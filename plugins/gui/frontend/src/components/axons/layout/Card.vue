@@ -1,39 +1,76 @@
 <template>
-    <div class="x-card">
-        <div class="header">
-            <x-button link v-if="reversible" class="back" @click="$emit('back')">&lt;</x-button>
-            <template v-if="logo">
-                <x-title :logo="logo">{{title}}</x-title>
-            </template>
-            <div class="title" :title="title" v-else>{{title}}</div>
-            <x-button link v-if="removable" class="remove" @click="$emit('remove')">x</x-button>
-        </div>
-        <slot></slot>
+  <div class="x-card">
+    <div class="header">
+      <x-button
+        v-if="reversible"
+        link
+        class="back"
+        @click="$emit('back')"
+      >&lt;</x-button>
+      <x-title
+        v-if="logo"
+        :logo="logo"
+      >{{ title }}</x-title>
+      <div
+        v-else
+        class="title"
+        :title="title"
+      >{{ title }}</div>
+      <div class="actions">
+        <x-button
+          v-if="editable"
+          class="edit"
+          title="Edit"
+          link
+          @click="$emit('edit')"
+        ><md-icon>edit</md-icon></x-button>
+        <x-button
+          v-if="removable"
+          class="remove"
+          title="Remove"
+          link
+          @click="$emit('remove')"
+        ><md-icon>clear</md-icon></x-button>
+      </div>
     </div>
+    <div class="body">
+      <slot />
+    </div>
+  </div>
 </template>
 
 <script>
-    import xTitle from './Title.vue'
-    import xButton from '../inputs/Button.vue'
+  import xTitle from './Title.vue'
+  import xButton from '../inputs/Button.vue'
 
-    export default {
-        name: 'x-card',
-        components: {
-            xTitle, xButton
-        },
-        props: {
-            title: {required: true},
-            logo: {},
-            removable: {
-                type: Boolean,
-                default: false
-            },
-            reversible: {
-                type: Boolean,
-                default: false
-            }
-        }
+  export default {
+    name: 'XCard',
+    components: {
+      xTitle, xButton
+    },
+    props: {
+      title: {
+        type: String,
+        required: true
+      },
+      logo: {
+        type: String,
+        default: ''
+      },
+      editable: {
+        type: Boolean,
+        default: false
+      },
+      removable: {
+        type: Boolean,
+        default: false
+      },
+      reversible: {
+        type: Boolean,
+        default: false
+      }
     }
+  }
 </script>
 
 <style lang="scss">
@@ -42,23 +79,24 @@
         flex-direction: column;
         background-color: white;
         box-shadow: 0 2px 12px 0px rgba(0, 0, 0, 0.2);
-        padding: 12px;
         border-radius: 2px;
 
         > .header {
             display: flex;
             width: 100%;
-            margin-bottom: 12px;
+            padding: 12px;
 
-            .back {
+          .back {
                 font-size: 24px;
             }
 
-            >.x-title {
+            > .x-title {
                 width: calc(100% - 36px);
+
                 .md-image {
                     height: 48px;
                 }
+
                 .text {
                     font-size: 24px;
                     margin-left: 24px;
@@ -71,25 +109,38 @@
 
             > .title {
                 font-size: 16px;
-                width: calc(100% - 18px);
+                flex: 1 0 auto;
                 text-overflow: ellipsis;
                 white-space: nowrap;
                 overflow: hidden;
             }
 
-            .remove {
-                padding: 0 4px;
-                margin-right: -2px;
-                line-height: 18px;
-                font-size: 18px;
-                align-self: center;
+            .actions {
+                display: flex;
+                line-height: 20px;
+                width: 48px;
+                margin-left: 4px;
 
-                &:hover {
+                .x-button {
+                  height: 20px;
+                  padding: 0;
+
+                  .md-icon {
+                    font-size: 20px !important;
+                    height: 20px;
+                    line-height: 20px;
+                  }
+
+                  &:hover {
                     cursor: pointer;
-                    background-color: rgba($theme-orange, 0.6);
-                    border-radius: 100%;
+                    text-shadow: $text-shadow;
+                  }
                 }
             }
+        }
+        > .body {
+          padding: 12px;
+          height: calc(100% - 72px);
         }
     }
 </style>

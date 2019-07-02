@@ -12,7 +12,7 @@ from retrying import retry
 from selenium import webdriver
 
 import conftest
-from axonius.consts.gui_consts import FEATURE_FLAGS_CONFIG, FeatureFlagsNames
+from axonius.consts.gui_consts import FEATURE_FLAGS_CONFIG, FeatureFlagsNames, DASHBOARD_SPACE_TYPE_CUSTOM
 from axonius.consts.plugin_consts import AXONIUS_USER_NAME
 from axonius.consts.system_consts import AXONIUS_DNS_SUFFIX, LOGS_PATH_HOST
 from axonius.plugin_base import EntityType
@@ -207,6 +207,14 @@ class TestBase:
         self.axonius_system.get_tasks_running_id_db().delete_many({})
         self.axonius_system.get_notifications_db().delete_many({})
         self.axonius_system.get_reports_config_db().delete_many({})
+        self.axonius_system.get_dashboard_spaces_db().delete_many({
+            'type': DASHBOARD_SPACE_TYPE_CUSTOM
+        })
+        self.axonius_system.get_dashboard_db().delete_many({
+            'user_id': {
+                'ne': '*'
+            }
+        })
 
         truncate_capped_collection(self.axonius_system.db.get_historical_entity_db_view(EntityType.Users))
         truncate_capped_collection(self.axonius_system.db.get_historical_entity_db_view(EntityType.Devices))

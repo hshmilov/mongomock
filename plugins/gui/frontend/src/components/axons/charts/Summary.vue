@@ -44,6 +44,7 @@
             setTimeout(() => {
                 this.enumerating = false
                 this.displayData = this.displayData.map((item, index) => {
+                    if (!this.data[index]) return null
                     let jumpValue = Math.max(10, Math.ceil(this.data[index].value / 200))
                     if (item.value === this.data[index].value) return item
                     this.enumerating = true
@@ -52,7 +53,7 @@
                     }
                     // Smaller - need to subtract
                     return {...item, value: Math.max(item.value - jumpValue, this.data[index].value)}
-                })
+                }).filter(x => x)
             }, 10)
         }
     }

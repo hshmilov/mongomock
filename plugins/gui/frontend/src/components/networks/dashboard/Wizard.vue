@@ -3,20 +3,22 @@
     :launch="true"
     :handle-save="saveNewDashboard"
     :disabled="isDisabled"
+    :note="note"
     approve-id="chart_save"
     @change="finishNewDashboard"
     @enter="nextWizardState"
   >
-    <h3>Create a Dashboard Chart</h3>
+    <h3 v-if="editMode">Edit Dashboard Chart - "{{ panel.data.name }}"</h3>
+    <h3 v-else>Create a Dashboard Chart</h3>
     <div class="x-chart-wizard">
       <!-- Select metric to be tested by chart -->
       <label>Chart metric</label>
       <x-select
         id="metric"
-        v-model="dashboard.metric"
+        :value="dashboard.metric"
         :options="metricOptions"
         placeholder="by..."
-        @input="advanceState = true"
+        @input="updateMetric"
       />
       <!-- Select method of presenting the data of the chart -->
       <template v-if="dashboard.metric">
@@ -45,8 +47,8 @@
         <component
           :is="dashboard.metric"
           v-model="dashboard.config"
-          :views="views"
           :entities="entityOptions"
+          :views="views"
           class="grid-span2"
           @state="nextWizardState"
           @validate="configValid = $event"
@@ -82,12 +84,12 @@
 
   import viewsMixin from '../../../mixins/views'
 
-  import { mapState, mapMutations, mapActions } from 'vuex'
-  import { SAVE_DASHBOARD_PANEL } from '../../../store/modules/dashboard'
+  import { mapMutations, mapActions } from 'vuex'
+  import { SAVE_DASHBOARD_PANEL, UPDATE_DASHBOARD_PANEL } from '../../../store/modules/dashboard'
   import { NEXT_TOUR_STATE, CHANGE_TOUR_STATE, UPDATE_TOUR_STATE } from '../../../store/modules/onboarding'
 
   const dashboard = {
-    metric: '', view: '', name: '', config: {}
+    metric: '', view: '', name: '', config: null
   }
   export default {
     name: 'XChartWizard',
@@ -97,6 +99,10 @@
       space: {
         type: String,
         required: true
+      },
+      panel: {
+        type: Object,
+        default: () => {}
       }
     },
     data () {
@@ -106,11 +112,9 @@
       }
     },
     computed: {
-      ...mapState({
-        dashboards (state) {
-          return state['dashboard']
-        }
-      }),
+      editMode () {
+        return this.panel !== undefined && this.panel !== null && this.panel.data !== undefined
+      },
       metricOptions () {
         return [
           { name: 'intersect', title: 'Query Intersection' },
@@ -138,14 +142,18 @@
       message () {
         if (!this.isDisabled) return ''
         return 'Missing required configuration'
+      },
+      note () {
+        if (!this.dashboard.updated) return ''
+        let dateTime = new Date(this.dashboard.updated)
+        dateTime.setMinutes(dateTime.getMinutes() - dateTime.getTimezoneOffset())
+        return `Last edited on ${dateTime.toISOString().replace(/(T|Z)/g, ' ').split('.')[0]}`
       }
     },
-    watch: {
-      availableViews: {
-        handler (newAvailableViews) {
-          this.dashboard.view = newAvailableViews[0]
-        },
-        deep: true
+    created () {
+      if (this.editMode) {
+        this.dashboard = { ...this.panel.data }
+        this.configValid = true
       }
     },
     methods: {
@@ -153,12 +161,27 @@
         nextState: NEXT_TOUR_STATE, changeState: CHANGE_TOUR_STATE, updateState: UPDATE_TOUR_STATE
       }),
       ...mapActions({
-        saveDashboard: SAVE_DASHBOARD_PANEL
+        saveDashboard: SAVE_DASHBOARD_PANEL, updateDashboard: UPDATE_DASHBOARD_PANEL
       }),
+      updateMetric (metric) {
+        this.dashboard.metric = metric
+        this.dashboard.config = null
+        this.$nextTick(() => {
+          if (!this.availableViews.includes(this.dashboard.view)) {
+            this.dashboard.view = this.availableViews[0]
+          }
+        })
+      },
       nameDashboard () {
         this.changeState({name: 'wizardSave'})
       },
       saveNewDashboard () {
+        if (this.panel && this.panel.uuid) {
+          return this.updateDashboard({
+            uuid: this.panel.uuid,
+            data: this.dashboard
+          })
+        }
         return this.saveDashboard({
           data: this.dashboard,
           space: this.space
@@ -173,7 +196,7 @@
         })
       },
       finishNewDashboard () {
-        this.$emit('done')
+        this.$emit('close')
       },
       nextWizardState () {
         this.nextState('dashboardWizard')

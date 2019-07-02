@@ -57,7 +57,7 @@
               selected: selected.includes(item[idField])
             }"
             @click="clickRow(item[idField])"
-            @mouseenter="enterRow(item[idField])"
+            @mouseenter="() => enterRow(item[idField])"
             @mouseleave="leaveRow"
           >
             <td

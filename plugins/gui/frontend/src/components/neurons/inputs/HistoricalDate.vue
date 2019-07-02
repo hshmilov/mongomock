@@ -1,56 +1,73 @@
 <template>
-    <div class="x-historical-date">
-        <x-date-edit :value="value" @input="onInput" :check-disabled="isDateUnavailable" label="Display by Date"/>
-    </div>
+  <div class="x-historical-date">
+    <x-date-edit
+      :value="value"
+      :check-disabled="isDateUnavailable"
+      :hide="hide"
+      label="Display by Date"
+      @input="onInput"
+    />
+  </div>
 </template>
 
 
 <script>
-    import xDateEdit from '../schema/types/string/DateEdit.vue'
-    import {mapState, mapActions} from 'vuex'
+  import xDateEdit from '../schema/types/string/DateEdit.vue'
+  import { mapState } from 'vuex'
 
-    export default {
-        name: 'x-historical-date',
-        components: {
-            xDateEdit
+  export default {
+    name: 'XHistoricalDate',
+    components: {
+      xDateEdit
+    },
+    props: {
+      value: {
+        type: [String, Date],
+        default: null
+      },
+      module: {
+        type: String,
+        default: ''
+      },
+      hide: {
+        type: Boolean,
+        default: false
+      }
+    },
+    computed: {
+      ...mapState({
+        firstHistoricalDate (state) {
+          let historicalDate = null
+          if (this.module) {
+            historicalDate = state.constants.firstHistoricalDate[this.module]
+          } else {
+            historicalDate = Object.values(state.constants.firstHistoricalDate).reduce((a, b) => {
+              return (new Date(a) < new Date(b)) ? a : b
+            }, new Date())
+          }
+          historicalDate = new Date(historicalDate)
+          historicalDate.setDate(historicalDate.getDate() - 1)
+          return historicalDate
         },
-        props: ['value', 'module'],
-        computed: {
-            ...mapState({
-                firstHistoricalDate(state) {
-                    let historicalDate = null
-                    if (this.module) {
-                        historicalDate = state.constants.firstHistoricalDate[this.module]
-                    } else {
-                        historicalDate = Object.values(state.constants.firstHistoricalDate).reduce((a, b) => {
-                            return (new Date(a) < new Date(b)) ? a : b
-                        }, new Date())
-                    }
-                    historicalDate = new Date(historicalDate)
-                    historicalDate.setDate(historicalDate.getDate() - 1)
-                    return historicalDate
-                },
-                allowedDates(state) {
-                    return state.constants.allowedDates[this.module]
-                }
-            }),
-            currentDate() {
-                return new Date()
-            }
-        },
-        methods: {
-            isDateUnavailable(date) {
-                if (date < this.firstHistoricalDate || date > this.currentDate) return true
+        allowedDates (state) {
+          return state.constants.allowedDates[this.module]
+        }
+      }),
+      currentDate () {
+        return new Date()
+      }
+    },
+    methods: {
+      isDateUnavailable (date) {
+        if (date < this.firstHistoricalDate || date > this.currentDate) return true
 
-                if (this.allowedDates && !this.allowedDates[date.toISOString().substring(0, 10)]) return true
-
-                return false
-            },
-            onInput(historical) {
-                this.$emit('input', historical)
-            }
-        },
+        return (this.allowedDates && this.allowedDates[date.toISOString().substring(0, 10)])
+      },
+      onInput (historical) {
+        this.$emit('input', historical)
+      }
     }
+  }
 </script>
 
 

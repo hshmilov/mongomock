@@ -53,11 +53,9 @@
 
 <style lang="scss">
     .x-histogram {
-        height: 100%;
         display: flex;
         flex-direction: column;
         align-items: flex-start;
-        padding-bottom: 8px;
         position: relative;
 
         .histogram-item {

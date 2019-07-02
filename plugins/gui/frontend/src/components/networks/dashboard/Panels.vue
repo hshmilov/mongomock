@@ -6,8 +6,12 @@
       :id="chart.uuid"
       :key="chart.uuid"
       :title="chart.name"
-      :removable="!isReadOnly"
-      @remove="removeDashboard(chart.uuid)"
+      :removable="!isReadOnly && hovered === chartInd"
+      :editable="!isReadOnly && hovered === chartInd && chart.user_id !== '*'"
+      @mouseenter.native="() => enterPanel(chartInd)"
+      @mouseleave.native="leavePanel"
+      @remove="() => verifyRemovePanel(chart.uuid)"
+      @edit="() => editPanel(chart)"
     >
       <div
         v-if="chart.metric !== 'timeline'"
@@ -15,6 +19,7 @@
       >
         <x-historical-date
           v-model="cardToDate[chart.uuid]"
+          :hide="hovered !== chartInd && !cardToDate[chart.uuid]"
           @clear="clearDate(chart.uuid)"
           @input="confirmPickDate(chart.uuid, chart.name)"
         />
@@ -41,6 +46,19 @@
       v-if="message"
       v-model="message"
     />
+    <x-modal
+      v-if="removed"
+      size="lg"
+      approve-text="Remove Chart"
+      @confirm="confirmRemovePanel"
+      @close="cancelRemovePanel"
+    >
+      <div slot="body">
+        <div>This chart will be completely removed from the system.</div>
+        <div>Removing the chart is an irreversible action.</div>
+        <div>Do you want to continue?</div>
+      </div>
+    </x-modal>
   </div>
 </template>
 
@@ -53,6 +71,7 @@
   import xLine from '../../axons/charts/Line.vue'
   import xButton from '../../axons/inputs/Button.vue'
   import xToast from '../../axons/popover/Toast.vue'
+  import xModal from '../../axons/popover/Modal.vue'
 
   import {mapState, mapGetters, mapMutations, mapActions} from 'vuex'
   import {REMOVE_DASHBOARD_PANEL, FETCH_HISTORICAL_SAVED_CARD} from '../../../store/modules/dashboard'
@@ -62,7 +81,7 @@
   export default {
     name: 'XPanels',
     components: {
-      xCard, xHistoricalDate, xHistogram, xPie, xSummary, xLine, xButton, xToast
+      xCard, xHistoricalDate, xHistogram, xPie, xSummary, xLine, xButton, xToast, xModal
     },
     props: {
       panels: {
@@ -78,6 +97,8 @@
       return {
         cardToDate: {},
         cardToHistory: {},
+        hovered: null,
+        removed: null,
         message: ''
       }
     },
@@ -96,16 +117,15 @@
         return this.panels.map(chart => {
           if (chart.metric === 'timeline') return chart
           return { ...chart,
-            showingHistorical: this.cardToDate[chart.uuid],
+            historical: this.cardToDate[chart.uuid],
             data: chart.data.map(item => {
               let historicalCard = this.cardToHistory[chart.uuid]
               if (historicalCard) {
-                let historicalCardView = historicalCard[item.name]
-                if (!historicalCardView) return null
+                let historicalCardData = historicalCard[item.name]
+                if (!historicalCardData) return null
                 return {
                   ...item,
-                  value: historicalCard[item.name].value,
-                  showingHistorical: historicalCard[item.name].accurate_for_datetime
+                  value: historicalCardData.value,
                 }
               }
               return item
@@ -113,7 +133,8 @@
           }
         })
         // Filter out spaces without data or with hide_empty and remainder 100%
-        .filter(chart => chart && chart.data && !(chart.hide_empty && [0, 1].includes(chart.data[0].value)))
+        .filter(chart => chart && chart.data &&
+                (!chart.hide_empty || ![0, 1].includes(chart.data[0].value) || chart.historical))
       }
     },
     methods: {
@@ -121,11 +142,39 @@
         updateView: UPDATE_DATA_VIEW
       }),
       ...mapActions({
-        removeDashboard: REMOVE_DASHBOARD_PANEL,
+        removePanel: REMOVE_DASHBOARD_PANEL,
         fetchHistoricalCard: FETCH_HISTORICAL_SAVED_CARD
       }),
       addNewPanel() {
         this.$emit('add')
+      },
+      enterPanel(id) {
+        this.hovered = id
+      },
+      leavePanel() {
+        this.hovered = null
+      },
+      verifyRemovePanel (chartId) {
+        this.removed = chartId
+      },
+      confirmRemovePanel () {
+        this.removePanel(this.removed)
+        this.removed = null
+      },
+      editPanel (panel) {
+        this.$emit('edit', {
+          uuid: panel.uuid,
+          data: {
+            name: panel.name,
+            metric: panel.metric,
+            view: panel.view,
+            config: panel.config,
+            updated: panel.last_updated
+          }
+        })
+      },
+      cancelRemovePanel () {
+        this.removed = null
       },
       clearDate (cardId) {
         this.cardToDate = { ...this.cardToDate, [cardId]: null }
@@ -176,10 +225,13 @@
             min-height: 300px;
 
             .card-history {
+                height: 36px;
                 font-size: 12px;
                 color: $grey-4;
                 text-align: right;
                 margin-bottom: 8px;
+                display: flex;
+                justify-content: center;
 
                 .cov-vue-date {
                     width: auto;
@@ -201,6 +253,7 @@
                 font-size: 144px;
                 text-align: center;
                 line-height: 200px;
+                width: 100%;
             }
         }
     }

@@ -4,6 +4,7 @@
     new-id="dashboard_wizard"
     class="x-default-space"
     @add="$emit('add')"
+    @edit="$emit('edit', $event)"
   >
     <template slot="pre">
       <x-data-discovery-card

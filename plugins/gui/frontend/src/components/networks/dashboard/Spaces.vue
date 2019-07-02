@@ -2,13 +2,13 @@
   <div class="x-spaces">
     <x-tabs
       v-if="spaces.length"
+      ref="tabs"
       :extendable="!isReadOnly"
       remove-text="Remove Space"
       @add="addNewSpace"
       @rename="renameSpace"
       @remove="removeSpace"
       @click="selectSpace"
-      ref="tabs"
     >
       <x-tab
         :id="defaultSpace.uuid"
@@ -17,10 +17,11 @@
         :editable="!isReadOnly"
       >
         <x-default-space
-          slot-scope="{ active }"
           v-if="active"
+          slot-scope="{ active }"
           :panels="defaultSpace.panels"
           @add="() => addNewPanel(defaultSpace.uuid)"
+          @edit="editPanel"
         />
       </x-tab>
       <x-tab
@@ -30,10 +31,11 @@
         :selected="currentSpace === personalSpace.uuid"
       >
         <x-panels
-          slot-scope="{ active }"
           v-if="active"
+          slot-scope="{ active }"
           :panels="personalSpace.panels"
           @add="() => addNewPanel(personalSpace.uuid)"
+          @edit="editPanel"
         />
       </x-tab>
       <x-tab
@@ -46,10 +48,11 @@
         :removable="!isReadOnly"
       >
         <x-panels
-          slot-scope="{ active }"
           v-if="active"
+          slot-scope="{ active }"
           :panels="space.panels"
           @add="() => addNewPanel(space.uuid)"
+          @edit="editPanel"
         />
       </x-tab>
       <div slot="remove_confirm">
@@ -61,7 +64,8 @@
     <x-wizard
       v-if="wizard.active"
       :space="wizard.space"
-      @done="finishNewPanel"
+      :panel="wizard.panel"
+      @close="closeWizard"
     />
   </div>
 </template>
@@ -142,8 +146,14 @@
         this.wizard.active = true
         this.wizard.space = spaceId
       },
-      finishNewPanel() {
+      closeWizard () {
         this.wizard.active = false
+        this.wizard.space = ''
+        this.wizard.panel = null
+      },
+      editPanel (panel) {
+        this.wizard.active = true
+        this.wizard.panel = { ...panel }
       },
       addNewSpace () {
         if (this.processing) return

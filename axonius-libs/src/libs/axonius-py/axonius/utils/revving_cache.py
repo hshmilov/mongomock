@@ -245,22 +245,39 @@ class RevCached:
             self.__initial_values[key] = cache_entry
             return cache_entry.get_cached_result()
 
-    def trigger_cache_update_now(self):
+    def trigger_cache_update_now(self, args: List = None):
         """
         Triggers a cache update right now, asynchronously
+        :param args: If not none, only update that specific parameter set. Otherwise, updates all values
         """
-        for cached_entry in dict(self.__initial_values).values():
-            cached_entry.job.modify(next_run_time=datetime.now())
+        initial_values = dict(self.__initial_values)
+        if args is not None:
+            to_process = [initial_values.get(self.__get_key_from_args(*args))]
+        else:
+            to_process = initial_values.values()
+
+        for cached_entry in to_process:
+            if cached_entry:
+                cached_entry.job.modify(next_run_time=datetime.now())
+
         plugin_base_instance().cached_operation_scheduler.wakeup()
 
-    def sync_clean_cache(self):
+    def sync_clean_cache(self, args: List = None):
         """
         Triggers a cache flush synchronously
+        :param args: If not none, only update that specific parameter set. Otherwise, updates all values
         """
-        for cached_entry in dict(self.__initial_values).values():
-            cached_entry.event.clear()
+        initial_values = dict(self.__initial_values)
+        if args is not None:
+            to_clear = [initial_values.get(self.__get_key_from_args(*args))]
+        else:
+            to_clear = initial_values.values()
 
-        self.trigger_cache_update_now()
+        for cached_entry in to_clear:
+            if cached_entry:
+                cached_entry.event.clear()
+
+        self.trigger_cache_update_now(args)
 
     def call_uncached(self, *args, **kwargs):
         """

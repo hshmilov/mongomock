@@ -26,13 +26,18 @@ class DashboardPage(Page):
     INTERSECTION_CHART_FIRST_QUERY_DROP_DOWN_CSS = '#intersectingFirst > div'
     INTERSECTION_CHART_SECOND_QUERY_DROP_DOWN_CSS = '#intersectingSecond > div'
     WIZARD_OPTIONS_CSS = 'div.x-select-options > div.x-select-option'
-    CHART_MODULE_DROP_DOWN_CSS = 'div.x-chart-metric.grid-span2 > div.x-dropdown.x-select.x-select-symbol'
+    CHART_WIZARD_CSS = '.x-chart-wizard'
+    CHART_MODULE_DROP_DOWN_CSS = '.x-chart-wizard .x-select.x-select-symbol'
+    SELECT_VIEWS_CSS = '.x-select-views'
+    SELECT_VIEWS_VIEW_CSS = '.view'
+    SELECT_VIEW_NAME_CSS = '.view-name'
     CHART_FIELD_DROP_DOWN_CSS = '.x-dropdown.x-select.field-select'
     CHART_FIELD_TEXT_BOX_CSS = 'div.x-search-input.x-select-search > input'
     CHART_FUNCTION_CSS = 'div.x-chart-metric.grid-span2 > div:nth-child(8)'
     CHART_TITLE_ID = 'chart_name'
     SUMMARY_CARD_TEXT_CSS = 'div.x-summary > div.summary'
-    CARD_CLOSE_BTN_CSS = 'div.header > .x-button.remove'
+    CARD_CLOSE_BTN_CSS = '.header > .actions > .remove'
+    CARD_EDIT_BTN_CSS = '.header > .actions > .edit'
     BANNER_BY_TEXT_XPATH = '//div[contains(@class, \'x-banner\') and .//text() = \'{banner_text}\']'
 
     SPACES_XPATH = '//div[@class=\'x-spaces\']'
@@ -96,6 +101,13 @@ class DashboardPage(Page):
         self.wait_for_element_present_by_css(self.CHART_METRIC_DROP_DOWN_CSS)
         self.select_option_without_search(self.CHART_METRIC_DROP_DOWN_CSS, self.WIZARD_OPTIONS_CSS, option, parent=None)
 
+    def select_chart_view_name(self, view_name, parent=None):
+        self.select_option(self.SELECT_VIEW_NAME_CSS,
+                           self.DROPDOWN_TEXT_BOX_CSS,
+                           self.DROPDOWN_SELECTED_OPTION_CSS,
+                           view_name,
+                           parent=parent)
+
     def select_intersection_chart_first_query(self, query):
         self.select_option_without_search(self.INTERSECTION_CHART_FIRST_QUERY_DROP_DOWN_CSS,
                                           self.WIZARD_OPTIONS_CSS, query, parent=None)
@@ -104,9 +116,9 @@ class DashboardPage(Page):
         self.select_option_without_search(self.INTERSECTION_CHART_SECOND_QUERY_DROP_DOWN_CSS,
                                           self.WIZARD_OPTIONS_CSS, query, parent=None)
 
-    def select_chart_wizard_module(self, entity):
+    def select_chart_wizard_module(self, entity, parent=None):
         self.select_option_without_search(self.CHART_MODULE_DROP_DOWN_CSS, self.WIZARD_OPTIONS_CSS,
-                                          entity, parent=None)
+                                          entity, parent=parent)
 
     def select_chart_wizard_field(self, prop):
         self.select_option(self.CHART_FIELD_DROP_DOWN_CSS,
@@ -115,6 +127,31 @@ class DashboardPage(Page):
 
     def select_chart_summary_function(self, func_name):
         self.select_option_without_search(self.CHART_FUNCTION_CSS, self.WIZARD_OPTIONS_CSS, func_name, parent=None)
+
+    def get_views_list(self):
+        return self.wait_for_element_present_by_css(self.SELECT_VIEWS_CSS).find_elements_by_css_selector(
+            self.SELECT_VIEWS_VIEW_CSS)
+
+    def add_comparison_card(self, first_module, first_query, second_module, second_query, title):
+        self.open_new_card_wizard()
+        self.select_chart_metric('Query Comparison')
+        views_list = self.get_views_list()
+        self.select_chart_wizard_module(first_module, views_list[0])
+        self.select_chart_view_name(first_query, views_list[0])
+        self.select_chart_wizard_module(second_module, views_list[1])
+        self.select_chart_view_name(second_query, views_list[1])
+        self.fill_text_field_by_element_id(self.CHART_TITLE_ID, title)
+        self.click_button('Save')
+        self.wait_for_element_absent_by_css(self.MODAL_OVERLAY_CSS, interval=1)
+
+    def add_comparison_card_view(self, module, query):
+        self.click_button('+', partial_class=True,
+                          context=self.driver.find_element_by_css_selector(self.CHART_WIZARD_CSS))
+        views_list = self.get_views_list()
+        self.select_chart_wizard_module(module, views_list[2])
+        self.select_chart_view_name(query, views_list[2])
+        self.click_button('Save')
+        self.wait_for_element_absent_by_css(self.MODAL_OVERLAY_CSS, interval=1)
 
     def add_intersection_card(self, module, first_query, second_query, title):
         self.open_new_card_wizard()
@@ -147,11 +184,9 @@ class DashboardPage(Page):
             self.click_button('Save')
             self.wait_for_element_absent_by_css(self.MODAL_OVERLAY_CSS, interval=1)
         except NoSuchElementException:
-            # in case of wrong field input return false and change it in order to continue the test
-            el = self.driver.find_element_by_css_selector(self.CHART_FIELD_TEXT_BOX_CSS)
-            self.fill_text_by_element(el, 'OS: Type')
-            self.driver.find_element_by_css_selector(self.WIZARD_OPTIONS_CSS).click()
+            self.close_dropdown()
             self.click_button('Cancel', partial_class=True)
+            self.wait_for_element_absent_by_css(self.MODAL_OVERLAY_CSS)
             return False
         return True
 
@@ -171,9 +206,18 @@ class DashboardPage(Page):
         pie = self.get_pie_chart_from_card(card)
         pie.find_element_by_css_selector('svg').click()
 
+    def edit_card(self, card_title):
+        card = self.get_card(card_title)
+        ActionChains(self.driver).move_to_element(card).perform()
+        card.find_element_by_css_selector(self.CARD_EDIT_BTN_CSS).click()
+        self.wait_for_element_present_by_css(self.MODAL_OVERLAY_CSS)
+
     def remove_card(self, card_title):
-        self.driver.find_element_by_xpath(self.PANEL_BY_NAME_XPATH.format(
-            panel_name=card_title)).find_element_by_css_selector(self.CARD_CLOSE_BTN_CSS).click()
+        panel = self.wait_for_element_present_by_xpath(self.PANEL_BY_NAME_XPATH.format(panel_name=card_title))
+        ActionChains(self.driver).move_to_element(panel).perform()
+        panel.find_element_by_css_selector(self.CARD_CLOSE_BTN_CSS).click()
+        self.wait_for_element_present_by_css(self.MODAL_OVERLAY_CSS)
+        self.click_button('Remove Chart')
         wait_until(lambda: self.is_missing_panel(card_title))
 
     def find_query_search_input(self):

@@ -18,6 +18,7 @@ export const REMOVE_DASHBOARD_SPACE = 'REMOVE_DASHBOARD_SPACE'
 export const UPDATE_REMOVED_SPACE = 'UPDATE_REMOVED_SPACE'
 
 export const SAVE_DASHBOARD_PANEL = 'SAVE_DASHBOARD_PANEL'
+export const UPDATE_DASHBOARD_PANEL = 'UPDATE_DASHBOARD_PANEL'
 export const REMOVE_DASHBOARD_PANEL = 'REMOVE_DASHBOARD_PANEL'
 export const UPDATE_REMOVED_PANEL = 'UPDATE_REMOVED_PANEL'
 
@@ -205,6 +206,18 @@ export const dashboard = {
 				data: payload.data
 			}).then(response => {
 				if (response.status === 200 && response.data) {
+					dispatch(FETCH_DASHBOARD_PANELS)
+				}
+				return response
+			})
+		},
+		[ UPDATE_DASHBOARD_PANEL ] ({dispatch}, payload) {
+			return dispatch(REQUEST_API, {
+				rule: `dashboards/panels/${payload.uuid}`,
+				method: 'POST',
+				data: payload.data
+			}).then(response => {
+				if (response.status === 200) {
 					dispatch(FETCH_DASHBOARD_PANELS)
 				}
 				return response

@@ -505,17 +505,13 @@
 
       .details {
         .x-card {
+          height: 100%;
+
           > .header {
             padding-bottom: 12px;
             border-bottom: 1px solid $grey-2;
           }
 
-          height: 100%;
-
-          .x-action-library, .x-action-config, .x-trigger-config {
-            height: calc(100% - 72px);
-            overflow: auto;
-          }
         }
       }
     }

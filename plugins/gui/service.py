@@ -3461,6 +3461,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
             return return_error('At least one query required in order to save Dashboard Chart', 400)
         dashboard_data['space'] = ObjectId(space_id)
         dashboard_data['user_id'] = get_connected_user_id()
+        dashboard_data['last_updated'] = datetime.now()
         insert_result = self.__dashboard_collection.insert_one(dashboard_data)
         if not insert_result or not insert_result.inserted_id:
             return return_error('Error saving dashboard chart', 400)
@@ -3478,18 +3479,32 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         """
         return jsonify(self._get_dashboard(skip, limit))
 
-    @gui_add_rule_logged_in('dashboards/panels/<panel_id>', methods=['DELETE'],
+    @gui_add_rule_logged_in('dashboards/panels/<panel_id>', methods=['DELETE', 'POST'],
                             required_permissions={Permission(PermissionType.Dashboard,
                                                              PermissionLevel.ReadWrite)})
-    def remove_dashboard_panel(self, panel_id):
+    def update_dashboard_panel(self, panel_id):
         """
         DELETE an existing Dashboard Panel, by its id
         :return: ObjectId of the Panel to delete
         """
+        panel_id = ObjectId(panel_id)
+        if request.method == 'DELETE':
+            update_data = {
+                'archived': True
+            }
+        else:
+            update_data = {
+                **self.get_request_data_as_object(),
+                'user_id': get_connected_user_id(),
+                'last_updated': datetime.now()
+            }
         update_result = self.__dashboard_collection.update_one(
-            {'_id': ObjectId(panel_id)}, {'$set': {'archived': True}})
+            {'_id': panel_id}, {'$set': update_data})
         if not update_result.modified_count:
-            return return_error(f'No dashboard by the id {panel_id} found or updated', 400)
+            return return_error(f'No dashboard by the id {str(panel_id)} found or updated', 400)
+        args = [self, panel_id]
+        self.__generate_dashboard_fast.clean_cache(args)
+        self.__generate_dashboard.clean_cache(args)
         return ''
 
     def __clear_dashboard_cache(self, clear_slow=False):
@@ -3508,11 +3523,13 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         self.__lifecycle.clean_cache()
         self._adapters.clean_cache()
 
-    def __generate_dashboard_uncached(self, dashboard):
+    def __generate_dashboard_uncached(self, dashboard_id: ObjectId):
         """
         See _get_dashboard
         """
-        dashboard = dict(dashboard)
+        dashboard = self.__dashboard_collection.find_one({
+            '_id': dashboard_id
+        })
 
         dashboard_metric = ChartMetrics[dashboard['metric']]
         handler_by_metric = {
@@ -3533,19 +3550,19 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         dashboard['space'] = str(dashboard['space'])
         return gui_helpers.beautify_db_entry(dashboard)
 
-    @rev_cached(ttl=3600 * 4, key_func=lambda self, dashboard: dashboard['_id'])
-    def __generate_dashboard(self, dashboard):
+    @rev_cached(ttl=3600 * 4, key_func=lambda self, dashboard_id: dashboard_id)
+    def __generate_dashboard(self, dashboard_id: ObjectId):
         """
         See _get_dashboard
         """
-        return self.__generate_dashboard_uncached(dashboard)
+        return self.__generate_dashboard_uncached(dashboard_id)
 
-    @rev_cached(ttl=120, key_func=lambda self, dashboard: dashboard['_id'])
-    def __generate_dashboard_fast(self, dashboard):
+    @rev_cached(ttl=120, key_func=lambda self, dashboard_id: dashboard_id)
+    def __generate_dashboard_fast(self, dashboard_id: ObjectId):
         """
         See _get_dashboard
         """
-        return self.__generate_dashboard_uncached(dashboard)
+        return self.__generate_dashboard_uncached(dashboard_id)
 
     def _get_dashboard(self, skip=0, limit=0, uncached: bool = False,
                        space_ids: list = None, exclude_personal=False):
@@ -3568,6 +3585,12 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
                 '$in': [ObjectId(space_id) for space_id in space_ids]
             } if space_ids else {
                 '$ne': personal_id
+            },
+            'name': {
+                '$ne': None
+            },
+            'config': {
+                '$ne': None
             }
         }
         if not exclude_personal:
@@ -3580,27 +3603,27 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
                 }, filter_spaces]
             }
         for dashboard in self.__dashboard_collection.find(
-                filter=filter_archived(filter_spaces), skip=skip, limit=limit):
-            if not dashboard.get('name'):
-                logger.info(f'No name for dashboard {dashboard["_id"]}')
-            elif not dashboard.get('config'):
-                logger.info(f'No config found for dashboard {dashboard.get("name")}')
-            else:
-                dashboard['space'] = str(dashboard['space'])
-                # Let's fetch and execute them query filters, depending on the chart's type
-                try:
-                    dashboard_metric = ChartMetrics[dashboard['metric']]
-                    if uncached:
-                        yield self.__generate_dashboard_uncached(dashboard)
-                    elif dashboard_metric == ChartMetrics.timeline:
-                        # slow dashboard cache
-                        yield self.__generate_dashboard(dashboard)
-                    else:
-                        yield self.__generate_dashboard_fast(dashboard)
+                filter=filter_archived(filter_spaces),
+                skip=skip,
+                limit=limit,
+                projection={
+                    '_id': True,
+                    'metric': True
+                }):
+            # Let's fetch and execute them query filters, depending on the chart's type
+            try:
+                dashboard_metric = ChartMetrics[dashboard['metric']]
+                if uncached:
+                    yield self.__generate_dashboard_uncached(dashboard['_id'])
+                elif dashboard_metric == ChartMetrics.timeline:
+                    # slow dashboard cache
+                    yield self.__generate_dashboard(dashboard['_id'])
+                else:
+                    yield self.__generate_dashboard_fast(dashboard['_id'])
 
-                except Exception:
-                    # Since there is no data, not adding this chart to the list
-                    logger.exception(f'Error fetching data for chart {dashboard["name"]} ({dashboard["_id"]})')
+            except Exception:
+                # Since there is no data, not adding this chart to the list
+                logger.exception(f'Error fetching data for chart {dashboard["name"]} ({dashboard["_id"]})')
 
     def _find_filter_by_name(self, entity_type: EntityType, name):
         """

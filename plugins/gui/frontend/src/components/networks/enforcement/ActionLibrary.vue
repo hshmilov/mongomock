@@ -122,6 +122,7 @@
 
 <style lang="scss">
   .x-action-library {
+    height: 100%;
     .actions-container {
       overflow: auto;
       height: calc(100% - 36px);

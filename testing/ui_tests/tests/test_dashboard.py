@@ -27,6 +27,7 @@ class TestDashboard(TestBase):
     TEST_INTERSECTION_TITLE = 'test intersection'
     TEST_SEGMENTATION_HISTOGRAM_TITLE = 'test segmentation histogram'
     TEST_SEGMENTATION_PIE_TITLE = 'test segmentation pie'
+    TEST_EDIT_CHART_TITLE = 'test edit'
 
     COVERAGE_SPACE_NAME = 'Coverage Dashboard'
     VULNERABILITY_SPACE_NAME = 'Vulnerability Dashboard'
@@ -174,7 +175,6 @@ class TestDashboard(TestBase):
         # 'network interfaces' is not one of the options, it suppose to return false
         assert not self.dashboard_page.add_segmentation_card('Devices', 'network interfaces', 'test segmentation')
         self.dashboard_page.add_segmentation_card('Devices', 'OS: Type', self.TEST_SEGMENTATION_HISTOGRAM_TITLE)
-        self.dashboard_page.wait_for_spinner_to_end()
         shc_card = self.dashboard_page.get_card(self.TEST_SEGMENTATION_HISTOGRAM_TITLE)
         shc_chart = self.dashboard_page.get_histogram_chart_from_card(shc_card)
         line = self.dashboard_page.get_histogram_line_from_histogram(shc_chart, 1)
@@ -184,7 +184,6 @@ class TestDashboard(TestBase):
         assert self.devices_page.count_entities() == first_result_count
         assert self.devices_page.find_search_value() == self.OS_WINDOWS_QUERY
         self.dashboard_page.switch_to_page()
-        self.dashboard_page.wait_for_spinner_to_end()
         shc_card = self.dashboard_page.get_card(self.TEST_SEGMENTATION_HISTOGRAM_TITLE)
         shc_chart = self.dashboard_page.get_histogram_chart_from_card(shc_card)
         line = self.dashboard_page.get_histogram_line_from_histogram(shc_chart, 2)
@@ -337,3 +336,12 @@ class TestDashboard(TestBase):
         self.dashboard_page.switch_to_page()
         assert self.dashboard_page.is_missing_space(DASHBOARD_SPACE_PERSONAL)
         assert self.dashboard_page.is_missing_add_space()
+
+    def test_dashboard_edit(self):
+        self.dashboard_page.switch_to_page()
+        self.base_page.run_discovery()
+        self.dashboard_page.add_comparison_card('Devices', 'Windows Operating System',
+                                                'Devices', 'Linux Operating System',
+                                                self.TEST_EDIT_CHART_TITLE)
+        self.dashboard_page.edit_card(self.TEST_EDIT_CHART_TITLE)
+        self.dashboard_page.add_comparison_card_view('Devices', 'IOS Operating System')

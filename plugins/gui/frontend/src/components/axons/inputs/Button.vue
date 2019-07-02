@@ -1,61 +1,64 @@
 <template>
-    <button class="x-button" :class="{disabled, inverse, inverseEmphasize, light, right, link, great, emphasize, active}"
-            @click="onClick"><slot /></button>
+  <button
+    class="x-button"
+    :class="{disabled, inverse, inverseEmphasize, light, right, link, great, emphasize, active}"
+    @click="onClick"
+  ><slot /></button>
 </template>
 
 <script>
-    export default {
-        name: 'x-button',
-        props: {
-            disabled: {
-                type: Boolean,
-                default: false
-            },
-            inverse: {
-                type: Boolean,
-                default: false
-            },
-            inverseEmphasize: {
-                type: Boolean,
-                default: false
-            },
-            light: {
-                type: Boolean,
-                default: false
-            },
-            right: {
-                type: Boolean,
-                default: false
-            },
-            link: {
-                type: Boolean,
-                default: false
-            },
-            great: {
-                type: Boolean,
-                default: false
-            },
-            emphasize: {
-                type: Boolean,
-                default: false
-            },
-            active: {
-                type: Boolean,
-                default: false
-            }
-        },
-        methods: {
-            onClick(e) {
-                if (this.disabled) {
-                    this.$emit('access')
-                    e.preventDefault()
-                    return false
-                }
-                this.$emit('click', e)
-                return true
-            }
+  export default {
+    name: 'XButton',
+    props: {
+      disabled: {
+        type: Boolean,
+        default: false
+      },
+      inverse: {
+        type: Boolean,
+        default: false
+      },
+      inverseEmphasize: {
+        type: Boolean,
+        default: false
+      },
+      light: {
+        type: Boolean,
+        default: false
+      },
+      right: {
+        type: Boolean,
+        default: false
+      },
+      link: {
+        type: Boolean,
+        default: false
+      },
+      great: {
+        type: Boolean,
+        default: false
+      },
+      emphasize: {
+        type: Boolean,
+        default: false
+      },
+      active: {
+        type: Boolean,
+        default: false
+      }
+    },
+    methods: {
+      onClick (e) {
+        if (this.disabled) {
+          this.$emit('access')
+          e.preventDefault()
+          return false
         }
+        this.$emit('click', e)
+        return true
+      }
     }
+  }
 </script>
 
 <style lang="scss">

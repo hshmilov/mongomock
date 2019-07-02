@@ -247,3 +247,9 @@ class MongoService(WeaveService):
 
     def gui_reports_config_collection(self):
         return self.client[GUI_PLUGIN_NAME]['reports_config']
+
+    def gui_dashboard_spaces_collection(self):
+        return self.client[GUI_PLUGIN_NAME]['dashboard_spaces']
+
+    def gui_dashboard_collection(self):
+        return self.client[GUI_PLUGIN_NAME]['dashboard']
