@@ -40,6 +40,10 @@ class TestInstancesAfterNodeJoin(TestInstancesBase):
         self._instances[0].wait_for_ssh()
         self._add_nexpose_adadpter_and_discover_devices()
 
+    def _try_discovery_until_check_devices_count_goes_up(self):
+        self.base_page.run_discovery()
+        return self._check_device_count() > 1
+
     def check_master_disconnect(self):
         local_json_adapter = JsonFileService()
         local_json_adapter.take_process_ownership()
@@ -60,9 +64,9 @@ class TestInstancesAfterNodeJoin(TestInstancesBase):
             self.axonius_system.start_and_wait()
             self.login_page.wait_for_login_page_to_load()
             self.login()
-            self.devices_page.switch_to_page()
-            self.base_page.run_discovery()
-            wait_until(lambda: self._check_device_count() > 1, total_timeout=90, interval=20)
+
+            wait_until(self._try_discovery_until_check_devices_count_goes_up, total_timeout=60 * 3, interval=30,
+                       tolerated_exceptions_list=[NoSuchElementException])
         finally:
             local_ad_adapter.start_and_wait()
             local_json_adapter.start_and_wait()
