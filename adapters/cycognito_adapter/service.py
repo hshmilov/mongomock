@@ -136,11 +136,14 @@ class CycognitoAdapter(ScannerAdapterBase):
             if isinstance(device_raw.get('severe-issues-count'), int):
                 device.severe_issues_count = device_raw.get('severe-issues-count')
             if isinstance(device_raw.get('domain-names'), list):
-                device.domain_names = device_raw.get('domain-names')
+                device.domain_names = [str(dn) for dn in (device_raw.get('domain-names') or []) if dn]
             if isinstance(device_raw.get('locations'), list):
-                device.locations = device_raw.get('locations')
+                device.locations = [str(location) for location in (device_raw.get('locations') or []) if location]
             device.alive = bool(device_raw.get('alive'))
-            device.security_rating = device_raw.get('security-rating')
+            try:
+                device.security_rating = device_raw.get('security-rating')
+            except Exception:
+                logger.exception(f'Problem adding security rating')
             open_ports_raw = device_raw.get('open-ports')
             if isinstance(open_ports_raw, list) and open_ports_raw:
                 for open_port_raw in open_ports_raw:
