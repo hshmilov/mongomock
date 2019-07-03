@@ -1,7 +1,9 @@
+import time
 import logging
 
 from axonius.clients.rest.connection import RESTConnection, RESTException
-from cisco_meraki_adapter.consts import DEVICE_TYPE, MDM_TYPE, CLIENT_TYPE, MDM_FIELDS
+from cisco_meraki_adapter.consts import DEVICE_TYPE, MDM_TYPE, CLIENT_TYPE, MDM_FIELDS, MAX_RATE_LIMIT_TRY
+
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -16,16 +18,32 @@ class CiscoMerakiConnection(RESTConnection):
                          **kwargs)
         self._permanent_headers['X-Cisco-Meraki-API-Key'] = self._apikey
 
+    def _meraki_get(self, path, url_params=None):
+        for try_ in range(MAX_RATE_LIMIT_TRY):
+            response = self._get(path, url_params=url_params,
+                                 raise_for_status=False,
+                                 return_response_raw=True,
+                                 use_json_in_response=False
+                                 )
+            if response.status_code == 429:
+                # Sleeping 2 seconds to be on the safe side
+                time.sleep(2)
+                continue
+            break
+        else:
+            raise RESTException(f'Failed to fetch path {path} because rate limit')
+        return self._handle_response(response)
+
     def _connect(self):
         if not self._apikey:
             raise RESTException('No API Key')
-        self._get('organizations')
+        self._meraki_get('organizations')
 
     def _get_networks(self, organizations):
         for organization in organizations:
             try:
                 if organization:
-                    yield from self._get(f'organizations/{organization}/networks')
+                    yield from self._meraki_get(f'organizations/{organization}/networks')
             except Exception:
                 logger.exception(f'Got problem getting networks from org: {organization}')
 
@@ -33,7 +51,7 @@ class CiscoMerakiConnection(RESTConnection):
         for network_raw in networks_raw:
             try:
                 if network_raw and network_raw.get('id'):
-                    devices_network_raw = self._get('networks/' + network_raw.get('id') + '/devices')
+                    devices_network_raw = self._meraki_get('networks/' + network_raw.get('id') + '/devices')
                     for device_raw in devices_network_raw:
                         device_raw['network_name'] = network_raw.get('name')
                         yield device_raw
@@ -52,7 +70,7 @@ class CiscoMerakiConnection(RESTConnection):
                 if not device_raw.get('serial'):
                     continue
                 serial = device_raw.get('serial')
-                clients_device_raw = self._get(f'devices/{serial}/clients?timespan={86400 * 2}')
+                clients_device_raw = self._meraki_get(f'devices/{serial}/clients?timespan={86400 * 2}')
                 for client_raw in clients_device_raw:
                     client_raw['associated_device'] = serial
                     client_raw['name'] = device_raw.get('name')
@@ -72,18 +90,18 @@ class CiscoMerakiConnection(RESTConnection):
         for network_raw in networks_raw:
             try:
                 if network_raw and network_raw.get('id'):
-                    response = self._get('networks/' + network_raw.get('id') + '/sm/devices',
-                                         url_params={'fields': MDM_FIELDS})
+                    response = self._meraki_get('networks/' + network_raw.get('id') + '/sm/devices',
+                                                url_params={'fields': MDM_FIELDS})
                     devices_network_raw = response['devices']
                     for device_raw in devices_network_raw:
                         device_raw['network_name'] = network_raw.get('name')
                         yield device_raw, MDM_TYPE
                     while response.get('batchToken'):
 
-                        response = self._get('networks/' + network_raw.get('id') + '/sm/devices',
-                                             url_params={'batchToken': response.get('batchToken'),
-                                                         'fields': MDM_FIELDS
-                                                         })
+                        response = self._meraki_get('networks/' + network_raw.get('id') + '/sm/devices',
+                                                    url_params={'batchToken': response.get('batchToken'),
+                                                                'fields': MDM_FIELDS
+                                                                })
                         devices_network_raw = response['devices']
                         for device_raw in devices_network_raw:
                             device_raw['network_name'] = network_raw.get('name')
@@ -95,7 +113,7 @@ class CiscoMerakiConnection(RESTConnection):
         serial_statuses_dict = dict()
         for organization in organizations:
             try:
-                device_statuses = self._get(f'organizations/{organization}/deviceStatuses')
+                device_statuses = self._meraki_get(f'organizations/{organization}/deviceStatuses')
                 for device_status in device_statuses:
                     if isinstance(device_status, dict) and device_status.get('serial'):
                         serial_statuses_dict[device_status.get('serial')] = device_status
@@ -104,7 +122,7 @@ class CiscoMerakiConnection(RESTConnection):
         return serial_statuses_dict
 
     def get_device_list(self):
-        organizations = [str(organization_raw['id']) for organization_raw in self._get('organizations')
+        organizations = [str(organization_raw['id']) for organization_raw in self._meraki_get('organizations')
                          if organization_raw.get('id')]
         serial_statuses_dict = self._get_device_statuses(organizations)
         networks_raw = list(self._get_networks(organizations))
