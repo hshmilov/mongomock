@@ -84,3 +84,7 @@ class CoreService(PluginService, UpdatablePluginMixin):
             {'$set': config}
         )
         self.post('update_config')
+
+    @property
+    def get_max_uwsgi_threads(self) -> int:
+        return 500
