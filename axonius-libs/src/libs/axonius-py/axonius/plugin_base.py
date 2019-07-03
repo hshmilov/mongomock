@@ -36,6 +36,7 @@ from funcy import chunks
 from namedlist import namedtuple
 from promise import Promise
 from pymongo import MongoClient
+from pymongo.errors import DuplicateKeyError
 from pymongo.collection import Collection
 from retrying import retry
 # bson is requirement of mongo and its not recommended to install it manually
@@ -1456,13 +1457,18 @@ class PluginBase(Configurable, Feature):
                                              f"{parsed_to_insert[PLUGIN_UNIQUE_NAME]}")
                         else:
                             # this is regular first-seen device, make its own value
-                            db_to_use.insert_one({
-                                "internal_axon_id": get_preferred_internal_axon_id_from_dict(parsed_to_insert, entity_type),
-                                "accurate_for_datetime": datetime.now(),
-                                "adapters": [parsed_to_insert],
-                                "tags": [],
-                                ADAPTERS_LIST_LENGTH: 1
-                            })
+                            try:
+                                internal_axon_id = get_preferred_internal_axon_id_from_dict(
+                                    parsed_to_insert, entity_type)
+                                db_to_use.insert_one({
+                                    'internal_axon_id': internal_axon_id,
+                                    'accurate_for_datetime': datetime.now(),
+                                    'adapters': [parsed_to_insert],
+                                    'tags': [],
+                                    ADAPTERS_LIST_LENGTH: 1
+                                })
+                            except DuplicateKeyError:
+                                logger.critical(f'Duplicate key error on {entity_type}, {parsed_to_insert}')
             except Exception as e:
                 logger.critical(f'insert_data_to_db failed, exception: {str(e)}')
                 raise
