@@ -403,9 +403,6 @@
                 }
             }
 
-            .x-select {
-                margin-bottom: 24px;
-            }
         }
 
         .upload-file {
