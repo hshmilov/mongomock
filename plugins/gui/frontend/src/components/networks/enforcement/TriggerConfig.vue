@@ -305,6 +305,7 @@
         display: grid;
         grid-template-rows: calc(100% - 30px) 30px;
         align-items: flex-start;
+        height: 100%;
         .main {
             overflow: auto;
             height: 100%;
