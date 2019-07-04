@@ -24,6 +24,7 @@ from install import (TEMPORAL_PATH,
 from lists import OLD_CRONJOBS
 from scripts.host_installation.watchdog_cron import WATCHDOG_CRON_SCRIPT_PATH
 from scripts.instances.network_utils import get_weave_subnet_ip_range
+from sysctl_editor import set_sysctl_value
 from utils import AXONIUS_DEPLOYMENT_PATH, print_state, current_file_system_path, VENV_WRAPPER, run_as_root
 
 
@@ -176,6 +177,8 @@ def setup_host():
     setup_instances()
     reset_network()
     create_system_cronjobs()
+    set_sysctl_value('kernel.pid_max', '64000')
+    os.system('sysctl --load')
 
 
 def set_booted_for_production():

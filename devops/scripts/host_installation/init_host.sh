@@ -178,5 +178,14 @@ else
         free -h
     fi
 fi
+
+echo "Set pid max"
+if [ $(cat /etc/sysctl.conf | grep 'kernel.pid_max' | wc -l) -ne 0 ]; then
+    sed -i 's/^\(kernel\.pid_max\s*=\s*\).*/\164000/' /etc/sysctl.conf
+else
+    echo "kernel.pid_max = 64000" >> /etc/sysctl.conf
+fi
+sysctl --load
+
 touch $INIT_FILE
 echo "Done successfully"
