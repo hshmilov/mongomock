@@ -94,7 +94,7 @@ class Page:
     DISABLED_BUTTON_XPATH = './/button[@class=\'x-button disabled\' and .//text()=\'{button_text}\']'
     VERTICAL_TABS_CSS = '.x-tabs.vertical .header .header-tab'
     NAMED_TAB_XPATH = '//div[@class=\'x-tabs\']/ul/li[contains(@class, "header-tab")]//div[text()=\'{tab_title}\']'
-    TABLE_ROWS_CSS = 'tbody .x-row.clickable'
+    TABLE_ROWS_CSS = 'tbody .x-table-row.clickable'
     TABLE_COUNTER = 'div.count'
     UPLOADING_FILE_CSS = '//div[@class=\'name-placeholder\' and text()=\'Uploading...\']'
 
@@ -112,7 +112,7 @@ class Page:
     CHECKBOX_BY_PARENT_ID = '//div[@id=\'{parent_id}\']/div[contains(@class, \'x-checkbox\')]' \
                             '//input[@type=\'checkbox\']'
     TABLE_ALL_CHECKBOX_CSS = 'thead tr th:nth-child(1) .x-checkbox'
-    TABLE_ROW_CHECKBOX_CSS = 'tbody .x-row.clickable:nth-child({child_index}) td:nth-child(1) .x-checkbox'
+    TABLE_ROW_CHECKBOX_CSS = 'tbody .x-table-row.clickable:nth-child({child_index}) td:nth-child(1) .x-checkbox'
 
     FIELD_WITH_LABEL_XPATH = '//div[child::label[text()=\'{label_text}\']]/div[contains(@class, \'md-field\')]'
 

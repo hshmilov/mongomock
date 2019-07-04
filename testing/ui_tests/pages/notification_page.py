@@ -102,7 +102,7 @@ class NotificationPage(Page):
         return [element.text for element in elements]
 
     def get_rows_from_notification_table(self):
-        rows = self.driver.find_elements_by_css_selector('tr.x-row.clickable')
+        rows = self.driver.find_elements_by_css_selector('tr.x-table-row.clickable')
         return [line.text for line in rows]
 
     @staticmethod

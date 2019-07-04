@@ -117,21 +117,21 @@
       adaptersFieldName () {
         return this.adaptersSchema.name
       },
-      adaptersList () {
-        return [...this.data[this.adaptersFieldName]].sort().map(adapter => [adapter])
-      },
       adaptersLength () {
-        return this.adaptersList.length
-      },
-      details () {
-        if (this.fieldName === this.adaptersFieldName) {
-          return this.adaptersList
-        }
-        return this.data[`${this.fieldName}_details`]
+        return this.data[this.adaptersFieldName].length
       },
       showExpand () {
         return (this.hoverRow || this.expandData) && this.adaptersLength > 1 && this.fieldName.includes('specific_data')
                 && Boolean(this.$refs.data && this.$refs.data.$el.textContent.trim())
+      },
+      adaptersListSorted() {
+        return this.data[this.adaptersFieldName].concat().sort()
+      },
+      details () {
+        if (this.fieldName === this.adaptersFieldName) {
+          return this.adaptersListSorted.map(adapter => [adapter])
+        }
+        return this.data[`${this.fieldName}_details`]
       },
       detailsTable () {
         let baseTable = {
@@ -141,7 +141,7 @@
           ],
           data: this.details.map((detail, i) => {
             return {
-              [this.adaptersFieldName]: [this.adaptersList[i]],
+              [this.adaptersFieldName]: [this.adaptersListSorted[i]],
               [this.fieldName]: detail
             }
           })

@@ -50,16 +50,16 @@ class EntitiesPage(Page):
     TABLE_COUNT_CSS = '.table-header .title .count'
     TABLE_SELECTED_COUNT_CSS = '.table-header > .title > .selection > div'
     TABLE_SELECT_ALL_BUTTON_CSS = '.table-header > .title > .selection > button'
-    TABLE_FIRST_ROW_CSS = 'tbody .x-row.clickable'
-    TABLE_SECOND_ROW_CSS = 'tbody .x-row.clickable:nth-child(2)'
+    TABLE_FIRST_ROW_CSS = 'tbody .x-table-row.clickable'
+    TABLE_SECOND_ROW_CSS = 'tbody .x-table-row.clickable:nth-child(2)'
     TABLE_FIRST_ROW_TAG_CSS = f'{TABLE_FIRST_ROW_CSS} td:last-child'
-    TABLE_ROW_EXPAND_CSS = 'tbody .x-row.clickable:nth-child({child_index}) td:nth-child(2) .md-icon'
-    TABLE_CELL_CSS = 'tbody .x-row.clickable td:nth-child({cell_index})'
-    TABLE_CELL_EXPAND_CSS = 'tbody .x-row.clickable:nth-child({row_index}) td:nth-child({cell_index}) .md-icon'
+    TABLE_ROW_EXPAND_CSS = 'tbody .x-table-row.clickable:nth-child({child_index}) td:nth-child(2) .md-icon'
+    TABLE_CELL_CSS = 'tbody .x-table-row.clickable td:nth-child({cell_index})'
+    TABLE_CELL_EXPAND_CSS = 'tbody .x-table-row.clickable:nth-child({row_index}) td:nth-child({cell_index}) .md-icon'
     TABLE_DATA_ROWS_XPATH = '//tr[@id]'
     TABLE_SCHEMA_CUSTOM = '//div[contains(@class, \'x-schema-custom\')]'
     TABLE_FIELD_ROWS_XPATH = '//div[contains(@class, \'x-tabs\')]//div[contains(@class, \'x-tab active\')]'\
-                             '//div[@class=\'table-container\']//tr[@class=\'x-row\']'
+                             '//div[@class=\'table-container\']//tr[@class=\'x-table-row\']'
     TABLE_PAGE_SIZE_XPATH = '//div[@class=\'x-pagination\']/div[@class=\'x-sizes\']/div[text()=\'{page_size_text}\']'
     TABLE_HEADER_XPATH = '//div[@class=\'x-table\']/div[@class=\'table-container\']/table/thead/tr'
     TABLE_HEADER_FIELD_XPATH = '//div[contains(@class, \'x-entity-general\')]//div[contains(@class, \'x-tab active\')]'\
@@ -553,7 +553,7 @@ class EntitiesPage(Page):
     def find_row_readonly(self, parent=None):
         if not parent:
             parent = self.driver
-        return parent.find_elements_by_css_selector('.x-row:not(.clickable)')
+        return parent.find_elements_by_css_selector('.x-table-row:not(.clickable)')
 
     def search_note(self, search_text):
         self.fill_text_field_by_css_selector(self.NOTES_SEARCH_INUPUT_CSS, search_text)

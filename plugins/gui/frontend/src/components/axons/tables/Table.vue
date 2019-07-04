@@ -47,66 +47,30 @@
           </tr>
         </thead>
         <tbody>
-          <tr
+          <x-table-row
             v-for="item in data"
             :id="item[idField]"
             :key="item[idField]"
-            class="x-row"
-            :class="{
-              clickable: onClickRow && !readOnly.includes(item[idField]),
-              selected: selected.includes(item[idField])
-            }"
-            @click="clickRow(item[idField])"
-            @mouseenter="() => enterRow(item[idField])"
-            @mouseleave="leaveRow"
+            :data="item"
+            :fields="dataFields"
+            :sort="sort"
+            :selected="value && value.includes(item[idField])"
+            :expandable="expandable"
+            :clickable="onClickRow !== undefined"
+            :read-only="readOnly.includes(item[idField])"
+            @input="(selected) => onSelect(item[idField], selected)"
+            @click.native="() => clickRow(item[idField])"
           >
-            <td
-              v-if="value"
-              class="w-14"
-            >
-              <x-checkbox
-                v-model="selected"
-                :value="item[idField]"
-                :read-only="readOnly.includes(item[idField])"
-                @change="onSelect"
-              />
-            </td>
-            <td v-if="expandable">
-              <md-icon
-                v-if="expanded.includes(item[idField])"
-                class="active"
-                @click.native.stop="collapseRow(item[idField])"
-                >expand_less</md-icon>
-              <md-icon
-                v-else
-                @click.native.stop="expandRow(item[idField])"
-              >expand_more</md-icon>
-            </td>
-            <td
-              v-for="schema in dataFields"
-              :key="schema.name"
-              nowrap
-            >
-              <slot
-                :schema="schema"
-                :data="item"
-                :sort="sort"
-                :hover-row="hovered === item[idField]"
-                :expand-row="expanded.includes(item[idField])"
-              >
-                <x-table-data
-                  :schema="schema"
-                  :data="item"
-                  :sort="sort"
-                />
-              </slot>
-            </td>
-          </tr>
+            <slot
+              slot-scope="props"
+              v-bind="props"
+            />
+          </x-table-row>
           <template v-if="pageSize">
             <tr
               v-for="n in pageSize - data.length"
               :key="n"
-              class="x-row"
+              class="x-table-row"
             >
               <td v-if="value">&nbsp;</td>
               <td v-if="expandable">&nbsp;</td>
@@ -124,11 +88,11 @@
 
 <script>
   import xCheckbox from '../inputs/Checkbox.vue'
-  import xTableData from './TableData.vue'
+  import xTableRow from './TableRow.vue'
 
   export default {
     name: 'XTable',
-    components: { xCheckbox, xTableData },
+    components: { xCheckbox, xTableRow },
     props: {
       fields: {
         type: Array,
@@ -179,20 +143,17 @@
     },
     data () {
       return {
-        selected: [],
-        hovered: null,
-        expanded: []
       }
     },
     computed: {
       ids () {
         return this.data.map(item => item[this.idField])
       },
-      allSelected () {
-        return this.selected.length && this.selected.length === this.data.length
-      },
       partSelected () {
-        return this.selected.length && this.selected.length < this.data.length
+        return Boolean(this.value && this.value.length && this.value.length < this.data.length)
+      },
+      allSelected () {
+        return Boolean(this.value && this.value.length && this.value.length === this.data.length)
       },
       dataFields () {
         return this.fields.map(field => {
@@ -201,11 +162,6 @@
             path: (field.path ? field.path : []).concat([field.name])
           }
         })
-      }
-    },
-    watch: {
-      value (newValue) {
-        this.selected = [...newValue]
       }
     },
     methods: {
@@ -226,31 +182,22 @@
         if (this.sort.desc) return 'down'
         return 'up'
       },
-      onSelectAll (isSelected) {
-        if (isSelected && !this.selected.length) {
-          this.selected = [...this.ids.filter(id => !this.readOnly.includes(id))]
+      onSelect (id, isSelected) {
+        if (isSelected) {
+          this.$emit('input', [...this.value, id])
         } else {
-          this.selected = []
+          this.$emit('input', this.value.filter(currentId => currentId !== id))
         }
-        this.$emit('input', this.selected)
+      },
+      onSelectAll (selected) {
+        if (selected && (!this.value || !this.value.length)) {
+          this.$emit('input', this.ids.filter(id => !this.readOnly.includes(id)))
+        } else {
+          this.$emit('input', [])
+        }
         if (this.onClickAll) {
-          this.onClickAll(isSelected)
+          this.onClickAll(selected)
         }
-      },
-      onSelect () {
-        this.$emit('input', this.selected)
-      },
-      enterRow(id) {
-        this.hovered = id
-      },
-      leaveRow() {
-        this.hovered = null
-      },
-      expandRow(id) {
-        this.expanded.push(id)
-      },
-      collapseRow(id) {
-        this.expanded = this.expanded.filter(item => item !== id)
       }
     }
   }
@@ -296,58 +243,6 @@
               }
             }
           }
-        }
-
-
-        tbody {
-          tr {
-            td {
-              vertical-align: top;
-              line-height: 24px;
-            }
-
-            .svg-bg {
-              fill: $theme-white;
-            }
-          }
-
-          tr:nth-child(odd) {
-            background: rgba($grey-1, 0.6);
-
-            .svg-bg {
-              fill: rgba($grey-1, 0.6);
-            }
-          }
-        }
-
-        .x-row {
-          height: 30px;
-
-          .x-data {
-            display: flex;
-          }
-
-          &.clickable:hover {
-            cursor: pointer;
-            box-shadow: 0 2px 16px -4px $grey-4;
-          }
-
-          &.selected {
-            background-color: rgba($theme-blue, 0.2);
-          }
-
-          .array {
-            min-height: 24px;
-          }
-
-          .md-icon {
-            width: 14px;
-            min-width: 14px;
-            &:hover, &.active {
-              color: $theme-orange;
-            }
-          }
-
         }
       }
     }

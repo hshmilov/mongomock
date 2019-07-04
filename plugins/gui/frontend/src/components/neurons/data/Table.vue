@@ -408,7 +408,7 @@
             margin-left: 12px;
         }
 
-        &.multiline .x-row .array {
+        &.multiline .x-table-row .array {
             display: block;
             height: auto;
 
