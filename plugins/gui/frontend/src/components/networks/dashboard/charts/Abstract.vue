@@ -1,10 +1,11 @@
 <template>
   <div class="x-chart-metric">
     <x-select-symbol
-      v-model="entity"
+      :value="entity"
       :options="entities"
       type="icon"
       placeholder="module..."
+      @input="updateEntity"
     />
     <x-select
       v-model="view"
@@ -111,6 +112,14 @@
     methods: {
       validate () {
         this.$emit('validate', this.fieldName && this.func)
+      },
+      updateEntity (entity) {
+        if (this.entity === entity) return
+        this.config = {
+          ...this.config,
+          entity,
+          view: ''
+        }
       }
     }
   }

@@ -175,7 +175,7 @@
         this.$refs.tooltip.style.left = event.clientX + 10 + 'px'
       },
       showPercentageText (val) {
-        return (this.forceText && val > 0) || val > 0.04
+        return (this.forceText && val > 0) || val > 4
       },
       onClick (index) {
         if (this.readOnly) return
