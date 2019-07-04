@@ -324,8 +324,8 @@ class DeviceAdapterSoftwareCVE(SmartJsonClass):
     software_version = Field(str, "Software Version")
     cve_id = Field(str, "CVE ID")
     cpe = ListField(str, "CPE")
-    cve_severity = Field(float, "CVE Severity (Metric V3)")
-    cve_severity_v2 = Field(float, "CVE Severity (Metric V2)")
+    cve_severity = Field(str, "CVE Severity (Metric V3)")
+    cve_severity_v2 = Field(str, "CVE Severity (Metric V2)")
     cve_description = Field(str, "CVE Description")
     cve_synopsis = Field(str, "CVE Synopsis")
     cve_references = ListField(str, "CVE References")
@@ -916,20 +916,8 @@ class DeviceAdapter(SmartJsonClass):
     def add_vulnerable_software(self, cve_severity=None, cve_severity_v2=None, **kwargs):
         if not cve_severity:
             cve_severity = None
-        else:
-            try:
-                cve_severity = float(cve_severity)
-            except Exception:
-                logger.exception(f'Invalid CVE Severity (Metric V3) {cve_severity}')
-                cve_severity = None
         if not cve_severity_v2:
             cve_severity_v2 = None
-        else:
-            try:
-                cve_severity_v2 = float(cve_severity_v2)
-            except Exception:
-                logger.exception(f'Invalid CVE Severity (Metric V2) {cve_severity_v2}')
-                cve_severity_v2 = None
         self.software_cves.append(DeviceAdapterSoftwareCVE(cve_severity=cve_severity,
                                                            cve_severity_v2=cve_severity_v2,
                                                            **kwargs))
