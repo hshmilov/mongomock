@@ -1,29 +1,54 @@
 from testing.services.plugins import aggregator_service
 
 
+# pylint: disable=too-many-nested-blocks
 def main():
+    core = aggregator_service.AggregatorService().db.client['core']
     db = aggregator_service.AggregatorService().db.client['aggregator']
-    overall_all_storage_size = 0
-    overall_raw_storage_size = 0
-    for collection in ['devices_db', 'users_db', 'historical_devices_db_view', 'historical_users_db_view']:
-        try:
-            size_of_all_data = 0
-            size_of_raw_data = 0
-            estimated_storage_size = db.command('collstats', collection)['storageSize']
-            for document in db[collection].find({}).limit(1000):
-                size_of_all_data += len(str(document))
-                for adapter in document.get('adapters') or []:
-                    adapter_raw = (adapter.get('data') or {}).get('raw')
-                    if adapter_raw:
-                        size_of_raw_data += len(str(adapter_raw))
+    devices_raw_data_average_size = dict()
+    users_raw_data_average_size = dict()
+    adapter_names = [adapter for adapter in core['configs'].find({}).distinct('plugin_name') if 'adapter' in adapter]
+    for collection in ['devices_db', 'users_db']:
+        for adapter_name in adapter_names:
+            raw_data_total = 0
+            num_of_devices = 0
+            for device in db[collection].find({'adapters.plugin_name': adapter_name}).limit(1000):
+                for adapter in device.get('adapters') or []:
+                    if adapter.get('plugin_name') == adapter_name:
+                        adapter_raw = (adapter.get('data') or {}).get('raw')
+                        if adapter_raw:
+                            raw_data_total += len(str(adapter_raw))
+                            num_of_devices += 1
+            if num_of_devices:
+                raw_data_average = raw_data_total / num_of_devices
+                if 'users' in collection:
+                    users_raw_data_average_size[adapter_name] = raw_data_average
+                else:
+                    devices_raw_data_average_size[adapter_name] = raw_data_average
 
-            overall_all_storage_size += estimated_storage_size
-            overall_raw_storage_size += (size_of_raw_data / size_of_all_data) * estimated_storage_size
-        except Exception as e:
-            print(f'Failed to estimate size of raw data for collection {collection}: {str(e)}')
+    overall_raw_data = 0
+    print(f'-- devices data --')
+    for adapter_name, avg_size in devices_raw_data_average_size.items():
+        num = db['devices_db'].count_documents({'adapters.plugin_name': adapter_name})
+        avg_size_mb = round(avg_size / (1024 ** 2), 6)
+        total = avg_size_mb * num
+        overall_raw_data += total
+        print(f'Adapter {adapter_name} has {num} devices with an '
+              f'average raw data size of {avg_size_mb}mb. Total size is {total}mb')
 
-    print(f'Size of all adapters data: {overall_all_storage_size / (1024 ** 2)} mb')
-    print(f'Size of adapters raw_data: {overall_raw_storage_size / (1024 ** 2)} mb')
+    print(f'Overall size for devices raw data in mb: {overall_raw_data}')
+
+    overall_raw_data = 0
+    print(f'-- users data --')
+    for adapter_name, avg_size in users_raw_data_average_size.items():
+        num = db['users_db'].count_documents({'adapters.plugin_name': adapter_name})
+        avg_size_mb = round(avg_size / (1024 ** 2), 6)
+        total = avg_size_mb * num
+        overall_raw_data += total
+        print(f'Adapter {adapter_name} has {num} users with an '
+              f'average raw data size of {avg_size_mb}mb. Total size is {total}mb')
+
+    print(f'Overall size for devices raw data in mb: {overall_raw_data}')
 
 
 if __name__ == '__main__':
