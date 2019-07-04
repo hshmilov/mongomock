@@ -87,4 +87,4 @@ class CoreService(PluginService, UpdatablePluginMixin):
 
     @property
     def get_max_uwsgi_threads(self) -> int:
-        return 500
+        return 250
