@@ -1,8 +1,11 @@
 import time
-from services.adapters.stresstest_service import StresstestService
-from services.adapters.cisco_service import CiscoService
-from ui_tests.tests.ui_test_base import TestBase
+
+import pytest
+
 from devops.scripts.automate_dev import credentials_inputer
+from services.adapters.cisco_service import CiscoService
+from services.adapters.stresstest_service import StresstestService
+from ui_tests.tests.ui_test_base import TestBase
 
 
 class TestHyperlinks(TestBase):
@@ -66,6 +69,7 @@ class TestHyperlinks(TestBase):
 
     def test_default_values(self):
         stresstest_name = 'stresstest_adapter'
+        clients_db = None
 
         self.settings_page.switch_to_page()
         try:
@@ -112,8 +116,10 @@ class TestHyperlinks(TestBase):
                     'client_config.name': 'lol lol lol'
                 }, limit=1) == 1
         finally:
-            clients_db.delete_many({})
+            if clients_db:
+                clients_db.delete_many({})
 
+    @pytest.mark.skip('AX-4476')
     def test_entity_field_links(self):
         self.enforcements_page.switch_to_page()
         with CiscoService().contextmanager(take_ownership=True):
