@@ -274,6 +274,7 @@ def paginated(limit_max=PAGINATION_LIMIT_MAX):
             if limit < 0:
                 raise ValueError('Limit must not be negative')
             if limit > limit_max:
+                logger.warning(f'GUI asked for too many records: {limit}')
                 limit = limit_max
             try:
                 skip = int(content.get('skip'))

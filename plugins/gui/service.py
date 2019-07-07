@@ -872,16 +872,15 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         if (session.get('user') or {}).get('user_name') == AXONIUS_USER_NAME:
             return
 
+        view_filter = request.args.get('filter')
         if request.args.get('is_refresh') != '1':
-            filter_obj = request.args.get('filter')
-            log_metric(logger, Query.QUERY_GUI, filter_obj)
+            log_metric(logger, Query.QUERY_GUI, view_filter)
             history = request.args.get('history')
             if history:
                 log_metric(logger, Query.QUERY_HISTORY, str(history))
 
         if view_filter and not skip:
             # getting the original filter text on purpose - we want to pass it
-            view_filter = request.args.get('filter')
             mongo_sort = {'desc': -1, 'field': ''}
             if sort:
                 field, desc = next(iter(sort.items()))
@@ -891,7 +890,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
                 {
                     'view': {
                         'page': 0,
-                        'pageSize': limit,
+                        'pageSize': 20,
                         'fields': list((projection or {}).keys()),
                         'coloumnSizes': [],
                         'query': {
