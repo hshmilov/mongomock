@@ -161,6 +161,7 @@
 
 <style lang="scss">
     .x-action-config {
+        height: 100%;
         display: grid;
         grid-template-rows: 60px calc(100% - 108px) 48px;
         align-items: flex-start;
