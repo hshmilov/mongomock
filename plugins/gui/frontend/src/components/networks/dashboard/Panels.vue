@@ -133,8 +133,8 @@
           }
         })
         // Filter out spaces without data or with hide_empty and remainder 100%
-        .filter(chart => chart && chart.data &&
-                (!chart.hide_empty || ![0, 1].includes(chart.data[0].value) || chart.historical))
+        .filter(chart => (chart && chart.data && chart.data.length && ![0, 1].includes(chart.data[0].value))
+                || !chart.hide_empty || chart.historical)
       }
     },
     methods: {
@@ -223,6 +223,12 @@
 
         .x-card {
             min-height: 300px;
+
+            > .body {
+              height: calc(100% - 40px);
+              display: flex;
+              flex-direction: column;
+            }
 
             .card-history {
                 height: 36px;
