@@ -251,7 +251,14 @@ class CoreService(PluginBase, Configurable):
         if kwargs.get('plugin_name') is not None and kwargs.get('plugin_unique_name') is None and kwargs.get(
                 NODE_ID) is None:
             return self._get_collection('configs').find(kwargs)
-        return self._get_collection('configs').find_one(kwargs)
+
+        # A common thing to do is to request a specific adapter on a specific node. But on some nodes, there are
+        # multiple configurations of the same adapter due to bugs or or due to hard reset. this is why we return
+        # the last one that communicated.
+        result = list(self._get_collection('configs').find(kwargs).sort('last_seen', pymongo.DESCENDING))
+        if len(result) > 1:
+            logger.warning(f'Warning, found more than 1 unique name for a requested adapter: {result}')
+        return result[0] if result else None
 
     def _request_plugin(self, resource, plugin_unique_name, method='get', **kwargs):
         data = self._translate_url(plugin_unique_name + f"/{resource}")

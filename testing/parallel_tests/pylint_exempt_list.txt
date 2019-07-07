@@ -418,7 +418,6 @@ testing/services/adapters/tenable_io_service.py
 testing/services/adapters/tenable_security_center_service.py
 testing/services/adapters/traiana_lab_machines_service.py
 testing/services/plugins/aggregator_service.py
-testing/services/plugins/core_service.py
 testing/services/plugins/device_control_service.py
 testing/services/plugins/diagnostics_service.py
 testing/services/plugins/execution_service.py

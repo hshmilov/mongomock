@@ -1,11 +1,14 @@
 import os
-
-import requests
+from collections import defaultdict
 import traceback
 
-from axonius.consts.plugin_consts import CONFIGURABLE_CONFIGS_COLLECTION, GUI_PLUGIN_NAME, GUI_SYSTEM_CONFIG_COLLECTION, \
-    AXONIUS_SETTINGS_DIR_NAME
+import requests
+
+from axonius.consts.plugin_consts import CONFIGURABLE_CONFIGS_COLLECTION, GUI_PLUGIN_NAME, \
+    AXONIUS_SETTINGS_DIR_NAME, GUI_SYSTEM_CONFIG_COLLECTION, NODE_ID, PLUGIN_NAME, PLUGIN_UNIQUE_NAME
+from axonius.consts.adapter_consts import ADAPTER_PLUGIN_TYPE
 from axonius.consts.core_consts import CORE_CONFIG_NAME
+from axonius.utils import datetime
 from services.plugin_service import PluginService, API_KEY_HEADER, UNIQUE_KEY_PARAM
 from services.updatable_service import UpdatablePluginMixin
 
@@ -19,7 +22,10 @@ class CoreService(PluginService, UpdatablePluginMixin):
         if self.db_schema_version < 1:
             self._update_schema_version_1()
 
-        if self.db_schema_version != 1:
+        if self.db_schema_version < 2:
+            self._update_schema_version_2()
+
+        if self.db_schema_version != 2:
             print(f'Upgrade failed, db_schema_version is {self.db_schema_version}')
 
     def _update_schema_version_1(self):
@@ -47,14 +53,56 @@ class CoreService(PluginService, UpdatablePluginMixin):
             print(f'Exception while upgrading core db to version 1. Details: {e}')
             traceback.print_exc()
 
-    def register(self, api_key=None, plugin_name=""):
+    def _update_schema_version_2(self):
+        print('Upgrade to schema 2')
+        try:
+            registered_plugins = list(self.db.client['core']['configs'].find({'plugin_type': ADAPTER_PLUGIN_TYPE}))
+
+            # Due to old bugs, we sometimes have multiple versions of the same adapter, running on the same node.
+            # However, an adapter should be a singleton on a specific node. This is why we deprecate old instances
+            # here.
+
+            plugins_mapping = defaultdict(lambda: defaultdict(list))
+            for x in registered_plugins:
+                plugins_mapping[x[NODE_ID]][x[PLUGIN_NAME]].append(x)
+
+            for node_id, node_plugins in plugins_mapping.items():
+                for plugin_name, all_plugin_name_instances_per_node in node_plugins.items():
+                    if len(all_plugin_name_instances_per_node) == 1:
+                        continue
+
+                    last_seen = max(
+                        all_plugin_name_instances_per_node,
+                        key=lambda adapter_candidate:
+                        adapter_candidate.get('last_seen') or datetime.datetime(year=2017, month=1, day=1)
+                    )
+                    leftover_adapters = [
+                        x[PLUGIN_UNIQUE_NAME]
+                        for x
+                        in all_plugin_name_instances_per_node
+                        if x[PLUGIN_UNIQUE_NAME] != last_seen[PLUGIN_UNIQUE_NAME]
+                    ]
+
+                    print(f'Node {node_id}: {last_seen[PLUGIN_UNIQUE_NAME]} is the newest, olds are all others: ' +
+                          ', '.join(leftover_adapters))
+
+                    for leftover in leftover_adapters:
+                        print(f'Deprecating {leftover}')
+                        self.db.deprecate_a_leftover_db(leftover)
+            self.db_schema_version = 2
+        except Exception as e:
+            print(f'Exception while upgrading core db to version 2. Details: {e}')
+            traceback.print_exc()
+            raise
+
+    def register(self, api_key=None, plugin_name=''):
         headers = {}
         params = {}
         if api_key:
             headers[API_KEY_HEADER] = api_key
             params[UNIQUE_KEY_PARAM] = plugin_name
 
-        return requests.get(self.req_url + "/register", headers=headers, params=params)
+        return requests.get(f'{self.req_url}/register', headers=headers, params=params)
 
     @property
     def volumes_override(self):

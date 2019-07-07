@@ -80,8 +80,8 @@ class PaloAltoCortexConnection(RESTConnection):
 
         if not 200 <= response.status_code < 300:
             if 'errorCode' in dr_json and 'errorMessage' in dr_json:
-                raise ValueError(dr_json['errorCode'] + ' - ' + dr_json['errorMessage'])
-            raise ValueError(response.status_code + ':' + response.reason)
+                raise ValueError(f'{dr_json["errorCode"]} - {dr_json["errorMessage"]}')
+            raise ValueError(f'{str(response.status_code)}:{response.reason}')
 
         if response.status_code == 200:
             return
@@ -101,7 +101,7 @@ class PaloAltoCortexConnection(RESTConnection):
 
         if not 200 <= r.status_code < 300:
             if 'errorCode' in r_json and 'errorMessage' in r_json:
-                raise ValueError(r.status_code + ':' + r_json)
+                raise ValueError(f'{str(r.status_code)}:{r_json}')
 
         if r_json.get('queryStatus') in ['FINISHED', 'JOB_FINISHED']:
             try:
@@ -147,6 +147,7 @@ class PaloAltoCortexConnection(RESTConnection):
         # recursion
         yield from self.xpoll(query_id, sequence_no, params, delete_query, **kwargs)
 
+    # pylint: disable=arguments-differ
     def get_device_list(self, weeks_ago_to_fetch):
         full_query = {
             'query': 'SELECT * FROM tms.analytics order by generatedTime DESC limit 10000000',
