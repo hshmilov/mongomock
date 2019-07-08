@@ -46,7 +46,7 @@
           text-anchor="middle"
           :x="slice.middle.x"
           :y="slice.middle.y"
-        >{{ slice.value }}%
+        >{{ Math.round(slice.value * 100) }}%
         </text>
       </g>
     </svg>
@@ -120,20 +120,18 @@
       },
       slices () {
         let cumulativePortion = 0
-        return this.processedData.map((slice, index) => {
+        return this.processedData.map((slice) => {
           // Starting slice at the end of previous one, and ending after percentage defined for item
-          const [startX, startY] = this.getCoordinatesForPercent(cumulativePortion/100)
-          slice.value = (index === this.processedData.length - 1) ?
-            100 - cumulativePortion : Math.round(slice.value * 100)
+          const [startX, startY] = this.getCoordinatesForPercent(cumulativePortion)
           cumulativePortion += slice.value / 2
-          const [middleX, middleY] = this.getCoordinatesForPercent(cumulativePortion/100)
+          const [middleX, middleY] = this.getCoordinatesForPercent(cumulativePortion)
           cumulativePortion += slice.value / 2
-          const [endX, endY] = this.getCoordinatesForPercent(cumulativePortion/100)
+          const [endX, endY] = this.getCoordinatesForPercent(cumulativePortion)
           return {
             ...slice,
             path: [
               `M ${startX} ${startY}`, // Move
-              `A 1 1 0 ${slice.value > 50 ? 1 : 0} 1 ${endX} ${endY}`, // Arc
+              `A 1 1 0 ${slice.value > 0.5? 1 : 0} 1 ${endX} ${endY}`, // Arc
               `L 0 0` // Line
             ].join(' '),
             middle: { x: middleX * 0.7, y: middleY * (middleY > 0 ? 0.8 : 0.5) }
@@ -143,7 +141,7 @@
       hoverDetails () {
         if (!this.data || this.data.length === 0) return {}
         if (this.inHover === -1) return {}
-        let percentage = this.processedData[this.inHover].value
+        let percentage = Math.round(this.processedData[this.inHover].value * 100)
         if (percentage < 0) {
           percentage = 100 + percentage
         }
@@ -175,7 +173,7 @@
         this.$refs.tooltip.style.left = event.clientX + 10 + 'px'
       },
       showPercentageText (val) {
-        return (this.forceText && val > 0) || val > 4
+        return (this.forceText && val > 0) || val > 0.04
       },
       onClick (index) {
         if (this.readOnly) return
