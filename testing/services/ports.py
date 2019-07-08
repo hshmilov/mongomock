@@ -1,5 +1,6 @@
 DOCKER_PORTS = {
     'smtp':                             25,
+    'maildiranasaurus':                 26,
     'gui':                              443,
     'mockingbird':                      1443,
     'selenium-hub':                     4444,

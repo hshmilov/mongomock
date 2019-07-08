@@ -478,6 +478,27 @@ else:
 
         return out, err, p.returncode
 
+    @retry(stop_max_attempt_number=3, wait_fixed=5)
+    def get_folder_content_from_container(self, folder_path):
+        """
+        Gets the contents of an internal file.
+        :param folder_path: the absolute path inside the container.
+        :return: the contents
+        """
+        p = subprocess.Popen(['docker', 'exec', self.container_name, 'ls', folder_path],
+                             stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        try:
+            (out, err) = p.communicate(timeout=60)
+        except subprocess.TimeoutExpired as e:
+            p.terminate()
+            print(f'Got timeout expired on {folder_path} - {e}')
+            raise
+
+        if p.returncode != 0:
+            raise DockerException(f'Failed to run "ls" on {self.container_name}: {str(out)}\n{str(err)}')
+
+        return out, err, p.returncode
+
     def run_command_in_container(self, command):
         """
         Gets any bash command to execute in this service's docker

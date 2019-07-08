@@ -2,6 +2,8 @@ import os
 import re
 
 from services.adapters import stresstest_scanner_service, stresstest_service
+from services.standalone_services.maildiranasaurus_server import \
+    MailDiranasaurusService, generate_test_random_valid_email
 from services.standalone_services.smtp_server import SMTPService, generate_random_valid_email
 from ui_tests.pages.reports_page import ReportFrequency
 from ui_tests.tests import ui_consts
@@ -186,7 +188,8 @@ class TestReport(TestBase):
         self.settings_page.remove_email_server()
 
     def test_create_and_edit_report(self):
-        smtp_service = SMTPService()
+
+        smtp_service = MailDiranasaurusService()
         smtp_service.take_process_ownership()
         stress = stresstest_service.StresstestService()
         stress_scanner = stresstest_scanner_service.StresstestScannerService()
@@ -211,7 +214,7 @@ class TestReport(TestBase):
             data_query2 = 'specific_data.data.name == regex(\'avig\', \'i\')'
             self.devices_page.create_saved_query(data_query2, self.TEST_REPORT_EDIT_QUERY1)
 
-            recipient = generate_random_valid_email()
+            recipient = generate_test_random_valid_email()
 
             self.reports_page.create_report(report_name=self.TEST_REPORT_EDIT, add_dashboard=True,
                                             queries=[{'entity': 'Devices', 'name': self.TEST_REPORT_EDIT_QUERY}],
@@ -228,6 +231,7 @@ class TestReport(TestBase):
             self.reports_page.click_save()
             self.reports_page.wait_for_table_to_load()
             self.reports_page.wait_for_spinner_to_end()
+            self.reports_page.wait_for_report_generation(self.TEST_REPORT_EDIT)
             self.reports_page.click_report(self.TEST_REPORT_EDIT)
             self.reports_page.wait_for_spinner_to_end()
 
@@ -235,6 +239,11 @@ class TestReport(TestBase):
             assert self.reports_page.is_frequency_set(ReportFrequency.monthly)
             assert self.reports_page.get_email_subject() == new_subject
             assert self.reports_page.get_saved_view() == self.TEST_REPORT_EDIT_QUERY1
+
+            self.reports_page.click_send_email()
+            self.reports_page.find_email_sent_toaster()
+            mail_content = smtp_service.get_email_first_csv_content()
+            assert len(mail_content.splitlines()) == 11
 
     def test_read_only_click_add_scheduling(self):
         smtp_service = SMTPService()
