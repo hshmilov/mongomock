@@ -59,6 +59,11 @@ class PluginService(WeaveService):
             EntityType.Devices: self.db.client['aggregator']['devices_db'],
         }
 
+        self._entity_views_map: Dict[EntityType, Collection] = {
+            EntityType.Users: self.db.client['gui']['user_views'],
+            EntityType.Devices: self.db.client['gui']['device_views'],
+        }
+
     @property
     def volumes_override(self):
         libs = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'axonius-libs', 'src', 'libs'))

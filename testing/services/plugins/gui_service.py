@@ -64,8 +64,10 @@ class GuiService(PluginService, UpdatablePluginMixin):
             self._update_schema_version_12()
         if self.db_schema_version < 13:
             self._update_schema_version_13()
+        if self.db_schema_version < 14:
+            self._update_schema_version_14()
 
-        if self.db_schema_version != 13:
+        if self.db_schema_version != 14:
             print(f'Upgrade failed, db_schema_version is {self.db_schema_version}')
 
     def _update_schema_version_1(self):
@@ -467,6 +469,30 @@ class GuiService(PluginService, UpdatablePluginMixin):
             self.db_schema_version = 13
         except Exception as e:
             print(f'Exception while upgrading gui db to version 13. Details: {e}')
+
+    def _update_schema_version_14(self):
+        """
+        For version 2.7, update all history views' pageSize to 20
+        """
+        print('Upgrade to schema 14')
+        try:
+            self._entity_views_map[EntityType.Users].update_many({
+                'query_type': 'history'
+            }, {
+                '$set': {
+                    'view.pageSize': 20
+                }
+            })
+            self._entity_views_map[EntityType.Devices].update_many({
+                'query_type': 'history'
+            }, {
+                '$set': {
+                    'view.pageSize': 20
+                }
+            })
+            self.db_schema_version = 14
+        except Exception as e:
+            print(f'Exception while upgrading gui db to version 14. Details: {e}')
 
     def _update_default_locked_actions(self, new_actions):
         """
