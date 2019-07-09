@@ -4543,7 +4543,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         """
         logger.info('Starting to generate report')
         generator_params = {}
-        space_ids = report['spaces'] or []
+        space_ids = report.get('spaces') or []
         generator_params['dashboard'] = self._get_dashboard(space_ids=space_ids, exclude_personal=True)
         generator_params['adapters'] = self._get_adapter_data(report['adapters']) if report.get('adapters') else None
         generator_params['default_sort'] = self._system_settings['defaultSort']
