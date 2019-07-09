@@ -310,7 +310,7 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
             if "socket connection error while opening: timed out" in str(e).lower():
                 additional_msg = "connection timed out"
             elif 'invalid server address' in str(e).lower():
-                additional_message = 'Invalid server address'
+                additional_msg = 'Invalid server address'
             elif 'ldapinvalidcredentialsresult' in str(e).lower():
                 additional_msg = 'Invalid credentials'
             else:
