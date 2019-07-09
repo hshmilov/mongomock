@@ -4522,16 +4522,18 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
 
         attachments_paths = []
         gridfs_connection = gridfs.GridFS(db_connection[GUI_PLUGIN_NAME])
-        for attachment_uuid in report.get('attachments'):
-            try:
-                with gridfs_connection.get(ObjectId(attachment_uuid)) as attachment_content:
-                    attachment_path = f'/tmp/{attachment_content.name}'
-                    with open(attachment_path, 'wb') as output_file:
-                        for chunk in iter(attachment_content.readchunk, b''):
-                            output_file.write(chunk)
-                    attachments_paths.append(attachment_path)
-            except Exception:
-                logger.error(f'failed to retrieve attachment {attachment_uuid}')
+        attachments = report.get('attachments')
+        if attachments:
+            for attachment_uuid in attachments:
+                try:
+                    with gridfs_connection.get(ObjectId(attachment_uuid)) as attachment_content:
+                        attachment_path = f'/tmp/{attachment_content.name}'
+                        with open(attachment_path, 'wb') as output_file:
+                            for chunk in iter(attachment_content.readchunk, b''):
+                                output_file.write(chunk)
+                        attachments_paths.append(attachment_path)
+                except Exception:
+                    logger.error(f'failed to retrieve attachment {attachment_uuid}')
         with gridfs_connection.get(ObjectId(uuid)) as report_content:
             open(report_path, 'wb').write(report_content.read())
             return report_path, attachments_paths
