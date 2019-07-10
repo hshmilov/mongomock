@@ -64,6 +64,11 @@ class CoreService(PluginService, UpdatablePluginMixin):
 
             plugins_mapping = defaultdict(lambda: defaultdict(list))
             for x in registered_plugins:
+                if NODE_ID not in x:
+                    # This is a plugin that was not seen for an extremely large time
+                    print(f'Deprecating {x[PLUGIN_UNIQUE_NAME]}')
+                    self.db.deprecate_a_leftover_db(x[PLUGIN_UNIQUE_NAME])
+                    continue
                 plugins_mapping[x[NODE_ID]][x[PLUGIN_NAME]].append(x)
 
             for node_id, node_plugins in plugins_mapping.items():
