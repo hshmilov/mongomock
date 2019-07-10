@@ -109,7 +109,7 @@ class RESTConnection(ABC):
             if collision:
                 log_metric(logger, metric_name=COLLISION_MESSAGE, metric_value=msg)
         except Exception:
-            logger.exception(f'failed to check for collision')
+            logger.warning(f'failed to check for collision', exc_info=True)
 
     def connect(self):
         self.check_for_collision_safe()

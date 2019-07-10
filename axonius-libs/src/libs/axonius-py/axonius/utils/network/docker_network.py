@@ -12,15 +12,18 @@ logger = logging.getLogger(f'axonius.{__name__}')
 
 COLLISION_MESSAGE = 'ADDR_COLLISION_DETECTED'
 
-
-def get_docker_ipv4_interface():
-    # we have ['lo', 'eth0', 'ethwe'] and eth0 represents docker
-    return netifaces.ifaddresses('eth0')[netifaces.AF_INET][0]
+ADDR = 'addr'
+NETMASK = 'netmask'
 
 
-def get_weave_ipv4_interface():
-    # we have ['lo', 'eth0', 'ethwe'] and ethwe represents weave
-    return netifaces.ifaddresses('ethwe')[netifaces.AF_INET][0]
+def get_ipv4_interfaces():
+    names = netifaces.interfaces()
+    for ifname in names:
+        iface = netifaces.ifaddresses(ifname).get(netifaces.AF_INET)
+        if iface and len(iface) > 0:
+            for network in iface:
+                if ADDR in network and NETMASK in network:
+                    yield ifname, network
 
 
 def get_network_from_interface(iface: dict) -> ipaddress.IPv4Network:
@@ -32,18 +35,16 @@ def get_network_from_interface(iface: dict) -> ipaddress.IPv4Network:
 def has_addr_collision(domain):
     try:
 
-        docker_net = get_network_from_interface(get_docker_ipv4_interface())
-        weaver_net = get_network_from_interface(get_weave_ipv4_interface())
+        for ifname, iface in get_ipv4_interfaces():
 
-        host_part_of_domain = parse_url(domain).host
-        domain_ip = socket.gethostbyname(host_part_of_domain)
-        domain_ip_net = ipaddress.IPv4Network(domain_ip)
+            net = get_network_from_interface(iface)
 
-        if docker_net.overlaps(domain_ip_net):
-            return True, f'{domain_ip_net} overlapped with docker network {docker_net}'
+            host_part_of_domain = parse_url(domain).host
+            domain_ip = socket.gethostbyname(host_part_of_domain)
+            domain_ip_net = ipaddress.IPv4Network(domain_ip)
 
-        if weaver_net.overlaps(domain_ip_net):
-            return True, f'{domain_ip_net} overlapped with weave network {weaver_net}'
+            if net.overlaps(domain_ip_net):
+                return True, f'{domain_ip_net} overlapped with network {net} {ifname}:{netifaces.ifaddresses(ifname)}'
 
     except Exception as e:
         logger.exception(f'failed to check collision for domain {domain} {netifaces.interfaces()} {e}')
