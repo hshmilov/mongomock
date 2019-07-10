@@ -196,7 +196,8 @@ class BitsightAdapter(ScannerAdapterBase):
                         last_seen, observation, observation_raw = port_values
                         if not last_seen_ip or last_seen > last_seen_ip:
                             last_seen_ip = last_seen
-                        device.add_nic(ips=[ip], port=port)
+                        device.add_open_port(protocol='TCP', port_id=port)
+                        device.add_nic(ips=[ip])
                         device.observations.append(observation)
                         raw_data[port] = observation_raw
                         try:
