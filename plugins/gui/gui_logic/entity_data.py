@@ -55,10 +55,14 @@ def get_entity_data(entity_type: EntityType, entity_id, history_date: datetime =
             item['data'] = [{**note, **{'user_id': str(note['user_id'])}} for note in item['data']]
 
     def _filter_long_data(data):
+        if not isinstance(data, dict):
+            return data
         new_data = {}
         for k, v in data.items():
             if isinstance(v, dict):
                 new_data[k] = _filter_long_data(v)
+            if isinstance(v, list):
+                new_data[k] = [_filter_long_data(x) for x in v if not isinstance(x, bytes)]
             elif isinstance(v, str) and len(v) > 128:
                 new_data[k] = f'{v[:128]}...'
             elif not isinstance(v, bytes):
