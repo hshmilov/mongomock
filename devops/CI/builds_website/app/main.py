@@ -65,7 +65,7 @@ def prepare_flask():
     blueprint = make_slack_blueprint(
         client_id=settings.credentials['slack']['data']['client_id'],
         client_secret=settings.credentials['slack']['data']['client_secret'],
-        scope=['identity.basic'],
+        scope='identity.basic,identity.email',
     )
     flask_app.register_blueprint(blueprint, url_prefix='/login')
 

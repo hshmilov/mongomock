@@ -2,7 +2,7 @@ import logging
 
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.exception import RESTException
-from cycognito_adapter.consts import DEVICE_PER_PAGE, MAX_NUMBER_OF_DEVICES
+from cycognito_adapter.consts import DEVICE_PER_PAGE, MAX_NUMBER_OF_PAGES
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -34,18 +34,18 @@ class CycognitoConnection(RESTConnection):
                                           'offset': offset},
                               body_params=[])
         yield from response
-        offset += DEVICE_PER_PAGE
-        while offset < MAX_NUMBER_OF_DEVICES:
+        offset += 1
+        while offset < MAX_NUMBER_OF_PAGES:
             try:
                 response = self._post(f'assets/ip',
                                       url_params={'key': self._apikey,
                                                   'count': DEVICE_PER_PAGE,
                                                   'offset': offset},
                                       body_params=[])
-                if not response or len(response) < DEVICE_PER_PAGE:
+                if not response:
                     break
                 yield from response
-                offset += DEVICE_PER_PAGE
+                offset += 1
             except Exception:
                 logger.exception(f'Problem at offset {offset}')
                 break

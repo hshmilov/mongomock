@@ -30,6 +30,7 @@ class CycognitoAdapter(ScannerAdapterBase):
         locations = ListField(str, 'Locations')
         alive = Field(bool, 'Alive')
         security_rating = Field(str, 'Security Rating')
+        owned_by = Field(str, 'Owned By')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -153,6 +154,7 @@ class CycognitoAdapter(ScannerAdapterBase):
                     except Exception:
                         logger.exception(f'Problem adding device open port {open_port_raw}')
             device.at_risk = bool(device_raw.get('at-risk'))
+            device.owned_by = device_raw.get('owned-by')
             device.set_raw(device_raw)
             return device
         except Exception:
