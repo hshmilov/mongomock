@@ -35,7 +35,7 @@ class UpdatablePluginMixin:
         print(f'upgrade to schema {version}')
         try:
             db = self.db.client
-            for x in [x for x in db.database_names() if x.startswith(self.plugin_name)]:
+            for x in [x for x in db.database_names() if x != self.plugin_name and x.startswith(self.plugin_name)]:
                 to_call(db[x])
             self.db_schema_version = version
         except Exception as e:
