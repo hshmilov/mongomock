@@ -153,6 +153,8 @@ class SolarwindsOrionAdapter(AdapterBase, Configurable):
         if not device_raw.get('MAC') and not device_raw.get('DisplayName'):
             logger.debug(f'Bad device with no mac {device_raw}')
             return None
+        if self.__fetch_mac_ipam and not device_raw.get('MAC'):
+            return None
         device.id = (device_raw.get('MAC') or '') + '_' + (device_raw.get('DisplayName') or '')
         ips = [device_raw.get('IPAddress')] if device_raw.get('IPAddress') else None
         device.hostname = device_raw.get('DhcpClientName')
@@ -290,10 +292,16 @@ class SolarwindsOrionAdapter(AdapterBase, Configurable):
                     'name': 'fetch_ipam',
                     'title': 'Fetch IPAM',
                     'type': 'bool'
+                },
+                {
+                    'name': 'fetch_mac_ipam',
+                    'title': 'Fetch IPAM Only If MAC Exists',
+                    'type': 'bool'
                 }
             ],
             'required': [
-                'fetch_ipam'
+                'fetch_ipam',
+                'fetch_mac_ipam'
             ],
             'pretty_name': 'Solarwinds Orion Configuration',
             'type': 'array'
@@ -302,8 +310,10 @@ class SolarwindsOrionAdapter(AdapterBase, Configurable):
     @classmethod
     def _db_config_default(cls):
         return {
-            'fetch_ipam': False
+            'fetch_ipam': False,
+            'fetch_mac_ipam': False
         }
 
     def _on_config_update(self, config):
         self.__fetch_ipam = config['fetch_ipam']
+        self.__fetch_mac_ipam = config['fetch_mac_ipam']

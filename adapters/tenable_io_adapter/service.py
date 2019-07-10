@@ -38,17 +38,36 @@ class TenableIoAdapter(ScannerAdapterBase, Configurable):
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
 
-    @add_rule('add_ips_to_target_group', methods=['POST'])
-    def add_ips_to_asset(self):
+    @add_rule('create_asset', methods=['POST'])
+    def create_asset(self):
         if self.get_method() != 'POST':
             return return_error('Method not supported', 405)
-        tenable_sc_dict = self.get_request_data_as_object()
+        tenable_io_dict = self.get_request_data_as_object()
         success = False
         try:
             for client_id in self._clients:
                 conn = self.get_connection(self._get_client_config_by_client_id(client_id))
                 with conn:
-                    result_status = conn.add_ips_to_target_group(tenable_sc_dict)
+                    result_status = conn.create_asset(tenable_io_dict)
+                    success = success or result_status
+                    if success is True:
+                        return '', 200
+        except Exception as e:
+            logger.exception('Got exception while adding to taget group')
+            return str(e), 400
+        return 'Failure', 400
+
+    @add_rule('add_ips_to_target_group', methods=['POST'])
+    def add_ips_to_asset(self):
+        if self.get_method() != 'POST':
+            return return_error('Method not supported', 405)
+        tenable_io_dict = self.get_request_data_as_object()
+        success = False
+        try:
+            for client_id in self._clients:
+                conn = self.get_connection(self._get_client_config_by_client_id(client_id))
+                with conn:
+                    result_status = conn.add_ips_to_target_group(tenable_io_dict)
                     success = success or result_status
                     if success is True:
                         return '', 200

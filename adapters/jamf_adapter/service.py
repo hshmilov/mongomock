@@ -374,6 +374,10 @@ class JamfAdapter(AdapterBase, Configurable):
                             for partition in partitions:
                                 if not partition:
                                     continue
+                                is_encrypted = None
+                                filevault2_status = partition.get('filevault2_status')
+                                if filevault2_status:
+                                    is_encrypted = filevault2_status == 'Encrypted'
                                 total_size = partition.get('partition_capacity_mb')
                                 if total_size:
                                     total_size = int(total_size) / 1024.0
@@ -381,7 +385,9 @@ class JamfAdapter(AdapterBase, Configurable):
                                 if free_size:
                                     free_size = int(free_size) / 1024.0
                                 if any([free_size, total_size]):
-                                    device.add_hd(total_size=total_size, free_size=free_size)
+                                    device.add_hd(total_size=total_size, free_size=free_size,
+                                                  is_encrypted=is_encrypted,
+                                                  device=partition.get('name'))
                         except Exception:
                             logger.exception(f"couldn't parse drive: {drive}")
                     active_directory_status = hardware.get('active_directory_status') or 'Not Bound'

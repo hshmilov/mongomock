@@ -66,8 +66,10 @@ class GuiService(PluginService, UpdatablePluginMixin):
             self._update_schema_version_13()
         if self.db_schema_version < 14:
             self._update_schema_version_14()
+        if self.db_schema_version < 15:
+            self._update_schema_version_15()
 
-        if self.db_schema_version != 14:
+        if self.db_schema_version != 15:
             print(f'Upgrade failed, db_schema_version is {self.db_schema_version}')
 
     def _update_schema_version_1(self):
@@ -469,6 +471,11 @@ class GuiService(PluginService, UpdatablePluginMixin):
             self.db_schema_version = 13
         except Exception as e:
             print(f'Exception while upgrading gui db to version 13. Details: {e}')
+
+    def _update_schema_version_15(self):
+        print('Upgrade to schema 15')
+        self._update_default_locked_actions(['tenable_io_create_asset'])
+        self.db_schema_version = 15
 
     def _update_schema_version_14(self):
         """

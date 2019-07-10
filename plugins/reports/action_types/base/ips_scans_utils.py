@@ -23,7 +23,7 @@ def get_ips_from_view(current_result, fetch_public_ips, fetch_private_ips):
                                     ips.add(ip)
                                 elif fetch_public_ips and not is_private:
                                     ips.add(ip)
-            results.append(EntityResult(entry['internal_axon_id'], True, 'sucesss'))
+            results.append(EntityResult(entry['internal_axon_id'], True, 'success'))
         except Exception:
             logger.exception(f'Failed adding nic entry {entry}')
             results.append(EntityResult(entry['internal_axon_id'], False, 'Unexpected Error'))

@@ -10,6 +10,7 @@ from axonius.types.correlation import CorrelationReason
 logger = logging.getLogger(f'axonius.{__name__}')
 
 NORMALIZED_MAIL = 'normalized_mail'
+BAD_USER_NAMES = ['NULL NULL']
 
 
 def get_ad_upn(adapter_data):
@@ -21,7 +22,7 @@ def get_ad_upn(adapter_data):
 
 def get_username(adapter_data):
     username = adapter_data['data'].get('username')
-    if username:
+    if username and username not in BAD_USER_NAMES:
         return username.lower().strip()
     return None
 

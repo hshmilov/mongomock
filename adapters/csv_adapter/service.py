@@ -21,6 +21,7 @@ logger = logging.getLogger(f'axonius.{__name__}')
 
 DEVICES_NEEDED_FIELDS = ['id', 'serial', 'mac_address', 'hostname', 'name']
 USERS_NEEDED_FIELDS = ['id', 'username', 'mail', 'name']
+SW_NEEDED_FIELDS = ['hostname', 'installed_sw_name']
 
 
 # pylint: disable=R1702,R0201,R0912,R0915,R0914
@@ -89,8 +90,15 @@ class CsvAdapter(AdapterBase):
         csv_dict = make_dict_from_csv(csv_data)
         fields = get_csv_field_names(csv_dict.fieldnames)
         is_users_csv = client_config.get('is_users_csv', False)
+        is_installed_sw = client_config.get('is_installed_sw', False)
         if is_users_csv:
             csv_needed_fields = USERS_NEEDED_FIELDS
+        elif is_installed_sw:
+            csv_needed_fields = SW_NEEDED_FIELDS
+            for id_field in csv_needed_fields:
+                if id_field not in fields:
+                    logger.error(f'Bad fields names {str(csv_dict.fieldnames)}')
+                    raise Exception(f'Missing Software Fields')
         else:
             csv_needed_fields = DEVICES_NEEDED_FIELDS
         if not any(id_field in fields for id_field in csv_needed_fields):
@@ -106,16 +114,22 @@ class CsvAdapter(AdapterBase):
 
     def _query_devices_by_client(self, client_name, client_data):
         is_users_csv = client_data.get('is_users_csv', False)
+        is_installed_sw = client_data.get('is_installed_sw', False)
         if is_users_csv:
             return None
-        return self.create_csv_info_from_client_config(client_data)
+        return self.create_csv_info_from_client_config(client_data), is_installed_sw
 
     def _clients_schema(self):
         return {
             'items': [
                 {
                     'name': 'is_users_csv',
-                    'title': 'Users CSV File',
+                    'title': 'Is Users CSV File',
+                    'type': 'bool'
+                },
+                {
+                    'name': 'is_installed_sw',
+                    'title': 'Is Installed Software File',
                     'type': 'bool'
                 },
                 {
@@ -206,10 +220,46 @@ class CsvAdapter(AdapterBase):
             except Exception:
                 logger.exception(f'Problem adding user: {str(user_raw)}')
 
+    def _parse_instaleld_sw_file(self, csv_data, file_name):
+        hostname_sw_dict = dict()
+        fields = get_csv_field_names(csv_data.fieldnames)
+        for device_raw in csv_data:
+            try:
+                vals = {field_name: device_raw.get(fields[field_name][0]) for field_name in fields}
+                hostname = vals.get('hostname')
+                if hostname not in hostname_sw_dict:
+                    hostname_sw_dict[hostname] = []
+                installed_sw_name = vals.get('installed_sw_name')
+                installed_sw_version = vals.get('installed_sw_version')
+                installed_sw_vendor = vals.get('installed_sw_vendor')
+                sw_data = (installed_sw_name, installed_sw_version, installed_sw_vendor)
+                hostname_sw_dict[hostname].append(sw_data)
+            except Exception:
+                logger.exception(f'Problem with device raw {device_raw}')
+        for hostname, sw_list in hostname_sw_dict.items():
+            try:
+                device = self._new_device_adapter()
+                device.file_name = file_name
+                for sw_data in sw_list:
+                    installed_sw_name, installed_sw_version, installed_sw_vendor = sw_data
+                    device.add_installed_software(name=installed_sw_name,
+                                                  version=installed_sw_version,
+                                                  vendor=installed_sw_vendor)
+                device.hostname = hostname
+                device.id = file_name + '_' + hostname
+                device.set_raw({})
+                yield device
+            except Exception:
+                logger.exception(f'Problem with hostanme {hostname}')
+
     def _parse_raw_data(self, devices_raw_data):
         if devices_raw_data is None:
             return
-        csv_data, should_parse_all_columns, file_name = devices_raw_data
+        devices_raw_data_inner, is_installed_sw = devices_raw_data
+        csv_data, should_parse_all_columns, file_name = devices_raw_data_inner
+        if is_installed_sw:
+            yield from self._parse_instaleld_sw_file(csv_data, file_name)
+            return
         fields = get_csv_field_names(csv_data.fieldnames)
         if not any(id_field in fields for id_field in DEVICES_NEEDED_FIELDS):
             logger.error(f'Bad devices fields names {str(csv_data.fieldnames)}')

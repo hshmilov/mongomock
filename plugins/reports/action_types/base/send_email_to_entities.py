@@ -71,7 +71,7 @@ class SendEmailToEntities(ActionTypeBase):
                 mail_list = list(mail_list)
                 email = mail_sender.new_email(self._config['mail_subject'], mail_list)
                 email.send(mail_content)
-                results.append(EntityResult(entry['internal_axon_id'], True, 'sucesss'))
+                results.append(EntityResult(entry['internal_axon_id'], True, 'success'))
             except Exception as e:
                 logger.exception(f'Failed sending email to {entry}')
                 results.append(EntityResult(entry['internal_axon_id'], False, f'Unexpected Error: {str(e)}'))

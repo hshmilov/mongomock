@@ -32,6 +32,7 @@ from reports.action_types.base.tenable_sc_add_ips_to_asset import TenableScAddIP
 from reports.action_types.base.untag_all_entities import UntagAllEntitiesAction
 from reports.action_types.base.sentinelone_initiate_scan import SentineloneInitiateScanAction
 from reports.action_types.base.haveibeenpwned_enrichment import HaveibeenpwnedEnrichment
+from reports.action_types.base.tenable_io_create_asset import TenableIoCreateAsset
 
 AllActionTypes: Dict[str, type(ActionTypeBase)] = {
     'create_service_now_computer': ServiceNowComputerAction,
@@ -64,5 +65,6 @@ AllActionTypes: Dict[str, type(ActionTypeBase)] = {
     'shodan_enrichment': ShodanEnrichment,
     'create_service_now_incident_per_entity': ServiceNowIncidentPerEntity,
     'sentinelone_initiate_scan_action': SentineloneInitiateScanAction,
-    'haveibeenpwned_enrichment': HaveibeenpwnedEnrichment
+    'haveibeenpwned_enrichment': HaveibeenpwnedEnrichment,
+    'tenable_io_create_asset': TenableIoCreateAsset
 }

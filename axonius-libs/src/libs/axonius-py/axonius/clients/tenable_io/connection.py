@@ -34,6 +34,35 @@ class TenableIoConnection(RESTConnection):
         else:
             raise RESTException('Missing user/password or api keys')
 
+    # pylint: disable=arguments-differ
+    def _do_request(self, *args, **kwargs):
+        nkwargs = kwargs.copy()
+        nkwargs.pop('raise_for_status', None)
+        nkwargs.pop('return_response_raw', None)
+        nkwargs.pop('use_json_in_response', None)
+        for try_ in range(4):
+            response = super()._do_request(
+                *args,
+                raise_for_status=False,
+                return_response_raw=True,
+                use_json_in_response=False,
+                **nkwargs
+            )
+            if response.status_code == 429:
+                retry_after = int(response.headers.get('retry-after') or 2)
+                logger.info(f'429: Retry After {retry_after}')
+                time.sleep(retry_after)
+                continue
+            break
+        else:
+            raise RESTException(f'Failed to fetch because rate limit')
+        return self._handle_response(response)
+
+    def create_asset(self, tenable_io_dict):
+        self._post('import/assets',
+                   body_params={'assets': [tenable_io_dict],
+                                'source': 'Axonius'})
+
     def add_ips_to_target_group(self, tenable_io_dict):
         target_group_name = tenable_io_dict.get('target_group_name')
         ips = tenable_io_dict.get('ips')
@@ -74,7 +103,7 @@ class TenableIoConnection(RESTConnection):
             raise RESTException('Missing IPS or Tagret Group ID')
         self._post(f'target-groups',
                    body_params={'members': ','.join(ips),
-                                'type': 'user',
+                                'type': 'system',
                                 'name': target_group_name})
         return True
 

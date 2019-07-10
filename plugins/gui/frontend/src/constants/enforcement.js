@@ -44,6 +44,9 @@ export const actionsMeta = {
     tenable_io_add_ips_to_target_group: {
         title: 'Add IPs to Tenable.io Target Group'
     },
+    tenable_io_create_asset: {
+        title: 'Create Tenable.io Asset'
+    },
     tenable_sc_add_ips_to_asset: {
         title: 'Add IPs to Tenable.sc Asset'
     },
@@ -127,7 +130,7 @@ export const actionsMeta = {
     },
     scan_va: {
         title: 'Add Device to VA Scan',
-        items: ['tenable_sc_add_ips_to_asset', 'tenable_io_add_ips_to_target_group', 'scan_with_qualys']
+        items: ['tenable_sc_add_ips_to_asset', 'tenable_io_add_ips_to_target_group', 'tenable_io_create_asset', 'scan_with_qualys']
     },
     patch_device: {
         title: 'Patch Device',

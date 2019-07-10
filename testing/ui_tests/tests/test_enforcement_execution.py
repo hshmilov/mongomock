@@ -50,7 +50,7 @@ class TestEnforcementExecution(TestBase):
 
             def _check_task_finished():
                 self.driver.refresh()
-                time.sleep(0.5)
+                time.sleep(3)
                 try:
                     assert self.enforcements_page.find_task_action_success(RUN_CMD_ACTION_NAME).text == str(1)
                     return True

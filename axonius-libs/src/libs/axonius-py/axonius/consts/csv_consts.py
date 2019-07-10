@@ -9,7 +9,7 @@ IDENTIFIERS = {
     'ip': ['ipaddresstext', 'ip', 'ipaddress', 'ipaddresses', 'ips', 'primaryip'],
     'subnetmask': ['ipsubnetmask'],
     'model': ['model', 'modelid'],
-    'serial': ['serial', 'serialnumber', 'sn', 'hostserialnumber'],
+    'serial': ['serial', 'serialnumber', 'sn', 'hostserialnumber', 'deviceserialnumber'],
     'os': ['os', 'osname', 'osversion', 'operatingsystem', 'osmode'],
     'kernel': ['kernel', 'kernelversion'],
     'manufacturer': ['manufacturer', 'devicemanufacturer'],
@@ -20,7 +20,10 @@ IDENTIFIERS = {
     'domain': ['domain', 'domainname'],
     'username': ['username'],
     'first_name': ['firstname', 'givenname'],
-    'last_name': ['lastname', 'surname', 'sn']
+    'last_name': ['lastname', 'surname', 'sn'],
+    'installed_sw_name': ['softwarename', 'swname'],
+    'installed_sw_version': ['softwareversion', 'swversion'],
+    'installed_sw_vendor': ['softwarevendor', 'swvendor']
 
 }
 
