@@ -46,10 +46,6 @@
           link
           @click="exportCSV"
         >Export CSV</x-button>
-        <x-button
-          link
-          @click="navigateSavedQueries"
-        >Saved Queries</x-button>
       </template>
         <x-table-data
           slot-scope="props"
@@ -153,9 +149,6 @@
       },
       exportCSV () {
         this.fetchContentCSV({ module: this.module })
-      },
-      navigateSavedQueries () {
-        this.$router.push({ path: `/${this.module}/query/saved` })
       },
       clearEc () {
         this.updateView({
