@@ -10,6 +10,8 @@ import json
 from retrying import retry
 import logging
 
+from axonius.utils import datetime
+
 logger = logging.getLogger(f'axonius.{__name__}')
 
 # NVD Information is available from 2002. But we don't necessarily want all of it.
@@ -99,7 +101,11 @@ def update(earliest_year=None, hard=False):
             pass
 
     # Get the current year. If we have no internet at any stage we will throw an exception - on purpose.
-    current_year = get_current_year_online()
+    try:
+        current_year = get_current_year_online()
+    except Exception:
+        logger.exception(f'Warning - could not get year online. Using local year')
+        current_year = datetime.datetime.now().year
 
     # Now, we can start downloading the database files. For each year, check if we need to download (with the cache)
     # and then download and parse it. We also download "Modified", which is the file that contains the last 8 days

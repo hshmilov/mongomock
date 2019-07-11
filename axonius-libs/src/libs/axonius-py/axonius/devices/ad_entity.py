@@ -50,6 +50,7 @@ class ADEntity(object):
     ad_user_principal_name = Field(str, "AD User Principal Name")
     ad_display_name = Field(str, "AD displayName")
     ad_distinguished_name = Field(str, "AD distinguishedName")
+    ad_canonical_name = Field(str, 'AD canonicalName')
     ad_account_expires = Field(datetime.datetime, "AD accountExpires")
     ad_object_class = ListField(str, "AD objectClass")
     ad_object_category = Field(str, "AD objectCategory")

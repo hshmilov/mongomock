@@ -713,7 +713,7 @@ class LdapConnection(object):
         else:
             search_filter = '(&(objectClass=Computer)(!(userAccountControl:1.2.840.113556.1.4.803:=2)))'
 
-        devices_generator = self._ldap_search(search_filter)
+        devices_generator = self._ldap_search(search_filter, attributes=['*', 'canonicalName'])
 
         one_device = None
         devices_count = 0
@@ -756,13 +756,14 @@ class LdapConnection(object):
 
         logger.info(f'LDAP - Starting to get users list')
         if self.domain_version >= LDAP_MINIMUM_PSO_DOMAIN_FUNCTIONALITY_LEVEL:
-            attributes = ['*', 'msDS-ResultantPSO']  # We have to specify it since this is calculated upon request.
+            # We have to specify it since this is calculated upon request.
+            attributes = ['*', 'msDS-ResultantPSO', 'canonicalName']
             try:
                 psos = self.get_password_settings_objects_by_dn()
             except Exception:
                 psos = dict()
         else:
-            attributes = None
+            attributes = ['*', 'canonicalName']
             psos = dict()
         users_generator = self._ldap_search(search_filter, attributes=attributes)
         users_count = 0

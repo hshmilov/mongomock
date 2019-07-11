@@ -517,6 +517,7 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
         ad_entity.ad_member_of = get_member_of_list_from_memberof(raw_data.get("memberOf"))
         ad_entity.ad_managed_by = get_first_object_from_dn(raw_data.get('managedBy'))
         ad_entity.ad_msds_allowed_to_delegate_to = raw_data.get("msDS-AllowedToDelegateTo")
+        ad_entity.ad_canonical_name = raw_data.get('canonicalName')
         ad_entity.figure_out_dial_in_policy(raw_data.get('msNPAllowDialin'))
         ad_entity.figure_out_delegation_policy(raw_data.get("userAccountControl"),
                                                raw_data.get("msDS-AllowedToDelegateTo"))
