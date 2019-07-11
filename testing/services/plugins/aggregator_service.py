@@ -49,8 +49,10 @@ class AggregatorService(PluginService, UpdatablePluginMixin):
             self._update_schema_version_10()
         if self.db_schema_version < 11:
             self._update_schema_version_11()
+        if self.db_schema_version < 12:
+            self._update_schema_version_12()
 
-        if self.db_schema_version != 11:
+        if self.db_schema_version != 12:
             print(f'Upgrade failed, db_schema_version is {self.db_schema_version}')
 
     def __create_capped_collections(self):
@@ -515,6 +517,152 @@ class AggregatorService(PluginService, UpdatablePluginMixin):
         except Exception as e:
             print(f'Could not upgrade aggregator db to version 11. Details: {e}')
             raise
+
+    def _update_schema_version_12(self):
+        """
+        https://axonius.atlassian.net/browse/AX-4520
+        """
+        try:
+            for entity_type in EntityType:
+                entities_db = self._entity_db_map[entity_type]
+
+                plugin_name = 'general_info'
+
+                plugin_unique_names_to_fix = [x
+                                              for x
+                                              in entities_db.distinct('tags.plugin_unique_name')
+                                              if f'{plugin_name}_' in x]
+                if plugin_unique_names_to_fix:
+                    print(f'plugins unique names to fix: {plugin_unique_names_to_fix}')
+
+                for plugin_unique_name in plugin_unique_names_to_fix:
+                    # Find all entities where they have the old (general_info_0) but not the new (general_info)
+                    # and rename "general_info_0" to "general_info"
+                    res = entities_db.update_many({
+                        '$and': [
+                            {
+                                f'tags.{PLUGIN_UNIQUE_NAME}': plugin_unique_name
+                            },
+                            {
+                                f'tags.{PLUGIN_UNIQUE_NAME}': {
+                                    '$ne': plugin_name
+                                }
+                            }
+                        ]
+                    }, {
+                        '$set': {
+                            f'tags.$[i].{PLUGIN_UNIQUE_NAME}': plugin_name
+                        }
+                    }, array_filters=[
+                        {
+                            f'i.{PLUGIN_UNIQUE_NAME}': plugin_unique_name
+                        }
+                    ]
+                    )
+                    print(f'Stage one of fixing general info: {res.matched_count}, modified: {res.modified_count}')
+
+                    # Fix tags.name
+                    res = entities_db.update_many({
+                        f'tags.name': plugin_unique_name
+                    }, {
+                        '$set': {
+                            f'tags.$[i].name': plugin_name
+                        }
+                    }, array_filters=[
+                        {
+                            f'i.name': plugin_unique_name
+                        }
+                    ]
+                    )
+                    print(f'Stage two of fixing general info: {res.matched_count}, modified: {res.modified_count}')
+
+                    # Fix tags.data.users.creation_source_plugin_unique_name
+                    res = entities_db.update_many(
+                        {
+                            f'tags.data.users.creation_source_plugin_unique_name': plugin_unique_name
+                        },
+                        {
+                            '$set': {
+                                f'tags.$.data.users.$[i].creation_source_plugin_unique_name': plugin_name
+                            }
+                        }, array_filters=[
+                            {
+                                f'i.creation_source_plugin_unique_name': plugin_unique_name
+                            }
+                        ])
+                    print(f'Stage three of fixing general info: {res.matched_count}, modified: {res.modified_count}')
+
+                    # Find all entities that were affected already (having both general_info_0 and general_info)
+                    # and simply remove the general_info_0
+                    res = entities_db.update_many({
+                        '$and': [
+                            {
+                                f'tags.{PLUGIN_UNIQUE_NAME}': plugin_unique_name
+                            },
+                            {
+                                f'tags.{PLUGIN_UNIQUE_NAME}': plugin_name
+                            }
+                        ]
+                    }, {
+                        '$pull': {
+                            'tags': {
+                                PLUGIN_UNIQUE_NAME: plugin_unique_name
+                            }
+                        }
+                    })
+                    print(f'Stage four of fixing general info: {res.matched_count}, modified: {res.modified_count}')
+
+                    # Now, the same for adapters:
+
+                    # Find all entities where they have the old (general_info_0) but not the new (general_info)
+                    # and rename "general_info_0" to "general_info"
+                    res = entities_db.update_many({
+                        '$and': [
+                            {
+                                f'adapters.{PLUGIN_UNIQUE_NAME}': plugin_unique_name
+                            },
+                            {
+                                f'adapters.{PLUGIN_UNIQUE_NAME}': {
+                                    '$ne': plugin_name
+                                }
+                            }
+                        ]
+                    }, {
+                        '$set': {
+                            f'adapters.$[i].{PLUGIN_UNIQUE_NAME}': plugin_name,
+                        }
+                    }, array_filters=[
+                        {
+                            f'i.{PLUGIN_UNIQUE_NAME}': plugin_unique_name
+                        }
+                    ]
+                    )
+                    print(f'Stage one for adapters: {res.matched_count}, modified: {res.modified_count}')
+
+                    # Find all entities that were affected already (having both general_info_0 and general_info)
+                    # and simply remove the general_info_0
+                    res = entities_db.update_many({
+                        '$and': [
+                            {
+                                f'adapters.{PLUGIN_UNIQUE_NAME}': plugin_unique_name
+                            },
+                            {
+                                f'adapters.{PLUGIN_UNIQUE_NAME}': plugin_name
+                            }
+                        ]
+                    }, {
+                        '$pull': {
+                            'adapters': {
+                                PLUGIN_UNIQUE_NAME: plugin_unique_name
+                            }
+                        }
+                    })
+                    print(f'Stage two for adapters: {res.matched_count}, modified: {res.modified_count}')
+
+            self.db_schema_version = 12
+        except Exception as e:
+            print(f'Could not upgrade aggregator db to version 12. Details: {e}')
+            traceback.print_exc()
 
     @retry(wait_random_min=2000, wait_random_max=7000, stop_max_delay=60 * 3 * 1000)
     def query_devices(self, adapter_id):
