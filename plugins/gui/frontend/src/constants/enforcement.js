@@ -18,10 +18,13 @@ export const actionsMeta = {
         title: 'Run Linux SSH Scan'
     },
     shodan_enrichment: {
-        title: 'Enrich Device Data from Shodan'
+        title: 'Enrich Device Data with Shodan'
+    },
+    censys_enrichment: {
+        title: 'Enrich Device Data with Censys'
     },
     haveibeenpwned_enrichment: {
-        title: 'Enrich User Data from Have I Been Pwned'
+        title: 'Enrich User Data with Have I Been Pwned'
     },
     carbonblack_isolate: {
         title: 'Isolate in Carbon Black CB Response'
@@ -152,9 +155,9 @@ export const actionsMeta = {
         title: 'Create Incident',
         items: ['create_service_now_incident', 'create_service_now_incident_per_entity', 'create_jira_incident', 'create_sysaid_incident']
     },
-    enrich_device_data: {
-        title: 'Enrich Device and User Data',
-        items: ['shodan_enrichment', 'haveibeenpwned_enrichment'],
+    enrich_device_or_user_data: {
+        title: 'Enrich Device or User Data',
+        items: ['shodan_enrichment', 'censys_enrichment', 'haveibeenpwned_enrichment']
     },
     notify: {
         title: 'Notify',
@@ -174,7 +177,7 @@ export const failCondition = 'failure'
 export const postCondition = 'post'
 
 export const actionCategories = [
-    'deploy_software', 'run_command', 'isolate_edr', 'scan_va','enrich_device_data',
+    'deploy_software', 'run_command', 'isolate_edr', 'scan_va','enrich_device_or_user_data',
     'block_fw', 'create_cmdb_computer', 'manage_directory',
     'notify', 'create_incident', 'axonius'
 ]

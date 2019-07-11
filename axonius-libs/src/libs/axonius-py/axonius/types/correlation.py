@@ -16,6 +16,7 @@ class CorrelationReason(Enum):
     ServiceNowCreation = auto()
     LinuxSSHScan = auto()
     ShodanEnrichment = auto()
+    CensysEnrichment = auto()
     HaveibeenpwnedEnrichment = auto()
 
 

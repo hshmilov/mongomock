@@ -1,6 +1,8 @@
 import logging
 import time
 
+from json.decoder import JSONDecodeError
+
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.exception import RESTException
 from axonius.adapter_exceptions import ClientConnectionException
@@ -67,7 +69,8 @@ class CensysConnection(RESTConnection):
 
     def _get_view_details(self, result_id):
         """
-        Returns the full/raw details for a given Censys search result given a type and id.
+        Returns the full/raw details for a given Censys search result given a type and id. If no
+        information is known to Censys, don't raise an exception for the resulting 404.
 
         :return: A JSON blob representing the full Censys document corresponding to the type/id
         """
@@ -78,7 +81,18 @@ class CensysConnection(RESTConnection):
         if self.free_tier:
             time.sleep(1.5)
         time.sleep(1)
-        return self._get(f'view/{self.search_type}/{result_id}', do_basic_auth=True)
+        response = self._get(f'view/{self.search_type}/{result_id}',
+                             do_basic_auth=True,
+                             raise_for_status=False,
+                             use_json_in_response=False,
+                             return_response_raw=True)
+        if response.status_code != 200:
+            try:
+                if 'error' in response.json():
+                    return response.json()
+            except JSONDecodeError as e:
+                pass
+        return self._handle_response(response)
 
     # Use normal Censys workflow of Search API --> results --> View API --> result details
     # pylint: disable=arguments-differ

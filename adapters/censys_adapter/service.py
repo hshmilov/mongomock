@@ -7,10 +7,13 @@ from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection, RESTException
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.utils.files import get_local_config_file
+from axonius.utils.datetime import parse_date
 from axonius.clients.censys.connection import CensysConnection
+from axonius.clients.censys.consts import (ADAPTER_SCHEMA)
 from axonius.smart_json_class import SmartJsonClass
 from axonius.fields import Field, ListField
 from censys_adapter.client_id import get_client_id
+from censys_adapter.execution import CensysExecutionMixIn
 
 
 logger = logging.getLogger(f'axonius.{__name__}')
@@ -54,7 +57,7 @@ class CensysPort(SmartJsonClass):
     # protocol_raw = Field(str, 'Protocol')   # This will be implemented soon. We don't have much data on possibilities
 
 
-class CensysAdapter(ScannerAdapterBase):
+class CensysAdapter(CensysExecutionMixIn, ScannerAdapterBase):
     class MyDeviceAdapter(DeviceAdapter):
         # pylint: disable=R0902
         protocols = ListField(str, 'Protocols')
@@ -82,7 +85,7 @@ class CensysAdapter(ScannerAdapterBase):
                                   domain_preferred=client_config.get('domain'),
                                   free_tier=not client_config.get('is_paid_tier'),
                                   search_type=client_config['search_type'],
-                                  https_proxy=client_config.get('https_proxy'),) as connection:
+                                  https_proxy=client_config.get('https_proxy')) as connection:
 
                 # Ensure search type is valid
                 if connection.search_type not in ['ipv4', 'websites']:
@@ -119,57 +122,7 @@ class CensysAdapter(ScannerAdapterBase):
 
         :return: JSON schema
         """
-        return {
-            'items': [
-                {
-                    'name': 'domain',
-                    'title': 'Censys Domain',
-                    'type': 'string',
-                    'default': 'censys.io'
-                },
-                {
-                    'name': 'is_paid_tier',
-                    'title': 'Is Paid Tier',
-                    'type': 'bool'
-                },
-                {
-                    'name': 'api_id',
-                    'title': 'API ID',
-                    'type': 'string'
-                },
-                {
-                    'name': 'api_secret',
-                    'title': 'API Secret',
-                    'type': 'string',
-                    'format': 'password'
-                },
-                {
-                    'name': 'search_query',
-                    'title': 'Search Query',
-                    'type': 'string'
-                },
-                {
-                    'name': 'search_type',
-                    'title': 'Search Type',
-                    'type': 'string',
-                    'enum': ['ipv4', 'websites']
-                },
-                {
-                    'name': 'https_proxy',
-                    'title': 'HTTPS Proxy',
-                    'type': 'string'
-                }
-            ],
-            'required': [
-                'domain',
-                'api_id',
-                'api_secret',
-                'search_type',
-                'search_query',
-                'is_paid_tier'
-            ],
-            'type': 'array'
-        }
+        return ADAPTER_SCHEMA
 
     def _create_device(self, device_raw):
         try:
@@ -188,6 +141,7 @@ class CensysAdapter(ScannerAdapterBase):
                 return None
 
             device.id = device_id
+            device.last_seen = parse_date(device_raw.get('updated_at'))
             device.censys_tags = device_raw.get('tags')
             device.protocols = device_raw.get('protocols')
             if device_raw.get('ports'):
