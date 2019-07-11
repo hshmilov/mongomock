@@ -23,7 +23,7 @@ class GuiAliveTask(WatchdogTask):
             time.sleep(SLEEP_SECONDS)
             self.report_info(f'{self.name} is running')
             try:
-                response = requests.get(f'https://localhost/api/version', verify=False, timeout=(10, 30))
+                response = requests.get(f'https://localhost/api/signup', verify=False, timeout=(10, 30))
                 if response.status_code != 200:
                     self.report_error(f'{ERROR_MSG} {response.status_code} {response.text}')
             except Exception as e:
