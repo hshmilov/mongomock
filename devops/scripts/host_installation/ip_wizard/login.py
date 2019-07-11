@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 import ipaddress
 import os
+import netifaces
 # pylint: disable=deprecated-module
 import string
 import sys
+from pprint import pprint
 
 INTERFACE_FILTER_LIST = ['lo', 'docker', 'veth', 'weave', 'datapath', 'vxlan']
 
@@ -116,7 +118,7 @@ def choose_interface():
     # print the interfaces to user.
     print('interface list:')
     for idx, val in enumerate(interface_list):
-        print(f'({idx+1}) {val} ')
+        print(f'({idx + 1}) {val} ')
 
     while not _represents_int(response) or int(response) - 1 < 0 or int(response) - 1 > len(
             interface_list) - 1:
@@ -124,7 +126,19 @@ def choose_interface():
     return interface_list[int(response) - 1]
 
 
+def print_banner():
+    print(f'The current network interfaces and addresses are\n')
+    for iface in netifaces.interfaces():
+        if not any(iface.startswith(x) for x in INTERFACE_FILTER_LIST):
+            addrs = netifaces.ifaddresses(iface)
+            if addrs:
+                print(f'{iface}:')
+                pprint(addrs)
+                print()
+
+
 def main():
+    print_banner()
     chosen_interface = choose_interface()
     interfaces = generate_interfaces(chosen_interface)
 

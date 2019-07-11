@@ -109,6 +109,7 @@ pip3 install virtualenv
 pip2 install --upgrade setuptools
 pip3 install --upgrade setuptools
 pip3 install ipython
+pip3 install netifaces==0.10.9
 echo "Installing docker-ce..."
 _wait_for_apt install -yq docker-ce=18.06.3~ce~3-0~ubuntu
 systemctl enable docker
