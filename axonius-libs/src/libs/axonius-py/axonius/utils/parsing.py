@@ -885,6 +885,8 @@ def get_normalized_hostname_str(adapter_device):
 def get_ad_name_or_azure_display_name(adapter_device):
     name = adapter_device['data'].get('ad_name') or adapter_device['data'].get('azure_display_name')
     if isinstance(name, str):
+        if name.endswith('$'):
+            name = name[:-1]
         return name.lower()
 
 

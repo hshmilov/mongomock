@@ -90,8 +90,6 @@ adapters/juniper_adapter/py-space-platform/jnpr/space/test/test_software_managem
 adapters/juniper_adapter/py-space-platform/jnpr/space/test/test_tag_1.py
 adapters/juniper_adapter/py-space-platform/jnpr/space/test/test_user_management.py
 adapters/junos_adapter/service.py
-adapters/kaseya_adapter/connection.py
-adapters/kaseya_adapter/service.py
 adapters/minerva_adapter/connection.py
 adapters/minerva_adapter/service.py
 adapters/mobileiron_adapter/connection.py

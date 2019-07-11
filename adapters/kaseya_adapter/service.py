@@ -14,6 +14,7 @@ logger = logging.getLogger(f'axonius.{__name__}')
 
 
 class KaseyaAdapter(AdapterBase):
+    # pylint: disable=too-many-instance-attributes
     class MyDeviceAdapter(DeviceAdapter):
         agent_version = Field(str, 'Agent Version')
         agent_status = Field(str, 'Agent Status')
@@ -30,8 +31,11 @@ class KaseyaAdapter(AdapterBase):
 
     def _connect_client(self, client_config):
         try:
-            connection = KaseyaConnection(domain=client_config['Kaseya_Domain'], verify_ssl=client_config['verify_ssl'],
-                                          username=client_config['username'], password=client_config['password'])
+            connection = KaseyaConnection(domain=client_config['Kaseya_Domain'],
+                                          verify_ssl=client_config['verify_ssl'],
+                                          username=client_config['username'],
+                                          password=client_config['password'],
+                                          https_proxy=client_config.get('https_proxy'))
             with connection:
                 pass  # check that the connection credentials are valid
             return connection
@@ -81,6 +85,11 @@ class KaseyaAdapter(AdapterBase):
                     'name': 'verify_ssl',
                     'title': 'Verify SSL',
                     'type': 'bool'
+                },
+                {
+                    'name': 'https_proxy',
+                    'title': 'HTTPS Proxy',
+                    'type': 'string'
                 }
             ],
             'required': [
@@ -92,6 +101,7 @@ class KaseyaAdapter(AdapterBase):
             'type': 'array'
         }
 
+    # pylint: disable=too-many-branches, too-many-statements, too-many-locals, too-many-nested-blocks
     def _parse_raw_data(self, devices_raw_data):
         for asset_raw, agents_id_dict in devices_raw_data:
             agent_raw = ''
@@ -104,11 +114,11 @@ class KaseyaAdapter(AdapterBase):
                     continue
                 device.id = str(device_id)
                 device.name = asset_raw.get('AssetName')
-                device.figure_os(asset_raw.get('OSName', ''))
+                device.figure_os(asset_raw.get('OSName'))
                 device.hostname = asset_raw.get('HostName', agent_raw.get('ComputerName'))
                 try:
                     last_used_users = agent_raw.get('LastLoggedInUser')
-                    if last_used_users is not None:
+                    if last_used_users:
                         device.last_used_users = last_used_users.split(',')
                 except Exception:
                     logger.exception(f'Problem with gettng users in {agent_raw}')
@@ -131,9 +141,30 @@ class KaseyaAdapter(AdapterBase):
                 mac_addresses = [mac_address_raw.strip() for mac_address_raw in
                                  asset_raw.get('MACAddresses', '').split(',')]
                 device.add_ips_and_macs(mac_addresses, ip_addresses)
-                device.agent_id = str(agent_raw.get('AgentId', ''))
-                device.agent_version = str(agent_raw.get('AgentVersion', ''))
-                device.agent_status = str(agent_raw.get('Online', ''))
+                device.agent_id = agent_raw.get('AgentId')
+                apps_raw = agent_raw.get('apps_raw')
+                if isinstance(apps_raw, list):
+                    for app_raw in apps_raw:
+                        try:
+                            name = app_raw.get('ProductName')
+                            version = app_raw.get('Version')
+                            vendor = app_raw.get('Manufacturer')
+                            description = app_raw.get('Description')
+                            path = None
+                            try:
+                                path = (app_raw.get('DirectoryPath') or '') + '\\' + \
+                                       (app_raw.get('ApplicationName') or '')
+                            except Exception:
+                                logger.exception(f'Problem with getting path for {app_raw}')
+                            device.add_installed_software(name=name,
+                                                          version=version,
+                                                          vendor=vendor,
+                                                          description=description,
+                                                          path=path)
+                        except Exception:
+                            logger.exception(f'Problem getting app {app_raw}')
+                device.agent_version = agent_raw.get('AgentVersion')
+                device.agent_status = agent_raw.get('Online')
                 asset_raw['agent_raw'] = agent_raw
                 try:
                     domain = agent_raw.get('DomainWorkgroup')

@@ -123,7 +123,8 @@ class AbsoluteAdapter(AdapterBase):
                 if not device_id:
                     logger.warning(f'Bad device with no id {device_raw}')
                     continue
-                device.id = device_id + '_' + (device_raw.get('fullSystemName') or '')
+                device.id = device_id + '_' + (device_raw.get('fullSystemName') or '') + '_' + \
+                    + (device_raw.get('systemName') or '')
                 hostname = device_raw.get('systemName')
                 device.full_hostname = device_raw.get('fullSystemName')
                 if hostname and hostname.lower().endswith('.local'):
