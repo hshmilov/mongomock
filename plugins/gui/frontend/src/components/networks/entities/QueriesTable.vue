@@ -57,7 +57,7 @@
     },
     data () {
       return {
-        selection: { ids: [] },
+        selection: { ids: [], include: true },
         searchValue: ''
       }
     },
@@ -131,7 +131,7 @@
       removeQuery () {
         this.removeData({ module: this.stateLocation, selection: this.selection })
         this.selection = {
-          ids: []
+          ids: [], include: true
         }
       },
       onSearchConfirm () {

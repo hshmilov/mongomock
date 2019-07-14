@@ -31,6 +31,7 @@
       id-field="internal_axon_id"
       :expandable="true"
       :on-click-row="configEntity"
+      @input="updateSelection"
       @data="onTableData"
     >
       <template slot="actions">
@@ -38,6 +39,7 @@
           v-show="hasSelection"
           :module="module"
           :entities="selection"
+          :entities-meta="selectionLabels"
           @done="updateEntities"
         />
         <!-- Modal for selecting fields to be presented in table, including adapters hierarchy -->
@@ -47,11 +49,11 @@
           @click="exportCSV"
         >Export CSV</x-button>
       </template>
-        <x-table-data
-          slot-scope="props"
-          :module="module"
-          v-bind="props"
-        />
+      <x-table-data
+        slot-scope="props"
+        :module="module"
+        v-bind="props"
+      />
     </x-table>
   </div>
 </template>
@@ -95,6 +97,15 @@
         },
         ecFilter (state) {
           return state[this.module].view.ecFilter
+        },
+        currentSelectionLabels (state) {
+          if (!this.selection.include) return {}
+          return state[this.module].content.data
+                  .filter(entity => this.selection.ids.includes(entity.internal_axon_id))
+                  .reduce((entityToLabels, entity) => {
+                    entityToLabels[entity.internal_axon_id] = entity.labels
+                    return entityToLabels
+                  }, {})
         }
       }),
       historical: {
@@ -119,7 +130,8 @@
     },
     data () {
       return {
-        selection: { ids: [] }
+        selection: { ids: [], include: true },
+        selectionLabels: {}
       }
     },
     methods: {
@@ -142,10 +154,14 @@
           history: this.historicalState
         })
       },
-      updateEntities () {
+      updateEntities (reset = true) {
         this.$refs.table.fetchContentPages(true)
         this.fetchDataFields({ module: this.module })
-        this.selection = { ids: [] }
+        if (reset) {
+          this.selection = {'ids': [], include: true}
+        } else {
+          this.updateSelection(this.selection)
+        }
       },
       exportCSV () {
         this.fetchContentCSV({ module: this.module })
@@ -163,6 +179,18 @@
       },
       onTableData (dataId) {
         this.$emit('data', dataId)
+      },
+      updateSelection (selection) {
+        if (!selection.include) {
+          this.selectionLabels = {}
+        } else {
+          this.$nextTick(() => {
+            this.selectionLabels = selection.ids.reduce((entityToLabels, entity) => {
+              entityToLabels[entity] = this.currentSelectionLabels[entity] || this.selectionLabels[entity] || []
+              return entityToLabels
+            }, {})
+          })
+        }
       }
     }
   }

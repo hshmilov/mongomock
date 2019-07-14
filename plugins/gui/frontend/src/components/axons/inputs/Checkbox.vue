@@ -1,77 +1,97 @@
 <template>
-    <div class="x-checkbox" :class="{'x-checked': isChecked, disabled: readOnly}" :id="id" :title="title"
-         @click.stop="$refs.checkbox.click()" @keyup.enter.stop="$refs.checkbox.click()">
-        <div class="x-checkbox-container" :class="{'x-checkbox-indeterminate': indeterminate}">
-            <input type="checkbox" v-model="checked" @change="updateData" ref="checkbox" :disabled="readOnly">
-        </div>
-        <label v-if="label" class="x-checkbox-label">{{label}}</label>
+  <div
+    class="x-checkbox"
+    :class="{'x-checked': isChecked, disabled: readOnly}"
+    @click.stop="$refs.checkbox.click()"
+    @keyup.enter.stop="$refs.checkbox.click()"
+  >
+    <div
+      class="x-checkbox-container"
+      :class="{'x-checkbox-indeterminate': indeterminate}"
+    >
+      <input
+        ref="checkbox"
+        v-model="isChecked"
+        type="checkbox"
+        :disabled="readOnly"
+      >
     </div>
+    <label
+      v-if="label"
+      class="x-checkbox-label"
+    >{{ label }}</label>
+  </div>
 </template>
 
 <script>
-    export default {
-        name: 'x-checkbox',
-        props: {
-            data: {}, value: {default: 'on'}, label: {}, indeterminate: {default: false}, id: {},
-            readOnly: {default: false}, title: {}
+  export default {
+    name: 'XCheckbox',
+    model: {
+      prop: 'data',
+      event: 'change'
+    },
+    props: {
+      data: {
+        type: [Array, Boolean, String],
+        required: true
+      },
+      value: {
+        type: String,
+        default: 'on'
+      },
+      label: {
+        type: String,
+        default: ''
+      },
+      indeterminate: {
+        type: Boolean,
+        default: false
+      },
+      readOnly: {
+        type: Boolean,
+        default: false
+      }
+    },
+    computed: {
+      isChecked: {
+        get () {
+          if (Array.isArray(this.data) && !Array.isArray(this.value)) {
+            return this.data.includes(this.value)
+          } else if (typeof this.data === 'boolean') {
+            return this.data === true
+          } else {
+            return this.data === this.value
+          }
         },
-        model: {
-            prop: 'data',
-            event: 'change'
-        },
-        computed: {
-            isChecked() {
-                if (Array.isArray(this.data) && !Array.isArray(this.value)) {
-                    return this.data.includes(this.value)
-                } else if (typeof this.data === 'boolean') {
-                    return this.data === true
-                } else {
-                    return this.data === this.value
-                }
-            }
-        },
-        data() {
-            return {
-                checked: false
-            }
-        },
-        watch: {
-            data(newData) {
-                this.updateChecked(newData)
-            }
-        },
-        methods: {
-            change(data) {
-                this.$emit('change', data)
-            },
-            updateData() {
-                if (Array.isArray(this.data) && !Array.isArray(this.value)) {
-                    if (this.checked) {
-                        this.change(this.data.concat([this.value]))
-                        return
-                    }
-                    let index = this.data.indexOf(this.value)
-                    if (index > -1) {
-                        let temp = [...this.data]
-                        temp.splice(index, 1)
-                        this.change(temp)
-                    }
-                } else if (typeof this.data === 'boolean') {
-                    this.change(this.checked)
-                } else {
-                    this.change(this.checked ? this.value : (Array.isArray(this.data) ? [] : null))
-                }
-            },
-            updateChecked(data) {
-                this.checked = ((Array.isArray(data) && !Array.isArray(this.value) && data.includes(this.value)) ||
-                    (typeof data === 'boolean' && data) ||
-                    (data === this.value))
-            }
-        },
-        created() {
-            this.updateChecked(this.data)
+        set (checked) {
+          this.updateData(checked)
         }
+      }
+    },
+    methods: {
+      change (data) {
+        this.$emit('change', data)
+      },
+      updateData (checked) {
+        if (Array.isArray(this.data) && !Array.isArray(this.value)) {
+          if (checked) {
+            this.change(this.data.concat([this.value]))
+            return
+          }
+          let index = this.data.indexOf(this.value)
+          if (index > -1) {
+            let temp = [...this.data]
+            temp.splice(index, 1)
+            this.change(temp)
+          }
+        } else if (typeof this.data === 'boolean') {
+          this.change(checked)
+        } else {
+          this.change(checked ? this.value : (Array.isArray(this.data) ? [] : null))
+        }
+      }
     }
+  }
 </script>
 
 <style lang="scss">

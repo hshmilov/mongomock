@@ -722,6 +722,11 @@ class EntitiesPage(Page):
         self.find_custom_data_save(context).click()
         self.wait_for_element_absent_by_css(self.MODAL_OVERLAY_CSS)
 
+    def save_custom_data_feedback(self, context=None):
+        self.find_custom_data_save(context).click()
+        self.wait_for_element_present_by_xpath(self.FEEDBACK_MODAL_MESSAGE_XPATH.format(message='Custom data saved'))
+        self.wait_for_element_absent_by_css(self.MODAL_OVERLAY_CSS)
+
     def clear_custom_data_field(self):
         self.click_remove_sign()
 

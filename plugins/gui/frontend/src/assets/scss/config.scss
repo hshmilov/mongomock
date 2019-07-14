@@ -142,7 +142,7 @@ $textbox-shadow: 4px 4px 8px 0px rgba(0, 0, 0, .2);
       transform: translate#{$direction}#{'(30%)'};
     }
     75% {
-      transform: translate#{$direction}#{'(-15)'};
+      transform: translate#{$direction}#{'(-15%)'};
     }
     100% {
       transform: translate#{$direction}#{'(0)'};

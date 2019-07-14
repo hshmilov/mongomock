@@ -213,12 +213,9 @@ export const updateRemovedDataLabels = (state, payload) => {
 	let data = payload.data
 	module.labels.data = module.labels.data.filter((label) => {
 		if (!data.labels.includes(label.name)) return true
-		let exists = false
-		module.content.data.forEach((entity) => {
-			if (!entity.labels) return
-			exists = exists && entity.labels.includes(label.name)
-		})
-		return exists
+		return module.content.data.reduce((exists, entity) => {
+			return exists || (!entity.labels || entity.labels.includes(label.name))
+		}, false)
 	})
 
 	module.content.data = module.content.data.map(entity => {

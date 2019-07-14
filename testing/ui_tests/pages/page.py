@@ -84,6 +84,7 @@ class Page:
     DIV_BY_LABEL_TEMPLATE = '//div[child::label[text()=\'{label_text}\']]'
     DROPDOWN_OVERLAY_CSS = '.x-dropdown-bg'
     MODAL_OVERLAY_CSS = '.modal-overlay'
+    FEEDBACK_MODAL_MESSAGE_XPATH = './/div[contains(@class, \'t-center\') and .//text()=\'{message}\']'
     CANCEL_BUTTON = 'Cancel'
     SAVE_BUTTON = 'Save'
     OK_BUTTON = 'OK'

@@ -33,17 +33,16 @@
       />
       <x-table
         slot="table"
+        v-model="pageSelection"
         :data="pageData"
         :fields="viewFields"
         :page-size="view.pageSize"
         :sort="view.sort"
         :id-field="idField"
-        :value="pageSelection"
         :expandable="expandable"
         :on-click-row="onClickRow"
         :on-click-col="onClickSort"
         :on-click-all="onClickAll"
-        @input="onUpdateSelection"
       >
         <slot
           slot-scope="props"
@@ -238,15 +237,25 @@
         }
         return Array.from({ length: lastPage - firstPage + 1 }, (x, i) => i + firstPage)
       },
-      pageSelection () {
-        if (this.value === undefined) return undefined
-        if (this.value.include === undefined) {
-          this.allSelected = false
+      pageSelection: {
+        get() {
+          if (this.value === undefined) return undefined
+          return this.pageIds.filter(id => this.allSelected? !this.value.ids.includes(id): this.value.ids.includes(id))
+        },
+        set (selectedList) {
+          // if (!this.allSelected && selectedList.length === this.count.data) {
+          //   this.allSelected = true
+          // }
+          let newIds = this.value.ids.filter(id => !this.pageIds.includes(id)).concat(
+                  this.allSelected ? this.pageIds.filter(item => !selectedList.includes(item)) : selectedList)
+          if (this.allSelected && newIds.length === this.count.data) {
+            this.allSelected = false
+            newIds = []
+          }
+          this.$emit('input', {
+            ids: newIds, include: !this.allSelected
+          })
         }
-        if (this.allSelected) {
-          return this.pageIds.filter(id => !this.value.ids.includes(id))
-        }
-        return this.value.ids
       },
       selectionCount () {
         if (!this.value) return 0
@@ -254,10 +263,6 @@
           return this.count.data - this.value.ids.length
         }
         return this.value.ids.length
-      },
-      selectionExcludePage () {
-        if (!this.value) return []
-        return this.value.ids.filter(id => !this.pageIds.includes(id))
       }
     },
     watch: {
@@ -275,14 +280,11 @@
         this.fetchContentPages()
       },
       loading (newLoading) {
-        if (newLoading) {
-          this.clearAllData()
+        if (newLoading) return
+        if (this.data && this.data.length) {
+          this.$emit('data', this.data[0][this.idField])
         } else {
-          if (this.data && this.data.length) {
-            this.$emit('data', this.data[0][this.idField])
-          } else {
-            this.$emit('data')
-          }
+          this.$emit('data')
         }
       },
       refresh (newRate) {
@@ -368,20 +370,6 @@
           })
         }
         this.timer = setTimeout(fetchAuto, this.refresh * 1000)
-      },
-      onUpdateSelection (selectedList) {
-        if (!this.allSelected && selectedList.length === this.count.data) {
-          this.allSelected = true
-        }
-        let newIds = this.selectionExcludePage.concat(
-          this.allSelected ? this.pageIds.filter(item => !selectedList.includes(item)) : selectedList)
-        if (this.allSelected && newIds.length === this.count.data) {
-          this.allSelected = false
-          newIds = []
-        }
-        this.$emit('input', {
-          ids: newIds, include: !this.allSelected
-        })
       },
       selectAllData () {
         this.allSelected = true

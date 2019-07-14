@@ -56,7 +56,6 @@ class DevicesPage(EntitiesPage):
     TAG_SAVE_BUTTON_CSS = 'div.modal-container.w-xl > div.modal-footer > div > button:nth-child(2)'
     LABELS_TEXTBOX_CSS = 'div.modal-body > div > div.x-search-input > input'
     TAGGING_X_DEVICE_MESSAGE = 'Tagged {number} devices!'
-    TAGGING_X_DEVICE_XPATH = './/div[contains(@class, \'t-center\') and .//text()=\'{message}\']'
     MULTI_LINE_CSS = 'div.x-data-table.multiline'
     FILTER_HOSTNAME = 'specific_data.data.hostname == regex("{filter_value}", "i")'
     ENFORCEMENT_DIALOG_DROPDOWN_CSS = 'div.x-select-trigger'
@@ -82,7 +81,7 @@ class DevicesPage(EntitiesPage):
             self.driver.find_element_by_css_selector('#specific')
 
     def wait_for_success_tagging_message(self, number=1):
-        message = self.TAGGING_X_DEVICE_XPATH.format(message=self.TAGGING_X_DEVICE_MESSAGE.format(number=number))
+        message = self.FEEDBACK_MODAL_MESSAGE_XPATH.format(message=self.TAGGING_X_DEVICE_MESSAGE.format(number=number))
         self.wait_for_element_present_by_xpath(message)
         self.wait_for_element_absent_by_xpath(message)
 

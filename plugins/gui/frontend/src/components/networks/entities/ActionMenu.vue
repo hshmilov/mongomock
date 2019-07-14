@@ -2,7 +2,8 @@
   <x-action-menu
     :module="module"
     :entities="entities"
-    @done="$emit('done')"
+    :entities-meta="entitiesMeta"
+    @done="(reset) => $emit('done', reset)"
   >
     <x-action-menu-item
       :title="`Link ${module}...`"
@@ -59,6 +60,10 @@
         required: true
       },
       entities: {
+        type: Object,
+        default: () => {}
+      },
+      entitiesMeta: {
         type: Object,
         default: () => {}
       }

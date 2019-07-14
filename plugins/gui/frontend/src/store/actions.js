@@ -338,6 +338,17 @@ export const fetchDataLabels = ({state, dispatch}, payload) => {
 	})
 }
 
+export const FETCH_COMMON_LABELS = 'FETCH_COMMON_LABELS'
+export const fetchCommonLabels = ({state, dispatch}, payload) => {
+	let moduleState = getModule(state, payload)
+	if (!moduleState) return
+	return dispatch(REQUEST_API, {
+		rule: `${payload.module}/labels/common?filter=${encodeURIComponent(moduleState.view.query.filter)}`,
+		method: 'POST',
+		data: payload.entities
+	})
+}
+
 export const ADD_DATA_LABELS = 'ADD_DATA_LABELS'
 export const addDataLabels = ({ state, dispatch }, payload) => {
 	let moduleState = getModule(state, payload)

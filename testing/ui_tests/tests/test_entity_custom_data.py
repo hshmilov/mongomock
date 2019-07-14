@@ -137,9 +137,8 @@ class TestEntityCustomData(TestBase):
         entities_page.click_custom_data_add_predefined()
         entities_page.select_custom_data_field(field_name)
         entities_page.fill_custom_data_value(self.CUSTOM_BULK_FIELD_VALUE)
-        entities_page.save_custom_data(
+        entities_page.save_custom_data_feedback(
             context=self.driver.find_element_by_css_selector(entities_page.CUSTOM_DATA_BULK_CONTAINER_CSS))
-        entities_page.wait_for_table_to_load()
         entities_page.click_query_wizard()
         entities_page.toggle_not()
         entities_page.click_search()

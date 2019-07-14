@@ -117,7 +117,7 @@
         default: 'uuid'
       },
       value: {
-        type: [Object, Array],
+        type: Array,
         default: undefined
       },
       expandable: {
@@ -139,10 +139,6 @@
       readOnly: {
         type: Array,
         default: () => []
-      }
-    },
-    data () {
-      return {
       }
     },
     computed: {
@@ -175,7 +171,6 @@
         if (!this.onClickCol) return
 
         this.onClickCol(name)
-
       },
       sortClass (name) {
         if (this.sort.field !== name) return ''

@@ -13,6 +13,7 @@ import {
   FETCH_DATA_HYPERLINKS, fetchDataHyperlinks,
   START_RESEARCH_PHASE, startResearch,
   FETCH_DATA_LABELS, fetchDataLabels,
+  FETCH_COMMON_LABELS, fetchCommonLabels,
   ADD_DATA_LABELS, addDataLabels,
   REMOVE_DATA_LABELS, removeDataLabels,
   DISABLE_DATA, disableData,
@@ -62,7 +63,6 @@ import {
   GET_DATA_FIELDS_BY_PLUGIN, getDataFieldsByPlugin,
   GET_DATA_SCHEMA_BY_NAME, getDataSchemaByName,
   GET_DATA_FIELD_LIST_SPREAD, getDataFieldListSpread,
-  GET_DATA_BY_ID, getDataByID,
   SINGLE_ADAPTER, singleAdapter,
   AUTO_QUERY, autoQuery,
   IS_EXPIRED, isExpired
@@ -102,7 +102,6 @@ export default new Vuex.Store({
     [GET_DATA_FIELDS_BY_PLUGIN]: getDataFieldsByPlugin,
     [GET_DATA_SCHEMA_BY_NAME]: getDataSchemaByName,
     [GET_DATA_FIELD_LIST_SPREAD]: getDataFieldListSpread,
-    [GET_DATA_BY_ID]: getDataByID,
     [SINGLE_ADAPTER]: singleAdapter,
     [AUTO_QUERY]: autoQuery,
     [IS_EXPIRED]: isExpired
@@ -147,6 +146,7 @@ export default new Vuex.Store({
     [FETCH_DATA_HYPERLINKS]: fetchDataHyperlinks,
     [START_RESEARCH_PHASE]: startResearch,
     [FETCH_DATA_LABELS]: fetchDataLabels,
+    [FETCH_COMMON_LABELS]: fetchCommonLabels,
     [ADD_DATA_LABELS]: addDataLabels,
     [REMOVE_DATA_LABELS]: removeDataLabels,
     [DISABLE_DATA]: disableData,

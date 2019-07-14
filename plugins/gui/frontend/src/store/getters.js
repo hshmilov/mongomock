@@ -65,17 +65,6 @@ export const getDataFieldListSpread = (state) => (module) => {
     }, []))
 }
 
-export const GET_DATA_BY_ID = 'GET_DATA_BY_ID'
-export const getDataByID = (state) => (module) => {
-    if (!state[module] || !state[module].content || !state[module].content.data
-        || !state[module].current || !state[module].current.data) return []
-
-    return state[module].content.data.reduce(function (map, input) {
-        map[input['internal_axon_id']] = input
-        return map
-    }, {})
-}
-
 export const SINGLE_ADAPTER = 'SINGLE_ADAPTER'
 export const singleAdapter = (state) => {
     if (!state.configuration || !state.configuration.data || !state.configuration.data.system) return false

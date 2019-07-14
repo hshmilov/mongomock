@@ -55,7 +55,7 @@
     },
     data () {
       return {
-        selection: { ids: [] },
+        selection: { ids: [], include: true },
         searchValue: ''
       }
     },
@@ -115,7 +115,7 @@
       },
       remove () {
         this.removeEnforcements(this.selection)
-        this.selection = { ids: [] }
+        this.selection = { ids: [], include: true }
       },
       navigateTasks () {
         this.updateView({
