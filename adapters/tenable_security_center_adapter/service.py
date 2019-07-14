@@ -106,7 +106,10 @@ class TenableSecurityCenterAdapter(ScannerAdapterBase, Configurable):
 
     def _query_devices_by_client(self, client_name, client_data):
         with client_data:
-            yield from client_data.get_device_list(self.__fetch_top_n_installed_software, self.__fetch_vulnerabilities)
+            yield from client_data.get_device_list(drop_only_ip_devices=self.__drop_only_ip_devices,
+                                                   top_n_software=self.__fetch_top_n_installed_software,
+                                                   per_device_software=self.__fetch_software_per_device,
+                                                   fetch_vulnerabilities=self.__fetch_vulnerabilities)
 
     def _clients_schema(self):
         return {
@@ -225,8 +228,8 @@ class TenableSecurityCenterAdapter(ScannerAdapterBase, Configurable):
                 if vulnerability.get('cve'):
                     cpes_list = list(filter(None, (vulnerability.get('cpe') or '').split('<br/>')))
                     cves_list = list(filter(None, (vulnerability.get('cve') or '').split(',')))
-                    cvss_v2 = vulnerability.get('baseScore')
                     cvss_v3 = vulnerability.get('cvssV3BaseScore')
+                    cvss_v2 = vulnerability.get('baseScore')
                     for cve in cves_list:
                         try:
                             device.add_vulnerable_software(cve_id=cve,
@@ -310,6 +313,11 @@ class TenableSecurityCenterAdapter(ScannerAdapterBase, Configurable):
                     'type': 'integer',
                 },
                 {
+                    'name': 'fetch_software_per_device',
+                    'title': 'Fetch Software Per Device',
+                    'type': 'bool'
+                },
+                {
                     'name': 'fetch_vulnerabilities',
                     'title': 'Fetch Vulnerabilities',
                     'type': 'bool'
@@ -317,6 +325,7 @@ class TenableSecurityCenterAdapter(ScannerAdapterBase, Configurable):
             ],
             "required": [
                 'drop_only_ip_devices',
+                'fetch_software_per_device',
                 'fetch_vulnerabilities'
             ],
             "pretty_name": "Tenable.sc Configuration",
@@ -328,10 +337,12 @@ class TenableSecurityCenterAdapter(ScannerAdapterBase, Configurable):
         return {
             'drop_only_ip_devices': False,
             'fetch_top_n_installed_software': 0,
+            'fetch_software_per_device': False,
             'fetch_vulnerabilities': False
         }
 
     def _on_config_update(self, config):
         self.__drop_only_ip_devices = config['drop_only_ip_devices']
-        self.__fetch_vulnerabilities = config['fetch_vulnerabilities']
         self.__fetch_top_n_installed_software = config.get('fetch_top_n_installed_software') or 0
+        self.__fetch_software_per_device = config['fetch_software_per_device']
+        self.__fetch_vulnerabilities = config['fetch_vulnerabilities']

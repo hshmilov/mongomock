@@ -113,9 +113,12 @@ class TenableSecurityScannerConnection(RESTConnection):
             except Exception:
                 logger.exception(f'Problem with repository {repository_id}')
 
-    # pylint: disable=arguments-differ
-    def get_device_list(self, top_n_software=0, fetch_vulnerabilities=False):
+    # pylint: disable=arguments-differ, too-many-branches
+    def get_device_list(self, drop_only_ip_devices=False, top_n_software=0,
+                        per_device_software=False, fetch_vulnerabilities=False):
         device_list = self._get_device_list()
+        if drop_only_ip_devices:
+            logger.info(f'Dropping devices with only IP address')
 
         if fetch_vulnerabilities:
             logger.info(f'Fetching vulnerabilities')
@@ -125,16 +128,35 @@ class TenableSecurityScannerConnection(RESTConnection):
             logger.info(f'Fetching top {top_n_software} installed software')
             software_mapping = self._get_software_device_mapping(top_n_software)
 
+        if per_device_software:
+            logger.info(f'Fetching installed software per device')
+
         for device in device_list:
-            if top_n_software:
+            try:
                 device['software'] = []
-                for software, devices in software_mapping.items():
-                    if self._software_id(device) in devices:
-                        device['software'].append(software)
-            if fetch_vulnerabilities:
-                device['vulnerabilities'] = vuln_mapping.get(self._vuln_id(device)) or []
-            yield device
-    # pylint: enable=arguments-differ
+                if drop_only_ip_devices:
+                    dns_name = device.get('dnsName')
+                    mac_address = device.get('macAddress')
+                    netbios_name = device.get('netbiosName')
+                    if not any([dns_name, mac_address, netbios_name]):
+                        continue
+                if top_n_software:
+                    for software, devices in software_mapping.items():
+                        if self._software_id(device) in devices:
+                            device['software'].append(software)
+                if fetch_vulnerabilities:
+                    device['vulnerabilities'] = vuln_mapping.get(self._vuln_id(device)) or []
+                if per_device_software:
+                    device_ip = device.get('ip')
+                    device_dns = device.get('dnsName')
+                    for software in self._get_software_per_device(device_ip=device_ip, device_dns=device_dns):
+                        if software.get('name'):
+                            device['software'].append(software.get('name'))
+                yield device
+            except Exception:
+                logger.info('Failed to add device')
+
+    # pylint: enable=arguments-differ, too-many-branches
 
     def _get_vuln_list(self):
         repositories = self._get('repository')
@@ -231,6 +253,39 @@ class TenableSecurityScannerConnection(RESTConnection):
                 logger.exception(f'Failed to fetch device list for software {software}')
         return result
 
+    def _get_software_per_device(self, device_ip=None, device_dns=None):
+        repositories = self._get('repository')
+        repositories_ids = [repository.get('id') for repository in repositories if repository.get('id')]
+        filter_ = [
+            {
+                'filterName': 'ip',
+                'id': 'ip',
+                'isPredefined': True,
+                'operator': '=',
+                'type': 'vuln',
+                'value': device_ip
+            },
+            {
+                'filterName': 'dnsName',
+                'id': 'dnsName',
+                'isPredefined': True,
+                'operator': '=',
+                'type': 'vuln',
+                'value': device_dns
+            }
+        ]
+
+        for repository_id in repositories_ids:
+            try:
+                yield from self.do_analysis(repository_id=repository_id,
+                                            analysis_type='vuln',
+                                            source_type='cumulative',
+                                            query_tool='listsoftware',
+                                            query_type='vuln',
+                                            extra_filter=filter_)
+            except Exception:
+                logger.exception(f'Problem with repository {repository_id}')
+
     def do_analysis(self,
                     repository_id,
                     analysis_type,
@@ -271,7 +326,13 @@ class TenableSecurityScannerConnection(RESTConnection):
                                              'type': query_type,
                                              'value': [{'id': repository_id}]
                                          }]}}
-                if extra_filter:
+
+                if isinstance(extra_filter, list):
+                    for filter_ in extra_filter:
+                        if filter_.get('value'):
+                            body_params['query']['filters'].append(filter_)
+
+                if isinstance(extra_filter, dict):
                     body_params['query']['filters'].append(extra_filter)
 
                 response = self._post('analysis',
