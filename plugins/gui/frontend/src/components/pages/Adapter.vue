@@ -31,7 +31,16 @@
                  @close="toggleServerModal" @confirm="saveServer" @enter="promptSaveServer">
             <div slot="body">
                 <!-- Container for configuration of a single selected / added server -->
-                <x-title :logo="`adapters/${adapterPluginName}`">{{ adapterName }}</x-title>
+                <x-title :logo="`adapters/${adapterPluginName}`">
+                    {{ adapterName }}
+                    <x-button v-if="adapterLink" slot="actions"
+                              header
+                              link
+                              class="help-link"
+                              title="More information about connecting this adapter"
+                              @click="openHelpLink">
+                        <md-icon>help_outline</md-icon>Help</x-button>
+                </x-title>
                 <div class="server-error" v-if="serverModal.error">
                     <svg-icon name="symbol/error" :original="true" height="12"></svg-icon>
                     <div class="error-text">{{serverModal.error}}</div>
@@ -109,6 +118,12 @@
                 }
                 return pluginMeta[this.adapterPluginName].title
             },
+            adapterLink() {
+                if (!pluginMeta[this.adapterPluginName]) {
+                    return null
+                }
+                return pluginMeta[this.adapterPluginName].link
+            },
             adapterClients() {
                 if (!this.currentAdapter) return []
                 let clients = []
@@ -180,6 +195,9 @@
                 fetchAdapters: FETCH_ADAPTERS, updateServer: SAVE_ADAPTER_SERVER, testAdapter: TEST_ADAPTER_SERVER,
                 archiveServer: ARCHIVE_SERVER, updatePluginConfig: SAVE_PLUGIN_CONFIG
             }),
+            openHelpLink() {
+                window.open(this.adapterLink, '_blank')
+            },
             configServer(serverId) {
                 this.message = ''
                 this.serverModal.valid = true
@@ -390,7 +408,33 @@
 
         .config-server {
             .x-title {
+                i {
+                    text-decoration: none;
+                }
+            }
+        }
+
+        .config-server {
+            .x-title {
+                display: flex;
                 margin-bottom: 24px;
+                .text {
+                    flex-grow: 1;
+                }
+
+                &:hover {
+                    box-shadow: none;
+                    i {
+                        color: $theme-orange;
+                    }
+                }
+
+                .help-link {
+                    padding-right: 0;
+                    i {
+                        font-size: 20px!important;
+                    }
+                }
             }
 
             .server-error {
@@ -402,7 +446,6 @@
                     margin-left: 8px;
                 }
             }
-
         }
 
         .upload-file {

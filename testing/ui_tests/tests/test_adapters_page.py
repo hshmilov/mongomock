@@ -1,3 +1,6 @@
+import os
+import re
+
 from services.adapters.eset_service import EsetService
 from services.adapters.gotoassist_service import GotoassistService
 from test_credentials.test_eset_credentials import eset_details
@@ -5,7 +8,14 @@ from test_credentials.test_gotoassist_credentials import client_details
 from ui_tests.tests.ui_test_base import TestBase
 
 GOTOASSIST_NAME = 'RescueAssist'
+ACTIVE_DIRECTORY_NAME = 'Microsoft Active Directory (AD)'
+JSON_ADAPTER_NAME = 'JSON File'
 ESET_NAME = 'ESET Endpoint Security'
+
+
+def get_cortex_dir() -> str:
+    """ Returns the relative path to cortex repo root directory """
+    return os.path.relpath(os.path.join(os.path.dirname(__file__), '..', '..', '..'))
 
 
 class TestAdaptersPage(TestBase):
@@ -51,3 +61,39 @@ class TestAdaptersPage(TestBase):
         finally:
             self.adapters_page.wait_for_adapter_down(GOTOASSIST_NAME)
             self.adapters_page.wait_for_adapter_down(ESET_NAME)
+
+    def test_adapters_page_help_link(self):
+        self.adapters_page.wait_for_adapter(ACTIVE_DIRECTORY_NAME)
+        self.adapters_page.click_adapter(ACTIVE_DIRECTORY_NAME)
+        self.adapters_page.wait_for_spinner_to_end()
+        self.adapters_page.wait_for_table_to_load()
+        self.adapters_page.click_new_server()
+
+        assert self.adapters_page.find_help_link()
+        self.adapters_page.click_help_link()
+        # switch to th new tab
+        self.adapters_page.driver.switch_to_window(self.adapters_page.driver.window_handles[1])
+
+        object_match = self._get_adapter_link('active_directory_adapter')
+        assert self.adapters_page.current_url in object_match.group(0)
+
+    def test_adapters_page_no_help_link(self):
+        self.adapters_page.wait_for_adapter(JSON_ADAPTER_NAME)
+        self.adapters_page.click_adapter(JSON_ADAPTER_NAME)
+        self.adapters_page.wait_for_spinner_to_end()
+        self.adapters_page.wait_for_table_to_load()
+        self.adapters_page.click_new_server()
+
+        object_match = self._get_adapter_link('json_file_adapter')
+        assert 'http' not in object_match.group(0)
+
+        assert not self.adapters_page.find_help_link()
+
+    @staticmethod
+    def _get_adapter_link(adapter):
+        plugin_meta = os.path.join(get_cortex_dir(), 'plugins/gui/frontend/src/constants/plugin_meta.js')
+        with open(plugin_meta, 'r', errors='ignore') as plugin_meta_file:
+            data = plugin_meta_file.read()
+            match = re.search(adapter + r':\s+{.*?}', data.strip().replace('\n', ''), re.MULTILINE)
+            object_match = re.search(r'link: \'.*?\'', match.group(0), re.MULTILINE)
+        return object_match

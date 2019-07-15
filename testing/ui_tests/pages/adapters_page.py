@@ -37,6 +37,8 @@ class AdaptersPage(EntitiesPage):
 
     DELETE_ASSOCIATED_ENTITIES_CHECKBOX_ID = 'deleteEntitiesCheckbox'
     AD_SERVER_SEARCH_FIELD = ('dc_name', 'DC Address')
+    ADAPTER_INSTANCE_CONFIG_CSS_SELECTOR = '.config-server'
+    EDIT_INSTANCE_XPATH = '//div[@title=\'{instance_name}\']/parent::td/parent::tr'
 
     @property
     def url(self):
@@ -205,3 +207,12 @@ class AdaptersPage(EntitiesPage):
             except NoSuchElementException:
                 return
         raise AssertionError('Adapter still up')
+
+    def find_help_link(self):
+        try:
+            return self.find_element_by_text('Help')
+        except NoSuchElementException:
+            return None
+
+    def click_help_link(self):
+        self.find_help_link().click()

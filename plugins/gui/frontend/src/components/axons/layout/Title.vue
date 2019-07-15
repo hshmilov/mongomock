@@ -2,6 +2,7 @@
     <div class="x-title" :class="{disabled}">
         <img :src="require(`Logos/${logo}.png`)" height="24" class="md-image">
         <div class="text"><slot /></div>
+        <slot name="actions" />
     </div>
 </template>
 

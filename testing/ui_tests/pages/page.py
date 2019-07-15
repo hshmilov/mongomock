@@ -141,6 +141,10 @@ class Page:
         raise NotImplementedError
 
     @property
+    def current_url(self):
+        return self.driver.current_url
+
+    @property
     def root_page_css(self):
         raise NotImplementedError
 
