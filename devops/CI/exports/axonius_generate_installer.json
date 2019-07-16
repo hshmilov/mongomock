@@ -10,7 +10,6 @@
   "builders": [
     {
       "vm_name": "axonius",
-      "format": "ova",
       "type": "vmware-iso",
       "boot_wait": "20s",
       "disk_size": 500000,
