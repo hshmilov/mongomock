@@ -111,6 +111,7 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
         ad_dc_source = Field(str, 'AD DC Source')
         ms_mcs_adm_pwd = Field(str, 'Mc Mcs Admin Pwd')
         ms_mcs_adm_pwd_expiration_time = Field(datetime, 'Mc Mcs Admin Pwd Expiration Time')
+        resolvable_hostname = Field(str, 'Resolvable Hostname')
 
     class MyUserAdapter(UserAdapter, ADEntity):
         user_managed_objects = ListField(str, "AD User Managed Objects")
@@ -270,7 +271,9 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
                               self._grab_file_contents(dc_details.get('private_key')),
                               dc_details.get('fetch_disabled_devices', False),
                               dc_details.get('fetch_disabled_users', False),
-                              connect_with_gc_mode=dc_details.get('is_ad_gc', False)
+                              connect_with_gc_mode=dc_details.get('is_ad_gc', False),
+                              ldap_ou_whitelist=dc_details.get('ldap_ou_whitelist'),
+                              alternative_dns_suffix=dc_details.get('alternative_dns_suffix')
                               )
 
     def _connect_client(self, dc_details):
@@ -350,6 +353,12 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
                     "title": "DNS Server Address",
                     "type": "string"
                 },
+                {
+                    'name': 'alternative_dns_suffix',
+                    'title': 'Alternative DNS suffix',
+                    'description': 'Alternative DNS suffix to append to hosts for ip resolving',
+                    'type': 'string'
+                },
                 *COMMON_SSL_CONFIG_SCHEMA,
                 {
                     "name": "fetch_disabled_devices",
@@ -365,6 +374,15 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
                     'name': 'is_ad_gc',
                     'title': 'Connect to Global Catalog (GC)',
                     'type': 'bool'
+                },
+                {
+                    'name': 'ldap_ou_whitelist',
+                    'title': 'Organizational units whitelist',
+                    'description': 'List of OU names to fetch entities from',
+                    'type': 'array',
+                    'items': {
+                        'type': 'string'
+                    }
                 }
             ],
             "required": [
@@ -522,6 +540,17 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
         ad_entity.figure_out_delegation_policy(raw_data.get("userAccountControl"),
                                                raw_data.get("msDS-AllowedToDelegateTo"))
 
+        ad_primary_group_dn = None
+        try:
+            pgid = raw_data.get('primaryGroupID')
+            if pgid:
+                if isinstance(pgid, list):
+                    pgid = pgid[0]
+                ad_entity.ad_primary_group_id = int(pgid)
+                ad_primary_group_dn = raw_data.get('primary_group_name')
+                ad_entity.ad_primary_group_dn = ad_primary_group_dn
+        except Exception:
+            logger.exception(f'Problem parsing primary group id')
         if raw_data.get('msDS-ResultantPSO'):
             ad_entity.ad_msds_resultant_pso = raw_data.get('msDS-ResultantPSO')
 
@@ -532,6 +561,15 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
             )
         except Exception:
             logger.exception(f'Exception while parsing user groups')
+
+        try:
+            if ad_primary_group_dn:
+                if ad_primary_group_dn not in ad_entity.ad_member_of:
+                    ad_entity.ad_member_of.append(ad_primary_group_dn)
+                if ad_primary_group_dn not in ad_entity.ad_member_of_full:
+                    ad_entity.ad_member_of_full.append(ad_primary_group_dn)
+        except Exception:
+            logger.exception(f'Can not add ad primary group dn')
 
         # If pwdLastSet is 0 (which is, in date time, 1/1/1601) then it means the password must change now.
         # is_date_real checks if the date is a "special" date like 1/1/1601 and if it is - the date is not real,
@@ -699,7 +737,8 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
             dc_name = host.get('AXON_DC_ADDR')
             current_resolved_host = dict(host)
             try:
-                ips_and_dns_servers = self._resolve_device_name(host['hostname'],
+                hostname = host.get('resolvable_hostname') or host.get('hostname')
+                ips_and_dns_servers = self._resolve_device_name(hostname,
                                                                 {"dns_name": dns_name,
                                                                  "dc_name": dc_name})
                 ips = [ip for ip, _ in ips_and_dns_servers]
@@ -762,7 +801,8 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
                                                             'id': True,
                                                             'AXON_DNS_ADDR': True,
                                                             'AXON_DC_ADDR': True,
-                                                            'hostname': True})
+                                                            'hostname': True,
+                                                            'resolvable_hostname': True})
 
             logger.debug(f"Going to resolve for {hosts_count} hosts")
 
@@ -999,13 +1039,21 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
                 if device.id in parsed_devices_ids:
                     continue
                 parsed_devices_ids.append(device.id)
-                device.domain = convert_ldap_searchpath_to_domain_name(device_raw['distinguishedName'])
-                if device.domain:
+                device_domain = convert_ldap_searchpath_to_domain_name(device_raw['distinguishedName'])
+                device.domain = device_domain
+                if device_domain:
                     # If we do not have dNSHostName than we would like to create it using name and domain.
                     device.hostname = device_raw.get('dNSHostName',
-                                                     f"{device_raw.get('name', '')}.{str(device.domain)}")
+                                                     f"{device_raw.get('name', '')}.{str(device_domain)}")
                 else:
                     device.hostname = device_raw.get('dNSHostName', device_raw.get('name', ''))
+                alternative_dns_suffix = device_raw.get('alternative_dns_suffix')
+                if alternative_dns_suffix:
+                    resolvable_hostname = device.hostname.rstrip(device_domain)
+                    resolvable_hostname += '.' + alternative_dns_suffix.lstrip('.')
+                else:
+                    resolvable_hostname = device.hostname
+                device.resolvable_hostname = resolvable_hostname
                 device.part_of_domain = True
                 device.organizational_unit = get_organizational_units_from_dn(device.id)
                 service_principal_name = device_raw.get("servicePrincipalName")  # only for devices
@@ -1107,6 +1155,7 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
                     device_as_dict_for_resolving = {
                         "id": device_as_dict['id'],
                         "hostname": device_as_dict['hostname'],
+                        'resolvable_hostname': device_as_dict.get('resolvable_hostname'),
                         "AXON_DNS_ADDR": device_raw['AXON_DNS_ADDR'],
                         "AXON_DC_ADDR": device_raw['AXON_DC_ADDR'],
                         "dns_resolve_status": device_as_dict['dns_resolve_status']
@@ -1264,7 +1313,7 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
                     # This is a legitimate flow. Do not try to build the domain name from the configurations.
                     domain_name, user_name = "", client_username
 
-                wanted_hostname = device_data['data']['hostname']
+                wanted_hostname = device_data['data'].get('resolvable_hostname') or device_data['data']['hostname']
                 password = client_password
                 try:
                     # We resolve ip only for devices who have been resolved before.

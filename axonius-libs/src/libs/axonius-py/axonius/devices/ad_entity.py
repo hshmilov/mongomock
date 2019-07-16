@@ -63,6 +63,8 @@ class ADEntity(object):
     ad_managed_by = Field(str, "AD managedBy")
     ad_password_last_set = Field(datetime.datetime, 'AD pwdLastSet')
     ad_cn = Field(str, "AD Common Name (CN)")
+    ad_primary_group_id = Field(int, 'AD Primary group ID')
+    ad_primary_group_dn = Field(str, 'AD Primary group distinguishedName')
     ad_member_of = ListField(str, "AD memberOf")
     ad_member_of_full = ListField(str, "AD memberOf (nested full list)")
     ad_usn_changed = Field(int, "AD uSNChanged")

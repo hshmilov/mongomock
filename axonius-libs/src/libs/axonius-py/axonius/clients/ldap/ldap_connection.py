@@ -18,10 +18,10 @@ import struct
 import itertools
 from collections import defaultdict
 from axonius.utils.parsing import get_exception_string, convert_ldap_searchpath_to_domain_name, \
-    ad_integer8_to_timedelta, get_member_of_list_from_memberof
+    ad_integer8_to_timedelta, get_member_of_list_from_memberof, get_organizational_units_from_dn
 from axonius.utils.files import create_temp_file
 import ssl
-from typing import TextIO, List, Tuple
+from typing import TextIO, List, Tuple, Optional
 import ldap3
 from axonius.types.ssl_state import SSLState
 
@@ -175,7 +175,9 @@ class LdapConnection(object):
             should_fetch_disabled_users=False,
             ldap_connection_timeout=DEFAULT_LDAP_CONNECTION_TIMEOUT,
             ldap_recieve_timeout=DEFAULT_LDAP_RECIEVE_TIMEOUT,
-            connect_with_gc_mode=False
+            connect_with_gc_mode=False,
+            ldap_ou_whitelist: Optional[list] = None,
+            alternative_dns_suffix: Optional[str] = None
     ):
         """Class initialization.
 
@@ -186,6 +188,8 @@ class LdapConnection(object):
         :param str dns_server: Address of other dns server
         :param bool use_ssl: Whether or not to use ssl. If true, ca_file_data, cert_file and private_key must be set
         :param connect_with_gc_mode: if True, connects in Global Catalog mode.
+        :param ldap_ou_whitelist: a list of OU's from which we fetch entities
+        :param alternative_dns_suffix: an alternative dns suffix (instead of the default one returned by ldap)
         """
         self.server_addr = server_addr
         self.user_name = user_name
@@ -210,6 +214,8 @@ class LdapConnection(object):
         self.__ca_file = create_temp_file(ca_file_data) if ca_file_data else None
         self.__cert_file = create_temp_file(cert_file) if cert_file else None
         self.__private_key_file = create_temp_file(private_key) if private_key else None
+        self.__ldap_ou_whitelist = ldap_ou_whitelist
+        self.__alternative_dns_suffix = alternative_dns_suffix
 
         self._connect_to_server()
 
@@ -696,6 +702,15 @@ class LdapConnection(object):
 
         return pso_dict
 
+    def __get_ldap_primary_group_name(self, pgid):
+        _, pgid_to_dn = get_ldap_groups(self)
+
+        if pgid and isinstance(pgid, list):
+            pgid = pgid[0]
+        if pgid:
+            return pgid_to_dn.get(str(pgid))
+        return None
+
     @retry_generator(wait_fixed=DEFAULT_WAIT_TIME_BETWEEN_RETRIES_IN_MS, stop_max_attempt_number=LDAP_MAX_TRIES)
     def get_device_list(self):
         """Fetch device list from the ActiveDirectory.
@@ -720,12 +735,26 @@ class LdapConnection(object):
         logger.info(f'LDAP - Starting to get device list')
         for one_device in devices_generator:
             device_dict = dict(one_device)
+            try:
+                if self.__ldap_ou_whitelist:
+                    ous = get_organizational_units_from_dn(device_dict.get('distinguishedName')) or []
+                    # ou's is a list of the current ou's, __ldap_ou_whitelist is a whitelist. If we do not have
+                    # intersection between them then this entity is not in the current OU's.
+                    if not bool(set(ous) & set(self.__ldap_ou_whitelist)):
+                        continue
+            except Exception:
+                logger.exception(f'problem whitelisting devices by OUs')
             if 'userCertificate' in device_dict:
                 # Special case where we want to remove 'userCertificate' key (Special case for Amdocs)
                 del device_dict['userCertificate']
             device_dict['AXON_DNS_ADDR'] = self.dns_server if self.dns_server else self.server_addr
             device_dict['AXON_DC_ADDR'] = self.server_addr
             device_dict['AXON_DOMAIN_NAME'] = self.domain_name
+            if self.__alternative_dns_suffix:
+                device_dict['alternative_dns_suffix'] = self.__alternative_dns_suffix
+            primary_group_dn = self.__get_ldap_primary_group_name(device_dict.get('primaryGroupID'))
+            if primary_group_dn:
+                device_dict['primary_group_name'] = primary_group_dn
             devices_count += 1
 
             if devices_count % 1000 == 0:
@@ -770,6 +799,15 @@ class LdapConnection(object):
         get_users_start = time.time()
         for user in users_generator:
             try:
+                if self.__ldap_ou_whitelist:
+                    ous = get_organizational_units_from_dn(user.get('distinguishedName')) or []
+                    # ou's is a list of the current ou's, __ldap_ou_whitelist is a whitelist. If we do not have
+                    # intersection between them then this entity is not in the current OU's.
+                    if not bool(set(ous) & set(self.__ldap_ou_whitelist)):
+                        continue
+            except Exception:
+                logger.exception(f'Problem whitelisting users by OUs')
+            try:
                 if should_get_nested_groups_for_user:
                     member_of_full_for_user = \
                         list(self.get_nested_groups_for_object({'memberOf': user.get('memberOf') or []}))
@@ -778,6 +816,10 @@ class LdapConnection(object):
             except Exception:
                 logger.exception(f'Problem getting nested groups for object, passing and reconnecting')
                 member_of_full_for_user = None
+
+            primary_group_dn = self.__get_ldap_primary_group_name(user.get('primaryGroupID'))
+            if primary_group_dn:
+                user['primary_group_name'] = primary_group_dn
 
             if self.domain_version >= LDAP_MINIMUM_PSO_DOMAIN_FUNCTIONALITY_LEVEL:
                 try:
@@ -982,6 +1024,7 @@ class LdapConnection(object):
     def get_user(self, username: str) -> Tuple[dict, List[str]]:
         """
         Get a user from AD and all nested groups it is part of
+        Note! This has to be a fast function since it uses for gui logins
         :param username: Name of user
         :return: User's attributes and list of groups it is part of
         """
@@ -992,6 +1035,8 @@ class LdapConnection(object):
         result = list(self._ldap_search(search_filter, attributes=['*']))
         result_2 = list(self._ldap_search(search_filter_2, attributes=['*']))
 
+        # Note! we do not parse primaryGroupID here, since this can take a whole lot time (many seconds). Since
+        # this method is used for ldap login via gui it should be fast.
         try:
             if result:
                 groups = list(self.get_nested_groups_for_object({'memberOf': result[0].get('memberOf') or []}))
@@ -1018,7 +1063,7 @@ class LdapConnection(object):
                              f'stopping to prevent stack exhausiton.')
                 return set()
 
-            self.__ldap_groups = get_ldap_groups(self)
+            self.__ldap_groups, _ = get_ldap_groups(self)
 
             group_object = self.__ldap_groups.get(group_dn)
             if not group_object:
