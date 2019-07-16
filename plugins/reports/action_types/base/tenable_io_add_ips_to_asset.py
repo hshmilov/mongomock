@@ -39,7 +39,7 @@ class TenableIoAddIPsToTargetGroup(ActionTypeBase):
                 },
                 {
                     'name': 'secret_key',
-                    'title': 'Secret API key',
+                    'title': 'Secret API Key',
                     'type': 'string',
                     'format': 'password'
                 },

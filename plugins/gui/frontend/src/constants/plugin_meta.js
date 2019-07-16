@@ -65,12 +65,12 @@ export const pluginMeta = {
         description: 'CA Service Management is an IT service management (ITSM) solution that offers incident management and IT asset management.'
     },
     zscaler_adapter: {
-        title: 'Zscaler Web Security - BETA',
+        title: 'Zscaler Web Security',
         link: 'https://docs.axonius.com/docs/zscaler-web-security',
         description: 'Zscaler Web Security, part of the Zscaler Cloud Security Platform, is a secure Internet and web gateway delivered as a service, stops malware, advanced threats, phishing, browser exploits, malicious URLs, botnets, and more.'
     },
     alertlogic_adapter: {
-        title: 'Alert Logic - BETA',
+        title: 'Alert Logic',
         link: 'https://docs.axonius.com/docs/alert-logic',
         description: 'Alert Logic provides vulnerability and asset visibility, endpoint protection, threat detection, incident management, and a web application firewall.'
     },

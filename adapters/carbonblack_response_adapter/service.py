@@ -9,6 +9,7 @@ from axonius.fields import Field
 from axonius.plugin_base import EntityType, add_rule, return_error
 from axonius.utils.files import get_local_config_file
 from axonius.utils.datetime import parse_date
+from axonius.utils.parsing import is_domain_valid
 from carbonblack_response_adapter.connection import \
     CarbonblackResponseConnection
 
@@ -117,7 +118,7 @@ class CarbonblackResponseAdapter(AdapterBase):
             'type': 'array'
         }
 
-    # pylint: disable=R0912
+    # pylint: disable=R0912,too-many-statements
     def _create_device(self, device_raw):
         try:
             device = self._new_device_adapter()
@@ -129,7 +130,12 @@ class CarbonblackResponseAdapter(AdapterBase):
             device.sensor_health_message = device_raw.get('sensor_health_message')
             device.build_version_string = device_raw.get('build_version_string')
             device.sensor_status = device_raw.get('status')
-            device.hostname = device_raw.get('computer_dns_name') or device_raw.get('computer_name')
+            hostname = device_raw.get('computer_dns_name') or device_raw.get('computer_name')
+            device.hostname = hostname
+            if '.' in hostname:
+                domain = '.'.join(hostname.split('.')[1:])
+                if is_domain_valid(domain):
+                    device.domain = domain
             if device_raw.get('computer_dns_name') and device_raw.get('computer_name'):
                 device.name = device_raw.get('computer_name')
             device.figure_os(device_raw.get('os_environment_display_string', ''))

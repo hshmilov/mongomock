@@ -16,6 +16,7 @@ class CarbonblackResponseConnection(RESTConnection):
             self._permanent_headers['X-Auth-Token'] = self._apikey
         else:
             raise RESTException('No user name or password')
+        self._get('v1/sensor')
 
     def get_device_list(self):
         yield from self._get('v1/sensor')

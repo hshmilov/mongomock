@@ -253,7 +253,7 @@ class QualysScansAdapter(ScannerAdapterBase):
                     try:
                         device.add_open_port(
                             protocol=(port_raw.get('HostAssetOpenPort') or {}).get('protocol'),
-                            port_id=int(port_raw.get('HostAssetOpenPort') or {}).get('port'),
+                            port_id=int((port_raw.get('HostAssetOpenPort') or {}).get('port')),
                             service_name=(port_raw.get('HostAssetOpenPort') or {}).get('serviceName')
                         )
                     except Exception:

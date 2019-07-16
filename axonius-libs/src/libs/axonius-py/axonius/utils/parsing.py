@@ -904,6 +904,11 @@ def get_bios_serial_or_serial(adapter_device):
         serial = str(serial).strip().lower()
         if serial == '' or ('invalid' in serial) or ('none' in serial):
             serial = None
+        if serial and serial.upper().strip().replace(' ', '') in ['INVALID',
+                                                                  '0',
+                                                                  'SYSTEMSERIALNUMBER',
+                                                                  'DEFAULTSTRING']:
+            serial = None
     return serial
 
 
@@ -956,7 +961,12 @@ def get_asset_name(adapter_device):
 
 def get_serial(adapter_device):
     serial = (adapter_device['data'].get('device_serial') or '').strip()
-    if serial and serial.upper().strip() not in ['INVALID', '0'] and 'VMWARE' not in serial.upper().strip():
+    if serial \
+            and serial.upper().strip().replace(' ', '') not in ['INVALID',
+                                                                '0',
+                                                                'SYSTEMSERIALNUMBER',
+                                                                'DEFAULTSTRING'] \
+            and 'VMWARE' not in serial.upper().strip():
         return serial.upper()
     return None
 

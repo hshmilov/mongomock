@@ -206,7 +206,9 @@ class AzureAdAdapter(AdapterBase):
                 device.last_seen = parse_date(device_raw.get('lastSyncDateTime'))
             except Exception:
                 logger.exception(f'Prbolem getting last seen for {device_raw}')
-            device.device_serial = device_raw.get('serialNumber')
+            device_serial = device_raw.get('serialNumber')
+            if device_serial and device_serial not in ['SystemSerialNumber', 'System Serial Number', 'Default string']:
+                device.device_serial = device_serial
             device.phone_number = device_raw.get('phoneNumber')
             device.android_security_patch_level = device_raw.get('androidSecurityPatchLevel')
             device.email = device_raw.get('emailAddress')

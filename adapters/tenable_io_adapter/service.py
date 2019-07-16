@@ -151,7 +151,7 @@ class TenableIoAdapter(ScannerAdapterBase, Configurable):
             'items': [
                 {
                     'name': 'domain',
-                    'title': 'TenableIO Domain',
+                    'title': 'Tenable.io Domain',
                     'type': 'string'
                 },
                 {
@@ -167,7 +167,7 @@ class TenableIoAdapter(ScannerAdapterBase, Configurable):
                 },
                 {
                     'name': 'secret_key',
-                    'title': 'Secret API key',
+                    'title': 'Secret API Key',
                     'type': 'string',
                     'format': 'password'
                 },

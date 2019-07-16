@@ -8,6 +8,7 @@ from axonius.devices.device_adapter import DeviceAdapter
 from axonius.utils.files import get_local_config_file
 from axonius.utils.datetime import parse_date
 from axonius.fields import Field
+from axonius.utils.parsing import is_domain_valid
 from redcanary_adapter.connection import RedcanaryConnection
 from redcanary_adapter.client_id import get_client_id
 
@@ -102,7 +103,7 @@ class RedcanaryAdapter(AdapterBase):
             'type': 'array'
         }
 
-    # pylint: disable=too-many-nested-blocks,too-many-branches
+    # pylint: disable=too-many-nested-blocks,too-many-branches,too-many-statements
     def _create_device(self, device_raw):
         try:
             device = self._new_device_adapter()
@@ -112,7 +113,12 @@ class RedcanaryAdapter(AdapterBase):
                 return None
             device_attributes = device_raw['attributes']
             device.id = str(device_id) + '_' + (device_attributes.get('hostname') or '')
-            device.hostname = device_attributes.get('hostname')
+            hostname = device_attributes.get('hostname')
+            device.hostname = hostname
+            if '.' in hostname:
+                domain = '.'.join(hostname.split('.')[1:])
+                if is_domain_valid(domain):
+                    device.domain = domain
             device.monitoring_status = device_attributes.get('monitoring_status')
             try:
                 device.figure_os((device_attributes.get('platform') or '') + ' ' +

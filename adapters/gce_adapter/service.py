@@ -217,6 +217,7 @@ class GceAdapter(AdapterBase):
             if public_ips:
                 for ip in public_ips:
                     if ip:
+                        device.add_nic(ips=[ip])
                         device.add_public_ip(ip)
         except Exception:
             logger.exception(f'Problem getting public IP for {str(raw_device_data)}')
