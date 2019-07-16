@@ -36,7 +36,7 @@ from funcy import chunks
 from namedlist import namedtuple
 from promise import Promise
 from pymongo import MongoClient
-from pymongo.errors import DuplicateKeyError
+from pymongo.errors import DuplicateKeyError, OperationFailure
 from pymongo.collection import Collection
 from retrying import retry
 # bson is requirement of mongo and its not recommended to install it manually
@@ -1468,9 +1468,12 @@ class PluginBase(Configurable, Feature):
                                     ADAPTERS_LIST_LENGTH: 1
                                 })
                             except DuplicateKeyError:
-                                logger.critical(f'Duplicate key error on {entity_type}, {parsed_to_insert}')
+                                logger.warning(f'Duplicate key error on {entity_type}, {parsed_to_insert}',
+                                               exc_info=True)
+                            except OperationFailure:
+                                logger.critical(f'Operational failure on {entity_type}, {parsed_to_insert}')
             except Exception as e:
-                logger.critical(f'insert_data_to_db failed, exception: {str(e)}')
+                logger.exception(f'insert_data_to_db failed, exception: {str(e)}')
                 raise
 
         if should_log_info is True:
