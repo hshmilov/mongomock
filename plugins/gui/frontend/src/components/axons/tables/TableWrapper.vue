@@ -73,7 +73,9 @@
                 display: grid;
                 grid-auto-flow: column;
                 grid-template-columns: max-content;
-                grid-gap: 8px;
+                .x-button.link {
+                    width: 120px;
+                }
             }
         }
     }

@@ -1,25 +1,5 @@
 <template>
   <div class="x-entity-table">
-    <span
-      class="table-results-title"
-    >
-      <template v-if="ecFilter">
-        <i class="text">{{ ecResultsMessage }}</i>
-        <x-button
-          link
-          @click="clearEc"
-        >Clear</x-button>
-        <x-button
-          link
-          @click="navigateFilteredTask"
-        >Go to Task</x-button>
-      </template>
-      <x-historical-date
-        v-model="historical"
-        :module="module"
-        @error="$emit('error', $event)"
-      />
-    </span>
     <x-query
       :module="module"
       :read-only="isReadOnly"
@@ -59,8 +39,7 @@
 </template>
 
 <script>
-  import xHistoricalDate from '../../neurons/inputs/HistoricalDate.vue'
-  import xQuery from '../../neurons/data/Query.vue'
+  import xQuery from './query/Query.vue'
   import xTable from '../../neurons/data/Table.vue'
   import xTableData from './TableData.vue'
   import xActionMenu from './ActionMenu.vue'
@@ -76,7 +55,7 @@
   export default {
     name: 'XEntityTable',
     components: {
-      xHistoricalDate, xQuery, xTable, xTableData, xActionMenu, xFieldConfig, xButton
+      xQuery, xTable, xTableData, xActionMenu, xFieldConfig, xButton
     },
     props: { module: { required: true } },
     computed: {
@@ -89,15 +68,6 @@
         historicalState (state) {
           return state[this.module].view.historical
         },
-        allowedDates (state) {
-          return state.constants.allowedDates[this.module]
-        },
-        query (state) {
-          return state[this.module].view.query
-        },
-        ecFilter (state) {
-          return state[this.module].view.ecFilter
-        },
         currentSelectionLabels (state) {
           if (!this.selection.include) return {}
           return state[this.module].content.data
@@ -108,24 +78,8 @@
                   }, {})
         }
       }),
-      historical: {
-        get () {
-          if (!this.historicalState) return ''
-          return this.historicalState.substring(0, 10)
-        },
-        set (newDate) {
-          this.updateView({
-            module: this.module, view: {
-              historical: this.allowedDates[newDate]
-            }
-          })
-        }
-      },
       hasSelection () {
         return (this.selection.ids && this.selection.ids.length) || this.selection.include === false
-      },
-      ecResultsMessage() {
-        return `Showing ${this.ecFilter.success.split('_')[0]} results of action ${this.ecFilter.details.action} of enforcement ${this.ecFilter.details.enforcement}, Task ${this.ecFilter.pretty_id}`
       }
     },
     data () {
@@ -166,17 +120,6 @@
       exportCSV () {
         this.fetchContentCSV({ module: this.module })
       },
-      clearEc () {
-        this.updateView({
-          module: this.module, view: {
-            ecFilter: null,
-            query: { ...this.query }
-          }
-        })
-      },
-      navigateFilteredTask() {
-        this.$router.push({path: `/enforcements/tasks/${this.ecFilter.details.id}`})
-      },
       onTableData (dataId) {
         this.$emit('data', dataId)
       },
@@ -199,13 +142,5 @@
 <style lang="scss">
     .x-entity-table {
         height: 100%;
-    }
-    .table-results-title {
-        display: flex;
-        align-items: center;
-        .x-historical-date {
-            flex: 1 0 auto;
-        }
-
     }
 </style>

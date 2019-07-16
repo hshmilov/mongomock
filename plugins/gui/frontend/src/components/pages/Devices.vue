@@ -1,32 +1,25 @@
 <template>
     <x-page title="devices">
-        <x-table module="devices" @data="updateDeviceState" @error="errorMessage = $event"/>
-        <x-toast v-if="errorMessage" v-model="errorMessage" />
+        <x-table module="devices" @data="updateDeviceState" />
     </x-page>
 </template>
 
 <script>
     import xPage from '../axons/layout/Page.vue'
     import xTable from '../networks/entities/Table.vue'
-    import xToast from '../axons/popover/Toast.vue'
 
     import {mapState, mapMutations} from 'vuex'
     import {CHANGE_TOUR_STATE} from '../../store/modules/onboarding'
 
     export default {
         name: 'x-devices',
-        components: {xPage, xTable, xToast},
+        components: {xPage, xTable},
         computed: {
             ...mapState({
                 tourDevices(state) {
                     return state.onboarding.tourStates.queues.devices
                 }
             })
-        },
-        data() {
-            return {
-                errorMessage: ''
-            }
         },
         methods: {
             ...mapMutations({

@@ -1,7 +1,6 @@
 <template>
     <x-page title="users">
-        <x-table module="users" @error="errorMessage = $event"/>
-        <x-toast v-if="errorMessage" v-model="errorMessage" />
+        <x-table module="users" />
     </x-page>
 </template>
 
@@ -12,12 +11,7 @@
 
     export default {
         name: 'x-users',
-        components: {xPage, xTable, xToast},
-        data() {
-            return {
-                errorMessage: ''
-            }
-        }
+        components: {xPage, xTable}
     }
 </script>
 

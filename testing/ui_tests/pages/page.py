@@ -11,6 +11,7 @@ from selenium.common.exceptions import (ElementNotVisibleException,
                                         WebDriverException)
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.common.action_chains import ActionChains
 
 from axonius.utils.parsing import normalize_timezone_date
 from services.axon_service import TimeoutException
@@ -685,7 +686,8 @@ class Page:
 
     def close_datepicker(self):
         try:
-            self.driver.find_element_by_css_selector(self.DATEPICKER_OVERLAY_CSS).click()
+            el = self.driver.find_element_by_css_selector(self.DATEPICKER_OVERLAY_CSS)
+            ActionChains(self.driver).move_to_element_with_offset(el, 1, 1).click().perform()
             self.wait_for_element_absent_by_css(self.DATEPICKER_OVERLAY_CSS)
         except NoSuchElementException:
             # Already closed

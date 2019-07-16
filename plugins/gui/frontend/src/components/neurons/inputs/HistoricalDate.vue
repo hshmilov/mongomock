@@ -61,7 +61,7 @@
       isDateUnavailable (date) {
         if (date < this.firstHistoricalDate || date > this.currentDate) return true
 
-        return (this.allowedDates && this.allowedDates[date.toISOString().substring(0, 10)])
+        return (!this.allowedDates || !this.allowedDates[date.toISOString().substring(0, 10)])
       },
       onInput (historical) {
         this.$emit('input', historical)

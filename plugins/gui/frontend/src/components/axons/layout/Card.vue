@@ -51,7 +51,7 @@
     props: {
       title: {
         type: String,
-        required: true
+        default: true
       },
       logo: {
         type: String,
