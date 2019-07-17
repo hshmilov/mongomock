@@ -40,7 +40,7 @@ class HaveibeenpwnedEnrichment(ActionTypeBase):
 
     @staticmethod
     def default_config() -> dict:
-        return add_node_default({}, HAVEIBEENPWNED_PLUGIN_NAME)
+        return add_node_default({'verify_ssl': False, 'https_proxy': None}, HAVEIBEENPWNED_PLUGIN_NAME)
 
     def _trigger_haveibeenpwned_adapter(self):
         adapter_unique_name = self._plugin_base._get_adapter_unique_name(

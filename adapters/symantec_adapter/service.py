@@ -73,7 +73,7 @@ class SymantecAdapter(AdapterBase):
             'items': [
                 {
                     'name': 'domain',
-                    'title': 'Symantec Endpoint Protection Domain',
+                    'title': 'Symantec Endpoint Protection Server',
                     'type': 'string'
                 },
                 {
