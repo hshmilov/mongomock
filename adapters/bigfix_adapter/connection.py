@@ -1,8 +1,8 @@
 import logging
-import xml.etree.ElementTree as ET
 
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.exception import RESTException
+from axonius.clients.xml.connection import parse_xml_from_string
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -17,7 +17,7 @@ class BigfixConnection(RESTConnection):
 
     # pylint: disable=too-many-nested-blocks
     def get_software_per_device_list(self):
-        xml_response = ET.fromstring(
+        xml_response = parse_xml_from_string(
             self._post(
                 'query',
                 body_params='relevance=(id of computer of it, values of it) of results of bes properties whose '
@@ -46,7 +46,7 @@ class BigfixConnection(RESTConnection):
         return computer_id_to_installed_software
 
     def get_device_list(self):
-        xml_computers = ET.fromstring(self._get('computers', use_json_in_response=False))
+        xml_computers = parse_xml_from_string(self._get('computers', use_json_in_response=False))
         async_requests = []
 
         for computer_node in xml_computers:

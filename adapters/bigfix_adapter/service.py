@@ -61,7 +61,11 @@ class BigfixAdapter(AdapterBase):
         """
         try:
             client_data.connect()
-            installed_software_dict = client_data.get_software_per_device_list()
+            try:
+                installed_software_dict = client_data.get_software_per_device_list()
+            except Exception:
+                installed_software_dict = dict()
+                logger.exception(f'Failed getting installed software list, continuing')
             for device_raw in client_data.get_device_list():
                 yield device_raw, installed_software_dict
         finally:
