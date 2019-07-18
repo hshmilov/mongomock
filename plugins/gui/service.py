@@ -61,7 +61,8 @@ from axonius.consts.gui_consts import (ADAPTERS_DATA, ENCRYPTION_KEY_PATH,
                                        FeatureFlagsNames, ResearchStatus,
                                        DASHBOARD_COLLECTION, DASHBOARD_SPACES_COLLECTION,
                                        DASHBOARD_SPACE_PERSONAL, DASHBOARD_SPACE_TYPE_CUSTOM,
-                                       Signup, PROXY_DATA_PATH, DASHBOARD_LIFECYCLE_ENDPOINT)
+                                       Signup, PROXY_DATA_PATH, DASHBOARD_LIFECYCLE_ENDPOINT,
+                                       UNCHANGED_MAGIC_FOR_GUI)
 from axonius.consts.metric_consts import ApiMetric, Query, SystemMetric
 from axonius.consts.plugin_consts import (AGGREGATOR_PLUGIN_NAME,
                                           AXONIUS_USER_NAME,
@@ -256,8 +257,6 @@ def gzipped_downloadable(filename, extension):
 
 # this is a magic that means that the value shouldn't be changed, i.e. when used by passwords
 # that aren't sent to the client from the server and if they aren't modified we need to not change them
-UNCHANGED_MAGIC_FOR_GUI = ['unchanged']
-
 
 def clear_passwords_fields(data, schema):
     """
@@ -3049,6 +3048,33 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
                                            role_name=post_data.get('role_name'))
         return ''
 
+    @gui_add_rule_logged_in('system/users/<user_id>', methods=['POST', 'DELETE'])
+    def update_user(self, user_id):
+        """
+            Updates the userinfo for the current user or deleting a user
+        """
+        if request.method == 'POST':
+
+            post_data = self.get_request_data_as_object()
+
+            if post_data.get('password') and post_data.get('password') != UNCHANGED_MAGIC_FOR_GUI:
+                post_data['password'] = bcrypt.hash(post_data['password'])
+            else:
+                del post_data['password']
+
+            res = self._users_collection.update_one({
+                '_id': ObjectId(user_id)
+            }, {
+                '$set': post_data
+            })
+            if not res.raw_result.get('updatedExisting'):
+                return '', 400
+        if request.method == 'DELETE':
+            self._users_collection.update_one({'_id': ObjectId(user_id)},
+                                              {'$set': {'archived': True}})
+            self.__invalidate_sessions(user_id)
+        return '', 200
+
     @gui_add_rule_logged_in('system/users/self/additional_userinfo', methods=['POST'])
     def system_users_additional_userinfo(self):
         """
@@ -3102,18 +3128,6 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         post_data = self.get_request_data_as_object()
         self._users_collection.update_one({'_id': ObjectId(user_id)},
                                           {'$set': post_data})
-        self.__invalidate_sessions(user_id)
-        return ''
-
-    @gui_add_rule_logged_in('system/users/<user_id>', methods=['DELETE'],
-                            required_permissions={Permission(PermissionType.Settings,
-                                                             PermissionLevel.ReadWrite)})
-    def system_users_delete(self, user_id):
-        """
-        Deletes a user
-        """
-        self._users_collection.update_one({'_id': ObjectId(user_id)},
-                                          {'$set': {'archived': True}})
         self.__invalidate_sessions(user_id)
         return ''
 

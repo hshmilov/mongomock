@@ -16,7 +16,7 @@ import dateutil
 import pymongo
 from bson import ObjectId
 
-from axonius.consts.gui_consts import SPECIFIC_DATA, ADAPTERS_DATA
+from axonius.consts.gui_consts import SPECIFIC_DATA, ADAPTERS_DATA, UNCHANGED_MAGIC_FOR_GUI
 from axonius.consts.metric_consts import SystemMetric
 from axonius.entities import EntitiesNamespace
 from flask import request, has_request_context, session, g
@@ -421,6 +421,7 @@ def beautify_user_entry(user):
                                                    'admin',
                                                    'source',
                                                    'additional_userinfo']}
+    user['password'] = UNCHANGED_MAGIC_FOR_GUI
     return user
 
 

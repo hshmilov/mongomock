@@ -57,6 +57,7 @@ class SettingsPage(Page):
     READ_WRITE_PERMISSION = 'Read and edit'
     RESTRICTED_PERMISSION = 'Restricted'
     SAVED_SUCCESSFULLY_TOASTER = 'Saved Successfully.'
+    SAVED_SUCCESSFULLY_PERMISSIONS_TOASTER = 'User permissions saved.'
     BAD_PROXY_TOASTER = PROXY_ERROR_MESSAGE
     SELECT_ROLE_CSS = 'div.x-dropdown.x-select.select-role'
     SELECT_USER_ROLE_CSS = '.user-permissions .user-role .x-select'
@@ -87,6 +88,8 @@ class SettingsPage(Page):
     TABS_BODY_CSS = '.x-tabs .body'
 
     CREATE_USER_BUTTON = 'Create User'
+    UPDATE_USER_BUTTON = 'Update User'
+    USER_DETAILS_SELECTOR = '.user-details-title'
 
     @property
     def url(self):
@@ -108,6 +111,9 @@ class SettingsPage(Page):
     def click_new_user(self):
         self.click_button('+ New User')
 
+    def click_edit_user(self, user_name):
+        self.driver.find_element_by_id(user_name).click()
+
     def fill_new_user_details(self, username, password, first_name=None, last_name=None, role_name=None):
         self.fill_text_field_by_element_id('user_name', username)
         self.fill_text_field_by_element_id('password', password)
@@ -120,11 +126,25 @@ class SettingsPage(Page):
                                               self.DROPDOWN_SELECTED_OPTION_CSS,
                                               role_name)
 
+    def fill_edit_user_details(self, password=None, first_name=None, last_name=None):
+        if password:
+            self.fill_password_field(password)
+        if first_name:
+            self.fill_text_field_by_element_id('first_name', first_name)
+        if last_name:
+            self.fill_text_field_by_element_id('last_name', last_name)
+
+    def fill_password_field(self, new_password):
+        self.fill_text_field_by_element_id('password', new_password)
+
     def click_create_user(self):
-        self.click_button(self.CREATE_USER_BUTTON)
+        self.get_special_button(self.CREATE_USER_BUTTON).click()
+
+    def click_update_user(self):
+        self.get_special_button(self.UPDATE_USER_BUTTON).click()
 
     def find_disabled_create_user(self):
-        return self.driver.find_element_by_xpath(self.DISABLED_BUTTON_XPATH.format(button_text=self.CREATE_USER_BUTTON))
+        return self.is_element_disabled(self.get_special_button(self.CREATE_USER_BUTTON))
 
     def find_password_input(self):
         return self.driver.find_element_by_id('password')
@@ -135,8 +155,14 @@ class SettingsPage(Page):
         self.click_create_user()
         self.wait_for_element_absent_by_css(self.MODAL_OVERLAY_CSS)
 
+    def update_new_user(self, username, password=None, first_name=None, last_name=None):
+        self.click_edit_user(username)
+        self.fill_edit_user_details(password=password, first_name=first_name, last_name=last_name)
+        self.click_update_user()
+        self.wait_for_element_absent_by_css(self.MODAL_OVERLAY_CSS)
+
     def get_all_users_from_users_and_roles(self):
-        return (x.text for x in self.driver.find_elements_by_css_selector('.user-details-title'))
+        return (x.text for x in self.driver.find_elements_by_css_selector(self.USER_DETAILS_SELECTOR))
 
     def click_gui_settings(self):
         self.driver.find_element_by_css_selector(self.GUI_SETTINGS_CSS).click()
@@ -152,6 +178,10 @@ class SettingsPage(Page):
 
     def is_save_button_enabled(self):
         button = self.get_save_button()
+        return button.get_attribute('class') != 'x-button disabled'
+
+    def is_update_button_enabled(self):
+        button = self.get_special_button(self.UPDATE_USER_BUTTON)
         return button.get_attribute('class') != 'x-button disabled'
 
     def click_save_button(self):
@@ -329,6 +359,12 @@ class SettingsPage(Page):
 
     def wait_for_saved_successfully_toaster(self):
         self.wait_for_toaster(self.SAVED_SUCCESSFULLY_TOASTER)
+
+    def find_saved_successfully_permissions_toaster(self):
+        return self.find_toaster(self.SAVED_SUCCESSFULLY_PERMISSIONS_TOASTER)
+
+    def wait_for_saved_successfully_permissions_toaster(self):
+        self.wait_for_toaster(self.SAVED_SUCCESSFULLY_PERMISSIONS_TOASTER)
 
     def wait_for_user_created_toaster(self):
         self.wait_for_toaster('User created.')

@@ -20,6 +20,7 @@ export const GET_SIGNUP = 'GET_SIGNUP'
 export const UPDATE_SIGNUP = 'UPDATE_SIGNUP'
 export const CHANGE_PERMISSIONS = 'CHANGE_PERMISSIONS'
 export const CREATE_USER = 'CREATE_USER'
+export const UPDATE_USER = 'UPDATE_USER'
 export const REMOVE_USER = 'REMOVE_USER'
 
 export const GET_ALL_ROLES = 'GET_ALL_ROLES'
@@ -249,6 +250,19 @@ export const auth = {
       return dispatch(REQUEST_API, {
         rule: 'system/users',
         method: 'PUT',
+        data: payload
+      })
+    },
+    [UPDATE_USER] ({ dispatch }, payload) {
+      /*
+        Request from server to update an existing user
+       */
+      if (!payload || !payload.uuid) {
+        return
+      }
+      return dispatch(REQUEST_API, {
+        rule: `system/users/${payload.uuid}`,
+        method: 'POST',
         data: payload
       })
     },

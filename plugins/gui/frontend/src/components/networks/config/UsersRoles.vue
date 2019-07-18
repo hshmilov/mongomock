@@ -10,7 +10,7 @@
       <x-button
         id="create-user"
         :disabled="readOnly"
-        @click="openCreateUser"
+        @click="() => openUserConfig()"
       >+ New User</x-button>
     </div>
     <div
@@ -28,7 +28,15 @@
             v-if="user.first_name.length > 0 || user.last_name.length > 0"
           > - {{ user.first_name }} {{ user.last_name }}</span>
           </div>
-          <div>{{ user.source }}</div>
+          <div class="user-source">{{ user.source }}</div>
+          <x-button
+                  v-if="user.source === 'internal' && user.user_name !== 'admin'"
+                  :id="user.user_name"
+                  link
+                  @click="() => openUserConfig(user)"
+          >
+            Edit
+          </x-button>
         </div>
       </div>
       <div
@@ -68,30 +76,11 @@
         >Save</x-button>
       </div>
     </div>
-    <x-modal
-      v-if="userToCreate"
-      class="modal-user"
-      @close="closeCreateUser"
-      @confirm="performCreateUser"
-    >
-      <div slot="body">
-        <x-form
-          v-model="userToCreate"
-          :schema="userSchema"
-          @validate="validateUser"
-        />
-      </div>
-      <template slot="footer">
-        <x-button
-          link
-          @click="closeCreateUser"
-        >Cancel</x-button>
-        <x-button
-          :disabled="!validUser"
-          @click="performCreateUser"
-        >Create User</x-button>
-      </template>
-    </x-modal>
+    <x-user-config
+      v-if="userToConfig"
+      :user="userToConfig"
+      @exit="closeUserConfig"
+    />
     <x-modal
       v-if="userToRemove"
       approve-text="Remove User"
@@ -164,17 +153,18 @@
   import xModal from '../../axons/popover/Modal.vue'
   import xSelect from '../../axons/inputs/Select.vue'
   import xButton from '../../axons/inputs/Button.vue'
+  import xUserConfig from './UserConfig.vue'
 
   import { mapState, mapActions } from 'vuex'
   import {
-    GET_ALL_USERS, CREATE_USER, REMOVE_USER, CHANGE_PERMISSIONS,
+    GET_ALL_USERS, CREATE_USER, UPDATE_USER, REMOVE_USER, CHANGE_PERMISSIONS,
     GET_ALL_ROLES, CREATE_ROLE, REMOVE_ROLE, CHANGE_ROLE,
     GET_DEFAULT_ROLE, UPDATE_DEFAULT_ROLE
   } from '../../../store/modules/auth'
 
   export default {
     name: 'XUsersRoles',
-    components: { xForm, xModal, xSelect, xButton },
+    components: { xForm, xModal, xSelect, xButton, xUserConfig },
     props: {
       readOnly: {
         type: Boolean,
@@ -183,7 +173,7 @@
     },
     data () {
       return {
-        userToCreate: null,
+        userToConfig: null,
         userToRemove: null,
         rolesConfig: {
           selected: '',
@@ -245,40 +235,6 @@
           type: 'array'
         }
       },
-      userSchema () {
-        return {
-          type: 'array', items: [{
-            name: 'user_name',
-            title: 'Username',
-            type: 'string'
-          }, {
-            name: 'password',
-            title: 'Password',
-            type: 'string',
-            format: 'password'
-          }, {
-            name: 'first_name',
-            title: 'First name',
-            type: 'string'
-          }, {
-            name: 'last_name',
-            title: 'Last name',
-            type: 'string'
-          }, {
-            name: 'role_name',
-            title: 'Role',
-            type: 'string',
-            enum: this.roles.map(item => item.name)
-          }],
-          required: ['user_name', 'password']
-        }
-      },
-      newUserTemplate () {
-        return this.userSchema.items.reduce((map, item) => {
-          map[item.name] = ''
-          return map
-        }, {})
-      },
       permissionsByRole () {
         return this.roles.reduce((map, role) => {
           map[role.name] = role.permissions
@@ -315,8 +271,7 @@
     methods: {
       ...mapActions({
         getAllUsers: GET_ALL_USERS, changePermissions: CHANGE_PERMISSIONS,
-        createUser: CREATE_USER, removeUser: REMOVE_USER,
-        getAllRoles: GET_ALL_ROLES, changeRole: CHANGE_ROLE,
+        removeUser: REMOVE_USER, getAllRoles: GET_ALL_ROLES, changeRole: CHANGE_ROLE,
         createRole: CREATE_ROLE, removeRole: REMOVE_ROLE,
         getDefaultRole: GET_DEFAULT_ROLE, updateDefaultRole: UPDATE_DEFAULT_ROLE
       }),
@@ -332,22 +287,15 @@
           default: default_value || 'Restricted'
         }
       },
-      openCreateUser () {
-        this.userToCreate = { ...this.newUserTemplate }
+      openUserConfig (user) {
+        this.userToConfig = Object.assign({}, user)
       },
       validateUser(valid) {
         this.validUser = valid
       },
-      performCreateUser () {
-        if (this.readOnly) return
-        this.createUser(this.userToCreate).then(response => {
-          this.$emit('toast', (response && response.status === 200 ? 'User created.' : response.data.message))
-          this.getAllUsers()
-        }).catch(error => this.$emit('toast', error.response.data.message))
-        this.closeCreateUser()
-      },
-      closeCreateUser () {
-        this.userToCreate = null
+      closeUserConfig () {
+        this.userToConfig = null
+        this.getAllUsers()
       },
       savePermissions (user) {
         this.changePermissions({
@@ -454,6 +402,10 @@
                 .user-details-title {
                     font-weight: 400;
                     font-size: 16px;
+                }
+
+                .user-source {
+                  display: inline;
                 }
             }
 

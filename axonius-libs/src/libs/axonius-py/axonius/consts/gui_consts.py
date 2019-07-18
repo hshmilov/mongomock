@@ -71,7 +71,13 @@ class ResearchStatus(Enum):
 CONFIG_CONFIG = 'GuiService'
 FEATURE_FLAGS_CONFIG = 'FeatureFlags'
 
+######################
+# Users consts #
+######################
+
 USERS_CONFIG_COLLECTION = 'users_config'
+UNCHANGED_MAGIC_FOR_GUI = ['unchanged']
+
 
 ######################
 # Exec report consts #

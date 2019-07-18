@@ -24,6 +24,7 @@
     :disabled="readOnly || schema.readOnly"
     @input="input"
     @focusout.stop="focusout"
+    @focusin="onFocusIn"
   >
   <!-- Select from enum values -->
   <x-select
@@ -33,7 +34,7 @@
     placeholder="value..."
     :searchable="true"
     :class="{'error-border': error}"
-    :read-only="readOnly"
+    :read-only="readOnly || schema.readOnly"
     @input="input"
     @focusout.stop="validate"
   />
@@ -91,6 +92,11 @@
         methods: {
 		    formatData() {
                 return this.data
+            },
+            onFocusIn(){
+		      if(this.isUnchangedPassword){
+		        this.data = ''
+              }
             }
         }
 	}
