@@ -118,6 +118,8 @@ class TenableSecurityScannerConnection(RESTConnection):
         for repository_id in repositories_ids:
             try:
                 device_list = self._get_device_list(repository_id=repository_id)
+                if drop_only_ip_devices:
+                    logger.info(f'Dropping devices with only IP address')
 
                 if fetch_vulnerabilities:
                     logger.info(f'Fetching vulnerabilities')
@@ -133,6 +135,12 @@ class TenableSecurityScannerConnection(RESTConnection):
 
                 for device in device_list:
                     device['software'] = []
+                    if drop_only_ip_devices:
+                        dns_name = device.get('dnsName')
+                        mac_address = device.get('macAddress')
+                        netbios_name = device.get('netbiosName')
+                        if not any([dns_name, mac_address, netbios_name]):
+                            continue
                     if top_n_software:
                         for software, devices in software_mapping.items():
                             if self._software_id(device) in devices:
