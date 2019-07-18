@@ -1,37 +1,64 @@
 <template>
-    <div class="x-table-wrapper">
-        <div class="v-spinner-bg" v-if="loading"></div>
-        <pulse-loader :loading="loading" color="#FF7D46"/>
-        <div class="table-header">
-            <div class="title" v-if="title">
-                <div class="text">{{ title }}</div>
-                <div v-if="count !== undefined" class="title count">({{ count }})</div>
-                <slot name="state"/>
-            </div>
-            <div class="error">{{error}}</div>
-            <div class="actions">
-                <slot name="actions"/>
-            </div>
-        </div>
-        <slot name="table"/>
+  <div class="x-table-wrapper">
+    <div
+      v-if="loading"
+      class="v-spinner-bg"
+    />
+    <pulse-loader
+      :loading="loading"
+      color="#FF7D46"
+    />
+    <div class="table-header">
+      <div
+        v-if="title"
+        class="title"
+      >
+        <div class="text">{{ title }}</div>
+        <div
+          v-if="count !== undefined"
+          class="title count"
+        >({{ count }})</div>
+        <slot name="state" />
+      </div>
+      <div class="error">{{ error }}</div>
+      <div class="actions">
+        <slot name="actions" />
+      </div>
     </div>
+    <slot name="table" />
+  </div>
 </template>
 
 <script>
-    import PulseLoader from 'vue-spinner/src/PulseLoader.vue'
+  import PulseLoader from 'vue-spinner/src/PulseLoader.vue'
 
-    export default {
-        name: 'x-table-wrapper',
-        components: {PulseLoader},
-        props: {
-            title: {}, loading: {default: false}, count: {}, error: {}
-        },
-        data() {
-            return {
-                searchValue: ''
-            }
-        }
+  export default {
+    name: 'XTableWrapper',
+    components: { PulseLoader },
+    props: {
+      title: {
+        type: String,
+        required: true
+      },
+      loading: {
+        type: Boolean,
+        default: false
+      },
+      count: {
+        type: [Number, undefined],
+        default: undefined
+      },
+      error: {
+        type: String,
+        default: ''
+      }
+    },
+    data () {
+      return {
+        searchValue: ''
+      }
     }
+  }
 </script>
 
 <style lang="scss">
@@ -73,9 +100,7 @@
                 display: grid;
                 grid-auto-flow: column;
                 grid-template-columns: max-content;
-                .x-button.link {
-                    width: 120px;
-                }
+                grid-gap: 0 8px;
             }
         }
     }

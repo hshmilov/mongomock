@@ -6,8 +6,11 @@
         class="title"
       >{{ enforcement.message }}</div>
       <template v-else>
-        <div class="title">New Query</div>
-        <div class="status">[Unsaved]</div>
+        <div class="title">{{ title }}</div>
+        <div
+          v-if="!selectedView"
+          class="status"
+        >[Unsaved]</div>
       </template>
     </div>
     <x-button
@@ -91,20 +94,25 @@
     },
     computed: {
       ...mapState({
-        historicalState (state) {
-          return state[this.module].view.historical
+        view (state) {
+          return state[this.module].view
         },
         allowedDates (state) {
           return state.constants.allowedDates[this.module]
         },
-        enforcement (state) {
-          return state[this.module].view.enforcement
+        selectedView (state) {
+          let uuid = state[this.module].selectedView
+          if (!uuid) return null
+          return state[this.module].views.saved.content.data.find(view => view.uuid === uuid)
         }
       }),
+      enforcement () {
+        return this.view.enforcement
+      },
       historical: {
         get () {
-          if (!this.historicalState) return ''
-          return this.historicalState.substring(0, 10)
+          if (!this.view.historical) return ''
+          return this.view.historical.substring(0, 10)
         },
         set (newDate) {
           this.updateView({
@@ -113,6 +121,12 @@
             }
           })
         }
+      },
+      title () {
+        if (this.selectedView) {
+          return this.selectedView.name
+        }
+        return 'New Query'
       }
     },
     methods: {
@@ -133,7 +147,8 @@
               field: '', desc: true
             },
             fields: defaultFields[this.module]
-          }
+          },
+          uuid: null
         })
       },
       navigateFilteredTask() {

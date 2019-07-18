@@ -11,7 +11,6 @@
       v-model="searchValue"
       placeholder="Insert your query or start typing to filter recent Queries"
       :tabindex="-1"
-      @input="searchQuery"
       @keyup.enter.native.stop="submitFilter"
       @keyup.down.native="incQueryMenuIndex"
       @keyup.up.native="decQueryMenuIndex"
@@ -35,11 +34,11 @@
         <div class="title">Saved Queries</div>
         <div class="menu-content">
           <x-menu-item
-            v-for="(query, index) in savedViews"
+            v-for="(item, index) in savedViews"
             :key="index"
-            :title="query.name"
+            :title="item.name"
             :selected="isSelectedSaved(index)"
-            @click="selectQuery(query)"
+            @click="selectQuery(item)"
           />
         </div>
       </x-menu>
@@ -47,11 +46,11 @@
         <div class="title">History</div>
         <div class="menu-content">
           <x-menu-item
-            v-for="(query, index) in historyViews"
+            v-for="(item, index) in historyViews"
             :key="index"
-            :title="query.view.query.filter"
+            :title="item.view.query.filter"
             :selected="isSelectedHistory(index)"
-            @click="selectQuery(query)"
+            @click="selectQuery(item)"
           />
         </div>
       </x-menu>
@@ -73,8 +72,9 @@
   import xMenu from '../../../axons/menus/Menu.vue'
   import xMenuItem from '../../../axons/menus/MenuItem.vue'
 
-  import { mapState, mapMutations, mapActions } from 'vuex'
-  import { FETCH_DATA_VIEWS } from '../../../../store/actions'
+  import viewsMixin from '../../../../mixins/views'
+
+  import { mapState, mapMutations } from 'vuex'
   import { UPDATE_DATA_VIEW } from '../../../../store/mutations'
 
   export default {
@@ -82,6 +82,7 @@
     components: {
       xDropdown, xSearchInput, xMenu, xMenuItem
     },
+    mixins: [viewsMixin],
     props: {
       module: {
         type: String,
@@ -110,13 +111,17 @@
     computed: {
       ...mapState({
         savedViews (state) {
-          return state[this.module].views.saved.data
+          if (!this.isSearchSimple) return state[this.module].views.saved.content.data
+          return state[this.module].views.saved.content.data
+                  .filter(item => item.name.toLowerCase().includes(this.searchValue.toLowerCase()))
+        },
+        historyViews (state) {
+          if (!this.isSearchSimple) return state[this.module].views.saved.content.data
+          return state[this.module].views.history.content.data
+                  .filter(item => item.view.query.filter.toLowerCase().includes(this.searchValue.toLowerCase()))
         },
         fields (state) {
           return state[this.module].view.fields
-        },
-        historyViews (state) {
-          return state[this.module].views.history.data
         }
       }),
       isSearchSimple () {
@@ -160,48 +165,29 @@
       }
     },
     created () {
-      this.searchQuery().then(() => {
+      if (this.querySearch) {
+        this.searchValue = this.querySearch
+      } else if (this.value) {
+        this.searchValue = this.value
+      }
+      this.fetchViewsHistory()
+    },
+    methods: {
+      ...mapMutations({
+        updateView: UPDATE_DATA_VIEW
+      }),
+      viewsCallback () {
         if (this.$route.query.view) {
           let requestedView = this.savedViews.find(view => view.name === this.$route.query.view)
           if (requestedView) {
             this.updateView({ module: this.module, view: requestedView.view })
           }
         }
-      })
-      if (this.querySearch) {
-        this.searchValue = this.querySearch
-      } else if (this.value) {
-        this.searchValue = this.value
-      }
-    },
-    methods: {
-      ...mapMutations({
-        updateView: UPDATE_DATA_VIEW
-      }),
-      ...mapActions({
-        fetchViews: FETCH_DATA_VIEWS
-      }),
-      searchQuery () {
-        this.inTextSearch = false
-        if (!this.isSearchSimple) return
-        /* Filter the saved and history queries in the dropdown, by the string user inserted */
-        return Promise.all([
-          this.filterQueries('saved', 'name'), this.filterQueries('history', 'view.query.filter')
-        ])
-      }
-      ,
-      filterQueries (type, filterField) {
-        return this.fetchViews({
-          module: this.module,
-          type: type,
-          filter: this.searchValue.length > 0 ? `${filterField} == regex("${this.searchValue}", "i")` : ``
-        }).catch((error) => this.$emit('error', error))
-      }
-      ,
-      selectQuery ({ view }) {
+      },
+      selectQuery ({ view, uuid }) {
         /* Load given view by settings current filter and expressions to it */
         this.inTextSearch = false
-        this.updateView({ module: this.module, view })
+        this.updateView({ module: this.module, view, uuid })
         if (!this.inTextSearch) {
           this.searchValue = view.query.filter
         }

@@ -771,14 +771,14 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         })
         return '', 200
 
-    def _entity_views(self, method, entity_type: EntityType, limit, skip, mongo_filter, mongo_sort):
+    def _entity_views(self, method, entity_type: EntityType, limit, skip, mongo_filter, mongo_sort, query_type='saved'):
         """
         Save or fetch views over the entities db
         :return:
         """
         entity_views_collection = self.gui_dbs.entity_query_views_db_map[entity_type]
         if method == 'GET':
-            mongo_filter['query_type'] = mongo_filter.get('query_type', 'saved')
+            mongo_filter['query_type'] = query_type
             return [gui_helpers.beautify_db_entry(entry)
                     for entry
                     in get_views(entity_type, limit, skip, mongo_filter, mongo_sort)]
@@ -791,6 +791,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
                 return return_error(f'View data is required in order to save one', 400)
             view_data['timestamp'] = datetime.now()
             view_data['user_id'] = get_connected_user_id()
+            view_data['query_type'] = query_type
             update_result = entity_views_collection.find_one_and_replace({
                 'name': view_data['name']
             }, view_data, upsert=True, return_document=pymongo.ReturnDocument.AFTER)
@@ -1092,23 +1093,23 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
     @gui_helpers.paginated()
     @gui_helpers.filtered()
     @gui_helpers.sorted_endpoint()
-    @gui_add_rule_logged_in('devices/views', methods=['GET', 'POST', 'DELETE'],
+    @gui_add_rule_logged_in('devices/views/<query_type>', methods=['GET', 'POST', 'DELETE'],
                             required_permissions={Permission(PermissionType.Devices, ReadOnlyJustForGet)})
-    def device_views(self, limit, skip, mongo_filter, mongo_sort):
+    def device_views(self, limit, skip, mongo_filter, mongo_sort, query_type):
         """
         Save or fetch views over the devices db
         :return:
         """
-        return jsonify(self._entity_views(request.method, EntityType.Devices, limit, skip, mongo_filter, mongo_sort))
+        return jsonify(self._entity_views(request.method, EntityType.Devices, limit, skip, mongo_filter, mongo_sort, query_type))
 
     @gui_helpers.filtered()
-    @gui_add_rule_logged_in('devices/views/count', methods=['GET'],
-                            required_permissions={Permission(PermissionType.Devices,
-                                                             PermissionLevel.ReadOnly)})
-    def get_devices_views_count(self, mongo_filter):
+    @gui_add_rule_logged_in('devices/views/<query_type>/count', methods=['GET'],
+                            required_permissions={Permission(PermissionType.Devices, PermissionLevel.ReadOnly)})
+    def get_devices_views_count(self, mongo_filter, query_type):
         content = self.get_request_data_as_object()
         quick = content.get('quick') or request.args.get('quick')
         quick = quick == 'True'
+        mongo_filter['query_type'] = query_type
         return str(get_views_count(EntityType.Devices, mongo_filter, quick=quick))
 
     @gui_helpers.filtered_entities()
@@ -1275,19 +1276,19 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
     @gui_helpers.paginated()
     @gui_helpers.filtered()
     @gui_helpers.sorted_endpoint()
-    @gui_add_rule_logged_in('users/views', methods=['GET', 'POST', 'DELETE'],
+    @gui_add_rule_logged_in('users/views/<query_type>', methods=['GET', 'POST', 'DELETE'],
                             required_permissions={Permission(PermissionType.Users, ReadOnlyJustForGet)})
-    def user_views(self, limit, skip, mongo_filter, mongo_sort):
-        return jsonify(self._entity_views(request.method, EntityType.Users, limit, skip, mongo_filter, mongo_sort))
+    def user_views(self, limit, skip, mongo_filter, mongo_sort, query_type):
+        return jsonify(self._entity_views(request.method, EntityType.Users, limit, skip, mongo_filter, mongo_sort, query_type))
 
     @gui_helpers.filtered()
-    @gui_add_rule_logged_in('users/views/count', methods=['GET'],
-                            required_permissions={Permission(PermissionType.Users,
-                                                             PermissionLevel.ReadOnly)})
-    def get_users_views_count(self, mongo_filter):
+    @gui_add_rule_logged_in('users/views/<query_type>/count', methods=['GET'],
+                            required_permissions={Permission(PermissionType.Users, PermissionLevel.ReadOnly)})
+    def get_users_views_count(self, mongo_filter, query_type):
         content = self.get_request_data_as_object()
         quick = content.get('quick') or request.args.get('quick')
         quick = quick == 'True'
+        mongo_filter['query_type'] = query_type
         return str(get_views_count(EntityType.Users, mongo_filter, quick=quick))
 
     @gui_helpers.filtered_entities()

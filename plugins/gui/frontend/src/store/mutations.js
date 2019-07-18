@@ -99,10 +99,15 @@ export const UPDATE_DATA_VIEW = 'UPDATE_DATA_VIEW'
 export const updateDataView = (state, payload) => {
 	let module = getModule(state, payload)
 	if (!module) return
-    if (module.view.query && payload.view.query && module.view.query.filter !== payload.view.query.filter) {
-        module.content.data = []
-    }
-	module.view = { ...module.view, ...payload.view }
+	if (payload.view) {
+		if (module.view.query && payload.view.query && module.view.query.filter !== payload.view.query.filter) {
+				module.content.data = []
+		}
+		module.view = { ...module.view, ...payload.view }
+	}
+	if (payload.uuid !== undefined) {
+		state[payload.module] = { ...module, selectedView: payload.uuid }
+	}
 }
 
 export const UPDATE_DATA_VIEWS = 'UPDATE_DATA_VIEWS'
@@ -119,9 +124,11 @@ export const updateDataViews = (state, payload) => {
 export const ADD_DATA_VIEW = 'ADD_DATA_VIEW'
 export const addDataView = (state, payload) => {
 	if (!getModule(state, payload)) return
-	const views = state[payload.module].views[payload.query_type]
+	const views = state[payload.module].views.saved.content
 	if (!views.data) views.data = []
-	views.data = [{ name: payload.name, view: payload.view }, ...views.data.filter(item => item.name !== payload.name)]
+	views.data = [{
+		uuid: payload.uuid, name: payload.name, view: payload.view
+	}, ...views.data.filter(item => item.name !== payload.name)]
 }
 
 export const UPDATE_REMOVED_DATA_VIEW = 'UPDATE_REMOVED_DATA_VIEW'

@@ -18,11 +18,13 @@
   import xSearchInsights from '../neurons/inputs/SearchInsights.vue'
   import xSpaces from '../networks/dashboard/Spaces.vue'
 
+  import viewsMixin from '../../mixins/views'
+
   import {
     FETCH_DISCOVERY_DATA, FETCH_DASHBOARD_SPACES, FETCH_DASHBOARD_PANELS, FETCH_DASHBOARD_FIRST_USE
   } from '../../store/modules/dashboard'
   import { IS_EXPIRED } from '../../store/getters'
-  import { FETCH_DATA_VIEWS, SAVE_VIEW } from '../../store/actions'
+  import { SAVE_VIEW } from '../../store/actions'
   import { CHANGE_TOUR_STATE, NEXT_TOUR_STATE } from '../../store/modules/onboarding'
   import { IS_ENTITY_RESTRICTED, IS_ENTITY_EDITABLE } from '../../store/modules/auth'
   import { mapState, mapGetters, mapMutations, mapActions } from 'vuex'
@@ -32,6 +34,7 @@
     components: {
       xPage, xEmptySystem, xSearchInsights, xSpaces
     },
+    mixins: [viewsMixin],
     computed: {
       ...mapState({
         dashboard (state) {
@@ -55,7 +58,7 @@
           return state.devices.view
         },
         devicesViewsList (state) {
-          return state.devices.views.saved.data
+          return state.devices.views.saved.content.data
         },
         dashboardFirstUse (state) {
           return state.dashboard.firstUse.data
@@ -78,21 +81,41 @@
     },
     created () {
       this.fetchDashboardFirstUse()
-      const getDashboardData = () => {
+      if (this.isExpired) {
+        this.getDashboardData()
+      }
+    },
+    beforeDestroy () {
+      clearTimeout(this.timer)
+    },
+    methods: {
+      ...mapMutations({
+        changeState: CHANGE_TOUR_STATE, nextState: NEXT_TOUR_STATE
+      }),
+      ...mapActions({
+        fetchDiscoveryData: FETCH_DISCOVERY_DATA,
+        fetchDashboardFirstUse: FETCH_DASHBOARD_FIRST_USE,
+        fetchSpaces: FETCH_DASHBOARD_SPACES, fetchPanels: FETCH_DASHBOARD_PANELS,
+        saveView: SAVE_VIEW
+      }),
+      onClickInsights () {
+        this.$router.push({ name: 'Insights Explorer' })
+      },
+      getDashboardData () {
         return Promise.all([
           this.fetchDiscoveryData({ module: 'devices' }), this.fetchDiscoveryData({ module: 'users' }),
           this.fetchSpaces(), this.fetchPanels()
         ]).then(() => {
           if (this._isDestroyed) return
-          this.timer = setTimeout(getDashboardData, 30000)
+          this.timer = setTimeout(this.getDashboardData, 30000)
         })
-      }
-      getDashboardData().then(() => {
-        if (this._isDestroyed || this.isExpired) return
-        if (!this.isEmptySystem) this.nextState('dashboard')
-        let module = 'devices'
-        if (this.isEntityRestricted(module)) return
-        this.fetchViews({ module, type: 'saved' }).then(() => {
+      },
+      viewsCallback () {
+        this.getDashboardData().then(() => {
+          if (this._isDestroyed || this.isExpired) return
+          if (!this.isEmptySystem) this.nextState('dashboard')
+          let module = 'devices'
+          if (this.isEntityRestricted(module)) return
           if (this.devicesViewsList.length && this.devicesViewsList.find((item) => item.name.includes('DEMO'))) return
           // If DEMO view was not yet added, add it now, according to the adapters' devices count
           if (this.seenDevices && this.isEntityEditable(module)) {
@@ -115,24 +138,6 @@
             })
           }
         })
-      })
-    },
-    beforeDestroy () {
-      clearTimeout(this.timer)
-    },
-    methods: {
-      ...mapMutations({
-        changeState: CHANGE_TOUR_STATE, nextState: NEXT_TOUR_STATE
-      }),
-      ...mapActions({
-        fetchDiscoveryData: FETCH_DISCOVERY_DATA,
-        fetchDashboardFirstUse: FETCH_DASHBOARD_FIRST_USE,
-        fetchSpaces: FETCH_DASHBOARD_SPACES,
-        fetchPanels: FETCH_DASHBOARD_PANELS,
-        fetchViews: FETCH_DATA_VIEWS, saveView: SAVE_VIEW
-      }),
-      onClickInsights () {
-        this.$router.push({ name: 'Insights Explorer' })
       }
     }
   }

@@ -142,5 +142,11 @@
 <style lang="scss">
     .x-entity-table {
         height: 100%;
+        .x-table-wrapper .actions {
+          grid-gap: 0;
+          .x-button.link {
+            width: 120px;
+          }
+        }
     }
 </style>

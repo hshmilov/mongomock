@@ -34,10 +34,9 @@
   import xQueryWizard from './Wizard.vue'
   import xButton from '../../../axons/inputs/Button.vue'
 
-  import { mapState, mapGetters, mapMutations, mapActions } from 'vuex'
+  import { mapState, mapGetters, mapMutations } from 'vuex'
   import { GET_DATA_FIELDS_BY_PLUGIN } from '../../../../store/getters'
   import { UPDATE_DATA_VIEW } from '../../../../store/mutations'
-  import { SAVE_DATA_VIEW } from '../../../../store/actions'
   import { CHANGE_TOUR_STATE } from '../../../../store/modules/onboarding'
 
   export default {
@@ -64,6 +63,9 @@
       ...mapState({
         view (state) {
           return state[this.module].view
+        },
+        selectedView (state) {
+          return state[this.module].selectedView
         }
       }),
       ...mapGetters({
@@ -90,7 +92,8 @@
                 filter: filter,
                 expressions: this.query.expressions },
               page: 0
-            }
+            },
+            selectedView: this.selectedView
           })
           this.filterValid = true
         }
@@ -103,9 +106,6 @@
     methods: {
       ...mapMutations({
         updateView: UPDATE_DATA_VIEW, changeState: CHANGE_TOUR_STATE
-      }),
-      ...mapActions({
-        saveView: SAVE_DATA_VIEW
       }),
       tour (stateName) {
         this.changeState({ name: stateName })

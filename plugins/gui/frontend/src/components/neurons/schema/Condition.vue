@@ -35,7 +35,7 @@
         computed: {
             ...mapState({
                 savedViews(state) {
-                    return state[this.module].views.saved.data
+                    return state[this.module].views.saved.content.data
                 }
             }),
             ...mapGetters({

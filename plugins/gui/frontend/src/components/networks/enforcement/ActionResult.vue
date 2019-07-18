@@ -1,98 +1,90 @@
 <template>
-    <div class="x-action-result">
-        <template v-if="schema && schema.type">
-            <h4 class="title">Configuration</h4>
-            <x-array-view :schema="schema" :value="data.action.config" v-if="schema" />
-        </template>
-        <h4 class="title">Results</h4>
-        <div v-if="isResultAlertAction" class="result-container">
-            <svg-icon :name="`symbol/${alertStatus}`" :original="true" height="20px"></svg-icon>
-            <div class="result" @click="$emit('click-one', alertStatus == 'success' ? 0 : 1)">{{alertStatusMessage}}</div>
-        </div>
-        <x-summary v-else-if="resultData" :data="resultData" @click-one="$emit('click-one', $event)"/>
-        <div v-else>Not ran</div>
+  <div class="x-action-result">
+    <template v-if="schema && schema.type">
+      <h4 class="title">Configuration</h4>
+      <x-array-view
+        v-if="schema"
+        :schema="schema"
+        :value="data.action.config"
+      />
+    </template>
+    <h4 class="title">Results</h4>
+    <div
+      v-if="isResultAlertAction"
+      class="result-container"
+    >
+      <svg-icon
+        :name="`symbol/${alertStatus}`"
+        :original="true"
+        height="20px"
+      />
+      <div
+        class="result"
+        @click="$emit('click-one', alertStatus == 'success' ? 0 : 1)"
+      >{{ alertStatusMessage }}</div>
     </div>
+    <x-summary
+      v-else-if="resultData"
+      :data="resultData"
+      @click-one="$emit('click-one', $event)"
+    />
+    <div v-else>Not ran</div>
+  </div>
 </template>
 
 <script>
-    import xSummary from '../../axons/charts/Summary.vue'
-    import xArrayView from '../../neurons/schema/types/array/ArrayView.vue'
-    import actionsMixin from '../../../mixins/actions'
+  import xSummary from '../../axons/charts/Summary.vue'
+  import xArrayView from '../../neurons/schema/types/array/ArrayView.vue'
+  import actionsMixin from '../../../mixins/actions'
 
-    import {mapState, mapActions} from 'vuex'
-    import {FETCH_DATA_VIEWS} from '../../../store/actions'
+  export default {
+    name: 'XActionResult',
+    components: {
+      xArrayView, xSummary
+    },
+    mixins: [actionsMixin],
+    props: {
+      data: {
+        type: Object,
+        required: true
+      }
+    },
+    computed: {
+      schema () {
+        if (!Object.keys(this.actionsDef).length || !this.data || !this.data.action) return {}
 
-    export default {
-        name: 'x-action-result',
-        components: {
-            xArrayView, xSummary
-        },
-        mixins: [actionsMixin],
-        props: {
-            data: {
-                required: true
-            },
-            module: {
-                required: true
-            },
-            view: {
-                required: true
-            }
-        },
-        computed: {
-            ...mapState({
-                savedViews(state) {
-                    return state[this.module].views.saved.data
-                }
-            }),
-            schema() {
-                if (!Object.keys(this.actionsDef).length || !this.data || !this.data.action) return {}
-
-                return this.actionsDef[this.data.action['action_name']].schema
-            },
-            isResultAlertAction() {
-                return this.data.action.action_type === 'alert'
-            },
-            alertStatus() {
-                if (this.data.action.results.successful_entities.length > 0) return 'success'
-                return 'error'
-            },
-            alertStatusMessage() {
-                return this.data.action.results.message_state
-            },
-            viewObj() {
-                return this.savedViews.find(item => item.name === this.view).view
-            },
-            successEntities() {
-                if (!this.data.action.results) return []
-                return this.data.action.results['successful_entities']
-            },
-            failureEntities() {
-                if (!this.data.action.results) return []
-                return this.data.action.results['unsuccessful_entities']
-            },
-            resultData() {
-                if (!this.successEntities.length && !this.failureEntities.length) return null
-                return [{
-                    name: 'Entities Succeeded',
-                    value: this.successEntities.length
-                }, {
-                    name: 'Entities Failed',
-                    value: this.failureEntities.length
-                }]
-            }
-        },
-        methods: {
-            ...mapActions({
-                fetchViews: FETCH_DATA_VIEWS
-            })
-        },
-        created() {
-            this.fetchViews({
-                module: this.module, type: 'saved'
-            })
-        }
+        return this.actionsDef[this.data.action['action_name']].schema
+      },
+      isResultAlertAction () {
+        return this.data.action.action_type === 'alert'
+      },
+      alertStatus () {
+        if (this.data.action.results.successful_entities.length > 0) return 'success'
+        return 'error'
+      },
+      alertStatusMessage () {
+        return this.data.action.results.message_state
+      },
+      successEntities () {
+        if (!this.data.action.results) return []
+        return this.data.action.results['successful_entities']
+      },
+      failureEntities () {
+        if (!this.data.action.results) return []
+        return this.data.action.results['unsuccessful_entities']
+      },
+      resultData () {
+        if (!this.successEntities.length && !this.failureEntities.length) return null
+        return [{
+          name: 'Entities Succeeded',
+          value: this.successEntities.length
+        }, {
+          name: 'Entities Failed',
+          value: this.failureEntities.length
+        }]
+      }
     }
+  }
 </script>
 
 <style lang="scss">

@@ -8,7 +8,7 @@ import {
 	UPDATE_DATA_LABELS, UPDATE_ADDED_DATA_LABELS, UPDATE_REMOVED_DATA_LABELS,
 	SELECT_DATA_CURRENT, UPDATE_DATA_CURRENT,
 	UPDATE_SAVED_DATA_NOTE, UPDATE_REMOVED_DATA_NOTE,
-	UPDATE_SYSTEM_CONFIG, UPDATE_SYSTEM_EXPIRED, UPDATE_DATA_HYPERLINKS, UPDATE_CUSTOM_DATA
+	UPDATE_SYSTEM_CONFIG, UPDATE_SYSTEM_EXPIRED, UPDATE_DATA_HYPERLINKS, UPDATE_CUSTOM_DATA, UPDATE_DATA_VIEW
 } from './mutations'
 
 
@@ -185,23 +185,31 @@ const createContentRequest = (state, payload) => {
 export const FETCH_DATA_CONTENT = 'FETCH_DATA_CONTENT'
 export const fetchDataContent = ({state, dispatch}, payload) => {
 	let module = getModule(state, payload)
-    let path = payload.endpoint || payload.module
+	let path = payload.endpoint || payload.module
 	if (!module) return 
 	const view = module.view
 
-	if (!payload.skip) {
+	if (!payload.skip && module.count !== undefined) {
 		dispatch(FETCH_DATA_COUNT, { module: payload.module, endpoint: payload.endpoint})
 	}
 
-    if (view.query.filter.length > MAX_GET_SIZE && ['users', 'devices'].includes(path)) { 
-        return dispatch(REQUEST_API, {
-            rule: path,
-            type: UPDATE_DATA_CONTENT,
-            method: 'POST',
-            data: createPostContentRequest(state, payload),
-            payload
-        })
-    }
+	if (!view) {
+		return dispatch(REQUEST_API, {
+			rule: path,
+			type: UPDATE_DATA_CONTENT,
+			payload
+		})
+	}
+
+	if (view.query.filter.length > MAX_GET_SIZE && ['users', 'devices'].includes(path)) {
+			return dispatch(REQUEST_API, {
+					rule: path,
+					type: UPDATE_DATA_CONTENT,
+					method: 'POST',
+					data: createPostContentRequest(state, payload),
+					payload
+			})
+	}
 
 	return dispatch(REQUEST_API, {
 		rule: `${path}?${createContentRequest(state, payload)}`,
@@ -255,25 +263,6 @@ export const downloadPdfReportFile = (name, response) => {
     link.click()
 }
 
-export const FETCH_DATA_VIEWS = 'FETCH_DATA_VIEWS'
-export const fetchDataViews = ({state, dispatch}, payload) => {
-	if (!getModule(state, payload)) return
-    if (!payload.skip) payload.skip = 0
-	if (!payload.limit) payload.limit = 1000
-
-	let filter = `query_type=='${payload.type}'`
-	if (payload.filter) {
-		filter += ` and ${payload.filter}`
-	}
-	let param = `?limit=${payload.limit}&skip=${payload.skip}&filter=${encodeURI(filter)}`
-
-	return dispatch(REQUEST_API, {
-		rule: `${payload.module}/views${param}`,
-		type: UPDATE_DATA_VIEWS,
-		payload: {module: payload.module, type: payload.type, skip: payload.skip}
-	})
-}
-
 export const SAVE_DATA_VIEW = 'SAVE_DATA_VIEW'
 export const saveDataView = ({state, dispatch, commit}, payload) => {
 	if (!getModule(state, payload)) return
@@ -284,18 +273,23 @@ export const saveDataView = ({state, dispatch, commit}, payload) => {
 export const SAVE_VIEW = 'SAVE_VIEW'
 export const saveView = ({dispatch, commit}, payload) => {
 	let viewObj = {
-		name: payload.name, view: payload.view, query_type: 'saved'
+		name: payload.name, view: payload.view
 	}
 	if (payload.predefined) {
 		viewObj.predefined = true
 	}
 	dispatch(REQUEST_API, {
-		rule: payload.module + '/views',
+		rule: payload.module + '/views/saved',
 		data: viewObj,
 		method: 'POST'
 	}).then((response) => {
 		if (response.status === 200) {
-			commit(ADD_DATA_VIEW, {module: payload.module, ...viewObj})
+			commit(ADD_DATA_VIEW, {
+				module: payload.module, uuid: response.data, ...viewObj
+			})
+			if (!payload.predefined) {
+				commit(UPDATE_DATA_VIEW, {module: payload.module, uuid: response.data})
+			}
 		}
 	}).catch(console.log.bind(console))
 }

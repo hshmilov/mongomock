@@ -51,13 +51,16 @@ class QualysScansAdapter(ScannerAdapterBase):
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
 
-    def _get_client_id(self, client_config):
+    @staticmethod
+    def _get_client_id(client_config):
         return client_config[consts.QUALYS_SCANS_DOMAIN]
 
-    def _test_reachability(self, client_config):
+    @staticmethod
+    def _test_reachability(client_config):
         return RESTConnection.test_reachability(client_config.get(consts.QUALYS_SCANS_DOMAIN))
 
-    def _connect_client(self, client_config):
+    @staticmethod
+    def _connect_client(client_config):
         try:
             connection = QualysScansConnection(
                 domain=client_config[consts.QUALYS_SCANS_DOMAIN],
@@ -76,11 +79,13 @@ class QualysScansAdapter(ScannerAdapterBase):
             logger.exception(message)
             raise ClientConnectionException(message)
 
-    def _query_devices_by_client(self, client_name, client_data):
+    @staticmethod
+    def _query_devices_by_client(client_name, client_data):
         with client_data:
             yield from client_data.get_device_list()
 
-    def _clients_schema(self):
+    @staticmethod
+    def _clients_schema():
         """
         The schema QualysScansAdapter expects from configs
 

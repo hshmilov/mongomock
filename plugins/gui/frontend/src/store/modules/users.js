@@ -23,19 +23,20 @@ export const users = {
         hyperlinks: {data: [], fetching: false, error: ''},
 
         views: {
-            content: { data: [], fetching: false, error: '', rule: ''},
-            count: { data: 0, fetching: false, error: ''},
-            view: {
-                page: 0, pageSize: 20, query: {
-                    filter: '', expressions: [], search: ''
-                }, sort: {
-                    field: '', desc: true
+            saved: {
+                content: { data: [], fetching: false, error: '', rule: ''},
+                count: { data: 0, fetching: false, error: ''},
+                view: {
+                    page: 0, pageSize: 20, query: {
+                        filter: '', expressions: [], search: ''
+                    }, sort: {
+                        field: '', desc: true
+                    }
                 }
             },
-
-            saved: {data: [], fetching: false, error: ''},
-
-            history: {data: [], fetching: false, error: ''}
+            history: {
+                content: { data: [], fetching: false, error: '', rule: ''}
+            },
         },
 
         labels: {data: [], fetching: false, error: ''},

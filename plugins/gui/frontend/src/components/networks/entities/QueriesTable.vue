@@ -64,7 +64,7 @@
     computed: {
       ...mapState({
         views (state) {
-          return state[this.module].views.content.data
+          return state[this.module].views.saved.content.data
         },
         isEnforcementsWrite (state) {
           let user = state.auth.currentUser.data
@@ -73,7 +73,7 @@
         }
       }),
       stateLocation() {
-        return `${this.module}/views`
+        return `${this.module}/views/saved`
       },
       hasSelection () {
         return (this.selection.ids && this.selection.ids.length) || this.selection.include === false

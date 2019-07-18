@@ -54,7 +54,7 @@
       },
       checkDisabled: {
         type: Function,
-        default: () => true
+        default: () => false
       },
       label: {
         type: String,
