@@ -43,12 +43,12 @@ def is_date_real(datetime_to_parse):
 
 def _parse_unix_timestamp(unix_timestamp):
     try:
-        return datetime.datetime.utcfromtimestamp(unix_timestamp)
+        return datetime.utcfromtimestamp(unix_timestamp)
     except Exception:
         # This must be unix timestamp with milliseconds, we continue to the next line.
         pass
     try:
-        return datetime.datetime.utcfromtimestamp(unix_timestamp / 1000)
+        return datetime.utcfromtimestamp(unix_timestamp / 1000)
     except Exception:
         logger.exception(f'problem parsing unix timestamp {unix_timestamp}')
         return None
