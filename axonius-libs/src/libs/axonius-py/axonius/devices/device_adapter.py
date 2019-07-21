@@ -451,7 +451,7 @@ class DeviceAdapter(SmartJsonClass):
     autoruns_data = ListField(DeviceAdapterAutorunData, 'Autoruns Data', json_format=JsonArrayFormat.table)
     software_cves = ListField(DeviceAdapterSoftwareCVE, "Vulnerable Software", json_format=JsonArrayFormat.table)
     security_patches = ListField(
-        DeviceAdapterSecurityPatch, "OS Security Patches", json_format=JsonArrayFormat.table
+        DeviceAdapterSecurityPatch, "OS Installed Security Patches", json_format=JsonArrayFormat.table
     )
     available_security_patches = ListField(
         DeviceAdapterMsrcAvailablePatch, "OS Available Security Patches", json_format=JsonArrayFormat.table
