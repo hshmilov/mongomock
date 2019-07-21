@@ -150,7 +150,8 @@ class CiscoPrimeAdapter(AdapterBase):
                  'type': 'string', 'description': 'Cisco Prime Infrastructure url'},
                 {'name': 'username', 'title': 'User Name', 'type': 'string'},
                 {'name': 'password', 'title': 'Password', 'type': 'string', 'format': 'password'},
-                {'name': 'wireless_vlan_exclude_list', 'title': 'Wireless VLAN Exclude List', 'type': 'string'}
+                {'name': 'wireless_vlan_exclude_list', 'title': 'Wireless VLAN Exclude List', 'type': 'string'},
+                {'name': 'wireless_ssid_exclude_list', 'title': 'Wireless SSID Exclude List', 'type': 'string'}
             ],
             'required': ['url', 'username', 'password'],
             'type': 'array',
@@ -252,6 +253,7 @@ class CiscoPrimeAdapter(AdapterBase):
         except Exception:
             logger.exception(f'Problem getting AP info for {raw_device}')
         device.nac_state = raw_device.get('nacState')
+        device.ssid = raw_device.get('ssid')
         try:
             device.last_used_users = (raw_device.get('userName') or '').split(',')
         except Exception:

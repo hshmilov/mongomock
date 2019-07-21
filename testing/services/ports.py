@@ -170,6 +170,7 @@ DOCKER_PORTS = {
     'haveibeenpwned-adapter':           9966,
     'jumpcloud-adapter':                9967,
     'cycognito-adapter':                9968,
+    'imperva-dam-adapter':              9969,
     'mongo':                            27017,
     'mockingbird-db':                   28017
 }

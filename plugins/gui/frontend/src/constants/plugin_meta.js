@@ -1,4 +1,8 @@
 export const pluginMeta = {
+    imperva_dam_adapter: {
+        title: 'Imperva Data Activity Monitoring (DAM)',
+        description: 'Imperva Data Activity Monitoring (DAM) defines and enforces uniform data security and compliance policy across the cloud and on-premises. It provides a single pane of glass management across relational databases, mainframes, big data platforms, data warehouses, and enterprise file stores.'
+    },
     cycognito_adapter: {
         title: 'CyCognito CyCAST Platform',
         link: 'https://docs.axonius.com/docs/cycognito-cycast-platform',

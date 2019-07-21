@@ -36,12 +36,13 @@ class CiscoPrimeException(Exception):
 
 
 class CiscoPrimeClient:
-    def __init__(self, url, username, password, wireless_vlan_exclude_list=None):
+    def __init__(self, url, username, password, wireless_vlan_exclude_list=None, wireless_ssid_exclude_list=None):
         url = RESTConnection.build_url(url).strip('/')
         self._url = url
         self._username = username
         self._password = password
         self.wireless_vlan_exclude_list = wireless_vlan_exclude_list.split(',') if wireless_vlan_exclude_list else []
+        self.wireless_ssid_exclude_list = wireless_ssid_exclude_list.split(',') if wireless_ssid_exclude_list else []
         self._sess = None
 
     @staticmethod
@@ -74,7 +75,7 @@ class CiscoPrimeClient:
         return resp
 
 # XXX: for some reason pylint thinks that the following triple qoute should be ''' - AX-1897
-#pylint: disable=C4002
+# pylint: disable=C4002,too-many-branches
     def connect(self):
         """
         Open session using the given creds.
@@ -174,6 +175,14 @@ class CiscoPrimeClient:
         :return: json that contains a list of the devices
         """
         for prime_client in self.get_prime_clients():
+            if not isinstance(prime_client, dict):
+                continue
+            if prime_client.get('vlanName') in self.wireless_vlan_exclude_list:
+                continue
+            if prime_client.get('vlan') in self.wireless_vlan_exclude_list:
+                continue
+            if prime_client.get('ssid') in self.wireless_ssid_exclude_list:
+                continue
             yield 'client', prime_client
         first_result = 0
         total_devices = 1
@@ -212,10 +221,6 @@ class CiscoPrimeClient:
             for entity in response['entity']:
                 # validate that the device contains inventory
                 device = entity.get('inventoryDetailsDTO', '')
-                if device.get('vlanName') in self.wireless_vlan_exclude_list:
-                    continue
-                if device.get('vlan') in self.wireless_vlan_exclude_list:
-                    continue
                 if device:
                     yield 'cisco', device
 

@@ -42,6 +42,7 @@ class CiscoDevice(DeviceAdapter):
     wireless_vlan = Field(str, 'Wireless Vlan')
     association_time = Field(datetime.datetime, 'Association Time')
     device_type = Field(str, 'Device Type')
+    ssid = Field(str, 'SSID')
 
 
 class AbstractCiscoClient:
