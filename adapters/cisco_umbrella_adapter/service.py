@@ -48,7 +48,8 @@ class CiscoUmbrellaAdapter(AdapterBase):
                                                  network_api_secret=client_config.get('network_api_secret'),
                                                  management_api_key=client_config.get('management_api_key'),
                                                  management_api_secret=client_config.get('management_api_secret'),
-                                                 https_proxy=client_config.get('https_proxy'))
+                                                 https_proxy=client_config.get('https_proxy'),
+                                                 msp_id=client_config.get('msp_id'))
             with connection:
                 pass
             return connection
@@ -105,6 +106,11 @@ class CiscoUmbrellaAdapter(AdapterBase):
                     'title': 'Management API Secret',
                     'type': 'string',
                     'format': 'password'
+                },
+                {
+                    'name': 'msp_id',
+                    'title': 'mspID',
+                    'type': 'string',
                 },
                 {
                     'name': 'verify_ssl',
