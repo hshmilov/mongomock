@@ -11,7 +11,7 @@
       class="tag-modal-info"
     >
       <svg-icon name="symbol/info" :original="true" height="16"
-      />All {{module}} were selected. You can only add tags, but you cannot remove existing tags.</div>
+      />With all {{module}} selected, you can add new tags but cannot remove existing ones.</div>
     <x-search-input
       ref="searchInput"
       v-model="searchValue"
