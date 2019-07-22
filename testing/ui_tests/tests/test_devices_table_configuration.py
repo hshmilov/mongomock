@@ -111,6 +111,7 @@ class TestDevicesTable(TestEntitiesTable):
             self.settings_page.set_single_adapter_checkbox()
             self.settings_page.set_table_multi_line_checkbox()
             self.settings_page.click_save_button()
+            self.settings_page.wait_for_toaster(self.settings_page.SAVED_SUCCESSFULLY_TOASTER)
             self.devices_page.switch_to_page()
             self.devices_page.check_if_table_is_multi_line()
             self.devices_page.click_row()

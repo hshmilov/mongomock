@@ -332,8 +332,11 @@ class DashboardPage(Page):
     def find_add_space(self):
         return self.driver.find_element_by_xpath(self.NEW_SPACE_BUTTON_XPATH)
 
+    def wait_add_space(self):
+        return self.wait_for_element_present_by_xpath(self.NEW_SPACE_BUTTON_XPATH)
+
     def add_new_space(self, space_name):
-        self.find_add_space().click()
+        self.wait_add_space().click()
         self.save_space_name(space_name)
 
     def is_missing_add_space(self):

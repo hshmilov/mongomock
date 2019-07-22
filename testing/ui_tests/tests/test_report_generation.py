@@ -214,14 +214,13 @@ class TestReportGeneration(TestBase):
                                             spaces=[self.TEST_DASHBOARD_SPACE])
 
             self.reports_page.click_report(self.TEST_REPORT_SPACES)
+            self.reports_page.wait_for_spinner_to_end()
             assert self.reports_page.get_spaces()[0] == self.TEST_DASHBOARD_SPACE
 
             doc = self._extract_report_pdf_doc(self.TEST_REPORT_SPACES)
             texts = [page.extractText() for page in doc.pages]
             text = ' '.join(texts)
             assert self.TEST_REPORT_SPACES in text
-            self.dashboard_page.switch_to_page()
-            self.dashboard_page.remove_space(3)
 
     def _new_generated_date(self, report_name, current_date):
         generated_date_str = self.reports_page.get_report_generated_date(report_name)
