@@ -11,11 +11,13 @@ class HaveibeenpwnedConnection(RESTConnection):
     """ rest client for Haveibeenpwned adapter """
 
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, url_base_prefix='api/v2',
+        super().__init__(*args, url_base_prefix='api/v3',
                          domain=HAVEIBEENPWNED_DOMAIN,
                          headers={'Content-Type': 'application/json',
                                   'Accept': 'application/json'},
                          **kwargs)
+        if self._apikey:
+            self._permanent_headers['hibp-api-key'] = self._apikey
 
     def get_breach_account_info(self, email):
         time.sleep(2)

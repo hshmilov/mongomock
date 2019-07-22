@@ -21,6 +21,12 @@ class HaveibeenpwnedEnrichment(ActionTypeBase):
         schema = {
             'items': [
                 {
+                    'name': 'apikey',
+                    'title': 'API Key',
+                    'type': 'string',
+                    'format': 'password'
+                },
+                {
                     'name': 'https_proxy',
                     'title': 'HTTPS Proxy',
                     'type': 'string'
@@ -32,7 +38,8 @@ class HaveibeenpwnedEnrichment(ActionTypeBase):
                 }
             ],
             'required': [
-                'verify_ssl'
+                'verify_ssl',
+                'apikey'
             ],
             'type': 'array'
         }

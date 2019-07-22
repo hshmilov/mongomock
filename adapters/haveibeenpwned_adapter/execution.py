@@ -28,7 +28,7 @@ class HaveibeenpwnedExecutionMixIn(Triggerable):
     @staticmethod
     def get_valid_config(config):
         try:
-            required_args = ['verify_ssl']
+            required_args = ['verify_ssl', 'apikey']
             if not all(arg in config for arg in required_args):
                 logger.error(f'Malformed config. Not running: {str(config)}')
                 return None
@@ -47,7 +47,7 @@ class HaveibeenpwnedExecutionMixIn(Triggerable):
         if not client_config:
             logger.debug(f'Bad config {client_config}')
             return {'status': 'error', 'message': f'Argument Error: Please specify a valid email'}
-        with HaveibeenpwnedConnection(verify_ssl=client_config.get('verify_ssl'),
+        with HaveibeenpwnedConnection(verify_ssl=client_config.get('verify_ssl'), apikey=client_config.get('apikey'),
                                       https_proxy=client_config.get('https_proxy')) as connection:
             results = {}
             for id_ in internal_axon_ids:

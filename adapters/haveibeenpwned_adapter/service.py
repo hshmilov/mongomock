@@ -55,6 +55,7 @@ class HaveibeenpwnedAdapter(HaveibeenpwnedExecutionMixIn, AdapterBase):
     @staticmethod
     def get_connection(client_config):
         connection = HaveibeenpwnedConnection(verify_ssl=client_config['verify_ssl'],
+                                              apikey=client_config.get('apikey'),
                                               https_proxy=client_config.get('https_proxy'))
         return connection
 
@@ -86,6 +87,12 @@ class HaveibeenpwnedAdapter(HaveibeenpwnedExecutionMixIn, AdapterBase):
         return {
             'items': [
                 {
+                    'name': 'apikey',
+                    'title': 'API Key',
+                    'type': 'string',
+                    'format': 'password'
+                },
+                {
                     'name': 'email',
                     'title': 'Account Email',
                     'type': 'string'
@@ -103,7 +110,8 @@ class HaveibeenpwnedAdapter(HaveibeenpwnedExecutionMixIn, AdapterBase):
             ],
             'required': [
                 'email',
-                'verify_ssl'
+                'verify_ssl',
+                'apikey'
             ],
             'type': 'array'
         }
