@@ -7,6 +7,8 @@ from conf_tools import get_customer_conf_json
 from exclude_helper import ExcludeHelper
 from services.axonius_service import get_service
 import subprocess
+import platform
+import os
 
 from services.standalone_services.mockingbird_service import MOCKINGBIRD_SERVICE
 from axonius.consts.system_consts import (METADATA_PATH,
@@ -307,8 +309,13 @@ class AutoFlush(object):
 
 
 def get_metadata(version):
-    cmd = f'{CORTEX_PATH}/install/metadata.sh {version}'
-    return subprocess.check_output(cmd.split()).decode()
+    cmd_list = [f'{CORTEX_PATH}/install/metadata.sh', version]
+    if platform.system() == 'Windows':
+        cmd_list.insert(0, os.getenv(('PROGRAMW6432'
+                                      if platform.architecture()[0] == '32bit'
+                                      else 'PROGRAMFILES')) + r'\Git\bin\bash')
+        return subprocess.check_output(cmd_list)
+    return subprocess.check_output(cmd_list).decode()
 
 
 if __name__ == '__main__':
