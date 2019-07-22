@@ -62,12 +62,14 @@ class CensysConnection(RESTConnection):
             raise RESTException('Missing credentials')
 
         # Do customer-specific internal auth (we need to refactor this ASAP...)
+        account_endpoint = 'api/v1/account'
         if not self._url.lower().startswith('https://censys.io/'):
             self._refresh_token()
+            account_endpoint = f'censys/{account_endpoint}'
 
         # Do normal Censys API check
         try:
-            self._get('api/v1/account', do_basic_auth=bool(self._url.lower().startswith('https://censys.io/')))
+            self._get(account_endpoint, do_basic_auth=bool(self._url.lower().startswith('https://censys.io/')))
         except RESTException as e:
             message = f'Error connecting to domain {self._domain}: {str(e)}'
             logger.exception(message)
@@ -86,9 +88,11 @@ class CensysConnection(RESTConnection):
         if self.free_tier:
             time.sleep(1.5)
         time.sleep(1)
+        search_endpoint = f'api/v1/search/{self.search_type}'
         if not self._url.lower().startswith('https://censys.io/'):
             self._refresh_token()
-        return self._post(f'api/v1/search/{self.search_type}',
+            search_endpoint = f'censys/{search_endpoint}'
+        return self._post(search_endpoint,
                           body_params={
                               'query': search_query,
                               'page': page,
@@ -124,9 +128,11 @@ class CensysConnection(RESTConnection):
         if self.free_tier:
             time.sleep(1.5)
         time.sleep(1)
+        view_endpoint = f'api/v1/view/{self.search_type}/{result_id}'
         if not self._url.lower().startswith('https://censys.io/'):
             self._refresh_token()
-        response = self._get(f'api/v1/view/{self.search_type}/{result_id}',
+            view_endpoint = f'censys/{view_endpoint}'
+        response = self._get(view_endpoint,
                              do_basic_auth=bool(self._url.lower().startswith('https://censys.io/')),
                              raise_for_status=False,
                              use_json_in_response=False,
