@@ -1,3 +1,4 @@
+import datetime
 import logging
 import time
 
@@ -13,20 +14,60 @@ logger = logging.getLogger(f'axonius.{__name__}')
 
 class CensysConnection(RESTConnection):
     def __init__(self, *args, domain_preferred=None, free_tier=False, search_type=None, **kwargs):
-        super().__init__(*args, url_base_prefix='api/v1', domain=domain_preferred or 'censys.io',
+        super().__init__(*args, domain=domain_preferred or 'censys.io',
                          headers={'Content-Type': 'application/json',
                                   'Accept': 'application/json'},
                          **kwargs)
         self.free_tier = free_tier
         self.search_type = search_type
+        self._session_refresh = None
+
+    def _refresh_token(self):
+        """
+        Temporarily adjusts the connection properties to handle a specific customer's
+        internal API proxy mechanism that sits in front of Censys. This should be
+        refactored ASAP...
+        """
+        if self._session_refresh and self._session_refresh > datetime.datetime.now():
+            return
+
+        self._session_headers = {'Content-Type': 'application/x-www-form-urlencoded',
+                                 'Accept': 'application/json'}
+
+        response = self._post('',
+                              body_params={'grant_type': 'password',
+                                           'username': self._username,
+                                           'password': self._password},
+                              do_basic_auth=True)
+        try:
+            access_token = response['access_token']
+            token_type = response['token_type']
+            expires_in = response['expires_in']
+            self._session_refresh = datetime.datetime.now() + datetime.timedelta(seconds=(expires_in - 1))
+        except Exception as e:
+            message = f'Error parsing response: {str(e)}'
+            logger.exception(message)
+            raise message
+        if token_type == 'Bearer' and expires_in > 0:
+            self._session_headers = {'Content-Type': 'application/json',
+                                     'Accept': 'application/json',
+                                     'Authorization': access_token}
+        else:
+            message = f'Invalid access_token type or token already expired!'
+            logger.exception(message)
+            raise message
 
     def _connect(self):
         if not self._username or not self._password:
-            raise RESTException('No API ID or API Key set')
+            raise RESTException('Missing credentials')
 
-        # Also get /account to check that api key/secret are valid
+        # Do customer-specific internal auth (we need to refactor this ASAP...)
+        if not self._url.lower().startswith('https://censys.io/'):
+            self._refresh_token()
+
+        # Do normal Censys API check
         try:
-            self._get('account', do_basic_auth=True)
+            self._get('api/v1/account', do_basic_auth=bool(self._url.lower().startswith('https://censys.io/')))
         except RESTException as e:
             message = f'Error connecting to domain {self._domain}: {str(e)}'
             logger.exception(message)
@@ -45,13 +86,15 @@ class CensysConnection(RESTConnection):
         if self.free_tier:
             time.sleep(1.5)
         time.sleep(1)
-        return self._post(f'search/{self.search_type}',
+        if not self._url.lower().startswith('https://censys.io/'):
+            self._refresh_token()
+        return self._post(f'api/v1/search/{self.search_type}',
                           body_params={
                               'query': search_query,
                               'page': page,
                               'flatten': True
                           },
-                          do_basic_auth=True,
+                          do_basic_auth=bool(self._url.lower().startswith('https://censys.io/')),
                           use_json_in_body=True)
 
     def _get_search_results(self, search_query):
@@ -81,8 +124,10 @@ class CensysConnection(RESTConnection):
         if self.free_tier:
             time.sleep(1.5)
         time.sleep(1)
-        response = self._get(f'view/{self.search_type}/{result_id}',
-                             do_basic_auth=True,
+        if not self._url.lower().startswith('https://censys.io/'):
+            self._refresh_token()
+        response = self._get(f'api/v1/view/{self.search_type}/{result_id}',
+                             do_basic_auth=bool(self._url.lower().startswith('https://censys.io/')),
                              raise_for_status=False,
                              use_json_in_response=False,
                              return_response_raw=True)

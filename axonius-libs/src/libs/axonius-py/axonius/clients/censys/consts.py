@@ -14,7 +14,8 @@ BASE_SCHEMA = {
         {
             'name': DOMAIN,
             'title': 'Censys Domain',
-            'type': 'string'
+            'type': 'string',
+            'default': 'censys.io'
         },
         {
             'name': IS_PAID_TIER,
