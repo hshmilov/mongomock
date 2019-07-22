@@ -371,9 +371,9 @@ class AxoniusService:
                             standalone_services_names,
                             system_base=False,
                             system_config=None):
-        all_services_to_start = [self.get_adapter(name) for name in adapter_names] + \
-                                [self.get_plugin(name) for name in plugin_names] + \
-                                [self.get_standalone_service(name) for name in standalone_services_names]
+        all_services_to_start = [self.get_adapter(name) for name in sorted(adapter_names)] + \
+                                [self.get_plugin(name) for name in sorted(plugin_names)] + \
+                                [self.get_standalone_service(name) for name in sorted(standalone_services_names)]
 
         if system_base:
             all_services_to_start += self.axonius_services

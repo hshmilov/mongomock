@@ -2,6 +2,7 @@ import json
 import os
 import shlex
 import subprocess
+import sys
 import time
 from contextlib import contextmanager
 from typing import Dict
@@ -10,6 +11,7 @@ import gridfs
 import requests
 from bson import ObjectId
 from pymongo.collection import Collection
+from retrying import retry
 
 from axonius.config_reader import (AdapterConfig, PluginConfig,
                                    PluginVolatileConfig)
@@ -155,10 +157,10 @@ class PluginService(WeaveService):
         super().start_and_wait(**kwargs)
         self.register_unique_dns()
 
+    @retry(stop_max_attempt_number=3, wait_fixed=5)
     def register_unique_dns(self):
-        # No need to do this if old and new name are similar (like aggregator)
-        if self.container_name == self.unique_name:
-            return
+        # Notice that we still register names like 'static-correlator', in which the service name is the same
+        # as the adapters name, since the dns resolving otherwise sometimes does not work.
 
         if self.docker_network == WEAVE_NETWORK:
             # Remove old dns entry from weave
@@ -170,6 +172,12 @@ class PluginService(WeaveService):
                 f'{WEAVE_PATH} dns-add {self.id} -h {self.fqdn}')
 
             subprocess.check_call(dns_add_command)
+
+            dns_check_command = shlex.split(f'{WEAVE_PATH} dns-lookup {self.fqdn}')
+            response = subprocess.check_output(dns_check_command)
+            if not response.strip():
+                print(f'Error looking up dns {self.fqdn}. Retrying...', file=sys.stderr)
+                raise ValueError(f'Error looking up dns {self.fqdn} after registration.')
         else:
             # Remove container with old dns entry from network
             disconnect_to_network_command = f'docker network disconnect {self.docker_network} {self.container_name}'
