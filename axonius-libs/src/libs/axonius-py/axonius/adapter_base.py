@@ -1235,7 +1235,7 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
                 },
                 {
                     "name": "user_last_seen_threshold_hours",
-                    "title": "Do not fetch user if not seen in last X hours",
+                    "title": "Do not fetch user if not seen by source in last X hours",
                     "type": "number"
                 },
                 {
