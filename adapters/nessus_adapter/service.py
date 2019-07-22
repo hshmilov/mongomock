@@ -169,7 +169,7 @@ class NessusAdapter(ScannerAdapterBase):
                 },
                 {
                     'name': USERNAME,
-                    'title': 'Username',
+                    'title': 'User Name',
                     'type': 'string'
                 },
                 {
@@ -180,13 +180,13 @@ class NessusAdapter(ScannerAdapterBase):
                 },
                 {
                     'name': ACCESS_KEY,
-                    'title': 'Access API Key (instead of user/password)',
+                    'title': 'Access API Key',
                     'type': 'string',
                     'format': 'password'
                 },
                 {
                     'name': SECRET_KEY,
-                    'title': 'Secret API key (instead of user/password)',
+                    'title': 'Secret API Key',
                     'type': 'string',
                     'format': 'password'
                 },

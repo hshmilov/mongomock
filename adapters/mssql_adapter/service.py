@@ -80,12 +80,12 @@ class MssqlAdapter(AdapterBase, Configurable):
             'items': [
                 {
                     'name': 'domain',
-                    'title': 'Mssql Domain',
+                    'title': 'MS SQL Server Domain',
                     'type': 'string'
                 },
                 {
                     'name': 'port',
-                    'title': 'Mssql Port',
+                    'title': 'MS SQL Server Port',
                     'type': 'string'
                 },
                 {

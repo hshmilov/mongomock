@@ -121,7 +121,7 @@ class TenableSecurityCenterAdapter(ScannerAdapterBase, Configurable):
                 },
                 {
                     'name': 'username',
-                    'title': 'Username',
+                    'title': 'User Name',
                     'type': 'string'
                 },
                 {

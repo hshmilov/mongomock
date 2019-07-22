@@ -125,7 +125,7 @@ class CiscoMerakiAdapter(AdapterBase):
                 },
                 {
                     'name': 'apikey',
-                    'title': 'Apikey',
+                    'title': 'API Key',
                     'type': 'string',
                     'format': 'password'
                 },

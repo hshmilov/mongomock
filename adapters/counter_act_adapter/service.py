@@ -73,7 +73,7 @@ class CounterActAdapter(AdapterBase):
             'items': [
                 {
                     'name': 'domain',
-                    'title': 'CounterAct Domain',
+                    'title': 'ForeScout CounterAct Domain',
                     'type': 'string'
                 },
                 {

@@ -95,7 +95,7 @@ class BitsightAdapter(ScannerAdapterBase):
             'items': [
                 {
                     'name': 'domain',
-                    'title': 'Bitsight Domain',
+                    'title': 'BitSight Domain',
                     'type': 'string',
                     'default': DEFAULT_DOMAIN
                 },

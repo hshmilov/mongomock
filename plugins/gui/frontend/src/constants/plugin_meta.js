@@ -164,13 +164,13 @@ export const pluginMeta = {
     },
     code42_adapter: {
         title: 'Code42',
-        link: '',
+        link: 'https://docs.axonius.com/docs/code42',
         description: 'Code42 is a next-gen DLP solution used to detect insider threats, satisfy regulatory compliance, and accelerate incident response investigations.'
     },
     counter_act_adapter: {
-        title: 'Forescout CounterACT',
-        link: '',
-        description: 'The Forescout CounterACT platform provides insight into network-connected devices.'
+        title: 'ForeScout CounterACT',
+        link: 'https://docs.axonius.com/docs/forescout-counteract',
+        description: 'The ForeScout CounterACT platform provides insight into network-connected devices.'
     },
     armis_adapter: {
         title: 'Armis',
@@ -229,7 +229,7 @@ export const pluginMeta = {
     },
     paloalto_panorama_adapter: {
         title: 'Palo Alto Networks Panorama',
-        link: '',
+        link: 'https://docs.axonius.com/docs/palo-alto-networks-panorama',
         description: 'The Palo Alto Panorama management server provides centralized monitoring and management of multiple next-generation firewalls and appliance clusters.'
     },
     proxmox_adapter: {
@@ -334,7 +334,7 @@ export const pluginMeta = {
     },
     zabbix_adapter: {
         title: 'Zabbix',
-        link: '',
+        link: 'https://docs.axonius.com/docs/zabbix',
         description: 'Zabbix is an open source monitoring software tool for networks, servers, virtual machines and cloud services.'
     },
     cisco_amp_adapter: {

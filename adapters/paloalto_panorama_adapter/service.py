@@ -94,7 +94,7 @@ class PaloaltoPanoramaAdapter(AdapterBase):
             'items': [
                 {
                     'name': 'domain',
-                    'title': 'PaloaltoPanorama Domain',
+                    'title': 'Panorama Domain',
                     'type': 'string'
                 },
                 {
