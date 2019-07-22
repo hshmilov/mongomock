@@ -1,16 +1,16 @@
 import logging
 import math
-import urllib3
 
 import aiohttp
 import requests
+import urllib3
 
-from axonius.adapter_exceptions import GetDevicesError, ClientConnectionException
-from nexpose_adapter.clients.nexpose_base_client import NexposeClient
-from axonius.utils.parsing import figure_out_cloud
+from axonius.adapter_exceptions import (ClientConnectionException,
+                                        GetDevicesError)
 from axonius.async.utils import async_request
 from axonius.utils.json import from_json
-
+from axonius.utils.parsing import figure_out_cloud
+from nexpose_adapter.clients.nexpose_base_client import NexposeClient
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 logger = logging.getLogger(f'axonius.{__name__}')
@@ -27,11 +27,11 @@ class NexposeV3Client(NexposeClient):
         for i, item in enumerate(devices):
             item_id = item.get('id')
             if not item_id:
-                logger.warning("Got device with no id, not yielding")
+                logger.warning('Got device with no id, not yielding')
                 continue
 
             aio_req = dict()
-            aio_req['method'] = "GET"
+            aio_req['method'] = 'GET'
             aio_req['url'] = f'https://{self.host}:{self.port}/api/3/assets/{item_id}/{data_type}'
             aio_req['auth'] = (self.username, self.password)
             aio_req['timeout'] = (5, 30)
@@ -43,7 +43,7 @@ class NexposeV3Client(NexposeClient):
 
         for chunk_id in range(int(math.ceil(len(aio_requests) / MAX_ASYNC_REQUESTS_IN_PARALLEL))):
             logger.debug(
-                f"Async requests: sending {chunk_id * MAX_ASYNC_REQUESTS_IN_PARALLEL} out of {len(aio_requests)}")
+                f'Async requests: sending {chunk_id * MAX_ASYNC_REQUESTS_IN_PARALLEL} out of {len(aio_requests)}')
 
             all_answers = async_request(
                 aio_requests[MAX_ASYNC_REQUESTS_IN_PARALLEL * chunk_id:
@@ -58,8 +58,8 @@ class NexposeV3Client(NexposeClient):
                 try:
                     # The answer could be an exception
                     if isinstance(raw_answer, Exception):
-                        logger.debug(f"Exception getting tags for request {request_id_absolute}, yielding"
-                                     f" device with no tags. Data type {data_type}. Exception {raw_answer}")
+                        logger.debug(f'Exception getting tags for request {request_id_absolute}, yielding'
+                                     f' device with no tags. Data type {data_type}. Exception {raw_answer}')
 
                     # Or, it can be the actual response
                     elif isinstance(raw_answer, tuple) and isinstance(raw_answer[0], str) \
@@ -71,18 +71,18 @@ class NexposeV3Client(NexposeClient):
                             response_object.raise_for_status()
                             current_device[data_type] = from_json(text_answer)['resources']
                         except aiohttp.ClientResponseError as e:
-                            logger.debug(f"async error code {e.status} on "
-                                         f"request id {request_id_absolute}. "
-                                         f"original response is {raw_answer}. Yielding with no tags")
+                            logger.debug(f'async error code {e.status} on '
+                                         f'request id {request_id_absolute}. '
+                                         f'original response is {raw_answer}. Yielding with no tags')
                         except Exception:
-                            logger.debug(f"Exception while parsing async response for {text_answer}"
-                                         f". Yielding with no tags")
+                            logger.debug(f'Exception while parsing async response for {text_answer}'
+                                         f'. Yielding with no tags')
                     else:
-                        msg = f"Got an async response which is not exception or ClientResponse. " \
-                              f"This should never happen! response is {raw_answer}"
+                        msg = f'Got an async response which is not exception or ClientResponse. ' \
+                              f'This should never happen! response is {raw_answer}'
                         logger.critical(msg)
                 except Exception:
-                    msg = f"Error while parsing request {request_id_absolute} - {raw_answer}, continuing"
+                    msg = f'Error while parsing request {request_id_absolute} - {raw_answer}, continuing'
                     logger.exception(msg)
 
     def get_all_devices(self, fetch_tags=False):
@@ -100,7 +100,8 @@ class NexposeV3Client(NexposeClient):
                     devices = current_page_response_as_json.get('resources', [])
                     num_of_asset_pages = current_page_response_as_json.get('page', {}).get('totalPages')
                     for item in devices:
-                        item.update({"API": '3'})
+                        item['vulnerability_details'] = [v for v in self.get_vulnerabilities_for_device(device=item)]
+                        item.update({'API': '3'})
 
                     if fetch_tags:
                         self._get_async_data(devices, 'tags')
@@ -108,20 +109,51 @@ class NexposeV3Client(NexposeClient):
                     yield from devices
 
                 except Exception:
-                    logger.exception(f"Got exception while fetching page {current_page_num+1} "
-                                     f"(api page {current_page_num}).")
+                    logger.exception(f'Got exception while fetching page {current_page_num+1} '
+                                     f'(api page {current_page_num}).')
                     continue
 
                 # num_of_asset_pages might be something that dividing by 100 could lead us to no prints at all like
                 # 188 pages.
                 if current_page_num % (max(1, round(num_of_asset_pages / 100))) == 0:
                     logger.info(
-                        f"Got {current_page_num} out of {num_of_asset_pages} pages. "
-                        f"({(current_page_num / max(num_of_asset_pages, 1)) * 100}% of device pages).")
+                        f'Got {current_page_num} out of {num_of_asset_pages} pages. '
+                        f'({(current_page_num / max(num_of_asset_pages, 1)) * 100}% of device pages).')
 
         except Exception as err:
-            logger.exception("Error getting the nexpose devices.")
-            raise GetDevicesError("Error getting the nexpose devices.")
+            logger.exception('Error getting the nexpose devices.')
+            raise GetDevicesError('Error getting the nexpose devices.')
+
+    def get_vuln_details(self, vuln_id):
+        try:
+            vuln_details = requests.get(f'https://{self.host}:{self.port}/api/3/vulnerabilities/{vuln_id}',
+                                        auth=(self.username, self.password),
+                                        verify=self.verify_ssl,
+                                        timeout=(5, 300))
+            return vuln_details.json()
+        except Exception:
+            logger.exception(f'Problem getting vulnerability details for {vuln_id}')
+
+    def get_vulnerabilities_for_device(self, device):
+        try:
+            device_id = device.get('id')
+            device_vulns = []
+            vulnerabilities = requests.get(f'https://{self.host}:{self.port}/api/3/assets/{device_id}/vulnerabilities',
+                                           auth=(self.username, self.password),
+                                           verify=self.verify_ssl,
+                                           timeout=(5, 300))
+            vulnerabilities = vulnerabilities.json()
+            for vuln in vulnerabilities.get('resources') or []:
+                try:
+                    vuln_id = vuln.get('id')
+                    vuln_details = self.get_vuln_details(vuln_id=vuln_id) or {}
+                    device_vulns.append(vuln_details)
+                except Exception:
+                    logger.exception(f'Problem getting details for vulnerability {vuln_id}')
+            yield from device_vulns
+
+        except Exception:
+            logger.exception(f'Problem getting vulnerability data for device')
 
     def _send_get_request(self, resource, params=None):
         """
@@ -156,8 +188,9 @@ class NexposeV3Client(NexposeClient):
         # The get request would have raised exception if status_code wasn't 200 on response.raise_for_status().
         return True
 
+    # pylint: disable=arguments-differ, too-many-locals, too-many-branches, too-many-statements
     @staticmethod
-    def parse_raw_device(device_raw, device_class, drop_only_ip_devices=False):
+    def parse_raw_device(device_raw, device_class, drop_only_ip_devices=False, fetch_vulnerabilities=False):
         last_seen = device_raw.get('history', [])[-1].get('date')
 
         last_seen = super(NexposeV3Client, NexposeV3Client).parse_raw_device_last_seen(last_seen)
@@ -182,28 +215,37 @@ class NexposeV3Client(NexposeClient):
             try:
                 device.risk_score = float(risk_score)
             except Exception:
-                logger.exception("Cant get risk score")
+                logger.exception('Cant get risk score')
         try:
-            vulnerabilities_raw = device_raw.get("vulnerabilities", {})
-            device.vulnerabilities_critical = vulnerabilities_raw.get("critical")
-            device.vulnerabilities_exploits = vulnerabilities_raw.get("exploits")
-            device.vulnerabilities_malwareKits = vulnerabilities_raw.get("malwareKits")
-            device.vulnerabilities_moderate = vulnerabilities_raw.get("moderate")
-            device.vulnerabilities_severe = vulnerabilities_raw.get("severe")
-            device.vulnerabilities_total = vulnerabilities_raw.get("total")
+            vulnerabilities_raw = device_raw.get('vulnerabilities', {})
+            device.vulnerabilities_critical = vulnerabilities_raw.get('critical')
+            device.vulnerabilities_exploits = vulnerabilities_raw.get('exploits')
+            device.vulnerabilities_malwareKits = vulnerabilities_raw.get('malwareKits')
+            device.vulnerabilities_moderate = vulnerabilities_raw.get('moderate')
+            device.vulnerabilities_severe = vulnerabilities_raw.get('severe')
+            device.vulnerabilities_total = vulnerabilities_raw.get('total')
         except Exception:
-            logger.exception(f"Problem getting vulns for {device_raw}")
+            logger.exception(f'Problem getting vulns for {device_raw}')
 
         try:
             for id_element in device_raw.get('ids', []):
-                cloud_type = figure_out_cloud(id_element.get("source"))
+                cloud_type = figure_out_cloud(id_element.get('source'))
                 if cloud_type is not None:
                     device.cloud_provider = cloud_type
-                    device.cloud_id = id_element.get("id")
+                    device.cloud_id = id_element.get('id')
                     break
 
         except Exception:
-            logger.exception(f"Error getting id's array from Rapid7 Nexpose: {device_raw.get('ids')}")
+            logger.exception(f'Error getting ids array from Rapid7 Nexpose: {device_raw.get("ids")}')
+
+        if fetch_vulnerabilities:
+            try:
+                device.software_cves = []
+                for vuln in device_raw.get('vulnerability_details') or []:
+                    for cve in vuln.get('cves') or []:
+                        device.add_vulnerable_software(cve_id=cve)
+            except Exception:
+                logger.exception(f'Problem adding CVES to device')
 
         try:
             software = device_raw.get('software') or []
@@ -252,3 +294,4 @@ class NexposeV3Client(NexposeClient):
 
         device.set_raw(device_raw)
         return device
+    # pylint: enable=arguments-differ, too-many-locals, too-many-branches, too-many-statements

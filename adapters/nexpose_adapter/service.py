@@ -118,7 +118,8 @@ class NexposeAdapter(ScannerAdapterBase, Configurable):
                 if api_client_class is None:
                     api_client_class = getattr(nexpose_clients, f"NexposeV{device_raw['API']}Client")
                 device = api_client_class.parse_raw_device(device_raw, self._new_device_adapter,
-                                                           drop_only_ip_devices=self.__drop_only_ip_devices)
+                                                           drop_only_ip_devices=self.__drop_only_ip_devices,
+                                                           fetch_vulnerabilities=self.__fetch_vulnerabilities)
                 if device:
                     yield device
             except Exception as err:
@@ -173,12 +174,18 @@ class NexposeAdapter(ScannerAdapterBase, Configurable):
                     'name': 'drop_only_ip_devices',
                     'title': 'Drop Devices With Only IP',
                     'type': 'bool'
+                },
+                {
+                    'name': 'fetch_vulnerabilities',
+                    'title': 'Fetch Vulnerabilities',
+                    'type': 'bool'
                 }
             ],
             "required": [
                 'fetch_tags',
                 'drop_only_ip_devices',
                 'num_of_simultaneous_devices'
+                'fetch_vulnerabilities'
             ],
             "pretty_name": "Nexpose Configuration",
             "type": "array"
@@ -189,10 +196,12 @@ class NexposeAdapter(ScannerAdapterBase, Configurable):
         return {
             'fetch_tags': True,
             'num_of_simultaneous_devices': 50,
-            'drop_only_ip_devices': False
+            'drop_only_ip_devices': False,
+            'fetch_vulnerabilities': True
         }
 
     def _on_config_update(self, config):
         self.__fetch_tags = config['fetch_tags']
         self.__num_of_simultaneous_devices = config['num_of_simultaneous_devices']
         self.__drop_only_ip_devices = config['drop_only_ip_devices']
+        self.__fetch_vulnerabilities = config['fetch_vulnerabilities']

@@ -100,7 +100,6 @@ adapters/nessus_csv_adapter/service.py
 adapters/nexpose_adapter/service.py
 adapters/nexpose_adapter/clients/nexpose_base_client.py
 adapters/nexpose_adapter/clients/nexpose_v2_client.py
-adapters/nexpose_adapter/clients/nexpose_v3_client.py
 adapters/observeit_adapter/service.py
 adapters/openstack_adapter/service.py
 adapters/oracle_vm_adapter/connection.py
