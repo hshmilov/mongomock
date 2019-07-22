@@ -5,6 +5,7 @@ from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
 from axonius.devices.device_adapter import DeviceAdapter
+from axonius.fields import Field
 from axonius.utils.files import get_local_config_file
 from zabbix_adapter.connection import ZabbixConnection
 
@@ -13,7 +14,7 @@ logger = logging.getLogger(f'axonius.{__name__}')
 
 class ZabbixAdapter(AdapterBase):
     class MyDeviceAdapter(DeviceAdapter):
-        pass
+        location = Field(str, 'Location')
 
     def __init__(self):
         super().__init__(get_local_config_file(__file__))
@@ -98,8 +99,14 @@ class ZabbixAdapter(AdapterBase):
             return None
         device.name = device_raw.get('name')
         device.description = device_raw.get('description')
-        # Waiting for field test to understand this field
-        #device.hostname = device_raw.get('host')
+        device.hostname = device_raw.get('host')
+        try:
+            device_inventory = device_raw.get('inventory')
+            if not isinstance(device_inventory, dict):
+                device_inventory = {}
+            device.location = device_inventory.get('location')
+        except Exception:
+            logger.exception(f'Problem with inventory for {device_raw}')
         try:
             os = (device_raw.get('inventory') or {}).get('os')
             if os:
