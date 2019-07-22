@@ -1,17 +1,8 @@
 <template>
   <div class="x-query-state">
     <div class="header">
-      <div
-        v-if="enforcement"
-        class="title"
-      >{{ enforcement.message }}</div>
-      <template v-else>
-        <div class="title">{{ title }}</div>
-        <div
-          v-if="!selectedView"
-          class="status"
-        >[Unsaved]</div>
-      </template>
+      <div class="title">{{ enforcement? enforcement.message: title }}</div>
+      <div class="status">{{ status }}</div>
     </div>
     <x-button
       v-if="enforcement"
@@ -19,12 +10,30 @@
       @click="navigateFilteredTask"
     >Go to Task</x-button>
     <x-button
-      v-else
+      v-else-if="!selectedView || !isEdited"
       id="query_save"
       link
       :disabled="disabled"
       @click="openSaveView"
     >Save as</x-button>
+    <x-dropdown v-else>
+      <x-button
+        slot="trigger"
+        link
+        :disabled="disabled"
+        @click.stop="saveSelectedView"
+      >Save</x-button>
+      <div slot="content">
+        <x-button
+          link
+          @click="openSaveView"
+        >Save as</x-button>
+        <x-button
+        link
+        @click="reloadSelectedView"
+        >Discard Changes</x-button>
+      </div>
+    </x-dropdown>
     <x-button
       link
       @click="resetQuery"
@@ -61,6 +70,7 @@
 
 <script>
   import xButton from '../../../axons/inputs/Button.vue'
+  import xDropdown from '../../../axons/popover/Dropdown.vue'
   import xHistoricalDate from '../../../neurons/inputs/HistoricalDate.vue'
   import xModal from '../../../axons/popover/Modal.vue'
   import {defaultFields} from '../../../../constants/entities'
@@ -72,7 +82,7 @@
   export default {
     name: 'XQueryState',
     components: {
-      xButton, xHistoricalDate, xModal
+      xButton, xDropdown, xHistoricalDate, xModal
     },
     props: {
       module: {
@@ -127,6 +137,16 @@
           return this.selectedView.name
         }
         return 'New Query'
+      },
+      isEdited () {
+        if (!this.selectedView || !this.selectedView.view) return false
+        return ((this.selectedView.view.query.filter !== this.view.query.filter)
+                || !this.arraysEqual(this.view.fields, this.selectedView.view.fields)
+                || this.view.sort.field !== this.selectedView.view.sort.field)
+      },
+      status () {
+        if (this.enforcement) return ''
+        return !this.selectedView? '[Unsaved]' : (this.isEdited ? '[Edited]' : '')
       }
     },
     methods: {
@@ -167,6 +187,23 @@
           module: this.module,
           name: this.saveModal.name
         }).then(() => this.saveModal.isActive = false)
+      },
+      saveSelectedView () {
+        if (!this.selectedView) return
+
+        this.saveView({
+          module: this.module,
+          name: this.selectedView.name
+        })
+      },
+      reloadSelectedView () {
+        this.updateView({
+          module: this.module,
+          view: { ...this.selectedView.view }
+        })
+      },
+      arraysEqual (arrA, arrB) {
+        return !arrA.filter(x => !arrB.includes(x)).length || arrB.filter(x => !arrA.includes(x)).length
       }
     }
   }
@@ -192,6 +229,22 @@
         }
         .x-button {
             margin-bottom: 8px;
+        }
+        .x-dropdown {
+          .trigger {
+            padding-right: 12px;
+            &:after {
+              margin-top: -6px;
+            }
+          }
+          .content {
+            &.expand {
+              min-width: max-content;
+            }
+            .x-button {
+              display: block;
+            }
+          }
         }
     }
 </style>

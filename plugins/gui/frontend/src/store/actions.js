@@ -273,7 +273,11 @@ export const saveDataView = ({state, dispatch, commit}, payload) => {
 export const SAVE_VIEW = 'SAVE_VIEW'
 export const saveView = ({dispatch, commit}, payload) => {
 	let viewObj = {
-		name: payload.name, view: payload.view
+		name: payload.name, view: {
+			query: payload.view.query,
+			fields: payload.view.fields,
+			sort: payload.view.sort
+		}
 	}
 	if (payload.predefined) {
 		viewObj.predefined = true

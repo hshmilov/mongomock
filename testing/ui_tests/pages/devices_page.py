@@ -167,6 +167,7 @@ class DevicesPage(EntitiesPage):
 
     def create_saved_query(self, data_query, query_name):
         self.switch_to_page()
+        self.reset_query()
         self.fill_filter(data_query)
         self.enter_search()
         self.click_save_query()

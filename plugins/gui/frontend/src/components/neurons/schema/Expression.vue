@@ -180,11 +180,6 @@
         }
       }
     },
-    created () {
-      if (this.expressionField) {
-        this.compileExpression()
-      }
-    },
     methods: {
       ...mapMutations({ changeState: CHANGE_TOUR_STATE }),
       toggleLeftBracket () {

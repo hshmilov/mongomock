@@ -9,8 +9,8 @@
       :first="!i"
       :module="module"
       :rebuild="rebuild"
-      @change="compileFilter(i, $event)"
-      @remove="removeExpression(i)"
+      @change="(filter) => compileFilter(i, filter)"
+      @remove="() => removeExpression(i)"
     />
     <div class="footer">
       <x-button
@@ -83,13 +83,10 @@
     },
     methods: {
       compileFilter (index, payload) {
-        let rebuild = this.rebuild
-        if (this.filters.length === this.expressions.length) {
-          this.rebuild = false
-        }
 
         if (payload.error) {
           this.error = payload.error
+          this.filters[index] = ''
           this.$emit('error')
           return
         }
@@ -107,11 +104,12 @@
         // No compilation error - can remove existing error
         this.error = ''
 
-        if (rebuild) {
+        if (this.rebuild && this.filters.length !== this.expressions.length) {
           // Rebuild state is when expressions are given on initialization
           // and filters should be updated but not passed on, in case the user edited the filter
           return
         }
+        this.rebuild = false
         // In ongoing update state - propagating the filter and expression values
         this.$emit('input', this.expressions)
         this.$emit('change', this.filters.join(' '))
@@ -141,6 +139,7 @@
           // Not ready for publishing yet, since first expression should not have a logical operation
           return
         }
+        this.$emit('input', this.expressions)
         this.$emit('change', this.filters.join(' '))
       },
       validateBrackets () {

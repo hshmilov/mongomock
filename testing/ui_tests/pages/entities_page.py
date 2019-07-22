@@ -473,12 +473,16 @@ class EntitiesPage(Page):
         self.driver.find_element_by_id(self.SAVE_QUERY_SAVE_BUTTON_ID).click()
         self.wait_for_element_absent_by_css(self.MODAL_OVERLAY_CSS)
 
+    def reset_query(self):
+        self.click_button('Reset', partial_class=True)
+
     def save_query(self, query_name):
         self.click_save_query()
         self.fill_query_name(query_name)
         self.click_save_query_save_button()
 
     def run_filter_and_save(self, query_name, query_filter):
+        self.reset_query()
         self.fill_filter(query_filter)
         self.enter_search()
         self.wait_for_table_to_load()

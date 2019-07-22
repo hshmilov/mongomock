@@ -68,8 +68,12 @@ class GuiService(PluginService, UpdatablePluginMixin):
             self._update_schema_version_14()
         if self.db_schema_version < 15:
             self._update_schema_version_15()
+        if self.db_schema_version < 15:
+            self._update_schema_version_15()
+        if self.db_schema_version < 16:
+            self._update_schema_version_16()
 
-        if self.db_schema_version != 15:
+        if self.db_schema_version != 16:
             print(f'Upgrade failed, db_schema_version is {self.db_schema_version}')
 
     def _update_schema_version_1(self):
@@ -472,11 +476,6 @@ class GuiService(PluginService, UpdatablePluginMixin):
         except Exception as e:
             print(f'Exception while upgrading gui db to version 13. Details: {e}')
 
-    def _update_schema_version_15(self):
-        print('Upgrade to schema 15')
-        self._update_default_locked_actions(['tenable_io_create_asset'])
-        self.db_schema_version = 15
-
     def _update_schema_version_14(self):
         """
         For version 2.7, update all history views' pageSize to 20
@@ -500,6 +499,30 @@ class GuiService(PluginService, UpdatablePluginMixin):
             self.db_schema_version = 14
         except Exception as e:
             print(f'Exception while upgrading gui db to version 14. Details: {e}')
+
+    def _update_schema_version_15(self):
+        print('Upgrade to schema 15')
+        self._update_default_locked_actions(['tenable_io_create_asset'])
+        self.db_schema_version = 15
+
+    def _update_schema_version_16(self):
+        """
+        For version 2.8, remove pageSize and page from all saved views
+        """
+        print('Upgrade to schema 16')
+        try:
+            for entity_type in EntityType:
+                self._entity_views_map[entity_type].update_many({
+                    'query_type': 'saved'
+                }, {
+                    '$set': {
+                        'view.pageSize': 20,
+                        'view.page': 0
+                    }
+                })
+            self.db_schema_version = 16
+        except Exception as e:
+            print(f'Exception while upgrading gui db to version 15. Details: {e}')
 
     def _update_default_locked_actions(self, new_actions):
         """
