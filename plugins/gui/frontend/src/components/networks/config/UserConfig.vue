@@ -85,8 +85,9 @@
             name: 'role_name',
             title: 'Role',
             type: 'string',
-            enum: this.roles.map(item => item.name),
-            readOnly: this.editMode
+            enum: !this.editMode ? this.roles.map(item => item.name) : null,
+            readOnly: this.editMode,
+            placeholder: 'CUSTOM'
           }],
           required: ['user_name', 'password']
         }

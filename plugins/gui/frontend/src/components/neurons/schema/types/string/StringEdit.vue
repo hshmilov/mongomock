@@ -22,6 +22,7 @@
     :type="inputType"
     :class="{'error-border': error}"
     :disabled="readOnly || schema.readOnly"
+    :placeholder="schema.placeholder"
     @input="input"
     @focusout.stop="focusout"
     @focusin="onFocusIn"
