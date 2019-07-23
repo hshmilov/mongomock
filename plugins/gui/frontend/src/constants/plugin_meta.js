@@ -1,4 +1,8 @@
 export const pluginMeta = {
+    maas360_adapter: {
+        title: 'IBM MaaS360 with Watson',
+        description: 'IBM MaaS360 with Watson is a Unified Endpoint Management (UEM) platform to enable endpoints, end-users, and everything in between — including apps, content, and data. It also gives visibility and control to manage mobile devices running iOS, macOS, Android, and Windows.'
+    },
     imperva_dam_adapter: {
         title: 'Imperva Data Activity Monitoring (DAM)',
         description: 'Imperva Data Activity Monitoring (DAM) defines and enforces uniform data security and compliance policy across the cloud and on-premises. It provides a single pane of glass management across relational databases, mainframes, big data platforms, data warehouses, and enterprise file stores.'

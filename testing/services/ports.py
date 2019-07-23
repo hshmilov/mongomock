@@ -171,6 +171,7 @@ DOCKER_PORTS = {
     'jumpcloud-adapter':                9967,
     'cycognito-adapter':                9968,
     'imperva-dam-adapter':              9969,
+    'maas360-adapter':                  9970,
     'mongo':                            27017,
     'mockingbird-db':                   28017
 }
