@@ -4674,8 +4674,16 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
                             with open(attachment_path, 'rb') as attachment_file:
                                 email.add_pdf(os.path.basename(attachment_path), bytes(attachment_file.read()))
                         email.send(EXEC_REPORT_EMAIL_CONTENT)
-                        report[report_consts.LAST_TRIGGERED_FIELD] = datetime.now()
-                        self._upsert_report_config(report_name, report, False)
+                        self.reports_config_collection.update_one({
+                            'name': report_name,
+                            'archived':  {
+                                '$ne': True
+                            }
+                        }, {
+                            '$set': {
+                                report_consts.LAST_TRIGGERED_FIELD: datetime.now()
+                            }
+                        })
                         logger.info(f'The "{report_name}" report was sent')
                 except Exception:
                     logger.info(f'Failed to send an Email for the "{report_name}" report')

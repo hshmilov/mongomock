@@ -33,7 +33,7 @@
     props: {
       data: {
         type: [Array, Boolean, String],
-        required: true
+        default: false
       },
       value: {
         type: String,
