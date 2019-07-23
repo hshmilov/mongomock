@@ -1,4 +1,8 @@
 export const pluginMeta = {
+    cisco_firepower_management_center_adapter: {
+        title: 'Cisco Firepower Management Center - BETA',
+        description: 'Cisco Firepower Management Center provides management over firewalls, application control, intrusion prevention, URL filtering, and advanced malware protection.'
+    },
     maas360_adapter: {
         title: 'IBM MaaS360 with Watson',
         description: 'IBM MaaS360 with Watson is a Unified Endpoint Management (UEM) platform to enable endpoints, end-users, and everything in between — including apps, content, and data. It also gives visibility and control to manage mobile devices running iOS, macOS, Android, and Windows.'
