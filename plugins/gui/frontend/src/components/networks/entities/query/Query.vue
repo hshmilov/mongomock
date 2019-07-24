@@ -2,7 +2,8 @@
   <div class="x-query">
     <x-query-state
       :module="module"
-      :disabled="disableSaveQuery"
+      :valid="queryValid"
+      :read-only="readOnly"
       @tour="tour"
     />
     <div class="filter">
@@ -98,9 +99,8 @@
           this.filterValid = true
         }
       },
-      disableSaveQuery () {
-        /* Determine whether query cannot be saved right now or it can */
-        return this.readOnly || this.queryFilter === '' || !this.filterValid
+      queryValid () {
+        return this.queryFilter !== '' && this.filterValid
       }
     },
     methods: {

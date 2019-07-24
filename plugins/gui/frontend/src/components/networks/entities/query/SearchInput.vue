@@ -187,7 +187,10 @@
       selectQuery ({ view, uuid }) {
         /* Load given view by settings current filter and expressions to it */
         this.inTextSearch = false
-        this.updateView({ module: this.module, view, uuid })
+        view.enforcement = null
+        this.updateView({
+          module: this.module, view, uuid
+        })
         if (!this.inTextSearch) {
           this.searchValue = view.query.filter
         }

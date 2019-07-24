@@ -174,12 +174,6 @@ class TestTasks(TestBase):
                        check_return_value=False)
 
             self.base_page.run_discovery()
-
-            self.enforcements_page.switch_to_page()
-            self.enforcements_page.click_tasks_button()
-            self.enforcements_page.wait_for_table_to_load()
-            self.enforcements_page.click_row()
-
             wait_until(lambda: self._test_specific_task(1, 1), tolerated_exceptions_list=[AssertionError],
                        check_return_value=False)
             wait_until(lambda: self._test_specific_task(1, 0, SUCCESS_TAG_NAME),

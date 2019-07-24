@@ -230,26 +230,24 @@
         let outcome = success.split('_')[0]
         outcome = `${outcome[0].toUpperCase()}${outcome.slice(1)}`
         let action = this.actionInView.definition.name
-        let prettyId = this.taskData.result.metadata.pretty_id
+        let task = this.taskData.result.metadata.pretty_id
 
         let i = this.actionInView.position.i || 0
         let condition = this.actionInView.position.condition
-        let filter = `exists_in(${prettyId}, ${condition}, ${i}, ${success})`
-        let viewFilter = this.view.query.filter.replace(/exists_in\(.*?\) ?/,'')
+        let filter = `exists_in(${task}, ${condition}, ${i}, ${success})`
 
         this.updateView({
           module: this.triggerView.entity, view: {
             ...this.view,
             enforcement: {
-              id: this.id,
-              message: `${outcome} results for action ${action} of enforcement ${this.name}, run by task ${prettyId}`,
-              i, condition, filter,
+              id: this.id, name: this.name,
+              action, task, outcome, filter
             },
             query: {
-              ...this.view.query,
-              filter: `${filter} ${viewFilter}`
+              expressions: [],
+              filter
             }
-          }
+          }, uuid: null
         })
         this.$router.push({ path: `/${this.triggerView.entity}` })
       }

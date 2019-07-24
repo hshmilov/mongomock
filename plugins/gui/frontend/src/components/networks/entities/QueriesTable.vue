@@ -101,9 +101,11 @@
         removeData: DELETE_DATA
       }),
       runQuery (viewId) {
+        let selectedView = this.views.find(view => view.uuid === viewId)
         this.updateView({
           module: this.module,
-          view: this.views.find(view => view.uuid === viewId).view
+          view: selectedView.view,
+          uuid: selectedView.uuid
         })
 
         this.$router.push({ path: `/${this.module}` })

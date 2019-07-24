@@ -1,7 +1,21 @@
 <template>
   <div class="x-query-state">
     <div class="header">
-      <div class="title">{{ enforcement? enforcement.message: title }}</div>
+      <template v-if="enforcement">
+        <div class="title">{{ enforcement.name }} - Task {{ enforcement.task }}</div>
+        <div class="subtitle">{{ enforcement.outcome }} results of "{{ enforcement.action }}" action</div>
+      </template>
+      <x-button
+        v-else-if="selectedView"
+        link
+        class="title"
+        :disabled="readOnly"
+        @click="openRenameView"
+      >{{ selectedView.name }}</x-button>
+      <div
+        v-else
+        class="title"
+      >New Query</div>
       <div class="status">{{ status }}</div>
     </div>
     <x-button
@@ -26,11 +40,12 @@
       <div slot="content">
         <x-button
           link
+          :disabled="disabled"
           @click="openSaveView"
         >Save as</x-button>
         <x-button
-        link
-        @click="reloadSelectedView"
+          link
+          @click="reloadSelectedView"
         >Discard Changes</x-button>
       </div>
     </x-dropdown>
@@ -42,29 +57,14 @@
       v-model="historical"
       :module="module"
     />
-    <x-modal
-      v-show="saveModal.isActive"
-      approve-text="Save"
-      approve-id="query_save_confirm"
-      size="md"
+    <x-save-modal
+      v-if="viewNameModal.isActive"
+      :module="module"
+      :view="viewNameModal.view"
       @close="closeSaveView"
-      @confirm="confirmSaveView"
       @enter="$emit('tour', 'querySaveConfirm')"
       @leave="$emit('tour', 'queryList')"
-    >
-      <div
-        slot="body"
-        class="query-save"
-      >
-        <label for="saveName">Save as:</label>
-        <input
-          id="saveName"
-          v-model="saveModal.name"
-          class="flex-expand"
-          @keyup.enter="confirmSaveView"
-        >
-      </div>
-    </x-modal>
+    />
   </div>
 </template>
 
@@ -72,33 +72,36 @@
   import xButton from '../../../axons/inputs/Button.vue'
   import xDropdown from '../../../axons/popover/Dropdown.vue'
   import xHistoricalDate from '../../../neurons/inputs/HistoricalDate.vue'
-  import xModal from '../../../axons/popover/Modal.vue'
+  import xSaveModal from './SaveModal.vue'
   import {defaultFields} from '../../../../constants/entities'
 
-  import {mapState, mapMutations, mapActions} from 'vuex'
+  import {mapState, mapMutations} from 'vuex'
   import {UPDATE_DATA_VIEW} from '../../../../store/mutations'
-  import {SAVE_DATA_VIEW} from '../../../../store/actions'
 
   export default {
     name: 'XQueryState',
     components: {
-      xButton, xDropdown, xHistoricalDate, xModal
+      xButton, xDropdown, xHistoricalDate, xSaveModal
     },
     props: {
       module: {
         type: String,
         required: true
       },
-      disabled: {
+      readOnly: {
         type: Boolean,
         default: false
+      },
+      valid: {
+        type: Boolean,
+        default: true
       }
     },
     data () {
       return {
-        saveModal: {
+        viewNameModal: {
           isActive: false,
-          name: ''
+          view: null
         }
       }
     },
@@ -119,6 +122,9 @@
       enforcement () {
         return this.view.enforcement
       },
+      disabled () {
+        return !this.valid || this.readOnly
+      },
       historical: {
         get () {
           if (!this.view.historical) return ''
@@ -133,6 +139,9 @@
         }
       },
       title () {
+        if (this.enforcement) {
+          return ``
+        }
         if (this.selectedView) {
           return this.selectedView.name
         }
@@ -153,9 +162,6 @@
       ...mapMutations({
         updateView: UPDATE_DATA_VIEW
       }),
-      ...mapActions({
-        saveView: SAVE_DATA_VIEW
-      }),
       resetQuery () {
         this.updateView({
           module: this.module, view: {
@@ -175,18 +181,17 @@
         this.$router.push({path: `/enforcements/tasks/${this.enforcement.id}`})
       },
       openSaveView () {
-        this.saveModal.isActive = true
+        this.viewNameModal.isActive = true
       },
       closeSaveView () {
-        this.saveModal.isActive = false
+        this.viewNameModal.isActive = false
       },
-      confirmSaveView () {
-        if (!this.saveModal.name) return
-
-        this.saveView({
-          module: this.module,
-          name: this.saveModal.name
-        }).then(() => this.saveModal.isActive = false)
+      openRenameView () {
+        this.viewNameModal.isActive = true
+        this.viewNameModal.view = {
+          uuid: this.selectedView.uuid,
+          name: this.selectedView.name
+        }
       },
       saveSelectedView () {
         if (!this.selectedView) return
@@ -222,6 +227,14 @@
                 font-size: 16px;
                 font-weight: 400;
                 margin-right: 8px;
+                color: $theme-black;
+                &.x-button {
+                  padding: 0;
+                  margin-bottom: 0;
+                }
+            }
+            .subtitle {
+              font-size: 14px;
             }
             .status {
                 color: $grey-3;

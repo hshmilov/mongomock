@@ -119,7 +119,8 @@ class EntitiesPage(Page):
     CUSTOM_DATA_ERROR_CSS = '.footer .error-text'
     CUSTOM_DATA_BULK_CONTAINER_CSS = '.actions'
 
-    ENFORCEMENT_RESULTS_HEADER = 'results for action {action_name} of enforcement {enforcement_name}, run by task'
+    ENFORCEMENT_RESULTS_TITLE = '{enforcement_name} - Task 1'
+    ENFORCEMENT_RESULTS_SUBTITLE = 'results of "{action_name}" action'
     MISSING_EMAIL_SETTINGS_TEXT = 'In order to send alerts through mail, configure it under settings'
 
     EXPORT_CSV_BUTTON_TEXT = 'Export CSV'
@@ -760,8 +761,9 @@ class EntitiesPage(Page):
         self.driver.find_element_by_xpath(self.TABLE_ACTION_ITEM_XPATH.format(action='Add custom data...')).click()
 
     def is_enforcement_results_header(self, enforcement_name, action_name):
-        return self.ENFORCEMENT_RESULTS_HEADER.format(enforcement_name=enforcement_name, action_name=action_name) \
-            in self.driver.find_element_by_css_selector('.x-query-state .header .title').text
+        header_text = self.driver.find_element_by_css_selector('.x-query-state .header').text
+        return (self.ENFORCEMENT_RESULTS_TITLE.format(enforcement_name=enforcement_name) in header_text
+                and self.ENFORCEMENT_RESULTS_SUBTITLE.format(action_name=action_name) in header_text)
 
     def find_missing_email_server_notification(self):
         return self.find_element_by_text(self.MISSING_EMAIL_SETTINGS_TEXT)

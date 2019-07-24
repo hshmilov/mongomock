@@ -813,6 +813,18 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
             })
             return ''
 
+    def _entity_views_update(self, entity_type: EntityType, query_id):
+        view_data = self.get_request_data_as_object()
+        if not view_data.get('name'):
+            return return_error(f'Name is required in order to save a view', 400)
+        self.gui_dbs.entity_query_views_db_map[entity_type].update_one({
+            '_id': ObjectId(query_id)
+        }, {
+            '$set': {
+                'name': view_data['name']
+            }
+        })
+
     def _entity_labels(self, db, namespace, mongo_filter):
         """
         GET Find all tags that currently belong to devices, to form a set of current tag values
@@ -1102,6 +1114,16 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         """
         return jsonify(self._entity_views(request.method, EntityType.Devices, limit, skip, mongo_filter, mongo_sort, query_type))
 
+    @gui_add_rule_logged_in('devices/views/saved/<query_id>', methods=['POST'],
+                            required_permissions={Permission(PermissionType.Devices, PermissionLevel.ReadWrite)})
+    def device_views_update(self, query_id):
+        """
+        Update name of an existing view
+        :return:
+        """
+        self._entity_views_update(EntityType.Devices, query_id)
+        return ''
+
     @gui_helpers.filtered()
     @gui_add_rule_logged_in('devices/views/<query_type>/count', methods=['GET'],
                             required_permissions={Permission(PermissionType.Devices, PermissionLevel.ReadOnly)})
@@ -1280,6 +1302,16 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
                             required_permissions={Permission(PermissionType.Users, ReadOnlyJustForGet)})
     def user_views(self, limit, skip, mongo_filter, mongo_sort, query_type):
         return jsonify(self._entity_views(request.method, EntityType.Users, limit, skip, mongo_filter, mongo_sort, query_type))
+
+    @gui_add_rule_logged_in('users/views/saved/<query_id>', methods=['POST'],
+                            required_permissions={Permission(PermissionType.Devices, PermissionLevel.ReadWrite)})
+    def users_views_update(self, query_id):
+        """
+        Update name of an existing view
+        :return:
+        """
+        self._entity_views_update(EntityType.Users, query_id)
+        return ''
 
     @gui_helpers.filtered()
     @gui_add_rule_logged_in('users/views/<query_type>/count', methods=['GET'],

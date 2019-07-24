@@ -131,6 +131,20 @@ export const addDataView = (state, payload) => {
 	}, ...views.data.filter(item => item.name !== payload.name)]
 }
 
+export const CHANGE_DATA_VIEW = 'CHANGE_DATA_VIEW'
+export const changeDataView = (state, payload) => {
+	let stateModule = getModule(state, payload)
+	if (!stateModule) return
+	const views = stateModule.views.saved.content
+	if (!views || !views.data || !views.data.length) return
+	views.data = views.data.map(item => {
+		if (item.uuid === payload.uuid) {
+			item.name = payload.name
+		}
+		return item
+	})
+}
+
 export const UPDATE_REMOVED_DATA_VIEW = 'UPDATE_REMOVED_DATA_VIEW'
 export const updateRemovedDataView = (state, payload) => {
 	if (!getModule(state, payload)) return

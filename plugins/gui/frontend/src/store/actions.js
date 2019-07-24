@@ -4,7 +4,7 @@ import Promise from 'promise'
 import { INIT_USER } from './modules/auth'
 import {
 	UPDATE_DATA, UPDATE_DATA_CONTENT, UPDATE_DATA_COUNT, UPDATE_DATA_COUNT_QUICK,
-	UPDATE_DATA_VIEWS, ADD_DATA_VIEW, UPDATE_DATA_FIELDS,
+	ADD_DATA_VIEW, CHANGE_DATA_VIEW, UPDATE_DATA_FIELDS,
 	UPDATE_DATA_LABELS, UPDATE_ADDED_DATA_LABELS, UPDATE_REMOVED_DATA_LABELS,
 	SELECT_DATA_CURRENT, UPDATE_DATA_CURRENT,
 	UPDATE_SAVED_DATA_NOTE, UPDATE_REMOVED_DATA_NOTE,
@@ -272,6 +272,17 @@ export const saveDataView = ({state, dispatch, commit}, payload) => {
 
 export const SAVE_VIEW = 'SAVE_VIEW'
 export const saveView = ({dispatch, commit}, payload) => {
+	if (payload.uuid) {
+		return dispatch(REQUEST_API, {
+			rule: `${payload.module}/views/saved/${payload.uuid}`,
+			data: {
+				name: payload.name
+			},
+			method: 'POST'
+		}).then(() => {
+			commit(CHANGE_DATA_VIEW, payload)
+		})
+	}
 	let viewObj = {
 		name: payload.name, view: {
 			query: payload.view.query,
