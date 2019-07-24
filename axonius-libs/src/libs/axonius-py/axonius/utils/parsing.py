@@ -684,7 +684,8 @@ def is_only_host_adapter_not_localhost(adapter_device):
         (not adapter_device.get('data').get('hostname') or
          ('localhost' not in adapter_device.get('data').get('hostname').strip().lower()
           and 'iphone' not in adapter_device.get('data').get('hostname').strip().lower()
-          and 'ipad' not in adapter_device.get('data').get('hostname').strip().lower())
+          and 'ipad' not in adapter_device.get('data').get('hostname').strip().lower()
+          and 'macbook-pro' != adapter_device.get('data').get('hostname').strip().lower())
          )
 
 
@@ -774,6 +775,15 @@ def is_linux(adapter_device):
     if not os_type:
         return False
     if os_type.lower() == 'linux':
+        return True
+    return False
+
+
+def is_windows(adapter_device):
+    os_type = get_os_type(adapter_device)
+    if not os_type:
+        return False
+    if os_type.lower() == 'windows':
         return True
     return False
 

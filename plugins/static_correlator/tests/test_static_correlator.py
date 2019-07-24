@@ -657,8 +657,8 @@ def test_rule_correlate_cloud_instances():
 
 
 def test_rule_correlate_ad_sccm_id():
-    device1 = get_raw_device(plugin_name=ACTIVE_DIRECTORY_PLUGIN_NAME, device_id='SomeDeviceId')
-    device2 = get_raw_device(plugin_name='sccm_adapter', device_id='SomeDeviceId')
+    device1 = get_raw_device(plugin_name=ACTIVE_DIRECTORY_PLUGIN_NAME, device_id='SomeDeviceId', os={'type': 'Windows'})
+    device2 = get_raw_device(plugin_name='sccm_adapter', device_id='SomeDeviceId', os={'type': 'Windows'})
     assert_success(correlate([device1, device2]), [device1, device2], 'They have the same ID and one is AD and the '
                                                                       'second is SCCM', 1)
 

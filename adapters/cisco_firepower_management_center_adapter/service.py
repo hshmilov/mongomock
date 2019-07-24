@@ -194,7 +194,7 @@ class CiscoFirepowerManagementCenterAdapter(AdapterBase):
                     id=device_raw.get('healthPolicy').get('id'),
                     type=device_raw.get('healthPolicy').get('type')
                 ) if device_raw.get('healthPolicy') else None
-            except BaseException:
+            except Exception:
                 logger.exception(f'Problem with parsing CiscoFMCHealthPolicy for device: {device_raw}')
 
             try:
@@ -205,7 +205,7 @@ class CiscoFirepowerManagementCenterAdapter(AdapterBase):
                     type=device_raw.get('deviceGroup').get('type'),
                     version=device_raw.get('deviceGroup').get('version')
                 ) if device_raw.get('deviceGroup') else None
-            except BaseException:
+            except Exception:
                 logger.exception(f'Problem with parsing CiscoFMCDeviceGroup for device: {device_raw}')
 
             try:

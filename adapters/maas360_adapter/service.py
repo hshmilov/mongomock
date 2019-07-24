@@ -144,7 +144,12 @@ class Maas360Adapter(AdapterBase):
                 'domain',
                 'username',
                 'password',
-                'verify_ssl'
+                'verify_ssl',
+                'billing_id',
+                'app_access_key',
+                'platform_id',
+                'app_version',
+                'app_id'
             ],
             'type': 'array'
         }

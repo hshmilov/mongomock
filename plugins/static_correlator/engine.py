@@ -15,7 +15,7 @@ from axonius.utils.parsing import (NORMALIZED_MACS,
                                    compare_asset_hosts, compare_asset_name,
                                    compare_bios_serial_serial, compare_clouds,
                                    compare_device_normalized_hostname,
-                                   compare_hostname,
+                                   compare_hostname, is_windows,
                                    compare_id, compare_last_used_users,
                                    get_ad_name_or_azure_display_name,
                                    get_asset_name, get_asset_or_host,
@@ -447,6 +447,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
         """
         logger.info('Starting to correlate on SCCM-AD')
         filtered_adapters_list = filter(is_sccm_or_ad, adapters_to_correlate)
+        filtered_adapters_list = filter(is_windows, adapters_to_correlate)
         return self._bucket_correlate(list(filtered_adapters_list),
                                       [get_id],
                                       [compare_id],

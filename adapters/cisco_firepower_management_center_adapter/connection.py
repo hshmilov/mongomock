@@ -35,14 +35,14 @@ class CiscoFirepowerManagementCenterConnection(RESTConnection):
             if self._session_refresh_token and self._session_refresh_count < 3:
                 response = self._post('auth/refreshtoken',
                                       extra_headers={'X-auth-refresh-token', self._session_refresh_token},
-                                      get_response_raw=True,
+                                      return_response_raw=True,
                                       use_json_in_response=False)
                 self._session_refresh_count += 1
             # otherwise, assume we have to generate a new token
             else:
                 response = self._post('auth/generatetoken',
                                       do_basic_auth=True,
-                                      get_response_raw=True,
+                                      return_response_raw=True,
                                       use_json_in_response=False)
                 self._session_refresh_count = 0
 

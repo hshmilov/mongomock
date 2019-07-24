@@ -173,6 +173,7 @@ DOCKER_PORTS = {
     'imperva-dam-adapter':              9969,
     'maas360-adapter':                  9970,
     'cisco-firepower-management-center-adapter': 9971,
+    'symantec-sep-cloud-adapter':       9972,
     'mongo':                            27017,
     'mockingbird-db':                   28017
 }
