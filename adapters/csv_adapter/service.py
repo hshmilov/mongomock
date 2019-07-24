@@ -1,3 +1,4 @@
+import re
 import datetime
 import logging
 import urllib
@@ -362,6 +363,30 @@ class CsvAdapter(AdapterBase):
                     device.last_used_users = [vals.get('username')]
 
                 device.add_ips_and_macs(macs, ips)
+
+                try:
+                    packages = vals.get('packages')
+                    if packages and isinstance(packages, str):
+                        packages = packages.split(' ')
+                        for package in packages:
+                            if len(package) < 100:
+                                device.add_installed_software(name=package)
+                except Exception:
+                    logger.exception(f'Problem with packages')
+
+                # pylint: disable=anomalous-backslash-in-string
+                try:
+                    nics_raw = vals.get('networkinterfaces')
+                    if not isinstance(nics_raw, str):
+                        nics_raw = ''
+                    macs_nics = re.findall('ether ([^\s]+)', nics_raw)
+                    macs_nics.extend(re.findall('HWaddr ([^\s]+)', nics_raw))
+                    ips_nics = re.findall('inet ([^\s]+)', nics_raw)
+                    ips_nics = [x.strip('addr:') for x in ips_nics]
+                    device.add_ips_and_macs(macs=macs_nics, ips=ips_nics)
+                except Exception:
+                    logger.exception(f'Problem with nics')
+
                 device.set_raw(device_raw)
 
                 if should_parse_all_columns:

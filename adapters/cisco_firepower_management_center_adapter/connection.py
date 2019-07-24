@@ -45,7 +45,6 @@ class CiscoFirepowerManagementCenterConnection(RESTConnection):
                                       return_response_raw=True,
                                       use_json_in_response=False)
                 self._session_refresh_count = 0
-
             # get access token value and set refresh token
             access_token = response.headers['X-auth-access-token']
             self._session_refresh_token = response.headers['X-auth-refresh-token']

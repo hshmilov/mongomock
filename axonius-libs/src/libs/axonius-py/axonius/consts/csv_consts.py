@@ -10,7 +10,7 @@ IDENTIFIERS = {
     'subnetmask': ['ipsubnetmask'],
     'model': ['model', 'modelid'],
     'serial': ['serial', 'serialnumber', 'sn', 'hostserialnumber', 'deviceserialnumber'],
-    'os': ['os', 'osname', 'osversion', 'operatingsystem', 'osmode'],
+    'os': ['os', 'osname', 'osversion', 'operatingsystem', 'osmode', 'uname'],
     'kernel': ['kernel', 'kernelversion'],
     'manufacturer': ['manufacturer', 'devicemanufacturer'],
     'total_physical_memory_gb': ['memorygb', 'totalmemorygb'],
@@ -23,7 +23,9 @@ IDENTIFIERS = {
     'last_name': ['lastname', 'surname', 'sn'],
     'installed_sw_name': ['softwarename', 'swname'],
     'installed_sw_version': ['softwareversion', 'swversion'],
-    'installed_sw_vendor': ['softwarevendor', 'swvendor']
+    'installed_sw_vendor': ['softwarevendor', 'swvendor'],
+    'packages': ['packages'],
+    'networkinterfaces': ['networkinterfaces']
 
 }
 
