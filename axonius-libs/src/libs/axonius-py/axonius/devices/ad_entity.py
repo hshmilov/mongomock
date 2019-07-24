@@ -129,6 +129,9 @@ class ADEntity(object):
     ad_exchange_server_serial = Field(str, "AD Exchange Server Serial")
     ad_exchange_server_product_id = Field(str, "AD Exchange Server Product ID")
 
+    # Other
+    ad_last_dc_fetched = Field(str, 'Last DC Fetched from')
+
     def figure_out_exchange_server_roles(self, exchange_server_roles):
         assert type(exchange_server_roles) == int
 

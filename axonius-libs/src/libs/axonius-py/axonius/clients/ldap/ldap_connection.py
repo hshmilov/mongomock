@@ -291,6 +291,11 @@ class LdapConnection(object):
             self.domain_name = ldap_must_get_str(self.root_dse, 'defaultNamingContext')
             self.configuration_naming_context = ldap_must_get_str(self.root_dse, 'configurationNamingContext')
             self.schema_naming_context = ldap_must_get_str(self.root_dse, "schemaNamingContext")
+            try:
+                self.current_connected_dc = ldap_must_get_str(self.root_dse, 'dnsHostName')
+            except Exception:
+                logger.exception(f'Can not get the currently connected DC')
+                self.current_connected_dc = ''
 
             # This is constant.
             self.domaindnszones_naming_context = f"DC=DomainDnsZones,{self.domain_name}"
@@ -750,6 +755,7 @@ class LdapConnection(object):
             device_dict['AXON_DNS_ADDR'] = self.dns_server if self.dns_server else self.server_addr
             device_dict['AXON_DC_ADDR'] = self.server_addr
             device_dict['AXON_DOMAIN_NAME'] = self.domain_name
+            device_dict['AXON_CURRENT_CONNECTED_DC'] = self.current_connected_dc
             if self.__alternative_dns_suffix:
                 device_dict['alternative_dns_suffix'] = self.__alternative_dns_suffix
             primary_group_dn = self.__get_ldap_primary_group_name(device_dict.get('primaryGroupID'))
@@ -848,6 +854,7 @@ class LdapConnection(object):
             user['AXON_DNS_ADDR'] = self.dns_server if self.dns_server else self.server_addr
             user['AXON_DC_ADDR'] = self.server_addr
             user['AXON_DOMAIN_NAME'] = self.domain_name
+            user['AXON_CURRENT_CONNECTED_DC'] = self.current_connected_dc
 
             users_count = users_count + 1
             if users_count % 1000 == 0:

@@ -539,6 +539,7 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
         ad_entity.figure_out_dial_in_policy(raw_data.get('msNPAllowDialin'))
         ad_entity.figure_out_delegation_policy(raw_data.get("userAccountControl"),
                                                raw_data.get("msDS-AllowedToDelegateTo"))
+        ad_entity.ad_last_dc_fetched = raw_data.get('AXON_CURRENT_CONNECTED_DC')
 
         ad_primary_group_dn = None
         try:

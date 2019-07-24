@@ -24,6 +24,8 @@ class CloudflareAdapter(AdapterBase):
         created_on = Field(datetime.datetime, 'Created On')
         modified_on = Field(datetime.datetime, 'Modified On')
         proxiable = Field(bool, 'Proxiable')
+        account_id = Field(str, 'Account ID')
+        account_name = Field(str, 'Account Name')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -114,7 +116,7 @@ class CloudflareAdapter(AdapterBase):
             'type': 'array'
         }
 
-    def _create_device(self, device_raw, cnamas_dict):
+    def _create_device(self, device_raw, cnamas_dict, account_info):
         try:
             device = self._new_device_adapter()
             if device_raw.get('type') not in ['A', 'AAAA']:
@@ -136,6 +138,10 @@ class CloudflareAdapter(AdapterBase):
             device.modified_on = parse_date(device_raw.get('modified_on'))
             if isinstance(device_raw.get('proxiable'), bool):
                 device.proxiable = bool(device_raw.get('proxiable'))
+            try:
+                device.account_id, device.account_name = account_info
+            except Exception:
+                logger.exception(f'Can not set account info')
             device.set_raw(device_raw)
             return device
         except Exception:
@@ -143,8 +149,8 @@ class CloudflareAdapter(AdapterBase):
             return None
 
     def _parse_raw_data(self, devices_raw_data):
-        for device_raw, cnamas_dict in devices_raw_data:
-            device = self._create_device(device_raw, cnamas_dict)
+        for device_raw, cnamas_dict, account_info in devices_raw_data:
+            device = self._create_device(device_raw, cnamas_dict, account_info)
             if device:
                 yield device
 
