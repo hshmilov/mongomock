@@ -53,6 +53,18 @@ class TestDevicesTable(TestEntitiesTable):
                                                 self.QUERY_FILTER_DEVICES)
         self.devices_page.assert_csv_match_ui_data(result)
 
+    def test_export_csv_progress_icon(self):
+        self.settings_page.switch_to_page()
+        self.base_page.run_discovery()
+        self.devices_page.switch_to_page()
+        self.devices_page.wait_for_spinner_to_end()
+
+        self.devices_page.click_export_csv()
+
+        self.devices_page.wait_for_csv_loading_button_to_be_absent()
+
+        assert not self.devices_page.is_export_csv_button_disabled()
+
     def test_device_table_field_export(self):
         self.enforcements_page.switch_to_page()
         with GeneralInfoService().contextmanager(take_ownership=True):

@@ -122,6 +122,9 @@ class EntitiesPage(Page):
     ENFORCEMENT_RESULTS_HEADER = 'results for action {action_name} of enforcement {enforcement_name}, run by task'
     MISSING_EMAIL_SETTINGS_TEXT = 'In order to send alerts through mail, configure it under settings'
 
+    EXPORT_CSV_BUTTON_TEXT = 'Export CSV'
+    EXPORT_CSV_LOADING_CSS = '.loading-button'
+
     @property
     def url(self):
         raise NotImplementedError
@@ -561,6 +564,18 @@ class EntitiesPage(Page):
 
     def search_note(self, search_text):
         self.fill_text_field_by_css_selector(self.NOTES_SEARCH_INUPUT_CSS, search_text)
+
+    def get_export_csv_button(self):
+        return self.get_special_button(self.EXPORT_CSV_BUTTON_TEXT)
+
+    def is_export_csv_button_disabled(self):
+        return self.is_element_disabled(self.get_export_csv_button())
+
+    def click_export_csv(self):
+        self.get_export_csv_button().click()
+
+    def wait_for_csv_loading_button_to_be_absent(self):
+        self.wait_for_element_absent_by_css(self.EXPORT_CSV_LOADING_CSS)
 
     def generate_csv(self, entity_type, fields, filters):
         session = requests.Session()

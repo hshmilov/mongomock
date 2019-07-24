@@ -24,10 +24,28 @@
         />
         <!-- Modal for selecting fields to be presented in table, including adapters hierarchy -->
         <x-field-config :module="module" />
+
         <x-button
+          v-if="!exporting"
           link
           @click="exportCSV"
         >Export CSV</x-button>
+        <div
+          v-if="exporting"
+          class="loading-button"
+        >
+          <md-progress-spinner
+            class="progress-spinner"
+            md-mode="indeterminate"
+            :md-stroke="3"
+            :md-diameter="30"
+          />
+          <x-button
+            link
+            disabled
+            class="exporting-loader"
+          >Exporting...</x-button>
+        </div>
       </template>
       <x-table-data
         slot-scope="props"
@@ -85,7 +103,8 @@
     data () {
       return {
         selection: { ids: [], include: true },
-        selectionLabels: {}
+        selectionLabels: {},
+        exporting: false
       }
     },
     methods: {
@@ -118,7 +137,11 @@
         }
       },
       exportCSV () {
-        this.fetchContentCSV({ module: this.module })
+        this.fetchContentCSV({ module: this.module }).then(() => {
+          this.exporting = false
+        })
+        this.exporting = true
+
       },
       onTableData (dataId) {
         this.$emit('data', dataId)
@@ -148,5 +171,30 @@
             width: 120px;
           }
         }
+
+        .md-progress-spinner-circle{
+            stroke: #0076FF;
+        }
+
+        .table-header {
+            .actions {
+                .loading-button {
+                    width: 120px;
+                    .progress-spinner {
+                        height: 15px;
+                        .md-progress-spinner-draw {
+                            width: 15px !important;
+                            height: 15px !important;;
+                        }
+                    }
+                    button.exporting-loader.link {
+                        padding-left: 8px;
+                        width: 80px;
+                    }
+                }
+
+            }
+        }
     }
+
 </style>
