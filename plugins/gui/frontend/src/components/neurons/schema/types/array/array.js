@@ -90,6 +90,7 @@ export default {
 			return !hasValue
 		},
 		toList(data) {
+			if (!data) return []
 			if (!Array.isArray(data)) {
 				return Object.keys(data)
 			}

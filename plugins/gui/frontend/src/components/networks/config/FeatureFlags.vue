@@ -1,5 +1,5 @@
 <template>
-  <div class="tab-settings">
+  <div class="x-feature-flags tab-settings">
     <x-form
       :value="value"
       :schema="processedSchema"
@@ -74,5 +74,11 @@
 </script>
 
 <style lang="scss">
-
+  .x-feature-flags {
+    .x-array-edit {
+      .object {
+        width: 100%;
+      }
+    }
+  }
 </style>

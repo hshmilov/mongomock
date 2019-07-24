@@ -102,7 +102,7 @@ from axonius.utils.hash import get_preferred_internal_axon_id_from_dict
 from axonius.utils.json_encoders import IteratorJSONEncoder
 from axonius.utils.mongo_retries import CustomRetryOperation, mongo_retry
 from axonius.utils.parsing import get_exception_string, remove_large_ints
-from axonius.utils.ssl import SSL_CERT_PATH, SSL_KEY_PATH
+from axonius.utils.ssl import SSL_CERT_PATH, SSL_KEY_PATH, CA_CERT_PATH
 from axonius.utils.revving_cache import rev_cached
 from axonius.utils.threading import (LazyMultiLocker, run_and_forget,
                                      run_in_executor_helper, ThreadPoolExecutorReusable, singlethreaded)
@@ -2527,6 +2527,31 @@ class PluginBase(Configurable, Feature):
         else:
             self._syslog_settings = current_syslog
 
+        ssl_trust_settings = config.get('ssl_trust_settings') or {}
+        if ssl_trust_settings.get('enabled'):
+            try:
+                for ca_file_index, ca_file in enumerate((ssl_trust_settings.get('ca_files') or [])):
+                    ca_key = self._grab_file_contents(ca_file, stored_locally=False)
+                    if b'-BEGIN CERTIFICATE-' not in ca_key or b'-END CERTIFICATE-' not in ca_key:
+                        logger.error(f'Invalid SSL CA certificate at position {ca_file_index}, not updating')
+                    else:
+                        specific_ca_path = os.path.join(CA_CERT_PATH, f'customer_ca_{ca_file_index}.crt')
+                        open(specific_ca_path, 'wb').write(ca_key)
+                        os.chmod(CA_CERT_PATH, 0o666)
+                        subprocess.check_call(['update-ca-certificates'])
+                        logger.info(f'Successfully loaded CA certificates to the system.')
+            except Exception:
+                logger.exception(f'Could not load ssl certificates.')
+        else:
+            try:
+                for ca_file_index in range(30):
+                    specific_ca_path = os.path.join(CA_CERT_PATH, f'customer_ca_{ca_file_index}.crt')
+                    if os.path.exists(specific_ca_path):
+                        os.unlink(specific_ca_path)
+                subprocess.check_call(['update-ca-certificates'])
+            except Exception:
+                logger.exception(f'Could not delete CA Certificate. bypassing')
+
         global_ssl = config['global_ssl']
         if global_ssl.get('enabled'):
             config_cert = self._grab_file_contents(global_ssl.get('cert_file'), stored_locally=False)
@@ -2612,13 +2637,34 @@ class PluginBase(Configurable, Feature):
                         *MANDATORY_SSL_CONFIG_SCHEMA,
                     ],
                     'name': 'global_ssl',
-                    'title': 'SSL Settings',
+                    'title': 'GUI SSL Settings',
                     'type': 'array',
                     'required': ['enabled', 'hostname', 'cert_file', 'private_key']
                 },
                 {
+                    'name': 'ssl_trust_settings',
+                    'title': 'SSL Trust & CA Settings',
+                    'type': 'array',
+                    'required': ['enabled', 'ca_files'],
+                    'items': [
+                        {
+                            'name': 'enabled',
+                            'title': 'Use custom CA certificate',
+                            'type': 'bool'
+                        },
+                        {
+                            'name': 'ca_files',
+                            'title': 'CA Certificates',
+                            'type': 'array',
+                            'items': {
+                                'type': 'file'
+                            }
+                        }
+                    ]
+                },
+                {
                     'name': PROXY_SETTINGS,
-                    'title': 'Proxy settings',
+                    'title': 'Proxy Settings',
                     'type': 'array',
                     'required': ['proxy_addr', 'proxy_port'],
                     'items': [
@@ -2868,6 +2914,10 @@ class PluginBase(Configurable, Feature):
                 'enabled': False,
                 'hostname': None,
                 **MANDATORY_SSL_CONFIG_SCHEMA_DEFAULTS
+            },
+            'ssl_trust_settings': {
+                'enabled': False,
+                'ca_files': []
             },
             'https_log_settings': {
                 "enabled": False,

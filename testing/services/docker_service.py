@@ -113,7 +113,8 @@ class DockerService(AxonService):
 
     @property
     def environment(self):
-        return []
+        # Explicitly states requests should use the list of ca certificates known by the system.
+        return ['REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt']
 
     @property
     def max_allowed_memory(self) -> int:

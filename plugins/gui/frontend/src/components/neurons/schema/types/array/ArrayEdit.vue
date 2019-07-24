@@ -164,12 +164,16 @@
         }
       },
       addNewItem () {
-        this.data = [...this.data,
-          this.schema.items.items.reduce((map, field) => {
-            map[field.name] = field.default || null
-            return map
-          }, {})
-        ]
+        if (!this.schema.items.items) {
+          this.data = [...this.data, null]
+        } else {
+          this.data = [...this.data,
+            this.schema.items.items.reduce((map, field) => {
+              map[field.name] = field.default || null
+              return map
+            }, {})
+          ]
+        }
       },
       removeItem (index) {
         this.data.splice(index, 1)
@@ -208,13 +212,23 @@
       display: flex;
       align-items: flex-end;
 
+      > .object {
+        width: auto;
+      }
+
       .index {
         display: inline-block;
         vertical-align: top;
       }
 
-      .x-button.link {
-        text-align: right;
+      .x-button {
+        &.link {
+          text-align: right;
+        }
+        &.light {
+          margin-top: 8px;
+          display: block;
+        }
       }
     }
 
@@ -223,6 +237,10 @@
 
       input, select, textarea {
         width: 100%;
+      }
+
+      .upload-file {
+        margin-top: 8px;
       }
     }
   }

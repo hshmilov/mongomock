@@ -29,6 +29,7 @@ class AlertlogicAdapter(AdapterBase):
         network_id = Field(str, 'Network Id')
         update_policy_id = Field(str, 'Update Policy Id')
         customer_id = Field(str, 'Customer Id')
+        device_status = Field(str, 'Device Status')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
