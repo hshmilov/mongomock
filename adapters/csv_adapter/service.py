@@ -7,6 +7,7 @@ from smb.SMBHandler import SMBHandler
 
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import GetDevicesError
+from axonius.clients.csv.utils import get_column_types
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.users.user_adapter import UserAdapter
 from axonius.clients.rest.consts import DEFAULT_TIMEOUT
@@ -181,6 +182,13 @@ class CsvAdapter(AdapterBase):
             logger.error(f'Bad user fields names {str(csv_data.fieldnames)}')
             raise GetDevicesError(f'Strong user identifier is missing for users')
 
+        column_types = dict()
+        try:
+            if should_parse_all_columns:
+                csv_data = list(csv_data)  # csv_data is a generator, we must get all values
+                column_types = get_column_types(csv_data)
+        except Exception:
+            logger.exception(f'Could not parse column types')
         for user_raw in csv_data:
             try:
                 user_obj = self._new_user_adapter()
@@ -208,12 +216,22 @@ class CsvAdapter(AdapterBase):
                                 logger.debug(f'Bad CSV fields. Name: {column_name} Value: {column_value}')
                                 continue
                             normalized_column_name = 'csv_' + normalize_var_name(column_name)
+                            field_type = column_types.get(column_name) or str
                             if not user_obj.does_field_exist(normalized_column_name):
                                 # Currently we treat all columns as str
                                 cn_capitalized = ' '.join([word.capitalize() for word in column_name.split(' ')])
-                                user_obj.declare_new_field(normalized_column_name, Field(str, f'CSV {cn_capitalized}'))
+                                user_obj.declare_new_field(
+                                    normalized_column_name, Field(field_type, f'CSV {cn_capitalized}'))
 
-                            user_obj[normalized_column_name] = column_value
+                            if field_type == datetime.datetime:
+                                value = parse_date(column_value)
+                            elif field_type == float:
+                                value = float(column_value)
+                            elif field_type == int:
+                                value = int(column_value)
+                            else:
+                                value = str(column_value)
+                            user_obj[normalized_column_name] = value
                         except Exception:
                             logger.exception(f'Could not parse column {column_name} with value {column_value}')
                 yield user_obj
@@ -265,6 +283,13 @@ class CsvAdapter(AdapterBase):
             logger.error(f'Bad devices fields names {str(csv_data.fieldnames)}')
             raise GetDevicesError(f'Strong identifier is missing for devices')
 
+        column_types = dict()
+        try:
+            if should_parse_all_columns:
+                csv_data = list(csv_data)   # csv_data is a generator, we must get all values
+                column_types = get_column_types(csv_data)
+        except Exception:
+            logger.exception(f'Could not parse column types')
         for device_raw in csv_data:
             try:
                 device = self._new_device_adapter()
@@ -343,12 +368,22 @@ class CsvAdapter(AdapterBase):
                     for column_name, column_value in device_raw.items():
                         try:
                             normalized_column_name = 'csv_' + normalize_var_name(column_name)
+                            field_type = column_types.get(column_name) or str
                             if not device.does_field_exist(normalized_column_name):
                                 # Currently we treat all columns as str
                                 cn_capitalized = ' '.join([word.capitalize() for word in column_name.split(' ')])
-                                device.declare_new_field(normalized_column_name, Field(str, f'CSV {cn_capitalized}'))
+                                device.declare_new_field(
+                                    normalized_column_name, Field(field_type, f'CSV {cn_capitalized}'))
 
-                            device[normalized_column_name] = column_value
+                            if field_type == datetime.datetime:
+                                value = parse_date(column_value)
+                            elif field_type == float:
+                                value = float(column_value)
+                            elif field_type == int:
+                                value = int(column_value)
+                            else:
+                                value = str(column_value)
+                            device[normalized_column_name] = value
                         except Exception:
                             logger.warning(f'Could not parse column {column_name} with value {column_value}',
                                            exc_info=True)

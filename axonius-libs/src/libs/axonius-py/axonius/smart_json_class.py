@@ -175,7 +175,7 @@ class SmartJsonClass(metaclass=SmartJsonClassMetaclass):
         # add this to the fields_info variable
         self.fields_info.append(field_value)
 
-        logger.info(f'Successfully declared dynamic field {field_name}')
+        logger.info(f'Successfully declared dynamic field {field_name} - {str(field_value)}')
 
     def set_dynamic_field(self, field_name, field_value):
         field_name = normalize_var_name(field_name)
