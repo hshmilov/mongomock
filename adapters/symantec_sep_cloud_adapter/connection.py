@@ -25,9 +25,10 @@ class SymantecSepCloudConnection(RESTConnection):
     def _connect(self):
         if not self._domain_id or not self._customer_id or not self._username or not self._password:
             raise RESTException('Missing Critical Parameter')
-        response = self._post('oauth/tokens',
+        response = self._post('oauth2/tokens',
                               extra_headers={'Content-Type': 'application/x-www-form-urlencoded'},
-                              body_params={'grant_type': 'client_credentials'},
+                              body_params='grant_type=client_credentials',
+                              use_json_in_body=False,
                               do_basic_auth=True)
         if 'access_token' not in response:
             raise RESTException(f'Bad response: {response}')

@@ -120,6 +120,12 @@ class SentinelOneConnection(RESTConnection):
                 response = self._get('web/api/v2.0/agents', url_params={'limit': consts.DEVICE_PER_PAGE,
                                                                         'cursor': cursor})
                 for device_raw in response['data']:
+                    try:
+                        device_id = device_raw.get('id')
+                        device_raw['apps_raw'] = self._get('web/api/v2.0/agents/applications',
+                                                           url_params={'ids': [device_id]})['data']
+                    except Exception:
+                        logger.exception(f'Problem getting apps for {device_raw}')
                     yield device_raw, consts.V2
                 if len(response['data']) < consts.DEVICE_PER_PAGE:
                     break

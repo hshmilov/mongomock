@@ -281,6 +281,16 @@ class SentineloneAdapter(AdapterBase):
                 device.total_physical_memory = int((device_raw.get('totalMemory') or 0)) / 1024.0
             except Exception:
                 logger.exception(f'Problem with adding memory to {device_raw}')
+            apps_raw = device_raw.get('apps_raw')
+            if not isinstance(apps_raw, list):
+                apps_raw = []
+            for app_raw in apps_raw:
+                try:
+                    device.add_installed_software(name=app_raw.get('name'),
+                                                  version=app_raw.get('version'),
+                                                  vendor=app_raw.get('publisher'))
+                except Exception:
+                    logger.exception(f'Problem with app raw {app_raw}')
             device.set_raw(device_raw)
             return device
         except Exception:
