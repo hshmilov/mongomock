@@ -1,10 +1,13 @@
 from collections import namedtuple
 
-
-def strings_named_tuple(name, strings: tuple):
-    nt = namedtuple(name, strings)
-    return nt(**dict(zip(strings, strings)))
-
+from pysnmp.hlapi import (usm3DESEDEPrivProtocol, usmAesCfb128Protocol,
+                          usmAesCfb192Protocol, usmAesCfb256Protocol,
+                          usmDESPrivProtocol, usmHMAC128SHA224AuthProtocol,
+                          usmHMAC192SHA256AuthProtocol,
+                          usmHMAC256SHA384AuthProtocol,
+                          usmHMAC384SHA512AuthProtocol, usmHMACMD5AuthProtocol,
+                          usmHMACSHAAuthProtocol, usmNoAuthProtocol,
+                          usmNoPrivProtocol)
 
 # snmp related
 
@@ -65,7 +68,41 @@ def get_command_name(command):
 
 SNMP_ARGUMENTS_KEYS = ('community', 'host', 'port')
 
-ARGUMENTS_KEYS = SNMP_ARGUMENTS_KEYS
+SNMPV3_ARGUMENTS_KEYS = ('username',
+                         'auth_passphrase',
+                         'priv_passphrase',
+                         'priv_protocol',
+                         'auth_protocol',
+                         'host',
+                         'port')
 
+AuthProtocols = namedtuple('authprotocols', ('hmac_md5',
+                                             'hmac_sha1',
+                                             'hmac128_sha224',
+                                             'hmac128_sha256',
+                                             'hmac256_sha384',
+                                             'hmac384_sha512',
+                                             'no_auth'))
+AUTH_PROTOCOLS = AuthProtocols(
+    hmac_md5=usmHMACMD5AuthProtocol,
+    hmac_sha1=usmHMACSHAAuthProtocol,
+    hmac128_sha224=usmHMAC128SHA224AuthProtocol,
+    hmac128_sha256=usmHMAC192SHA256AuthProtocol,
+    hmac256_sha384=usmHMAC256SHA384AuthProtocol,
+    hmac384_sha512=usmHMAC384SHA512AuthProtocol,
+    no_auth=usmNoAuthProtocol)
 
-ARGUMENTS = strings_named_tuple('arguments', ARGUMENTS_KEYS)
+PrivProtocols = namedtuple('privprotocols', ('des',
+                                             'threedes',
+                                             'aescfb128',
+                                             'aescfb192',
+                                             'aescfb256',
+                                             'no_priv'))
+
+PRIV_PROTOCOLS = PrivProtocols(
+    des=usmDESPrivProtocol,
+    threedes=usm3DESEDEPrivProtocol,
+    aescfb128=usmAesCfb128Protocol,
+    aescfb192=usmAesCfb192Protocol,
+    aescfb256=usmAesCfb256Protocol,
+    no_priv=usmNoPrivProtocol)

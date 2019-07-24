@@ -1,20 +1,26 @@
 import asyncio
-import logging
 import binascii
-
+import logging
 from collections import defaultdict, namedtuple
 
 from pyasn1.type.univ import Null
-from pysnmp.hlapi.asyncio import CommunityData, ContextData, ObjectIdentity, ObjectType, SnmpEngine
+from pysnmp.hlapi.asyncio import (CommunityData, ContextData, ObjectIdentity,
+                                  ObjectType, SnmpEngine)
 from pysnmp.hlapi.asyncio import UdpTransportTarget as AsyncUdpTransportTarget
-from pysnmp.hlapi.asyncio import bulkCmd, getCmd
+from pysnmp.hlapi.asyncio import UsmUserData, bulkCmd, getCmd
 from pysnmp.hlapi.varbinds import CommandGeneratorVarBinds
 from pysnmp.proto.rfc1905 import NoSuchInstance
 
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.cisco import snmp_parser
-from axonius.clients.cisco.abstract import AbstractCiscoClient, ArpCiscoData, BasicInfoData, CdpCiscoData
-from axonius.clients.cisco.constants import ARGUMENTS, BASIC_INFO_OID_KEYS, OIDS, SNMP_ARGUMENTS_KEYS, get_oid_name
+from axonius.clients.cisco.abstract import (AbstractCiscoClient, ArpCiscoData,
+                                            BasicInfoData, CdpCiscoData)
+from axonius.clients.cisco.constants import (AUTH_PROTOCOLS,
+                                             BASIC_INFO_OID_KEYS, OIDS,
+                                             PRIV_PROTOCOLS,
+                                             SNMP_ARGUMENTS_KEYS,
+                                             SNMPV3_ARGUMENTS_KEYS,
+                                             get_oid_name)
 from axonius.utils.singleton import Singleton
 
 logger = logging.getLogger(f'axonius.{__name__}')
@@ -48,7 +54,7 @@ def run_event_loop(tasks):
     return map(lambda x: x.result(), tasks)
 
 
-async def asyncio_next(engine, community, ip, port, oid):
+async def asyncio_next(engine, auth, ip, port, oid):
     # based on hlapi/asyncore/sync/cmdgen.py NextCmd
 
     varBinds = [ObjectType(ObjectIdentity(oid))]
@@ -59,7 +65,7 @@ async def asyncio_next(engine, community, ip, port, oid):
         # XXX: fallback to nextCmd
         (errorIndication, errorStatus, errorIndex, varBindTable) = await bulkCmd(
             engine,
-            CommunityData(community),
+            auth,
             AsyncUdpTransportTarget((ip, port)),
             ContextData(),
             0,
@@ -94,24 +100,21 @@ async def asyncio_next(engine, community, ip, port, oid):
         varBinds = [ObjectType(ObjectIdentity(varBinds[0][0]))]
 
 
-async def asyncio_get(engine, community, ip, port, oid):
+async def asyncio_get(engine, auth, ip, port, oid):
     varBinds = [ObjectType(ObjectIdentity(oid))]
     (errorIndication, errorStatus, errorIndex, varBindTable) = await getCmd(
-        engine, CommunityData(community), AsyncUdpTransportTarget((ip, port)), ContextData(), *varBinds, lookupMib=False
+        engine, auth, AsyncUdpTransportTarget((ip, port)), ContextData(), *varBinds, lookupMib=False
     )
     return (errorIndication, errorStatus, errorIndex, varBindTable)
 
 
-class CiscoSnmpClient(AbstractCiscoClient):
+class AbstractSnmpClient(AbstractCiscoClient):
     def __init__(self, **kwargs):
         super().__init__()
-        for required_arg in SNMP_ARGUMENTS_KEYS:
-            if required_arg not in kwargs:
-                raise ClientConnectionException(f'SNMP - missing required parmeter "{required_arg}"')
-
-        self._community = kwargs[ARGUMENTS.community]
-        self._ip = kwargs[ARGUMENTS.host]
-        self._port = kwargs[ARGUMENTS.port]
+        for required_arg in self.REQUIRED_ARGS:
+            if required_arg not in kwargs or not kwargs[required_arg]:
+                raise ClientConnectionException(f'{self.PROTOCOL} - missing required parmeter "{required_arg}"')
+            setattr(self, '_' + required_arg, kwargs[required_arg])
 
     @staticmethod
     def get_device_type():
@@ -124,7 +127,7 @@ class CiscoSnmpClient(AbstractCiscoClient):
     def validate_connection(self):
         data = list(self._get_cmd(OIDS.system_description + '.1.0', oid_name='description'))[0]
         if not data:
-            raise ClientConnectionException(f'Unable to communicate with {self._ip}')
+            raise ClientConnectionException(f'Unable to communicate with {self._host}')
 
     def _next_cmd(self, oid, oid_name=None):
         return run_event_loop([self._async_next_cmd(oid, oid_name)])
@@ -132,12 +135,24 @@ class CiscoSnmpClient(AbstractCiscoClient):
     def _get_cmd(self, oid, oid_name=None):
         return run_event_loop([self._async_get_cmd(oid, oid_name)])
 
+    def get_auth(self):
+        raise NotImplementedError()
+
+    async def __async_get(self, oid):
+        engine = SingletonEngine().get_instance()
+        auth = self.get_auth()
+        return await asyncio_get(engine, auth, self._host, self._port, oid)
+
+    async def __async_next(self, oid):
+        engine = SingletonEngine().get_instance()
+        auth = self.get_auth()
+        return await asyncio_next(engine, auth, self._host, self._port, oid)
+
     async def _async_get_cmd(self, oid, oid_name=None):
         if oid_name is None:
             oid_name = get_oid_name(oid)
         try:
-            engine = SingletonEngine().get_instance()
-            data = await asyncio_get(engine, self._community, self._ip, self._port, oid)
+            data = await self.__async_get(oid)
             error = data[0]
             data = data[3]
             if error:
@@ -155,9 +170,7 @@ class CiscoSnmpClient(AbstractCiscoClient):
         if oid_name is None:
             oid_name = get_oid_name(oid)
         try:
-            engine = SingletonEngine().get_instance()
-            data = await asyncio_next(engine, self._community, self._ip, self._port, oid)
-
+            data = await self.__async_next(oid)
             errors = list(filter(None, map(lambda x: x[0], data)))
             result = oid_name, list(map(lambda x: x[3], data))
             if not errors:
@@ -177,7 +190,7 @@ class CiscoSnmpClient(AbstractCiscoClient):
             name, results = results
         else:
             results = []
-        return SnmpArpCiscoData(results, received_from=self._ip)
+        return SnmpArpCiscoData(results, received_from=self._host)
 
     async def _query_basic_info(self):
         """ query basic information about the device itself """
@@ -212,7 +225,7 @@ class CiscoSnmpClient(AbstractCiscoClient):
         else:
             results = []
         results = self._group_cdp(results)
-        return SnmpCdpCiscoData(results, received_from=self._ip)
+        return SnmpCdpCiscoData(results, received_from=self._host)
 
     def get_tasks(self):
         """ return all tasks """
@@ -222,6 +235,34 @@ class CiscoSnmpClient(AbstractCiscoClient):
         """ since snmp queries are async, we must handle them differently """
         tasks = self.get_tasks()
         yield from run_event_loop(tasks)
+
+
+class CiscoSnmpClient(AbstractSnmpClient):
+    REQUIRED_ARGS = SNMP_ARGUMENTS_KEYS
+    PROTOCOL = 'SNMP'
+
+    @staticmethod
+    def test_rechability(host, port):
+        raise NotImplementedError()
+
+    def get_auth(self):
+        return CommunityData(self._community)
+
+
+class CiscoSnmpV3Client(AbstractSnmpClient):
+    REQUIRED_ARGS = SNMPV3_ARGUMENTS_KEYS
+    PROTOCOL = 'SNMPV3'
+
+    @staticmethod
+    def test_rechability(host, port):
+        raise NotImplementedError()
+
+    def get_auth(self):
+        return UsmUserData(userName=self._username,
+                           authKey=self._auth_passphrase or None,
+                           privKey=self._priv_passphrase or None,
+                           authProtocol=AUTH_PROTOCOLS._asdict().get(self._auth_protocol) or None,
+                           privProtocol=PRIV_PROTOCOLS._asdict().get(self._priv_protocol) or None)
 
 
 class SnmpBasicInfoCiscoData(BasicInfoData):
@@ -455,10 +496,3 @@ class CpsIfConfigTable(snmp_parser.SnmpTable):
 class CpsSecureMacAddressTable(snmp_parser.SnmpTable):
     table = {2: (snmp_parser.parse_secure_mac_type, 'type'), 3: (snmp_parser.parse_int, 'remaining_age')}
     index = 13
-
-
-if __name__ == '__main__':
-    logging.basicConfig(format='%(asctime)s [%(levelname)s] %(message)s', level=logging.INFO)
-    CLIENT = CiscoSnmpClient(host='cisco-switch', community='public', port=161)
-    CLIENT.validate_connection()
-    RESULTS = list(filter(None, CLIENT.query_all()))

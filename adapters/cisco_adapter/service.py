@@ -2,6 +2,7 @@ import logging
 
 from axonius.clients.cisco import console
 from axonius.clients.cisco import snmp
+from axonius.clients.cisco import constants
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.cisco.abstract import CiscoDevice, InstanceParser
@@ -13,6 +14,7 @@ logger = logging.getLogger(f'axonius.{__name__}')
 
 PROTOCOLS = {
     'snmp': (snmp.CiscoSnmpClient, 161),
+    'snmpv3': (snmp.CiscoSnmpV3Client, 161),
     'ssh': (console.CiscoSshClient, 22),
     'telnet': (console.CiscoTelnetClient, 23),
 }
@@ -77,6 +79,32 @@ class CiscoAdapter(AdapterBase):
                     'format': 'password',
                 },
                 {
+                    'name': 'auth_passphrase',
+                    'title': 'Snmp V3 auth passphrase',
+                    'type': 'string',
+                    'format': 'password',
+                },
+                {
+                    'name': 'priv_passphrase',
+                    'title': 'Snmp V3 priv passphrase',
+                    'type': 'string',
+                    'format': 'password',
+                },
+                {
+                    'name': 'auth_protocol',
+                    'title': 'Snmp V3 auth protocol',
+                    'type': 'string',
+                    'enum': list(constants.AUTH_PROTOCOLS._fields),
+                    'default': 'hmac_md5'
+                },
+                {
+                    'name': 'priv_protocol',
+                    'title': 'Snmp V3 priv protocol',
+                    'type': 'string',
+                    'enum': list(constants.PRIV_PROTOCOLS._fields),
+                    'default': 'aescfb128',
+                },
+                {
                     'name': 'port',
                     'title': 'Protocol port',
                     'type': 'integer',
@@ -110,6 +138,13 @@ class CiscoAdapter(AdapterBase):
         # we use if not so '' and 0 and None will get default port
         if not client_config.get('port'):
             client_config['port'] = default_port
+
+        if not client_config.get('auth_passphrase'):
+            client_config['auth_passphrase'] = None
+
+        if not client_config.get('priv_passphrase'):
+            client_config['priv_passphrase'] = None
+
         return client_config
 
     def _get_client_id(self, client_config):
