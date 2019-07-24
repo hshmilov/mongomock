@@ -1,6 +1,7 @@
 <template>
   <div class="x-historical-date">
     <x-date-edit
+      ref="date"
       :value="value"
       :check-disabled="isDateUnavailable"
       :hide="hide"
@@ -64,7 +65,11 @@
         return (this.allowedDates && !this.allowedDates[date.toISOString().substring(0, 10)])
       },
       onInput (historical) {
-        this.$emit('input', historical)
+        if (historical && this.isDateUnavailable(new Date(historical))) {
+          this.$refs.date.onClear()
+        } else {
+          this.$emit('input', historical)
+        }
       }
     }
   }
