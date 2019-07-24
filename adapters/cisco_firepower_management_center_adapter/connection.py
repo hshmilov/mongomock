@@ -46,6 +46,11 @@ class CiscoFirepowerManagementCenterConnection(RESTConnection):
                                       use_json_in_response=False)
                 self._session_refresh_count = 0
             # get access token value and set refresh token
+            response.raise_for_status()
+            if 'X-auth-access-token' not in response.headers:
+                headers_keys = dict(response.headers).keys()
+                logger.error(f'Bad headers {response.headers}')
+                raise RESTException(f'Bad Headers in response {str(headers_keys)}')
             access_token = response.headers['X-auth-access-token']
             self._session_refresh_token = response.headers['X-auth-refresh-token']
 
@@ -60,7 +65,7 @@ class CiscoFirepowerManagementCenterConnection(RESTConnection):
         except Exception as e:
             message = f'Error parsing response: {str(e)}'
             logger.exception(message)
-            raise message
+            raise
 
         # update access token to new/refreshed version
         self._session_headers['X-auth-access-token'] = access_token
