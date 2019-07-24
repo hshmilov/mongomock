@@ -452,7 +452,7 @@ export const pluginMeta = {
     carbonblack_defense_adapter: {
         title: 'Carbon Black CB Defense',
         link: 'https://docs.axonius.com/docs/carbon-black-cb-defense',
-        description: 'Carbon Black CB Defense includes antivirus and EDR in a cloud-delivered platform to stop malware, non-malware attacks, and ransomware.'
+        description: 'Carbon Black CB Defense includes antivirus and EDR in a cloud-delivered platform to stop malware, non-malware attacks, and ransomware. (Also Note: This adapter is also compatible with CB ThreatHunter and CB LiveOps)'
     },
     carbonblack_protection_adapter: {
         title: 'Carbon Black CB Protection',
