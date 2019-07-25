@@ -66,7 +66,7 @@ class TestGlobalSSL(TestBase):
         self.settings_page.click_save_button()
 
         try:
-            self.settings_page.find_saved_successfully_toaster()
+            self.settings_page.wait_for_saved_successfully_toaster()
 
             self.settings_page.refresh()
             try:
@@ -84,4 +84,4 @@ class TestGlobalSSL(TestBase):
             self.settings_page.click_global_settings()
             self.settings_page.open_global_ssl_toggle(make_yes=False)
             self.settings_page.click_save_button()
-            self.settings_page.find_saved_successfully_toaster()
+            self.settings_page.wait_for_saved_successfully_toaster()

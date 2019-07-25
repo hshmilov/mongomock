@@ -351,20 +351,11 @@ class SettingsPage(Page):
     def get_saml_idp(self):
         return self.driver.find_element_by_id(self.SAML_IDP).get_attribute('value')
 
-    def find_email_connection_failure_toaster(self, host):
-        return self.find_toaster(f'Could not connect to mail server "{host}"')
-
-    def find_saved_successfully_toaster(self):
-        return self.find_toaster(self.SAVED_SUCCESSFULLY_TOASTER)
+    def wait_email_connection_failure_toaster(self, host):
+        return self.wait_for_toaster(f'Could not connect to mail server "{host}"')
 
     def wait_for_saved_successfully_toaster(self):
         self.wait_for_toaster(self.SAVED_SUCCESSFULLY_TOASTER)
-
-    def find_saved_successfully_permissions_toaster(self):
-        return self.find_toaster(self.SAVED_SUCCESSFULLY_PERMISSIONS_TOASTER)
-
-    def wait_for_saved_successfully_permissions_toaster(self):
-        self.wait_for_toaster(self.SAVED_SUCCESSFULLY_PERMISSIONS_TOASTER)
 
     def wait_for_user_created_toaster(self):
         self.wait_for_toaster('User created.')

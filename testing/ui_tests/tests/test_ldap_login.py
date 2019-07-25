@@ -11,7 +11,7 @@ class TestLDAPLogin(TestBase):
         self.settings_page.click_toggle_button(toggle, scroll_to_toggle=False)
         self.settings_page.fill_dc_address(ad_client1_details['dc_name'])
         self.settings_page.click_save_button()
-        self.settings_page.find_saved_successfully_toaster()
+        self.settings_page.wait_for_saved_successfully_toaster()
 
         self.login_page.logout()
         self.login_page.wait_for_login_page_to_load()
@@ -45,7 +45,7 @@ class TestLDAPLogin(TestBase):
         self.settings_page.fill_dc_address(ad_client1_details['dc_name'])
         self.settings_page.fill_group_ldap(GROUPS_USERS['group'])
         self.settings_page.click_save_button()
-        self.settings_page.find_saved_successfully_toaster()
+        self.settings_page.wait_for_saved_successfully_toaster()
 
         self.login_page.logout()
         self.login_page.wait_for_login_page_to_load()

@@ -41,11 +41,11 @@ class TestGlobalSettings(TestBase):
         self.settings_page.fill_email_port(smtp_service.port)
 
         self.settings_page.click_save_button()
-        self.settings_page.find_email_connection_failure_toaster(smtp_service.name)
+        self.settings_page.wait_email_connection_failure_toaster(smtp_service.fqdn)
 
         with smtp_service.contextmanager():
             self.settings_page.click_save_button()
-            self.settings_page.find_saved_successfully_toaster()
+            self.settings_page.wait_for_saved_successfully_toaster()
 
         self.settings_page.switch_to_page()
         self.settings_page.click_global_settings()

@@ -67,8 +67,7 @@ BUTTON_TYPE_A = 'a'
 PAGE_BODY = '.x-page > .body'
 TAB_BODY = '.x-tabs > .body'
 TOGGLE_CHECKED_CLASS = 'x-checkbox x-checked'
-TOASTER_CLASS_NAME = 'x-toast'
-TOASTER_ELEMENT_WITH_TEXT_TEMPLATE = '//div[@class=\'x-toast\' and text()=\'{}\']'
+TOASTER_BY_TEXT_XPATH = '//div[@class=\'x-toast\']//div[@class=\'content\' and text()=\'{toast_text}\']'
 TABLE_SPINNER_NOT_DISPLAYED_XPATH = '//div[@class=\'v-spinner\' and @style=\'display: none;\']'
 RETRY_WAIT_FOR_ELEMENT = 150
 SLEEP_INTERVAL = 0.2
@@ -383,11 +382,7 @@ class Page:
         return element.find_element(by=how, value=what)
 
     def find_toaster(self, text):
-        elems = self.driver.find_elements_by_class_name(TOASTER_CLASS_NAME)
-        for elem in elems:
-            if elem.text == text:
-                return elem
-        return None
+        return self.driver.find_element_by_xpath(TOASTER_BY_TEXT_XPATH.format(toast_text=text))
 
     # this is currently a bit duplicated, will fix later
     def wait_for_toaster(self,
