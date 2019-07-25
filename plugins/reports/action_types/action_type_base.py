@@ -1,6 +1,7 @@
 import logging
 import copy
 import traceback
+import urllib.parse
 from abc import ABC, abstractmethod
 from typing import Set, List, Iterable
 
@@ -185,8 +186,9 @@ class ActionTypeBase(ABC):
         # Getting system config from the gui.
         system_config = self._plugin_base._get_collection(GUI_SYSTEM_CONFIG_COLLECTION, GUI_PLUGIN_NAME).find_one(
             {'type': 'server'}) or {}
-        return 'https://{}/{}?view={}'.format(
-            system_config.get('server_name', 'localhost'), self._entity_type.value, view_name)
+        url_params = urllib.parse.urlencode({'view': view_name})
+        return 'https://{}/{}?{}'.format(
+            system_config.get('server_name', 'localhost'), self._entity_type.value, url_params)
 
     def _get_trigger_description(self):
         """
