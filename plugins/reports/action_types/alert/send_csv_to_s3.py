@@ -93,7 +93,9 @@ class SendCsvToS3(ActionTypeAlert):
                 aws_secret_access_key=aws_secret_access_key
             )
             csv_name = 'axonius_csv_' + datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S').replace(' ', '-') + '.csv'
-            s3_client.upload_fileobj(csv_data, self._config.get('s3_bucket'), csv_name)
+            bucket_name = self._config.get('s3_bucket')
+            s3_client.upload_fileobj(csv_data, bucket_name, csv_name)
+            s3_client.put_object_acl(ACL='bucket-owner-full-control', Bucket=bucket_name, Key=csv_name)
 
             return AlertActionResult(True, 'Wrote to S3')
         except Exception as e:
