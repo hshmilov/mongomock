@@ -6,7 +6,6 @@ from axonius.adapter_base import AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
 from axonius.devices.device_adapter import DeviceAdapter
-from axonius.devices.device_adapter import DeviceAdapterSoftwareCVE
 from axonius.fields import Field
 from axonius.mixins.configurable import Configurable
 from axonius.plugin_base import add_rule, return_error
@@ -226,16 +225,10 @@ class TenableSecurityCenterAdapter(ScannerAdapterBase, Configurable):
         for vulnerability in raw_device_data.get('vulnerabilities') or []:
             try:
                 if vulnerability.get('cve'):
-                    cpes_list = list(filter(None, (vulnerability.get('cpe') or '').split('<br/>')))
                     cves_list = list(filter(None, (vulnerability.get('cve') or '').split(',')))
-                    cvss_v3 = vulnerability.get('cvssV3BaseScore')
-                    cvss_v2 = vulnerability.get('baseScore')
                     for cve in cves_list:
                         try:
-                            device.add_vulnerable_software(cve_id=cve,
-                                                           cve_severity=cvss_v3,
-                                                           cve_severity_v2=cvss_v2,
-                                                           cpe=cpes_list)
+                            device.add_vulnerable_software(cve_id=cve)
                         except Exception:
                             logger.exception(f'Problem adding CVE {cve}')
             except Exception:

@@ -89,12 +89,6 @@ class StaticAnalysisService(Triggerable, PluginBase):
 
     def __start_analysis(self):
         try:
-            self.__analyze_cves()
-            logger.info(f'Finished analyzing CVEs')
-        except Exception:
-            logger.exception('Exception while trying to analyze cves')
-
-        try:
             self.__associate_users_with_devices()
         except Exception:
             logger.exception('Exception while trying to associate devices and users')
@@ -105,125 +99,209 @@ class StaticAnalysisService(Triggerable, PluginBase):
         except Exception:
             logger.exception('Exception while trying to get last used users departments')
 
-    # CVE Analysis
+        try:
+            self.__add_enriched_cve_data()
+            logger.info(f'Finished adding CVE data from NVD')
+        except Exception:
+            logger.exception('Exception while trying to add CVE data from NVD')
 
-    def __analyze_cves(self):
+    # pylint: disable=too-many-branches, inconsistent-return-statements
+    def __add_enriched_cve_data(self):
         """
-        Analyses all devices that have some installed software on them and looks for software
-        that have known CVEs from the NVD. Tags those devices with the appropriate tags.
+        This function will check for installed software and CVEs listed in a device's
+        general data (software_cves)
+        It will search the NIST NVD based on existing CVEs and enrich the device's software_cves
+        with additional information like CVSS, severity, and affected software
+        It maps installed software to CVEs, then searches the NIST NVD with those CVEs and adds
+        them to the device with the corresponding installed software
+        :return:
         """
-        # We can divide all devices into two groups:
-        # 1. those that have at least one 'specific_data.data.installed_software.name'
-        # 2. those that don't
-        # if we deal with both groups we deal with all devices.
-
-        # dealing with group (1)
-        # those devices must be processed - i.e. to find any CVEs in them and tag appropriately.
         with self.__nvd_lock:
-            # filter to find only devices with any installed software
-            # Since the process_devices operation can take a lot time, this can lead to a situation where
-            # mongodb throws 'cursor not found' . This happens if we did not fetch a page from mongodb within 10 minutes
-            # and this is possible if a page takes at least 10 minutes to process. a page, by default, is 100 documents.
-            # to handle this we save all candidates' internal_axon_ids and then fetch them only when needed.
+            # Filters and searches the database
+            devices_with_cve = self.__get_devices_with_software_or_cves()
+            for device in devices_with_cve:
+                try:
+                    # Create a device with the enriched cves
+                    created_device = self.create_device_with_enriched_cves(device)
+                    if not created_device:
+                        logger.error(f'Error, did not parse device {device.get("internal_axon_id")}')
+                        continue
+                    # Get the original device from mongo db
+                    device_object = list(self.devices.get(internal_axon_id=device.get('internal_axon_id')))[0]
+                    # Add the enriched cve data from the created device to the one from mongo db
+                    device_object.add_adapterdata(created_device.to_dict(),
+                                                  action_if_exists='update',
+                                                  additional_data={'hidden_for_gui': True})
+                    # Update the device in mongo db
+                    self._save_field_names_to_db(EntityType.Devices)
+                except Exception:
+                    logger.exception(f'Exception while trying to add cves for device. Continuing')
 
-            devices_with_installed_software = list(self.devices_db.find(
-                parse_filter('specific_data.data.installed_software.name == exists(true)'),
-                projection={
-                    '_id': False,
-                    'internal_axon_id': True
-                }
-            ))
-            for i, internal_axon_id_doc in enumerate(devices_with_installed_software):
-                if i % 100 == 0 and i > 0:
-                    logger.info(f'1/2: Finished parsing {i} devices')
-                device = self.devices_db.find_one({'internal_axon_id': internal_axon_id_doc['internal_axon_id']})
-                self.__analyze_cves_process_devices(convert_db_entity_to_view_entity(device))
-
-        # find all devices that -
-        # 1. are part of group (2)
-        # 2. also have been tagged by us, and we have given it some CVE
-        # imagine the case that some axonius device that used to have installed_software
-        # and them we tagged it with some CVE.
-        # then that device looses its installed_software, so the previous loop won't find it, then the CVE
-        # will never be untagged!
-        # this loop will find those devices and search them :)
-        with self.__nvd_lock:
-            devices_with_cves_and_no_software = list(self.devices_db.find(
-                parse_filter(
-                    'not ((specific_data.data.installed_software.name == ({"$exists":true,"$ne":""}))) and '
-                    '(specific_data.data.software_cves.cve_id == ({"$exists":true,"$ne":""}))'),
-                projection={
-                    '_id': False,
-                    'internal_axon_id': True
-                }
-            ))
-            for i, internal_axon_id_doc in enumerate(devices_with_cves_and_no_software):
-                if i % 100 == 0 and i > 0:
-                    logger.info(f'2/2: Finished parsing {i} devices')
-                device = self.devices_db.find_one({'internal_axon_id': internal_axon_id_doc['internal_axon_id']})
-                self.__analyze_cves_process_devices(convert_db_entity_to_view_entity(device))
-
-    def __analyze_cves_process_devices(self, device) -> None:
+    def create_device_with_enriched_cves(self, device):
         """
-        Given an axonius devices, tag it with the appropriate CVEs.
+        This function creates a device adapter object that holds the enriched cves
+        from the NVD search
+        :param device: a device from the mongo db search
+        :return: a DeviceAdapter object with enriched cves
         """
         try:
-            software_cves_ids = set()
-            created_device = self._new_device_adapter()
-            created_device.id = self.plugin_unique_name + '!' + device['internal_axon_id']
-            created_device.software_cves = []
+            device_id = device.get('internal_axon_id')
+            if not device_id:
+                logger.exception('Failed to get internal axon id for device')
+                return
+        except Exception:
+            logger.exception('Failed to get internal axon id for device')
+            return
 
-            for adapter_device in device.get('specific_data', []):
-                # don't run on ourselves
-                if adapter_device[PLUGIN_NAME] == self.plugin_name:
+        try:
+            device_cves = []
+            software_cves = []
+            if not device.get('specific_data'):
+                logger.info(f'Cannot get data for device {device}')
+                return
+
+            for adapter_data in device.get('specific_data') or []:
+                # Don't run on a static analysis plugin tag
+
+                # This check is what updates old tags for devices that, for example, have enriched
+                # cves from an old run of static analysis but no longer report those cves
+                # or installed software
+                if adapter_data[PLUGIN_NAME] == self.plugin_name:
                     continue
 
-                # this includes both real devices and virtual devices from other plugins
-                installed_software = adapter_device['data'].get('installed_software', [])
+                # Now search the NVD for enriched data
+                adapter_specific_data = adapter_data.get('data') or {}
+                if adapter_specific_data.get('software_cves'):
+                    device_cves += self.__get_cve_data_from_device(adapter_specific_data=adapter_specific_data)
+                if adapter_specific_data.get('installed_software'):
+                    software_cves += self.__get_cve_data_from_installed_software(
+                        adapter_specific_data=adapter_specific_data)
 
-                for found_cve in self.__analyze_cves_process_installed_software(installed_software):
-                    if found_cve['cve_id'] not in software_cves_ids:
-                        software_cves_ids.add(found_cve['cve_id'])
-                        created_device.add_vulnerable_software(**found_cve)
-
-            # Add the final one
-            device_object = list(self.devices.get(internal_axon_id=device['internal_axon_id']))[0]
-            device_object.add_adapterdata(
-                created_device.to_dict(),
-                action_if_exists='update',
-                additional_data={
-                    'hidden_for_gui': True
-                }
-            )
-            self._save_field_names_to_db(EntityType.Devices)
         except Exception:
-            logger.exception(f'Exception while processing device {device}')
+            logger.exception(f'Problem getting cve data for device')
+            return
 
-    def __analyze_cves_process_installed_software(self, installed_software: Iterable[Dict]) -> Iterable[dict]:
+        created_device = self._new_device_adapter()
+        created_device.id = self.plugin_unique_name + '!' + 'cve' + '!' + device_id
+
+        # Add the enriched cve data to a new DeviceAdapter object and return it
+        if device_cves:
+            for device_cve in device_cves:
+                try:
+                    self.add_cve_data_to_device(created_device=created_device, cve_data=device_cve)
+                except Exception:
+                    logger.exception(f'Problem adding CVE data for {device_cve}')
+
+        if software_cves:
+            for software_cve in software_cves:
+                try:
+                    self.add_cve_data_to_device(created_device=created_device, cve_data=software_cve)
+                except Exception:
+                    logger.exception(f'Problem adding CVE data for {software_cve}')
+
+        return created_device
+    # pylint: enable=too-many-branches, inconsistent-return-statements
+
+    @staticmethod
+    def add_cve_data_to_device(created_device, cve_data):
         """
-        Processes all installed softwares and returns all CVEs found in those softwares
-        :param installed_software: Iterable of tuples from DB, the tuples represent DeviceAdapterInstalledSoftware
-        :return: yields dicts that each represent a DeviceAdapterSoftwareCVE
+        Will add the CVSS and severity ranking from version 3 of the CVSS if available,
+        if not will use the version 2
+        :param created_device: a new DeviceAdapter object
+        :param cve_data: CVE data fetched from the NVD
+        :return:
         """
+        cvss = cve_data.get('cvss_v3') or cve_data.get('cvss_v2')
+        cve_severity = cve_data.get('severity_v3') or cve_data.get('severity_v2')
+        created_device.add_vulnerable_software(cve_id=cve_data.get('id'),
+                                               cve_description=cve_data.get('description'),
+                                               cve_references=cve_data.get('references'),
+                                               cve_severity=cve_severity,
+                                               cvss=cvss,
+                                               software_name=cve_data.get('software_name'),
+                                               software_vendor=cve_data.get('software_vendor'))
+
+    def __get_devices_with_software_or_cves(self):
+        """
+        This queries Axonius's database for devices we want to enrich with CVE data from the NVD
+        :return:
+        """
+        # Since the process_devices operation can take a lot time, this can lead to a situation where
+        # mongodb throws 'cursor not found' . This happens if we did not fetch a page from mongodb within 10 minutes
+        # and this is possible if a page takes at least 10 minutes to process. a page, by default, is 100 documents.
+        # to handle this we save all candidates' internal_axon_ids and then fetch them only when needed.
+
+        # We want to run static analysis on devices that have one or both of the following:
+        # a) The device's adapter reports CVEs (i.e. Shodan, Tenable SC) alone
+        # b) The device has installed software and we can search for CVEs associated with it
+        devices_with_cve_or_softwares = list(self.devices_db.find(
+            parse_filter(
+                '(specific_data.data.software_cves.cve_id == ({"$exists":true,"$ne": ""})) '
+                'or (specific_data.data.installed_software.name == ({"$exists":true,"$ne": ""}))'),
+            projection={
+                '_id': False,
+                'internal_axon_id': True}
+        ))
+
+        devices_seen = set([])      # Don't want to enrich the same device twice
+        for i, axon_id in enumerate(devices_with_cve_or_softwares):
+            if axon_id.get('internal_axon_id') in devices_seen:
+                continue
+            # Get the whole device and all its data from the database by searching with its internal axon id
+            device = self.devices_db.find_one({'internal_axon_id': axon_id['internal_axon_id']})
+            yield convert_db_entity_to_view_entity(device, ignore_errors=True)
+            devices_seen.add(axon_id.get('internal_axon_id'))
+
+    def __get_cve_data_from_installed_software(self, adapter_specific_data):
+        """
+        Searches the NVD with a device's installed software
+        :param adapter_specific_data: specific data dict from a device returned by the db
+        :return:
+        """
+        try:
+            device_installed_software = adapter_specific_data.get('installed_software') or []
+            if device_installed_software:
+                software_cves = self.__query_nvd_with_software(device_installed_software)
+                yield from software_cves
+        except Exception:
+            logger.exception(f'Exception while processing device')
+
+    def __get_cve_data_from_device(self, adapter_specific_data):
+        """
+        Searches the NVD with a device's existing CVE ids
+        :param adapter_specific_data: specific data dict from a device returned by the db
+        :return:
+        """
+        try:
+            device_cves = adapter_specific_data.get('software_cves') or []
+            if device_cves:
+                for cve in device_cves:
+                    try:
+                        yield self.__query_nvd_with_cve(cve_id=cve.get('cve_id'))
+                    except Exception:
+                        logger.exception(f'CVE search in NVD failed for {cve}')
+        except Exception:
+            logger.exception(f'Exception while processing device')
+
+    def __query_nvd_with_cve(self, cve_id):
+        try:
+            return self.__nvd_searcher.search_by_cve(cve_id_to_search=cve_id)
+        except Exception:
+            logger.exception(f'Failed to get CVE data for {cve_id}')
+
+    def __query_nvd_with_software(self, installed_software: Iterable[Dict]) -> Iterable[dict]:
         for software in installed_software:
             software_vendor = software.get('vendor') or ''
             software_name = software.get('name') or ''
             software_version = software.get('version') or ''
 
             try:
-                # We want all of our params to be strings, and only strings. but, software_vendor might be empty,
-                # so our conditions will be:
-                # software_vendor, software_name, and software_version are strings
-                # software_name, software_version are not empty strings.
-
+                # Check for valid software input
                 if not all(isinstance(x, str) for x in (software_vendor, software_name, software_version)):
-                    # Sometimes, that happens.
                     logger.error(f'Error: installed software contains not strings: {software}')
                     continue
 
                 if not software_name or not software_version:
-                    # Sometimes, that also happens.
-                    # do note that we allow empty software_vendor as some adapters do not give it.
                     logger.debug(f'Error: installed software contains name/version empty strings: {software}')
                     continue
 
@@ -235,27 +313,20 @@ class StaticAnalysisService(Triggerable, PluginBase):
                     # our patch management modules.
                     continue
 
-                for cve in self.__nvd_searcher.search_vuln(software_vendor, software_name, software_version):
-                    try:
-                        cve_id = cve['id']
-                        cve_description = cve.get('description')
-                        cve_references = cve.get('references')
-                        cve_severity = cve.get('severity')
-                        yield dict(
-                            software_vendor=software_vendor,
-                            software_name=software_name,
-                            software_version=software_version,
-                            cve_id=cve_id,
-                            cve_description=cve_description,
-                            cve_references=cve_references,
-                            cve_severity=cve_severity
-                        )
-                    except Exception:
-                        logger.exception(
-                            f'Exception parsing cve {cve} for {software_vendor}:{software_name}:{software_version}')
+                software_cves = self.__nvd_searcher.search_vuln(software_vendor, software_name, software_version)
+                for cve in software_cves:
+                    if software_vendor:
+                        cve['software_vendor'] = software_vendor
+                    if software_name:
+                        cve['software_name'] = software_name
+                    if software_version:
+                        cve['software_version'] = software_version
+
+                    yield cve
+
             except Exception:
-                logger.exception(
-                    f'Exception while searching for vuln for {software_vendor}:{software_name}:{software_version}')
+                logger.exception(f'Exception while searching for vuln for '
+                                 f'{software_vendor}:{software_name}:{software_version}')
 
     # Devices/Users association
 

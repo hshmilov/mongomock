@@ -319,13 +319,13 @@ class DeviceAdapterAutorunData(SmartJsonClass):
 class DeviceAdapterSoftwareCVE(SmartJsonClass):
     """ A definition for a CVE that is available for a software"""
 
-    software_vendor = Field(str, "Software Vendor")
+    cve_id = Field(str, "CVE ID")
     software_name = Field(str, "Software Name")
     software_version = Field(str, "Software Version")
-    cve_id = Field(str, "CVE ID")
+    software_vendor = Field(str, "Software Vendor")
     cpe = ListField(str, "CPE")
-    cve_severity = Field(str, "CVE Severity (Metric V3)")
-    cve_severity_v2 = Field(str, "CVE Severity (Metric V2)")
+    cvss = Field(float, "CVSS")
+    cve_severity = Field(str, "CVE Severity")
     cve_description = Field(str, "CVE Description")
     cve_synopsis = Field(str, "CVE Synopsis")
     cve_references = ListField(str, "CVE References")
@@ -913,14 +913,16 @@ class DeviceAdapter(SmartJsonClass):
 
         self.installed_software.append(DeviceAdapterInstalledSoftware(**kwargs))
 
-    def add_vulnerable_software(self, cve_severity=None, cve_severity_v2=None, **kwargs):
-        if not cve_severity:
-            cve_severity = None
-        if not cve_severity_v2:
-            cve_severity_v2 = None
-        self.software_cves.append(DeviceAdapterSoftwareCVE(cve_severity=cve_severity,
-                                                           cve_severity_v2=cve_severity_v2,
-                                                           **kwargs))
+    def add_vulnerable_software(self, cvss=None, **kwargs):
+        if cvss:
+            try:
+                cvss = float(cvss)
+            except Exception:
+                logger.exception(f'Invalid cvss {cvss}')
+                return
+        else:
+            cvss = None
+        self.software_cves.append(DeviceAdapterSoftwareCVE(cvss=cvss, **kwargs))
 
     def add_key_value_tag(self, key, value):
         self.tags.append(DeviceTagKeyValue(tag_key=key, tag_value=value))
