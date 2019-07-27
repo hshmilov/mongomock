@@ -6,6 +6,7 @@ from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.fields import Field, ListField
+from axonius.mixins.configurable import Configurable
 from axonius.scanner_adapter_base import ScannerAdapterBase
 from axonius.smart_json_class import SmartJsonClass
 from axonius.utils.datetime import parse_date
@@ -34,7 +35,7 @@ class QualysAgentPort(SmartJsonClass):
     service_name = Field(str, 'Service Name')
 
 
-class QualysScansAdapter(ScannerAdapterBase):
+class QualysScansAdapter(ScannerAdapterBase, Configurable):
     class MyDeviceAdapter(DeviceAdapter):
         qualys_agent_vulns = ListField(QualysAgentVuln, 'Vulnerabilities')
         qualys_agnet_ports = ListField(QualysAgentPort, 'Qualys Open Ports')
@@ -58,15 +59,25 @@ class QualysScansAdapter(ScannerAdapterBase):
     @staticmethod
     def _test_reachability(client_config):
         return RESTConnection.test_reachability(client_config.get(consts.QUALYS_SCANS_DOMAIN))
+    # pylint: disable=too-many-function-args
 
-    @staticmethod
-    def _connect_client(client_config):
+    def _connect_client(self, client_config):
         try:
+            date_filter = None
+            if self._last_seen_timedelta:
+                now = datetime.datetime.now(datetime.timezone.utc)
+                date_filter = (now - self._last_seen_timedelta).replace(microsecond=0).isoformat()
+                date_filter = date_filter.replace('+00:00', '') + 'Z'
+
             connection = QualysScansConnection(
                 domain=client_config[consts.QUALYS_SCANS_DOMAIN],
                 username=client_config[consts.USERNAME],
                 password=client_config[consts.PASSWORD],
                 verify_ssl=client_config.get('verify_ssl') or False,
+                date_filter=date_filter,
+                request_timeout=self.__request_timeout,
+                chunk_size=self.__async_chunk_size,
+                devices_per_page=self.__devices_per_page,
                 https_proxy=client_config.get('https_proxy')
             )
             with connection:
@@ -78,6 +89,7 @@ class QualysScansAdapter(ScannerAdapterBase):
             )
             logger.exception(message)
             raise ClientConnectionException(message)
+    # pylint: enable=too-many-function-args
 
     @staticmethod
     def _query_devices_by_client(client_name, client_data):
@@ -104,59 +116,10 @@ class QualysScansAdapter(ScannerAdapterBase):
         }
 
     def _parse_raw_data(self, devices_raw_data):
-        for device_raw, device_type in devices_raw_data:
-            device = None
-            if device_type == consts.SCAN_DEVICE:
-                device = self._create_scan_device(device_raw)
-            if device_type == consts.AGENT_DEVICE:
-                device = self._create_agent_device(device_raw)
+        for device_raw in devices_raw_data:
+            device = self._create_agent_device(device_raw)
             if device:
                 yield device
-
-    def _create_scan_device(self, device_raw):
-        try:
-            last_seen = device_raw.get('LAST_VM_SCANNED_DATE', device_raw.get('LAST_VULN_SCAN_DATETIME'))
-            if last_seen is None:
-                # No data on the last timestamp of the device. Not inserting this device.
-                logger.warning(f'Device scan with no scan time {device_raw}')
-                return None
-
-            # Parsing the timestamp.
-            last_seen = parse_date(last_seen)
-        except Exception:
-            logger.exception(
-                f'An Exception was raised while getting and parsing ' f'the last_seen field for device {device_raw}'
-            )
-            return None
-        try:
-            device = self._new_device_adapter()
-            device.hostname = device_raw.get('DNS') or device_raw.get('NETBIOS')
-            device.figure_os(device_raw.get('OS'))
-            device.last_seen = last_seen
-            try:
-                if 'IP' in device_raw:
-                    device.add_nic(None, [device_raw['IP']])
-            except Exception:
-                logger.exception(f'Problem adding nic to {device_raw}')
-            device.id = device_raw.get('ID')
-            try:
-                vulns_list = (device_raw.get('DETECTION_LIST') or {}).get('DETECTION') or []
-                if isinstance(vulns_list, dict):
-                    vulns_list = [vulns_list]
-                for vuln in vulns_list:
-                    severity = vuln.get('SEVERITY') or ''
-                    results = vuln.get('RESULTS') or ''
-                    if severity or results:
-                        device.severity_results.append(QualysVulnerability(severity=severity, results=results))
-
-            except Exception:
-                logger.exception(f'Problem adding scans to {device_raw}')
-            device.adapter_properties = [AdapterProperty.Vulnerability_Assessment.name, AdapterProperty.Network.name]
-            device.set_raw(device_raw)
-            return device
-        except Exception:
-            logger.exception(f'Problem with device {device_raw}')
-            return None
 
     # pylint: disable=R0912,R0915
     def _create_agent_device(self, device_raw):
@@ -272,6 +235,47 @@ class QualysScansAdapter(ScannerAdapterBase):
         except Exception:
             logger.exception(f'Problem with device {device_raw}')
             return None
+
+    @classmethod
+    def _db_config_schema(cls) -> dict:
+        return {
+            'items': [
+                {
+                    'name': 'request_timeout',
+                    'title': 'Request Timeout',
+                    'type': 'integer'
+                },
+                {
+                    'name': 'async_chunk_size',
+                    'title': 'Chunk Size',
+                    'type': 'integer',
+                },
+                {
+                    'name': 'devices_per_page',
+                    'title': 'Devices Per Page',
+                    'type': 'integer',
+                }
+            ],
+            'required': [
+                'request_timeout',
+                'async_chunk_size',
+            ],
+            'pretty_name': 'Qualys Configuration',
+            'type': 'array'
+        }
+
+    @classmethod
+    def _db_config_default(cls):
+        return {
+            'request_timeout': 200,
+            'async_chunk_size': 50,
+            'devices_per_page': consts.DEVICES_PER_PAGE,
+        }
+
+    def _on_config_update(self, config):
+        self.__request_timeout = config['request_timeout']
+        self.__async_chunk_size = config['async_chunk_size']
+        self.__devices_per_page = config.get('devices_per_page', consts.DEVICES_PER_PAGE)
 
     @classmethod
     def adapter_properties(cls):

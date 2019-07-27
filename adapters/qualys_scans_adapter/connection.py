@@ -1,10 +1,8 @@
 import logging
 import xml.etree.cElementTree as ET
 
-
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.exception import RESTException
-from axonius.utils.xml2json_parser import Xml2Json
 from qualys_scans_adapter import consts
 
 logger = logging.getLogger(f'axonius.{__name__}')
@@ -15,17 +13,44 @@ For the sake of the user - if the next api request is allowed within the next 30
 '''
 
 
+class IteratorCounter:
+    def __init__(self,
+                 message,
+                 start_value=0,
+                 threshold=50):
+        self._message = message
+        self._count = start_value
+        self._last_printed_value = self._count
+        self._threshold = threshold
+
+    def add(self, value=1):
+        self._count += value
+
+    def print_if_needed(self):
+        if self._count - self._last_printed_value >= self._threshold:
+            self._last_printed_value = self._count
+            self.print()
+            return True
+        return False
+
+    def print(self):
+        logger.info(self._message.format(count=self._count))
+
+
 class QualysScansConnection(RESTConnection):
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, request_timeout, chunk_size, devices_per_page, *args, date_filter=None, **kwargs):
         """ Initializes a connection to Illusive using its rest API
 
         :param obj logger: Logger object of the system
         :param str domain: domain address for Illusive
         """
-        super().__init__(*args, session_timeout=(5, 2000), **kwargs)
+        super().__init__(*args, session_timeout=(5, request_timeout), **kwargs)
         self._permanent_headers = {'X-Requested-With': 'Axonius Qualys Scans Adapter',
                                    'Accept': 'application/json'}
+        self._date_filter = date_filter
+        self._chunk_size = chunk_size
+        self._devices_per_page = devices_per_page
 
     def _connect(self):
         if not self._username or not self._password:
@@ -39,115 +64,107 @@ class QualysScansConnection(RESTConnection):
                 or response_tree.find('RESPONSE').find('CODE') is not None:
             logger.error(f'Failed to connect to qualys scans. got {response}')
             raise RESTException(f'Got bad XML: {response[:100]}')
+        # XXX: replace with real connect check
 
-    def _get_device_agent_list(self):
-        last_id = 0
-        has_more_records = 'true'
-        pages_count = 0
-        while has_more_records == 'true':
-            logger.info(f'Got {pages_count * consts.DEVICES_PER_PAGE} devices so far')
-            pages_count += 1
-            current_iterator_data = consts.QUALYS_SCANS_ITERATOR_FORMAT.format(last_id, consts.DEVICES_PER_PAGE)
+    def _prepare_get_hostassets_request_params(self, start_offset):
+        params = {
+            'ServiceRequest': {
+                'preferences': {
+                    'startFromOffset': start_offset,
+                    'limitResults': self._devices_per_page
+                },
+            }
+        }
+        if self._date_filter:
+            # filter by 'last_seen' greater then
+            params['ServiceRequest']['filters'] = {
+                'Criteria': [{
+                    'field': 'lastVulnScan',
+                    'operator': 'GREATER',
+                    'value': self._date_filter,
+                }],
+            }
+        return {'name': 'qps/rest/2.0/search/am/hostasset/',
+                'body_params': params,
+                'do_basic_auth': True}
+
+    def _get_device_count(self):
+        params = {
+            'ServiceRequest': {
+            }
+        }
+        if self._date_filter:
+            # filter by 'last_seen' greater then
+            params['ServiceRequest']['filters'] = {
+                'Criteria': [{
+                    'field': 'lastVulnScan',
+                    'operator': 'GREATER',
+                    'value': self._date_filter,
+                }],
+            }
+        exception_count = 0
+        while True:
             try:
-                current_clients_page = self._post('qps/rest/2.0/search/am/hostasset/',
-                                                  do_basic_auth=True,
-                                                  use_json_in_body=False,
-                                                  body_params=current_iterator_data)['ServiceResponse']
-            except Exception:
-                try:
-                    logger.exception(f'First POST failure at {last_id}')
-                    current_clients_page = self._post('qps/rest/2.0/search/am/hostasset/',
-                                                      do_basic_auth=True,
-                                                      use_json_in_body=False,
-                                                      body_params=current_iterator_data)['ServiceResponse']
-                except Exception:
-                    logger.exception(f'Second POST failure at {last_id}')
-                    current_clients_page = self._post('qps/rest/2.0/search/am/hostasset/',
-                                                      do_basic_auth=True,
-                                                      use_json_in_body=False,
-                                                      body_params=current_iterator_data)['ServiceResponse']
-            if pages_count == 1:
-                total_count = current_clients_page['count']
-                logger.info(f'Total Count is {total_count}')
-            if current_clients_page.get('data'):
-                yield from current_clients_page['data']
-            else:
-                logger.error(f'Error while fetching devics from qualys. response is {current_clients_page}')
+                result = self._post('qps/rest/2.0/count/am/hostasset', body_params=params, do_basic_auth=True)
+                if not (result.get('ServiceResponse') or {}).get('count'):
+                    raise RuntimeError(f'Response is {result}')
                 break
-            last_id = current_clients_page.get('lastId')
-            has_more_records = current_clients_page.get('hasMoreRecords')
-            if last_id is None and has_more_records == 'true':
-                break
+            except Exception as e:
+                logger.warning(f'Exception {exception_count} while fetching count error :{e}')
+                exception_count += 1
+                if exception_count >= consts.FETCH_EXCEPTION_THRESHOLD:
+                    raise
 
-    def _get_qualys_scan_results(self, url, url_params, output_key):
-        devices_page_count = 0
-        while url_params:
+        return result['ServiceResponse']['count']
+
+    def _get_hostassets_by_requests(self, requests):
+        for request_id, response in enumerate(self._async_post(requests, chunks=self._chunk_size)):
             try:
-                logger.info(f'Got {devices_page_count*consts.DEVICES_PER_PAGE} devices so far')
-                devices_page_count += 1
-                response = self._get(consts.SCANS_URL_PREFIX + url + '?' + url_params,
-                                     do_basic_auth=True,
-                                     use_json_in_response=False)
-                current_clients_page = Xml2Json(response).result
-                # if there's no response field - there are no clients
-                response_json = current_clients_page[output_key]['RESPONSE']
-                hosts = response_json.get('HOST_LIST', {}).get('HOST')
-                if isinstance(hosts, dict):
-                    yield hosts
-                if isinstance(hosts, list):
-                    yield from hosts
-                url_params = ((response_json.get('WARNING') or {}).get('URL') or '?').split('?')[1]
-            except Exception:
-                logger.exception(f'No devices found for params {url_params}')
-                break
-
-    def _get_device_scans_list(self):
-        """
-        Get all devices from a specific QualysScans domain
-
-        :param str client_name: The name of the client
-        :param obj client_data: The data that represent a QualysScans connection
-
-        :return: A json with all the attributes returned from the QualysScans Server
-        """
-        logger.info(f'Getting all qualys scannable hosts')
-        all_hosts = dict()
-        for device_raw in self._get_qualys_scan_results(url=consts.ALL_HOSTS_URL,
-                                                        url_params=consts.ALL_HOSTS_PARAMS,
-                                                        output_key=consts.ALL_HOSTS_OUTPUT):
-            try:
-                device_id = device_raw.get('ID')
-                if not device_id:
-                    logger.warning(f'Bad device without id {str(device_raw)}')
+                if isinstance(response, Exception):
+                    logger.error(f'{request_id} - Got Exception: {response}')
                     continue
-                all_hosts[device_id] = device_raw
-            except Exception:
-                logger.exception(f'Problem getting ID for {str(device_raw)}')
-        logger.info(f'Getting all vulnerable hosts')
-        try:
-            vm_hosts = self._get_qualys_scan_results(url=consts.VM_HOST_URL,
-                                                     url_params=consts.VM_HOST_PARAMS,
-                                                     output_key=consts.VM_HOST_OUTPUT)
-        except Exception:
-            logger.exception(f'Problem getting detection lists')
-            vm_hosts = []
 
-        for device_raw in vm_hosts:
-            try:
-                if not device_raw.get('ID'):
-                    logger.warning(f'Bad device without id {str(device_raw)}')
+                service_response = response.get('ServiceResponse') or {}
+                data = service_response.get('data')
+                if not data:
+                    logger.error(f'{request_id} - no data. Response is {service_response}')
                     continue
-                if device_raw['ID'] in all_hosts:
-                    all_hosts[device_raw['ID']]['DETECTION_LIST'] = device_raw.get('DETECTION_LIST') or {}
-                else:
-                    all_hosts[device_raw['ID']] = device_raw
+
+                yield (request_id, data)
+                self._yielded_devices_count.add(len(data))
+                self._yielded_devices_count.print_if_needed()
             except Exception:
-                logger.exception(f'Problem add detection list to {device_raw}')
-        yield from all_hosts.values()
+                logger.exception(f'{request_id} - Failed to deliver: {response}')
+
+    def _get_hostassets(self):
+        logger.info('Starting to fetch')
+        count = self._get_device_count()
+        self._yielded_devices_count = IteratorCounter(f'Got {{count}} devices so far out of {count}', threshold=100)
+        logger.info(f'device count is {count}')
+
+        offsets = range(1, count + 1, self._devices_per_page)
+        requests = [self._prepare_get_hostassets_request_params(offset) for offset in offsets]
+
+        # we try to fetch each page max exception threshold.
+        # if we got data back we remove it from the next round
+        # if we got all responses back we stop
+
+        for i in range(1, consts.FETCH_EXCEPTION_THRESHOLD + 1):
+            logger.info(f'Aync round number {i}, sending {len(requests)} requests')
+            success_indices = []
+            for index, devices in self._get_hostassets_by_requests(requests):
+                yield from devices
+                success_indices.append(index)
+
+            requests = [request for i, request in enumerate(requests) if i not in success_indices]
+            if not requests:
+                break
+        else:
+            logger.error(f'Lost {len(requests) * self._devices_per_page} devices')
 
     def get_device_list(self):
         try:
-            for device_raw in self._get_device_agent_list():
-                yield device_raw, consts.AGENT_DEVICE
+            for device_raw in self._get_hostassets():
+                yield device_raw
         except Exception:
-            logger.exception(f'Problem getting agents moving to scans')
+            logger.exception(f'Problem getting hostassets')

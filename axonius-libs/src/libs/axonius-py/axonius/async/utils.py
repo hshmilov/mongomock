@@ -3,7 +3,7 @@ Async io utilities.
 """
 import asyncio
 import typing
-from aiohttp import ClientSession, ClientTimeout, ClientResponse, BasicAuth
+from aiohttp import ClientSession, ClientTimeout, ClientResponse, BasicAuth, TCPConnector
 
 
 def async_request(req_list: list) -> typing.List[ClientResponse]:
@@ -45,8 +45,9 @@ def async_request(req_list: list) -> typing.List[ClientResponse]:
         tasks = []
 
         # Fetch all responses within one Client session,
-        # keep connection alive for all requests.
-        async with ClientSession() as session:
+        # keep connection alive for all requests.A
+        connector = TCPConnector(limit=None)
+        async with ClientSession(connector=connector) as session:
             for req in reqs:
                 task = asyncio.ensure_future(request(session, **req))
                 tasks.append(task)
@@ -55,6 +56,7 @@ def async_request(req_list: list) -> typing.List[ClientResponse]:
             # the result of the requests.
             # so the result can be ["first_result", "second_result", Exception(...), "fourth_result"]
             return await asyncio.gather(*tasks, return_exceptions=True)
+        await connector.close()
 
     try:
         loop = asyncio.get_event_loop()
@@ -62,4 +64,8 @@ def async_request(req_list: list) -> typing.List[ClientResponse]:
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
     future = asyncio.ensure_future(run(req_list))
-    return loop.run_until_complete(future)
+    result = loop.run_until_complete(future)
+    # Wait 250 ms for the underlying SSL connections to close
+    # https://aiohttp.readthedocs.io/en/stable/client_advanced.html
+    loop.run_until_complete(asyncio.sleep(0.250))
+    return result
