@@ -1,3 +1,4 @@
+import ipaddress
 import logging
 
 from axonius.adapter_base import AdapterBase, AdapterProperty
@@ -162,16 +163,22 @@ class CiscoFirepowerManagementCenterAdapter(AdapterBase):
             'type': 'array'
         }
 
-    def _create_device(self, device_raw):
+    def _create_device_type_device(self, device_raw):
         try:
             device = self._new_device_adapter()
             device_id = device_raw.get('id')
             if device_id is None:
                 logger.warning(f'Bad device with no ID {device_raw}')
                 return None
-            device.id = device_id + '_' + (device_raw.get('id') or '')
+            device.id = device_id + '_' + (device_raw.get('name') or '')
             device.name = device_raw.get('name')
-            device.hostname = device_raw.get('hostName')
+            hostname = device_raw.get('hostName')
+            device.hostname = hostname
+            try:
+                ipaddress.ip_address(hostname)
+                device.add_nic(ips=[hostname])
+            except Exception:
+                pass
             device.description = device_raw.get('description')
 
             device.fmc_model = device_raw.get('model')
@@ -234,9 +241,35 @@ class CiscoFirepowerManagementCenterAdapter(AdapterBase):
             logger.exception(f'Problem with fetching CiscoFirepowerManagementCenter Device for {device_raw}')
             return None
 
+    def _create_host_type_device(self, device_raw):
+        try:
+            device = self._new_device_adapter()
+            device_id = device_raw.get('id')
+            if device_id is None:
+                logger.warning(f'Bad device with no ID {device_raw}')
+                return None
+            device.id = device_id + '_' + (device_raw.get('name') or '')
+            device.name = device_raw.get('name')
+            try:
+                value = device_raw.get('value')
+                ipaddress.ip_address(value)
+                device.add_nic(ips=[value])
+            except Exception:
+                pass
+            device.set_raw(device_raw)
+            return device
+        except Exception:
+            logger.exception(f'Problem with fetching CiscoFirepowerManagementCenter Host for {device_raw}')
+            return None
+
     def _parse_raw_data(self, devices_raw_data):
-        for device_raw in devices_raw_data:
-            device = self._create_device(device_raw)
+        for device_raw, device_type in devices_raw_data:
+            device = None
+            if device_type == 'device_type':
+                device = self._create_device_type_device(device_raw)
+            elif device_type == 'host_type':
+                device = self._create_host_type_device(device_raw)
+
             if device:
                 yield device
 

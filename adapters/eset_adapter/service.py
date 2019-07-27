@@ -1,6 +1,7 @@
 import threading
 import ctypes
 import logging
+from urllib3.util.url import parse_url
 
 
 logger = logging.getLogger(f'axonius.{__name__}')
@@ -140,9 +141,10 @@ class EsetAdapter(AdapterBase):
         raise NotImplementedError()
 
     def _connect_client(self, client_config):
+        eset_host = parse_url(client_config[ESET_HOST]).host
         return EsetClient(self.eset_session_lock, self.eset_connection_library,
-                          host=client_config[ESET_HOST], username=client_config[USER],
-                          password=client_config[PASSWORD], port=client_config.get(ESET_PORT, 2223))
+                          host=eset_host, username=client_config[USER],
+                          password=client_config[PASSWORD], port=client_config.get(ESET_PORT) or 2223)
 
     @classmethod
     def adapter_properties(cls):

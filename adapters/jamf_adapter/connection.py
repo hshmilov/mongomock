@@ -5,6 +5,7 @@ from datetime import datetime
 import requests
 import base64
 import time
+from urllib3.util.url import parse_url
 
 from axonius.fields import Field
 from axonius.utils.datetime import parse_date
@@ -32,7 +33,11 @@ class JamfConnection(object):
 
         :param str domain: domain address for Jamf
         """
-        url = domain
+        url_parsed = parse_url(domain)
+        url = url_parsed.host
+        port = url_parsed.port
+        if port:
+            url = f'{url}:{port}'
         self.users_db = users_db
         if not url.lower().startswith('https://') and not url.lower().startswith("http://"):
             url = 'https://' + url
@@ -275,12 +280,12 @@ class JamfConnection(object):
                     try:
                         policy_key = policy.get('policy_id')
                         policy_date = parse_date(policy.get('date_completed_utc')
-                                                 ) or parse_date(policy.get('date_completed'))
+                                                 ) or parse_date(policy.get('date_completed')).replace(tzinfo=None)
                         if not policy_date:
                             logging.warning(f'Bad Policy with no date or key {policy}')
                             continue
                         device_policy = device_policies.get(policy_key)
-                        if device_policy is None or device_policy.last_runtime_date < policy_date:
+                        if device_policy is None or device_policy.last_runtime_date.replace(tzinfo=None) < policy_date.replace(tzinfo=None):
                             device_policy = JamfPolicy()
                             device_policy.policy_id = policy['policy_id']
                             device_policy.policy_name = policy['policy_name']
@@ -289,7 +294,7 @@ class JamfConnection(object):
                             device_policy.last_completed_date = parse_date(-1)
                         if policy['status'] == 'Completed' and \
                                 (('last_completed_date' not in device_policy.to_dict()) or
-                                 (device_policy.last_completed_date < policy_date)):
+                                 (device_policy.last_completed_date.replace(tzinfo=None) < policy_date.replace(tzinfo=None))):
                             device_policy.last_completed_date = policy_date
                         device_policies[policy_key] = device_policy
                     except Exception:

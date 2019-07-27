@@ -13,13 +13,16 @@ class TenableSecurityScannerConnection(RESTConnection):
     # This code heavily relies on pyTenable https://github.com/tenable/pyTenable/blob/
     # 24e0fbd6191907b46c4e2e1b6cee176e93ad6d4d/tenable/securitycenter/securitycenter.py
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, token=None, **kwargs):
         super().__init__(*args, url_base_prefix='/rest/',
                          headers={'Content-Type': 'application/json',
                                   'Accept': 'application/json'}, **kwargs)
+        self._token = token
 
     def _connect(self):
-        if self._username is not None and self._password is not None:
+        if (not self._username or not self._password) and not self._token:
+            raise RESTException('Credentials must include username and password or Token')
+        if not self._token:
             # Based on Tenable SCCV Documentation (https://docs.tenable.com/sccv/api/index.html)
             # and https://docs.tenable.com/sccv/api/Token.html
             # We need to post to 'token' and get the token and cookie.
@@ -34,7 +37,8 @@ class TenableSecurityScannerConnection(RESTConnection):
             # We don't have to set the cookie since RESTConnection does that for us (uses request.Session)
             self._session_headers['X-SecurityCenter'] = str(response['token'])
         else:
-            raise RESTException('No user name or password')
+            self._session_headers['X-SecurityCenter'] = self._token
+        self._get('repository')
 
     def _handle_response(self, response, raise_for_status=True, use_json_in_response=True, return_response_raw=False):
         resp = super()._handle_response(response=response,
@@ -56,7 +60,8 @@ class TenableSecurityScannerConnection(RESTConnection):
     def close(self):
         # Deletes the token associated with the logged in User (https://docs.tenable.com/sccv/api/Token.html)
         try:
-            self._delete('token')
+            if not self._token:
+                self._delete('token')
         except Exception:
             logger.exception('Couldn\'t delete token')
         super().close()

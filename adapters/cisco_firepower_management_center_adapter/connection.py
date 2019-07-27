@@ -12,7 +12,7 @@ class CiscoFirepowerManagementCenterConnection(RESTConnection):
     """ rest client for CiscoFirepowerManagementCenter adapter """
 
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, url_base_prefix='api/fmc_platform/v1',
+        super().__init__(*args, url_base_prefix='',
                          headers={'Content-Type': 'application/json',
                                   'Accept': 'application/json'},
                          **kwargs)
@@ -33,14 +33,14 @@ class CiscoFirepowerManagementCenterConnection(RESTConnection):
         try:
             # if we have a refresh token and have not hit the 3 refresh limit yet, refresh the current token
             if self._session_refresh_token and self._session_refresh_count < 3:
-                response = self._post('auth/refreshtoken',
+                response = self._post('api/fmc_platform/v1/auth/refreshtoken',
                                       extra_headers={'X-auth-refresh-token', self._session_refresh_token},
                                       return_response_raw=True,
                                       use_json_in_response=False)
                 self._session_refresh_count += 1
             # otherwise, assume we have to generate a new token
             else:
-                response = self._post('auth/generatetoken',
+                response = self._post('api/fmc_platform/v1/auth/generatetoken',
                                       do_basic_auth=True,
                                       return_response_raw=True,
                                       use_json_in_response=False)
@@ -74,23 +74,35 @@ class CiscoFirepowerManagementCenterConnection(RESTConnection):
         if not self._username or not self._password:
             raise RESTException('No username or password')
 
+        self._session_refresh_time = None
+        self._session_refresh_count = 0
+        self._session_refresh_token = None
+        self._domain_uuid = None
+
         # if creds are valid, go through the token refresh/generate flow
         self._refresh_token()
 
         # Try to access required API endpoints to check that API token has correct permissions
         try:
-            self._get(f'domain/{self._domain_uuid}/devices/devicerecords')
+            self._get(f'api/fmc_config/v1/domain/{self._domain_uuid}/devices/devicerecords')
         except RESTException as e:
             message = f'Unable to access a required API endpoint: {str(e)}'
             logger.exception(message)
             raise ClientConnectionException(message)
 
     def get_device_list(self):
-        self._refresh_token()
-        response = self._get(f'domain/{self._domain_uuid}/devices/devicerecords')
+        for device_raw in self._get_api_endpoint('devices/devicerecords'):
+            yield device_raw, 'device_type'
+        for device_raw in self._get_api_endpoint('object/hosts'):
+            yield device_raw, 'host_type'
 
-        offset = response['paging']['offset']
-        pages = response['paging']['pages']
+    def _get_api_endpoint(self, endpoint_api):
+        self._refresh_token()
+        response = self._get(f'api/fmc_config/v1/domain/{self._domain_uuid}/{endpoint_api}')
+
+        next_url = response['paging'].get('next')
+        if isinstance(next_url, list) and next_url:
+            next_url = next_url[0]
         items = response['items']
 
         # use the fact that API response contains full URLs for individual objects when using /devices/devicerecords
@@ -100,19 +112,19 @@ class CiscoFirepowerManagementCenterConnection(RESTConnection):
                 yield self._get(item['links']['self'], force_full_url=True)
             except Exception:
                 logger.exception(f'Encountered malformed Device item.')
-        offset += 1
-        while offset < pages:
+        while next_url:
             try:
-                response = self._get(f'domain/{self._domain_uuid}/devices/devicerecords', url_params={'offset': offset})
-                if not response:
-                    break
+                response = self._get(next_url, force_full_url=True)
+                next_url = response['paging'].get('next')
+                if isinstance(next_url, list) and next_url:
+                    next_url = next_url[0]
+                items = response['items']
                 for item in items:
                     try:
                         self._refresh_token()
                         yield self._get(item['links']['self'], force_full_url=True)
                     except Exception:
                         logger.exception(f'Encountered malformed Device item.')
-                offset += 1
             except Exception:
-                logger.exception(f'Problem at offset {offset}')
+                logger.exception(f'Problem at fetchin url {next_url}')
                 break

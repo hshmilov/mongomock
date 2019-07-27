@@ -89,7 +89,9 @@ class TenableSecurityCenterAdapter(ScannerAdapterBase, Configurable):
             verify_ssl = bool(client_config['verify_ssl'])
         connection = TenableSecurityScannerConnection(
             domain=client_config['url'],
-            username=client_config['username'], password=client_config['password'],
+            username=client_config.get('username'),
+            password=client_config.get('password'),
+            token=client_config.get('token'),
             verify_ssl=verify_ssl)
         with connection:
             pass  # check that the connection credentials are valid
@@ -130,6 +132,12 @@ class TenableSecurityCenterAdapter(ScannerAdapterBase, Configurable):
                     'format': 'password'
                 },
                 {
+                    'name': 'token',
+                    'title': 'API Token',
+                    'type': 'string',
+                    'format': 'password'
+                },
+                {
                     'name': 'verify_ssl',
                     'title': 'Verify SSL',
                     'type': 'bool'
@@ -137,8 +145,6 @@ class TenableSecurityCenterAdapter(ScannerAdapterBase, Configurable):
             ],
             'required': [
                 'url',
-                'username',
-                'password',
                 'verify_ssl'
             ],
             'type': 'array'

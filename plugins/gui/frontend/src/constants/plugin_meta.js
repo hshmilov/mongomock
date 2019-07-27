@@ -4,7 +4,7 @@ export const pluginMeta = {
         description: 'Symantec Endpoint Protection Cloud unifies threat protection and device management for PC, Mac, mobile devices and servers so you can quickly protect all of your endpoints and stop today\'s ransomware, zero-day threats and other sophisticated attacks.'
     },
     cisco_firepower_management_center_adapter: {
-        title: 'Cisco Firepower Management Center - BETA',
+        title: 'Cisco Firepower Management Center',
         description: 'Cisco Firepower Management Center provides management over firewalls, application control, intrusion prevention, URL filtering, and advanced malware protection.'
     },
     maas360_adapter: {
