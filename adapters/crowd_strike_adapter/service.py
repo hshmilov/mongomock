@@ -79,12 +79,12 @@ class CrowdStrikeAdapter(AdapterBase, Configurable):
                 },
                 {
                     'name': 'username',
-                    'title': 'User Name',
+                    'title': 'User Name / Client ID',
                     'type': 'string'
                 },
                 {
                     'name': 'apikey',
-                    'title': 'API Key',
+                    'title': 'API Key / Secret',
                     'type': 'string',
                     'format': 'password'
                 },
