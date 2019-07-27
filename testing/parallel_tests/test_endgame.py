@@ -1,4 +1,6 @@
 # pylint: disable=unused-import
+import pytest
+
 from services.adapters.endgame_service import EndgameService, endgame_fixture
 from test_helpers.adapter_test_base import AdapterTestBase
 from test_credentials.test_endgame_credentials import CLIENT_DETAILS, SOME_DEVICE_ID
@@ -29,3 +31,11 @@ class TestEndgameAdapter(AdapterTestBase):
     @property
     def some_user_id(self):
         raise NotImplementedError()
+
+    @pytest.mark.skip('No env')
+    def test_check_reachability(self):
+        pass
+
+    @pytest.mark.skip('No env')
+    def test_fetch_devices(self):
+        pass
