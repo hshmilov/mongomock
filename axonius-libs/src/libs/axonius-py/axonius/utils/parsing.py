@@ -343,8 +343,11 @@ def is_domain_valid(domain):
 
 
 def not_aruba_adapters(adapter_device1, adapter_device2):
-    if 'aruba' not in adapter_device1.get('plugin_name').lower() and \
-            'aruba' not in adapter_device2.get('plugin_name').lower():
+    return not_aruba_adapter(adapter_device1) and not_aruba_adapter(adapter_device2)
+
+
+def not_aruba_adapter(adapter_device):
+    if 'aruba' not in adapter_device.get('plugin_name').lower():
         return True
     return False
 
@@ -669,24 +672,33 @@ def is_dangerous_asset_names_adapter(adapter_device):
     return is_snow_adapter(adapter_device) or is_lansweerp_dapter(adapter_device)
 
 
+def hostname_not_problematic(adapter_device):
+    if (not get_normalized_hostname_str(adapter_device) or
+            ('localhost' not in get_normalized_hostname_str(adapter_device).strip().lower()
+             and 'iphone' not in get_normalized_hostname_str(adapter_device).strip().lower()
+             and 'ipad' not in get_normalized_hostname_str(adapter_device).strip().lower()
+             and 'macbook-pro' != get_normalized_hostname_str(adapter_device).strip().lower())):
+        return True
+    return False
+
+
+def is_only_host_adapter(adapter_device):
+    if (adapter_device.get('plugin_name') in ['deep_security_adapter',
+                                              'cisco_umbrella_adapter',
+                                              'carbonblack_defense_adapter',
+                                              'carbonblack_protection_adapter',
+                                              'csv_adapter',
+                                              'mssql_adapter',
+                                              'code42_adapter',
+                                              'sysaid_adapter',
+                                              'logrhythm_adapter',
+                                              'symantec_ee_adapter']):
+        return True
+    return False
+
+
 def is_only_host_adapter_not_localhost(adapter_device):
-    return (adapter_device.get('plugin_name') in ['deep_security_adapter',
-                                                  'cisco_umbrella_adapter',
-                                                  'carbonblack_defense_adapter',
-                                                  'azure_ad_adapter',
-                                                  'carbonblack_protection_adapter',
-                                                  'csv_adapter',
-                                                  'mssql_adapter',
-                                                  'code42_adapter',
-                                                  'sysaid_adapter',
-                                                  'logrhythm_adapter',
-                                                  'symantec_ee_adapter']) and \
-        (not adapter_device.get('data').get('hostname') or
-         ('localhost' not in adapter_device.get('data').get('hostname').strip().lower()
-          and 'iphone' not in adapter_device.get('data').get('hostname').strip().lower()
-          and 'ipad' not in adapter_device.get('data').get('hostname').strip().lower()
-          and 'macbook-pro' != adapter_device.get('data').get('hostname').strip().lower())
-         )
+    return is_only_host_adapter(adapter_device) and hostname_not_problematic(adapter_device)
 
 
 def is_sccm_or_ad(adapter_device):

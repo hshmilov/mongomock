@@ -29,13 +29,16 @@ from axonius.utils.parsing import (NORMALIZED_MACS,
                                    ips_do_not_contradict_or_mac_intersection,
                                    is_azuread_or_ad_and_have_name,
                                    is_only_host_adapter_not_localhost,
+                                   hostname_not_problematic,
+                                   is_only_host_adapter,
                                    is_different_plugin,
                                    is_from_juniper_and_asset_name,
                                    is_junos_space_device,
                                    is_old_device, is_sccm_or_ad, is_snow_device,
                                    is_splunk_vpn, normalize_adapter_devices,
                                    serials_do_not_contradict, compare_macs_or_one_is_jamf,
-                                   not_aruba_adapters, cloud_id_do_not_contradict,
+                                   not_aruba_adapters, not_aruba_adapter,
+                                   cloud_id_do_not_contradict,
                                    get_serial_no_s, compare_serial_no_s,
                                    get_bios_serial_or_serial_no_s, compare_bios_serial_serial_no_s,
                                    get_hostname_or_serial, compare_hostname_serial,
@@ -297,11 +300,13 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
         # pylint: disable=line-too-long
         filtered_adapters_list = filter(lambda x: not x.get(NORMALIZED_MACS) or not get_normalized_ip(x) or not is_only_host_adapter_not_localhost(x),
                                         filtered_adapters_list)
+        filtered_adapters_list = filter(hostname_not_problematic, filtered_adapters_list)
+        filtered_adapters_list = filter(not_aruba_adapter, filtered_adapters_list)
         return self._bucket_correlate(list(filtered_adapters_list),
                                       [get_normalized_hostname_str],
                                       [compare_device_normalized_hostname],
-                                      [is_only_host_adapter_not_localhost],
-                                      [not_aruba_adapters],
+                                      [is_only_host_adapter],
+                                      [],
                                       {'Reason': 'They have the same hostname and from specifc adapters'},
                                       CorrelationReason.StaticAnalysis)
 
