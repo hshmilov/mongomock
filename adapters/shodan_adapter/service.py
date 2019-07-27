@@ -163,6 +163,7 @@ class ShodanAdapter(ShodanExecutionMixIn, ScannerAdapterBase):
                     device.id = ip_str
                     device.add_public_ip(ip_str)
                     device.add_nic(None, [ip_str])
+                    device.software_cves = []
                     hostname = None
                     city = None
                     region_code = None
@@ -189,6 +190,7 @@ class ShodanAdapter(ShodanExecutionMixIn, ScannerAdapterBase):
                                                         cvss=float(vuln_data.get('cvss'))
                                                         if vuln_data.get('cvss') is not None
                                                         else None))
+                                device.add_vulnerable_software(cve_id=vuln_name)
                             except Exception:
                                 logger.exception(f'Problem adding vulnerability for {vuln_name}')
                         if not hostname:

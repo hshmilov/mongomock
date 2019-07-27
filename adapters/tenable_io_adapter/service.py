@@ -219,6 +219,7 @@ class TenableIoAdapter(ScannerAdapterBase, Configurable):
             device.hostname = netbios[0]
         plugin_and_severity = []
         vulns_info = device_raw.get('vulns_info', [])
+        device.software_cves = []
         for vuln_raw in vulns_info:
             try:
                 severity = vuln_raw.get('severity', '')
@@ -257,6 +258,7 @@ class TenableIoAdapter(ScannerAdapterBase, Configurable):
                     device.add_tenable_vuln(plugin=plugin_name, severity=severity, cpe=cpe, cve=cve,
                                             cvss_base_score=cvss_base_score, exploit_available=exploit_available,
                                             synopsis=synopsis, see_also=see_also)
+                    device.add_vulnerable_software(cve_id=cve)
             except Exception:
                 logger.exception(f'Problem getting vuln raw {vuln_raw}')
 

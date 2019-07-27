@@ -239,6 +239,7 @@ class NessusAdapter(ScannerAdapterBase):
                     logger.warning(f"Couldn't parse hostname from netbios name {netbios_name}")
                 vulnerabilities_raw = device_raw.get("vulnerabilities", [])
                 device.vulnerabilities = []
+                device.software_cves = []
                 for vulnerability_raw in vulnerabilities_raw:
                     try:
                         new_vulnerability = NessusVulnerability()
@@ -255,6 +256,7 @@ class NessusAdapter(ScannerAdapterBase):
                                         new_vulnerability.cpe = attribute_plugin.get('attribute_value')
                                     elif attribute_plugin.get('attribute_name') == 'cve':
                                         new_vulnerability.cve = attribute_plugin.get('attribute_value')
+                                        device.add_vulnerable_software(cve_id=attribute_plugin.get('attribute_value'))
                                     elif attribute_plugin.get('attribute_name') == 'cvss_base_score':
                                         new_vulnerability.cvss_base_score = float(
                                             attribute_plugin.get('attribute_value'))

@@ -10,6 +10,7 @@ from axonius.utils.gui_helpers import find_entity_field
 from axonius.utils.datetime import parse_date
 from axonius.clients.shodan.connection import ShodanConnection
 from axonius.devices.device_adapter import ShodanVuln
+from axonius.devices.device_adapter import DeviceAdapterSoftwareCVE
 logger = logging.getLogger(f'axonius.{__name__}')
 
 INVALID_HOSTS = ['localhost', 'ubuntu']
@@ -90,6 +91,7 @@ class ShodanExecutionMixIn(Triggerable):
             if not isinstance(shodan_info_data, list):
                 shodan_info_data = []
             vulns_dict_list = []
+            software_cves = []
             if isinstance(shodan_info_data, list):
                 vulns_dict_list = [shodan_info_data_item.get('vulns')
                                    for shodan_info_data_item in shodan_info_data
@@ -103,6 +105,7 @@ class ShodanExecutionMixIn(Triggerable):
                                                 cvss=float(vuln_data.get('cvss'))
                                                 if vuln_data.get('cvss') is not None
                                                 else None))
+                        software_cves.append(DeviceAdapterSoftwareCVE(cve_id=vuln_name))
                     except Exception:
                         logger.exception(f'Problem adding vuln name {vuln_name}')
             cpe = []
@@ -140,7 +143,8 @@ class ShodanExecutionMixIn(Triggerable):
                     'http_location': http_location,
                     'http_server': http_server,
                     'http_site_map': http_site_map,
-                    'http_security_text_hash': http_security_text_hash}
+                    'http_security_text_hash': http_security_text_hash,
+                    'software_cves': software_cves}
         except Exception:
             logger.exception(f'Problem parsing shodan info')
         return None

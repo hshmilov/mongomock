@@ -87,6 +87,7 @@ class NessusCsvAdapter(ScannerAdapterBase):
                 device = self._new_device_adapter()
                 device.add_nic(None, [ip_address])
                 device.scans = []
+                device.software_cves = []
                 scans_raw = ip_addresses_data_dict[ip_address]
                 for scan_raw in scans_raw:
                     try:
@@ -98,6 +99,7 @@ class NessusCsvAdapter(ScannerAdapterBase):
                         new_scan.cvss = scan_raw.get("CVSS")
                         new_scan.plugin_id = scan_raw.get("Plugin ID")
                         new_scan.cve = scan_raw.get("CVE")
+                        device.add_vulnerable_software(scan_raw.get('CVE'))
                         device.scans.append(new_scan)
                     except Exception:
                         logger.exception(f"IP {ip_address} got problem adding scan_raw {scan_raw}")

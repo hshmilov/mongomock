@@ -147,6 +147,7 @@ class RedsealAdapter(AdapterBase):
                     logger.exception('Error while adding interface')
 
         device.rs_vulnerabilities = []
+        device.software_cves = []
         for appliction_dict in raw_device_data.get('Applications', []):
             for app in appliction_dict.get('Application', []):
                 for vulnerabilities in app.get('Vulnerabilities', []):
@@ -162,6 +163,7 @@ class RedsealAdapter(AdapterBase):
                             if 'TrlEntry' in vuln:
                                 new_vulnerability.cve = vuln['TrlEntry'].get('CVE')
                                 new_vulnerability.severity = vuln['TrlEntry'].get('Severity')
+                                device.add_vulnerable_software(cve_id=vuln['TrlEntry'].get('CVE'))
                             device.rs_vulnerabilities.append(new_vulnerability)
                         except Exception:
                             logger.exception('Error while adding vulnerability')
