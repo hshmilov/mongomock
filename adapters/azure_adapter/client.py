@@ -72,9 +72,24 @@ class AzureClient(object):
             self._expand_ip_configuration_dict(ip_configuration, subnets)
             for ip_configuration in iface.ip_configurations
         ]
+        try:
+            nsg_object = iface.network_security_group
+            if nsg_object:
+                nsg = self._expand_network_security_group(nsg_object.id)
+                if nsg:
+                    iface_dict['network_security_group'] = nsg
+        except Exception:
+            logger.exception(f'Error parsing network security group for iface {str(iface_dict)}')
         if 'virtual_machine' in iface_dict:
             del iface_dict['virtual_machine']
         return iface_dict
+
+    def _expand_network_security_group(self, network_security_group_id):
+        nsg_dict = self.split_id(network_security_group_id)
+        nsg_object = self.network.network_security_groups.get(
+            nsg_dict['resourceGroups'], nsg_dict['networkSecurityGroups']
+        )
+        return nsg_object.as_dict()
 
     def _expand_ip_configuration_dict(self, ip_configuration, subnets):
         ip_configuration_dict = ip_configuration.as_dict()

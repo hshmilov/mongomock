@@ -1,3 +1,4 @@
+import itertools
 import logging
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -24,6 +25,22 @@ class AzureImage(SmartJsonClass):
     version = Field(str, 'Image Version')
 
 
+class AzureNetworkSecurityGroupRule(SmartJsonClass):
+    iface_name = Field(str, 'Interface Name')
+    access = Field(str, 'Access')
+    description = Field(str, 'Description')
+    direction = Field(str, 'Direction')
+    rule_id = Field(str, 'ID')
+    name = Field(str, 'Name')
+    priority = Field(int, 'Priority')
+    protocol = Field(str, 'Protocol')
+    source_address_prefixes = ListField(str, 'Source Address Prefixes')
+    source_port_ranges = ListField(str, 'Source Port Ranges')
+    destination_address_prefixes = ListField(str, 'Destination Address Prefixes')
+    destination_port_ranges = ListField(str, 'Destination Port Ranges')
+    is_default = Field(bool, 'Is Default')
+
+
 class AzureAdapter(AdapterBase):
     class MyDeviceAdapter(DeviceAdapter):
         location = Field(str, 'Azure Location')
@@ -31,6 +48,7 @@ class AzureAdapter(AdapterBase):
         image = Field(AzureImage, 'Image')
         admin_username = Field(str, 'Admin Username')
         vm_id = Field(str, 'VM ID')
+        azure_firewall_rules = ListField(AzureNetworkSecurityGroupRule, 'Azure Firewall Rules')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -147,6 +165,113 @@ class AzureAdapter(AdapterBase):
                     subnets.append(ip_config.get('subnet', {}).get('address_prefix'))
                 device.add_nic(mac=iface.get('mac_address'), ips=[ip for ip in ips if ip is not None],
                                subnets=[subnet for subnet in subnets if subnet is not None], name=iface.get('name'))
+
+                try:
+                    nsg = iface.get('network_security_group') or {}
+                    if not nsg:
+                        device.firewall_rules = []
+                        device.azure_firewall_rules = []
+                    else:
+                        for rule, is_default in itertools.chain(
+                                zip(nsg.get('security_rules') or [], itertools.repeat(False)),
+                                zip(nsg.get('default_security_rules') or [], itertools.repeat(True))
+                        ):
+                            access = rule.get('access')
+                            description = rule.get('description')
+                            direction = rule.get('direction')
+                            rule_id = rule.get('id')
+                            name = rule.get('name')
+                            priority = rule.get('Priority')
+                            protocol = rule.get('protocol')
+                            destination_address_prefix = rule.get('destination_address_prefix')
+                            destination_address_prefixes = rule.get('destination_address_prefixes') or []
+                            if destination_address_prefix:
+                                destination_address_prefixes.append(destination_address_prefix)
+                            destination_port_range = rule.get('destination_port_range')
+                            destination_port_ranges = rule.get('destination_port_ranges') or []
+                            if destination_port_range:
+                                destination_port_ranges.append(destination_port_range)
+
+                            source_address_prefix = rule.get('source_address_prefix')
+                            source_address_prefixes = rule.get('source_address_prefixes') or []
+                            if source_address_prefix:
+                                source_address_prefixes.append(source_address_prefix)
+                            source_port_range = rule.get('source_port_range')
+                            source_port_ranges = rule.get('source_port_ranges') or []
+                            if source_port_range:
+                                source_port_ranges.append(source_port_range)
+
+                            iface_name = iface.get('name')
+
+                            # First, build the specific rule
+                            rule = AzureNetworkSecurityGroupRule(
+                                iface_name=iface_name,
+                                access=access,
+                                description=description,
+                                direction=direction,
+                                rule_id=rule_id,
+                                name=name,
+                                priority=priority,
+                                protocol=protocol,
+                                source_address_prefixes=source_address_prefixes,
+                                source_port_ranges=source_port_ranges,
+                                destination_address_prefixes=destination_address_prefixes,
+                                destination_port_ranges=destination_port_ranges,
+                                is_default=is_default
+                            )
+                            device.azure_firewall_rules.append(rule)
+
+                            # Next, parse the generic rule.
+                            # If that is an inbound rule, we care about the source prefix, but destination port.
+                            # If that is an outbound rule, we care about the destination prefix, and destination port.
+                            port_ranges_to_check = destination_port_ranges
+                            if str(direction).lower() == 'inbound':
+                                fw_direction = 'INGRESS'
+                                address_prefixes_to_check = source_address_prefixes
+                            elif str(direction).lower() == 'outbound':
+                                fw_direction = 'EGRESS'
+                                address_prefixes_to_check = destination_address_prefixes
+                            else:
+                                logger.error(f'Found unknown direction {str(direction)}, bypassing')
+                                continue
+
+                            for address_prefix in address_prefixes_to_check:
+                                for port_range in port_ranges_to_check:
+                                    if port_range == '*' or str(port_range).lower() == 'all' or \
+                                            str(port_range).lower() == 'any':
+                                        from_port = 0
+                                        to_port = 65535
+                                    elif '-' in port_range:
+                                        try:
+                                            from_port, to_port = port_range.split('-')
+                                        except Exception:
+                                            from_port, to_port = None, None
+                                    else:
+                                        try:
+                                            from_port, to_port = port_range, port_range
+                                        except Exception:
+                                            from_port, to_port = None, None
+
+                                    if address_prefix == '*':
+                                        address_prefix = '0.0.0.0/0'
+
+                                    if protocol == '*' or str(protocol).lower() == 'all' \
+                                            or str(protocol).lower() == 'any':
+                                        protocol = 'Any'
+
+                                    device.add_firewall_rule(
+                                        name=f'{name} (iface {iface_name})',
+                                        source='Azure NIC network security group',
+                                        type='Allow' if str(access).lower() == 'allow' else 'Deny',
+                                        direction=fw_direction,
+                                        target=address_prefix,
+                                        protocol=protocol,
+                                        from_port=from_port,
+                                        to_port=to_port
+                                    )
+
+                except Exception:
+                    logger.exception(f'Failed to parse network security group, continuing')
             device.set_raw(device_raw)
             yield device
 
