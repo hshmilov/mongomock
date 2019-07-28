@@ -11,6 +11,7 @@ from axonius.scanner_adapter_base import ScannerAdapterBase
 from axonius.smart_json_class import SmartJsonClass
 from axonius.utils.datetime import parse_date
 from axonius.utils.files import get_local_config_file
+from axonius.utils.parsing import make_dict_from_csv
 from qualys_scans_adapter import consts
 from qualys_scans_adapter.connection import QualysScansConnection
 
@@ -51,6 +52,7 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
+        self._qid_to_cve_mapping = self.parse_cve_from_qid()
 
     @staticmethod
     def _get_client_id(client_config):
@@ -114,6 +116,38 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
             'required': [consts.QUALYS_SCANS_DOMAIN, consts.USERNAME, consts.PASSWORD, consts.VERIFY_SSL],
             'type': 'array',
         }
+
+    @staticmethod
+    def parse_cve_from_qid():
+        logger.info('Parsing QID to CVE from csv file')
+        qid_to_cve_mapping = {}
+        try:
+            with open(consts.QUALYS_QID_TO_CVE_CSV, 'r') as f:
+                entire_csv_file = f.readlines()
+                # The first few lines of the file may be data about the download (i.e. street address
+                # of the account holder) which will mess up what is interpreted as the csv headers
+                # so we find the line with headers and parse from then on
+                header_line_number = None
+                for i, line in enumerate(entire_csv_file):
+                    if 'QID' in line:
+                        header_line_number = i
+                        break
+                if not header_line_number:
+                    logger.exception('Could not find CSV headers, stopping parsing')
+                    return qid_to_cve_mapping
+
+                cleaned_csv_data = entire_csv_file[header_line_number:]
+                csv_dict = make_dict_from_csv(''.join(cleaned_csv_data))
+                for entry in csv_dict:
+                    try:
+                        qid_to_cve_mapping[entry.get('QID')] = entry.get('CVE ID').split(',')
+                    except Exception:
+                        logger.exception(f'Problem mapping entry {entry}')
+                logger.info(f'{len(qid_to_cve_mapping)} QIDs mapped')
+                return qid_to_cve_mapping
+        except Exception:
+            logger.info('Problem opening vulnerabilities csv file')
+            return qid_to_cve_mapping
 
     def _parse_raw_data(self, devices_raw_data):
         for device_raw in devices_raw_data:
@@ -205,6 +239,11 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
                         )
                     except Exception:
                         logger.exception(f'Problem with vuln {vuln_raw}')
+                    try:
+                        for cve in self._qid_to_cve_mapping.get((vuln_raw.get('HostAssetVuln') or {}).get('qid')) or []:
+                            device.add_vulnerable_software(cve_id=cve)
+                    except Exception:
+                        logger.exception(f'Problem with adding vuln software for {vuln_raw}')
             except Exception:
                 logger.exception(f'Problem with adding software to Qualys agent {device_raw}')
 

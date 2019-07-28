@@ -1,0 +1,1 @@
+This directory contains a qualys file with QIDs and other vulnerability data that was last updated: July 24, 2019
