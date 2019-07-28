@@ -22,7 +22,7 @@ class ZscalerConnection(RESTConnection):
         headers = {
             'ZS_CUSTOM_CODE': self._session.cookies['ZS_SESSION_CODE'],
             'DNT': '1',
-            'referer': 'https://admin.zscalerthree.net/',
+            'referer': self._url,
             'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64; rv:66.0) Gecko/20100101 Firefox/66.0',
             'X-Requested-With': 'XMLHttpRequest'
         }
@@ -33,7 +33,10 @@ class ZscalerConnection(RESTConnection):
         saml_resp = resp['samlResponse']
         relayState = resp['relayState']
 
-        assert url == 'https://mobile.zscalerthree.net/sso.do'
+        admin_url = self._url
+        self._url = self._url.replace('admin', 'mobile')
+
+        assert url == ''.join([self._url, 'sso.do'])
         assert not relayState
 
         json = {
@@ -41,10 +44,9 @@ class ZscalerConnection(RESTConnection):
             'SAMLResponse': saml_resp,
             'RelayState': relayState if relayState else ''
         }
-        self._url = self._url.replace('admin', 'mobile')
         self._session = requests.Session()
         self._session_headers = {
-            'referer': 'https://admin.zscalerthree.net/',
+            'referer': admin_url,
             'DNT': '1',
             'Upgrade-Insecure-Requests': '1',
             'Content-Type': 'application/x-www-form-urlencoded',
@@ -118,7 +120,7 @@ class ZscalerConnection(RESTConnection):
         self._url = self._url.replace('admin', 'mobile')
         self._session_headers.update({'X-Requested-With': 'XMLHttpRequest',
                                       'Accept': 'application/json, text/javascript, */*; q=0.01',
-                                      'referer': 'https://mobile.zscalerthree.net/index.html',
+                                      'referer': ''.join([self._url, 'index.html']),
                                       'Content-Type': 'application/json'})
 
         for page in range(1, MAX_PAGES):
