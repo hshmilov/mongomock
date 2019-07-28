@@ -83,7 +83,7 @@ class SymantecSepCloudAdapter(AdapterBase):
             'items': [
                 {
                     'name': 'domain',
-                    'title': 'Symantec Cloud Workload Protection (CWP) Domain',
+                    'title': 'Symantec Endpoint Protection Cloud URL',
                     'type': 'string',
                     'default': DEFAULT_DOMAIN
                 },

@@ -93,7 +93,7 @@ class CloudflareAdapter(AdapterBase):
                 },
                 {
                     'name': 'apikey',
-                    'title': 'API Key',
+                    'title': 'API Key / API Token',
                     'type': 'string',
                     'format': 'password'
                 },

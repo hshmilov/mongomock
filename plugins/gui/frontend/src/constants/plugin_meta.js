@@ -1,7 +1,8 @@
 export const pluginMeta = {
     symantec_sep_cloud_adapter: {
         title: 'Symantec Endpoint Protection Cloud',
-        description: 'Symantec Endpoint Protection Cloud unifies threat protection and device management for PC, Mac, mobile devices and servers so you can quickly protect all of your endpoints and stop today\'s ransomware, zero-day threats and other sophisticated attacks.'
+        link: 'https://docs.axonius.com/docs/symantec-endpoint-protection-cloud',
+        description: 'Symantec Endpoint Protection Cloud unifies threat protection and device management for PC, Mac, mobile devices, and servers to protect endpoints from ransomware, zero-day threats, and other sophisticated attacks.'
     },
     cisco_firepower_management_center_adapter: {
         title: 'Cisco Firepower Management Center',
@@ -9,11 +10,13 @@ export const pluginMeta = {
     },
     maas360_adapter: {
         title: 'IBM MaaS360 with Watson',
-        description: 'IBM MaaS360 with Watson is a Unified Endpoint Management (UEM) platform to enable endpoints, end-users, and everything in between — including apps, content, and data. It also gives visibility and control to manage mobile devices running iOS, macOS, Android, and Windows.'
+        link: 'https://docs.axonius.com/docs/ibm-maas360-with-watson',
+        description: 'IBM MaaS360 with Watson is a Unified Endpoint Management (UEM) platform covering endpoints, end-users, apps, content, and data. It also gives visibility and control to manage mobile devices running iOS, macOS, Android, and Windows.'
     },
     imperva_dam_adapter: {
         title: 'Imperva Data Activity Monitoring (DAM)',
-        description: 'Imperva Data Activity Monitoring (DAM) defines and enforces uniform data security and compliance policy across the cloud and on-premises. It provides a single pane of glass management across relational databases, mainframes, big data platforms, data warehouses, and enterprise file stores.'
+        link: 'https://docs.axonius.com/docs/imperva-data-activity-monitoring-dam',
+        description: 'Imperva Data Activity Monitoring (DAM) defines and enforces data security and compliance policies across the cloud and on-premises including relational databases, mainframes, big data platforms, data warehouses, and enterprise file stores.'
     },
     cycognito_adapter: {
         title: 'CyCognito CyCAST Platform',
@@ -731,7 +734,7 @@ export const pluginMeta = {
     },
     alibaba_adapter: {
         title: 'Alibaba Cloud',
-        link: '',
+        link: 'https://docs.axonius.com/docs/alibaba-cloud',
         description: 'Alibaba Cloud provides cloud computing services and cloud Infrastructure as a service.'
     }
 }
