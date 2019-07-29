@@ -104,8 +104,11 @@ class TestGlobalSettings(TestBase):
         self.settings_page.fill_proxy_port(port)
         self.settings_page.save_and_wait_for_toaster()
 
-        content = PROXY_DATA_HOST_PATH.read_text().strip()
-        assert content == '{"creds": "IP:PORT", "verify": true}'.replace('IP', PROXY_IP).replace('PORT', port)
+        def proxy_settings_propagate():
+            content = PROXY_DATA_HOST_PATH.read_text().strip()
+            return content == '{"creds": "IP:PORT", "verify": true}'.replace('IP', PROXY_IP).replace('PORT', port)
+
+        wait_until(proxy_settings_propagate, total_timeout=60 * 2)
 
     def test_bad_proxy_settings(self):
         self.settings_page.switch_to_page()
