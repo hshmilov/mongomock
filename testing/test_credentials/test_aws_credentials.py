@@ -1,7 +1,7 @@
 from test_helpers.machines import PROXY_IP, PROXY_PORT
 from test_helpers.file_mock_credentials import FileForCredentialsMock
 
-US_EAST_1_ECS_FARGATE_CONTAINER_ID = 'arn:aws:ecs:us-east-1:405773942477:container/dd52300c-ce17-4206-99da-a343a51bfafb'
+US_EAST_1_ECS_FARGATE_CONTAINER_ID = 'arn:aws:ecs:us-east-1:405773942477:container/41ed1d64-d5a5-4fc5-9ab8-7094f3a8b11f'
 US_EAST_2_EC2_BUILDS_MACHINE_ID = 'i-0ec91cae8a42be974'
 US_EAST_1_EKS_NODE_ID = 'i-02380686d4ee7e12e'
 US_EAST_1_TEST_1_AWS_DEV_2_ROLE_TEST = 'i-00203ff84d4b860e5'
