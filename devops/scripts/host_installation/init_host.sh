@@ -86,7 +86,8 @@ retry timeout 20 add-apt-repository \
    "deb [arch=amd64] https://download.docker.com/linux/ubuntu \
    $(lsb_release -cs) \
    stable"
-retry timeout 20 add-apt-repository -y ppa:jonathonf/python-3.6
+echo "deb http://nexus.axonius.lan:8081/repository/ppa.launchpad.net.jonathonf.python3-6.ubuntu/ xenial main" >> /etc/apt/sources.list
+sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys F06FC659
 _wait_for_apt update
 echo "Installing various dependencies..."
 _wait_for_apt install -yq sshpass open-vm-tools stunnel4 htop moreutils gparted sysstat python-apt python3-apt net-tools iputils-ping libpq-dev tmux screen nano vim curl python3-dev python-dev libffi-dev libxml2-dev libxslt-dev musl-dev make gcc tcl-dev tk-dev openssl git python libpango1.0-0 libcairo2 software-properties-common python-software-properties ssh libxmlsec1 ncdu traceroute libc6:i386 libstdc++6:i386
