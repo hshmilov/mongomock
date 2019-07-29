@@ -89,7 +89,7 @@ class Maas360Adapter(AdapterBase):
             'items': [
                 {
                     'name': 'domain',
-                    'title': 'Maas360 Domain',
+                    'title': 'IBM MaaS360 Domain',
                     'type': 'string'
                 },
                 {

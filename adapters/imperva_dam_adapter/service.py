@@ -93,7 +93,7 @@ class ImpervaDamAdapter(AdapterBase):
             'items': [
                 {
                     'name': 'domain',
-                    'title': 'ImpervaDam Domain',
+                    'title': 'Imperva DAM Domain',
                     'type': 'string'
                 },
                 {
