@@ -28,6 +28,9 @@ class AbsoluteAdapter(AdapterBase):
         macs_no_ip = ListField(str, 'MAC addresses with No IP')
         encryption_algo = Field(str, 'Encryption Algorithm')
         encryption_status_description = Field(str, 'Encryption Status Description')
+        encryption_status = Field(str, 'Encryption Status')
+        encryption_product_name = Field(str, 'Encryption Product Name')
+        encryption_version = Field(str, 'Encryption Version')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -126,7 +129,7 @@ class AbsoluteAdapter(AdapterBase):
                     logger.warning(f'Bad device with no id {device_raw}')
                     continue
                 device.id = device_id + '_' + (device_raw.get('fullSystemName') or '') + '_' + \
-                    + (device_raw.get('systemName') or '')
+                    (device_raw.get('systemName') or '')
                 hostname = device_raw.get('systemName')
                 device.full_hostname = device_raw.get('fullSystemName')
                 if hostname and hostname.lower().endswith('.local'):
@@ -159,6 +162,26 @@ class AbsoluteAdapter(AdapterBase):
                     device.total_physical_memory = device_raw.get('totalPhysicalRamBytes') / (1024**3)
                 if isinstance(device_raw.get('availablePhysicalRamBytes'), int):
                     device.free_physical_memory = device_raw.get('availablePhysicalRamBytes') / (1024**3)
+                c_is_encrypted = None
+                try:
+                    esp_info = device_raw.get('espInfo')
+                    if not isinstance(esp_info, dict):
+                        esp_info = {}
+                    device.encryption_algo = esp_info.get('encryptionAlgorithm')
+                    encryption_status_description = esp_info.get('encryptionStatusDescription')
+                    if encryption_status_description and encryption_status_description.startswith('Drive=C: '
+                                                                                                  'ProtectionStatus='
+                                                                                                  'The volume is '
+                                                                                                  'fully encrypted'):
+                        c_is_encrypted = True
+                    if encryption_status_description == 'Drive=C: ProtectionStatus=The volume is not encrypted':
+                        c_is_encrypted = False
+                    device.encryption_status_description = encryption_status_description
+                    device.encryption_status = esp_info.get('encryptionStatus')
+                    device.encryption_product_name = esp_info.get('encryptionProductName')
+                    device.encryption_version = esp_info.get('encryptionVersion')
+                except Exception:
+                    logger.exception(f'Problem with esp info esp info for {device_raw}')
                 bios_details = device_raw.get('bios')
                 if bios_details and isinstance(bios_details, dict):
                     device.bios_serial = bios_details.get('serialNumber')
@@ -168,10 +191,14 @@ class AbsoluteAdapter(AdapterBase):
                     volumes_raw = []
                 for volume_raw in volumes_raw:
                     try:
+                        is_encrypted = None
+                        if str(volume_raw.get('name')).startswith('C:') and c_is_encrypted is not None:
+                            is_encrypted = c_is_encrypted
                         device.add_hd(device=volume_raw.get('name'),
                                       file_system=volume_raw.get('fileSystem'),
                                       total_size=float(volume_raw.get('sizeBytes') or 0) / (1024**3),
-                                      free_size=float(volume_raw.get('freeSpaceBytes') or 0) / (1024 ** 3))
+                                      free_size=float(volume_raw.get('freeSpaceBytes') or 0) / (1024 ** 3),
+                                      is_encrypted=is_encrypted)
                     except Exception:
                         logger.exception(f'Problem adding disk {volume_raw}')
                 try:
@@ -224,14 +251,6 @@ class AbsoluteAdapter(AdapterBase):
                     device.figure_os(os_str)
                 except Exception:
                     logger.exception(f'Problem getting OS for {device_raw}')
-                try:
-                    esp_info = device_raw.get('espInfo')
-                    if not isinstance(esp_info, dict):
-                        esp_info = {}
-                    device.encryption_algo = esp_info.get('encryptionAlgorithm')
-                    device.encryption_status_description = esp_info.get('encryptionStatusDescription')
-                except Exception:
-                    logger.exception(f'Problem with esp info esp info for {device_raw}')
                 device.set_raw(device_raw)
                 yield device
             except Exception:
