@@ -90,12 +90,18 @@ class EsetAdapter(AdapterBase):
                     "title": "Password",
                     "type": "string",
                     "format": "password"
+                },
+                {
+                    'name': 'is_domain_user',
+                    'title': 'Is Domain User',
+                    'type': 'bool'
                 }
             ],
             "required": [
                 USER,
                 PASSWORD,
                 ESET_HOST,
+                'is_domain_user'
             ],
             "type": "array"
         }
@@ -144,7 +150,8 @@ class EsetAdapter(AdapterBase):
         eset_host = parse_url(client_config[ESET_HOST]).host
         return EsetClient(self.eset_session_lock, self.eset_connection_library,
                           host=eset_host, username=client_config[USER],
-                          password=client_config[PASSWORD], port=client_config.get(ESET_PORT) or 2223)
+                          password=client_config[PASSWORD], port=client_config.get(ESET_PORT) or 2223,
+                          is_domain_user='true' if client_config.get('is_domain_user') else 'false')
 
     @classmethod
     def adapter_properties(cls):

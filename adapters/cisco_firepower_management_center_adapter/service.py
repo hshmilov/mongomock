@@ -269,7 +269,6 @@ class CiscoFirepowerManagementCenterAdapter(AdapterBase):
                 device = self._create_device_type_device(device_raw)
             elif device_type == 'host_type':
                 device = self._create_host_type_device(device_raw)
-
             if device:
                 yield device
 

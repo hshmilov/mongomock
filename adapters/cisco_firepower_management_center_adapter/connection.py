@@ -99,7 +99,9 @@ class CiscoFirepowerManagementCenterConnection(RESTConnection):
     def _get_api_endpoint(self, endpoint_api):
         self._refresh_token()
         response = self._get(f'api/fmc_config/v1/domain/{self._domain_uuid}/{endpoint_api}')
-
+        if not response.get('items'):
+            logger.info(f'No data for {endpoint_api}')
+            return
         next_url = response['paging'].get('next')
         if isinstance(next_url, list) and next_url:
             next_url = next_url[0]

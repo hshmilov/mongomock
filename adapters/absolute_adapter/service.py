@@ -26,6 +26,8 @@ class AbsoluteAdapter(AdapterBase):
         policy_group_name = Field(str, 'Policy Group Name')
         full_hostname = Field(str, 'Full Hostname')
         macs_no_ip = ListField(str, 'MAC addresses with No IP')
+        encryption_algo = Field(str, 'Encryption Algorithm')
+        encryption_status_description = Field(str, 'Encryption Status Description')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -114,7 +116,7 @@ class AbsoluteAdapter(AdapterBase):
             'type': 'array'
         }
 
-    # pylint:disable=too-many-nested-blocks,too-many-branches,too-many-statements
+    # pylint:disable=too-many-nested-blocks,too-many-branches,too-many-statements,too-many-locals
     def _parse_raw_data(self, devices_raw_data):
         for device_raw in devices_raw_data:
             try:
@@ -222,6 +224,14 @@ class AbsoluteAdapter(AdapterBase):
                     device.figure_os(os_str)
                 except Exception:
                     logger.exception(f'Problem getting OS for {device_raw}')
+                try:
+                    esp_info = device_raw.get('espInfo')
+                    if not isinstance(esp_info, dict):
+                        esp_info = {}
+                    device.encryption_algo = esp_info.get('encryptionAlgorithm')
+                    device.encryption_status_description = esp_info.get('encryptionStatusDescription')
+                except Exception:
+                    logger.exception(f'Problem with esp info esp info for {device_raw}')
                 device.set_raw(device_raw)
                 yield device
             except Exception:

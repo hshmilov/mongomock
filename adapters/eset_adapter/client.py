@@ -10,12 +10,13 @@ import eset_adapter.consts as eset_consts
 
 class EsetClient(object):
 
-    def __init__(self, lock, library, host, username, password, port=22):
+    def __init__(self, lock, library, host, username, password, port=22, is_domain_user='false'):
         super().__init__()
         self.client = library
         self.host = host
         self.username = username
         self.password = password
+        self.is_domain_user = is_domain_user
         self.port = port
         self.lock = lock
         self.connect()
@@ -50,7 +51,7 @@ class EsetClient(object):
 
                 # Authenticating.
                 self._send_message_to_server(self.client, eset_consts.LOGIN.format(
-                    username=self.username, password=self.password).encode('utf-8'))
+                    username=self.username, password=self.password, is_domain_user=self.is_domain_user).encode('utf-8'))
 
                 yield self.client
             except Exception:

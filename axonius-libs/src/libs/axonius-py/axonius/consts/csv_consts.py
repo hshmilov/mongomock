@@ -25,7 +25,8 @@ IDENTIFIERS = {
     'installed_sw_version': ['softwareversion', 'swversion'],
     'installed_sw_vendor': ['softwarevendor', 'swvendor'],
     'packages': ['packages'],
-    'networkinterfaces': ['networkinterfaces']
+    'networkinterfaces': ['networkinterfaces'],
+    'etcissue': ['etcissue']
 
 }
 

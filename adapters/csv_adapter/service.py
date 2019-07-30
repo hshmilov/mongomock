@@ -33,6 +33,7 @@ class CsvAdapter(AdapterBase):
     # pylint: disable=R0902
     class MyDeviceAdapter(DeviceAdapter):
         file_name = Field(str, 'CSV File Name')
+        etc_version = Field(str, 'Etcissue Version')
 
     class MyUserAdapter(UserAdapter):
         file_name = Field(str, 'CSV File Name')
@@ -386,6 +387,13 @@ class CsvAdapter(AdapterBase):
                     device.add_ips_and_macs(macs=macs_nics, ips=ips_nics)
                 except Exception:
                     logger.exception(f'Problem with nics')
+
+                try:
+                    etc_str = vals.get('etcissue')
+                    if etc_str and ' ' in etc_str:
+                        device.etc_version = etc_str.split(' ')[1]
+                except Exception:
+                    logger.exception(f'Problem with etcissue')
 
                 device.set_raw(device_raw)
 
