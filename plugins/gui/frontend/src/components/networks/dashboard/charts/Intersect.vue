@@ -18,7 +18,7 @@
       :options="views[entity]"
       :searchable="true"
       placeholder="query (or empty for all)"
-      class="grid-span2"
+      class="grid-span2 view-name"
     />
 
     <label>Intersecting Query:</label>

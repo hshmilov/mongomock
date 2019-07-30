@@ -47,6 +47,7 @@ class DashboardPage(Page):
     NEW_SPACE_BUTTON_XPATH = f'{SPACES_XPATH}//li[@class=\'add-tab\']'
     PANEL_BY_NAME_XPATH = '//div[contains(@class, \'x-tab active\')]//div[@class=\'x-card\' ' \
         'and .//text()=\'{panel_name}\']'
+    NO_DATA_FOUND_TEXT = 'No data found'
 
     @property
     def root_page_css(self):
@@ -132,10 +133,12 @@ class DashboardPage(Page):
         return self.wait_for_element_present_by_css(self.SELECT_VIEWS_CSS).find_elements_by_css_selector(
             self.SELECT_VIEWS_VIEW_CSS)
 
-    def add_comparison_card(self, first_module, first_query, second_module, second_query, title):
+    def add_comparison_card(self, first_module, first_query, second_module, second_query,
+                            title, chart_type='histogram'):
         self.open_new_card_wizard()
         self.select_chart_metric('Query Comparison')
         views_list = self.get_views_list()
+        self.driver.find_element_by_css_selector(f'#{chart_type}').click()
         self.select_chart_wizard_module(first_module, views_list[0])
         self.select_chart_view_name(first_query, views_list[0])
         self.select_chart_wizard_module(second_module, views_list[1])
@@ -153,10 +156,12 @@ class DashboardPage(Page):
         self.click_button('Save')
         self.wait_for_element_absent_by_css(self.MODAL_OVERLAY_CSS, interval=1)
 
-    def add_intersection_card(self, module, first_query, second_query, title):
+    def add_intersection_card(self, module, first_query, second_query, title, view_name=''):
         self.open_new_card_wizard()
         self.select_chart_metric('Query Intersection')
         self.select_chart_wizard_module(module)
+        if view_name:
+            self.select_chart_view_name(view_name)
         self.select_intersection_chart_first_query(first_query)
         self.select_intersection_chart_second_query(second_query)
         self.fill_text_field_by_element_id(self.CHART_TITLE_ID, title)
@@ -173,12 +178,14 @@ class DashboardPage(Page):
         self.click_button('Save')
         self.wait_for_element_absent_by_css(self.MODAL_OVERLAY_CSS, interval=1)
 
-    def add_segmentation_card(self, module, field, title, chart_type='histogram'):
+    def add_segmentation_card(self, module, field, title, chart_type='histogram', view_name=''):
         try:
             self.open_new_card_wizard()
             self.select_chart_metric('Field Segmentation')
             self.driver.find_element_by_css_selector(f'#{chart_type}').click()
             self.select_chart_wizard_module(module)
+            if view_name:
+                self.select_chart_view_name(view_name)
             self.select_chart_wizard_field(field)
             self.fill_text_field_by_element_id(self.CHART_TITLE_ID, title)
             self.click_button('Save')
@@ -376,3 +383,6 @@ class DashboardPage(Page):
             # Good, it is missing
             return True
         return False
+
+    def find_no_data_label(self):
+        return self.find_element_by_text(self.NO_DATA_FOUND_TEXT)

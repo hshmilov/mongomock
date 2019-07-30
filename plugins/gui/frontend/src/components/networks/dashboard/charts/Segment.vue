@@ -12,6 +12,7 @@
       :options="views[entity]"
       :searchable="true"
       placeholder="query (or empty for all)"
+      class="view-name"
     />
     <div />
     <div />

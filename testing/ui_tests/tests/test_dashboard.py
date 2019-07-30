@@ -34,6 +34,8 @@ class TestDashboard(TestBase):
     CUSTOM_SPACE_PANEL_NAME = 'Segment OS'
     PERSONAL_SPACE_PANEL_NAME = 'Private Segment OS'
 
+    TEST_EMPTY_TITLE = 'test empty'
+
     @pytest.mark.skip('TBD')
     def test_system_empty_state(self):
         self.dashboard_page.switch_to_page()
@@ -344,3 +346,39 @@ class TestDashboard(TestBase):
                                                 self.TEST_EDIT_CHART_TITLE)
         self.dashboard_page.edit_card(self.TEST_EDIT_CHART_TITLE)
         self.dashboard_page.add_comparison_card_view('Devices', 'IOS Operating System')
+
+    def test_dashboard_empty_segmentation_chart(self):
+        self.dashboard_page.switch_to_page()
+        self.base_page.run_discovery()
+        self.dashboard_page.add_segmentation_card(module='Devices',
+                                                  field='OS: Type',
+                                                  title=self.TEST_EMPTY_TITLE,
+                                                  view_name='OS X Operating System')
+
+        assert self.dashboard_page.find_no_data_label()
+        self.dashboard_page.remove_card(self.TEST_EMPTY_TITLE)
+
+    def test_dashboard_empty_intersection_chart(self):
+        self.dashboard_page.switch_to_page()
+        self.base_page.run_discovery()
+        self.dashboard_page.add_intersection_card(module='Devices',
+                                                  view_name='OS X Operating System',
+                                                  first_query='OS X Operating System',
+                                                  second_query='OS X Operating System',
+                                                  title=self.TEST_EMPTY_TITLE)
+
+        assert self.dashboard_page.find_no_data_label()
+        self.dashboard_page.remove_card(self.TEST_EMPTY_TITLE)
+
+    def test_dashboard_empty_comparison_chart(self):
+        self.dashboard_page.switch_to_page()
+        self.base_page.run_discovery()
+        self.dashboard_page.add_comparison_card(first_module='Devices',
+                                                first_query='OS X Operating System',
+                                                second_module='Devices',
+                                                second_query='OS X Operating System',
+                                                title=self.TEST_EMPTY_TITLE,
+                                                chart_type='pie')
+
+        assert self.dashboard_page.find_no_data_label()
+        self.dashboard_page.remove_card(self.TEST_EMPTY_TITLE)

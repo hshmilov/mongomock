@@ -26,9 +26,17 @@
       </div>
       <component
         :is="`x-${chart.view}`"
+        v-if="!isChartEmpty(chart)"
         :data="chart.data"
         @click-one="runChartFilter(chartInd, $event)"
       />
+      <div
+        v-if="isChartEmpty(chart)"
+        class="no-data-found"
+      >
+        <svg-icon name="illustration/binocular" :original="true" height="50"/>
+        <div>No data found</div>
+      </div>
     </x-card>
     <slot name="post" />
     <x-card
@@ -209,6 +217,18 @@
         })
         this.$router.push({ path: query.module })
       },
+      isChartEmpty(chart){
+        if(!chart.data){
+          return true;
+        }
+        if(chart.data.length === 0){
+          return true;
+        }
+        if(chart.data.length === 1 && chart.data[0].value === 0){
+          return true;
+        }
+        return false;
+      }
     }
   }
 </script>
@@ -223,6 +243,17 @@
 
         .x-card {
             min-height: 300px;
+
+          .no-data-found{
+            text-transform: uppercase;
+            text-align: center;
+            font-size: 18px;
+            margin-top: 30px;
+
+            svg {
+              margin-bottom: 10px;
+            }
+          }
 
             > .body {
               height: calc(100% - 40px);
