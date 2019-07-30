@@ -76,7 +76,7 @@
         return this.getDataFieldsByPlugin(this.entity).map(category => {
           return {
             ...category, fields: category.fields.filter(field => {
-              return !field.branched && field.type !== 'array'
+              return !field.branched && field.type !== 'array' || this.chartView === 'histogram'
             })
           }
         })
@@ -99,7 +99,12 @@
             name: ''
           }
         }
-      }
+      },
+      updateView(view) {
+        if (view != 'histogram') {
+            this.config = { ...this.config, field: { name: ''}}
+        }
+      },
     }
   }
 </script>

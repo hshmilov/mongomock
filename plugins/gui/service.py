@@ -3947,8 +3947,11 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         all_values = defaultdict(int)
         for item in aggregate_results:
             for value in item['name']:
-                all_values[value] += item['value']
-
+                if isinstance(value, list):
+                    for subvalue in set(value):
+                        all_values[subvalue] += item['value']
+                else:
+                    all_values[value] += item['value']
         for field_value, field_count in all_values.items():
             if field_value == 'No Value':
                 value_filter = f'not ({field_name} == exists(true))'
@@ -3975,7 +3978,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
                     }
                 }
             })
-
+        data = sorted(data, key=lambda x: x['value'], reverse=True)
         if chart_view == ChartViews.pie:
             total = data_collection.count_documents(base_query)
             return [{'name': view or 'ALL', 'value': 0}, *[{**x, 'value': x['value'] / total} for x in data]]

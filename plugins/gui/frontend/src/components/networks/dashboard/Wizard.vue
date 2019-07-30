@@ -28,7 +28,7 @@
             <input
               :id="view"
               :key="view"
-              v-model="dashboard.view"
+              v-model="dashboardView"
               type="radio"
               :value="view"
             >
@@ -49,9 +49,11 @@
           v-model="dashboard.config"
           :entities="entityOptions"
           :views="views"
+          :chartView="dashboard.view"
           class="grid-span2"
           @state="nextWizardState"
           @validate="configValid = $event"
+          ref="dashboardRef"
         />
       </template>
 
@@ -112,6 +114,15 @@
       }
     },
     computed: {
+      dashboardView: {
+          get () {
+              return this.dashboard.view
+          },
+          set (value) {
+              this.dashboard.view = value
+              this.updateView(this.dashboard.view)
+          },
+      },
       editMode () {
         return this.panel !== undefined && this.panel !== null && this.panel.data !== undefined
       },
@@ -137,7 +148,7 @@
         return ['summary']
       },
       isDisabled () {
-        return (!this.dashboard.name || !this.dashboard.metric || !this.dashboard.view || !this.configValid)
+        return (!this.dashboard.name || !this.dashboard.metric || !this.dashboardView || !this.configValid)
       },
       message () {
         if (!this.isDisabled) return ''
@@ -167,8 +178,8 @@
         this.dashboard.metric = metric
         this.dashboard.config = null
         this.$nextTick(() => {
-          if (!this.availableViews.includes(this.dashboard.view)) {
-            this.dashboard.view = this.availableViews[0]
+          if (!this.availableViews.includes(this.dashboardView)) {
+            this.dashboardView = this.availableViews[0]
           }
         })
       },
@@ -200,7 +211,10 @@
       },
       nextWizardState () {
         this.nextState('dashboardWizard')
-      }
+      },
+      updateView(view) {
+        this.$refs.dashboardRef.updateView(view)
+      },
     }
   }
 </script>

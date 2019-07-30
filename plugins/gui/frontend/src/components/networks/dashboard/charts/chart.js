@@ -2,7 +2,8 @@ export default {
 	props: {
 		value: {},
 		entities: { required: true },
-		views: { required: true }
+		views: { required: true },
+		chartView: { required: true },
 	},
 	computed: {
 		config: {
@@ -15,5 +16,9 @@ export default {
 				this.$nextTick(this.validate)
 			}
 		}
-	}
+	},
+    methods: {
+        updateView(view) {
+        },
+    },
 }
