@@ -178,6 +178,7 @@ def setup_host():
     reset_network()
     create_system_cronjobs()
     set_sysctl_value('kernel.pid_max', '64000')
+    set_sysctl_value('kernel.threads-max', '200000')
     os.system('sysctl --load')
 
 

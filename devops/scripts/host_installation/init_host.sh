@@ -187,6 +187,14 @@ if [ $(cat /etc/sysctl.conf | grep 'kernel.pid_max' | wc -l) -ne 0 ]; then
 else
     echo "kernel.pid_max = 64000" >> /etc/sysctl.conf
 fi
+
+echo "Set thread max"
+if [ $(cat /etc/sysctl.conf | grep 'kernel.threads-max' | wc -l) -ne 0 ]; then
+    sed -i 's/^\(kernel\.threads-max\s*=\s*\).*/\1200000/' /etc/sysctl.conf
+else
+    echo "kernel.threads-max = 200000" >> /etc/sysctl.conf
+fi
+
 sysctl --load
 
 touch $INIT_FILE
