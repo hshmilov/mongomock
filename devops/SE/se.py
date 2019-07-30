@@ -2,6 +2,8 @@
 System engineering common tasks.
 """
 import sys
+import os
+import subprocess
 
 from axonius.consts.plugin_subtype import PluginSubtype
 from services.plugins.reimage_tags_analysis_service import ReimageTagsAnalysisService
@@ -11,6 +13,12 @@ from testing.services.plugins.core_service import CoreService
 from testing.services.plugins.static_correlator_service import StaticCorrelatorService
 from testing.services.plugins.static_users_correlator_service import StaticUsersCorrelatorService
 from testing.services.plugins.static_analysis_service import StaticAnalysisService
+
+ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+SERVICES_DIR = os.path.join(ROOT_DIR, 'testing', 'services')
+ADAPTERS_DIR = os.path.join(SERVICES_DIR, 'adapters')
+PLUGINS_DIR = os.path.join(SERVICES_DIR, 'plugins')
+AXONIUS_SH = os.path.join(ROOT_DIR, 'axonius.sh')
 
 
 def usage():
@@ -22,11 +30,12 @@ def usage():
     {name} cd - run clean devices (clean db)
     {name} rr - run reports
     {name} sa - run static analysis
-    {name} rta - run reimage tags analysis 
+    {name} rta - run reimage tags analysis
+    {name} re [service/adapter] - restart some service/adapter  
     '''
 
 
-# pylint: disable=too-many-branches
+# pylint: disable=too-many-branches, too-many-statements
 def main():
     try:
         component = sys.argv[1]
@@ -90,6 +99,21 @@ def main():
     elif component == 'rta':
         print(f'Running Reimage Tags Analysis (Blocking)...')
         rta.trigger_execute(True)
+
+    elif component == 're':
+        service_filename = f'{action}_service.py'
+        if os.path.exists(os.path.join(ADAPTERS_DIR, service_filename)):
+            service_type = 'adapter'
+        elif os.path.exists(os.path.join(PLUGINS_DIR, service_filename)):
+            service_type = 'service'
+        else:
+            print(f'No such adapter or action!')
+            return -1
+
+        print(f'Restarting {service_type} {action}...')
+        subprocess.check_call(
+            f'{AXONIUS_SH} {service_type} {action} up --restart --prod', shell=True, cwd=ROOT_DIR
+        )
 
     else:
         print(usage())
