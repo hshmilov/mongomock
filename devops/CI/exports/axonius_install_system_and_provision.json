@@ -212,6 +212,29 @@
       },
       {
         "type": "shell-local",
+        "inline": ["qemu-img convert -O raw ./output-axonius-{{user `build_name` }}-build/disk.vmdk ./output-axonius-{{user `build_name` }}-build/disk.raw"]
+      },
+      {
+        "type": "artifice",
+        "files": [
+          "./output-axonius-{{user `build_name` }}-build/disk.raw"
+        ]
+      },
+      {
+        "type": "compress",
+        "output": "output-axonius-{{user `build_name` }}-build/disk.raw.tar.gz"
+      },
+      {
+        "type": "googlecompute-import",
+        "project_id": "axonius-office",
+        "account_file": "/home/ubuntu/account.json",
+        "bucket": "axonius-releases",
+        "image_name": "axonius-{{user `build_name` | sed \"s/_/-/g\" | lower}}",
+        "image_description": "axonius-{{user `build_name`}}",
+        "image_family": "ubuntu-1604-lts"
+      },
+      {
+        "type": "shell-local",
         "inline": [
           "rm -rf ./output-axonius-{{user `build_name` }}-build"
         ]

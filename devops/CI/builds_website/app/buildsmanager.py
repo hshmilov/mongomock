@@ -44,6 +44,8 @@ class BuildsManager(object):
             connect=False
         ).builds
         self.bcm = BuildsCloudManager(CREDENTIALS_PATH)
+        self.__exports_credentials = dict()
+        self.__parse_credentials_file(CREDENTIALS_PATH)
         self.st = SlackNotifier()
 
         self.bypass_token = None
@@ -54,6 +56,12 @@ class BuildsManager(object):
                     self.bypass_token = token
                     break
         assert self.bypass_token, 'No bypass token found'
+
+    def __parse_credentials_file(self, credentials_file_path: str):
+        with open(credentials_file_path, 'rt') as f:
+            credentials_file_contents = json.loads(f.read())
+
+        self.__exports_credentials = credentials_file_contents['exports']['data']
 
     def get_instances(self, cloud=None, instance_id=None, vm_type=None):
         last_instances = self.db.realtime.find_one({'name': 'instances'})['value']
@@ -263,7 +271,8 @@ class BuildsManager(object):
         """Exports an instance by its id."""
         ssh = paramiko.SSHClient()
         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        ssh.connect(AXONIUS_EXPORTS_SERVER, username='ubuntu', password='Password2')
+        ssh.connect(AXONIUS_EXPORTS_SERVER, username=self.__exports_credentials['username'],
+                    password=self.__exports_credentials['password'])
         transport = ssh.get_transport()
         channel = transport.open_session()
         channel.set_environment_variable(name='AWS_POLL_DELAY_SECONDS', value='10')
@@ -321,11 +330,11 @@ class BuildsManager(object):
         self.db.exports.insert_one(db_json)
         return True
 
-    @staticmethod
-    def get_export_running_log(export_version):
+    def get_export_running_log(self, export_version):
         ssh = paramiko.SSHClient()
         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        ssh.connect(AXONIUS_EXPORTS_SERVER, username='ubuntu', password='Password2')
+        ssh.connect(AXONIUS_EXPORTS_SERVER, username=self.__exports_credentials['username'],
+                    password=self.__exports_credentials['password'])
         with ssh.open_sftp().open('/home/ubuntu/exports/build_{0}.log'.format(export_version), 'r') as remote_file:
             return {'value': remote_file.read().decode('utf-8')}
 
