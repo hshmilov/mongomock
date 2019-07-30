@@ -1,4 +1,5 @@
 import copy
+from collections import namedtuple
 
 DEFAULT_NETWORK_TIMEOUT = 30
 DEFAULT_PORT = 22
@@ -12,6 +13,10 @@ PORT = 'port'
 PRIVATE_KEY = 'private_key'
 IS_SUDOER = 'is_sudoer'
 PASSPHRASE = 'passphrase'
+COMMAND = 'command'
+COMMAND_NAME = 'command_name'
+ACTION_TYPES = namedtuple('ActionTypes', ('scan', 'cmd'))(scan='execute_scan', cmd='execute_cmd')
+
 
 BASE_SCHEMA = {
     'items': [
@@ -53,7 +58,15 @@ BASE_DEFAULTS_SCHEMA = {PORT: DEFAULT_PORT,
                         IS_SUDOER: True,
                         PASSWORD: ''}
 
-ACTION_SCHEMA = copy.deepcopy(BASE_SCHEMA)
+SCAN_ACTION_SCHEMA = copy.deepcopy(BASE_SCHEMA)
+
+CMD_ACTION_SCHEMA = copy.deepcopy(BASE_SCHEMA)
+CMD_ITEM = {'name': COMMAND, 'title': 'Command', 'type': 'string'}
+CMDNAME_ITEM = {'name': COMMAND_NAME, 'title': 'Command Name', 'type': 'string'}
+CMD_ACTION_SCHEMA['items'].append(CMD_ITEM)
+CMD_ACTION_SCHEMA['items'].append(CMDNAME_ITEM)
+CMD_ACTION_SCHEMA['required'].append(COMMAND)
+CMD_ACTION_SCHEMA['required'].append(COMMAND_NAME)
 
 ADAPTER_SCHEMA = copy.deepcopy(BASE_SCHEMA)
 

@@ -7,11 +7,13 @@ from bson import ObjectId
 
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
-from axonius.clients.linux_ssh.consts import (DEFAULT_NETWORK_TIMEOUT,
+from axonius.clients.linux_ssh.consts import (ADAPTER_SCHEMA, COMMAND,
+                                              COMMAND_NAME,
+                                              DEFAULT_NETWORK_TIMEOUT,
                                               DEFAULT_POOL_SIZE, DEFAULT_PORT,
-                                              HOSTNAME, IS_SUDOER, PASSWORD,
-                                              PORT, PRIVATE_KEY, ADAPTER_SCHEMA,
-                                              USERNAME, PASSPHRASE)
+                                              HOSTNAME, IS_SUDOER, PASSPHRASE,
+                                              PASSWORD, PORT, PRIVATE_KEY,
+                                              USERNAME)
 from axonius.clients.linux_ssh.data import LinuxDeviceAdapter
 from axonius.clients.linux_ssh.ppk import ppkraw_to_openssh
 from axonius.consts.plugin_consts import DEVICE_CONTROL_PLUGIN_NAME
@@ -19,13 +21,12 @@ from axonius.mixins.configurable import Configurable
 from axonius.utils.files import get_local_config_file
 from linux_ssh_adapter.client_id import get_client_id
 from linux_ssh_adapter.connection import LinuxSshConnection
-from linux_ssh_adapter.execution import LinuxSshExectionMixIn
-
+from linux_ssh_adapter.execution import LinuxSshExecutionMixIn
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
-class LinuxSshAdapter(LinuxSshExectionMixIn, AdapterBase, Configurable):
+class LinuxSshAdapter(LinuxSshExecutionMixIn, AdapterBase, Configurable):
     MyDeviceAdapter = LinuxDeviceAdapter
 
     def __init__(self, *args, **kwargs):
@@ -49,6 +50,10 @@ class LinuxSshAdapter(LinuxSshExectionMixIn, AdapterBase, Configurable):
             client_config[IS_SUDOER] = True
         if not client_config.get(PASSPHRASE):
             client_config[PASSPHRASE] = None
+        if not client_config.get(COMMAND):
+            client_config[COMMAND] = None
+        if not client_config.get(COMMAND_NAME):
+            client_config[COMMAND_NAME] = None
         key = client_config.get(PRIVATE_KEY)
         client_config[PRIVATE_KEY] = self._grab_file_contents(key) if key else None
 

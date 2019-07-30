@@ -10,6 +10,7 @@ from typing import Callable, List
 import string
 # pylint: enable=deprecated-module
 from axonius.devices.device_adapter import AdapterProperty, DeviceAdapter, ListField
+from axonius.fields import Field
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -167,6 +168,32 @@ class MD5FilesCommand(LocalInfoCommand):
     def _to_axonius(device, parsed_data):
         for hash_, filename in parsed_data:
             device.md5_files_list.append(f'{filename}: {hash_}')
+
+
+class DynamicFieldCommand(LocalInfoCommand):
+    COMMAND = '{command}'
+    CHECK_RET_VALUE = False
+
+    def __init__(self, field_name: str, command: str):
+        self._command = command
+        self._field_name = field_name.strip()
+        self._normalized_field_name = field_name.strip().lower().replace(' ', '_').replace('-', '_')
+        super().__init__()
+
+    def _get_command(self):
+        command = super()._get_command()
+        command = command.format(command=self._command)
+        return command
+
+    @staticmethod
+    def _parse(raw_data):
+        return raw_data
+
+    def _to_axonius(self, device, parsed_data):
+        if not device.does_field_exist(self._normalized_field_name):
+            field = Field(str, f'Linux {self._field_name}')
+            device.declare_new_field(self._normalized_field_name, field)
+        device[self._normalized_field_name] = str(parsed_data)
 
 
 class ForeignInfoCommand(AbstractCommand):

@@ -1,6 +1,6 @@
 import logging
 
-from axonius.clients.linux_ssh.consts import SCAN_ACTION_SCHEMA, BASE_DEFAULTS_SCHEMA, ACTION_TYPES
+from axonius.clients.linux_ssh.consts import CMD_ACTION_SCHEMA, BASE_DEFAULTS_SCHEMA, ACTION_TYPES
 from axonius.consts.plugin_consts import LINUX_SSH_PLUGIN_NAME
 from axonius.types.enforcement_classes import EntitiesResult, EntityResult
 from reports.action_types.action_type_base import (ActionTypeBase,
@@ -12,7 +12,7 @@ logger = logging.getLogger(f'axonius.{__name__}')
 # pylint: disable=protected-access
 
 
-class RunLinuxSSHScan(ActionTypeBase):
+class RunLinuxCommand(ActionTypeBase):
     @staticmethod
     def prettify_output(id_, result: dict) -> EntityResult:
         value = result['value']
@@ -21,7 +21,7 @@ class RunLinuxSSHScan(ActionTypeBase):
 
     @staticmethod
     def config_schema() -> dict:
-        return add_node_selection(SCAN_ACTION_SCHEMA, LINUX_SSH_PLUGIN_NAME)
+        return add_node_selection(CMD_ACTION_SCHEMA, LINUX_SSH_PLUGIN_NAME)
 
     @staticmethod
     def default_config() -> dict:
@@ -34,15 +34,15 @@ class RunLinuxSSHScan(ActionTypeBase):
                                                                  priority=True,
                                                                  blocking=True,
                                                                  data=action_data,
-                                                                 job_name=ACTION_TYPES.scan)
+                                                                 job_name=ACTION_TYPES.cmd)
         action_result = action_result.json()
         if action_result.get('status') == 'error':
             raise RuntimeError(action_result['message'])
         return action_result
 
-    def _linux_ssh_scan_fail(self, reason):
+    def _linux_command_fail(self, reason):
         reason = str(reason)
-        reason = f'Error while running Linux SSH Scan: {reason}'
+        reason = f'Error while running Linux Command: {reason}'
         return generic_fail(internal_axon_ids=self._internal_axon_ids, reason=reason)
 
     def __run(self) -> EntitiesResult:
@@ -54,7 +54,7 @@ class RunLinuxSSHScan(ActionTypeBase):
         try:
             return self.__run()
         except RuntimeError as e:
-            return self._linux_ssh_scan_fail(e)
+            return self._linux_command_fail(e)
         except Exception as e:
-            logger.exception('Error while running Linux SSH Scan')
-            return self._linux_ssh_scan_fail(e)
+            logger.exception('Error while running Linux Command')
+            return self._linux_command_fail(e)

@@ -65,7 +65,7 @@ def add_node_selection(config_schema: dict, adapter_name: str) -> dict:
     nodes_with_online_adapter = _get_list_of_nodes_with_online_adapter(adapter_name)
 
     if not nodes_with_online_adapter:
-        logger.info('Action not available due to no supporting adapters online.')
+        logger.info(f'Action not available due to no supporting adapters ({adapter_name}) online.')
         node_names = [{'name': '0', 'title': 'Action not available'}]
     else:
         node_names = [{'name': instance[NODE_ID], 'title': instance[NODE_NAME]} for instance in
