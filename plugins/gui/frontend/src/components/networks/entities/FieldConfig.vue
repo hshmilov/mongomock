@@ -86,8 +86,11 @@
 
 <style lang="scss">
     .x-field-config {
-        .modal-mask .x-modal .modal-container {
-            width: 80vw;
+        .x-modal .modal-container {
+            height: 500px;
+            .modal-body {
+                height: calc(100% - 40px);
+            }
         }
 
         .x-select-trigger {
