@@ -119,7 +119,7 @@ export const pluginMeta = {
         description: 'OPSWAT MetaAccess prevents risky devices from accessing local networks and cloud applications.'
     },
     spacewalk_adapter: {
-        title: 'Spacewalk - BETA',
+        title: 'Spacewalk',
         link: '',
         description: 'Spacewalk is an open-source systems management solution for system provisioning, patching and configuration.'    },
     unifi_adapter: {

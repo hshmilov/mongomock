@@ -130,7 +130,7 @@ class SophosAdapter(AdapterBase):
                     device.cloud_provider = 'AWS'
                 try:
                     used_user = device_raw.get('last_user')
-                    if used_user:
+                    if used_user and used_user.lower() != 'n/a':
                         device.last_used_users = used_user.split(',')
                 except Exception:
                     logger.exception(f'Problem getting users for {device_raw}')

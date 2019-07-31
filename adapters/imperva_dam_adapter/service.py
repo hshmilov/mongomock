@@ -187,7 +187,10 @@ class ImpervaDamAdapter(AdapterBase):
                 if isinstance(device_raw.get('open_ports'), list):
                     for open_port in device_raw.get('open_ports'):
                         if isinstance(open_port, dict):
-                            device.add_open_port(port_id=open_port.get('port'),
+                            port_id = None
+                            if open_port.get('port'):
+                                port_id = open_port.get('port')
+                            device.add_open_port(port_id=port_id,
                                                  service_name=open_port.get('type'))
             except Exception:
                 logger.exception(f'Problem with ports for {device_raw}')

@@ -42,7 +42,7 @@ class Maas360Connection(RESTConnection):
             error_msg = response['authResponse'].get('errorCode') or 'No Error Code'
             raise RESTException(f'Bad Response: {error_msg}')
         self._token = response['authResponse']['authToken']
-        self._session_headers['Authorization'] = f'MaaS token={self._token}'
+        self._session_headers['Authorization'] = f'MaaS token="{self._token}"'
         self._get(f'device-apis/devices/2.0/search/customer/{self._billing_id}',
                   url_params={'pageSize': DEVICE_PER_PAGE,
                               'pageNumber': 1})

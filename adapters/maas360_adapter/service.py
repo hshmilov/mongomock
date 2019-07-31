@@ -28,6 +28,7 @@ class Maas360Adapter(AdapterBase):
         maas_status = Field(str, 'Maas360 Managed Status')
         udid = Field(str, 'Udid')
         mailbox_managed = Field(str, 'Mailbox Managed')
+        imei = Field(str, 'IMEI')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)

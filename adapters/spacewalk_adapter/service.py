@@ -58,6 +58,16 @@ class SpacewalkAdapter(AdapterBase):
         """
         connection, key = self.get_connection(client_data)
         for device_raw in connection.system.listSystems(key):
+            try:
+                device_id = device_raw.get('id')
+                device_raw['network'] = connection.system.getNetworkDevices(key, device_id)
+            except Exception:
+                logger.exception(f'Problem getting network for {device_raw}')
+            try:
+                device_id = device_raw.get('id')
+                device_raw['packages'] = connection.system.listPackages(key, device_id)
+            except Exception:
+                logger.exception(f'Problem getting packages')
             yield device_raw
 
     @staticmethod
@@ -94,6 +104,7 @@ class SpacewalkAdapter(AdapterBase):
             'type': 'array'
         }
 
+    # pylint: disable=too-many-branches, too-many-statements, too-many-locals, too-many-nested-blocks
     def _create_device(self, device_raw):
         try:
             device = self._new_device_adapter()
@@ -104,8 +115,40 @@ class SpacewalkAdapter(AdapterBase):
             device.id = str(device_id) + '_' + (device_raw.get('name') or '')
             device.hostname = device_raw.get('name')
             device.last_seen = parse_date(device_raw.get('last_checkin'))
-            device.set_boot_time(boot_time=device_raw.get('last_boot'))
+            if device_raw.get('last_boot'):
+                device.set_boot_time(boot_time=device_raw.get('last_boot'))
             device.creation_time = parse_date(device_raw.get('created'))
+            try:
+                nics = device_raw.get('network')
+                for nic in nics:
+                    ips = []
+                    ipv4 = nic.get('ip')
+                    if ipv4:
+                        ips.extend(ipv4.split(','))
+                    name = nic.get('interface')
+                    mac = nic.get('hardware_address')
+                    try:
+                        ipv6s = nic.get('ipv6')
+                        for ipv6 in ipv6s:
+                            if ipv6.get('address'):
+                                ips.append(ipv6.get('address'))
+                    except Exception:
+                        logger.exception(f'Problem with IPv6')
+                    device.add_nic(name=name, mac=mac, ips=ips)
+            except Exception:
+                logger.exception(f'Problem with nic')
+            try:
+                packages = device_raw.get('packages')
+                for package in packages:
+                    try:
+                        device.add_installed_software(name=package.get('name'),
+                                                      version=package.get('version'))
+                    except Exception:
+                        logger.exception(f'Problem getting package {package}')
+            except Exception:
+                logger.exception(f'Problem with packages')
+            for key in device_raw:
+                device_raw[key] = str(key)
             device.set_raw(device_raw)
             return device
         except Exception:
