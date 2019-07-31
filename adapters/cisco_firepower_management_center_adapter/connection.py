@@ -93,8 +93,11 @@ class CiscoFirepowerManagementCenterConnection(RESTConnection):
     def get_device_list(self):
         for device_raw in self._get_api_endpoint('devices/devicerecords'):
             yield device_raw, 'device_type'
-        for device_raw in self._get_api_endpoint('object/hosts'):
-            yield device_raw, 'host_type'
+        #
+        # disable fetching "Hosts" for now as they don't seem to be valid devices
+        #
+        # for device_raw in self._get_api_endpoint('object/hosts'):
+        #     yield device_raw, 'host_type'
 
     def _get_api_endpoint(self, endpoint_api):
         self._refresh_token()
