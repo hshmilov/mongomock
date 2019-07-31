@@ -18,6 +18,7 @@
           :title="item.title"
           :description="item.description"
           :required="item.required"
+          :expand="!isFileList"
         >
           <component
             :is="item.type"
@@ -111,6 +112,10 @@
       isStringList () {
         if (this.isOrderedObject) return false
         return this.schema.items.type === 'string'
+      },
+      isFileList () {
+        if (this.isOrderedObject) return false
+        return this.schema.items.type === 'file'
       },
       invalidStringItems() {
         if (!this.isStringList) return []
@@ -212,10 +217,6 @@
       display: flex;
       align-items: flex-end;
 
-      > .object {
-        width: auto;
-      }
-
       .index {
         display: inline-block;
         vertical-align: top;
@@ -233,7 +234,6 @@
     }
 
     .object {
-      width: 100%;
 
       input, select, textarea {
         width: 100%;
