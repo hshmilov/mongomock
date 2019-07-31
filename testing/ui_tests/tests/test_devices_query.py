@@ -15,7 +15,6 @@ class TestDevicesQuery(TestBase):
     SEARCH_TEXT_WINDOWS = 'windows'
     SEARCH_TEXT_TESTDOMAIN = 'testdomain'
     ERROR_TEXT_QUERY_BRACKET = 'Missing {direction} bracket'
-    SAVED_QUERY_NAME = 'query to save'
 
     def test_bad_subnet(self):
         self.dashboard_page.switch_to_page()
@@ -38,64 +37,6 @@ class TestDevicesQuery(TestBase):
         self.devices_page.select_query_adapter(self.devices_page.VALUE_ADAPTERS_AD)
         assert self.devices_page.get_query_field() == self.devices_page.ID_FIELD
         assert self.devices_page.get_query_comp_op() == self.devices_page.QUERY_COMP_EXISTS
-
-    def test_saved_queries_execute(self):
-        self.settings_page.switch_to_page()
-        self.base_page.run_discovery()
-
-        self.devices_queries_page.switch_to_page()
-
-        self.devices_page.wait_for_spinner_to_end()
-        windows_query_row = self.devices_queries_page.find_query_row_by_name('Windows Operating System')
-        self.devices_page.wait_for_spinner_to_end()
-        windows_query_row.click()
-        assert 'devices' in self.driver.current_url and 'query' not in self.driver.current_url
-        self.devices_page.wait_for_spinner_to_end()
-        assert all(x == self.devices_page.VALUE_OS_WINDOWS for x in
-                   self.devices_page.get_column_data(self.devices_page.FIELD_OS_TYPE))
-        self.devices_page.fill_filter('linux')
-        self.devices_page.open_search_list()
-        self.devices_page.select_query_by_name('Linux Operating System')
-        self.devices_page.wait_for_spinner_to_end()
-        assert not len(self.devices_page.get_column_data(self.devices_page.FIELD_OS_TYPE))
-
-    def test_saved_queries_remove(self):
-        self.settings_page.switch_to_page()
-        self.devices_queries_page.switch_to_page()
-        self.devices_queries_page.wait_for_table_to_load()
-        self.devices_queries_page.wait_for_spinner_to_end()
-        data_count = self.devices_queries_page.get_table_count()
-
-        def _remove_queries_wait_count(data_count):
-            self.devices_queries_page.remove_selected_queries()
-            wait_until(lambda: self.devices_queries_page.get_table_count() == data_count)
-            return data_count
-
-        # Test remove a few (select each one)
-        all_data = self.devices_queries_page.get_all_table_rows()
-        self.devices_queries_page.click_row_checkbox(1)
-        self.devices_queries_page.click_row_checkbox(2)
-        self.devices_queries_page.click_row_checkbox(3)
-        data_count = _remove_queries_wait_count(data_count - 3)
-        current_data = self.devices_queries_page.get_all_table_rows()
-        if len(current_data) == 20:
-            current_data = current_data[:-3]
-        assert current_data == all_data[3:]
-
-        # Test remove all but some (select all and exclude 3 rows)
-        all_data = self.devices_queries_page.get_all_table_rows()
-        self.devices_queries_page.click_table_checkbox()
-        self.devices_queries_page.click_row_checkbox(3)
-        self.devices_queries_page.click_row_checkbox(6)
-        self.devices_queries_page.click_row_checkbox(9)
-        _remove_queries_wait_count(data_count - 17)
-        assert self.devices_queries_page.get_all_table_rows()[:3] == [all_data[2], all_data[5], all_data[8]]
-
-        # Test remove all
-        self.devices_queries_page.click_table_checkbox()
-        self.devices_queries_page.click_button('Select all', partial_class=True)
-        _remove_queries_wait_count(0)
-        assert self.devices_queries_page.get_all_table_rows() == []
 
     def _check_search_text_result(self, text):
         self.devices_page.wait_for_table_to_load()
@@ -131,11 +72,11 @@ class TestDevicesQuery(TestBase):
         self.devices_page.add_query_expression()
         expressions = self.devices_page.find_expressions()
         assert len(expressions) == 2
-        self.devices_page.select_query_adapter(self.users_page.VALUE_ADAPTERS_JSON, parent=expressions[0])
+        self.devices_page.select_query_adapter(self.devices_page.VALUE_ADAPTERS_JSON, parent=expressions[0])
         self.devices_page.wait_for_spinner_to_end()
         results_count = len(self.devices_page.get_all_data())
         self.devices_page.select_query_logic_op(self.devices_page.QUERY_LOGIC_AND)
-        self.devices_page.select_query_adapter(self.users_page.VALUE_ADAPTERS_AD, parent=expressions[1])
+        self.devices_page.select_query_adapter(self.devices_page.VALUE_ADAPTERS_AD, parent=expressions[1])
         self.devices_page.wait_for_spinner_to_end()
         assert len(self.devices_page.get_all_data()) <= results_count
         self.devices_page.clear_query_wizard()
@@ -479,12 +420,12 @@ class TestDevicesQuery(TestBase):
         self.devices_page.select_query_comp_op(self.devices_page.QUERY_COMP_CONTAINS, expressions[1])
         self.devices_page.fill_query_value(DEVICE_MAC, expressions[1])
         self.devices_page.toggle_right_bracket(expressions[1])
-        assert not self.devices_page.is_save_query_disabled()
+        assert not self.devices_page.is_query_save_as_disabled()
 
         self.devices_page.toggle_right_bracket(expressions[1])
-        assert self.devices_page.is_save_query_disabled()
+        assert self.devices_page.is_query_save_as_disabled()
         self.devices_page.toggle_right_bracket(expressions[1])
-        assert not self.devices_page.is_save_query_disabled()
+        assert not self.devices_page.is_query_save_as_disabled()
 
     def test_quick_count(self):
         """

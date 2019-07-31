@@ -140,6 +140,7 @@ export const changeDataView = (state, payload) => {
 	views.data = views.data.map(item => {
 		if (item.uuid === payload.uuid) {
 			item.name = payload.name
+			item.view = payload.view
 		}
 		return item
 	})

@@ -6,12 +6,15 @@
         <div class="subtitle">{{ enforcement.outcome }} results of "{{ enforcement.action }}" action</div>
       </template>
       <x-button
-        v-else-if="selectedView"
+        v-else-if="selectedView && !readOnly"
         link
         class="title"
-        :disabled="readOnly"
         @click="openRenameView"
       >{{ selectedView.name }}</x-button>
+      <div
+        v-else-if="selectedView"
+        class="title"
+      >{{ selectedView.name }}</div>
       <div
         v-else
         class="title"
@@ -75,8 +78,9 @@
   import xSaveModal from './SaveModal.vue'
   import {defaultFields} from '../../../../constants/entities'
 
-  import {mapState, mapMutations} from 'vuex'
+  import {mapState, mapMutations, mapActions} from 'vuex'
   import {UPDATE_DATA_VIEW} from '../../../../store/mutations'
+  import { SAVE_DATA_VIEW } from '../../../../store/actions'
 
   export default {
     name: 'XQueryState',
@@ -151,7 +155,8 @@
         if (!this.selectedView || !this.selectedView.view) return false
         return ((this.selectedView.view.query.filter !== this.view.query.filter)
                 || !this.arraysEqual(this.view.fields, this.selectedView.view.fields)
-                || this.view.sort.field !== this.selectedView.view.sort.field)
+                || this.view.sort.field !== this.selectedView.view.sort.field
+                || this.view.sort.desc !== this.selectedView.view.sort.desc)
       },
       status () {
         if (this.enforcement) return ''
@@ -161,6 +166,9 @@
     methods: {
       ...mapMutations({
         updateView: UPDATE_DATA_VIEW
+      }),
+      ...mapActions({
+        saveView: SAVE_DATA_VIEW
       }),
       resetQuery () {
         this.updateView({
@@ -194,11 +202,12 @@
         }
       },
       saveSelectedView () {
-        if (!this.selectedView) return
+        if (!this.selectedView || !this.selectedView.uuid) return
 
         this.saveView({
           module: this.module,
-          name: this.selectedView.name
+          name: this.selectedView.name,
+          uuid: this.selectedView.uuid
         })
       },
       reloadSelectedView () {
@@ -208,7 +217,7 @@
         })
       },
       arraysEqual (arrA, arrB) {
-        return !arrA.filter(x => !arrB.includes(x)).length || arrB.filter(x => !arrA.includes(x)).length
+        return !arrA.filter(x => !arrB.includes(x)).length && !arrB.filter(x => !arrA.includes(x)).length
       }
     }
   }
@@ -242,6 +251,7 @@
         }
         .x-button {
             margin-bottom: 8px;
+            padding: 4px 16px;
         }
         .x-dropdown {
           .trigger {

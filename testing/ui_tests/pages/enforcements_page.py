@@ -531,11 +531,14 @@ class EnforcementsPage(EntitiesPage):
     def find_checkbox_container_by_label(self, label_text):
         return self.driver.find_element_by_xpath(self.DIV_BY_LABEL_TEMPLATE.format(label_text=label_text))
 
-    def select_task_action(self, name):
-        self.find_element_by_text(name).click()
+    def wait_for_action_result(self):
         self.wait_for_element_present_by_css(self.ACTION_RESULT_CONTAINER_CSS)
         # Appearance animation time
         time.sleep(0.6)
+
+    def select_task_action(self, name):
+        self.find_element_by_text(name).click()
+        self.wait_for_action_result()
 
     def find_task_action_success(self, name):
         self.select_task_action(name)
@@ -578,3 +581,9 @@ class EnforcementsPage(EntitiesPage):
 
     def find_existing_trigger(self):
         return self.wait_for_element_present_by_text('Trigger')
+
+    def navigate_task_success_results(self, action_name):
+        self.click_row()
+        self.wait_for_element_present_by_text(action_name)
+        self.wait_for_action_result()
+        self.find_task_action_success(action_name).click()

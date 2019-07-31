@@ -244,6 +244,11 @@ class MongoService(WeaveService):
                 'archived': False
             }
         })
+        self.client[GUI_PLUGIN_NAME][views_collection_name].delete_many({
+            'predefined': {
+                '$exists': False
+            }
+        })
 
     def gui_reports_config_collection(self):
         return self.client[GUI_PLUGIN_NAME]['reports_config']

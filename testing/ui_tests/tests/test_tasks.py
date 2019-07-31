@@ -79,6 +79,7 @@ class TestTasks(TestBase):
         self.devices_page.switch_to_page()
         self.base_page.run_discovery()
         self.devices_page.run_filter_and_save(ENFORCEMENT_CHANGE_NAME, ENFORCEMENT_CHANGE_FILTER)
+        self.devices_page.run_filter_and_save(ENFORCEMENT_QUERY, ENFORCEMENT_DEVICES_QUERY)
 
         self.enforcements_page.switch_to_page()
         enforcement_names = ['Test 3', 'Test 2', 'Test 5', 'Test 1', 'Test 4']
@@ -118,6 +119,7 @@ class TestTasks(TestBase):
         self.devices_page.switch_to_page()
         self.base_page.run_discovery()
         self.devices_page.run_filter_and_save(ENFORCEMENT_CHANGE_NAME, ENFORCEMENT_CHANGE_FILTER)
+        self.devices_page.run_filter_and_save(ENFORCEMENT_QUERY, ENFORCEMENT_DEVICES_QUERY)
 
         self.enforcements_page.switch_to_page()
         enforcement_names = ['Test 3', 'Test 2', 'Test 5', 'Test 1', 'Test 4']

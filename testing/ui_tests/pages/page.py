@@ -87,6 +87,7 @@ class Page:
     FEEDBACK_MODAL_MESSAGE_XPATH = './/div[contains(@class, \'t-center\') and .//text()=\'{message}\']'
     CANCEL_BUTTON = 'Cancel'
     SAVE_BUTTON = 'Save'
+    SAVE_AS_BUTTON = 'Save as'
     OK_BUTTON = 'OK'
     REMOVE_BUTTON = 'Remove'
     DELETE_BUTTON = 'Delete'
@@ -638,7 +639,8 @@ class Page:
         return self.upload_file_on_element(element, file_content, is_bytes, prefix)
 
     def close_dropdown(self):
-        self.driver.find_element_by_css_selector(self.DROPDOWN_OVERLAY_CSS).click()
+        el = self.driver.find_element_by_css_selector(self.DROPDOWN_OVERLAY_CSS)
+        ActionChains(self.driver).move_to_element_with_offset(el, 1, 1).click().perform()
 
     def click_tab(self, tab_title):
         self.driver.find_element_by_xpath(self.TAB_HEADER_XPATH.format(tab_title=tab_title)).click()

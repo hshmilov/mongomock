@@ -821,7 +821,8 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
             '_id': ObjectId(query_id)
         }, {
             '$set': {
-                'name': view_data['name']
+                'name': view_data['name'],
+                'view': view_data['view']
             }
         })
 

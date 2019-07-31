@@ -276,7 +276,8 @@ export const saveView = ({dispatch, commit}, payload) => {
 		return dispatch(REQUEST_API, {
 			rule: `${payload.module}/views/saved/${payload.uuid}`,
 			data: {
-				name: payload.name
+				name: payload.name,
+				view: payload.view
 			},
 			method: 'POST'
 		}).then(() => {

@@ -244,6 +244,12 @@ class EntitiesPage(Page):
     def open_search_list(self):
         self.key_down_arrow_down(self.find_query_search_input())
 
+    def check_search_list_for_names(self, query_names):
+        self.open_search_list()
+        for name in query_names:
+            assert self.driver.find_element_by_xpath(self.QUERY_SEARCH_DROPDOWN_XPATH.format(query_name_text=name))
+        self.close_dropdown()
+
     @retry(wait_fixed=500, stop_max_attempt_number=30)
     def select_query_by_name(self, query_name):
         el = self.wait_for_element_present_by_xpath(self.QUERY_SEARCH_DROPDOWN_XPATH.format(query_name_text=query_name))
@@ -320,6 +326,20 @@ class EntitiesPage(Page):
             parent = self.driver
         parent.find_element_by_css_selector(self.QUERY_NEST_EXPRESSION_CSS).click()
 
+    def build_query_active_directory(self):
+        self.click_query_wizard()
+        self.select_query_adapter(self.VALUE_ADAPTERS_AD)
+        self.wait_for_table_to_load()
+        self.close_dropdown()
+
+    def build_query_field_contains(self, field_name, field_value):
+        self.click_query_wizard()
+        self.select_query_field(field_name)
+        self.select_query_comp_op(self.QUERY_COMP_CONTAINS)
+        self.fill_query_value(field_value)
+        self.wait_for_table_to_load()
+        self.close_dropdown()
+
     def find_rows_with_data(self):
         return self.driver.find_elements_by_xpath(self.TABLE_DATA_ROWS_XPATH)
 
@@ -328,6 +348,10 @@ class EntitiesPage(Page):
 
     def click_sort_column(self, col_name):
         self.driver.find_element_by_xpath(self.TABLE_HEADER_SORT_XPATH.format(col_name_text=col_name)).click()
+
+    def check_sort_column(self, col_name, desc=True):
+        header = self.driver.find_element_by_xpath(self.TABLE_HEADER_SORT_XPATH.format(col_name_text=col_name))
+        assert header.get_attribute('class') == ('sort down' if desc else 'sort up')
 
     def get_columns_header_text(self):
         headers = self.driver.find_element_by_xpath(self.TABLE_HEADER_XPATH)
@@ -458,8 +482,11 @@ class EntitiesPage(Page):
     def click_save_query(self):
         self.driver.find_element_by_id(self.SAVE_QUERY_ID).click()
 
-    def is_save_query_disabled(self):
-        return 'disabled' in self.driver.find_element_by_id(self.SAVE_QUERY_ID).get_attribute('class')
+    def is_query_save_as_disabled(self):
+        return self.is_element_disabled(self.find_element_by_text(self.SAVE_AS_BUTTON))
+
+    def is_query_save_disabled(self):
+        return self.is_element_disabled(self.find_element_by_text(self.SAVE_BUTTON))
 
     def fill_query_name(self, name):
         self.fill_text_field_by_element_id(self.SAVE_QUERY_NAME_ID, name)
@@ -480,9 +507,31 @@ class EntitiesPage(Page):
     def reset_query(self):
         self.click_button('Reset', partial_class=True)
 
+    def open_actions_query(self):
+        el = self.driver.find_element_by_css_selector('.x-query-state .x-dropdown .arrow')
+        ActionChains(self.driver).move_to_element_with_offset(el, 60, 12).click().perform()
+
+    def discard_changes_query(self):
+        self.open_actions_query()
+        self.click_button('Discard Changes', partial_class=True)
+        self.wait_for_table_to_load()
+
     def save_query(self, query_name):
         self.click_save_query()
         self.fill_query_name(query_name)
+        self.click_save_query_save_button()
+
+    def save_query_as(self, query_name):
+        self.click_button(self.SAVE_AS_BUTTON, partial_class=True)
+        self.fill_query_name(query_name)
+        self.click_save_query_save_button()
+
+    def save_existing_query(self):
+        self.click_button('Save', partial_class=True)
+
+    def rename_query(self, query_name, new_query_name):
+        self.click_button(query_name, partial_class=True)
+        self.fill_query_name(new_query_name)
         self.click_save_query_save_button()
 
     def run_filter_and_save(self, query_name, query_filter):
@@ -791,3 +840,12 @@ class EntitiesPage(Page):
 
     def wait_close_column_details_popup(self):
         self.wait_for_element_absent_by_css('.details-table-container .popup .content .table')
+
+    def find_query_header(self):
+        return self.driver.find_element_by_css_selector('.x-query .x-query-state .header')
+
+    def find_query_title_text(self):
+        return self.find_query_header().find_element_by_css_selector('.title').text
+
+    def find_query_status_text(self):
+        return self.find_query_header().find_element_by_css_selector('.status').text

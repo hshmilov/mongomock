@@ -177,3 +177,14 @@ class DevicesPage(EntitiesPage):
     def get_value_for_label_in_device_page(self, label_text):
         text = self.driver.find_element_by_xpath(self.DIV_BY_LABEL_TEMPLATE.format(label_text=label_text)).text
         return text.split('\n')[1]  # [0] is the label itself
+
+    def add_query_last_seen(self):
+        self.click_query_wizard()
+        self.add_query_expression()
+        expressions = self.find_expressions()
+        self.select_query_logic_op(self.QUERY_LOGIC_AND, parent=expressions[1])
+        self.select_query_field(self.FIELD_LAST_SEEN, parent=expressions[1])
+        self.select_query_comp_op('days', parent=expressions[1])
+        self.fill_query_value(5, parent=expressions[1])
+        self.wait_for_table_to_load()
+        self.close_dropdown()

@@ -122,6 +122,11 @@
 
         > .filter {
           display: flex;
+
+          > .x-button {
+            width: 120px;
+          }
         }
+
     }
 </style>
