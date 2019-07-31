@@ -6,6 +6,7 @@
       :entities="entities"
       :views="views"
       :max="max"
+      :min="1"
     />
   </div>
 </template>

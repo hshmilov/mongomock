@@ -21,7 +21,7 @@
         @input="(name) => updateName(index, name)"
       />
       <x-button
-        v-if="index > 1"
+        v-if="isItemDeletable(index)"
         link
         @click="() => removeView(index)"
       >x</x-button>
@@ -65,6 +65,10 @@
       max: {
         type: Number,
         default: 0
+      },
+      min: {
+        type: Number,
+        default: 0
       }
     },
     computed: {
@@ -106,6 +110,9 @@
       },
       addView () {
         this.selected = [...this.selected, { ...dashboardView }]
+      },
+      isItemDeletable(index) {
+        return index >= this.min
       }
     }
   }

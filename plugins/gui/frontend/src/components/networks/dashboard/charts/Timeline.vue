@@ -17,6 +17,7 @@
       :entities="entities"
       :views="views"
       :max="max"
+      :min="min"
     />
     <x-select-timeframe
       v-model="timeframe"
@@ -73,6 +74,9 @@
       },
       max () {
         return (this.intersection)? 2 : 3
+      },
+      min () {
+        return this.intersection ? 2 : 1
       }
     },
     methods: {
