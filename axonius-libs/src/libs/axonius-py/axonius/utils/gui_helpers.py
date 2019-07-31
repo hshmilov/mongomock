@@ -907,6 +907,12 @@ def entity_fields(entity_type: EntityType):
         'unique': True
     }
 
+    axon_id_json = {
+        'name': 'internal_axon_id',
+        'title': 'Asset Unique ID',
+        'type': 'string'
+    }
+
     tags_json = {
         'name': 'labels',
         'title': 'Tags',
@@ -922,7 +928,9 @@ def entity_fields(entity_type: EntityType):
             'generic': generic_fields,
             'specific': {}
         },
-        'generic': [adapters_json] + flatten_fields(generic_fields, 'specific_data.data', ['scanner']) + [tags_json],
+        'generic': [adapters_json, axon_id_json]
+        + flatten_fields(generic_fields, 'specific_data.data', ['scanner'])
+        + [tags_json],
         'specific': {},
     }
 
@@ -1023,7 +1031,6 @@ def _get_csv(mongo_filter, mongo_sort, mongo_projection, entity_type: EntityType
                             ignore_errors=True)
 
     # Beautifying the resulting csv.
-    mongo_projection.pop('internal_axon_id', None)
     mongo_projection.pop(ADAPTERS_LIST_LENGTH, None)
 
     # Getting pretty titles for all generic fields as well as specific
@@ -1043,7 +1050,8 @@ def _get_csv(mongo_filter, mongo_sort, mongo_projection, entity_type: EntityType
     yield dw.writerow(dict(zip(dw.fieldnames, dw.fieldnames)))
 
     for current_entity in entities:
-        current_entity.pop('internal_axon_id', None)
+        if not mongo_projection.get('internal_axon_id'):
+            current_entity.pop('internal_axon_id', None)
         current_entity.pop(ADAPTERS_LIST_LENGTH, None)
 
         for field in mongo_projection.keys():

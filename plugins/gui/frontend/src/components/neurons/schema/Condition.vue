@@ -196,7 +196,7 @@
         }
       },
       conditionField () {
-        if (this.condition.field.includes('id')) {
+        if (this.condition.field.includes('.id')) {
           this.condition.compOp = 'exists'
         }
       },
