@@ -525,7 +525,7 @@ export const pluginMeta = {
     nessus_csv_adapter: {
         title: 'Tenable Nessus CSV File',
         link: '',
-        description: 'The Tehable Nessus CSV File Adapter imports device information from vulnerability scan data.'
+        description: 'Tenable Nessus CSV File Adapter imports device information from vulnerability scan data.'
     },
     esx_adapter: {
         title: 'VMware ESXi',
