@@ -35,6 +35,7 @@ from reports.action_types.base.sentinelone_initiate_scan import SentineloneIniti
 from reports.action_types.base.haveibeenpwned_enrichment import HaveibeenpwnedEnrichment
 from reports.action_types.base.run_linux_command import RunLinuxCommand
 from reports.action_types.base.tenable_io_create_asset import TenableIoCreateAsset
+from reports.action_types.alert.create_zendesk_ticket import ZendeskTicketAction
 
 
 AllActionTypes: Dict[str, type(ActionTypeBase)] = {
@@ -71,5 +72,6 @@ AllActionTypes: Dict[str, type(ActionTypeBase)] = {
     'sentinelone_initiate_scan_action': SentineloneInitiateScanAction,
     'haveibeenpwned_enrichment': HaveibeenpwnedEnrichment,
     'run_command_linux': RunLinuxCommand,
-    'tenable_io_create_asset': TenableIoCreateAsset
+    'tenable_io_create_asset': TenableIoCreateAsset,
+    'create_zendesk_ticket': ZendeskTicketAction
 }

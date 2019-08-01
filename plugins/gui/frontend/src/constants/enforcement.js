@@ -89,6 +89,9 @@ export const actionsMeta = {
     create_sysaid_incident: {
         title: 'Create SysAid Incident'
     },
+    create_zendesk_ticket: {
+        title: 'Create Zendesk Ticket'
+    },
     send_emails: {
         title: 'Send Email'
     },
@@ -121,7 +124,7 @@ export const actionsMeta = {
     },
     deploy_software: {
         title: 'Deploy Software',
-        items: ['run_executable_windows', 'run_executable_linux']
+        items: ['run_executable_windows']
     },
     run_command: {
         title: 'Run Command',
@@ -153,7 +156,7 @@ export const actionsMeta = {
     },
     create_incident: {
         title: 'Create Incident',
-        items: ['create_service_now_incident', 'create_service_now_incident_per_entity', 'create_jira_incident', 'create_sysaid_incident']
+        items: ['create_service_now_incident', 'create_service_now_incident_per_entity', 'create_jira_incident', 'create_sysaid_incident', 'create_zendesk_ticket']
     },
     enrich_device_or_user_data: {
         title: 'Enrich Device or User Data',
