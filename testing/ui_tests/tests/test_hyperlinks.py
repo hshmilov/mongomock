@@ -136,7 +136,7 @@ class TestHyperlinks(TestBase):
             self.devices_page.click_general_tab()
             self.devices_page.click_tab(self.devices_page.FIELD_CONNECTED_DEVICES)
             link = self.devices_page.driver.find_element_by_css_selector(
-                '.x-entity-general .x-tab.active .table-container .x-table-row td a')
+                '.x-entity-general .x-tab.active .x-table .x-table-row td a')
             link_text = link.text
             link.click()
             self.devices_page.wait_for_table_to_load()

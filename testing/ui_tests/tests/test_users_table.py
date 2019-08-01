@@ -180,7 +180,7 @@ class TestUsersTable(TestEntitiesTable):
         last_seens = self.users_page.get_column_data(self.LAST_SEEN_COLUMN)[0].split('\n')
         assert last_seens[-2] == last_seens[0]
         self._check_last_seen(2, last_seens)
-        assert last_seens[-3] == 'Days'
+        assert 'Days' in last_seens[-3]
 
     def test_user_bool_consistency(self):
         self.settings_page.switch_to_page()

@@ -1,7 +1,7 @@
 from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.common.action_chains import ActionChains
 
-from ui_tests.pages.page import Page
+from ui_tests.pages.page import Page, TAB_BODY
 from services.axon_service import TimeoutException
 from axonius.utils.wait import wait_until
 
@@ -96,7 +96,9 @@ class DashboardPage(Page):
         self.click_button('View in Users', partial_class=True, should_scroll_into_view=False)
 
     def open_new_card_wizard(self):
-        self.wait_for_element_present_by_css(self.NEW_CARD_WIZARD_CSS).click()
+        new_card = self.wait_for_element_present_by_css(self.NEW_CARD_WIZARD_CSS)
+        self.scroll_into_view(new_card, window=TAB_BODY)
+        new_card.click()
 
     def select_chart_metric(self, option):
         self.wait_for_element_present_by_css(self.CHART_METRIC_DROP_DOWN_CSS)
@@ -221,6 +223,7 @@ class DashboardPage(Page):
 
     def remove_card(self, card_title):
         panel = self.wait_for_element_present_by_xpath(self.PANEL_BY_NAME_XPATH.format(panel_name=card_title))
+        self.scroll_into_view(panel, window=TAB_BODY)
         ActionChains(self.driver).move_to_element(panel).perform()
         panel.find_element_by_css_selector(self.CARD_CLOSE_BTN_CSS).click()
         self.wait_for_element_present_by_css(self.MODAL_OVERLAY_CSS)
@@ -253,7 +256,9 @@ class DashboardPage(Page):
 
     def click_pie_slice(self, slice_css, card_title):
         card = self.wait_for_element_present_by_xpath(self.PANEL_BY_NAME_XPATH.format(panel_name=card_title))
-        self.get_pie_chart_from_card(card).find_element_by_css_selector(slice_css).click()
+        card_slice = self.get_pie_chart_from_card(card).find_element_by_css_selector(slice_css)
+        self.scroll_into_view(card_slice, window=TAB_BODY)
+        card_slice.click()
 
     @staticmethod
     def get_title_from_card(card):
@@ -362,11 +367,12 @@ class DashboardPage(Page):
     def remove_space(self, index=3):
         # Default 3 since 1 and 2 are note removable
         space_header = self.find_space_header(index)
+        space_header_text = space_header.text
         ActionChains(self.driver).move_to_element(space_header).perform()
         space_header.find_element_by_css_selector('.x-button.link').click()
         self.wait_for_element_present_by_css(self.MODAL_OVERLAY_CSS)
         self.click_button('Remove Space')
-        self.wait_for_element_absent_by_css(self.SPACE_HEADER_CSS.format(tab_index=index))
+        self.wait_for_element_absent_by_text(space_header_text)
 
     def is_missing_space(self, space_name):
         try:

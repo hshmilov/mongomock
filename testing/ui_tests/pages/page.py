@@ -355,8 +355,10 @@ class Page:
                                 interval=SLEEP_INTERVAL):
         for _ in range(retries):
             try:
-                element = self.find_element(by, value, element)
-                if not element:
+                absent_element = self.find_element(by, value, element)
+                if not absent_element:
+                    return
+                if 'none' in absent_element.get_attribute('style'):
                     return
             except (NoSuchElementException, StaleElementReferenceException):
                 return
@@ -471,6 +473,21 @@ class Page:
                 pass
             time.sleep(interval)
         raise TimeoutException(f'Timeout while waiting for {text}')
+
+    def wait_for_element_absent_by_text(self,
+                                        text,
+                                        element=None,
+                                        retries=RETRY_WAIT_FOR_ELEMENT,
+                                        interval=SLEEP_INTERVAL):
+        for _ in range(retries):
+            try:
+                element = self.find_element_by_text(text, element=element)
+                if not element:
+                    return
+            except (NoSuchElementException, StaleElementReferenceException):
+                return
+            time.sleep(interval)
+        raise TimeoutException(f'Timeout while waiting for {text} to disappear')
 
     @staticmethod
     def is_toggle_selected(toggle):

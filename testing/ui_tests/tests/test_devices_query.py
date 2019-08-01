@@ -116,7 +116,7 @@ class TestDevicesQuery(TestBase):
         self.devices_page.select_query_logic_op(self.devices_page.QUERY_LOGIC_AND, parent=expressions[2])
         self.devices_page.remove_query_expression(expressions[0])
         assert self.devices_page.is_query_error(self.ERROR_TEXT_QUERY_BRACKET.format(direction='left'))
-        self.devices_page.toggle_right_bracket(expressions[1])
+        self.devices_page.toggle_right_bracket(expressions[0])
         assert self.devices_page.is_query_error()
         self.devices_page.clear_query_wizard()
 

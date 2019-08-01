@@ -296,9 +296,7 @@ ul {
 
 table {
   width: 100%;
-  overflow: hidden;
   thead {
-    overflow: auto;
     th {
       text-align: left;
       font-weight: 300;
@@ -306,7 +304,6 @@ table {
     }
   }
   tbody {
-    overflow: auto;
     td {
       padding: 2px 8px;
     }

@@ -59,16 +59,16 @@ class EntitiesPage(Page):
     TABLE_DATA_ROWS_XPATH = '//tr[@id]'
     TABLE_SCHEMA_CUSTOM = '//div[contains(@class, \'x-schema-custom\')]'
     TABLE_FIELD_ROWS_XPATH = '//div[contains(@class, \'x-tabs\')]//div[contains(@class, \'x-tab active\')]'\
-                             '//div[@class=\'table-container\']//tr[@class=\'x-table-row\']'
+                             '//div[@class=\'x-table\']//tr[@class=\'x-table-row\']'
     TABLE_PAGE_SIZE_XPATH = '//div[@class=\'x-pagination\']/div[@class=\'x-sizes\']/div[text()=\'{page_size_text}\']'
-    TABLE_HEADER_XPATH = '//div[@class=\'x-table\']/div[@class=\'table-container\']/table/thead/tr'
+    TABLE_HEADER_XPATH = '//div[@class=\'x-table\']/table/thead/tr'
     TABLE_HEADER_FIELD_XPATH = '//div[contains(@class, \'x-entity-general\')]//div[contains(@class, \'x-tab active\')]'\
-                               '//div[@class=\'table-container\']//thead/tr'
+                               '//div[@class=\'x-table\']//thead/tr'
     VALUE_ADAPTERS_JSON = 'JSON File'
     VALUE_ADAPTERS_AD = 'Microsoft Active Directory (AD)'
-    TABLE_HEADER_CELLS_CSS = '.data-title'
-    TABLE_HEADER_CELLS_XPATH = '//div[contains(@class, \'data-title\') and child::img[contains(@class, \'logo\')]]'
-    TABLE_HEADER_SORT_XPATH = '//th//div[contains(@class, \'sortable\') and contains(text(), \'{col_name_text}\')]/div'
+    TABLE_HEADER_CELLS_CSS = 'th'
+    TABLE_HEADER_CELLS_XPATH = '//th[child::img[contains(@class, \'logo\')]]'
+    TABLE_HEADER_SORT_XPATH = '//th[contains(@class, \'sortable\') and contains(text(), \'{col_name_text}\')]/div'
     TABLE_DATA_POS_XPATH = '//tr[@id]/td[position()={data_position}]'
     TABLE_DATA_TITLE_POS_XPATH = '//tr[@id]/td[position()={data_position}]//' \
                                  'div[@class=\'x-data\' or @class=\'list\']/div'
@@ -623,6 +623,12 @@ class EntitiesPage(Page):
 
     def click_export_csv(self):
         self.get_export_csv_button().click()
+
+    def find_export_csv_loading(self):
+        return self.driver.find_element_by_css_selector(self.EXPORT_CSV_LOADING_CSS)
+
+    def wait_for_csv_loading_button_to_be_present(self):
+        self.wait_for_element_present_by_css(self.EXPORT_CSV_LOADING_CSS)
 
     def wait_for_csv_loading_button_to_be_absent(self):
         self.wait_for_element_absent_by_css(self.EXPORT_CSV_LOADING_CSS)

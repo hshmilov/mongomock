@@ -1,88 +1,79 @@
 <template>
   <div class="x-table">
-    <div class="header-container"></div>
-    <div class="table-container">
-      <table class="table">
-        <thead>
-          <tr class="clickable">
-            <th
-              v-if="value"
-              class="w-14"
-            >
-              <div class="data-title">
-                <x-checkbox
-                  :data="allSelected"
-                  :indeterminate="partSelected"
-                  @change="onSelectAll"
-                />
-              </div>
-            </th>
-            <th v-if="expandable">
-              <div class="data-title">&nbsp;</div>
-            </th>
-            <th
-              v-for="{name, title, logo} in dataFields"
-              :key="name"
-              nowrap
-              @click="clickCol(name)"
-              @keyup.enter.stop="clickCol(name)"
-            >{{ title }}
-              <div
-                class="data-title"
-                :class="{sortable: onClickCol}"
-              >
-                <img
-                  v-if="logo"
-                  class="logo md-image"
-                  :src="require(`Logos/adapters/${logo}.png`)"
-                  height="20"
-                  :alt="logo"
-                  :title="logo"
-                >{{ title }}<div
-                  v-if="onClickCol"
-                  :class="`sort ${sortClass(name)}`"
-                />
-              </div>
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          <x-table-row
-            v-for="item in data"
-            :id="item[idField]"
-            :key="item[idField]"
-            :data="item"
-            :fields="dataFields"
-            :sort="sort"
-            :selected="value && value.includes(item[idField])"
-            :expandable="expandable"
-            :clickable="onClickRow !== undefined"
-            :read-only="readOnly.includes(item[idField])"
-            @input="(selected) => onSelect(item[idField], selected)"
-            @click.native="() => clickRow(item[idField])"
+    <table class="table">
+      <thead>
+        <tr class="clickable">
+          <th
+            v-if="value"
+            class="w-14"
           >
-            <slot
-              slot-scope="props"
-              v-bind="props"
+            <x-checkbox
+              :data="allSelected"
+              :indeterminate="partSelected"
+              @change="onSelectAll"
             />
-          </x-table-row>
-          <template v-if="pageSize">
-            <tr
-              v-for="n in pageSize - data.length"
-              :key="n"
-              class="x-table-row"
-            >
-              <td v-if="value">&nbsp;</td>
-              <td v-if="expandable">&nbsp;</td>
-              <td
-                v-for="field in fields"
-                :key="field.name"
-              >&nbsp;</td>
-            </tr>
-          </template>
-        </tbody>
-      </table>
-    </div>
+          </th>
+          <th v-if="expandable">
+            <div>&nbsp;</div>
+          </th>
+          <th
+            v-for="{name, title, logo} in dataFields"
+            :key="name"
+            :class="{sortable: onClickCol}"
+            nowrap
+            @click="clickCol(name)"
+            @keyup.enter.stop="clickCol(name)"
+          >
+            <img
+              v-if="logo"
+              class="logo md-image"
+              :src="require(`Logos/adapters/${logo}.png`)"
+              height="20"
+              :alt="logo"
+              :title="logo"
+            >{{ title }}<div
+              v-if="onClickCol"
+              :class="`sort ${sortClass(name)}`"
+            />
+          </th>
+        </tr>
+      </thead>
+      <tbody>
+        <x-table-row
+          v-for="item in data"
+          :id="item[idField]"
+          :key="item[idField]"
+          :data="item"
+          :fields="dataFields"
+          :sort="sort"
+          :selected="value && value.includes(item[idField])"
+          :expandable="expandable"
+          :clickable="onClickRow !== undefined"
+          :read-only="readOnly.includes(item[idField])"
+          @input="(selected) => onSelect(item[idField], selected)"
+          @click.native="() => clickRow(item[idField])"
+        >
+          <slot
+            slot-scope="props"
+            v-bind="props"
+          />
+        </x-table-row>
+        <template v-if="pageSize">
+          <tr
+            v-for="n in pageSize - data.length"
+            :key="n"
+            class="x-table-row"
+          >
+            <td v-if="value">&nbsp;</td>
+            <td v-if="expandable">&nbsp;</td>
+            <td
+              v-for="field in fields"
+              :key="field.name"
+            >&nbsp;</td>
+          </tr>
+        </template>
+      </tbody>
+    </table>
   </div>
 </template>
 
@@ -202,41 +193,23 @@
   .x-table {
     position: relative;
     height: calc(100% - 48px);
-    padding-top: 30px;
-    overflow: auto;
+    overflow-y: auto;
+    .table {
+      border-collapse: collapse;
 
-    .header-container {
-      height: 30px;
-      position: absolute;
-      top: 0;
-      right: 0;
-      left: 0;
-    }
-    .table-container {
-      height: 100%;
-      width: max-content;
-      min-width: 100%;
-      border-top: 2px dashed $grey-2;
-      overflow: hidden auto;
-      .table {
-        background: $theme-white;
-        border-collapse: collapse;
-
-        thead {
+      thead {
+        tr {
           th {
-            color: transparent;
-            height: 0;
-            line-height: 0;
-
-            .data-title {
-              position: absolute;
-              color: $theme-black;
-              top: 0;
-              line-height: 28px;
-              &.sortable {
-                cursor: pointer;
-              }
-            }
+            position: sticky;
+            top: 0;
+            background: $theme-white;
+            line-height: 28px;
+            color: $theme-black;
+            z-index: 10;
+            box-shadow: 8px 0 4px 0 $grey-2;
+          }
+          &.sortable {
+            cursor: pointer;
           }
         }
       }
