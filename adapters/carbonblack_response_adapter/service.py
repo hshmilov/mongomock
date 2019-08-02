@@ -18,11 +18,14 @@ logger = logging.getLogger(f'axonius.{__name__}')
 
 class CarbonblackResponseAdapter(AdapterBase):
 
+    # pylint: disable=too-many-instance-attributes
     class MyDeviceAdapter(DeviceAdapter):
         build_version_string = Field(str, 'Sensor Version')
         sensor_health_message = Field(str, 'Sensor Health Message')
         is_isolating = Field(bool, 'Is Isolating')
+        network_isolation_enabled = Field(bool, 'Network Isolation Enabled')
         sensor_status = Field(str, 'Sensor Status')
+        sensor_id = Field(str, 'Sensor Id')
 
     def __init__(self):
         super().__init__(get_local_config_file(__file__))
@@ -131,6 +134,7 @@ class CarbonblackResponseAdapter(AdapterBase):
                 logger.warning(f'Bad device id {device_raw}')
                 return None
             device.id = str(device_id) + '_' + (device_raw.get('computer_name') or '')
+            device.sensor_id = device_id
             device.sensor_health_message = device_raw.get('sensor_health_message')
             device.build_version_string = device_raw.get('build_version_string')
             device.sensor_status = device_raw.get('status')
@@ -157,6 +161,7 @@ class CarbonblackResponseAdapter(AdapterBase):
                 logger.exception('Problem getting Last seen in CarbonBlackResponse')
             try:
                 device.is_isolating = device_raw.get('is_isolating') or False
+                device.network_isolation_enabled = device_raw.get('network_isolation_enabled') or False
             except Exception:
                 logger.exception(f'Problem parsing isolating {device_raw}')
                 device.is_isolating = False

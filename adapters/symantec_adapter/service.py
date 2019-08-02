@@ -27,7 +27,8 @@ class SymantecAdapter(AdapterBase):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
 
     def _get_client_id(self, client_config):
-        return client_config['domain']
+        return client_config['domain'] + '_' + client_config['username'] + '_' + \
+            (client_config.get('username_domain') or '')
 
     def _test_reachability(self, client_config):
         return RESTConnection.test_reachability(client_config.get('domain'), client_config.get('port'))

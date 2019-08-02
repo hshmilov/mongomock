@@ -17,7 +17,7 @@ def carbonblack_action(action_name, current_result, node_id):
         try:
             for adapter_data in entry['adapters']:
                 if adapter_data['plugin_name'] == ADAPTER_NAME:
-                    device_id = adapter_data['data']['id']
+                    device_id = adapter_data['data']['sensor_id']
                     client_id = adapter_data['client_used']
                     cb_response_dict = dict()
                     cb_response_dict['device_id'] = device_id

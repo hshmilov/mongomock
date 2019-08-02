@@ -51,7 +51,8 @@ class ZendeskTicketAction(ActionTypeAlert):
                 {
                     'name': 'ticket_body',
                     'title': 'Ticket Body',
-                    'type': 'string'
+                    'type': 'string',
+                    'format': 'text'
                 },
                 {
                     'name': 'description_default',
@@ -61,7 +62,8 @@ class ZendeskTicketAction(ActionTypeAlert):
                 {
                     'name': 'priority',
                     'title': 'Priority',
-                    'type': 'string'
+                    'type': 'string',
+                    'enum': ['low', 'normal', 'high', 'urgent']
                 }
             ],
             'required': [
@@ -70,6 +72,7 @@ class ZendeskTicketAction(ActionTypeAlert):
                 'verify_ssl',
                 'password',
                 'username',
+                'priority',
                 'domain',
                 'description_default'
             ],
@@ -87,7 +90,7 @@ class ZendeskTicketAction(ActionTypeAlert):
             'https_proxy': None,
             'ticket_subject': None,
             'ticket_body': None,
-            'priority': None
+            'priority': 'normal',
         }
 
     def _run(self) -> AlertActionResult:

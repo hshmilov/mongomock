@@ -12,7 +12,8 @@ class TestSymantecAdapter(AdapterTestBase):
 
     @property
     def some_client_id(self):
-        return client_details['domain']
+        return client_details['domain'] + '_' + client_details['username'] + '_' +\
+            (client_details.get('username_domain') or '')
 
     @property
     def some_client_details(self):

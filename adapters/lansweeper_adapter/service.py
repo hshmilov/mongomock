@@ -71,6 +71,18 @@ class LansweeperAdapter(AdapterBase, Configurable):
         client_data.set_devices_paging(self.__devices_fetched_at_a_time)
         with client_data:
 
+            users_groups_dict = dict()
+            try:
+                for users_groups_data in client_data.query(consts.USERS_GROUPS_QUERY):
+                    asset_id = users_groups_data.get('AssetID')
+                    if not asset_id:
+                        continue
+                    if asset_id not in users_groups_dict:
+                        users_groups_dict[asset_id] = []
+                    users_groups_dict[asset_id].append(users_groups_data)
+            except Exception:
+                logger.exception(f'Problem getting users groups')
+
             asset_processes_dict = dict()
             try:
                 for asset_processes_data in client_data.query(consts.PROCESSES_QUERY):
@@ -172,7 +184,7 @@ class LansweeperAdapter(AdapterBase, Configurable):
                        hotfix_id_to_hotfix_data_dict,
                        asset_reg_dict, bios_data_dict,
                        asset_autoruns_dict, autoruns_id_to_autoruns_data_dict, autoruns_id_to_autoruns_loc_dict,
-                       asset_processes_dict)
+                       asset_processes_dict, users_groups_dict)
 
     @staticmethod
     def _clients_schema():
@@ -218,7 +230,8 @@ class LansweeperAdapter(AdapterBase, Configurable):
                 asset_autoruns_dict,
                 autoruns_id_to_autoruns_data_dict,
                 autoruns_id_to_autoruns_loc_dict,
-                asset_processes_dict
+                asset_processes_dict,
+                users_groups_dict
         ) in devices_raw_data:
             try:
                 device = self._new_device_adapter()
@@ -234,6 +247,21 @@ class LansweeperAdapter(AdapterBase, Configurable):
                         device.bios_version = bios_data.get('Version')
                 except Exception:
                     logger.exception(f'Problem parsing bios data for {device_raw}')
+                try:
+                    users_groups_data = users_groups_dict.get(device_raw.get('AssetID'))
+                    if not isinstance(users_groups_data, list):
+                        users_groups_data = []
+                    for user_groups_data in users_groups_data:
+                        try:
+                            if user_groups_data and user_groups_data.get('Admingroup') is True:
+                                admin_name = (user_groups_data.get('Username') or '') +\
+                                    '@' + (user_groups_data.get('Domainname') or '')
+                                device.add_local_admin(admin_type='Admin User',
+                                                       admin_name=admin_name)
+                        except Exception:
+                            logger.exception(f'Problem with users groups data {user_groups_data}')
+                except Exception:
+                    logger.exception(f'Problem with users groups for {device_raw}')
                 try:
                     asset_processes_list = asset_processes_dict.get(device_raw.get('AssetID'))
                     if isinstance(asset_processes_list, list):

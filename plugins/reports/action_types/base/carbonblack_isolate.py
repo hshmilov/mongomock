@@ -32,6 +32,6 @@ class CarbonblackIsolateAction(ActionTypeBase):
         return carbonblack_action('isolate_device', self._get_entities_from_view({
             'internal_axon_id': 1,
             'adapters.client_used': 1,
-            'adapters.data.id': 1,
+            'adapters.data.sensor_id': 1,
             'adapters.plugin_name': 1
         }), self.action_node_id)

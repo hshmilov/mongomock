@@ -29,7 +29,8 @@ class SlackSendMessageAction(ActionTypeAlert):
                 {
                     'name': 'incident_description',
                     'title': 'Incident Description',
-                    'type': 'string'
+                    'type': 'string',
+                    'format': 'text'
                 },
             ],
             'required': [

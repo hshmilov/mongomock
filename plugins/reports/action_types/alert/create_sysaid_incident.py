@@ -20,7 +20,8 @@ class SysaidIncidentAction(ActionTypeAlert):
                 {
                     'name': 'incident_description',
                     'title': 'Incident Description',
-                    'type': 'string'
+                    'type': 'string',
+                    'format': 'text'
                 },
                 {
                     'name': 'description_default',

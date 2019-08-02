@@ -24,6 +24,7 @@ class CarbonblackResponseConnection(RESTConnection):
     def update_isolate_status(self, device_id, do_isolate):
         device_json = self._get(f'v1/sensor/{device_id}')
         device_json['is_isolating'] = do_isolate
+        device_json['network_isolation_enabled'] = do_isolate
         self._put(f'v1/sensor/{device_id}', body_params=device_json, use_json_in_response=False)
         number_of_sleeps = 0
         while device_json.get('is_isolating') != do_isolate and number_of_sleeps < consts.MAX_NUMBER_OF_SLEEPS:

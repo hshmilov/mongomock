@@ -1,3 +1,4 @@
+import re
 import ipaddress
 import logging
 
@@ -68,6 +69,9 @@ class PaloaltoPanoramaAdapter(AdapterBase):
             message = 'Error connecting to client with domain {0}, reason: {1}'.format(
                 client_config['domain'], str(e))
             logger.exception(message)
+            all_str = re.findall('<msg>(.*)</msg>', message)
+            if all_str:
+                message = all_str[0]
             raise ClientConnectionException(message)
 
     @staticmethod

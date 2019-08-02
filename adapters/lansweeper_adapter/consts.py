@@ -17,6 +17,7 @@ QUERY_AUTORUNS = 'Select * from tblAutorun'
 QUERY_AUTORUNS_2 = 'Select * from tblAutorunLoc'
 QUERY_AUTORUNS_3 = 'Select * from tblAutorunUni'
 PROCESSES_QUERY = 'Select * from tblProcesses'
+USERS_GROUPS_QUERY = 'Select * from tblUsersInGroup'
 LANSWEEPER_TYPE_DICT = {'-1': 'Windows',
                         '0': 'Unknown',
                         '1': 'Network device',
