@@ -99,6 +99,7 @@
                 border-collapse: separate;
                 border-spacing: 0 8px;
                 font-size: 14px;
+                overflow: hidden;
 
                 .table-row {
                     .row-data {
@@ -143,14 +144,20 @@
                     }
                 }
 
-                thead .table-row .row-data:nth-child(2) {
-                    border-bottom-left-radius: 4px;
-                    border-top-left-radius: 4px;
+                thead {
+                    overflow: auto;
+                    .table-row .row-data:nth-child(2) {
+                        border-bottom-left-radius: 4px;
+                        border-top-left-radius: 4px;
+                    }
                 }
 
-                tbody .table-row:hover {
-                    cursor: pointer;
-                    transform: scale(1.02);
+                tbody {
+                    overflow: auto;
+                    .table-row:hover {
+                        cursor: pointer;
+                        transform: scale(1.02);
+                    }
                 }
             }
 

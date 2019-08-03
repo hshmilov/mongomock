@@ -170,8 +170,8 @@ class AdaptersPage(EntitiesPage):
 
     def add_server(self, ad_client, adapter_name=AD_NAME):
         self.switch_to_page()
-        self.wait_for_spinner_to_end()
         self.click_adapter(adapter_name)
+        self.wait_for_table_to_load()
         self.wait_for_spinner_to_end()
         self.click_new_server()
 
