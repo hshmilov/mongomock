@@ -6,6 +6,7 @@ export const pluginMeta = {
     },
     cisco_firepower_management_center_adapter: {
         title: 'Cisco Firepower Management Center',
+        link: 'https://docs.axonius.com/docs/cisco-firepower-management-center',
         description: 'Cisco Firepower Management Center provides management over firewalls, application control, intrusion prevention, URL filtering, and advanced malware protection.'
     },
     maas360_adapter: {
@@ -334,7 +335,7 @@ export const pluginMeta = {
     },
     dropbox_adapter: {
         title: 'Dropbox',
-        link: '',
+        link: 'https://docs.axonius.com/docs/dropbox',
         description: 'Dropbox is a file hosting service that offers cloud storage, file synchronization, personal cloud, and client software.'
     },
     azure_ad_adapter: {

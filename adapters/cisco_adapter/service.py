@@ -54,7 +54,7 @@ class CiscoAdapter(AdapterBase):
                 },
                 {
                     'name': 'protocol',
-                    'title': 'Protocol to use',
+                    'title': 'Protocol',
                     'type': 'string',
                     'enum': list(PROTOCOLS.keys()),
                     'default': 'snmp',
@@ -63,52 +63,52 @@ class CiscoAdapter(AdapterBase):
                     'name': 'username',
                     'title': 'User Name',
                     'type': 'string',
-                    'description': 'Console username for telnet/ssh'
+                    'description': 'Console user name for Telnet/SSH'
                 },
                 {
                     'name': 'password',
                     'title': 'Password',
                     'type': 'string',
                     'format': 'password',
-                    'description': 'Console password for telnet/ssh'
+                    'description': 'Console password for Telnet/SSH'
                 },
                 {
                     'name': 'community',
-                    'title': 'Snmp read community',
+                    'title': 'SNMP Read Community',
                     'type': 'string',
                     'format': 'password',
                 },
                 {
                     'name': 'auth_passphrase',
-                    'title': 'Snmp V3 auth passphrase',
+                    'title': 'SNMPv3 Authentication Passphrase (authKey)',
                     'type': 'string',
                     'format': 'password',
                 },
                 {
                     'name': 'priv_passphrase',
-                    'title': 'Snmp V3 priv passphrase',
+                    'title': 'SNMPv3 Private Passphrase (privKey)',
                     'type': 'string',
                     'format': 'password',
                 },
                 {
                     'name': 'auth_protocol',
-                    'title': 'Snmp V3 auth protocol',
+                    'title': 'SNMPv3 Authentication Type (authProtocol)',
                     'type': 'string',
                     'enum': list(constants.AUTH_PROTOCOLS._fields),
                     'default': 'hmac_md5'
                 },
                 {
                     'name': 'priv_protocol',
-                    'title': 'Snmp V3 priv protocol',
+                    'title': 'SNMPv3 Privacy Type (privProtocol)',
                     'type': 'string',
                     'enum': list(constants.PRIV_PROTOCOLS._fields),
                     'default': 'aescfb128',
                 },
                 {
                     'name': 'port',
-                    'title': 'Protocol port',
+                    'title': 'Protocol Port',
                     'type': 'integer',
-                    'description': 'Protocol Port (Default: standart port)'
+                    'description': 'Protocol Port (Default: standard port)'
                 },
                 {
                     'name': 'description',
