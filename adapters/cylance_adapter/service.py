@@ -9,7 +9,7 @@ from axonius.devices.device_adapter import DeviceAdapter
 from axonius.fields import Field, ListField
 from axonius.utils.datetime import parse_date
 from axonius.utils.files import get_local_config_file
-from axonius.utils.parsing import DEFAULT_MAC_EXTENSIONS, is_hostname_valid
+from axonius.utils.parsing import is_hostname_valid
 from cylance_adapter.connection import CylanceConnection
 
 logger = logging.getLogger(f'axonius.{__name__}')
@@ -140,12 +140,15 @@ class CylanceAdapter(AdapterBase):
                 device_os = device.os
                 if device_os:
                     if device_os.type == 'OS X':
-                        if str(hostname).lower().endswith('.local'):
-                            hostname = str(hostname)[:-len('.local')]
-                        for default_name in DEFAULT_MAC_EXTENSIONS:
-                            if str(hostname).upper().startswith(default_name):
-                                hostname = device_raw.get('name') or ''
-                                break
+                        try:
+                            host_no_spaces_list = device_raw.get('name').replace(' ', '-').split('-')
+                            host_no_spaces_list[0] = ''.join(char for char in host_no_spaces_list[0] if char.isalnum())
+                            if len(host_no_spaces_list) > 1:
+                                host_no_spaces_list[1] = ''.join(
+                                    char for char in host_no_spaces_list[1] if char.isalnum())
+                            hostname = '-'.join(host_no_spaces_list).split('.')[0]
+                        except Exception:
+                            logger.exception(f'Problem with OS X hostname logic for {device_raw}')
             except Exception:
                 logger.debug(f'Problem in MAX OS hostname parsing for {device_raw}')
             if len(hostname) > 0:

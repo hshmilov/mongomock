@@ -125,6 +125,7 @@ class SymantecAdapter(AdapterBase):
         for device_raw in devices_raw_data:
             try:
                 device = self._new_device_adapter()
+
                 domain_strip_upper = str(device_raw.get('domainOrWorkgroup', '')).strip().upper()
                 computer_name = device_raw.get('computerName') or ''
                 if not any(elem in computer_name for elem in [' ', '.']) or \
@@ -145,6 +146,8 @@ class SymantecAdapter(AdapterBase):
                         host_no_spaces_list[1] = ''.join(char for char in host_no_spaces_list[1] if char.isalnum())
                     hostname = '-'.join(host_no_spaces_list).split('.')[0]
                     device.hostname = hostname
+                if is_domain_valid(device_raw.get('domainOrWorkgroup')):
+                    device.domain = device_raw.get('domainOrWorkgroup')
                 device.figure_os(' '.join([device_raw.get('operatingSystem', ''),
                                            str(device_raw.get('osbitness', '')),
                                            str(device_raw.get('osversion', '')),

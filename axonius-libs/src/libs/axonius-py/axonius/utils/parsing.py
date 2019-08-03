@@ -668,8 +668,13 @@ def is_lansweerp_dapter(adapter_device):
     return adapter_device.get('plugin_name') == 'lansweeper_adapter'
 
 
+def is_alertlogic_adapter(adapter_device):
+    return adapter_device.get('plugin_name') == 'alertlogic_adapter'
+
+
 def is_dangerous_asset_names_adapter(adapter_device):
-    return is_snow_adapter(adapter_device) or is_lansweerp_dapter(adapter_device)
+    return is_snow_adapter(adapter_device) or is_lansweerp_dapter(adapter_device) \
+        or is_alertlogic_adapter(adapter_device)
 
 
 def hostname_not_problematic(adapter_device):

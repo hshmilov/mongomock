@@ -168,13 +168,14 @@ class CiscoMerakiAdapter(AdapterBase):
             device.associated_user = client_raw.get('user')
             device.device_type = CLIENT_TYPE
             mac_address = client_raw.get('mac')
-            hostname = client_raw.get('mdnsName') or client_raw.get('dhcpHostname')
-            if str(hostname).lower().endswith('.local'):
-                hostname = str(hostname)[:-len('.local')]
-            device.hostname = hostname
+            hostname = client_raw.get('dhcpHostname') or client_raw.get('mdnsName')
             if client_raw.get('mdnsName') and client_raw.get('dhcpHostname') and \
                     client_raw.get('mdnsName')[:5] == client_raw.get('dhcpHostname')[:5]:
                 device.name = client_raw.get('dhcpHostname')
+                hostname = client_raw.get('mdnsName')
+            if str(hostname).lower().endswith('.local'):
+                hostname = str(hostname)[:-len('.local')]
+            device.hostname = hostname
             try:
                 ip_addresses = list(client_raw.get('ip'))
                 if ip_addresses or mac_address:

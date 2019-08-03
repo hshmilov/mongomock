@@ -139,13 +139,22 @@ class CarbonblackResponseAdapter(AdapterBase):
             device.build_version_string = device_raw.get('build_version_string')
             device.sensor_status = device_raw.get('status')
             hostname = device_raw.get('computer_dns_name') or device_raw.get('computer_name')
-            device.hostname = hostname
+            if device_raw.get('computer_dns_name') and device_raw.get('computer_name'):
+                try:
+                    device_name = device_raw.get('computer_name')
+                    device.name = device_name
+                    host_no_spaces_list = device.name.replace(' ', '-').split('-')
+                    host_no_spaces_list[0] = ''.join(char for char in host_no_spaces_list[0] if char.isalnum())
+                    if len(host_no_spaces_list) > 1:
+                        host_no_spaces_list[1] = ''.join(char for char in host_no_spaces_list[1] if char.isalnum())
+                    hostname = '-'.join(host_no_spaces_list).split('.')[0]
+                except Exception:
+                    logger.exception(f'Problem with hostname logic for {device_raw}')
             if '.' in hostname:
                 domain = '.'.join(hostname.split('.')[1:])
                 if is_domain_valid(domain):
                     device.domain = domain
-            if device_raw.get('computer_dns_name') and device_raw.get('computer_name'):
-                device.name = device_raw.get('computer_name')
+            device.hostname = hostname
             device.figure_os(device_raw.get('os_environment_display_string', ''))
             try:
                 if device_raw.get('network_adapters'):
