@@ -59,6 +59,12 @@ NORMALIZED_IPS = 'normalized_ips'
 NORMALIZED_MACS = 'normalized_macs'
 ALLOWED_VAR_CHARACTERS = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_'
 
+# Constants for parsing and formatting software versions in order to compare
+# them in the query wizard
+N_CHAR_EXTENSION = 8
+DEFAULT_VERSION_EXTENSION = '00000000'
+DEFAULT_LINUX_VERSION_EPOCH = '0'
+
 # This number stands for the default number of days needed for us to say a device is old,
 # first use if for correlation at is_old_device
 DEFAULT_NUMBER_OF_DAYS_FOR_OLD_DEVICE = 7
@@ -503,6 +509,81 @@ def format_ip_raw(value):
         # return Decimal128(ctx.create_decimal(str(address._ip)))
     except Exception:
         raise ValueError(f'Invalid raw IP address: {value}')
+
+
+def parse_versions_raw(version):
+    """
+    Gets a software version number and formats it so it can be compared in
+    the query wizard
+    :param version:
+    :return:
+    """
+    try:
+        version = version.strip()
+        # Even if the version is not linux software, the input is formatted as if it were
+        # (meaning it has a leading 0) because it may or may not be comparing linux
+        # software versions, so all versions need to have the same alignment (meaning they
+        # start with a leading 0)
+        extended_version = DEFAULT_LINUX_VERSION_EPOCH
+
+        # Check for linux software since it has different, inconsistent format
+        if any(word in version for word in ['ubuntu', 'dsfg', 'dsf', 'build', '-', '~', '+', ':']):
+            extended_version = parse_linux_software_versions_raw(version)
+            return extended_version
+
+        split_on_dot = version.split('.')
+
+        for field in split_on_dot:
+            try:
+                if not str.isdigit(field):
+                    return ''
+                # If the existing version is longer than the n characters each field is allotted, trim it
+                if len(field) > N_CHAR_EXTENSION:
+                    field = field[:N_CHAR_EXTENSION]
+                extended_version += extend_to_n_digits(field, N_CHAR_EXTENSION)
+            except Exception:
+                logger.exception(f'Problem parsing version {version}')
+                return ''
+
+        return extended_version
+
+    except Exception:
+        logger.exception(f'Could not parse software version {version}')
+        return ''
+
+
+def extend_to_n_digits(value, n_chars_to_extend):
+    try:
+        extended_value = ''.join(['0' for i in range(n_chars_to_extend - len(value))])
+        extended_value += value
+        return extended_value
+    except Exception:
+        logger.exception(f'Problem extending version field {value}')
+        return ''
+
+
+def parse_linux_software_versions_raw(version):
+    """
+    Only parses the version for the source (the first version listed), doesn't
+    handle the rest of the version
+    :param version:
+    :return:
+    """
+    try:
+        extended_version = DEFAULT_LINUX_VERSION_EPOCH      # If no explicit epoch, it has an implied 0
+        if ':' in version:
+            extended_version = version.split(':')[0]
+            version = str(version.split(':')[1])
+        to_split = version.replace('~', '-').replace('+', '-').replace('ubuntu', '-')
+        primary_version = to_split.split('-')[0]
+        for field in primary_version.split('.'):
+            if not str.isdigit(field):
+                return ''
+            extended_version += extend_to_n_digits(field, N_CHAR_EXTENSION)
+        return extended_version
+    except Exception:
+        logger.exception(f'Problem parsing linux software version {version}')
+        return ''
 
 
 def parse_unix_timestamp(unix_timestamp):

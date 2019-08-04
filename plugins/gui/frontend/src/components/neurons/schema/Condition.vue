@@ -232,6 +232,44 @@
           return ''
         }
       },
+      extendVersionField (val) {
+        let extended = ''
+        for (var i = 0; i < 8 - val.length; i ++) {
+          extended = '0' + extended
+        }
+        extended = extended + val
+        return extended
+      },
+      convertVersionToRaw (version) {
+        try {
+          let converted = '0'
+          if (version.includes(':')) {
+            if (version.includes('.') && version.indexOf(':') > version.indexOf('.')) {
+              return ''
+            }
+            let epoch_split = version.split(':')
+            converted = epoch_split[0]
+            version = epoch_split[1]
+          }
+          let split_version = [version]
+          if (version.includes('.')) {
+            split_version = version.split('.')
+          }
+          for (var i = 0; i < split_version.length; i ++) {
+            if (isNaN(split_version[i])) {
+              return ''
+            }
+            if (split_version[i].length > 8) {
+              split_version[i] = split_version[i].substring(0,9)
+            }
+            let extended = this.extendVersionField(split_version[i])
+            converted = converted + extended
+          }
+          return converted
+        } catch (err) {
+          return ''
+        }
+      },
       convertSubnetToRaw (val) {
         if (!val.includes('/') || val.indexOf('/') === val.length - 1) {
           return []
@@ -283,6 +321,15 @@
         this.processedValue = rawIps
         return ''
       },
+      formatVersion () {
+        let version = this.condition.value
+        let rawVersion =  this.convertVersionToRaw(version)
+        if (rawVersion.length == 0) {
+          return 'Invalid version format, must be <optional>:<period>.<separated>.<numbers>'
+        }
+        this.processedValue = "'" + rawVersion + "'"
+        return ''
+      },
       formatCondition () {
         this.processedValue = ''
         if (this.fieldSchema.format && this.fieldSchema.format === 'ip') {
@@ -291,6 +338,11 @@
           }
           if (this.condition.compOp === 'notInSubnet') {
             return this.formatNotInSubnet()
+          }
+        }
+        if (this.fieldSchema.format && this.fieldSchema.format === 'version') {
+          if (this.condition.compOp === 'earlier than' || this.condition.compOp === 'later than') {
+            return this.formatVersion()
           }
         }
         if (this.fieldSchema.enum && this.fieldSchema.enum.length && this.condition.value) {

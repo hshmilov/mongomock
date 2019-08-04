@@ -63,6 +63,13 @@ export const compOps = {
         equals,
         exists: exists_str
     },
+    version: {
+        contains,
+        equals,
+        exists: exists_str,
+        'earlier than': '{field}_raw < {val}',
+        'later than': '{field}_raw > {val}'
+    },
     tag: {
         contains,
         equals,

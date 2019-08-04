@@ -210,6 +210,7 @@ class JsonStringFormat(JsonFormat):
     uri = auto()
     image = auto()
     subnet = auto()
+    version = auto()
 
 
 class JsonNumericFormat(JsonFormat):

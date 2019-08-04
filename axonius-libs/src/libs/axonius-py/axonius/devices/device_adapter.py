@@ -20,6 +20,7 @@ from axonius.utils.parsing import (
     get_manufacturer_from_mac,
     normalize_mac,
     replace_large_ints,
+    parse_versions_raw
 )
 
 MAX_SIZE_OF_MONGO_DOCUMENT = (1024**2) * 10
@@ -297,7 +298,7 @@ class DeviceAdapterInstalledSoftware(SmartJsonClass):
     """ A definition for installed security patch on this device"""
 
     name = Field(str, "Software Name")
-    version = Field(str, "Software Version")
+    version = Field(str, "Software Version", json_format=JsonStringFormat.version)
     architecture = Field(
         str, "Software Architecture", enum=["x86", "x64", "MIPS", "Alpha", "PowerPC", "ARM", "ia64", "all", 'i686']
     )
@@ -308,6 +309,7 @@ class DeviceAdapterInstalledSoftware(SmartJsonClass):
     cve_count = Field(str, 'CVE Count')
     sw_license = Field(str, 'License')
     path = Field(str, 'Software Path')
+    version_raw = Field(str)
 
 
 class DeviceAdapterAutorunData(SmartJsonClass):
@@ -911,7 +913,11 @@ class DeviceAdapter(SmartJsonClass):
         if 'architecture' in kwargs and kwargs['architecture'] in arch_translate_dict.keys():
             kwargs['architecture'] = arch_translate_dict[kwargs['architecture']]
 
-        self.installed_software.append(DeviceAdapterInstalledSoftware(**kwargs))
+        if 'version' in kwargs:
+            version_raw = parse_versions_raw(kwargs['version']) or None
+
+        self.installed_software.append(DeviceAdapterInstalledSoftware(
+            version_raw=version_raw, **kwargs))
 
     def add_vulnerable_software(self, cvss=None, **kwargs):
         if cvss:
@@ -922,6 +928,7 @@ class DeviceAdapter(SmartJsonClass):
                 return
         else:
             cvss = None
+
         self.software_cves.append(DeviceAdapterSoftwareCVE(cvss=cvss, **kwargs))
 
     def add_key_value_tag(self, key, value):
