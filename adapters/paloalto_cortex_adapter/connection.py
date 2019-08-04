@@ -41,6 +41,8 @@ class PaloAltoCortexConnection(RESTConnection):
 
             region = response['region']
 
+            logger.info(f'Got access token from {consts.CLOUD_URL}, continuing to contacting palo alto')
+
             # Here should be a process of getting url + credentials
             self.__logging_service = LoggingService(
                 url=f'https://api.{region}.paloaltonetworks.com',
@@ -66,6 +68,7 @@ class PaloAltoCortexConnection(RESTConnection):
         query = self.__logging_service.query(full_query)
         if 'queryId' not in query.json():
             raise ValueError(f'Error in response: {query.json()}')
+        logger.info(f'Successfully connected.')
 
     def close(self):
         self.__logging_service = None
@@ -149,6 +152,50 @@ class PaloAltoCortexConnection(RESTConnection):
 
     # pylint: disable=arguments-differ
     def get_device_list(self, weeks_ago_to_fetch):
+        for device in self.get_traps_devices(weeks_ago_to_fetch):
+            yield device, consts.DeviceType.Traps
+
+        for device in self.get_global_protect_devices(weeks_ago_to_fetch):
+            yield device, consts.DeviceType.GlobalProtect
+
+    def get_global_protect_devices(self, weeks_ago_to_fetch):
+        full_query = {
+            'query': 'SELECT * FROM panw.dpi_hipreport order by time_generated DESC limit 10000000',
+            'startTime': int((datetime.now() - timedelta(weeks=weeks_ago_to_fetch)).timestamp()),
+            'endTime': int(datetime.now().timestamp()),
+            'maxWaitTime': 0  # no logs in initial response
+        }
+
+        query = self.__logging_service.query(full_query)
+        try:
+            query_id = query.json()['queryId']
+        except Exception:
+            raise ValueError(query.content)
+
+        agent_ids = set()
+        try:
+            for record in self.xpoll(
+                    query_id=query_id,
+                    sequence_no=0,
+                    params={'maxWaitTime': consts.MAX_PANCLOUD_POLL_WAIT_TIME}
+            ):
+                try:
+                    for log in record['esResult']['hits']['hits']:
+                        try:
+                            data = log['_source']
+                            if 'machinename' in data and data.get('machinename') not in agent_ids:
+                                yield data
+                                agent_ids.add(data['machinename'])
+                        except Exception:
+                            logger.exception(f'Failed fetching device from log {log}')
+                except Exception:
+                    logger.exception(f'Failed getting results for record {record}')
+                    break
+                self.refresh_access_token()
+        except Exception:
+            logger.exception(f'Exception in xpoll process')
+
+    def get_traps_devices(self, weeks_ago_to_fetch):
         full_query = {
             'query': 'SELECT * FROM tms.analytics order by generatedTime DESC limit 10000000',
             'startTime': int((datetime.now() - timedelta(weeks=weeks_ago_to_fetch)).timestamp()),

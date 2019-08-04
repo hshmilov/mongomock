@@ -9,6 +9,7 @@ from axonius.fields import Field
 from axonius.mixins.configurable import Configurable
 from axonius.utils.datetime import parse_date
 from axonius.utils.files import get_local_config_file
+from paloalto_cortex_adapter import consts
 from paloalto_cortex_adapter.connection import PaloAltoCortexConnection
 from paloalto_cortex_adapter.client_id import get_client_id
 from paloalto_cortex_adapter.consts import CLOUD_URL, DEFAULT_NUMBER_OF_WEEKS_AGO_TO_FETCH
@@ -20,6 +21,7 @@ logger = logging.getLogger(f'axonius.{__name__}')
 class PaloaltoCortexAdapter(AdapterBase, Configurable):
     # pylint: disable=too-many-instance-attributes
     class MyDeviceAdapter(DeviceAdapter):
+        pan_source = Field(str, 'Source', enum=[dt.value for dt in consts.DeviceType])
         agent_id = Field(str, 'Agent ID')
         customer_id = Field(str, 'Customer ID')
         traps_id = Field(str, 'Traps ID')
@@ -98,7 +100,7 @@ class PaloaltoCortexAdapter(AdapterBase, Configurable):
             'type': 'array'
         }
 
-    def _create_device(self, device_raw):
+    def _create_traps_device(self, device_raw):
         try:
             device = self._new_device_adapter()
             device_id = device_raw.get('agentId')
@@ -107,6 +109,7 @@ class PaloaltoCortexAdapter(AdapterBase, Configurable):
                 logger.warning(f'Bad device with no ID {device_raw}')
                 return None
             device.id = device_id + '_' + (endpoint_header.get('deviceName') or '')
+            device.pan_source = consts.DeviceType.Traps.value
             device.agent_id = device_raw.get('agentId')
             device.customer_id = device_raw.get('customerId')
             device.traps_id = device_raw.get('trapsId')
@@ -135,12 +138,55 @@ class PaloaltoCortexAdapter(AdapterBase, Configurable):
             device.set_raw(device_raw)
             return device
         except Exception:
-            logger.exception(f'Problem with fetching Paloalto Cortex Device for {device_raw}')
+            logger.exception(f'Problem with fetching Paloalto Cortex Traps Device for {device_raw}')
+            return None
+
+    def _create_global_protect_device(self, device_raw: dict):
+        try:
+            device = self._new_device_adapter()
+            device.pan_source = consts.DeviceType.GlobalProtect.value
+            machine_name = device_raw.get('machinename')
+            if not machine_name:
+                logger.error(f'Error - no machien name in GlobalProtect agent: {device_raw}')
+                return None
+            device.id = f'global_protect_{machine_name}'
+            device.hostname = machine_name
+            for interface in (device_raw.get('interfaces') or []):
+                try:
+                    mac = interface.get('mac')
+                    ips = []
+                    if interface.get('ip'):
+                        ips.append(interface.get('ip'))
+                    if interface.get('ip6'):
+                        ips.append(interface.get('ip6'))
+
+                    device.add_nic(mac=mac, ips=ips)
+                except Exception:
+                    logger.exception(f'Failed adding interface {str(interface)}')
+            src_user = device_raw.get('srcuser')
+            if src_user:
+                device.last_used_users.append(src_user)
+            device.customer_id = device_raw.get('customer-id')
+            device.figure_os(device_raw.get('os'))
+
+            # NOTICE! 'serial' is not the serial of the device. Its the serial of the firewall!
+            device.set_raw(device_raw)
+            return device
+        except Exception:
+            logger.exception(f'Problem with fetching Paloalto Cortex Global Protect Device for {device_raw}')
             return None
 
     def _parse_raw_data(self, devices_raw_data):
-        for device_raw in devices_raw_data:
-            device = self._create_device(device_raw)
+        for device_raw, device_type in devices_raw_data:
+
+            device = None
+            if device_type == consts.DeviceType.Traps:
+                device = self._create_traps_device(device_raw)
+            elif device_type == consts.DeviceType.GlobalProtect:
+                device = self._create_global_protect_device(device_raw)
+            else:
+                logger.error(f'Error - got unknown device type')
+
             if device:
                 yield device
 
