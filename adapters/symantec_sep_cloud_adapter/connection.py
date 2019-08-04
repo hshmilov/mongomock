@@ -1,3 +1,4 @@
+import datetime
 import logging
 
 from axonius.clients.rest.connection import RESTConnection
@@ -21,10 +22,13 @@ class SymantecSepCloudConnection(RESTConnection):
         self._password = client_secret
         self._permanent_headers['x-epmp-customer-id'] = self._customer_id
         self._permanent_headers['x-epmp-domain-id'] = self._domain_id
+        self._last_refresh = None
+        self._expires_in = None
 
-    def _connect(self):
-        if not self._domain_id or not self._customer_id or not self._username or not self._password:
-            raise RESTException('Missing Critical Parameter')
+    def _refresh_token(self):
+        if self._last_refresh and self._expires_in \
+                and self._last_refresh + datetime.timedelta(seconds=self._expires_in) > datetime.datetime.now():
+            return
         response = self._post('oauth2/tokens',
                               extra_headers={'Content-Type': 'application/x-www-form-urlencoded'},
                               body_params='grant_type=client_credentials',
@@ -34,6 +38,14 @@ class SymantecSepCloudConnection(RESTConnection):
             raise RESTException(f'Bad response: {response}')
         self._token = response['access_token']
         self._session_headers['Authorization'] = f'Bearer {self._token}'
+        self._last_refresh = datetime.datetime.now()
+        self._expires_in = int(response['expires_in'])
+
+    def _connect(self):
+        if not self._domain_id or not self._customer_id or not self._username or not self._password:
+            raise RESTException('Missing Critical Parameter')
+        self._last_refresh = None
+        self._refresh_token()
         self._get('sepcloud/v1/devices',
                   url_params={'limit': DEVICE_PER_PAGE,
                               'offset': 0})
@@ -42,6 +54,7 @@ class SymantecSepCloudConnection(RESTConnection):
         offset = 0
         while offset < MAX_NUMBER_OF_DEVICES:
             try:
+                self._refresh_token()
                 response = self._get('sepcloud/v1/devices',
                                      url_params={'limit': DEVICE_PER_PAGE,
                                                  'offset': offset})

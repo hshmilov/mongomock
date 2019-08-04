@@ -59,6 +59,7 @@ class SccmVm(SmartJsonClass):
 class SccmAdapter(AdapterBase, Configurable):
     class MyDeviceAdapter(DeviceAdapter, ADEntity):
         resource_id = Field(str, 'Resource ID')
+        sccm_server = Field(str, 'SCCM Server')
         top_user = Field(str, 'Top Console User')
         macs_no_ip = ListField(str, 'MAC addresses with No IP')
         sccm_type = Field(str, 'SCCM Computer Type')
@@ -278,13 +279,13 @@ class SccmAdapter(AdapterBase, Configurable):
 
             if not self._last_seen_timedelta:
                 for device_raw in client_data.query(consts.SCCM_QUERY.format('')):
-                    yield device_raw, asset_software_dict, asset_patch_dict, asset_program_dict, \
+                    yield device_raw, client_data.server, asset_software_dict, asset_patch_dict, asset_program_dict, \
                         asset_bios_dict, asset_users_dict, asset_top_dict, asset_malware_dict, \
                         asset_lenovo_dict, asset_chasis_dict, asset_encryption_dict,\
                         asset_vm_dict, owner_dict, tpm_dict
             else:
                 for device_raw in client_data.query(consts.SCCM_QUERY.format(consts.LIMIT_SCCM_QUERY.format(self._last_seen_timedelta.total_seconds() / 3600))):
-                    yield device_raw, asset_software_dict, asset_patch_dict, asset_program_dict, asset_bios_dict, \
+                    yield device_raw, client_data.server, asset_software_dict, asset_patch_dict, asset_program_dict, asset_bios_dict, \
                         asset_users_dict, asset_top_dict, asset_malware_dict, \
                         asset_lenovo_dict, asset_chasis_dict, asset_encryption_dict,\
                         asset_vm_dict, owner_dict, tpm_dict
@@ -307,6 +308,7 @@ class SccmAdapter(AdapterBase, Configurable):
     def _parse_raw_data(self, devices_raw_data):
         for (
             device_raw,
+            sccm_server,
             asset_software_dict,
             asset_patch_dict,
             asset_program_dict,
@@ -332,6 +334,7 @@ class SccmAdapter(AdapterBase, Configurable):
                         continue
                 device = self._new_device_adapter()
                 device.id = device_id
+                device.sccm_server = sccm_server
                 try:
                     users_raw = asset_users_dict.get(device_raw.get('ResourceID'))
                     if users_raw and isinstance(users_raw, list):

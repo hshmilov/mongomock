@@ -1,4 +1,8 @@
 export const pluginMeta = {
+    druva_adapter: {
+        title: 'Druva Cloud Platform',
+        description: 'Druva Cloud Platform is a data protection as-a-service that provides data visibility and control across organizations’ entire data footprint.'
+    },
     symantec_sep_cloud_adapter: {
         title: 'Symantec Endpoint Protection Cloud',
         link: 'https://docs.axonius.com/docs/symantec-endpoint-protection-cloud',

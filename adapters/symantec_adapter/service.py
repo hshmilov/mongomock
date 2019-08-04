@@ -17,7 +17,9 @@ logger = logging.getLogger(f'axonius.{__name__}')
 
 class SymantecAdapter(AdapterBase):
 
+    # pylint: disable=too-many-instance-attributes
     class MyDeviceAdapter(DeviceAdapter):
+        client_id = Field(str, 'SEP Server Details')
         online_status = Field(str, 'Online Status')
         agent_version = Field(str, 'Agent Version')
         cids_defset_version = Field(str, 'Definition Set Version')
@@ -45,11 +47,12 @@ class SymantecAdapter(AdapterBase):
                                             headers={'Content-Type': 'application/json'})
             with connection:
                 pass  # check that the connection credentials are valid
-            return connection
+            return connection, self._get_client_id(client_config)
         except RESTException as e:
             message = 'Error connecting to client with address {0} and port {1}, reason: {2}'.format(
                 client_config['domain'], str(client_config.get('port', consts.DEFAULT_SYMANTEC_PORT)), str(e))
             logger.exception(message)
+            message = message[:300]
             raise ClientConnectionException(message)
 
     def _query_devices_by_client(self, client_name, client_data):
@@ -61,8 +64,10 @@ class SymantecAdapter(AdapterBase):
 
         :return: A json with all the attributes returned from the Symantec Server
         """
-        with client_data:
-            yield from client_data.get_device_list()
+        connection, client_id = client_data
+        with connection:
+            for device_raw in connection.get_device_list():
+                yield device_raw, client_id
 
     def _clients_schema(self):
         """
@@ -122,10 +127,10 @@ class SymantecAdapter(AdapterBase):
 
     # pylint: disable=too-many-branches, too-many-statements, too-many-nested-blocks
     def _parse_raw_data(self, devices_raw_data):
-        for device_raw in devices_raw_data:
+        for device_raw, client_id in devices_raw_data:
             try:
                 device = self._new_device_adapter()
-
+                device.client_id = client_id
                 domain_strip_upper = str(device_raw.get('domainOrWorkgroup', '')).strip().upper()
                 computer_name = device_raw.get('computerName') or ''
                 if not any(elem in computer_name for elem in [' ', '.']) or \

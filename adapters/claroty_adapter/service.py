@@ -14,13 +14,18 @@ logger = logging.getLogger(f'axonius.{__name__}')
 
 
 class ClarotyAdapter(AdapterBase):
-
+    # pylint: disable=too-many-instance-attributes
     class MyDeviceAdapter(DeviceAdapter):
         asset_type = Field(str, 'Asset Type')
         vendor = Field(str, 'Vendor')
         criticality = Field(str, 'Criticality')
         site_name = Field(str, 'Site Name')
         ghost = Field(bool, 'Ghost')
+        firmware_version = Field(str, 'Firmware Version')
+        subnet_tag = Field(str, 'Subnet Tag')
+        vlans = Field(str, 'Vlans')
+        virtual_zone = Field(str, 'Virtual Zone')
+        risk_level = Field(int, 'Risk Level')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -101,6 +106,7 @@ class ClarotyAdapter(AdapterBase):
             'type': 'array'
         }
 
+    # pylint: disable=too-many-branches, too-many-statements, too-many-locals, too-many-nested-blocks
     def _parse_raw_data(self, devices_raw_data):
         for device_raw in devices_raw_data:
             try:
@@ -136,12 +142,30 @@ class ClarotyAdapter(AdapterBase):
                     device.figure_os(device_raw.get('os'))
                 except Exception:
                     logger.exception(f'Problem getting os for {device_raw}')
-                device.asset_type = device_raw.get('asset_type__')
+                asset_type = device_raw.get('asset_type__')
+                if isinstance(asset_type, str) and len(asset_type) > 1 and asset_type.startswith('e'):
+                    asset_type = asset_type[1:]
+                device.asset_type = asset_type
                 device.vendor = device_raw.get('vendor')
                 device.site_name = device_raw.get('site_name')
-                device.criticality = device_raw.get('criticality__')
+                device.device_serial = device_raw.get('serial_number')
+                device.device_model = device_raw.get('model')
+                device.firmware_version = device_raw.get('firmware')
+                device.virtual_zone = device_raw.get('virtual_zone_name')
+                criticality = device_raw.get('criticality__')
+                if isinstance(criticality, str) and len(criticality) > 1 and criticality.startswith('e'):
+                    criticality = criticality[1:]
+                device.criticality = criticality
+                device.subnet_tag = device_raw.get('subnet_tag')
+                try:
+                    if isinstance(device_raw.get('vlan'), list):
+                        device.vlans = device_raw.get('vlan')
+                except Exception:
+                    logger.exception(f'Problem with VLAN for {device_raw}')
                 if isinstance(device_raw.get('ghost'), bool):
                     device.ghost = device_raw.get('ghost')
+                if isinstance(device_raw.get('risk_level'), int):
+                    device.risk_level = device_raw.get('risk_level')
                 device.set_raw(device_raw)
                 yield device
             except Exception:

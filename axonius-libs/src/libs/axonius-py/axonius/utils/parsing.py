@@ -778,7 +778,8 @@ def is_only_host_adapter(adapter_device):
                                               'code42_adapter',
                                               'sysaid_adapter',
                                               'logrhythm_adapter',
-                                              'symantec_ee_adapter']):
+                                              'symantec_ee_adapter',
+                                              'druva_adapter']):
         return True
     return False
 
