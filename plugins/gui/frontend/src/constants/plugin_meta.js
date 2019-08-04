@@ -170,12 +170,12 @@ export const pluginMeta = {
     },
     redcloack_adapter: {
         title: 'Secureworks Red Cloak',
-        link: '',
+        link: 'https://docs.axonius.com/docs/secureworks-red-cloak',
         description: 'Secureworks Red Cloak is an Endpoint Detection and Response technology that continuously monitors endpoints for signs of adversary activity.'
     },
     dynatrace_adapter: {
         title: 'Dynatrace',
-        link: '',
+        link: 'https://docs.axonius.com/docs/dynatrace',
         description: 'Dynatrace is a software intelligence platform providing application performance management and cloud infrastructure monitoring.'
     },
     code42_adapter: {
@@ -210,7 +210,7 @@ export const pluginMeta = {
     },
     riverbed_adapter: {
         title: 'Riverbed SteelCentral Controller (SCC) - BETA',
-        link: '',
+        link: 'https://docs.axonius.com/docs/riverbed-steelcentral-controller-scc',
         description: 'Riverbed SteelCentral Controller SCC facilitates administration tasks for groups of SteelHeads, Interceptors, Mobile Controller, Cores, and Edges.'
     },
     checkpoint_r80_adapter: {
@@ -295,7 +295,7 @@ export const pluginMeta = {
     },
     malwarebytes_adapter: {
         title: 'Malwarebytes - BETA',
-        link: '',
+        link: 'https://docs.axonius.com/docs/malwarebytes',
         description: 'Malwarebytes protects endpoints from ransomware, automates endpoint remediation, and provides continuous visibility and monitoring.'
     },
     cybereason_adapter: {
@@ -315,7 +315,7 @@ export const pluginMeta = {
     },
     clearpass_adapter: {
         title: 'Aruba ClearPass',
-        link: '',
+        link: 'https://docs.axonius.com/docs/aruba-clearpass',
         description: 'Aruba ClearPass is a network access control (NAC) solution that allows enterprises to identify devices, enforce policies, and remediate threats.'
     },
     ibm_tivoli_taddm_adapter: {
@@ -540,7 +540,7 @@ export const pluginMeta = {
     },
     eset_adapter: {
         title: 'ESET Endpoint Security',
-        link: '',
+        link: 'https://docs.axonius.com/docs/eset-endpoint-security',
         description: 'ESET Endpoint Security is an anti-malware suite for Windows including web filtering, firewall, USB drive and botnet protection.'
     },
     traiana_lab_machines_adapter: {
@@ -595,8 +595,8 @@ export const pluginMeta = {
     },
     junos_adapter: {
         title: 'Juniper Junos',
-        link: 'https://docs.axonius.com/docs/juniper-junos-space-network-management-platform',
-        description: 'The Juniper Junos Adapter connects to Juniper switches and routers.'
+        link: 'https://docs.axonius.com/docs/juniper-junos',
+        description: 'Juniper Junos connects to Juniper switches and routers.'
     },
     bitdefender_adapter: {
         title: 'Bitdefender GravityZone Business Security',
