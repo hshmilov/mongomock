@@ -6,6 +6,7 @@ class SystemMetric:
     USERS_UNIQUE = 'system.users.unique'
     ENFORCEMENT_RAW = 'system.alert.raw'
     TIMED_ENDPOINT = 'timed_endpoint'
+    NETIFACES_COUNT = 'netifaces.count'
 
 
 class ApiMetric:

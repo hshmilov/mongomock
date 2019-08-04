@@ -4,6 +4,7 @@ import logging
 import json_log_formatter
 
 from axonius.consts.system_consts import LOGS_PATH_HOST
+from axonius.logging.metric_helper import log_metric
 
 WATCHDOG_LOGS_DIR = LOGS_PATH_HOST / 'watchdogs'
 
@@ -33,6 +34,9 @@ class WatchdogTask:
 
     def report_error(self, msg):
         self.logger.error(msg)
+
+    def report_metric(self, metric_name, metric_value, **kwargs):
+        log_metric(self.logger, metric_name=metric_name, metric_value=metric_value, **kwargs)
 
     def start(self):
         daemon = daemonocle.Daemon(worker=self.run, pidfile=self.pidfile)
