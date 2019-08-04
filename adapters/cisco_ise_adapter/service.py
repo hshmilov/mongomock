@@ -32,8 +32,7 @@ class CiscoIseAdapter(AdapterBase):
     @staticmethod
     def _test_reachability(client_config):
         fields = CLIENT_CONFIG_FIELDS
-        return CiscoIseConnection.test_reachability(domain=client_config.get(fields.domain),
-                                                    verify_ssl=client_config.get(fields.verify_ssl) or False)
+        return CiscoIseConnection.test_reachability(domain=client_config.get(fields.domain))
 
     @staticmethod
     def get_connection(client_config):

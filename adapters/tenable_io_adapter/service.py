@@ -274,8 +274,11 @@ class TenableIoAdapter(ScannerAdapterBase, Configurable):
             except Exception:
                 logger.exception(f'Problem adding tenable source {tenble_source}')
 
-        # This is too much info for our poor raw deivice. It made the collection too big
-        device.set_raw({})
+        try:
+            device.set_raw(device_raw)
+        except exception as e:
+            logger.exception('failed to set raw')
+
         return device
 
     def _parse_raw_data(self, devices_raw_data_all):

@@ -325,9 +325,9 @@ class DeviceAdapterSoftwareCVE(SmartJsonClass):
     software_name = Field(str, "Software Name")
     software_version = Field(str, "Software Version")
     software_vendor = Field(str, "Software Vendor")
-    cpe = ListField(str, "CPE")
+    cvss_version = Field(str, "CVSS Version", enum=['v2.0', 'v3.0'])
     cvss = Field(float, "CVSS")
-    cve_severity = Field(str, "CVE Severity")
+    cve_severity = Field(str, "CVE Severity", enum=["NONE", "LOW", "MEDIUM", "HIGH", "CRITICAL"])
     cve_description = Field(str, "CVE Description")
     cve_synopsis = Field(str, "CVE Synopsis")
     cve_references = ListField(str, "CVE References")
@@ -952,9 +952,9 @@ class DeviceAdapter(SmartJsonClass):
                 protocol = protocol.upper()
             except Exception:
                 logger.exception(f'Error converting protocol {protocol}')
-        if service_name and not isinstance(service_name, str):
+        if service_name and not isinstance(service_name, (str, bytes)):
             return
-        if not any([protocol, port_id, service_name]):
+        if not any([port_id, service_name]):
             logger.debug('Skipping empty port')
             return
         open_port = DeviceOpenPort(protocol=protocol,

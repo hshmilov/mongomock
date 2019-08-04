@@ -146,7 +146,7 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
                 logger.info(f'{len(qid_to_cve_mapping)} QIDs mapped')
                 return qid_to_cve_mapping
         except Exception:
-            logger.info('Problem opening vulnerabilities csv file')
+            logger.exception('Problem opening vulnerabilities csv file')
             return qid_to_cve_mapping
 
     def _parse_raw_data(self, devices_raw_data):
@@ -260,7 +260,7 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
                     try:
                         device.add_open_port(
                             protocol=(port_raw.get('HostAssetOpenPort') or {}).get('protocol'),
-                            port_id=int((port_raw.get('HostAssetOpenPort') or {}).get('port')),
+                            port_id=(port_raw.get('HostAssetOpenPort') or {}).get('port'),
                             service_name=(port_raw.get('HostAssetOpenPort') or {}).get('serviceName')
                         )
                     except Exception:

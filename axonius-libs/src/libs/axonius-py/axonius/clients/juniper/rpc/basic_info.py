@@ -33,7 +33,6 @@ def parse_basic_info(xmls: Tuple[str, List[Tuple[str, str]]]):
             if type_ not in BASIC_INFO_TYPES:
                 logger.error(f'Invalid type {type_}')
                 continue
-
             xml = prepare(xml)
             parse_callback = BASIC_INFO_TYPES[type_]
             raw_data[type_] = parse_callback(xml)
@@ -111,7 +110,11 @@ def parse_interface_list(xml):
         for logical_interface in logical_interfaces:
             result.append(logical_interface)
 
-    return result, Xml2Json(xml).result
+    try:
+        rr = Xml2Json(xml).result
+    except Exception:
+        rr = None
+    return result, rr
 
 
 def parse_hardware(xml):

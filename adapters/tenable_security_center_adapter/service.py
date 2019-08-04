@@ -5,7 +5,7 @@ from datetime import datetime
 from axonius.adapter_base import AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
-from axonius.devices.device_adapter import DeviceAdapter
+from axonius.devices.device_adapter import DeviceAdapter, TenableVulnerability
 from axonius.fields import Field
 from axonius.mixins.configurable import Configurable
 from axonius.plugin_base import add_rule, return_error
@@ -34,6 +34,9 @@ class TenableSecurityCenterAdapter(ScannerAdapterBase, Configurable):
         has_passive = Field(bool, 'Has Passive')
         has_compliance = Field(bool, 'Has Compliance')
         last_scan = Field(datetime, 'Last Scan')
+
+    def add_tenable_vuln(self, **kwargs):
+        self.plugin_and_severities.append(TenableVulnerability(**kwargs))
 
     def __init__(self):
         super().__init__(get_local_config_file(__file__))
@@ -229,6 +232,28 @@ class TenableSecurityCenterAdapter(ScannerAdapterBase, Configurable):
         device.mcafee_guid = raw_device_data.get('mcafeeGUID')
 
         for vulnerability in raw_device_data.get('vulnerabilities') or []:
+            try:
+                plugin_name = vulnerability.get('pluginName')
+                cpe = vulnerability.get('cpe') or None
+                cve = vulnerability.get('cve') or None
+                cvss_base_score = vulnerability.get('baseScore') or None
+                exploit_value = (vulnerability.get('exploitAvailable') or '').lower()
+                exploit_available = None
+                if exploit_value:
+                    exploit_available = exploit_value == 'yes'
+                synopsis = vulnerability.get('synopsis') or None
+                see_also = vulnerability.get('seeAlso') or None
+                severity = (vulnerability.get('severity') or {}).get('name') or None
+                device.add_tenable_vuln(plugin=plugin_name,
+                                        severity=severity,
+                                        cpe=cpe,
+                                        cve=cve,
+                                        cvss_base_score=cvss_base_score,
+                                        exploit_available=exploit_available,
+                                        synopsis=synopsis,
+                                        see_also=see_also)
+            except Exception:
+                logger.exception(f'Problem adding tenable vuln')
             try:
                 if vulnerability.get('cve'):
                     cves_list = list(filter(None, (vulnerability.get('cve') or '').split(',')))

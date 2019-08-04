@@ -1,11 +1,15 @@
 """ utils for juniper xml parsing """
 
 from xml.etree import ElementTree
+import lxml.etree
 
 
+# pylint: disable=protected-access
 def cast_to_xml_if_needed(xml):
     """ cast argument to xml if it is string
         if we got lxml element, convert to xml"""
+    if isinstance(xml, (lxml.etree._Element, lxml.etree._ElementTree)):
+        xml = lxml.etree.tostring(xml, xml_declaration=True)
     if isinstance(xml, (str, bytes)):
         xml = ElementTree.fromstring(xml)
     return xml

@@ -111,8 +111,8 @@ class CiscoIseConnection(RESTConnection):
 
     # pylint: disable=arguments-differ
     @staticmethod
-    def test_reachability(domain, verify_ssl=False):
-        return super().test_reachbility(domain, port=ISE_PORT, path=URL_BASE_PREFIX, ssl=verify_ssl)
+    def test_reachability(domain):
+        return super().test_reachbility(domain, port=ISE_PORT, path=URL_BASE_PREFIX, ssl=True)
 
     # pylint: enable=arguments-differ
 

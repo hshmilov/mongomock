@@ -7,8 +7,7 @@ JUNIPER_NON_UNIQUE_MACS = [
     '00:0B:CA:FE:00:01',
     '20:41:53:59:4E:FF',
     '00:05:9a:3c:7a:00',
-    '02:00:00:00:00:0A',
-    '02:00:00:00:00:0B'
+    '02:00:00:00:00:0*',
 ]
 
 # https://knowledgebase.paloaltonetworks.com/KCSArticleDetail?id=kA10g000000CmAOCA0

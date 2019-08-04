@@ -18,6 +18,7 @@ PROTOCOLS = {
     'ssh': (console.CiscoSshClient, 22),
     'telnet': (console.CiscoTelnetClient, 23),
 }
+DEFAULT_PROTOCOL = 'snmp'
 
 
 class CiscoAdapter(AdapterBase):
@@ -57,7 +58,7 @@ class CiscoAdapter(AdapterBase):
                     'title': 'Protocol',
                     'type': 'string',
                     'enum': list(PROTOCOLS.keys()),
-                    'default': 'snmp',
+                    'default': DEFAULT_PROTOCOL
                 },
                 {
                     'name': 'username',

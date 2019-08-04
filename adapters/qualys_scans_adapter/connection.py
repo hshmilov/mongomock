@@ -1,5 +1,4 @@
 import logging
-import xml.etree.cElementTree as ET
 
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.exception import RESTException
@@ -55,16 +54,7 @@ class QualysScansConnection(RESTConnection):
     def _connect(self):
         if not self._username or not self._password:
             raise RESTException('No username or password')
-        response = self._get(consts.SCANS_URL_PREFIX + 'scan', do_basic_auth=True, use_json_in_response=False,
-                             url_params=[('action', 'list'),
-                                         ('launched_after_datetime',
-                                          '3999-12-31T23:12:00Z')])
-        response_tree = ET.fromstring(response)
-        if response_tree.find('RESPONSE') is None or response_tree.find('RESPONSE').find('DATETIME') is None \
-                or response_tree.find('RESPONSE').find('CODE') is not None:
-            logger.error(f'Failed to connect to qualys scans. got {response}')
-            raise RESTException(f'Got bad XML: {response[:100]}')
-        # XXX: replace with real connect check
+        self._get_device_count()
 
     def _prepare_get_hostassets_request_params(self, start_offset):
         params = {
