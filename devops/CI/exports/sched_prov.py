@@ -66,7 +66,8 @@ def read_proxy_data():
 def is_local_node():
     try:
         # no-venv, can not import request and the url
-        return json.loads(urllib.request.urlopen('http://services.axonius.lan:8080/axonius-local.json').read()
+        # our dns is not good enough: 10.0.2.110 is services.axonius.lan
+        return json.loads(urllib.request.urlopen('http://10.0.2.110:8080/axonius-local.json').read()
                           .decode())['local'] is True
     except Exception:
         return False
