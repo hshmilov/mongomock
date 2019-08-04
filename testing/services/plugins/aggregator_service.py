@@ -51,8 +51,10 @@ class AggregatorService(PluginService, UpdatablePluginMixin):
             self._update_schema_version_11()
         if self.db_schema_version < 12:
             self._update_schema_version_12()
+        if self.db_schema_version < 13:
+            self._update_schema_version_13()
 
-        if self.db_schema_version != 12:
+        if self.db_schema_version != 13:
             print(f'Upgrade failed, db_schema_version is {self.db_schema_version}')
 
     def __create_capped_collections(self):
@@ -663,6 +665,20 @@ class AggregatorService(PluginService, UpdatablePluginMixin):
         except Exception as e:
             print(f'Could not upgrade aggregator db to version 12. Details: {e}')
             traceback.print_exc()
+
+    def _update_schema_version_13(self):
+        print('Upgrade to schema 13 - Convert Symantec Adapter client_id to a new format')
+        try:
+            def new_symantec_client_id(client_config):
+                return client_config['domain'] + '_' + client_config['username'] + '_' + \
+                    (client_config.get('username_domain') or '')
+
+            self._upgrade_adapter_client_id('symantec_adapter', new_symantec_client_id)
+            self.db_schema_version = 13
+        except Exception as e:
+            print(f'Exception while upgrading core db to version 13. Details: {e}')
+            traceback.print_exc()
+            raise
 
     @retry(wait_random_min=2000, wait_random_max=7000, stop_max_delay=60 * 3 * 1000)
     def query_devices(self, adapter_id):

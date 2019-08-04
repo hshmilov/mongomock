@@ -10,6 +10,41 @@ class UpdatablePluginMixin:
     This must be a mixin that also inherits from PluginService
     """
 
+    def _upgrade_adapter_client_id(self, plugin_name: str, new_client_id_func: Callable):
+        """
+        Takes a plugin_name like 'symantec_adapter'. Then, for each plugin_unique_name of this adapter, and
+        for each client in every plugin_unique_name, calls new_client_id_func with 'client_config'. Then sets the
+        return value as the new client id.
+        :return:
+        """
+        all_plugin_instances = list(self.db.client['core']['configs'].find({'plugin_name': plugin_name}))
+        for plugin_instance in all_plugin_instances:
+            if 'plugin_unique_name' not in plugin_instance:
+                print(f'Error - No plugin unique name for document, bypassing: {plugin_instance}')
+                continue
+            plugin_unique_name = plugin_instance['plugin_unique_name']
+            clients_db = self.db.client[plugin_unique_name]['clients']
+            plugin_clients = list(clients_db.find({}))
+
+            print(f'Upgrading {plugin_unique_name} with {len(plugin_clients)} clients..')
+            for client in plugin_clients:
+                if 'client_config' not in client:
+                    print(f'Error - no client config for plugin, bypassing: {client}')
+                    continue
+
+                new_client_id = new_client_id_func(client['client_config'])
+                clients_db.update(
+                    {
+                        'client_id': client['client_id']
+                    },
+                    {
+                        '$set':
+                            {
+                                'client_id': new_client_id
+                            }
+                    }
+                )
+
     @property
     def db_schema_version(self):
         res = self.__version_collection.find_one({'name': 'schema'})
