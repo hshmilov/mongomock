@@ -2,6 +2,7 @@
   "variables": {
     "build_name": "test",
     "password": "bringorder",
+    "host_password": "Password2",
     "branch": "develop",
     "fork": "axonius",
     "image": "Axonius-operational-export-103"
@@ -185,8 +186,8 @@
           "mkdir -p ./output-axonius-{{user `build_name` }}-build/{{user `build_name`}}/updater",
           "mv ./axonius_{{user `build_name`}}.py ./output-axonius-{{user `build_name` }}-build/{{user `build_name`}}/updater/",
           "ovftool ./output-axonius-{{user `build_name` }}-build/*.vmx ./output-axonius-{{user `build_name` }}-build/{{user `build_name`}}/{{user `build_name`}}_export.ova",
-          "echo 'Password2' | sudo -S cp -R ./output-axonius-{{user `build_name` }}-build/{{user `build_name`}} /mnt/smb_share/nopassshare/Releases/",
-          "echo 'Password2' | sudo -S chmod -R 0777 /mnt/smb_share/nopassshare/Releases/{{user `build_name`}}",
+          "echo '{{user `host_password`}}' | sudo -S cp -R ./output-axonius-{{user `build_name` }}-build/{{user `build_name`}} /mnt/smb_share/nopassshare/Releases/",
+          "echo '{{user `host_password`}}' | sudo -S chmod -R 0777 /mnt/smb_share/nopassshare/Releases/{{user `build_name`}}",
           "/home/ubuntu/.local/bin/aws s3 sync ./output-axonius-{{user `build_name` }}-build/{{user `build_name`}}/updater s3://axonius-releases/{{user `build_name`}}/ --acl public-read"
         ]
       },

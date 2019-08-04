@@ -297,8 +297,8 @@ class BuildsManager(object):
             "/usr/local/bin/packer build -force -var build_name={0} -var fork={1} -var branch={2} -var image={3} axonius_generate_installer.json >> build_{0}.log 2>&1".format(
                 version, fork, branch, OVA_IMAGE_NAME),
             "git_hash=$(cat ./axonius_{0}_git_hash.txt)".format(version),
-            "/usr/local/bin/packer build -force -var build_name={0} -var fork={1} -var branch={2} -var image={3} axonius_install_system_and_provision.json >> build_{0}.log 2>&1".format(
-                version, fork, branch, OVA_IMAGE_NAME),
+            "/usr/local/bin/packer build -force -var build_name={0} -var fork={1} -var branch={2} -var image={3} -var host_password={4} axonius_install_system_and_provision.json >> build_{0}.log 2>&1".format(
+                version, fork, branch, OVA_IMAGE_NAME, self.__exports_credentials['password']),
             "return_code=$?",
             "/home/ubuntu/.local/bin/aws s3 cp ./build_{0}.log s3://{1}/".format(
                 version, S3_BUCKET_NAME_FOR_EXPORT_LOGS),
@@ -350,6 +350,8 @@ class BuildsManager(object):
         export = self.db.exports.find_one({'version': export_id})
         ami_id_match = re.search('^us-east-2: (.*)$', log, re.MULTILINE)
         ami_id = ami_id_match.group(1) if ami_id_match else ''
+        gce_name_match = re.search('Creating GCE image (.*)...$', log, re.MULTILINE)
+        gce_name = gce_name_match.group(1) if gce_name_match else ''
         download_link = '<a href="http://{0}.s3-accelerate.amazonaws.com/{1}/{1}/{1}_export.ova">Click here</a>'.format(
             S3_BUCKET_NAME_FOR_OVA,
             export['version']
@@ -363,6 +365,7 @@ class BuildsManager(object):
                         'log': log,
                         'download_link': download_link,
                         'ami_id': ami_id,
+                        'gce_name': gce_name,
                         'git_hash': git_hash
                     }
             }
