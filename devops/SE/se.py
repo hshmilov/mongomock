@@ -1,6 +1,7 @@
 """
 System engineering common tasks.
 """
+import importlib
 import sys
 import os
 import subprocess
@@ -13,12 +14,18 @@ from testing.services.plugins.core_service import CoreService
 from testing.services.plugins.static_correlator_service import StaticCorrelatorService
 from testing.services.plugins.static_users_correlator_service import StaticUsersCorrelatorService
 from testing.services.plugins.static_analysis_service import StaticAnalysisService
+from testing.services.plugin_service import AdapterService
 
 ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
 SERVICES_DIR = os.path.join(ROOT_DIR, 'testing', 'services')
 ADAPTERS_DIR = os.path.join(SERVICES_DIR, 'adapters')
 PLUGINS_DIR = os.path.join(SERVICES_DIR, 'plugins')
 AXONIUS_SH = os.path.join(ROOT_DIR, 'axonius.sh')
+
+
+def _get_docker_service(type_name, name) -> AdapterService:
+    module = importlib.import_module(f'services.{type_name}.{name.lower()}_service')
+    return getattr(module, ' '.join(name.lower().split('_')).title().replace(' ', '') + 'Service')()
 
 
 def usage():
@@ -85,8 +92,18 @@ def main():
         scu.correlate(True)
 
     elif component == 'cd':
-        print('Running clean devices (Blocking)...')
-        ag.clean_db(True)
+        if not action:
+            print('Running clean devices for all adapters(Blocking)...')
+            ag.clean_db(True)
+        else:
+            try:
+                service = _get_docker_service('adapters', action)
+            except Exception:
+                print(f'No such adapter "{action}"!')
+                return -1
+
+            print(f'Running clean devices for {action} (Blocking)...')
+            service.trigger_clean_db()
 
     elif component == 'rr':
         print('Running reports (Blocking)...')
