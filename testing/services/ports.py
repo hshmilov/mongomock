@@ -175,7 +175,8 @@ DOCKER_PORTS = {
     'maas360-adapter':                  9970,
     'cisco-firepower-management-center-adapter': 9971,
     'symantec-sep-cloud-adapter':       9972,
-    'druva-adapter':                    9973,
+    'f5-icontrol-adapter':              9973,
+    'druva-adapter':                    9974,
     'mongo':                            27017,
     'mockingbird-db':                   28017
 }

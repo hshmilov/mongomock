@@ -1,4 +1,8 @@
 export const pluginMeta = {
+    f5_icontrol_adapter: {
+        title: 'F5 BIG-IP iControl - BETA',
+        description: 'F5 iControl is a Web services-enabled open API providing granular control over the configuration and management of F5\'s application delivery platform, BIG-IP.'
+    },
     druva_adapter: {
         title: 'Druva Cloud Platform',
         description: 'Druva Cloud Platform is a data protection as-a-service that provides data visibility and control across organizations’ entire data footprint.'
