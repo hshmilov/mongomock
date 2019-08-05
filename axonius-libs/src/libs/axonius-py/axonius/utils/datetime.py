@@ -42,6 +42,8 @@ def is_date_real(datetime_to_parse):
 
 
 def _parse_unix_timestamp(unix_timestamp):
+    if unix_timestamp == -1:
+        return None
     try:
         return datetime.utcfromtimestamp(unix_timestamp)
     except Exception:
