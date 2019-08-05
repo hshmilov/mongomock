@@ -54,6 +54,7 @@ class NexposeAdapter(ScannerAdapterBase, Configurable):
     """ Adapter for Rapid7's nexpose """
 
     class MyDeviceAdapter(DeviceAdapter):
+        nexpose_hostname = Field(str, 'Nexpose Hostname')
         risk_score = Field(float, 'Risk score')
         vulnerabilities_critical = Field(int, "Critical Vulnerabiliies")
         vulnerabilities_exploits = Field(int, "Exploits Vulnerabiliies")
@@ -113,7 +114,7 @@ class NexposeAdapter(ScannerAdapterBase, Configurable):
         # We do not use data with no timestamp.
         failed_to_parse = 0
         api_client_class = None
-        for device_raw in devices_raw_data:
+        for device_raw, nexpose_hostname in devices_raw_data:
             try:
                 if api_client_class is None:
                     api_client_class = getattr(nexpose_clients, f"NexposeV{device_raw['API']}Client")
@@ -121,6 +122,7 @@ class NexposeAdapter(ScannerAdapterBase, Configurable):
                                                            drop_only_ip_devices=self.__drop_only_ip_devices,
                                                            fetch_vulnerabilities=self.__fetch_vulnerabilities)
                 if device:
+                    device.nexpose_hostname = nexpose_hostname
                     yield device
             except Exception as err:
                 logger.exception(
@@ -133,17 +135,21 @@ class NexposeAdapter(ScannerAdapterBase, Configurable):
             logger.warning(f"Failed to parse {failed_to_parse} devices.")
 
     def _query_devices_by_client(self, client_name, client_data):
-        if isinstance(client_data, nexpose_clients.NexposeClient):
-            yield from client_data.get_all_devices(fetch_tags=self.__fetch_tags)
+        connection, nexpose_hostname = client_data
+        if isinstance(connection, nexpose_clients.NexposeClient):
+            for device_raw in connection.get_all_devices(fetch_tags=self.__fetch_tags):
+                yield device_raw, nexpose_hostname
 
     def _get_client_id(self, client_config):
         return client_config[NEXPOSE_HOST]
 
     def _connect_client(self, client_config):
         try:
-            return nexpose_clients.NexposeV3Client(self.__num_of_simultaneous_devices, **client_config)
+            return nexpose_clients.NexposeV3Client(self.__num_of_simultaneous_devices, **client_config),\
+                client_config[NEXPOSE_HOST]
         except ClientConnectionException:
-            return nexpose_clients.NexposeV2Client(self.__num_of_simultaneous_devices, **client_config)
+            return nexpose_clients.NexposeV2Client(self.__num_of_simultaneous_devices, **client_config),\
+                client_config[NEXPOSE_HOST]
 
     def _test_reachability(self, client_config):
         return RESTConnection.test_reachability(client_config.get(NEXPOSE_HOST), client_config.get(NEXPOSE_PORT))
@@ -184,7 +190,7 @@ class NexposeAdapter(ScannerAdapterBase, Configurable):
             "required": [
                 'fetch_tags',
                 'drop_only_ip_devices',
-                'num_of_simultaneous_devices'
+                'num_of_simultaneous_devices',
                 'fetch_vulnerabilities'
             ],
             "pretty_name": "Nexpose Configuration",
@@ -197,7 +203,7 @@ class NexposeAdapter(ScannerAdapterBase, Configurable):
             'fetch_tags': True,
             'num_of_simultaneous_devices': 50,
             'drop_only_ip_devices': False,
-            'fetch_vulnerabilities': True
+            'fetch_vulnerabilities': False
         }
 
     def _on_config_update(self, config):
