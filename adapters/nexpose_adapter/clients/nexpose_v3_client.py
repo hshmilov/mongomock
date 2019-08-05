@@ -85,7 +85,8 @@ class NexposeV3Client(NexposeClient):
                     msg = f'Error while parsing request {request_id_absolute} - {raw_answer}, continuing'
                     logger.exception(msg)
 
-    def get_all_devices(self, fetch_tags=False):
+    # pylint: disable=arguments-differ
+    def get_all_devices(self, fetch_tags=False, fetch_vulnerabilities=False):
         logger.info(f'Stating to fetch devices on V3 for nexpose')
         try:
             num_of_asset_pages = 1
@@ -100,7 +101,9 @@ class NexposeV3Client(NexposeClient):
                     devices = current_page_response_as_json.get('resources', [])
                     num_of_asset_pages = current_page_response_as_json.get('page', {}).get('totalPages')
                     for item in devices:
-                        item['vulnerability_details'] = [v for v in self.get_vulnerabilities_for_device(device=item)]
+                        if fetch_vulnerabilities:
+                            item['vulnerability_details'] = \
+                                [v for v in self.get_vulnerabilities_for_device(device=item)]
                         item.update({'API': '3'})
 
                     if fetch_tags:

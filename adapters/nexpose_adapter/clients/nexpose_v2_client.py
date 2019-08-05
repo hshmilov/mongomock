@@ -53,7 +53,7 @@ class NexposeV2Client(NexposeClient):
             details[current_detail] = getattr(asset_details, current_detail)
         return details
 
-    def get_all_devices(self, fetch_tags=False):
+    def get_all_devices(self, fetch_tags=False, fetch_vulnerabilities=False):
         """
         Pushing all the asset summaries to a queue and requesting details simultaneously
         from predefined number of workers

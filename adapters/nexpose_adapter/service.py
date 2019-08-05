@@ -137,7 +137,8 @@ class NexposeAdapter(ScannerAdapterBase, Configurable):
     def _query_devices_by_client(self, client_name, client_data):
         connection, nexpose_hostname = client_data
         if isinstance(connection, nexpose_clients.NexposeClient):
-            for device_raw in connection.get_all_devices(fetch_tags=self.__fetch_tags):
+            for device_raw in connection.get_all_devices(fetch_tags=self.__fetch_tags,
+                                                         fetch_vulnerabilities=self.__fetch_vulnerabilities):
                 yield device_raw, nexpose_hostname
 
     def _get_client_id(self, client_config):
