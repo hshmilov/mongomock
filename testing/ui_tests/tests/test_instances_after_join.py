@@ -49,27 +49,21 @@ class TestInstancesAfterNodeJoin(TestInstancesBase):
         local_json_adapter.take_process_ownership()
         local_ad_adapter = AdService()
         local_ad_adapter.take_process_ownership()
-        try:
-            local_json_adapter.stop()
-            local_ad_adapter.stop()
 
-            self.adapters_page.remove_server(delete_associated_entities=True)
-            time.sleep(5)
-            self.devices_page.delete_devices()
+        self.adapters_page.remove_server(delete_associated_entities=True)
+        time.sleep(5)
+        self.devices_page.delete_devices()
 
-            self.axonius_system.take_process_ownership()
-            self.axonius_system.stop()
+        self.axonius_system.take_process_ownership()
+        self.axonius_system.stop()
 
-            subprocess.check_call('weave stop'.split())
-            self.axonius_system.start_and_wait()
-            self.login_page.wait_for_login_page_to_load()
-            self.login()
+        subprocess.check_call('weave stop'.split())
+        self.axonius_system.start_and_wait()
+        self.login_page.wait_for_login_page_to_load()
+        self.login()
 
-            wait_until(self._try_discovery_until_check_devices_count_goes_up, total_timeout=60 * 3, interval=30,
-                       tolerated_exceptions_list=[NoSuchElementException])
-        finally:
-            local_ad_adapter.start_and_wait()
-            local_json_adapter.start_and_wait()
+        wait_until(self._try_discovery_until_check_devices_count_goes_up, total_timeout=60 * 3, interval=30,
+                   tolerated_exceptions_list=[NoSuchElementException])
 
     def check_password_change(self):
         # Wait for node to change node_maker password after connection.

@@ -441,3 +441,9 @@ class TenableIoAdapter(ScannerAdapterBase, Configurable):
 
     def _on_config_update(self, config):
         self.__use_cache = config['use_cache']
+
+    def outside_reason_to_live(self) -> bool:
+        """
+        This adapter might be called from outside, let it live
+        """
+        return True

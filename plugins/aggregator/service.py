@@ -70,6 +70,7 @@ class AggregatorService(Triggerable, PluginBase):
         Insert useful indexes.
         :return: None
         """
+
         def non_historic_indexes(db):
             db.create_index(
                 [(f'adapters.{PLUGIN_UNIQUE_NAME}', pymongo.ASCENDING), ('adapters.data.id', pymongo.ASCENDING)
@@ -151,15 +152,12 @@ class AggregatorService(Triggerable, PluginBase):
 
         :param str adapter: The address of the adapter (url)
         """
-        try:
-            clients = self.request_remote_plugin('clients', adapter).json()
-        except Exception as e:
-            logger.exception(f"{repr(e)}")
-            raise AdapterOffline()
-        if 'status' in clients and 'message' in clients:
-            logger.error(
-                f'Request for clients from {adapter} failed. Status: {clients.get("status", "")}, Message \'{clients.get("message", "")}\'')
-            raise ClientsUnavailable()
+        clients = [x['client_id']
+                   for x
+                   in self._get_db_connection()[adapter]['clients'].find(projection={
+                       'client_id': True,
+                       '_id': False
+                   })]
         if clients and self._notify_on_adapters is True:
             self.create_notification(f"Starting to fetch device for {adapter}")
         check_fetch_time = True
@@ -238,29 +236,20 @@ class AggregatorService(Triggerable, PluginBase):
         tmp_collection.drop()
 
     def _triggered(self, job_name, post_json, *args):
-        def _filter_adapters_by_parameter(adapter_filter, adapters):
-            filtered_adapters = list(adapters.values())
-            for current_adapter in adapters.values():
-                for key, val in adapter_filter.items():
-                    if current_adapter[key] != val:
-                        filtered_adapters.remove(current_adapter)
-            return filtered_adapters
-
-        adapters = self.get_available_plugins_from_core_uncached()
-
         if job_name == 'clean_db':
-            self._clean_db_devices_from_adapters(adapters.values())
+            self._clean_db_devices_from_adapters(self.get_available_plugins_from_core_uncached().values())
             return
         elif job_name == 'fetch_filtered_adapters':
-            adapters = _filter_adapters_by_parameter(post_json, adapters)
+            adapters = self.get_available_plugins_from_core_uncached(post_json).values()
         elif job_name == 'save_history':
             now = datetime.utcnow()
             for entity_type in EntityType:
                 self._save_entity_views_to_historical_db(entity_type, now)
             return
         else:
-            adapters = [adapter for adapter in adapters.values()
-                        if adapter[PLUGIN_UNIQUE_NAME] == job_name]
+            adapters = self.get_available_plugins_from_core_uncached({
+                PLUGIN_UNIQUE_NAME: job_name
+            }).values()
 
         logger.debug("Fetching from registered adapters = {}".format(adapters))
 
@@ -271,10 +260,16 @@ class AggregatorService(Triggerable, PluginBase):
         calls /clean_devices on the given adapter unique name
         :return:
         """
-        response = self._trigger_remote_plugin(plugin_unique_name, 'clean_devices')
-        if response.status_code != 200:
-            logger.warning(f"Failed cleaning db with adapter {plugin_unique_name}. " +
-                           f"Reason: {str(response.content)}")
+        if self.devices_db.count_documents({
+            f'adapters.{PLUGIN_UNIQUE_NAME}': plugin_unique_name
+        }, limit=1) or self.users_db.count_documents({
+            f'adapters.{PLUGIN_UNIQUE_NAME}': plugin_unique_name
+        }, limit=1):
+            response = self._trigger_remote_plugin(plugin_unique_name, 'clean_devices')
+
+            if response.status_code != 200:
+                logger.error(f"Failed cleaning db with adapter {plugin_unique_name}. " +
+                             f"Reason: {str(response.content)}")
 
     def _clean_db_devices_from_adapters(self, current_adapters):
         """ Function for cleaning the devices db.

@@ -699,5 +699,5 @@ class AggregatorService(PluginService, UpdatablePluginMixin):
             f"Error in response: {str(response.status_code)}, " \
             f"{str(response.content)}"
 
-    def is_up(self):
-        return super().is_up() and {"Triggerable"}.issubset(self.get_supported_features())
+    def is_up(self, *args, **kwargs):
+        return super().is_up(*args, **kwargs) and {"Triggerable"}.issubset(self.get_supported_features())

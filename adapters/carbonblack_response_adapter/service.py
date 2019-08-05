@@ -7,6 +7,7 @@ from axonius.clients.rest.exception import RESTException
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.fields import Field
 from axonius.plugin_base import EntityType, add_rule, return_error
+from axonius.utils.atomicint import AtomicInteger
 from axonius.utils.files import get_local_config_file
 from axonius.utils.datetime import parse_date
 from axonius.utils.parsing import is_domain_valid
@@ -17,7 +18,6 @@ logger = logging.getLogger(f'axonius.{__name__}')
 
 
 class CarbonblackResponseAdapter(AdapterBase):
-
     # pylint: disable=too-many-instance-attributes
     class MyDeviceAdapter(DeviceAdapter):
         build_version_string = Field(str, 'Sensor Version')
@@ -29,6 +29,9 @@ class CarbonblackResponseAdapter(AdapterBase):
 
     def __init__(self):
         super().__init__(get_local_config_file(__file__))
+
+        # The amount of threads inside _parse_isolating_request
+        self.__working = AtomicInteger()
 
     @staticmethod
     def _get_client_id(client_config):
@@ -179,7 +182,7 @@ class CarbonblackResponseAdapter(AdapterBase):
             total_size = device_raw.get('systemvolume_total_size')
             try:
                 if free_size:
-                    free_size = int(free_size) / (1024 ** 3)    # bytes -> gb
+                    free_size = int(free_size) / (1024 ** 3)  # bytes -> gb
                 else:
                     free_size = None
                 if total_size:
@@ -217,6 +220,7 @@ class CarbonblackResponseAdapter(AdapterBase):
 
     def _parse_isolating_request(self, do_isolate):
         try:
+            self.__working.inc()
             if self.get_method() != 'POST':
                 return return_error('Method not supported', 405)
             cb_response_dict = self.get_request_data_as_object()
@@ -235,4 +239,12 @@ class CarbonblackResponseAdapter(AdapterBase):
         except Exception as e:
             logger.exception(f'Problem during isolating changes')
             return return_error(str(e), 500)
+        finally:
+            self.__working.dec()
         return '', 200
+
+    def outside_reason_to_live(self) -> bool:
+        """
+        Whether or not anything is in isolate/unisolate device
+        """
+        return self.__working.value > 0

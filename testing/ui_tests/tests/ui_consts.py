@@ -35,7 +35,7 @@ HIDDEN_USER_NEW_PASSWORD = 'test_pass_2'
 LOCAL_DEFAULT_USER_PATTERN = 'admin[internal]'
 NONE_USER_PATTERN = 'None[None]'
 
-TEMP_FILE_PREFIX = 'temp_file_upload'
+TEMP_FILE_PREFIX = 'tfu_'
 
 NOTE_COLUMN = 'Note'
 

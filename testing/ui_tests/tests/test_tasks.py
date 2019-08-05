@@ -72,6 +72,7 @@ class TestTasks(TestBase):
     def _check_action_results(self, success_count, failure_count, action_name=ENFORCEMENT_NAME):
         self._check_action_result(
             self.enforcements_page.find_task_action_success(action_name), success_count, action_name)
+        time.sleep(1)
         self._check_action_result(
             self.enforcements_page.find_task_action_failure(action_name), failure_count, action_name)
 
@@ -176,17 +177,13 @@ class TestTasks(TestBase):
                        check_return_value=False)
 
             self.base_page.run_discovery()
-            wait_until(lambda: self._test_specific_task(1, 1), tolerated_exceptions_list=[AssertionError],
-                       check_return_value=False)
-            wait_until(lambda: self._test_specific_task(1, 0, SUCCESS_TAG_NAME),
-                       tolerated_exceptions_list=[AssertionError],
-                       check_return_value=False)
-            wait_until(lambda: self._test_specific_task(1, 0, FAILURE_TAG_NAME),
-                       tolerated_exceptions_list=[AssertionError],
-                       check_return_value=False)
-            wait_until(lambda: self._test_specific_task(0, 1, FAILURE_ISOLATE_NAME),
-                       tolerated_exceptions_list=[AssertionError],
-                       check_return_value=False)
+
+            time.sleep(2)
+
+            self._test_specific_task(1, 1)
+            self._test_specific_task(1, 0, SUCCESS_TAG_NAME)
+            self._test_specific_task(1, 0, FAILURE_TAG_NAME)
+            self._test_specific_task(0, 1, FAILURE_ISOLATE_NAME)
 
     def test_enforcement_tasks(self):
         self.devices_page.switch_to_page()

@@ -8,6 +8,7 @@ from ui_tests.tests.ui_test_base import TestBase
 CSV_ADAPTER_QUERY = 'adapters_data.csv_adapter.id == exists(true)'
 CSV_FILE_NAME = 'csv'
 CSV_NAME = 'CSV Serials'
+CSV_PLUGIN_NAME = 'csv_adapter'
 QUERY_WIZARD_CSV_DATE_PICKER_VALUE = '2018-12-30 02:13:24.485Z'
 
 
@@ -34,7 +35,8 @@ class TestAdapters(TestBase):
                 self.adapters_page.switch_to_page()
                 self.adapters_page.clean_adapter_servers(CSV_NAME, True)
         finally:
-            self.adapters_page.wait_for_adapter_down(CSV_NAME)
+            self.adapters_page.clean_adapter_servers(CSV_NAME)
+            self.wait_for_adapter_down(CSV_PLUGIN_NAME)
 
     # Sometimes upload file to CSV adapter does not work
     @flaky(max_runs=2)
@@ -68,4 +70,5 @@ class TestAdapters(TestBase):
                 self.adapters_page.switch_to_page()
                 self.adapters_page.clean_adapter_servers(CSV_NAME, True)
         finally:
-            self.adapters_page.wait_for_adapter_down(CSV_NAME)
+            self.adapters_page.clean_adapter_servers(CSV_NAME)
+            self.wait_for_adapter_down(CSV_PLUGIN_NAME)

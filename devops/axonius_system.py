@@ -50,8 +50,8 @@ def main(command):
         for name, _ in axonius_system.get_all_plugins():
             print(f'    {name}')
         print('Adapters:')
-        for name, _ in axonius_system.get_all_adapters():
-            print(f'    {name}')
+        for name, adapter in axonius_system.get_all_adapters():
+            print(f'    {name}, {adapter().container_name}')
         print('Standalone services:')
         for name, _ in axonius_system.get_all_standalone_services():
             print(f'    {name}')

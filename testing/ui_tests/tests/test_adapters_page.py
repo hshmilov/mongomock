@@ -8,9 +8,11 @@ from test_credentials.test_gotoassist_credentials import client_details
 from ui_tests.tests.ui_test_base import TestBase
 
 GOTOASSIST_NAME = 'RescueAssist'
+GOTOASSIST_PLUGIN_NAME = 'gotoassist_adapter'
 ACTIVE_DIRECTORY_NAME = 'Microsoft Active Directory (AD)'
 JSON_ADAPTER_NAME = 'JSON File'
 ESET_NAME = 'ESET Endpoint Security'
+ESET_PLUGIN_NAME = 'eset_adapter'
 
 
 def get_cortex_dir() -> str:
@@ -59,8 +61,8 @@ class TestAdaptersPage(TestBase):
                     self.adapters_page.clean_adapter_servers(GOTOASSIST_NAME)
                     self.adapters_page.clean_adapter_servers(ESET_NAME)
         finally:
-            self.adapters_page.wait_for_adapter_down(GOTOASSIST_NAME)
-            self.adapters_page.wait_for_adapter_down(ESET_NAME)
+            self.wait_for_adapter_down(GOTOASSIST_PLUGIN_NAME)
+            self.wait_for_adapter_down(ESET_PLUGIN_NAME)
 
     def test_adapters_page_help_link(self):
         self.adapters_page.wait_for_adapter(ACTIVE_DIRECTORY_NAME)

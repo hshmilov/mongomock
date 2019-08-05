@@ -71,6 +71,9 @@ class WaitableTriggerableImplementedMock(Triggerable):
 
         return self.db[collection_name]
 
+    def get_caller_plugin_name(self):
+        return 'plugin', 'name'
+
 
 class SimpleWaitableTriggerableImplementedMock(WaitableTriggerableImplementedMock):
     def __init__(self, wait_for, *args, **kwargs):

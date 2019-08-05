@@ -198,3 +198,9 @@ class CybereasonAdapter(AdapterBase):
             logger.exception(f'Problem during isolating changes')
             return return_error(str(e), 500)
         return '', 200
+
+    def outside_reason_to_live(self) -> bool:
+        """
+        This adapter might be called from outside, let it live
+        """
+        return True

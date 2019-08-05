@@ -266,7 +266,9 @@ class Page:
         else:
             try:
                 button.click()
+                logger.info(f'Clicked on {button}')
             except WebDriverException:
+                logger.info(f'Failed clicking on {button}')
                 if not ignore_exc:
                     raise
         if with_confirmation:
@@ -645,11 +647,12 @@ class Page:
         else:
             prefix += TEMP_FILE_PREFIX
         with NamedTemporaryFile(delete=False, prefix=prefix) as temp_file:
-            temp_file.write(file_content if is_bytes else bytes(file_content, 'ascii'))
+            temp_file.write(file_content if is_bytes else bytes(file_content, 'utf-8'))
             temp_file.file.flush()
             Page.__upload_file_on_element(element, temp_file.name)
-            self.wait_for_uploading_file(temp_file.name.split('/')[-1])
-            return temp_file.name.split('/')[-1]
+            fname = os.path.basename(temp_file.name)
+            self.wait_for_uploading_file(fname)
+            return fname
 
     def upload_file_by_id(self, input_id, file_content, is_bytes=False, prefix=None):
         element = self.driver.find_element_by_id(input_id)

@@ -9,11 +9,11 @@ from retrying import retry
 
 from axonius.consts.system_consts import AXONIUS_DNS_SUFFIX
 from axonius.utils.wait import wait_until
-from services.adapters.json_file_service import JsonFileService
 from services.standalone_services.smtp_server import (SMTPService,
                                                       generate_random_valid_email)
 from services.standalone_services.syslog_server import SyslogService
 from ui_tests.tests.ui_test_base import TestBase
+from test_credentials.json_file_credentials import client_details as json_file_creds
 
 ENFORCEMENT_NAME = 'Special enforcement name'
 COMMON_ENFORCEMENT_QUERY = 'Enabled AD Devices'
@@ -25,6 +25,8 @@ AD_LAST_OR_ADDED_QUERY = '({added_filter}) or adapters_data.active_directory_ada
 
 TAG_ALL_COMMENT = 'tag all'
 TAG_NEW_COMMENT = 'tag new'
+
+JSON_ADAPTER_NAME = 'JSON File'
 
 
 def create_enforcement_name(number, enforcement_name=ENFORCEMENT_NAME):
@@ -179,50 +181,53 @@ class TestEnforcementActions(TestBase):
 
     @flaky(max_runs=3)
     def test_tag_entities(self):
-        json_service = JsonFileService()
-        json_service.take_process_ownership()
-        try:
-            json_service.stop(should_delete=False)
+        self.adapters_page.clean_adapter_servers(JSON_ADAPTER_NAME)
 
-            # This is here to see if this is really the issue: All tests should start with no devices
-            assert self.axonius_system.get_devices_db().count_documents({}) == 0
+        # This is here to see if this is really the issue: All tests should start with no devices
+        assert self.axonius_system.get_devices_db().count_documents({}) == 0
 
-            self.devices_page.switch_to_page()
-            self.devices_page.run_filter_and_save(ENFORCEMENT_CHANGE_NAME,
-                                                  AD_LAST_OR_ADDED_QUERY.format(added_filter=self.devices_page.
-                                                                                JSON_ADAPTER_FILTER))
-            self.enforcements_page.switch_to_page()
-            self.enforcements_page.wait_for_table_to_load()
-            self.enforcements_page.click_new_enforcement()
-            self.enforcements_page.fill_enforcement_name(ENFORCEMENT_CHANGE_NAME)
-            self.enforcements_page.select_trigger()
-            self.enforcements_page.check_scheduling()
-            self.enforcements_page.select_saved_view(ENFORCEMENT_CHANGE_NAME)
-            self.enforcements_page.save_trigger()
-            self.enforcements_page.add_push_system_notification()
-            self.enforcements_page.add_tag_entities(ENFORCEMENT_CHANGE_NAME, TAG_ALL_COMMENT,
-                                                    self.enforcements_page.POST_ACTIONS_TEXT)
-            self.enforcements_page.click_save_button()
-            self.base_page.run_discovery()
+        self.devices_page.switch_to_page()
+        self.devices_page.run_filter_and_save(ENFORCEMENT_CHANGE_NAME,
+                                              AD_LAST_OR_ADDED_QUERY.format(added_filter=self.devices_page.
+                                                                            JSON_ADAPTER_FILTER))
+        self.enforcements_page.switch_to_page()
+        self.enforcements_page.wait_for_table_to_load()
+        self.enforcements_page.click_new_enforcement()
+        self.enforcements_page.fill_enforcement_name(ENFORCEMENT_CHANGE_NAME)
+        self.enforcements_page.select_trigger()
+        self.enforcements_page.check_scheduling()
+        self.enforcements_page.select_saved_view(ENFORCEMENT_CHANGE_NAME)
+        self.enforcements_page.save_trigger()
+        self.enforcements_page.add_push_system_notification()
+        self.enforcements_page.add_tag_entities(ENFORCEMENT_CHANGE_NAME, TAG_ALL_COMMENT,
+                                                self.enforcements_page.POST_ACTIONS_TEXT)
+        self.enforcements_page.click_save_button()
+        self.base_page.run_discovery()
 
-            self.devices_page.switch_to_page()
-            self.devices_page.fill_filter(AD_LAST_OR_ADDED_QUERY.format(added_filter=self.devices_page.
-                                                                        JSON_ADAPTER_FILTER))
-            self.devices_page.enter_search()
-            self.enforcements_page.wait_for_table_to_load()
-            assert self.devices_page.get_first_row_tags() == TAG_ALL_COMMENT
+        self.devices_page.switch_to_page()
+        self.devices_page.fill_filter(AD_LAST_OR_ADDED_QUERY.format(added_filter=self.devices_page.
+                                                                    JSON_ADAPTER_FILTER))
+        self.devices_page.enter_search()
+        self.enforcements_page.wait_for_table_to_load()
+        assert self.devices_page.get_first_row_tags() == TAG_ALL_COMMENT
 
-            self.enforcements_page.switch_to_page()
-            self.enforcements_page.edit_enforcement(ENFORCEMENT_CHANGE_NAME)
-            self.enforcements_page.change_tag_entities(ENFORCEMENT_CHANGE_NAME, TAG_NEW_COMMENT)
-            self.enforcements_page.select_trigger()
-            self.enforcements_page.check_conditions()
-            self.enforcements_page.check_condition_added()
-            self.enforcements_page.check_new_entities()
-            self.enforcements_page.save_trigger()
-            self.enforcements_page.click_save_button()
-        finally:
-            json_service.start_and_wait()
+        self.enforcements_page.switch_to_page()
+        self.enforcements_page.wait_for_spinner_to_end()
+        self.enforcements_page.edit_enforcement(ENFORCEMENT_CHANGE_NAME)
+        self.enforcements_page.change_tag_entities(ENFORCEMENT_CHANGE_NAME, TAG_NEW_COMMENT)
+        self.enforcements_page.select_trigger()
+        self.enforcements_page.check_conditions()
+        self.enforcements_page.check_condition_added()
+        self.enforcements_page.check_new_entities()
+        self.enforcements_page.save_trigger()
+        self.enforcements_page.click_save_button()
+
+        # the EC moves us to a page in a weird way, let's wait for it to finish
+        time.sleep(1)
+
+        # restore JSON client
+        self.adapters_page.add_server(json_file_creds, JSON_ADAPTER_NAME)
+        time.sleep(1)
 
         self.base_page.run_discovery()
         self.devices_page.switch_to_page()

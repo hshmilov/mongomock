@@ -11,14 +11,26 @@ from axonius.consts.plugin_consts import (PLUGIN_UNIQUE_NAME, AGGREGATOR_PLUGIN_
 from services.ports import DOCKER_PORTS
 from services.weave_service import WeaveService
 
+# Ideally, the replicaSet would be specified here (the same way it does in plugin_base.py)
+# However this code is ran within the context of the machine and not a specific docker, so
+# accessing the DB is done by accessing 'localhost', with a forwarded port.
+#
+# If the replicaSet is specified here, then the machine will try to access the
+# endpoints specified in that replicaSet, which are only accessible from within the
+# docker network, and thus, inaccessible to the context this code is running from.
+connection_line = "mongodb://{user}:{password}@{addr}:{port}".format(user="ax_user",
+                                                                     password="ax_pass",
+                                                                     addr='localhost',
+                                                                     port=27017)
+
 
 class MongoService(WeaveService):
+    # The reason we're using just one client is that you must'nt have many instance of the client
+    # because mongo is buggy as hell and opens 600 threads and crashes your app
+    client = pymongo.MongoClient(connection_line)
+
     def __init__(self):
         super().__init__('mongo', '../infrastructures/database')
-        self.client = None
-        exposed = self.exposed_ports[0]
-        self.endpoint = ('localhost', exposed[0])
-        self.connect()
 
     @property
     def exposed_ports(self):
@@ -105,7 +117,6 @@ class MongoService(WeaveService):
         # This might be solved by using a more sophisticated docker setup, but it will do for now.
         time.sleep(10)
 
-        self.connect()
         self.clean_old_databases()
 
         print("Finished setting up mongo")
@@ -148,29 +159,13 @@ class MongoService(WeaveService):
 
     def is_mongo_alive(self):
         try:
-            self.connect()
             self.client.server_info()
         except Exception as err:
             print(err)
             return False
         return True
 
-    def connect(self):
-        # Ideally, the replicaSet would be specified here (the same way it does in plugin_base.py)
-        # However this code is ran within the context of the machine and not a specific docker, so
-        # accessing the DB is done by accessing 'localhost', with a forwarded port.
-        #
-        # If the replicaSet is specified here, then the machine will try to access the
-        # endpoints specified in that replicaSet, which are only accessible from within the
-        # docker network, and thus, inaccessible to the context this code is running from.
-
-        connection_line = "mongodb://{user}:{password}@{addr}:{port}".format(user="ax_user",
-                                                                             password="ax_pass",
-                                                                             addr=self.endpoint[0],
-                                                                             port=self.endpoint[1])
-        self.client = pymongo.MongoClient(connection_line)
-
-    def is_up(self):
+    def is_up(self, *args, **kwargs):
         return self.is_mongo_alive()
 
     def get_configs(self):

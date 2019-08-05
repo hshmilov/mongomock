@@ -25,9 +25,7 @@ GENERAL_INFO_PLUGIN_NAME = 'general_info'
 AXONIUS_DNS_SUFFIX = 'axonius.local'
 HEAVY_LIFTING_PLUGIN_NAME = 'heavy_lifting_plugin'
 STATIC_ANALYSIS_PLUGIN_NAME = 'static_analysis'
-REPORTS_PLUGIN_NAME = 'reports'
 REIMAGE_TAGS_ANALYSIS_PLUGIN_NAME = 'reimage_tags_analysis'
-EXECUTION_PLUGIN_NAME = 'execution'
 
 # ADAPTERS #
 ACTIVE_DIRECTORY_PLUGIN_NAME = 'active_directory_adapter'

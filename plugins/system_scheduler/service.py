@@ -248,7 +248,10 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
             _change_subphase(scheduler_consts.ResearchPhases.Clean_Devices)
             self._request_gui_dashboard_cache_clear()
 
-            for adapter in self.__get__all_adapters():
+            for adapter in self.core_configs_collection.find({
+                'plugin_type': adapter_consts.ADAPTER_PLUGIN_TYPE,
+                'status': 'up'
+            }):
                 try:
                     # this is important and is described at
                     # https://axonius.atlassian.net/wiki/spaces/AX/pages/799211552/
@@ -291,15 +294,11 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
                 self.create_notification(f'Finished {scheduler_consts.Phases.Research.name} Phase Successfully.')
             self.send_external_info_log(f'Finished {scheduler_consts.Phases.Research.name} Phase Successfully.')
 
-    def __get__all_adapters(self):
-        db_connection = self._get_db_connection()
-        return list(db_connection[CORE_UNIQUE_NAME]['configs'].find({
-            'plugin_type': adapter_consts.ADAPTER_PLUGIN_TYPE
-        }))
-
     def __get_all_realtime_adapters(self):
         db_connection = self._get_db_connection()
-        for adapter in self.__get__all_adapters():
+        for adapter in self.core_configs_collection.find({
+            'plugin_type': adapter_consts.ADAPTER_PLUGIN_TYPE
+        }):
             config = db_connection[adapter[PLUGIN_UNIQUE_NAME]][CONFIGURABLE_CONFIGS_COLLECTION].find_one({
                 'config_name': AdapterBase.__name__
             })

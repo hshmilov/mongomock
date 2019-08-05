@@ -21,7 +21,7 @@ class AxonService(ABC):
         pass
 
     @abstractmethod
-    def is_up(self):
+    def is_up(self, *args, **kwargs):
         pass
 
     def wait_for_service(self, timeout=180):
@@ -29,7 +29,7 @@ class AxonService(ABC):
         start = time.time()
         while time.time() - start < timeout:
             try:
-                assert self.is_up()
+                assert self.is_up(raise_via_core=False)
                 success = True
                 break
             except Exception:

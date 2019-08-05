@@ -370,3 +370,9 @@ class TenableSecurityCenterAdapter(ScannerAdapterBase, Configurable):
         self.__fetch_top_n_installed_software = config.get('fetch_top_n_installed_software') or 0
         self.__fetch_software_per_device = config['fetch_software_per_device']
         self.__fetch_vulnerabilities = config['fetch_vulnerabilities']
+
+    def outside_reason_to_live(self) -> bool:
+        """
+        This adapter might be called from outside, let it live
+        """
+        return True

@@ -56,7 +56,6 @@ from axonius.utils.parsing import (ad_integer8_to_timedelta,
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
-
 TEMP_FILES_FOLDER = "/home/axonius/temp_dir/"
 
 LDAP_DONT_EXPIRE_PASSWORD = 0x10000
@@ -1804,3 +1803,9 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
     @classmethod
     def adapter_properties(cls):
         return [AdapterProperty.Assets, AdapterProperty.Manager, AdapterProperty.UserManagement]
+
+    def outside_reason_to_live(self) -> bool:
+        """
+        This adapter might be called from outside, let it live
+        """
+        return True

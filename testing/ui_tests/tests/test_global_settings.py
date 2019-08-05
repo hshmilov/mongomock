@@ -1,3 +1,5 @@
+from retrying import retry
+
 from axonius.utils.wait import wait_until
 from scripts.instances.instances_consts import PROXY_DATA_HOST_PATH
 from services.plugins.gui_service import GuiService
@@ -104,11 +106,12 @@ class TestGlobalSettings(TestBase):
         self.settings_page.fill_proxy_port(port)
         self.settings_page.save_and_wait_for_toaster()
 
+        @retry(wait_fixed=1000, stop_max_attempt_number=60 * 2)
         def proxy_settings_propagate():
             content = PROXY_DATA_HOST_PATH.read_text().strip()
-            return content == '{"creds": "IP:PORT", "verify": true}'.replace('IP', PROXY_IP).replace('PORT', port)
+            assert content == f'{{"creds": "{PROXY_IP}:{port}", "verify": true}}'
 
-        wait_until(proxy_settings_propagate, total_timeout=60 * 2)
+        proxy_settings_propagate()
 
     def test_bad_proxy_settings(self):
         self.settings_page.switch_to_page()

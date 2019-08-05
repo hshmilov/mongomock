@@ -13,16 +13,20 @@ from threading import Event, RLock, Thread
 from typing import Any, Dict, Iterable, List, Tuple
 
 import func_timeout
+from apscheduler.executors.pool import ThreadPoolExecutor
+from apscheduler.triggers.interval import IntervalTrigger
+from axonius.thread_pool_executor import LoggedThreadPoolExecutor
+from axonius.background_scheduler import LoggedBackgroundScheduler
+
 from axonius import adapter_exceptions
 from axonius.consts import adapter_consts
-from axonius.consts.plugin_consts import PLUGIN_NAME, PLUGIN_UNIQUE_NAME, X_UI_USER, X_UI_USER_SOURCE
+from axonius.consts.plugin_consts import PLUGIN_NAME, PLUGIN_UNIQUE_NAME, X_UI_USER, X_UI_USER_SOURCE, CORE_UNIQUE_NAME
 from axonius.consts.plugin_subtype import PluginSubtype
 from axonius.devices.device_adapter import LAST_SEEN_FIELD, DeviceAdapter, AdapterProperty
 from axonius.mixins.configurable import Configurable
 from axonius.mixins.feature import Feature
 from axonius.mixins.triggerable import Triggerable
 from axonius.plugin_base import EntityType, PluginBase, add_rule, return_error
-from axonius.thread_pool_executor import LoggedThreadPoolExecutor
 from axonius.thread_stopper import StopThreadException
 from axonius.users.user_adapter import UserAdapter
 from axonius.utils.json import to_json
@@ -84,6 +88,16 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
         # This will trigger an 'adapter page' cache clear for better CI stability
         self._request_gui_dashboard_cache_clear()
 
+        self.existential_wondering = LoggedBackgroundScheduler(executors={'default': ThreadPoolExecutor(1)})
+        self.existential_wondering.add_job(func=self.__check_for_reasons_to_live,
+                                           trigger=IntervalTrigger(minutes=1),
+                                           next_run_time=datetime.now() + timedelta(minutes=1),
+                                           name='check_for_reasons_to_live',
+                                           id='check_for_reasons_to_live',
+                                           max_instances=1)
+        self.existential_wondering.start()
+        self.__has_a_reason_to_live = False
+
     def _on_config_update(self, config):
         logger.info(f"Loading AdapterBase config: {config}")
 
@@ -115,6 +129,33 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
         self._is_last_seen_prioritized = config.get('last_seen_prioritized', False)
 
         self.__is_realtime = config.get('realtime_adapter', False)
+
+    def outside_reason_to_live(self) -> bool:
+        """
+        Override this to provide more reasons to live
+        :return: bool
+        """
+        return False
+
+    def __check_for_reasons_to_live(self):
+        client_count = self._clients_collection.estimated_document_count()
+        running_task = self.any_tasks_in_progress()
+        if self.outside_reason_to_live() or running_task or client_count:
+            logger.debug('Found reason to live')
+            logger.debug(f'{client_count} clients exist')
+            logger.debug(f'Task {running_task} is still running')
+            self.__has_a_reason_to_live = True
+            return
+
+        if not self.__has_a_reason_to_live:
+            logger.info('No reason to live. Goodbye!')
+            try:
+                self._trigger_remote_plugin(CORE_UNIQUE_NAME, f'stop:{self.plugin_unique_name}')
+            except Exception:
+                logger.critical('Cannot stop ourselves', exc_info=True)
+        else:
+            logger.info('No reason to live, marking for termination')
+            self.__has_a_reason_to_live = False
 
     @classmethod
     def specific_supported_features(cls) -> list:
@@ -555,6 +596,8 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
         failure_line = f'{ui_user}[{source}]: {adapter_consts.LOG_CLIENT_FAILURE_LINE}'
         with self._clients_lock:
             if self.get_method() == 'PUT':
+                self.__has_a_reason_to_live = True
+
                 client_config = request.get_json(silent=True)
                 if not client_config:
                     logger.info(f'{failure_line} - invalid client')
@@ -578,6 +621,7 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
                 return jsonify(add_client_result), 200
 
             if self.get_method() == 'POST':
+                self.__has_a_reason_to_live = True
                 self._prepare_parsed_clients_config()
 
             return jsonify(self._clients.keys())
@@ -1157,13 +1201,16 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
         """
         db_connection = self._get_db_connection()
         collection = db_connection[self.plugin_unique_name]['adapter_schema']
-        collection.replace_one(filter={'adapter_name': self.plugin_unique_name,
-                                       'adapter_version': self.version},
-                               replacement={
-                                   'adapter_name': self.plugin_unique_name,
-                                   'adapter_version': self.version,
-                                   'schema': schema},
-                               upsert=True)
+        collection.replace_one(filter={
+            'adapter_name': self.plugin_unique_name,
+            'adapter_version': self.version
+        },
+            replacement={
+                'adapter_name': self.plugin_unique_name,
+                'adapter_version': self.version,
+                'schema': schema
+        },
+            upsert=True)
 
     def _create_axonius_entity(self, client_name, data, entity_type: EntityType,
                                plugin_identity: Tuple[str, str, str]):

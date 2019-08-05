@@ -25,12 +25,9 @@ class NVDSearcher:
         """
         Initializes the class. We have to read all artifacts and load them into the memory.
         """
-        self.__cve_db = dict()
+        self.__cve_db = None
         self.__products_db = dict()
-        self.__use_lock = threading.Lock()
-
-        # Just load artifacts
-        self._load_artifacts()
+        self.__use_lock = threading.RLock()
 
     def update(self):
         """
@@ -164,6 +161,8 @@ class NVDSearcher:
 
     def search_by_cve(self, cve_id_to_search):
         with self.__use_lock:
+            if self.__cve_db is None:
+                self._load_artifacts()
             if cve_id_to_search:
                 try:
                     return self.__cve_db.get(cve_id_to_search)
@@ -222,6 +221,8 @@ class NVDSearcher:
 
         # pylint: disable=too-many-nested-blocks
         with self.__use_lock:
+            if self.__cve_db is None:
+                self._load_artifacts()
             for db_vendor_name, db_vendor_products in self.__products_db.items():
                 # we have to replace all '_' with spaces from now on.
                 if str(db_vendor_name).lower() in vendor_name or empty_vendor:

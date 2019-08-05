@@ -4,6 +4,7 @@ from copy import copy
 
 from selenium.common.exceptions import NoSuchElementException
 
+from test_helpers.file_mock_credentials import FileForCredentialsMock
 from ui_tests.pages.entities_page import EntitiesPage
 from ui_tests.pages.page import PAGE_BODY
 
@@ -163,7 +164,11 @@ class AdaptersPage(EntitiesPage):
     def fill_creds(self, **kwargs):
         for key, value in kwargs.items():
             element = self.driver.find_element_by_id(key)
-            self.fill_text_by_element(element, value)
+            if isinstance(value, FileForCredentialsMock):
+                value: FileForCredentialsMock
+                self.upload_file_on_element(element, value.file_contents)
+            else:
+                self.fill_text_by_element(element, value)
 
     def wait_for_data_collection_toaster_absent(self):
         self.wait_for_toaster_to_end(self.DATA_COLLECTION_TOASTER, retries=1200)
@@ -194,19 +199,6 @@ class AdaptersPage(EntitiesPage):
             except NoSuchElementException:
                 pass
             time.sleep(interval)
-
-    def wait_for_adapter_down(self, adapter_name, retires=60 * 3, interval=2):
-        for _ in range(retires):
-            self.test_base.settings_page.switch_to_page()
-            self.switch_to_page()
-            try:
-                element = self.find_element_by_text(adapter_name)
-                if element:
-                    time.sleep(interval)
-                    continue
-            except NoSuchElementException:
-                return
-        raise AssertionError('Adapter still up')
 
     def find_help_link(self):
         try:

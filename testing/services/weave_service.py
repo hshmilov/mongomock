@@ -56,7 +56,7 @@ class WeaveService(DockerService):
         return WEAVE_NETWORK if 'linux' in sys.platform.lower() and is_weave_up() else AXONIUS_NETWORK
 
     @abstractmethod
-    def is_up(self):
+    def is_up(self, *args, **kwargs):
         pass
 
     def is_unique_dns_registered(self):

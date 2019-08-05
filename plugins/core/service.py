@@ -1,20 +1,28 @@
 import configparser
+import json
 import logging
 import os
 import threading
+import time
 import uuid
 from datetime import datetime
 from multiprocessing.pool import ThreadPool
 
+import docker.models
 import pymongo
 import requests
-import uritools
 from apscheduler.executors.pool import ThreadPoolExecutor
 from apscheduler.triggers.interval import IntervalTrigger
+from axonius.consts.plugin_subtype import PluginSubtype
+
+from axonius.utils.threading import LazyMultiLocker
+from docker.models.containers import Container
+
+from axonius.mixins.triggerable import Triggerable, RunIdentifier
 from flask import jsonify, request
 from passlib.utils import generate_password
-from pymongo import ReturnDocument
 from requests.exceptions import ConnectionError, ReadTimeout, Timeout
+from retry.api import retry_call
 
 from axonius.background_scheduler import LoggedBackgroundScheduler
 from axonius.consts.plugin_consts import (NODE_ID,
@@ -24,7 +32,8 @@ from axonius.consts.plugin_consts import (NODE_ID,
                                           PLUGIN_UNIQUE_NAME,
                                           HEAVY_LIFTING_PLUGIN_NAME,
                                           NODE_ID_PATH,
-                                          NODE_ID_ENV_VAR_NAME, PLUGIN_NAME)
+                                          NODE_ID_ENV_VAR_NAME,
+                                          PLUGIN_NAME, AXONIUS_DNS_SUFFIX)
 from axonius.mixins.configurable import Configurable
 from axonius.plugin_base import (VOLATILE_CONFIG_PATH, PluginBase, add_rule,
                                  return_error)
@@ -39,7 +48,7 @@ MAX_INSTANCES_OF_SAME_PLUGIN = 100
 MASTER_NODE_NAME = 'Master'
 
 
-class CoreService(PluginBase, Configurable):
+class CoreService(Triggerable, PluginBase, Configurable):
     def __init__(self, **kwargs):
         """ Initialize all needed configurations
         """
@@ -47,9 +56,6 @@ class CoreService(PluginBase, Configurable):
         config = configparser.ConfigParser()
         config.read(get_local_config_file(__file__))
         plugin_unique_name = config['core_specific'][PLUGIN_UNIQUE_NAME]
-        db_addr = config['core_specific']['db_addr']
-        db_user = config['core_specific']['db_user']
-        db_password = config['core_specific']['db_password']
 
         temp_config = configparser.ConfigParser()
         temp_config.read(VOLATILE_CONFIG_PATH)
@@ -72,25 +78,54 @@ class CoreService(PluginBase, Configurable):
         self.did_adapter_registered = False
 
         # Building doc data so we won't register on PluginBase (Core doesnt need to register)
-        core_data = {"plugin_unique_name": plugin_unique_name,
-                     "db_addr": db_addr,
-                     "db_user": db_user,
-                     "db_password": db_password,
-                     "api_key": api_key,
-                     "node_id": node_id or '',
-                     "status": "ok"}
+        core_data = {
+            "plugin_unique_name": plugin_unique_name,
+            "api_key": api_key,
+            "node_id": node_id or '',
+            "status": "ok"
+        }
 
         self.online_plugins = {}
 
         # Initialize the base plugin (will initialize http server)
         # No registration process since we are sending core_data
         super().__init__(get_local_config_file(__file__), core_data=core_data, **kwargs)
+        self.core_configs_collection.replace_one(filter={
+            PLUGIN_UNIQUE_NAME: plugin_unique_name,
+        }, replacement={**core_data, **{
+            PLUGIN_NAME: plugin_unique_name,
+            'plugin_subtype': PluginSubtype.NotRunning.value
+        }}, upsert=True)
 
         # Get the needed docker socket
-        # self.docker_client = docker.APIClient(base_url='unix://var/run/docker.sock')
+        self.__docker_client = docker.from_env()
 
-        self._setup_images()  # TODO: Check if we should move it to another function
-        # (so we wont get register request before initializing the server here)
+        weave_container = self.__docker_client.containers.list(all=True,
+                                                               filters={
+                                                                   'name': 'weave'
+                                                               })
+        if weave_container:
+            # we're under weave
+            logger.info('Running under weave')
+            self.__docker_axonius_network = None
+
+            # This is not used anymore
+            self.__docker_client = None
+
+        else:
+            self.__docker_axonius_network: docker.models.networks.Network = \
+                self.__docker_client.networks.list(names='axonius')
+            if self.__docker_axonius_network:
+                # if we found a network named 'axonius' it implies we're running without weave, so we have
+                # to manually set up every container to be under the axonius network
+                # This is the case for dev machines
+                self.__docker_axonius_network = self.__docker_axonius_network[0]
+                logger.info('Running under docker')
+            else:
+                # not running under weave, and still no 'axonius' network
+                logger.error('No weave and no axonius network. AOD might have issues')
+                self.__docker_axonius_network = None
+                self.__docker_client = None
 
         self.adapters_lock = threading.Lock()
 
@@ -130,6 +165,8 @@ class CoreService(PluginBase, Configurable):
         self._delete_node_name(MASTER_NODE_NAME)
         self._set_node_name(self.node_id, MASTER_NODE_NAME)
 
+        self.__lazy_locker = LazyMultiLocker()
+
     def clean_offline_plugins(self):
         """Thread for cleaning offline plugin.
 
@@ -144,22 +181,21 @@ class CoreService(PluginBase, Configurable):
 
             delete_list = []
             for plugin_unique_name in temp_list:
-                with self.adapters_lock:
-                    plugin_is_debug = temp_list[plugin_unique_name].get('is_debug', False)
-                    should_delete = False
-                    if not plugin_is_debug:
-                        for i in range(4):
-                            should_delete = not self._check_plugin_online(plugin_unique_name)
-                            if should_delete is False:
-                                break
-                    if should_delete:
-                        if self.did_adapter_registered:
-                            # We need to wait a bit and then try to check if plugin exists again
-                            self.did_adapter_registered = False
+                plugin_is_debug = temp_list[plugin_unique_name].get('is_debug', False)
+                should_delete = False
+                if not plugin_is_debug:
+                    for i in range(4):
+                        should_delete = not self._check_plugin_online(plugin_unique_name)
+                        if should_delete is False:
                             break
-                        else:
-                            # The plugin didnt answer, removing the plugin subscription
-                            delete_list.append((plugin_unique_name, temp_list[plugin_unique_name]))
+                if should_delete:
+                    if self.did_adapter_registered:
+                        # We need to wait a bit and then try to check if plugin exists again
+                        self.did_adapter_registered = False
+                        break
+                    else:
+                        # The plugin didnt answer, removing the plugin subscription
+                        delete_list.append((plugin_unique_name, temp_list[plugin_unique_name]))
 
             with self.adapters_lock:
                 for delete_key, delete_value in delete_list:
@@ -168,15 +204,16 @@ class CoreService(PluginBase, Configurable):
                         logger.info("Plugin {0} didn't answer, deleting "
                                     "from online plugins list".format(delete_candidate))
                         del self.online_plugins[delete_key]
+                        self.core_configs_collection.update_one({
+                            PLUGIN_UNIQUE_NAME: delete_key
+                        }, {
+                            '$set': {
+                                'status': 'down'
+                            }
+                        })
 
         except Exception as e:
             logger.critical("Cleaning plugins had an error. message: {0}", str(e))
-
-    def _setup_images(self):
-        """ Setting up needed images
-        """
-        # TODO: Implement this
-        pass
 
     @add_rule('nodes/tags/<node_id>', methods=['GET', 'DELETE', 'POST'], should_authenticate=False)
     def node_tags(self, node_id):
@@ -196,23 +233,26 @@ class CoreService(PluginBase, Configurable):
 
     @add_rule('nodes/last_seen/<node_id>', methods=['GET'], should_authenticate=False)
     def get_node_status(self, node_id):
-        return jsonify({'last_seen': self._get_collection('configs').find_one(filter={'node_id': node_id}, sort=[
-            ('last_seen', pymongo.DESCENDING)])['last_seen']})
+        x = self.core_configs_collection.find_one(filter={'node_id': node_id},
+                                                  sort=[('last_seen', pymongo.DESCENDING)])
+        return jsonify({
+            'last_seen': x['last_seen']
+        })
 
     @add_rule('find_plugin_unique_name/nodes/<node_id>/plugins/<plugin_name>', methods=['GET'],
               should_authenticate=False)
-    def find_plugin_unique_name(self, **kwargs):
-        if kwargs.get(NODE_ID) != 'None':
+    def find_plugin_unique_name(self, node_id, plugin_name):
+        if node_id != 'None':
             # Case of get plugin_unique_name (by node_id and plugin_name).
-            config = self._get_config(**kwargs)
+            config = self._get_config(node_id=node_id, plugin_name=plugin_name)
             if config is not None:
                 return jsonify({'plugin_unique_name': config.get('plugin_unique_name')})
         else:
             # Case of get all plugin_unique_names (with the same plugin_name).
-            kwargs.pop(NODE_ID)
-            config = self._get_config(**kwargs)
-            if config is not None:
-                return jsonify([current_plugin['plugin_unique_name'] for current_plugin in config])
+            config = self.core_configs_collection.find({
+                PLUGIN_NAME: plugin_name
+            }).sort('last_seen', pymongo.DESCENDING)
+            return jsonify([current_plugin['plugin_unique_name'] for current_plugin in config])
 
         return ''
 
@@ -238,7 +278,7 @@ class CoreService(PluginBase, Configurable):
 
     def _set_node_metadata(self, node_id, key, value):
         self._get_collection('nodes_metadata').find_one_and_update({NODE_ID: node_id}, {
-            '$set': {key: value}}, upsert=True, return_document=ReturnDocument.AFTER)
+            '$set': {key: value}}, upsert=True)
 
     def _delete_node_name(self, node_name):
         self._get_collection('nodes_metadata').find_one_and_delete({NODE_NAME: node_name})
@@ -246,26 +286,153 @@ class CoreService(PluginBase, Configurable):
     def _set_node_name(self, node_id, node_name):
         self._set_node_metadata(node_id, NODE_NAME, node_name)
 
-    def _get_config(self, **kwargs):
-        # Checking to see if we're searching by plugin_name alone
-        if kwargs.get('plugin_name') is not None and kwargs.get('plugin_unique_name') is None and kwargs.get(
-                NODE_ID) is None:
-            return self._get_collection('configs').find(kwargs)
+    def _get_config_by_plugin_unique_name(self, plugin_unique_name: str) -> dict:
+        """
+        Finds the plugin by the plugin unique name in the DB
+        """
+        return self.core_configs_collection.find_one({
+            PLUGIN_UNIQUE_NAME: plugin_unique_name
+        })
 
+    def _get_config(self, **kwargs):
         # A common thing to do is to request a specific adapter on a specific node. But on some nodes, there are
         # multiple configurations of the same adapter due to bugs or or due to hard reset. this is why we return
         # the last one that communicated.
-        result = list(self._get_collection('configs').find(kwargs).sort('last_seen', pymongo.DESCENDING))
+        result = list(self.core_configs_collection.find(kwargs).sort('last_seen', pymongo.DESCENDING))
         if len(result) > 1:
             logger.warning(f'Warning, found more than 1 unique name for a requested adapter: {result}')
         return result[0] if result else None
 
-    def _request_plugin(self, resource, plugin_unique_name, method='get', **kwargs):
-        data = self._translate_url(plugin_unique_name + f"/{resource}")
-        final_url = uritools.uricompose(scheme='https', host=data['plugin_ip'], port=data['plugin_port'],
-                                        path=data['path'])
+    @staticmethod
+    def _request_plugin(resource, plugin_unique_name, method='get', **kwargs):
+        url = f'https://{plugin_unique_name}.{AXONIUS_DNS_SUFFIX}/api/{resource}'
+        return requests.request(method=method, url=url, timeout=10, **kwargs)
 
-        return requests.request(method=method, url=final_url, timeout=10, **kwargs)
+    def _triggered(self, job_name: str, post_json: dict, run_identifier: RunIdentifier, *args):
+        """
+        Job name is the start:plugin_unique_name or stop:plugin_unique_name
+        """
+        parsed_path = job_name.split(':')
+        if len(parsed_path) != 2:
+            raise RuntimeError('Wrong job_name')
+        operation_type, plugin_unique_name = parsed_path
+        if operation_type not in ['start', 'stop']:
+            raise RuntimeError('Wrong job_name')
+        del parsed_path
+
+        with self.__lazy_locker.get_lock([plugin_unique_name]):
+            plugin_entity = self.core_configs_collection.find_one({
+                PLUGIN_UNIQUE_NAME: plugin_unique_name
+            }, projection={
+                '_id': True,
+                PLUGIN_NAME: True,
+                PLUGIN_UNIQUE_NAME: True,
+                NODE_ID: True
+            })
+            if not plugin_entity:
+                raise RuntimeError('Plugin not found')
+
+            if self.__docker_axonius_network is not None:
+                # Currently, AOD is disabled on dev machines :(
+                return ''
+                return self.__handle_plugin_up_down_dev(operation_type, plugin_entity)
+
+            relevant_instance_control = self.core_configs_collection.find_one({
+                PLUGIN_NAME: 'instance_control',
+                NODE_ID: plugin_entity[NODE_ID]
+            })
+            if not relevant_instance_control:
+                raise RuntimeError(f'Instance control for node {plugin_entity[NODE_ID]} '
+                                   f'for plugin {plugin_unique_name} not found')
+            response = self._trigger_remote_plugin(relevant_instance_control[PLUGIN_UNIQUE_NAME],
+                                                   f'{operation_type}:{plugin_entity[PLUGIN_NAME]}',
+                                                   reschedulable=False)
+            response.raise_for_status()
+            self.core_configs_collection.update_one({
+                PLUGIN_UNIQUE_NAME: plugin_unique_name
+            }, {
+                '$set': {
+                    'status': 'up' if operation_type == 'start' else 'down'
+                }
+            })
+            return response.text
+
+    def __handle_plugin_up_down_dev(self, operation_type: str, plugin_entity: dict):
+        """
+        Handles raising or stopping plugins when running under docker
+        :param operation_type: 'up' or 'down'
+        :param plugin_entity: the plugin entity from the DB
+        :return: response
+        """
+        plugin_unique_name = plugin_entity[PLUGIN_UNIQUE_NAME]
+        name_to_find = plugin_entity[PLUGIN_NAME].replace('_', '-')
+        container = [x
+                     for x
+                     in self.__docker_client.containers.list(all=True,
+                                                             filters={
+                                                                 'name': name_to_find
+                                                             }) if x.name == name_to_find]
+        if len(container) != 1:
+            logger.exception(', '.join(x.name for x in container))
+            raise RuntimeError(
+                f'Found a weird amount of containers {len(container)} for {plugin_entity[PLUGIN_NAME]}')
+        container: Container = container[0]
+        if operation_type == 'start':
+            self.__raise_adapter_from_docker(plugin_unique_name, container)
+            status = 'up'
+        else:
+            # assumed 'stop':
+            self.__stop_adapter_from_docker(container)
+            status = 'down'
+            self.online_plugins.pop(plugin_unique_name, None)
+
+        self.core_configs_collection.update_one({
+            '_id': plugin_entity['_id']
+        }, {
+            '$set': {
+                'status': status
+            }
+        })
+
+        if status == 'up':
+            self.online_plugins[plugin_unique_name] = self._get_config_by_plugin_unique_name(plugin_unique_name)
+        return ''
+
+    def __raise_adapter_from_docker(self, plugin_unique_name: str, container: Container) -> None:
+        """
+        Raises an adapter using the local docker instance
+        """
+        container.start()
+        for i in range(30):  # retries
+            if json.loads(next(container.stats()))['pids_stats'].get('current'):
+                break
+            time.sleep(1)
+        else:
+            # reached the end of the loop
+            container.stop()
+            raise RuntimeError('Failed waiting for docker to raise!')
+
+        try:
+            self.__docker_axonius_network.disconnect(container)
+        except Exception:
+            # Usually means that the docker is not connected to the network
+            pass
+
+        # Wait until the plugin is actually up
+        def is_online():
+            fqdn = f'{plugin_unique_name}.{AXONIUS_DNS_SUFFIX}'
+            logger.info(f'Connecting to {fqdn}')
+            self.__docker_axonius_network.connect(container, aliases=[fqdn])
+            assert self._check_plugin_online(plugin_unique_name)
+
+        retry_call(is_online, delay=1, tries=30)
+
+    def __stop_adapter_from_docker(self, container: Container):
+        """
+        Stops an adapter using docker
+        """
+        container.stop()
+        self.__docker_axonius_network.disconnect(container)
 
     def _check_plugin_online(self, plugin_unique_name):
         """ Function for checking if a plugin is online.
@@ -325,14 +492,21 @@ class CoreService(PluginBase, Configurable):
                 else:
                     return 'OK'
             else:
-                # This is a registered check, we should get the plugin name (a parameter) and tell if its
-                # In our online list
-                if unique_name in self.online_plugins:
-                    plugin = self.online_plugins[unique_name]
+                # This is a registered check, we should get the plugin name (a parameter) and tell if it's
+                # already registered
+                plugin = self.core_configs_collection.find_one({
+                    PLUGIN_UNIQUE_NAME: unique_name
+                })
+                if plugin:
                     if api_key == plugin['api_key']:
                         plugin['last_seen'] = datetime.utcnow()
-                        self._get_collection('configs').update_one({PLUGIN_UNIQUE_NAME: unique_name},
-                                                                   {'$set': {'last_seen': plugin['last_seen']}})
+                        self.core_configs_collection.update_one({
+                            PLUGIN_UNIQUE_NAME: unique_name
+                        }, {
+                            '$set': {
+                                'last_seen': plugin['last_seen']
+                            }
+                        })
                         return 'OK'
                     else:
                         # Probably a new node_connection.
@@ -349,7 +523,6 @@ class CoreService(PluginBase, Configurable):
             plugin_name = data['plugin_name']
             plugin_type = data['plugin_type']
             plugin_subtype = data['plugin_subtype']
-            plugin_port = data['plugin_port']
             supported_features = data['supported_features']
             plugin_is_debug = data.get('is_debug', False)
             node_id = data[NODE_ID]
@@ -361,74 +534,48 @@ class CoreService(PluginBase, Configurable):
 
         logger.info(f"Got registration request : {data} from {request.remote_addr}")
 
-        with self.adapters_lock:  # Locking the adapters list, in case "register" will get called from 2 plugins
+        with self.adapters_lock:
             relevant_doc = None
 
             plugin_unique_name = data.get(PLUGIN_UNIQUE_NAME)
 
             if plugin_unique_name:
-                # Plugin is trying to register with his own name
-                logger.info("Plugin request to register with his own name: {0}".format(plugin_unique_name))
+                # Plugin is trying to register with it's own name
+                logger.info("Plugin request to register with it's own name: {0}".format(plugin_unique_name))
 
                 # Trying to get the configuration of the current plugin
-                relevant_doc = self._get_config(plugin_unique_name=plugin_unique_name, node_id=node_id)
+                relevant_doc = self._get_config_by_plugin_unique_name(plugin_unique_name)
 
-                if 'api_key' in data and relevant_doc is not None:
-                    api_key = data['api_key']
-                    # Checking that this plugin has the correct api key
-                    if api_key != relevant_doc['api_key']:
-                        if data[NODE_ID] != self.node_id:
-                            # This is not the correct api key, decline registration
-                            return return_error('Duplicate plugin unique name.', 409)
-                        return return_error('Wrong API key', 400)
-                else:
-                    # TODO: prompt message to gui that an unrecognized plugin is trying to connect
-                    logger.warning("Plugin {0} request to register with "
-                                   "unique name but with no api key".format(plugin_unique_name))
-
-                # Checking if this plugin already online for some reason
-                if plugin_unique_name in self.online_plugins:
-                    duplicated = self.online_plugins[plugin_unique_name]
-
-                    # HEAVY_LIFTING_PLUGIN_NAME is allowed to have multiples, don't touch that
-                    if plugin_unique_name == HEAVY_LIFTING_PLUGIN_NAME:
-                        return jsonify(relevant_doc)
-
-                    if request.remote_addr == duplicated['plugin_ip'] and plugin_port == duplicated['plugin_port']:
-                        logger.warn("Pluging {} restarted".format(plugin_unique_name))
-                        del self.online_plugins[plugin_unique_name]
+                # plugin_unique_name and node_id match an existing plugin
+                if relevant_doc:
+                    if node_id != relevant_doc[NODE_ID]:
+                        # new plugin from remote server.
+                        relevant_doc = None
+                        plugin_unique_name = self._generate_unique_name(plugin_name)
+                        if node_init_name is not None:
+                            # Setting node_init_name
+                            logger.info(f'Setting new node name: {node_init_name}')
+                            self._set_node_name(node_id, node_init_name)
                     else:
-                        if node_id == duplicated['node_id']:
-                            logger.warn(f"Already have instance of {plugin_unique_name}, trying to check if alive")
-                            if self._check_plugin_online(plugin_unique_name):
-                                # There is already a running plugin with the same name
-                                logger.error("Plugin {0} trying to register but already online")
-                                return return_error("Error - {0} is trying to register but already "
-                                                    "online".format(plugin_unique_name), 400)
-                            else:
-                                # The old plugin should be deleted
-                                del self.online_plugins[plugin_unique_name]
-                        else:
-                            # new plugin from remote server.
-                            relevant_doc = None
-                            plugin_unique_name = self._generate_unique_name(plugin_name)
-                            if node_init_name is not None:
-                                # Setting node_init_name
-                                logger.info(f'Setting new node name: {node_init_name}')
-                                self._set_node_name(node_id, node_init_name)
+                        # Checking if this plugin already registered
+                        if self.core_configs_collection.count_documents({
+                            PLUGIN_UNIQUE_NAME: plugin_unique_name
+                        }, limit=1):
+                            # HEAVY_LIFTING_PLUGIN_NAME is allowed to have multiples, don't touch that
+                            if plugin_unique_name != HEAVY_LIFTING_PLUGIN_NAME:
+                                logger.warning(
+                                    f"Already have instance of {plugin_unique_name}, re-registration detected")
 
+                            return jsonify(relevant_doc)
             else:
                 plugin_unique_name = self._generate_unique_name(plugin_name)
 
             if not relevant_doc:
                 # Create a new plugin line
-                # TODO: Ask the gui for permission to register this new plugin
                 plugin_user, plugin_password = self.db_user, self.db_password
                 doc = {
                     PLUGIN_UNIQUE_NAME: plugin_unique_name,
                     'plugin_name': plugin_name,
-                    'plugin_ip': request.remote_addr,
-                    'plugin_port': plugin_port,
                     'plugin_type': plugin_type,
                     'plugin_subtype': plugin_subtype,
                     'supported_features': supported_features,
@@ -437,7 +584,7 @@ class CoreService(PluginBase, Configurable):
                     'db_user': plugin_user,
                     'db_password': plugin_password,
                     'last_seen': datetime.utcnow(),
-                    'status': 'ok',
+                    'status': 'up',
                     NODE_ID: node_id
                 }
 
@@ -446,47 +593,26 @@ class CoreService(PluginBase, Configurable):
             else:
                 # This is an existing plugin, we should update its data on the db (data that the plugin can change)
                 doc = relevant_doc.copy()
-                doc['plugin_name'] = plugin_name
-                doc['plugin_ip'] = request.remote_addr
-                doc['plugin_port'] = plugin_port
                 doc['plugin_subtype'] = plugin_subtype
                 doc['plugin_type'] = plugin_type
                 doc['supported_features'] = supported_features
+                doc['last_seen'] = datetime.utcnow()
+                doc['status'] = 'up'
                 doc[NODE_ID] = node_id
 
-            # The next section is trying to find plugins with same ip address and port. If there are such we have
-            # a major problem since the core cant access both of the plugins.
-            # In most cases, if there are plugins with the same IP they are probably offline (and docker just used
-            # their IP for the next plugin)
-            same_ip_plugins = [same_ip_name for same_ip_name, same_ip_doc in self.online_plugins.items()
-                               if (same_ip_doc['plugin_ip'] == doc['plugin_ip'] and
-                                   same_ip_doc['plugin_port'] == doc['plugin_port'])]
-
-            for same_ip_plugin in same_ip_plugins:
-                # If we have reached here it means that we have another registered plugin with the same IP and port
-                if self._check_plugin_online(same_ip_plugin):
-                    logger.error(f"Found two online plugins with same IP. "
-                                 f"({same_ip_plugin}, {plugin_unique_name})")
-                    return return_error(f"Already have plugin with this ip: {same_ip_plugin}")
-                else:
-                    # The older plugin is no longer online, removing it from the onine_plugins list
-                    logger.info(f"Removing {same_ip_plugin} from online since other "
-                                f"{plugin_unique_name} got registered with same ip")
-                    del self.online_plugins[same_ip_plugin]
-
             # Setting a new doc with the wanted configuration
-            collection = self._get_collection('configs')
-            collection.replace_one(filter={PLUGIN_UNIQUE_NAME: doc[PLUGIN_UNIQUE_NAME]},
-                                   replacement=doc,
-                                   upsert=True)
+            self.core_configs_collection.replace_one(filter={PLUGIN_UNIQUE_NAME: doc[PLUGIN_UNIQUE_NAME]},
+                                                     replacement=doc,
+                                                     upsert=True)
 
             # This time it must work since we entered the needed document
-            relevant_doc = self._get_config(plugin_unique_name=plugin_unique_name)
+            relevant_doc = self._get_config_by_plugin_unique_name(plugin_unique_name)
 
             self.online_plugins[plugin_unique_name] = relevant_doc
             del relevant_doc['_id']  # We dont need the '_id' field
             self.did_adapter_registered = True
-            logger.info("Plugin {0} registered successfuly!".format(relevant_doc[PLUGIN_UNIQUE_NAME]))
+            logger.info("Plugin {0} registered successfully!".format(relevant_doc[PLUGIN_UNIQUE_NAME]))
+            logger.debug(relevant_doc)
             return jsonify(relevant_doc)
 
     def _generate_unique_name(self, plugin_name):
@@ -495,13 +621,12 @@ class CoreService(PluginBase, Configurable):
         for unique_name_suffix in [f"_{i}" for i in range(MAX_INSTANCES_OF_SAME_PLUGIN)]:
             # Try generating a unique name
             # TODO: Check that this name is also not in the DB
-            plugin_unique_name = f"{plugin_name}{unique_name_suffix}"
-            if not self._get_config(
-                    plugin_unique_name=plugin_unique_name) and plugin_unique_name not in self.online_plugins:
+            plugin_unique_name = f'{plugin_name}{unique_name_suffix}'
+            if not self._get_config_by_plugin_unique_name(plugin_unique_name):
                 break
         else:
             # Looped through the whole for and couldn't hit the break..
-            raise ValueError(f"Error, couldn't find a unique name for plugin {plugin_name}!")
+            raise ValueError(f'Error, couldn\'t find a unique name for plugin {plugin_name}!')
         return plugin_unique_name
 
     def _get_online_plugins(self):
@@ -517,47 +642,6 @@ class CoreService(PluginBase, Configurable):
             }
 
         return online_devices
-
-    def _translate_url(self, full_url):
-        (plugin, *url) = full_url.split('/')
-
-        address_dict = self._get_plugin_addr(plugin.lower())
-
-        address_dict['path'] = '/api/' + '/'.join(url)
-
-        return address_dict
-
-    def _get_plugin_addr(self, plugin_unique_name):
-        """ Get the plugin address from its unique_name/name.
-
-        Looks in the online plugins list.
-        At first, it will try to find the plugin by his unique name. If one cant find a matching unique name,
-        It will try to search for a plugin with the same name (For example, Execution)
-
-        :param str plugin_unique_name: The unique_name/name of the plugin
-
-        :return dict: Dictionary containing plugin ip, plugin port and api key to use.
-        """
-        candidate_plugin = self.online_plugins.get(plugin_unique_name)
-        if not candidate_plugin:
-            # Try to find plugin by name and not by unique name
-            candidate_plugin = next((plugin for plugin in self.online_plugins.values()
-                                     if plugin['plugin_name'] == plugin_unique_name), None)
-            if not candidate_plugin:
-                # Plugin is not in the online list
-                raise PluginNotFoundError()
-
-        unique_plugin = candidate_plugin[PLUGIN_UNIQUE_NAME]
-
-        relevant_doc = self._get_config(plugin_unique_name=unique_plugin)
-
-        if not relevant_doc:
-            logger.warning("No online plugin found for {0}".format(plugin_unique_name))
-            raise PluginNotFoundError()
-
-        return {"plugin_ip": relevant_doc["plugin_ip"],
-                "plugin_port": str(relevant_doc["plugin_port"]),
-                "api_key": relevant_doc["api_key"]}
 
     def _on_config_update(self, config):
         logger.info(f"Loading core config: {config}")

@@ -150,3 +150,9 @@ class SysaidAdapter(AdapterBase):
     @classmethod
     def adapter_properties(cls):
         return [AdapterProperty.Agent]
+
+    def outside_reason_to_live(self) -> bool:
+        """
+        This adapter might be called from outside, let it live
+        """
+        return True

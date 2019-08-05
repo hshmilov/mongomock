@@ -67,7 +67,7 @@ class MasterProxyService(WeaveService):
 
             super().start(*args, **kwargs)
 
-    def is_up(self):
+    def is_up(self, *args, **kwargs):
         try:
             response = requests.get('https://manage.chef.io',
                                     proxies={'https': f'https://127.0.0.1:{self.port()}'},

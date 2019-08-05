@@ -1,11 +1,15 @@
 import os
 from collections import defaultdict
 import traceback
+from pathlib import Path
 
 import requests
+from pymongo.collection import Collection
 
+from axonius.consts.system_consts import WEAVE_NETWORK
 from axonius.consts.plugin_consts import CONFIGURABLE_CONFIGS_COLLECTION, GUI_PLUGIN_NAME, \
-    AXONIUS_SETTINGS_DIR_NAME, GUI_SYSTEM_CONFIG_COLLECTION, NODE_ID, PLUGIN_NAME, PLUGIN_UNIQUE_NAME
+    AXONIUS_SETTINGS_DIR_NAME, GUI_SYSTEM_CONFIG_COLLECTION, NODE_ID, PLUGIN_NAME,\
+    PLUGIN_UNIQUE_NAME, CORE_UNIQUE_NAME, NODE_ID_FILENAME
 from axonius.consts.adapter_consts import ADAPTER_PLUGIN_TYPE
 from axonius.consts.core_consts import CORE_CONFIG_NAME
 from axonius.utils import datetime
@@ -25,7 +29,10 @@ class CoreService(PluginService, UpdatablePluginMixin):
         if self.db_schema_version < 2:
             self._update_schema_version_2()
 
-        if self.db_schema_version != 2:
+        if self.db_schema_version < 3:
+            self._update_schema_version_3()
+
+        if self.db_schema_version != 3:
             print(f'Upgrade failed, db_schema_version is {self.db_schema_version}')
 
     def _update_schema_version_1(self):
@@ -100,6 +107,55 @@ class CoreService(PluginService, UpdatablePluginMixin):
             traceback.print_exc()
             raise
 
+    def _update_schema_version_3(self):
+        # https://axonius.atlassian.net/browse/AX-4606
+        print('Upgrade to schema 3')
+        # This makes the strong assumption that this deployment of axonius has only a master and no nodes
+
+        try:
+            node_id_file_path = os.path.abspath(os.path.join(self.cortex_root_dir,
+                                                             AXONIUS_SETTINGS_DIR_NAME,
+                                                             NODE_ID_FILENAME))
+            print(f'Reading node_id from {node_id_file_path}')
+            node_id: str = Path(node_id_file_path).read_text().strip()
+            del node_id_file_path
+        except Exception as e:
+            print(f'Core is not registered, nothing to do here, {e}')
+            self.db_schema_version = 3
+            return
+
+        try:
+            plugins_collection: Collection = self.db.client[CORE_UNIQUE_NAME]['configs']
+            actions_collection: Collection = self.db.client['reports']['saved_actions']
+
+            update_res = actions_collection.update_many(filter={
+                'action.config.instance': {
+                    '$exists': True
+                }
+            }, update={
+                '$set': {
+                    'action.config.instance': node_id
+                }
+            })
+            print(f'Updated {update_res.modified_count} saved actions, matched {update_res.matched_count}')
+
+            update_res = plugins_collection.update_many(filter={
+                PLUGIN_UNIQUE_NAME: {
+                    '$ne': CORE_UNIQUE_NAME
+                }
+            }, update={
+                '$set': {
+                    NODE_ID: f'!{node_id}'
+                }
+            })
+
+            print(f'Updated {update_res.modified_count} plugins, matched {update_res.matched_count}')
+            self.db_schema_version = 3
+        except Exception as e:
+            print(f'Exception while upgrading core db to version 3. Details: {e}')
+            traceback.print_exc()
+            raise
+
     def register(self, api_key=None, plugin_name=''):
         headers = {}
         params = {}
@@ -116,7 +172,13 @@ class CoreService(PluginService, UpdatablePluginMixin):
         settings_path = os.path.abspath(os.path.join(self.cortex_root_dir, AXONIUS_SETTINGS_DIR_NAME))
         os.makedirs(settings_path, exist_ok=True)
         container_settings_dir_path = os.path.join('/home/axonius/', AXONIUS_SETTINGS_DIR_NAME)
-        volumes = [f'{settings_path}:{container_settings_dir_path}']
+
+        if self.docker_network == WEAVE_NETWORK:
+            docker_socket_mapping = '/var/run/weave/weave.sock:/var/run/docker.sock'
+        else:
+            # running on a windows machine
+            docker_socket_mapping = '/var/run/docker.sock:/var/run/docker.sock'
+        volumes = [f'{settings_path}:{container_settings_dir_path}', docker_socket_mapping]
 
         volumes.extend(super().volumes_override)
         return volumes

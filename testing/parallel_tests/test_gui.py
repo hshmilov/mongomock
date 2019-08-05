@@ -355,6 +355,7 @@ def test_api_devices():
         test_get_specific_device()
 
 
+@pytest.mark.skip("Flaky 4668")
 def test_api_users():
     def test_get_all_users():
         axonius_system = get_service()
@@ -377,8 +378,8 @@ def test_api_users():
                           int), f'Unexpected response type: {users_count_response.json()}'
 
         assert users_count_response.json() == len(
-            users_response.json()['assets']), f"Error in device count. Got: {str(len(users_response.json()))}, " \
-                                              f"{users_count_response.json()}"
+            users_response.json()['assets']), f'Error in device count. Got: {str(users_response.json())}, ' \
+                                              f'{users_count_response.json()}'
 
     def test_get_specific_user():
         axonius_system = get_service()

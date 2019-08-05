@@ -13,7 +13,7 @@ from selenium import webdriver
 
 import conftest
 from axonius.consts.gui_consts import FEATURE_FLAGS_CONFIG, FeatureFlagsNames, DASHBOARD_SPACE_TYPE_CUSTOM
-from axonius.consts.plugin_consts import AXONIUS_USER_NAME
+from axonius.consts.plugin_consts import AXONIUS_USER_NAME, CORE_UNIQUE_NAME, PLUGIN_NAME
 from axonius.consts.system_consts import AXONIUS_DNS_SUFFIX, LOGS_PATH_HOST
 from axonius.plugin_base import EntityType
 from axonius.utils.mongo_administration import truncate_capped_collection
@@ -351,3 +351,11 @@ class TestBase:
         self.base_page.run_discovery()
         self._create_history(entity_type)
         self.base_page.refresh()
+
+    @retry(stop_max_attempt_number=150, wait_fixed=3000)
+    def wait_for_adapter_down(self, adapter_name):
+        # Adapters will go down by themselves when there are no clients
+        # This is effectively testing AOD
+        assert self.axonius_system.db.get_collection(CORE_UNIQUE_NAME, 'configs').find_one({
+            PLUGIN_NAME: adapter_name
+        })['status'] == 'down'

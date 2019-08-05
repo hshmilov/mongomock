@@ -5,6 +5,7 @@ from collections import defaultdict, Callable
 from datetime import datetime
 from threading import RLock, Lock
 import logging
+from typing import List, Hashable
 
 from apscheduler.executors.pool import BasePoolExecutor
 
@@ -212,7 +213,7 @@ class LazyMultiLocker(object):
     def __init__(self):
         self.__locks = {}
 
-    def get_lock(self, indexes: list) -> MultiLocker:
+    def get_lock(self, indexes: List[Hashable]) -> MultiLocker:
         """
         Get a lock that will be the "union" lock of all indexes
         :param indexes: List of anything sortable that act as indexes

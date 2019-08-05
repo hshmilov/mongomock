@@ -16,7 +16,6 @@ logger = logging.getLogger(f'axonius.{__name__}')
 
 
 class CarbonblackDefenseAdapter(AdapterBase, Configurable):
-
     # pylint: disable=R0902
     class MyDeviceAdapter(DeviceAdapter):
         av_status = Field(str, 'AV Status')
@@ -224,3 +223,9 @@ class CarbonblackDefenseAdapter(AdapterBase, Configurable):
 
     def _on_config_update(self, config):
         self.__fetch_deregistred = config['fetch_deregistred']
+
+    def outside_reason_to_live(self) -> bool:
+        """
+        This adapter might be called from outside, let it live
+        """
+        return True

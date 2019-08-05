@@ -22,7 +22,7 @@ class SMTPService(WeaveService):
             os.path.join(self.cortex_root_dir, 'testing', 'services', 'standalone_services', 'go-guerrilla')).\
             replace('\\', '/')
 
-    def is_up(self):
+    def is_up(self, *args, **kwargs):
         return True
 
     @property

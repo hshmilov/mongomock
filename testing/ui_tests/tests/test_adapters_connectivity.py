@@ -10,7 +10,9 @@ from ui_tests.tests.ui_consts import LOCAL_DEFAULT_USER_PATTERN
 from ui_tests.tests.ui_test_base import TestBase
 
 GOTOASSIST_NAME = 'RescueAssist'
+GOTOASSIST_PLUGIN_NAME = 'gotoassist_adapter'
 CISCO_NAME = 'Cisco'
+CISCO_PLUGIN_NAME = 'cisco_adapter'
 
 
 class TestAdaptersConnectivity(TestBase):
@@ -72,8 +74,10 @@ class TestAdaptersConnectivity(TestBase):
 
             self.adapters_page.click_cancel()
         finally:
-            self.adapters_page.wait_for_adapter_down(GOTOASSIST_NAME)
-            self.adapters_page.wait_for_adapter_down(CISCO_NAME)
+            self.adapters_page.clean_adapter_servers(GOTOASSIST_NAME)
+            self.adapters_page.clean_adapter_servers(CISCO_NAME)
+            self.wait_for_adapter_down(GOTOASSIST_PLUGIN_NAME)
+            self.wait_for_adapter_down(CISCO_PLUGIN_NAME)
 
     def test_icon_color(self):
         self.adapters_page.switch_to_page()

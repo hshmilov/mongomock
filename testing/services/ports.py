@@ -158,6 +158,7 @@ DOCKER_PORTS = {
     'zscaler-adapter':                  6686,
     'reimage-tags-analysis':            6687,
     'heavy-lifting':                    6688,
+    'instance-control':                 6689,
     'master-proxy':                     8888,  # reserved
     'ssh-socat':                        9958,
     'office-scan-adapter':              9959,

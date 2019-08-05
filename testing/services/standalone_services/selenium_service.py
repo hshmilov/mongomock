@@ -9,7 +9,7 @@ from axonius.consts.system_consts import AXONIUS_DNS_SUFFIX
 
 # pylint: disable=too-many-locals
 class SeleniumService(WeaveService):
-    def is_up(self):
+    def is_up(self, *args, **kwargs):
         return True
 
     def __init__(self):

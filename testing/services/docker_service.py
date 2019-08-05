@@ -517,7 +517,7 @@ else:
         return out, err, p.returncode
 
     @abstractmethod
-    def is_up(self):
+    def is_up(self, *args, **kwargs):
         pass
 
     def wait_for_service(self, timeout=180):
@@ -544,11 +544,11 @@ else:
         """
 
     @contextmanager
-    def contextmanager(self, *, should_delete=True, take_ownership=False):
+    def contextmanager(self, *, should_delete=True, take_ownership=False, allow_restart=False):
         if take_ownership:
             self.take_process_ownership()
         try:
-            self.start_and_wait()
+            self.start_and_wait(allow_restart=allow_restart)
             yield self
         finally:
             self.stop(should_delete=should_delete)

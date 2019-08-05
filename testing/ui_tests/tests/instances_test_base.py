@@ -251,7 +251,7 @@ class TestInstancesBase(TestBase):
         return client
 
     def join_node(self):
-        def read_until(ssh_chan, what):
+        def read_until(ssh_chan: paramiko.Channel, what):
             data = b''
             try:
                 for _ in range(MAX_CHARS):
@@ -271,7 +271,7 @@ class TestInstancesBase(TestBase):
         master_ip_address = re.search(PRIVATE_IP_ADDRESS_REGEX, ip_output).group(1)
         node_join_token = self.instances_page.get_node_join_token()
         ssh_client = self.connect_node_maker(self._instances[0])
-        chan = ssh_client.get_transport().open_session()
+        chan: paramiko.Channel = ssh_client.get_transport().open_session()
         chan.settimeout(SSH_CHANNEL_TIMEOUT)
         chan.invoke_shell()
         node_join_message = read_until(chan, b'Please enter connection string:')
@@ -299,7 +299,7 @@ class TestInstancesBase(TestBase):
         self.adapters_page.add_server(client_details, adapter_name=NEXPOSE_ADAPTER_NAME)
         self.adapters_page.wait_for_spinner_to_end()
         self.base_page.run_discovery()
-        wait_until(lambda: self._check_device_count() > 1, total_timeout=90, interval=20)
+        wait_until(lambda: self._check_device_count() > 1, total_timeout=200, interval=20)
 
     def _check_device_count(self):
         self.devices_page.switch_to_page()
@@ -309,4 +309,7 @@ class TestInstancesBase(TestBase):
 
     def _delete_nexpose_adapter_and_data(self):
         self.adapters_page.remove_server(adapter_name=NEXPOSE_ADAPTER_NAME, delete_associated_entities=True)
-        wait_until(lambda: self._check_device_count() == 0, total_timeout=90, interval=20)
+        @retry(stop_max_attempt_number=100, wait_fixed=2000)
+        def to_check():
+            assert self._check_device_count() == 0
+        to_check()

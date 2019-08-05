@@ -15,7 +15,7 @@ class MockingbirdService(WeaveService):
         super().__init__(self.name, os.path.join('..', 'devops', MOCKINGBIRD_SERVICE))
         self.override_exposed_port = True  # if this service is up, always be exposed to remote connections
 
-    def is_up(self):
+    def is_up(self, *args, **kwargs):
         return True
 
     @property

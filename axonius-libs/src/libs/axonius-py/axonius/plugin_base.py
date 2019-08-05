@@ -72,13 +72,9 @@ from axonius.consts.plugin_consts import (ADAPTERS_LIST_LENGTH,
                                           X_UI_USER,
                                           X_UI_USER_SOURCE,
                                           PROXY_VERIFY,
-                                          PROXY_FOR_ADAPTERS,
-                                          GLOBAL_KEYVAL_COLLECTION,
-                                          NODE_USER_PASSWORD,
-                                          REPORTS_PLUGIN_NAME,
-                                          EXECUTION_PLUGIN_NAME,
+                                          GLOBAL_KEYVAL_COLLECTION, AXONIUS_DNS_SUFFIX,
+                                          NODE_USER_PASSWORD, REPORTS_PLUGIN_NAME, EXECUTION_PLUGIN_NAME,
                                           NODE_ID_ENV_VAR_NAME,
-                                          AXONIUS_DNS_SUFFIX,
                                           HEAVY_LIFTING_PLUGIN_NAME)
 from axonius.consts.plugin_subtype import PluginSubtype
 from axonius.consts.core_consts import CORE_CONFIG_NAME
@@ -189,7 +185,6 @@ def add_rule(rule, methods=['GET'], should_authenticate: bool = True):
                         self.authorized_api_keys.clean_cache()
                         if request.headers.get('x-api-key') not in self.authorized_api_keys():
                             raise RuntimeError(f"Bad api key. got {request.headers.get('x-api-key')}")
-                    pass
                 return func(self, *args, **kwargs)
             except Exception as err:
                 try:
@@ -258,6 +253,14 @@ def recalculate_adapter_oldness(adapter_list: list):
         max(adapters, key=lambda x: x['data'][LAST_SEEN_FIELD])['data']['_old'] = False
 
 
+def is_plugin_on_demand(plugin_unique_name: str) -> bool:
+    """
+    Whether or not this plugin is even subject to being 'up' or 'down' dynamically
+    :param plugin_unique_name: the plugin name
+    """
+    return 'adapter' in plugin_unique_name
+
+
 class PluginBase(Configurable, Feature):
     """ This is an abstract class containing the implementation
     For the base capabilities of the Plugin.
@@ -289,6 +292,11 @@ class PluginBase(Configurable, Feature):
 
         PluginBase.Instance = self
         super().__init__(*args, **kwargs)
+
+        # Use the data we have from the core.
+        self.db_host = 'mongodb://mongo.axonius.local:27017'
+        self.db_user = 'ax_user'
+        self.db_password = 'ax_pass'
 
         # Basic configurations concerning axonius-libs. This will be changed by the CI.
         # No need to put such a small thing in a version.ini file, the CI changes this string everywhere.
@@ -340,6 +348,32 @@ class PluginBase(Configurable, Feature):
             self.plugin_unique_name = self.temp_config['registration'][PLUGIN_UNIQUE_NAME]
             self.api_key = self.temp_config['registration']['api_key']
             self.node_id = self.temp_config['registration'][NODE_ID]
+
+            if self.plugin_unique_name and self.node_id:
+                # this means that this is not the first time we're starting
+                # and we might have a wrong node_id, according to
+                # https://axonius.atlassian.net/browse/AX-4606
+                db_node_id = self._get_db_connection()[CORE_UNIQUE_NAME]['configs'].find_one({
+                    PLUGIN_UNIQUE_NAME: self.plugin_unique_name
+                }, projection={
+                    NODE_ID: True
+                })
+                if not db_node_id:
+                    print('No config found in db!')
+                else:
+                    db_node_id = db_node_id[NODE_ID]
+                    if db_node_id.startswith('!'):
+                        print(f'Found (!), {db_node_id}, current is {self.node_id}')
+                        db_node_id = db_node_id[1:]
+                        self.node_id = db_node_id
+                        self.temp_config['registration'][NODE_ID] = self.node_id
+                        self._get_db_connection()[CORE_UNIQUE_NAME]['configs'].update_one({
+                            PLUGIN_UNIQUE_NAME: self.plugin_unique_name
+                        }, {
+                            '$set': {
+                                NODE_ID: db_node_id
+                            }
+                        })
         except KeyError:
             # We might have api_key but not have a unique plugin name.
             pass
@@ -367,15 +401,6 @@ class PluginBase(Configurable, Feature):
 
         with open(VOLATILE_CONFIG_PATH, 'w') as self.temp_config_file:
             self.temp_config.write(self.temp_config_file)
-
-        # Use the data we have from the core.
-        try:
-            self.db_host = self.config['DEBUG']['db_addr']
-        except KeyError:
-            self.db_host = core_data['db_addr']
-
-        self.db_user = core_data['db_user']
-        self.db_password = core_data['db_password']
 
         self.log_level = logging.INFO
 
@@ -472,6 +497,8 @@ class PluginBase(Configurable, Feature):
         }
 
         self.gui_dbs = GUI_DBs(entity_query_views_db_map)
+
+        self.core_configs_collection = self._get_db_connection()[CORE_UNIQUE_NAME]['configs']
 
         # Reports collections
         reports_db = self._get_db_connection()[REPORTS_PLUGIN_NAME]
@@ -588,7 +615,7 @@ class PluginBase(Configurable, Feature):
         Gets all the api_keys generated by the system from the core/configs db.
         :return: a list of the api_keys generated by the system.
         """
-        cursor = self._get_collection('configs', CORE_UNIQUE_NAME).find(projection={
+        cursor = self.core_configs_collection.find(projection={
             '_id': 0,
             'api_key': 1
         })
@@ -757,7 +784,8 @@ class PluginBase(Configurable, Feature):
         try:
             response = self.request_remote_plugin("register?unique_name={0}".format(self.plugin_unique_name),
                                                   plugin_unique_name=CORE_UNIQUE_NAME,
-                                                  timeout=10)
+                                                  timeout=10,
+                                                  fail_on_plugin_down=True)
             if response.status_code in [404, 499, 502, 409]:  # Fault values
                 logger.error(f"Not registered to core (got response {response.status_code}), Exiting")
                 # TODO: Think about a better way for exiting this process
@@ -879,7 +907,10 @@ class PluginBase(Configurable, Feature):
         Figures out who called us from
         :return: tuple(plugin_unique_name, plugin_name)
         """
-        return request.headers.get('x-unique-plugin-name'), request.headers.get('x-plugin-name')
+        try:
+            return request.headers.get('x-unique-plugin-name'), request.headers.get('x-plugin-name')
+        except RuntimeError:
+            return 'self_induced', 'self_induced'
 
     def _handle_request_headers_and_users(self, **kwargs):
         headers = {
@@ -901,8 +932,41 @@ class PluginBase(Configurable, Feature):
 
         return headers
 
-    def request_remote_plugin(self, resource, plugin_unique_name='core', method='get',
-                              raise_on_network_error: bool = False, **kwargs) -> requests.Response:
+    def __ask_core_to_raise_adapter(self, plugin_unique_name: str):
+        try:
+            logger.info(f'Raising plugin {plugin_unique_name}')
+            self._trigger_remote_plugin(CORE_UNIQUE_NAME, f'start:{plugin_unique_name}', reschedulable=False)
+        except Exception:
+            logger.exception('Core failed raising adapter!')
+            raise
+
+    @singlethreaded()
+    @cachetools.cached(cachetools.TTLCache(maxsize=200, ttl=30))
+    def _verify_plugin_is_up(self, plugin_unique_name: str):
+        if not is_plugin_on_demand(plugin_unique_name):
+            # Core is assumed to be up
+            return
+
+        plugin_data = self.core_configs_collection.find_one({
+            PLUGIN_UNIQUE_NAME: plugin_unique_name
+        }, projection={
+            '_id': 0,
+            'status': 1,
+        })
+        if not plugin_data:
+            raise RuntimeError(f'Plugin {plugin_unique_name} not found!')
+
+        if plugin_data['status'] != 'up':
+            # asking core to raise adapter
+            logger.info(f'Plugin {plugin_unique_name} is not up, asking core to raise it')
+            self.__ask_core_to_raise_adapter(plugin_unique_name)
+
+        return True
+
+    def request_remote_plugin(self, resource, plugin_unique_name=CORE_UNIQUE_NAME, method='get',
+                              raise_on_network_error: bool = False,
+                              fail_on_plugin_down: bool = False,
+                              **kwargs) -> requests.Response:
         """
         Provides an interface to access other plugins, with the current plugin's API key.
         :type resource: str
@@ -913,12 +977,14 @@ class PluginBase(Configurable, Feature):
                                    Aggregator or Execution.
         :param method: HTTP method - see `request.request`
         :param raise_on_network_error: Whether to raise ConnectionError on error or not
+        :param fail_on_plugin_down: If True, won't try to raise a plugin if it is down
         :param kwargs: passed to `requests.request`
         :return: :class:`Response <Response>` object
         :rtype: requests.Response
         """
-        url = f'https://{plugin_unique_name}.{AXONIUS_DNS_SUFFIX}/api/{resource}'
+        self._verify_plugin_is_up(plugin_unique_name)
 
+        url = f'https://{plugin_unique_name}.{AXONIUS_DNS_SUFFIX}/api/{resource}'
         headers = self._handle_request_headers_and_users(**kwargs)
 
         data = kwargs.pop('data', None)
@@ -930,11 +996,24 @@ class PluginBase(Configurable, Feature):
 
         try:
             result = requests.request(method, url, headers=headers, data=data, **kwargs)
-        except requests.exceptions.ConnectionError:
-            if raise_on_network_error:
+        except Exception:
+            # If this plugin is not 'on demand' - there is no point trying again
+            if not is_plugin_on_demand(plugin_unique_name):
                 raise
-            logger.warning(f'Request failed for {url}')
-            return None
+
+            # If requested to fail on the case of a plugin down
+            if fail_on_plugin_down:
+                raise
+
+            # Otherwise, force a 'start:plugin' request
+            self.__ask_core_to_raise_adapter(plugin_unique_name)
+            try:
+                result = requests.request(method, url, headers=headers, data=data, **kwargs)
+            except Exception:
+                if raise_on_network_error:
+                    raise
+                logger.error(f'Request failed for {url}, {result}')
+                return None
         return result
 
     def async_request_remote_plugin(self, *args, **kwargs) -> Promise:
@@ -948,17 +1027,21 @@ class PluginBase(Configurable, Feature):
                                          args=args,
                                          kwargs=kwargs))
 
-    def get_available_plugins_from_core_uncached(self) -> Dict[str, dict]:
+    def get_available_plugins_from_core_uncached(self, filter_: dict = None) -> Dict[str, dict]:
         """
         Uncached version for get_available_plugins_from_core
         """
-        return requests.get(self.core_address + '/register').json()
+        return {
+            x[PLUGIN_UNIQUE_NAME]: x
+            for x
+            in self.core_configs_collection.find(filter_)
+        }
 
     @singlethreaded()
     @cachetools.cached(cachetools.TTLCache(maxsize=1, ttl=10))
     def get_available_plugins_from_core(self) -> Dict[str, dict]:
         """
-        Gets all running plugins from core by querying core/register
+        Gets all running plugins from core by querying the DB
         """
         return self.get_available_plugins_from_core_uncached()
 
@@ -971,9 +1054,12 @@ class PluginBase(Configurable, Feature):
         return self.request_remote_plugin(f'stop/{job_name}', plugin_name, method='post')
 
     def _trigger_remote_plugin(self, plugin_name: str, job_name: str = 'execute',
-                               blocking: bool = True, priority: bool = False,
+                               blocking: bool = True,
+                               priority: bool = False,
                                data: dict = None,
-                               timeout: int = None, stop_on_timeout: bool = False) -> requests.Response:
+                               timeout: int = None,
+                               stop_on_timeout: bool = False,
+                               reschedulable: bool = True) -> requests.Response:
         """
         Triggers a triggerable plugin
         :param plugin_name: The plugin name to trigger
@@ -983,14 +1069,18 @@ class PluginBase(Configurable, Feature):
         :param data: POST data to the job
         :param timeout: How long to wait for a response, only relevant if blocking=True
         :param stop_on_timeout: If true, and timed out, then a 'stop' operation will be triggered
+        :param reschedulable: If true, then the job will reschedule if it's already running
         :return: Either the response from the invocation or None for async operations
         """
         timeout = timeout or ''
 
         def inner():
             try:
+                logger.debug(f'Triggering {job_name} on {plugin_name} with {blocking}, {priority}, {reschedulable}'
+                             f' and {timeout}')
+                logger.debug(data)
                 res = self.request_remote_plugin(f'trigger/{job_name}?blocking={blocking}&priority={priority}'
-                                                 f'&timeout={timeout}',
+                                                 f'&timeout={timeout}&reschedulable={reschedulable}',
                                                  plugin_name, method='post',
                                                  json=data,
                                                  raise_on_network_error=True)
@@ -1254,7 +1344,7 @@ class PluginBase(Configurable, Feature):
         :return: MongoClient
         """
         if not self.__mongo_client:
-            self.__mongo_client = MongoClient(self.db_host, replicaset='axon-cluster', retryWrites=True,
+            self.__mongo_client = MongoClient(self.db_host, replicaSet='axon-cluster', retryWrites=True,
                                               username=self.db_user, password=self.db_password,
                                               localthresholdms=1000)
         return self.__mongo_client
@@ -1603,7 +1693,7 @@ class PluginBase(Configurable, Feature):
     def _get_nodes_table(self):
         db_connection = self._get_db_connection()
         nodes = []
-        for current_node in db_connection['core']['configs'].distinct('node_id'):
+        for current_node in self.core_configs_collection.distinct('node_id'):
             node_data = db_connection['core']['nodes_metadata'].find_one({'node_id': current_node})
             if node_data is not None:
                 nodes.append({'node_id': current_node, 'node_name': node_data.get('node_name', {}),
@@ -1617,7 +1707,8 @@ class PluginBase(Configurable, Feature):
         return nodes
 
     def _get_adapter_unique_name(self, adapter_name: str, node_id: str) -> str:
-        response = self.request_remote_plugin(f'find_plugin_unique_name/nodes/{node_id}/plugins/{adapter_name}')  # .json().get(
+        response = self.request_remote_plugin(
+            f'find_plugin_unique_name/nodes/{node_id}/plugins/{adapter_name}')  # .json().get(
         # 'plugin_unique_name')
 
         if response.status_code != 200 or not response.text:
@@ -2255,38 +2346,42 @@ class PluginBase(Configurable, Feature):
                 self.__archive_axonius_device(plugin_unique_name, adapter_id, _entities_db, session)
 
     def __add_many_labels_to_entity_huge(self, entity: EntityType, identity_by_adapter, labels,
-                                         are_enabled=True):
+                                         are_enabled=True, with_results=False):
         """
         See add_many_labels_to_entity for all the docs
         This is the optional optimization that delegates the work to the heavy lifting plugin because
         sometimes adding a lot of tags can take a long while on a non-SMP process.
         """
         for label in labels:
-
             def perform_tag(specific_identities_chunk: Iterable[dict]):
                 try:
-                    return self.request_remote_plugin('tag_entities', HEAVY_LIFTING_PLUGIN_NAME,
-                                                      'post', json={
-                                                          'entity': entity.value,
-                                                          'identity_by_adapter': list(specific_identities_chunk),
-                                                          'labels': [label],
-                                                          'are_enabled': are_enabled,
-                                                          'is_huge': False
-                                                      }).json()
+                    res = self.request_remote_plugin('tag_entities', HEAVY_LIFTING_PLUGIN_NAME,
+                                                     'post', json={
+                                                         'entity': entity.value,
+                                                         'identity_by_adapter': list(specific_identities_chunk),
+                                                         'labels': [label],
+                                                         'are_enabled': are_enabled,
+                                                         'is_huge': False,
+                                                         'with_results': with_results
+                                                     })
+                    if with_results:
+                        return res.json()
+                    return None
                 except Exception:
                     logger.exception(f'Problem adding label: {label}')
 
             yield from self._common_executor.map(perform_tag, chunks(1000, identity_by_adapter))
 
     def add_many_labels_to_entity(self, entity: EntityType, identity_by_adapter, labels,
-                                  are_enabled=True, is_huge: bool = False) -> List[dict]:
+                                  are_enabled=True, is_huge: bool = False, with_results: bool = False) -> List[dict]:
         """
         Tag many devices with many tags. if is_enabled = False, the labels are grayed out.
         :param is_huge: If True, will use heavy_lifting plugin for assistance
         :return: List of affected entities
         """
         if is_huge:
-            return list(self.__add_many_labels_to_entity_huge(entity, identity_by_adapter, labels, are_enabled))
+            return list(self.__add_many_labels_to_entity_huge(entity, identity_by_adapter, labels, are_enabled,
+                                                              with_results))
 
         def perform_many_tags():
             for label in labels:
@@ -2469,7 +2564,7 @@ class PluginBase(Configurable, Feature):
         """
         return set(x[PLUGIN_UNIQUE_NAME]
                    for x in
-                   self._get_db_connection()[CORE_UNIQUE_NAME]['configs'].find(
+                   self.core_configs_collection.find(
                        filter={
                            'supported_features': feature,
                        },

@@ -490,3 +490,9 @@ class ServiceNowAdapter(AdapterBase, Configurable):
         self.__fetch_ips = config['fetch_ips']
         self.__fetch_users_info_for_devices = config['fetch_users_info_for_devices']
         self.__exclude_disposed_devices = config['exclude_disposed_devices']
+
+    def outside_reason_to_live(self) -> bool:
+        """
+        This adapter might be called from outside, let it live
+        """
+        return True

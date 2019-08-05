@@ -29,7 +29,7 @@ def parse_proxy(url):
 
 
 class DiagnosticsService(DockerService):
-    def is_up(self):
+    def is_up(self, *args, **kwargs):
         return True
 
     def __init__(self):

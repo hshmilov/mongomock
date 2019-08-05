@@ -2,10 +2,12 @@ import glob
 import importlib
 import inspect
 import os
+import random
 import subprocess
 import sys
 import time
 from datetime import datetime, timedelta
+from multiprocessing.pool import ThreadPool
 
 import pytest
 
@@ -26,6 +28,7 @@ from services.plugins.execution_service import ExecutionService
 from services.plugins.gui_service import GuiService
 from services.plugins.heavy_lifting_service import HeavyLiftingService
 from services.plugins.mongo_service import MongoService
+from services.plugins.instance_control_service import InstanceControlService
 from services.plugins.reports_service import ReportsService
 from services.plugins.static_correlator_service import StaticCorrelatorService
 from services.plugins.static_users_correlator_service import StaticUsersCorrelatorService
@@ -56,6 +59,7 @@ class AxoniusService:
         self.static_users_correlator = StaticUsersCorrelatorService()
         self.reports = ReportsService()
         self.heavy_lifting = HeavyLiftingService()
+        self.instance_control = InstanceControlService()
         self.master_proxy = MasterProxyService()
 
         self.axonius_services = [self.db,
@@ -69,6 +73,10 @@ class AxoniusService:
                                  self.heavy_lifting,
                                  self.reports,
                                  self.master_proxy]
+
+        # No instance control on windows
+        if 'linux' in sys.platform.lower():
+            self.axonius_services.append(self.instance_control)
 
     @classmethod
     def get_is_network_exists(cls):
@@ -334,7 +342,7 @@ class AxoniusService:
         current_time = datetime.now()
         self.aggregator.trigger_check_registered()
         while self.aggregator.is_up():
-            assert datetime.now() - current_time < timedelta(seconds=10)
+            assert datetime.now() - current_time < timedelta(seconds=120)
             time.sleep(1)
         # Now aggregator is down as well
         self.core.start_and_wait()
@@ -405,34 +413,34 @@ class AxoniusService:
         if allow_restart:
             for service in all_services_to_start:
                 service.remove_container()
-        for service in all_services_to_start:
-            service.set_system_config(system_config)
-            service.take_process_ownership()
-            if service.get_is_container_up():
-                if skip:
-                    continue
-            service.start(mode, allow_restart=allow_restart, rebuild=rebuild,
-                          hard=hard, show_print=show_print, docker_internal_env_vars=env_vars)
-        timeout = 60
-        start = time.time()
-        first = True
-        while start + timeout > time.time() and len(all_services_to_start) > 0:
-            for service in all_services_to_start.copy():
-                try:
-                    # On heavy systems (especially with nodes) it takes more time for core to respond.
-                    # So we have to give so more time for plugins.
-                    service.wait_for_service(120 if first else 60)
-                    if service.should_register_unique_dns:
-                        service.register_unique_dns()
-                    all_services_to_start.remove(service)
-                except TimeoutException:
-                    pass
-                first = False
-        if len(all_services_to_start) > 0:
+
+        def start_and_wait_for_service(service):
+            """
+            Returns the problematic service if there's an error. Otherwise returns None
+            """
+            try:
+                service.set_system_config(system_config)
+                service.take_process_ownership()
+                if service.get_is_container_up():
+                    if skip:
+                        return None
+                service.start(mode, allow_restart=allow_restart, rebuild=rebuild,
+                              hard=hard, show_print=show_print, docker_internal_env_vars=env_vars)
+                service.wait_for_service(120)
+                if service.should_register_unique_dns:
+                    service.register_unique_dns()
+                return None
+            except Exception:
+                return service
+
+        with ThreadPool(5) as pool:
+            errors = [x for x in pool.map(start_and_wait_for_service, all_services_to_start) if x]
+
+        if len(errors) > 0:
             # plugins contains failed ones and should be removed to make sure the state is stable for next time.
-            for service in all_services_to_start:
+            for service in errors:
                 service.stop(should_delete=True)
-            raise TimeoutException(repr([plugin.container_name for plugin in all_services_to_start]))
+            raise TimeoutException(repr([plugin.container_name for plugin in errors]))
 
     def stop_plugins(self, adapter_names, plugin_names, standalone_services_names, **kwargs):
         all_services_to_stop = [self.get_adapter(name) for name in adapter_names] + \

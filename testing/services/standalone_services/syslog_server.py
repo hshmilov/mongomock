@@ -14,7 +14,7 @@ class SyslogService(WeaveService):
         self.__conf_file = os.path.abspath(
             os.path.join(self.cortex_root_dir, 'testing', 'services', 'standalone_services', 'syslog-ng.conf'))
 
-    def is_up(self):
+    def is_up(self, *args, **kwargs):
         return True
 
     @property

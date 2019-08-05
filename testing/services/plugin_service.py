@@ -15,7 +15,7 @@ from retrying import retry
 
 from axonius.config_reader import (AdapterConfig, PluginConfig,
                                    PluginVolatileConfig)
-from axonius.consts.plugin_consts import CONFIGURABLE_CONFIGS_COLLECTION
+from axonius.consts.plugin_consts import CONFIGURABLE_CONFIGS_COLLECTION, PLUGIN_UNIQUE_NAME, CORE_UNIQUE_NAME
 from axonius.consts.system_consts import AXONIUS_DNS_SUFFIX, WEAVE_NETWORK, WEAVE_PATH
 from axonius.entities import EntityType
 from axonius.plugin_base import VOLATILE_CONFIG_PATH
@@ -49,7 +49,15 @@ class PluginService(WeaveService):
             self.service_class_name += 'Service'
         self.plugin_name = os.path.basename(self.service_dir)
         self.db = MongoService()
+        if self.container_name == CORE_UNIQUE_NAME:
+            self.core = self
+        else:
+            from services.plugins.core_service import CoreService
+            self.core = CoreService()
+
+        self.core_configs_collection = self.db.client[CORE_UNIQUE_NAME]['configs']
         self.__cached_api_key = None
+        self.__cached_unique_name = None
 
         self._historical_entity_views_db_map: Dict[EntityType, Collection] = {
             EntityType.Users: self.db.client['aggregator']['historical_users_db_view'],
@@ -66,6 +74,36 @@ class PluginService(WeaveService):
             EntityType.Devices: self.db.client['gui']['device_views'],
         }
 
+    def __ask_core_to_raise_adapter(self, plugin_unique_name: str):
+        print(f'asking core to raise {plugin_unique_name}')
+        if 'adapter' not in plugin_unique_name:
+            # Only adapters can be down like this
+            return
+        self.core.trigger(job_name=f'start:{plugin_unique_name}', blocking=True, reschedulable=False)
+
+    def _verify_plugin_is_up(self, plugin_unique_name: str):
+        if plugin_unique_name == CORE_UNIQUE_NAME:
+            # Core is assumed to be up
+            return
+        if 'adapter' not in plugin_unique_name:
+            # Only adapters can be down like this
+            return
+
+        plugin_data = self.core_configs_collection.find_one({
+            PLUGIN_UNIQUE_NAME: plugin_unique_name
+        }, projection={
+            '_id': 0,
+            'status': 1,
+        })
+        if not plugin_data:
+            raise RuntimeError(f'Plugin {plugin_unique_name} not found!')
+
+        if plugin_data['status'] != 'up':
+            # asking core to raise adapter
+            self.__ask_core_to_raise_adapter(plugin_unique_name)
+
+        return True
+
     @property
     def volumes_override(self):
         libs = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'axonius-libs', 'src', 'libs'))
@@ -75,16 +113,10 @@ class PluginService(WeaveService):
     def should_register_unique_dns(self):
         return True
 
-    def request(self, method, endpoint, api_key=None, headers=None, session=None, *vargs, **kwargs):
-        if headers is None:
-            headers = {}
-
-        if api_key is not None:
-            headers[API_KEY_HEADER] = api_key
-
-        if 'data' in kwargs and isinstance(kwargs['data'], dict):
-            kwargs['data'] = json.dumps(kwargs['data'])
-
+    def __perform_request(self, method, endpoint, headers, session, *vargs, **kwargs):
+        """
+        See request
+        """
         if session:
             with session:
                 return session.request(method, url='{0}/{1}'.format(self.req_url, endpoint),
@@ -93,10 +125,33 @@ class PluginService(WeaveService):
         return requests.request(method, url='{0}/{1}'.format(self.req_url, endpoint),
                                 headers=headers, *vargs, **kwargs)
 
+    def request(self, method, endpoint, api_key=None, headers=None, session=None, *vargs, verify_is_up: bool = True,
+                **kwargs):
+        if verify_is_up:
+            self._verify_plugin_is_up(self.unique_name)
+        if headers is None:
+            headers = {}
+
+        if api_key is not None:
+            headers[API_KEY_HEADER] = api_key
+
+        headers['x-unique-plugin-name'] = self.unique_name
+        headers['x-plugin-name'] = self.plugin_name
+
+        if 'data' in kwargs and isinstance(kwargs['data'], dict):
+            kwargs['data'] = json.dumps(kwargs['data'])
+        try:
+            return self.__perform_request(method, endpoint, headers, session, *vargs, **kwargs)
+        except Exception:
+            if verify_is_up:
+                self.__ask_core_to_raise_adapter(self.unique_name)
+                return self.__perform_request(method, endpoint, headers, session, *vargs, **kwargs)
+            raise
+
     def get(self, endpoint, *vargs, **kwargs):
         return self.request('get', endpoint, *vargs, **kwargs)
 
-    def put(self, endpoint, data, *vargs, **kwargs):
+    def put(self, endpoint, data=None, *vargs, **kwargs):
         return self.request('put', endpoint, data=data, *vargs, **kwargs)
 
     def post(self, endpoint, *vargs, **kwargs):
@@ -108,8 +163,8 @@ class PluginService(WeaveService):
     def version(self):
         return self.get('version', timeout=15)
 
-    def get_supported_features(self):
-        res = self.get('supported_features', timeout=15)
+    def get_supported_features(self, *args, **kwargs):
+        res = self.get('supported_features', timeout=15, *args, **kwargs)
         assert res.status_code == 200
         return set(res.json())
 
@@ -131,19 +186,21 @@ class PluginService(WeaveService):
         else:
             return self.fqdn in self.inspect[0]['NetworkSettings']['Networks']['axonius']['Aliases']
 
-    def trigger_execute(self, blocking: bool):
-        response = requests.post(
-            self.req_url + f'/trigger/execute?blocking={blocking}',
-            headers={API_KEY_HEADER: self.api_key}
-        )
-
+    def trigger(self, job_name: str, blocking: bool, reschedulable: bool = True):
+        response = self.post(f'/trigger/{job_name}?blocking={blocking}&reschedulable={reschedulable}',
+                             headers={
+                                 API_KEY_HEADER: self.api_key
+                             })
         assert response.status_code == 200, \
             f'Error in response: {str(response.status_code)}, ' \
             f'{str(response.content)}'
 
         return response
 
-    def is_up(self):
+    def trigger_execute(self, blocking: bool):
+        self.trigger('execute', blocking)
+
+    def is_up(self, *args, **kwargs):
         return self._is_service_alive() and "Plugin" in self.get_supported_features()
 
     @property
@@ -156,6 +213,8 @@ class PluginService(WeaveService):
     def start_and_wait(self, **kwargs):
         super().start_and_wait(**kwargs)
         self.register_unique_dns()
+        self.api_key  # put API key in cache
+        self.unique_name  # put unique name in cache
 
     @retry(stop_max_attempt_number=3, wait_fixed=5)
     def register_unique_dns(self):
@@ -211,12 +270,26 @@ class PluginService(WeaveService):
     def api_key(self):
         if self.__cached_api_key is not None:
             return self.__cached_api_key
-        self.__cached_api_key = self.vol_conf.api_key
+        try:
+            self.__cached_api_key = self.vol_conf.api_key
+        except Exception:
+            # If the plugin is down, or anything, give something else
+            return self.db.client['core']['configs'].find_one({})['api_key']
         return self.__cached_api_key
 
     @property
     def unique_name(self):
-        return self.vol_conf.unique_name
+        try:
+            self.__cached_unique_name = self.vol_conf.unique_name
+        except Exception:
+            # If the plugin is down, getting the unique name will fail.
+            # in this case, use the cache
+            if self.__cached_unique_name is not None:
+                return self.__cached_unique_name
+            else:
+                # If there's no cache, die. This shouldn't happened.
+                raise
+        return self.__cached_unique_name
 
     @property
     def log_path(self):
@@ -267,6 +340,7 @@ class PluginService(WeaveService):
                                                                                      {"$set":
                                                                                       {f"config."
                                                                                        f"{specific_key}": value}})
+        self._verify_plugin_is_up(self.unique_name)
         response = requests.post(self.req_url + "/update_config", headers={API_KEY_HEADER: self.api_key})
         response.raise_for_status()
 
@@ -279,8 +353,10 @@ class PluginService(WeaveService):
         return gridfs.GridFS(self.db.client[self.unique_name]).get(oid).read()
 
     @contextmanager
-    def contextmanager(self, *, should_delete=True, take_ownership=False):
-        with super().contextmanager(should_delete=should_delete, take_ownership=take_ownership):
+    def contextmanager(self, *, should_delete=True, take_ownership=False, allow_restart=True):
+        with super().contextmanager(should_delete=should_delete,
+                                    take_ownership=take_ownership,
+                                    allow_restart=allow_restart):
             self.register_unique_dns()
             yield self
 
@@ -298,13 +374,13 @@ class AdapterService(PluginService):
         return self.clients(client_details)
 
     def users(self):
-        response = requests.get(self.req_url + "/users", headers={API_KEY_HEADER: self.api_key})
+        response = self.get('/users', headers={API_KEY_HEADER: self.api_key})
 
         assert response.status_code == 200, str(response)
         return response.json()
 
     def devices(self):
-        response = requests.get(self.req_url + "/devices", headers={API_KEY_HEADER: self.api_key})
+        response = self.get('/devices', headers={API_KEY_HEADER: self.api_key})
 
         assert response.status_code == 200, str(response)
         return from_json(response.content)
@@ -312,8 +388,10 @@ class AdapterService(PluginService):
     def trigger_clean_db(self):
         # This help guarantee consistency for transactions
         time.sleep(1)
-        response = requests.post(self.req_url + "/trigger/clean_devices?priority=True",
-                                 headers={API_KEY_HEADER: self.api_key})
+        response = self.post('/trigger/clean_devices?priority=True',
+                             headers={
+                                 API_KEY_HEADER: self.api_key
+                             })
 
         assert response.status_code == 200, str(response)
         return from_json(response.content)
@@ -337,18 +415,18 @@ class AdapterService(PluginService):
 
     def clients(self, client_data=None):
         if not client_data:
-            response = requests.post(self.req_url + "/clients", headers={API_KEY_HEADER: self.api_key})
+            response = self.post('clients', headers={API_KEY_HEADER: self.api_key})
         else:
             client_data = self._process_clients_for_adapter(client_data)
-            response = requests.put(self.req_url + "/clients", headers={API_KEY_HEADER: self.api_key},
-                                    json=client_data)
+            response = self.put('clients', headers={API_KEY_HEADER: self.api_key},
+                                json=client_data)
         assert response.status_code == 200, str(response)
         return response.json()
 
     def is_client_reachable(self, client_data):
         client_data = self._process_clients_for_adapter(client_data)
-        response = requests.post(self.req_url + "/client_test", headers={API_KEY_HEADER: self.api_key},
-                                 json=client_data)
+        response = self.post('/client_test', headers={API_KEY_HEADER: self.api_key},
+                             json=client_data)
 
         return response.status_code == 200
 
@@ -358,8 +436,14 @@ class AdapterService(PluginService):
     def schema(self, schema_type="general", api_key=None):
         return self.get('{0}/{1}'.format('schema', schema_type), api_key=self.api_key if api_key is None else api_key)
 
-    def is_up(self):
-        return super().is_up() and "Adapter" in self.get_supported_features()
+    def is_up(self, raise_via_core: bool = True):
+        """
+        Verifies the adapter is up
+        :param raise_via_core: if False, will not try to raise via core
+        """
+        if raise_via_core:
+            self._verify_plugin_is_up(self.unique_name)
+        return "Adapter" in self.get_supported_features(verify_is_up=raise_via_core)
 
     @property
     def conf(self):

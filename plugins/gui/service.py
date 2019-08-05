@@ -1432,18 +1432,13 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         Get all adapters from the core
         :return:
         """
-        plugins_available = self.get_available_plugins_from_core()
         db_connection = self._get_db_connection()
-        adapters_from_db = db_connection[CORE_UNIQUE_NAME]['configs'].find(
-            {
-                'plugin_type': adapter_consts.ADAPTER_PLUGIN_TYPE
-            }).sort([(PLUGIN_UNIQUE_NAME, pymongo.ASCENDING)])
+        adapters_from_db = db_connection[CORE_UNIQUE_NAME]['configs'].find({
+            'plugin_type': adapter_consts.ADAPTER_PLUGIN_TYPE
+        }).sort([(PLUGIN_UNIQUE_NAME, pymongo.ASCENDING)])
         adapters_to_return = []
         for adapter in adapters_from_db:
             adapter_name = adapter[PLUGIN_UNIQUE_NAME]
-            if adapter_name not in plugins_available:
-                # Plugin not registered - unwanted in UI
-                continue
 
             schema = self._get_plugin_schemas(db_connection, adapter_name).get('clients')
             nodes_metadata_collection = db_connection['core']['nodes_metadata']
@@ -1470,17 +1465,19 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
 
             node_name = '' if node_name is None else node_name.get(NODE_NAME)
 
-            adapters_to_return.append({'plugin_name': adapter['plugin_name'],
-                                       'unique_plugin_name': adapter_name,
-                                       'status': status,
-                                       'supported_features': adapter['supported_features'],
-                                       'schema': schema,
-                                       'clients': clients,
-                                       NODE_ID: adapter[NODE_ID],
-                                       NODE_NAME: node_name,
-                                       'config': self.__extract_configs_and_schemas(db_connection,
-                                                                                    adapter_name)
-                                       })
+            adapters_to_return.append({
+                'plugin_name': adapter['plugin_name'],
+                'unique_plugin_name': adapter_name,
+                'status': status,
+                'supported_features': adapter['supported_features'],
+                'schema': schema,
+                'clients': clients,
+                NODE_ID: adapter[NODE_ID],
+                NODE_NAME: node_name,
+                'config': self.__extract_configs_and_schemas(db_connection,
+                                                             adapter_name)
+            })
+
         adapters = defaultdict(list)
         for adapter in adapters_to_return:
             plugin_name = adapter.pop('plugin_name')
@@ -1534,7 +1531,8 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         if data_from_db_for_unchanged:
             clients = refill_passwords_fields(clients, data_from_db_for_unchanged['client_config'])
         # adding client to specific adapter
-        response = self.request_remote_plugin('clients', adapter_unique_name, 'put', json=clients)
+        response = self.request_remote_plugin('clients', adapter_unique_name, 'put', json=clients,
+                                              raise_on_network_error=True)
         self._adapters.clean_cache()
         if response.status_code == 200:
             self._client_insertion_threadpool.submit(self._fetch_after_clients_thread, adapter_unique_name,
@@ -1602,7 +1600,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
     def _adapters_clients(self, adapter_name):
         """
         Gets or creates clients in the adapter
-        :param adapter_unique_name: the adapter to refer to
+        :param adapter_name: the adapter to refer to
         :return:
         """
         clients = request.get_json(silent=True)
@@ -1610,6 +1608,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
 
         adapter_unique_name = self.request_remote_plugin(
             f'find_plugin_unique_name/nodes/{node_id}/plugins/{adapter_name}').json().get('plugin_unique_name')
+        logger.info(f'Got adapter unique name {adapter_unique_name}')
         if request.method == 'PUT':
             def reset_cache_soon():
                 time.sleep(5)
@@ -1632,7 +1631,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
     def _adapters_clients_update(self, adapter_name, client_id=None):
         """
         Create or delete credential sets (clients) in the adapter
-        :param adapter_unique_name: the adapter to refer to
+        :param adapter_name: the adapter to refer to
         :param client_id: UUID of client to delete if DELETE is used
         :return:
         """
@@ -1640,16 +1639,14 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         node_id = data.pop('instanceName', self.node_id)
         old_node_id = data.pop('oldInstanceName', None)
         adapter_unique_name = self.request_remote_plugin(f'find_plugin_unique_name/nodes/{old_node_id or node_id}/'
-                                                         f'plugins/{adapter_name}').json().get('plugin_unique_name')
+                                                         f'plugins/{adapter_name}').json().get(PLUGIN_UNIQUE_NAME)
         if request.method == 'DELETE':
-            delete_entities = request.args.get('deleteEntities', False)
-            self.delete_client_data(adapter_unique_name, client_id,
-                                    data.get('nodeId', None), delete_entities)
+            if request.args.get('deleteEntities', False):
+                self.delete_client_data(adapter_name, adapter_unique_name, client_id)
 
         client_from_db = self._get_collection('clients', adapter_unique_name).find_one({'_id': ObjectId(client_id)})
         if not client_from_db:
             return return_error('Server is already gone, please try again after refreshing the page')
-
         self.request_remote_plugin('clients/' + client_id, adapter_unique_name, method='delete')
 
         if request.method == 'PUT':
@@ -1664,101 +1661,94 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         self._adapters.clean_cache()
         return '', 200
 
-    def delete_client_data(self, plugin_name, client_id, node_id, delete_entities=False):
-        adapter_name = self.get_plugin_by_name(plugin_name, node_id)[
-            PLUGIN_UNIQUE_NAME] if node_id is not None else plugin_name
-        plugin_name = plugin_name if node_id is not None else self.get_plugin_by_name(plugin_name, node_id)[PLUGIN_NAME]
-        logger.info(f'Delete request for {plugin_name} [{adapter_name}]'
-                    f' and delete entities - {delete_entities}, client_id: {client_id}')
-        if delete_entities:
-            client_from_db = self._get_collection('clients', adapter_name). \
-                find_one({'_id': ObjectId(client_id)})
-            if client_from_db:
-                # this is the "client_id" - i.e. AD server or AWS Access Key
-                local_client_id = client_from_db['client_id']
-                logger.info(f'client from db: {client_from_db}')
-                for entity_type in EntityType:
-                    res = self._entity_db_map[entity_type].update_many(
-                        {
-                            'adapters': {
-                                '$elemMatch': {
-                                    '$and': [
-                                        {
-                                            PLUGIN_NAME: plugin_name
-                                        },
-                                        {
-                                            # and the device must be from this adapter
-                                            'client_used': local_client_id
-                                        }
-                                    ]
-                                }
-                            }
-                        },
-                        {
-                            '$set': {
-                                'adapters.$[i].pending_delete': True
-                            }
-                        },
-                        array_filters=[
-                            {
+    def delete_client_data(self, plugin_name, plugin_unique_name, client_id):
+        client_from_db = self._get_collection('clients', plugin_unique_name).find_one({'_id': ObjectId(client_id)})
+        if client_from_db:
+            # this is the "client_id" - i.e. AD server or AWS Access Key
+            local_client_id = client_from_db['client_id']
+            logger.info(f'client from db: {client_from_db}')
+            for entity_type in EntityType:
+                res = self._entity_db_map[entity_type].update_many(
+                    {
+                        'adapters': {
+                            '$elemMatch': {
                                 '$and': [
-                                    {f'i.{PLUGIN_NAME}': plugin_name},
-                                    {'i.client_used': local_client_id}
+                                    {
+                                        PLUGIN_NAME: plugin_name
+                                    },
+                                    {
+                                        # and the device must be from this adapter
+                                        'client_used': local_client_id
+                                    }
                                 ]
                             }
-                        ]
-                    )
-
-                    logger.info(f'Set pending_delete on {res.modified_count} axonius entities '
-                                f'(or some adapters in them) ' +
-                                f'from {res.matched_count} matches')
-
-                    entities_to_pass_to_be_deleted = list(self._entity_db_map[entity_type].find(
+                        }
+                    },
+                    {
+                        '$set': {
+                            'adapters.$[i].pending_delete': True
+                        }
+                    },
+                    array_filters=[
                         {
-                            'adapters': {
-                                '$elemMatch': {
-                                    '$and': [
-                                        {
-                                            PLUGIN_NAME: plugin_name
-                                        },
-                                        {
-                                            # and the device must be from this adapter
-                                            'client_used': local_client_id
-                                        }
-                                    ]
-                                }
+                            '$and': [
+                                {f'i.{PLUGIN_NAME}': plugin_name},
+                                {'i.client_used': local_client_id}
+                            ]
+                        }
+                    ]
+                )
+
+                logger.info(f'Set pending_delete on {res.modified_count} axonius entities '
+                            f'(or some adapters in them) ' +
+                            f'from {res.matched_count} matches')
+
+                entities_to_pass_to_be_deleted = list(self._entity_db_map[entity_type].find(
+                    {
+                        'adapters': {
+                            '$elemMatch': {
+                                '$and': [
+                                    {
+                                        PLUGIN_NAME: plugin_name
+                                    },
+                                    {
+                                        # and the device must be from this adapter
+                                        'client_used': local_client_id
+                                    }
+                                ]
                             }
-                        },
-                        projection={
-                            'adapters.client_used': True,
-                            'adapters.data.id': True,
-                            f'adapters.{PLUGIN_UNIQUE_NAME}': True,
-                            f'adapters.{PLUGIN_NAME}': True,
-                        }))
+                        }
+                    },
+                    projection={
+                        'adapters.client_used': True,
+                        'adapters.data.id': True,
+                        f'adapters.{PLUGIN_UNIQUE_NAME}': True,
+                        f'adapters.{PLUGIN_NAME}': True,
+                    }))
 
-                    def async_delete_entities(entity_type, entities_to_delete):
-                        with ThreadPool(5) as pool:
-                            def delete_adapters(entity):
-                                try:
-                                    for adapter in entity['adapters']:
-                                        if adapter.get('client_used') == local_client_id and \
-                                                adapter[PLUGIN_NAME] == plugin_name:
-                                            logger.debug('deleting ' + adapter['data']['id'])
-                                            self.delete_adapter_entity(entity_type, adapter[PLUGIN_UNIQUE_NAME],
-                                                                       adapter['data']['id'])
-                                except Exception as e:
-                                    logger.exception(e)
+                def async_delete_entities(entity_type, entities_to_delete):
+                    with ThreadPool(5) as pool:
+                        def delete_adapters(entity):
+                            try:
+                                for adapter in entity['adapters']:
+                                    if adapter.get('client_used') == local_client_id and \
+                                            adapter[PLUGIN_NAME] == plugin_name:
+                                        logger.debug('deleting ' + adapter['data']['id'])
+                                        self.delete_adapter_entity(entity_type, adapter[PLUGIN_UNIQUE_NAME],
+                                                                   adapter['data']['id'])
+                            except Exception as e:
+                                logger.exception(e)
 
-                            pool.map(delete_adapters, entities_to_delete)
-                            self._trigger('clear_dashboard_cache', blocking=False)
+                        pool.map(delete_adapters, entities_to_delete)
+                        self._trigger('clear_dashboard_cache', blocking=False)
 
-                    # while we can quickly mark all adapters to be pending_delete
-                    # we still want to run a background task to delete them
-                    tmp_entity_type = entity_type
-                    run_and_forget(lambda: async_delete_entities(tmp_entity_type, entities_to_pass_to_be_deleted))
+                # while we can quickly mark all adapters to be pending_delete
+                # we still want to run a background task to delete them
+                tmp_entity_type = entity_type
+                run_and_forget(lambda: async_delete_entities(tmp_entity_type, entities_to_pass_to_be_deleted))
 
-            self._trigger('clear_dashboard_cache', blocking=False)
-            return client_from_db
+        self._trigger('clear_dashboard_cache', blocking=False)
+        return client_from_db
 
     def run_actions(self, action_data, mongo_filter):
         # The format of data is defined in device_control\service.py::run_shell
@@ -4930,8 +4920,9 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
                     cursor = self._get_collection('clients', adapter[PLUGIN_UNIQUE_NAME]).find({},
                                                                                                projection={'_id': 1})
                     for current_client in cursor:
-                        self.delete_client_data(adapter[PLUGIN_NAME], current_client['_id'],
-                                                current_node, delete_entities)
+                        if delete_entities:
+                            self.delete_client_data(adapter[PLUGIN_NAME], adapter[PLUGIN_UNIQUE_NAME],
+                                                    current_client['_id'])
                         self.request_remote_plugin(
                             'clients/' + str(current_client['_id']), adapter[PLUGIN_UNIQUE_NAME], method='delete')
             return ''

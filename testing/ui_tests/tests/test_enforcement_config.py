@@ -5,8 +5,8 @@ from flaky import flaky
 from selenium.common.exceptions import NoSuchElementException
 
 from axonius.consts.metric_consts import SystemMetric
-from services.adapters.json_file_service import JsonFileService
 from ui_tests.tests.ui_test_base import TestBase
+from test_credentials.json_file_credentials import client_details as json_file_creds
 
 
 COMMON_ENFORCEMENT_QUERY = 'Enabled AD Devices'
@@ -16,6 +16,8 @@ ENFORCEMENT_CHANGE_FILTER = 'adapters_data.json_file_adapter.test_enforcement_ch
 
 FIELD_NAME = 'Name'
 FIELD_QUERY_NAME = 'Trigger Query Name'
+
+JSON_NAME = 'JSON File'
 
 
 class TestEnforcementSanity(TestBase):
@@ -55,9 +57,7 @@ class TestEnforcementSanity(TestBase):
         # make sure it is still 1
         self.notification_page.verify_amount_of_notifications(1)
 
-        json_service = JsonFileService()
-        json_service.take_process_ownership()
-        json_service.stop(should_delete=False)
+        self.adapters_page.clean_adapter_servers(JSON_NAME)
 
         try:
             # Making the query return 0 results
@@ -70,13 +70,15 @@ class TestEnforcementSanity(TestBase):
             self.notification_page.verify_amount_of_notifications(2)
 
         finally:
-            json_service.start_and_wait()
+            # restore JSON client
+            self.adapters_page.add_server(json_file_creds, JSON_NAME)
+            self.adapters_page.wait_for_server_green()
+            self.adapters_page.wait_for_table_to_load()
+            self.adapters_page.wait_for_data_collection_toaster_absent()
 
     def test_new(self):
-        json_service = JsonFileService()
-        json_service.take_process_ownership()
+        self.adapters_page.clean_adapter_servers(JSON_NAME)
         try:
-            json_service.stop(should_delete=False)
             self._create_enforcement_change_query()
             self.enforcements_page.switch_to_page()
             self.enforcements_page.wait_for_table_to_load()
@@ -97,7 +99,11 @@ class TestEnforcementSanity(TestBase):
             assert self.axonius_system.gui.log_tester.is_metric_in_log(SystemMetric.ENFORCEMENT_RAW,
                                                                        ENFORCEMENT_CHANGE_NAME)
         finally:
-            json_service.start_and_wait()
+            # restore JSON client
+            self.adapters_page.add_server(json_file_creds, JSON_NAME)
+            self.adapters_page.wait_for_server_green()
+            self.adapters_page.wait_for_table_to_load()
+            self.adapters_page.wait_for_data_collection_toaster_absent()
 
         self.base_page.run_discovery()
         self.notification_page.verify_amount_of_notifications(1)

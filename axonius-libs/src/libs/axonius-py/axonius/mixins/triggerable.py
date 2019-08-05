@@ -6,6 +6,7 @@ from collections import defaultdict
 from datetime import datetime
 from enum import Enum, auto
 from threading import RLock
+from typing import DefaultDict
 
 import func_timeout
 import pymongo
@@ -88,11 +89,14 @@ StoredJobState = namedlist('StoredJobState',
                                ('finished_at', None),
                                # result of the job (or exception if failed)
                                ('result', None),
-                               # priority as given by the original called (see _trigger)
+                               # priority as given by the original caller (see _trigger)
                                ('priority', False),
-                               # blocking as given by the original called
+                               # blocking as given by the original caller
                                ('blocking', False),
-                               # post_json as given by the original called
+                               # reschedulable as given by the original caller
+                               ('reschedulable', False),
+                               ('caller_name', None),
+                               # post_json as given by the original caller
                                ('post_json', None)
                            ])
 
@@ -133,7 +137,7 @@ class Triggerable(Feature, ABC):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.__state = defaultdict(JobState)
+        self.__state: DefaultDict[str, JobState] = defaultdict(JobState)
         self.__last_error = ''
 
         # Triggerable will log the state (Running, Completed, Failed) of every job it has been given
@@ -212,6 +216,11 @@ class Triggerable(Feature, ABC):
         Trigger a job.
         :param job_name: the job to trigger.
         """
+        # if reschedulable is true, and the task is running at the moment of request, the task will be rescheduled
+        # to run after the task finishes, again. A task can only be rescheduled once.
+        # If it is false, and the task is already running, a new task will not be rescheduled, and if the request
+        # is blocking, it will only wait until the current run finishes.
+        reschedulable = request.args.get('reschedulable', 'True') == 'True'
         # if ?blocking=True/False is passed than this request will wait until the trigger has completed
         blocking = request.args.get('blocking', 'True') == 'True'
         # if ?priority=True than this request will run immediately, ignoring any internal lock mechanism
@@ -232,7 +241,7 @@ class Triggerable(Feature, ABC):
             logger.info(message)
         res = self._trigger(job_name, blocking, priority,
                             self.get_request_data_as_object(prefer_none=True),
-                            timeout)
+                            timeout, reschedulable)
         return normalize_triggerable_request_result(res)
 
     @add_rule('wait/<job_name>', methods=['GET'])
@@ -264,6 +273,17 @@ class Triggerable(Feature, ABC):
                 return 'Error has occurred', 500
             return normalize_triggerable_request_result(promise.value or '')
         return ''
+
+    def any_tasks_in_progress(self) -> str:
+        """
+        Returns whether any task is currently in progress
+        Returns the name of the first task, or None
+        """
+        for name, task in self.__state.items():
+            with task.lock:
+                if task.triggered or task.scheduled:
+                    return name
+        return None
 
     def __perform_stop_job(self, job_name, job_state):
         """
@@ -359,11 +379,14 @@ class Triggerable(Feature, ABC):
 
         return result
 
-    def _trigger(self, job_name='execute', blocking=True, priority=False, post_json=None, timeout=None):
+    def _trigger(self, job_name='execute', blocking=True, priority=False, post_json=None, timeout=None,
+                 reschedulable: bool = True):
         state = StoredJobState(job_name=job_name,
                                blocking=blocking,
                                priority=priority,
-                               post_json=post_json)
+                               post_json=post_json,
+                               reschedulable=reschedulable,
+                               caller_name=self.get_caller_plugin_name())
 
         if priority:
             if blocking:
@@ -377,7 +400,7 @@ class Triggerable(Feature, ABC):
 
         # having a lock per job allows more efficient parallelization
         with job_state.lock:
-            promise = self.__perform_trigger(job_name, job_state, post_json, state)
+            promise = self.__perform_trigger(job_name, job_state, post_json, state, reschedulable)
 
         if blocking:
             try:
@@ -393,7 +416,7 @@ class Triggerable(Feature, ABC):
             return promise.value or ''
         return ''
 
-    def __perform_trigger(self, job_name, job_state, post_json, db_state: StoredJobState):
+    def __perform_trigger(self, job_name, job_state, post_json, db_state: StoredJobState, reschedulable: bool):
         """
         Actually perform the job, assumes locks
         :return:
@@ -412,7 +435,7 @@ class Triggerable(Feature, ABC):
         # so another trigger will be scheduled.
         def on_success(arg):
             with job_state.lock:
-                self.__on_job_continue(job_state, arg)
+                self.__on_job_continue(job_state, arg, StoredJobStateCompletion.Successful)
                 logger.debug('Successfully triggered')
                 return arg
 
@@ -420,7 +443,7 @@ class Triggerable(Feature, ABC):
             with job_state.lock:
                 tb = ''.join(traceback.format_tb(err.__traceback__))
                 result = f'{err}\n{tb}'
-                self.__on_job_continue(job_state, result)
+                self.__on_job_continue(job_state, result, StoredJobStateCompletion.Failure)
                 logger.error(f'Failed triggering up: {err}', exc_info=err)
                 return err
 
@@ -436,10 +459,14 @@ class Triggerable(Feature, ABC):
             return self._triggered(job_name, post_json, run_id, *args, **kwargs)
 
         if job_state.triggered:
-            job_state.scheduled = True
-            job_state.promise = job_state.promise.then(lambda x: Promise(functools.partial(run_in_thread_helper,
-                                                                                           job_state.thread,
-                                                                                           to_run)))
+            if reschedulable:
+                job_state.scheduled = True
+                job_state.promise = job_state.promise.then(lambda x: Promise(functools.partial(run_in_thread_helper,
+                                                                                               job_state.thread,
+                                                                                               to_run)))
+            else:
+                # not reschedulable, return same promise
+                return job_state.promise
 
         else:
             job_state.triggered = True
@@ -450,7 +477,7 @@ class Triggerable(Feature, ABC):
                                                    did_reject=on_failed)
         return job_state.promise
 
-    def __on_job_continue(self, job_state: JobState, last_error: str):
+    def __on_job_continue(self, job_state: JobState, last_error: str, job_completed_state: StoredJobStateCompletion):
         if not job_state.scheduled:
             job_state.triggered = False
             # Why bother removing the reference to 'promise'?
@@ -471,6 +498,6 @@ class Triggerable(Feature, ABC):
             '$set': {
                 'result': last_error,
                 'finished_at': datetime.utcnow(),
-                'job_completed_state': StoredJobStateCompletion.Successful.name
+                'job_completed_state': job_completed_state.name
             }
         })
