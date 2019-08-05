@@ -24,7 +24,7 @@ class HyperVAdapter(AdapterBase):
         super().__init__(get_local_config_file(__file__))
 
     def _get_client_id(self, client_config):
-        return client_config[HYPER_V_HOST]
+        return client_config[HYPER_V_HOST] + '_' + client_config.get(USER)
 
     @property
     def _use_wmi_smb_path(self):

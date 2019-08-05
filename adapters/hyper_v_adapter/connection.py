@@ -47,7 +47,15 @@ class HyperVConnection(object):
         :return list: The basic command
         """
         # Putting the file using wmi_smb_path.
-        return [self._python_27_path, self._wmi_util_path, '', self.user_name, self.password, self.host,
+        client_username = self.user_name
+        if '\\' in client_username:
+            domain_name, user_name = client_username.split('\\')
+        elif '/' in client_username:
+            domain_name, user_name = client_username.split('/')
+        else:
+            # This is a legitimate flow. Do not try to build the domain name from the configurations.
+            domain_name, user_name = '', client_username
+        return [self._python_27_path, self._wmi_util_path, domain_name, user_name, self.password, self.host,
                 WMI_NAMESPACE]
 
     def _execute_wmi_command(self, commands):

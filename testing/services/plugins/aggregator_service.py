@@ -53,8 +53,10 @@ class AggregatorService(PluginService, UpdatablePluginMixin):
             self._update_schema_version_12()
         if self.db_schema_version < 13:
             self._update_schema_version_13()
+        if self.db_schema_version < 14:
+            self._update_schema_version_14()
 
-        if self.db_schema_version != 13:
+        if self.db_schema_version != 14:
             print(f'Upgrade failed, db_schema_version is {self.db_schema_version}')
 
     def __create_capped_collections(self):
@@ -677,6 +679,19 @@ class AggregatorService(PluginService, UpdatablePluginMixin):
             self.db_schema_version = 13
         except Exception as e:
             print(f'Exception while upgrading core db to version 13. Details: {e}')
+            traceback.print_exc()
+            raise
+
+    def _update_schema_version_14(self):
+        print('Update to schema 14 - Convert Hyper-V adapter client_id to a new format')
+        try:
+            def hyper_v_new_client_id(client_config):
+                return client_config['host'] + '_' + client_config.get('username')
+
+            self._upgrade_adapter_client_id('hyper_v_adapter', hyper_v_new_client_id)
+            self.db_schema_version = 14
+        except Exception:
+            print(f'Exception while upgrading core db to version 14. Details: {e}')
             traceback.print_exc()
             raise
 

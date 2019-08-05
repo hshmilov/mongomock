@@ -14,7 +14,7 @@ class TestHyperVAdapter(AdapterTestBase):
 
     @property
     def some_client_id(self):
-        return client_details['host']
+        return client_details['host'] + '_' + client_details.get('username')
 
     @property
     def some_client_details(self):
