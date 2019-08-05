@@ -89,7 +89,7 @@ class DruvaAdapter(AdapterBase):
                     'type': 'string'
                 },
                 {
-                    'name': 'Client_secret',
+                    'name': 'client_secret',
                     'title': 'Client Secret',
                     'type': 'string',
                     'format': 'password'
