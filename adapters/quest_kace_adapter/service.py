@@ -5,6 +5,8 @@ from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.connection import RESTException
 from axonius.utils.datetime import parse_date
+from axonius.utils.parsing import is_domain_valid
+from axonius.fields import Field
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.utils.files import get_local_config_file
 from quest_kace_adapter.connection import QuestKaceConnection
@@ -14,9 +16,11 @@ logger = logging.getLogger(f'axonius.{__name__}')
 
 
 class QuestKaceAdapter(AdapterBase):
+    # pylint: disable=too-many-instance-attributes
     class MyDeviceAdapter(DeviceAdapter):
-        # AUTOADAPTER - add here device fields if needed
-        pass
+        asset_tag = Field(str, 'Asset Tag')
+        chassis_type = Field(str, 'Chassis Type')
+        agent_version = Field(str, 'Agent Version')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -101,6 +105,7 @@ class QuestKaceAdapter(AdapterBase):
             'type': 'array'
         }
 
+    # pylint: disable=too-many-branches, too-many-statements, too-many-locals, too-many-nested-blocks
     def _create_device(self, device_raw):
         try:
             device = self._new_device_adapter()
@@ -110,6 +115,16 @@ class QuestKaceAdapter(AdapterBase):
                 return None
             device.id = device_id + '_' + (device_raw.get('Name') or '')
             device.hostname = device_raw.get('Name')
+            device.asset_tag = device_raw.get('Asset_tag')
+            device.bios_serial = device_raw.get('Bios_serial_number')
+            device.bios_version = device_raw.get('Bios_version')
+            device.chassis_type = device_raw.get('Chassis_type')
+            device.agent_version = device_raw.get('Client_version')
+            if is_domain_valid(device_raw.get('Cs_domain')):
+                device.domain = device_raw.get('Cs_domain')
+            device.device_manufacturer = device_raw.get('Cs_manufacturer')
+            device.device_model = device_raw.get('Cs_model')
+
             try:
                 device.figure_os(device_raw.get('Os_name'))
             except Exception:
@@ -119,9 +134,15 @@ class QuestKaceAdapter(AdapterBase):
             except Exception:
                 logger.exception(f'Problem getting last seen for {device_raw}')
             try:
+                mac = device_raw.get('Mac')
+                if not mac:
+                    mac = None
+                ips = None
                 ip = device_raw.get('Ip')
                 if ip and isinstance(ip, str):
-                    device.add_nic(None, ip.split(','))
+                    ips = ip.split(',')
+                if mac or ips:
+                    device.add_nic(mac=mac, ips=ips)
             except Exception:
                 logger.exception(f'Problem adding nic to {device_raw}')
             try:
@@ -130,6 +151,24 @@ class QuestKaceAdapter(AdapterBase):
                     device.last_used_users = user.split(',')
             except Exception:
                 logger.exception(f'Problem adding user to {device_raw}')
+            try:
+                software_list = device_raw.get('Software')
+                if not isinstance(software_list, list):
+                    software_list = []
+                for sofware_data in software_list:
+                    try:
+                        # pylint: disable=line-too-long
+                        if ('Update for' in sofware_data.get('DISPLAY_NAME') or 'Hotfix for' in sofware_data.get('DISPLAY_NAME'))\
+                                and 'KB' in sofware_data.get('DISPLAY_NAME'):
+                            device.add_security_patch(patch_description=sofware_data.get('DISPLAY_NAME'),
+                                                      installed_on=parse_date(sofware_data.get('INSTALL_DATE')))
+                        else:
+                            device.add_installed_software(name=sofware_data.get('DISPLAY_NAME'),
+                                                          version=sofware_data.get('DISPLAY_VERSION'))
+                    except Exception:
+                        logger.exception(f'Problem with software {sofware_data}')
+            except Exception:
+                logger.exception(f'Problem with sw for {device_raw}')
             device.set_raw(device_raw)
             return device
         except Exception:

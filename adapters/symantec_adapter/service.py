@@ -136,7 +136,7 @@ class SymantecAdapter(AdapterBase):
                 if not any(elem in computer_name for elem in [' ', '.']) or \
                         ('Mac' not in str(device_raw.get('operatingSystem'))):
                     device.hostname = computer_name
-                    if domain_strip_upper in ['WORKGROUP', '', 'LOCAL']:
+                    if not is_domain_valid(device_raw.get('domainOrWorkgroup')):
                         # Special case for workgroup
                         if computer_name.upper().endswith('.LOCAL'):
                             computer_name = computer_name[:-len('.LOCAL')]

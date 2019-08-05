@@ -29,7 +29,8 @@ class QuestKaceConnection(RESTConnection):
             raise RESTException(f'Bad Response: {response.content[:100]}')
         self._session_headers['x-dell-csrf-token'] = response.headers['x-dell-csrf-token']
         self._session_headers['x-dell-api-version'] = '5'
-        self._get(f'api/inventory/machines?paging=limit {DEVICE_PER_PAGE}')
+        self._get(f'api/inventory/machines?shaping=machine all,software standard&'
+                  f'paging=limit {DEVICE_PER_PAGE}')
 
     def get_device_list(self):
         offset = 0
@@ -39,7 +40,8 @@ class QuestKaceConnection(RESTConnection):
         offset += DEVICE_PER_PAGE
         while offset < min(count, MAX_NUMBER_OF_DEVICES):
             try:
-                response = self._get(f'api/inventory/machines?paging=limit {DEVICE_PER_PAGE} offset {offset}')
+                response = self._get(f'api/inventory/machines?shaping=machine all,software standard&'
+                                     f'paging=limit {DEVICE_PER_PAGE} offset {offset}')
                 yield from response['Machines']
                 count = response['Count']
                 offset += DEVICE_PER_PAGE

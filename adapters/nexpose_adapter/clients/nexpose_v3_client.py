@@ -19,6 +19,7 @@ MAX_ASYNC_REQUESTS_IN_PARALLEL = 100
 
 class NexposeV3Client(NexposeClient):
 
+    # pylint: disable=too-many-branches, too-many-statements, too-many-locals, too-many-nested-blocks
     def _get_async_data(self, devices, data_type):
         # Get all tags for all devices asynchronously
         # Build the requests
@@ -69,7 +70,7 @@ class NexposeV3Client(NexposeClient):
 
                         try:
                             response_object.raise_for_status()
-                            current_device[data_type] = from_json(text_answer)['resources']
+                            current_device[f'{data_type}_details'] = from_json(text_answer)['resources']
                         except aiohttp.ClientResponseError as e:
                             logger.debug(f'async error code {e.status} on '
                                          f'request id {request_id_absolute}. '
@@ -88,6 +89,7 @@ class NexposeV3Client(NexposeClient):
     # pylint: disable=arguments-differ
     def get_all_devices(self, fetch_tags=False, fetch_vulnerabilities=False):
         logger.info(f'Stating to fetch devices on V3 for nexpose')
+        self.vuln_ids_dict = {}
         try:
             num_of_asset_pages = 1
             current_page_num = -1
@@ -101,10 +103,18 @@ class NexposeV3Client(NexposeClient):
                     devices = current_page_response_as_json.get('resources', [])
                     num_of_asset_pages = current_page_response_as_json.get('page', {}).get('totalPages')
                     for item in devices:
-                        if fetch_vulnerabilities:
-                            item['vulnerability_details'] = \
-                                [v for v in self.get_vulnerabilities_for_device(device=item)]
                         item.update({'API': '3'})
+                        item['vulnerability_details_full'] = []
+                    if fetch_vulnerabilities:
+                        self._get_async_data(devices, 'vulnerabilities')
+                        for item in devices:
+                            for vuln in item.get('vulnerability_details') or []:
+                                try:
+                                    vuln_id = vuln.get('id')
+                                    vuln_details = self.get_vuln_details(vuln_id=vuln_id) or {}
+                                    item['vulnerability_details_full'].append(vuln_details)
+                                except Exception:
+                                    logger.exception(f'Problem getting details for vulnerability {vuln_id}')
 
                     if fetch_tags:
                         self._get_async_data(devices, 'tags')
@@ -128,12 +138,15 @@ class NexposeV3Client(NexposeClient):
             raise GetDevicesError('Error getting the nexpose devices.')
 
     def get_vuln_details(self, vuln_id):
+        if vuln_id in self.vuln_ids_dict:
+            return self.vuln_ids_dict[vuln_id]
         try:
             vuln_details = requests.get(f'https://{self.host}:{self.port}/api/3/vulnerabilities/{vuln_id}',
                                         auth=(self.username, self.password),
                                         verify=self.verify_ssl,
                                         timeout=(5, 300))
-            return vuln_details.json()
+            self.vuln_ids_dict[vuln_id] = vuln_details.json()
+            return self.vuln_ids_dict[vuln_id]
         except Exception:
             logger.exception(f'Problem getting vulnerability details for {vuln_id}')
 
@@ -244,14 +257,14 @@ class NexposeV3Client(NexposeClient):
         if fetch_vulnerabilities:
             try:
                 device.software_cves = []
-                for vuln in device_raw.get('vulnerability_details') or []:
+                for vuln in device_raw.get('vulnerability_details_full') or []:
                     for cve in vuln.get('cves') or []:
                         device.add_vulnerable_software(cve_id=cve)
             except Exception:
                 logger.exception(f'Problem adding CVES to device')
 
         try:
-            software = device_raw.get('software') or []
+            software = device_raw.get('software_details') or []
             if software and isinstance(software, list):
                 for software_data in software:
                     try:
@@ -270,7 +283,7 @@ class NexposeV3Client(NexposeClient):
             logger.exception(f'Problem parsing sw')
 
         try:
-            tags = device_raw.get('tags') or []
+            tags = device_raw.get('tags_details') or []
             if tags and isinstance(tags, list):
                 for tag in tags:
                     try:

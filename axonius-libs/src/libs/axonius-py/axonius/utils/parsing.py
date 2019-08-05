@@ -343,7 +343,7 @@ def is_domain_valid(domain):
     """
     domain = (domain or '').strip().lower()
     if domain and not 'workgroup' in domain and not 'local' == domain and \
-            not 'n/a' in domain:
+            not 'n/a' in domain and not '(none)' in domain:
         return True
     return False
 
