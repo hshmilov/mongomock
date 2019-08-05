@@ -348,32 +348,6 @@ class PluginBase(Configurable, Feature):
             self.plugin_unique_name = self.temp_config['registration'][PLUGIN_UNIQUE_NAME]
             self.api_key = self.temp_config['registration']['api_key']
             self.node_id = self.temp_config['registration'][NODE_ID]
-
-            if self.plugin_unique_name and self.node_id:
-                # this means that this is not the first time we're starting
-                # and we might have a wrong node_id, according to
-                # https://axonius.atlassian.net/browse/AX-4606
-                db_node_id = self._get_db_connection()[CORE_UNIQUE_NAME]['configs'].find_one({
-                    PLUGIN_UNIQUE_NAME: self.plugin_unique_name
-                }, projection={
-                    NODE_ID: True
-                })
-                if not db_node_id:
-                    print('No config found in db!')
-                else:
-                    db_node_id = db_node_id[NODE_ID]
-                    if db_node_id.startswith('!'):
-                        print(f'Found (!), {db_node_id}, current is {self.node_id}')
-                        db_node_id = db_node_id[1:]
-                        self.node_id = db_node_id
-                        self.temp_config['registration'][NODE_ID] = self.node_id
-                        self._get_db_connection()[CORE_UNIQUE_NAME]['configs'].update_one({
-                            PLUGIN_UNIQUE_NAME: self.plugin_unique_name
-                        }, {
-                            '$set': {
-                                NODE_ID: db_node_id
-                            }
-                        })
         except KeyError:
             # We might have api_key but not have a unique plugin name.
             pass
@@ -381,6 +355,34 @@ class PluginBase(Configurable, Feature):
         if requested_unique_plugin_name is not None:
             if self.plugin_unique_name != requested_unique_plugin_name:
                 self.plugin_unique_name = requested_unique_plugin_name
+
+        if self.plugin_unique_name:
+            # we might have a wrong node_id, according to
+            # https://axonius.atlassian.net/browse/AX-4606
+            db_node_id = self._get_db_connection()[CORE_UNIQUE_NAME]['configs'].find_one({
+                PLUGIN_UNIQUE_NAME: self.plugin_unique_name
+            }, projection={
+                NODE_ID: True
+            })
+            if not db_node_id:
+                print('No config found in db!')
+            else:
+                db_node_id = db_node_id[NODE_ID]
+                if db_node_id.startswith('!'):
+                    print(f'Found (!), {db_node_id}, current is {self.node_id}')
+                    db_node_id = db_node_id[1:]
+                    self.node_id = db_node_id
+                    try:
+                        self.temp_config['registration'][NODE_ID] = self.node_id
+                    except Exception:
+                        print('no temp config')
+                    self._get_db_connection()[CORE_UNIQUE_NAME]['configs'].update_one({
+                        PLUGIN_UNIQUE_NAME: self.plugin_unique_name
+                    }, {
+                        '$set': {
+                            NODE_ID: db_node_id
+                        }
+                    })
 
         if not core_data:
             core_data = self._register(self.core_address + "/register",
