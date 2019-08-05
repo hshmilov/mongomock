@@ -51,7 +51,7 @@ logger = logging.getLogger(f'axonius.{__name__}')
 
 
 ALLOW_OLD_MAC_LIST = ['clearpass_adapter']
-DANGEROUS_ADAPTERS = ['lansweeper_adapter', 'carbonblack_protection_adapter']
+DANGEROUS_ADAPTERS = ['lansweeper_adapter', 'carbonblack_protection_adapter', 'infoblox_adapter']
 DOMAIN_TO_DNS_DICT = dict()
 
 
