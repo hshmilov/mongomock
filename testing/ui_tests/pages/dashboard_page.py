@@ -1,3 +1,4 @@
+import time
 from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.common.action_chains import ActionChains
 
@@ -257,6 +258,8 @@ class DashboardPage(Page):
     def click_pie_slice(self, slice_css, card_title):
         card = self.wait_for_element_present_by_xpath(self.PANEL_BY_NAME_XPATH.format(panel_name=card_title))
         card_slice = self.get_pie_chart_from_card(card).find_element_by_css_selector(slice_css)
+        # Wait for text animation
+        time.sleep(1)
         self.scroll_into_view(card_slice, window=TAB_BODY)
         card_slice.click()
 
