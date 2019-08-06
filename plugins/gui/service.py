@@ -4910,21 +4910,28 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
 
             delete_entities = data['deleteEntities']
 
-            plugins_available = requests.get(self.core_address + '/register').json()
-
             for current_node in node_ids:
-                node_adapters = [x for x in plugins_available.values() if
-                                 x['plugin_type'] == adapter_consts.ADAPTER_PLUGIN_TYPE and x[NODE_ID] == current_node]
+                # List because it might take a while for the process to finish
+                # and cursors have a TTL
+                node_adapters = list(self.core_configs_collection.find({
+                    'plugin_type': adapter_consts.ADAPTER_PLUGIN_TYPE,
+                    NODE_ID: current_node
+                }, projection={
+                    PLUGIN_UNIQUE_NAME: True,
+                    PLUGIN_NAME: True
+                }))
 
                 for adapter in node_adapters:
-                    cursor = self._get_collection('clients', adapter[PLUGIN_UNIQUE_NAME]).find({},
-                                                                                               projection={'_id': 1})
+                    plugin_unique_name = adapter[PLUGIN_UNIQUE_NAME]
+                    plugin_name = adapter[PLUGIN_NAME]
+                    cursor = self._get_collection('clients', plugin_unique_name).find({},
+                                                                                      projection={'_id': 1})
                     for current_client in cursor:
                         if delete_entities:
-                            self.delete_client_data(adapter[PLUGIN_NAME], adapter[PLUGIN_UNIQUE_NAME],
+                            self.delete_client_data(plugin_name, plugin_unique_name,
                                                     current_client['_id'])
                         self.request_remote_plugin(
-                            'clients/' + str(current_client['_id']), adapter[PLUGIN_UNIQUE_NAME], method='delete')
+                            'clients/' + str(current_client['_id']), plugin_unique_name, method='delete')
             return ''
 
     @gui_add_rule_logged_in('instances/tags', methods=['DELETE', 'POST'],

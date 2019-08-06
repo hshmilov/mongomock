@@ -487,8 +487,23 @@ class CoreService(Triggerable, PluginBase, Configurable):
                 if not unique_name:
                     # No api_key, Returning the current online plugins. This will be used by the aggregator
                     # To find out which adapters are available
-                    online_devices = self._get_online_plugins()
-                    return jsonify(online_devices)
+                    return jsonify({
+                        adapter[PLUGIN_UNIQUE_NAME]: adapter
+                        for adapter
+                        in self.core_configs_collection.find({
+                            PLUGIN_UNIQUE_NAME: {
+                                '$ne': self.plugin_unique_name  # hide core from results
+                            }
+                        }, projection={
+                            '_id': False,
+                            NODE_ID: True,
+                            PLUGIN_NAME: True,
+                            PLUGIN_UNIQUE_NAME: True,
+                            'plugin_subtype': True,
+                            'plugin_type': True,
+                            'supported_features': True
+                        })
+                    })
                 else:
                     return 'OK'
             else:
@@ -566,6 +581,7 @@ class CoreService(Triggerable, PluginBase, Configurable):
                                 logger.warning(
                                     f"Already have instance of {plugin_unique_name}, re-registration detected")
 
+                            self.online_plugins[plugin_unique_name] = relevant_doc
                             return jsonify(relevant_doc)
             else:
                 plugin_unique_name = self._generate_unique_name(plugin_name)
@@ -629,20 +645,6 @@ class CoreService(Triggerable, PluginBase, Configurable):
             raise ValueError(f'Error, couldn\'t find a unique name for plugin {plugin_name}!')
         logger.info(f'Generated new plugin unique name for plugin {plugin_name}: {plugin_unique_name}')
         return plugin_unique_name
-
-    def _get_online_plugins(self):
-        online_devices = dict()
-        for plugin_unique_name, plugin in self.online_plugins.items():
-            online_devices[plugin_unique_name] = {
-                'plugin_type': plugin['plugin_type'],
-                'plugin_subtype': plugin['plugin_subtype'],
-                PLUGIN_UNIQUE_NAME: plugin[PLUGIN_UNIQUE_NAME],
-                PLUGIN_NAME: plugin[PLUGIN_NAME],
-                'supported_features': plugin['supported_features'],
-                NODE_ID: plugin[NODE_ID]
-            }
-
-        return online_devices
 
     def _on_config_update(self, config):
         logger.info(f"Loading core config: {config}")
