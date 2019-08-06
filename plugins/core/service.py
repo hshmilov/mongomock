@@ -627,6 +627,7 @@ class CoreService(Triggerable, PluginBase, Configurable):
         else:
             # Looped through the whole for and couldn't hit the break..
             raise ValueError(f'Error, couldn\'t find a unique name for plugin {plugin_name}!')
+        logger.info(f'Generated new plugin unique name for plugin {plugin_name}: {plugin_unique_name}')
         return plugin_unique_name
 
     def _get_online_plugins(self):

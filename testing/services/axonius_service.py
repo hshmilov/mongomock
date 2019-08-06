@@ -453,6 +453,14 @@ class AxoniusService:
             current = iter(plugin.stop_async(**kwargs))
             next(current)  # actual stop call
             async_items.append(current)
+
+            # We do not want more than 30 containers getting down at the same time since this can cause docker issues.
+            if len(async_items) == 30:
+                for async_item in async_items:
+                    for _ in async_item:
+                        pass
+
+                async_items = []
         # stop_async is a generator that yields just after the first exec, that is why we run next(current) before
         # adding it to async_items; and after we go over all services, we need to complete the rest of the function
         # using next (in the 'for _ in async_item')
