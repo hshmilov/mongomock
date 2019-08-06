@@ -1434,7 +1434,10 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         """
         db_connection = self._get_db_connection()
         adapters_from_db = db_connection[CORE_UNIQUE_NAME]['configs'].find({
-            'plugin_type': adapter_consts.ADAPTER_PLUGIN_TYPE
+            'plugin_type': adapter_consts.ADAPTER_PLUGIN_TYPE,
+            'hidden': {
+                '$ne': True
+            }
         }).sort([(PLUGIN_UNIQUE_NAME, pymongo.ASCENDING)])
         adapters_to_return = []
         for adapter in adapters_from_db:

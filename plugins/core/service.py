@@ -601,6 +601,7 @@ class CoreService(Triggerable, PluginBase, Configurable):
                     'db_password': plugin_password,
                     'last_seen': datetime.utcnow(),
                     'status': 'up',
+                    'hidden': False,
                     NODE_ID: node_id
                 }
 
