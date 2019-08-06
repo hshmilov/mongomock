@@ -72,7 +72,7 @@ class ClearpassAdapter(AdapterBase, Configurable):
             'items': [
                 {
                     'name': 'domain',
-                    'title': 'Clearpass Domain',
+                    'title': 'Aruba ClearPass Domain',
                     'type': 'string'
                 },
                 {
