@@ -64,9 +64,6 @@
       ...mapState({
         view (state) {
           return state[this.module].view
-        },
-        selectedView (state) {
-          return state[this.module].selectedView
         }
       }),
       ...mapGetters({
@@ -94,7 +91,6 @@
                 expressions: this.query.expressions },
               page: 0
             },
-            selectedView: this.selectedView
           })
           this.filterValid = true
         }

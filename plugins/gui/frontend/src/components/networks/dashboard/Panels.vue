@@ -213,7 +213,7 @@
           return
         }
         this.updateView({
-          module: query.module, view: query.view
+          module: query.module, view: query.view, name: query.name
         })
         this.$router.push({ path: query.module })
       },
