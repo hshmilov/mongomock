@@ -1,5 +1,5 @@
 import time
-from selenium.common.exceptions import NoSuchElementException
+from selenium.common.exceptions import NoSuchElementException, ElementClickInterceptedException
 from selenium.webdriver.common.action_chains import ActionChains
 
 from ui_tests.pages.page import Page, TAB_BODY
@@ -253,7 +253,10 @@ class DashboardPage(Page):
         self.click_pie_slice(self.SYMMETRIC_DIFFERENCE_FROM_BASE_QUERY_SLICE_CSS, card_title)
 
     def click_symmetric_difference_first_query_pie_slice(self, card_title):
-        self.click_pie_slice(self.SYMMETRIC_DIFFERENCE_FROM_FIRST_QUERY_SLICE_CSS, card_title)
+        wait_until(lambda: self.click_pie_slice(self.SYMMETRIC_DIFFERENCE_FROM_FIRST_QUERY_SLICE_CSS, card_title),
+                   check_return_value=False,
+                   tolerated_exceptions_list=[ElementClickInterceptedException],
+                   total_timeout=120)
 
     def click_pie_slice(self, slice_css, card_title):
         card = self.wait_for_element_present_by_xpath(self.PANEL_BY_NAME_XPATH.format(panel_name=card_title))

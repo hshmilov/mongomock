@@ -631,7 +631,7 @@ class EntitiesPage(Page):
         self.wait_for_element_present_by_css(self.EXPORT_CSV_LOADING_CSS)
 
     def wait_for_csv_loading_button_to_be_absent(self):
-        self.wait_for_element_absent_by_css(self.EXPORT_CSV_LOADING_CSS)
+        self.wait_for_element_absent_by_css(self.EXPORT_CSV_LOADING_CSS, retries=450)
 
     def generate_csv(self, entity_type, fields, filters):
         session = requests.Session()
