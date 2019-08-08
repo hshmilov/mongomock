@@ -213,21 +213,15 @@
           return
         }
         this.updateView({
-          module: query.module, view: query.view, name: query.name
+          module: query.module,
+          view: query.view,
+          name: this.processedPanels[chartInd].metric === 'compare' ? query.name : undefined,
+          uuid: null
         })
         this.$router.push({ path: query.module })
       },
-      isChartEmpty(chart){
-        if(!chart.data){
-          return true;
-        }
-        if(chart.data.length === 0){
-          return true;
-        }
-        if(chart.data.length === 1 && chart.data[0].value === 0){
-          return true;
-        }
-        return false;
+      isChartEmpty(chart) {
+        return (!chart.data || (chart.data.length === 0) || (chart.data.length === 1 && chart.data[0].value === 0))
       }
     }
   }
