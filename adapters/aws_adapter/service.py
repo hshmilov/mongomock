@@ -242,7 +242,6 @@ class AWSLoadBalancer(SmartJsonClass):
 
 
 class SSMComplianceSummary(SmartJsonClass):
-    compliance_type = Field(str, 'Compliance Type')
     status = Field(str, 'Status')
     overall_severity = Field(str, 'Overall Severity')
     last_execution = Field(datetime.datetime, 'Last Execution Time')
@@ -278,7 +277,8 @@ class SSMInfo(SmartJsonClass):
     baseline_id = Field(str, 'Patch Baseline Id')
     baseline_name = Field(str, 'Patch Baseline Name')
     baseline_description = Field(str, 'Patch Baseline Description')
-    compliance_summaries = ListField(SSMComplianceSummary, 'Compliance')
+    patch_compliance_summaries = ListField(SSMComplianceSummary, 'Patch Compliance')
+    association_compliance_summaries = ListField(SSMComplianceSummary, 'Association Compliance')
 
 
 class AwsAdapter(AdapterBase, Configurable):
@@ -2240,9 +2240,9 @@ class AwsAdapter(AdapterBase, Configurable):
                     non_compliant_summary = compliance_item_summary.get('NonCompliantSummary') or {}
                     non_compliant_severity_summary = non_compliant_summary.get('SeveritySummary')
 
-                    ssm_data.compliance_summaries.append(
+                    compliance_type = compliance_item_summary.get('ComplianceType')
+                    new_compliance = (
                         SSMComplianceSummary(
-                            compliance_type=compliance_item_summary.get('ComplianceType'),
                             status=compliance_item_summary.get('Status'),
                             overall_severity=compliance_item_summary.get('OverallSeverity'),
                             last_execution=parse_date(execution_summary.get('ExecutionTime')),
@@ -2262,6 +2262,12 @@ class AwsAdapter(AdapterBase, Configurable):
                             non_compliant_unspecified_count=non_compliant_severity_summary.get('UnspecifiedCount')
                         )
                     )
+                    if str(compliance_type).lower() == 'patch':
+                        ssm_data.patch_compliance_summaries.append(new_compliance)
+                    elif str(compliance_type).lower() == 'association':
+                        ssm_data.association_compliance_summaries.append(new_compliance)
+                    else:
+                        logger.error(f'Error parsing unknown compliance type {compliance_type}')
             except Exception:
                 logger.exception(f'Problem parsing compliance summary')
 
