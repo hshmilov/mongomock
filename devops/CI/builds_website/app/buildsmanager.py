@@ -294,10 +294,10 @@ class BuildsManager(object):
         export_id = ObjectId()
         commands.extend([
             "cd /home/ubuntu/exports/",
-            "/usr/local/bin/packer build -force -var build_name={0} -var fork={1} -var branch={2} -var image={3} axonius_generate_installer.json >> build_{0}.log 2>&1".format(
+            "/usr/local/bin/packer build -force -var 'build_name={0}' -var 'fork={1}' -var 'branch={2}' -var 'image={3}' axonius_generate_installer.json >> build_{0}.log 2>&1".format(
                 version, fork, branch, OVA_IMAGE_NAME),
             "git_hash=$(cat ./axonius_{0}_git_hash.txt)".format(version),
-            "/usr/local/bin/packer build -force -var build_name={0} -var fork={1} -var branch={2} -var image={3} -var host_password={4} axonius_install_system_and_provision.json >> build_{0}.log 2>&1".format(
+            "/usr/local/bin/packer build -force -var 'build_name={0}' -var 'fork={1}' -var 'branch={2}' -var 'image={3}' -var 'host_password={4}' axonius_install_system_and_provision.json >> build_{0}.log 2>&1".format(
                 version, fork, branch, OVA_IMAGE_NAME, self.__exports_credentials['password']),
             "return_code=$?",
             "/home/ubuntu/.local/bin/aws s3 cp ./build_{0}.log s3://{1}/".format(
