@@ -144,62 +144,11 @@ class CiscoIseConnection(RESTConnection):
         """
         return bool(re.search(r'([0-9A-F]{2}[:]){5}([0-9A-F]){2}', mac.upper()) is not None)
 
-    def get_endpoint_groups(self):
-        """
-        Get all endpoint identity groups
-        :return: result dictionary
-        """
-        result = {'success': False, 'response': '', 'error': ''}
-
-        extra_headers = {'Accept': 'application/vnd.com.cisco.ise.identity.endpointgroup.1.0+xml'}
-
-        resp = self._get('config/endpointgroup', extra_headers=extra_headers)
-
-        if resp.status_code == 200:
-            result['success'] = True
-            result['response'] = [
-                (i['@name'], i['@id'], i['@description'])
-                for i in self._to_json(resp.text)['ns3:searchResult']['ns3:resources']['resource']
-            ]
-        else:
-            result['response'] = self._to_json(resp.text)['ns3:ersResponse']['messages']['message']['title']
-            result['error'] = resp.status_code
-        return result
-
-    def get_endpoint_group(self, group):
-        """
-        Get endpoint identity group details
-        :param group: Name of the identity group
-        :return: result dictionary
-        """
-        extra_headers = {'Accept': 'application/vnd.com.cisco.ise.identity.endpointgroup.1.0+xml'}
-
-        result = {'success': False, 'response': '', 'error': ''}
-
-        resp = self._get('config/endpointgroup?filter=name.EQ.{0}'.format(group), extra_headers=extra_headers)
-        found_group = self._to_json(resp.text)
-
-        if found_group['ns3:searchResult']['@total'] == '1':
-            resp = self._get(
-                'config/endpointgroup/{0}'.format(found_group['ns3:searchResult']['ns3:resources']['resource']['@id']),
-                extra_headers=extra_headers,
-            )
-            if resp.status_code == 200:
-                result['success'] = True
-                result['response'] = self._to_json(resp.text)['ns4:endpointgroup']
-            elif resp.status_code == 404:
-                result['response'] = '{0} not found'.format(group)
-                result['error'] = resp.status_code
-            else:
-                result['response'] = self._to_json(resp.text)['ns3:ersResponse']['messages']['message']['title']
-                result['error'] = resp.status_code
-        elif found_group['ns3:searchResult']['@total'] == '0':
-            result['response'] = '{0} not found'.format(group)
-            result['error'] = 404
-        else:
-            result['response'] = '{0} not found'.format(group)
-            result['error'] = resp.status_code
-        return result
+    # pylint: disable=invalid-name
+    @staticmethod
+    def get_ns(json_, field, ns='ns3'):
+        return json_.get(field) or json_.get(':'.join([ns, field]))
+    # pylint: enable=invalid-name
 
     def get_endpoints(self, page=1, size=PAGE_SIZE):
         """
@@ -215,23 +164,25 @@ class CiscoIseConnection(RESTConnection):
 
         json_res = self._to_json(resp.text)
         try:
-            json_res = json_res['ns3:searchResult']
+            json_res = self.get_ns(json_res, 'searchResult')
 
             if resp.status_code == 200 and int(json_res['@total']) > 1:
                 result['success'] = True
-                result['response'] = [(i['@name'], i['@id']) for i in json_res['ns3:resources']['resource']]
+                result['response'] = [(i['@name'], i['@id']) for i in self.get_ns(json_res, 'resources')['resource']]
 
             elif resp.status_code == 200 and int(json_res['@total']) == 1:
                 result['success'] = True
                 result['response'] = [
-                    (json_res['ns3:resources']['resource']['@name'], json_res['ns3:resources']['resource']['@id'])
+                    (self.get_ns(json_res, 'resources')['resource']['@name'],
+                     self.get_ns(json_res, 'resources')['resource']['@id'])
                 ]
             elif resp.status_code == 200 and int(json_res['@total']) == 0:
                 result['success'] = True
                 result['response'] = []
 
             else:
-                result['response'] = self._to_json(resp.text)['ns3:ersResponse']['messages']['message']['title']
+                response = self.get_ns(self._to_json(resp.text), 'ersResponse')
+                result['response'] = resp['messages']['message']['title']
                 result['error'] = resp.status_code
         except Exception:
             logger.exception(f'Failed to parse json_res {json_res}')
@@ -251,176 +202,12 @@ class CiscoIseConnection(RESTConnection):
         resp = self._get('config/endpoint/{0}'.format(device_id), extra_headers=extra_headers)
         if resp.status_code == 200:
             result['success'] = True
-            result['response'] = self._to_json(resp.text)['ns4:endpoint']
+            result['response'] = self.get_ns(self._to_json(resp.text), 'endpoint', 'ns4')
         elif resp.status_code == 404:
             result['response'] = '{0} not found'.format(device_id)
             result['error'] = resp.status_code
         else:
-            result['response'] = self._to_json(resp.text)['ns3:ersResponse']['messages']['message']['title']
-            result['error'] = resp.status_code
-        return result
-
-    def get_identity_groups(self):
-        """
-        Get all identity groups
-        :return: result dictionary
-        """
-        result = {'success': False, 'response': '', 'error': ''}
-
-        extra_headers = {'Accept': 'application/vnd.com.cisco.ise.identity.identitygroup.1.0+xml'}
-
-        resp = self._get('config/identitygroup', extra_headers=extra_headers)
-
-        if resp.status_code == 200:
-            result['success'] = True
-            result['response'] = [
-                (i['@name'], i['@id'], i['@description'])
-                for i in self._to_json(resp.text)['ns3:searchResult']['ns3:resources']['resource']
-            ]
-        else:
-            result['response'] = self._to_json(resp.text)['ns3:ersResponse']['messages']['message']['title']
-            result['error'] = resp.status_code
-        return result
-
-    def get_identity_group(self, group):
-        """
-        Get identity group details
-        :param group: Name of the identity group
-        :return: result dictionary
-        """
-        extra_headers = {'Accept': 'application/vnd.com.cisco.ise.identity.identitygroup.1.0+xml'}
-
-        result = {'success': False, 'response': '', 'error': ''}
-
-        resp = self._get('config/identitygroup?filter=name.EQ.{0}'.format(group), extra_headers=extra_headers)
-        found_group = self._to_json(resp.text)
-
-        if found_group['ns3:searchResult']['@total'] == '1':
-            resp = self._get(
-                'config/identitygroup/{0}'.format(found_group['ns3:searchResult']['ns3:resources']['resource']['@id']),
-                extra_headers=extra_headers,
-            )
-            if resp.status_code == 200:
-                result['success'] = True
-                result['response'] = self._to_json(resp.text)['ns4:identitygroup']
-            elif resp.status_code == 404:
-                result['response'] = '{0} not found'.format(group)
-                result['error'] = resp.status_code
-            else:
-                result['response'] = self._to_json(resp.text)['ns3:ersResponse']['messages']['message']['title']
-                result['error'] = resp.status_code
-        elif found_group['ns3:searchResult']['@total'] == '0':
-            result['response'] = '{0} not found'.format(group)
-            result['error'] = 404
-        else:
-            result['response'] = '{0} not found'.format(group)
-            result['error'] = resp.status_code
-        return result
-
-    def get_users(self):
-        """
-        Get all internal users
-        :return: List of tuples of user details
-        """
-        extra_headers = {'Accept': 'application/vnd.com.cisco.ise.identity.internaluser.1.1+xml'}
-
-        resp = self._get('config/internaluser', extra_headers=extra_headers)
-
-        result = {'success': False, 'response': '', 'error': ''}
-
-        json_res = self._to_json(resp.text)['ns3:searchResult']
-
-        if resp.status_code == 200 and int(json_res['@total']) > 1:
-            result['success'] = True
-            result['response'] = [(i['@name'], i['@id']) for i in json_res['ns3:resources']['resource']]
-        elif resp.status_code == 200 and int(json_res['@total']) == 1:
-            result['success'] = True
-            result['response'] = [
-                (json_res['ns3:resources']['resource']['@name'], json_res['ns3:resources']['resource']['@id'])
-            ]
-        elif resp.status_code == 200 and int(json_res['@total']) == 0:
-            result['success'] = True
-            result['response'] = []
-        else:
-            result['response'] = self._to_json(resp.text)['ns3:ersResponse']['messages']['message']['title']
-            result['error'] = resp.status_code
-        return result
-
-    def get_user(self, user_id):
-        """
-        Get user detailed info
-        :param user_id: User ID
-        :return: result dictionary
-        """
-        extra_headers = {'Accept': 'application/vnd.com.cisco.ise.identity.internaluser.1.0+xml'}
-
-        result = {'success': False, 'response': '', 'error': ''}
-
-        resp = self._get('config/internaluser?filter=name.EQ.{0}'.format(user_id), extra_headers=extra_headers)
-        found_user = self._to_json(resp.text)
-
-        if found_user['ns3:searchResult']['@total'] == '1':
-            resp = self._get(
-                'config/internaluser/{0}'.format(found_user['ns3:searchResult']['ns3:resources']['resource']['@id']),
-                extra_headers=extra_headers,
-            )
-            if resp.status_code == 200:
-                result['success'] = True
-                result['response'] = self._to_json(resp.text)['ns4:internaluser']
-            elif resp.status_code == 404:
-                result['response'] = '{0} not found'.format(user_id)
-                result['error'] = resp.status_code
-            else:
-                result['response'] = self._to_json(resp.text)['ns3:ersResponse']['messages']['message']['title']
-                result['error'] = resp.status_code
-        elif found_user['ns3:searchResult']['@total'] == '0':
-            result['response'] = '{0} not found'.format(user_id)
-            result['error'] = 404
-        else:
-            result['response'] = 'Unknown error'
-            result['error'] = resp.status_code
-        return result
-
-    def get_device_groups(self):
-        """
-        Get a list tuples of device groups
-        :return:
-        """
-        result = {'success': False, 'response': '', 'error': ''}
-
-        extra_headers = {'Accept': 'application/vnd.com.cisco.ise.network.networkdevicegroup.1.0+xml'}
-
-        resp = self._get('config/networkdevicegroup', extra_headers=extra_headers)
-
-        if resp.status_code == 200:
-            resources = self._to_json(resp.text)['ns3:searchResult']['ns3:resources']['resource']
-            result['success'] = True
-            result['response'] = [(i['@name'], i['@id']) for i in resources]
-        else:
-            result['response'] = self._to_json(resp.text)['ns3:ersResponse']['messages']['message']['title']
-            result['error'] = resp.status_code
-        return result
-
-    def get_device_group(self, device_group_oid):
-        """
-        Get a device group details
-        :param device_group_oid: oid of the device group
-        :return: result dictionary
-        """
-        extra_headers = {'Accept': 'application/vnd.com.cisco.ise.network.networkdevicegroup.1.0+xml'}
-
-        resp = self._get('config/networkdevicegroup/{0}'.format(device_group_oid), extra_headers=extra_headers)
-
-        result = {'success': False, 'response': '', 'error': ''}
-
-        if resp.status_code == 200:
-            result['success'] = True
-            result['response'] = self._to_json(resp.text)['ns4:networkdevicegroup']
-        elif resp.status_code == 404:
-            result['response'] = '{0} not found'.format(device_group_oid)
-            result['error'] = resp.status_code
-        else:
-            result['response'] = self._to_json(resp.text)['ns3:ersResponse']['messages']['message']['title']
+            result['response'] = self.get_ns(self._to_json(resp.text), 'ersResponse')['messages']['message']['title']
             result['error'] = resp.status_code
         return result
 
@@ -437,14 +224,15 @@ class CiscoIseConnection(RESTConnection):
 
         json_res = self._to_json(resp.text)
         try:
-            json_res = self._to_json(resp.text)['ns3:searchResult']
+            json_res = self.get_ns(self._to_json(resp.text), 'searchResult')
             if resp.status_code == 200 and int(json_res['@total']) > 1:
-                result['response'] = [(i['@name'], i['@id']) for i in json_res['ns3:resources']['resource']]
+                result['response'] = [(i['@name'], i['@id']) for i in self.get_ns(json_res, 'resources')['resource']]
                 result['success'] = True
 
             elif resp.status_code == 200 and int(json_res['@total']) == 1:
                 result['response'] = [
-                    (json_res['ns3:resources']['resource']['@name'], json_res['ns3:resources']['resource']['@id'])
+                    (self.get_ns(json_res, 'resources')['resource']['@name'],
+                     self.get_ns(json_res, 'resources')['resource']['@id'])
                 ]
                 result['success'] = True
 
@@ -453,7 +241,8 @@ class CiscoIseConnection(RESTConnection):
                 result['response'] = []
 
             else:
-                result['response'] = self._to_json(resp.text)['ns3:ersResponse']['messages']['message']['title']
+                response = self.get_ns(self._to_json(resp.text), 'ersResponse')
+                result['response'] = response['messages']['message']['title']
                 result['error'] = resp.status_code
         except Exception:
             logger.exception(f'Failed to parse json_res {json_res}')
@@ -472,13 +261,13 @@ class CiscoIseConnection(RESTConnection):
         specific_device = self._to_json(resp.text)
         try:
             if resp.status_code == 200:
-                result['response'] = specific_device['ns4:networkdevice']
+                result['response'] = self.get_ns(specific_device, 'networkdevice', 'ns4')
                 result['success'] = True
             elif resp.status_code == 404:
                 result['response'] = '{0} not found'.format(device_id)
                 result['error'] = resp.status_code
             else:
-                result['response'] = specific_device['ns3:ersResponse']['messages']['message']['title']
+                result['response'] = self.get_ns(specific_device, 'ersResponse')['messages']['message']['title']
                 result['error'] = resp.status_code
         except Exception:
             logger.exception(f'Failed to parse specific_device {specific_device}')

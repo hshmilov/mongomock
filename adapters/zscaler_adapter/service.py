@@ -144,7 +144,12 @@ class ZscalerAdapter(AdapterBase, Configurable):
         if not duplicated_macs_list or (mac and mac not in duplicated_macs_list):
             device.add_nic(mac=mac)
         device.figure_os(device_raw.get('osVersion'))
-        device.hostname = device_raw.get('machineHostname')
+
+        # Sometimes Zscaler return 'disabled' instead of hostname
+        hostname = device_raw.get('machineHostname') or ''
+        if hostname.lower() != 'disabled':
+            device.hostname = hostname
+
         device.device_manufacturer = device_raw.get('manufacturer')
 
         try:

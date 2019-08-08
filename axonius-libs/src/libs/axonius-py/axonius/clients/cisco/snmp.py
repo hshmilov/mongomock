@@ -321,7 +321,7 @@ class SnmpBasicInfoCiscoData(BasicInfoData):
                     logger.exception('Exception while parsing basic info port security')
                     continue
             if index not in self.result[interface_field]:
-                self.result[interface_field] = {}
+                self.result[interface_field][index] = {}
             self.result[interface_field][index][port_security_field] = port_security
 
     def _parse_port_security_entries(self, entries):
@@ -394,13 +394,13 @@ class SnmpBasicInfoCiscoData(BasicInfoData):
             base_mac=self._parse_base_mac,
         )
 
-        self.result = {'os': 'cisco'}
+        self.result = defaultdict(dict, {'os': 'cisco'})
         for type_, entries in self._raw_data:
             try:
                 parse_table._asdict()[type_](entries)
             except Exception:
                 logger.exception(f'Failed to parse {type_} {entries}')
-        yield self.result
+        yield dict(self.result)
 
 
 class SnmpArpCiscoData(ArpCiscoData):

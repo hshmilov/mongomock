@@ -1101,7 +1101,7 @@ def test_basic_info_devices(mocks):
     dict_ = devices[0].to_dict()
     del dict_['raw']
     assert dict_ == {
-        'id': 'basic_info_cisco-switch.axonius.lan',
+        'id': 'basic_info_cisco-switch.axonius.lan_001b8fdfdf00_FOC1115Z2Y5',
         'network_interfaces': [
             {
                 'mac': '00:1B:8F:DF:DF:40',

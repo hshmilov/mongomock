@@ -307,7 +307,10 @@ class BasicInfoData(AbstractCiscoData):
         raise NotImplementedError()
 
     def _get_id(self, instance):
-        id_ = '_'.join(['basic_info', instance.get('hostname', '')])
+        id_ = '_'.join(filter(None, ['basic_info',
+                                     instance.get('hostname', ''),
+                                     instance.get('base_mac'),
+                                     instance.get('device_serial')]))
         if id_ == 'basic_info':
             return None
         return id_
