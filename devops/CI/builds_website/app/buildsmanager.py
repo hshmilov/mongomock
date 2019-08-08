@@ -241,7 +241,7 @@ class BuildsManager(object):
                 }}
             )
 
-        export = self.db.exports.find_one({'version': version})
+        export = self.db.exports.find_one({'version': version}, projection={'ami_id': True})
         ami_id = export['ami_id']
         deleted = _delete_s3_export()
 
@@ -350,7 +350,7 @@ class BuildsManager(object):
         export = self.db.exports.find_one({'version': export_id})
         ami_id_match = re.search('^us-east-2: (.*)$', log, re.MULTILINE)
         ami_id = ami_id_match.group(1) if ami_id_match else ''
-        gce_name_match = re.search('Creating GCE image (.*)...$', log, re.MULTILINE)
+        gce_name_match = re.search('Creating GCE image (.*)\.\.\.$', log, re.MULTILINE)
         gce_name = gce_name_match.group(1) if gce_name_match else ''
         download_link = '<a href="http://{0}.s3-accelerate.amazonaws.com/{1}/{1}/{1}_export.ova">Click here</a>'.format(
             S3_BUCKET_NAME_FOR_OVA,
