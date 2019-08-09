@@ -2,9 +2,8 @@ import logging
 logger = logging.getLogger(f'axonius.{__name__}')
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
-from axonius.devices.device_adapter import DeviceAdapter
+from axonius.devices.device_adapter import DeviceAdapter, AGENT_NAMES
 from axonius.utils.files import get_local_config_file
-from axonius.fields import Field
 from axonius.clients.rest.exception import RESTException
 from fireeye_hx_adapter.connection import FireeyeHxConnection
 from fireeye_hx_adapter import consts
@@ -14,7 +13,7 @@ from axonius.clients.rest.connection import RESTConnection
 
 class FireeyeHxAdapter(AdapterBase):
     class MyDeviceAdapter(DeviceAdapter):
-        agent_version = Field(str, 'Agent Version')
+        pass
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -123,7 +122,7 @@ class FireeyeHxAdapter(AdapterBase):
                     device.figure_os((os_raw.get("product_name") or "") + " " + (os_raw.get("bitness") or ""))
                 except Exception:
                     logger.exception(f"Problem getting os for {device_raw}")
-                device.agent_version = device_raw.get("agent_version")
+                device.add_agent_version(agent=AGENT_NAMES.fireeye_hx, version=device_raw.get('agent_version'))
                 try:
                     hostname = device_raw.get("hostname")
                     device.hostname = hostname

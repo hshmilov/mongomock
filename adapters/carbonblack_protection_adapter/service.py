@@ -5,7 +5,7 @@ from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.exception import RESTException
-from axonius.devices.device_adapter import DeviceAdapter
+from axonius.devices.device_adapter import DeviceAdapter, AGENT_NAMES
 from axonius.fields import Field
 from axonius.mixins.configurable import Configurable
 from axonius.utils.files import get_local_config_file
@@ -21,7 +21,6 @@ class CarbonblackProtectionAdapter(AdapterBase, Configurable):
     # pylint: disable=R0902
     class MyDeviceAdapter(DeviceAdapter):
         connected = Field(bool, 'Connected')
-        agent_version = Field(str, 'Agent Version')
         policy_name = Field(str, 'Policy Name')
 
     def __init__(self):
@@ -136,7 +135,8 @@ class CarbonblackProtectionAdapter(AdapterBase, Configurable):
                     device.last_seen = parse_date(str(device_raw.get('lastPollDate')))
                 except Exception:
                     logger.exception('Problem getting Last seen in CarbonBlackProtection')
-                device.agent_version = device_raw.get('agentVersion')
+                device.add_agent_version(agent=AGENT_NAMES.carbonblack_protection,
+                                         version=device_raw.get('agentVersion'))
                 device.policy_name = device_raw.get('policyName')
                 device.last_used_users = str(device_raw.get('users') or '').split(',')
                 device.connected = device_raw.get('connected')

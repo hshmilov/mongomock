@@ -4,7 +4,7 @@ from dateutil.parser import parse as parse_date
 
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
-from axonius.devices.device_adapter import DeviceAdapter
+from axonius.devices.device_adapter import DeviceAdapter, AGENT_NAMES
 from axonius.fields import Field
 from axonius.utils.files import get_local_config_file
 from dropbox_adapter.client import DropboxConnection
@@ -15,7 +15,6 @@ logger = logging.getLogger(f'axonius.{__name__}')
 class DropboxAdapter(AdapterBase):
     class MyDeviceAdapter(DeviceAdapter):
         carrier = Field(str, 'Mobile Carrier')
-        dropbox_client_version = Field(str, 'Client Version')
 
     def __init__(self):
         super().__init__(get_local_config_file(__file__))
@@ -134,7 +133,7 @@ class DropboxAdapter(AdapterBase):
                     carrier = raw_device_data.get('last_carrier', '')
                     if carrier != 'unavailable' and carrier:
                         device.carrier = carrier
-                    device.dropbox_client_version = client_version
+                    device.add_agent_version(agent=AGENT_NAMES.dropbox, version=client_version)
                 else:
                     logger.error(f'Could not determine if device is desktop or mobile: {raw_device_data}')
                     continue

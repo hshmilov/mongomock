@@ -2,7 +2,7 @@ import logging
 import requests
 
 from axonius.adapter_base import AdapterBase, AdapterProperty
-from axonius.devices.device_adapter import DeviceAdapter
+from axonius.devices.device_adapter import DeviceAdapter, AGENT_NAMES
 from axonius.fields import Field
 from axonius.clients.rest.consts import DEFAULT_TIMEOUT
 from axonius.adapter_exceptions import ClientConnectionException
@@ -16,8 +16,6 @@ logger = logging.getLogger(f'axonius.{__name__}')
 
 class ForcepointCsvAdapter(AdapterBase):
     class MyDeviceAdapter(DeviceAdapter):
-        client_version = Field(str, 'Client Version')
-        client_status = Field(str, 'Client Status')
         endpoint_server = Field(str, 'Endpoint Server')
 
     def __init__(self, *args, **kwargs):
@@ -89,8 +87,9 @@ class ForcepointCsvAdapter(AdapterBase):
                 device = self._new_device_adapter()
                 device.hostname = device_raw.get('Hostname')
                 device.id = device.hostname
-                device.client_status = device_raw.get('Client Status')
-                device.client_version = device_raw.get('Client Installation Version')
+                device.add_agent_version(agent=AGENT_NAMES.forcepoint_csv,
+                                         version=device_raw.get('Client Installation Version'),
+                                         status=device_raw.get('Client Status'))
                 device.endpoint_server = device_raw.get('Endpoint Server')
                 device.add_nic(None, device_raw.get('IP Address', '').split(','))
                 device.last_used_users = device_raw.get('Logged-in Users', '').split(',')

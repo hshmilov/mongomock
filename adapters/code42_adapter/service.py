@@ -4,7 +4,7 @@ from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.connection import RESTException
-from axonius.devices.device_adapter import DeviceAdapter
+from axonius.devices.device_adapter import DeviceAdapter, AGENT_NAMES
 from axonius.utils.files import get_local_config_file
 from axonius.utils.datetime import parse_date
 from axonius.fields import Field
@@ -20,7 +20,6 @@ class Code42Adapter(AdapterBase):
         product_version = Field(str, 'Product Version')
         device_service = Field(str, 'Device Service')
         java_version = Field(str, 'Java Version')
-        agent_version = Field(str, 'Agent Version')
         device_status = Field(str, 'Device Status')
         device_type = Field(str, 'Device Type')
         user_id = Field(str, 'User ID')
@@ -133,7 +132,8 @@ class Code42Adapter(AdapterBase):
                 device.product_version = device_raw.get('productVersion')
                 device.device_service = device_raw.get('service')
                 device.java_version = device_raw.get('javaVersion')
-                device.agent_version = str(device_raw.get('version')) if device_raw.get('version') else None
+                agent_version = str(device_raw.get('version')) if device_raw.get('version') else None
+                device.add_agent_version(agent=AGENT_NAMES.code42, version=agent_version)
                 device.device_status = device_raw.get('status')
                 device.device_type = device_raw.get('type')
                 device.user_id = str(device_raw.get('userId')) if device_raw.get('userId') else None

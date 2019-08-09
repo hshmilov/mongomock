@@ -3,7 +3,7 @@ import logging
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
-from axonius.devices.device_adapter import DeviceAdapter
+from axonius.devices.device_adapter import DeviceAdapter, AGENT_NAMES
 from axonius.fields import Field
 from axonius.utils.datetime import parse_date
 from axonius.utils.files import get_local_config_file
@@ -16,8 +16,6 @@ logger = logging.getLogger(f'axonius.{__name__}')
 class KaseyaAdapter(AdapterBase):
     # pylint: disable=too-many-instance-attributes
     class MyDeviceAdapter(DeviceAdapter):
-        agent_version = Field(str, 'Agent Version')
-        agent_status = Field(str, 'Agent Status')
         agent_id = Field(str, 'Agent ID')
 
     def __init__(self, *args, **kwargs):
@@ -163,8 +161,9 @@ class KaseyaAdapter(AdapterBase):
                                                           path=path)
                         except Exception:
                             logger.exception(f'Problem getting app {app_raw}')
-                device.agent_version = agent_raw.get('AgentVersion')
-                device.agent_status = agent_raw.get('Online')
+                device.add_agent_version(agent=AGENT_NAMES.kaseya,
+                                         version=agent_raw.get('AgentVersion'),
+                                         status=agent_raw.get('Online'))
                 asset_raw['agent_raw'] = agent_raw
                 try:
                     domain = agent_raw.get('DomainWorkgroup')

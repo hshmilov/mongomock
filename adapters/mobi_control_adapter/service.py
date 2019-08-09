@@ -4,7 +4,7 @@ from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.connection import RESTException
-from axonius.devices.device_adapter import DeviceAdapter
+from axonius.devices.device_adapter import DeviceAdapter, AGENT_NAMES
 from axonius.utils.files import get_local_config_file
 from axonius.fields import Field
 from axonius.utils.datetime import parse_date
@@ -19,7 +19,6 @@ class MobiControlAdapter(AdapterBase):
     # pylint: disable=R0902
     class MyDeviceAdapter(DeviceAdapter):
         is_online = Field(bool, 'Is Online')
-        agent_version = Field(str, 'Agent Version')
         cell_carrier = Field(str, 'Cell Carrier')
         imei = Field(str, 'IMEI')
         in_roaming = Field(bool, 'In Roaming')
@@ -148,7 +147,7 @@ class MobiControlAdapter(AdapterBase):
                         device.add_nic(mac_wifi, ips)
                 except Exception:
                     logger.exception(f'Problem adding MAC Wifi to {device_raw}')
-                device.agent_version = device_raw.get('AgentVersion')
+                device.add_agent_version(agent=AGENT_NAMES.mobi_control, version=device_raw.get('AgentVersion'))
                 device.in_romaing = device_raw.get('InRoaming')
                 try:
                     device.last_seen = parse_date(device_raw.get('LastCheckInTime'))

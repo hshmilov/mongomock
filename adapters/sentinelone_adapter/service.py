@@ -4,7 +4,7 @@ from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.exception import RESTException
-from axonius.devices.device_adapter import DeviceAdapter
+from axonius.devices.device_adapter import DeviceAdapter, AGENT_NAMES
 from axonius.fields import Field
 from axonius.plugin_base import add_rule, return_error
 from axonius.utils.files import get_local_config_file
@@ -20,7 +20,6 @@ logger = logging.getLogger(f'axonius.{__name__}')
 class SentineloneAdapter(AdapterBase):
 
     class MyDeviceAdapter(DeviceAdapter):
-        agent_version = Field(str, 'Agent Version')
         active_state = Field(str, 'Active State')
         is_active = Field(bool, 'Is Active')
         basic_device_id = Field(str, 'Basic ID')
@@ -145,7 +144,7 @@ class SentineloneAdapter(AdapterBase):
                 logger.warning(f'Bad device with no id {device_raw}')
                 return None
             device.id = device_id + '_' + uuid
-            device.agent_version = device_raw.get('agent_version')
+            device.add_agent_version(agent=AGENT_NAMES.sentinelone, version=device_raw.get('agent_version'))
             is_active = device_raw.get('is_active')
             if is_active and isinstance(is_active, bool):
                 device.is_active = is_active
@@ -234,7 +233,7 @@ class SentineloneAdapter(AdapterBase):
                 return None
             device.id = device_id + computer_name
             device.basic_device_id = device_id
-            device.agent_version = device_raw.get('agentVersion')
+            device.add_agent_version(agent=AGENT_NAMES.sentinelone, version=device_raw.get('agentVersion'))
             try:
                 device.last_seen = parse_date(device_raw.get('lastActiveDate'))
             except Exception:

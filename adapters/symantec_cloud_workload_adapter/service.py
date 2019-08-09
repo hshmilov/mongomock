@@ -7,7 +7,7 @@ from axonius.clients.rest.connection import RESTConnection
 from axonius.fields import Field, ListField
 from axonius.clients.rest.connection import RESTException
 from axonius.utils.parsing import figure_out_cloud
-from axonius.devices.device_adapter import DeviceAdapter
+from axonius.devices.device_adapter import DeviceAdapter, AGENT_NAMES
 from axonius.utils.parsing import is_domain_valid
 from axonius.utils.files import get_local_config_file
 from axonius.utils.datetime import parse_date
@@ -42,7 +42,6 @@ class SymantecCloudWorkloadAdapter(AdapterBase):
         policy_applied = Field(str, 'Policy Applied')
         availability_zone = Field(str, 'Availability Zone')
         agent_id = Field(str, 'Agent Id')
-        agent_version = Field(str, 'Agent Version')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -197,7 +196,8 @@ class SymantecCloudWorkloadAdapter(AdapterBase):
                 security_agent = device_raw.get('security_agent')
                 if isinstance(security_agent, dict):
                     device.agent_id = security_agent.get('agent_id')
-                    device.agent_version = security_agent.get('agent_version')
+                    device.add_agent_version(agent=AGENT_NAMES.symantec_cloud_workload,
+                                             version=security_agent.get('agent_version'))
                     device.last_seen = parse_date(security_agent.get('last_connected_time'))
             except Exception:
                 logger.exception(f'Problem getting agent data for {device_raw}')

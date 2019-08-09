@@ -4,7 +4,7 @@ from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.connection import RESTException
-from axonius.devices.device_adapter import DeviceAdapter
+from axonius.devices.device_adapter import DeviceAdapter, AGENT_NAMES
 from axonius.fields import Field
 from axonius.mixins.configurable import Configurable
 from axonius.utils.datetime import parse_date
@@ -25,7 +25,6 @@ class PaloaltoCortexAdapter(AdapterBase, Configurable):
         agent_id = Field(str, 'Agent ID')
         customer_id = Field(str, 'Customer ID')
         traps_id = Field(str, 'Traps ID')
-        agent_version = Field(str, 'Agent Version')
         protection_status = Field(bool, 'Protection Status')
         policy_tag = Field(str, 'Policy Tag')
         is_vdi = Field(bool, 'Is VDI')
@@ -122,7 +121,7 @@ class PaloaltoCortexAdapter(AdapterBase, Configurable):
             if not isinstance(agent_ip, list):
                 agent_ip = [agent_ip]
             device.add_nic(ips=agent_ip)
-            device.agent_version = endpoint_header.get('agentVersion')
+            device.add_agent_version(agent=AGENT_NAMES.paloalto_cortex, version=endpoint_header.get('agentVersion'))
             device.policy_tag = endpoint_header.get('policyTag')
             device.protection_status = not (endpoint_header.get('protectionStatus') == 0)
             device_os_type = {

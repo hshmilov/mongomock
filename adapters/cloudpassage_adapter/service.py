@@ -4,7 +4,7 @@ from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.connection import RESTException
-from axonius.devices.device_adapter import DeviceAdapter
+from axonius.devices.device_adapter import DeviceAdapter, AGENT_NAMES
 from axonius.utils.datetime import parse_date
 from axonius.fields import Field
 from axonius.utils.files import get_local_config_file
@@ -21,7 +21,6 @@ class CloudpassageAdapter(AdapterBase):
         server_label = Field(str, 'Server Label')
         reported_fqdn = Field(str, 'Reported FQDN')
         server_state = Field(str, 'Server State')
-        daemon_version = Field(str, 'Daemon Version')
         read_only = Field(bool, 'Read Only')
         proxy = Field(str, 'Proxy')
         primary_ip_address = Field(str, 'Primary IP Address')
@@ -129,7 +128,8 @@ class CloudpassageAdapter(AdapterBase):
             device.server_label = device_raw.get('server_label')
             device.reported_fqdn = device_raw.get('reported_fqdn')
             device.server_state = device_raw.get('state')
-            device.daemon_version = device_raw.get('daemon_version')
+            device.add_agent_version(agent=AGENT_NAMES.cloudpassage,
+                                     version=device_raw.get('daemon_version'))
             device.proxy = device_raw.get('proxy')
             device.group_name = device_raw.get('group_name')
             try:

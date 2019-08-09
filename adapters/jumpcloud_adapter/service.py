@@ -5,7 +5,7 @@ from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.connection import RESTException
-from axonius.devices.device_adapter import DeviceAdapter
+from axonius.devices.device_adapter import DeviceAdapter, AGENT_NAMES
 from axonius.utils.files import get_local_config_file
 from axonius.fields import Field, ListField
 from axonius.users.user_adapter import UserAdapter
@@ -26,7 +26,6 @@ class JumpcloudAdapter(AdapterBase):
         remote_ip = Field(str, 'Remote IP')
         is_active = Field(bool, 'Is Active')
         created = Field(datetime.datetime, 'Created')
-        agent_version = Field(str, 'Agent Version')
         jumpcloud_tags = ListField(str, 'JumpCloud Tags')
         allow_ssh_root_login = Field(bool, 'Allow SSH Root Login')
 
@@ -159,7 +158,7 @@ class JumpcloudAdapter(AdapterBase):
                 logger.exception(f'Problem adding nic to {device_raw}')
             device.is_active = bool(device_raw.get('active'))
             device.allow_ssh_root_login = bool(device_raw.get('allowSshRootLogin'))
-            device.agent_version = device_raw.get('agentVersion')
+            device.add_agent_version(agent=AGENT_NAMES.jumpcloud, version=device_raw.get('agentVersion'))
             if device_raw.get('amazonInstanceID'):
                 device.cloud_id = device_raw.get('amazonInstanceID')
                 device.cloud_provider = 'AWS'

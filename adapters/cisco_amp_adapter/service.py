@@ -4,7 +4,7 @@ from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.utils.datetime import parse_date
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
-from axonius.devices.device_adapter import DeviceAdapter, DeviceRunningState
+from axonius.devices.device_adapter import DeviceAdapter, DeviceRunningState, AGENT_NAMES
 from axonius.fields import Field
 from axonius.utils.files import get_local_config_file
 from cisco_amp_adapter import consts
@@ -116,8 +116,8 @@ class CiscoAmpAdapter(AdapterBase):
                     device.power_state = DeviceRunningState.TurnedOn
                 else:
                     device.power_state = DeviceRunningState.TurnedOff
-
-                device.connector_version = raw_device_data.get('connector_version')
+                device.add_agent_version(agent=AGENT_NAMES.cisco_amp,
+                                         version=raw_device_data.get('connector_version'))
                 try:
                     os = raw_device_data.get('operating_system', '')
                     device.figure_os(os)

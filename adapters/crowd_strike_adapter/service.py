@@ -5,7 +5,7 @@ from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.exception import RESTException
 from axonius.mixins.configurable import Configurable
-from axonius.devices.device_adapter import DeviceAdapter
+from axonius.devices.device_adapter import DeviceAdapter, AGENT_NAMES
 from axonius.fields import Field, ListField
 from axonius.utils.files import get_local_config_file
 from axonius.utils.datetime import parse_date
@@ -18,7 +18,6 @@ logger = logging.getLogger(f'axonius.{__name__}')
 class CrowdStrikeAdapter(AdapterBase, Configurable):
 
     class MyDeviceAdapter(DeviceAdapter):
-        agent_version = Field(str, 'Agent Version')
         external_ip = Field(str, 'External IP')
         policies = ListField(str, 'Policies')
 
@@ -116,7 +115,7 @@ class CrowdStrikeAdapter(AdapterBase, Configurable):
                 if not device_id:
                     continue
                 device.id = device_id
-                device.agent_version = device_raw.get('agent_version')
+                device.add_agent_version(agent=AGENT_NAMES.crowd_strike, version=device_raw.get('agent_version'))
                 mac_address = device_raw.get('mac_address')
                 local_ip = device_raw.get('local_ip')
                 device.add_ips_and_macs(mac_address, local_ip.split(',') if local_ip is not None else None)

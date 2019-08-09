@@ -6,7 +6,7 @@ from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.exception import RESTException
-from axonius.devices.device_adapter import DeviceAdapter
+from axonius.devices.device_adapter import DeviceAdapter, AGENT_NAMES
 from axonius.fields import Field
 from axonius.utils.datetime import parse_date
 from axonius.utils.files import get_local_config_file
@@ -20,7 +20,6 @@ logger = logging.getLogger(f'axonius.{__name__}')
 class BigfixAdapter(AdapterBase):
 
     class MyDeviceAdapter(DeviceAdapter):
-        agent_version = Field(str, 'Agent Version')
         bigfix_device_type = Field(str, 'Device type')
         bigfix_computer_type = Field(str, 'Computer type')
 
@@ -175,7 +174,7 @@ class BigfixAdapter(AdapterBase):
                     device.add_ips_and_macs(mac_addresses, ips)
                 except Exception:
                     logger.exception('Problem adding nic to Bigfix')
-                device.agent_version = device_raw.get('Agent Version')
+                device.add_agent_version(agent=AGENT_NAMES.bigfix, version=device_raw.get('Agent Version'))
                 if isinstance(device_raw.get('User Name'), str) and '<none>' not in device_raw.get('User Name'):
                     device.last_used_users = device_raw.get('User Name').split(',')
                 last_report_time = device_raw.get('Last Report Time')

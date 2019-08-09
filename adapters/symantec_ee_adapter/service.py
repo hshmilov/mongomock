@@ -3,7 +3,7 @@ import logging
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.mssql.connection import MSSQLConnection
-from axonius.devices.device_adapter import DeviceAdapter
+from axonius.devices.device_adapter import DeviceAdapter, AGENT_NAMES
 from axonius.fields import Field, ListField
 from axonius.mixins.configurable import Configurable
 from axonius.utils.datetime import parse_date
@@ -16,7 +16,6 @@ logger = logging.getLogger(f'axonius.{__name__}')
 
 class SymantecEeAdapter(AdapterBase, Configurable):
     class MyDeviceAdapter(DeviceAdapter):
-        agent_version = Field(str, 'Agent Version')
         decrypted_volumes = ListField(str, 'Decrypted Volumes')
         decrypting_volumes = ListField(str, 'Decrypting Volumes')
         encrypted_volumes = ListField(str, 'Encrypted Volumes')
@@ -117,7 +116,8 @@ class SymantecEeAdapter(AdapterBase, Configurable):
                 except Exception:
                     logger.exception(f'Problem getting last seen for {device_raw}')
                 device.hostname = device_raw.get('CompName')
-                device.agent_version = device_raw.get('SEE Version')
+                device.add_agent_version(agent=AGENT_NAMES.symantec_ee,
+                                         version=device_raw.get('SEE Version'))
                 try:
                     device.figure_os(device_raw.get('OSVersion'))
                 except Exception:

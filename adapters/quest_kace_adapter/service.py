@@ -7,7 +7,7 @@ from axonius.clients.rest.connection import RESTException
 from axonius.utils.datetime import parse_date
 from axonius.utils.parsing import is_domain_valid
 from axonius.fields import Field
-from axonius.devices.device_adapter import DeviceAdapter
+from axonius.devices.device_adapter import DeviceAdapter, AGENT_NAMES
 from axonius.utils.files import get_local_config_file
 from quest_kace_adapter.connection import QuestKaceConnection
 from quest_kace_adapter.client_id import get_client_id
@@ -20,7 +20,6 @@ class QuestKaceAdapter(AdapterBase):
     class MyDeviceAdapter(DeviceAdapter):
         asset_tag = Field(str, 'Asset Tag')
         chassis_type = Field(str, 'Chassis Type')
-        agent_version = Field(str, 'Agent Version')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -119,7 +118,7 @@ class QuestKaceAdapter(AdapterBase):
             device.bios_serial = device_raw.get('Bios_serial_number')
             device.bios_version = device_raw.get('Bios_version')
             device.chassis_type = device_raw.get('Chassis_type')
-            device.agent_version = device_raw.get('Client_version')
+            device.add_agent_version(agent=AGENT_NAMES.quest_kace, version=device_raw.get('Client_version'))
             if is_domain_valid(device_raw.get('Cs_domain')):
                 device.domain = device_raw.get('Cs_domain')
             device.device_manufacturer = device_raw.get('Cs_manufacturer')

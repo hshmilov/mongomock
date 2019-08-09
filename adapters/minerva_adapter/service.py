@@ -4,8 +4,7 @@ from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.exception import RESTException
-from axonius.devices.device_adapter import DeviceAdapter
-from axonius.fields import Field
+from axonius.devices.device_adapter import DeviceAdapter, AGENT_NAMES
 from axonius.utils.files import get_local_config_file
 from axonius.utils.datetime import parse_date
 from minerva_adapter.connection import MinervaConnection
@@ -15,8 +14,7 @@ logger = logging.getLogger(f'axonius.{__name__}')
 
 class MinervaAdapter(AdapterBase):
     class MyDeviceAdapter(DeviceAdapter):
-        agent_version = Field(str, 'Agent Version')
-        agent_status = Field(str, 'Agent Status')
+        pass
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -109,8 +107,9 @@ class MinervaAdapter(AdapterBase):
                         device.add_nic(None, device_raw.get("reportedIpAddress", "").split(","))
                 except Exception:
                     logger.exception("Problem with adding nic to Minerva device")
-                device.agent_version = device_raw.get("armorVersion", "")
-                device.agent_status = device_raw.get("agentStatus")
+                device.add_agent_version(agent=AGENT_NAMES.minerva,
+                                         version=device_raw.get("armorVersion", ""),
+                                         status=device_raw.get("agentStatus"))
                 device.last_used_users = device_raw.get("loggedOnUsers", "").split(";")
                 device.last_seen = parse_date(device_raw.get("lastSeenOnline", ""))
                 device.set_raw(device_raw)

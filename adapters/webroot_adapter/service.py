@@ -5,7 +5,7 @@ from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.connection import RESTException
-from axonius.devices.device_adapter import DeviceAdapter
+from axonius.devices.device_adapter import DeviceAdapter, AGENT_NAMES
 from axonius.utils.parsing import is_domain_valid
 from axonius.fields import Field
 from axonius.utils.datetime import parse_date
@@ -18,7 +18,6 @@ logger = logging.getLogger(f'axonius.{__name__}')
 
 class WebrootAdapter(AdapterBase):
     class MyDeviceAdapter(DeviceAdapter):
-        agent_version = Field(str, 'Agent Version')
         policy_name = Field(str, 'Policy Name')
         group_name = Field(str, 'Group Name')
         last_infected = Field(datetime.datetime, 'Last Infected')
@@ -129,7 +128,8 @@ class WebrootAdapter(AdapterBase):
                 return None
             device.id = device_id + '_' + (device_raw.get('HostName') or '')
             device.hostname = device_raw.get('HostName')
-            device.agent_version = device_raw.get('AgentVersion')
+            device.add_agent_version(agent=AGENT_NAMES.webroot,
+                                     version=device_raw.get('AgentVersion'))
             try:
                 device.last_seen = parse_date(device_raw.get('LastSeen'))
             except Exception:

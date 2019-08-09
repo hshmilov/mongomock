@@ -4,7 +4,7 @@ from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.connection import RESTException
-from axonius.devices.device_adapter import DeviceAdapter
+from axonius.devices.device_adapter import DeviceAdapter, AGENT_NAMES
 from axonius.utils.files import get_local_config_file
 from axonius.fields import Field
 from axonius.utils.datetime import parse_date
@@ -17,9 +17,7 @@ logger = logging.getLogger(f'axonius.{__name__}')
 
 class CiscoUmbrellaAdapter(AdapterBase):
     class MyDeviceAdapter(DeviceAdapter):
-        agent_version = Field(str, 'Agent Version')
         agent_type = Field(str, 'Agent Type')
-        agent_status = Field(str, 'Agent Status')
         ip_blocking = Field(bool, 'IP Blocking')
 
     def __init__(self, *args, **kwargs):
@@ -152,9 +150,10 @@ class CiscoUmbrellaAdapter(AdapterBase):
                     device.last_seen = parse_date(device_raw.get('lastSync'))
                 except Exception:
                     logger.exception(f'Problem getting last seen for {device_raw}')
-                device.agent_status = device_raw.get('status')
                 device.agent_type = device_raw.get('type')
-                device.agent_version = device_raw.get('version')
+                device.add_agent_version(agent=AGENT_NAMES.cisco_umbrella,
+                                         version=device_raw.get('version'),
+                                         status=device_raw.get('status'))
                 device.set_raw(device_raw)
                 yield device
             except Exception:

@@ -7,7 +7,7 @@ from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.connection import RESTException
 from axonius.fields import Field
 from axonius.utils.datetime import parse_date
-from axonius.devices.device_adapter import DeviceAdapter
+from axonius.devices.device_adapter import DeviceAdapter, AGENT_NAMES
 from axonius.utils.files import get_local_config_file
 from druva_adapter.connection import DruvaConnection
 from druva_adapter.client_id import get_client_id
@@ -19,7 +19,6 @@ class DruvaAdapter(AdapterBase):
     # pylint: disable=too-many-instance-attributes
     class MyDeviceAdapter(DeviceAdapter):
         device_status = Field(str, 'Device Status')
-        agent_version = Field(str, 'Agent Version')
         upgrade_state = Field(str, 'Upgrade State')
         total_backup_data = Field(str, 'Total Backup Data')
         added_on = Field(datetime.datetime, 'Added On')
@@ -135,7 +134,7 @@ class DruvaAdapter(AdapterBase):
             device.first_seen = parse_date(device_raw.get('addedOn'))
             device.last_upgraded_on = parse_date(device_raw.get('lastUpgradedOn'))
             device.last_seen = parse_date(device_raw.get('lastConnected'))
-            device.agent_version = device_raw.get('clientVersion')
+            device.add_agent_version(agent=AGENT_NAMES.druva, version=device_raw.get('clientVersion'))
             try:
                 if device_raw.get('userID') and users_data_dict.get(device_raw.get('userID')):
                     user_raw = users_data_dict.get(device_raw.get('userID'))

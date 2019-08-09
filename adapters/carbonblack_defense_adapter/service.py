@@ -5,7 +5,7 @@ from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.exception import RESTException
-from axonius.devices.device_adapter import DeviceAdapter
+from axonius.devices.device_adapter import DeviceAdapter, AGENT_NAMES
 from axonius.plugin_base import EntityType, add_rule, return_error
 from axonius.fields import Field
 from axonius.mixins.configurable import Configurable
@@ -19,8 +19,6 @@ class CarbonblackDefenseAdapter(AdapterBase, Configurable):
     # pylint: disable=R0902
     class MyDeviceAdapter(DeviceAdapter):
         av_status = Field(str, 'AV Status')
-        status = Field(str, 'Agent Status')
-        sensor_version = Field(str, 'Sensor Version')
         policy_name = Field(str, 'Policy Name')
         email = Field(str, 'Email')
         basic_device_id = Field(str, 'Basic ID')
@@ -176,9 +174,10 @@ class CarbonblackDefenseAdapter(AdapterBase, Configurable):
             except Exception:
                 logger.exception('Problem getting Last seen in CarbonBlackDefense')
             device.av_status = str(device_raw.get('avStatus'))
-            device.status = device_raw.get('status')
             device.email = device_raw.get('email')
-            device.sensor_version = device_raw.get('sensorVersion')
+            device.add_agent_version(agent=AGENT_NAMES.carbonblack_defense,
+                                     version=device_raw.get('sensorVersion'),
+                                     status=device_raw.get('status'))
             device.policy_name = device_raw.get('policyName')
             if device_raw.get('lastExternalIpAddress'):
                 device.add_public_ip(device_raw.get('lastExternalIpAddress'))

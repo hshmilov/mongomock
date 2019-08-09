@@ -4,7 +4,7 @@ from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.connection import RESTException
-from axonius.devices.device_adapter import DeviceAdapter
+from axonius.devices.device_adapter import DeviceAdapter, AGENT_NAMES
 from axonius.utils.files import get_local_config_file
 from axonius.utils.datetime import parse_date
 from axonius.fields import Field, ListField
@@ -16,7 +16,6 @@ logger = logging.getLogger(f'axonius.{__name__}')
 
 class RedcloackAdapter(AdapterBase):
     class MyDeviceAdapter(DeviceAdapter):
-        agent_version = Field(str, 'Agent Version')
         color = Field(str, 'Color')
         red_tag = ListField(str, 'Redcloak Tag')
 
@@ -127,7 +126,7 @@ class RedcloackAdapter(AdapterBase):
                     device.bios_serial = system_info.get('bios_serial')
                     ips = system_info.get('ip_address')
                     device.add_ips_and_macs(None, ips)
-                    device.agent_version = system_info.get('redcloak_version')
+                    device.add_agent_version(agent=AGENT_NAMES.redcloak, version=system_info.get('redcloak_version'))
                     if system_info.get('logon_user') and isinstance(system_info.get('logon_user'), list):
                         device.last_used_users = system_info.get('logon_user')
                     try:

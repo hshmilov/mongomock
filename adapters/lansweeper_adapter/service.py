@@ -5,7 +5,7 @@ from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.mssql.connection import MSSQLConnection
 from axonius.clients.rest.connection import RESTConnection
-from axonius.devices.device_adapter import DeviceAdapter
+from axonius.devices.device_adapter import DeviceAdapter, AGENT_NAMES
 from axonius.fields import Field
 from axonius.devices.device_adapter import RegistryInfomation
 from axonius.mixins.configurable import Configurable
@@ -21,7 +21,6 @@ logger = logging.getLogger(f'axonius.{__name__}')
 class LansweeperAdapter(AdapterBase, Configurable):
     # pylint: disable=R0902
     class MyDeviceAdapter(DeviceAdapter):
-        agent_version = Field(str, 'Agent Version')
         last_active_scan = Field(datetime.datetime, 'Last Active Scan')
         lsat_ls_agent = Field(datetime.datetime, 'Last Ls Agent')
         lansweeper_type = Field(str, 'Lansweeper Type')
@@ -367,7 +366,7 @@ class LansweeperAdapter(AdapterBase, Configurable):
                     )
                 except Exception:
                     logger.exception(f'Problem getting memory for {device_raw}')
-                device.agent_version = device_raw.get('LsAgentVersion')
+                device.add_agent_version(agent=AGENT_NAMES.lansweeper, version=device_raw.get('LsAgentVersion'))
                 username = device_raw.get('Username')
                 user_domain = device_raw.get('Userdomain')
                 if username:

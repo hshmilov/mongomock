@@ -5,7 +5,7 @@ from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.exception import RESTException
-from axonius.devices.device_adapter import DeviceAdapter
+from axonius.devices.device_adapter import DeviceAdapter, AGENT_NAMES
 from axonius.fields import Field, ListField
 from axonius.utils.datetime import parse_date
 from axonius.utils.files import get_local_config_file
@@ -19,7 +19,6 @@ class CylanceAdapter(AdapterBase):
 
     # pylint: disable=too-many-instance-attributes
     class MyDeviceAdapter(DeviceAdapter):
-        agent_version = Field(str, 'Agent Version')
         is_safe = Field(str, 'Is Safe')
         device_state = Field(str, 'Device State', enum=['Online', 'Offline'])
         policy_id = Field(str, 'Policy ID')
@@ -165,7 +164,7 @@ class CylanceAdapter(AdapterBase):
                 device.add_ips_and_macs(mac_addresses, ip_addresses)
             except Exception:
                 logger.exception(f'Problem with adding nic to Cylance device {device_raw}')
-            device.agent_version = device_raw.get('agent_version', '')
+            device.add_agent_version(agent=AGENT_NAMES.cylance, version=device_raw.get('agent_version', ''))
             try:
                 if device_raw.get('date_offline'):
                     device.last_seen = parse_date(str(device_raw.get('date_offline')))

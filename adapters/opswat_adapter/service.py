@@ -7,7 +7,7 @@ from axonius.fields import Field
 from axonius.utils.parsing import is_domain_valid
 from axonius.utils.datetime import parse_date
 from axonius.clients.rest.connection import RESTException
-from axonius.devices.device_adapter import DeviceAdapter
+from axonius.devices.device_adapter import DeviceAdapter, AGENT_NAMES
 from axonius.utils.files import get_local_config_file
 from opswat_adapter.connection import OpswatConnection
 from opswat_adapter.client_id import get_client_id
@@ -23,7 +23,6 @@ class OpswatAdapter(AdapterBase):
         device_status = Field(str, 'Status')
         device_type = Field(str, 'Device Type')
         nickname = Field(str, 'Nickname')
-        agent_version = Field(str, 'Agent Version')
         group_name = Field(str, 'Group Name')
         total_cves = Field(int, 'Total CVEs')
         country = Field(str, 'Country')
@@ -136,7 +135,7 @@ class OpswatAdapter(AdapterBase):
             device.hostname = device_raw.get('device_name')
             device.last_seen = parse_date(device_raw.get('last_seen'))
             device.set_boot_time(boot_time=parse_date(device_raw.get('last_reboot')))
-            device.agent_version = device_raw.get('agent_version')
+            device.add_agent_version(agent=AGENT_NAMES.opswat, version=device_raw.get('agent_version'))
             device.nickname = device_raw.get('nickname')
             device.device_type = device_raw.get('device_type')
             device.group_name = device_raw.get('group_name')

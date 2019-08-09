@@ -7,7 +7,7 @@ from urllib3.util.url import parse_url
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
-from axonius.devices.device_adapter import DeviceAdapter
+from axonius.devices.device_adapter import DeviceAdapter, AGENT_NAMES
 from axonius.fields import Field, ListField
 from axonius.utils.datetime import parse_date
 from axonius.utils.files import get_local_config_file
@@ -84,7 +84,6 @@ class EpoAdapter(AdapterBase):
 
     class MyDeviceAdapter(DeviceAdapter):
         epo_products = ListField(str, "EPO Products")
-        epo_agent_version = Field(str, "EPO Agent Version")
         node_name = Field(str, 'Node Name')
         epo_tags = ListField(str, 'EPO Tags')
 
@@ -167,7 +166,8 @@ class EpoAdapter(AdapterBase):
                 device.part_of_domain = True
             else:
                 device.part_of_domain = False
-            device.epo_agent_version = device_raw.get("EPOLeafNode.AgentVersion")
+            device.add_agent_version(agent=AGENT_NAMES.epo,
+                                     version=device_raw.get("EPOLeafNode.AgentVersion"))
 
             # TODO: Understand if the next line is always included in hostname. Do we need it?
             # device.computer_name = device_raw.get("EPOComputerProperties.ComputerName")

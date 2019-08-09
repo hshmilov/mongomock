@@ -11,7 +11,7 @@ from axonius.devices.device_adapter import TenableSource, TenableVulnerability
 from axonius.plugin_base import add_rule, return_error
 from axonius.clients.rest.exception import RESTException
 from axonius.utils.datetime import parse_date
-from axonius.devices.device_adapter import DeviceAdapter
+from axonius.devices.device_adapter import DeviceAdapter, AGENT_NAMES
 from axonius.clients.rest.connection import RESTConnection
 from axonius.mixins.configurable import Configurable
 from axonius.clients.tenable_io.connection import TenableIoConnection
@@ -24,7 +24,6 @@ class TenableIoAdapter(ScannerAdapterBase, Configurable):
 
     class MyDeviceAdapter(DeviceAdapter):
         has_agent = Field(bool, 'Has Agent')
-        agent_version = Field(str, 'Agent Version')
         status = Field(str, 'Status')
         risk_and_name_list = ListField(str, 'CSV - Vulnerability Details')
         tenable_sources = ListField(TenableSource, 'Tenable Source')
@@ -322,7 +321,7 @@ class TenableIoAdapter(ScannerAdapterBase, Configurable):
                         logger.exception(f'Problem getting last seen at {agent_raw}')
                     device.has_agent = True
                     device.status = agent_raw.get('status')
-                    device.agent_version = agent_raw.get('core_version')
+                    device.add_agent_version(agent=AGENT_NAMES.tenable_io, version=agent_raw.get('core_version'))
                     device.adapter_properties = [AdapterProperty.Agent.name,
                                                  AdapterProperty.Vulnerability_Assessment.name]
                     device.set_raw(agent_raw)

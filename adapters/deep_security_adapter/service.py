@@ -21,7 +21,6 @@ def raise_not_exit(msg=''):
 class DeepSecurityAdapter(AdapterBase):
 
     class MyDeviceAdapter(DeviceAdapter):
-        agent_version = Field(str, 'Agent Version')
         state = Field(str, 'Device running state')
 
     def __init__(self, *args, **kwargs):

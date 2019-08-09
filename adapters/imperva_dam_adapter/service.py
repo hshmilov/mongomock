@@ -7,7 +7,7 @@ from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.connection import RESTException
 from axonius.fields import Field, ListField
 from axonius.utils.datetime import parse_date
-from axonius.devices.device_adapter import DeviceAdapter
+from axonius.devices.device_adapter import DeviceAdapter, AGENT_NAMES
 from axonius.utils.files import get_local_config_file
 from imperva_dam_adapter.connection import ImpervaDamConnection
 from imperva_dam_adapter.client_id import get_client_id
@@ -26,7 +26,6 @@ class ImpervaDamAdapter(AdapterBase):
         connections_per_sec = Field(int, 'Connections Per Second')
         hits_per_sec = Field(int, 'Hits Per Second')
         cpu_utilization = Field(int, 'CPU Utilization')
-        agent_version = Field(str, 'Agent Version')
         kernel_patch = Field(str, 'Kernel Patch')
         creation_time = Field(datetime.datetime, 'Creation Time')
         manual_settings_activation = Field(str, 'Manual Settings Activation')
@@ -169,7 +168,8 @@ class ImpervaDamAdapter(AdapterBase):
                 device_properties = device_details.get('properties')
                 if not isinstance(device_properties, dict):
                     device_properties = {}
-                device.agent_version = device_properties.get('Agent Version')
+                device.add_agent_version(agent=AGENT_NAMES.imperva_dam,
+                                         version=device_properties.get('Agent Version'))
                 device.kernel_patch = device_properties.get('Kernel Patch')
                 device.figure_os(device_properties.get('Operating System'))
                 device.hostname = device_properties.get('Hostname')

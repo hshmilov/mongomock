@@ -5,7 +5,7 @@ from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.connection import RESTException
-from axonius.devices.device_adapter import DeviceAdapter
+from axonius.devices.device_adapter import DeviceAdapter, AGENT_NAMES
 from axonius.utils.files import get_local_config_file
 from axonius.fields import Field
 from axonius.utils.datetime import parse_date
@@ -29,7 +29,6 @@ class VulnerabilitiesCount(SmartJsonClass):
 class TwistlockAdapter(AdapterBase):
     # pylint: disable=R0902
     class MyDeviceAdapter(DeviceAdapter):
-        agent_version = Field(str, 'Agent Version')
         agent_type = Field(str, 'Agent Type')
         is_connected = Field(bool, 'Is Connected')
         proxy_listener_type = Field(str, 'Proxy Listener Type')
@@ -171,7 +170,7 @@ class TwistlockAdapter(AdapterBase):
                     device.add_nic(None, ips)
             except Exception:
                 logger.exception(f'Problem adding nic to {device_raw}')
-            device.agent_version = device_raw.get('version')
+            device.add_agent_version(agent=AGENT_NAMES.twistlock, version=device_raw.get('version'))
             device.agent_type = device_raw.get('type')
             device.last_modified = parse_date(device_raw.get('lastModified'))
             try:

@@ -5,7 +5,7 @@ from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.connection import RESTException
-from axonius.devices.device_adapter import DeviceAdapter
+from axonius.devices.device_adapter import DeviceAdapter, AGENT_NAMES
 from axonius.fields import Field, ListField
 from axonius.utils.datetime import parse_date
 from axonius.smart_json_class import SmartJsonClass
@@ -183,6 +183,9 @@ class EndgameAdapter(AdapterBase):
                                                            policy_id=sensor_raw.get('policy_id'),
                                                            policy_name=sensor_raw.get('policy_name'),
                                                            policy_status=sensor_raw.get('policy_status')))
+                        device.add_agent_version(agent=AGENT_NAMES.endgame,
+                                                 version=sensor_raw.get('sensor_version'),
+                                                 status=sensor_raw.get('status'))
                     except Exception:
                         logger.exception(f'Problem adding sensor raw {sensor_raw}')
             device.created_at = parse_date(device_raw.get('created_at'))

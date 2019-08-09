@@ -4,7 +4,7 @@ from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.exception import RESTException
-from axonius.devices.device_adapter import DeviceAdapter
+from axonius.devices.device_adapter import DeviceAdapter, AGENT_NAMES
 from axonius.fields import Field
 from axonius.plugin_base import EntityType, add_rule, return_error
 from axonius.utils.atomicint import AtomicInteger
@@ -20,11 +20,9 @@ logger = logging.getLogger(f'axonius.{__name__}')
 class CarbonblackResponseAdapter(AdapterBase):
     # pylint: disable=too-many-instance-attributes
     class MyDeviceAdapter(DeviceAdapter):
-        build_version_string = Field(str, 'Sensor Version')
         sensor_health_message = Field(str, 'Sensor Health Message')
         is_isolating = Field(bool, 'Is Isolating')
         network_isolation_enabled = Field(bool, 'Network Isolation Enabled')
-        sensor_status = Field(str, 'Sensor Status')
         sensor_id = Field(str, 'Sensor Id')
 
     def __init__(self):
@@ -139,8 +137,9 @@ class CarbonblackResponseAdapter(AdapterBase):
             device.id = str(device_id) + '_' + (device_raw.get('computer_name') or '')
             device.sensor_id = device_id
             device.sensor_health_message = device_raw.get('sensor_health_message')
-            device.build_version_string = device_raw.get('build_version_string')
-            device.sensor_status = device_raw.get('status')
+            device.add_agent_version(agent=AGENT_NAMES.carbonblack_response,
+                                     version=device_raw.get('build_version_string'),
+                                     status=device_raw.get('status'))
             hostname = device_raw.get('computer_dns_name') or device_raw.get('computer_name')
             if device_raw.get('computer_dns_name') and device_raw.get('computer_name'):
                 try:

@@ -5,7 +5,7 @@ from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.connection import RESTException
-from axonius.devices.device_adapter import DeviceAdapter
+from axonius.devices.device_adapter import DeviceAdapter, AGENT_NAMES
 from axonius.utils.files import get_local_config_file
 from axonius.smart_json_class import SmartJsonClass
 from axonius.fields import Field, ListField
@@ -194,6 +194,8 @@ class CiscoFirepowerManagementCenterAdapter(AdapterBase):
             device.fmc_nat_id = device_raw.get('natID')
             device.fmc_reg_key = device_raw.get('regKey')
             device.fmc_license_caps = device_raw.get('license_caps')
+            device.add_agent_version(agent=AGENT_NAMES.cisco_firepower_management_center,
+                                     version=device_raw.get('version'))
 
             try:
                 device.health_policy = CiscoFMCHealthPolicy(

@@ -3,7 +3,7 @@ import logging
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.mssql.connection import MSSQLConnection
-from axonius.devices.device_adapter import DeviceAdapter
+from axonius.devices.device_adapter import DeviceAdapter, AGENT_NAMES
 from axonius.fields import Field
 from axonius.mixins.configurable import Configurable
 from axonius.utils.datetime import parse_date
@@ -16,8 +16,6 @@ logger = logging.getLogger(f'axonius.{__name__}')
 
 class ObserveitAdapter(AdapterBase, Configurable):
     class MyDeviceAdapter(DeviceAdapter):
-        client_version = Field(str, 'Client Version')
-        client_status = Field(str, 'Client Status')
         client_type = Field(str, 'Client Type')
 
     def __init__(self):
@@ -142,8 +140,9 @@ class ObserveitAdapter(AdapterBase, Configurable):
                         device.add_nic(None, ip_list.split(','))
                 except Exception:
                     logger.exception(f'Problem adding nic to {device_raw}')
-                device.client_version = device_raw.get('SrvVersion')
-                device.client_status = device_raw.get('SrvMonitorStatus')
+                device.add_agent_version(agent=AGENT_NAMES.observeit,
+                                         version=device_raw.get('SrvVersion'),
+                                         status=device_raw.get('SrvMonitorStatus'))
                 try:
                     device.last_seen = parse_date(str(device_raw.get('ScreenshotLastActivityDate')))
                 except Exception:

@@ -4,7 +4,7 @@ import logging
 from axonius.adapter_base import AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
-from axonius.devices.device_adapter import DeviceAdapter
+from axonius.devices.device_adapter import DeviceAdapter, AGENT_NAMES
 from axonius.fields import Field, ListField
 from axonius.mixins.configurable import Configurable
 from axonius.scanner_adapter_base import ScannerAdapterBase
@@ -40,8 +40,6 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
     class MyDeviceAdapter(DeviceAdapter):
         qualys_agent_vulns = ListField(QualysAgentVuln, 'Vulnerabilities')
         qualys_agnet_ports = ListField(QualysAgentPort, 'Qualys Open Ports')
-        agent_version = Field(str, 'Qualys agent version')
-        agent_status = Field(str, 'Agent Status')
         qualys_tags = ListField(str, 'Qualys Tags')
 
         def add_qualys_vuln(self, **kwargs):
@@ -176,11 +174,12 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
                 device.last_seen = parse_date(device_raw.get('lastVulnScan'))
             except Exception:
                 logger.exception(f'Problem getting last seen for {device_raw}')
-            device.agent_version = (device_raw.get('agentInfo') or {}).get('agentVersion')
+            device.add_agent_version(agent=AGENT_NAMES.qualys_scans,
+                                     version=(device_raw.get('agentInfo') or {}).get('agentVersion'),
+                                     status=(device_raw.get('agentInfo') or {}).get('status'))
             device.physical_location = (device_raw.get('agentInfo') or {}).get('location')
             if device_raw.get('lastSystemBoot'):
                 device.set_boot_time(boot_time=parse_date(str(device_raw.get('lastSystemBoot'))))
-            device.agent_status = (device_raw.get('agentInfo') or {}).get('status')
             try:
                 for asset_interface in (device_raw.get('networkInterface') or {}).get('list') or []:
                     try:

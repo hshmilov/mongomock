@@ -2,7 +2,7 @@ import logging
 logger = logging.getLogger(f'axonius.{__name__}')
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
-from axonius.devices.device_adapter import DeviceAdapter
+from axonius.devices.device_adapter import DeviceAdapter, AGENT_NAMES
 from axonius.utils.files import get_local_config_file
 from axonius.fields import Field
 from axonius.clients.rest.exception import RESTException
@@ -14,7 +14,6 @@ from axonius.clients.rest.connection import RESTConnection
 class SecdoAdapter(AdapterBase):
 
     class MyDeviceAdapter(DeviceAdapter):
-        agent_version = Field(str, 'Agent Version')
         agent_state = Field(str, 'Agent State')
 
     def __init__(self, *args, **kwargs):
@@ -117,7 +116,7 @@ class SecdoAdapter(AdapterBase):
                     device.add_nic(None, device_raw.get("interfaces", "").split(","))
                 except Exception:
                     logger.exception("Problem with fetching Secdo Device nic")
-                device.agent_version = device_raw.get("version", "")
+                device.add_agent_version(agent=AGENT_NAMES.secdo, version=device_raw.get("version", ""))
                 device.agent_state = device_raw.get("agentState")
                 device.last_used_users = device_raw.get("users", "").split(",")
                 device.last_seen = datetime.datetime.fromtimestamp(max(device_raw.get("lastWatchdog", 0),

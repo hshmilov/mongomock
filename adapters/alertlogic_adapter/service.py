@@ -5,7 +5,7 @@ from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.connection import RESTException
-from axonius.devices.device_adapter import DeviceAdapter
+from axonius.devices.device_adapter import DeviceAdapter, AGENT_NAMES
 from axonius.fields import Field
 from axonius.utils.parsing import parse_unix_timestamp
 from axonius.utils.files import get_local_config_file
@@ -25,7 +25,6 @@ class AlertlogicAdapter(AdapterBase):
         modified_by = Field(str, 'Modified By')
         bucket = Field(str, 'Bucket')
         service_offering = Field(str, 'Service Offering')
-        agent_version = Field(str, 'Agent Version')
         network_id = Field(str, 'Network Id')
         update_policy_id = Field(str, 'Update Policy Id')
         customer_id = Field(str, 'Customer Id')
@@ -147,7 +146,7 @@ class AlertlogicAdapter(AdapterBase):
                     device.service_offering = metadata.get('service_offering')
                     if isinstance(metadata.get('total_mem_mb'), int):
                         device.total_physical_memory = metadata.get('total_mem_mb') / 1024.0
-                    device.agent_version = metadata.get('version')
+                    device.add_agent_version(agent=AGENT_NAMES.alertlogic, version=metadata.get('version'))
 
             except Exception:
                 logger.exception(f'Problem with Metadata at {device_raw}')

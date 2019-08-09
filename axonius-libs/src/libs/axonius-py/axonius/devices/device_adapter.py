@@ -4,6 +4,7 @@ import logging
 import typing
 import copy
 from enum import Enum, auto
+from collections import namedtuple
 
 from axonius.blacklists import ALL_BLACKLIST
 from axonius.clients.cisco.port_security import PortSecurityInterface
@@ -24,6 +25,35 @@ from axonius.utils.parsing import (
 )
 
 MAX_SIZE_OF_MONGO_DOCUMENT = (1024**2) * 10
+
+AGENTS = namedtuple('Agents', (
+    'alertlogic', 'bigfix', 'carbonblack_defense', 'carbonblack_protection', 'carbonblack_response', 'cisco_amp',
+    'cisco_firepower_management_center', 'cisco_umbrella', 'cloudpassage', 'code42', 'counter_act', 'crowd_strike',
+    'cylance', 'datadog', 'desktop_central', 'dropbox', 'druva', 'endgame', 'ensilo', 'epo', 'fireeye_hx',
+    'forcepoint_csv', 'imperva_dam', 'jumpcloud', 'kaseya', 'lansweeper', 'minerva', 'mobi_control', 'mobileiron',
+    'observeit', 'opswat', 'paloalto_cortex', 'qualys_scans', 'quest_kace', 'redcloak', 'secdo', 'sentinelone',
+    'sophos', 'symantec', 'symantec_cloud_workload', 'symantec_ee', 'tanium', 'tenable_io', 'tripwire', 'truefort',
+    'twistlock', 'webroot'
+))
+
+AGENT_NAMES = AGENTS(
+    alertlogic='Alert Logic Agent', bigfix='IBM BigFix Agent', carbonblack_defense='CarbonBlack Defense Sensor',
+    carbonblack_protection='CarbonBlack Protection Sensor', carbonblack_response='CarbonBlack Response Sensor',
+    cisco_amp='Cisco AMP Connector', cisco_firepower_management_center='Cisco FMC Agent',
+    cisco_umbrella='Cisco Umbrella Agent', cloudpassage='CloudPassage Daemon', code42='Code42 Agent',
+    counter_act='CounterACT Agent', crowd_strike='CrowdStrike Agent', cylance='Cylance Agent', datadog='Datadog Agent',
+    desktop_central='Desktop Central Agent', dropbox='Dropbox Client', druva='Druva Client', endgame='Endgame Sensor',
+    ensilo='enSilo Agent', epo='McAfee EPO Agemt', fireeye_hx='FireEye HX Agent', forcepoint_csv='Forcepoint Client',
+    imperva_dam='Imperva DAM Agent', jumpcloud='JumpCloud Agent', kaseya='Kaseya Agent', lansweeper='Lansweeper Agent',
+    minerva='Minerva Labs Agent', mobi_control='MobiControl Agent', mobileiron='MobileIron Client',
+    observeit='ObserveIT Client', opswat='OPSWAT Agent', paloalto_cortex='Palo Alto Networks Cortex Agent',
+    qualys_scans='Qualys Agent', quest_kace='Quest Client', redcloak='Redcloak Agent', secdo='Secdo Agent',
+    sentinelone='SentinelOne Agent', sophos='Sophos Agent', symantec='Symantec Agent',
+    symantec_cloud_workload='Symantec Cloud Agent', symantec_ee='Symantec Endpoint Encryption Agent',
+    tanium='Tanium Agent', tenable_io='Tenable IO Agent',
+    tripwire='Tripwire Agent', truefort='TrueFort Agent', twistlock='Twistlock Agent',
+    webroot='Webroot Agent'
+)
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -323,7 +353,7 @@ class DeviceAdapterSoftwareCVE(SmartJsonClass):
 
     cve_id = Field(str, "CVE ID")
     software_name = Field(str, "Software Name")
-    software_version = Field(str, "Software Version")
+    software_version = Field(str, "Software Version", json_format=JsonStringFormat.version)
     software_vendor = Field(str, "Software Vendor")
     cvss_version = Field(str, "CVSS Version", enum=['v2.0', 'v3.0'])
     cvss = Field(float, "CVSS")
@@ -331,6 +361,7 @@ class DeviceAdapterSoftwareCVE(SmartJsonClass):
     cve_description = Field(str, "CVE Description")
     cve_synopsis = Field(str, "CVE Synopsis")
     cve_references = ListField(str, "CVE References")
+    version_raw = Field(str)
 
 
 class ShareData(SmartJsonClass):
@@ -344,6 +375,14 @@ class DeviceTagKeyValue(SmartJsonClass):
 
     tag_key = Field(str, "Tag Key")
     tag_value = Field(str, "Tag Value")
+
+
+class DeviceAdapterAgentVersion(SmartJsonClass):
+    agent_name_dict = {'bigfix_adapter': 'IBM BigFix'}
+    adapter_name = Field(str, 'Name', enum=list(AGENT_NAMES))
+    agent_version = Field(str, 'Version', json_format=JsonStringFormat.version)
+    agent_version_raw = Field(str)
+    agent_status = Field(str, 'Status')
 
 
 class ShodanVuln(SmartJsonClass):
@@ -472,6 +511,7 @@ class DeviceAdapter(SmartJsonClass):
     users = ListField(DeviceAdapterUser, "Users", json_format=JsonArrayFormat.table)
     local_admins = ListField(DeviceAdapterLocalAdmin, "Local Admins", json_format=JsonArrayFormat.table)
     pretty_id = Field(str, 'Axonius Name')
+    agent_versions = ListField(DeviceAdapterAgentVersion, 'Agent Versions', json_format=JsonArrayFormat.table)
 
     related_ips = Field(DeviceAdapterRelatedIps, "Related Ips")
     pc_type = Field(
@@ -929,10 +969,28 @@ class DeviceAdapter(SmartJsonClass):
         else:
             cvss = None
 
-        self.software_cves.append(DeviceAdapterSoftwareCVE(cvss=cvss, **kwargs))
+        try:
+            version_raw = None
+            if 'software_version' in kwargs:
+                version_raw = parse_versions_raw(kwargs['software_version'])
+        except Exception:
+            logger.exception('Problem parsing raw version')
+
+        self.software_cves.append(DeviceAdapterSoftwareCVE(cvss=cvss, version_raw=version_raw, **kwargs))
 
     def add_key_value_tag(self, key, value):
         self.tags.append(DeviceTagKeyValue(tag_key=key, tag_value=value))
+
+    def add_agent_version(self, agent=None, version=None, status=None):
+        if not version:
+            return
+        try:
+            self.agent_versions.append(DeviceAdapterAgentVersion(adapter_name=agent,
+                                                                 agent_version=version,
+                                                                 agent_version_raw=parse_versions_raw(version),
+                                                                 agent_status=status))
+        except Exception:
+            logger.exception(f'Problem adding agent version for {agent} {version}')
 
     def set_shodan_data(self, **kwargs):
         self.shodan_data = ShodanData(**kwargs)

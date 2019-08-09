@@ -8,7 +8,7 @@ from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.connection import RESTException
 from axonius.fields import Field, ListField
 from axonius.utils.datetime import parse_date
-from axonius.devices.device_adapter import DeviceAdapter
+from axonius.devices.device_adapter import DeviceAdapter, AGENT_NAMES
 from axonius.utils.parsing import is_domain_valid
 from axonius.utils.files import get_local_config_file
 from truefort_adapter.connection import TruefortConnection
@@ -23,8 +23,6 @@ class TruefortAdapter(AdapterBase):
         group_id = Field(str, 'Group ID')
         last_update = Field(datetime.datetime, 'Last Update')
         create_time = Field(datetime.datetime, 'Create Time')
-        agent_version = Field(str, 'Agent Version')
-        agent_status = Field(str, 'Agent Status')
         applications = ListField(str, 'Applications')
 
     def __init__(self, *args, **kwargs):
@@ -137,8 +135,9 @@ class TruefortAdapter(AdapterBase):
                 logger.exception(f'Problem getting os for {device_raw}')
             device.opts = device_raw.get('opts')
             device.group_id = device_raw.get('groupid')
-            device.agent_version = device_raw.get('version')
-            device.agent_status = device_raw.get('status')
+            device.add_agent_version(agent=AGENT_NAMES.truefort,
+                                     version=device_raw.get('version'),
+                                     status=device_raw.get('status'))
             try:
                 device.last_update = parse_date(device_raw.get('lastUpdate'))
             except Exception:

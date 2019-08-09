@@ -4,7 +4,7 @@ import logging
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
-from axonius.devices.device_adapter import DeviceAdapter
+from axonius.devices.device_adapter import DeviceAdapter, AGENT_NAMES
 from axonius.utils.datetime import parse_date
 from axonius.fields import Field, ListField
 from axonius.utils.files import get_local_config_file
@@ -23,7 +23,6 @@ class TripwireEnterpriseAdapter(AdapterBase):
         imported_time = Field(datetime.datetime, 'Imported Time')
         last_registration = Field(datetime.datetime, 'Last Registration')
         has_failures = Field(bool, 'Has Failures')
-        agent_version = Field(str, 'Agent Versoin')
         is_disabled = Field(str, 'Is Disabled')
         is_socks_proxy = Field(str, 'Is Socks Proxy')
         max_severity = Field(int, 'Max Severity')
@@ -131,7 +130,7 @@ class TripwireEnterpriseAdapter(AdapterBase):
         device.device_manufacturer = device_raw.get('make')
         device.device_model = device_raw.get('model')
         device.has_failures = device_raw.get('hasFailures')
-        device.agent_version = device_raw.get('agentVersion')
+        device.add_agent_version(agent=AGENT_NAMES.tripwire, version=device_raw.get('agentVersion'))
         device.description = device_raw.get('description')
         device.is_disabled = device_raw.get('isDisabled')
         device.is_socks_proxy = device_raw.get('isSocksProxy')

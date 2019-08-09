@@ -3,7 +3,7 @@ import logging
 
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
-from axonius.devices.device_adapter import DeviceAdapter
+from axonius.devices.device_adapter import DeviceAdapter, AGENT_NAMES
 from axonius.utils.files import get_local_config_file
 from axonius.fields import Field
 from axonius.clients.rest.exception import RESTException
@@ -21,7 +21,6 @@ class SymantecAdapter(AdapterBase):
     class MyDeviceAdapter(DeviceAdapter):
         client_id = Field(str, 'SEP Server Details')
         online_status = Field(str, 'Online Status')
-        agent_version = Field(str, 'Agent Version')
         cids_defset_version = Field(str, 'Definition Set Version')
         last_scan_date = Field(datetime.datetime, 'Last Scan Date')
 
@@ -162,7 +161,7 @@ class SymantecAdapter(AdapterBase):
                 ip_addresses = device_raw.get('ipAddresses') or []
                 device.add_ips_and_macs(mac_addresses, ip_addresses)
                 device.online_status = str(device_raw.get('onlineStatus'))
-                device.agent_version = device_raw.get('agentVersion')
+                device.add_agent_version(agent=AGENT_NAMES.symantec, version=device_raw.get('agentVersion'))
                 try:
                     device.last_seen = datetime.datetime.fromtimestamp(max(int(device_raw.get('lastScanTime', 0)),
                                                                            int(device_raw.get('lastUpdateTime', 0)))

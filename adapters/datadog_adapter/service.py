@@ -5,7 +5,7 @@ from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.exception import RESTException
-from axonius.devices.device_adapter import DeviceAdapter
+from axonius.devices.device_adapter import DeviceAdapter, AGENT_NAMES
 from axonius.fields import Field
 from axonius.utils.files import get_local_config_file
 from datadog_adapter.connection import DatadogConnection
@@ -16,7 +16,6 @@ logger = logging.getLogger(f'axonius.{__name__}')
 class DatadogAdapter(AdapterBase):
 
     class MyDeviceAdapter(DeviceAdapter):
-        agent_version = Field(str, 'Agent Version')
         python_version = Field(str, 'Python Version')
 
     def __init__(self):
@@ -140,7 +139,8 @@ class DatadogAdapter(AdapterBase):
                     os_raw = (platform.get('kernel_name') or '') + ' ' + (platform.get('os') or '') \
                         + ' ' + (platform.get('processor') or '')
                     device.figure_os(os_raw)
-                    device.agent_version = (device_raw.get('meta') or {}).get('agent_version')
+                    device.add_agent_version(agent=AGENT_NAMES.datadog,
+                                             version=(device_raw.get('meta') or {}).get('agent_version'))
                 except Exception:
                     logger.exception(f'Problem getting ohai at {device_raw}')
 

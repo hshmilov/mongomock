@@ -5,7 +5,7 @@ from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.connection import RESTException
-from axonius.devices.device_adapter import DeviceAdapter
+from axonius.devices.device_adapter import DeviceAdapter, AGENT_NAMES
 from axonius.fields import Field, ListField
 from axonius.utils.files import get_local_config_file
 from counter_act_adapter.connection import CounterActConnection
@@ -19,7 +19,6 @@ class CounterActAdapter(AdapterBase):
     class MyDeviceAdapter(DeviceAdapter):
         online_status = Field(str, 'Online Status')
         ca_open_ports = ListField(str, 'Counter Act Open Ports')
-        agent_version = Field(str, 'Agent Version')
         av_install = ListField(str, 'AV Installed')
         ad_disply_name = Field(str, 'AD Display Name')
         fingerprint = Field(str, 'Fingerprint')
@@ -155,7 +154,8 @@ class CounterActAdapter(AdapterBase):
                                     device.av_install = [field_raw.get('value') for field_raw in field_raw_data
                                                          if str(field_raw.get('value')) != 'None']
                                 elif field_raw_name == 'agent_version':
-                                    device.agent_version = field_raw_data.get('value')
+                                    device.add_agent_version(agent=AGENT_NAMES.counter_act,
+                                                             version=field_raw_data.get('value'))
                                 elif field_raw_name == 'hostname':
                                     device.hostname = field_raw_data.get('value')
                                 elif field_raw_name == 'dhcp_hostname':
