@@ -33,6 +33,7 @@
                   v-if="user.source === 'internal' && user.user_name !== 'admin'"
                   :id="user.user_name"
                   link
+                  :disabled="readOnly"
                   @click="() => openUserConfig(user)"
           >
             Edit

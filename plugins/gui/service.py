@@ -3075,26 +3075,31 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
                                            role_name=post_data.get('role_name'))
         return ''
 
-    @gui_add_rule_logged_in('system/users/<user_id>', methods=['POST', 'DELETE'])
+    @gui_add_rule_logged_in('system/users/<user_id>', methods=['POST', 'DELETE'],
+                            required_permissions={Permission(PermissionType.Settings, PermissionLevel.ReadWrite)})
     def update_user(self, user_id):
         """
             Updates the userinfo for the current user or deleting a user
         """
         if request.method == 'POST':
-
+            update_white_list_fields = ['first_name', 'last_name', 'password']
             post_data = self.get_request_data_as_object()
-
-            if post_data.get('password') and post_data.get('password') != UNCHANGED_MAGIC_FOR_GUI:
-                post_data['password'] = bcrypt.hash(post_data['password'])
-            else:
-                del post_data['password']
+            user_data = {}
+            for key, value in post_data.items():
+                if key not in update_white_list_fields:
+                    continue
+                if key == 'password':
+                    if value != UNCHANGED_MAGIC_FOR_GUI:
+                        user_data[key] = bcrypt.hash(value)
+                else:
+                    user_data[key] = value
 
             res = self._users_collection.update_one({
                 '_id': ObjectId(user_id)
             }, {
-                '$set': post_data
+                '$set': user_data
             })
-            if not res.raw_result.get('updatedExisting'):
+            if not res.modified_count:
                 return '', 400
         if request.method == 'DELETE':
             self._users_collection.update_one({'_id': ObjectId(user_id)},
@@ -3119,8 +3124,8 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         })
         return '', 200
 
-    @gui_add_rule_logged_in('system/users/<user_id>/password', methods=['POST'])
-    def system_users_password(self, user_id):
+    @gui_add_rule_logged_in('system/users/self/password', methods=['POST'])
+    def system_users_password(self):
         """
         Change a password for a specific user. It must be the same user as currently logged in to the system.
         Post data is expected to have the old password, matching the one in the DB
@@ -3130,15 +3135,12 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         """
         post_data = self.get_request_data_as_object()
         user = session['user']
-        if str(user['_id']) != user_id:
-            return return_error('Login to your user first')
-
         if not bcrypt.verify(post_data['old'], user['password']):
             return return_error('Given password is wrong')
 
-        self._users_collection.update_one({'_id': ObjectId(user_id)},
+        self._users_collection.update_one({'_id': user['_id']},
                                           {'$set': {'password': bcrypt.hash(post_data['new'])}})
-        self.__invalidate_sessions(user_id)
+        self.__invalidate_sessions(user['_id'])
         return '', 200
 
     @gui_add_rule_logged_in('system/users/<user_id>/access', methods=['POST'],

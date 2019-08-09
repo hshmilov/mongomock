@@ -193,11 +193,11 @@ export const auth = {
       /*
         Request from server to login a user according to its Google token id
        */
-      if (!payload || !payload.uuid || !payload.oldPassword || !payload.newPassword) {
+      if (!payload || !payload.oldPassword || !payload.newPassword) {
         return
       }
       return dispatch(REQUEST_API, {
-        rule: `system/users/${payload.uuid}/password`,
+        rule: `system/users/self/password`,
         method: 'POST',
         data: {
           new: payload.newPassword,

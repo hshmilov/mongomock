@@ -64,9 +64,6 @@
                 },
                 userSource(state) {
                     return state.auth.currentUser.data.source
-                },
-                userId(state) {
-                    return state.auth.currentUser.data.uuid
                 }
             }),
             passwordFormSchema() {
@@ -110,7 +107,6 @@
                     return
                 }
                 this.changePassword({
-                    uuid: this.userId,
                     oldPassword: this.passwordForm.currentPassword,
                     newPassword: this.passwordForm.newPassword
                 }).then(() => {
