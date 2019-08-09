@@ -1,0 +1,9 @@
+PASSWORD = 'password'
+USER = 'username'
+SYMANTEC_12_HOST = 'server'
+SYMANTEC_12_PORT = 'port'
+SYMANTEC_12_DATABASE = 'database'
+DRIVER = 'driver'
+DEFAULT_SYMANTEC_12_PORT = 1433
+DEVICES_FETECHED_AT_A_TIME = 'devices_fetched_at_a_time'
+SYMANTEC_12_QUERY = 'Select * from AGENTSTATUS'

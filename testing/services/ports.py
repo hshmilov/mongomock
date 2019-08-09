@@ -177,6 +177,7 @@ DOCKER_PORTS = {
     'symantec-sep-cloud-adapter':       9972,
     'f5-icontrol-adapter':              9973,
     'druva-adapter':                    9974,
+    'symantec-12-adapter':              9975,
     'mongo':                            27017,
     'mockingbird-db':                   28017
 }

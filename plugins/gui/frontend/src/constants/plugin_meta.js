@@ -1,4 +1,8 @@
 export const pluginMeta = {
+    symantec_12_adapter: {
+        title: 'Symantec Endpoint Protection 12.x',
+        description: 'Symantec Endpoint Protection manages events, policies, and registration for the client computers that connect to customer networks.'
+    },
     f5_icontrol_adapter: {
         title: 'F5 BIG-IP iControl - BETA',
         description: 'F5 iControl is a Web services-enabled open API providing granular control over the configuration and management of F5\'s application delivery platform, BIG-IP.'
@@ -518,7 +522,7 @@ export const pluginMeta = {
         description: 'Splunk captures, indexes, and correlates real-time data in a searchable repository.'
     },
     symantec_adapter: {
-        title: 'Symantec Endpoint Protection',
+        title: 'Symantec Endpoint Protection 14.x',
         link: 'https://docs.axonius.com/docs/symantec-endpoint-protection',
         description: 'Symantec Endpoint Protection manages events, policies, and registration for the client computers that connect to customer networks.'
     },
