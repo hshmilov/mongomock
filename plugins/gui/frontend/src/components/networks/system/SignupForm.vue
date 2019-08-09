@@ -45,30 +45,38 @@
     computed: {
       signupSchema () {
         return {
-          type: 'array', 'items': [{
+          type: 'array', 
+          'items': [
+            {
               name: 'companyName',
               title: 'Your Organization',
               type: 'string',
-            }, {
+            },
+            {
               name: 'contactEmail',
               title: 'Your Email',
               type: 'string',
-            }, {
-            name: 'userName',
-            title: 'User Name',
-            type: 'string',
-            readOnly: true
-          }, {
+              format: 'email'
+            },
+            {
+              name: 'userName',
+              title: 'User Name',
+              type: 'string',
+              readOnly: true
+            },
+            {
               name: 'newPassword',
               title: 'Set Password',
               type: 'string',
               format: 'password'
-            }, {
+            },
+            {
               name: 'confirmNewPassword',
               title: 'Confirm Password',
               type: 'string',
               format: 'password'
-            }],
+            }
+          ],
           required: ['companyName', 'newPassword', 'confirmNewPassword', 'contactEmail', 'userName']
         }
       }

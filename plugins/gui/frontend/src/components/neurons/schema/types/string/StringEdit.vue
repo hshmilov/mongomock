@@ -8,13 +8,8 @@
     :clearable="clearable"
     @input="input"
   />
-  <textarea
-    v-else-if="isText"
-    v-model="data"
-    :maxlength="schema.limit"
-    rows="3"
-    @input="input"
-  ></textarea>
+  <textarea v-else-if="isText" v-model="data" :maxlength="schema.limit" rows="3" @input="input"></textarea>
+
   <input
     v-else-if="inputType"
     :id="schema.name"
@@ -26,7 +21,7 @@
     @input="input"
     @focusout.stop="focusout"
     @focusin="onFocusIn"
-  >
+  />
   <!-- Select from enum values -->
   <x-select
     v-else-if="enumOptions"
@@ -42,9 +37,10 @@
 </template>
 
 <script>
-	import primitiveMixin from '../primitive.js'
-    import xSelect from '../../../../axons/inputs/Select.vue'
-    import xDateEdit from './DateEdit.vue'
+  import primitiveMixin from '../primitive.js'
+  import xSelect from '../../../../axons/inputs/Select.vue'
+  import xDateEdit from './DateEdit.vue'
+  import regEx from '../../../../../constants/validations'
 
 	export default {
 		name: 'XStringEdit',
@@ -64,41 +60,54 @@
             }
         },
         computed: {
-		    processedData: {
-				get() {
-					return this.isUnchangedPassword ? "********" : this.data
+            processedData: {
+                get() {
+                  return this.isUnchangedPassword ? "********" : this.data
                 },
                 set(new_val) {
                     this.data = new_val
                 }
             },
+            isEmailValid: function() {
+               return (this.data == "")? "" : (this.data.match(new RegExp(regEx.isMailValid.template))) ? '' : 'error-border';
+            },
             isDate() {
-		        return (this.schema.format === 'date-time' || this.schema.format === 'date')
+		           return (this.schema.format === 'date-time' || this.schema.format === 'date')
             },
             isText() {
                 return this.schema.format === 'text'
             },
-		    isUnchangedPassword() {
-		        return this.inputType === 'password' && this.data && this.data[0] === 'unchanged'
+            isMail() {
+               return this.schema.format === 'email'
             },
+		        isUnchangedPassword() {
+		            return this.inputType === 'password' && this.data && this.data[0] === 'unchanged'
+            },
+           
             inputType() {
-				if (this.schema.format && this.schema.format === 'password') {
-					return 'password'
-                } else if (this.schema.enum) {
-					return ''
-                }
-                return 'text'
+              if (this.schema.format && this.schema.format === 'password') {
+                return 'password'
+              } else if (this.schema.enum) {
+                return ''
+              }
+              return 'text'
             }
         },
         methods: {
-		    formatData() {
-                return this.data
+		        formatData() {
+              return this.data
             },
             onFocusIn(){
-		      if(this.isUnchangedPassword){
-		        this.data = ''
+              if(this.isUnchangedPassword){
+                this.data = ''
               }
-            }
+            },
+            onValidate (validity) {
+                    this.$emit('validate', validity)
+            },
+            checkData() {
+			        return !this.isMail ? true: !this.isEmailValid
+		        }
         }
 	}
 </script>
