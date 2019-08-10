@@ -41,6 +41,7 @@
     <x-action-menu-item
       :title="`Add custom data...`"
       :handle-save="saveFields"
+      :handle-close="initCustomFields"
       :message="`Custom data saved`"
       action-text="Save"
     >
@@ -87,7 +88,7 @@
     },
     data () {
       return {
-        customAdapterData: { id: 'unique' }
+        customAdapterData: {}
       }
     },
     computed: {
@@ -131,7 +132,10 @@
           module: this.module, data: {
             selection: this.entities, data: this.customAdapterData
           }
-        })
+        }).then(this.initCustomFields)
+      },
+      initCustomFields () {
+        this.customAdapterData = {}
       }
     }
   }

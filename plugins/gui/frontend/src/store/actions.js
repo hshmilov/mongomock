@@ -572,7 +572,10 @@ export const saveCustomData = ({ state, dispatch }, payload) => {
 	return dispatch(REQUEST_API, {
 		rule: `${payload.module}/custom?filter=${encodeURIComponent(module.view.query.filter)}`,
 		method: 'POST',
-		data: payload.data,
+		data: {
+			selection: payload.data.selection,
+			data: { ...payload.data.data, id: 'unique' }
+		},
 		type: UPDATE_CUSTOM_DATA,
 		payload
 	})

@@ -155,9 +155,12 @@
         }
         return res
       },
-      customFields() {
+      customFields () {
         return (this.fields.specific.gui || this.fields.generic)
       },
+      customData () {
+        return { ...this.sortedSpecificData[this.sortedSpecificData.length - 1].data, id: undefined }
+      }
     },
     mounted() {
       if (this.module === 'devices') {
@@ -196,7 +199,7 @@
       editFields() {
         this.fieldsEditor = {
           active: true,
-          data: this.flattenObj('', this.sortedSpecificData[this.sortedSpecificData.length - 1].data || {}),
+          data: this.flattenObj('', this.customData),
           valid: true
         }
       },
@@ -206,6 +209,7 @@
         }
         if (typeof obj === 'object' && Object.keys(obj).length) {
           return Object.keys(obj).reduce((map, key) => {
+            if (!obj[key]) return map
             return {...map, ...this.flattenObj(path ? `${path}.${key}` : key, obj[key])}
           }, {})
         }
