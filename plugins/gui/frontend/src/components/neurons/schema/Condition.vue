@@ -191,8 +191,9 @@
         this.$emit('error', '')
       },
       value (newValue) {
-        if (newValue.field !== this.condition.field) {
-          this.condition = { ...newValue }
+        if (newValue.field !== this.condition.field || 
+           newValue.value !== this.condition.value) {
+              this.condition = { ...newValue }
         }
       },
       conditionField () {
