@@ -39,8 +39,8 @@ class DashboardPage(Page):
     CHART_FUNCTION_CSS = 'div.x-chart-metric.grid-span2 > div:nth-child(8)'
     CHART_TITLE_ID = 'chart_name'
     SUMMARY_CARD_TEXT_CSS = 'div.x-summary > div.summary'
-    CARD_CLOSE_BTN_CSS = '.header > .actions > .remove'
-    CARD_EDIT_BTN_CSS = '.header > .actions > .edit'
+    CARD_CLOSE_BTN_CSS = '.actions > .remove'
+    CARD_EDIT_BTN_CSS = '.actions > .edit'
     BANNER_BY_TEXT_XPATH = '//div[contains(@class, \'x-banner\') and .//text() = \'{banner_text}\']'
 
     SPACES_XPATH = '//div[@class=\'x-spaces\']'

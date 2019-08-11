@@ -16,22 +16,22 @@
         class="title"
         :title="title"
       >{{ title }}</div>
-      <div class="actions">
-        <x-button
-          v-if="editable"
-          class="edit"
-          title="Edit"
-          link
-          @click="$emit('edit')"
-        ><md-icon>edit</md-icon></x-button>
-        <x-button
-          v-if="removable"
-          class="remove"
-          title="Remove"
-          link
-          @click="$emit('remove')"
-        ><md-icon>clear</md-icon></x-button>
-      </div>
+    </div>
+    <div class="actions">
+      <x-button
+        v-if="editable"
+        class="edit"
+        title="Edit"
+        link
+        @click="$emit('edit')"
+      ><md-icon>edit</md-icon></x-button>
+      <x-button
+        v-if="removable"
+        class="remove"
+        title="Remove"
+        link
+        @click="$emit('remove')"
+      ><md-icon>clear</md-icon></x-button>
     </div>
     <div class="body">
       <slot />
@@ -80,7 +80,8 @@
         background-color: white;
         box-shadow: 0 2px 12px 0px rgba(0, 0, 0, 0.2);
         border-radius: 2px;
-
+        position:relative;
+      
         > .header {
             display: flex;
             width: 100%;
@@ -113,30 +114,32 @@
                 text-overflow: ellipsis;
                 white-space: nowrap;
                 overflow: hidden;
+                max-width: 80%;
+            }   
+        }
+        .actions {
+          display: flex;
+          line-height: 20px;
+          position: absolute;
+          right: 4px;
+          top: 10px;
+          // justify-content: space-around;
+
+          .x-button {
+            height: 20px;
+            padding: 0;
+
+            .md-icon {
+              font-size: 20px !important;
+              height: 20px;
+              line-height: 20px;
             }
 
-            .actions {
-                display: flex;
-                line-height: 20px;
-                width: 48px;
-                margin-left: 4px;
-
-                .x-button {
-                  height: 20px;
-                  padding: 0;
-
-                  .md-icon {
-                    font-size: 20px !important;
-                    height: 20px;
-                    line-height: 20px;
-                  }
-
-                  &:hover {
-                    cursor: pointer;
-                    text-shadow: $text-shadow;
-                  }
-                }
+            &:hover {
+              cursor: pointer;
+              text-shadow: $text-shadow;
             }
+          }
         }
         > .body {
           padding: 12px;
