@@ -1,4 +1,6 @@
 import time
+import datetime
+
 from selenium.common.exceptions import NoSuchElementException, ElementClickInterceptedException
 from selenium.webdriver.common.action_chains import ActionChains
 
@@ -293,6 +295,13 @@ class DashboardPage(Page):
     @staticmethod
     def assert_cycle_is_stable(cycle):
         assert cycle.find_element_by_css_selector('text.title').text == 'STABLE'
+
+    @staticmethod
+    def assert_cycle_start_and_finish_dates(card):
+        dates = card.find_elements_by_css_selector('.cycle-date')
+        date_start = datetime.datetime.strptime(dates[0].text, '%Y-%m-%d %H:%M:%S')
+        date_finish = datetime.datetime.strptime(dates[1].text, '%Y-%m-%d %H:%M:%S')
+        assert date_finish > date_start
 
     @staticmethod
     def assert_plus_button_in_card(card):

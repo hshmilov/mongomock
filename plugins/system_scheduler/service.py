@@ -20,7 +20,7 @@ from axonius.background_scheduler import LoggedBackgroundScheduler
 from axonius.consts import plugin_consts, scheduler_consts, adapter_consts
 from axonius.consts.plugin_subtype import PluginSubtype
 from axonius.mixins.configurable import Configurable
-from axonius.mixins.triggerable import Triggerable
+from axonius.mixins.triggerable import Triggerable, StoredJobStateCompletion
 from axonius.plugin_base import PluginBase, add_rule, return_error
 from axonius.thread_stopper import StopThreadException
 from axonius.utils.files import get_local_config_file
@@ -70,10 +70,22 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
         """
         next_run_time = self._research_phase_scheduler.get_job(
             scheduler_consts.RESEARCH_THREAD_ID).next_run_time
+        last_triggered_job = self.get_last_job({'job_name': 'execute'}, 'started_at')
+        last_finished_job = self.get_last_job({'job_name': 'execute',
+                                               'job_completed_state': StoredJobStateCompletion.Successful.name},
+                                              'finished_at')
+        last_start_time = None
+        last_finished_at = None
+        if last_triggered_job:
+            last_start_time = last_triggered_job.get('started_at')
+        if last_finished_job:
+            last_finished_at = last_finished_job.get('finished_at')
         return jsonify({
             'state': self.state._asdict(),
             'stopping': self.__stopping_initiated,
-            'next_run_time': time.mktime(next_run_time.timetuple())
+            'next_run_time': time.mktime(next_run_time.timetuple()),
+            'last_start_time': last_start_time,
+            'last_finished_time': last_finished_at
         })
 
     def _on_config_update(self, config):

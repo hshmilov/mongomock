@@ -49,7 +49,9 @@ export const dashboard = {
 				state.lifecycle.data = {
 					subPhases: payload.data.sub_phases,
 					nextRunTime: payload.data.next_run_time,
-					status: payload.data.status
+					status: payload.data.status,
+					lastStartTime: payload.data.last_start_time,
+					lastFinishedTime: payload.data.last_finished_time
 				}
 			}
 		},

@@ -501,3 +501,9 @@ class Triggerable(Feature, ABC):
                 'job_completed_state': job_completed_state.name
             }
         })
+
+    def get_last_job(self, criteria, by_field='started_at'):
+        last_triggered_data = self.__triggerable_db.find(criteria).sort(by_field, -1).limit(1)
+        if last_triggered_data and last_triggered_data.count() > 0:
+            return last_triggered_data[0]
+        return None

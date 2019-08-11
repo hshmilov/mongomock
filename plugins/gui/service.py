@@ -4264,6 +4264,8 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         return {
             'sub_phases': sub_phases,
             'next_run_time': state_response['next_run_time'],
+            'last_start_time': state_response['last_start_time'],
+            'last_finished_time': state_response['last_finished_time'],
             'status': nice_state.name
         }
 

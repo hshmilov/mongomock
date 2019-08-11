@@ -37,6 +37,7 @@
 
 <script>
     import hyperlinkMixin from '../hyperlink.js'
+    import {formatDate} from '../../../../../constants/utils'
 
 	export default {
 		name: 'XStringView',
@@ -72,18 +73,7 @@
 				if (!this.schema.format) return value
 				if (this.schema.format.includes('date') || this.schema.format.includes('time')) {
 					if (!value) return ''
-					let dateTime = new Date(value)
-					if (dateTime === 'Invalid Date') return value
-                    dateTime.setMinutes(dateTime.getMinutes() - dateTime.getTimezoneOffset())
-                    let dateParts = dateTime.toISOString().split('T')
-					dateParts[1] = dateParts[1].split('.')[0]
-                    if (this.schema.format === 'date') {
-						return dateParts[0]
-                    }
-					if (this.schema.format === 'time') {
-						return dateParts[1]
-					}
-					return dateParts.join(' ')
+                    return formatDate(value, this.schema);
                 }
 				if (this.schema.format === 'password') {
 				  return '********'

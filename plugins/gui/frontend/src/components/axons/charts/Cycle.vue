@@ -26,7 +26,7 @@
         <template v-else>
             <!-- Cycle is complete, namely status is stable -->
             <text x="50%" y="50%" text-anchor="middle" class="title">STABLE</text>
-            <path d="M160 150 L140 180 L130 170" stroke-width="4" class="check"></path>
+            <path d="M160 100 L140 130 L130 120" stroke-width="4" class="check"></path>
         </template>
     </svg>
 </template>
@@ -39,7 +39,7 @@
                 required: true
             },
             radius: {
-                default: 100
+                default: 80
             }
         },
         computed: {
@@ -84,7 +84,7 @@
 
     .x-cycle {
         margin: auto;
-        height: 240px;
+        height: 175px;
 
         circle {
             transition: stroke-dasharray 0.3s ease-in-out, stroke-dashoffset 0.3s ease-in-out;

@@ -69,6 +69,7 @@ class TestDashboard(TestBase):
         sl_cycle = self.dashboard_page.get_cycle_from_card(sl_card)
         self.dashboard_page.assert_check_in_cycle(sl_cycle)
         self.dashboard_page.assert_cycle_is_stable(sl_cycle)
+        self.dashboard_page.assert_cycle_start_and_finish_dates(sl_card)
 
         nc_card = self.dashboard_page.find_new_chart_card()
         assert self.dashboard_page.get_title_from_card(nc_card) == self.dashboard_page.NEW_CHART

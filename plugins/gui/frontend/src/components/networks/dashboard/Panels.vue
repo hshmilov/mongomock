@@ -238,6 +238,15 @@
         .x-card {
             min-height: 300px;
 
+          &.chart-lifecycle {
+            .header {
+              padding-bottom: 0;
+            }
+            .body {
+              padding-top: 0;
+            }
+          }
+
           .no-data-found{
             text-transform: uppercase;
             text-align: center;

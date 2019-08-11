@@ -24,8 +24,18 @@
       class="chart-lifecycle print-exclude"
     >
       <x-cycle :data="lifecycle.subPhases" />
-      <div class="cycle-time">Next cycle starts in
-        <div class="blue">{{ nextRunTime }}</div>
+      <div class="cycle-info">
+        <div class="cycle-history">
+          <div>Last cycle started at:</div>
+          <div class="cycle-date">{{ lastStartTime }}</div>
+          <div>Last cycle completed at:</div>
+          <div class="cycle-date">{{ lastFinishedTime }}</div>
+        </div>
+        <div class="cycle-time">
+          <div class="cycle-next">
+            Next cycle starts in <div class="blue">{{ nextRunTime }}</div>
+          </div>
+        </div>
       </div>
     </x-card>
   </x-panels>
@@ -40,6 +50,7 @@
     import {mapState, mapGetters, mapMutations} from 'vuex'
     import {IS_ENTITY_RESTRICTED} from '../../../store/modules/auth'
     import {UPDATE_DATA_VIEW} from '../../../store/mutations'
+    import {formatDate} from '../../../constants/utils'
 
     export default {
     name: 'XDefaultSpace',
@@ -74,6 +85,18 @@
           }
         }
         return `${Math.round(leftToRun / thresholds[thresholds.length - 1])} ${units[units.length - 1]}`
+      },
+      lastStartTime () {
+        if(this.lifecycle.lastStartTime) {
+          return formatDate(this.lifecycle.lastStartTime);
+        }
+        return ' ';
+      },
+      lastFinishedTime () {
+        if(this.lifecycle.lastFinishedTime) {
+          return formatDate(this.lifecycle.lastFinishedTime);
+        }
+        return ' ';
       }
     },
     methods: {
@@ -109,13 +132,38 @@
       .cycle {
         flex: 100%;
       }
-
-      .cycle-time {
+      .cycle-info {
+        display: flex;
+        flex-direction: row;
         font-size: 12px;
-        text-align: right;
 
-        .blue {
-          display: inline-block;
+        .cycle-history {
+          display: flex;
+          flex-direction: column;
+          width: 100%;
+
+          .cycle-date {
+            color: $theme-blue;
+            white-space: pre;
+          }
+        }
+
+        .cycle-time {
+          display: flex;
+          flex-direction: column;
+          text-align: right;
+          width: 100%;
+          align-items: flex-end;
+          justify-content: flex-end;
+
+          .cycle-next {
+            display: inline-block;
+            height: 20px;
+
+            .blue {
+              display: inline-block;
+            }
+          }
         }
       }
     }
