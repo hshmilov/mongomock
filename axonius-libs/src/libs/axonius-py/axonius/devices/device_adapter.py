@@ -953,8 +953,10 @@ class DeviceAdapter(SmartJsonClass):
         if 'architecture' in kwargs and kwargs['architecture'] in arch_translate_dict.keys():
             kwargs['architecture'] = arch_translate_dict[kwargs['architecture']]
 
-        if 'version' in kwargs:
+        if 'version' in kwargs and kwargs['version']:
             version_raw = parse_versions_raw(kwargs['version']) or None
+        else:
+            version_raw = None
 
         self.installed_software.append(DeviceAdapterInstalledSoftware(
             version_raw=version_raw, **kwargs))

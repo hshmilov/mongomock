@@ -32,6 +32,7 @@ from test_helpers.log_tester import LogTester
 
 API_KEY_HEADER = "x-api-key"
 UNIQUE_KEY_PARAM = "unique_name"
+WEAVE_API_URL = 'http://127.0.0.1:6784'
 
 
 class PluginService(WeaveService):
@@ -226,6 +227,22 @@ class PluginService(WeaveService):
             dns_remove_command = shlex.split(f'{WEAVE_PATH} dns-remove {self.id}')
             subprocess.check_call(dns_remove_command)
 
+            # Check that we have removed the dns entries. If we still have a dns entry associated with that hostname,
+            # it must be an old dead container. see:
+            # * https://github.com/weaveworks/weave/issues/3432
+            # * https://axonius.atlassian.net/browse/AX-4731
+            dns_check_command = shlex.split(f'{WEAVE_PATH} dns-lookup {self.fqdn}')
+            response = subprocess.check_output(dns_check_command).strip().decode('utf-8')
+
+            if response:
+                # We should not have any other ip associated with this hostname. Lets remove it.
+                for ip in response.splitlines():
+                    print(f'Found stale weave-dns record: {self.fqdn} -> {ip}. Removing')
+                    for i in range(3):
+                        # Try 3 times, because weave is not always working
+                        requests.delete(f'{WEAVE_API_URL}/name/*/{ip.strip()}?fqdn={self.fqdn}')
+                        # We do not raise for status or fail, as this is too risky.
+
             # Add new unique dns entry to weave
             dns_add_command = shlex.split(
                 f'{WEAVE_PATH} dns-add {self.id} -h {self.fqdn}')
@@ -233,8 +250,8 @@ class PluginService(WeaveService):
             subprocess.check_call(dns_add_command)
 
             dns_check_command = shlex.split(f'{WEAVE_PATH} dns-lookup {self.fqdn}')
-            response = subprocess.check_output(dns_check_command)
-            if not response.strip():
+            response = subprocess.check_output(dns_check_command).strip()
+            if not response:
                 print(f'Error looking up dns {self.fqdn}. Retrying...', file=sys.stderr)
                 raise ValueError(f'Error looking up dns {self.fqdn} after registration.')
         else:
