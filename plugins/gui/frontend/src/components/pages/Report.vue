@@ -494,6 +494,8 @@
           if (this.report.add_scheduling) {
             this.$refs.mail_ref.validate()
             this.tour({name: 'reportsMails'})
+          } else {
+            this.removeEmailValidations();
           }
         })
       },
@@ -503,12 +505,27 @@
         }
         this.report.add_scheduling = !this.report.add_scheduling
         this.onAddScheduling()
-        setTimeout(() => {
-          if (this.report.add_scheduling) {
-            this.$refs.mail_ref.validate()
+        this.$forceUpdate()
+      },
+      removeEmailValidations() {
+        let fieldsToRemove = []
+        this.validity.fields.forEach((field, index) => {
+          if (this.mailSchema.items.find((item) => item.name === field.name)) {
+            fieldsToRemove.push(index);
           }
         })
-        this.$forceUpdate()
+        fieldsToRemove.forEach((fieldIndex, index) => {
+          if (this.validity.fields.length > 0) {
+            this.validity.fields.splice(fieldIndex - index, 1);
+          }
+        })
+        if (this.validity.fields.length === 0) {
+          this.validity.error = '';
+        } else {
+          this.validity.fields.forEach(field => {
+            this.onValidate(field)
+          })
+        }
       },
       runNow() {
         let self = this

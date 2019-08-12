@@ -90,6 +90,18 @@ class TestReport(TestBase):
 
         assert not self.reports_page.is_send_email_button_exists()
 
+        # test for bug AX-4696
+        self.reports_page.get_to_new_report_page()
+        self.reports_page.fill_report_name('test_scheduling1')
+        self.reports_page.click_include_dashboard()
+        self.reports_page.click_add_scheduling()
+
+        assert self.reports_page.is_save_button_disabled()
+
+        self.reports_page.click_add_scheduling()
+
+        assert not self.reports_page.is_save_button_disabled()
+
         self.settings_page.remove_email_server()
 
     def test_save_disabled(self):
