@@ -66,7 +66,6 @@
       :view="viewNameModal.view"
       @close="closeSaveView"
       @enter="$emit('tour', 'querySaveConfirm')"
-      @leave="$emit('tour', 'queryList')"
     />
   </div>
 </template>
@@ -193,6 +192,7 @@
       },
       closeSaveView () {
         this.viewNameModal.isActive = false
+        this.$emit('tour', 'queryList')
       },
       openRenameView () {
         this.viewNameModal.isActive = true

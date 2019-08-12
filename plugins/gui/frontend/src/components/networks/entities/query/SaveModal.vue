@@ -7,7 +7,6 @@
     @close="close"
     @confirm="confirmSave"
     @enter="$emit('enter')"
-    @leave="$emit('leave')"
   >
     <div
       slot="body"

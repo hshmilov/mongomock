@@ -12,13 +12,14 @@
       v-show="!loading"
     >
       <x-tab
-        v-if="!singleAdapter"
+        v-if="!this.singleAdapter"
         id="specific"
         key="specific"
         title="Adapters Data"
         :selected="true"
       >
         <x-entity-adapters
+          v-if="entityContent.adapters"
           :entity-id="entityId"
           :module="module"
           :adapters="entityContent.adapters"

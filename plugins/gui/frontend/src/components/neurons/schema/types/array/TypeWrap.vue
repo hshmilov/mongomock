@@ -46,8 +46,8 @@
         default: () => []
       },
       path: {
-        type: String,
-        default: ''
+        type: Array,
+        default: () => []
       },
       expand: {
         type: Boolean,
