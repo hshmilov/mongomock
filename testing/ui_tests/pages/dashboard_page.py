@@ -258,14 +258,13 @@ class DashboardPage(Page):
         wait_until(lambda: self.click_pie_slice(self.SYMMETRIC_DIFFERENCE_FROM_FIRST_QUERY_SLICE_CSS, card_title),
                    check_return_value=False,
                    tolerated_exceptions_list=[ElementClickInterceptedException],
-                   total_timeout=120)
+                   total_timeout=60 * 5)
 
     def click_pie_slice(self, slice_css, card_title):
         card = self.wait_for_element_present_by_xpath(self.PANEL_BY_NAME_XPATH.format(panel_name=card_title))
         card_slice = self.get_pie_chart_from_card(card).find_element_by_css_selector(slice_css)
-        # Wait for text animation
-        time.sleep(1)
         self.scroll_into_view(card_slice, window=TAB_BODY)
+        time.sleep(10)
         card_slice.click()
 
     @staticmethod

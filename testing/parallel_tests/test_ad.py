@@ -388,4 +388,4 @@ class TestAdAdapter(AdapterTestBase):
             assert "STATUS_OBJECT_NAME_NOT_FOUND" in action_product[0]["data"]
             assert "STATUS_OBJECT_NAME_NOT_FOUND" in action_product[1]["data"]
 
-        try_until_not_thrown(15, 10, check_get_files_after_delete_results)
+        try_until_not_thrown(30, 10, check_get_files_after_delete_results)
