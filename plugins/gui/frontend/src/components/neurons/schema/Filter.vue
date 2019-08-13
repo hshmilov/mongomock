@@ -55,6 +55,12 @@
     computed: {
       isFilterEmpty () {
         return !this.expressions.length || (this.expressions.length === 1 && !this.expressions[0].field)
+      },
+      calculateI () {
+        return this.expressions.length > 0 ? ( (Math.max(
+          ...this.expressions.map(
+            expr => expr.i
+          ))) + 1) : 0
       }
     },
     watch: {
@@ -117,7 +123,7 @@
       addExpression () {
         this.expressions.push({
           ...expression,
-          i: this.expressions.length,
+          i: this.calculateI,
           nested: [{ ...nestedExpression, i: 0 }]
         })
         this.$emit('input', this.expressions)
@@ -127,15 +133,12 @@
         this.expressions.splice(index, 1)
         this.filters.splice(index, 1)
         this.bracketWeights.splice(index, 1)
-        while (index < this.expressions.length) {
-          this.expressions[index].i = index
-          index++
-        }
         if (!this.validateBrackets()) return
         if (!this.expressions.length) {
           // Expressions list should never stay empty, but have at least one empty expression
           this.addExpression()
         } else if (this.expressions[0].logicOp) {
+          this.expressions[0].logicOp = ""
           // Not ready for publishing yet, since first expression should not have a logical operation
           return
         }

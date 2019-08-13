@@ -143,10 +143,9 @@
           }
         },
         set (condition) {
-          this.expression = {
-            ...this.expression,
-            field: condition.field, compOp: condition.compOp, value: condition.value
-          }
+          this.expression.value = condition.value
+          this.expression.field = condition.field
+          this.expression.compOp = condition.compOp
         }
       },
       expressionField () {
@@ -203,9 +202,6 @@
         return ''
       },
       compileExpression () {
-        if (!this.expression.i) {
-          this.expression.logicOp = ''
-        }
         if (!this.expression.field || (this.expression.obj && !this.nestedExpressionCond)) {
           this.$emit('change', { filter: '', bracketWeight: 0 })
           return
@@ -216,7 +212,7 @@
           return
         }
         let filterStack = []
-        if (this.expression.logicOp) {
+        if (this.expression.logicOp && !this.first) {
           filterStack.push(this.expression.logicOp + ' ')
         }
         let bracketWeight = 0

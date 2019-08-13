@@ -116,6 +116,8 @@ class TestDevicesQuery(TestBase):
         self.devices_page.select_query_logic_op(self.devices_page.QUERY_LOGIC_AND, parent=expressions[2])
         self.devices_page.remove_query_expression(expressions[0])
         assert self.devices_page.is_query_error(self.ERROR_TEXT_QUERY_BRACKET.format(direction='left'))
+        expressions = self.devices_page.find_expressions()
+        assert len(expressions) == 2
         self.devices_page.toggle_right_bracket(expressions[0])
         assert self.devices_page.is_query_error()
         self.devices_page.clear_query_wizard()
@@ -145,6 +147,33 @@ class TestDevicesQuery(TestBase):
         self.devices_page.wait_for_spinner_to_end()
         assert self.devices_page.is_query_error()
         assert len(self.devices_page.get_all_data())
+        self.devices_page.clear_query_wizard()
+
+    def _test_remove_query_expression_does_not_reset_values(self):
+        self.devices_page.add_query_expression()
+        self.devices_page.add_query_expression()
+        expressions = self.devices_page.find_expressions()
+        assert len(expressions) == 3
+        self.devices_page.select_query_field(self.devices_page.FIELD_HOSTNAME_TITLE, parent=expressions[0])
+        self.devices_page.select_query_comp_op(self.devices_page.QUERY_COMP_CONTAINS, parent=expressions[0])
+        self.devices_page.fill_query_value('test', parent=expressions[0])
+        self.devices_page.select_query_logic_op(self.devices_page.QUERY_LOGIC_OR, parent=expressions[1])
+        self.devices_page.select_query_field(self.devices_page.FIELD_LAST_SEEN, parent=expressions[1])
+        self.devices_page.select_query_comp_op(self.users_page.QUERY_COMP_DAYS, parent=expressions[1])
+        self.devices_page.fill_query_value('1', parent=expressions[1])
+        self.devices_page.wait_for_spinner_to_end()
+        self.devices_page.select_query_logic_op(self.devices_page.QUERY_LOGIC_OR, parent=expressions[2])
+        self.devices_page.select_query_field(self.devices_page.FIELD_ASSET_NAME, parent=expressions[2])
+        self.devices_page.select_query_comp_op(self.devices_page.QUERY_COMP_EQUALS, parent=expressions[2])
+        self.devices_page.fill_query_value('test_device', parent=expressions[2])
+        self.devices_page.wait_for_spinner_to_end()
+        self.devices_page.remove_query_expression(expressions[0])
+        self.devices_page.wait_for_spinner_to_end()
+        assert self.devices_page.is_query_error()
+        expressions = self.devices_page.find_expressions()
+        assert len(expressions) == 2
+        assert self.devices_page.get_query_value(parent=expressions[0]) == '1'
+        assert self.devices_page.get_query_value(parent=expressions[1]) == 'test_device'
         self.devices_page.clear_query_wizard()
 
     def _test_not_expression(self):
@@ -349,13 +378,13 @@ class TestDevicesQuery(TestBase):
         self.base_page.run_discovery()
         self.devices_page.switch_to_page()
         self.devices_page.click_query_wizard()
-
         self._test_complex_obj()
         self._test_comp_op_change()
         self._test_and_expression()
         self._test_last_seen_query()
         self._test_query_brackets()
         self._test_remove_query_expressions()
+        self._test_remove_query_expression_does_not_reset_values()
         self._test_not_expression()
         self._test_adapters_size()
 

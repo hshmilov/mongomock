@@ -51,6 +51,7 @@
                     newPassword: null,
                     confirmNewPassword: null
                 },
+                isKeyVisible: false,
                 passwordFormComplete: false,
                 message: '',
                 apiKey: {},

@@ -206,8 +206,11 @@ class EntitiesPage(Page):
                            self.DROPDOWN_SELECTED_OPTION_CSS,
                            text, parent=parent)
 
-    def get_query_value(self):
-        el = self.wait_for_element_present_by_css(self.QUERY_VALUE_COMPONENT_CSS)
+    def get_query_value(self, parent=None):
+        if parent:
+            el = parent.find_element_by_css_selector(self.QUERY_VALUE_COMPONENT_CSS)
+        else:
+            el = self.wait_for_element_present_by_css(self.QUERY_VALUE_COMPONENT_CSS)
         return el.get_attribute('value')
 
     def select_query_logic_op(self, text, parent=None):
