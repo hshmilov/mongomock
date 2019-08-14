@@ -56,7 +56,7 @@ google-auth-httplib2==0.0.3
 orionsdk==0.0.6
 flasgger==0.9.0
 python-dateutil==2.7.3
-duo-client==3.3.0
+duo-client==4.2.1
 ncclient==0.6.4
 junos-eznc==2.1.8
 apache-libcloud==2.4.0
