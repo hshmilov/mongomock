@@ -120,16 +120,6 @@ if (ENV.medical) {
             name:'Adapter'
         },
         {
-            path: '/enforcements/tasks',
-            name: 'Tasks',
-            component: Tasks
-        },
-        {
-            path: '/enforcements/tasks/:id',
-            component: Task,
-            name: 'Task'
-        },
-        {
             path: '/enforcements',
             name: 'Enforcements',
             component: Enforcements
@@ -138,6 +128,26 @@ if (ENV.medical) {
             path: '/enforcements/:id',
             component: Enforcement,
             name: 'Enforcement'
+        },
+        {
+            path: '/enforcements/:id/tasks',
+            component: Tasks,
+            name: 'EnforcementTasks'
+        },
+        {
+            path: '/enforcements/:id/tasks/:taskId',
+            component: Task,
+            name: 'EnforcementTaskById'
+        },
+        {
+            path: '/enforcements/tasks',
+            name: 'Tasks',
+            component: Tasks
+        },
+        {
+            path: '/enforcements/tasks/:taskId',
+            component: Task,
+            name: 'Task'
         },
         {
             path: '/settings',

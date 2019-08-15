@@ -362,6 +362,34 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
                         'api_secret': secrets.token_urlsafe()
                         }
 
+    def beautify_task_entry(self, task):
+        """
+        Extract needed fields to build task as represented in the Frontend
+        """
+        success_rate = '0 / 0'
+        status = 'In Progress'
+        if task['job_completed_state'] == StoredJobStateCompletion.Successful.name:
+            main_results = task['result'][ACTIONS_MAIN_FIELD]['action']['results']
+
+            main_successful_count = get_chunks_length(self.enforcement_tasks_action_results_id_lists,
+                                                      main_results['successful_entities'])
+
+            main_unsuccessful_count = get_chunks_length(self.enforcement_tasks_action_results_id_lists,
+                                                        main_results['unsuccessful_entities'])
+            success_rate = f'{main_successful_count} / {main_successful_count + main_unsuccessful_count}'
+            status = 'Completed'
+
+        return gui_helpers.beautify_db_entry({
+            '_id': task['_id'],
+            'result.metadata.success_rate': success_rate,
+            'post_json.report_name': task['post_json']['report_name'],
+            'status': status,
+            f'result.{ACTIONS_MAIN_FIELD}.name': task['result']['main']['name'],
+            'result.metadata.trigger.view.name': task['result']['metadata']['trigger']['view']['name'],
+            'started_at': task['started_at'] or '',
+            'finished_at': task['finished_at'] or ''
+        })
+
     def __add_defaults(self):
         self._add_default_roles()
         if self.__users_config_collection.find_one({}) is None:
@@ -2098,6 +2126,39 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
 
         return response.text, response.status_code
 
+    @gui_helpers.paginated()
+    @gui_helpers.filtered()
+    @gui_helpers.sorted_endpoint()
+    @gui_add_rule_logged_in('enforcements/<enforcement_id>/tasks', methods=['GET'],
+                            required_permissions={Permission(PermissionType.Enforcements, PermissionLevel.ReadOnly)})
+    def tasks_by_enforcement_id(self, enforcement_id, limit, skip, mongo_filter, mongo_sort):
+        enforcement = self.enforcements_collection.find_one({
+            '_id': ObjectId(enforcement_id)
+        })
+        if not enforcement:
+            return return_error(f'Enforcement with id {enforcement_id} was not found', 400)
+
+        if mongo_sort.get('status'):
+            mongo_sort['job_completed_state'] = -1 * mongo_sort['status']
+            del mongo_sort['status']
+        sort = [('finished_at', pymongo.DESCENDING)] if not mongo_sort else list(mongo_sort.items())
+        return jsonify([self.beautify_task_entry(x) for x in self.enforcement_tasks_runs_collection.find(
+            self.__tasks_query(mongo_filter, enforcement['name'])).sort(sort).skip(skip).limit(limit)])
+
+    @gui_helpers.filtered()
+    @gui_add_rule_logged_in('enforcements/<enforcement_id>/tasks/count', methods=['GET'],
+                            required_permissions={Permission(PermissionType.Enforcements, PermissionLevel.ReadOnly)})
+    def tasks_by_enforcement_id_count(self, enforcement_id, mongo_filter):
+        enforcement = self.enforcements_collection.find_one({
+            '_id': ObjectId(enforcement_id)
+        })
+        if not enforcement:
+            return return_error(f'Enforcement with id {enforcement_id} was not found', 400)
+
+        return jsonify(self.enforcement_tasks_runs_collection.count_documents(
+            self.__tasks_query(mongo_filter, enforcement['name'])
+        ))
+
     @gui_add_rule_logged_in('enforcements/<enforcement_id>/trigger', methods=['POST'],
                             required_permissions={Permission(PermissionType.Enforcements, PermissionLevel.ReadWrite)})
     def trigger_enforcement_by_id(self, enforcement_id):
@@ -2159,24 +2220,31 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         })])
 
     @staticmethod
-    def __tasks_query(mongo_filter):
+    def __tasks_query(mongo_filter, enforcement_name=None):
         """
         General query for all Complete / In progress task that also answer given mongo_filter
         """
-        return {
-            '$and': [{
-                'job_name': 'run',
-                '$or': [
-                    {
-                        'job_completed_state': StoredJobStateCompletion.Successful.name,
-                        'result': {
-                            '$ne': NOT_RAN_STATE
-                        }
-                    }, {
-                        'job_completed_state': StoredJobStateCompletion.Running.name
+        query_segments = [{
+            'job_name': 'run',
+            '$or': [
+                {
+                    'job_completed_state': StoredJobStateCompletion.Successful.name,
+                    'result': {
+                        '$ne': NOT_RAN_STATE
                     }
-                ]
-            }, mongo_filter]
+                }, {
+                    'job_completed_state': StoredJobStateCompletion.Running.name
+                }
+            ]
+        }, mongo_filter]
+
+        if enforcement_name:
+            query_segments.append({
+                'post_json.report_name': enforcement_name
+            })
+
+        return {
+            '$and': query_segments
         }
 
     @gui_helpers.paginated()
@@ -2186,39 +2254,11 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
                                                                       PermissionLevel.ReadOnly)})
     def enforcement_tasks(self, limit, skip, mongo_filter, mongo_sort):
 
-        def beautify_task(task):
-            """
-            Extract needed fields to build task as represented in the Frontend
-            """
-            success_rate = '0 / 0'
-            status = 'In Progress'
-            if task['job_completed_state'] == StoredJobStateCompletion.Successful.name:
-                main_results = task['result'][ACTIONS_MAIN_FIELD]['action']['results']
-
-                main_successful_count = get_chunks_length(self.enforcement_tasks_action_results_id_lists,
-                                                          main_results['successful_entities'])
-
-                main_unsuccessful_count = get_chunks_length(self.enforcement_tasks_action_results_id_lists,
-                                                            main_results['unsuccessful_entities'])
-                success_rate = f'{main_successful_count} / {main_successful_count + main_unsuccessful_count}'
-                status = 'Completed'
-
-            return gui_helpers.beautify_db_entry({
-                '_id': task['_id'],
-                'result.metadata.success_rate': success_rate,
-                'post_json.report_name': task['post_json']['report_name'],
-                'status': status,
-                f'result.{ACTIONS_MAIN_FIELD}.name': task['result']['main']['name'],
-                'result.metadata.trigger.view.name': task['result']['metadata']['trigger']['view']['name'],
-                'started_at': task['started_at'] or '',
-                'finished_at': task['finished_at'] or ''
-            })
-
         if mongo_sort.get('status'):
             mongo_sort['job_completed_state'] = -1 * mongo_sort['status']
             del mongo_sort['status']
         sort = [('finished_at', pymongo.DESCENDING)] if not mongo_sort else list(mongo_sort.items())
-        return jsonify([beautify_task(x) for x in self.enforcement_tasks_runs_collection.find(
+        return jsonify([self.beautify_task_entry(x) for x in self.enforcement_tasks_runs_collection.find(
             self.__tasks_query(mongo_filter)).sort(sort).skip(skip).limit(limit)])
 
     @gui_helpers.filtered()

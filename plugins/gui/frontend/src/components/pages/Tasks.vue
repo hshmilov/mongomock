@@ -1,30 +1,13 @@
 <template>
-  <x-page
-    class="x-tasks"
-    :breadcrumbs="[
-      { title: 'enforcement center', path: { name: 'Enforcements'}},
-      { title: 'enforcement tasks' }]"
-  >
+  <x-page class="x-tasks" :breadcrumbs="breadcrumbs">
     <x-search
       v-model="searchValue"
       placeholder="Search Tasks..."
       @keyup.enter.native="onSearchConfirm"
     />
-    <!--div class="tasks-search">
-      <x-search
-        v-model="searchValue"
-        placeholder="Search Tasks..."
-        @keyup.enter.native="onSearchConfirm"
-      />
-      <label>Status:</label>
-      <x-select
-        v-model="statusValue"
-        :options="statusOptions"
-        @input="onSearchConfirm"
-      />
-    </div-->
     <x-table
-      module="tasks"
+      :module="enforcementDesignated ? 'enforcements/current' : 'tasks'"
+      :endpoint="endpointForDesignatedTasks"
       title="Enforcement Tasks"
       :static-fields="fields"
       :on-click-row="viewTask"
@@ -38,9 +21,11 @@
   import xSelect from '../axons/inputs/Select.vue'
   import xTable from '../neurons/data/Table.vue'
 
-  import { mapMutations, mapActions } from 'vuex'
+  import { mapMutations, mapActions, mapState } from 'vuex'
   import { UPDATE_DATA_VIEW } from '../../store/mutations'
   import { FETCH_TASK } from '../../store/modules/tasks'
+
+  import { FETCH_ENFORCEMENT } from '../../store/modules/enforcements'
 
   export default {
     name: 'XTasks',
@@ -48,6 +33,24 @@
       xPage, xSearch, xSelect, xTable
     },
     computed: {
+      ...mapState({
+        currentEnforcementName(state) {
+          return state.enforcements.current.data.name
+        }
+      }),
+      enforcementDesignated() {
+        return this.$route.params.id || false
+      },
+      endpointForDesignatedTasks(){
+        return this.enforcementDesignated ? `enforcements/${this.enforcementDesignated}/tasks` : ''
+      },
+      breadcrumbs() {
+        return [
+          { title: 'enforcement center', path: { name: 'Enforcements'}},
+          ...( this.enforcementDesignated ? [{title: this.currentEnforcementName, path: { name: 'Enforcement', params: {id: this.enforcementDesignated}}}] : [] ),
+          { title: 'Tasks' }
+        ]        
+      },
       fields() {
         return [{
           name: 'status', title: 'Status', type: 'string'
@@ -88,20 +91,31 @@
         statusValue: '*'
       }
     },
+    created() {
+      this.fetchEnforcementIfNotExist()
+      this.onSearchConfirm()
+    },
     methods: {
       ...mapMutations({
         updateView: UPDATE_DATA_VIEW
       }),
       ...mapActions({
-        fetchTask: FETCH_TASK
+        fetchTask: FETCH_TASK,
+        fetchEnforcmentAPI: FETCH_ENFORCEMENT,
       }),
+      fetchEnforcementIfNotExist() {
+
+        if(!this.currentEnforcementName) {
+          this.fetchEnforcmentAPI(this.enforcementDesignated)
+        }
+      },
       viewTask (taskId) {
         this.fetchTask(taskId)
         this.$router.push({ path: `/enforcements/tasks/${taskId}` })
       },
       onSearchConfirm() {
         this.updateView({
-          module: 'tasks',
+          module: this.enforcementDesignated ? 'enforcements/current' : 'tasks',
           view: {
             query: {
               filter: this.searchFilter

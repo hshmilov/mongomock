@@ -655,7 +655,7 @@ class Page:
             return fname
 
     def upload_file_by_id(self, input_id, file_content, is_bytes=False, prefix=None):
-        element = self.driver.find_element_by_id(input_id)
+        element = self.wait_for_element_present_by_id(input_id)
         return self.upload_file_on_element(element, file_content, is_bytes, prefix)
 
     def close_dropdown(self):

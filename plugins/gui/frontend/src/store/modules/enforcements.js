@@ -62,7 +62,28 @@ export const enforcements = {
     savedEnforcements: { fetching: false, data: [], error: '' },
 
     /* Data of Enforcement currently being configured */
-    current: { fetching: false, data: {}, error: '' },
+    current: {
+      fetching: false, 
+      data: {}, 
+      error: '', 
+      content: { 
+        data: [], 
+        fetching: false, 
+        error: '',
+      },
+      view: {
+        page: 0, 
+        pageSize: 20, 
+        coloumnSizes: [], 
+        query: {
+          filter: '', expressions: []
+        }, 
+        sort: {
+          field: '', desc: true
+        }
+      }, 
+      count: { data: 0, fetching: false, error: '' }
+    },
 
     actions: { fetching: false, data: {}, error: '' },
 
@@ -70,7 +91,7 @@ export const enforcements = {
 
   },
   mutations: {
-    [SET_ENFORCEMENT] (state, enforcementData) {
+    [SET_ENFORCEMENT](state, enforcementData) {
       /*
           Set given data, if given, or a new Enforcement otherwise, as Enforcement in the handle
        */
@@ -88,21 +109,21 @@ export const enforcements = {
         }
       }
     },
-    [UPDATE_ACTIONS] (state, payload) {
+    [UPDATE_ACTIONS](state, payload) {
       state.actions.fetching = payload.fetching
       state.actions.error = payload.error
       if (payload.data) {
         state.actions.data = payload.data
       }
     },
-    [UPDATE_SAVED_ENFORCEMENTS] (state, payload) {
+    [UPDATE_SAVED_ENFORCEMENTS](state, payload) {
       state.savedEnforcements.fetching = payload.fetching
       state.savedEnforcements.error = payload.error
       if (payload.data) {
         state.savedEnforcements.data = payload.data
       }
     },
-    [UPDATE_SAVED_ACTIONS] (state, payload) {
+    [UPDATE_SAVED_ACTIONS](state, payload) {
       state.savedActions.fetching = payload.fetching
       state.savedActions.error = payload.error
       if (payload.data) {
@@ -111,7 +132,7 @@ export const enforcements = {
     }
   },
   actions: {
-    [FETCH_ENFORCEMENT] ({ dispatch, commit }, enforcementId) {
+    [FETCH_ENFORCEMENT]({ dispatch, commit }, enforcementId) {
       /*
           Ask server for a complete, specific enforcement, if given an actual ID.
           Set the response as the enforcement in handling.
@@ -134,7 +155,7 @@ export const enforcements = {
         }
       })
     },
-    [SAVE_ENFORCEMENT] ({ dispatch }, enforcement) {
+    [SAVE_ENFORCEMENT]({ dispatch }, enforcement) {
       /*
           Update an existing Enforcement, if given an id, or create a new one otherwise
        */
@@ -167,7 +188,7 @@ export const enforcements = {
         })
       }
     },
-    [REMOVE_ENFORCEMENTS] ({ dispatch }, selection) {
+    [REMOVE_ENFORCEMENTS]({ dispatch }, selection) {
       /*
           Remove given selection of Enforcement.
           Expected structure is a list of ids and a flag indicating whether to include or exclude them
@@ -182,13 +203,13 @@ export const enforcements = {
         }
       })
     },
-    [FETCH_SAVED_ENFORCEMENTS] ({ dispatch }) {
+    [FETCH_SAVED_ENFORCEMENTS]({ dispatch }) {
       return dispatch(REQUEST_API, {
         rule: 'enforcements/saved',
         type: UPDATE_SAVED_ENFORCEMENTS
       })
     },
-    [FETCH_ACTIONS] ({ dispatch }) {
+    [FETCH_ACTIONS]({ dispatch }) {
       /*
           Get list of actions and each one's schema
        */
@@ -197,13 +218,13 @@ export const enforcements = {
         type: UPDATE_ACTIONS
       })
     },
-    [FETCH_SAVED_ACTIONS] ({ dispatch }) {
+    [FETCH_SAVED_ACTIONS]({ dispatch }) {
       return dispatch(REQUEST_API, {
         rule: 'enforcements/actions/saved',
         type: UPDATE_SAVED_ACTIONS
       })
     },
-    [RUN_ENFORCEMENT] ({ dispatch }, enforcementId) {
+    [RUN_ENFORCEMENT]({ dispatch }, enforcementId) {
       return dispatch(REQUEST_API, {
         rule: `enforcements/${enforcementId}/trigger`,
         method: 'POST'

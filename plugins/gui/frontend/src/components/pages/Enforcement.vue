@@ -338,15 +338,7 @@
         this.saveEnforcement(this.enforcement).then(() => this.exit())
       },
       viewTasks() {
-        this.updateView({
-          module: 'tasks',
-          view: {
-            query: {
-              filter: `post_json.report_name == "${this.enforcement.name}"`
-            }
-          }
-        })
-        this.$router.push({ name: 'Tasks' })
+        this.$router.push({ name: 'EnforcementTasks', params: { id: this.enforcement.uuid } })
       },
       exit () {
         this.$router.push({ name: 'Enforcements' })

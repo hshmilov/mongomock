@@ -1,10 +1,7 @@
 <template>
   <x-page
     class="x-task"
-    :breadcrumbs="[
-      { title: 'enforcements', path: { name: 'Enforcements'}},
-      { title: 'tasks', path: {name: 'Tasks'} },
-      { title: name }]"
+    :breadcrumbs="breadcrumbs"
   >
     <x-split-box>
       <template slot="main">
@@ -80,6 +77,20 @@
           }
           return state.constants.constants.trigger_periods
         },
+        fromEnforcementSetTaskListView() {
+          return !!this.$route.params.id
+        },
+        designatedEnforcementSetId() {
+          return this.$route.params.id
+        },
+        breadcrumbs(){
+          return [
+            { title: 'enforcements', path: { name: 'Enforcements'}},
+            ...(this.fromEnforcementSetTaskListView ? [ {title: this.taskData['post_json.report_name'], path: { name: 'Enforcements'}} ] : []),
+            { title: 'tasks', path: {name: 'Tasks'} },
+            { title: this.name }
+          ]
+        },
         taskData (state) {
           let period = this.triggerPeriods.find((x) => {
             return x[state.tasks.current.data.period] !== undefined
@@ -98,7 +109,7 @@
         }
       }),
       id () {
-        return this.$route.params.id
+        return this.$route.params.taskId
       },
       name () {
         if (!this.taskData || !this.taskData.enforcement) return ''
