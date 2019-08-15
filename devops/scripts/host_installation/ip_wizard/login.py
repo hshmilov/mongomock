@@ -5,9 +5,9 @@ import netifaces
 # pylint: disable=deprecated-module
 import string
 import sys
-from pprint import pprint
+from pathlib import Path
 
-INTERFACE_FILTER_LIST = ['lo', 'docker', 'veth', 'weave', 'datapath', 'vxlan']
+INTERFACE_FILTER_LIST = ['lo', 'docker', 'veth', 'weave', 'datapath', 'vxlan', 'dummy']
 
 TEMPLATE = '''
 # This file describes the network interfaces available on your system
@@ -126,19 +126,25 @@ def choose_interface():
     return interface_list[int(response) - 1]
 
 
-def print_banner():
-    print(f'The current network interfaces and addresses are\n')
+def generate_banner():
+    yield 'The current network interfaces and addresses are'
     for iface in netifaces.interfaces():
         if not any(iface.startswith(x) for x in INTERFACE_FILTER_LIST):
-            addrs = netifaces.ifaddresses(iface)
-            if addrs:
-                print(f'{iface}:')
-                pprint(addrs)
-                print()
+            addrs = netifaces.ifaddresses(iface).get(netifaces.AF_INET)
+            if addrs and len(addrs) > 0:
+                yield f'{iface}:'
+                for addr in addrs:
+                    if addr and isinstance(addr, dict):
+                        for k, v in addr.items():
+                            yield f'   {k}: {v}'
+    yield '\n'
 
 
 def main():
-    print_banner()
+    banner = '\n'.join(generate_banner())
+    print(banner)
+    Path('/home/netconfig/banner').write_text(banner)
+
     chosen_interface = choose_interface()
     interfaces = generate_interfaces(chosen_interface)
 
@@ -150,6 +156,7 @@ def main():
         if res == 'yes':
             with open('/home/netconfig/interfaces', 'wb') as f:
                 f.write(interfaces.encode())
+            print(f'We are rebooting the system to apply the changes...')
             return sys.exit(0)
         if res == 'no':
             return sys.exit(1)

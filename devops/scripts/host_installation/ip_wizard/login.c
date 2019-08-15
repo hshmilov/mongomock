@@ -24,6 +24,13 @@ int main()
 
       printf("interfaces file updated\n");
 
+      if (0 != rename("/home/netconfig/banner", "/etc/issue")) {
+        printf("set banner failed\n");
+        return 1;
+      }
+
+      system("sudo reboot");
+
    } else {
       printf("Keeping the network settings\n");
    }
