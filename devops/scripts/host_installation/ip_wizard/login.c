@@ -2,6 +2,8 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <sys/reboot.h>
+
 
 int main()
 {
@@ -29,7 +31,8 @@ int main()
         return 1;
       }
 
-      system("sudo reboot");
+      sync();
+      reboot(RB_AUTOBOOT);
 
    } else {
       printf("Keeping the network settings\n");
