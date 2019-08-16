@@ -34,12 +34,6 @@ def main():
     # Waiting for weave network to be stable.
     wait_until_machine_is_ready()
 
-    # Checks if this is a first boot for a machine (meaning it's new.)
-    if BOOTED_FOR_PRODUCTION_MARKER_PATH.exists():
-        set_unique_dns()
-        print('System Is Registered.')
-        return
-
     raise_system()
     chown_cortex()
     print('System Is Ready.')
