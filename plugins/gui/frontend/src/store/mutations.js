@@ -354,13 +354,17 @@ export const UPDATE_CUSTOM_DATA = 'UPDATE_CUSTOM_DATA'
 export const updateCustomData = (state, payload) => {
 	let module = getModule(state, payload)
 	if (!payload.fetching || !module.current.data.adapters) return
-	let gui_adapter = module.current.data.adapters.find(item => item.name === 'gui')
-	let data = Object.keys(payload.data.data).reduce((map, key) => {
-		map[key.split(' ').join('_').toLowerCase()] = payload.data.data[key]
+	let guiAdapter = module.current.data.adapters.find(item => item.name === 'gui')
+	let data = payload.data.reduce((map, field) => {
+		let canonizedName = field.name.split(' ').join('_').toLowerCase()
+		if (!field.predefined) {
+			canonizedName = `custom_${canonizedName}`
+		}
+		map[canonizedName] = field.value
 		return map
 	}, {})
-	if (gui_adapter) {
-		gui_adapter.data = data
+	if (guiAdapter) {
+		guiAdapter.data = data
 	} else {
 		module.current.data.adapters.push({
 			...initCustomData(payload.module),

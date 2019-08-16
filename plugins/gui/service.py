@@ -95,7 +95,7 @@ from axonius.mixins.configurable import Configurable
 from axonius.mixins.triggerable import (RunIdentifier,
                                         StoredJobStateCompletion, Triggerable,
                                         TriggerStates)
-from axonius.plugin_base import EntityType, PluginBase, return_error
+from axonius.plugin_base import EntityType, PluginBase, return_error, add_rule
 from axonius.thread_pool_executor import LoggedThreadPoolExecutor
 from axonius.types.correlation import (MAX_LINK_AMOUNT, CorrelationReason,
                                        CorrelationResult)
@@ -945,7 +945,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
                 },
                 upsert=True)
 
-    def _entity_custom_data(self, entity_type: EntityType, mongo_filter):
+    def _entity_custom_data(self, entity_type: EntityType, mongo_filter=None):
         """
         Adds misc adapter data to the data as given in the request
         POST data:
@@ -955,6 +955,10 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
             },
             'data': {...}
         }
+        For each field to set, search for as a title of an existing field.
+        If found, set matching value to that field.
+        Otherwise, create a new field with the name as a title and 'custom_<name>' as the field name.
+
         :param entity_type: the entity type to use
         """
         post_data = request.get_json()
@@ -969,19 +973,23 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         }))
 
         entity_to_add = self._new_device_adapter() if entity_type == EntityType.Devices else self._new_user_adapter()
+
         errors = {}
         for k, v in post_data['data'].items():
             allowed_types = [str, int, bool, float]
             if type(v) not in allowed_types:
                 errors[k] = f'{k} is of type {type(v)} which is not allowed'
             try:
-                if not entity_to_add.set_static_field(k, v):
-                    # Save the field with a canonized name and title as received
-                    new_field_name = '_'.join(k.split(' ')).lower()
-                    entity_to_add.declare_new_field(new_field_name, Field(type(v), k))
-                    setattr(entity_to_add, new_field_name, v)
+                if k.startswith('custom_'):
+                    entity_to_add.set_static_field(k, Field(type(v), k))
+                elif not entity_to_add.set_field_by_title(k, v):
+                    # Canonize field name with title as received
+                    field_name = f'custom_{"_".join(k.split(" ")).lower()}'
+                    entity_to_add.declare_new_field(field_name, Field(type(v), k))
+                    setattr(entity_to_add, field_name, v)
             except Exception:
                 errors[k] = f'Value {v} not compatible with field {k}'
+                logger.exception(errors[k])
 
         if len(errors) > 0:
             return return_error(errors, 400)
@@ -1005,6 +1013,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         self._save_field_names_to_db(entity_type)
         self._trigger('clear_dashboard_cache', blocking=False)
         entity_fields.clean_cache()
+        return '', 200
 
     def __get_entity_hyperlinks(self, entity_type: EntityType) -> Dict[str, str]:
         """
@@ -1235,10 +1244,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         """
         See self._entity_custom_data
         """
-        result = self._entity_custom_data(EntityType.Devices, mongo_filter)
-        if result:
-            return result
-        return '', 200
+        return self._entity_custom_data(EntityType.Devices, mongo_filter)
 
     @gui_add_rule_logged_in('devices/hyperlinks', required_permissions={Permission(PermissionType.Devices,
                                                                                    PermissionLevel.ReadOnly)})
@@ -1410,8 +1416,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         """
         See self._entity_custom_data
         """
-        self._entity_custom_data(EntityType.Users, mongo_filter)
-        return '', 200
+        return self._entity_custom_data(EntityType.Users, mongo_filter)
 
     @gui_add_rule_logged_in('users/hyperlinks', required_permissions={Permission(PermissionType.Users,
                                                                                  PermissionLevel.ReadOnly)})
@@ -2178,6 +2183,13 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
             'manual': True
         })
         return response.text, response.status_code
+
+    @add_rule('enforcements/<entity_type>/custom', methods=['POST'])
+    def enforce_entity_custom_data(self, entity_type):
+        """
+        See self._entity_custom_data
+        """
+        return self._entity_custom_data(EntityType(entity_type))
 
     @rev_cached(ttl=3600)
     def _get_actions_from_reports_plugin(self) -> dict:

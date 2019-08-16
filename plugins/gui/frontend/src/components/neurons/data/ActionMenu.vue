@@ -64,7 +64,7 @@
   import xButton from '../../axons/inputs/Button.vue'
 
   import { mapState, mapActions } from 'vuex'
-  import { DELETE_DATA, DISABLE_DATA, SAVE_CUSTOM_DATA } from '../../../store/actions'
+  import { DELETE_DATA, DISABLE_DATA, SAVE_CUSTOM_DATA, FETCH_DATA_FIELDS } from '../../../store/actions'
 
   export default {
     name: 'XActionMenu',
@@ -88,7 +88,7 @@
     },
     data () {
       return {
-        customAdapterData: {}
+        customAdapterData: []
       }
     },
     computed: {
@@ -114,7 +114,8 @@
       ...mapActions({
         disableData: DISABLE_DATA,
         deleteData: DELETE_DATA,
-        saveCustomData: SAVE_CUSTOM_DATA
+        saveCustomData: SAVE_CUSTOM_DATA,
+        fetchDataFields: FETCH_DATA_FIELDS
       }),
       activate (item) {
         if (!item || !item.activate) return
@@ -129,13 +130,16 @@
       },
       saveFields () {
         return this.saveCustomData({
-          module: this.module, data: {
-            selection: this.entities, data: this.customAdapterData
-          }
-        }).then(this.initCustomFields)
+          module: this.module,
+          selection: this.entities,
+          data: this.customAdapterData
+        }).then(() => {
+          this.fetchDataFields({module: this.module})
+          this.initCustomFields()
+        })
       },
       initCustomFields () {
-        this.customAdapterData = {}
+        this.customAdapterData = []
       }
     }
   }

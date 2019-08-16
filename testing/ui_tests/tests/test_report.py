@@ -32,7 +32,7 @@ class TestReport(TestBase):
         self.reports_page.wait_for_before_save_finished_toaster()
         assert self.reports_page.is_name_already_exists_error_appear()
         self.reports_page.fill_report_name('test2')
-        assert self.reports_page.get_error_text() == ''
+        assert self.reports_page.is_report_error()
         self.reports_page.click_save()
 
     def test_add_saved_query(self):
@@ -62,7 +62,7 @@ class TestReport(TestBase):
         self.reports_page.fill_email_subject(report_name)
 
         self.reports_page.fill_email('test.axonius.com')
-        assert self.reports_page.is_custom_error('\'Recipients\' items are not all properly formed')
+        assert self.reports_page.is_report_error('\'Recipients\' items are not all properly formed')
         emails_str = 'test1@axonius.com,test2@axonius.com;test3@axonius.com'
         self.reports_page.edit_email(emails_str)
         assert self.reports_page.get_emails() == re.compile('[,;]').split(emails_str)

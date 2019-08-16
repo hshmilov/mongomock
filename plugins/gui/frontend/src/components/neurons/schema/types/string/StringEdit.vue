@@ -40,7 +40,7 @@
   import primitiveMixin from '../primitive.js'
   import xSelect from '../../../../axons/inputs/Select.vue'
   import xDateEdit from './DateEdit.vue'
-  import regEx from '../../../../../constants/validations'
+  import { validateEmail } from '../../../../../constants/validations'
 
 	export default {
 		name: 'XStringEdit',
@@ -62,14 +62,14 @@
         computed: {
             processedData: {
                 get() {
-                  return this.isUnchangedPassword ? "********" : this.data
+                  return this.isUnchangedPassword ? '********' : this.data
                 },
                 set(new_val) {
                     this.data = new_val
                 }
             },
             isEmailValid: function() {
-               return (this.data == "")? "" : (this.data.match(new RegExp(regEx.isMailValid.template))) ? '' : 'error-border';
+               return (!this.data || validateEmail(this.data)) ? '' : 'error-border';
             },
             isDate() {
 		           return (this.schema.format === 'date-time' || this.schema.format === 'date')

@@ -147,7 +147,7 @@
     import xSelectSymbol from '../../neurons/inputs/SelectSymbol.vue'
 
     import viewsMixin from '../../../mixins/views'
-    import {validateInteger} from '../../../constants/utils'
+    import {validateInteger} from '../../../constants/validations'
     import {mapState} from 'vuex'
 
     export default {

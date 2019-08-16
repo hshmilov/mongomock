@@ -2,7 +2,7 @@
 	import primitiveMixin from '../primitive.js'
 	import numericalMixin from './numerical'
 	import xSelect from '../../../../axons/inputs/Select.vue'
-    import { validateInteger } from '../../../../../constants/utils'
+    import { validateInteger } from '../../../../../constants/validations'
 
     export default {
 		name: 'XIntegerEdit',

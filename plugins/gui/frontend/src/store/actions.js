@@ -569,12 +569,17 @@ export const saveCustomData = ({ state, dispatch }, payload) => {
 	let module = getModule(state, payload)
     if (!module) return
 
+	let fieldData = payload.data.reduce((map, item) => {
+		map[item.title || item.name] = item.value
+		return map
+	}, {})
+	fieldData.id = 'unique'
 	return dispatch(REQUEST_API, {
 		rule: `${payload.module}/custom?filter=${encodeURIComponent(module.view.query.filter)}`,
 		method: 'POST',
 		data: {
-			selection: payload.data.selection,
-			data: { ...payload.data.data, id: 'unique' }
+			selection: payload.selection,
+			data: fieldData
 		},
 		type: UPDATE_CUSTOM_DATA,
 		payload

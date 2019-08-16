@@ -83,7 +83,7 @@
   import range from '../string/RangeEdit.vue'
   import xButton from '../../../../axons/inputs/Button.vue'
   import xListInput from '../../../../axons/inputs/ListInput.vue'
-  import regEx from '../../../../../constants/validations'
+  import { validateEmail } from '../../../../../constants/validations'
 
   import arrayMixin from './array'
 
@@ -122,7 +122,7 @@
         if (!this.isStringList) return []
         return this.data.filter(item => {
           if (this.schema.items.format === 'email') {
-            return !item.match(new RegExp(regEx.isMailValid.template))
+            return !validateEmail(item)
           }
           return false
         })

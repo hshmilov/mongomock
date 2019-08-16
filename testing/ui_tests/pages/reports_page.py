@@ -302,11 +302,13 @@ class ReportsPage(EntitiesPage):
                          self.is_save_button_disabled()]
         return all(disabled_list)
 
-    def get_error_text(self):
-        return self.driver.find_element_by_css_selector(self.ERROR_TEXT_CSS).text
+    def is_report_error(self, error_text=None):
+        if not error_text:
+            error_text = ''
+        return error_text == self.driver.find_element_by_css_selector(self.ERROR_TEXT_CSS).text
 
     def wait_for_before_save_finished_toaster(self):
         self.wait_for_toaster_to_end(self.BEFORE_SAVE_MESSAGE)
 
     def is_name_already_exists_error_appear(self):
-        return self.get_error_text() == self.REPORT_NAME_DUPLICATE_ERROR
+        return self.is_report_error(self.REPORT_NAME_DUPLICATE_ERROR)

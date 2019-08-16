@@ -94,6 +94,7 @@ class EntitiesPage(Page):
     CUSTOM_DATA_TAB_CSS = 'li#gui_unique'
     GENERAL_DATA_TAB_TITLE = 'General Data'
     ADAPTERS_DATA_TAB_TITLE = 'Adapters Data'
+    ADAPTERS_DATA_TAB_CSS = '.x-entity-adapters'
     ENFORCEMENT_DATA_TAB_TITLE = 'Enforcement Tasks'
     EXTENDED_DATA_TAB_TITLE = 'Extended Data'
 
@@ -116,7 +117,7 @@ class EntitiesPage(Page):
     CUSTOM_DATA_NEW_FIELD_NAME_CSS = '.custom-fields .fields-item input.item-name'
     CUSTOM_DATA_FIELD_VALUE_CSS = '.custom-fields .fields-item .item-value'
     CUSTOM_DATA_FIELD_ITEM = '.custom-fields .fields-item'
-    CUSTOM_DATA_ERROR_CSS = '.footer .error-text'
+    CUSTOM_DATA_ERROR_CSS = '.x-entity-custom-fields .footer .error-text'
     CUSTOM_DATA_BULK_CONTAINER_CSS = '.actions'
 
     ENFORCEMENT_RESULTS_TITLE = '{enforcement_name} - Task 1'
@@ -757,6 +758,8 @@ class EntitiesPage(Page):
         return self.click_button('+ New field', partial_class=True)
 
     def find_custom_data_save(self, context=None):
+        if not context:
+            context = self.driver.find_element_by_css_selector(self.ADAPTERS_DATA_TAB_CSS)
         return self.get_button(self.SAVE_BUTTON, partial_class=True, context=context)
 
     def find_custom_fields_items(self):
@@ -796,8 +799,8 @@ class EntitiesPage(Page):
     def fill_custom_data_value(self, field_value, parent=None):
         self.fill_text_field_by_css_selector(self.CUSTOM_DATA_FIELD_VALUE_CSS, field_value, parent)
 
-    def save_custom_data(self, context=None):
-        self.find_custom_data_save(context).click()
+    def save_custom_data(self):
+        self.find_custom_data_save().click()
         self.wait_for_element_absent_by_css(self.MODAL_OVERLAY_CSS)
 
     def save_custom_data_feedback(self, context=None):

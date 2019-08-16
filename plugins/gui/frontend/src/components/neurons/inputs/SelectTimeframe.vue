@@ -56,7 +56,7 @@
 <script>
   import xSelect from '../../axons/inputs/Select.vue'
   import xDateEdit from '../schema/types/string/DateEdit.vue'
-  import {validateNumber} from '../../../constants/utils'
+  import {validateNumber} from '../../../constants/validations'
 
   import { mapState } from 'vuex'
 

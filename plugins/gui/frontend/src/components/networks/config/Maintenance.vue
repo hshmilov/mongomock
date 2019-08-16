@@ -75,7 +75,7 @@
         FETCH_MAINTENANCE_CONFIG, SAVE_MAINTENANCE_CONFIG, START_MAINTENANCE_CONFIG, STOP_MAINTENANCE_CONFIG
     } from '../../../store/modules/settings'
 
-    import {validateNumber} from '../../../constants/utils'
+    import {validateNumber} from '../../../constants/validations'
 
     export default {
         name: 'x-maintenance',

@@ -2526,7 +2526,7 @@ class PluginBase(Configurable, Feature):
             logger.exception(f'Warning - could not get keyval {key}')
             return None
 
-    def get_selected_entities(self, entity_type: EntityType, entities_selection: dict, mongo_filter: dict):
+    def get_selected_entities(self, entity_type: EntityType, entities_selection: dict, mongo_filter: dict = None):
         """
 
         :param entities_selection: Represents the selection of entities.

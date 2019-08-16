@@ -109,7 +109,7 @@
         viewBasic: true,
         fieldsEditor: {active: false},
         toastMessage: '',
-        error: ''
+        error: {}
       }
     },
     computed: {
@@ -159,7 +159,7 @@
         return (this.fields.specific.gui || this.fields.generic)
       },
       customData () {
-        return { ...this.sortedSpecificData[this.sortedSpecificData.length - 1].data, id: undefined }
+        return this.sortedSpecificData[this.sortedSpecificData.length - 1].data
       }
     },
     mounted() {
@@ -199,34 +199,26 @@
       editFields() {
         this.fieldsEditor = {
           active: true,
-          data: this.flattenObj('', this.customData),
+          data: Object.entries(this.customData).map(([ name, value ]) => {
+            return { name, value, predefined: true }
+          }),
           valid: true
         }
-      },
-      flattenObj(path, obj) {
-        if (Array.isArray(obj)) {
-          return this.flattenObj(path, obj[0])
-        }
-        if (typeof obj === 'object' && Object.keys(obj).length) {
-          return Object.keys(obj).reduce((map, key) => {
-            if (!obj[key]) return map
-            return {...map, ...this.flattenObj(path ? `${path}.${key}` : key, obj[key])}
-          }, {})
-        }
-        return {[path]: obj}
       },
       saveFieldsEditor() {
         if (!this.fieldsEditor.valid) return
         this.saveCustomData({
-          module: this.module, data: {
-            selection: {
-              ids: [this.entityId],
-              include: true
-            }, data: this.fieldsEditor.data
-          }
+          module: this.module,
+          selection: {
+            ids: [this.entityId],
+            include: true
+          },
+          data: this.fieldsEditor.data
         }).then(() => {
           this.toastMessage = 'Saved Custom Data'
-          this.fetchDataFields({module: this.module})
+          this.fetchDataFields({
+            module: this.module
+          })
           this.closeFieldsEditor()
         }).catch(error => {
           this.error = error.response.data.message
@@ -234,7 +226,7 @@
       },
       closeFieldsEditor() {
         this.fieldsEditor = {active: false}
-        this.error = ''
+        this.error = {}
       },
       validateFieldsEditor(valid) {
         this.fieldsEditor.valid = valid

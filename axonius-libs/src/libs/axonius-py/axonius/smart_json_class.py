@@ -184,6 +184,34 @@ class SmartJsonClass(metaclass=SmartJsonClassMetaclass):
             self.declare_new_field(field_name, Field(str, f'{capitalized}'))
         self[field_name] = field_value
 
+    def set_field_by_title(self, field_title: str, field_value) -> bool:
+        """
+        Search for a field among this type's fields, matching its title with given field_title
+        If found, set the given field_value
+
+        :param field_title: To search for
+        :param field_value: To set
+        :return: True if found and set, False otherwise
+        """
+        base = [x for x in self.fields_info if x.title and x.title.lower() == field_title.lower()]
+        if not base:
+            return False
+
+        base = base[0]
+        if isinstance(base, ListField):
+            new_data = base.type()
+            self[base.name].append(new_data)
+            field = new_data
+        else:
+            if issubclass(base.type, SmartJsonClass):
+                self[base.name] = base.type()
+            field = self
+        try:
+            field[base.name] = field_value
+        except AttributeError:
+            return False
+        return True
+
     def set_static_field(self, field_name: str, field_value) -> bool:
         """
         Made for this https://axonius.atlassian.net/wiki/spaces/AX/pages/818577415/Add+user+custom+fields+data+to+Axonius+entity+from+the+GUI

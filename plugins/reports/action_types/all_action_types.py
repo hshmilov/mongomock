@@ -28,6 +28,7 @@ from reports.action_types.base.censys_enrichment import CensysEnrichment
 from reports.action_types.base.run_wmi_scan import RunWMIScan
 from reports.action_types.base.send_email_to_entities import SendEmailToEntities
 from reports.action_types.base.tag_all_entities import TagAllEntitiesAction
+from reports.action_types.base.add_custom_data import AddCustomDataAction
 from reports.action_types.base.tenable_io_add_ips_to_asset import TenableIoAddIPsToTargetGroup
 from reports.action_types.base.tenable_sc_add_ips_to_asset import TenableScAddIPsToAsset
 from reports.action_types.base.untag_all_entities import UntagAllEntitiesAction
@@ -41,6 +42,7 @@ from reports.action_types.alert.create_zendesk_ticket import ZendeskTicketAction
 AllActionTypes: Dict[str, type(ActionTypeBase)] = {
     'create_service_now_computer': ServiceNowComputerAction,
     'tag': TagAllEntitiesAction,
+    'add_custom_data': AddCustomDataAction,
     'carbonblack_isolate': CarbonblackIsolateAction,
     'carbonblack_unisolate': CarbonblackUnisolateAction,
     'untag': UntagAllEntitiesAction,
