@@ -85,6 +85,7 @@ class SymantecAdapter(AdapterBase):
                     'name': 'port',
                     'title': 'Port',
                     'description': 'Symantec Endpoint Protection Port (Default is 8446)',
+                    'default': consts.DEFAULT_SYMANTEC_PORT,
                     'type': 'integer',
                     'format': 'port'
                 },
