@@ -10,7 +10,7 @@
       :title="schema.title"
       :module="stateLocation"
       :static-fields="fields"
-      :static-data="sortedData"
+      :static-data="filteredData"
     >
       <template slot="actions">
         <x-button
@@ -174,17 +174,8 @@
 
         return result
       },
-      filteredData () {
-        if (!this.searchValue) return this.mergedData
-        return this.mergedData.filter(item => {
-          return this.fields.filter(field => {
-            if (!item[field.name]) return false
-            return item[field.name].toString().toLowerCase().includes(this.searchValue.toLowerCase())
-          }).length
-        })
-      },
       sortedData () {
-        return [...this.filteredData].sort((first, second) => {
+        return [...this.mergedData].sort((first, second) => {
           if (!this.sort.field) return 1
           first = first[this.sort.field] || ''
           second = second[this.sort.field] || ''
@@ -208,6 +199,15 @@
             return (first < second) ? -1 : 1
           }
           return first - second
+        })
+      },
+      searchValueLower() {
+        return this.searchValue.toLowerCase()
+      },
+      filteredData () {
+        if (!this.searchValue) return this.sortedData
+        return this.sortedData.filter(item => {
+          return Object.values(item).find(val => val.toString().toLowerCase().includes(this.searchValueLower))
         })
       },
       fields () {
