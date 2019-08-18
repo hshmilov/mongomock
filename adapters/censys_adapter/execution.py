@@ -51,14 +51,24 @@ class CensysExecutionMixIn(Triggerable):
         if not client_config:
             logger.debug(f'Bad config {client_config}')
             return {'status': 'error', 'message': f'Argument Error: Please specify a valid api_id and api_secret'}
-
-        devices = (list(result)[0] for result in (self.devices.get(internal_axon_id=id_) for id_ in internal_axon_ids))
+        results = dict()
         with CensysConnection(username=client_config[API_ID],
                               password=client_config[API_SECRET],
                               domain_preferred=client_config.get(DOMAIN),
                               free_tier=not client_config.get(IS_PAID_TIER),
                               https_proxy=client_config.get('https_proxy')) as connection:
-            results = dict(self._handle_device(device, connection) for device in devices)
+            for _id in internal_axon_ids:
+                try:
+                    devices = list(self.devices.get(internal_axon_id=_id))
+                    if not devices:
+                        logger.error(f'Error - device with internal axon id {_id} not found! continuing')
+                        results[_id] = {'success': False, 'value': 'No such internal axon id!'}
+                        continue
+                    result_key, result_value = self._handle_device(devices[0], connection)
+                    results[result_key] = result_value
+                except Exception as e:
+                    logger.exception(f'Failed to handle internal axon id {_id}')
+                    results[_id] = {'success': False, 'value': str(e)}
         logger.info('Censys Trigger end.')
         return results
 

@@ -52,9 +52,18 @@ class HaveibeenpwnedExecutionMixIn(Triggerable):
                                       domain_preferred=client_config.get('domain_preferred')) as connection:
             results = {}
             for id_ in internal_axon_ids:
-                user = list(self.users.get(internal_axon_id=id_))[0]
-                internal_axon_id, result = self._handle_user(user, connection)
-                results[internal_axon_id] = result
+                try:
+                    user = list(self.users.get(internal_axon_id=id_))
+                    if not user:
+                        logger.error(f'Error - no such user with internal axon id {id_}, continuing')
+                        results[id_] = {'success': False, 'value': f'Internal axon id {id_} not found'}
+                        continue
+                    user = user[0]
+                    internal_axon_id, result = self._handle_user(user, connection)
+                    results[internal_axon_id] = result
+                except Exception as e:
+                    logger.exception(f'Error handling internal axon id {id_}')
+                    results[id_] = {'success': False, 'value': str(e)}
         logger.info('Haveibeenpwned Trigger end.')
         return results
 

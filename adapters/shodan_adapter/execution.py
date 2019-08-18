@@ -62,9 +62,18 @@ class ShodanExecutionMixIn(Triggerable):
                               https_proxy=client_config.get('https_proxy')) as connection:
             results = {}
             for id_ in internal_axon_ids:
-                device = list(self.devices.get(internal_axon_id=id_))[0]
-                internal_axon_id, result = self._handle_device(device, connection)
-                results[internal_axon_id] = result
+                try:
+                    device = list(self.devices.get(internal_axon_id=id_))
+                    if not device:
+                        logger.error(f'Error - no such device with internal axon id {id_}, continuing')
+                        results[id_] = {'success': False, 'value': f'Internal axon id {id_} not found'}
+                        continue
+                    device = device[0]
+                    internal_axon_id, result = self._handle_device(device, connection)
+                    results[internal_axon_id] = result
+                except Exception as e:
+                    logger.exception(f'Error handling internal axon id {id_}')
+                    results[id_] = {'success': False, 'value': str(e)}
         logger.info('Shodan Trigger end.')
         return results
 
