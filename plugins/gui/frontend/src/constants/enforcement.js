@@ -20,6 +20,9 @@ export const actionsMeta = {
     shodan_enrichment: {
         title: 'Enrich Device Data with Shodan'
     },
+    portnox_enrichment: {
+        title: 'Enrich Device Data with Portnox'
+    },
     censys_enrichment: {
         title: 'Enrich Device Data with Censys'
     },
@@ -92,6 +95,9 @@ export const actionsMeta = {
     create_zendesk_ticket: {
         title: 'Create Zendesk Ticket'
     },
+    create_remedy_ticket: {
+        title: 'Create Remedy Ticket'
+    },
     send_emails: {
         title: 'Send Email'
     },
@@ -156,11 +162,11 @@ export const actionsMeta = {
     },
     create_incident: {
         title: 'Create Incident',
-        items: ['create_service_now_incident', 'create_service_now_incident_per_entity', 'create_jira_incident', 'create_sysaid_incident', 'create_zendesk_ticket']
+        items: ['create_service_now_incident', 'create_service_now_incident_per_entity', 'create_jira_incident', 'create_sysaid_incident', 'create_zendesk_ticket', 'create_remedy_ticket']
     },
     enrich_device_or_user_data: {
         title: 'Enrich Device or User Data',
-        items: ['shodan_enrichment', 'censys_enrichment', 'haveibeenpwned_enrichment']
+        items: ['shodan_enrichment', 'censys_enrichment', 'haveibeenpwned_enrichment', 'portnox_enrichment']
     },
     notify: {
         title: 'Notify',

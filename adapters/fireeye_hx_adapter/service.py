@@ -7,13 +7,14 @@ from axonius.utils.files import get_local_config_file
 from axonius.clients.rest.exception import RESTException
 from fireeye_hx_adapter.connection import FireeyeHxConnection
 from fireeye_hx_adapter import consts
+from axonius.fields import Field
 from axonius.utils.datetime import parse_date
 from axonius.clients.rest.connection import RESTConnection
 
 
 class FireeyeHxAdapter(AdapterBase):
     class MyDeviceAdapter(DeviceAdapter):
-        pass
+        excluded_from_containment = Field(bool, 'Excluded From Containment')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -132,6 +133,8 @@ class FireeyeHxAdapter(AdapterBase):
                         device.domain = domain
                 except Exception:
                     logger.exception(f"Problem getting hostname {device_raw}")
+                device.first_seen = parse_date(device_raw.get('initial_agent_checkin'))
+                device.excluded_from_containment = bool(device_raw.get('excluded_from_containment'))
                 device.time_zone = device_raw.get("timezone")
                 device.set_raw(device_raw)
                 yield device

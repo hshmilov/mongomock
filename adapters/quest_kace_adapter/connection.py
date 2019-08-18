@@ -1,3 +1,4 @@
+import time
 import logging
 
 from axonius.clients.rest.connection import RESTConnection
@@ -34,6 +35,7 @@ class QuestKaceConnection(RESTConnection):
 
     def get_device_list(self):
         offset = 0
+        was_execption = False
         response = self._get(f'api/inventory/machines?paging=limit {DEVICE_PER_PAGE} offset {offset}')
         yield from response['Machines']
         count = response['Count']
@@ -43,8 +45,13 @@ class QuestKaceConnection(RESTConnection):
                 response = self._get(f'api/inventory/machines?shaping=machine all,software standard&'
                                      f'paging=limit {DEVICE_PER_PAGE} offset {offset}')
                 yield from response['Machines']
+                was_execption = False
                 count = response['Count']
                 offset += DEVICE_PER_PAGE
             except Exception:
                 logger.exception(f'Problem at offset {offset}')
-                break
+                if not was_execption:
+                    was_execption = True
+                    time.sleep(5)
+                else:
+                    break

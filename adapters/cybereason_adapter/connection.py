@@ -20,6 +20,18 @@ class CybereasonConnection(RESTConnection):
             self._post('login.html', use_json_in_body=False, use_json_in_response=False,
                        body_params={'username': self._username,
                                     'password': self._password})
+            query_dict = {'filters': [{'fieldName': 'status',
+                                       'operator': 'NotEquals',
+                                       'values': ['Archived']
+                                       }
+                                      ],
+                          'sortingFieldName': 'machineName',
+                          'sortDirection': 'ASC',
+                          'limit': DEVICE_PER_PAGE,
+                          'offset': 0,
+                          'batchId': None
+                          }
+            self._post('rest/sensors/query', body_params=query_dict)
         else:
             raise RESTException('No username or password')
 

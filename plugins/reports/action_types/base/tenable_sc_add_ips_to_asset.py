@@ -71,6 +71,11 @@ class TenableScAddIPsToAsset(ActionTypeBase):
                     'type': 'bool'
                 },
                 {
+                    'name': 'exclude_ipv6',
+                    'title': 'Exclude IPv6',
+                    'type': 'bool'
+                },
+                {
                     'name': 'override_ips',
                     'title': 'Override Current IPs List',
                     'type': 'bool',
@@ -82,7 +87,8 @@ class TenableScAddIPsToAsset(ActionTypeBase):
                 'use_private_ips',
                 'use_public_ips',
                 'use_adapter',
-                'override_ips'
+                'override_ips',
+                'exclude_ipv6'
 
             ],
             'type': 'array'
@@ -98,6 +104,7 @@ class TenableScAddIPsToAsset(ActionTypeBase):
             'use_public_ips': True,
             'use_adapter': True,
             'verify_ssl': False,
+            'exclude_ipv6': False,
             'domain': None,
             'https_proxy': None,
             'username': None,
@@ -115,7 +122,8 @@ class TenableScAddIPsToAsset(ActionTypeBase):
         })
         ips, results = get_ips_from_view(current_result,
                                          self._config['use_public_ips'],
-                                         self._config['use_private_ips'])
+                                         self._config['use_private_ips'],
+                                         self._config.get('exclude_ipv6') or False)
         asset_name = self._config['asset_name']
         create_new_asset = self._config['create_new_asset']
         override = self._config.get('override_ips') or False

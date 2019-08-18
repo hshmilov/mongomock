@@ -76,7 +76,8 @@ class StaticCorrelatorService(CorrelatorBase):
                                 'azure_display_name': '$$adapter.data.azure_display_name',
                                 'last_used_users': '$$adapter.data.last_used_users',
                                 'nessus_no_scan_id': '$$adapter.data.nessus_no_scan_id',
-                                'private_dns_name': '$$adapter.data.private_dns_name'
+                                'private_dns_name': '$$adapter.data.private_dns_name',
+                                'macs_no_ip': '$$adapter.data.macs_no_ip'
                             }
                         }
                     }
@@ -87,7 +88,8 @@ class StaticCorrelatorService(CorrelatorBase):
 
     # pylint: disable=arguments-differ
     def _correlate(self, entities: list, use_markers=False):
-        return self._correlation_engine.correlate(entities, use_markers=use_markers)
+        return self._correlation_engine.correlate(entities, use_markers=use_markers,
+                                                  correlation_config={'correlate_ad_sccm': self._correlate_ad_sccm})
     # pylint: enable=arguments-differ
 
     def _map_correlation(self, entities_to_correlate):

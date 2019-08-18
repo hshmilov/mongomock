@@ -12,7 +12,8 @@ from static_correlator.engine import StaticCorrelatorEngine
 
 
 def correlate(devices):
-    return list(StaticCorrelatorEngine().correlate(devices))
+    return list(StaticCorrelatorEngine().correlate(devices,
+                                                   correlation_config={'correlate_ad_sccm': True}))
 
 
 def test_empty():

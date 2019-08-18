@@ -30,6 +30,15 @@ LEFT JOIN v_GS_OPERATING_SYSTEM on SYS.ResourceID = v_GS_OPERATING_SYSTEM.Resour
 LIMIT_SCCM_QUERY = """
 WHERE DATEDIFF(dd,v_CH_ClientSummary.LastActiveTime,GETDATE())<{0}/24.0;
 """
+
+SCCM_MAIN_QUERY = 'Select * from v_R_SYSTEM'
+
+NICS_QUERY = 'Select MACAddress0, IPAddress0, ResourceID from v_GS_NETWORK_ADAPTER_CONFIGURATION'
+COMPUTER_SYSTEM_QUERY = 'Select ResourceID, Caption0, Model0, SystemType0, NumberOfProcesses0, UserName0, CurrentTimeZone0 from v_GS_COMPUTER_SYSTEM'
+CLIENT_SUMMARY_QUERY = 'Select ResourceID, LastActiveTime from v_CH_ClientSummary'
+OS_DATA_QUERY = 'Select ResourceID, LastBootUpTime0 from v_GS_OPERATING_SYSTEM'
+
+
 QUERY_SOFTWARE = 'Select ResourceID, ProductName0, ProductVersion0 from v_GS_INSTALLED_SOFTWARE'
 QUERY_PATCH = 'Select ResourceID, Description0, FixComments0, InstallDate0, HotFixID0 from v_GS_QUICK_FIX_ENGINEERING'
 QUERY_PROGRAM = 'Select ResourceID, DisplayName0, Version0 from v_GS_ADD_REMOVE_PROGRAMS'

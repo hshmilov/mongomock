@@ -18,6 +18,9 @@ QUERY_AUTORUNS_2 = 'Select * from tblAutorunLoc'
 QUERY_AUTORUNS_3 = 'Select * from tblAutorunUni'
 PROCESSES_QUERY = 'Select * from tblProcesses'
 USERS_GROUPS_QUERY = 'Select * from tblUsersInGroup'
+DISKS_QUERY = 'Select * from tblDiskdrives'
+ENCRYPTION_QUERY = 'Select * from tblEncryptableVolume'
+ERRORS_QUERY = 'Select * from tblErrors'
 LANSWEEPER_TYPE_DICT = {'-1': 'Windows',
                         '0': 'Unknown',
                         '1': 'Network device',
@@ -109,3 +112,32 @@ BAD_TYPES = ['Mouse',
              'Monitor',
              'Projector',
              ]
+ERRORS_TYPES = {0: 'Error',
+                1: 'Access Denied',
+                2: 'RPC Unavailable',
+                3: 'Cannot resolve IP address',
+                4: 'Ping failed',
+                5: 'WMI Service disabled',
+                6: 'SSH Error',
+                7: 'Vmware Error',
+                8: 'LinuxSoftwareError',
+                9: 'LinuxTtyRequired',
+                10: 'LinuxNoSudoRights',
+                11: 'LinuxNotInstalled',
+                12: 'LinuxWrongSudoPassword',
+                13: 'LinuxMacError',
+                14: 'SSHUndefinedCredentials',
+                15: 'SSHGlobalCredentials',
+                16: 'Cannot connect to SSH server.',
+                17: 'Cannot connect to SSH server.',
+                18: 'Scan Incomplete',
+                19: 'VmwareUndefinedCredentials',
+                20: 'Enable SNMP',
+                21: 'No valid credentials found',
+                22: 'Cannot connect to SSH server.',
+                23: 'Unable To Connect.',
+                24: 'No valid powershell credentials.',
+                25: 'Powershell connection failed.',
+                26: 'Powershell stream error.',
+                27: 'Exchange errors'
+                }

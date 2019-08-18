@@ -53,7 +53,7 @@ from axonius.consts.plugin_consts import (ADAPTERS_LIST_LENGTH,
                                           AGGREGATOR_PLUGIN_NAME,
                                           CONFIGURABLE_CONFIGS_COLLECTION,
                                           CORE_UNIQUE_NAME,
-                                          CORRELATE_BY_EMAIL_PREFIX,
+                                          CORRELATE_BY_EMAIL_PREFIX, CORRELATE_AD_SCCM,
                                           CORRELATION_SETTINGS,
                                           GUI_PLUGIN_NAME,
                                           MAX_WORKERS,
@@ -2605,6 +2605,7 @@ class PluginBase(Configurable, Feature):
         self._notify_on_adapters = config[NOTIFICATIONS_SETTINGS].get(NOTIFY_ADAPTERS_FETCH)
         self._adapter_errors_mail_address = config[NOTIFICATIONS_SETTINGS].get(ADAPTERS_ERRORS_MAIL_ADDRESS)
         self._email_prefix_correlation = config[CORRELATION_SETTINGS].get(CORRELATE_BY_EMAIL_PREFIX)
+        self._correlate_ad_sccm = config[CORRELATION_SETTINGS].get(CORRELATE_AD_SCCM, True)
         self._jira_settings = config['jira_settings']
         self._proxy_settings = config[PROXY_SETTINGS]
 
@@ -2957,12 +2958,17 @@ class PluginBase(Configurable, Feature):
                             "name": CORRELATE_BY_EMAIL_PREFIX,
                             "title": "Correlate Users by Email Prefix",
                             "type": "bool"
+                        },
+                        {
+                            'name': CORRELATE_AD_SCCM,
+                            'title': 'Correlate AD-SCCM DistinguishIds',
+                            'type': 'bool'
                         }
                     ],
                     "name": CORRELATION_SETTINGS,
                     "title": "Correlation Settings",
                     "type": "array",
-                    "required": [CORRELATE_BY_EMAIL_PREFIX]
+                    "required": [CORRELATE_BY_EMAIL_PREFIX, CORRELATE_AD_SCCM]
                 },
                 {
                     "items": [
@@ -3035,7 +3041,8 @@ class PluginBase(Configurable, Feature):
                 ADAPTERS_ERRORS_MAIL_ADDRESS: None
             },
             CORRELATION_SETTINGS: {
-                CORRELATE_BY_EMAIL_PREFIX: False
+                CORRELATE_BY_EMAIL_PREFIX: False,
+                CORRELATE_AD_SCCM: True
             },
             AGGREGATION_SETTINGS: {
                 MAX_WORKERS: 20,

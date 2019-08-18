@@ -127,7 +127,11 @@ class ChefAdapter(AdapterBase):
                 device.hostname = (device_raw_automatic.get('cloud') or {}).get(
                     'local_hostname'
                 ) or device_raw_automatic.get('fqdn')
-                device.instance_id = (device_raw_automatic.get('ec2') or {}).get('instance_id')
+                instance_id = (device_raw_automatic.get('ec2') or {}).get('instance_id')
+                if instance_id:
+                    device.cloud_id = instance_id
+                    device.cloud_provider = 'AWS'
+                    device.instance_id = instance_id
                 try:
                     device.last_seen = datetime.datetime.fromtimestamp(device_raw_automatic['ohai_time'])
                 except Exception as e:

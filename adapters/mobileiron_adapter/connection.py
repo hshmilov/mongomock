@@ -6,14 +6,33 @@ from mobileiron_adapter.consts import DEVICE_PER_PAGE, MAX_DEVICES_COUNT
 
 
 class MobileironConnection(RESTConnection):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, is_cloud=False, **kwargs):
         super().__init__(*args, headers={'Content-Type': 'application/json',
                                          'Accept': 'application/json'},
                          **kwargs)
         self.__fetch_apps = False
         self._users_dict = {}
+        self._is_cloud = is_cloud
 
     def _connect(self):
+        if not self._is_cloud:
+            self._connect_core()
+            return
+        self._connect_cloud()
+
+    def _connect_cloud(self):
+        response = self._get('metadata/tenant',
+                             do_basic_auth=True,)
+        if 'result' not in response:
+            raise RESTException(f'Bad Metadata response {response}')
+        self._dm_partition_id = response['result']['defaultDmPartitionId']
+        self._get('device',
+                  do_basic_auth=True,
+                  url_params={'rows': DEVICE_PER_PAGE,
+                              'start': 0,
+                              'dmPartitionId': self._dm_partition_id})
+
+    def _connect_core(self):
         if not self._username or not self._password:
             raise RESTException('No user name or password')
         self._get('ping', do_basic_auth=True)
@@ -34,7 +53,43 @@ class MobileironConnection(RESTConnection):
         except Exception:
             logger.exception(f'Bad users response')
 
-    def get_device_list(self, fetch_apps: bool = True):
+    def get_device_list(self, fetch_apps: bool = True, is_cloud: bool = False):
+        if not is_cloud:
+            yield from self._get_device_list_core(fetch_apps)
+        else:
+            for device_raw in self._get_device_list_cloud():
+                yield device_raw, None
+
+    def _get_device_list_cloud(self):
+        response = self._get('device',
+                             do_basic_auth=True,
+                             url_params={'rows': DEVICE_PER_PAGE,
+                                         'start': 0,
+                                         'dmPartitionId': self._dm_partition_id}
+                             )
+        if not response.get('result') or 'searchResults' not in response['result']:
+            raise RESTException(f'Bad Response: {str(response)[:100]}')
+        yield from response['result']['searchResults']
+        total_count = response['result']['totalCount']
+        start = DEVICE_PER_PAGE
+        while start < min(total_count, MAX_DEVICES_COUNT):
+            try:
+                response = self._get('device',
+                                     do_basic_auth=True,
+                                     url_params={'rows': DEVICE_PER_PAGE,
+                                                 'start': start,
+                                                 'dmPartitionId': self._dm_partition_id}
+                                     )
+                if 'result' not in response or 'searchResults' not in response['result']:
+                    logger.error(f'Bad Response: {str(response)[:300]}')
+                    break
+                yield from response['result']['searchResults']
+                start += DEVICE_PER_PAGE
+            except Exception:
+                logger.exception(f'Problem at start {start}')
+                break
+
+    def _get_device_list_core(self, fetch_apps: bool = True):
         self.__fetch_apps = fetch_apps
         self._device_space_id = self._get('device_spaces/mine')['results'][0]['id']
         self._update_users_dict()

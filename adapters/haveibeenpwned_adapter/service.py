@@ -56,7 +56,8 @@ class HaveibeenpwnedAdapter(HaveibeenpwnedExecutionMixIn, AdapterBase):
     def get_connection(client_config):
         connection = HaveibeenpwnedConnection(verify_ssl=client_config['verify_ssl'],
                                               apikey=client_config.get('apikey'),
-                                              https_proxy=client_config.get('https_proxy'))
+                                              https_proxy=client_config.get('https_proxy'),
+                                              domain_preferred=client_config.get('domain_preferred'))
         return connection
 
     def _connect_client(self, client_config):
@@ -86,6 +87,12 @@ class HaveibeenpwnedAdapter(HaveibeenpwnedExecutionMixIn, AdapterBase):
         """
         return {
             'items': [
+                {
+                    'name': 'domain_preferred',
+                    'title': 'Have I Been Pwned Domain',
+                    'type': 'string',
+                    'default': HAVEIBEENPWNED_DOMAIN
+                },
                 {
                     'name': 'apikey',
                     'title': 'API Key',

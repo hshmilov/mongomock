@@ -6,13 +6,14 @@ from axonius.adapter_exceptions import ClientConnectionException, ParseDevicesEr
 
 class NexposeClient(abc.ABC):
 
-    def __init__(self, num_of_simultaneous_devices, host, port, username, password, verify_ssl):
+    def __init__(self, num_of_simultaneous_devices, host, port, username, password, verify_ssl, token=None):
         self.host = host
         self.port = port
         self.username = username
         self.password = password
         self.num_of_simultaneous_devices = num_of_simultaneous_devices
         self.verify_ssl = verify_ssl
+        self._token = token
         if not self._does_api_exist():
             raise ClientConnectionException("API Does not Exist.")
         super().__init__()

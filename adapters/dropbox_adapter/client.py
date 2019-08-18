@@ -18,7 +18,7 @@ class DropboxConnection(RESTConnection):
             token_type = 'Bearer'
             self._session_headers = {'Authorization': f'{token_type} {self.token}', 'Cache-Control': 'no-cache'}
             try:
-                self._post(name='2/team/get_info')
+                self._post(name='2/team/devices/list_members_devices')
             except Exception:
                 logger.exception(f'There was an exception making post request for list member devices')
                 raise RESTException('Was unable to get the list of member devices and connect to Dropbox')

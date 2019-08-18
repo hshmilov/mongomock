@@ -232,6 +232,7 @@ class SentineloneAdapter(AdapterBase):
                 logger.warning(f'Bad device with no id {device_raw}')
                 return None
             device.id = device_id + computer_name
+            device.uuid = device_raw.get('uuid')
             device.basic_device_id = device_id
             device.add_agent_version(agent=AGENT_NAMES.sentinelone, version=device_raw.get('agentVersion'))
             try:

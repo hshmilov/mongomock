@@ -1,3 +1,4 @@
+import datetime
 import logging
 
 from axonius.adapter_base import AdapterBase, AdapterProperty
@@ -6,6 +7,7 @@ from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.connection import RESTException
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.fields import Field
+from axonius.utils.datetime import parse_date
 from axonius.utils.files import get_local_config_file
 from bluecat_adapter.connection import BluecatConnection
 from bluecat_adapter.client_id import get_client_id
@@ -19,6 +21,8 @@ class BluecatAdapter(AdapterBase):
         device_comments = Field(str, 'Device Comments')
         location_code = Field(str, 'Location Code')
         vendor_class_identifier = Field(str, 'Vendor Class Identifier')
+        lease_time = Field(datetime.datetime, 'Lease Time')
+        expiry_time = Field(datetime.datetime, 'Expiry Time')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -131,6 +135,10 @@ class BluecatAdapter(AdapterBase):
                                 device.location_code = property_raw[1]
                             elif property_raw[0] == 'vendorClassIdentifier':
                                 device.vendor_class_identifier = property_raw[1]
+                            elif property_raw[0] == 'expiryTime':
+                                device.expiry_time = parse_date(property_raw[1])
+                            elif property_raw[0] == 'leaseTime':
+                                device.lease_time = parse_date(property_raw[1])
                     if mac or ips:
                         device.add_nic(mac, ips)
                 except Exception:

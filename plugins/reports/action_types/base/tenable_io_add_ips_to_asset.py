@@ -76,7 +76,12 @@ class TenableIoAddIPsToTargetGroup(ActionTypeBase):
                     'name': 'override_ips',
                     'title': 'Override Current IPs List',
                     'type': 'bool',
-                }
+                },
+                {
+                    'name': 'exclude_ipv6',
+                    'title': 'Exclude IPv6',
+                    'type': 'bool'
+                },
             ],
             'required': [
                 'target_group_name',
@@ -84,6 +89,7 @@ class TenableIoAddIPsToTargetGroup(ActionTypeBase):
                 'use_private_ips',
                 'use_public_ips',
                 'use_adapter',
+                'exclude_ipv6',
                 'override_ips'
 
             ],
@@ -96,6 +102,7 @@ class TenableIoAddIPsToTargetGroup(ActionTypeBase):
         return add_node_default({
             'target_group_name': None,
             'create_new_asset': False,
+            'exclude_ipv6': False,
             'use_private_ips': True,
             'use_public_ips': True,
             'access_key': None,
@@ -116,7 +123,8 @@ class TenableIoAddIPsToTargetGroup(ActionTypeBase):
         })
         ips, results = get_ips_from_view(current_result,
                                          self._config['use_public_ips'],
-                                         self._config['use_private_ips'])
+                                         self._config['use_private_ips'],
+                                         self._config.get('exclude_ipv6') or False)
         target_group_name = self._config['target_group_name']
         create_new_asset = self._config['create_new_asset']
         override = self._config.get('override_ips') or False

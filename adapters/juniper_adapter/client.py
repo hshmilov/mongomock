@@ -19,8 +19,8 @@ class JuniperClient:
         self.test_connection()
 
     def test_connection(self):
+        self.space_rest_client.login()
         try:
-            self.space_rest_client.login()
             devices = self.space_rest_client.device_management.devices.get(
                 filter_={'connectionStatus': 'up'})
         finally:

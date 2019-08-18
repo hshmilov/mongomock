@@ -5,7 +5,7 @@ from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.mssql.connection import MSSQLConnection
 from axonius.devices.ad_entity import ADEntity
-from axonius.devices.device_adapter import DeviceAdapter
+from axonius.devices.device_adapter import DeviceAdapter, AGENT_NAMES
 from axonius.fields import Field, ListField
 from axonius.mixins.configurable import Configurable
 from axonius.smart_json_class import SmartJsonClass
@@ -121,8 +121,49 @@ class SccmAdapter(AdapterBase, Configurable):
 
     def _query_devices_by_client(self, client_name, client_data):
         client_data.set_devices_paging(self.__devices_fetched_at_a_time)
-        try:
-            client_data.connect()
+        with client_data:
+
+            nics_dict = dict()
+            try:
+                for nic_data in client_data.query(consts.NICS_QUERY):
+                    asset_id = nic_data.get('ResourceID')
+                    if not asset_id:
+                        continue
+                    if asset_id not in nics_dict:
+                        nics_dict[asset_id] = []
+                    nics_dict[asset_id].append(nic_data)
+            except Exception:
+                logger.exception(f'Problem getting nics dict')
+
+            clients_dict = dict()
+            try:
+                for clients_data in client_data.query(consts.CLIENT_SUMMARY_QUERY):
+                    asset_id = clients_data.get('ResourceID')
+                    if not asset_id:
+                        continue
+                    clients_dict[asset_id] = clients_data
+            except Exception:
+                logger.exception(f'Problem getting clietns data')
+
+            os_dict = dict()
+            try:
+                for os_data in client_data.query(consts.OS_DATA_QUERY):
+                    asset_id = os_data.get('ResourceID')
+                    if not asset_id:
+                        continue
+                    os_dict[asset_id] = os_data
+            except Exception:
+                logger.exception(f'Problem getting os data')
+
+            computer_dict = dict()
+            try:
+                for computer_data in client_data.query(consts.COMPUTER_SYSTEM_QUERY):
+                    asset_id = computer_data.get('ResourceID')
+                    if not asset_id:
+                        continue
+                    computer_dict[asset_id] = computer_data
+            except Exception:
+                logger.exception(f'Problem getting computer data')
 
             tpm_dict = dict()
             try:
@@ -277,20 +318,11 @@ class SccmAdapter(AdapterBase, Configurable):
             except Exception:
                 logger.exception(f'Problem getting query bios')
 
-            if not self._last_seen_timedelta:
-                for device_raw in client_data.query(consts.SCCM_QUERY.format('')):
-                    yield device_raw, client_data.server, asset_software_dict, asset_patch_dict, asset_program_dict, \
-                        asset_bios_dict, asset_users_dict, asset_top_dict, asset_malware_dict, \
-                        asset_lenovo_dict, asset_chasis_dict, asset_encryption_dict,\
-                        asset_vm_dict, owner_dict, tpm_dict
-            else:
-                for device_raw in client_data.query(consts.SCCM_QUERY.format(consts.LIMIT_SCCM_QUERY.format(self._last_seen_timedelta.total_seconds() / 3600))):
-                    yield device_raw, client_data.server, asset_software_dict, asset_patch_dict, asset_program_dict, asset_bios_dict, \
-                        asset_users_dict, asset_top_dict, asset_malware_dict, \
-                        asset_lenovo_dict, asset_chasis_dict, asset_encryption_dict,\
-                        asset_vm_dict, owner_dict, tpm_dict
-        finally:
-            client_data.logout()
+            for device_raw in client_data.query(consts.SCCM_MAIN_QUERY):
+                yield device_raw, client_data.server, asset_software_dict, asset_patch_dict, asset_program_dict, \
+                    asset_bios_dict, asset_users_dict, asset_top_dict, asset_malware_dict, \
+                    asset_lenovo_dict, asset_chasis_dict, asset_encryption_dict,\
+                    asset_vm_dict, owner_dict, tpm_dict, computer_dict, clients_dict, os_dict, nics_dict
 
     def _clients_schema(self):
         return {
@@ -321,7 +353,10 @@ class SccmAdapter(AdapterBase, Configurable):
             asset_encryption_dict,
             asset_vm_dict,
             owner_dict,
-            tpm_dict
+            tpm_dict,
+            computer_dict,
+            clients_dict,
+            os_dict, nics_dict
         ) in devices_raw_data:
             try:
                 device_id = device_raw.get('Distinguished_Name0')
@@ -335,6 +370,12 @@ class SccmAdapter(AdapterBase, Configurable):
                 device = self._new_device_adapter()
                 device.id = device_id
                 device.sccm_server = sccm_server
+                os_data = os_dict.get(device_raw.get('ResourceID'))
+                if not isinstance(os_data, dict):
+                    os_data = {}
+                computer_data = computer_dict.get(device_raw.get('ResourceID'))
+                if not isinstance(computer_data, dict):
+                    computer_data = {}
                 try:
                     users_raw = asset_users_dict.get(device_raw.get('ResourceID'))
                     if users_raw and isinstance(users_raw, list):
@@ -363,14 +404,17 @@ class SccmAdapter(AdapterBase, Configurable):
                 device.resource_id = str(device_raw.get('ResourceID'))
                 device.organizational_unit = get_organizational_units_from_dn(device_id)
                 domain = device_raw.get('Full_Domain_Name0')
+                device.add_agent_version(version=device_raw.get('Client_Version0'),
+                                         agent=AGENT_NAMES.sccm)
                 device.hostname = device_raw.get('Netbios_Name0')
                 if domain and device_raw.get('Netbios_Name0'):
                     device.hostname += '.' + domain
                     device.part_of_domain = True
                     device.domain = domain
                 device.figure_os(
-                    (device_raw.get('Caption0') or '') + (device_raw.get("Operating_System_Name_and0") or '')
+                    (computer_data.get('Caption0') or '') + (device_raw.get("Operating_System_Name_and0") or '')
                 )
+
                 mac_total = []
                 ips_total = []
                 for nic in (device_raw.get('Network Interfaces') or '').split(';'):
@@ -437,7 +481,7 @@ class SccmAdapter(AdapterBase, Configurable):
                         device.device_manufacturer = device_manufacturer
                 except Exception:
                     logger.exception(f'Problem getting bios data dor {device_raw}')
-                device.sccm_type = device_raw.get('SystemType0')
+                device.sccm_type = computer_data.get('SystemType0')
                 product_type_dict = {'1': 'WORKSTATION', '2': 'DOMAIN CONTROLLER', '3': 'SERVER'}
                 device.sccm_product_type = product_type_dict.get(str(device_raw.get('ProductType0')))
                 try:
@@ -446,6 +490,31 @@ class SccmAdapter(AdapterBase, Configurable):
                         device.top_user = top_data.get('TopConsoleUser0')
                 except Exception:
                     logger.exception(f'Problem getting top user data dor {device_raw}')
+
+                try:
+                    if isinstance(nics_dict.get(device_raw.get('ResourceID')), list):
+                        for nic_data in nics_dict.get(device_raw.get('ResourceID')):
+                            try:
+                                mac = nic_data.get('MACAddress0')
+                                ips = nic_data.get('IPAddress0')
+                                if mac:
+                                    mac = mac.strip()
+                                else:
+                                    mac = None
+                                if ips:
+                                    ips = [ip.strip() for ip in ips.split(',')]
+                                else:
+                                    ips = []
+                                if self.__exclude_ipv6:
+                                    ips = [ip for ip in ips if not is_valid_ipv6(ip)]
+                                if ips:
+                                    device.add_nic(mac, ips)
+                                elif mac:
+                                    device.macs_no_ip.append(mac)
+                            except Exception:
+                                logger.exception(f'Problem with nic data {nic_data}')
+                except Exception:
+                    logger.exception(f'Problem getting vm data dor {device_raw}')
 
                 try:
                     if isinstance(asset_vm_dict.get(device_raw.get('ResourceID')), list):
@@ -486,6 +555,14 @@ class SccmAdapter(AdapterBase, Configurable):
                         device.purpose = owner_data.get('Purpose00')
                 except Exception:
                     logger.exception(f'Problem getting owner data dor {device_raw}')
+
+                try:
+                    if isinstance(clients_dict.get(device_raw.get('ResourceID')), dict):
+                        client_data = clients_dict.get(device_raw.get('ResourceID'))
+                        device.last_seen = parse_date(client_data.get('LastActiveTime'))
+                except Exception:
+                    logger.exception(f'Problem getting last seen data dor {device_raw}')
+
                 try:
                     if isinstance(asset_chasis_dict.get(device_raw.get('ResourceID')), dict):
                         chasis_data = asset_chasis_dict.get(device_raw.get('ResourceID'))
@@ -511,25 +588,20 @@ class SccmAdapter(AdapterBase, Configurable):
                     logger.exception(f'Problem getting malware data dor {device_raw}')
                 try:
                     if not device_manufacturer or 'LENOVO' not in device_manufacturer.upper():
-                        device.device_model = device_raw.get('Model0')
+                        device.device_model = computer_data.get('Model0')
                     elif isinstance(asset_lenovo_dict.get(device_raw.get('ResourceID')), dict):
                         device.device_model = asset_lenovo_dict.get(device_raw.get('ResourceID')).get('Version0')
                 except Exception:
                     logger.exception(f'Problem getting model for {device_raw}')
-                processes = device_raw.get('NumberOfProcesses0')
+                processes = computer_data.get('NumberOfProcesses0')
                 device.number_of_processes = int(processes) if processes else None
-                processors = device_raw.get('NumberOfProcessors0')
+                processors = computer_data.get('NumberOfProcessors0')
                 device.total_number_of_physical_processors = int(processors) if processors else None
-                device.current_logged_user = device_raw.get('UserName0') or device_raw.get('User_Name0')
-                device.time_zone = device_raw.get('CurrentTimeZone0')
-                if device_raw.get('LastBootUpTime0'):
-                    device.set_boot_time(boot_time=device_raw.get('LastBootUpTime0'))
-                last_seen = device_raw.get('Last Seen')
-                try:
-                    if last_seen:
-                        device.last_seen = parse_date(last_seen)
-                except Exception:
-                    logger.exception(f'Can not parse last seen {last_seen}')
+                device.current_logged_user = computer_data.get('UserName0') or device_raw.get('User_Name0')
+                device.time_zone = computer_data.get('CurrentTimeZone0')
+                if os_data.get('LastBootUpTime0'):
+                    device.set_boot_time(boot_time=os_data.get('LastBootUpTime0'))
+
                 try:
                     if isinstance(asset_software_dict.get(device_raw.get('ResourceID')), list):
                         for asset_data in asset_software_dict.get(device_raw.get('ResourceID')):

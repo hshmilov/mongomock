@@ -76,6 +76,7 @@ DOCKER_PORTS = {
     'cloudflare-adapter':               5880,
     'selenium-vnc':                     5900,
     'lansweeper-adapter':               5907,
+    'portnox':                          5908,
     'cynet-adapter':                    5910,
     'illusive-adapter':                 5911,
     'nmap-adapter':                     5920,
@@ -178,6 +179,9 @@ DOCKER_PORTS = {
     'f5-icontrol-adapter':              9973,
     'druva-adapter':                    9974,
     'symantec-12-adapter':              9975,
+    'kaspersky-sc-adapter':             9976,
+    'automox-adapter':                  9977,
+    'signalsciences-adapter':           9978,
     'mongo':                            27017,
     'mockingbird-db':                   28017
 }

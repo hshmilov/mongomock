@@ -3,7 +3,7 @@ import logging
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.mssql.connection import MSSQLConnection
-from axonius.devices.device_adapter import DeviceAdapter
+from axonius.devices.device_adapter import DeviceAdapter, AGENT_NAMES
 from axonius.fields import Field
 from axonius.mixins.configurable import Configurable
 from axonius.utils.datetime import parse_date
@@ -104,7 +104,7 @@ class Symantec12Adapter(AdapterBase, Configurable):
                     continue
                 device.id = str(device_id) + '_' + device_raw.get('MACHINE_NAME')
                 device.hostname = device_raw.get('MACHINE_NAME')
-                device.agent_version = device_raw.get('VERSION_BUILD')
+                device.add_agent_version(agent=AGENT_NAMES.symantec_12, version=device_raw.get('VERSION_BUILD'))
                 device.last_seen = parse_date(device_raw.get('LASTRUNGMT'))
                 device.agent_type = device_raw.get('AGENTTYPE')
                 device.set_raw(device_raw)

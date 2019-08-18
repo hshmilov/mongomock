@@ -99,7 +99,13 @@ class NexposeAdapter(ScannerAdapterBase, Configurable):
                     "name": VERIFY_SSL,
                     "title": "Verify SSL",
                     "type": "bool"
-                }
+                },
+                {
+                    'name': 'token',
+                    'title': 'Token (for 2FA only)',
+                    'type': 'string',
+                    'format': 'password'
+                },
             ],
             "required": [
                 NEXPOSE_HOST,

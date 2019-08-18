@@ -52,8 +52,11 @@ class CybereasonAdapter(AdapterBase):
         try:
             return self.get_connection(client_config)
         except RESTException as e:
+            err_msg = str(e)
+            if 'HTTP Status 403 - Forbidden' in str(e):
+                err_msg = 'HTTP Status 403 - Forbidden'
             message = 'Error connecting to client with domain {0}, reason: {1}'.format(
-                client_config['domain'], str(e))
+                client_config['domain'], err_msg)
             logger.exception(message)
             raise ClientConnectionException(message)
 

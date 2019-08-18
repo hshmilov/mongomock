@@ -3,13 +3,17 @@ from datetime import datetime
 import duo_client
 
 from axonius.users.user_adapter import UserAdapter
-
-logger = logging.getLogger(f'axonius.{__name__}')
-
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.utils.files import get_local_config_file
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
+
+
+logger = logging.getLogger(f'axonius.{__name__}')
+
+
+USERS_PER_PAGE = 100
+MAX_USERS = 1000000
 
 
 class DuoAdapter(AdapterBase):
@@ -40,7 +44,19 @@ class DuoAdapter(AdapterBase):
             raise ClientConnectionException(str(e))
 
     def _query_users_by_client(self, client_name, session):
-        return session.get_users()
+        offset = 0
+        yield from session.get_users(limit=USERS_PER_PAGE, offset=offset)
+        offset += USERS_PER_PAGE
+        while offset < MAX_USERS:
+            try:
+                response = session.get_users(limit=USERS_PER_PAGE, offset=offset)
+                if not response:
+                    break
+                yield from response
+                offset += USERS_PER_PAGE
+            except Exception:
+                logger.exception(f'Problem with offset {offset}')
+                break
 
     def _clients_schema(self):
         return {

@@ -6,7 +6,7 @@ from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.connection import RESTException
 from axonius.utils.datetime import parse_date
-from axonius.fields import Field
+from axonius.fields import Field, ListField
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.utils.files import get_local_config_file
 from librenms_adapter.connection import LibrenmsConnection
@@ -22,6 +22,8 @@ class LibrenmsAdapter(AdapterBase):
         location = Field(str, 'Location')
         notes = Field(str, 'Notes')
         hardware = Field(str, 'Hardware')
+        fdb_macs = ListField(str, 'Fdb Macs')
+        associated_ips = ListField(str, 'Associated IPs')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -106,6 +108,7 @@ class LibrenmsAdapter(AdapterBase):
             'type': 'array'
         }
 
+    # pylint: disable=too-many-branches, too-many-statements, too-many-locals, too-many-nested-blocks
     def _create_device(self, device_raw):
         try:
             device = self._new_device_adapter()
@@ -116,29 +119,51 @@ class LibrenmsAdapter(AdapterBase):
             device.id = str(device_id) + '_' + (device_raw.get('hostname') or '')
             device.hostname = device_raw.get('hostname')
             device.device_serial = device_raw.get('serial')
-            device.figure_os(device_raw.get('os'))
+            device.figure_os((device_raw.get('os') or '') + ' ' + (device_raw.get('sysDescr') or ''))
             device.icon = device_raw.get('icon')
             device.location = device_raw.get('location')
             device.notes = device_raw.get('notes')
             device.description = device_raw.get('sysDescr')
             device.hardware = device_raw.get('hardware')
+            macs = set()
             mac = device_raw.get('mac')
-            if not mac:
-                mac = None
-            ips = []
+            if mac:
+                macs.add(mac)
+            ips = set()
             if device_raw.get('ipv4') and isinstance(device_raw.get('ipv4'), str):
-                ips.extend(device_raw.get('ipv4').split(','))
+                ips.union(device_raw.get('ipv4').split(','))
             if device_raw.get('ipv6') and isinstance(device_raw.get('ipv6'), str):
-                ips.extend(device_raw.get('ipv6').split(','))
+                ips.union(device_raw.get('ipv6').split(','))
             if device_raw.get('ip') and isinstance(device_raw.get('ip'), str):
-                ips.extend(device_raw.get('ip').split(','))
-            if not ips:
-                ips = None
+                ips.union(device_raw.get('ip').split(','))
             if device_raw.get('uptime'):
                 device.set_boot_time(uptime=datetime.timedelta(seconds=int(device_raw.get('uptime'))))
             device.last_seen = parse_date(device_raw.get('last_discovered'))
+            try:
+                fdb_data = (device_raw.get('fdb_raw') or {}).get('ports_fdb')
+                if not isinstance(fdb_data, list):
+                    fdb_data = []
+                for mac_raw in fdb_data:
+                    if mac_raw.get('mac_address'):
+                        device.fdb_macs.append(mac_raw.get('mac_address'))
+            except Exception:
+                logger.exception('Problem getting more macs')
+            try:
+                ips_data = (device_raw.get('ip_raw') or {}).get('addresses')
+                if not isinstance(ips_data, list):
+                    ips_data = []
+                for ip_raw in ips_data:
+                    if ip_raw.get('ipv4_address'):
+                        device.associated_ips.append(ip_raw.get('ipv4_address'))
+                    elif ip_raw.get('ipv6_address'):
+                        device.associated_ips.append(ip_raw.get('ipv6_address'))
+            except Exception:
+                logger.exception('Problem getting more ips')
+
+            ips = list(ips)
+            macs = list(macs)
             if mac or ips:
-                device.add_nic(mac=mac, ips=ips)
+                device.add_ips_and_macs(macs=macs, ips=ips)
 
             device.set_raw(device_raw)
             return device

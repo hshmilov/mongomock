@@ -1,12 +1,13 @@
 import ipaddress
 import logging
 
+from axonius.utils.parsing import is_valid_ipv6
 from axonius.types.enforcement_classes import EntityResult
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
-def get_ips_from_view(current_result, fetch_public_ips, fetch_private_ips):
+def get_ips_from_view(current_result, fetch_public_ips, fetch_private_ips, exclude_ipv6=False):
     ips = set()
     results = []
     # pylint: disable=R1702
@@ -18,6 +19,8 @@ def get_ips_from_view(current_result, fetch_public_ips, fetch_private_ips):
                     for nic in adapter_data.get('network_interfaces'):
                         if isinstance(nic.get('ips'), list):
                             for ip in nic.get('ips'):
+                                if exclude_ipv6 and is_valid_ipv6(ip):
+                                    continue
                                 is_private = ipaddress.ip_address(ip).is_private
                                 if fetch_private_ips and is_private:
                                     ips.add(ip)

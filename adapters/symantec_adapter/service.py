@@ -23,6 +23,8 @@ class SymantecAdapter(AdapterBase):
         online_status = Field(str, 'Online Status')
         cids_defset_version = Field(str, 'Definition Set Version')
         last_scan_date = Field(datetime.datetime, 'Last Scan Date')
+        is_npvdi_client = Field(bool, 'Is Npvdi Client')
+        install_type = Field(str, 'Install Type')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -184,6 +186,9 @@ class SymantecAdapter(AdapterBase):
                 except Exception:
                     logger.exception(f'Problem adding user to {device_raw}')
                 device.cids_defset_version = device_raw.get('cidsDefsetVersion')
+                if isinstance(device_raw.get('isNpvdiClient'), int):
+                    device.is_npvdi_client = device_raw.get('isNpvdiClient') == 1
+                device.install_type = device_raw.get('installType')
                 try:
                     if isinstance(device_raw.get('lastScanTime'), int):
                         device.last_scan_date = datetime.datetime.fromtimestamp(device_raw.get('lastScanTime') / 1000)

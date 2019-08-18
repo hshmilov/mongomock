@@ -2,7 +2,9 @@ import logging
 
 from axonius.consts.plugin_consts import HAVEIBEENPWNED_PLUGIN_NAME
 from axonius.types.enforcement_classes import EntitiesResult, EntityResult
+from axonius.clients.haveibeenpwned.consts import HAVEIBEENPWNED_DOMAIN
 from reports.action_types.action_type_base import ActionTypeBase, generic_fail, add_node_selection, add_node_default
+
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -20,6 +22,12 @@ class HaveibeenpwnedEnrichment(ActionTypeBase):
     def config_schema() -> dict:
         schema = {
             'items': [
+                {
+                    'name': 'domain_preferred',
+                    'title': 'Have I Been Pwned Domain',
+                    'type': 'string',
+                    'default': HAVEIBEENPWNED_DOMAIN
+                },
                 {
                     'name': 'apikey',
                     'title': 'API Key',

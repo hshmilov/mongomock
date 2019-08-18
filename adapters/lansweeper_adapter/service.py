@@ -5,11 +5,12 @@ from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.mssql.connection import MSSQLConnection
 from axonius.clients.rest.connection import RESTConnection
+from axonius.fields import Field, ListField
 from axonius.devices.device_adapter import DeviceAdapter, AGENT_NAMES
-from axonius.fields import Field
 from axonius.devices.device_adapter import RegistryInfomation
 from axonius.mixins.configurable import Configurable
 from axonius.utils.datetime import parse_date
+from axonius.smart_json_class import SmartJsonClass
 from axonius.utils.files import get_local_config_file
 from axonius.utils.parsing import get_exception_string, is_domain_valid
 from lansweeper_adapter import consts
@@ -18,12 +19,21 @@ from lansweeper_adapter.client_id import get_client_id
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
+class LansweeprError(SmartJsonClass):
+    error_type = Field(str, 'Error Type')
+    error_text = Field(str, 'Error Text')
+
+
 class LansweeperAdapter(AdapterBase, Configurable):
     # pylint: disable=R0902
     class MyDeviceAdapter(DeviceAdapter):
         last_active_scan = Field(datetime.datetime, 'Last Active Scan')
         lsat_ls_agent = Field(datetime.datetime, 'Last Ls Agent')
         lansweeper_type = Field(str, 'Lansweeper Type')
+        errors_data = ListField(LansweeprError, 'Errors Data')
+        last_triggered = Field(datetime.datetime, 'Last Triggered')
+        last_scan_fallback = Field(datetime.datetime, 'Last Scan Fallback')
+        last_performance_scan = Field(datetime.datetime, 'Last Performance Scan')
 
         def add_registry_information(self, **kwargs):
             self.registry_information.append(RegistryInfomation(**kwargs))
@@ -69,6 +79,40 @@ class LansweeperAdapter(AdapterBase, Configurable):
     def _query_devices_by_client(self, client_name, client_data):
         client_data.set_devices_paging(self.__devices_fetched_at_a_time)
         with client_data:
+            errors_dict = dict()
+            try:
+                for errors_data in client_data.query(consts.ERRORS_QUERY):
+                    asset_id = errors_data.get('AssetID')
+                    if not asset_id:
+                        continue
+                    if asset_id not in errors_dict:
+                        errors_dict[asset_id] = []
+                    errors_dict[asset_id].append(errors_data)
+            except Exception:
+                logger.exception(f'Problem getting errors')
+
+            encryption_dict = dict()
+            try:
+                for encryption_data in client_data.query(consts.ENCRYPTION_QUERY):
+                    asset_id = encryption_data.get('AssetID')
+                    if not asset_id:
+                        continue
+                    if asset_id not in encryption_dict:
+                        encryption_dict[asset_id] = []
+                    encryption_dict[asset_id].append(encryption_data)
+            except Exception:
+                logger.exception(f'Problem getting encryption')
+            disks_dict = dict()
+            try:
+                for disks_data in client_data.query(consts.DISKS_QUERY):
+                    asset_id = disks_data.get('AssetID')
+                    if not asset_id:
+                        continue
+                    if asset_id not in disks_dict:
+                        disks_dict[asset_id] = []
+                    disks_dict[asset_id].append(disks_data)
+            except Exception:
+                logger.exception(f'Problem getting disks')
 
             users_groups_dict = dict()
             try:
@@ -183,7 +227,7 @@ class LansweeperAdapter(AdapterBase, Configurable):
                        hotfix_id_to_hotfix_data_dict,
                        asset_reg_dict, bios_data_dict,
                        asset_autoruns_dict, autoruns_id_to_autoruns_data_dict, autoruns_id_to_autoruns_loc_dict,
-                       asset_processes_dict, users_groups_dict)
+                       asset_processes_dict, users_groups_dict, disks_dict, encryption_dict, errors_dict)
 
     @staticmethod
     def _clients_schema():
@@ -230,7 +274,10 @@ class LansweeperAdapter(AdapterBase, Configurable):
                 autoruns_id_to_autoruns_data_dict,
                 autoruns_id_to_autoruns_loc_dict,
                 asset_processes_dict,
-                users_groups_dict
+                users_groups_dict,
+                disks_dict,
+                encryption_dict,
+                errors_dict
         ) in devices_raw_data:
             try:
                 device = self._new_device_adapter()
@@ -246,6 +293,68 @@ class LansweeperAdapter(AdapterBase, Configurable):
                         device.bios_version = bios_data.get('Version')
                 except Exception:
                     logger.exception(f'Problem parsing bios data for {device_raw}')
+                try:
+                    disks_data = disks_dict.get(device_raw.get('AssetID'))
+                    encryption_data = encryption_dict.get(device_raw.get('AssetID'))
+                    if not encryption_data:
+                        encryption_data = []
+                    if not isinstance(disks_data, list):
+                        disks_data = []
+                    for disk_data in disks_data:
+                        try:
+                            total_size = disk_data.get('Size')
+                            try:
+                                total_size = int(total_size)
+                                total_size = total_size / (1024.0 ** 3)
+                            except Exception:
+                                total_size = None
+                            free_size = disk_data.get('Freespace')
+                            try:
+                                free_size = int(free_size)
+                                free_size = free_size / (1024.0 ** 3)
+                            except Exception:
+                                free_size = None
+                            is_encrypted = None
+                            path = disk_data.get('Caption')
+                            try:
+                                for disk_encryption_data in encryption_data:
+                                    try:
+                                        if isinstance(disk_encryption_data, dict) \
+                                                and disk_encryption_data.get('DriveLetter') == path:
+                                            if int(disk_encryption_data.get('ProtectionStatus')) == 0:
+                                                is_encrypted = False
+                                            if int(disk_encryption_data.get('ProtectionStatus')) == 1:
+                                                is_encrypted = True
+                                    except Exception:
+                                        pass
+                            except Exception:
+                                logger.exception(f'Problem with encryption for {encryption_data}')
+                            device.add_hd(device=disk_data.get('Description'),
+                                          path=path,
+                                          total_size=total_size,
+                                          is_encrypted=is_encrypted,
+                                          free_size=free_size)
+                        except Exception:
+                            logger.exception(f'Problem with disks')
+                except Exception:
+                    logger.exception(f'Problem with users groups for {device_raw}')
+
+                try:
+                    errors_data = errors_dict.get(device_raw.get('AssetID'))
+                    if not isinstance(errors_data, list):
+                        errors_data = []
+                    for error_data in errors_data:
+                        try:
+                            error_type = consts.ERRORS_TYPES.get(int(error_data.get('ErrorType')))
+                            if not error_type:
+                                continue
+                            error_text = error_data.get('ErrorText')
+                            device.errors_data.append(LansweeprError(error_text=error_text,
+                                                                     error_type=error_type))
+                        except Exception:
+                            logger.exception(f'Problem with error data {error_data}')
+                except Exception:
+                    logger.exception(f'Problem with errors data')
                 try:
                     users_groups_data = users_groups_dict.get(device_raw.get('AssetID'))
                     if not isinstance(users_groups_data, list):
@@ -383,6 +492,9 @@ class LansweeperAdapter(AdapterBase, Configurable):
                     device.lsat_ls_agent = parse_date(device_raw.get('LastLsAgent'))
                 except Exception:
                     logger.exception(f'Problem getting last ls agent for {device_raw}')
+                device.last_triggered = parse_date(device_raw.get('Lasttriggered'))
+                device.last_scan_fallback = parse_date(device_raw.get('LastLsFallBack'))
+                device.last_performance_scan = device_raw.get('LastPerformanceScan')
                 try:
                     asset_reg_list = asset_reg_dict.get(device_raw.get('AssetID'))
                     if isinstance(asset_reg_list, list):

@@ -4,7 +4,7 @@ from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.mssql.connection import MSSQLConnection
 from axonius.devices.device_adapter import DeviceAdapter
-from axonius.fields import Field
+from axonius.fields import Field, ListField
 from axonius.mixins.configurable import Configurable
 from axonius.utils.datetime import parse_date
 from axonius.utils.files import get_local_config_file
@@ -17,6 +17,7 @@ logger = logging.getLogger(f'axonius.{__name__}')
 class PromisecAdapter(AdapterBase, Configurable):
     class MyDeviceAdapter(DeviceAdapter):
         threats_found = Field(int, 'Threats Found')
+        alert_names = ListField(str, 'Alert Names')
 
     def __init__(self):
         super().__init__(get_local_config_file(__file__))
@@ -48,11 +49,18 @@ class PromisecAdapter(AdapterBase, Configurable):
 
     def _query_devices_by_client(self, client_name, client_data):
         client_data.set_devices_paging(self.__devices_fetched_at_a_time)
-        try:
-            client_data.connect()
-            yield from client_data.query(consts.PROMISEC_QUERY)
-        finally:
-            client_data.logout()
+        with client_data:
+            alerts_dict = dict()
+            try:
+                for alerts_data in client_data.query(consts.ALERTS_QUERY):
+                    asset_id = alerts_data.get('host')
+                    if asset_id not in alerts_dict:
+                        alerts_dict[asset_id] = []
+                    alerts_dict[asset_id].append(alerts_data)
+            except Exception:
+                logger.exception(f'Problem getting alerts')
+            for device_raw in client_data.query(consts.PROMISEC_QUERY):
+                yield device_raw, alerts_dict
 
     def _clients_schema(self):
         return {
@@ -96,9 +104,9 @@ class PromisecAdapter(AdapterBase, Configurable):
             'type': 'array'
         }
 
-    # pylint: disable=too-many-branches
+    # pylint: disable=too-many-branches, too-many-statements, too-many-nested-blocks
     def _parse_raw_data(self, devices_raw_data):
-        for device_raw in devices_raw_data:
+        for device_raw, alerts_dict in devices_raw_data:
             try:
                 device = self._new_device_adapter()
                 device_id = device_raw.get('host_id')
@@ -107,6 +115,17 @@ class PromisecAdapter(AdapterBase, Configurable):
                     continue
                 device.id = str(device_id) + '_' + (device_raw.get('host_name') or '')
                 device.hostname = device_raw.get('host_name')
+                try:
+                    alerts_data = alerts_dict.get('host_id')
+                    if not isinstance(alerts_data, list):
+                        alerts_data = []
+                    for alert_data in alerts_data:
+                        try:
+                            device.alert_names.append(alert_data.get('alert_name'))
+                        except Exception:
+                            logger.exception(f'Problem with alert {alert_data}')
+                except Exception:
+                    logger.exception(f'Problem with alerts {device_raw}')
                 domain = device_raw.get('host_domain')
                 if is_domain_valid(domain):
                     device.domain = domain

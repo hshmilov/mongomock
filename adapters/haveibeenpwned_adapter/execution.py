@@ -48,7 +48,8 @@ class HaveibeenpwnedExecutionMixIn(Triggerable):
             logger.debug(f'Bad config {client_config}')
             return {'status': 'error', 'message': f'Argument Error: Please specify a valid email'}
         with HaveibeenpwnedConnection(verify_ssl=client_config.get('verify_ssl'), apikey=client_config.get('apikey'),
-                                      https_proxy=client_config.get('https_proxy')) as connection:
+                                      https_proxy=client_config.get('https_proxy'),
+                                      domain_preferred=client_config.get('domain_preferred')) as connection:
             results = {}
             for id_ in internal_axon_ids:
                 user = list(self.users.get(internal_axon_id=id_))[0]

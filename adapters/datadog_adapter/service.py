@@ -17,6 +17,7 @@ class DatadogAdapter(AdapterBase):
 
     class MyDeviceAdapter(DeviceAdapter):
         python_version = Field(str, 'Python Version')
+        up_status = Field(bool, 'Up Status')
 
     def __init__(self):
         super().__init__(get_local_config_file(__file__))
@@ -101,6 +102,7 @@ class DatadogAdapter(AdapterBase):
             'type': 'array'
         }
 
+    # pylint: disable=too-many-branches, too-many-statements, too-many-locals, too-many-nested-blocks
     def _parse_raw_data(self, devices_raw_data):
         for device_raw in devices_raw_data:
             try:
@@ -139,6 +141,22 @@ class DatadogAdapter(AdapterBase):
                     os_raw = (platform.get('kernel_name') or '') + ' ' + (platform.get('os') or '') \
                         + ' ' + (platform.get('processor') or '')
                     device.figure_os(os_raw)
+                    try:
+                        device.os.kernel_version = (platform.get('kernel_release') or '') + ' ' +\
+                                                   (platform.get('kernel_version') or '')
+                        nixv = device_raw.get('nixV')
+                        if isinstance(nixv, list) and nixv[0] == 'centos':
+                            device.os.distribution = nixv[0]
+                            try:
+                                version = nixv[1]
+                                major = version.split('.')[0]
+                                minor = version.split('.')[1]
+                                device.os.major = major
+                                device.os.minor = minor
+                            except Exception:
+                                logger.debug(f'Problem with os version')
+                    except Exception:
+                        logger.debug(f'Problem with more os data')
                     device.add_agent_version(agent=AGENT_NAMES.datadog,
                                              version=(device_raw.get('meta') or {}).get('agent_version'))
                 except Exception:
@@ -148,7 +166,7 @@ class DatadogAdapter(AdapterBase):
                 if aws_id:
                     device.cloud_provider = 'AWS'
                     device.cloud_id = aws_id
-
+                device.up_status = bool(device_raw.get('up'))
                 device.set_raw(device_raw)
                 yield device
             except Exception:

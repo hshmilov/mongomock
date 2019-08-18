@@ -2539,7 +2539,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
             'system': self._system_settings,
             'global': {
                 'mail': self._email_settings['enabled'] if self._email_settings else False,
-                'syslog': self._syslog_settings['enabled'] if self._system_settings else False,
+                'syslog': self._syslog_settings['enabled'] if self._syslog_settings else False,
                 'httpsLog': self._https_logs_settings['enabled'] if self._https_logs_settings else False,
                 'jira': self._jira_settings['enabled'] if self._jira_settings else False
             }

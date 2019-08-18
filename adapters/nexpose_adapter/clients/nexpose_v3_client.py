@@ -35,6 +35,11 @@ class NexposeV3Client(NexposeClient):
             aio_req['method'] = 'GET'
             aio_req['url'] = f'https://{self.host}:{self.port}/api/3/assets/{item_id}/{data_type}'
             aio_req['auth'] = (self.username, self.password)
+            headers = None
+            if self._token:
+                headers = {'Token': self._token}
+            if headers:
+                aio_req['headers'] = headers
             aio_req['timeout'] = (5, 30)
 
             if self.verify_ssl is False:
@@ -108,7 +113,7 @@ class NexposeV3Client(NexposeClient):
                     if fetch_vulnerabilities:
                         self._get_async_data(devices, 'vulnerabilities')
                         for item in devices:
-                            for vuln in item.get('vulnerability_details') or []:
+                            for vuln in item.get('vulnerabilities_details') or []:
                                 try:
                                     vuln_id = vuln.get('id')
                                     vuln_details = self.get_vuln_details(vuln_id=vuln_id) or {}
@@ -141,10 +146,14 @@ class NexposeV3Client(NexposeClient):
         if vuln_id in self.vuln_ids_dict:
             return self.vuln_ids_dict[vuln_id]
         try:
+            headers = None
+            if self._token:
+                headers = {'Token': self._token}
             vuln_details = requests.get(f'https://{self.host}:{self.port}/api/3/vulnerabilities/{vuln_id}',
                                         auth=(self.username, self.password),
                                         verify=self.verify_ssl,
-                                        timeout=(5, 300))
+                                        timeout=(5, 300),
+                                        headers=headers)
             self.vuln_ids_dict[vuln_id] = vuln_details.json()
             return self.vuln_ids_dict[vuln_id]
         except Exception:
@@ -154,10 +163,14 @@ class NexposeV3Client(NexposeClient):
         try:
             device_id = device.get('id')
             device_vulns = []
+            headers = None
+            if self._token:
+                headers = {'Token': self._token}
             vulnerabilities = requests.get(f'https://{self.host}:{self.port}/api/3/assets/{device_id}/vulnerabilities',
                                            auth=(self.username, self.password),
                                            verify=self.verify_ssl,
-                                           timeout=(5, 300))
+                                           timeout=(5, 300),
+                                           headers=headers)
             vulnerabilities = vulnerabilities.json()
             for vuln in vulnerabilities.get('resources') or []:
                 try:
@@ -182,9 +195,12 @@ class NexposeV3Client(NexposeClient):
             return f'https://{self.host}:{self.port}/api/3/{resource}'
 
         try:
+            headers = None
+            if self._token:
+                headers = {'Token': self._token}
             response = requests.get(_parse_dedicated_url(resource), params=params,
                                     auth=(self.username, self.password), verify=self.verify_ssl,
-                                    timeout=(5, 300))
+                                    timeout=(5, 300), headers=headers)
             response.raise_for_status()
             response = response.json()
         except requests.HTTPError as e:

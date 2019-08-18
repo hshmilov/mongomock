@@ -60,6 +60,7 @@ class BluecatConnection(RESTConnection):
             self._refresh_token()
         # pylint: disable=R1702
         networks_ids = list(networks_ids)
+        logger.info(f'Got {len(networks_ids)} networks')
         for network_id in networks_ids:
             try:
                 if (datetime.datetime.now() - self._token_time) > datetime.timedelta(minutes=5):

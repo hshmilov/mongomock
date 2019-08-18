@@ -14,10 +14,23 @@ logger = logging.getLogger(f'axonius.{__name__}')
 
 class CensysConnection(RESTConnection):
     def __init__(self, *args, domain_preferred=None, free_tier=False, search_type=None, **kwargs):
+        self._internal_censys = domain_preferred and ';' in domain_preferred
+        self._auth_url = None
+        if self._internal_censys:
+            domain_preferred, self._auth_url = domain_preferred.split(';')[0], domain_preferred.split(';')[1]
         super().__init__(*args, domain=domain_preferred or 'censys.io',
                          headers={'Content-Type': 'application/json',
                                   'Accept': 'application/json'},
                          **kwargs)
+        if self._internal_censys:
+            if len(self._username.split(';')) > 1:
+                self._username, self._app_id = self._username.split(';')[0], self._username.split(';')[1]
+            else:
+                self._app_id = ''
+            if len(self._password.split(';')) > 1:
+                self._password, self._app_secret = self._password.split(';')[0], self._password.split(';')[1]
+            else:
+                self._app_secret = ''
         self.free_tier = free_tier
         self.search_type = search_type
         self._session_refresh = None
@@ -34,10 +47,10 @@ class CensysConnection(RESTConnection):
         self._session_headers = {'Content-Type': 'application/x-www-form-urlencoded',
                                  'Accept': 'application/json'}
 
-        response = self._post('',
-                              body_params={'grant_type': 'password',
-                                           'username': self._username,
-                                           'password': self._password},
+        response = self._post(self._auth_url,
+                              force_full_url=True,
+                              body_params=f'grant_type=password&username={self._app_id}&password={self._app_secret}',
+                              use_json_in_body=False,
                               do_basic_auth=True)
         try:
             access_token = response['access_token']
@@ -63,7 +76,7 @@ class CensysConnection(RESTConnection):
 
         # Do customer-specific internal auth (we need to refactor this ASAP...)
         account_endpoint = 'api/v1/account'
-        if not self._url.lower().startswith('https://censys.io/'):
+        if self._internal_censys:
             self._refresh_token()
             account_endpoint = f'censys/{account_endpoint}'
 
@@ -89,7 +102,7 @@ class CensysConnection(RESTConnection):
             time.sleep(1.5)
         time.sleep(1)
         search_endpoint = f'api/v1/search/{self.search_type}'
-        if not self._url.lower().startswith('https://censys.io/'):
+        if self._internal_censys:
             self._refresh_token()
             search_endpoint = f'censys/{search_endpoint}'
         return self._post(search_endpoint,
@@ -129,7 +142,7 @@ class CensysConnection(RESTConnection):
             time.sleep(1.5)
         time.sleep(1)
         view_endpoint = f'api/v1/view/{self.search_type}/{result_id}'
-        if not self._url.lower().startswith('https://censys.io/'):
+        if self._internal_censys:
             self._refresh_token()
             view_endpoint = f'censys/{view_endpoint}'
         response = self._get(view_endpoint,

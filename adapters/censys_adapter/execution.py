@@ -28,10 +28,10 @@ def get_entity_field_list(device_data, field):
 
 
 class CensysExecutionMixIn(Triggerable):
-    def get_valid_config(self, config):
+    @staticmethod
+    def get_valid_config(config):
         try:
             required_args = ACTION_SCHEMA['required']
-            config = self._prepare_client_config(config)
             if not all(arg in config for arg in required_args):
                 return None
         except Exception:

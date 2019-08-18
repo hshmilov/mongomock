@@ -32,8 +32,10 @@ AGENTS = namedtuple('Agents', (
     'cisco_firepower_management_center', 'cisco_umbrella', 'cloudpassage', 'code42', 'counter_act', 'crowd_strike',
     'cylance', 'datadog', 'desktop_central', 'dropbox', 'druva', 'endgame', 'ensilo', 'epo', 'fireeye_hx',
     'forcepoint_csv', 'imperva_dam', 'jumpcloud', 'kaseya', 'lansweeper', 'minerva', 'mobi_control', 'mobileiron',
-    'observeit', 'opswat', 'paloalto_cortex', 'qualys_scans', 'quest_kace', 'redcloak', 'secdo', 'sentinelone',
-    'sophos', 'symantec', 'symantec_cloud_workload', 'symantec_ee', 'tanium', 'tenable_io', 'tripwire', 'truefort',
+    'observeit', 'opswat', 'paloalto_cortex', 'qualys_scans', 'quest_kace', 'redcloak', 'sccm',
+    'secdo', 'sentinelone', 'signalsciences',
+    'sophos', 'symantec', 'symantec_cloud_workload', 'symantec_ee', 'symantec_12', 'tanium', 'tenable_io', 'tripwire',
+    'truefort',
     'twistlock', 'webroot'
 ))
 
@@ -44,16 +46,18 @@ AGENT_NAMES = AGENTS(
     cisco_umbrella='Cisco Umbrella Agent', cloudpassage='CloudPassage Daemon', code42='Code42 Agent',
     counter_act='CounterACT Agent', crowd_strike='CrowdStrike Agent', cylance='Cylance Agent', datadog='Datadog Agent',
     desktop_central='Desktop Central Agent', dropbox='Dropbox Client', druva='Druva Client', endgame='Endgame Sensor',
-    ensilo='enSilo Agent', epo='McAfee EPO Agemt', fireeye_hx='FireEye HX Agent', forcepoint_csv='Forcepoint Client',
+    ensilo='enSilo Agent', epo='McAfee EPO Agent', fireeye_hx='FireEye HX Agent', forcepoint_csv='Forcepoint Client',
     imperva_dam='Imperva DAM Agent', jumpcloud='JumpCloud Agent', kaseya='Kaseya Agent', lansweeper='Lansweeper Agent',
     minerva='Minerva Labs Agent', mobi_control='MobiControl Agent', mobileiron='MobileIron Client',
     observeit='ObserveIT Client', opswat='OPSWAT Agent', paloalto_cortex='Palo Alto Networks Cortex Agent',
+    sccm='Microsoft SCCM Client',
     qualys_scans='Qualys Agent', quest_kace='Quest Client', redcloak='Redcloak Agent', secdo='Secdo Agent',
-    sentinelone='SentinelOne Agent', sophos='Sophos Agent', symantec='Symantec Agent',
+    sentinelone='SentinelOne Agent', signalsciences='Signalsciences Agent',
+    sophos='Sophos Agent', symantec='Symantec SEP 14 Agent',
     symantec_cloud_workload='Symantec Cloud Agent', symantec_ee='Symantec Endpoint Encryption Agent',
-    tanium='Tanium Agent', tenable_io='Tenable IO Agent',
+    tanium='Tanium Agent', tenable_io='Tenable io Agent',
     tripwire='Tripwire Agent', truefort='TrueFort Agent', twistlock='Twistlock Agent',
-    webroot='Webroot Agent'
+    webroot='Webroot Agent', symantec_12='Symantec SEP 12 Agent'
 )
 
 logger = logging.getLogger(f'axonius.{__name__}')

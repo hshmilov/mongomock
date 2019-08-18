@@ -185,6 +185,8 @@ class JamfAdapter(AdapterBase, Configurable):
                                 device.certificates.append(certificate_obj)
                 except Exception:
                     logger.exception(f'Probelm with certificates')
+                if not general_info.get('name'):
+                    continue
                 device.name = general_info.get('name')
                 try:
                     jamf_location_raw = device_raw.get('location')

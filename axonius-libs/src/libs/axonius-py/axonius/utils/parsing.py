@@ -519,6 +519,8 @@ def parse_versions_raw(version):
     :return:
     """
     try:
+        if not version or not isinstance(version, str):
+            return ''
         version = version.strip()
         # Even if the version is not linux software, the input is formatted as if it were
         # (meaning it has a leading 0) because it may or may not be comparing linux
@@ -753,9 +755,13 @@ def is_alertlogic_adapter(adapter_device):
     return adapter_device.get('plugin_name') == 'alertlogic_adapter'
 
 
+def is_bluecat_adapter(adapter_device):
+    return adapter_device.get('plugin_name') == 'bluecat_adapter'
+
+
 def is_dangerous_asset_names_adapter(adapter_device):
     return is_snow_adapter(adapter_device) or is_lansweerp_dapter(adapter_device) \
-        or is_alertlogic_adapter(adapter_device)
+        or is_alertlogic_adapter(adapter_device) or is_bluecat_adapter(adapter_device)
 
 
 def hostname_not_problematic(adapter_device):
@@ -1075,7 +1081,7 @@ def get_serial(adapter_device):
             and serial.upper().strip().replace(' ', '') not in ['INVALID',
                                                                 '0',
                                                                 'SYSTEMSERIALNUMBER',
-                                                                'DEFAULTSTRING'] \
+                                                                'DEFAULTSTRING', 'NA', 'N/A'] \
             and 'VMWARE' not in serial.upper().strip():
         return serial.upper()
     return None
@@ -1210,8 +1216,10 @@ def have_mac_intersection(adapter_device1, adapter_device2) -> bool:
     :param adapter_device2:
     :return Whether there is at least one mac in both adapter_devices:
     """
-    device1_macs = set(adapter_device1.get(NORMALIZED_MACS) or [])
-    device2_macs = set(adapter_device2.get(NORMALIZED_MACS) or [])
+    device1_macs = set(adapter_device1.get(NORMALIZED_MACS) or []).union(set([normalize_mac(mac_raw)
+                                                                              for mac_raw in (adapter_device1['data'].get('macs_no_ip') or [])]))
+    device2_macs = set(adapter_device2.get(NORMALIZED_MACS) or []).union(set([normalize_mac(mac_raw)
+                                                                              for mac_raw in (adapter_device2['data'].get('macs_no_ip') or [])]))
     return bool(device1_macs.intersection(device2_macs))
 
 

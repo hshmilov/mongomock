@@ -66,7 +66,7 @@ class ProxmoxAdapter(AdapterBase):
                 if resource.get('vmid') and resource.get('type') and resource.get('node'):
                     vm = proxmox.nodes(resource.get('node'))(resource.get('type'))(resource.get('vmid'))
                     yield {'config': vm.config.get(), 'status': vm.status.current.get(),
-                           'type': resource.get('type'), 'node': resource.get('node')}
+                           'type': resource.get('type'), 'node': resource.get('node'), 'vmid': resource.get('vmid')}
             except Exception:
                 logger.exception(f'Problem in resource')
 
@@ -121,10 +121,10 @@ class ProxmoxAdapter(AdapterBase):
             try:
                 device = self._new_device_adapter()
                 device_status = device_raw.get('status')
-                if not device_status.get('vmid'):
+                if not device_raw.get('vmid'):
                     logger.warning(f'Bad device with no ID {device_raw}')
                     continue
-                device.id = device_status.get('vmid') + '_' + device_status.get('name')
+                device.id = str(device_raw.get('vmid')) + '_' + device_status.get('name')
                 device.name = device_status.get('name')
                 device.vm_status = device_status.get('status')
                 device.vm_type = device_raw.get('type')

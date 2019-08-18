@@ -284,6 +284,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
         logger.info('Starting to correlate on Hostname-Domain')
         filtered_adapters_list = filter(get_normalized_hostname_str, filter(get_domain_for_correlation,
                                                                             adapters_to_correlate))
+        filtered_adapters_list = filter(hostname_not_problematic, filtered_adapters_list)
         return self._bucket_correlate(list(filtered_adapters_list),
                                       [get_normalized_hostname_str],
                                       [compare_device_normalized_hostname],
@@ -482,7 +483,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
                                       [get_ad_name_or_azure_display_name],
                                       [compare_ad_name_or_azure_display_name],
                                       [is_from_ad],
-                                      [domain_do_not_contradict],
+                                      [domain_do_not_contradict, hostnames_do_not_contradict],
                                       {'Reason': 'They have the same display name'},
                                       CorrelationReason.StaticAnalysis)
 
@@ -572,7 +573,8 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
         yield from self._correlate_cloud_instances(adapters_to_correlate)
 
         # Find SCCM or Ad adapters with the same ID
-        yield from self._correlate_ad_sccm_id(adapters_to_correlate)
+        if self._correlation_config and self._correlation_config.get('correlate_ad_sccm') is True:
+            yield from self._correlate_ad_sccm_id(adapters_to_correlate)
 
         # Find azure ad and ad with the same display name
         yield from self._correlate_ad_azure_ad(adapters_to_correlate)

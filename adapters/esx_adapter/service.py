@@ -1,6 +1,8 @@
 import datetime
 import logging
 from enum import Enum, auto
+from urllib3.util.url import parse_url
+
 
 from pyVmomi import vim
 
@@ -54,6 +56,8 @@ class EsxAdapter(AdapterBase):
         client_id = self._get_client_id(client_config)
         try:
             host = client_config['host']
+            url_parsed = parse_url(host)
+            host = url_parsed.host
             return vCenterApi(
                 host=host,
                 user=client_config['user'],

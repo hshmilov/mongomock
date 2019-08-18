@@ -1,4 +1,16 @@
 export const pluginMeta = {
+    signalsciences_adapter: {
+        title: 'Signal Sciences',
+        description: 'Signal Sciences is a web protection platform that Protects on-premise, multi-cloud and hybrid-cloud apps, within containers and serverless functions.'
+    },
+    automox_adapter: {
+        title: 'Automox',
+        description: 'Automox’s cloud-based, automated patch management solution simplifies patching and configuration management across Windows, Linux, Mac OS X, and third-party software.'
+    },
+    kaspersky_sc_adapter: {
+        title: 'Kaspersky Security Center',
+        description: 'Kaspersky Security Center simplifies security administration and IT systems management.'
+    },
     symantec_12_adapter: {
         title: 'Symantec Endpoint Protection 12.x',
         description: 'Symantec Endpoint Protection manages events, policies, and registration for the client computers that connect to customer networks.'
