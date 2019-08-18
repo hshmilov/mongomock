@@ -1,6 +1,7 @@
 """ utils for juniper xml parsing """
 
 from xml.etree import ElementTree
+
 import lxml.etree
 
 
@@ -36,17 +37,21 @@ def gettext(text: str):
     """ for some reason, somtimes we get string from xml with \n in start and end.
         strip t  - We should investiage more """
 
+    if not text:
+        return text
+
     if text[0] == '\n' and text[-1] == '\n':
         text = text[1:-1]
 
-    return text
+    return str(text)
 
 
 def gettag(tag: str):
     """ sometimes junos tag return with {<version>} prefix,
         remote it if possible """
-
+    if not tag:
+        return tag
     if tag[0] == '{' and '}' in tag:
         tag = tag[tag.index('}') + 1:]
 
-    return tag
+    return str(tag)

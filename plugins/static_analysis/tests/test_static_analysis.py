@@ -29,6 +29,8 @@ def nvd_searcher():
 
     print('\nCleaning up')
     for nvd_file in glob.glob(f'{ARTIFACT_FOLDER}/*'):
+        if nvd_file == 'README.md':
+            continue
         try:
             os.remove(nvd_file)
             print(f'Removed {nvd_file}')

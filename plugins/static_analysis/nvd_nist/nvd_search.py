@@ -6,6 +6,7 @@ import json
 import zipfile
 import logging
 import threading
+import itertools
 import requests.exceptions
 from axonius.utils.parsing import get_exception_string
 from static_analysis.nvd_nist import nvd_update
@@ -107,10 +108,11 @@ class NVDSearcher:
                 vendor_name = None
                 vendor_data = (((cve_raw.get('cve') or {}).get('affects') or {}).get('vendor') or {}).get('vendor_data')
                 if vendor_data:
-                    # Will only save the first listed software
-                    vendor_name = vendor_data[0].get('vendor_name')
-                    first_product_data = vendor_data[0].get('product', {}).get('product_data')[0]
-                    software_name = first_product_data.get('product_name')
+                    # Take the shortest software_name
+                    vendor_iter = ([(x['vendor_name'], y['product_name'])
+                                    for y in x['product']['product_data']] for x in vendor_data)
+                    vendor_iter = itertools.chain.from_iterable(vendor_iter)
+                    vendor_name, software_name = min(vendor_iter, key=lambda x: len(x[1]))
 
                 # Save only what's important
                 self.__cve_db[cve_id_from_nvd] = {

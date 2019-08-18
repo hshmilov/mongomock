@@ -116,6 +116,7 @@ class StaticAnalysisService(Triggerable, PluginBase):
         them to the device with the corresponding installed software
         :return:
         """
+        logger.info('Cve Enrichment Started')
         with self.__nvd_lock:
             # Filters and searches the database
             devices_with_cve = self.__get_devices_with_software_or_cves()
@@ -136,6 +137,7 @@ class StaticAnalysisService(Triggerable, PluginBase):
                     self._save_field_names_to_db(EntityType.Devices)
                 except Exception:
                     logger.exception(f'Exception while trying to add cves for device. Continuing')
+        logger.info('Cve Enrichment Ended')
 
     def create_device_with_enriched_cves(self, device):
         """
@@ -246,11 +248,15 @@ class StaticAnalysisService(Triggerable, PluginBase):
         ))
 
         devices_seen = set([])      # Don't want to enrich the same device twice
-        for i, axon_id in enumerate(devices_with_cve_or_softwares):
+        for axon_id in devices_with_cve_or_softwares:
             if axon_id.get('internal_axon_id') in devices_seen:
                 continue
             # Get the whole device and all its data from the database by searching with its internal axon id
             device = self.devices_db.find_one({'internal_axon_id': axon_id['internal_axon_id']})
+            # XXX: somehow I got error where device is None
+            if not device:
+                logger.debug(f'internal_axon_id {axon_id["internal_axon_id"]} not found')
+                continue
             yield convert_db_entity_to_view_entity(device, ignore_errors=True)
             devices_seen.add(axon_id.get('internal_axon_id'))
 
@@ -279,7 +285,9 @@ class StaticAnalysisService(Triggerable, PluginBase):
             if device_cves:
                 for cve in device_cves:
                     try:
-                        yield self.__query_nvd_with_cve(cve_id=cve.get('cve_id'))
+                        data = self.__query_nvd_with_cve(cve_id=cve.get('cve_id'))
+                        if data:
+                            yield data
                     except Exception:
                         logger.exception(f'CVE search in NVD failed for {cve}')
         except Exception:

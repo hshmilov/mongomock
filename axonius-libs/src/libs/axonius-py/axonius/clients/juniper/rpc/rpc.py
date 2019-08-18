@@ -218,7 +218,10 @@ def parse_lldp(xmls):
 
             json = json['lldp-neighbors-information']
 
-            for neighbor in json.get('lldp-neighbor-information', []):
+            neighbors = json.get('lldp-neighbor-information') or []
+            if isinstance(neighbors, dict):
+                neighbors = [neighbors]
+            for neighbor in neighbors:
                 # In order to perform as many as possible internal correlations We try to correlate the devices by Name.
                 # We save for each name the lldp entry, and the device that saw him.
                 # Note that lldp neighbor may be different equipment,

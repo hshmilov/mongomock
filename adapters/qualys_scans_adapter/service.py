@@ -138,7 +138,19 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
                 csv_dict = make_dict_from_csv(''.join(cleaned_csv_data))
                 for entry in csv_dict:
                     try:
-                        qid_to_cve_mapping[entry.get('QID')] = entry.get('CVE ID').split(',')
+                        if not entry.get('QID'):
+                            continue
+
+                        if not entry.get('CVE ID'):
+                            continue
+
+                        cve_ids = entry['CVE ID'].split(',')
+
+                        if not cve_ids:
+                            continue
+
+                        qid_to_cve_mapping[entry['QID']] = cve_ids
+
                     except Exception:
                         logger.exception(f'Problem mapping entry {entry}')
                 logger.info(f'{len(qid_to_cve_mapping)} QIDs mapped')
@@ -153,7 +165,7 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
             if device:
                 yield device
 
-    # pylint: disable=R0912,R0915
+    # pylint: disable=R0912,R0915,too-many-nested-blocks
     def _create_agent_device(self, device_raw):
         try:
             device_raw = device_raw.get('HostAsset')
@@ -239,8 +251,10 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
                     except Exception:
                         logger.exception(f'Problem with vuln {vuln_raw}')
                     try:
-                        for cve in self._qid_to_cve_mapping.get((vuln_raw.get('HostAssetVuln') or {}).get('qid')) or []:
-                            device.add_vulnerable_software(cve_id=cve)
+                        qid = str((vuln_raw.get('HostAssetVuln') or {}).get('qid')) or ''
+                        if qid:
+                            for cve in self._qid_to_cve_mapping.get(qid) or []:
+                                device.add_vulnerable_software(cve_id=cve)
                     except Exception:
                         logger.exception(f'Problem with adding vuln software for {vuln_raw}')
             except Exception:

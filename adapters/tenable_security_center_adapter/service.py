@@ -35,8 +35,8 @@ class TenableSecurityCenterAdapter(ScannerAdapterBase, Configurable):
         has_compliance = Field(bool, 'Has Compliance')
         last_scan = Field(datetime, 'Last Scan')
 
-    def add_tenable_vuln(self, **kwargs):
-        self.plugin_and_severities.append(TenableVulnerability(**kwargs))
+        def add_tenable_vuln(self, **kwargs):
+            self.plugin_and_severities.append(TenableVulnerability(**kwargs))
 
     def __init__(self):
         super().__init__(get_local_config_file(__file__))
