@@ -8,6 +8,7 @@ from collections import namedtuple
 
 from axonius.blacklists import ALL_BLACKLIST
 from axonius.clients.cisco.port_security import PortSecurityInterface
+from axonius.clients.cisco.port_access import PortAccessEntity
 from axonius.fields import Field, JsonArrayFormat, JsonStringFormat, ListField
 from axonius.smart_json_class import SmartJsonClass
 from axonius.utils.datetime import parse_date
@@ -578,6 +579,7 @@ class DeviceAdapter(SmartJsonClass):
     shares = ListField(ShareData, 'Shares', json_format=JsonArrayFormat.table)
     adapter_properties = ListField(str, 'Adapter Properties', enum=AdapterProperty)
     port_security = ListField(PortSecurityInterface, 'Port Security', json_format=JsonArrayFormat.table)
+    port_access = ListField(PortAccessEntity, 'Port Access', json_format=JsonArrayFormat.table)
     dns_servers = ListField(str, 'DNS Servers')
     dhcp_servers = ListField(str, 'DHCP Servers')
     uuid = Field(str, 'UUID')

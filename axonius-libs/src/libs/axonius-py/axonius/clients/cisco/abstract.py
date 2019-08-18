@@ -7,6 +7,8 @@ from functools import reduce
 
 from axonius.clients.cisco.constants import OIDS, get_oid_name
 from axonius.clients.cisco.port_security import PortSecurityInterface, SecureMacAddressEntry
+from axonius.clients.cisco.port_access import PortAccessEntity
+
 from axonius.devices.device_adapter import (
     AdapterProperty,
     ConnectionType,
@@ -170,10 +172,12 @@ class AbstractCiscoData:
     def _get_id(instance):
         return instance.get('mac')
 
+    # pylint: disable=too-many-locals
     @staticmethod
     def _handle_ifaces(new_device, instance):
         interface_field = get_oid_name(OIDS.interface)
         port_security_field = get_oid_name(OIDS.port_security)
+        port_access_field = get_oid_name(OIDS.port_access)
 
         ip_field = get_oid_name(OIDS.ip)
         for iface in instance[interface_field].values():
@@ -222,6 +226,19 @@ class AbstractCiscoData:
                     entries=entries,
                 )
                 new_device.port_security.append(port_security_class)
+
+            if port_access_field in iface:
+                port_access = iface[port_access_field]
+                port_access_class = PortAccessEntity(
+                    name=iface.get('description'),
+                    port_mode=port_access.get('port_mode'),
+                    operation_vlan_type=port_access.get('operation_vlan_type'),
+                    guest_vlan_number=port_access.get('guest_vlan_number'),
+                    auth_fail_vlan_number=port_access.get('auth_fail_vlan_number'),
+                    operation_vlan_number=port_access.get('operation_vlan_number'),
+                    shutdown_timeout_enabled=port_access.get('shutdown_timeout_enabled'),
+                    auth_fail_max_attempts=port_access.get('auth_fail_max_attempts'))
+                new_device.port_access.append(port_access_class)
 
     @staticmethod
     def _handle_connected(new_device, instance):

@@ -200,6 +200,7 @@ class AbstractSnmpClient(AbstractCiscoClient):
             self._async_next_cmd(OIDS.ip),
             self._async_next_cmd(OIDS.port_security),
             self._async_next_cmd(OIDS.port_security_entries),
+            self._async_next_cmd(OIDS.port_access),
             self._async_get_cmd(OIDS.device_model),
             self._async_get_cmd(OIDS.device_model2),
             self._async_get_cmd(OIDS.device_serial),
@@ -350,6 +351,25 @@ class SnmpBasicInfoCiscoData(BasicInfoData):
                     self.result[interface][index][port_security] = {}
                 self.result[interface][index][port_security]['entries'] = entry
 
+    def _parse_port_access(self, entries):
+        interface = get_oid_name(OIDS.interface)
+        port_access = get_oid_name(OIDS.port_access)
+        prot_access_entries = {}
+        for entry in entries:
+            try:
+                oid, value = entry[0][0], entry[0][1]
+                index = str(oid[-1])
+                key, value = CpaePortTable.parse_value(oid, value)
+                if value is None:
+                    continue
+                if index in self.result[interface].keys():
+                    if port_access not in self.result[interface][index]:
+                        self.result[interface][index][port_access] = {}
+                    self.result[interface][index][port_access][key] = value
+            except Exception:
+                logger.exception('Exception while parsing basic info port access')
+                continue
+
     def _parse_ip(self, entires):
         interface_field = get_oid_name(OIDS.interface)
         ip_field = get_oid_name(OIDS.ip)
@@ -387,6 +407,7 @@ class SnmpBasicInfoCiscoData(BasicInfoData):
             ip=self._parse_ip,
             port_security=self._parse_port_security,
             port_security_entries=self._parse_port_security_entries,
+            port_access=self._parse_port_access,
             device_model=self._parse_device_model,
             device_model2=self._parse_device_model,
             device_serial=self._parse_serial,
@@ -496,3 +517,18 @@ class CpsIfConfigTable(snmp_parser.SnmpTable):
 class CpsSecureMacAddressTable(snmp_parser.SnmpTable):
     table = {2: (snmp_parser.parse_secure_mac_type, 'type'), 3: (snmp_parser.parse_int, 'remaining_age')}
     index = 13
+
+
+class CpaePortTable(snmp_parser.SnmpTable):
+    table = {
+        # 1: multiple entries
+        2: (snmp_parser.parse_int, 'port_mode'),
+        3: (snmp_parser.parse_int, 'guest_vlan_number'),
+        # 4: in guest vlan
+        5: (snmp_parser.parse_bool, 'shutdown_timeout_enabled'),
+        6: (snmp_parser.parse_int, 'auth_fail_vlan_number'),
+        7: (snmp_parser.parse_int, 'operation_vlan_number'),
+        8: (snmp_parser.parse_int, 'operation_vlan_type'),
+        9: (snmp_parser.parse_int, 'auth_fail_max_attempts'),
+    }
+    index = -2
