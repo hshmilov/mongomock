@@ -986,6 +986,8 @@ class DeviceAdapter(SmartJsonClass):
     def add_agent_version(self, agent=None, version=None, status=None):
         if not version:
             return
+        if not status:
+            status = 'Not Provided'
         try:
             self.agent_versions.append(DeviceAdapterAgentVersion(adapter_name=agent,
                                                                  agent_version=version,
