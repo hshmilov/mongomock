@@ -1,7 +1,6 @@
 import logging
 import socket
 import struct
-import os
 from typing import Iterable, Dict
 
 import paramiko
@@ -35,8 +34,7 @@ def get_ssh_connection() -> paramiko.SSHClient:
     """
     client = paramiko.SSHClient()
     client.set_missing_host_key_policy(paramiko.AutoAddPolicy)
-    username = os.environ['DOCKER_USER']
-    client.connect(get_default_gateway_linux(), username=username, key_filename='/home/axonius/app/rsa_keys')
+    client.connect(get_default_gateway_linux(), username='ubuntu', key_filename='/home/axonius/app/rsa_keys')
     return client
 
 
