@@ -63,6 +63,14 @@ echo "Initializing the host image.."
 echo "hostname: $(hostname)"
 echo ""
 
+if [ $(cat /etc/environment | grep LC_ALL | wc -l) -ne 0 ]; then
+    echo "Locale settings exist"
+else
+    echo export LC_ALL=\"en_US.UTF-8\" >> /etc/environment
+    echo export LC_CTYPE=\"en_US.UTF-8\" >> /etc/environment
+fi
+export LC_ALL="en_US.UTF-8"
+export LC_CTYPE="en_US.UTF-8"
 
 echo "Updating the sources..."
 if [ -e /etc/apt/sources.list.d/webupd8team-ubuntu-java-xenial.list ]; then
@@ -123,13 +131,6 @@ cp ./weave-2.5.1 /usr/local/bin/weave
 chmod a+x /usr/local/bin/weave
 echo "Setting system-wide settings"
 sudo timedatectl set-timezone UTC
-
-if [ $(cat /etc/environment | grep LC_ALL | wc -l) -ne 0 ]; then
-    echo "Locale settings exist"
-else
-    echo export LC_ALL=\"en_US.UTF-8\" >> /etc/environment
-    echo export LC_CTYPE=\"en_US.UTF-8\" >> /etc/environment
-fi
 
 if [ $(cat /etc/passwd | grep netconfig | wc -l) -ne 0 ]; then
     echo "User netconfig exists"
@@ -196,6 +197,23 @@ else
 fi
 
 sysctl --load
+
+
+if [[ -d "/etc/scalyr-agent-2" ]]; then
+    echo "scalyr exist"
+else
+    echo "install scalyr agent"
+    wget -q https://www.scalyr.com/scalyr-repo/stable/latest/scalyr-repo-bootstrap_1.2.1_all.deb
+    sudo dpkg -r scalyr-repo scalyr-repo-bootstrap  # Remove any previous repository definitions, if any.
+    sudo dpkg -i scalyr-repo-bootstrap_1.2.1_all.deb
+    set +e
+    sudo apt-get update
+    set -e
+    sudo apt-get install scalyr-repo -y
+    sudo apt-get install scalyr-agent-2 -y
+    rm scalyr-repo-bootstrap_1.2.1_all.deb
+fi
+
 
 touch $INIT_FILE
 echo "Done successfully"
