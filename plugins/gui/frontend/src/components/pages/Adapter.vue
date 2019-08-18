@@ -55,7 +55,7 @@
             </div>
             <template slot="footer">
                 <x-button link @click="toggleServerModal">Cancel</x-button>
-                <x-button id="test_reachability" @click="testServer" :disabled="!serverModal.valid">Test Connectivity</x-button>
+                <x-button id="test_reachability" @click="testServer" :disabled="!serverModal.valid">Test Reachability</x-button>
                 <x-button id="save_server" @click="saveServer" :disabled="!serverModal.valid">Save</x-button>
             </template>
         </x-modal>
@@ -292,7 +292,7 @@
                 }).then((updateRes) => {
                     if (updateRes.data.status === 'error') {
                         if (updateRes.data.type === 'NotImplementedError') {
-                            this.message = 'Test connectivity is not supported for this adapter.'
+                            this.message = 'Test reachability is not supported for this adapter.'
                         } else {
                             this.message = 'Problem connecting to server.'
                         }
@@ -304,7 +304,7 @@
                     }, 60000)
                 }).catch((error) => {
                     if (error.response.data.type === 'NotImplementedError') {
-                        this.message = 'Test connectivity is not supported for this adapter.'
+                        this.message = 'Test reachability is not supported for this adapter.'
                     } else {
                         this.message = 'Problem connecting to server.'
                     }

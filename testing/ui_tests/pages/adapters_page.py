@@ -18,13 +18,13 @@ class AdaptersPage(EntitiesPage):
     ROOT_PAGE_CSS = 'li#adapters.x-nav-item'
     SEARCH_TEXTBOX_CSS = 'div.x-search-input > input.input-value'
     TABLE_ROW_CLASS = 'table-row'
-    TEST_CONNECTIVITY = 'Test Connectivity'
+    TEST_CONNECTIVITY = 'Test Reachability'
     DEVICE_CHECKBOX = 'div.x-checkbox-container'
     RT_CHECKBOX_CSS = '[for=realtime_adapter]+div'
     ADVANCED_SETTINGS_SAVE_BUTTON_CSS = '.configuration>.x-button'
 
     TEST_CONNECTIVITY_CONNECTION_IS_VALID = 'Connection is valid.'
-    TEST_CONNECTIVITY_NOT_SUPPORTED = 'Test connectivity is not supported for this adapter.'
+    TEST_CONNECTIVITY_NOT_SUPPORTED = 'Test reachability is not supported for this adapter.'
     TEST_CONNECTIVITY_PROBLEM = 'Problem connecting to server.'
 
     SERVER_ORANGE_COLOR_ID = 'svgicon_symbol_warning_a'
