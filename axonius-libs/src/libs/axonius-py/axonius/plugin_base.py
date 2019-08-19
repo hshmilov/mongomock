@@ -1697,15 +1697,17 @@ class PluginBase(Configurable, Feature):
         nodes = []
         for current_node in self.core_configs_collection.distinct('node_id'):
             node_data = db_connection['core']['nodes_metadata'].find_one({'node_id': current_node})
-            if node_data is not None:
-                nodes.append({'node_id': current_node, 'node_name': node_data.get('node_name', {}),
-                              'tags': node_data.get('tags', {}),
-                              'last_seen': self.request_remote_plugin(f'nodes/last_seen/{current_node}').json()[
-                                  'last_seen'], NODE_USER_PASSWORD: node_data.get(NODE_USER_PASSWORD, '')})
-            else:
-                nodes.append({'node_id': current_node, 'node_name': current_node, 'tags': {},
-                              'last_seen': self.request_remote_plugin(f'nodes/last_seen/{current_node}').json()[
-                                  'last_seen'], NODE_USER_PASSWORD: ''})
+            node = {'node_id': current_node, 'last_seen': self.request_remote_plugin(f'nodes/last_seen/{current_node}').json()[
+                'last_seen']}
+
+            if node_data:
+                node['node_name'] = node_data.get('node_name', '')
+                node['tags'] = node_data.get('tags', {})
+                node[NODE_USER_PASSWORD] = node_data.get(NODE_USER_PASSWORD, '')
+                node['hostname'] = node_data.get('hostname', '')
+                node['ips'] = node_data.get('ips', '')
+            nodes.append(node)
+
         return nodes
 
     def _get_adapter_unique_name(self, adapter_name: str, node_id: str) -> str:

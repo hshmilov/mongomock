@@ -20,13 +20,14 @@ class TestInstancesAfterNodeJoin(TestInstancesBase):
         self.adapters_page.add_server(ad_client1_details)
         self.adapters_page.wait_for_spinner_to_end()
         self.base_page.run_discovery()
-
         self.change_node_hostname()
 
         self.join_node()
 
         self.check_password_change()
         self.check_add_adapter_to_node()
+        self.check_correct_ip_is_shown_in_table()
+        self.check_correct_hostname_is_shown_in_table()
         self.check_node_restart()
         self.check_master_disconnect()
 
@@ -91,9 +92,19 @@ class TestInstancesAfterNodeJoin(TestInstancesBase):
         node_maker_password = self.instances_page.get_node_password(NODE_NAME)
         self.connect_node_maker(self._instances[0], node_maker_password)
 
+    def check_correct_ip_is_shown_in_table(self):
+        node_ip_from_table = self.instances_page.get_node_ip(NODE_NAME)
+        self.logger.info(f'{NODE_NAME} IP recognised as:{node_ip_from_table}')
+        assert node_ip_from_table == self._instances[0].ip, 'System did not recognize node IP correctly.'
+
     def change_node_hostname(self):
         self._instances[0].ssh(f'echo \'{self._instances[0].ssh_pass}\' | sudo -S hostname {NODE_HOSTNAME}')
-        self._instances[0].ssh(
-            f'echo \'{self._instances[0].ssh_pass}\' | sudo -S echo "{NODE_HOSTNAME}" > /etc/hostname')
+        self._instances[0].ssh(f'echo \'{NODE_HOSTNAME}\' > /tmp/temp_name_file')
+        self._instances[0].ssh(f'echo \'{self._instances[0].ssh_pass}\' | sudo -S mv /tmp/temp_name_file /etc/hostname')
         self._instances[0].sshc.close()
         self._instances[0].wait_for_ssh()
+
+    def check_correct_hostname_is_shown_in_table(self):
+        node_hostname_from_table = self.instances_page.get_node_hostname(NODE_NAME)
+        self.logger.info(f'{NODE_NAME} hostname recognised as:{node_hostname_from_table}')
+        assert node_hostname_from_table == NODE_HOSTNAME, 'System did not recognize node hostname correctly.'

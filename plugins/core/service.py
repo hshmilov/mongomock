@@ -260,7 +260,9 @@ class CoreService(Triggerable, PluginBase, Configurable):
     def node_metadata(self, node_id):
         data = self.get_request_data_as_object()
         if request.method == 'POST':
-            self._set_node_name(node_id, data['node_name'])
+            key = data.get('key', NODE_NAME)
+            assert key in ['hostname', NODE_NAME, 'ips']
+            self._set_node_metadata(node_id, key, data['value'])
             return ''
         else:
             # A node with this ID isn't registered (No adapters with that node_id).

@@ -4,6 +4,7 @@ import subprocess
 import pytest
 from services.plugin_service import PluginService
 from services.simple_fixture import initialize_fixture
+from axonius.consts.instance_control_consts import HOSTNAME_FILE_PATH
 
 
 class InstanceControlService(PluginService):
@@ -43,7 +44,8 @@ class InstanceControlService(PluginService):
 
     @property
     def volumes_override(self):
-        volumes = [f'{self.service_dir}/rsa_keys:/home/axonius/app/rsa_keys']
+        volumes = [f'{self.service_dir}/rsa_keys:/home/axonius/app/rsa_keys',
+                   f'/etc/hostname:{HOSTNAME_FILE_PATH}:ro']
         volumes.extend(super().volumes_override)
         return volumes
 

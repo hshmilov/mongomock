@@ -13,7 +13,9 @@ class InstancesPage(EntitiesPage):
     CONNECT_NODE_ID = 'get-connection-string'
     NODE_JOIN_TOKEN_REGEX = '<axonius-hostname> (.*) '
     INSTANCES_ROW_BY_NAME_XPATH = '//tr[child::td[child::div[text()=\'{instance_name}\']]]'
-    INSTANCES_USER_PASSWORD_XPATH = './/td[position()=4]/div'
+    INSTANCES_USER_PASSWORD_XPATH = './/td[position()=6]/div'
+    INSTANCES_HOSTNAME_XPATH = './/td[position()=3]/div'
+    INSTANCES_IP_XPATH = './/td[position()=4]/div'
 
     @property
     def url(self):
@@ -65,6 +67,18 @@ class InstancesPage(EntitiesPage):
         self.refresh()
         instances_row = self.find_query_row_by_name(node_name)
         return instances_row.find_element_by_xpath(self.INSTANCES_USER_PASSWORD_XPATH).text
+
+    def get_node_ip(self, node_name):
+        self.switch_to_page()
+        self.refresh()
+        instances_row = self.find_query_row_by_name(node_name)
+        return instances_row.find_element_by_xpath(self.INSTANCES_IP_XPATH).text
+
+    def get_node_hostname(self, node_name):
+        self.switch_to_page()
+        self.refresh()
+        instances_row = self.find_query_row_by_name(node_name)
+        return instances_row.find_element_by_xpath(self.INSTANCES_HOSTNAME_XPATH).text
 
     def find_query_row_by_name(self, instance_name):
         return self.driver.find_element_by_xpath(self.INSTANCES_ROW_BY_NAME_XPATH.format(instance_name=instance_name))

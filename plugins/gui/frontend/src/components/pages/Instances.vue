@@ -60,6 +60,8 @@
             fields() {
                 return [
                     {name: 'node_name', title: 'Name', type: 'string'},
+                    {name: 'hostname', title: 'Hostname', type: 'string'},
+                    {name: 'ips', title: 'IP', type: 'string'},
                     {name: 'last_seen', title: 'Last Seen', type: 'string', format: 'date-time'},
                     {name: 'node_user_password', title: 'Instance Connect User Password', type: 'string'}
                 ]

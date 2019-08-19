@@ -5003,7 +5003,8 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
                                                                                               '<axonius-hostname>')}})
         elif request.method == 'POST':
             data = self.get_request_data_as_object()
-            self.request_remote_plugin(f'node/{data["node_id"]}', method='POST', json={'node_name': data['node_name']})
+            self.request_remote_plugin(f'node/{data["node_id"]}', method='POST',
+                                       json={'key': NODE_NAME, 'value': data[NODE_NAME]})
             return ''
         elif request.method == 'DELETE':
             data = self.get_request_data_as_object()
