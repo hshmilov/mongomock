@@ -2621,6 +2621,12 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
             return ''
         return response.json(), response.status_code
 
+    @gui_add_rule_logged_in('plugins/gui/upload_file', methods=['POST'],
+                            required_permissions={Permission(PermissionType.Settings,
+                                                             PermissionLevel.ReadWrite)})
+    def gui_upload_file(self):
+        return self._upload_file(GUI_PLUGIN_NAME)
+
     @gui_add_rule_logged_in('plugins/<plugin_name>/upload_file', methods=['POST'],
                             required_permissions={Permission(PermissionType.Adapters,
                                                              PermissionLevel.ReadWrite)})
