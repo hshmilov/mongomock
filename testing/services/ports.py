@@ -182,6 +182,7 @@ DOCKER_PORTS = {
     'kaspersky-sc-adapter':             9976,
     'automox-adapter':                  9977,
     'signalsciences-adapter':           9978,
+    'indegy-adapter':                   9979,
     'mongo':                            27017,
     'mockingbird-db':                   28017
 }

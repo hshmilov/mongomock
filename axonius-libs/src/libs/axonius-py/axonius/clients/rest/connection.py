@@ -6,18 +6,19 @@ from abc import ABC, abstractmethod
 from json.decoder import JSONDecodeError
 from typing import Tuple
 
-import aiohttp
-import requests
-import uritools
 from urllib3.util.url import parse_url
+import requests
+import aiohttp
+import uritools
 
-from axonius.async.utils import async_request
+from axonius.async.utils import async_request, async_http_request
 from axonius.clients.rest import consts
 from axonius.clients.rest.exception import RESTException, RESTAlreadyConnected, \
     RESTConnectionError, RESTNotConnected, RESTRequestException
 from axonius.logging.metric_helper import log_metric
 from axonius.utils.json import from_json
 from axonius.utils.network.docker_network import has_addr_collision, COLLISION_MESSAGE
+from axonius.utils.ssl import check_associate_cert_with_private_key
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -102,6 +103,19 @@ class RESTConnection(ABC):
     def __del__(self):
         if hasattr(self, 'session') and self._is_connected:
             self.close()
+
+    def add_ssl_cert(self, cert, private_key):
+        """
+        :param cert: Public cert filename .
+        :param private_key: Private key filename.
+        :return: True if the keys are valid an associated, otherwise returns false.
+        """
+        with open(cert, 'r') as cert_file, open(private_key, 'r') as private_key_file:
+            match = check_associate_cert_with_private_key(cert_file.read(), private_key_file.read())
+            if self._session and match:
+                self._session.cert = (cert, private_key)
+                return True
+        return False
 
     def check_for_collision_safe(self):
         try:
@@ -306,6 +320,69 @@ class RESTConnection(ABC):
         else:
             return response.content
 
+    def create_async_dict(self, req, method):
+        """
+        :param dict req:    convert RestConnection request dictionary to a dictionary contains aiohttp request params
+        :param str method:  http method
+        :return: dictionary
+        """
+        aio_req = dict()
+        aio_req['method'] = method
+        if req.get('callback'):
+            aio_req['callback'] = req.get('callback')
+        # Build url
+        if req.get('force_full_url', False) is True:
+            aio_req['url'] = req['name']
+        else:
+            aio_req['url'] = self._get_url_request(req['name'])
+
+        # Take care of url params
+        url_params = req.get('url_params')
+        if url_params is not None:
+            aio_req['params'] = url_params
+
+        # Take care of body params
+        body_params = req.get('body_params')
+        if body_params is not None:
+            if req.get('use_json_in_body', True) is True:
+                aio_req['json'] = body_params
+            else:
+                aio_req['data'] = body_params
+
+        # Take care of auth
+        if req.get('do_basic_auth', False) is True:
+            aio_req['auth'] = (self._username, self._password)
+        if req.get('do_digest_auth') is not None:
+            raise ValueError(f'Async requests do not support digest auth')
+
+        # Take care of headers, timeout and ssl verification
+        aio_req['headers'] = self._permanent_headers.copy()
+        aio_req['headers'].update(self._session_headers)
+        aio_req['timeout'] = self._session_timeout
+        # setting verify_ssl=false makes auth cert skip
+        if not self._session.cert:
+            aio_req['verify_ssl'] = self._verify_ssl
+        else:
+            if self._verify_ssl is True:
+                aio_req['verify_ssl'] = True
+        # Take care of proxy. aiohttp doesn't allow us to try both proxies, we need to prefer one of them.
+        if self._proxies.get('https'):
+            aio_req['proxy'] = self._proxies['https']
+        elif self._proxies.get('http'):
+            aio_req['proxy'] = self._proxies['http']
+        return aio_req
+
+    def _do_single_async_request(self, method, request, session):
+        """
+        create a single http request, return an awaitable object
+        :param str method:      Http method
+        :param dict request:    request dictionary to send
+        :param aiohttp.ClientSession session:   aiohttp session
+        :return: async async_http_request
+        """
+        req = self.create_async_dict(request, method)
+        return async_http_request(session, **req)
+
     # pylint: disable=R0915
     def _do_async_request(self, method, list_of_requests, chunks, max_requests_per_minute):
         """
@@ -321,6 +398,7 @@ class RESTConnection(ABC):
         #
         #   Remember to change _do_request when adding/removing functionality here!
         #
+
         if not self._is_connected:
             raise RESTNotConnected()
 
@@ -328,56 +406,16 @@ class RESTConnection(ABC):
         aio_requests = []
 
         for req in list_of_requests:
-            aio_req = dict()
-            aio_req['method'] = method
-
-            # Build url
-            if req.get('force_full_url', False) is True:
-                aio_req['url'] = req['name']
-            else:
-                aio_req['url'] = self._get_url_request(req['name'])
-
-            # Take care of url params
-            url_params = req.get('url_params')
-            if url_params is not None:
-                aio_req['params'] = url_params
-
-            # Take care of body params
-            body_params = req.get('body_params')
-            if body_params is not None:
-                if req.get('use_json_in_body', True) is True:
-                    aio_req['json'] = body_params
-                else:
-                    aio_req['data'] = body_params
-
-            # Take care of auth
-            if req.get('do_basic_auth', False) is True:
-                aio_req['auth'] = (self._username, self._password)
-            if req.get('do_digest_auth') is not None:
-                raise ValueError(f'Async requests do not support digest auth')
-
-            # Take care of headers, timeout and ssl verification
-            aio_req['headers'] = self._permanent_headers.copy()
-            aio_req['headers'].update(self._session_headers)
-            aio_req['timeout'] = self._session_timeout
-            if self._verify_ssl is False:
-                aio_req['ssl'] = False
-
-            # Take care of proxy. aiohttp doesn't allow us to try both proxies, we need to prefer one of them.
-            if self._proxies.get('https'):
-                aio_req['proxy'] = self._proxies['https']
-            elif self._proxies.get('http'):
-                aio_req['proxy'] = self._proxies['http']
-
-            aio_requests.append(aio_req)
-
+            aio_requests.append(self.create_async_dict(req, method))
         # Now that we have built the new requests, try to asynchronously get them.
         for chunk_id in range(int(math.ceil(len(aio_requests) / chunks))):
             logger.debug(f'Async requests: sending {chunk_id * chunks} out of {len(aio_requests)}')
-            all_answers = async_request(aio_requests[chunks * chunk_id: chunks * (chunk_id + 1)])
+            all_answers = async_request(aio_requests[chunks * chunk_id: chunks * (chunk_id + 1)],
+                                        cert=self._session.cert)
 
             # We got the requests, time to check if they are valid and transform them to what the user wanted.
             for i, raw_answer in enumerate(all_answers):
+                answer_text = None
                 request_id_absolute = chunks * chunk_id + i
                 # The answer could be an exception
                 if isinstance(raw_answer, Exception):

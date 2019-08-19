@@ -1,4 +1,9 @@
 export const pluginMeta = {
+    indegy_adapter: {
+        title: 'Indegy Industrial Cybersecurity Suite',
+        link: 'https://docs.axonius.com/docs/indegy-industrial-cybersecurity-suite',
+        description: 'Indegy Industrial Cybersecurity Suite protects industrial networks from cyber threats, malicious insiders, and human error, including threat detection and mitigation, asset tracking, vulnerability management, configuration control, and device integrity checks.'
+    },
     signalsciences_adapter: {
         title: 'Signal Sciences',
         description: 'Signal Sciences is a web protection platform that Protects on-premise, multi-cloud and hybrid-cloud apps, within containers and serverless functions.'
