@@ -1,6 +1,7 @@
 import {REQUEST_API} from '../actions'
 import { pluginMeta } from '../../constants/plugin_meta.js'
 
+export const HINT_ADAPTER_UP = 'HINT_ADAPTER_UP'
 export const FETCH_ADAPTERS = 'FETCH_ADAPTERS'
 export const UPDATE_ADAPTERS = 'UPDATE_ADAPTERS'
 export const UPDATE_CURRENT_ADAPTER = 'UPDATE_CURRENT_ADAPTER'
@@ -181,6 +182,12 @@ export const adapters = {
 					return
 				}
 				commit(REMOVE_SERVER, payload.serverId)
+			})
+		},
+		[ HINT_ADAPTER_UP ] ({dispatch, commit}, adapterId) {
+			dispatch(REQUEST_API, {
+				rule: `adapters/hint_raise/${adapterId}`,
+				method: 'POST',
 			})
 		}
 	}

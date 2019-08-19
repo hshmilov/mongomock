@@ -15,6 +15,8 @@ from typing import Any, Dict, Iterable, List, Tuple
 import func_timeout
 from apscheduler.executors.pool import ThreadPoolExecutor
 from apscheduler.triggers.interval import IntervalTrigger
+from pymongo import ReturnDocument
+
 from axonius.thread_pool_executor import LoggedThreadPoolExecutor
 from axonius.background_scheduler import LoggedBackgroundScheduler
 
@@ -138,6 +140,19 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
         return False
 
     def __check_for_reasons_to_live(self):
+        lives_left = self._get_collection('lives_left').find_one_and_update({
+            'lives_left': {
+                '$exists': True
+            }
+        }, {
+            '$inc': {
+                'lives_left': -1
+            }
+        }, upsert=True, return_document=ReturnDocument.AFTER)['lives_left']
+        if lives_left >= 0:
+            logger.debug(f'Reason to live is {lives_left} lives left')
+            return
+
         client_count = self._clients_collection.estimated_document_count()
         running_task = self.any_tasks_in_progress()
         if self.outside_reason_to_live() or running_task or client_count:

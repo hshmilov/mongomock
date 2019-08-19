@@ -84,7 +84,12 @@
 
     import {mapState, mapMutations, mapActions} from 'vuex'
     import {
-        FETCH_ADAPTERS, UPDATE_CURRENT_ADAPTER, SAVE_ADAPTER_SERVER, ARCHIVE_SERVER, TEST_ADAPTER_SERVER
+        FETCH_ADAPTERS,
+        UPDATE_CURRENT_ADAPTER,
+        SAVE_ADAPTER_SERVER,
+        ARCHIVE_SERVER,
+        TEST_ADAPTER_SERVER,
+        HINT_ADAPTER_UP
     } from '../../store/modules/adapters'
     import {pluginMeta} from '../../constants/plugin_meta.js'
     import {SAVE_PLUGIN_CONFIG} from '../../store/modules/settings'
@@ -97,6 +102,9 @@
         },
         computed: {
             ...mapState({
+                allAdapters(state) {
+                    return state.adapters.adapterList
+                },
                 currentAdapter(state) {
                     return state.adapters.currentAdapter
                 },
@@ -193,7 +201,8 @@
             }),
             ...mapActions({
                 fetchAdapters: FETCH_ADAPTERS, updateServer: SAVE_ADAPTER_SERVER, testAdapter: TEST_ADAPTER_SERVER,
-                archiveServer: ARCHIVE_SERVER, updatePluginConfig: SAVE_PLUGIN_CONFIG
+                archiveServer: ARCHIVE_SERVER, updatePluginConfig: SAVE_PLUGIN_CONFIG,
+                hintAdapterUp: HINT_ADAPTER_UP
             }),
             openHelpLink() {
                 window.open(this.adapterLink, '_blank')
@@ -339,13 +348,24 @@
             }
         },
         created() {
+            this.hintAdapterUp(this.adapterId)
             if (!this.currentAdapter || this.currentAdapter.id !== this.adapterId) {
-                this.loading = true
+                let shouldFetch = true
+                if (this.allAdapters && this.allAdapters.data) {
+                    let currentAdapter = this.allAdapters.data.find(adapter => adapter.id === this.adapterId)
+                    if (currentAdapter) {
+                        this.updateAdapter(this.adapterId)
+                        shouldFetch = false
+                    }
+                }
+                if (shouldFetch) {
+                    this.loading = true
+                    this.fetchAdapters().then(() => {
+                        this.updateAdapter(this.adapterId)
+                        this.loading = false
+                    })
+                }
             }
-            this.fetchAdapters().then(() => {
-                this.updateAdapter(this.adapterId)
-                this.loading = false
-            })
             this.changeState({name: 'addServer'})
         }
     }

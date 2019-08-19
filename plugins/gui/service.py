@@ -1150,7 +1150,8 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         Save or fetch views over the devices db
         :return:
         """
-        return jsonify(self._entity_views(request.method, EntityType.Devices, limit, skip, mongo_filter, mongo_sort, query_type))
+        return jsonify(
+            self._entity_views(request.method, EntityType.Devices, limit, skip, mongo_filter, mongo_sort, query_type))
 
     @gui_add_rule_logged_in('devices/views/saved/<query_id>', methods=['POST'],
                             required_permissions={Permission(PermissionType.Devices, PermissionLevel.ReadWrite)})
@@ -1273,8 +1274,9 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
     @gui_helpers.filtered_entities()
     @gui_helpers.sorted_endpoint()
     @gui_helpers.projected()
-    @gui_add_rule_logged_in('users', methods=['GET', 'POST', 'DELETE'], required_permissions={Permission(PermissionType.Users,
-                                                                                                         ReadOnlyJustForGet)})
+    @gui_add_rule_logged_in('users', methods=['GET', 'POST', 'DELETE'],
+                            required_permissions={Permission(PermissionType.Users,
+                                                             ReadOnlyJustForGet)})
     def get_users(self, limit, skip, mongo_filter, mongo_sort, mongo_projection, history: datetime):
         if request.method == 'DELETE':
             return self.__delete_entities_by_internal_axon_id(
@@ -1336,7 +1338,8 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
     @gui_add_rule_logged_in('users/views/<query_type>', methods=['GET', 'POST', 'DELETE'],
                             required_permissions={Permission(PermissionType.Users, ReadOnlyJustForGet)})
     def user_views(self, limit, skip, mongo_filter, mongo_sort, query_type):
-        return jsonify(self._entity_views(request.method, EntityType.Users, limit, skip, mongo_filter, mongo_sort, query_type))
+        return jsonify(
+            self._entity_views(request.method, EntityType.Users, limit, skip, mongo_filter, mongo_sort, query_type))
 
     @gui_add_rule_logged_in('users/views/saved/<query_id>', methods=['POST'],
                             required_permissions={Permission(PermissionType.Devices, PermissionLevel.ReadWrite)})
@@ -1458,6 +1461,41 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
                                                                          PermissionLevel.ReadOnly)})
     def adapters(self):
         return jsonify(self._adapters())
+
+    @gui_add_rule_logged_in('adapters/hint_raise/<plugin_name>',
+                            required_permissions={Permission(PermissionType.Adapters,
+                                                             PermissionLevel.ReadOnly)},
+                            methods=['POST'])
+    def hint_raise_adapter(self, plugin_name: str):
+        """
+        Raises all instances of the given plugin name
+        """
+        plugins_to_raise = self.core_configs_collection.find({
+            PLUGIN_NAME: plugin_name,
+            'plugin_type': adapter_consts.ADAPTER_PLUGIN_TYPE,
+            'status': {
+                '$ne': 'up'
+            }
+        }, projection={
+            PLUGIN_UNIQUE_NAME: True
+        })
+        for plugin in plugins_to_raise:
+            unique_name = plugin[PLUGIN_UNIQUE_NAME]
+            # 'lives_left' is a variable that accounts for the amount of minutes of grace
+            # for the adapter until it shuts down again
+            self._get_collection('lives_left', db_name=unique_name).update_one(
+                {
+                    'lives_left': {
+                        '$exists': True
+                    }
+                },
+                {
+                    '$set': {
+                        'lives_left': 5
+                    }
+                }, upsert=True)
+            run_and_forget(lambda: self.request_remote_plugin('version', plugin_unique_name=unique_name))
+        return ''
 
     @rev_cached(ttl=10, remove_from_cache_ttl=60)
     def _adapters(self):
@@ -4761,7 +4799,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
                         email.send(EXEC_REPORT_EMAIL_CONTENT)
                         self.reports_config_collection.update_one({
                             'name': report_name,
-                            'archived':  {
+                            'archived': {
                                 '$ne': True
                             }
                         }, {
