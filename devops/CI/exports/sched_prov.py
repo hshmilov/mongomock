@@ -17,6 +17,51 @@ NODE_MARKER_PATH_HOST = '/home/ubuntu/cortex/.axonius_settings/connected_to_mast
 CREDS = 'creds'
 VERIFY = 'verify'
 
+SCALYR_TEMPLATE = '''
+// Configuration for the Scalyr Agent. For help:
+//
+// https://www.scalyr.com/help/scalyr-agent-2
+
+{{
+  api_key: "{API_KEY}",
+
+  {PROXY_SECTION}
+
+  server_attributes: {{
+     // Fill in this field if you'd like to override the server's hostname.
+     serverHost: "{NODE_NAME}",
+
+     // You can add whatever additional fields you'd like.
+     tier: "{TIER}"
+  }},
+
+  // Log files to upload to Scalyr. You can use '*' wildcards here.
+  logs: [
+     {{
+        path: "/var/log/syslog",
+        attributes: {{parser: "rawlog"}}
+     }},
+     {{
+        path:"/home/ubuntu/helper.log",
+        attributes: {{parser: "rawlog"}}
+     }},
+     {{
+        path: "/home/ubuntu/.bash_history",
+        attributes: {{parser: "rawlog"}}
+     }},
+     {{
+        path: "/var/log/auth.log",
+        attributes: {{parser: "rawlog"}}
+     }}
+  ]
+}}
+'''
+
+PROXY_TEMPLATE = '''
+   "use_requests_lib": true,
+   "https_proxy": "{PROXY_STRING}",
+ '''
+
 
 def chech_command_status(cmd, **kwargs):
     return run_command(cmd, **kwargs).returncode
@@ -73,21 +118,41 @@ def is_local_node():
         return False
 
 
+def configure_scalyr_for_pre_provision(proxy_line, node_name, api_key, tier):
+    proxy_section = ''
+    if proxy_line:
+        proxy_section = PROXY_TEMPLATE.format(PROXY_STRING=f'https://{proxy_line}')
+    template = SCALYR_TEMPLATE.format(API_KEY=api_key,
+                                      PROXY_SECTION=proxy_section,
+                                      NODE_NAME=node_name,
+                                      TIER=tier)
+
+    Path('/etc/scalyr-agent-2/agent.json').write_text(template)
+    run_command('/usr/sbin/service scalyr-agent-2 restart')
+
+
 def provision():
+    node_name_file = Path('/node_name')
     if chech_command_status('pgrep -x chef-client') == 0:
         print('chef client already running')
     else:
         print('starting provision sequence')
 
-    random_part = ''.join(random.choices('abcdefghijklmnopqrstuvwxyz0123456789', k=8))
+    is_node_local = is_local_node()
 
-    if is_local_node():
-        node_name = 'node-ax-' + random_part
+    if not node_name_file.exists():
+        random_part = ''.join(random.choices('abcdefghijklmnopqrstuvwxyz0123456789', k=8))
+        if is_node_local:
+            node_name = 'node-ax-' + random_part
+        else:
+            node_name = 'node-' + random_part
+        node_name_file.write_text(node_name)
+
+        shutil.rmtree('/etc/chef')
+        Path('/etc/chef').mkdir(mode=0o750)
     else:
-        node_name = 'node-' + random_part
+        node_name = node_name_file.read_text()
 
-    shutil.rmtree('/etc/chef')
-    Path('/etc/chef').mkdir(mode=0o750)
     client_rb = Path('/etc/chef/client.rb')
 
     client_rb_template = [f'chef_server_url  "https://manage.chef.io/organizations/axonius"',
@@ -118,10 +183,22 @@ def provision():
          ]
     }
     '''
+
+    try:
+        tier = 'pre_prov_test' if is_node_local else 'pre_prov'
+        configure_scalyr_for_pre_provision(proxy_line=proxy_line,
+                                           node_name=node_name,
+                                           api_key=Path('/home/ubuntu/pre-prov-scalyr.key').read_text().strip(),
+                                           tier=tier)
+    except Exception as e:
+        print(f'Failed to pre-configure scalyr {e}')
+
     Path('/etc/chef/first-boot.json').write_text(first_boot)
 
-    run_command('/usr/bin/chef-client -j /etc/chef/first-boot.json')
-    run_command('/usr/sbin/service chef-client restart')
+    with open('/home/ubuntu/helper.log', 'wb') as helper:
+        run_command('cat /etc/resolv.conf', stdout=helper, stderr=helper)
+        run_command('/usr/bin/chef-client -j /etc/chef/first-boot.json -l debug', stdout=helper, stderr=helper)
+        run_command('/usr/sbin/service chef-client restart', stdout=helper, stderr=helper)
 
 
 def main():
