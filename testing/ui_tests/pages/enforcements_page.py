@@ -71,6 +71,7 @@ class EnforcementsPage(EntitiesPage):
     POST_ACTIONS_TEXT = 'post actions'
     ACTION_LIBRARY_CONTAINER_CSS = '.x-action-library'
     ACTION_CONF_CONTAINER_CSS = '.x-action-config'
+    ACTION_CONF_BODY_CSS = f'{ACTION_CONF_CONTAINER_CSS} .main'
     ACTION_RESULT_CONTAINER_CSS = '.x-action-result'
     ACTION_NAME_ID = 'action-name'
     ACTION_BY_NAME_XPATH = '//div[@class=\'x-text-box\' and child::div[text()=\'{action_name}\']]'
@@ -326,7 +327,8 @@ class EnforcementsPage(EntitiesPage):
         files = files or []
         for file_num, file_data in enumerate(files):
             file_prefix, file_contents = file_data
-            self.click_button('+', button_class='x-button light')
+            self.click_button('+', button_class='x-button light',
+                              scroll_into_view_container=self.ACTION_CONF_BODY_CSS)
             file_name = self.upload_file_by_id(
                 str(file_num),
                 file_contents,

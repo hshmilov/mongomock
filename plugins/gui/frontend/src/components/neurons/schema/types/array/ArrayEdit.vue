@@ -23,7 +23,8 @@
           <component
             :is="item.type"
             ref="itemChild"
-            v-model="data[item.name]"
+            :value="data[item.name]"
+            @input="(value) => dataChanged(value, item.name)"
             :schema="item"
             :api-upload="apiUpload"
             :read-only="readOnly"
@@ -159,6 +160,13 @@
       }
     },
     methods: {
+      dataChanged(value, itemName) {
+        if (Array.isArray(this.data) && typeof itemName === 'number') {
+          this.data = this.data.map((item, index) => index === itemName? value : item)
+        } else {
+          this.data = {...this.data, [itemName]: value}
+        }
+      },
       onValidate (validity) {
         this.$emit('validate', validity)
       },

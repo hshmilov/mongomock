@@ -8,8 +8,14 @@
     :clearable="clearable"
     @input="input"
   />
-  <textarea v-else-if="isText" v-model="data" :maxlength="schema.limit" rows="3" @input="input"></textarea>
-
+  <textarea 
+    v-else-if="isText" 
+    v-model="data" 
+    :maxlength="schema.limit" 
+    rows="3" 
+    @input="input"
+  >
+  </textarea>
   <input
     v-else-if="inputType"
     :id="schema.name"
@@ -25,7 +31,7 @@
   <!-- Select from enum values -->
   <x-select
     v-else-if="enumOptions"
-    v-model="data"
+    v-model="processedData"
     :options="enumOptions"
     placeholder="value..."
     :searchable="true"
@@ -44,9 +50,9 @@
 
 	export default {
 		name: 'XStringEdit',
-        components: { xSelect, xDateEdit },
-        mixins: [primitiveMixin],
-        props: {
+    components: { xSelect, xDateEdit },
+    mixins: [primitiveMixin],
+    props: {
 		  clearable: {
 		    type: Boolean,
             default: true
@@ -109,7 +115,7 @@
 			        return !this.isMail ? true: !this.isEmailValid
 		        }
         }
-	}
+      }
 </script>
 
 <style lang="scss">
