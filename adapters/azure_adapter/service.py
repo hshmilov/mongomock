@@ -43,6 +43,7 @@ class AzureNetworkSecurityGroupRule(SmartJsonClass):
 
 class AzureAdapter(AdapterBase):
     class MyDeviceAdapter(DeviceAdapter):
+        account_tag = Field(str, 'Account Tag')
         location = Field(str, 'Azure Location')
         instance_type = Field(str, 'Azure Instance Type')
         image = Field(AzureImage, 'Image')
@@ -68,7 +69,10 @@ class AzureAdapter(AdapterBase):
                                      cloud_name=client_config.get(AZURE_CLOUD_ENVIRONMENT),
                                      https_proxy=client_config.get('https_proxy'))
             connection.test_connection()
-            return connection
+            metadata_dict = dict()
+            if client_config.get('account_tag'):
+                metadata_dict['account_tag'] = client_config.get('account_tag')
+            return connection, metadata_dict
         except Exception as e:
             message = "Error connecting to azure with subscription_id {0}, reason: {1}".format(
                 client_config[AZURE_SUBSCRIPTION_ID], str(e))
@@ -107,6 +111,12 @@ class AzureAdapter(AdapterBase):
                     "default": AzureClient.DEFAULT_CLOUD
                 },
                 {
+                    'name': 'account_tag',
+                    'title': 'Account Tag',
+                    'type': 'string'
+
+                },
+                {
                     'name': 'https_proxy',
                     'title': 'HTTP/S Proxy',
                     'type': 'string'
@@ -121,10 +131,12 @@ class AzureAdapter(AdapterBase):
             "type": "array"
         }
 
-    def _query_devices_by_client(self, client_name, client_data):
-        return client_data.get_virtual_machines()
+    def _query_devices_by_client(self, client_name, client_data_all):
+        client_data, metadata = client_data_all
+        return client_data.get_virtual_machines(), metadata
 
-    def _parse_raw_data(self, devices_raw_data):
+    def _parse_raw_data(self, devices_raw_data_all):
+        devices_raw_data, metadata = devices_raw_data_all
         for device_raw in devices_raw_data:
             device = self._new_device_adapter()
             device.id = device_raw['id']
@@ -272,6 +284,7 @@ class AzureAdapter(AdapterBase):
 
                 except Exception:
                     logger.exception(f'Failed to parse network security group, continuing')
+            device.account_tag = metadata.get('account_tag')
             device.set_raw(device_raw)
             yield device
 

@@ -279,18 +279,93 @@ class SSMInfo(SmartJsonClass):
     baseline_description = Field(str, 'Patch Baseline Description')
     patch_compliance_summaries = ListField(SSMComplianceSummary, 'Patch Compliance')
     association_compliance_summaries = ListField(SSMComplianceSummary, 'Association Compliance')
+    last_seen = Field(datetime.datetime, 'Last Seen')
+
+
+class RDSDBParameterGroup(SmartJsonClass):
+    db_parameter_group_name = Field(str, 'DB Parameter Group Name')
+    db_parameter_apply_status = Field(str, 'DB Parameter Apply Status')
+
+
+class RDSDBSecurityGroup(SmartJsonClass):
+    db_security_group_name = Field(str, 'DB Security Group Name')
+    status = Field(str, 'Status')
+
+
+class RDSVPCSecurityGroup(SmartJsonClass):
+    vpc_security_group_id = Field(str, 'Security Group ID')
+    status = Field(str, 'Status')
+
+
+class RDSSubnet(SmartJsonClass):
+    subnet_az = Field(str, 'Availability Zone')
+    subnet_id = Field(str, 'ID')
+    subnet_status = Field(str, 'Status')
+
+
+class RDSDomainMembership(SmartJsonClass):
+    domain = Field(str, 'Domain')
+    status = Field(str, 'Status')
+    fqdn = Field(str, 'FQDN')
+    iam_role_name = Field(str, 'IAM Role Name')
+
+
+class RDSInfo(SmartJsonClass):
+    allocated_storage = Field(int, 'Allocated Storage')
+    auto_minor_version_upgrade = Field(bool, 'Auto Minor Version Upgrade')
+    backup_retention_period = Field(int, 'Backup Retention Period')
+    ca_certificate_identifier = Field(str, 'CA Certificate Identifier')
+    copy_tags_to_snapshot = Field(bool, 'Copy Tags To Snapshot')
+    db_instance_arn = Field(str, 'DB Instance ARN')
+    db_instance_class = Field(str, 'DB Instance Class')
+    db_instance_status = Field(str, 'DB Instance Status')
+    db_name = Field(str, 'Initial Database Name')
+    db_instance_port = Field(int, 'DB Instance Port')
+    dbi_resource_id = Field(str, 'DBI Resource ID')
+    deletion_protection = Field(bool, 'Deletion Protection')
+    engine = Field(str, 'Engine')
+    engine_version = Field(str, 'Engine Version')
+    iam_database_authentication_enabled = Field(bool, 'IAM Database Authentication Enabled')
+    instance_create_time = Field(datetime.datetime, 'Instance Create Time')
+    latest_restorable_time = Field(datetime.datetime, 'Latest Restorable Time')
+    license_model = Field(str, 'License Model')
+    master_username = Field(str, 'Master Username')
+    monitoring_interval = Field(int, 'Monitoring Interval')
+    mutli_az = Field(bool, 'Multi AZ')
+    performance_insights_enabled = Field(bool, 'Performance Insights Enabled')
+    preferred_backup_window = Field(str, 'Preferred Backup Window')
+    preferred_maintenance_window = Field(str, 'Preferred Maintenance Window')
+    publicly_accessible = Field(bool, 'Publicly Accessible')
+    storage_encrypted = Field(bool, 'Storage Encrypted')
+    storage_type = Field(str, 'Storage Type')
+
+    rds_db_parameter_group = ListField(RDSDBParameterGroup, 'DB Parameter Group')
+    rds_db_security_group = ListField(RDSDBSecurityGroup, 'DB Security Group')
+    vpc_security_groups = ListField(RDSVPCSecurityGroup, 'VPC Security Groups')
+
+    db_subnet_group_name = Field(str, 'Subnet Group Name')
+    db_subnet_group_description = Field(str, 'Subnet Group Description')
+    db_subnet_group_status = Field(str, 'Subnet Group Status')
+    db_subnets = ListField(RDSSubnet, 'Subnets')
+
+    domain_memberships = ListField(RDSDomainMembership, 'Domain Membership')
+
+    endpoint_address = Field(str, 'Endpoint Address')
+    endpoint_hosted_zone_id = Field(str, 'Endpoint Hosted Zone ID')
+    endpoint_port = Field(int, 'Endpoint Port')
 
 
 class AwsAdapter(AdapterBase, Configurable):
     class MyDeviceAdapter(DeviceOrContainerAdapter):
         account_tag = Field(str, 'Account Tag')
+        aws_account_alias = ListField(str, 'Account Alias')
         aws_region = Field(str, 'Region')
         aws_source = Field(str, 'Source')    # Specifiy if it is from a user, a role, or what.
         aws_availability_zone = Field(str, 'Availability Zone')
         aws_device_type = Field(
             str,
-            'Device Type (EC2/ECS/EKS/ELB/Managed/NAT)',
-            enum=['EC2', 'ECS', 'EKS', 'ELB', 'Managed', 'NAT']
+            'Device Type (EC2/ECS/EKS/ELB/Managed/NAT/RDS)',
+            enum=['EC2', 'ECS', 'EKS', 'ELB', 'Managed', 'NAT', 'RDS']
         )
         security_groups = ListField(AWSSecurityGroup, 'Security Groups')
 
@@ -318,6 +393,9 @@ class AwsAdapter(AdapterBase, Configurable):
 
         # SSM specific fields
         ssm_data = Field(SSMInfo, 'SSM Information')
+
+        # RDS specific fields
+        rds_data = Field(RDSInfo, 'RDS Information')
 
         def add_aws_ec2_tag(self, **kwargs):
             self.aws_tags.append(AWSTagKeyValue(**kwargs))
@@ -576,6 +654,13 @@ class AwsAdapter(AdapterBase, Configurable):
         except Exception as e:
             errors['ssm'] = str(e)
 
+        try:
+            c = session.client('rds', **params)
+            c.describe_db_instances()
+            clients['rds'] = c
+        except Exception as e:
+            errors['rds'] = str(e)
+
         # the only service we truely need is ec2. all the rest are optional.
         # If this has failed we raise an exception
         if not clients.get('ec2'):
@@ -633,21 +718,37 @@ class AwsAdapter(AdapterBase, Configurable):
             logger.info(f'query_devices_by_client account: {account}')
             parsed_data_for_all_regions = None
             for region_name, client_data_by_region in account_regions_clients.items():
+                source_name = f'{account}_{region_name}'
                 try:
-                    source_name = f'{account}_{region_name}'
+                    account_metadata = self._get_account_metadata(client_data_by_region)
                     if parsed_data_for_all_regions is None:
                         parsed_data_for_all_regions = self._query_devices_by_client_for_all_sources(
                             client_data_by_region)
                     parse_data_for_source = self._query_devices_by_client_by_source(client_data_by_region,
                                                                                     https_proxy=https_proxy)
                     parse_data_for_source.update(parsed_data_for_all_regions)
-                    yield source_name, parse_data_for_source, AwsRawDataTypes.Regular
+                    yield source_name, account_metadata, parse_data_for_source, AwsRawDataTypes.Regular
 
                     for parse_data_for_source in self._query_devices_by_client_by_source_ssm(
                             client_data_by_region):
-                        yield source_name, parse_data_for_source, AwsRawDataTypes.SSM
+                        yield source_name, account_metadata, parse_data_for_source, AwsRawDataTypes.SSM
                 except Exception:
                     logger.exception(f'Problem querying source {source_name}')
+
+    def _get_account_metadata(self, client_data):
+        iam_client = client_data.get('iam')
+        account_metadata = dict()
+        if iam_client:
+            try:
+                all_aliases = []
+                for list_account_aliases_page in get_paginated_marker_api(iam_client.list_account_aliases):
+                    all_aliases.extend(list_account_aliases_page.get('AccountAliases') or [])
+
+                account_metadata['aliases'] = all_aliases
+            except Exception:
+                logger.exception(f'Exception while querying account aliases')
+
+        return account_metadata
 
     def _query_devices_by_client_by_source_ssm(self, client_data):
         extra_data = dict()
@@ -1333,6 +1434,16 @@ class AwsAdapter(AdapterBase, Configurable):
                 # We do not raise an exception here since this could be a networking exception or a programming
                 # exception and we do not want the whole adapter to crash.
                 logger.exception('Error while parsing ELB v2')
+        if client_data.get('rds') is not None and self.__fetch_rds is True:
+            try:
+                rds_client = client_data.get('rds')
+                all_rds_instances = []
+                for rds_page in get_paginated_marker_api(rds_client.describe_db_instances):
+                    all_rds_instances.extend(rds_page.get('DBInstances') or [])
+
+                raw_data['rds'] = all_rds_instances
+            except Exception:
+                logger.exception(f'Problem fetching information about RDS')
         return raw_data
 
     def _clients_schema(self):
@@ -1395,14 +1506,18 @@ class AwsAdapter(AdapterBase, Configurable):
         }
 
     def _parse_raw_data(self, devices_raw_data):
-        for aws_source, devices_raw_data_by_source, raw_data_type in devices_raw_data:
+        for aws_source, account_metadata, devices_raw_data_by_source, raw_data_type in devices_raw_data:
             try:
                 if raw_data_type == AwsRawDataTypes.Regular:
-                    yield from self._parse_raw_data_inner_regular(devices_raw_data_by_source, aws_source)
+                    for device in self._parse_raw_data_inner_regular(devices_raw_data_by_source, aws_source):
+                        if device:
+                            self.append_metadata_to_device(device, account_metadata)
+                            yield device
                 elif raw_data_type == AwsRawDataTypes.SSM:
                     try:
                         device = self._parse_raw_data_inner_ssm(devices_raw_data_by_source, aws_source)
                         if device:
+                            self.append_metadata_to_device(device, account_metadata)
                             yield device
                     except Exception:
                         logger.exception(f'Problem parsing device from ssm')
@@ -1411,6 +1526,14 @@ class AwsAdapter(AdapterBase, Configurable):
                                     f'unknown type {raw_data_type.name}')
             except Exception:
                 logger.exception(f'Problem parsing data from source {aws_source}')
+
+    def append_metadata_to_device(self, device: MyDeviceAdapter, account_metadata: dict):
+        try:
+            account_aliases = account_metadata.get('aliases')
+            if account_aliases and isinstance(account_aliases, list):
+                device.aws_account_alias = account_aliases
+        except Exception:
+            pass
 
     @staticmethod
     def __make_ip_rules_list(ip_pemissions_list):
@@ -1501,6 +1624,7 @@ class AwsAdapter(AdapterBase, Configurable):
         elb_by_iid = devices_raw_data.get('elb_by_iid') or {}
         all_elbs = devices_raw_data.get('all_elbs') or []
         nat_gateways = devices_raw_data.get('nat') or {}
+        rds_instances = devices_raw_data.get('rds') or []
 
         ec2_id_to_ips = dict()
         private_ips_to_ec2 = dict()
@@ -1667,7 +1791,7 @@ class AwsAdapter(AdapterBase, Configurable):
                                                              DeviceRunningState.Unknown)
                     try:
                         if POWER_STATE_MAP.get(device_raw.get('State', {}).get('Name'),
-                                               DeviceRunningState.Unknown) != DeviceRunningState.TurnedOn:
+                                               DeviceRunningState.Unknown) == DeviceRunningState.TurnedOn:
                             device.last_seen = datetime.datetime.now()
                     except Exception:
                         logger.exception(f'Problem adding last seen')
@@ -2168,6 +2292,130 @@ class AwsAdapter(AdapterBase, Configurable):
         except Exception:
             logger.exception(f'Failure adding ELBs')
 
+        # Parse RDS's
+        try:
+            for rds_instance_raw in rds_instances:
+                try:
+                    device = self._new_device_adapter()
+                    device.id = rds_instance_raw['DBInstanceIdentifier']
+                    device.name = rds_instance_raw['DBInstanceIdentifier']
+                    device.aws_device_type = 'RDS'
+                    device.aws_source = aws_source
+                    device.aws_region = aws_region
+                    device.account_tag = account_tag
+                    device.cloud_id = rds_instance_raw['DBInstanceIdentifier']
+                    device.cloud_provider = 'AWS'
+                    device.aws_availability_zone = rds_instance_raw.get('AvailabilityZone')
+
+                    rds_data = RDSInfo()
+                    if isinstance(rds_instance_raw.get('AllocatedStorage'), int):
+                        rds_data.allocated_storage = rds_instance_raw.get('AllocatedStorage')
+
+                    rds_data.auto_minor_version_upgrade = rds_instance_raw.get('AutoMinorVersionUpgrade')
+                    rds_data.backup_retention_period = rds_instance_raw.get('BackupRetentionPeriod')
+                    rds_data.ca_certificate_identifier = rds_instance_raw.get('CACertificateIdentifier')
+                    rds_data.copy_tags_to_snapshot = rds_instance_raw.get('CopyTagsToSnapshot')
+                    rds_data.db_instance_arn = rds_instance_raw.get('DBInstanceArn')
+                    rds_data.db_instance_class = rds_instance_raw.get('DBInstanceClass')
+                    rds_data.db_instance_status = rds_instance_raw.get('DBInstanceStatus')
+                    rds_data.db_name = rds_instance_raw.get('DBName')
+                    rds_data.db_instance_port = rds_instance_raw.get('DbInstancePort')
+                    rds_data.dbi_resource_id = rds_instance_raw.get('DbiResourceId')
+                    rds_data.deletion_protection = rds_instance_raw.get('DeletionProtection')
+                    rds_data.engine = rds_instance_raw.get('Engine')
+                    rds_data.engine_version = rds_instance_raw.get('EngineVersion')
+                    rds_data.iam_database_authentication_enabled = rds_instance_raw.get(
+                        'IAMDatabaseAuthenticationEnabled')
+                    rds_data.instance_create_time = parse_date(rds_instance_raw.get('InstanceCreateTime'))
+                    rds_data.latest_restorable_time = parse_date(rds_instance_raw.get('LatestRestorableTime'))
+                    rds_data.license_model = rds_instance_raw.get('LicenseModel')
+                    rds_data.master_username = rds_instance_raw.get('MasterUsername')
+                    rds_data.monitoring_interval = rds_instance_raw.get('MonitoringInterval')
+                    rds_data.mutli_az = rds_instance_raw.get('MultiAZ')
+                    rds_data.performance_insights_enabled = rds_instance_raw.get('PerformanceInsightsEnabled')
+                    rds_data.preferred_backup_window = rds_instance_raw.get('PreferredBackupWindow')
+                    rds_data.preferred_maintenance_window = rds_instance_raw.get('PreferredMaintenanceWindow')
+                    rds_data.publicly_accessible = rds_instance_raw.get('PubliclyAccessible')
+                    rds_data.storage_encrypted = rds_instance_raw.get('StorageEncrypted')
+                    rds_data.storage_type = rds_instance_raw.get('StorageType')
+
+                    for parameter_group in (rds_instance_raw.get('DBParameterGroups') or []):
+                        try:
+                            rds_data.rds_db_parameter_group.append(
+                                RDSDBParameterGroup(
+                                    db_parameter_group_name=parameter_group.get('DBParameterGroupName'),
+                                    db_parameter_apply_status=parameter_group.get('ParameterApplyStatus')
+                                )
+                            )
+                        except Exception:
+                            logger.exception(f'Failed adding db parameter group')
+
+                    for db_security_group in (rds_instance_raw.get('DBSecurityGroups') or []):
+                        try:
+                            rds_data.rds_db_security_group.append(
+                                RDSDBSecurityGroup(
+                                    db_security_group_name=db_security_group.get('DBSecurityGroupName'),
+                                    status=db_security_group.get('Status')
+                                )
+                            )
+                        except Exception:
+                            logger.exception(f'Failed adding db security group')
+
+                    for vpc_security_group in (rds_instance_raw.get('VpcSecurityGroups') or []):
+                        try:
+                            rds_data.vpc_security_groups.append(
+                                RDSVPCSecurityGroup(
+                                    vpc_security_group_id=vpc_security_group.get('VpcSecurityGroupId'),
+                                    status=vpc_security_group.get('Status')
+                                )
+                            )
+                        except Exception:
+                            logger.exception(f'Failed adding vpc security group')
+
+                    subnet_group = rds_instance_raw.get('DBSubnetGroup') or {}
+                    rds_data.db_subnet_group_name = subnet_group.get('DBSubnetGroupName')
+                    rds_data.db_subnet_group_description = subnet_group.get('DBSubnetGroupDescription')
+                    rds_data.db_subnet_group_status = subnet_group.get('SubnetGroupStatus')
+
+                    try:
+                        for subnet_raw in (subnet_group.get('Subnets') or []):
+                            rds_data.db_subnets.append(RDSSubnet(
+                                subnet_az=(subnet_raw.get('SubnetAvailabilityZone') or {}).get('Name'),
+                                subnet_id=subnet_raw.get('SubnetIdentifier'),
+                                subnet_status=subnet_raw.get('SubnetStatus')
+                            ))
+                    except Exception:
+                        logger.exception(f'Failed adding RDS subnets')
+
+                    try:
+                        for domain_membership_raw in (rds_instance_raw.get('DomainMemberships') or []):
+                            rds_data.domain_memberships.append(RDSDomainMembership(
+                                domain=domain_membership_raw.get('Domain'),
+                                status=domain_membership_raw.get('Status'),
+                                fqdn=domain_membership_raw.get('FQDN'),
+                                iam_role_name=domain_membership_raw.get('IAMRoleName')
+                            ))
+                    except Exception:
+                        logger.exception(f'Failed adding domain membership')
+
+                    endpoint_data = rds_instance_raw.get('Endpoint') or {}
+                    rds_data.endpoint_address = endpoint_data.get('Address')
+                    rds_data.endpoint_hosted_zone_id = endpoint_data.get('HostedZoneId')
+                    rds_data.endpoint_port = endpoint_data.get('Port')
+
+                    # To be added - parse db security groups, use `describe_db_security_groups`
+
+                    device.vpc_id = subnet_group.get('VpcId')
+                    device.vpc_name = vpcs_by_id.get(subnet_group.get('VpcId'))
+                    device.rds_data = rds_data
+
+                    device.set_raw(rds_instance_raw)
+                    yield device
+                except Exception:
+                    logger.exception(f'Could not parse RDS {rds_instance_raw}')
+        except Exception:
+            logger.exception(f'Failure parsing RDSs')
+
     def _parse_raw_data_inner_ssm(
             self,
             device_raw_data_all: Tuple[Dict[str, Dict], Dict[str, Dict], Dict[str, str]],
@@ -2193,7 +2441,8 @@ class AwsAdapter(AdapterBase, Configurable):
         ssm_data = SSMInfo()
         ssm_data.ping_status = basic_data.get('PingStatus')
         ssm_data.last_ping_date = parse_date(basic_data.get('LastPingDateTime'))
-        device.last_seen = parse_date(basic_data.get('LastPingDateTime'))
+        # Do not set device.last_seen! otherwise filtering devices will not work without 'Include outdated adapter...'
+        ssm_data.last_seen = parse_date(basic_data.get('LastPingDateTime'))
         ssm_data.agent_version = basic_data.get('AgentVersion')
         try:
             ssm_data.is_latest_version = bool(basic_data.get('IsLatestVersion'))
@@ -2391,6 +2640,7 @@ class AwsAdapter(AdapterBase, Configurable):
         self.__correlate_eks_ec2 = config.get('correlate_eks_ec2') or False
         self.__fetch_instance_roles = config.get('fetch_instance_roles') or False
         self.__fetch_load_balancers = config.get('fetch_load_balancers') or False
+        self.__fetch_rds = config.get('fetch_rds') or False
         self.__fetch_ssm = config.get('fetch_ssm') or False
         self.__fetch_nat = config.get('fetch_nat') or False
         self.__parse_elb_ips = config.get('parse_elb_ips') or False
@@ -2437,6 +2687,11 @@ class AwsAdapter(AdapterBase, Configurable):
                     'type': 'bool'
                 },
                 {
+                    'name': 'fetch_rds',
+                    'title': 'Fetch information about RDS (Relational Database Service)',
+                    'type': 'bool'
+                },
+                {
                     'name': 'verbose_auth_notifications',
                     'title': 'Show verbose notifications about connection failures',
                     'type': 'bool'
@@ -2453,6 +2708,7 @@ class AwsAdapter(AdapterBase, Configurable):
                 'correlate_eks_ec2',
                 'fetch_instance_roles',
                 'fetch_load_balancers',
+                'fetch_rds',
                 'fetch_ssm',
                 'fetch_nat',
                 'parse_elb_ips',
@@ -2469,6 +2725,7 @@ class AwsAdapter(AdapterBase, Configurable):
             'correlate_eks_ec2': False,
             'fetch_instance_roles': False,
             'fetch_load_balancers': False,
+            'fetch_rds': False,
             'fetch_ssm': False,
             'fetch_nat': False,
             'parse_elb_ips': False,

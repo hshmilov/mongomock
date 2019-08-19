@@ -24,6 +24,7 @@ AZURE_AUTHORIZATION_CODE = 'authorization_code'
 # pylint: disable=invalid-name,too-many-instance-attributes,arguments-differ
 class AzureAdAdapter(AdapterBase):
     class MyDeviceAdapter(DeviceAdapter):
+        account_tag = Field(str, 'Account Tag')
         azure_device_id = Field(str, 'Azure Device ID')
         azure_display_name = Field(str, 'Azure Display Name')
         azure_is_compliant = Field(bool, 'Azure Is Compliant')
@@ -42,6 +43,7 @@ class AzureAdAdapter(AdapterBase):
         last_sign_in = Field(datetime.datetime, 'Approximate Last SignIn Time')
 
     class MyUserAdapter(UserAdapter, ADEntity):
+        account_tag = Field(str, 'Account Tag')
         ad_on_premise_immutable_id = Field(str, 'On Premise Immutable ID')
         ad_on_premise_sync_enabled = Field(bool, 'On Premise Sync Enabled')
         ad_on_premise_last_sync_date_time = Field(datetime.datetime, 'On Premise Last Sync Date Time)')
@@ -74,7 +76,10 @@ class AzureAdAdapter(AdapterBase):
                 connection.set_refresh_token(refresh_token)
 
             connection.test_connection()
-            return connection
+            metadata_dict = dict()
+            if client_config.get('account_tag'):
+                metadata_dict['account_tag'] = client_config.get('account_tag')
+            return connection, metadata_dict
         except Exception as e:
             message = 'Error connecting to Azure AD with tenant id {0}, reason: {1}'.format(
                 client_config[AZURE_TENANT_ID], str(e))
@@ -82,12 +87,14 @@ class AzureAdAdapter(AdapterBase):
             raise ClientConnectionException(message)
 
     @staticmethod
-    def _query_devices_by_client(client_name, session: AzureAdClient):
-        yield from session.get_device_list()
+    def _query_devices_by_client(client_name, data):
+        session, metadata = data
+        return session.get_device_list(), metadata
 
     @staticmethod
-    def _query_users_by_client(client_name, session: AzureAdClient):
-        yield from session.get_user_list()
+    def _query_users_by_client(client_name, data):
+        session, metadata = data
+        return session.get_user_list(), metadata
 
     @staticmethod
     def _clients_schema():
@@ -114,6 +121,12 @@ class AzureAdAdapter(AdapterBase):
                     'title': 'Azure Oauth Authorization Code',
                     'type': 'string',
                     'format': 'password'
+                },
+                {
+                    'name': 'account_tag',
+                    'title': 'Account Tag',
+                    'type': 'string'
+
                 },
                 {
                     'name': 'https_proxy',
@@ -223,7 +236,8 @@ class AzureAdAdapter(AdapterBase):
             logger.exception(f'Problem with device {device_raw}')
             return None
 
-    def _parse_raw_data(self, raw_data):
+    def _parse_raw_data(self, raw_data_all):
+        raw_data, metadata = raw_data_all
         for raw_device_data, devie_type in iter(raw_data):
             device = None
             if devie_type == 'Azure AD':
@@ -231,14 +245,17 @@ class AzureAdAdapter(AdapterBase):
             if devie_type == 'Intune':
                 device = self._create_intune_device(raw_device_data)
             if device:
+                device.account_tag = metadata.get('account_tag')
                 yield device
 
-    def _parse_users_raw_data(self, raw_data):
+    def _parse_users_raw_data(self, raw_data_all):
+        raw_data, metadata = raw_data_all
         for raw_user_data in iter(raw_data):
             try:
                 # Schema: https://developer.microsoft.com/en-us/graph/docs/api-reference/v1.0/resources/user
                 user = self._new_user_adapter()
                 user.id = raw_user_data['id']
+                user.account_tag = metadata.get('account_tag')
 
                 account_enabled = raw_user_data.get('accountEnabled')
                 if isinstance(account_enabled, bool):

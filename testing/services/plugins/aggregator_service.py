@@ -55,8 +55,10 @@ class AggregatorService(PluginService, UpdatablePluginMixin):
             self._update_schema_version_13()
         if self.db_schema_version < 14:
             self._update_schema_version_14()
+        if self.db_schema_version < 15:
+            self._update_schema_version_15()
 
-        if self.db_schema_version != 14:
+        if self.db_schema_version != 15:
             print(f'Upgrade failed, db_schema_version is {self.db_schema_version}')
 
     def __create_capped_collections(self):
@@ -690,8 +692,80 @@ class AggregatorService(PluginService, UpdatablePluginMixin):
 
             self._upgrade_adapter_client_id('hyper_v_adapter', hyper_v_new_client_id)
             self.db_schema_version = 14
-        except Exception:
+        except Exception as e:
             print(f'Exception while upgrading core db to version 14. Details: {e}')
+            traceback.print_exc()
+            raise
+
+    def _update_schema_version_15(self):
+        print('Update to schema 15 - update AWS SSM last seen')
+        try:
+            all_set_operations = []
+            all_unset_operations = []
+            devices_db = self._entity_db_map[EntityType.Devices]
+            for device in devices_db.find(
+                {'adapters.data.ssm_data': {'$exists': True}},
+                projection={
+                    '_id': 1,
+                    f'adapters.{PLUGIN_NAME}': 1,
+                    'adapters.data.id': 1,
+                    'adapters.data.last_seen': 1,
+                    'adapters.data.ssm_data':  1,
+                }
+            ):
+                all_aws = [x for x in device['adapters'] if x[PLUGIN_NAME] == 'aws_adapter']
+                for current_aws in all_aws:
+                    current_aws_data = current_aws.get('data') or {}
+                    if not current_aws_data.get('ssm_data'):
+                        continue
+
+                    if not current_aws_data.get('id'):
+                        print(f'Warning! found aws ssm with no id')
+                        continue
+
+                    current_last_seen = current_aws_data.get('last_seen')
+                    if current_last_seen:
+                        all_set_operations.append(
+                            pymongo.operations.UpdateOne(
+                                {
+                                    '_id': device['_id'],
+                                    'adapters.data.id': current_aws_data['id']
+                                },
+                                {
+                                    '$set': {
+                                        'adapters.$.data.ssm_data.last_seen': current_last_seen
+                                    }
+                                }
+                            )
+                        )
+
+                        all_unset_operations.append(
+                            pymongo.operations.UpdateOne(
+                                {
+                                    '_id': device['_id'],
+                                    'adapters.data.id': current_aws_data['id']
+                                },
+                                {
+                                    '$unset': {
+                                        'adapters.$.data.last_seen': 1
+                                    }
+                                }
+                            )
+                        )
+
+            print(f'Going to fix {len(all_set_operations)} ssm devices')
+            if all_set_operations:
+                for i in range(0, len(all_set_operations), 1000):
+                    devices_db.bulk_write(all_set_operations[i: i + 1000], ordered=False)
+                    print(f'aws ssm last_seen addition: Fixed Chunk of {i + 1000} records')
+
+                for i in range(0, len(all_unset_operations), 1000):
+                    devices_db.bulk_write(all_unset_operations[i: i + 1000], ordered=False)
+                    print(f'aws ssm last_seen removal: Fixed Chunk of {i + 1000} records')
+
+            self.db_schema_version = 15
+        except Exception as e:
+            print(f'Exception while upgrading core db to version 15. Details: {e}')
             traceback.print_exc()
             raise
 

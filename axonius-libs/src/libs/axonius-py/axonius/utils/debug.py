@@ -41,6 +41,10 @@ def redprint(s):
     debugprint(s, 'light_red')
 
 
+def yellowprint(s):
+    debugprint(s, 'light_yellow')
+
+
 def is_debug_attached():
     if '_pydev_bundle' not in sys.modules:
         return False

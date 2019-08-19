@@ -1,12 +1,15 @@
 """
 System engineering common tasks.
 """
+# pylint: disable=too-many-locals, too-many-return-statements, protected-access
 import importlib
 import sys
 import os
 import subprocess
 
 from axonius.consts.plugin_subtype import PluginSubtype
+from axonius.utils.debug import redprint, yellowprint
+from axonius.entities import EntityType
 from services.plugins.reimage_tags_analysis_service import ReimageTagsAnalysisService
 from services.plugins.reports_service import ReportsService
 from testing.services.plugins.aggregator_service import AggregatorService
@@ -23,7 +26,15 @@ PLUGINS_DIR = os.path.join(SERVICES_DIR, 'plugins')
 AXONIUS_SH = os.path.join(ROOT_DIR, 'axonius.sh')
 
 
-def _get_docker_service(type_name, name) -> AdapterService:
+def _get_docker_service(name, type_name=None) -> AdapterService:
+    if not type_name:
+        service_filename = f'{name}_service.py'
+        if os.path.exists(os.path.join(ADAPTERS_DIR, service_filename)):
+            type_name = 'adapters'
+        elif os.path.exists(os.path.join(PLUGINS_DIR, service_filename)):
+            type_name = 'plugins'
+        else:
+            raise ValueError(f'No such adapter or action!')
     module = importlib.import_module(f'services.{type_name}.{name.lower()}_service')
     return getattr(module, ' '.join(name.lower().split('_')).title().replace(' ', '') + 'Service')()
 
@@ -38,7 +49,10 @@ def usage():
     {name} rr - run reports
     {name} sa - run static analysis
     {name} rta - run reimage tags analysis
-    {name} re [service/adapter] - restart some service/adapter  
+    {name} re [service/adapter] - restart some service/adapter
+    {name} migrate [service/adapter] - run db migrations on some service/adapter. e.g. `migrate aggregator`
+    {name} db rf [device/user] [adapter] [field] - removes a field from an adapter. e.g. `db rf device aws _old`
+                                                   will remove '_old' from all aws devices.
     '''
 
 
@@ -97,7 +111,7 @@ def main():
             ag.clean_db(True)
         else:
             try:
-                service = _get_docker_service('adapters', action)
+                service = _get_docker_service(action, type_name='adapters')
             except Exception:
                 print(f'No such adapter "{action}"!')
                 return -1
@@ -131,6 +145,63 @@ def main():
         subprocess.check_call(
             f'{AXONIUS_SH} {service_type} {action} up --restart --prod', shell=True, cwd=ROOT_DIR
         )
+
+    elif component == 'migrate':
+        service = _get_docker_service(action)
+        print(f'Running DB Migration for {action}...')
+        service._migrate_db()   # pylint: disable=protected-access
+        print(f'Done!')
+
+    elif component == 'db':
+        if action == 'rf':
+            try:
+                entity, adapter, field = sys.argv[3], sys.argv[4], sys.argv[5]
+            except Exception:
+                print(usage())
+                return -1
+
+            entity = entity.lower()
+            assert entity in ['device', 'user']
+
+            entity_type = EntityType.Devices if entity == 'device' else EntityType.Users
+
+            entity_db = ag._entity_db_map[entity_type]
+            match = {
+                'adapters': {
+                    '$elemMatch': {
+                        'plugin_name': f'{adapter}_adapter',
+                        f'data.{field}': {'$exists': True}
+                    }
+                }
+            }
+            count = entity_db.count(match)
+            redprint(f'You are going to remove the field {field} from {count} {adapter} {entity}s. '
+                     f'This is unrecoverable!')
+            redprint(f'Are you sure? [yes/no]')
+            res = input()
+            if res != 'yes':
+                print(f'Not continuing.')
+                return 0
+
+            result = entity_db.update_many(
+                match,
+                {
+                    '$unset': {f'adapters.$.data.{field}': 1}
+                }
+            )
+
+            print(f'Matched {result.matched_count}, modified {result.modified_count}')
+
+            new_count = entity_db.count(match)
+            if new_count > 0:
+                yellowprint(f'Warning - {adapter} {entity}s with {field} still exist. '
+                            f'This happens because only the first occurrence of {adapter} in the {entity} is deleted.'
+                            f'please run this script again.')
+            else:
+                print('Done')
+        else:
+            print(usage())
+            return -1
 
     else:
         print(usage())
