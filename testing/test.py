@@ -416,6 +416,7 @@ def main():
                         help='Set the amount of max jobs in the parallel builder (which can be run distributed). '
                              'This should be used only for debugging')
     parser.add_argument('--pytest-args', nargs='*', help='Extra args to pass to pytest, with a -- prefix.')
+    parser.add_argument('--pytest-single-args', nargs='*', help='Extra single args to pass to pytest, with a - prefix.')
 
     try:
         args = parser.parse_args()
@@ -424,12 +425,18 @@ def main():
         sys.exit(1)
 
     extra_pytest_args = ' '.join([f'--{arg}' for arg in args.pytest_args]) if args.pytest_args else ''
+    extra_pytest_single_args = \
+        ' '.join([f'-{arg}' for arg in args.pytest_single_args]) \
+        if args.pytest_single_args \
+        else ''
+    all_extra_pytest_args = f'{extra_pytest_args} {extra_pytest_single_args}'
 
     print(f'Cloud type: {args.cloud}')
     print(f'Number of instances: {args.number_of_instances}')
     print(f'Instance Type: {args.instance_type}')
     print(f'Max Parallel Builder Tasks: {args.max_parallel_builder_tasks}')
     print(f'Extra pytest arguments: {extra_pytest_args}')
+    print(f'Extra pytest single arguments: {extra_pytest_single_args}')
 
     group_name = os.environ['BUILD_NUMBER'] if 'BUILD_NUMBER' in os.environ else f'Local test ({socket.gethostname()})'
     # test_group_name_as_env = group_name.replace('"', '-').replace('$', '-').replace('#', '-')
@@ -442,7 +449,7 @@ def main():
 
             def get_ut_tests_jobs():
                 return {
-                    'Unit Tests': f'./run_ut_tests.sh {extra_pytest_args}'
+                    'Unit Tests': f'./run_ut_tests.sh {all_extra_pytest_args}'
                 }
 
             def get_integ_tests_jobs():
@@ -454,7 +461,7 @@ def main():
                 return {
                     'integ_' + file_name.split('.py')[0]:
                         f'python3 -u '
-                        f'./testing/run_pytest.py {extra_pytest_args} {os.path.join(DIR_MAP["integ"], file_name)}'
+                        f'./testing/run_pytest.py {all_extra_pytest_args} {os.path.join(DIR_MAP["integ"], file_name)}'
                     for file_name in integ_tests
                 }
 
@@ -477,7 +484,7 @@ def main():
                     ])
 
                     parallel_jobs[job_name] = \
-                        f'python3 -u ./testing/run_parallel_tests.py {extra_pytest_args} {files_list}'
+                        f'python3 -u ./testing/run_parallel_tests.py {all_extra_pytest_args} {files_list}'
 
                 return parallel_jobs
 
@@ -502,7 +509,7 @@ def main():
                 return {
                     'ui_' + test_module.split('.py')[0]:
                         'python3 -u ./testing/run_ui_tests.py '
-                        f'{extra_pytest_args} {os.path.join(DIR_MAP["ui"], test_module)}'
+                        f'{all_extra_pytest_args} {os.path.join(DIR_MAP["ui"], test_module)}'
                     for test_module in ui_tests
                 }
 
