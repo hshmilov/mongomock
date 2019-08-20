@@ -25,7 +25,8 @@ export const pluginMeta = {
         description: 'Symantec Endpoint Protection manages events, policies, and registration for the client computers that connect to customer networks.'
     },
     f5_icontrol_adapter: {
-        title: 'F5 BIG-IP iControl - BETA',
+        title: 'F5 BIG-IP iControl',
+        link: 'https://docs.axonius.com/docs/f5-big-ip-icontrol',
         description: 'F5 iControl is a Web services-enabled open API providing granular control over the configuration and management of F5\'s application delivery platform, BIG-IP.'
     },
     druva_adapter: {
