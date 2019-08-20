@@ -1,5 +1,7 @@
 import time
+
 import pytest
+from flaky import flaky
 
 from ui_tests.tests.ui_test_base import TestBase
 from ui_tests.tests.ui_consts import (READ_WRITE_USERNAME, READ_ONLY_USERNAME, NEW_PASSWORD, FIRST_NAME, LAST_NAME)
@@ -110,6 +112,7 @@ class TestDashboard(TestBase):
         self.devices_page.wait_for_table_to_load()
         assert self.devices_page.find_search_value() == self.COVERED_QUERY
 
+    @flaky(max_runs=2)
     def test_dashboard_intersection_chart(self):
         self.dashboard_page.switch_to_page()
         self.base_page.run_discovery()
