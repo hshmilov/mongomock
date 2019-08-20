@@ -1,5 +1,6 @@
 import datetime
 import logging
+import os
 import socket
 import struct
 from typing import Dict, Iterable
@@ -94,6 +95,7 @@ class InstanceControlService(Triggerable, PluginBase):
         # pylint: disable=W0511
         # TODO: Figure out if this connection has be refreshed from time to time
         self.__host_ssh = get_ssh_connection()
+        self.__cortex_path = os.environ['CORTEX_PATH']
         self.__adapters = get_adapter_names_mappings(self.__exec_system_command('ls'))
         assert len(self.__adapters) > 100, f'Can not get all adapters mappings, got just {self.__adapters}'
 
@@ -172,7 +174,7 @@ class InstanceControlService(Triggerable, PluginBase):
         :param cmd: command to execute
         :return: stdout
         """
-        return self.__exec_command(f'cd cortex; ./pyrun.sh devops/axonius_system.py {cmd}')
+        return self.__exec_command(f'cd {self.__cortex_path}; ./pyrun.sh devops/axonius_system.py {cmd}')
 
     @retry(wait_fixed=10000,
            stop_max_delay=60000,

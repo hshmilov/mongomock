@@ -16,7 +16,8 @@ from axonius.consts.plugin_consts import (AGGREGATOR_PLUGIN_NAME,
                                           PLUGIN_NAME,
                                           PLUGIN_UNIQUE_NAME,
                                           MAINTENANCE_TYPE,
-                                          GUI_SYSTEM_CONFIG_COLLECTION)
+                                          GUI_SYSTEM_CONFIG_COLLECTION,
+                                          LIBS_PATH)
 from axonius.entities import EntityType
 from axonius.utils.gui_helpers import PermissionLevel, PermissionType
 from gui.gui_logic.filter_utils import filter_archived
@@ -564,7 +565,7 @@ class GuiService(PluginService, UpdatablePluginMixin):
             volumes.extend(super().volumes_override)
             return volumes
         libs = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..', 'axonius-libs', 'src', 'libs'))
-        volumes.extend([f'{libs}:/home/axonius/libs:ro'])
+        volumes.extend([f'{libs}:{LIBS_PATH.absolute().as_posix()}:ro'])
 
         # extend volumes by mapping specifically each python file, to be able to debug much better.
         volumes.extend([f'{self.service_dir}/{fn}:/home/axonius/app/{self.package_name}/{fn}:ro'

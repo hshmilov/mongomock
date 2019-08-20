@@ -4,6 +4,7 @@ import psutil
 
 from services.ports import DOCKER_PORTS
 from services.weave_service import WeaveService
+from axonius.consts.plugin_consts import LIBS_PATH
 
 CORTEX_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..'))
 
@@ -71,7 +72,7 @@ class MockingbirdService(WeaveService):
             f'{self.container_name}_data:/data/db',
             f'{os.path.join(self.service_dir, "app")}:/home/axonius/app',
             f'{os.path.join(self.service_dir, "config")}:/home/axonius/config',
-            f'{libs}:/home/axonius/libs:ro',
+            f'{libs}:{LIBS_PATH.absolute().as_posix()}:ro',
             f'{adapters}:/home/axonius/adapters:ro'
         ]
 

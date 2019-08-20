@@ -4,6 +4,7 @@ import subprocess
 import pytest
 from services.plugin_service import PluginService
 from services.simple_fixture import initialize_fixture
+from axonius.consts.system_consts import CORTEX_PATH
 from axonius.consts.instance_control_consts import HOSTNAME_FILE_PATH
 
 
@@ -48,6 +49,12 @@ class InstanceControlService(PluginService):
                    f'/etc/hostname:{HOSTNAME_FILE_PATH}:ro']
         volumes.extend(super().volumes_override)
         return volumes
+
+    @property
+    def environment(self):
+        env = super().environment
+        env.append(f'CORTEX_PATH={CORTEX_PATH}')
+        return env
 
 
 @pytest.fixture(scope='module')

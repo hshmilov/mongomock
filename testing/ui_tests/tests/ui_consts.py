@@ -2,7 +2,7 @@ import os
 from pathlib import Path
 
 from axonius.consts.plugin_consts import AXONIUS_SETTINGS_DIR_NAME
-from axonius.consts.system_consts import LOGS_PATH_HOST
+from axonius.consts.system_consts import LOGS_PATH_HOST, CORTEX_PATH
 
 INCORRECT_PASSWORD = 'Incorrect!'
 UNMATCHED_PASSWORD1 = 'Unmatched!'
@@ -16,6 +16,7 @@ VALID_EMAIL = 'lalala@lalala.com'
 ROOT_DIR = os.path.join(os.path.abspath(os.path.dirname(__file__)), '..', '..', '..')
 LOGGED_IN_MARKER = Path(ROOT_DIR) / AXONIUS_SETTINGS_DIR_NAME / '.logged_in'
 GUI_LOG_PATH = os.path.join(LOGS_PATH_HOST, 'gui', 'gui.axonius.log')
+LOGS_AFTER_UPGRADE_PATH = os.path.join(CORTEX_PATH, 'install_dir', 'cortex', 'logs')
 
 RESTRICTED_USERNAME = 'RestrictedUser'
 UPDATE_USERNAME = 'UpdateUser'
