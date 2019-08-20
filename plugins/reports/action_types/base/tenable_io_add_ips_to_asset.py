@@ -73,14 +73,14 @@ class TenableIoAddIPsToTargetGroup(ActionTypeBase):
                     'type': 'bool'
                 },
                 {
-                    'name': 'override_ips',
-                    'title': 'Override Current IPs List',
-                    'type': 'bool',
-                },
-                {
                     'name': 'exclude_ipv6',
                     'title': 'Exclude IPv6',
                     'type': 'bool'
+                },
+                {
+                    'name': 'override_ips',
+                    'title': 'Override Current IPs List',
+                    'type': 'bool',
                 },
             ],
             'required': [

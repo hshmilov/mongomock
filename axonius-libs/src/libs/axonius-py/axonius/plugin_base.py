@@ -2963,7 +2963,7 @@ class PluginBase(Configurable, Feature):
                         },
                         {
                             'name': CORRELATE_AD_SCCM,
-                            'title': 'Correlate AD-SCCM DistinguishIds',
+                            'title': 'Correlate Microsoft Active Directory (AD) and Microsoft SCCM data based on Distinguished Names',
                             'type': 'bool'
                         }
                     ],

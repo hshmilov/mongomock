@@ -77,7 +77,7 @@ class SignalsciencesAdapter(AdapterBase):
             'items': [
                 {
                     'name': 'domain',
-                    'title': 'Signalsciences Domain',
+                    'title': 'Signal Sciences Domain',
                     'type': 'string'
                 },
                 {

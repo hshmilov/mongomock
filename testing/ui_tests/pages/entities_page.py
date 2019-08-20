@@ -691,14 +691,14 @@ class EntitiesPage(Page):
 
     def open_link_dialog(self):
         self.click_button(self.ACTIONS_BUTTON, partial_class=True)
-        self.driver.find_element_by_xpath(self.TABLE_ACTION_ITEM_XPATH.format(action='Link devices...')).click()
+        self.driver.find_element_by_xpath(self.TABLE_ACTION_ITEM_XPATH.format(action='Link devices')).click()
 
     def confirm_link(self):
         self.driver.find_element_by_css_selector('.modal-container.w-xl>.modal-footer>div>button:nth-child(2)').click()
 
     def open_unlink_dialog(self):
         self.click_button(self.ACTIONS_BUTTON, partial_class=True)
-        self.driver.find_element_by_xpath(self.TABLE_ACTION_ITEM_XPATH.format(action='Unlink devices...')).click()
+        self.driver.find_element_by_xpath(self.TABLE_ACTION_ITEM_XPATH.format(action='Unlink devices')).click()
 
     def read_delete_dialog(self):
         return self.wait_for_element_present_by_css('.actions .modal-body .warn-delete').text
@@ -819,7 +819,7 @@ class EntitiesPage(Page):
 
     def open_custom_data_bulk(self):
         self.click_button('Actions', partial_class=True, should_scroll_into_view=False)
-        self.driver.find_element_by_xpath(self.TABLE_ACTION_ITEM_XPATH.format(action='Add custom data...')).click()
+        self.driver.find_element_by_xpath(self.TABLE_ACTION_ITEM_XPATH.format(action='Add custom data')).click()
 
     def is_enforcement_results_header(self, enforcement_name, action_name):
         header_text = self.driver.find_element_by_css_selector('.x-query-state .header').text

@@ -6,18 +6,22 @@ export const pluginMeta = {
     },
     signalsciences_adapter: {
         title: 'Signal Sciences',
+        link:'https://docs.axonius.com/docs/signal-sciences',
         description: 'Signal Sciences is a web protection platform that Protects on-premise, multi-cloud and hybrid-cloud apps, within containers and serverless functions.'
     },
     automox_adapter: {
         title: 'Automox',
+        link: 'https://docs.axonius.com/docs/automox',
         description: 'Automox’s cloud-based, automated patch management solution simplifies patching and configuration management across Windows, Linux, Mac OS X, and third-party software.'
     },
     kaspersky_sc_adapter: {
         title: 'Kaspersky Security Center',
+        link: 'https://docs.axonius.com/docs/kaspersky-security-center',
         description: 'Kaspersky Security Center simplifies security administration and IT systems management.'
     },
     symantec_12_adapter: {
         title: 'Symantec Endpoint Protection 12.x',
+        link: 'https://docs.axonius.com/docs/symantec-endpoint-protection-12x',
         description: 'Symantec Endpoint Protection manages events, policies, and registration for the client computers that connect to customer networks.'
     },
     f5_icontrol_adapter: {
@@ -27,7 +31,7 @@ export const pluginMeta = {
     druva_adapter: {
         title: 'Druva Cloud Platform',
         link: 'https://docs.axonius.com/docs/druva-cloud-platform',
-        description: 'Druva Cloud Platform is a data protection as-a-service that provides data visibility and control across organizations’ entire data footprint.'
+        description: 'Druva Cloud Platform is a data protection as-a-service that provides management across all customer data sources that are scalable, predictable and on-demand.'
     },
     symantec_sep_cloud_adapter: {
         title: 'Symantec Endpoint Protection Cloud',
@@ -470,7 +474,7 @@ export const pluginMeta = {
     },
     fireeye_hx_adapter: {
         title: 'FireEye Endpoint Security (formerly HX)',
-        link: '',
+        link: 'https://docs.axonius.com/docs/fireeye-endpoint-security-formerly-hx',
         description: 'FireEye Endpoint Security (formerly HX) detects and protects against unknown endpoint threats and exploits with integrated threat intelligence.'
     },
     aws_adapter: {

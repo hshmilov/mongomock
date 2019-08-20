@@ -35,14 +35,14 @@ class HaveibeenpwnedEnrichment(ActionTypeBase):
                     'format': 'password'
                 },
                 {
-                    'name': 'https_proxy',
-                    'title': 'HTTPS Proxy',
-                    'type': 'string'
-                },
-                {
                     'name': 'verify_ssl',
                     'title': 'Verify SSL',
                     'type': 'bool'
+                },
+                {
+                    'name': 'https_proxy',
+                    'title': 'HTTPS Proxy',
+                    'type': 'string'
                 }
             ],
             'required': [

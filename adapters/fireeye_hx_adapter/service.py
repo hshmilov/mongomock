@@ -66,7 +66,7 @@ class FireeyeHxAdapter(AdapterBase):
             "items": [
                 {
                     "name": "domain",
-                    "title": "FireeyeHx Domain",
+                    "title": "FireEye Endpoint Security Domain",
                     "type": "string"
                 },
                 {

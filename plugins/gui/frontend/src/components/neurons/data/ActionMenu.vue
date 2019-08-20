@@ -21,14 +21,14 @@
       </x-menu>
     </x-dropdown>
     <x-tag-modal
-      title="Tag..."
+      title="Tag"
       :module="module"
       :entities="entities"
       :entities-meta="entitiesMeta"
       @done="() => $emit('done', false)"
     />
     <x-action-menu-item
-      title="Delete..."
+      title="Delete"
       :handle-save="deleteEntities"
       :message="`Deleted ${module}`"
       action-text="Delete"
@@ -39,7 +39,7 @@
     </x-action-menu-item>
     <slot />
     <x-action-menu-item
-      :title="`Add custom data...`"
+      :title="`Add custom data`"
       :handle-save="saveFields"
       :handle-close="initCustomFields"
       :message="`Custom data saved`"

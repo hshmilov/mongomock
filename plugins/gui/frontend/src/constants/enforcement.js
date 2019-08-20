@@ -96,7 +96,7 @@ export const actionsMeta = {
         title: 'Create Zendesk Ticket'
     },
     create_remedy_ticket: {
-        title: 'Create Remedy Ticket'
+        title: 'Create BMC Helix Remedy Ticket'
     },
     send_emails: {
         title: 'Send Email'

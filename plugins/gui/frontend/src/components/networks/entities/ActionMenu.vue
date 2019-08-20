@@ -6,7 +6,7 @@
     @done="(reset) => $emit('done', reset)"
   >
     <x-action-menu-item
-      :title="`Link ${module}...`"
+      :title="`Link ${module}`"
       :handle-save="linkEntities"
       :message="`${module} were linked`"
       action-text="Save"
@@ -22,7 +22,7 @@
       >You are about to link {{ selectionCount }} {{ module }}.</div>
     </x-action-menu-item>
     <x-action-menu-item
-      :title="`Unlink ${module}...`"
+      :title="`Unlink ${module}`"
       :handle-save="unlinkEntities"
       :message="`${module} were unlinked`"
       action-text="Save"
@@ -31,7 +31,7 @@
     </x-action-menu-item>
     <x-action-menu-item
       v-if="!enforcementRestricted"
-      title="Enforce..."
+      title="Enforce"
       :handle-save="enforceEntities"
       :message="`Enforcement is running. View in Enforcements -> Tasks`"
       action-text="Run"

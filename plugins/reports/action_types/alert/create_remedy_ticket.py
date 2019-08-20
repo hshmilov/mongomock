@@ -18,29 +18,8 @@ class RemedyTicketAction(ActionTypeAlert):
         return {
             'items': [
                 {
-                    'name': 'form_name',
-                    'title': 'Form Name',
-                    'type': 'string'
-                },
-                {
-                    'name': 'ticket_description',
-                    'title': 'Ticket Description',
-                    'type': 'string',
-                    'format': 'text'
-                },
-                {
-                    'name': 'description_default',
-                    'title': 'Add Ticket Description Default',
-                    'type': 'bool'
-                },
-                {
-                    'name': 'priority',
-                    'title': 'Priority',
-                    'type': 'string'
-                },
-                {
                     'name': 'domain',
-                    'title': 'Remedy Domain',
+                    'title': 'BMC Helix Remedy Domain',
                     'type': 'string'
                 },
                 {
@@ -63,8 +42,28 @@ class RemedyTicketAction(ActionTypeAlert):
                     'name': 'https_proxy',
                     'title': 'HTTPS Proxy',
                     'type': 'string'
+                },
+                {
+                    'name': 'form_name',
+                    'title': 'Form Name',
+                    'type': 'string'
+                },
+                {
+                    'name': 'ticket_description',
+                    'title': 'Ticket Description',
+                    'type': 'string',
+                    'format': 'text'
+                },
+                {
+                    'name': 'description_default',
+                    'title': 'Add Ticket Description Default',
+                    'type': 'bool'
+                },
+                {
+                    'name': 'priority',
+                    'title': 'Priority',
+                    'type': 'string'
                 }
-
             ],
             'required': [
                 'description_default',

@@ -112,6 +112,7 @@ class NexposeAdapter(ScannerAdapterBase, Configurable):
                 NEXPOSE_PORT,
                 USER,
                 PASSWORD,
+                VERIFY_SSL
             ],
             "type": "array"
         }
