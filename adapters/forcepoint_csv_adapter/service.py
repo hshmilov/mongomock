@@ -4,7 +4,7 @@ import requests
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.devices.device_adapter import DeviceAdapter, AGENT_NAMES
 from axonius.fields import Field
-from axonius.clients.rest.consts import DEFAULT_TIMEOUT
+from axonius.clients.rest.consts import get_default_timeout
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.utils.files import get_local_config_file
 from axonius.utils.datetime import parse_date
@@ -33,7 +33,7 @@ class ForcepointCsvAdapter(AdapterBase):
         if client_config.get('csv_http'):
             r = requests.get(client_config.get('csv_http'),
                              verify=False,
-                             timeout=DEFAULT_TIMEOUT).content
+                             timeout=get_default_timeout()).content
             r.raise_for_status()
         return client_config
 
@@ -43,7 +43,7 @@ class ForcepointCsvAdapter(AdapterBase):
             try:
                 csv_data = requests.get(client_data.get('csv_http'),
                                         verify=False,
-                                        timeout=DEFAULT_TIMEOUT).content
+                                        timeout=get_default_timeout()).content
             except Exception:
                 logger.exception(f'Couldn\'t get csv info from URL')
         if csv_data is None:

@@ -10,7 +10,7 @@ from urllib.parse import urljoin
 import requests
 
 from axonius.adapter_exceptions import ClientConnectionException
-from axonius.clients.rest.consts import DEFAULT_TIMEOUT
+from axonius.clients.rest.consts import get_default_timeout
 from axonius.clients.rest.connection import RESTConnection
 from axonius.utils import json
 
@@ -84,7 +84,7 @@ class CiscoPrimeClient:
         logger.info(f'Creating session using {self._username}')
         try:
             self._sess = requests.Session()
-            resp = self.get('/webacs/api/v2/data.json', timeout=DEFAULT_TIMEOUT)
+            resp = self.get('/webacs/api/v2/data.json', timeout=get_default_timeout())
         except CiscoPrimeException as e:
             raise ClientConnectionException(f'Invalid creds for api test')
         except Exception as e:

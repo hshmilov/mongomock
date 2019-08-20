@@ -1784,9 +1784,21 @@ class AwsAdapter(AdapterBase, Configurable):
                     if ec2_ips:
                         ec2_id_to_ips[device_id] = ec2_ips
 
+                    more_ips = []
+
                     specific_private_ip_address = device_raw.get('PrivateIpAddress')
                     if specific_private_ip_address:
                         private_ips_to_ec2[specific_private_ip_address] = device_id
+                        if specific_private_ip_address not in ec2_ips:
+                            more_ips.append(specific_private_ip_address)
+
+                    specific_public_ip_address = device_raw.get('PublicIpAddress')
+                    if specific_public_ip_address not in ec2_ips:
+                        more_ips.append(specific_public_ip_address)
+                        device.add_public_ip(specific_public_ip_address)
+
+                    if more_ips:
+                        device.add_ips_and_macs(ips=more_ips)
                     device.power_state = POWER_STATE_MAP.get(device_raw.get('State', {}).get('Name'),
                                                              DeviceRunningState.Unknown)
                     try:

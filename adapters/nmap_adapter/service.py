@@ -10,7 +10,7 @@ from axonius.adapter_base import AdapterProperty
 from axonius.scanner_adapter_base import ScannerAdapterBase
 from axonius.utils.parsing import is_domain_valid
 from axonius.devices.device_adapter import DeviceAdapter
-from axonius.clients.rest.consts import DEFAULT_TIMEOUT
+from axonius.clients.rest.consts import get_default_timeout
 from axonius.smart_json_class import SmartJsonClass
 from axonius.fields import Field, ListField
 from axonius.adapter_exceptions import ClientConnectionException
@@ -64,7 +64,7 @@ class NmapAdapter(ScannerAdapterBase):
             try:
                 nmap_data_bytes = requests.get(client_config.get('nmap_http'),
                                                verify=False,
-                                               timeout=DEFAULT_TIMEOUT).content
+                                               timeout=get_default_timeout()).content
             except Exception:
                 logger.exception(f'Couldn\'t get nmap info from URL')
         elif client_config.get('nmap_share'):

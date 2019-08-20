@@ -11,7 +11,7 @@ from axonius.adapter_exceptions import GetDevicesError
 from axonius.clients.csv.utils import get_column_types
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.users.user_adapter import UserAdapter
-from axonius.clients.rest.consts import DEFAULT_TIMEOUT
+from axonius.clients.rest.consts import get_default_timeout
 from axonius.fields import Field
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.utils.datetime import parse_date
@@ -59,7 +59,7 @@ class CsvAdapter(AdapterBase):
             try:
                 csv_data_bytes = requests.get(client_config.get('csv_http'),
                                               verify=False,
-                                              timeout=DEFAULT_TIMEOUT).content
+                                              timeout=get_default_timeout()).content
             except Exception:
                 logger.exception(f'Couldn\'t get csv info from URL')
         elif client_config.get('csv_share'):

@@ -29,7 +29,7 @@ def get_username(adapter_data):
 
 def get_ad_display_name(adapter_data):
     ad_display_name = adapter_data['data'].get('ad_display_name')
-    if ad_display_name:
+    if ad_display_name and ad_display_name.lower().strip() not in ['unknown']:
         return ad_display_name.lower().strip()
     return None
 

@@ -118,7 +118,7 @@ class AzureAdapter(AdapterBase):
                 },
                 {
                     'name': 'https_proxy',
-                    'title': 'HTTP/S Proxy',
+                    'title': 'HTTPS Proxy',
                     'type': 'string'
                 }
             ],

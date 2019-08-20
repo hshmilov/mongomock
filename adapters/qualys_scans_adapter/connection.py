@@ -2,6 +2,7 @@ import logging
 
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.exception import RESTException
+from axonius.clients.rest.consts import get_default_timeout
 from qualys_scans_adapter import consts
 
 logger = logging.getLogger(f'axonius.{__name__}')
@@ -44,7 +45,7 @@ class QualysScansConnection(RESTConnection):
         :param obj logger: Logger object of the system
         :param str domain: domain address for Illusive
         """
-        super().__init__(*args, session_timeout=(5, request_timeout), **kwargs)
+        super().__init__(*args, session_timeout=(get_default_timeout().read_timeout, request_timeout), **kwargs)
         self._permanent_headers = {'X-Requested-With': 'Axonius Qualys Scans Adapter',
                                    'Accept': 'application/json'}
         self._date_filter = date_filter

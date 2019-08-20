@@ -10,7 +10,7 @@ from bs4 import BeautifulSoup
 
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
-from axonius.clients.rest.consts import DEFAULT_TIMEOUT
+from axonius.clients.rest.consts import get_default_timeout
 from fortigate_adapter.consts import (DEFAULT_DHCP_LEASE_TIME,
                                       DEFAULT_FORTIGATE_PORT)
 
@@ -54,7 +54,7 @@ class FortigateClient():
         url = uritools.urijoin(RESTConnection.build_url(domain=self.host, port=self.port), resource)
         response = session.request(method, url,
                                    data=payload, verify=self.verify_ssl, params={'vdom': self.vdom},
-                                   timeout=DEFAULT_TIMEOUT)
+                                   timeout=get_default_timeout())
         response.raise_for_status()
         try:
             return response.json()

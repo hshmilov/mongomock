@@ -75,7 +75,8 @@ from axonius.consts.plugin_consts import (ADAPTERS_LIST_LENGTH,
                                           GLOBAL_KEYVAL_COLLECTION, AXONIUS_DNS_SUFFIX,
                                           NODE_USER_PASSWORD, REPORTS_PLUGIN_NAME, EXECUTION_PLUGIN_NAME,
                                           NODE_ID_ENV_VAR_NAME,
-                                          HEAVY_LIFTING_PLUGIN_NAME)
+                                          HEAVY_LIFTING_PLUGIN_NAME, SOCKET_READ_TIMEOUT,
+                                          DEFAULT_SOCKET_READ_TIMEOUT, DEFAULT_SOCKET_RECV_TIMEOUT)
 from axonius.consts.plugin_subtype import PluginSubtype
 from axonius.consts.core_consts import CORE_CONFIG_NAME
 from axonius.consts.gui_consts import FEATURE_FLAGS_CONFIG, FeatureFlagsNames
@@ -2618,6 +2619,16 @@ class PluginBase(Configurable, Feature):
         except Exception:
             pass
 
+        self._socket_recv_timeout = DEFAULT_SOCKET_RECV_TIMEOUT
+        self._socket_read_timeout = DEFAULT_SOCKET_READ_TIMEOUT
+        try:
+            socket_read_timeout = int(config[AGGREGATION_SETTINGS].get(SOCKET_READ_TIMEOUT))
+            if socket_read_timeout > 0:
+                self._socket_read_timeout = socket_read_timeout
+        except Exception:
+            logger.exception(f'Could not set socket read timout')
+        self._configured_session_timeout = (self._socket_read_timeout, self._socket_recv_timeout)
+
         current_syslog = getattr(self, '_syslog_settings', None)
         if current_syslog != config['syslog_settings']:
             logger.info('new syslog settings arrived')
@@ -2977,6 +2988,11 @@ class PluginBase(Configurable, Feature):
                             "name": MAX_WORKERS,
                             "title": "Maximum Adapters to Execute Asynchronously",
                             "type": "integer",
+                        },
+                        {
+                            'name': SOCKET_READ_TIMEOUT,
+                            'title': 'Socket read-timeout in seconds',
+                            'type': 'integer'
                         }
                     ],
                     "name": AGGREGATION_SETTINGS,
@@ -3047,6 +3063,7 @@ class PluginBase(Configurable, Feature):
             },
             AGGREGATION_SETTINGS: {
                 MAX_WORKERS: 20,
+                SOCKET_READ_TIMEOUT: 5
             },
 
         }

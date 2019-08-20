@@ -141,7 +141,8 @@ class CrowdStrikeAdapter(AdapterBase):
                 device.external_ip = device_raw.get('external_ip')
                 device.device_manufacturer = device_raw.get('bios_manufacturer')
                 try:
-                    device.policies = [str(policty_key) for policty_key in device_raw.get('device_policies').keys()]
+                    if device_raw.get('device_policies'):
+                        device.policies = [str(policy_key) for policy_key in device_raw.get('device_policies').keys()]
                 except Exception:
                     logger.exception(f'Problem getting policies at {device_raw}')
                 device.set_raw(device_raw)

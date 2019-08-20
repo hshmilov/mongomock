@@ -65,6 +65,7 @@ CORRELATE_BY_EMAIL_PREFIX = 'correlate_by_email_prefix'
 CORRELATE_AD_SCCM = 'correlate_ad_sccm'
 AGGREGATION_SETTINGS = 'aggregation_settings'
 MAX_WORKERS = 'max_workers'
+SOCKET_READ_TIMEOUT = 'socket_read_timeout'
 
 # COLLECTIONS #
 CONFIGURABLE_CONFIGS_COLLECTION = 'configurable_configs'
@@ -77,3 +78,7 @@ AXONIUS_USER_NAME = '_axonius'
 
 X_UI_USER = 'x-ui-user'
 X_UI_USER_SOURCE = 'x-ui-user-source'
+
+# Defaults
+DEFAULT_SOCKET_READ_TIMEOUT = 5
+DEFAULT_SOCKET_RECV_TIMEOUT = 300

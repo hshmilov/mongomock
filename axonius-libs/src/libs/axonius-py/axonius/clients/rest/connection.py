@@ -16,6 +16,7 @@ from axonius.clients.rest import consts
 from axonius.clients.rest.exception import RESTException, RESTAlreadyConnected, \
     RESTConnectionError, RESTNotConnected, RESTRequestException
 from axonius.logging.metric_helper import log_metric
+from axonius.clients.rest.consts import get_default_timeout
 from axonius.utils.json import from_json
 from axonius.utils.network.docker_network import has_addr_collision, COLLISION_MESSAGE
 from axonius.utils.ssl import check_associate_cert_with_private_key
@@ -34,7 +35,7 @@ class RESTConnection(ABC):
     def __init__(self, domain: str, username: str = None, password: str = None, apikey: str = None,
                  verify_ssl: bool = False,
                  http_proxy: str = None, https_proxy: str = None, url_base_prefix: str = '/',
-                 session_timeout: Tuple[int, int] = consts.DEFAULT_TIMEOUT,
+                 session_timeout: Tuple[int, int] = None,
                  port: int = None, headers: dict = None, use_domain_path: bool = False):
         """
         An abstract class that implements backbone logic for accessing RESTful APIs in the manner
@@ -64,7 +65,9 @@ class RESTConnection(ABC):
             self._url_base_prefix = '/' + self._url_base_prefix
         if not self._url_base_prefix.endswith('/'):
             self._url_base_prefix = self._url_base_prefix + '/'
-        self._session_timeout = session_timeout
+        self._requested_session_timeout = session_timeout
+        self._session_timeout = None
+        self.revalidate_session_timeout()
         self._port = port
         self._proxies = {}
         if http_proxy is not None:
@@ -80,6 +83,15 @@ class RESTConnection(ABC):
         self._session_headers = {}
         self._session = None
         self._session_lock = threading.Lock()
+
+    def revalidate_session_timeout(self):
+        """
+        Gets the session timeout configured by the user and sets it. This is useful when the default timeout is not
+        enough for a specific scenario / environment. for example, a customer which needs a bigger read-timeout
+        :return:
+        """
+        self._session_timeout = self._requested_session_timeout or get_default_timeout()
+        logger.debug(f'Session timeout revalidated to {self._session_timeout}')
 
     @staticmethod
     def build_url(domain: str, port: int = None, url_base_prefix: str = '/', use_domain_path: bool = False):
@@ -126,6 +138,7 @@ class RESTConnection(ABC):
             logger.warning(f'failed to check for collision', exc_info=True)
 
     def connect(self):
+        self.revalidate_session_timeout()
         self.check_for_collision_safe()
         self._validate_no_connection()
         self._session = requests.Session()
