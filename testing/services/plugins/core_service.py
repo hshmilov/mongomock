@@ -32,7 +32,10 @@ class CoreService(PluginService, UpdatablePluginMixin):
         if self.db_schema_version < 3:
             self._update_schema_version_3()
 
-        if self.db_schema_version != 3:
+        if self.db_schema_version < 4:
+            self._update_schema_version_4()
+
+        if self.db_schema_version != 4:
             print(f'Upgrade failed, db_schema_version is {self.db_schema_version}')
 
     def _update_schema_version_1(self):
@@ -153,6 +156,42 @@ class CoreService(PluginService, UpdatablePluginMixin):
             self.db_schema_version = 3
         except Exception as e:
             print(f'Exception while upgrading core db to version 3. Details: {e}')
+            traceback.print_exc()
+            raise
+
+    def _update_schema_version_4(self):
+        # https://axonius.atlassian.net/browse/AX-4732
+        # https://axonius.atlassian.net/browse/AX-4733
+        print('Upgrade to schema 4')
+        try:
+            stress_res = self.db.client['core']['configs'].delete_many({
+                PLUGIN_NAME: 'stresstest_adapter'
+            })
+            stressuser_res = self.db.client['core']['configs'].delete_many({
+                PLUGIN_NAME: 'stresstest_users_adapter'
+            })
+            print(f'Deleted {stress_res.deleted_count} stresstest and {stressuser_res.deleted_count} user stresstest')
+
+            pm_status = self.db.client['core']['configs'].delete_many({
+                PLUGIN_NAME: 'pm_status'
+            })
+            print(f'Deleted {pm_status.deleted_count} pm status')
+
+            careful_exec = self.db.client['core']['configs'].delete_many({
+                PLUGIN_NAME: 'careful_execution_correlator'
+            })
+            print(f'Deleted {careful_exec.deleted_count} careful exection')
+
+            # Even if we delete too much, that's not really an issue, because it will just re-register
+            old_stuff = self.db.client['core']['configs'].delete_many({
+                'last_seen': {
+                    '$lt': datetime.datetime.now() - datetime.timedelta(days=30)
+                }
+            })
+            print(f'Deleted {old_stuff.deleted_count} old stuff')
+            self.db_schema_version = 4
+        except Exception as e:
+            print(f'Exception while upgrading core db to version 4. Details: {e}')
             traceback.print_exc()
             raise
 
