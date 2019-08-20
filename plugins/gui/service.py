@@ -3195,7 +3195,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
             }, {
                 '$set': user_data
             })
-            if not res.modified_count:
+            if not res.matched_count:
                 return '', 400
         if request.method == 'DELETE':
             self._users_collection.update_one({'_id': ObjectId(user_id)},
