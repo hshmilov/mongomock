@@ -17,3 +17,8 @@ class ApiMetric:
 class Query:
     QUERY_GUI = 'query.gui'
     QUERY_HISTORY = 'query.history'
+
+
+class Adapters:
+    CREDENTIALS_CHANGE_OK = 'credentials_change.ok'
+    CREDENTIALS_CHANGE_ERROR = 'credentials_change.error'

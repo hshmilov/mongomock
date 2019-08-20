@@ -1,10 +1,10 @@
 import re
 
-from axonius.consts import adapter_consts
+from axonius.consts.metric_consts import Adapters
+from axonius.utils.wait import wait_until
 from services.adapters.ad_service import AdService
 from services.adapters.cisco_service import CiscoService
 from test_credentials.test_ad_credentials import ad_client1_details
-from ui_tests.tests.ui_consts import LOCAL_DEFAULT_USER_PATTERN
 from ui_tests.tests.ui_test_base import TestBase
 
 JSON_ADAPTER_SEARCH = 'json'
@@ -42,5 +42,7 @@ class TestAdaptersFast(TestBase):
     def test_add_server(self):
         self.adapters_page.add_server(ad_client1_details)
         ad_log_tester = AdService().log_tester
-        pattern = f'{LOCAL_DEFAULT_USER_PATTERN}: {adapter_consts.LOG_CLIENT_SUCCESS_LINE}'
-        ad_log_tester.is_pattern_in_log(re.escape(pattern))
+        assert ad_log_tester.is_metric_in_log(metric_name=Adapters.CREDENTIALS_CHANGE_OK,
+                                              value=re.escape(ad_client1_details['dc_name']))
+        pattern = f'"metric_name": "{Adapters.CREDENTIALS_CHANGE_OK}".*"ui_user": "admin", "ui_user_source": "internal"'
+        wait_until(lambda: ad_log_tester.is_pattern_in_log(pattern))

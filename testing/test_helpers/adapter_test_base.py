@@ -1,14 +1,12 @@
 import uuid
-import re
 from datetime import datetime, timedelta, timezone
 
 import pytest
 from flaky import flaky
 
-from axonius.consts import adapter_consts
+from axonius.consts.metric_consts import Adapters
 from axonius.utils.wait import wait_until
 from axonius.plugin_base import EntityType
-from ui_tests.tests.ui_consts import NONE_USER_PATTERN
 
 from services.axonius_service import get_service
 from test_credentials.test_bad_credentials import FAKE_CLIENT_DETAILS
@@ -113,8 +111,10 @@ class AdapterTestBase:
     @flaky(max_runs=2)
     def test_fetch_devices(self):
         self.adapter_service.add_client(self.some_client_details)
-        pattern = f'{NONE_USER_PATTERN}: {adapter_consts.LOG_CLIENT_SUCCESS_LINE}'
-        wait_until(lambda: self.log_tester.is_pattern_in_log(re.escape(pattern), 10))
+        wait_until(lambda: self.log_tester.is_metric_in_log(metric_name=Adapters.CREDENTIALS_CHANGE_OK,
+                                                            value='.*',
+                                                            lines_lookback=10))
+
         self.axonius_system.assert_device_aggregated(
             self.adapter_service, [(self.some_client_id, self.some_device_id)])
 
@@ -424,5 +424,5 @@ class AdapterTestBase:
             self.adapter_service.add_client(FAKE_CLIENT_DETAILS)
         except AssertionError:
             pass  # some adapters return 200, and some an error
-        pattern = f'{NONE_USER_PATTERN}: {adapter_consts.LOG_CLIENT_FAILURE_LINE}'
-        wait_until(lambda: self.log_tester.is_pattern_in_log(re.escape(pattern), 10))
+        wait_until(lambda: self.log_tester.is_metric_in_log(metric_name=Adapters.CREDENTIALS_CHANGE_ERROR,
+                                                            value='.*'))

@@ -1,12 +1,9 @@
-import re
-
-from axonius.consts import adapter_consts
+from axonius.consts.metric_consts import Adapters
 from services.adapters.ad_service import AdService
 from services.adapters.cisco_service import CiscoService
 from services.adapters.gotoassist_service import GotoassistService
 from test_credentials.test_ad_credentials import ad_client1_details
 from ui_tests.pages.adapters_page import AD_NAME
-from ui_tests.tests.ui_consts import LOCAL_DEFAULT_USER_PATTERN
 from ui_tests.tests.ui_test_base import TestBase
 
 GOTOASSIST_NAME = 'RescueAssist'
@@ -104,8 +101,7 @@ class TestAdaptersConnectivity(TestBase):
                 self.adapters_page.wait_for_server_red()
 
                 ad_log_tester = AdService().log_tester
-                pattern = f'{LOCAL_DEFAULT_USER_PATTERN}: {adapter_consts.LOG_CLIENT_FAILURE_LINE}'
-                ad_log_tester.is_pattern_in_log(re.escape(pattern))
+                ad_log_tester.is_metric_in_log(metric_name=Adapters.CREDENTIALS_CHANGE_ERROR, value='.*')
 
                 self.adapters_page.switch_to_page()
 

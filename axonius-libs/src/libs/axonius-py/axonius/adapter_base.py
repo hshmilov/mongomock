@@ -17,6 +17,8 @@ from apscheduler.executors.pool import ThreadPoolExecutor
 from apscheduler.triggers.interval import IntervalTrigger
 from pymongo import ReturnDocument
 
+from axonius.consts.metric_consts import Adapters
+from axonius.logging.metric_helper import log_metric
 from axonius.thread_pool_executor import LoggedThreadPoolExecutor
 from axonius.background_scheduler import LoggedBackgroundScheduler
 
@@ -605,33 +607,34 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
            PUT (expects client data) - Adds a new client, or updates existing one, according to given data.
                                        Uniqueness compared according to _get_client_id value.
         """
-        ui_user = request.headers.get(X_UI_USER)
-        source = request.headers.get(X_UI_USER_SOURCE)
-        success_line = f'{ui_user}[{source}]: {adapter_consts.LOG_CLIENT_SUCCESS_LINE}'
-        failure_line = f'{ui_user}[{source}]: {adapter_consts.LOG_CLIENT_FAILURE_LINE}'
         with self._clients_lock:
             if self.get_method() == 'PUT':
                 self.__has_a_reason_to_live = True
 
                 client_config = request.get_json(silent=True)
                 if not client_config:
-                    logger.info(f'{failure_line} - invalid client')
+                    log_metric(logger, metric_name=Adapters.CREDENTIALS_CHANGE_ERROR, metric_value='invalid client')
                     return return_error("Invalid client")
                 try:
                     client_id = self._get_client_id(client_config)
-                except Exception:
-                    logger.exception(f'{failure_line} - invalid client id')
-                    return return_error('Failed to get client id')
+                except Exception as e:
+                    err_msg = 'invalid client id'
+                    log_metric(logger, metric_name=Adapters.CREDENTIALS_CHANGE_ERROR,
+                               metric_value=f'{err_msg} - {e}')
+                    logger.warning(f'{err_msg}', exc_info=True)
+                    return return_error(err_msg)
 
                 add_client_result = self._add_client(client_config)
                 if not add_client_result:
-                    logger.info(f'{failure_line} - {client_id}')
+                    log_metric(logger, metric_name=Adapters.CREDENTIALS_CHANGE_ERROR,
+                               metric_value=f'_add_client failed for {client_id}')
                     return return_error("Could not save client with given config", 400)
                 else:
                     if add_client_result['status'] == 'success':
-                        logger.info(f'{success_line} - {client_id}')
+                        log_metric(logger, metric_name=Adapters.CREDENTIALS_CHANGE_OK, metric_value=client_id)
                     else:
-                        logger.info(f'{failure_line} - {add_client_result}')
+                        log_metric(logger, metric_name=Adapters.CREDENTIALS_CHANGE_ERROR,
+                                   metric_value=add_client_result)
                 self.__last_fetch_time = None
                 return jsonify(add_client_result), 200
 

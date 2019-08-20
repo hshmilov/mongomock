@@ -2,9 +2,9 @@ import json_log_formatter
 from datetime import datetime
 import inspect
 import traceback
-from flask import has_request_context, session
+from flask import has_request_context, session, request
 
-from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME
+from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME, X_UI_USER, X_UI_USER_SOURCE
 
 
 # Custumized logger formatter in order to enter some extra fields to the log message
@@ -63,10 +63,14 @@ class CustomisedJSONFormatter(json_log_formatter.JSONFormatter):
                     user = session.get('user', {}).get('user_name')
                     if user:
                         extra['ui_user'] = user
+                    elif request.headers.get(X_UI_USER):
+                        extra['ui_user'] = request.headers.get(X_UI_USER)
 
                     source = session.get('user', {}).get('source')
                     if source:
                         extra['ui_user_source'] = source
+                    elif request.headers.get(X_UI_USER_SOURCE):
+                        extra['ui_user_source'] = request.headers.get(X_UI_USER_SOURCE)
 
             except Exception:
                 pass
