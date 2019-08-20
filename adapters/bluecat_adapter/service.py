@@ -144,7 +144,7 @@ class BluecatAdapter(AdapterBase):
                 except Exception:
                     logger.exception(f'Problem getting properties for {device_raw}')
                 device.set_raw(device_raw)
-                if device_state == 'RESERVED':
+                if device_state in ['RESERVED', 'DHCP_FREE', 'DHCP_RESERVED']:
                     continue
                 yield device
             except Exception:

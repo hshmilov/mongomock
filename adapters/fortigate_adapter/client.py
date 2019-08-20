@@ -1,7 +1,9 @@
+"""
+fortigate
+"""
 import logging
 from contextlib import contextmanager
 from json.decoder import JSONDecodeError
-
 import requests
 import uritools
 from bs4 import BeautifulSoup
@@ -18,7 +20,6 @@ logger = logging.getLogger(f'axonius.{__name__}')
 
 
 class FortigateClient():
-
     def __init__(self, host, username, password, verify_ssl=False, port=DEFAULT_FORTIGATE_PORT,
                  vdom=None, dhcp_lease_time=DEFAULT_DHCP_LEASE_TIME, is_fortimanager=None):
         if port is None:
@@ -105,3 +106,27 @@ class FortigateClient():
                 except Exception:
                     # pylint: disable=W1203
                     logger.exception(f'Problem with interface {str(current_interface)}')
+            try:
+                managed_aps = self._make_request(session, 'get', 'api/v2/monitor/wifi/managed_ap/')
+                ipsec_vpns = self._make_request(session, 'get', 'api/v2/monitor/vpn/ipsec')
+                wifi_clients = self._make_request(session, 'get', 'api/v2/monitor/wifi/client')
+                for raw_ap_device in (managed_aps.get('results') or []):
+                    try:
+                        raw_ap_device['fortios_name'] = fortios_name
+                        yield raw_ap_device, 'fortigate_access_point'
+                    except Exception:
+                        logger.exception('Problem with access point')
+                for vpn_device in (ipsec_vpns.get('results') or []):
+                    try:
+                        vpn_device['fortios_name'] = fortios_name
+                        yield vpn_device, 'fortigate_vpn'
+                    except Exception:
+                        logger.exception('Problem with VPN')
+                for wifi_client in (wifi_clients.get('resources') or []):
+                    try:
+                        wifi_client['fortios_name'] = fortios_name
+                        yield wifi_client, 'fortigate_wifi_client'
+                    except Exception:
+                        logger.exception('Problem with wifi client')
+            except Exception:
+                logger.exception(f'Problem getting extended fortigate data')

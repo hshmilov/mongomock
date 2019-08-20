@@ -77,7 +77,8 @@ class StaticCorrelatorService(CorrelatorBase):
                                 'last_used_users': '$$adapter.data.last_used_users',
                                 'nessus_no_scan_id': '$$adapter.data.nessus_no_scan_id',
                                 'private_dns_name': '$$adapter.data.private_dns_name',
-                                'macs_no_ip': '$$adapter.data.macs_no_ip'
+                                'macs_no_ip': '$$adapter.data.macs_no_ip',
+                                'node_id': '$$adapter.data.node_id'
                             }
                         }
                     }

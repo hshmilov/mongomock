@@ -2490,8 +2490,7 @@ class PluginBase(Configurable, Feature):
         if syslog_settings['enabled'] is True:
             syslog_logger = logging.getLogger("axonius.syslog")
             # Starting the messages with the tag Axonius
-            formatted_message = f'Axonius:{message}'
-            getattr(syslog_logger, log_level)(formatted_message)
+            getattr(syslog_logger, log_level)(message)
 
     def send_https_log_message(self, message):
         https_log_setting = self._https_logs_settings

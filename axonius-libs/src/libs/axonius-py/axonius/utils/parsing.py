@@ -759,9 +759,14 @@ def is_bluecat_adapter(adapter_device):
     return adapter_device.get('plugin_name') == 'bluecat_adapter'
 
 
+def is_qualys_adapter(adapter_device):
+    return adapter_device.get('plugin_name') == 'qualys_scans_adapter'
+
+
 def is_dangerous_asset_names_adapter(adapter_device):
     return is_snow_adapter(adapter_device) or is_lansweerp_dapter(adapter_device) \
-        or is_alertlogic_adapter(adapter_device) or is_bluecat_adapter(adapter_device)
+        or is_alertlogic_adapter(adapter_device) \
+        or is_bluecat_adapter(adapter_device) or is_qualys_adapter(adapter_device)
 
 
 def hostname_not_problematic(adapter_device):

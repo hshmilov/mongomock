@@ -149,7 +149,7 @@ class TestEnforcementActions(TestBase):
             self.enforcements_page.click_save_button()
 
             self.base_page.run_discovery()
-            syslog_expected = f'Axonius:Alert - "{ENFORCEMENT_NAME}"' + \
+            syslog_expected = f'Alert - "{ENFORCEMENT_NAME}"' + \
                               f' for the following query has been triggered: {COMMON_ENFORCEMENT_QUERY}'
             _verify_in_syslog_data(syslog_server, syslog_expected)
 
@@ -175,7 +175,7 @@ class TestEnforcementActions(TestBase):
             self.enforcements_page.click_save_button()
 
             self.base_page.run_discovery()
-            syslog_expected = f'Axonius:Alert - "{new_enforcement_name}"' + \
+            syslog_expected = f'Alert - "{new_enforcement_name}"' + \
                               f' for the following query has been triggered: {COMMON_ENFORCEMENT_QUERY}'
             _verify_in_syslog_data(syslog_server, syslog_expected)
 

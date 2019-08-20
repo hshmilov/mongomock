@@ -6,11 +6,17 @@ from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.exception import RESTException
 from axonius.devices.device_adapter import DeviceAdapter, AGENT_NAMES
-from axonius.fields import Field
+from axonius.fields import Field, ListField
+from axonius.smart_json_class import SmartJsonClass
 from axonius.utils.files import get_local_config_file
 from datadog_adapter.connection import DatadogConnection
 
 logger = logging.getLogger(f'axonius.{__name__}')
+
+
+class SourceTag(SmartJsonClass):
+    source_name = Field(str, 'Source Name')
+    source_tags = ListField(str, 'Source Tags')
 
 
 class DatadogAdapter(AdapterBase):
@@ -18,6 +24,7 @@ class DatadogAdapter(AdapterBase):
     class MyDeviceAdapter(DeviceAdapter):
         python_version = Field(str, 'Python Version')
         up_status = Field(bool, 'Up Status')
+        source_tags = ListField(SourceTag, 'Tags By Source')
 
     def __init__(self):
         super().__init__(get_local_config_file(__file__))
@@ -166,6 +173,13 @@ class DatadogAdapter(AdapterBase):
                 if aws_id:
                     device.cloud_provider = 'AWS'
                     device.cloud_id = aws_id
+                try:
+                    for source_name, source_tags in (device_raw.get('tags_by_source') or {}).items():
+                        if isinstance(source_name, str) and isinstance(source_tags, list):
+                            device.source_tags.append(SourceTag(source_name=source_name,
+                                                                source_tags=source_tags))
+                except Exception:
+                    logger.exception(f'Problem getting tags by source')
                 device.up_status = bool(device_raw.get('up'))
                 device.set_raw(device_raw)
                 yield device

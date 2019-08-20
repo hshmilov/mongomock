@@ -7,6 +7,7 @@ from axonius.clients.rest.connection import RESTConnection
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.fields import Field
 from axonius.mixins.configurable import Configurable
+from axonius.smart_json_class import SmartJsonClass
 from axonius.utils.files import get_local_config_file
 from axonius.utils.parsing import format_mac
 from fortigate_adapter import consts
@@ -14,6 +15,14 @@ from fortigate_adapter.client import FortigateClient
 from fortigate_adapter.connection import FortimanagerConnection
 
 logger = logging.getLogger(f'axonius.{__name__}')
+
+
+class FortigateVPNClient(SmartJsonClass):
+    user = Field(str, 'User')
+    remote_gateway = Field(str, 'Remote Gateway')
+    incoming_bytes = Field(str, 'Incoming Bytes')
+    outgoing_bytes = Field(str, 'Outgoing Bytes')
+    parent = Field(str, 'Parent')
 
 
 class FortigateAdapter(AdapterBase, Configurable):
@@ -24,6 +33,8 @@ class FortigateAdapter(AdapterBase, Configurable):
     class MyDeviceAdapter(DeviceAdapter):
         interface = Field(str, 'Interface')
         fortigate_name = Field(str, 'Fortigate Name')
+        status = Field(str, 'Status')
+        vpn_client = Field(FortigateVPNClient, 'VPN Client')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -116,6 +127,63 @@ class FortigateAdapter(AdapterBase, Configurable):
             logger.exception(f'Problem with device raw {raw_device}')
             return None
 
+    def _create_fortigate_vpn_device(self, raw_device):
+        try:
+            if 'dialup' not in raw_device.get('wizard-type') or not raw_device.get('xauth_user'):
+                return None
+            device = self._new_device_adapter()
+            name = raw_device.get('name')
+            if not name:
+                logger.warning(f'Bad device with no name {raw_device}')
+                return None
+            device.hostname = name
+            device.id = 'vpn_fortigate_' + '_' + (name or '')
+            device.fortigate_name = raw_device.get('fortios_name')
+            device.status = raw_device.get('status')
+            device.vpn_client = FortigateVPNClient()
+            device.vpn_client.user = raw_device.get('xauth_user')
+            device.vpn_client.remote_gateway = raw_device.get('rgwy')
+            device.vpn_client.incoming_bytes = raw_device.get('incoming_bytes')
+            device.vpn_client.outgoing_bytes = raw_device.get('outgoing_bytes')
+            device.vpn_client.parent = raw_device.get('parent')
+            if raw_device.get('rgwy'):
+                ips = [raw_device.get('rgwy')]
+            else:
+                ips = []
+            for proxy_dict in (raw_device.get('proxyid') or []):
+                try:
+                    dst_ip_range = proxy_dict.get('proxy_dst')[0].split('-')
+                    lower_range = dst_ip_range[0].split(':')[1]
+                    upper_range = dst_ip_range[1].split(':')[0]
+                    if lower_range == upper_range:
+                        ips.append(lower_range)
+                except Exception:
+                    logger.debug(f'Problem with {proxy_dict}')
+            if ips:
+                device.add_nic(ips=ips)
+            device.set_raw(raw_device)
+            return device
+        except Exception:
+            logger.exception(f'Problem with raw device {raw_device}')
+            return None
+
+    def _create_fortigate_wifi_client_device(self, raw_device):
+        try:
+            device = self._new_device_adapter()
+            name = raw_device.get('name')
+            if not name:
+                logger.warning(f'Bad device with no name {raw_device}')
+                return None
+            device.hostname = raw_device.get('hostname')
+            device.id = 'wifi_fortigate_' + '_' + (name or '')
+            device.figure_os(raw_device.get('os'))
+            device.add_ips_and_macs(macs=device.get('mac'), ips=device.get('ip'))
+            device.set_raw(raw_device)
+            return device
+        except Exception:
+            logger.exception(f'Problem with raw device {raw_device}')
+            return None
+
     def _create_fortimanager_device(self, device_raw):
         try:
             device = self._new_device_adapter()
@@ -154,6 +222,10 @@ class FortigateAdapter(AdapterBase, Configurable):
                 device = self._create_fortios_device(raw_device)
             if device_type == 'fortimanager_device':
                 device = self._create_fortimanager_device(raw_device)
+            if device_type == 'fortigate_vpn':
+                device = self._create_fortigate_vpn_device(raw_device)
+            if device_type == 'fortigate_wifi_client':
+                device = self._create_fortigate_wifi_client_device(raw_device)
             if device:
                 yield device
 
