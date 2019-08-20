@@ -80,9 +80,12 @@
         },
         set (expressions) {
           this.updateView({
-            module: this.module, view: {
-              query: { filter: this.query.filter, expressions }, page: 0
-            }
+            module: this.module,
+            view: {
+              query: { filter: this.query.filter, expressions },
+              page: 0
+            },
+            uuid: !this.$refs.filter.isFilterEmpty ? undefined : null
           })
         }
       },
@@ -110,12 +113,9 @@
       },
       clearFilter () {
         // Restart the expressions, search input and filter
-        this.queryExpressions = [{
-          ...expression,
-          i: 0, nested: [{ ...nestedExpression, i: 0 }]
-        }]
-        this.searchValue = ''
-        this.queryFilter = ''
+        this.queryExpressions = []
+        this.$nextTick(this.$refs.filter.addExpression)
+        this.onChangeFilter('')
       },
       onChangeFilter (filter) {
         if (this.isUniqueAdapters) {
