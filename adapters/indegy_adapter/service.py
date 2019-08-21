@@ -5,6 +5,7 @@ from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.connection import RESTException
 from axonius.devices.device_adapter import DeviceAdapter
+from axonius.types.ssl_state import MANDATORY_SSL_CONFIG_SCHEMA
 from axonius.utils.datetime import parse_date
 from axonius.utils.files import get_local_config_file
 from axonius.fields import Field
@@ -89,18 +90,7 @@ class IndegyAdapter(AdapterBase):
                     'title': 'Robot Name',
                     'type': 'string'
                 },
-                {
-                    'name': 'private_key',
-                    'title': 'SSL TLC Private key',
-                    'description': 'Generated private key file',
-                    'type': 'file',
-                },
-                {
-                    'name': 'cert_file',
-                    'title': 'SSL Certificate',
-                    'description': 'Generated cert file',
-                    'type': 'file',
-                },
+                *MANDATORY_SSL_CONFIG_SCHEMA,
                 {
                     'name': 'verify_ssl',
                     'title': 'Verify SSL',
