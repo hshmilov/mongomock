@@ -21,3 +21,5 @@ def test_watchdog_logs():
 
     system_metric_tester = LogTester(WATCHDOG_LOGS_DIR / 'systemmetricstask.watchdog.log')
     wait_until(lambda: system_metric_tester.is_metric_in_log(SystemMetric.NETIFACES_COUNT, r'\d+'))
+    wait_until(lambda: system_metric_tester.is_metric_in_log(SystemMetric.HOST_DB_DISK_FREE_PERC, r'\d+'))
+    wait_until(lambda: system_metric_tester.is_metric_in_log(SystemMetric.HOST_DB_DISK_FREE_BYTES, r'\d+'))
