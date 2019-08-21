@@ -565,7 +565,7 @@ class GuiService(PluginService, UpdatablePluginMixin):
             volumes.extend(super().volumes_override)
             return volumes
         libs = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..', 'axonius-libs', 'src', 'libs'))
-        volumes.extend([f'{libs}:{LIBS_PATH.absolute().as_posix()}:ro'])
+        volumes.extend([f'{libs}:{LIBS_PATH.as_posix()}:ro'])
 
         # extend volumes by mapping specifically each python file, to be able to debug much better.
         volumes.extend([f'{self.service_dir}/{fn}:/home/axonius/app/{self.package_name}/{fn}:ro'

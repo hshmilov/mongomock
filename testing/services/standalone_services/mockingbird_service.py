@@ -72,7 +72,7 @@ class MockingbirdService(WeaveService):
             f'{self.container_name}_data:/data/db',
             f'{os.path.join(self.service_dir, "app")}:/home/axonius/app',
             f'{os.path.join(self.service_dir, "config")}:/home/axonius/config',
-            f'{libs}:{LIBS_PATH.absolute().as_posix()}:ro',
+            f'{libs}:{LIBS_PATH.as_posix()}:ro',
             f'{adapters}:/home/axonius/adapters:ro'
         ]
 
