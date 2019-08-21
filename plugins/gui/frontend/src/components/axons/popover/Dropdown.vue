@@ -1,7 +1,7 @@
 <template>
     <div class="x-dropdown" v-bind:class="{ active: isActive, disabled: readOnly }">
         <div :class="{trigger: true, arrow}" data-toggle="dropdown" aria-haspopup="true" :aria-expanded="isActive"
-             @click="toggle" @keyup.enter="toggle" @keyup.down="open" @keyup.up="close" @keyup.esc="close">
+             @click.stop="toggle" @keyup.enter="toggle" @keyup.down="open" @keyup.up="close" @keyup.esc="close">
             <slot name="trigger"></slot>
         </div>
         <div :class="`content ${sizeClass}`" :style="menuStyle" v-if="isActive" ref="content">

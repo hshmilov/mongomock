@@ -232,11 +232,12 @@
             display: flex;
             line-height: 28px;
             margin-bottom: 8px;
+            margin-right: 16px;
             .title {
                 font-size: 16px;
                 font-weight: 400;
-                margin-right: 8px;
                 color: $theme-black;
+                margin-right: 8px;
                 &.x-button {
                   padding: 0;
                   margin-bottom: 0;
@@ -251,11 +252,13 @@
         }
         .x-button {
             margin-bottom: 8px;
-            padding: 4px 16px;
+            padding: 4px;
+            margin-right: 16px;
         }
         .x-dropdown {
+          margin-right: 16px;
           .trigger {
-            padding-right: 12px;
+            padding-right: 8px;
             &:after {
               margin-top: -6px;
             }
