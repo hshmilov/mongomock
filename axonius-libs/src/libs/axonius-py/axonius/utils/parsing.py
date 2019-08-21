@@ -39,6 +39,7 @@ mobile_version = re.compile(r'(\d+\.\d+.\d+)')
 # Also we want to split the hostname on "." and make sure one split list is the beginning of the other.
 NORMALIZED_HOSTNAME = 'normalized_hostname'
 OSX_NAMES = ['mojave', 'sierra', 'capitan', 'yosemite', 'mavericks', 'darwin']
+MAC_NAMES = ['os x', 'osx', 'macos', 'mac os', 'macbook']
 # In some cases we don't want to use compare_hostnames because indexing using it is complicated
 # and in some cases indexsing is performance critical
 NORMALIZED_HOSTNAME_STRING = 'normalized_hostname_string'
@@ -47,11 +48,11 @@ DEFAULT_DOMAIN_EXTENSIONS = ['.LOCAL', '.WORKGROUP', '.LOCALHOST']
 # In MacOs hostname of the same computer can return in different shapes,
 # that's why we would like to compare them without these strings
 DEFAULT_MAC_EXTENSIONS = ['-MACBOOK-PRO', 'MACBOOK-PRO', '-MBP', 'MBP', '-MBA', '-MACBOOK-AIR', 'MACBOOK-AIR'] + \
-                         [f"-MBP-{index}" for index in range(20)] + [f"-MBP-0{index}" for index in range(10)] + ['-AIR',
-                                                                                                                 'AIR'] + \
-                         [f"-MACBOOK-PRO-{index}" for index in range(20)] + \
-                         [f"-MACBOOK-PRO-0{index}" for index in range(10)] + \
-                         [f"MACBOOKPRO{index}" for index in range(20)] + [f"MACBOOKPRO0{index}" for index in range(10)]
+                         [f'-MBP-{index}' for index in range(20)] + \
+                         [f'-MBP-0{index}' for index in range(10)] + ['-AIR', 'AIR'] + \
+                         [f'-MACBOOK-PRO-{index}' for index in range(20)] + \
+                         [f'-MACBOOK-PRO-0{index}' for index in range(10)] + \
+                         [f'MACBOOKPRO{index}' for index in range(20)] + [f'MACBOOKPRO0{index}' for index in range(10)]
 # NORMALIZED_IPS/MACS fields will hold the set of IPs and MACs an adapter devices has extracted.
 # Without it, in order to compare IPs and MACs we would have to go through the list of network interfaces and extract
 # them each time.
@@ -96,11 +97,11 @@ def parse_bool_from_raw(bool_raw_value, raise_on_exception=False):
         return bool_raw_value
     elif type(bool_raw_value) == int:
         return bool(bool_raw_value)
-    elif type(bool_raw_value) == str and bool_raw_value.lower() in ["true", "false", "0", "1"]:
-        return bool_raw_value.lower() in ["true", "1"]
+    elif type(bool_raw_value) == str and bool_raw_value.lower() in ['true', 'false', '0', '1']:
+        return bool_raw_value.lower() in ['true', '1']
 
     if raise_on_exception is True:
-        raise ValueError(f"{bool_raw_value} isn't a boolean value")
+        raise ValueError(f'{bool_raw_value} isn\'t a boolean value')
 
     else:
         return None
@@ -112,7 +113,7 @@ def get_manufacturer_from_mac(mac: str) -> str:
         manufacturer = mac_manufacturer_details.get(mac)
         if manufacturer is None:
             return None
-        return f"{manufacturer[2]} ({manufacturer[3]})"
+        return f'{manufacturer[2]} ({manufacturer[3]})'
 
 
 def normalize_var_name(name):
@@ -133,16 +134,16 @@ def get_exception_string():
     """
     exc_type, exc_obj, exc_tb = sys.exc_info()
 
-    ex_str = "Traceback (most recent call last):\n"
+    ex_str = 'Traceback (most recent call last):\n'
     while exc_tb is not None:
-        ex_str = ex_str + "  File {0}, line {1}, in {2}\n".format(
+        ex_str = ex_str + '  File {0}, line {1}, in {2}\n'.format(
             exc_tb.tb_frame.f_code.co_filename,
             exc_tb.tb_lineno,
             exc_tb.tb_frame.f_code.co_name)
 
         exc_tb = exc_tb.tb_next
 
-    ex_str = ex_str + f"{exc_type}:{exc_obj}"
+    ex_str = ex_str + f'{exc_type}:{exc_obj}'
     return ex_str
 
 
@@ -157,23 +158,44 @@ def figure_out_cloud(s):
 
     cloud_provider = s.lower()
 
-    if "aws" in cloud_provider or "amazon" in cloud_provider:
-        return "AWS"
-    elif "azure" in cloud_provider or "microsoft" in cloud_provider:
-        return "Azure"
-    elif "google" in cloud_provider or "gcp" in cloud_provider:
-        return "GCP"
-    elif "softlayer" in cloud_provider or "ibm" in cloud_provider:
-        return "Softlayer"
-    elif "vmware" in cloud_provider or "vcenter" in cloud_provider \
-            or "vsphere" in cloud_provider or "esx" in cloud_provider:
-        return "VMWare"
-    elif "alibaba" in cloud_provider or "aliyun" in cloud_provider:
-        return "Alibaba"
-    elif "oracle" in cloud_provider:
-        return "Oracle"
+    if 'aws' in cloud_provider or 'amazon' in cloud_provider:
+        return 'AWS'
+    elif 'azure' in cloud_provider or 'microsoft' in cloud_provider:
+        return 'Azure'
+    elif 'google' in cloud_provider or 'gcp' in cloud_provider:
+        return 'GCP'
+    elif 'softlayer' in cloud_provider or 'ibm' in cloud_provider:
+        return 'Softlayer'
+    elif 'vmware' in cloud_provider or 'vcenter' in cloud_provider \
+            or 'vsphere' in cloud_provider or 'esx' in cloud_provider:
+        return 'VMWare'
+    elif 'alibaba' in cloud_provider or 'aliyun' in cloud_provider:
+        return 'Alibaba'
+    elif 'oracle' in cloud_provider:
+        return 'Oracle'
     else:
         return None
+
+
+def figure_out_windows_dist(s):
+    s = s.replace('Windows ', '').replace('Windows', '').replace('Win', '')
+    dist_name = 'NT' if ' nt ' in s else ''
+    if 'server' in s:
+        dist_name = f'{dist_name} Server'
+    else:
+        dists_with_no_version = ['Vista', 'XP']
+        for dist in dists_with_no_version:
+            if dist.lower() in s:
+                return dist
+    dist_versions = ['2000', '2003', '2008', '2012', '2016', '2019']
+    dist_versions.extend([' 10', ' 8.1', ' 95', ' 98', ' 8', ' 7'])
+    for version in dist_versions:
+        if version in s:
+            dist_name = f'{dist_name} {version.strip()}'
+            break
+    if not dist_name.strip():
+        return None
+    return dist_name.strip()
 
 
 def figure_out_os(s):
@@ -212,11 +234,11 @@ def figure_out_os(s):
 
     os_type = None
     distribution = None
-    linux_names = ["linux", 'ubuntu', 'canonical', 'red hat',
-                   'debian', 'fedora', 'centos', 'oracle', 'opensuse', 'rhel server', 'sles']
+    linux_names = ['linux', 'ubuntu', 'canonical', 'red hat',
+                   'debian', 'fedora', 'centos', 'oracle', 'opensuse', 'rhel server', 'sles', 'gentoo', 'arch']
 
-    ios_devices = ["iphone", "ipad", "apple"]
-    ios_names = ios_devices + ["ios"]
+    ios_devices = ['iphone', 'ipad', 'apple']
+    ios_names = ios_devices + ['ios']
 
     # Start with the one who have for sure capital in their names
     # The first part is not enough, since some devices have only 'IOS' in them, but not "cisco".
@@ -229,17 +251,7 @@ def figure_out_os(s):
         os_type = 'VxWorks'
     elif 'windows' in s or ('win' in s and 'darwin' not in s):
         os_type = 'Windows'
-        s = s.replace('windows storage server', 'windows server')
-        # XP must reamin the last item in the list because there is a chance it will be found in "s" by chacne
-        windows_distribution = ['Vista', 'Windows 7', 'Windows 8', 'Windows 8.1', 'Windows 10',
-                                'Windows Server 2003', 'Win10', 'Win7', 'Win8', 'Windows 2016',
-                                'Windows 2008', 'Windows 2012', 'Windows 2000',
-                                'Windows Server 2008', 'Windows Server 2012', 'Windows Server 2016', 'XP',
-                                'WindowsServer 2003', 'WindowsServer 2008', 'WindowsServer 2012', 'WindowsServer 2016']
-        for dist in windows_distribution:
-            if dist.lower() in s:
-                distribution = dist.replace("Windows ", "").replace("Windows", "").replace("Win", "")
-                break
+        distribution = figure_out_windows_dist(s)
     elif 'android' in s:
         os_type = 'Android'
         version = mobile_version.findall(s)
@@ -247,7 +259,7 @@ def figure_out_os(s):
             distribution = version[0]
     elif any(x in s for x in linux_names):
         os_type = 'Linux'
-        linux_distributions = [ubuntu_full, "Ubuntu", "Red Hat", "Debian", "Fedora", 'RHEL']
+        linux_distributions = [ubuntu_full, 'Ubuntu', 'Red Hat', 'Debian', 'Fedora', 'RHEL', 'Gentoo', 'Arch']
         for dist in linux_distributions:
             if isinstance(dist, str):
                 if dist.lower() in s:
@@ -259,7 +271,8 @@ def figure_out_os(s):
                     assert isinstance(found_values[0], str)
                     distribution = found_values[0]
                     break
-    elif ('os x' in s) or ('osx' in s) or ('macos' in s) or ('mac os' in s) \
+
+    elif any(elem in s for elem in MAC_NAMES) \
             or any(elem in s for elem in OSX_NAMES):
         os_type = 'OS X'
         version = osx_version_full.findall(s)
@@ -279,13 +292,13 @@ def figure_out_os(s):
         if len(version):
             distribution = version[0]
     elif 'freebsd' in s:
-        os_type = "FreeBSD"
-        distribution = "FreeBSD"
+        os_type = 'FreeBSD'
+        distribution = 'FreeBSD'
     elif 'junos' in s:
-        os_type = "FreeBSD"
-        distribution = "Junos OS"
+        os_type = 'FreeBSD'
+        distribution = 'Junos OS'
     elif s.startswith('vmware'):
-        os_type = "VMWare"
+        os_type = 'VMWare'
         esx_distributions = ['ESX 4.0',
                              'ESX 4.1',
                              'ESXi 4.0',
@@ -302,33 +315,33 @@ def figure_out_os(s):
                              'ESXi 6.5.0',
                              'ESXi 6.5.0d',
                              'ESXi/ESX 4.1']
-        distribution = s.replace("VMWare ", "")
+        distribution = s.replace('VMWare ', '')
         if distribution not in esx_distributions:
-            distribution = "(?) " + distribution
+            distribution = '(?) ' + distribution
     elif 'mikrotik' in s.lower():
         os_type = 'Mikrotik'
     elif 'f5 networks big-ip' == s.lower():
         os_type = 'F5 Networks Big-IP'
 
-    return {"type": os_type,
-            "distribution": distribution,
-            "bitness": bitness}
+    return {'type': os_type,
+            'distribution': distribution,
+            'bitness': bitness}
 
 
 def convert_ldap_searchpath_to_domain_name(ldap_search_path):
     """
     Converts LDAP search path to DC.
-    e.g. 'CN=DESKTOP-MPP10U1,CN=Computers,DC=TestDomain,DC=test' -> "TestDomain.test"
+    e.g. 'CN=DESKTOP-MPP10U1,CN=Computers,DC=TestDomain,DC=test' -> 'TestDomain.test'
     :param ldap_search_path: the str
     :return:
     """
 
-    return ".".join([x[3:] for x in ldap_search_path.strip().split(",") if x.lower().startswith("dc=")])
+    return '.'.join([x[3:] for x in ldap_search_path.strip().split(',') if x.lower().startswith('dc=')])
 
 
 def get_organizational_units_from_dn(distinguished_name):
     try:
-        ous = [ou[3:] for ou in distinguished_name.split(",") if ou.startswith("OU=")]
+        ous = [ou[3:] for ou in distinguished_name.split(',') if ou.startswith('OU=')]
         if ous:
             return ous
         return None
@@ -365,10 +378,10 @@ def get_first_object_from_dn(dn):
     """
     if type(dn) == str:
         dn = dn.replace('\\,', '')
-        dn = dn.split(",")
+        dn = dn.split(',')
         if len(dn) > 0:
             # This usually looks like CN=User Name, CN=Users, DC=.... so lets take the first one
-            rv = dn[0].split("=")
+            rv = dn[0].split('=')
             if len(rv) == 2:
                 return rv[1]
 
@@ -378,9 +391,9 @@ def get_first_object_from_dn(dn):
 def get_member_of_list_from_memberof(member_of) -> List[str]:
     try:
         if member_of is not None:
-            # member_of is a list of dn's that look like "CN=d,OU=b,DC=c,DC=a"
+            # member_of is a list of dn's that look like 'CN=d,OU=b,DC=c,DC=a'
             # so we take each string in the list and transform it to d.b.c.a
-            return [".".join([x[3:] for x in member_of_entry.strip().split(",")]) for member_of_entry in member_of]
+            return ['.'.join([x[3:] for x in member_of_entry.strip().split(',')]) for member_of_entry in member_of]
     except Exception:
         pass
 
@@ -437,7 +450,7 @@ def format_mac(mac: str):
         raise ValueError(f'Invalid mac {mac}')
 
     # convert mac in canonical form (eg. 00:80:41:ae:fd:7e)
-    mac = ":".join(["%s" % (mac[i:i + 2]) for i in range(0, 12, 2)])
+    mac = ':'.join(['%s' % (mac[i:i + 2]) for i in range(0, 12, 2)])
     return mac.upper()
 
 
@@ -480,19 +493,19 @@ def bytes_image_to_base64(value):
     """
     try:
         header = binascii.hexlify(value[:4])
-        if header.startswith(b"ffd8ff"):
-            header = "jpeg"
-        elif header == b"89504e47":
-            header = "png"
-        elif header == b"47494638":
-            header = "gif"
+        if header.startswith(b'ffd8ff'):
+            header = 'jpeg'
+        elif header == b'89504e47':
+            header = 'png'
+        elif header == b'47494638':
+            header = 'gif'
         elif header == b'49492a00':
             # This is a tiff image, browser do not support displaying it.
             return None
         else:
-            raise ValueError(f"Invalid image. header is {header}, cannot determine if jpeg/png/gif."
-                             f"This could be a legitimate error, some iamges aren't parsable")
-        return "data:image/{0};base64,{1}".format(header, base64.b64encode(value).decode("utf-8"))
+            raise ValueError(f'Invalid image. header is {header}, cannot determine if jpeg/png/gif.'
+                             f'This could be a legitimate error, some iamges aren\'t parsable')
+        return 'data:image/{0};base64,{1}'.format(header, base64.b64encode(value).decode('utf-8'))
     except Exception:
         raise ValueError(f'Invalid Image. Exception is {get_exception_string()}')
 
@@ -867,9 +880,8 @@ def is_junos_space_device(adapter_device):
 
 
 def is_from_juniper_and_asset_name(adapter_device):
-    return adapter_device.get('plugin_name') in ['juniper_adapter', 'junos_adapter'] and adapter_device.get('data',
-                                                                                                            {}).get(
-        'name')
+    return adapter_device.get('plugin_name') in ['juniper_adapter', 'junos_adapter'] and \
+        adapter_device.get('data', {}).get('name')
 
 
 def compare_id(adapter_device1, adapter_device2):
@@ -1147,7 +1159,7 @@ def get_cloud_data(adapter_device):
     cloud_id = adapter_device_data.get('cloud_id')
 
     if isinstance(cloud_provider, str) and isinstance(cloud_id, str) and len(cloud_provider) > 0 and len(cloud_id) > 0:
-        return cloud_provider.upper().strip() + "-" + cloud_id.upper().strip()
+        return cloud_provider.upper().strip() + '-' + cloud_id.upper().strip()
 
     return None
 
@@ -1221,10 +1233,10 @@ def have_mac_intersection(adapter_device1, adapter_device2) -> bool:
     :param adapter_device2:
     :return Whether there is at least one mac in both adapter_devices:
     """
-    device1_macs = set(adapter_device1.get(NORMALIZED_MACS) or []).union(set([normalize_mac(mac_raw)
-                                                                              for mac_raw in (adapter_device1['data'].get('macs_no_ip') or [])]))
-    device2_macs = set(adapter_device2.get(NORMALIZED_MACS) or []).union(set([normalize_mac(mac_raw)
-                                                                              for mac_raw in (adapter_device2['data'].get('macs_no_ip') or [])]))
+    device1_macs = set(adapter_device1.get(NORMALIZED_MACS) or []).union(
+        set([normalize_mac(mac_raw) for mac_raw in (adapter_device1['data'].get('macs_no_ip') or [])]))
+    device2_macs = set(adapter_device2.get(NORMALIZED_MACS) or []).union(
+        set([normalize_mac(mac_raw)for mac_raw in (adapter_device2['data'].get('macs_no_ip') or [])]))
     return bool(device1_macs.intersection(device2_macs))
 
 
@@ -1408,7 +1420,8 @@ def normalize_adapter_device(adapter_device):
     adapter_device[NORMALIZED_HOSTNAME] = normalize_hostname(adapter_data)
     if adapter_device[NORMALIZED_HOSTNAME]:
         adapter_device[NORMALIZED_HOSTNAME_STRING] = '.'.join(adapter_device[NORMALIZED_HOSTNAME]) + '.'
-    if not adapter_device.get(NORMALIZED_HOSTNAME_STRING) and is_from_azure_ad(adapter_device) and get_asset_name(adapter_device):
+    if not adapter_device.get(NORMALIZED_HOSTNAME_STRING) and \
+            is_from_azure_ad(adapter_device) and get_asset_name(adapter_device):
         adapter_device[NORMALIZED_HOSTNAME_STRING] = get_asset_name(adapter_device)
         adapter_device[NORMALIZED_HOSTNAME] = [get_asset_name(adapter_device)]
     if adapter_data.get(OS_FIELD) is not None and adapter_data.get(OS_FIELD, {}).get('type'):

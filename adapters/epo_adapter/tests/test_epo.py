@@ -87,7 +87,7 @@ def test_os():
     details = figure_out_os(raw_device_data.get('EPOLeafNode.os', ''))
     print(details)
     assert details['type'] == 'Windows'
-    assert details['distribution'] == '10'
+    assert details['distribution'] == 'Server 10'
 
 
 def test_parse_network_positive():
