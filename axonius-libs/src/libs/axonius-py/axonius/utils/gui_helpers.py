@@ -450,7 +450,7 @@ def _normalize_db_projection_for_aggregation(projection: Dict[str, int]):
             for i in range(1, k):
                 if '.'.join(entry[:i]) in projection:
                     del projection['.'.join(entry)]
-                    continue
+                    break
 
 
 def _perform_aggregation(entity_views_db,
