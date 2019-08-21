@@ -843,7 +843,7 @@ def is_from_ad(adapter_device):
 
 
 def get_azure_ad_id(adapter_device):
-    return adapter_device.get('data').get('azure_ad_id ') or adapter_device.get('data').get('id')
+    return adapter_device.get('data').get('azure_ad_id') or adapter_device.get('data').get('azure_device_id')
 
 
 def compare_azure_ad_id(adapter_device1, adapter_device2):

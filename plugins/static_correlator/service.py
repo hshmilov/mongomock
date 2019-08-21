@@ -78,7 +78,9 @@ class StaticCorrelatorService(CorrelatorBase):
                                 'nessus_no_scan_id': '$$adapter.data.nessus_no_scan_id',
                                 'private_dns_name': '$$adapter.data.private_dns_name',
                                 'macs_no_ip': '$$adapter.data.macs_no_ip',
-                                'node_id': '$$adapter.data.node_id'
+                                'node_id': '$$adapter.data.node_id',
+                                'azure_ad_id': '$$adapter.data.azure_ad_id',
+                                'azure_device_id': '$$adapter.data.azure_device_id'
                             }
                         }
                     }

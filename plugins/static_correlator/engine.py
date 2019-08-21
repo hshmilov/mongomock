@@ -44,7 +44,7 @@ from axonius.utils.parsing import (NORMALIZED_MACS,
                                    get_hostname_or_serial, compare_hostname_serial,
                                    is_from_twistlock_or_aws, get_nessus_no_scan_id, compare_nessus_no_scan_id,
                                    is_domain_valid, compare_uuid, get_uuid,
-                                   is_from_azure_ad, get_azure_ad_id, compare_azure_ad_id, get_hostname_no_localhost)
+                                   get_azure_ad_id, compare_azure_ad_id, get_hostname_no_localhost)
 
 
 logger = logging.getLogger(f'axonius.{__name__}')
@@ -464,7 +464,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
 
     def _correlata_azure_ad_intune(self, adapters_to_correlate):
         logger.info('Starting to correlate on Intune Azuze ad')
-        filtered_adapters_list = filter(is_from_azure_ad, adapters_to_correlate)
+        filtered_adapters_list = filter(get_azure_ad_id, adapters_to_correlate)
         return self._bucket_correlate(list(filtered_adapters_list),
                                       [get_azure_ad_id],
                                       [compare_azure_ad_id],
