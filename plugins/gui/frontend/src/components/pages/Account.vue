@@ -13,7 +13,27 @@
                     <label>API Key:</label>
                     <div>{{apiKey['api_key']}}</div>
                     <label>API Secret:</label>
-                    <div>{{apiKey['api_secret']}}</div>
+                    <div>
+                        <input type="text"
+                                v-show="isKeyVisible"
+                                class="secret-key visible"
+                                :value="this.apiKey['api_secret']"
+                                disabled/>
+                        <input type="text"
+                                v-show="!isKeyVisible"
+                                class="secret-key invisible"
+                                :value="invisibleSecretKey"
+                                disabled/>
+
+                        <md-button class="md-icon-button" @click="toggleVisibility">
+                            <md-icon v-if="isKeyVisible" class="hide-key-icon" title="Hide API Secret">visibility_off</md-icon>
+                            <md-icon v-else class="show-key-icon" title="Show API Secret">visibility</md-icon>
+                        </md-button>
+                        <md-button class="md-icon-button" @click="copyToClipboard">
+                            <md-icon class="copy-to-clipboard-icon" title="Copy API Secret">filter_none</md-icon>
+                        </md-button>
+                    </div>
+
                 </div>
             </x-tab>
         </x-tabs>
@@ -38,8 +58,9 @@
     import xToast from '../axons/popover/Toast.vue'
 
     import {CHANGE_PASSWORD} from '../../store/modules/auth'
-    import {mapActions, mapState} from 'vuex'
+    import {mapActions, mapMutations, mapState} from 'vuex'
     import {REQUEST_API} from '../../store/actions'
+    import {SHOW_TOASTER_MESSAGE, REMOVE_TOASTER} from '../../store/mutations'
 
     export default {
         name: 'x-account',
@@ -55,7 +76,8 @@
                 passwordFormComplete: false,
                 message: '',
                 apiKey: {},
-                resetKeyActive: false
+                resetKeyActive: false,
+                isKeyVisible: false,
             }
         },
         computed: {
@@ -86,12 +108,18 @@
                         format: 'password'
                     }], required: ['currentPassword', 'newPassword', 'confirmNewPassword']
                 }
+            },
+            invisibleSecretKey() {
+                return !this.apiKey['api_secret'] ? "" : this.apiKey['api_secret'].replace(/./gi, '*')
             }
         },
         methods: {
             ...mapActions({
                 changePassword: CHANGE_PASSWORD,
                 fetchData: REQUEST_API
+            }),
+            ...mapMutations({
+                showToasterMessage: SHOW_TOASTER_MESSAGE
             }),
             updatePasswordValidity(valid) {
                 this.passwordFormComplete = valid
@@ -140,6 +168,22 @@
                         this.message = 'a new secret key has been generated, the old one is no longer valid'
                     }
                 })
+            },
+            toggleVisibility() {
+                this.isKeyVisible =! this.isKeyVisible
+            },
+
+            copyToClipboard() {
+                const copySecretKey = document.getElementsByClassName('secret-key visible')[0];
+                copySecretKey.select();
+                navigator.clipboard.writeText(copySecretKey.value).then(
+                    response => {
+                        this.showToasterMessage({ message: 'Key was copied to Clipboard' })
+                    },
+                    error => {
+                        this.showToasterMessage({ message : 'Key was not copied to Clipboard' })
+                    }
+                );
             }
         },
         created() {
@@ -169,6 +213,16 @@
                 margin-top: 24px;
                 grid-template-columns: 1fr 2fr;
             }
+        }
+        .md-icon-button {
+            color: $theme-blue
+        }
+        .secret-key {
+            width: 360px;
+            border: none;
+            top: 10px;
+            position: relative;
+            background: transparent
         }
     }
 </style>

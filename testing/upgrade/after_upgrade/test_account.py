@@ -1,12 +1,12 @@
 import json
 from pathlib import Path
-
 from ui_tests.tests.ui_consts import Account
 from ui_tests.tests.ui_test_base import TestBase
 from ui_tests.tests.test_api import get_device_views_from_api
 
 
 class TestAccount(TestBase):
+
     def test_api_key(self):
         self.account_page.switch_to_page()
         self.account_page.wait_for_spinner_to_end()

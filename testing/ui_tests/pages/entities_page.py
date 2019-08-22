@@ -13,6 +13,8 @@ from ui_tests.pages.page import Page
 
 
 class EntitiesPage(Page):
+    EXPORT_CSV_LOADING_CSS = '.loading-button'
+    EXPORT_CSV_BUTTON_TEXT = 'Export CSV'
     EDIT_COLUMNS_ADAPTER_DROPDOWN_CSS = 'div.x-dropdown.x-select.x-select-symbol'
     QUERY_WIZARD_ID = 'query_wizard'
     QUERY_EXPRESSIONS_CSS = '.x-filter .x-expression'
@@ -123,9 +125,6 @@ class EntitiesPage(Page):
     ENFORCEMENT_RESULTS_TITLE = '{enforcement_name} - Task 1'
     ENFORCEMENT_RESULTS_SUBTITLE = 'results of "{action_name}" action'
     MISSING_EMAIL_SETTINGS_TEXT = 'In order to send alerts through mail, configure it under settings'
-
-    EXPORT_CSV_BUTTON_TEXT = 'Export CSV'
-    EXPORT_CSV_LOADING_CSS = '.loading-button'
 
     @property
     def url(self):
