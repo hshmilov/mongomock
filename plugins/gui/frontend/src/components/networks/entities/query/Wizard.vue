@@ -85,7 +85,7 @@
               query: { filter: this.query.filter, expressions },
               page: 0
             },
-            uuid: !this.$refs.filter.isFilterEmpty ? undefined : null
+            uuid: !this.$refs.filter || !this.$refs.filter.isFilterEmpty ? undefined : null
           })
         }
       },

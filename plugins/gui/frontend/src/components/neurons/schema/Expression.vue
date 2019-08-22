@@ -54,7 +54,7 @@
       <template v-for="(nestedExpr, i) in expression.nested">
         <div class="grid-span4" />
         <x-condition
-          :key="nestedExpr.i"
+          :key="'cond' + nestedExpr.i"
           v-model="nestedExpr.expression"
           :module="module"
           :parent-field="expression.field"
@@ -62,7 +62,7 @@
           @error="onErrorCondition"
         />
         <x-button
-          :key="nestedExpr.i"
+          :key="'button' + nestedExpr.i"
           link
           class="condition-remove"
           @click="removeNestedExpression(i)"
@@ -139,13 +139,19 @@
       expressionCond: {
         get () {
           return {
-            field: this.expression.field, compOp: this.expression.compOp, value: this.expression.value
+            field: this.expression.field,
+              compOp: this.expression.compOp,
+              value: this.expression.value,
+              filteredAdapters: this.expression.filteredAdapters,
+              fieldType: this.expression.fieldType
           }
         },
         set (condition) {
           this.expression.value = condition.value
           this.expression.field = condition.field
           this.expression.compOp = condition.compOp
+          this.expression.filteredAdapters = condition.filteredAdapters
+          this.expression.fieldType = condition.fieldType
         }
       },
       expressionField () {
@@ -224,7 +230,18 @@
           filterStack.push('not ')
         }
         if (this.expression.obj) {
-          filterStack.push(`${this.expression.field} == match([${this.nestedExpressionCond}])`)
+          let filteredAdapters = []
+          if(this.expression.fieldType === 'axonius' &&  this.expression.filteredAdapters && this.expression.field.indexOf('specific_data.data') !== -1){
+              if(!this.expression.filteredAdapters.selectAll)
+              filteredAdapters =  Object.keys(this.expression.filteredAdapters.selectedValues).filter(key => this.expression.filteredAdapters.selectedValues[key]);
+          }
+          if(filteredAdapters && filteredAdapters.length > 0) {
+              let cond = '({val})'
+              let currentConditions = filteredAdapters.map(adapter => this.getMatchExpression(this.expression.field, this.nestedExpressionCond, adapter));
+              filterStack.push(cond.replace(/{val}/g,  currentConditions.join(' or ')))
+          } else {
+              filterStack.push(this.getMatchExpression(this.expression.field, this.nestedExpressionCond))
+          }
         } else {
           filterStack.push(this.condition)
         }
@@ -234,13 +251,21 @@
         }
         this.$emit('change', { filter: filterStack.join(''), bracketWeight })
       },
+      getMatchExpression(field, condition, adapter){
+          if(adapter) {
+              field = field.replace('specific_data.data.', 'adapters_data.' + adapter + '.')
+          }
+          return `${field} == match([${condition}])`
+      },
       addNestedExpression () {
-        this.expression.nested.push({ ...nestedExpression, i: this.expression.nested.length })
+        let newNestedExpression =   { ...nestedExpression, i: this.expression.nested.length }
+        newNestedExpression.expression.filteredAdapters = this.expression.filteredAdapters
+        this.expression.nested.push(newNestedExpression)
       },
       onChangeCondition (condition, nestedIndex) {
         if (nestedIndex !== undefined) {
           this.expression.nested[nestedIndex].condition = condition
-        } else {
+        } else if(condition !== undefined){
           this.condition = condition
         }
         if (this.autoQuery || this.rebuild) {

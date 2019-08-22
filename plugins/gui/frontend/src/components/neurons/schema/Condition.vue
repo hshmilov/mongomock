@@ -3,7 +3,9 @@
     <x-select-typed-field
       :id="first? 'query_field': undefined"
       v-model="condition.field"
+      :filtered-adapters="condition.filteredAdapters"
       :options="schema"
+      @input="onChangeConditionFieldType"
     />
     <x-select
       v-if="!isParent && opsList.length"
@@ -107,10 +109,10 @@
             }
           })
         }, ...schema[0].fields]
-        return schema
+        return this.addFilteredOption(schema)
       },
       schemaObject () {
-        return this.getDataFieldsByPlugin(this.module, true)
+        return this.addFilteredOption(this.getDataFieldsByPlugin(this.module, true))
       },
       schemaByName () {
         return this.schemaObject.reduce((map, item) => {
@@ -191,7 +193,7 @@
         this.$emit('error', '')
       },
       value (newValue) {
-        if (newValue.field !== this.condition.field || 
+        if (newValue.field !== this.condition.field ||
            newValue.value !== this.condition.value) {
               this.condition = { ...newValue }
         }
@@ -355,33 +357,71 @@
         return ''
       },
       composeCondition () {
-        let cond = '({val})'
-        if (this.opsMap[this.condition.compOp]) {
-          cond = this.opsMap[this.condition.compOp].replace(/{field}/g, this.condition.field)
-        } else if (this.opsList.length) {
-          this.condition.compOp = ''
-          this.condition.value = ''
-          return ''
-        }
+          let cond = '({val})'
+          let currentOption = this.schema.find(option => this.condition.fieldType === option.name)
+          let filteredAdapters = [];
+          if(currentOption && currentOption.plugins && this.condition.filteredAdapters && !this.condition.filteredAdapters.selectAll) {
+              filteredAdapters = this.condition.filteredAdapters.selectedValues ?
+                  Object.keys(this.condition.filteredAdapters.selectedValues).filter(key => this.condition.filteredAdapters.selectedValues[key]) : null;
+          }
+          if(this.condition.field.indexOf('specific_data.data') === -1 ||
+              !filteredAdapters ||
+              filteredAdapters.length === 0) {
+              cond = this.getConditionExpression('', cond);
+          } else {
+              let conditions = filteredAdapters.map(adapter => this.getConditionExpression(adapter, cond))
+              cond = cond.replace(/{val}/g,  conditions.join(' or '))
+          }
+          return cond;
+        },
+        getConditionExpression(adapter, cond) {
+          if (this.opsMap[this.condition.compOp]) {
+                let field = this.condition.field;
+                if(adapter) {
+                    field = field.replace('specific_data.data.', 'adapters_data.' + adapter + '.')
+                }
+                cond = this.opsMap[this.condition.compOp].replace(/{field}/g, field)
+            } else if (this.opsList.length) {
+                this.condition.compOp = ''
+                this.condition.value = ''
+                return ''
+            }
 
-        let val = this.processedValue ? this.processedValue : this.condition.value
-        let iVal = Array.isArray(val) ? -1 : undefined
-        return cond.replace(/{val}/g, () => {
-          if (iVal === undefined) return val
-          iVal = (iVal + 1) % val.length
-          return val[iVal]
-        })
-      },
+            let val = this.processedValue ? this.processedValue : this.condition.value
+            let iVal = Array.isArray(val) ? -1 : undefined
+            return cond.replace(/{val}/g, () => {
+              if (iVal === undefined) return val
+                iVal = (iVal + 1) % val.length
+                return val[iVal]
+            })
+        },
       compileCondition () {
         this.$emit('input', this.condition)
-        if (!this.condition.field || this.isParent) return
-
+        if (!this.condition.field) return
+        if(this.isParent){
+            this.$emit('change')
+            return
+        }
         let error = this.checkErrors() || this.formatCondition()
         this.$emit('error', error)
         if (error) {
           return
         }
         this.$emit('change', this.composeCondition())
+      },
+      onChangeConditionFieldType(value, fieldType, secondaryValues){
+          this.condition.fieldType = fieldType;
+          this.condition.filteredAdapters = secondaryValues;
+      },
+      addFilteredOption(schema){
+          if(schema && schema.length > 0 && schema[0].name === 'axonius'){
+              schema[0].plugins = this.getDataFieldsByPlugin(this.module).
+              filter(adapter => adapter.name !== 'axonius').
+              map(adapter => {
+                  return {title: adapter.title, name: adapter.name}
+              })
+          }
+          return schema
       }
     }
   }

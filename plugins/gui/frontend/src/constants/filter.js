@@ -2,7 +2,8 @@ export const nestedExpression = {
     expression: {
         field: '',
         compOp: '',
-        value: null
+        value: null,
+        filteredAdapters: null
     }, condition: ''
 }
 

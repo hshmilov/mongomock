@@ -28,53 +28,37 @@
         class="placeholder"
       >{{ placeholder }}</div>
     </div>
-    <div
+    <x-select-content
       slot="content"
-      class="x-select-content"
-      @keydown.down="incActiveOption"
-      @keydown.up="decActiveOption"
-      @keyup.enter="selectActive"
-      @keyup.esc="closeDropdown"
-    >
-      <x-search-input
-        v-if="searchable"
-        ref="searchInput"
-        v-model="searchValue"
-        class="x-select-search"
-      />
-      <div class="x-select-options">
-        <div
-          v-for="(option, index) in filteredOptions"
-          :key="index"
-          ref="option"
-          class="x-select-option"
-          :class="{active: index === activeOptionIndex}"
-          :tabindex="-1"
-          @click="selectOption(option.name)"
-          @keyup.enter.stop.prevent="selectOption(option.name)"
-        >
-          <slot :option="option">{{ option.title }}</slot>
-        </div>
-      </div>
-    </div>
+      v-model="selectContentValue"
+      :multi-select="false"
+      :options="options"
+      :searchable="searchable"
+      :read-only="readOnly"
+      @close="() => closeDropdown()"
+    ><slot
+      slot-scope="{ option }"
+      :option="option"
+    />
+    </x-select-content>
   </x-dropdown>
 </template>
 
 <script>
   import xDropdown from '../popover/Dropdown.vue'
-  import xSearchInput from '../../neurons/inputs/SearchInput.vue'
+  import xSelectContent from './SelectContent.vue'
 
   export default {
     name: 'XSelect',
-    components: { xDropdown, xSearchInput },
+    components: { xDropdown, xSelectContent },
     props: {
       options: {
         type: Array,
         default: () => []
       },
       value: {
-        type: [String],
-        default: ''
+        type: [String, Object],
+        default: null
       },
       placeholder: {
         type: String,
@@ -105,77 +89,40 @@
         default: false
       }
     },
-    data () {
-      return {
-        searchValue: '',
-        activeOptionIndex: -1
-      }
-    },
     computed: {
       completeOptions () {
-        if (this.value && !this.options.find(item => item.name === this.value)) {
+        if (this.stringValue && !this.options.find(item => item.name === this.stringValue)) {
           return [...this.options, {
-            name: this.value, title: `${this.value} (deleted)`
+            name: this.stringValue, title: `${this.stringValue} (deleted)`
           }]
         }
         return this.options
       },
-      filteredOptions () {
-        if (!this.completeOptions || !Array.isArray(this.completeOptions)) return []
-        return this.completeOptions.filter(option =>
-          option.title && option.title.toLowerCase().includes(this.searchValue.toLowerCase()))
-      },
       selectedOption () {
-        if (!this.value || !this.completeOptions || !this.completeOptions.length) return undefined
-        return this.completeOptions.find(option => (option && option.name === this.value))
-      }
-    },
-    watch: {
-      filteredOptions () {
-        this.activeOptionIndex = -1
+        if (!this.stringValue || !this.completeOptions || !this.completeOptions.length) return undefined
+        return this.completeOptions.find(option => (option && option.name === this.stringValue));
+      },
+      selectContentValue: {
+        get() {
+            return this.value
+        },
+        set(value) {
+            this.$emit('input', value)
+        }
+      },
+      stringValue() {
+          return !this.value || typeof(this.value) === 'string' ? this.value : this.value['value']
       }
     },
     methods: {
-      selectOption (name) {
-        this.$emit('input', name)
-        this.searchValue = ''
+      selectOption (value) {
+        this.$emit('input', value)
         this.closeDropdown()
       },
       closeDropdown () {
         this.$refs.dropdown.close()
-      },
-      incActiveOption () {
-        this.focusOptions()
-        this.activeOptionIndex++
-        if (this.activeOptionIndex === this.filteredOptions.length) {
-          this.activeOptionIndex = -1
-        }
-        this.scrollOption()
-      },
-      decActiveOption () {
-        this.activeOptionIndex--
-        if (this.activeOptionIndex < -1) {
-          this.activeOptionIndex = this.filteredOptions.length - 1
-        }
-        this.scrollOption()
-      },
-      focusOptions () {
-        if (this.searchable) {
-          this.$refs.searchInput.focus()
-        } else {
-          this.$refs.option[0].focus()
-        }
-      },
-      scrollOption () {
-        if (this.activeOptionIndex >= 0 && this.activeOptionIndex < this.filteredOptions.length) {
-          this.$refs.option[this.activeOptionIndex].scrollIntoView(false)
-        }
-      },
-      selectActive () {
-        if (this.activeOptionIndex === -1) return
-        this.selectOption(this.filteredOptions[this.activeOptionIndex].name)
       }
-    }
+    },
   }
 </script>
 

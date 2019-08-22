@@ -8,7 +8,12 @@
     <template slot-scope="{ option }">
       <div class="x-type-img">
         <img
-          v-if="type === 'img'"
+          v-if="option && isFiltered(option)"
+          src="/src/assets/icons/logo/general_filtered.png"
+          :alt="option.name"
+        >
+        <img
+          v-else-if="type === 'img' && option"
           :src="require(`Logos/adapters/${option.name}.png`)"
           :alt="option.name"
         >
@@ -19,7 +24,7 @@
           width="30"
         />
       </div>
-      <div class="logo-text">{{ option.title }}</div>
+      <div v-if="option" class="logo-text">{{ option.title }}</div>
     </template>
   </x-select>
 </template>
@@ -36,8 +41,8 @@
         required: true
       },
       value: {
-        type: String,
-        default: ''
+        type: [String, Object],
+        default: null
       },
       type: {
         type: String,
@@ -55,8 +60,18 @@
       readOnly: Boolean
     },
     methods: {
-      selectOption (option) {
-        this.$emit('input', option)
+      selectOption (value) {
+          this.$emit('input', value)
+      },
+      isFiltered(currentOption){
+        if(currentOption.plugins && this.value && this.value['secondaryValues']){
+          let secondaryValues = this.value['secondaryValues']
+          let numOfPlugins = Object.values(secondaryValues['selectedValues']).filter(value => value).length
+          if(numOfPlugins > 0 && !secondaryValues.selectAll && numOfPlugins < currentOption.plugins.length) {
+            return true
+          }
+        }
+        return false
       }
     }
   }

@@ -2,7 +2,7 @@
   <div class="x-select-typed-field">
     <x-select-symbol
       v-if="isTyped"
-      v-model="fieldType"
+      v-model="filterTypeWithFilters"
       :options="options"
       :minimal="minimal"
       @input="updateAutoField"
@@ -15,7 +15,7 @@
       :searchable="true"
       class="field-select"
       :class="{linked: isTyped}"
-      @input="$emit('input', $event)"
+      @input="onChangedField"
     />
   </div>
 </template>
@@ -35,6 +35,10 @@
       value: {
         type: String,
         default: ''
+      },
+      filteredAdapters: {
+        type: Object,
+        default: () => {}
       },
       id: {
         type: String,
@@ -62,6 +66,14 @@
       firstType () {
         if (!this.options || !this.options.length) return 'axonius'
         return this.options[0].name
+      },
+      filterTypeWithFilters: {
+          get(){
+              return {value: this.fieldType, secondaryValues: this.filteredAdapters}
+          },
+          set(value){
+              this.updateAutoField(value)
+          }
       }
     },
     watch: {
@@ -72,10 +84,10 @@
           this.fieldType = 'axonius'
         }
       },
-      currentFields (newCurrenFields) {
+      currentFields (newCurrentFields) {
         if (!this.value) return
-        if (!newCurrenFields.filter(field => field.name === this.value).length) {
-          this.$emit('input', '')
+        if (!newCurrentFields.filter(field => field.name === this.value).length) {
+          this.$emit('input', '', this.fieldType, this.filteredAdapters)
         }
       },
       firstType (newFirstType) {
@@ -86,7 +98,7 @@
       this.fieldType = this.firstType
       if (this.value) {
         this.updateFieldType()
-        this.$emit('input', this.value)
+        this.$emit('input', this.value, this.fieldType, this.filteredAdapters)
       }
     },
     methods: {
@@ -98,8 +110,19 @@
           this.fieldType = 'axonius'
         }
       },
-      updateAutoField () {
+      updateAutoField (value) {
+        let secondaryValues = null
+        if(typeof(value) === 'string'){
+            this.fieldType = value
+        } else {
+            this.fieldType = value['value']
+            secondaryValues = value['secondaryValues']
+        }
+
         if (!this.isTyped || this.fieldType === '' || this.fieldType === 'axonius') {
+          if(secondaryValues){
+              this.$emit('input', this.value, this.fieldType, secondaryValues)
+          }
           return
         }
         if (this.value) {
@@ -107,14 +130,17 @@
           if (fieldMatch && fieldMatch.length > 1) {
             let currentField = this.currentFields.find(field => field.name.includes(fieldMatch[1]))
             if (currentField) {
-              this.$emit('input', currentField.name)
+              this.$emit('input', currentField.name, this.fieldType, secondaryValues)
               return
             }
           }
         }
         if (this.currentFields.find(field => field.name.includes('.id'))) {
-          this.$emit('input', `adapters_data.${this.fieldType}.id`)
+          this.$emit('input', `adapters_data.${this.fieldType}.id`, this.fieldType, secondaryValues)
         }
+      },
+      onChangedField(value){
+        this.$emit('input', value, this.fieldType, this.filteredAdapters)
       }
     }
   }
