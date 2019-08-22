@@ -44,6 +44,8 @@ class SMTPService(WeaveService):
         
         WORKDIR /go/src/github.com/flashmob/go-guerrilla
         
+        RUN git reset --hard b803e062a62e3103cbf238486f02c275c886f26a
+        
         RUN make guerrillad || echo dependencies failed
 
         COPY goguerrilla ./
