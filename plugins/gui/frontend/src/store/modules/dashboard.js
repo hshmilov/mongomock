@@ -46,6 +46,7 @@ export const dashboard = {
 		[UPDATE_LIFECYCLE](state, payload) {
 			state.lifecycle.fetching = payload.fetching
 			state.lifecycle.error = payload.error
+
 			if (payload.data && payload.data.sub_phases) {
 				state.lifecycle.data = {
 					subPhases: payload.data.sub_phases,

@@ -1,65 +1,120 @@
-import {REQUEST_API} from '../actions'
+import { REQUEST_API } from '../actions'
 import { pluginMeta } from '../../constants/plugin_meta.js'
+import shortid from 'shortid'
 
 export const HINT_ADAPTER_UP = 'HINT_ADAPTER_UP'
 export const FETCH_ADAPTERS = 'FETCH_ADAPTERS'
-export const UPDATE_ADAPTERS = 'UPDATE_ADAPTERS'
-export const UPDATE_CURRENT_ADAPTER = 'UPDATE_CURRENT_ADAPTER'
+export const INSERT_ADAPTERS = 'INSERT_ADAPTERS'
 
-export const SAVE_ADAPTER_SERVER = 'SAVE_ADAPTER_SERVER'
+export const SAVE_ADAPTER_CLIENT = 'SAVE_ADAPTER_CLIENT'
 export const TEST_ADAPTER_SERVER = 'TEST_ADAPTER_SERVER'
-export const UPDATE_ADAPTER_SERVER = 'UPDATE_ADAPTER_SERVER'
-export const ARCHIVE_SERVER = 'ARCHIVE_SERVER'
-export const REMOVE_SERVER = 'REMOVE_SERVER'
+export const UPDATE_ADAPTER_CLIENT = 'UPDATE_ADAPTER_CLIENT'
+export const ARCHIVE_CLIENT = 'ARCHIVE_CLIENT'
+export const REMOVE_CLIENT = 'REMOVE_CLIENT'
+
+export const UPDATE_EXISTING_CLIENT = 'UPDATE_EXISTING_CLIENT'
+export const ADD_NEW_CLIENT = 'ADD_NEW_CLIENT'
+
+export const CLEAR_ADAPTERS_STATE = 'CLEAR_ADAPTERS_STATE'
 
 export const UPDATE_ADAPTER_STATUS = 'UPDATE_ADAPTER_STATUS'
 
-
 export const adapters = {
 	state: {
-		/* All adapters */
-		adapterList: {
+		adapters: {
 			fetching: false, data: [], error: ''
 		},
-
-		currentAdapter: null
+		instances: [],
+		clients: [],
 	},
 	mutations: {
-		[ UPDATE_ADAPTERS ] (state, payload) {
+		[INSERT_ADAPTERS](state, payload) {
+
 			/*
 				Called first before API request for adapters, in order to update state to fetching
 				Called again after API call returns with either error or result controls, that is added to adapters list
 			 */
-			state.adapterList.fetching = payload.fetching
-			if (payload.data) {
-				state.adapterList.data = []
-				for (let pluginName in payload.data) {
-					let current_plugin_data = payload.data[pluginName]
-                    let pluginTitle = pluginName
-                    let pluginDescription = ''
-                    if (pluginMeta[pluginName]) {
-                        pluginDescription = pluginMeta[pluginName].description
-                        pluginTitle = pluginMeta[pluginName].title
-                    }
-                    let status = ''
-					current_plugin_data.forEach((unique_adapter) => {
-						if (unique_adapter.status === "error") {
-							status = "warning"
-						}
-						else if (unique_adapter.status !== "" &&  status !== "warning") {
-							status = unique_adapter.status
-						}
-					})
-                    state.adapterList.data.push({
-                        ...current_plugin_data,
-                        id: pluginName,
-                        title: pluginTitle,
-						status: status,
-                        description: pluginDescription,
-                        supported_features: current_plugin_data[0].supported_features
-                    })
+
+			const newStateAdapters = []
+			const newStateInstances = []
+			let newStateClients = []
+
+			function getAllClientsData(aggregatedInstanceData, currentInstance) {
+
+				const { clients: currentInstanceClients } = currentInstance
+				const currentInstanceClientsCount = currentInstanceClients.length
+
+				let instanceSuccessClients = 0
+				let instanceFailClients = 0
+
+
+				currentInstanceClients.forEach(c => {
+					const { status } = c
+					instanceSuccessClients = status === 'success' ? instanceSuccessClients + 1 : instanceSuccessClients
+					instanceFailClients = status === 'error' ? instanceFailClients + 1 : instanceFailClients
+				})
+
+				const { countClients, successClients, errorClients, clients } = aggregatedInstanceData
+				return {
+					clients: [...clients, ...currentInstanceClients],
+					countClients: countClients + currentInstanceClientsCount,
+					errorClients: errorClients + instanceFailClients,
+					successClients: successClients + instanceSuccessClients
 				}
-				state.adapterList.data.sort((first, second) => {
+			}
+
+
+			const { data, fetching, error } = payload
+			state.adapters.fetching = fetching
+
+			if (data) {
+				for (let [name, currentAdapter] of Object.entries(data)) {
+					let adapter = {}
+					let instance = {}
+
+					const adapterMetaData = pluginMeta[name] || {}
+					
+
+					// get all clients data from all Instances
+					const aggregatedClientsData = currentAdapter.reduce(getAllClientsData, { clients: [], successClients: 0, errorClients: 0, countClients: 0 })
+
+					const { countClients, successClients, errorClients, clients: clientsList } = aggregatedClientsData
+
+					// Itterate through Instances
+					currentAdapter.forEach(a => {
+						const { config, node_id, node_name, schema, status, supported_features } = a
+						adapter = {
+							id: name,
+							title: adapterMetaData.title || name,
+							description: adapterMetaData.description || '',
+							link: adapterMetaData.link,
+							config,
+							status: countClients && successClients ? 'success' : countClients ? 'warning' : '',
+							schema,
+							supported_features,
+							clients: clientsList.map(c => c.uuid),
+							countClients,
+							successClients,
+							errorClients,
+							instances: currentAdapter.map(a => a.node_id)
+						}
+
+						instance = { node_id, node_name }
+						
+						if (!newStateInstances.find(i => i.node_id === node_id)) {
+							newStateInstances.push(instance)
+						}
+						newStateClients = [...newStateClients, ...clientsList]
+					})
+					newStateAdapters.push(adapter)
+				}
+
+				//** It is essential to replace the data in the state here. If not, data will be accumulated  */
+				state.adapters.data = newStateAdapters
+				state.instances = newStateInstances
+				state.clients = newStateClients
+
+				state.adapters.data.sort((first, second) => {
 					// Sort by adapters plugin name (the one that is shown in the gui).
 					let firstText = first.title.toLowerCase()
 					let secondText = second.title.toLowerCase()
@@ -67,48 +122,91 @@ export const adapters = {
 					if (firstText > secondText) return 1
 					return 0
 				})
-				if (state.currentAdapter && state.currentAdapter.id) {
-					state.currentAdapter = state.adapterList.data.find(
-						adapter => adapter.id === state.currentAdapter.id)
+			}
+
+			if (error) {
+				state.adapters.error = payload.error
+			}
+		},
+		[ADD_NEW_CLIENT](state, payload){
+			const { adapterId, ...newClient } = payload
+
+			const newAdaptersList = state.adapters.data.map(adapter => {
+				if (adapterId !== adapter.id) {
+					return adapter
 				}
-			}
-			if (payload.error) {
-				state.adapterList.error = payload.error
-			}
-		},
-		[ UPDATE_CURRENT_ADAPTER ] (state, adapterId) {
-			state.currentAdapter = state.adapterList.data.find(adapter => adapter.id === adapterId)
-		},
-		[ UPDATE_ADAPTER_SERVER ] (state, payload) {
-			if (!payload.uuid && !payload.uuidToSwap) {
-				Object.values(state.currentAdapter).find(adapter =>
-					adapter.clients && adapter.node_id === payload.client_config.instanceName).clients.splice(0, 0, payload)
-				return
-			}
-			Object.values(state.currentAdapter).forEach(adapter => {
-				if (!adapter.clients) return
-				adapter.clients = adapter.clients.map(client => {
-					if (client.uuid === payload.uuidToSwap || client.uuid === payload.uuid) {
-						return { ...client, ...payload }
-					}
-					return client
-				})
+				return  {
+					...adapter,
+					client: adapter.clients.push(newClient.uuid),
+					status: 'warning'
+				}
 			})
+
+			state.adapters.data = newAdaptersList
+			state.clients.push(newClient)
+
 		},
-		[ REMOVE_SERVER ] (state, serverId) {
-			Object.values(state.currentAdapter).filter(field => (field.clients)).forEach((adapter) => {
-				adapter.clients = adapter.clients.filter(currentClient => currentClient.uuid !== serverId)
+		[UPDATE_EXISTING_CLIENT](state, payload){
+			// update exsiting client
+			const { adapterId, uuidToSwap = payload.uuid, ...updatedClient } = payload
+
+			const newAdaptersList = state.adapters.data.map(adapter => {
+				if (adapterId !== adapter.id) {
+					return adapter
+				}
+
+				const { clients } = adapter
+
+				const replaceClientAtIndex = clients.findIndex(c => uuidToSwap === c)
+				const newClientsList = clients.map((c, index) => {
+					if (index !== replaceClientAtIndex) {
+						return c
+					}
+					return updatedClient.uuid
 				})
+
+				return {
+					...adapter,
+					clients: newClientsList
+				}
+			})
+
+			state.adapters.data = newAdaptersList
+
+			state.clients.push(updatedClient)
 		},
-		[ UPDATE_ADAPTER_STATUS ] (state, adapterId) {
-			state.adapterList.data = state.adapterList.data.map((item) => {
-				if (item.id !== adapterId) return item
-				return { ...item, status: 'warning' }
+		[REMOVE_CLIENT](state, { clientId, adapterId }) {
+
+			const newAdaptersList = state.adapters.data.map(adapter => {
+				if (adapterId !== adapter.id) {
+					return adapter
+				}
+
+				const { clients } = adapter
+
+				const replaceClientAtIndex = clients.findIndex(c => clientId === c)
+				const newClientsList = clients.filter((c, index) => index !== replaceClientAtIndex)
+
+				return {
+					...adapter,
+					clients: newClientsList
+				}
+			})
+
+			state.adapters.data = newAdaptersList
+			state.clients = state.clients.filter(c => c.uuid !== clientId)
+		},
+		[UPDATE_ADAPTER_STATUS](state, adapterId) {
+			state.adapters.data = state.adapters.data.map((adapter) => {
+				if (adapter.id !== adapterId) {
+					return adapter
+				} 
+				return { ...adapter, status: 'warning' }
 			})
 		}
 	},
 	actions: {
-		[ FETCH_ADAPTERS ] ({dispatch}, payload) {
+		[FETCH_ADAPTERS]({ dispatch, commit }, payload) {
 			/*
 				Fetch all adapters, according to given filter
 			 */
@@ -118,70 +216,96 @@ export const adapters = {
 			}
 			return dispatch(REQUEST_API, {
 				rule: `adapters${param}`,
-				type: UPDATE_ADAPTERS
+				type: INSERT_ADAPTERS
 			})
 		},
-		[ SAVE_ADAPTER_SERVER ] ({dispatch, commit}, payload) {
+		[SAVE_ADAPTER_CLIENT]({ dispatch, commit, getters }, payload) {
 			/*
 				Call API to save given server controls to adapters by the given adapters id,
 				either adding a new server or updating and existing one, if id is provided with the controls
 			 */
-			if (!payload || !payload.adapterId || !payload.serverData) { return }
-			let rule = `adapters/${payload.adapterId}/clients`
-			if (payload.uuid !== 'new') {
-				rule += '/' + payload.uuid
+			const { serverData } = payload
+			const { instanceName: instanceId } = serverData
+
+			const instance = getters.getInstancesMap.get(instanceId)
+			if (!payload || !payload.adapterId || !payload.serverData) { 
+				return 
 			}
-			commit(UPDATE_ADAPTER_SERVER, {
+
+			const isNewClient = payload.uuid === 'new'
+			const baseRulePath = `adapters/${payload.adapterId}/clients`
+			let rule = isNewClient ? baseRulePath : `${baseRulePath}/${payload.uuid}`
+			const uniqueTmpId = isNewClient ? shortid.generate() : null
+
+			// why is that? the status can be changed, and the client can be added, right after the API response with
+			// the status 200
+			// that way, if the server operation failed, the data will remain not updated.
+			// Moreover, why is it looks like the client id is being changed after update?!
+			// if we want to change the status we can use designated mutation
+
+			const client = {
+				adapterId: payload.adapterId,
 				client_config: payload.serverData,
-				uuid: (payload.uuid !== 'new') ? payload.uuid: '',
+				uuid: isNewClient ? uniqueTmpId : payload.uuid,
+				...instance,
 				status: 'warning'
-			})
-			commit(UPDATE_ADAPTER_STATUS, payload.adapterId)
+			}
+
+			if (isNewClient) {
+				commit(ADD_NEW_CLIENT, client)
+			} else {
+				commit(UPDATE_EXISTING_CLIENT, client)
+			}
 
 			return dispatch(REQUEST_API, {
 				rule: rule,
 				method: 'PUT',
 				data: payload.serverData
 			}).then(response => {
-				commit(UPDATE_ADAPTER_SERVER, {
-					uuidToSwap: (payload.uuid !== 'new') ? payload.uuid: '',
+				commit(UPDATE_EXISTING_CLIENT, {
+					adapterId: payload.adapterId,
+					uuidToSwap: isNewClient ? uniqueTmpId : payload.uuid,
 					uuid: response.data.id,
 					status: response.data.status,
 					client_config: payload.serverData,
-					error: response.data.error
+					error: response.data.error,
+					node_id: instance.node_id
 				})
 				return response
 			})
 		},
-        [ TEST_ADAPTER_SERVER ] ({dispatch}, payload) {
+		[TEST_ADAPTER_SERVER]({ dispatch }, payload) {
             /*
                 Call API to test connectivity to given server controls to adapters by the given adapters id,
                 either adding a new server or updating and existing one, if id is provided with the controls
              */
-            if (!payload || !payload.adapterId || !payload.serverData) { return }
-            let rule = `adapters/${payload.adapterId}/clients`
+			if (!payload || !payload.adapterId || !payload.serverData) { return }
+			let rule = `adapters/${payload.adapterId}/clients`
 
-            return dispatch(REQUEST_API, {
-                rule: rule,
-                method: 'post',
-                data: payload.serverData
-            })
-        },
-		[ ARCHIVE_SERVER ] ({dispatch, commit}, payload) {
-			if (!payload.adapterId || !payload.serverId) { return }
-            let param = ''
-            if (payload.deleteEntities) {
+			return dispatch(REQUEST_API, {
+				rule: rule,
+				method: 'post',
+				data: payload.serverData
+			})
+		},
+		[ARCHIVE_CLIENT]({ dispatch, commit }, payload) {
+			const { adapterId, serverId: clientId, deleteEntities, nodeId } = payload 
+			if (!adapterId || !clientId) { 
+				return 
+			}
+			let param = ''
+			if (deleteEntities) {
 				param = '?deleteEntities=True'
 			}
 			dispatch(REQUEST_API, {
-				rule: `adapters/${payload.adapterId}/clients/${payload.serverId}${param}`,
+				rule: `adapters/${adapterId}/clients/${clientId}${param}`,
 				method: 'DELETE',
-				data: {instanceName: payload.nodeId}
+				data: { instanceName: nodeId }
 			}).then((response) => {
 				if (response.data !== '') {
 					return
 				}
-				commit(REMOVE_SERVER, payload.serverId)
+				commit(REMOVE_CLIENT, { clientId, adapterId })
 			})
 		},
 		[ HINT_ADAPTER_UP ] ({dispatch, commit}, adapterId) {
@@ -189,6 +313,43 @@ export const adapters = {
 				rule: `adapters/hint_raise/${adapterId}`,
 				method: 'POST',
 			})
+		}
+	},
+	getters: {
+		getAdaptersMap: state => {
+			const byId = new Map()
+
+			state.adapters.data.forEach(currentAdapter => {
+				byId.set(currentAdapter.id, currentAdapter)
+			})
+
+			return byId
+		},
+		getClientsMap: (state) => {
+			return state.clients.reduce((map, client) => {
+				map.set(client.uuid, client)
+				return map
+			}, new Map())
+		},
+		getInstancesMap: (state) => {
+			return state.instances.reduce((map, instance) => {
+				map.set(instance.node_id, instance)
+				return map
+			}, new Map())
+		},
+		getAdapterById: (state, getters) => id => {
+			const pluginNameIndex = getters.getAdaptersMap
+			return pluginNameIndex.get(id)
+		},
+		getClientById: (state, getters) => id => {
+			return getters.getClientsMap[id]
+		},
+		getInstanceByNodeId: (state, getters) => id => {
+			return getters.getInstancesMap[id]
+
+		},
+		getInstanceByName: (state, getters) => name => {
+			return Array.from(getters.getInstancesMap.values()).find(i => i.node_name === name)
 		}
 	}
 }

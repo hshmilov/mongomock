@@ -1,72 +1,124 @@
 <template>
-    <x-page :breadcrumbs="[
+  <x-page
+    :breadcrumbs="[
     	{ title: 'adapters', path: { name: 'Adapters'}},
-    	{ title: adapterName }
-    ]" class="x-adapter">
-        <x-table-wrapper title="Add or Edit Servers" :loading="loading">
-            <template slot="actions">
-                <x-button v-if="selectedServers && selectedServers.length" link @click="removeServers">Remove</x-button>
-                <x-button @click="configServer('new')" id="new_server" :disabled="isReadOnly">+ New Server</x-button>
-            </template>
-            <x-table slot="table" :fields="tableFields" v-model="isReadOnly? undefined: selectedServers"
-                     :on-click-row="isReadOnly? undefined: configServer" :data="adapterClients"/>
-        </x-table-wrapper>
+    	{ title: title }
+    ]"
+    class="x-adapter"
+  >
+    <x-table-wrapper title="Add or Edit Servers" :loading="loading">
+      <template slot="actions">
+        <x-button
+          v-if="selectedServers && selectedServers.length"
+          link
+          @click="removeServers"
+        >Remove</x-button>
+        <x-button @click="configServer('new')" id="new_server" :disabled="isReadOnly">+ New Server</x-button>
+      </template>
+      <x-table
+        slot="table"
+        :fields="tableFields"
+        v-model="isReadOnly ? undefined : selectedServers"
+        :on-click-row="isReadOnly ? undefined: configServer"
+        :data="adapterClients"
+      />
+    </x-table-wrapper>
 
-        <div class="config-settings">
-            <x-button link class="header" :disabled="isReadOnly" @click="toggleSettings">
-                <svg-icon name="navigation/settings" :original="true" height="20"/>Advanced Settings</x-button>
-            <div class="content">
-                <x-tabs v-if="currentAdapter && currentAdapter[0] && advancedSettings" class="growing-y" ref="tabs">
-                    <x-tab v-for="config, configName, i in currentAdapter[0].config" :key="i"
-                           :title="config.schema.pretty_name || configName" :id="configName" :selected="!i">
-                        <div class="configuration">
-                            <x-form :schema="config.schema" v-model="config.config" @validate="validateConfig"/>
-                            <x-button @click="saveConfig(configName, config.config)" tabindex="1" :disabled="!configValid">Save Config</x-button>
-                        </div>
-                    </x-tab>
-                </x-tabs>
+    <div class="config-settings">
+      <x-button link class="header" :disabled="isReadOnly" @click="toggleSettings">
+        <svg-icon name="navigation/settings" :original="true" height="20" />Advanced Settings</x-button>
+      <div class="content">
+        <x-tabs v-if="currentAdapter && advancedSettings" class="growing-y" ref="tabs">
+          <x-tab
+            v-for="config, configName, i in currentAdapter.config"
+            :key="i"
+            :title="config.schema.pretty_name || configName"
+            :id="configName"
+            :selected="!i"
+          >
+            <div class="configuration">
+              <x-form :schema="config.schema" v-model="config.config" @validate="validateConfig" />
+              <x-button
+                @click="saveConfig(configName, config.config)"
+                tabindex="1"
+                :disabled="!configValid"
+              >Save Config</x-button>
             </div>
+          </x-tab>
+        </x-tabs>
+      </div>
+    </div>
+    <x-modal
+      v-if="serverModal.serverData && serverModal.uuid && serverModal.open"
+      size="lg"
+      class="config-server"
+      @close="toggleServerModal"
+      @confirm="saveServer"
+      @enter="promptSaveServer"
+    >
+      <div slot="body">
+        <!-- Container for configuration of a single selected / added server -->
+        <x-title :logo="`adapters/${adapterId}`">
+          {{ title }}
+          <x-button
+            v-if="adapterLink"
+            slot="actions"
+            header
+            link
+            class="help-link"
+            title="More information about connecting this adapter"
+            @click="openHelpLink"
+          >
+            <md-icon>help_outline</md-icon>Help
+          </x-button>
+        </x-title>
+        <div class="server-error" v-if="serverModal.error">
+          <svg-icon name="symbol/error" :original="true" height="12"></svg-icon>
+          <div class="error-text">{{serverModal.error}}</div>
         </div>
-        <x-modal v-if="serverModal.serverData && serverModal.uuid && serverModal.open" size="lg" class="config-server"
-                 @close="toggleServerModal" @confirm="saveServer" @enter="promptSaveServer">
-            <div slot="body">
-                <!-- Container for configuration of a single selected / added server -->
-                <x-title :logo="`adapters/${adapterPluginName}`">
-                    {{ adapterName }}
-                    <x-button v-if="adapterLink" slot="actions"
-                              header
-                              link
-                              class="help-link"
-                              title="More information about connecting this adapter"
-                              @click="openHelpLink">
-                        <md-icon>help_outline</md-icon>Help</x-button>
-                </x-title>
-                <div class="server-error" v-if="serverModal.error">
-                    <svg-icon name="symbol/error" :original="true" height="12"></svg-icon>
-                    <div class="error-text">{{serverModal.error}}</div>
-                </div>
-                <x-form :schema="adapterSchema" v-model="serverModal.serverData"
-                        :api-upload="`adapters/${adapterId}/${serverModal.instanceName}`"
-                        @submit="saveServer" @validate="validateServer"/>
-                <div v-if="instances && instances.length > 0" id="serverInstancesList">
-                    <label for="serverInstance" align="left">Choose Instance</label>
-                    <x-select id="serverInstance" align="left" :options="instances" v-model="serverModal.instanceName"/>
-                </div>
-            </div>
-            <template slot="footer">
-                <x-button link @click="toggleServerModal">Cancel</x-button>
-                <x-button id="test_reachability" @click="testServer" :disabled="!serverModal.valid">Test Reachability</x-button>
-                <x-button id="save_server" @click="saveServer" :disabled="!serverModal.valid">Save</x-button>
-            </template>
-        </x-modal>
-        <x-modal v-if="deleting" @close="closeConfirmDelete" @confirm="doRemoveServers" approve-text="Delete">
-            <div slot="body">Are you sure you want to delete this server? <br/><br/>
-                <input type="checkbox" id="deleteEntitiesCheckbox" v-model="deleteEntities">
-                <label for="deleteEntitiesCheckbox">Also delete all associated entities (devices, users)</label>
-            </div>
-        </x-modal>
-        <x-toast v-if="message" v-model="message" :timeout="toastTimeout"/>
-    </x-page>
+        <x-form
+          :schema="adapterSchema"
+          v-model="serverModal.serverData"
+          :api-upload="uploadFileEndpoint"
+          @submit="saveServer"
+          @validate="validateServer"
+        />
+        <div v-if="instances && instances.length > 0" id="serverInstancesList">
+          <label for="serverInstance" align="left">Choose Instance</label>
+          <x-select
+            id="serverInstance"
+            align="left"
+            :options="instances"
+            v-model="defaultInstance"
+          />
+        </div>
+      </div>
+      <template slot="footer">
+        <x-button link @click="toggleServerModal">Cancel</x-button>
+        <x-button
+          id="test_reachability"
+          @click="testServer"
+          :disabled="!serverModal.valid"
+        >Test Reachability</x-button>
+        <x-button id="save_server" @click="saveServer" :disabled="!serverModal.valid">Save</x-button>
+      </template>
+    </x-modal>
+    <x-modal
+      v-if="deleting"
+      @close="closeConfirmDelete"
+      @confirm="doRemoveServers"
+      approve-text="Delete"
+    >
+      <div slot="body">
+        Are you sure you want to delete this server?
+        <br />
+        <br />
+        <input type="checkbox" id="deleteEntitiesCheckbox" v-model="deleteEntities" />
+        <label for="deleteEntitiesCheckbox">Also delete all associated entities (devices, users)</label>
+      </div>
+    </x-modal>
+    <x-toast v-if="message" v-model="message" :timeout="toastTimeout" />
+  </x-page>
 </template>
 
 <script>
@@ -82,18 +134,19 @@
     import xTitle from '../axons/layout/Title.vue'
     import xToast from '../axons/popover/Toast.vue'
 
-    import {mapState, mapMutations, mapActions} from 'vuex'
+    import {mapState, mapMutations, mapGetters, mapActions} from 'vuex'
     import {
-        FETCH_ADAPTERS,
-        UPDATE_CURRENT_ADAPTER,
-        SAVE_ADAPTER_SERVER,
-        ARCHIVE_SERVER,
-        TEST_ADAPTER_SERVER,
+        FETCH_ADAPTERS, 
+        SAVE_ADAPTER_CLIENT, 
+        ARCHIVE_CLIENT, 
+        TEST_ADAPTER_SERVER, 
         HINT_ADAPTER_UP
     } from '../../store/modules/adapters'
     import {pluginMeta} from '../../constants/plugin_meta.js'
     import {SAVE_PLUGIN_CONFIG} from '../../store/modules/settings'
     import {CHANGE_TOUR_STATE} from '../../store/modules/onboarding'
+    import _get from 'lodash/get'
+    import _isEmpty from 'lodash/isEmpty'
 
     export default {
         name: 'x-adapter',
@@ -101,85 +154,91 @@
             xPage, xTableWrapper, xTable, xTabs, xTab, xForm, xModal, xSelect, xButton, xTitle, xToast
         },
         computed: {
+            ...mapGetters(['getAdapterById', 'getClientsMap', 'getInstancesMap']),
             ...mapState({
-                allAdapters(state) {
-                    return state.adapters.adapterList
-                },
-                currentAdapter(state) {
-                    return state.adapters.currentAdapter
+                loading(state) {
+                    return state.adapters.adapters.fetching
                 },
                 isReadOnly(state) {
                     let user = state.auth.currentUser.data
                     if (!user || !user.permissions) return true
                     return user.permissions.Adapters === 'ReadOnly'
+                },
+                allClients(state) {
+                    return state.adapters.clients
                 }
             }),
             adapterId() {
                 return this.$route.params.id
             },
-            adapterPluginName() {
-                return this.adapterId
+            currentAdapter() {
+                return this.getAdapterById(this.adapterId) || {}
             },
-            adapterName() {
-                if (!pluginMeta[this.adapterPluginName]) {
-                    return this.adapterPluginName
-                }
-                return pluginMeta[this.adapterPluginName].title
+            title() {
+                return this.currentAdapter.title
             },
             adapterLink() {
-                if (!pluginMeta[this.adapterPluginName]) {
-                    return null
-                }
-                return pluginMeta[this.adapterPluginName].link
+                return this.currentAdapter.link
             },
             adapterClients() {
-                if (!this.currentAdapter) return []
-                let clients = []
-                Object.values(this.currentAdapter).filter(field => (field.clients && field.clients.length > 0)).forEach(currentAdapter =>
-                    currentAdapter.clients.forEach(currentClient =>
-                        clients.push({
-                            uuid: currentClient.uuid,
-                            status: currentClient.status,
-                            node_id: currentClient.node_id,
-                            node_name: currentAdapter.node_name,
-                            ...currentClient.client_config,
-                            error: currentClient.error
-                        })
-                    )
-                )
-                return clients
-            },
-            instances() {
-                if (!this.currentAdapter) return []
-                let instancesList = Object.values(this.currentAdapter).filter(field => (field.node_id)).map((adapter) => {
-                    if (adapter.node_name && adapter.node_name !== '') {
-                        return {name: adapter.node_id, title: adapter.node_name}
-                    } else if (adapter.node_id) {
-                        return {name: adapter.node_id, title: adapter.node_id}
+                const clients =  _get(this.currentAdapter, 'clients', [])
+                const instances = this.getInstancesMap
+                const res =  clients.map((c, index) => {
+                    const client = this.getClientsMap.get(c)
+                    const { node_id } = client
+                    const instance = instances.get(node_id)
+
+                    return {
+                        ...client,
+                        ...client.client_config,
+                        node_name: instance.node_name
                     }
                 })
-                return instancesList
+                return res
+            },
+            instances() {
+                const instancesIds =  _get(this.currentAdapter, 'instances', [])
+                return instancesIds.map(instance => {
+                    const i = this.getInstancesMap.get(instance)
+                    return {
+                        name: i.node_id,
+                        title: i.node_name 
+                    }
+                })
+            },
+            defaultInstance: {
+                get: function () {
+                    const defaultInstance = this.instances.find(i => i.title.toLowerCase() === 'master') || this.instances[0]
+                    return this.instanceName ||  defaultInstance ? defaultInstance.name  : ''  
+                },
+                set(newValue) {
+                    this.instanceName = newValue
+                }
             },
             adapterSchema() {
-                if (!this.currentAdapter) return null
-                return this.currentAdapter[0].schema
+                return _get(this.currentAdapter, 'schema', null)
             },
             tableFields() {
                 if (!this.adapterSchema || !this.adapterSchema.items) return []
-                return [
+                const fields =  [
                     {name: 'status', title: '', type: 'string', format: 'icon'},
                     {name: 'node_name', title: 'Instance Name', type: 'string'},
                     ...this.adapterSchema.items.filter(field => (field.type !== 'file' && field.format !== 'password'))
                 ]
+                return fields
+                
+            },
+            uploadFileEndpoint() {
+                return `adapters/${this.adapterId}/${this.serverModal.instanceName || this.defaultInstance}`
             }
         },
         data() {
             return {
-                loading: false,
+                instanceName: this.defaultInstance,
                 serverModal: {
                     open: false,
                     serverData: {},
-                    instanceName: '',
+                    instanceName: this.defaultInstance,
                     error: '',
                     serverName: 'New Server',
                     uuid: null,
@@ -197,43 +256,41 @@
         },
         methods: {
             ...mapMutations({
-                updateAdapter: UPDATE_CURRENT_ADAPTER, changeState: CHANGE_TOUR_STATE
+                changeState: CHANGE_TOUR_STATE
             }),
             ...mapActions({
-                fetchAdapters: FETCH_ADAPTERS, updateServer: SAVE_ADAPTER_SERVER, testAdapter: TEST_ADAPTER_SERVER,
-                archiveServer: ARCHIVE_SERVER, updatePluginConfig: SAVE_PLUGIN_CONFIG,
+                fetchAdapters: FETCH_ADAPTERS, 
+                updateServer: SAVE_ADAPTER_CLIENT, 
+                testAdapter: TEST_ADAPTER_SERVER,
+                archiveServer: ARCHIVE_CLIENT, 
+                updatePluginConfig: SAVE_PLUGIN_CONFIG, 
                 hintAdapterUp: HINT_ADAPTER_UP
             }),
             openHelpLink() {
                 window.open(this.adapterLink, '_blank')
             },
-            configServer(serverId) {
+            configServer(clientId) {
                 this.message = ''
                 this.serverModal.valid = true
-                if (serverId === 'new') {
-                    this.serverModal.instanceName = this.instances[0].name
+                if (clientId === 'new') {
+                    // this.serverModal.instanceName = this.currentAdapter.title
                     this.serverModal = {
                         ...this.serverModal,
-                        serverData: {instanceName: null},
+                        serverData: {instanceName: this.defaultInstance},
                         serverName: 'New Server',
-                        uuid: serverId,
+                        uuid: clientId,
                         error: '',
                         valid: false
                     }
                 } else {
-                    let server = null
-                    Object.values(this.currentAdapter).filter(field => (field.clients && field.clients.length > 0)).forEach((unique_adapter) => {
-                        if (unique_adapter.clients.find(client => (client.uuid === serverId))) {
-                            server = unique_adapter.clients.find(client => (client.uuid === serverId))
-                        }
-                    })
+                    let client = this.adapterClients.find(c => c.uuid === clientId)
                     this.serverModal = {
                         ...this.serverModal,
-                        serverData: {...server.client_config, oldInstanceName: server.node_id},
-                        instanceName: server.node_id,
-                        serverName: server.client_id,
-                        uuid: server.uuid,
-                        error: server.error,
+                        serverData: {...client.client_config, oldInstanceName: client.node_id},
+                        instanceName: client.node_id,
+                        serverName: client.client_id,
+                        uuid: client.uuid,
+                        error: client.error,
                         valid: true
                     }
                 }
@@ -267,7 +324,7 @@
                 this.message = 'Connecting to Server...'
                 this.updateServer({
                     adapterId: this.adapterId,
-                    serverData: {...this.serverModal.serverData, instanceName: this.serverModal.instanceName},
+                    serverData: {...this.serverModal.serverData, instanceName: this.serverModal.instanceName || this.defaultInstance},
                     uuid: this.serverModal.uuid
                 }).then((updateRes) => {
                     if (this.selectedServers.includes('')) {
@@ -349,22 +406,8 @@
         },
         created() {
             this.hintAdapterUp(this.adapterId)
-            if (!this.currentAdapter || this.currentAdapter.id !== this.adapterId) {
-                let shouldFetch = true
-                if (this.allAdapters && this.allAdapters.data) {
-                    let currentAdapter = this.allAdapters.data.find(adapter => adapter.id === this.adapterId)
-                    if (currentAdapter) {
-                        this.updateAdapter(this.adapterId)
-                        shouldFetch = false
-                    }
-                }
-                if (shouldFetch) {
-                    this.loading = true
-                    this.fetchAdapters().then(() => {
-                        this.updateAdapter(this.adapterId)
-                        this.loading = false
-                    })
-                }
+            if (_isEmpty(this.currentAdapter)) {
+                this.fetchAdapters()
             }
             this.changeState({name: 'addServer'})
         }

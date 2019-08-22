@@ -30,7 +30,7 @@ class AdaptersPage(EntitiesPage):
     SERVER_ORANGE_COLOR_ID = 'svgicon_symbol_warning_a'
     SERVER_RED_COLOR_ID = 'svgicon_symbol_error_a'
     SERVER_GREEN_COLOR_ID = 'svgicon_symbol_success_a'
-    ORANGE_COLOR_ID = 'svgicon_symbol_warning_b'
+    ORANGE_COLOR_ID = 'svgicon_symbol_error_b'
     RED_COLOR_ID = 'svgicon_symbol_error_b'
     GREEN_COLOR_ID = 'svgicon_symbol_success_b'
     NEW_SERVER_BUTTON_ID = 'new_server'
@@ -62,14 +62,14 @@ class AdaptersPage(EntitiesPage):
         adapter_table = adapter_table[1:]
 
         for adapter_element in adapter_table:
-            name, description = adapter_element.text.split('\n', 1)
+            count, name, description = adapter_element.text.split('\n')
             result.append(Adapter(name=name, description=description))
 
         return result
 
     def click_adapter(self, adapter_name):
         self.click_button(adapter_name,
-                          button_class='x-title',
+                          button_class='x-title adapter-title',
                           button_type='div',
                           call_space=False,
                           scroll_into_view_container='.adapters-table')
@@ -179,7 +179,7 @@ class AdaptersPage(EntitiesPage):
         self.wait_for_table_to_load()
         self.wait_for_spinner_to_end()
         self.click_new_server()
-
+        self.wait_for_element_present_by_css(self.MODAL_OVERLAY_CSS)
         dict_ = copy(ad_client)
         dict_.pop('use_ssl', None)
         dict_.pop('fetch_disabled_users', None)

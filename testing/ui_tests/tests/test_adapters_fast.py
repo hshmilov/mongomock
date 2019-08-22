@@ -19,6 +19,7 @@ class TestAdaptersFast(TestBase):
         self.adapters_page.wait_for_spinner_to_end()
         self.adapters_page.search(JSON_ADAPTER_SEARCH)
         adapter_list = self.adapters_page.get_adapter_list()
+
         assert len(adapter_list) == 1
         assert adapter_list[0].name == JSON_ADAPTER_NAME
 

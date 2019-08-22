@@ -1,36 +1,50 @@
 <template>
-    <x-page title="adapters" class="x-adapters">
-        <div class="adapters-search">
-            <x-search-input v-model="searchText" placeholder="Search Adapters..."/>
-        </div>
-        <div class="adapters-table">
-            <table class="table">
-                <thead>
-                <tr class="table-row">
-                    <th class="status">&nbsp;</th>
-                    <th class="row-data">Name</th>
-                    <th class="row-data">Description</th>
-                </tr>
-                </thead>
-                <tbody>
-                <tr v-for="item in adaptersData" @click="configAdapter(item['id'])" class="table-row">
-                    <td class="status">
-                        <div class="symbol">
-                            <svg-icon :name="`symbol/${item['status']}`" :original="true" height="20px"></svg-icon>
-                        </div>
-                        <div class="marker" :class="`indicator-bg-${item['status'] || 'void'}`"></div>
-                    </td>
-                    <td class="row-data" :id="item.id">
-                        <x-title :id="item.id" :logo="`adapters/${item.id}`">{{ item.title }}</x-title>
-                    </td>
-                    <td class="row-data">
-                        <div class="content">{{ item.description }}</div>
-                    </td>
-                </tr>
-                </tbody>
-            </table>
-        </div>
-    </x-page>
+  <x-page title="adapters" class="x-adapters">
+    <div class="adapters-search">
+      <x-search-input class="adapters-search_input" v-model="searchText" placeholder="Search Adapters..." />
+      <md-switch
+        v-model="showOnlyConnected"
+        class="md-primary"
+        @change="toggleAdaptersFilterbyConnection"
+        >
+            Connected Only ({{connectedAdapterCount}})
+        </md-switch>
+    </div>
+    <div class="adapters-table">
+      <table class="table">
+        <thead>
+          <tr class="table-row">
+            <th class="status">&nbsp;</th>
+            <th class="row-data">Name</th>
+            <th class="row-data">Description</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="item in filteredData" @click="configAdapter(item['id'])" class="table-row">
+            <td class="status">
+              <div class="symbol">
+                  <div v-if="item.successClients">
+                    <svg-icon class="status_icon" :name="`symbol/success`" :original="true" height="13px"></svg-icon>
+                    <p class="status_clients-count">{{item.successClients}}</p>
+                  </div>
+                  <div  v-if="item.errorClients">
+                    <svg-icon class="status_icon" :name="`symbol/error`" :original="true" height="13px"></svg-icon>
+                    <p class="status_clients-count">{{item.errorClients}}</p>
+                  </div>
+              </div>
+              <div class="marker" :class="`indicator-bg-${item['status'] || 'void'}`"></div>
+            </td>
+            <td class="row-data title" :id="item.id">
+              <x-title class="adapter-title" :id="item.id" :logo="`adapters/${item.id}`">{{ item.title }}</x-title>
+            </td>
+            <td class="row-data description">
+              <div class="content">{{ item.description }}</div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </x-page>
 </template>
 
 
@@ -43,26 +57,43 @@
     import {FETCH_ADAPTERS} from '../../store/modules/adapters'
     import {CHANGE_TOUR_STATE} from '../../store/modules/onboarding'
 
+    function getConnectedAdapters(adapter) {
+        // connected adapter is one that a least one of its clients is
+        // successfuly connected        
+        return adapter.successClients
+    }
+
     export default {
         name: 'x-adapters',
         components: {xPage, xTitle, xSearchInput},
         computed: {
             ...mapState({
                 adaptersData(state) {
-                    if (state.adapters.adapterList.data.length > 0) {
-                        return state.adapters.adapterList.data.filter(adapter => {
-                            return adapter.title.toLowerCase().includes(this.searchText.toLowerCase())
-                        })
-                    }
+                    return state.adapters.adapters.data
                 },
                 tourAdapters(state) {
                     return state.onboarding.tourStates.queues.adapters
                 }
-            })
+            }),
+            filteredData() {
+                const serachTerm = this.searchText.toLowerCase()
+                let res = this.adaptersData
+                if (this.searchText) {
+                    res = res.filter(a => a.title.toLowerCase().includes(serachTerm))
+                }
+                if (this.showOnlyConnected) {
+                    res = res.filter(getConnectedAdapters)
+                }
+                return res
+            },
+            connectedAdapterCount() {
+                return this.filteredData.filter(getConnectedAdapters).length
+            }
         },
         data() {
             return {
-                searchText: ''
+                searchText: '',
+                showOnlyConnected: false,
             }
         },
         methods: {
@@ -74,6 +105,9 @@
                     configuration page, so it will return meanwhile
                  */
                 this.$router.push({path: `adapters/${adapterId}`})
+            },
+            toggleAdaptersFilterbyConnection(showOnlyConnected) {
+                this.showOnlyConnected = showOnlyConnected
             }
         },
         created() {
@@ -89,6 +123,19 @@
     .x-adapters {
         .adapters-search {
             margin-bottom: 12px;
+            display: flex;
+            justify-content: center;
+
+            &_input{
+                width: 50%;
+                margin-right: 10px;
+            }
+
+            .md-primary {
+                margin: 0;
+                width: 20%;
+                padding: 5px 0;
+            }
         }
 
         .adapters-table {
@@ -103,6 +150,23 @@
 
                 .table-row {
                     .row-data {
+
+                        &.title {
+                            width: 20%;
+
+                            .adapter-title {
+                                .text {
+                                    white-space: unset;
+                                    overflow: unset;
+                                    text-overflow: unset;
+                                    word-wrap: break-word;
+                                }
+                            }
+                        }
+
+                        &.description {
+                            width: 80%
+                        }
                         background: $theme-white;
                         vertical-align: middle;
                         padding: 12px;
@@ -127,10 +191,33 @@
                         box-shadow: none;
 
                         .symbol {
-                            flex: 1 0 auto;
-                            text-align: center;
-                            line-height: calc(3.6em + 24px);
-                            margin: 0 12px;
+                                flex: 1 0 auto;
+                                text-align: center;
+                                line-height: calc(3.6em + 24px);
+                                margin: 0 12px;
+                                display: flex;
+                                flex-direction: column;
+                                justify-content: center;
+                             & > div {
+                                 display: flex;
+                                flex-direction: column;
+                                justify-content: space-around;
+                             }
+                            .status {
+                                &_clients-count {
+                                    margin: 0;
+                                    padding: 2px 0;
+                                    line-height: 12px;
+                                    font-size: 12px;
+                                    font-weight: 600;
+                                }
+
+                                &_icon {
+                                    margin: 2px 0;
+                                }
+
+                            }
+                            
                         }
 
                         .marker {
