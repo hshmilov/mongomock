@@ -94,7 +94,8 @@ class CoreService(Triggerable, PluginBase, Configurable):
             PLUGIN_UNIQUE_NAME: plugin_unique_name,
         }, replacement={**core_data, **{
             PLUGIN_NAME: plugin_unique_name,
-            'plugin_subtype': PluginSubtype.NotRunning.value
+            'plugin_subtype': PluginSubtype.NotRunning.value,
+            'plugin_type': 'plugin'
         }}, upsert=True)
 
         # Get the needed docker socket
