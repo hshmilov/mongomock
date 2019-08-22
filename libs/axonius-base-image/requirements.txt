@@ -86,3 +86,4 @@ zeep==3.3.1
 docker==4.0.1
 netifaces==0.10.9
 aiodns==2.0.0
+xmltodict==0.12.0
