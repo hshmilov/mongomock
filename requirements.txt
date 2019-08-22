@@ -100,3 +100,4 @@ pysnmp==4.4.4
 PyPDF2==1.26.0
 daemonocle==1.0.1
 netifaces==0.10.9
+aiodns==2.0.0
