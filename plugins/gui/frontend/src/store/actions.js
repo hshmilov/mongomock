@@ -89,7 +89,7 @@ export const fetchDataCount = ({state, dispatch}, payload) => {
     module.count.data = undefined
 
     // For now we support only /users and /devices 'big queries'
-    if (view.query.filter.length > MAX_GET_SIZE && ['users', 'devices'].includes(path)) { 
+    if (view.query.filter.length > MAX_GET_SIZE && ['users', 'devices'].includes(path)) {
         dispatch(REQUEST_API, {
             rule: `${path}/count`,
             type: UPDATE_DATA_COUNT,
@@ -186,7 +186,7 @@ export const FETCH_DATA_CONTENT = 'FETCH_DATA_CONTENT'
 export const fetchDataContent = ({state, dispatch}, payload) => {
 	let module = getModule(state, payload)
 	let path = payload.endpoint || payload.module
-	if (!module) return 
+	if (!module) return
 	const view = module.view
 
 	if (!payload.skip && module.count !== undefined) {
@@ -220,7 +220,6 @@ export const fetchDataContent = ({state, dispatch}, payload) => {
 
 export const FETCH_DATA_CONTENT_CSV = 'FETCH_DATA_CONTENT_CSV'
 export const fetchDataContentCSV = ({state, dispatch}, payload) => {
-
 	return dispatch(REQUEST_API, {
 		rule: `${payload.endpoint || payload.module}/csv?${createContentRequest(state, payload)}`
 	}).then((response) => {
@@ -228,7 +227,8 @@ export const fetchDataContentCSV = ({state, dispatch}, payload) => {
 	})
 }
 
-export const downloadFile = (fileType, response) => {
+
+export const downloadFile = (fileType, response, objName) => {
 	let format = '';
 	let reportType = '';
 	switch (fileType) {
@@ -247,7 +247,11 @@ export const downloadFile = (fileType, response) => {
     let now = new Date()
     let formattedDate = now.toLocaleDateString().replace(/\//g,'')
     let formattedTime = now.toLocaleTimeString().replace(/:/g,'')
-    link.download = `axonius-${reportType}_${formattedDate}-${formattedTime}.${format}`
+	if (objName) {
+		link.download = `axonius_chart_${objName.replace(/[\s,-]/g, '_')}_${formattedDate}-${formattedTime}.${format}`
+	} else {
+		link.download = `axonius-${reportType}_${formattedDate}-${formattedTime}.${format}`
+	}
     link.click()
 }
 

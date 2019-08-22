@@ -111,6 +111,7 @@
         .data-discovery {
             display: flex;
             flex-direction: column;
+            flex: 1;
 
             .discovery-summary {
                 border-top: 2px dashed $grey-2;

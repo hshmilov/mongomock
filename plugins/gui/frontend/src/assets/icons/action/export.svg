@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="162px" height="162px" viewBox="0 0 162 162" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <!-- Generator: Sketch 51.2 (57519) - http://www.bohemiancoding.com/sketch -->
+    <title>Export to CSV</title>
+    <desc>Created with Sketch.</desc>
+    <defs></defs>
+    <g id="Page-1" stroke="none" stroke-width="20" fill="none" fill-rule="evenodd">
+        <g id="export" transform="translate(1.000000, 1.000000)" fill-rule="nonzero" stroke="#0076FF">
+            <polyline id="Path-27" points="90 30 90 0 0 0 0 160 90 160 90 130"></polyline>
+            <path d="M40,80 L160,80" id="Path-28"></path>
+            <path d="M160,80 L120,120" id="Path-30"></path>
+            <path d="M160,80 L120,40" id="Path-29"></path>
+        </g>
+    </g>
+</svg>

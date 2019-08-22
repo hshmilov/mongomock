@@ -19,6 +19,13 @@
     </div>
     <div class="actions">
       <x-button
+        v-if="exportable"
+        class="export"
+        title="Export to CSV"
+        link
+        @click="() => $emit('export')"
+      ><md-icon md-src="src/assets/icons/action/export.svg"></md-icon></x-button>
+      <x-button
         v-if="editable"
         class="edit"
         title="Edit"
@@ -65,6 +72,10 @@
         type: Boolean,
         default: false
       },
+      exportable: {
+        type: Boolean,
+        default: false
+      },
       reversible: {
         type: Boolean,
         default: false
@@ -81,7 +92,7 @@
         box-shadow: 0 2px 12px 0px rgba(0, 0, 0, 0.2);
         border-radius: 2px;
         position:relative;
-      
+
         > .header {
             display: flex;
             width: 100%;
@@ -115,7 +126,7 @@
                 white-space: nowrap;
                 overflow: hidden;
                 max-width: 80%;
-            }   
+            }
         }
         .actions {
           display: flex;
@@ -129,6 +140,11 @@
             height: 20px;
             padding: 0;
 
+            &.export .md-icon{
+              height: 18px;
+              line-height: 17px
+            }
+
             .md-icon {
               font-size: 20px !important;
               height: 20px;
@@ -138,6 +154,9 @@
             &:hover {
               cursor: pointer;
               text-shadow: $text-shadow;
+            }
+            .export {
+              color: $theme-blue;
             }
           }
         }

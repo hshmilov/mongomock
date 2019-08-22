@@ -1,3 +1,4 @@
+import csv
 import configparser
 import io
 import json
@@ -3644,6 +3645,29 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         self.__generate_dashboard_fast.clean_cache(args)
         self.__generate_dashboard.clean_cache(args)
         return ''
+
+    @gui_add_rule_logged_in('dashboards/panels/<panel_id>/csv', methods=['GET'],
+                            required_permissions={Permission(PermissionType.Dashboard, PermissionLevel.ReadOnly)})
+    def export_segmentations_chart_to_csv(self, panel_id):
+        card = self.__dashboard_collection.find_one({
+            '_id': ObjectId(panel_id)
+        })
+        if not card.get('view') or not card.get('config') or not card['config'].get('entity') or not card['config'].get('field'):
+            return return_error('Error: no such data available ', 400)
+        data = self._fetch_chart_segment(ChartViews[card['view']],
+                                         EntityType(card['config']['entity']),
+                                         card['config'].get('view'),
+                                         card['config']['field'])
+        name = card['config']['field']['title']
+        string_output = io.StringIO()
+        dw = csv.DictWriter(string_output, [name, 'count'])
+        dw.writeheader()
+        dw.writerows([{name: x['name'], 'count': x['value']} for x in data])
+        outputFile = make_response(string_output.getvalue().encode('utf-8'))
+        timestamp = datetime.now().strftime('%d%m%Y-%H%M%S')
+        outputFile.headers['Content-Disposition'] = f'attachment; filename=axonius-chart_{card["name"]}_{timestamp}.csv'
+        outputFile.headers['Content-type'] = 'text/csv'
+        return outputFile
 
     def __clear_dashboard_cache(self, clear_slow=False):
         """

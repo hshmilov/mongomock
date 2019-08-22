@@ -1,17 +1,19 @@
 <template>
   <div class="x-panels">
     <slot name="pre" />
-    <x-card
+      <x-card
       v-for="(chart, chartInd) in processedPanels"
       :id="chart.uuid"
       :key="chart.uuid"
       :title="chart.name"
       :removable="!isReadOnly && hovered === chartInd"
       :editable="!isReadOnly && hovered === chartInd && chart.user_id !== '*'"
+      :exportable="chart.metric==='segment' && hovered === chartInd"
       @mouseenter.native="() => enterPanel(chartInd)"
       @mouseleave.native="leavePanel"
       @remove="() => verifyRemovePanel(chart.uuid)"
       @edit="() => editPanel(chart)"
+      @export="() => exportCSV(chart.uuid, chart.name)"
     >
       <div
         v-if="chart.metric !== 'timeline'"
@@ -82,16 +84,19 @@
   import xModal from '../../axons/popover/Modal.vue'
 
   import {mapState, mapGetters, mapMutations, mapActions} from 'vuex'
-  import {REMOVE_DASHBOARD_PANEL, FETCH_HISTORICAL_SAVED_CARD} from '../../../store/modules/dashboard'
+  import {REMOVE_DASHBOARD_PANEL, FETCH_HISTORICAL_SAVED_CARD, FETCH_CHART_SEGMENTS_CSV} from '../../../store/modules/dashboard'
   import {IS_ENTITY_RESTRICTED} from '../../../store/modules/auth'
   import {UPDATE_DATA_VIEW} from '../../../store/mutations'
-
+  import {
+    FETCH_DATA_CONTENT_CSV, FETCH_DATA_FIELDS, FETCH_DATA_CURRENT
+  } from '../../../store/actions'
   export default {
     name: 'XPanels',
     components: {
       xCard, xHistoricalDate, xHistogram, xPie, xSummary, xLine, xButton, xToast, xModal
     },
     props: {
+      // module: { required: true },
       panels: {
         type: Array,
         required: true
@@ -151,7 +156,8 @@
       }),
       ...mapActions({
         removePanel: REMOVE_DASHBOARD_PANEL,
-        fetchHistoricalCard: FETCH_HISTORICAL_SAVED_CARD
+        fetchHistoricalCard: FETCH_HISTORICAL_SAVED_CARD,
+        fetchChartSegmentsCSV: FETCH_CHART_SEGMENTS_CSV
       }),
       addNewPanel() {
         this.$emit('add')
@@ -179,6 +185,13 @@
             config: panel.config,
             updated: panel.last_updated
           }
+        })
+      },
+
+      exportCSV (panelId, panelName) {
+        this.fetchChartSegmentsCSV({
+          panelId: panelId,
+          chartName: panelName
         })
       },
       cancelRemovePanel () {
