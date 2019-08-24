@@ -3977,13 +3977,27 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
 
         field_name = field['name']
 
+        adapter_conditions = [
+            {
+                '$ne': ['$$i.data._old', True]
+            }
+        ]
+
         if field_name.startswith(SPECIFIC_DATA):
             empty_field_name = field_name[len(SPECIFIC_DATA) + 1:]
             adapter_field_name = 'adapters.' + empty_field_name
             tags_field_name = 'tags.' + empty_field_name
 
         elif field_name.startswith(ADAPTERS_DATA):
+            # e.g. adapters_data.aws_adapter.some_field
             splitted = field_name.split('.')
+            adapter_data_adapter_name = splitted[1]
+
+            # this condition is specific for fields that are in a specific adapter, so we
+            # will not take other adapters that might share a field name (although the field itself might differ)
+            adapter_conditions.append({
+                '$eq': [f'$$i.{PLUGIN_NAME}', adapter_data_adapter_name]
+            })
             empty_field_name = 'data.' + '.'.join(splitted[2:])
             adapter_field_name = 'adapters.' + empty_field_name
             tags_field_name = 'tags.' + empty_field_name
@@ -4000,17 +4014,13 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
                             'input': '$adapters',
                             'as': 'i',
                             'cond': {
-                                '$ne': ['$$i.data._old', True]
+                                '$and': adapter_conditions
                             }
                         }
                     }
                 }
             },
             {
-                # TODO: We might need another $filter stage here for cases
-                # where two adapters have the same field name and the user *really* want to
-                # differentiate between the two cases.
-                # It's a bit complicated to do so I'm postponing this for later.
                 '$project': {
                     'field': {
                         '$filter': {
