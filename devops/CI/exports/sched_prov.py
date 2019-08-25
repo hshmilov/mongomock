@@ -158,8 +158,11 @@ def provision():
     client_rb_template = [f'chef_server_url  "https://manage.chef.io/organizations/axonius"',
                           f'node_name  "{node_name}"',
                           f'validation_key "/home/ubuntu/axonius-validator-2.pem"',
-                          f'validation_client_name "axonius-validator-2"',
-                          f'automatic_attribute_blacklist [["filesystem", "by_mountpoint"], ["filesystem", "by_pair"]]']
+                          f'validation_client_name "axonius-validator-2"']
+
+    client_rb_template.append(
+        'automatic_attribute_blacklist [["filesystem","by_mountpoint"], ["filesystem","by_pair"], '
+        '["network", "interfaces"], ["counters", "network"], ["dmi"], ["packages"]]')
 
     proxy_data = read_proxy_data()
     proxy_line = proxy_data[CREDS]
