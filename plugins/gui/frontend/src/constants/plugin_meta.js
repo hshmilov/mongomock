@@ -1,4 +1,9 @@
 export const pluginMeta = {
+    vcloud_director_adapter: {
+        title: 'VMware vCloud Director',
+        link: 'https://docs.axonius.com/docs/vmware-vcloud-director',
+        description: 'VMware vCloud Director is a leading cloud service-delivery platform used by some of the world’s most popular cloud providers to operate and manage successful cloud-service businesses.'
+    },
     indegy_adapter: {
         title: 'Indegy Industrial Cybersecurity Suite',
         link: 'https://docs.axonius.com/docs/indegy-industrial-cybersecurity-suite',

@@ -183,6 +183,7 @@ DOCKER_PORTS = {
     'automox-adapter':                  9977,
     'signalsciences-adapter':           9978,
     'indegy-adapter':                   9979,
+    'vcloud-director-adapter':          9980,
     'mongo':                            27017,
     'mockingbird-db':                   28017
 }

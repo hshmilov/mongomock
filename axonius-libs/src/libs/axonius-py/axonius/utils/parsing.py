@@ -440,6 +440,15 @@ def is_valid_ipv6(ip):
         return False
 
 
+def guaranteed_list(x):
+    if not x:
+        return []
+    elif isinstance(x, list):
+        return x
+    else:
+        return [x]
+
+
 def format_mac(mac: str):
     if mac is None or mac == '':
         return None
