@@ -283,7 +283,7 @@ class AggregatorService(Triggerable, PluginBase):
             with concurrent.futures.ThreadPoolExecutor(max_workers=self._aggregation_max_workers) as executor:
                 num_of_adapters_to_fetch = len(current_adapters)
                 for adapter in current_adapters:
-                    if not is_plugin_adapter(adapter['plugin_type']):
+                    if not adapter.get('plugin_type') or not is_plugin_adapter(adapter['plugin_type']):
                         # This is not an adapter, not running
                         num_of_adapters_to_fetch -= 1
                         continue
@@ -316,7 +316,7 @@ class AggregatorService(Triggerable, PluginBase):
             with concurrent.futures.ThreadPoolExecutor(max_workers=self._aggregation_max_workers) as executor:
                 num_of_adapters_to_fetch = len(current_adapters)
                 for adapter in current_adapters:
-                    if not is_plugin_adapter(adapter['plugin_type']):
+                    if not adapter.get('plugin_type') or not is_plugin_adapter(adapter['plugin_type']):
                         # This is not an adapter, not running
                         num_of_adapters_to_fetch -= 1
                         continue
