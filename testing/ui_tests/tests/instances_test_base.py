@@ -183,9 +183,15 @@ def wait_for_booted_for_production(instance: BuildsInstance):
 
 
 def bring_restart_on_reboot_node_log(instance: BuildsInstance, logger):
-    get_log_command = f'tail {RESTART_LOG_PATH.absolute().as_posix()}'
+    get_log_command = f'tail {RESTART_LOG_PATH.as_posix()} -n 50'
     restart_log_tail = instance.ssh(get_log_command)
     logger.info(f'{RESTART_LOG_PATH} : {restart_log_tail[1]}')
+    try:
+        get_log_command = f'cat {RESTART_LOG_PATH.as_posix()}'
+        restart_log_tail = instance.ssh(get_log_command)
+        logger.info(f'{RESTART_LOG_PATH} : {restart_log_tail[1]}')
+    except Exception:
+        logger.info(f'Failed bringing full log', exc_info=True)
 
 
 def setup_instances(logger, instance_name, export_name=None):
