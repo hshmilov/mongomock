@@ -143,10 +143,10 @@ class vCenterApi(object):
         """
         guest = getattr(vm, 'guest', None)
         if not guest:
-            return []
+            return
         guest_net = guest.net
         if guest_net is None:
-            return []
+            return
         for network in guest_net:
             if network is None:
                 continue

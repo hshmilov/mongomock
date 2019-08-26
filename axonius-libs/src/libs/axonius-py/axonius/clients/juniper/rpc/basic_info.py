@@ -199,7 +199,6 @@ def parse_l2ald_interface(xml):
         'l2iff-interface-vlan-member-tagness': 'interface-vlan-member-tagness',
     }
 
-    result_list = []
     result = {}
     if gettag(xml.tag) != 'l2ng-l2ald-iff-interface-information':
         raise ValueError(f'l2ng-l2ald-iff-interface-information not found got {gettag(xml.tag)}')

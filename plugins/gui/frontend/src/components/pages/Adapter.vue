@@ -142,7 +142,6 @@
         TEST_ADAPTER_SERVER, 
         HINT_ADAPTER_UP
     } from '../../store/modules/adapters'
-    import {pluginMeta} from '../../constants/plugin_meta.js'
     import {SAVE_PLUGIN_CONFIG} from '../../store/modules/settings'
     import {CHANGE_TOUR_STATE} from '../../store/modules/onboarding'
     import _get from 'lodash/get'

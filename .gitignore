@@ -212,6 +212,7 @@ $RECYCLE.BIN/
 .idea/dictionaries
 .idea/deployment.xml
 .idea/webServers.xml
+.idea/sonarlint
 
 # Sensitive or high-churn files:
 .idea/**/dataSources/

@@ -213,7 +213,7 @@ class GeneralInfoService(Triggerable, PluginBase):
                     logger.error(f'Waited {self.seconds_stuck} seconds to continue sending more execution '
                                  f'requests but we still have {self.number_of_active_execution_requests} '
                                  f'threads active')
-                    return False
+                    return
 
             if device_i % log_message_device_count_threshold == 0:
                 logger.info(f'Execution progress: {device_i} out of {len(internal_axon_ids)} devices executed')
@@ -482,7 +482,6 @@ class GeneralInfoService(Triggerable, PluginBase):
                             pm_publish_date = datetime.fromtimestamp(pm_publish_date)
                     except Exception:
                         logger.exception(f"Error parsing publish date of patch {patch}")
-                        pass
 
                     pm_title = patch.get("Title")
                     pm_msrc_severity = patch.get("MsrcSeverity")

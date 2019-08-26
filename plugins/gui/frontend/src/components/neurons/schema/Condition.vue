@@ -301,7 +301,7 @@
           rawIpsArray.push(rawIps)
 
         }
-        rawIpsArray = rawIpsArray.sort((range1, range2) => {return range1[0] - range2[0]})
+        rawIpsArray.sort((range1, range2) => {return range1[0] - range2[0]})
         rawIpsArray.forEach(range => {
           let lastRange = result.pop(-1)
           let new1 = [lastRange[0], range[0]]

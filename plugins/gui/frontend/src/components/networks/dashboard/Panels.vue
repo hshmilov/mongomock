@@ -87,9 +87,6 @@
   import {REMOVE_DASHBOARD_PANEL, FETCH_HISTORICAL_SAVED_CARD, FETCH_CHART_SEGMENTS_CSV} from '../../../store/modules/dashboard'
   import {IS_ENTITY_RESTRICTED} from '../../../store/modules/auth'
   import {UPDATE_DATA_VIEW} from '../../../store/mutations'
-  import {
-    FETCH_DATA_CONTENT_CSV, FETCH_DATA_FIELDS, FETCH_DATA_CURRENT
-  } from '../../../store/actions'
   export default {
     name: 'XPanels',
     components: {

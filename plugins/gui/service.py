@@ -790,7 +790,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         Trigger selected Enforcement with a static list of entities, as selected by user
         """
         post_data = request.get_json()
-        response = self._trigger_remote_plugin(REPORTS_PLUGIN_NAME, 'run', blocking=False, data={
+        self._trigger_remote_plugin(REPORTS_PLUGIN_NAME, 'run', blocking=False, data={
             'report_name': post_data['enforcement'],
             'input': {
                 'entity': entity_type.name,
@@ -1641,7 +1641,6 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         except Exception:
             # if there's no aggregator, there's nothing we can do
             logger.exception(f'Error fetching devices from {adapter_unique_name} for client {client_to_add}')
-            pass
         return
 
     @gui_add_rule_logged_in('adapters/<adapter_name>/<node_id>/upload_file', methods=['POST'],
@@ -4296,7 +4295,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
     def _intersect_timeline_lines(self, views, date_ranges):
         if len(views) != 2 or not views[0].get('name'):
             logger.error(f'Unexpected number of views for performing intersection {len(views)}')
-            return None
+            return
         first_entity_type = EntityType(views[0]['entity'])
         second_entity_type = EntityType(views[1]['entity'])
 

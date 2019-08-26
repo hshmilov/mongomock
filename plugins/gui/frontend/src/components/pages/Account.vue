@@ -60,7 +60,7 @@
     import {CHANGE_PASSWORD} from '../../store/modules/auth'
     import {mapActions, mapMutations, mapState} from 'vuex'
     import {REQUEST_API} from '../../store/actions'
-    import {SHOW_TOASTER_MESSAGE, REMOVE_TOASTER} from '../../store/mutations'
+    import {SHOW_TOASTER_MESSAGE,} from '../../store/mutations'
 
     export default {
         name: 'x-account',
@@ -72,7 +72,6 @@
                     newPassword: null,
                     confirmNewPassword: null
                 },
-                isKeyVisible: false,
                 passwordFormComplete: false,
                 message: '',
                 apiKey: {},
@@ -170,7 +169,7 @@
                 })
             },
             toggleVisibility() {
-                this.isKeyVisible =! this.isKeyVisible
+                this.isKeyVisible = !this.isKeyVisible
             },
 
             copyToClipboard() {

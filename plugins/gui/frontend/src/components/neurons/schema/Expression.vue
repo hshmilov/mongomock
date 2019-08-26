@@ -232,10 +232,11 @@
         if (this.expression.obj) {
           let filteredAdapters = []
           if(this.expression.fieldType === 'axonius' &&  this.expression.filteredAdapters && this.expression.field.indexOf('specific_data.data') !== -1){
-              if(!this.expression.filteredAdapters.selectAll)
-              filteredAdapters =  Object.keys(this.expression.filteredAdapters.selectedValues).filter(key => this.expression.filteredAdapters.selectedValues[key]);
+              if(!this.expression.filteredAdapters.selectAll) {
+                filteredAdapters = Object.keys(this.expression.filteredAdapters.selectedValues).filter(key => this.expression.filteredAdapters.selectedValues[key]);
+              }
           }
-          if(filteredAdapters && filteredAdapters.length > 0) {
+          if(filteredAdapters.length > 0) {
               let cond = '({val})'
               let currentConditions = filteredAdapters.map(adapter => this.getMatchExpression(this.expression.field, this.nestedExpressionCond, adapter));
               filterStack.push(cond.replace(/{val}/g,  currentConditions.join(' or ')))

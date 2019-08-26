@@ -459,7 +459,7 @@
               this.canSendEmail = true;
             }
             let dateTime = new Date(this.report.last_generated)
-            if (dateTime) {
+            if (!isNaN(dateTime.getDate())) {
               dateTime.setMinutes(dateTime.getMinutes() - dateTime.getTimezoneOffset())
               let dateParts = dateTime.toISOString().split('T')
               dateParts[1] = dateParts[1].split('.')[0]

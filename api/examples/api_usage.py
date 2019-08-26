@@ -543,8 +543,6 @@ class RESTExample:
         nodes = adapters['active_directory_adapter']
         master_node = list(filter(lambda node: node['node_name'] == 'Master', nodes))[0]
 
-        node_id = master_node['node_id']
-
         assert master_node['clients'], 'No clients in master node'
 
     def check_connectivity(self):

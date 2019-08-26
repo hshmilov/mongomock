@@ -185,7 +185,7 @@ class CoreService(Triggerable, PluginBase, Configurable):
                 plugin_is_debug = temp_list[plugin_unique_name].get('is_debug', False)
                 should_delete = False
                 if not plugin_is_debug:
-                    for i in range(4):
+                    for _ in range(4):
                         should_delete = not self._check_plugin_online(plugin_unique_name)
                         if should_delete is False:
                             break
@@ -406,7 +406,7 @@ class CoreService(Triggerable, PluginBase, Configurable):
         Raises an adapter using the local docker instance
         """
         container.start()
-        for i in range(30):  # retries
+        for _ in range(30):  # retries
             if json.loads(next(container.stats()))['pids_stats'].get('current'):
                 break
             time.sleep(1)

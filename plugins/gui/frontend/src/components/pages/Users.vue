@@ -7,7 +7,6 @@
 <script>
     import xPage from '../axons/layout/Page.vue'
     import xTable from '../networks/entities/Table.vue'
-    import xToast from '../axons/popover/Toast.vue'
 
     export default {
         name: 'x-users',

@@ -46,7 +46,6 @@ class AWSComputeManager:
                 self.image_id_to_name[image_details['ImageId']] = image_details.get('Name') or 'Unknown'
         except Exception:
             print(f'Could not refresh images names, will try later.')
-            pass
 
     def turn_raw_to_generic(self, raw_instance_data):
         result = {

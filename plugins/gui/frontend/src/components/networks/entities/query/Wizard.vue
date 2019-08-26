@@ -48,7 +48,6 @@
   import xButton from '../../../axons/inputs/Button.vue'
   import xFilter from '../../../neurons/schema/Filter.vue'
 
-  import { expression, nestedExpression } from '../../../../constants/filter'
   const INCLUDE_OUDATED_MAGIC = 'INCLUDE OUTDATED: '
 
   import { mapState, mapMutations } from 'vuex'
