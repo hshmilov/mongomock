@@ -26,7 +26,7 @@ class StresstestUsersAdapter(AdapterBase):
     this is an imaginary adapter.
     """
 
-    class MyDeviceAdapter(UserAdapter):
+    class MyUserAdapter(UserAdapter):
         vm_tools_status = Field(str, 'VM Tools Status')
         test_hyperlinks_str = Field(str, 'Test External Link String Hyperlink')
         test_hyperlinks_int = Field(int, 'Test External Link Int Hyperlink')
@@ -183,8 +183,9 @@ class StresstestUsersAdapter(AdapterBase):
     # pylint: disable=arguments-differ
     def _parse_users_raw_data(self, devices_raw_data):
         for device_raw in devices_raw_data:
-            device = self._new_device_adapter()
+            device = self._new_user_adapter()
             device.id = f'{device_raw["sa_name"]}-{device_raw["index"]}'
+            device.username = f'user-{device_raw["index"]}'
             device.last_seen = datetime.now()
 
             # statistically proven to be the luckiest number, guaranteed to provide prosperity

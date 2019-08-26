@@ -57,8 +57,10 @@ class AggregatorService(PluginService, UpdatablePluginMixin):
             self._update_schema_version_14()
         if self.db_schema_version < 15:
             self._update_schema_version_15()
+        if self.db_schema_version < 16:
+            self._update_schema_version_16()
 
-        if self.db_schema_version != 15:
+        if self.db_schema_version != 16:
             print(f'Upgrade failed, db_schema_version is {self.db_schema_version}')
 
     def __create_capped_collections(self):
@@ -766,6 +768,48 @@ class AggregatorService(PluginService, UpdatablePluginMixin):
             self.db_schema_version = 15
         except Exception as e:
             print(f'Exception while upgrading core db to version 15. Details: {e}')
+            traceback.print_exc()
+            raise
+
+    def _update_schema_version_16(self):
+        # https://axonius.atlassian.net/browse/AX-4846
+        print('Update to schema 16 - remove _old from all users')
+        try:
+            res = self._entity_db_map[EntityType.Users].update_many({
+                'adapters.data._old': True
+            }, {
+                '$set': {
+                    'adapters.$[].data._old': False
+                }
+            })
+            print(f'Updates {res.modified_count} users from {res.matched_count} matches')
+
+            include_outdated = 'INCLUDE OUTDATED: '
+            views_collection = self._entity_views_map[EntityType.Users]
+            saved_queries_cursor = views_collection.find({
+                'view.query.filter': {
+                    '$regex': f'^{include_outdated}'
+                }
+            }, projection={
+                '_id': True,
+                'view.query.filter': True
+            })
+            counter = 0
+            for q in saved_queries_cursor:
+                counter += 1
+                new_query = q['view']['query']['filter'][len(include_outdated):]
+                views_collection.update_one({
+                    '_id': q['_id']
+                }, {
+                    '$set': {
+                        'view.query.filter': new_query
+                    }
+                })
+            print(f'Updated {counter} saved views')
+
+            self.db_schema_version = 16
+        except Exception as e:
+            print(f'Exception while upgrading core db to version 16. Details: {e}')
             traceback.print_exc()
             raise
 

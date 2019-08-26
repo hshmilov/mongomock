@@ -4,25 +4,52 @@ Axonius entities class wrappers. Implement methods to be used on devices/users f
 import logging
 
 from promise import Promise
+from dataclasses import dataclass
 
 from axonius.consts.gui_consts import SPECIFIC_DATA
 from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME
 from axonius.utils.axonius_query_language import parse_filter, convert_db_entity_to_view_entity
 
-logger = logging.getLogger(f'axonius.{__name__}')
-
 import functools
-from enum import Enum
+from enum import Enum, EnumMeta
 from bson import ObjectId
 
+logger = logging.getLogger(f'axonius.{__name__}')
 
-class EntityType(Enum):
+
+class EntityTypeMeta(EnumMeta):
+    def __new__(mcs, *args):
+        enum_class = super().__new__(mcs, *args)
+        enum_class._value2member_map_ = {m.value: m for m in enum_class.__members__.values()}
+        return enum_class
+
+
+@dataclass()
+class EntityTypeClass:
+    # The name used in the DB
+    value: str
+    # Whether or not this entity takes part in "_old" and "recalculate_adapter_oldness"
+    is_old_calculated: bool = True
+
+
+class EntityType(Enum, metaclass=EntityTypeMeta):
     """
     Possible axonius entities
     """
 
-    Users = "users"
-    Devices = "devices"
+    def __init__(self, value):
+        self._value = value
+
+    @property
+    def is_old_calculated(self):
+        return self._value.is_old_calculated
+
+    @property
+    def value(self):
+        return self._value.value
+
+    Devices = EntityTypeClass('devices')
+    Users = EntityTypeClass('users', is_old_calculated=False)
 
 
 class EntitiesNamespace(object):

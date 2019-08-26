@@ -230,18 +230,22 @@ entity_query_views_db_map   - map between EntityType and views collection from t
 GUI_DBs = namedtuple("GUI_DBs", ['entity_query_views_db_map'])
 
 
-def recalculate_adapter_oldness(adapter_list: list):
+def recalculate_adapter_oldness(adapter_list: list, entity_type: EntityType):
     """
     Updates (in place) all adapters given.
-    This assuems that they all comprise a single axonius entity.
+    This assumes that they all comprise a single axonius entity.
     All groups of adapters by plugin_name (i.e. "duplicate" adapter entities from the same adapter)
     will have they're "old" value recalculated
     https://axonius.atlassian.net/wiki/spaces/AX/pages/794230909/Handle+Duplicates+of+adapter+entity+of+the+same+adapter+entity
     Only the newest adapter entity will have an "old" value of False, all others will have "new".
     (Adapters that don't have duplicates are unaffected)
     :param adapter_list: list of adapter entities
+    :param entity_type: Used to verify whether or not this calculation should take palce
     :return: None
     """
+    if not entity_type.is_old_calculated:
+        return
+
     all_unique_adapter_entities_data_indexed = defaultdict(list)
     for adapter in adapter_list:
         all_unique_adapter_entities_data_indexed[adapter[PLUGIN_NAME]].append(adapter)
@@ -2068,7 +2072,7 @@ class PluginBase(Configurable, Feature):
 
                     collected_adapter_entities = [axonius_entity['adapters'] for axonius_entity in entities_candidates]
                     all_unique_adapter_entities_data = [v for d in collected_adapter_entities for v in d]
-                    recalculate_adapter_oldness(all_unique_adapter_entities_data)
+                    recalculate_adapter_oldness(all_unique_adapter_entities_data, entity)
 
                     # Get all tags from all devices. If we have the same tag name and issuer, prefer the newest.
                     # a tag is the same tag, if it has the same plugin_unique_name and name.
@@ -2213,7 +2217,7 @@ class PluginBase(Configurable, Feature):
         for adapter_to_remove_from_old in new_axonius_entity['adapters']:
             adapter_entities_left.remove(adapter_to_remove_from_old)
 
-        recalculate_adapter_oldness(adapter_entities_left)
+        recalculate_adapter_oldness(adapter_entities_left, entity_type)
 
         update_dict = {
             '$set': {
@@ -2281,7 +2285,7 @@ class PluginBase(Configurable, Feature):
         }, full_query)
         new_axonius_entity[ADAPTERS_LIST_LENGTH] = len(set([x[PLUGIN_NAME] for x in new_axonius_entity['adapters']]))
 
-        recalculate_adapter_oldness(new_axonius_entity['adapters'])
+        recalculate_adapter_oldness(new_axonius_entity['adapters'], entity_type)
         session.insert_one(new_axonius_entity)
 
         return internal_axon_id, entity_to_split['internal_axon_id']
