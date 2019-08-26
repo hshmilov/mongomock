@@ -39,6 +39,8 @@ def main():
 
     if free_space_gb > desired_swap_size * 1.2:  # lets have some 20% spare disk size
         create_swap(SWAPFILE_LOCATION, desired_swap_size)
+    else:
+        print(f'Not creating swap, not enough free space: {free_space_gb}. needed: {desired_swap_size}')
 
 
 if __name__ == '__main__':

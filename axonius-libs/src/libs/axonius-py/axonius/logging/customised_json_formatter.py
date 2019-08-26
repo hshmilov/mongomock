@@ -6,6 +6,8 @@ from flask import has_request_context, session, request
 
 from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME, X_UI_USER, X_UI_USER_SOURCE
 
+MAX_LOG_MESSAGE_LEN = 1024 * 4
+
 
 # Custumized logger formatter in order to enter some extra fields to the log message
 class CustomisedJSONFormatter(json_log_formatter.JSONFormatter):
@@ -17,7 +19,12 @@ class CustomisedJSONFormatter(json_log_formatter.JSONFormatter):
         try:
             extra['level'] = record.levelname
             extra['thread'] = record.thread
-            extra['message'] = message
+            if len(message) < MAX_LOG_MESSAGE_LEN:
+                extra['message'] = message
+            else:
+                extra['message'] = message[:MAX_LOG_MESSAGE_LEN]
+                extra['truncated'] = True
+
             if record.exc_info:
                 # split to stack trace and the specific message
                 formatted = self.formatException(record.exc_info).split('\n')
