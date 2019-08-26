@@ -214,6 +214,13 @@ else
     rm scalyr-repo-bootstrap_1.2.1_all.deb
 fi
 
+if [[ $(/bin/systemctl is-enabled tmp.mount) == "enabled" ]]; then
+    echo "/tmp already configured"
+else
+    echo "making sure /tmp gets deleted on boot"
+    cp /usr/share/systemd/tmp.mount /etc/systemd/system/tmp.mount
+    /bin/systemctl enable tmp.mount
+fi
 
 touch $INIT_FILE
 echo "Done successfully"

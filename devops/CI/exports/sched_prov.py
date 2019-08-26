@@ -132,7 +132,7 @@ def configure_scalyr_for_pre_provision(proxy_line, node_name, api_key, tier):
 
 
 def provision():
-    node_name_file = Path('/node_name')
+    node_name_file = Path('/tmp/chef_node_name')
     if chech_command_status('pgrep -x chef-client') == 0:
         print('chef client already running')
     else:
@@ -199,6 +199,7 @@ def provision():
     Path('/etc/chef/first-boot.json').write_text(first_boot)
 
     with open('/home/ubuntu/helper.log', 'wb') as helper:
+        run_command('/sbin/ifconfig', stdout=helper, stderr=helper)
         run_command('cat /etc/resolv.conf', stdout=helper, stderr=helper)
         run_command('/usr/bin/chef-client -j /etc/chef/first-boot.json -l debug', stdout=helper, stderr=helper)
         run_command('/usr/sbin/service chef-client restart', stdout=helper, stderr=helper)
