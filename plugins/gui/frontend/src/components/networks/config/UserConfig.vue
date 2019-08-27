@@ -1,6 +1,6 @@
 <template>
   <x-modal
-    class="modal-user"
+    class="x-user-config"
     @close="onClose"
     @confirm="performUserConfig"
   >
@@ -139,15 +139,18 @@
 </script>
 
 <style lang="scss">
-  .x-form {
-    text-align: left;
+  .x-user-config {
 
-    .x-array-edit {
-      grid-template-columns: 1fr 1fr 1fr;
-    }
+    .x-form {
+      text-align: left;
 
-    .error {
-      display: none;
+      .x-array-edit {
+        grid-template-columns: 1fr 1fr 1fr;
+      }
+
+      .error {
+        display: none;
+      }
     }
   }
 </style>
