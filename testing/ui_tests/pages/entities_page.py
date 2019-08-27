@@ -670,8 +670,17 @@ class EntitiesPage(Page):
         # the reason we check it is because the csv have more columns with data
         # than the columns that we getting from the ui (boolean in the ui are represented by the css)
         for index, data_row in enumerate(csv_data_rows):
-            for ui_data_row in ui_data_rows[index]:
-                assert normalize_timezone_date(ui_data_row.strip().split(', ')[0]) in data_row
+            for ui_data_cell in ui_data_rows[index]:
+                cell_value = ui_data_cell.strip().split(', ')[0]
+                # the boolean field return 'Yes' or 'No' instead of the regular true/false boolean
+                # so we do a little hack on the returned data from the UI
+                # if the cell value is the words 'Yes' or 'No' only we will change the value to True or False
+                fixed_for_boolean = cell_value
+                if fixed_for_boolean == 'Yes':
+                    fixed_for_boolean = 'True'
+                elif fixed_for_boolean == 'No':
+                    fixed_for_boolean = 'False'
+                assert normalize_timezone_date(cell_value) in data_row or fixed_for_boolean in data_row
 
     def assert_csv_field_match_ui_data(self, result):
         self.assert_csv_match_ui_data(result, self.get_field_data(), self.get_field_columns_header_text())
@@ -838,7 +847,7 @@ class EntitiesPage(Page):
             row_index=row_index, cell_index=cell_index)).click()
 
     def get_coloumn_data_count_bool(self, col_name, count_true=False, generic_col=True):
-        count_class = 'checkmark' if count_true else 'x-cross'
+        count_class = 'data-true' if count_true else 'data-false'
         col_position = self.count_sort_column(col_name) if generic_col else self.count_specific_column(col_name)
         return [len(el.find_elements_by_css_selector(f'.x-boolean-view .{count_class}')) for el in
                 self.driver.find_elements_by_xpath(self.TABLE_DATA_POS_XPATH.format(data_position=col_position))]

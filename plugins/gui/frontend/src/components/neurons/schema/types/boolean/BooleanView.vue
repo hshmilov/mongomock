@@ -5,33 +5,33 @@
         :is="hyperlink? 'a' : 'div'"
         :key="i"
         :href="hyperlinkHref"
-        :class="{item: true, checkmark: item}"
+        :class="{item: true}"
         @click="onClickLink"
       >
-        <x-cross v-if="!item" />
+        <span class="data-false" v-if="item === false">No</span>
+        <span class="data-true" v-else-if="item === true">Yes</span>
+        <span class="data-empty" v-else></span>
       </component>
     </template>
   </div>
 </template>
 
 <script>
-  import xCross from '../../../../axons/visuals/Cross.vue'
-  import hyperlinkMixin from '../hyperlink.js'
+    import hyperlinkMixin from '../hyperlink.js'
 
-  export default {
-    name: 'XBoolView',
-    components: { xCross },
-    mixins: [hyperlinkMixin],
-    props: ['schema', 'value'],
-    computed: {
-      processedData () {
-        if (Array.isArray(this.value)) {
-          return this.value
+    export default {
+        name: 'XBoolView',
+        mixins: [hyperlinkMixin],
+        props: ['schema', 'value'],
+        computed: {
+            processedData() {
+                if (Array.isArray(this.value)) {
+                    return this.value
+                }
+                return [this.value]
+            }
         }
-        return [this.value]
-      }
     }
-  }
 </script>
 
 <style lang="scss">
@@ -39,18 +39,10 @@
         height: 24px;
         display: flex;
         align-items: center;
-
-        .checkmark {
-            width: 6px;
-            height: 12px;
-            transform: rotate(45deg);
-            border-bottom: 1px solid;
-            border-right: 1px solid;
-            margin-left: 4px;
-        }
+        font-weight: 300;
 
         .item {
-          margin-right: 8px;
+            margin-right: 8px;
         }
     }
 </style>

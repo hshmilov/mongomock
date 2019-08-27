@@ -70,7 +70,7 @@ class TestEnforcementExecution(TestBase):
             enforcement_set_name, action_name, is_success, output = table_data[0]
             assert enforcement_set_name == RUN_CMD_ACTION_NAME
             assert action_name == Action.run_windows_shell_command.value
-            assert is_success == ''
+            assert is_success == 'Yes'
             assert 'axonius_output_' in output
             self.devices_page.click_extended_data_tasks_tab()
             vertical_tabs = self.devices_page.find_vertical_tabs()
