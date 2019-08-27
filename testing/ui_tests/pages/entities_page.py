@@ -647,8 +647,6 @@ class EntitiesPage(Page):
         cookies = self.driver.get_cookies()
         for cookie in cookies:
             session.cookies.set(cookie['name'], cookie['value'])
-        import pdb
-        pdb.set_trace()
         return session.post(f'https://127.0.0.1/api/{entity_type}/csv', json={
             'fields': fields, 'filter': filters
         })
