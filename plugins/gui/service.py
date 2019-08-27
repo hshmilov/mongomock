@@ -3797,7 +3797,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
 
             except Exception:
                 # Since there is no data, not adding this chart to the list
-                logger.exception(f'Error fetching data for chart {dashboard["name"]} ({dashboard["_id"]})')
+                logger.exception(f'Error fetching data for chart ({dashboard["_id"]})')
 
     def _find_filter_by_name(self, entity_type: EntityType, name):
         """
