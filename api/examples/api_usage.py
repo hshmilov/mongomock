@@ -556,13 +556,14 @@ class RESTExample:
 
         node_id = master_node['node_id']
 
-        first_client = master_node['clients'][0]['client_config']
+        first_client = master_node['clients'][0]
+        first_client_config = first_client['client_config']
 
-        status_code, resp = self._client.check_connectivity('active_directory_adapter', first_client, node_id)
+        status_code, resp = self._client.check_connectivity('active_directory_adapter', first_client_config, node_id)
         assert status_code == 200, resp
 
-        first_client['dc_name'] = 'fail'
-        status_code, resp = self._client.check_connectivity('active_directory_adapter', first_client, node_id)
+        first_client_config['dc_name'] = 'fail'
+        status_code, resp = self._client.check_connectivity('active_directory_adapter', first_client_config, node_id)
         assert status_code == 500, resp
 
     def add_and_delete_client(self):

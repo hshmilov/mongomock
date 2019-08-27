@@ -364,7 +364,7 @@ class API:
         return jsonify(actions)
 
     @api_add_rule(f'adapters/<adapter_name>/clients', methods=['PUT', 'POST'],
-                  required_permissions={Permission(PermissionType.Devices, PermissionLevel.ReadOnly)})
+                  required_permissions={Permission(PermissionType.Adapters, PermissionLevel.ReadWrite)})
     def api_adapters_clients(self, adapter_name):
         return self._adapters_clients(adapter_name)
 
