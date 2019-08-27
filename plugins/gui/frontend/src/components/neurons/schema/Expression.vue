@@ -3,7 +3,7 @@
     <!-- Choice of logical operator, available from second expression --->
     <x-select
       v-if="!first"
-      v-model="expression.logicOp"
+      v-model="logicOp"
       :options="logicOps"
       placeholder="op..."
       class="x-select-logic"
@@ -58,11 +58,11 @@
           v-model="nestedExpr.expression"
           :module="module"
           :parent-field="expression.field"
-          @change="onChangeCondition($event, i)"
+          @change="(cond) => onChangeCondition(cond, i)"
           @error="onErrorCondition"
         />
         <x-button
-          :key="'button' + nestedExpr.i"
+          :key="`remove_${nestedExpr.i}`"
           link
           class="condition-remove"
           @click="removeNestedExpression(i)"
@@ -87,15 +87,20 @@
 
   import {mapGetters, mapMutations} from 'vuex'
   import { CHANGE_TOUR_STATE } from '../../../store/modules/onboarding'
-  import { AUTO_QUERY } from "../../../store/getters";
+  import { AUTO_QUERY } from "../../../store/getters"
+  import { calcMaxIndex } from '../../../constants/utils'
 
   export default {
     name: 'XExpression',
     components: {
       xSelect, xCondition, xButton
     },
+    model: {
+      prop: 'expression',
+      event: 'input'
+    },
     props: {
-      value: {
+      expression: {
         type: Object,
         default: () => {}
       },
@@ -120,7 +125,9 @@
       }
     },
     computed: {
-      ...mapGetters({autoQuery: AUTO_QUERY}),
+      ...mapGetters({
+        autoQuery: AUTO_QUERY
+      }),
       logicOps () {
         return [{
           name: 'and', title: 'and'
@@ -128,34 +135,37 @@
           name: 'or', title: 'or'
         }]
       },
-      expression: {
-        get () {
-          return this.value
-        },
-        set (expression) {
-          this.$emit('input', expression)
-        }
-      },
       expressionCond: {
         get () {
           return {
             field: this.expression.field,
-              compOp: this.expression.compOp,
-              value: this.expression.value,
-              filteredAdapters: this.expression.filteredAdapters,
-              fieldType: this.expression.fieldType
+            compOp: this.expression.compOp,
+            value: this.expression.value,
+            filteredAdapters: this.expression.filteredAdapters,
+            fieldType: this.expression.fieldType
           }
         },
         set (condition) {
-          this.expression.value = condition.value
-          this.expression.field = condition.field
-          this.expression.compOp = condition.compOp
-          this.expression.filteredAdapters = condition.filteredAdapters
-          this.expression.fieldType = condition.fieldType
+          if (condition.field !== this.expression.field && this.expression.obj) {
+            this.expression.nested = []
+            this.addNestedExpression()
+          }
+          this.updateExpression({
+            value: condition.value,
+            field: condition.field,
+            compOp: condition.compOp,
+            filteredAdapters: condition.filteredAdapters,
+            fieldType: condition.fieldType
+          })
         }
       },
-      expressionField () {
-        return this.expression.field
+      logicOp: {
+        get () {
+          return this.expression.logicOp
+        },
+        set (logicOp) {
+          this.updateExpression({ logicOp })
+        }
       },
       nestedExpressionCond () {
         return this.expression.nested
@@ -164,19 +174,7 @@
           .join(' and ')
       }
     },
-    watch: {
-      expressionField () {
-        if (this.expression.obj) {
-          this.expression.nested = []
-          this.addNestedExpression()
-        }
-
-      }
-    },
     updated () {
-      if (this.autoQuery || this.rebuild) {
-          this.compileExpression()
-      }
       if (this.first) {
         if (this.expression.field && this.expression.compOp && !this.expression.value) {
           this.changeState({ name: 'queryValue' })
@@ -186,28 +184,49 @@
       }
     },
     methods: {
-      ...mapMutations({ changeState: CHANGE_TOUR_STATE }),
+      ...mapMutations({
+        changeState: CHANGE_TOUR_STATE
+      }),
+      updateExpression (update) {
+        this.$emit('input', {
+          ...this.expression,
+          ...update
+        })
+        this.$nextTick(this.compileExpression)
+      },
       toggleLeftBracket () {
-        this.expression.leftBracket = !this.expression.leftBracket
+        this.updateExpression({
+          leftBracket: !this.expression.leftBracket
+        })
       },
       toggleRightBracket () {
-        this.expression.rightBracket = !this.expression.rightBracket
+        this.updateExpression({
+          rightBracket: !this.expression.rightBracket
+        })
       },
       toggleNot () {
-        this.expression.not = !this.expression.not
+        this.updateExpression({
+          not: !this.expression.not
+        })
       },
       toggleObj () {
-        this.expression.obj = !this.expression.obj
+        this.updateExpression({
+          obj: !this.expression.obj,
+          field: ''
+        })
       },
       checkErrors () {
-        if (!this.first && !this.expression.logicOp) {
+        if (!this.first && !this.logicOp) {
           return 'Logical operator is needed to add expression to the filter'
         } else if (this.expression.obj && !this.expression.field) {
           return 'Select an object to add nested conditions'
         }
         return ''
       },
-      compileExpression () {
+      compileExpression (force = false) {
+        if (!force && !this.autoQuery && !this.rebuild) {
+          return
+        }
         if (!this.expression.field || (this.expression.obj && !this.nestedExpressionCond)) {
           this.$emit('change', { filter: '', bracketWeight: 0 })
           return
@@ -218,8 +237,8 @@
           return
         }
         let filterStack = []
-        if (this.expression.logicOp && !this.first) {
-          filterStack.push(this.expression.logicOp + ' ')
+        if (this.logicOp && !this.first) {
+          filterStack.push(this.logicOp + ' ')
         }
         let bracketWeight = 0
         if (this.expression.leftBracket) {
@@ -238,7 +257,7 @@
           }
           if(filteredAdapters.length > 0) {
               let cond = '({val})'
-              let currentConditions = filteredAdapters.map(adapter => this.getMatchExpression(this.expression.field, this.nestedExpressionCond, adapter));
+              let currentConditions = filteredAdapters.map(adapter => this.getMatchExpression(this.expression.field, this.nestedExpressionCond, adapter))
               filterStack.push(cond.replace(/{val}/g,  currentConditions.join(' or ')))
           } else {
               filterStack.push(this.getMatchExpression(this.expression.field, this.nestedExpressionCond))
@@ -259,9 +278,11 @@
           return `${field} == match([${condition}])`
       },
       addNestedExpression () {
-        let newNestedExpression =   { ...nestedExpression, i: this.expression.nested.length }
-        newNestedExpression.expression.filteredAdapters = this.expression.filteredAdapters
-        this.expression.nested.push(newNestedExpression)
+        this.expression.nested.push({
+          ...nestedExpression,
+          i: calcMaxIndex(this.expression.nested),
+          filteredAdapters: this.expression.filteredAdapters
+        })
       },
       onChangeCondition (condition, nestedIndex) {
         if (nestedIndex !== undefined) {
@@ -269,12 +290,11 @@
         } else if(condition !== undefined){
           this.condition = condition
         }
-        if (this.autoQuery || this.rebuild) {
-          this.compileExpression()
-        }
+        this.compileExpression()
       },
       onErrorCondition (error) {
         this.errorCondition = error
+        this.compileExpression(true)
       },
       removeNestedExpression (index) {
         this.expression.nested.splice(index, 1)

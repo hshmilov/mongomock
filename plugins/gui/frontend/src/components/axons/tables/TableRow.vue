@@ -32,17 +32,11 @@
       nowrap
     >
       <slot
-        :schema="schema"
-        :data="data"
-        :sort="sort"
+        v-bind="dataProps(schema)"
         :hover-row="hovered"
         :expand-row="expanded"
       >
-        <x-table-data
-          :schema="schema"
-          :data="data"
-          :sort="sort"
-        />
+        <x-table-data v-bind="dataProps(schema)" />
       </slot>
     </td>
   </tr>
@@ -72,6 +66,12 @@
           return { field: '', desc: true }
         }
       },
+      filters: {
+        type: Object,
+        default: () => {
+          return {}
+        }
+      },
       selected: {
         type: Boolean
       },
@@ -95,6 +95,14 @@
       }
     },
     methods: {
+      dataProps (schema) {
+        return {
+          schema,
+          data: this.data,
+          sort: this.sort,
+          filter: this.filters[schema.name]
+        }
+      },
       enterRow () {
         this.hovered = true
       },

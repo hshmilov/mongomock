@@ -1117,12 +1117,18 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
     @gui_helpers.filtered_entities()
     @gui_helpers.sorted_endpoint()
     @gui_helpers.projected()
-    @gui_add_rule_logged_in('devices/csv', methods=['GET'],
+    @gui_helpers.filtered_fields()
+    @gui_add_rule_logged_in('devices/csv', methods=['POST'],
                             required_permissions={Permission(PermissionType.Devices,
                                                              PermissionLevel.ReadOnly)})
-    def get_devices_csv(self, mongo_filter, mongo_sort, mongo_projection, history: datetime):
-        return get_csv_from_heavy_lifting_plugin(mongo_filter, mongo_sort, mongo_projection, history,
-                                                 EntityType.Devices, self._system_settings.get('defaultSort'))
+    def get_devices_csv(self, mongo_filter, mongo_sort, mongo_projection, history: datetime, field_filters):
+        return get_csv_from_heavy_lifting_plugin(mongo_filter,
+                                                 mongo_sort,
+                                                 mongo_projection,
+                                                 history,
+                                                 EntityType.Devices,
+                                                 self._system_settings.get('defaultSort'),
+                                                 field_filters)
 
     @gui_helpers.filtered_entities()
     @gui_helpers.historical()
@@ -1294,16 +1300,22 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
     @gui_helpers.filtered_entities()
     @gui_helpers.sorted_endpoint()
     @gui_helpers.projected()
-    @gui_add_rule_logged_in('users/csv', methods=['GET'],
+    @gui_helpers.filtered_fields()
+    @gui_add_rule_logged_in('users/csv', methods=['POST'],
                             required_permissions={Permission(PermissionType.Users,
                                                              PermissionLevel.ReadOnly)})
-    def get_users_csv(self, mongo_filter, mongo_sort, mongo_projection, history: datetime):
+    def get_users_csv(self, mongo_filter, mongo_sort, mongo_projection, history: datetime, field_filters):
         # Deleting image from the CSV (we dont need this base64 blob in the csv)
         if 'specific_data.data.image' in mongo_projection:
             del mongo_projection['specific_data.data.image']
 
-        return get_csv_from_heavy_lifting_plugin(mongo_filter, mongo_sort, mongo_projection, history,
-                                                 EntityType.Users, self._system_settings.get('defaultSort'))
+        return get_csv_from_heavy_lifting_plugin(mongo_filter,
+                                                 mongo_sort,
+                                                 mongo_projection,
+                                                 history,
+                                                 EntityType.Users,
+                                                 self._system_settings.get('defaultSort'),
+                                                 field_filters)
 
     @gui_helpers.historical()
     @gui_helpers.filtered_entities()
@@ -1377,9 +1389,10 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
 
     @gui_helpers.historical()
     @gui_helpers.sorted_endpoint()
-    @gui_add_rule_logged_in('users/<user_id>/<field_name>/csv', methods=['GET'],
+    @gui_helpers.filtered_fields()
+    @gui_add_rule_logged_in('users/<user_id>/<field_name>/csv', methods=['POST'],
                             required_permissions={Permission(PermissionType.Devices, PermissionLevel.ReadOnly)})
-    def user_generic_field_csv(self, user_id, field_name, mongo_sort, history: datetime):
+    def user_generic_field_csv(self, user_id, field_name, mongo_sort, history: datetime, field_filters):
         """
         Create a csv file for a specific field of a specific entity
 
@@ -1389,7 +1402,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         :param history:     Fetch the User according to this past date
         :return:            Response containing csv data, that can be downloaded into a csv file
         """
-        csv_string = entity_data_field_csv(EntityType.Users, user_id, field_name, mongo_sort, history)
+        csv_string = entity_data_field_csv(EntityType.Users, user_id, field_name, mongo_sort, history, field_filters)
         output = make_response(csv_string.getvalue().encode('utf-8'))
         timestamp = datetime.now().strftime('%d%m%Y-%H%M%S')
         field_name = field_name.split('.')[-1]
@@ -4746,7 +4759,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
             return ''
         except Exception as e:
             logger.exception('Failed sending test report by email.')
-            return return_error(f'Problem testing report by email:\n{str(e.args[0]) if e.args else e}', 400)
+            return return_error(f'Problem testing report by email: {repr(e)}', 400)
 
     def _get_exec_report_settings(self, exec_reports_settings_collection):
         settings_objects = exec_reports_settings_collection.find(

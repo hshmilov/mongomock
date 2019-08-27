@@ -5,7 +5,6 @@
       v-model="credentials"
       :schema="schema"
       :error="prettyUserError"
-      @input="initError"
       @validate="onValidate"
       @submit="onLogin"/>
     <x-button

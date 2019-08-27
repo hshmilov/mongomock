@@ -5,6 +5,7 @@
         :schema="schema"
         :data="data"
         :sort="sort"
+        :filter="filter"
         ref="data"
       />
       <div class="details-table-container">
@@ -46,6 +47,7 @@
             :schema="schema"
             :data="detail"
             :sort="sort"
+            :filter="filter"
             class="item"
           />
         </div>
@@ -87,6 +89,10 @@
           }
         }
       },
+      filter: {
+        type: String,
+        default: ''
+      },
       hoverRow: {
         type: Boolean,
         default: false
@@ -94,7 +100,7 @@
       expandRow: {
         type: Boolean,
         default: false
-      }
+      },
     },
     data () {
       return {
@@ -144,7 +150,11 @@
               [this.adaptersFieldName]: [this.adaptersListSorted[i]],
               [this.fieldName]: detail
             }
-          })
+          }),
+          colFilters: {
+            [this.schema.name]: this.filter
+          },
+          filterable: false
         }
         if (this.schema.type === 'string' && this.schema.format === 'date-time') {
           baseTable.fields.push({

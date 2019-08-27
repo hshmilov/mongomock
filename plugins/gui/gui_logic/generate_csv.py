@@ -10,7 +10,8 @@ CHUNK_SIZE = 1024
 
 
 def get_csv_from_heavy_lifting_plugin(mongo_filter, mongo_sort, mongo_projection, history: datetime,
-                                      entity_type: EntityType, default_sort: bool) -> Response:
+                                      entity_type: EntityType, default_sort: bool,
+                                      field_filters: dict = None) -> Response:
     """
     Queries the heavy lifting plugin and asks it to process the csv request.
     All the params are documented in the respected decorators in gui/service.py
@@ -20,7 +21,8 @@ def get_csv_from_heavy_lifting_plugin(mongo_filter, mongo_sort, mongo_projection
         'Content-Disposition': f'attachment; filename=axonius-data_{timestamp}.csv',
         'Content-Type': 'text/csv'
     }
-    res = _get_csv_from_heavy_lifting(default_sort, entity_type, history, mongo_filter, mongo_projection, mongo_sort)
+    res = _get_csv_from_heavy_lifting(
+        default_sort, entity_type, history, mongo_filter, mongo_projection, mongo_sort, field_filters)
 
     def generate():
         for chunk in res.iter_content(CHUNK_SIZE):
@@ -30,8 +32,8 @@ def get_csv_from_heavy_lifting_plugin(mongo_filter, mongo_sort, mongo_projection
 
 
 def get_csv_file_from_heavy_lifting_plugin(output_path, query_name, mongo_filter, mongo_sort,
-                                           mongo_projection, history: datetime,
-                                           entity_type: EntityType, default_sort: bool) -> str:
+                                           mongo_projection, history: datetime, entity_type: EntityType,
+                                           default_sort: bool, field_filters: dict = None) -> str:
     """
     Queries the heavy lifting plugin and asks it to process the csv request.
     All the params are documented in the respected decorators in gui/service.py
@@ -39,7 +41,8 @@ def get_csv_file_from_heavy_lifting_plugin(output_path, query_name, mongo_filter
     :return: the generated csv file of the saved query.
     """
     timestamp = datetime.now().strftime('%m-%d-%Y-%H:%M:%S')
-    res = _get_csv_from_heavy_lifting(default_sort, entity_type, history, mongo_filter, mongo_projection, mongo_sort)
+    res = _get_csv_from_heavy_lifting(
+        default_sort, entity_type, history, mongo_filter, mongo_projection, mongo_sort, field_filters)
 
     temp_csv_filename = f'{output_path}{query_name[0:100]}_{timestamp}.csv'
     with open(temp_csv_filename, 'wb') as file:
@@ -48,7 +51,8 @@ def get_csv_file_from_heavy_lifting_plugin(output_path, query_name, mongo_filter
     return temp_csv_filename
 
 
-def _get_csv_from_heavy_lifting(default_sort, entity_type, history, mongo_filter, mongo_projection, mongo_sort):
+def _get_csv_from_heavy_lifting(default_sort, entity_type, history, mongo_filter, mongo_projection, mongo_sort,
+                                field_filters: dict = None):
     return PluginBase.Instance.request_remote_plugin('generate_csv', HEAVY_LIFTING_PLUGIN_NAME,
                                                      'post',
                                                      json={
@@ -57,5 +61,6 @@ def _get_csv_from_heavy_lifting(default_sort, entity_type, history, mongo_filter
                                                          'mongo_projection': mongo_projection,
                                                          'entity_type': entity_type.value,
                                                          'default_sort': default_sort,
-                                                         'history': history
+                                                         'history': history,
+                                                         'field_filters': field_filters
                                                      }, stream=True)

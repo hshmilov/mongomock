@@ -7,6 +7,7 @@ from services.plugins.general_info_service import GeneralInfoService
 from test_credentials.json_file_credentials import (DEVICE_FIRST_IP,
                                                     DEVICE_THIRD_IP,
                                                     DEVICE_MAC,
+                                                    DEVICE_SUBNET,
                                                     DEVICE_FIRST_VLAN_TAGID,
                                                     DEVICE_SECOND_VLAN_NAME)
 
@@ -236,11 +237,14 @@ class TestDevicesQuery(TestBase):
         self.devices_page.wait_for_table_to_load()
         assert len(self.devices_page.get_all_data()) == 1
 
-        # DEVICE_MAC and DEVICE_THIRD_IP are not on same Network Interface, so Device will not return
+        # DEVICE_THIRD_IP and SUBNETS are not on same Network Interface, so Device will not return
         self.devices_page.fill_query_value(DEVICE_THIRD_IP, conditions[1])
+        self.devices_page.select_query_field(self.devices_page.FIELD_SUBNETS, conditions[2])
+        self.devices_page.fill_query_value(DEVICE_SUBNET, conditions[2])
+        self.devices_page.wait_for_table_to_load()
         assert len(self.devices_page.get_all_data()) == 0
 
-        # However, this MAC and IP will return the device, when not using the OBJ feature
+        # However, this IP and VLAN will return the device, when not using the OBJ feature
         self.devices_page.clear_query_wizard()
         self.devices_page.add_query_expression()
         expressions = self.devices_page.find_expressions()
@@ -249,9 +253,9 @@ class TestDevicesQuery(TestBase):
         self.devices_page.select_query_comp_op(self.devices_page.QUERY_COMP_EQUALS, expressions[0])
         self.devices_page.fill_query_value(DEVICE_THIRD_IP, expressions[0])
         self.devices_page.select_query_logic_op(self.devices_page.QUERY_LOGIC_AND, expressions[1])
-        self.devices_page.select_query_field(self.devices_page.FIELD_NETWORK_INTERFACES_MAC, expressions[1])
+        self.devices_page.select_query_field(self.devices_page.FIELD_NETWORK_INTERFACES_SUBNETS, expressions[1])
         self.devices_page.select_query_comp_op(self.devices_page.QUERY_COMP_CONTAINS, expressions[1])
-        self.devices_page.fill_query_value(DEVICE_MAC, expressions[1])
+        self.devices_page.fill_query_value(DEVICE_SUBNET, expressions[1])
         self.devices_page.wait_for_table_to_load()
         assert len(self.devices_page.get_all_data()) == 1
         self.devices_page.clear_query_wizard()

@@ -137,7 +137,6 @@
 
   import { mapState, mapMutations, mapActions } from 'vuex'
   import { CHANGE_TOUR_STATE } from '../../store/modules/onboarding'
-  import { UPDATE_DATA_VIEW } from '../../store/mutations'
   import {
     initRecipe, initAction, initTrigger,
     FETCH_ENFORCEMENT, SAVE_ENFORCEMENT, RUN_ENFORCEMENT,
@@ -315,7 +314,7 @@
     },
     methods: {
       ...mapMutations({
-        tour: CHANGE_TOUR_STATE, updateView: UPDATE_DATA_VIEW
+        tour: CHANGE_TOUR_STATE
       }),
       ...mapActions({
         fetchEnforcement: FETCH_ENFORCEMENT, saveEnforcement: SAVE_ENFORCEMENT,

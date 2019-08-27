@@ -70,7 +70,7 @@ class EntitiesPage(Page):
     VALUE_ADAPTERS_AD = 'Microsoft Active Directory (AD)'
     TABLE_HEADER_CELLS_CSS = 'th'
     TABLE_HEADER_CELLS_XPATH = '//th[child::img[contains(@class, \'logo\')]]'
-    TABLE_HEADER_SORT_XPATH = '//th[contains(@class, \'sortable\') and contains(text(), \'{col_name_text}\')]/div'
+    TABLE_HEADER_SORT_XPATH = '//th[contains(@class, \'sortable\') and contains(text(), \'{col_name_text}\')]'
     TABLE_DATA_POS_XPATH = '//tr[@id]/td[position()={data_position}]'
     TABLE_DATA_TITLE_POS_XPATH = '//tr[@id]/td[position()={data_position}]//' \
                                  'div[@class=\'x-data\' or @class=\'list\']/div'
@@ -354,23 +354,28 @@ class EntitiesPage(Page):
 
     def check_sort_column(self, col_name, desc=True):
         header = self.driver.find_element_by_xpath(self.TABLE_HEADER_SORT_XPATH.format(col_name_text=col_name))
-        assert header.get_attribute('class') == ('sort down' if desc else 'sort up')
+        sort = header.find_element_by_css_selector('.sort')
+        assert sort.get_attribute('class') == ('sort down' if desc else 'sort up')
+
+    @staticmethod
+    def _get_column_title(head):
+        return head.text.strip().split('\n')[0]
 
     def get_columns_header_text(self):
         headers = self.driver.find_element_by_xpath(self.TABLE_HEADER_XPATH)
         header_columns = headers.find_elements_by_css_selector(self.TABLE_HEADER_CELLS_CSS)
-        return [head.text.strip() for head in header_columns if head.text.strip()]
+        return [self._get_column_title(head) for head in header_columns if self._get_column_title(head)]
 
     def get_field_columns_header_text(self):
         headers = self.driver.find_element_by_xpath(self.TABLE_HEADER_FIELD_XPATH)
         header_columns = headers.find_elements_by_css_selector(self.TABLE_HEADER_CELLS_CSS)
-        return [head.text.strip() for head in header_columns if head.text.strip()]
+        return [self._get_column_title(head) for head in header_columns if self._get_column_title(head)]
 
     def count_sort_column(self, col_name, parent=None):
         # Return the position of given col_name in list of column headers, 1-based
         if not parent:
             parent = self.driver
-        return [element.text.strip() for element
+        return [self._get_column_title(element) for element
                 in parent.find_elements_by_css_selector(self.TABLE_HEADER_CELLS_CSS)].index(col_name) + 1
 
     def count_specific_column(self, col_name, parent=None):
@@ -383,7 +388,7 @@ class EntitiesPage(Page):
             try:
                 element.find_element_by_tag_name('img')
             except NoSuchElementException:
-                if element.text.strip() == col_name:
+                if self._get_column_title(element) == col_name:
                     return index
         # This coloumn title was not found
         raise ValueError
@@ -432,8 +437,9 @@ class EntitiesPage(Page):
         the respective valueTABLE_SELECT_ALL_CURRENT_PAGE_CHECKBOX_CSS
         """
         result = []
-        column_names = [x.text for x in self.driver.find_elements_by_css_selector(self.TABLE_HEADER_CELLS_CSS)
-                        if x.text.strip()]
+        column_names = [self._get_column_title(x)
+                        for x in self.driver.find_elements_by_css_selector(self.TABLE_HEADER_CELLS_CSS)
+                        if self._get_column_title(x)]
         all_entities = self.driver.find_elements_by_css_selector(self.ALL_ENTITIES_CSS)
         for entity in all_entities:
             if not entity.text.strip():
@@ -641,18 +647,23 @@ class EntitiesPage(Page):
         cookies = self.driver.get_cookies()
         for cookie in cookies:
             session.cookies.set(cookie['name'], cookie['value'])
-        return session.get(f'https://127.0.0.1/api/{entity_type}/csv?fields={fields}&filter={filters}')
+        import pdb
+        pdb.set_trace()
+        return session.post(f'https://127.0.0.1/api/{entity_type}/csv', json={
+            'fields': fields, 'filter': filters
+        })
 
     def generate_csv_field(self, entity_type, entity_id, field_name, sort, desc=False):
         session = requests.Session()
         cookies = self.driver.get_cookies()
         for cookie in cookies:
             session.cookies.set(cookie['name'], cookie['value'])
-        return session.get(
-            f'https://127.0.0.1/api/{entity_type}/{entity_id}/{field_name}/csv?sort={sort}&desc={1 if desc else 0}')
+        return session.post(f'https://127.0.0.1/api/{entity_type}/{entity_id}/{field_name}/csv', json={
+            'sort': sort, 'desc': (1 if desc else 0)
+        })
 
     def assert_csv_match_ui_data(self, result, ui_data=None, ui_headers=None):
-        all_csv_rows = result.text.split('\r\n')
+        all_csv_rows = result.content.decode('utf-8').split('\r\n')
         csv_headers = all_csv_rows[0].split(',')
         csv_data_rows = all_csv_rows[1:-1]
 

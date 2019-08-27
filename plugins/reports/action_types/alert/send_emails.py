@@ -146,15 +146,18 @@ class SendEmailsAction(ActionTypeAlert):
                     parsed_query_filter = parse_filter(query['view']['query']['filter'])
                     field_list = query['view'].get('fields', [])
                     sort = gui_helpers.get_sort(query['view'])
+                    field_filters = query['view'].get('colFilters', {})
                 else:
                     parsed_query_filter = self._create_query(self._internal_axon_ids)
                     field_list = ['specific_data.data.name', 'specific_data.data.hostname',
                                   'specific_data.data.os.type', 'specific_data.data.last_used_users']
                     sort = {}
+                    field_filters = {}
                 csv_string = gui_helpers.get_csv(parsed_query_filter,
                                                  sort,
                                                  {field: 1 for field in field_list},
-                                                 self._entity_type)
+                                                 self._entity_type,
+                                                 field_filters=field_filters)
 
                 email.add_attachment('Axonius Entity Data.csv', csv_string.getvalue().encode('utf-8'), 'text/csv')
         except Exception:
@@ -215,25 +218,26 @@ class SendEmailsAction(ActionTypeAlert):
         })
         try:
             parsed_query_filter = parse_filter(query['view']['query']['filter'])
+            field_filters = query['view'].get('colFilters', {})
 
             self.__create_table_in_email(email, parsed_query_filter, html_sections, images_cid,
-                                         10, 'Top 10 results')
+                                         10, 'Top 10 results', field_filters)
         except Exception:
             parsed_query_filter = self._create_query(self._internal_axon_ids)
             self.__create_table_in_email(email, parsed_query_filter, html_sections, images_cid,
-                                         10, 'Top 10 results')
+                                         10, 'Top 10 results', field_filters)
 
         if added_result_count > 0:
             parsed_added_query_filter = self._create_query(self._added_axon_ids)
 
             self.__create_table_in_email(email, parsed_added_query_filter, html_sections, images_cid,
-                                         5, f'Top 5 new {self._entity_type} in query')
+                                         5, f'Top 5 new {self._entity_type} in query', field_filters)
             logger.info(parsed_added_query_filter)
         if removed_result_count > 0:
             parsed_removed_query_filter = self._create_query(self._removed_axon_ids)
 
             self.__create_table_in_email(email, parsed_removed_query_filter, html_sections, images_cid, 5,
-                                         f'Top 5 {self._entity_type} removed from query')
+                                         f'Top 5 {self._entity_type} removed from query', field_filters)
             logger.info(parsed_removed_query_filter)
         logger.info(parsed_query_filter)
 
@@ -244,7 +248,7 @@ class SendEmailsAction(ActionTypeAlert):
         return AlertActionResult(True, 'Sent email')
 
     def __create_table_in_email(self, email, query_filter, sections: list, images_cids: dict,
-                                limit: int, header: str):
+                                limit: int, header: str, field_filters: dict = None):
         """
         Undocumented - migrated from reports/service.py
         :param email: the email instance
@@ -260,13 +264,13 @@ class SendEmailsAction(ActionTypeAlert):
         if self._entity_type == EntityType.Devices:
             data = gui_helpers.get_entities(limit, 0, query_filter, {},
                                             {'adapters': 1, 'specific_data.data.hostname': 1},
-                                            self._entity_type)
+                                            self._entity_type, field_filters=field_filters)
             heads = [REPORTS_TEMPLATES['table_head'].render({'content': 'Adapters'}),
                      REPORTS_TEMPLATES['table_head'].render({'content': 'Host Name'})]
         elif self._entity_type == EntityType.Users:
             data = gui_helpers.get_entities(limit, 0, query_filter, {},
                                             {'adapters': 1, 'specific_data.data.username': 1},
-                                            self._entity_type)
+                                            self._entity_type, field_filters=field_filters)
             heads = [REPORTS_TEMPLATES['table_head'].render({'content': 'Adapters'}),
                      REPORTS_TEMPLATES['table_head'].render({'content': 'User Name'})]
         rows = []
@@ -346,12 +350,16 @@ class SendEmailsAction(ActionTypeAlert):
         if query:
             field_list = query['view'].get('fields', [])
             sort = gui_helpers.get_sort(query['view'])
+            field_filters = query['view'].get('colFilters', {})
         else:
             field_list = ['specific_data.data.name', 'specific_data.data.hostname',
                           'specific_data.data.os.type', 'specific_data.data.last_used_users']
             sort = {}
+            field_filters = {}
         csv_string = gui_helpers.get_csv(parsed_query_filter, sort,
-                                         {field: 1 for field in field_list}, self._entity_type)
+                                         {field: 1 for field in field_list},
+                                         self._entity_type,
+                                         field_filters=field_filters)
 
         email.add_attachment(f'Axonius {data_action} entity data.csv', csv_string.getvalue().encode('utf-8'),
                              'text/csv')

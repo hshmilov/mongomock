@@ -85,7 +85,7 @@
               query: { filter: this.query.filter, expressions },
               page: 0
             },
-            uuid: !this.$refs.filter || !this.$refs.filter.isFilterEmpty ? undefined : null
+            uuid: this.query.filter ? undefined : null
           })
         }
       },
@@ -114,8 +114,11 @@
       clearFilter () {
         // Restart the expressions, search input and filter
         this.queryExpressions = []
-        this.$nextTick(this.$refs.filter.addExpression)
-        this.onChangeFilter('')
+        this.isUniqueAdapters = false
+        this.$nextTick(() => {
+          this.$refs.filter.addExpression()
+          this.onChangeFilter('')
+        })
       },
       onChangeFilter (filter) {
         if (this.isUniqueAdapters) {

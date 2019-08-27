@@ -181,7 +181,10 @@
         if (this.$route.query.view) {
           let requestedView = this.savedViews.find(view => view.name === this.$route.query.view)
           if (requestedView) {
-            this.updateView({ module: this.module, view: requestedView.view })
+            this.selectQuery({
+              view: requestedView.view,
+              uuid: requestedView.uuid
+            })
           }
         }
       },

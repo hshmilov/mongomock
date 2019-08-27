@@ -13,45 +13,40 @@
               @change="onSelectAll"
             />
           </th>
-          <th v-if="expandable">
+          <th
+            v-if="expandable"
+            class="w-14"
+          >
             <div>&nbsp;</div>
           </th>
-          <th
-            v-for="{name, title, logo} in dataFields"
-            :key="name"
-            :class="{sortable: onClickCol}"
-            nowrap
-            @click="clickCol(name)"
-            @keyup.enter.stop="clickCol(name)"
-          >
-            <img
-              v-if="logo"
-              class="logo md-image"
-              :src="require(`Logos/adapters/${logo}.png`)"
-              height="20"
-              :alt="logo"
-              :title="logo"
-            >{{ title }}<div
-              v-if="onClickCol"
-              :class="`sort ${sortClass(name)}`"
-            />
-          </th>
+          <x-table-head
+            v-for="field in fields"
+            :key="field.name"
+            :field="field"
+            :sort="sort"
+            :sortable="onClickCol !== undefined"
+            :filter="getFilter(field.name)"
+            :filterable="filterable"
+            @click="clickCol"
+            @filter="(filter) => filterCol(field.name, filter)"
+          />
         </tr>
       </thead>
       <tbody>
         <x-table-row
-          v-for="item in data"
-          :id="item[idField]"
-          :key="item[idField]"
-          :data="item"
-          :fields="dataFields"
+          v-for="row in data"
+          :id="row[idField]"
+          :key="row[idField]"
+          :data="row"
+          :fields="fields"
           :sort="sort"
-          :selected="value && value.includes(item[idField])"
+          :filters="colFilters"
+          :selected="value && value.includes(row[idField])"
           :expandable="expandable"
           :clickable="onClickRow !== undefined"
-          :read-only="readOnly.includes(item[idField])"
-          @input="(selected) => onSelect(item[idField], selected)"
-          @click.native="() => clickRow(item[idField])"
+          :read-only="readOnly.includes(row[idField])"
+          @input="(selected) => onSelect(row[idField], selected)"
+          @click.native="() => clickRow(row[idField])"
         >
           <slot
             slot-scope="props"
@@ -78,12 +73,15 @@
 </template>
 
 <script>
-  import xCheckbox from '../inputs/Checkbox.vue'
+  import xTableHead from './TableHead.vue'
   import xTableRow from './TableRow.vue'
+  import xCheckbox from '../inputs/Checkbox.vue'
 
   export default {
     name: 'XTable',
-    components: { xCheckbox, xTableRow },
+    components: {
+      xTableHead, xTableRow, xCheckbox
+    },
     props: {
       fields: {
         type: Array,
@@ -103,6 +101,10 @@
           return { field: '', desc: true }
         }
       },
+      colFilters: {
+        type: Object,
+        default: undefined
+      },
       idField: {
         type: String,
         default: 'uuid'
@@ -114,6 +116,10 @@
       expandable: {
         type: Boolean,
         default: false
+      },
+      filterable: {
+        type: Boolean,
+        default: true
       },
       onClickRow: {
         type: Function,
@@ -141,14 +147,6 @@
       },
       allSelected () {
         return Boolean(this.value && this.value.length && this.value.length === this.data.length)
-      },
-      dataFields () {
-        return this.fields.map(field => {
-          return {
-            ...field,
-            path: (field.path ? field.path : []).concat([field.name])
-          }
-        })
       }
     },
     methods: {
@@ -162,11 +160,6 @@
         if (!this.onClickCol) return
 
         this.onClickCol(name)
-      },
-      sortClass (name) {
-        if (this.sort.field !== name) return ''
-        if (this.sort.desc) return 'down'
-        return 'up'
       },
       onSelect (id, isSelected) {
         if (isSelected) {
@@ -184,6 +177,18 @@
         if (this.onClickAll) {
           this.onClickAll(selected)
         }
+      },
+      filterCol (fieldName, filter) {
+        this.$emit('filter', {
+          ...this.colFilters,
+          [fieldName]: filter.toLowerCase()
+        })
+      },
+      getFilter(fieldName) {
+        if (!this.colFilters) {
+          return undefined
+        }
+        return this.colFilters[fieldName] || ''
       }
     }
   }
@@ -194,6 +199,7 @@
     position: relative;
     height: calc(100% - 48px);
     overflow-y: auto;
+
     .table {
       border-collapse: collapse;
 
@@ -205,11 +211,8 @@
             background: $theme-white;
             line-height: 28px;
             color: $theme-black;
-            z-index: 10;
             box-shadow: 8px 0 4px 0 $grey-2;
-          }
-          &.sortable {
-            cursor: pointer;
+            z-index: 10;
           }
         }
       }

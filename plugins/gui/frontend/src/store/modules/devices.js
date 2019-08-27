@@ -13,6 +13,7 @@ export const devices = {
 			}, sort: {
 				field: '', desc: true
 			},
+			colFilters: {},
 			historical: null
 		},
 

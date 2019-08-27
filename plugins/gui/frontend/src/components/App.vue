@@ -3,7 +3,7 @@
         App structure includes fixed navigation containing header and menu bars
         with changing content, according to chosen route
     -->
-    <div id="app">
+    <div id="app" v-if="fetchedLoginStatus">
         <!--Link for downloading files-->
         <a id="file-auto-download-link"></a>
         <!-- Nested navigation linking to routes defined in router/index.js -->
@@ -55,6 +55,9 @@
         },
         computed: {
             ...mapState({
+                fetchedLoginStatus(state) {
+                    return Object.keys(state.auth.currentUser.data).length > 0 || state.auth.currentUser.error
+                },
                 userName(state) {
                 	return state.auth.currentUser.data.user_name
                 },

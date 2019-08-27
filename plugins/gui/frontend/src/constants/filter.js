@@ -20,7 +20,7 @@ export const expression = {
 }
 
 const exists = '({field} == ({"$exists":true,"$ne":null}))'
-const exists_str = '({field} == ({"$exists":true,"$ne": ""}))'
+const exists_str = '({field} == ({"$exists":true,"$ne":""}))'
 const exists_array = '({field} == ({"$exists":true,"$ne":[]}))'
 const equals = '{field} == "{val}"'
 const contains = '{field} == regex("{val}", "i")'

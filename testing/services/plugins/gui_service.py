@@ -69,8 +69,6 @@ class GuiService(PluginService, UpdatablePluginMixin):
             self._update_schema_version_14()
         if self.db_schema_version < 15:
             self._update_schema_version_15()
-        if self.db_schema_version < 15:
-            self._update_schema_version_15()
         if self.db_schema_version < 16:
             self._update_schema_version_16()
 

@@ -7,7 +7,7 @@ AWS_NAME = 'Amazon Web Services (AWS)'
 
 
 class TestDevicesTable(TestEntitiesTable):
-    QUERY_FILTER_DEVICES = 'specific_data.data.hostname%20%3D%3D%20regex(%22w%22%2C%20%22i%22)'
+    QUERY_FILTER_DEVICES = 'specific_data.data.hostname == regex("w", "i")'
     QUERY_FIELDS = 'adapters,specific_data.data.hostname,specific_data.data.name,specific_data.data.last_seen,' \
                    'specific_data.data.os.type,specific_data.data.network_interfaces.ips,' \
                    'specific_data.data.network_interfaces.mac,labels'

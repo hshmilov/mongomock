@@ -9,7 +9,7 @@ import re
 from collections import defaultdict
 from datetime import datetime
 from enum import Enum
-from typing import NamedTuple, Iterable, List, Dict
+from typing import NamedTuple, Iterable, List, Dict, Union
 
 import cachetools
 import dateutil
@@ -17,9 +17,8 @@ import pymongo
 from bson import ObjectId
 
 from axonius.consts.gui_consts import SPECIFIC_DATA, ADAPTERS_DATA, UNCHANGED_MAGIC_FOR_GUI
-from axonius.consts.metric_consts import SystemMetric
 from axonius.entities import EntitiesNamespace
-from flask import request, has_request_context, session, g
+from flask import request, session, g
 from pymongo.errors import PyMongoError
 from retry.api import retry_call
 
@@ -31,9 +30,8 @@ from axonius.users.user_adapter import UserAdapter
 from axonius.utils.axonius_query_language import (convert_db_entity_to_view_entity, convert_db_projection_to_view,
                                                   parse_filter, parse_filter_non_entities)
 from axonius.utils.revving_cache import rev_cached_entity_type
-from axonius.utils.metric import remove_ids
 from axonius.utils.threading import singlethreaded
-from axonius.logging.metric_helper import log_metric
+from axonius.utils.dict_utils import is_filter_in_value
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -171,11 +169,9 @@ def filtered_entities():
     def wrap(func):
         def actual_wrapper(self, *args, **kwargs):
             try:
-                content = {}
-                if request.method == 'POST':
-                    content = self.get_request_data_as_object()
-                filter_expr = content.get('filter') or request.args.get('filter', '')
-                history_date = content.get('history') or request.args.get('history')
+                content = self.get_request_data_as_object() if request.method == 'POST' else request.args
+                filter_expr = content.get('filter')
+                history_date = content.get('history')
                 filter_obj = parse_filter(filter_expr, history_date)
             except Exception as e:
                 logger.exception('Failed in mongo filter')
@@ -198,11 +194,9 @@ def sorted_endpoint():
         def actual_wrapper(self, *args, **kwargs):
             sort_obj = {}
             try:
-                content = {}
-                if request.method == 'POST':
-                    content = self.get_request_data_as_object()
-                sort_param = content.get('sort') or request.args.get('sort')
-                desc_param = content.get('desc') or request.args.get('desc')
+                content = self.get_request_data_as_object() if request.method == 'POST' else request.args
+                sort_param = content.get('sort')
+                desc_param = content.get('desc')
                 if sort_param:
                     logger.info(f'Parsing sort: {sort_param}')
                     direction = pymongo.DESCENDING if desc_param == '1' else pymongo.ASCENDING
@@ -237,11 +231,9 @@ def projected():
 
     def wrap(func):
         def actual_wrapper(self, *args, **kwargs):
-            content = {}
-            if request.method == 'POST':
-                content = self.get_request_data_as_object()
             mongo_projection = None
-            field_names = content.get('fields') or request.args.get('fields')
+            content = self.get_request_data_as_object() if request.method == 'POST' else request.args
+            field_names = content.get('fields')
             if field_names:
                 try:
                     mongo_projection = {}
@@ -255,6 +247,20 @@ def projected():
     return wrap
 
 
+def filtered_fields():
+    """
+    Assumes the request.method is POST
+    The property 'field_filters', sent in the request data, is added as an argument to the decorated method
+    """
+    def wrap(func):
+        def actual_wrapper(self, *args, **kwargs):
+            field_filters = self.get_request_data_as_object().get('field_filters', {})
+            return func(self, field_filters=field_filters, *args, **kwargs)
+        return actual_wrapper
+
+    return wrap
+
+
 def paginated(limit_max=PAGINATION_LIMIT_MAX):
     """
     Decorator stating that the view supports '?limit=X&start=Y' for pagination
@@ -263,14 +269,11 @@ def paginated(limit_max=PAGINATION_LIMIT_MAX):
     def wrap(func):
         def actual_wrapper(self, *args, **kwargs):
             # it's fine to raise here - an exception will be nicely JSONly displayed by add_rule
-            content = {}
-            if request.method == 'POST':
-                content = self.get_request_data_as_object()
+            content = self.get_request_data_as_object() if request.method == 'POST' else request.args
             try:
-                limit = int(content.get('limit'))
+                limit = content.get('limit', limit_max, int)
             except TypeError:
-                limit = None
-            limit = limit or request.args.get('limit', limit_max, int)
+                limit = limit_max
             if limit < 0:
                 raise ValueError('Limit must not be negative')
             if limit > limit_max:
@@ -335,10 +338,8 @@ def historical():
 
     def wrap(func):
         def actual_wrapper(self, *args, **kwargs):
-            content = {}
-            if request.method == 'POST':
-                content = self.get_request_data_as_object()
-            history = content.get('history') or request.args.get('history', None)
+            content = self.get_request_data_as_object() if request.method == 'POST' else request.args
+            history = content.get('history')
             if history:
                 try:
                     history = dateutil.parser.parse(history)
@@ -522,7 +523,8 @@ def get_entities(limit: int, skip: int,
                  run_over_projection=True,
                  history_date: datetime = None,
                  ignore_errors: bool = False,
-                 include_details: bool = False) -> Iterable[dict]:
+                 include_details: bool = False,
+                 field_filters: dict = None) -> Iterable[dict]:
     """
     Get Axonius data of type <entity_type>, from the aggregator which is expected to store them.
     :param limit: the max amount of entities to return
@@ -535,6 +537,7 @@ def get_entities(limit: int, skip: int,
     :param run_over_projection: adds some common fields to the projection
     :param history_date: the date for which to fetch, or None for latest
     :param ignore_errors: Passed to convert_db_entity_to_view_entity
+    :param field_filters: Filter fields' values to those that are have a string including their matching filter
     :return:
     """
     if run_over_projection:
@@ -577,7 +580,9 @@ def get_entities(limit: int, skip: int,
         if not projection:
             yield beautify_db_entry(entity)
         else:
-            yield parse_entity_fields(entity, projection.keys(), include_details=include_details)
+            logger.info(f'Parsing {field_filters}')
+            yield parse_entity_fields(entity, projection.keys(), include_details=include_details,
+                                      field_filters=field_filters)
 
 
 def get_historized_filter(entities_filter, history_date: datetime):
@@ -698,7 +703,7 @@ def find_entity_field(entity_data, field_path):
     return children
 
 
-def parse_entity_fields(entity_data, fields, include_details=False):
+def parse_entity_fields(entity_data, fields, include_details=False, field_filters: dict = None):
     """
     For each field in given list, if it begins with adapters_data, just fetch it from corresponding adapter.
 
@@ -706,6 +711,7 @@ def parse_entity_fields(entity_data, fields, include_details=False):
     :param fields:          List of paths to values in the entity_data dict
     :param include_details: For each requested field, add also <field>_details,
                             containing a list of values for the field per adapter that composes the entity
+    :param field_filters: Filter fields' values to those that are have a string including their matching filter
     :return:                Mapping of a field path to it's value list as found in the entity_data
     """
 
@@ -724,6 +730,12 @@ def parse_entity_fields(entity_data, fields, include_details=False):
     for field_path in fields:
         val = find_entity_field(entity_data, field_path)
         if val is not None and (type(val) not in [str, list] or len(val)):
+            if field_filters and field_filters.get(field_path):
+                if isinstance(val, str) and not is_filter_in_value(val, field_filters[field_path]):
+                    val = ''
+                elif isinstance(val, list):
+                    val = [item for item in val if is_filter_in_value(item, field_filters[field_path])]
+
             field_to_value[field_path] = val
         if not include_details:
             continue
@@ -984,18 +996,18 @@ def entity_fields(entity_type: EntityType):
 
 
 def get_csv(mongo_filter, mongo_sort, mongo_projection, entity_type: EntityType,
-            default_sort=True, history: datetime = None) -> io.StringIO:
+            default_sort=True, history: datetime = None, field_filters: dict = None) -> io.StringIO:
     """
     See '_get_csv' docs.
     Returns a StringIO object - not iterable
     """
     s = io.StringIO()
-    list(_get_csv(mongo_filter, mongo_sort, mongo_projection, entity_type, s, default_sort, history))
+    list(_get_csv(mongo_filter, mongo_sort, mongo_projection, entity_type, s, default_sort, history, field_filters))
     return s
 
 
 def get_csv_iterable(mongo_filter, mongo_sort, mongo_projection, entity_type: EntityType,
-                     default_sort=True, history: datetime = None) -> Iterable[str]:
+                     default_sort=True, history: datetime = None, field_filters: dict = None) -> Iterable[str]:
     """
     See '_get_csv' docs.
     Returns an iterator of string lines
@@ -1011,11 +1023,28 @@ def get_csv_iterable(mongo_filter, mongo_sort, mongo_projection, entity_type: En
             return x
 
     s = MyStringIo()
-    return _get_csv(mongo_filter, mongo_sort, mongo_projection, entity_type, s, default_sort, history)
+    return _get_csv(mongo_filter, mongo_sort, mongo_projection, entity_type, s, default_sort, history, field_filters)
+
+
+def get_csv_canonized_value(
+        value: Union[str, list, int, datetime, float, bool], field_filter: str) -> Union[List[str], str]:
+    """
+    Format dates as a pretty string or convert all value to a string
+    Values containing given filter are removed
+    """
+    def _process_item(item):
+        return item.strftime('%Y-%m-%d %H:%M:%S') if isinstance(item, datetime) else str(item)
+    if isinstance(value, list):
+        return ', '.join([_process_item(item) for item in value
+                          if not isinstance(item, str) or field_filter in item.lower()])
+    if isinstance(value, str) and field_filter not in value.lower():
+        return ''
+
+    return _process_item(value)
 
 
 def _get_csv(mongo_filter, mongo_sort, mongo_projection, entity_type: EntityType, file_obj,
-             default_sort=True, history: datetime = None) -> Iterable[None]:
+             default_sort=True, history: datetime = None, field_filters: dict = None) -> Iterable[None]:
     """
     Given a entity_type, retrieve it's entities, according to given filter, sort and requested fields.
     The resulting list is processed into csv format and returned as a file content, to be downloaded by browser.
@@ -1057,14 +1086,9 @@ def _get_csv(mongo_filter, mongo_sort, mongo_projection, entity_type: EntityType
         for field in mongo_projection.keys():
             # Replace field paths with their pretty titles
             if field in current_entity:
-                current_entity[mongo_projection[field]] = current_entity[field]
+                field_filter = field_filters.get(field, '') if field_filters else ''
+                current_entity[mongo_projection[field]] = get_csv_canonized_value(current_entity[field], field_filter)
                 del current_entity[field]
-                if isinstance(current_entity[mongo_projection[field]], list):
-                    canonized_values = [val.strftime('%Y-%m-%d %H:%M:%S')
-                                        if isinstance(val, datetime)
-                                        else str(val)
-                                        for val in current_entity[mongo_projection[field]]]
-                    current_entity[mongo_projection[field]] = ', '.join(canonized_values)
 
         yield dw.writerow(current_entity)
 
@@ -1101,8 +1125,14 @@ def flatten_fields(schema, name='', exclude=[], branched=False):
                 return []
             return [{**schema, 'name': name}]
 
-        return [{**schema, 'name': name, 'items': flatten_fields(schema['items'], '', exclude)}] + flatten_fields(
-            _merge_title(schema['items'], schema.get('title')), name, exclude, True)
+        return [{
+            **schema,
+            'name': name,
+            'items': {
+                'type': 'array',
+                'items': flatten_fields(schema['items'], '', exclude)
+            }
+        }, *flatten_fields(_merge_title(schema['items'], schema.get('title')), name, exclude, True)]
 
     if not schema.get('title'):
         return []

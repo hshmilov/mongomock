@@ -38,7 +38,6 @@
           v-model="ldapData.credentials"
           :schema="ldapSchema"
           :error="prettyUserError"
-          @input="initError"
           @validate="onValidateLDAP"
           @submit="onLdapLogin"
         />

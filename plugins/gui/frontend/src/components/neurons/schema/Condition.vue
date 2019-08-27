@@ -2,15 +2,15 @@
   <div class="x-condition">
     <x-select-typed-field
       :id="first? 'query_field': undefined"
-      v-model="condition.field"
+      :value="field"
       :filtered-adapters="condition.filteredAdapters"
       :options="schema"
-      @input="onChangeConditionFieldType"
+      @input="onChangeFieldType"
     />
     <x-select
       v-if="!isParent && opsList.length"
       :id="first? 'query_op': undefined"
-      v-model="condition.compOp"
+      v-model="compOp"
       :options="opsList"
       placeholder="func..."
       class="expression-comp"
@@ -19,7 +19,7 @@
       :is="valueSchema.type"
       v-if="showValue"
       :id="first? 'query_value': undefined"
-      v-model="condition.value"
+      v-model="value"
       :schema="valueSchema"
       class="expression-value"
       :class="{'grid-span2': !opsList.length}"
@@ -48,12 +48,16 @@
     components: {
       xSelect, xSelectTypedField, string, number, integer, bool, array
     },
+    model: {
+      prop: 'condition',
+      event: 'input'
+    },
     props: {
       module: {
         type: String,
         required: true
       },
-      value: {
+      condition: {
         type: Object,
         default: undefined
       },
@@ -72,7 +76,6 @@
     },
     data () {
       return {
-        condition: { ...this.value },
         processedValue: ''
       }
     },
@@ -85,15 +88,44 @@
       ...mapGetters({
         getDataFieldsByPlugin: GET_DATA_FIELDS_BY_PLUGIN, getDataSchemaByName: GET_DATA_SCHEMA_BY_NAME
       }),
-      conditionField () {
+      field () {
         return this.condition.field
+      },
+      compOp: {
+        get () {
+          return this.condition.compOp
+        },
+        set (compOp) {
+          this.updateCondition({ compOp })
+        }
+      },
+      value: {
+        get () {
+          return this.condition.value
+        },
+        set (value) {
+          this.updateCondition({ value })
+        }
+      },
+      error () {
+        if (!this.field) {
+          return ''
+        }
+        if (this.opsList.length && (!this.compOp || !this.opsMap[this.compOp])) {
+          return 'Comparison operator is needed to add expression to the filter'
+        } else if (this.showValue && (typeof this.value !== 'number' || isNaN(this.value))
+                && (!this.value || !this.value.length)) {
+          return 'A value to compare is needed to add expression to the filter'
+        }
+        return ''
       },
       schema () {
         if (this.isParent) {
           return this.schemaObject
         }
         if (this.parentField) {
-          return this.schemaByName[this.parentField].items
+          const parentSchema = this.schemaByName[this.parentField]
+          return Array.isArray(parentSchema.items)? parentSchema.items : parentSchema.items.items
         }
         return this.schemaFlat
       },
@@ -121,22 +153,22 @@
         }, this.getDataSchemaByName(this.module))
       },
       fieldSchema () {
-        if (!this.condition.field) return {}
+        if (!this.field) return {}
         if (this.parentField) {
-          return this.schemaByName[`${this.parentField}.${this.condition.field}`]
+          return this.schemaByName[`${this.parentField}.${this.field}`]
         }
-        if (this.condition.field === 'saved_query') {
+        if (this.field === 'saved_query') {
           return this.schemaFlat[0].fields[0]
         }
-        return this.schemaByName[this.condition.field]
+        return this.schemaByName[this.field]
       },
       valueSchema () {
         if (this.fieldSchema && this.fieldSchema.type === 'array'
-          && ['contains', 'equals', 'subnet', 'notInSubnet'].includes(this.condition.compOp)) {
+          && ['contains', 'equals', 'subnet', 'notInSubnet'].includes(this.compOp)) {
           return this.fieldSchema.items
         }
         if (this.fieldSchema && this.fieldSchema.format && this.fieldSchema.format === 'date-time'
-          && ['days'].includes(this.condition.compOp)) {
+          && ['days'].includes(this.compOp)) {
           return { type: 'integer' }
         }
         return this.fieldSchema
@@ -182,58 +214,36 @@
         })
       },
       showValue () {
-        return this.checkShowValue(this.condition.compOp)
+        return this.checkShowValue(this.compOp)
       }
     },
     watch: {
-      isParent () {
-        this.condition.field = ''
-        this.condition.compOp = ''
-        this.condition.value = null
-        this.$emit('error', '')
-      },
-      value (newValue) {
-        if (newValue.field !== this.condition.field ||
-           newValue.value !== this.condition.value) {
-              this.condition = { ...newValue }
-        }
-      },
-      conditionField () {
-        if (this.condition.field.includes('.id')) {
-          this.condition.compOp = 'exists'
+      field () {
+        if (this.field.endsWith('.id')) {
+          this.compOp = 'exists'
         }
       },
       valueSchema (newSchema, oldSchema) {
         if (!newSchema || !oldSchema || this.isParent) return
         if (!oldSchema.type && !oldSchema.format) return
         if (newSchema.type !== oldSchema.type || newSchema.format !== oldSchema.format) {
-          this.condition.value = null
+          this.value = null
         }
       }
     },
-    updated () {
-      this.compileCondition()
-    },
-    created () {
-      if (this.condition.field) {
+    mounted () {
+      if (this.field) {
         this.compileCondition()
       }
     },
     methods: {
+      updateCondition (update) {
+        this.$emit('input', { ...this.condition, ...update })
+        this.$nextTick(this.compileCondition)
+      },
       checkShowValue (op) {
         return this.fieldSchema && (this.fieldSchema.format === 'predefined' ||
           (op && this.opsList.length && this.opsMap[op] && this.opsMap[op].includes('{val}')))
-      },
-      checkErrors () {
-        if (this.opsList.length && (!this.condition.compOp || !this.opsMap[this.condition.compOp])) {
-          this.condition.compOp = ''
-          return 'Comparison operator is needed to add expression to the filter'
-        } else if (this.showValue && (typeof this.condition.value !== 'number' || isNaN(this.condition.value))
-          && (!this.condition.value || !this.condition.value.length)) {
-          return 'A value to compare is needed to add expression to the filter'
-        } else {
-          return ''
-        }
       },
       extendVersionField (val) {
         let extended = ''
@@ -286,7 +296,7 @@
         return []
       },
       formatNotInSubnet () {
-        let subnets = this.condition.value.split(',')
+        let subnets = this.value.split(',')
         let rawIpsArray = []
         let result = [[0, 0xffffffff]]
         for (var i = 0; i < subnets.length; i++) {
@@ -309,13 +319,13 @@
           result.push(new1)
           result.push(new2)
         })
-        result = result.map(range => {return `${this.condition.field}_raw == match({"$gte": ${range[0]}, "$lte": ${range[1]}})`}).join(' or ')
+        result = result.map(range => {return `${this.field}_raw == match({"$gte": ${range[0]}, "$lte": ${range[1]}})`}).join(' or ')
         result = `(${result})`
         this.processedValue = result
         return ''
       },
       formatInSubnet () {
-        let subnet = this.condition.value
+        let subnet = this.value
         let rawIps = this.convertSubnetToRaw(subnet)
 
         if (rawIps.length == 0) {
@@ -325,7 +335,7 @@
         return ''
       },
       formatVersion () {
-        let version = this.condition.value
+        let version = this.value
         let rawVersion =  this.convertVersionToRaw(version)
         if (rawVersion.length == 0) {
           return 'Invalid version format, must be <optional>:<period>.<separated>.<numbers>'
@@ -336,21 +346,21 @@
       formatCondition () {
         this.processedValue = ''
         if (this.fieldSchema.format && this.fieldSchema.format === 'ip') {
-          if (this.condition.compOp === 'subnet') {
+          if (this.compOp === 'subnet') {
             return this.formatInSubnet()
           }
-          if (this.condition.compOp === 'notInSubnet') {
+          if (this.compOp === 'notInSubnet') {
             return this.formatNotInSubnet()
           }
         }
         if (this.fieldSchema.format && this.fieldSchema.format === 'version') {
-          if (this.condition.compOp === 'earlier than' || this.condition.compOp === 'later than') {
+          if (this.compOp === 'earlier than' || this.compOp === 'later than') {
             return this.formatVersion()
           }
         }
-        if (this.fieldSchema.enum && this.fieldSchema.enum.length && this.condition.value) {
+        if (this.fieldSchema.enum && this.fieldSchema.enum.length && this.value) {
           let exists = this.fieldSchema.enum.filter((item) => {
-            return (item.name) ? (item.name === this.condition.value) : item === this.condition.value
+            return (item.name) ? (item.name === this.value) : item === this.value
           })
           if (!exists || !exists.length) return 'Specify a valid value for enum field'
         }
@@ -364,7 +374,7 @@
               filteredAdapters = this.condition.filteredAdapters.selectedValues ?
                   Object.keys(this.condition.filteredAdapters.selectedValues).filter(key => this.condition.filteredAdapters.selectedValues[key]) : null;
           }
-          if(this.condition.field.indexOf('specific_data.data') === -1 ||
+          if(this.field.indexOf('specific_data.data') === -1 ||
               !filteredAdapters ||
               filteredAdapters.length === 0) {
               cond = this.getConditionExpression('', cond);
@@ -375,19 +385,19 @@
           return cond;
         },
         getConditionExpression(adapter, cond) {
-          if (this.opsMap[this.condition.compOp]) {
-                let field = this.condition.field;
+          if (this.opsMap[this.compOp]) {
+                let field = this.field
                 if(adapter) {
                     field = field.replace('specific_data.data.', 'adapters_data.' + adapter + '.')
                 }
-                cond = this.opsMap[this.condition.compOp].replace(/{field}/g, field)
+                cond = this.opsMap[this.compOp].replace(/{field}/g, field)
             } else if (this.opsList.length) {
-                this.condition.compOp = ''
-                this.condition.value = ''
+                this.compOp = ''
+                this.value = ''
                 return ''
             }
 
-            let val = this.processedValue ? this.processedValue : this.condition.value
+            let val = this.processedValue ? this.processedValue : this.value
             let iVal = Array.isArray(val) ? -1 : undefined
             return cond.replace(/{val}/g, () => {
               if (iVal === undefined) return val
@@ -396,22 +406,19 @@
             })
         },
       compileCondition () {
-        this.$emit('input', this.condition)
-        if (!this.condition.field) return
-        if(this.isParent){
-            this.$emit('change')
+        if (!this.field) return
+        if (this.isParent) {
             return
         }
-        let error = this.checkErrors() || this.formatCondition()
+        let error = this.error || this.formatCondition()
         this.$emit('error', error)
         if (error) {
           return
         }
         this.$emit('change', this.composeCondition())
       },
-      onChangeConditionFieldType(value, fieldType, secondaryValues){
-          this.condition.fieldType = fieldType;
-          this.condition.filteredAdapters = secondaryValues;
+      onChangeFieldType(field, fieldType, filteredAdapters){
+        this.updateCondition({ field, fieldType, filteredAdapters })
       },
       addFilteredOption(schema){
           if(schema && schema.length > 0 && schema[0].name === 'axonius'){

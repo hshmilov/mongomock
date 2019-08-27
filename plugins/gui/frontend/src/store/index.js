@@ -40,6 +40,7 @@ import {
   UPDATE_DATA_COUNT, updateDataCount,
   UPDATE_DATA_COUNT_QUICK, updateDataCountQuick,
   UPDATE_DATA_VIEW, updateDataView,
+  UPDATE_DATA_VIEW_FILTER, updateDataViewFilter,
   UPDATE_DATA_VIEWS, updateDataViews,
   ADD_DATA_VIEW, addDataView,
   CHANGE_DATA_VIEW, changeDataView,
@@ -62,7 +63,6 @@ import {
 import {
   GET_DATA_FIELDS_BY_PLUGIN, getDataFieldsByPlugin,
   GET_DATA_SCHEMA_BY_NAME, getDataSchemaByName,
-  GET_DATA_FIELD_LIST_SPREAD, getDataFieldListSpread,
   SINGLE_ADAPTER, singleAdapter,
   AUTO_QUERY, autoQuery,
   IS_EXPIRED, isExpired
@@ -101,7 +101,6 @@ export default new Vuex.Store({
   getters: {
     [GET_DATA_FIELDS_BY_PLUGIN]: getDataFieldsByPlugin,
     [GET_DATA_SCHEMA_BY_NAME]: getDataSchemaByName,
-    [GET_DATA_FIELD_LIST_SPREAD]: getDataFieldListSpread,
     [SINGLE_ADAPTER]: singleAdapter,
     [AUTO_QUERY]: autoQuery,
     [IS_EXPIRED]: isExpired
@@ -116,6 +115,7 @@ export default new Vuex.Store({
     [UPDATE_DATA_COUNT]: updateDataCount,
     [UPDATE_DATA_COUNT_QUICK]: updateDataCountQuick,
     [UPDATE_DATA_VIEW]: updateDataView,
+    [UPDATE_DATA_VIEW_FILTER]: updateDataViewFilter,
     [UPDATE_DATA_VIEWS]: updateDataViews,
     [ADD_DATA_VIEW]: addDataView,
     [CHANGE_DATA_VIEW]: changeDataView,

@@ -10,6 +10,7 @@
       @keyup.enter.native="onSearchConfirm"
     />
     <x-table
+      ref="table"
       v-model="isReadOnly? undefined: selection"
       module="enforcements"
       title="Enforcement Sets"
@@ -64,6 +65,9 @@
         tourEnforcements (state) {
           return state.onboarding.tourStates.queues.enforcements
         },
+        query (state) {
+          return state.enforcements.view.query
+        },
         isReadOnly (state) {
           let user = state.auth.currentUser.data
           if (!user || !user.permissions) return true
@@ -103,9 +107,14 @@
       if (this.tourEnforcements && this.tourEnforcements.length) {
         this.changeState({ name: this.tourEnforcements[0] })
       }
+      if (this.query) {
+        this.searchValue = this.query.search
+      }
     },
     methods: {
-      ...mapMutations({ updateView: UPDATE_DATA_VIEW, changeState: CHANGE_TOUR_STATE }),
+      ...mapMutations({
+        updateView: UPDATE_DATA_VIEW, changeState: CHANGE_TOUR_STATE
+      }),
       ...mapActions({
         removeEnforcements: REMOVE_ENFORCEMENTS, fetchEnforcement: FETCH_ENFORCEMENT
       }),
@@ -133,11 +142,13 @@
           module: this.name,
           view: {
             query: {
-              filter: this.searchFilter
+              filter: this.searchFilter,
+              search: this.searchValue
             },
             page: 0
           }
         })
+        this.$refs.table.fetchContentPages(true)
       }
     }
   }

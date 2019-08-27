@@ -3,6 +3,7 @@
     :is="schema.type"
     :schema="schema"
     :value="value"
+    :filter="filter"
   />
 </template>
 
@@ -35,6 +36,10 @@
             field: '', desc: true
           }
         }
+      },
+      filter: {
+        type: String,
+        default: ''
       }
     },
     computed: {

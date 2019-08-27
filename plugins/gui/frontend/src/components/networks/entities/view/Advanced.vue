@@ -212,8 +212,9 @@
       },
       fields () {
         return this.schema.items
-        .filter(item => !Array.isArray(item['items']) && this.mergedData.find(currentData => !this.isEmpty(currentData[item.name])))
-          .map(item => {
+        .filter(item => {
+          return this.isSimpleList(item) && this.hasAnyValue(item.name)
+        }).map(item => {
             return { ...item, path: [this.module, 'aggregator', 'data', this.schema.name] }
           })
       }
@@ -238,8 +239,14 @@
         fetchDataCSV: FETCH_DATA_CONTENT_CSV
       }),
       isEmpty(value) {
-              return value === undefined || value === null || value === ''
-            },
+        return value === undefined || value === null || value === ''
+      },
+      hasAnyValue(name) {
+        return this.mergedData.find(currentData => !this.isEmpty(currentData[name]))
+      },
+      isSimpleList(schema) {
+        return (schema.type !== 'array' || schema.items['type'] !== 'array')
+      },
       isSubset (subset, superset) {
         for (let [key, value] of Object.entries(subset)) {
           if (value && !superset[key]) return false

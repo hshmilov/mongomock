@@ -140,12 +140,12 @@ if (ENV.medical) {
             name: 'EnforcementTaskById'
         },
         {
-            path: '/enforcements/tasks',
+            path: '/tasks',
             name: 'Tasks',
             component: Tasks
         },
         {
-            path: '/enforcements/tasks/:taskId',
+            path: '/tasks/:taskId',
             component: Task,
             name: 'Task'
         },

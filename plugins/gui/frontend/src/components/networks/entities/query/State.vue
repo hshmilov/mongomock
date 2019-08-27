@@ -139,6 +139,7 @@
               historical: this.allowedDates[newDate]
             }
           })
+          this.$emit('done')
         }
       },
       title () {
@@ -155,7 +156,8 @@
         return ((this.selectedView.view.query.filter !== this.view.query.filter)
                 || !this.arraysEqual(this.view.fields, this.selectedView.view.fields)
                 || this.view.sort.field !== this.selectedView.view.sort.field
-                || this.view.sort.desc !== this.selectedView.view.sort.desc)
+                || this.view.sort.desc !== this.selectedView.view.sort.desc
+                || !this.objsEqual(this.view.colFilters, this.selectedView.view.colFilters))
       },
       status () {
         if (this.enforcement) return ''
@@ -179,13 +181,15 @@
             sort: {
               field: '', desc: true
             },
-            fields: defaultFields[this.module]
+            fields: defaultFields[this.module],
+            colFilters: {}
           },
           uuid: null
         })
+        this.$emit('done')
       },
       navigateFilteredTask() {
-        this.$router.push({path: `/enforcements/tasks/${this.enforcement.id}`})
+        this.$router.push({path: `/tasks/${this.enforcement.id}`})
       },
       openSaveView () {
         this.viewNameModal.isActive = true
@@ -215,9 +219,17 @@
           module: this.module,
           view: { ...this.selectedView.view }
         })
+        this.$emit('done')
       },
       arraysEqual (arrA, arrB) {
         return !arrA.filter(x => !arrB.includes(x)).length && !arrB.filter(x => !arrA.includes(x)).length
+      },
+      objsEqual (objA, objB) {
+        if (!objA || !objB) {
+          return true
+        }
+        return this.arraysEqual(Object.keys(objA), Object.keys(objB))
+                && this.arraysEqual(Object.values(objA), Object.values(objB))
       }
     }
   }

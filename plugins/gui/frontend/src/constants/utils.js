@@ -12,3 +12,11 @@ export const formatDate = (dateString, schema) => {
     }
     return dateParts.join(' ')
 }
+
+export const includesIgnoreCase = (str, substring) => {
+    return str && str.toLowerCase().includes(substring)
+}
+
+export const calcMaxIndex = (list) => {
+    return list.length > 0 ? Math.max(...list.map(item => item.i)) + 1 : 0
+}

@@ -4,6 +4,7 @@
       :module="module"
       :valid="queryValid"
       :read-only="readOnly"
+      @done="$emit('done')"
       @tour="tour"
     />
     <div class="filter">
@@ -13,7 +14,7 @@
         :valid="filterValid"
         :query-search="query.search"
         @activated="tour('querySelect')"
-        @validate="filterValid = true"
+        @validate="onValid"
       />
       <x-button
         link
@@ -22,8 +23,8 @@
       <x-query-wizard
         v-model="queryFilter"
         :module="module"
-        @activated="tour('queryField')"
-        @error="filterValid = false"
+        @activated="() => tour('queryField')"
+        @error="onError"
       />
     </div>
   </div>
@@ -81,6 +82,7 @@
           return this.query.filter
         },
         set (filter) {
+          let prevFilter = this.query.filter
           if (this.enforcementFilter) {
             filter = `${this.enforcementFilter} ${filter}`
           }
@@ -93,6 +95,9 @@
             },
           })
           this.filterValid = true
+          if (prevFilter !== filter) {
+            this.$emit('done')
+          }
         }
       },
       queryValid () {
@@ -108,6 +113,13 @@
       },
       navigateSavedQueries () {
         this.$router.push({ path: `/${this.module}/query/saved` })
+      },
+      onValid () {
+        this.filterValid = true
+        this.$emit('done')
+      },
+      onError () {
+        this.filterValid = false
       }
     }
   }

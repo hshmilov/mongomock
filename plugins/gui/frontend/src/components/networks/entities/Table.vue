@@ -3,6 +3,7 @@
     <x-query
       :module="module"
       :read-only="isReadOnly"
+      @done="updateEntities"
     />
     <x-table
       ref="table"
@@ -23,7 +24,10 @@
           @done="updateEntities"
         />
         <!-- Modal for selecting fields to be presented in table, including adapters hierarchy -->
-        <x-field-config :module="module" />
+        <x-field-config
+          :module="module"
+          @done="updateEntities"
+        />
 
         <x-button
           v-if="!exporting"

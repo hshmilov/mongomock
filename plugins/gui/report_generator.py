@@ -687,6 +687,7 @@ class ReportGenerator:
                     view = view_doc.get('view')
                     if view:
                         filter_query = view.get('query', {}).get('filter', '')
+                        field_filters = view.get('colFilters', {})
                         log_metric(logger, 'query.report', filter_query)
                         count = self.report_params['saved_view_count_func'](
                             entity, parse_filter(filter_query), None, False)
@@ -701,7 +702,8 @@ class ReportGenerator:
                                                                   sort=gui_helpers.get_sort(view),
                                                                   projection=projection,
                                                                   entity_type=entity,
-                                                                  default_sort=self.report_params['default_sort'])),
+                                                                  default_sort=self.report_params['default_sort'],
+                                                                  field_filters=field_filters)),
                             'count': count,
                             'csv':
                                 get_csv_file_from_heavy_lifting_plugin(self.output_path,
@@ -711,7 +713,8 @@ class ReportGenerator:
                                                                        projection,
                                                                        None,
                                                                        entity,
-                                                                       self.report_params['default_sort'])
+                                                                       self.report_params['default_sort'],
+                                                                       field_filters)
                                 if attach_views_csvs else None
                         })
                 except Exception:

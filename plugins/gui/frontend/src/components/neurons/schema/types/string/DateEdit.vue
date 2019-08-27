@@ -114,8 +114,8 @@
             margin-bottom: 0;
         }
         .x-button.link {
-            margin-left: -32px;
-            margin-bottom: -4px;
+            margin-left: -16px;
+            margin-bottom: 0;
             z-index: 100;
         }
     }

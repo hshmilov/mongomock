@@ -22,3 +22,16 @@ class AxoniusDict(Mapping):
         if isinstance(default, dict):
             default = AxoniusDict(default)
         return self._storage.get(key, default) or default
+
+
+def is_filter_in_value(value, str_filter):
+    """
+    Check recursively if any string value inside given item, has the current field's filter
+    """
+    if isinstance(value, str):
+        return str_filter in value.lower()
+    if isinstance(value, list):
+        return any(is_filter_in_value(item, str_filter) for item in value)
+    if isinstance(value, dict):
+        return any(is_filter_in_value(item, str_filter) for key, item in value.items())
+    return True

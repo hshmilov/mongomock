@@ -30,8 +30,7 @@ export const reports = {
                     name: 'period', title: 'Scheduled Email', type: 'string'
                 }, {
                     name: 'mailSubject', title: 'Email Subject', type: 'string'
-                }
-                ]
+                }]
             }
         },
         /* Data of Report currently being configured */

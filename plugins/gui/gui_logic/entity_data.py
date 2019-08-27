@@ -7,7 +7,7 @@ from flask import request, session, jsonify
 
 from axonius.plugin_base import EntityType, return_error, PluginBase
 from axonius.utils.gui_helpers import (get_historized_filter, parse_entity_fields, merge_entities_fields,
-                                       flatten_fields, get_generic_fields)
+                                       flatten_fields, get_generic_fields, get_csv_canonized_value)
 from axonius.utils.axonius_query_language import (convert_db_entity_to_view_entity, convert_db_projection_to_view)
 from axonius.consts.plugin_consts import NOTES_DATA_TAG
 from axonius.consts.gui_consts import PREDEFINED_ROLE_ADMIN
@@ -109,7 +109,7 @@ def get_entity_data(entity_type: EntityType, entity_id, history_date: datetime =
 
 
 def entity_data_field_csv(entity_type: EntityType, entity_id, field_name, mongo_sort=None,
-                          history_date: datetime = None):
+                          history_date: datetime = None, field_filters: dict = None):
     """
     Generate a csv file from the data of given field, with fields' pretty titles as coloumn headers
 
@@ -162,16 +162,9 @@ def entity_data_field_csv(entity_type: EntityType, entity_id, field_name, mongo_
         for field in field_by_name.keys():
             # Replace field paths with their pretty titles
             if field in data:
-                field_title = field_by_name[field]['title']
-                data[field_title] = data[field]
+                field_filter = field_filters.get(field, '') if field_filters else ''
+                data[field_by_name[field]['title']] = get_csv_canonized_value(data[field], field_filter)
                 del data[field]
-                if isinstance(data[field_title], list):
-                    # Make list value text-readable
-                    canonized_values = [val.strftime('%Y-%m-%d %H:%M:%S')
-                                        if isinstance(val, datetime)
-                                        else str(val)
-                                        for val in data[field_title]]
-                    data[field_title] = ', '.join(canonized_values)
 
     dw = csv.DictWriter(string_output, [field['title'] for field in field_by_name.values()])
     dw.writeheader()

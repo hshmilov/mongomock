@@ -26,9 +26,9 @@ export const getDataFieldsByPlugin = (state) => (module, objectView) => {
 }
 
 const selectFields = (schema, objectView) => {
-    return objectView ?
-        schema.filter(field => field.items && Array.isArray(field.items)) :
-        schema.filter(field => !field.items || !Array.isArray(field.items))
+    return objectView
+      ? schema.filter(field => field.items && !Array.isArray(field.items) && field.items.type === 'array')
+      : schema
 }
 
 export const GET_DATA_SCHEMA_BY_NAME = 'GET_DATA_SCHEMA_BY_NAME'
@@ -37,32 +37,16 @@ export const getDataSchemaByName = (state) => (module) => {
     if (!fields.generic || !fields.generic.length) return []
 
     let allFieldsList = [...fields.generic]
-    allFieldsList = Object.values(fields.specific).reduce((aggregatedList, currentList) => {
-        return aggregatedList.concat(currentList)
-    }, allFieldsList)
+    if (fields.specific) {
+        allFieldsList = Object.values(fields.specific).reduce((aggregatedList, currentList) => {
+            return aggregatedList.concat(currentList)
+        }, allFieldsList)
+    }
 
     return allFieldsList.reduce((map, schema) => {
         map[schema.name] = schema
         return map
     }, {})
-}
-
-export const GET_DATA_FIELD_LIST_SPREAD = 'GET_DATA_FIELD_LIST_SPREAD'
-export const getDataFieldListSpread = (state) => (module) => {
-    if (!state[module] || !state[module].fields || !state[module].fields.data) return []
-    let fields = state[module].fields.data
-    if (!fields.generic || !state[module].fields.data.generic.length) return []
-
-    return fields.generic.filter((field) => {
-        return !(field.type === 'array' && (Array.isArray(field.items) || field.items.type === 'array'))
-    }).concat(Object.keys(fields.specific || []).reduce((list, name) => {
-        if (!fields.specific[name]) return list
-        list = [...list, ...fields.specific[name].map((field) => {
-            if (singleAdapter(state)) return field
-            return {...field, logo: name}
-        })]
-        return list
-    }, []))
 }
 
 export const SINGLE_ADAPTER = 'SINGLE_ADAPTER'

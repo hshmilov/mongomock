@@ -29,6 +29,7 @@
   import xExpression from './Expression.vue'
   import xButton from '../../axons/inputs/Button.vue'
   import { expression, nestedExpression } from '../../../constants/filter'
+  import { calcMaxIndex } from '../../../constants/utils'
 
   export default {
     name: 'XFilter',
@@ -45,7 +46,6 @@
     },
     data () {
       return {
-        expressions: [],
         filters: [],
         bracketWeights: [],
         error: '',
@@ -53,31 +53,22 @@
       }
     },
     computed: {
+      expressions: {
+        get () {
+          return this.value
+        },
+        set (expressions) {
+          this.$emit('input', expressions)
+        }
+      },
       isFilterEmpty () {
         return !this.expressions.length || (this.expressions.length === 1 && !this.expressions[0].field)
       },
       calculateI () {
-        return this.expressions.length > 0 ? ( (Math.max(
-          ...this.expressions.map(
-            expr => expr.i
-          ))) + 1) : 0
-      }
-    },
-    watch: {
-      value (newValue) {
-        if (!newValue) return
-        this.expressions = [...newValue]
-        if (this.isFilterEmpty) {
-          this.error = ''
-          this.filters = []
-          this.bracketWeights = []
-        }
+        return calcMaxIndex(this.expressions)
       }
     },
     created () {
-      if (this.value && this.value.length) {
-        this.expressions = [...this.value]
-      }
       if (!this.expressions.length) {
         this.addExpression()
       }
@@ -117,16 +108,14 @@
         }
         this.rebuild = false
         // In ongoing update state - propagating the filter and expression values
-        this.$emit('input', this.expressions)
         this.$emit('change', this.filters.join(' '))
       },
       addExpression () {
-        this.expressions.push({
+        this.expressions = [ ...this.expressions, {
           ...expression,
           i: this.calculateI,
           nested: [{ ...nestedExpression, i: 0 }]
-        })
-        this.$emit('input', this.expressions)
+        }]
       },
       removeExpression (index) {
         if (index >= this.expressions.length) return
@@ -142,7 +131,6 @@
           // Not ready for publishing yet, since first expression should not have a logical operation
           return
         }
-        this.$emit('input', this.expressions)
         this.$emit('change', this.filters.join(' '))
       },
       validateBrackets () {
@@ -155,7 +143,7 @@
         return true
       },
       compile () {
-        this.$refs.expression.forEach((expression) => expression.compileExpression())
+        this.$refs.expression.forEach((expression) => expression.compileExpression(true))
       }
     }
   }

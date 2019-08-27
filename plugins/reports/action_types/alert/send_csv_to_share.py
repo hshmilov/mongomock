@@ -62,15 +62,18 @@ class SendCsvToShare(ActionTypeAlert):
                 parsed_query_filter = parse_filter(query['view']['query']['filter'])
                 field_list = query['view'].get('fields', [])
                 sort = gui_helpers.get_sort(query['view'])
+                field_filters = query['view'].get('colFilters', {})
             else:
                 parsed_query_filter = self._create_query(self._internal_axon_ids)
                 field_list = ['specific_data.data.name', 'specific_data.data.hostname',
                               'specific_data.data.os.type', 'specific_data.data.last_used_users']
                 sort = {}
+                field_filters = {}
             csv_string = gui_helpers.get_csv(parsed_query_filter,
                                              sort,
                                              {field: 1 for field in field_list},
-                                             self._entity_type)
+                                             self._entity_type,
+                                             field_filters=field_filters)
 
             csv_data = io.BytesIO(csv_string.getvalue().encode('utf-8'))
             share_username = self._config.get('csv_share_username')

@@ -107,7 +107,6 @@
           view: selectedView.view,
           uuid: selectedView.uuid
         })
-
         this.$router.push({ path: `/${this.module}` })
       },
       createEnforcement () {

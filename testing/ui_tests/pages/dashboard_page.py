@@ -1,7 +1,7 @@
 import time
 import datetime
 
-from selenium.common.exceptions import NoSuchElementException, ElementClickInterceptedException
+from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.common.action_chains import ActionChains
 
 from ui_tests.pages.page import Page, TAB_BODY
@@ -20,10 +20,10 @@ class DashboardPage(Page):
     QUERY_SEARCH_INPUT_CSS = 'div:nth-child(1) > div > div > input'
     UNCOVERED_PIE_SLICE_CSS = 'svg > g.slice-0 > text.scaling'
     COVERED_PIE_SLICE_CSS = 'svg > g.slice-1 > text.scaling'
-    INTERSECTION_PIE_INTERSECTION_SLICE_CSS = 'svg > g:nth-child(4) > text'
-    SYMMETRIC_DIFFERENCE_FROM_BASE_QUERY_SLICE_CSS = 'svg > g:nth-child(2)'
-    SYMMETRIC_DIFFERENCE_FROM_FIRST_QUERY_SLICE_CSS = 'svg > g:nth-child(3)'
-    SYMMETRIC_DIFFERENCE_FROM_SECOND_QUERY_SLICE_CSS = 'svg > g:nth-child(1)'
+    INTERSECTION_PIE_INTERSECTION_SLICE_CSS = 'svg > g.slice-2 > text'
+    SYMMETRIC_DIFFERENCE_FROM_BASE_QUERY_SLICE_CSS = 'svg > g.slice-0 > text'
+    SYMMETRIC_DIFFERENCE_FROM_FIRST_QUERY_SLICE_CSS = 'svg > g.slice-1 > text'
+    SYMMETRIC_DIFFERENCE_FROM_SECOND_QUERY_SLICE_CSS = 'svg > g.slice-3 > text'
     NEW_CARD_WIZARD_CSS = '.x-tab.active .x-card.chart-new'
     CHART_METRIC_DROP_DOWN_CSS = '#metric > div'
     INTERSECTION_CHART_FIRST_QUERY_DROP_DOWN_CSS = '#intersectingFirst > div'
@@ -255,16 +255,13 @@ class DashboardPage(Page):
         self.click_pie_slice(self.SYMMETRIC_DIFFERENCE_FROM_BASE_QUERY_SLICE_CSS, card_title)
 
     def click_symmetric_difference_first_query_pie_slice(self, card_title):
-        wait_until(lambda: self.click_pie_slice(self.SYMMETRIC_DIFFERENCE_FROM_FIRST_QUERY_SLICE_CSS, card_title),
-                   check_return_value=False,
-                   tolerated_exceptions_list=[ElementClickInterceptedException],
-                   total_timeout=60 * 5)
+        self.click_pie_slice(self.SYMMETRIC_DIFFERENCE_FROM_FIRST_QUERY_SLICE_CSS, card_title)
 
     def click_pie_slice(self, slice_css, card_title):
         card = self.wait_for_element_present_by_xpath(self.PANEL_BY_NAME_XPATH.format(panel_name=card_title))
+        time.sleep(2)
         card_slice = self.get_pie_chart_from_card(card).find_element_by_css_selector(slice_css)
         self.scroll_into_view(card_slice, window=TAB_BODY)
-        time.sleep(10)
         card_slice.click()
 
     @staticmethod

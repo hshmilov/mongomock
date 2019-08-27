@@ -84,9 +84,8 @@
         overflow: hidden;
 
         .md-datepicker {
-            margin-bottom: 0;
-            margin-top: -20px;
-            margin-right: 8px;
+            margin: -20px 0 0 0;
+            min-height: auto;
 
             .md-input {
                 max-width: 160px;

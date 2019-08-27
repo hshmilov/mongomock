@@ -161,6 +161,9 @@ const createPostContentRequest = (state, payload) => {
 	if (view.historical) {
 		params['history'] = view.historical
 	}
+	if (view.colFilters) {
+		params['field_filters'] = view.colFilters
+	}
 	// TODO: Not passing expressions because it might reach max URL size
 	// if (view.query.expressions) {
 	// 	params.push(`expressions=${encodeURI(JSON.stringify(view.query.expressions))}`)
@@ -178,8 +181,9 @@ const createPostContentRequest = (state, payload) => {
 
 const createContentRequest = (state, payload) => {
     let params = createPostContentRequest(state, payload)
-    let queryString = Object.keys(params).map(key => key + '=' + encodeURIComponent(params[key])).join('&')
-    return queryString
+    return Object.keys(params)
+			.filter(key => ['string','number'].includes(typeof params[key]))
+			.map(key => key + '=' + encodeURIComponent(params[key])).join('&')
 }
 
 export const FETCH_DATA_CONTENT = 'FETCH_DATA_CONTENT'
@@ -221,7 +225,9 @@ export const fetchDataContent = ({state, dispatch}, payload) => {
 export const FETCH_DATA_CONTENT_CSV = 'FETCH_DATA_CONTENT_CSV'
 export const fetchDataContentCSV = ({state, dispatch}, payload) => {
 	return dispatch(REQUEST_API, {
-		rule: `${payload.endpoint || payload.module}/csv?${createContentRequest(state, payload)}`
+		rule: `${payload.endpoint || payload.module}/csv`,
+		method: 'POST',
+		data: createPostContentRequest(state, payload)
 	}).then((response) => {
         downloadFile('csv', response)
 	})
@@ -276,36 +282,34 @@ export const saveDataView = ({state, dispatch, commit}, payload) => {
 
 export const SAVE_VIEW = 'SAVE_VIEW'
 export const saveView = ({dispatch, commit}, payload) => {
+	let data = {
+		name: payload.name, view: {
+			query: payload.view.query,
+			fields: payload.view.fields,
+			sort: payload.view.sort,
+			colFilters: payload.view.colFilters
+		}
+	}
+	if (payload.predefined) {
+		data.predefined = true
+	}
 	if (payload.uuid) {
 		return dispatch(REQUEST_API, {
 			rule: `${payload.module}/views/saved/${payload.uuid}`,
-			data: {
-				name: payload.name,
-				view: payload.view
-			},
-			method: 'POST'
+			method: 'POST',
+			data
 		}).then(() => {
 			commit(CHANGE_DATA_VIEW, payload)
 		})
 	}
-	let viewObj = {
-		name: payload.name, view: {
-			query: payload.view.query,
-			fields: payload.view.fields,
-			sort: payload.view.sort
-		}
-	}
-	if (payload.predefined) {
-		viewObj.predefined = true
-	}
 	dispatch(REQUEST_API, {
 		rule: payload.module + '/views/saved',
-		data: viewObj,
-		method: 'POST'
+		method: 'POST',
+		data
 	}).then((response) => {
 		if (response.status === 200) {
 			commit(ADD_DATA_VIEW, {
-				module: payload.module, uuid: response.data, ...viewObj
+				module: payload.module, uuid: response.data, ...data
 			})
 			if (!payload.predefined) {
 				commit(UPDATE_DATA_VIEW, {module: payload.module, uuid: response.data})

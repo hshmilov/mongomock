@@ -50,6 +50,7 @@ export default {
 					schema.required = (this.schema.required === true ||
 						(Array.isArray(this.schema.required) && this.schema.required.includes(schema.name)))
 				}
+				schema.filter = this.schema.filter
 			})
 			return schemaItems
 		},
@@ -78,8 +79,8 @@ export default {
 	},
 	methods: {
 		empty (data) {
-			if (data === undefined || data == null || data === '') { return true }
-			if (typeof data !== 'object') { return false }
+			if (data === undefined || data == null || data === '') return true
+			if (typeof data !== 'object') return false
 			let dataToCheck = Array.isArray(data)? data : Object.values(data)
 			let hasValue = false
 			dataToCheck.forEach((value) => {

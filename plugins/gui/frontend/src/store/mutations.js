@@ -96,12 +96,14 @@ export const updateDataContent = (state, payload) => {
 }
 
 export const UPDATE_DATA_VIEW = 'UPDATE_DATA_VIEW'
-export const updateDataView = (state, payload) => {
+export const updateDataView = (state, payload) => {UPDATE_DATA_VIEW
 	let module = getModule(state, payload)
 	if (!module) return
 	if (payload.view) {
-		if (module.view.query && payload.view.query && module.view.query.filter !== payload.view.query.filter) {
-				module.content.data = []
+		if (module.view.query && payload.view.query && module.view.query.filter !== payload.view.query.filter
+			|| (payload.view.historical !== undefined && module.view.historical !== payload.view.historical)) {
+			module.content.data = []
+			module.count.data_to_show = 0
 		}
 		module.view = { ...module.view, ...payload.view }
 	}
@@ -114,6 +116,15 @@ export const updateDataView = (state, payload) => {
 			...module,
 			selectedView: matchingView? matchingView.uuid : null
 		}
+	}
+}
+
+export const UPDATE_DATA_VIEW_FILTER = 'UPDATE_DATA_VIEW_FILTER'
+export const updateDataViewFilter = (state, payload) => {UPDATE_DATA_VIEW_FILTER
+	let module = getModule(state, payload)
+	if (!module) return
+	if (payload.view) {
+		module.view.colFilters = payload.view.colFilters
 	}
 }
 

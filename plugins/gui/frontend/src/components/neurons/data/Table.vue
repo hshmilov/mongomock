@@ -38,11 +38,13 @@
         :fields="viewFields"
         :page-size="view.pageSize"
         :sort="view.sort"
+        :col-filters="view.colFilters"
         :id-field="idField"
         :expandable="expandable"
         :on-click-row="onClickRow"
         :on-click-col="onClickSort"
         :on-click-all="onClickAll"
+        @filter="updateColFilters"
       >
         <slot
           slot-scope="props"
@@ -101,8 +103,8 @@
   import xTable from '../../axons/tables/Table.vue'
   import xButton from '../../axons/inputs/Button.vue'
 
-  import { GET_DATA_FIELD_LIST_SPREAD } from '../../../store/getters'
-  import { UPDATE_DATA_VIEW } from '../../../store/mutations'
+  import { GET_DATA_SCHEMA_BY_NAME } from '../../../store/getters'
+  import { UPDATE_DATA_VIEW, UPDATE_DATA_VIEW_FILTER } from '../../../store/mutations'
   import { FETCH_DATA_CONTENT } from '../../../store/actions'
   import { mapState, mapGetters, mapMutations, mapActions } from 'vuex'
 
@@ -171,7 +173,7 @@
         }
       }),
       ...mapGetters({
-        getDataFieldsListSpread: GET_DATA_FIELD_LIST_SPREAD
+        getFieldSchemaByName: GET_DATA_SCHEMA_BY_NAME
       }),
       tableTitle () {
         if (this.title) return this.title
@@ -193,12 +195,27 @@
         return this.moduleState.view
       },
       fields () {
-        if (this.staticFields) return this.staticFields
-        return this.getDataFieldsListSpread(this.module)
+        if (this.staticFields) {
+          return this.staticFields.reduce((map, item) => {
+            map[item.name] = item
+            return map
+          }, {})
+        }
+        return this.getFieldSchemaByName(this.module)
       },
       viewFields () {
-        if (!this.view.fields) return this.fields
-        return this.fields.filter((field) => field.name && this.view.fields.includes(field.name))
+        if (!this.view.fields || !Object.keys(this.fields).length) {
+          return this.staticFields || []
+        }
+        return this.view.fields
+                .filter(field => this.fields[field] || this.fields[field] === 0 || this.fields[field] === false)
+                .map(field => {
+                  let fieldDef = this.fields[field]
+                  return {
+                    ...fieldDef,
+                    path: (fieldDef.path ? fieldDef.path : []).concat([fieldDef.name])
+                  }
+                })
       },
       ids () {
         return this.data.map(item => item[this.idField])
@@ -243,9 +260,6 @@
           return this.pageIds.filter(id => this.allSelected? !this.value.ids.includes(id): this.value.ids.includes(id))
         },
         set (selectedList) {
-          // if (!this.allSelected && selectedList.length === this.count.data) {
-          //   this.allSelected = true
-          // }
           let newIds = this.value.ids.filter(id => !this.pageIds.includes(id)).concat(
                   this.allSelected ? this.pageIds.filter(item => !selectedList.includes(item)) : selectedList)
           if (this.allSelected && newIds.length === this.count.data) {
@@ -266,19 +280,6 @@
       }
     },
     watch: {
-      view (newView, oldView) {
-        if (this.staticData) return
-        if (newView.query.filter !== oldView.query.filter
-          || (newView.fields && oldView.fields && newView.fields.length > oldView.fields.length)
-          || newView.sort.field !== oldView.sort.field || newView.sort.desc !== oldView.sort.desc
-          || Math.abs(newView.page - oldView.page) > 3
-          || this.data.length < (newView.page % this.pageLinkNumbers.length) * newView.pageSize
-          || newView.historical !== oldView.historical) {
-
-          this.loading = true
-        }
-        this.fetchContentPages()
-      },
       loading (newLoading) {
         if (newLoading) return
         if (this.data && this.data.length) {
@@ -293,7 +294,7 @@
         }
       }
     },
-    created () {
+    mounted () {
       if (this.staticData) {
         this.loading = false
         return
@@ -310,7 +311,8 @@
     },
     methods: {
       ...mapMutations({
-        updateView: UPDATE_DATA_VIEW
+        updateView: UPDATE_DATA_VIEW,
+        updateViewFilter: UPDATE_DATA_VIEW_FILTER
       }),
       ...mapActions({
         fetchContent: FETCH_DATA_CONTENT
@@ -341,11 +343,17 @@
       onClickSize (size) {
         if (size === this.view.pageSize) return
         this.updateModuleView({ pageSize: size })
+        this.fetchContentPages()
       },
       onClickPage (page) {
-        if (page === this.view.page) return
-        if (page < 0 || page > this.pageCount) return
+        if ((page === this.view.page) || (page < 0 || page > this.pageCount)) {
+          return
+        }
+        if (Math.abs(page - this.view.page) > 3) {
+          this.loading = true
+        }
         this.updateModuleView({ page: page })
+        this.$nextTick(this.fetchContentPages)
       },
       onClickSort (fieldName) {
         let sort = { ...this.view.sort }
@@ -358,6 +366,7 @@
           sort.field = ''
         }
         this.updateModuleView({ sort, page: 0 })
+        this.fetchContentPages(true)
       },
       updateModuleView (view) {
         this.updateView({ module: this.module, view })
@@ -381,6 +390,9 @@
       },
       onClickAll (selected) {
         this.enableSelectAll = selected
+      },
+      updateColFilters(colFilters) {
+        this.updateViewFilter({ module: this.module, view: {colFilters} })
       }
     }
   }

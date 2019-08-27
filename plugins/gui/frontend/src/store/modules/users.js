@@ -13,7 +13,8 @@ export const users = {
             }, sort: {
                 field: '', desc: true
             },
-            historical: null
+            historical: null,
+            colFilters: {}
         },
 
         details: { data: {}, fetching: false, error: '' },

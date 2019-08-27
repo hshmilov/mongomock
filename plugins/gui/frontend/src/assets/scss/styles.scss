@@ -323,36 +323,6 @@ table {
   }
 }
 
-.sortable {
-  .sort {
-    position: relative;
-    display: inline-block;
-    height: 4px;
-    width: 16px;
-    margin-left: 8px;
-    &.up:before {
-      @include triangle('up', $color: $grey-4);
-      top: -2px;
-    }
-    &.down:after {
-      @include triangle('down', $color: $grey-4);
-      top: 4px;
-    }
-  }
-  &:hover {
-    .sort {
-      &.down:before {
-        @include triangle('up', $color: rgba($grey-4, 0.6));
-        top: -2px;
-      }
-      &:not(.down):not(.up):after {
-        @include triangle('down', $color: rgba($grey-4, 0.6));
-        top: 4px;
-      }
-    }
-  }
-}
-
 .x-content {
   padding: 12px 24px;
   .x-section {

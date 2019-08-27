@@ -6,6 +6,7 @@
       @keyup.enter.native="onSearchConfirm"
     />
     <x-table
+      ref="table"
       :module="enforcementDesignated ? 'enforcements/current' : 'tasks'"
       :endpoint="endpointForDesignatedTasks"
       title="Enforcement Tasks"
@@ -18,7 +19,6 @@
 <script>
   import xPage from '../axons/layout/Page.vue'
   import xSearch from '../neurons/inputs/SearchInput.vue'
-  import xSelect from '../axons/inputs/Select.vue'
   import xTable from '../neurons/data/Table.vue'
 
   import { mapMutations, mapActions, mapState } from 'vuex'
@@ -30,7 +30,7 @@
   export default {
     name: 'XTasks',
     components: {
-      xPage, xSearch, xSelect, xTable
+      xPage, xSearch, xTable
     },
     computed: {
       ...mapState({
@@ -68,15 +68,6 @@
           name: 'finished_at', title: 'Completed', type: 'string', format: 'date-time'
         }]
       },
-      statusOptions() {
-        return [{
-          name: '*', title: 'Any'
-        }, {
-          name: 'Successful', title: 'Completed'
-        }, {
-          name: 'Running', title: 'In Progress'
-        }]
-      },
       searchFilter() {
         let textFilter = this.fields.map(field => `${field.name} == regex("${this.searchValue}", "i")`).join(' or ')
         if (this.statusValue === '*') {
@@ -91,7 +82,7 @@
         statusValue: '*'
       }
     },
-    created() {
+    mounted() {
       this.fetchEnforcementIfNotExist()
       this.onSearchConfirm()
     },
@@ -111,7 +102,7 @@
       },
       viewTask (taskId) {
         this.fetchTask(taskId)
-        this.$router.push({ path: `/enforcements/tasks/${taskId}` })
+        this.$router.push({ path: `/tasks/${taskId}` })
       },
       onSearchConfirm() {
         this.updateView({
@@ -123,6 +114,7 @@
             page: 0
           }
         })
+        this.$refs.table.fetchContentPages(true)
       }
     }
   }

@@ -5,10 +5,11 @@
       { title: 'Search' }
     ]"
   >
-    <x-search-insights />
+    <x-search-insights @click="updateEntities" />
     <div class="explorer-results">
       <x-table
         v-for="entity in entities"
+        ref="table"
         :key="entity.name"
         id-field="internal_axon_id"
         :module="entity.name"
@@ -75,6 +76,9 @@
         this.$router.push({
           path: `/${entityType}`
         })
+      },
+      updateEntities () {
+        this.$refs.table.forEach(ref => ref.fetchContentPages(true))
       }
     }
   }

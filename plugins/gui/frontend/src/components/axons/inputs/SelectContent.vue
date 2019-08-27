@@ -16,7 +16,6 @@
     <div class="x-select-options">
       <template v-for="(currentOption, index) in filteredOptions">
         <div
-
           :key="index"
           ref="option"
           class="x-select-option"
