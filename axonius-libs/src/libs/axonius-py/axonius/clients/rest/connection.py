@@ -373,7 +373,7 @@ class RESTConnection(ABC):
         aio_req['headers'].update(self._session_headers)
         aio_req['timeout'] = self._session_timeout
         # setting verify_ssl=false makes auth cert skip
-        if not self._session.cert:
+        if self._session and not self._session.cert:
             aio_req['verify_ssl'] = self._verify_ssl
         else:
             if self._verify_ssl is True:
@@ -383,6 +383,19 @@ class RESTConnection(ABC):
             aio_req['proxy'] = self._proxies['https']
         elif self._proxies.get('http'):
             aio_req['proxy'] = self._proxies['http']
+
+        if aio_req.get('proxy'):
+            # aiohttp doesn't support https proxy, but it does support https proxy over http CONNECT.
+            # always try to prepand http://
+            https_prefix = 'https://'
+            http_prefix = 'http://'
+
+            if aio_req['proxy'].startswith(https_prefix):
+                aio_req['proxy'] = aio_req['proxy'][len(https_prefix):]
+
+            if not aio_req['proxy'].startswith(http_prefix):
+                aio_req['proxy'] = http_prefix + aio_req['proxy']
+
         return aio_req
 
     def _do_single_async_request(self, method, request, session):

@@ -4,6 +4,7 @@ Notice! this requires rest_server.py to run (automatic as part of the CI).
 # pylint: disable=protected-access, redefined-outer-name
 import threading
 import time
+import itertools
 
 import urllib3
 
@@ -136,3 +137,12 @@ def test_connection_can_be_restored(con: MockConnection):
     # Lets see if we can use it using this thread.
     with con:
         assert_connection_is_valid(con)
+
+
+def test_async_proxy_behavior():
+    proxies = ['https://localhost', 'http://localhost', 'localhost']
+    args = ['https_proxy', 'http_proxy']
+    for arg, value in itertools.product(args, proxies):
+        connection = MockConnection('https://localhost:33443', **{arg: value})
+        aio_req = connection.create_async_dict({'name': 'test'}, 'get')
+        assert aio_req['proxy'] == 'http://localhost'
