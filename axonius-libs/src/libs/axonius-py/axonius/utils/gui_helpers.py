@@ -4,7 +4,6 @@ import json
 import logging
 import itertools
 import os
-import time
 import re
 from collections import defaultdict
 from datetime import datetime
@@ -147,12 +146,13 @@ def filtered():
 
     def wrap(func):
         def actual_wrapper(self, *args, **kwargs):
+            filter_expr = None
             try:
                 filter_expr = request.args.get('filter', '')
                 history_date = request.args.get('history')
                 filter_obj = parse_filter_non_entities(filter_expr, history_date)
             except Exception as e:
-                logger.exception('Failed in mongo filter')
+                logger.warning(f'Failed in mongo filter {func} with "{filter_expr}"')
                 return return_error('Could not create mongo filter. Details: {0}'.format(e), 400)
             return func(self, mongo_filter=filter_obj, *args, **kwargs)
 
@@ -168,13 +168,14 @@ def filtered_entities():
 
     def wrap(func):
         def actual_wrapper(self, *args, **kwargs):
+            filter_expr = None
             try:
                 content = self.get_request_data_as_object() if request.method == 'POST' else request.args
                 filter_expr = content.get('filter')
                 history_date = content.get('history')
                 filter_obj = parse_filter(filter_expr, history_date)
             except Exception as e:
-                logger.exception('Failed in mongo filter')
+                logger.warning(f'Failed in mongo filter on {func} on "{filter_expr}"')
                 return return_error('Could not create mongo filter. Details: {0}'.format(e), 400)
             return func(self, mongo_filter=filter_obj, *args, **kwargs)
 
