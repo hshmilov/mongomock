@@ -989,7 +989,9 @@ class PluginBase(Configurable, Feature):
         :return: :class:`Response <Response>` object
         :rtype: requests.Response
         """
-        self._verify_plugin_is_up(plugin_unique_name)
+        if not fail_on_plugin_down:
+            self._verify_plugin_is_up(plugin_unique_name)
+        # if we don't want to raise adapters which are down, don't verify it
 
         url = f'https://{plugin_unique_name}.{AXONIUS_DNS_SUFFIX}/api/{resource}'
         headers = self._handle_request_headers_and_users(**kwargs)

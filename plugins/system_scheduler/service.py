@@ -4,10 +4,12 @@ import time
 from concurrent.futures import ALL_COMPLETED, wait, as_completed, ThreadPoolExecutor
 from contextlib import contextmanager
 from datetime import datetime
+from typing import Set
 
 from apscheduler.executors.pool import \
     ThreadPoolExecutor as ThreadPoolExecutorApscheduler
 from apscheduler.triggers.interval import IntervalTrigger
+
 from axonius.adapter_base import AdapterBase
 
 from axonius.consts.plugin_consts import PLUGIN_NAME, PLUGIN_UNIQUE_NAME, CONFIGURABLE_CONFIGS_COLLECTION, \
@@ -468,14 +470,16 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
             self.state = SchedulerState()
             self.__stopping_initiated = False
 
-    def get_all_plugins(self):
+    def get_all_plugins(self) -> Set[str]:
         """
-        :return: all the currently registered plugins except Scheduler
+        :return: all the currently registered plugin unique names except Scheduler, Core and Instance Control
         """
-        plugins_available = self.get_available_plugins_from_core()
-        for plugin_unique_name in plugins_available:
-            if plugin_unique_name != self.plugin_unique_name:
-                yield plugin_unique_name
+        return {x
+                for x
+                in self.get_available_plugins_from_core().keys()
+                if not x.startswith('instance_control') and
+                x not in {self.plugin_unique_name, CORE_UNIQUE_NAME}
+                }
 
     def _stop_plugins(self):
         """
@@ -487,13 +491,14 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
         def _stop_plugin(plugin):
             try:
                 logger.debug(f'stopping {plugin}')
-                response = self.request_remote_plugin('stop_all', plugin, method='post', timeout=20)
+                response = self.request_remote_plugin('stop_all', plugin, method='post', timeout=20,
+                                                      fail_on_plugin_down=True)
                 if response.status_code != 200:
-                    logger.error(f'{plugin} didn\'t stop properly, returned: {response.content}')
+                    logger.info(f'{plugin} didn\'t stop properly, returned: {response.content}')
             except Exception:
-                logger.exception(f'error stopping {plugin}')
+                logger.debug(f'error stopping {plugin}, perhaps the plugin is down', exc_info=True)
 
-        plugins_to_stop = frozenset(self.get_all_plugins())
+        plugins_to_stop = self.get_all_plugins()
         if len(plugins_to_stop) == 0:
             return
         logger.info(f'Starting {len(plugins_to_stop)} worker threads.')
