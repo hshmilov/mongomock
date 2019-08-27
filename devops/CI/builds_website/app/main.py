@@ -123,6 +123,7 @@ dhclient -v
 {install_system_line}
 {post_script}
 chown -R ubuntu:ubuntu $HOME_DIRECTORY
+chown -R ubuntu:ubuntu /home/ubuntu/cortex
 """
 
 
