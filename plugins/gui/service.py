@@ -3720,7 +3720,10 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
             config['entity'] = EntityType(dashboard['config']['entity'])
             if self._fetch_chart_compare == handler_by_metric[dashboard_metric]:
                 del config['entity']
-        dashboard['data'] = handler_by_metric[dashboard_metric](ChartViews[dashboard['view']], **config)
+        try:
+            dashboard['data'] = handler_by_metric[dashboard_metric](ChartViews[dashboard['view']], **config)
+        except Exception:
+            logger.exception(f'Problem handling dashboard {dashboard}')
         dashboard['space'] = str(dashboard['space'])
         return gui_helpers.beautify_db_entry(dashboard)
 

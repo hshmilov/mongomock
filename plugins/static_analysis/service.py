@@ -554,6 +554,7 @@ class StaticAnalysisService(Triggerable, PluginBase):
     # pylint: disable=invalid-name
     def __parse_devices_last_used_users_departments(self):
         users_to_department = dict()
+        users_to_ad_display_name = dict()
         devices_with_last_used_users = self.devices_db.find(
             parse_filter(
                 'specific_data.data.last_used_users == exists(true)'
@@ -577,10 +578,14 @@ class StaticAnalysisService(Triggerable, PluginBase):
             # Now we have a set of all last used users for this device, from all of its adapters.
             # Lets try to get each of these users to achieve their department
             device_last_used_users_departments = set()
+            device_last_used_users_ad_display_name = set()
             for last_used_user in device_last_used_users_set:
-                if last_used_user in users_to_department:
+                # if last used user is in one of them, it will also be in the second. so 'or' == 'and' here.
+                if last_used_user in users_to_department or last_used_user in users_to_ad_display_name:
                     if users_to_department.get(last_used_user):
                         device_last_used_users_departments.add(users_to_department[last_used_user])
+                    if users_to_ad_display_name.get(last_used_user):
+                        device_last_used_users_ad_display_name.add(users_to_ad_display_name[last_used_user])
                 else:
                     user = list(self.users.get(
                         axonius_query_language=f'specific_data.data.id == regex("^{re.escape(last_used_user)}$", "i")'))
@@ -588,14 +593,19 @@ class StaticAnalysisService(Triggerable, PluginBase):
                     if len(user) == 1:
                         user = user[0]
                         user_department = user.get_first_data('user_department')
+                        ad_display_name = user.get_first_data('ad_display_name')
                         if user_department:
                             device_last_used_users_departments.add(user_department)
+                        if ad_display_name:
+                            device_last_used_users_ad_display_name.add(ad_display_name)
                         users_to_department[last_used_user] = user_department
+                        users_to_ad_display_name[last_used_user] = ad_display_name
 
             # Now that we have all departments for this device lets add the appropriate adapterdata.
             # be careful not to override an adapterdata which already exists like the vuln one.
             device_adapter = self._new_device_adapter()
             device_adapter.last_used_users_departments_association = list(device_last_used_users_departments)
+            device_adapter.last_used_users_ad_display_name_association = list(device_last_used_users_ad_display_name)
             # Add the final one
             device_object = list(self.devices.get(internal_axon_id=device_raw['internal_axon_id']))
             if len(device_object) != 1:
