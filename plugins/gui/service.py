@@ -197,10 +197,11 @@ def session_connection(func, required_permissions: Iterable[Permission], enforce
                 if request.args.get('is_refresh') != '1' and DASHBOARD_LIFECYCLE_ENDPOINT not in request.path:
                     cleanpath = remove_ids(request.path)
                     delay_seconds = time.time() - now
-                    log_metric(logger, SystemMetric.TIMED_ENDPOINT,
-                               metric_value=delay_seconds,
-                               endpoint=cleanpath,
-                               method=request.method)
+                    if delay_seconds > 1:
+                        log_metric(logger, SystemMetric.TIMED_ENDPOINT,
+                                   metric_value=delay_seconds,
+                                   endpoint=cleanpath,
+                                   method=request.method)
 
     return wrapper
 
