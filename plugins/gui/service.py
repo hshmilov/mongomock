@@ -1209,7 +1209,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
 
     @gui_helpers.historical()
     @gui_helpers.sorted_endpoint()
-    @gui_add_rule_logged_in('devices/<device_id>/<field_name>/csv', methods=['GET'],
+    @gui_add_rule_logged_in('devices/<device_id>/<field_name>/csv', methods=['POST'],
                             required_permissions={Permission(PermissionType.Devices, PermissionLevel.ReadOnly)})
     def device_generic_field_csv(self, device_id, field_name, mongo_sort, history: datetime):
         """

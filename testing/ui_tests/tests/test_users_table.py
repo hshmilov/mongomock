@@ -17,7 +17,7 @@ class TestUsersTable(TestEntitiesTable):
     LAST_SEEN_COLUMN = 'Last Seen In Domain'
     ADAPTERS_COLUMN = 'Adapters'
     ACCOUNT_DISABLED_COLUMN = 'Account Disabled'
-    QUERY_FILTER_USERNAME = 'specific_data.data.username%20%3D%3D%20regex(%22m%22)'
+    QUERY_FILTER_USERNAME = 'specific_data.data.username == regex("m")'
     QUERY_FIELDS = 'adapters,specific_data.data.image,specific_data.data.username,specific_data.' \
                    'data.domain,specific_data.data.last_seen,specific_data.data.is_admin,labels'
 

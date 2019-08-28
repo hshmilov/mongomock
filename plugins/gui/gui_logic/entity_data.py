@@ -4,6 +4,7 @@ import logging
 from datetime import datetime
 from uuid import uuid4
 from flask import request, session, jsonify
+from pymongo import DESCENDING
 
 from axonius.plugin_base import EntityType, return_error, PluginBase
 from axonius.utils.gui_helpers import (get_historized_filter, parse_entity_fields, merge_entities_fields,
@@ -133,8 +134,8 @@ def entity_data_field_csv(entity_type: EntityType, entity_id, field_name, mongo_
         field['name']: field for field in fields
         if not isinstance(field.get('items'), list)
     }
-    entity_field_data = merge_entities_fields(
-        parse_entity_fields(entity, [field_name_full]).get(field_name_full, []), field_by_name.keys())
+    entity_field_data = merge_entities_fields(parse_entity_fields(entity, [field_name_full]).get(field_name_full, []),
+                                              field_by_name.keys())
     if not len(entity_field_data):
         return string_output
 
@@ -143,7 +144,7 @@ def entity_data_field_csv(entity_type: EntityType, entity_id, field_name, mongo_
         if any(data.get(field) is not None for data in entity_field_data)
     }
     if mongo_sort:
-        sort_field = request.args.get('sort')
+        sort_field, sort_desc = mongo_sort.popitem()
         default_value = None
         if field_by_name[sort_field]['type'] == 'string':
             if field_by_name[sort_field].get('format') and 'date' in field_by_name[sort_field]['format']:
@@ -156,8 +157,15 @@ def entity_data_field_csv(entity_type: EntityType, entity_id, field_name, mongo_
             default_value = False
         elif field_by_name[sort_field]['type'] == 'array':
             default_value = []
-        entity_field_data.sort(key=lambda row: row.get(sort_field, default_value),
-                               reverse=request.args.get('desc') == '1')
+
+        def sort_key(row):
+            sort_value = row.get(sort_field, default_value)
+            if sort_value and isinstance(sort_value, list):
+                return ''.join(sort_value)
+            return sort_value
+
+        entity_field_data.sort(key=sort_key, reverse=(int(sort_desc) == DESCENDING))
+
     for data in entity_field_data:
         for field in field_by_name.keys():
             # Replace field paths with their pretty titles

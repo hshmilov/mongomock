@@ -93,7 +93,6 @@
       xCard, xHistoricalDate, xHistogram, xPie, xSummary, xLine, xButton, xToast, xModal
     },
     props: {
-      // module: { required: true },
       panels: {
         type: Array,
         required: true

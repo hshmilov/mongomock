@@ -11,6 +11,7 @@
       :module="stateLocation"
       :static-fields="fields"
       :static-data="filteredData"
+      :filterable="false"
     >
       <template slot="actions">
         <x-button
@@ -180,10 +181,10 @@
           first = first[this.sort.field] || ''
           second = second[this.sort.field] || ''
           if (Array.isArray(first)) {
-            first = first[0] || ''
+            first = first.join('')
           }
           if (Array.isArray(second)) {
-            second = second[0] || ''
+            second = second.join('')
           }
           if (this.sort.desc) {
             let temp = first

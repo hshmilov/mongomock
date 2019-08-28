@@ -41,6 +41,7 @@
         :col-filters="view.colFilters"
         :id-field="idField"
         :expandable="expandable"
+        :filterable="filterable"
         :on-click-row="onClickRow"
         :on-click-col="onClickSort"
         :on-click-all="onClickAll"
@@ -143,6 +144,10 @@
       expandable: {
         type: Boolean,
         default: false
+      },
+      filterable: {
+        type: Boolean,
+        default: true
       },
       onClickRow: {
         type: Function,
@@ -366,7 +371,9 @@
           sort.field = ''
         }
         this.updateModuleView({ sort, page: 0 })
-        this.fetchContentPages(true)
+        if (!this.staticData) {
+          this.fetchContentPages(true)
+        }
       },
       updateModuleView (view) {
         this.updateView({ module: this.module, view })

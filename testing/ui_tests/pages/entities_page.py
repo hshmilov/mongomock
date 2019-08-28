@@ -657,7 +657,7 @@ class EntitiesPage(Page):
         for cookie in cookies:
             session.cookies.set(cookie['name'], cookie['value'])
         return session.post(f'https://127.0.0.1/api/{entity_type}/{entity_id}/{field_name}/csv', json={
-            'sort': sort, 'desc': (1 if desc else 0)
+            'sort': sort, 'desc': ('1' if desc else '0')
         })
 
     def assert_csv_match_ui_data(self, result, ui_data=None, ui_headers=None):
