@@ -130,6 +130,10 @@ class RESTConnection(ABC):
         return False
 
     def check_for_collision_safe(self):
+        if not self._domain:
+            logger.warning(f'domain field should not be {self._domain}')
+            return
+
         try:
             collision, msg = has_addr_collision(self._domain)
             if collision:
