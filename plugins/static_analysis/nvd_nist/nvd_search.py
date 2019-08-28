@@ -1,13 +1,15 @@
 """
 Searches for vulnerable software versions.
 """
-import os
-import json
-import zipfile
-import logging
-import threading
 import itertools
+import json
+import logging
+import os
+import threading
+import zipfile
+
 import requests.exceptions
+
 from axonius.utils.parsing import get_exception_string
 from static_analysis.nvd_nist import nvd_update
 
@@ -66,7 +68,51 @@ class NVDSearcher:
                     except Exception:
                         logger.exception(f'Failure parsing artifact {full_file_name}. Moving on')
 
-    # pylint: disable=too-many-locals, too-many-nested-blocks
+    @staticmethod
+    def _get_software_data(vendor_data):
+        multiple_vendors = 'Multiple vendors'
+        multiple_software = 'Multiple Software'
+
+        software_name = None
+        vendor_name = None
+        try:
+            if vendor_data:
+                vendor_iter = ([(x['vendor_name'], y['product_name'])
+                                for y in x['product']['product_data']] for x in vendor_data)
+                vendor_iter = list(itertools.chain.from_iterable(vendor_iter))
+                vendors, names = list(map(set, zip(*vendor_iter)))
+                if len(vendors) == 1:
+                    vendor_name = vendors.pop()
+                else:
+                    vendor_name = multiple_vendors
+
+                if len(names) == 1:
+                    software_name = names.pop()
+                else:
+                    software_name = multiple_software
+
+                # optimizations for multiple vendors common cases
+                if len(vendor_iter) == 2 and ('linux', 'linux_kernel') in vendor_iter:
+                    vendor_name, software_name = ('linux', 'linux_kernel')
+
+                if len(vendor_iter) == 2 and ('google', 'chrome') in vendor_iter:
+                    vendor_name, software_name = ('google', 'chrome')
+
+                if len(vendor_iter) == 2 and ('wireshark', 'wireshark') in vendor_iter:
+                    vendor_name, software_name = ('wireshark', 'wireshark')
+
+                if len(vendor_iter) == 2 and ('debian', 'debian_linux') in vendor_iter:
+                    other = list(filter(lambda item: item != ('debian', 'debian_linux'), vendor_iter))
+                    if other:
+                        other = other[0]
+                    if len(other) == 2 and 'linux' not in other[1] and 'zen' not in other[1]:
+                        vendor_name, software_name = other
+        except Exception as e:
+            logger.exception('Failed to get software data')
+        return software_name, vendor_name
+
+    # pylint: disable=too-many-locals, too-many-nested-blocks,too-many-branches,too-many-statements
+
     def _parse_artifact(self, artifact_path):
         """
         Gets an artifact path (.json.zip file) and parses it
@@ -104,15 +150,8 @@ class NVDSearcher:
                 cvss_v3 = (((cve_raw.get('impact') or {}).get('baseMetricV3')
                             or {}).get('cvssV3') or {}).get('baseScore')
 
-                software_name = None
-                vendor_name = None
                 vendor_data = (((cve_raw.get('cve') or {}).get('affects') or {}).get('vendor') or {}).get('vendor_data')
-                if vendor_data:
-                    # Take the shortest software_name
-                    vendor_iter = ([(x['vendor_name'], y['product_name'])
-                                    for y in x['product']['product_data']] for x in vendor_data)
-                    vendor_iter = itertools.chain.from_iterable(vendor_iter)
-                    vendor_name, software_name = min(vendor_iter, key=lambda x: len(x[1]))
+                software_name, vendor_name = self._get_software_data(vendor_data)
 
                 # Save only what's important
                 self.__cve_db[cve_id_from_nvd] = {

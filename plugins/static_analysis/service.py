@@ -23,6 +23,7 @@ from axonius.utils.files import get_local_config_file
 from axonius.utils.parsing import is_valid_user
 
 from static_analysis.nvd_nist.nvd_search import NVDSearcher
+from static_analysis.consts import AnalysisTypes, JOB_NAMES
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -73,6 +74,10 @@ class StaticAnalysisService(Triggerable, PluginBase):
             max_instances=1)
         self.__scheduler.start()
 
+        self.__jobs = AnalysisTypes(cve_enrichment=self.__add_enriched_cve_data,
+                                    user_devices_association=self.__associate_users_with_devices,
+                                    last_used_user_association=self.__parse_devices_last_used_users_departments)
+
     def __update_nvd_db(self):
         try:
             with self.__nvd_lock:
@@ -83,27 +88,30 @@ class StaticAnalysisService(Triggerable, PluginBase):
             logger.exception('Exception while updating')
 
     def _triggered(self, job_name: str, post_json: dict, run_identifier: RunIdentifier, *args):
-        if job_name != 'execute':
-            raise ValueError('The only job name supported is execute')
-        self.__start_analysis()
+        if job_name not in JOB_NAMES:
+            raise ValueError(f'The only job names supported are {JOB_NAMES}')
 
-    def __start_analysis(self):
-        try:
-            self.__associate_users_with_devices()
-        except Exception:
-            logger.exception('Exception while trying to associate devices and users')
+        logger.info(f'Static Analysis triggered {job_name}')
 
-        try:
-            self.__parse_devices_last_used_users_departments()
-            logger.info(f'Finished parsing devices last used users departments')
-        except Exception:
-            logger.exception('Exception while trying to get last used users departments')
+        if job_name == 'execute':
+            triggers = self.__jobs._fields
+        else:
+            triggers = (job_name, )
 
-        try:
-            self.__add_enriched_cve_data()
-            logger.info(f'Finished adding CVE data from NVD')
-        except Exception:
-            logger.exception('Exception while trying to add CVE data from NVD')
+        self.__start_analysis(triggers)
+
+        logger.info('Static Analysis trigger Finished')
+
+    def __start_analysis(self, job_names):
+        jobs = {k: v for k, v in self.__jobs._asdict().items() if k in job_names}
+
+        for name, callback in jobs.items():
+            try:
+                logger.info(f'Static Analysis: Calling {name}')
+                callback()
+                logger.info(f'Static Analysis: {name} finished')
+            except Exception:
+                logger.exception(f'Exception while calling job {name}')
 
     # pylint: disable=too-many-branches, inconsistent-return-statements
     def __add_enriched_cve_data(self):
@@ -323,6 +331,8 @@ class StaticAnalysisService(Triggerable, PluginBase):
                     # our patch management modules.
                     continue
 
+                if not self._fetch_empty_vendor_software_vulnerabilites and not software_vendor:
+                    continue
                 software_cves = self.__nvd_searcher.search_vuln(software_vendor, software_name, software_version)
                 for cve in software_cves:
                     if software_vendor:

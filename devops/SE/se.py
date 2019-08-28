@@ -19,6 +19,7 @@ from testing.services.plugins.static_users_correlator_service import StaticUsers
 from testing.services.plugins.static_analysis_service import StaticAnalysisService
 from testing.services.plugin_service import AdapterService
 
+from static_analysis.consts import JOB_NAMES
 ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
 SERVICES_DIR = os.path.join(ROOT_DIR, 'testing', 'services')
 ADAPTERS_DIR = os.path.join(SERVICES_DIR, 'adapters')
@@ -47,7 +48,7 @@ def usage():
     {name} sc - run static correlator & static users correlator
     {name} cd - run clean devices (clean db)
     {name} rr - run reports
-    {name} sa - run static analysis
+    {name} sa - run static analysis [job_name]
     {name} rta - run reimage tags analysis
     {name} re [service/adapter] - restart some service/adapter
     {name} migrate [service/adapter] - run db migrations on some service/adapter. e.g. `migrate aggregator`
@@ -125,7 +126,12 @@ def main():
 
     elif component == 'sa':
         print('Running Static Analysis (Blocking)...')
-        sa.trigger_execute(True)
+        if not action:
+            action = 'execute'
+        if action not in JOB_NAMES:
+            print(f'Invalid action {action}, actions: {JOB_NAMES}')
+            return -1
+        sa.trigger(action, True)
 
     elif component == 'rta':
         print(f'Running Reimage Tags Analysis (Blocking)...')

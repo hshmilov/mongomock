@@ -76,7 +76,7 @@ from axonius.consts.plugin_consts import (ADAPTERS_LIST_LENGTH,
                                           NODE_USER_PASSWORD, REPORTS_PLUGIN_NAME, EXECUTION_PLUGIN_NAME,
                                           NODE_ID_ENV_VAR_NAME,
                                           HEAVY_LIFTING_PLUGIN_NAME, SOCKET_READ_TIMEOUT,
-                                          DEFAULT_SOCKET_READ_TIMEOUT, DEFAULT_SOCKET_RECV_TIMEOUT)
+                                          DEFAULT_SOCKET_READ_TIMEOUT, DEFAULT_SOCKET_RECV_TIMEOUT, STATIC_ANALYSIS_SETTINGS, FETCH_EMPTY_VENDOR_SOFTWARE_VULNERABILITES)
 from axonius.consts.plugin_subtype import PluginSubtype
 from axonius.consts.core_consts import CORE_CONFIG_NAME
 from axonius.consts.gui_consts import FEATURE_FLAGS_CONFIG, FeatureFlagsNames
@@ -2613,6 +2613,8 @@ class PluginBase(Configurable, Feature):
         self._notify_on_adapters = config[NOTIFICATIONS_SETTINGS].get(NOTIFY_ADAPTERS_FETCH)
         self._adapter_errors_mail_address = config[NOTIFICATIONS_SETTINGS].get(ADAPTERS_ERRORS_MAIL_ADDRESS)
         self._email_prefix_correlation = config[CORRELATION_SETTINGS].get(CORRELATE_BY_EMAIL_PREFIX)
+        self._fetch_empty_vendor_software_vulnerabilites = (config.get(STATIC_ANALYSIS_SETTINGS) or {}).get(
+            FETCH_EMPTY_VENDOR_SOFTWARE_VULNERABILITES) or False
         self._correlate_ad_sccm = config[CORRELATION_SETTINGS].get(CORRELATE_AD_SCCM, True)
         self._jira_settings = config['jira_settings']
         self._proxy_settings = config[PROXY_SETTINGS]
@@ -2991,6 +2993,19 @@ class PluginBase(Configurable, Feature):
                 {
                     "items": [
                         {
+                            'name': FETCH_EMPTY_VENDOR_SOFTWARE_VULNERABILITES,
+                            'title': 'Fetch software vulnerabilites even when the vendor name is unknown',
+                            'type': 'bool'
+                        }
+                    ],
+                    "name": STATIC_ANALYSIS_SETTINGS,
+                    "title": "Static Analysis Settings",
+                    "type": "array",
+                    "required": [FETCH_EMPTY_VENDOR_SOFTWARE_VULNERABILITES]
+                },
+                {
+                    "items": [
+                        {
                             "name": MAX_WORKERS,
                             "title": "Maximum Adapters to Execute Asynchronously",
                             "type": "integer",
@@ -3066,6 +3081,9 @@ class PluginBase(Configurable, Feature):
             CORRELATION_SETTINGS: {
                 CORRELATE_BY_EMAIL_PREFIX: False,
                 CORRELATE_AD_SCCM: True
+            },
+            STATIC_ANALYSIS_SETTINGS: {
+                FETCH_EMPTY_VENDOR_SOFTWARE_VULNERABILITES: False,
             },
             AGGREGATION_SETTINGS: {
                 MAX_WORKERS: 20,

@@ -190,6 +190,7 @@ class MockStaticAnalysisService(StaticAnalysisService):
                                                             'raw_fields_set': set([])}}
         self.plugin_unique_name = 'mock_static'
         self.plugin_name = 'static_analysis'
+        self._fetch_empty_vendor_software_vulnerabilites = True
         if devices_db:
             self.devices_db = devices_db
 
