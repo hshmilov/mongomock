@@ -29,6 +29,7 @@
         watch: {
             data() {
                 this.enumerating = true
+                this.displayData =  [...this.data]
             }
         },
         methods: {

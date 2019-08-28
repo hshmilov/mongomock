@@ -98,6 +98,9 @@ export default {
             if( val !== oldVal) {
                 this.$emit('input', this.data.slice(this.from - 1, this.to))
             }
+        },
+        data() {
+            this.$emit('input', this.data.slice(this.from - 1, this.to))
         }
     },
     methods: {
