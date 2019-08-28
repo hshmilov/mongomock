@@ -147,6 +147,15 @@ class AzureAdapter(AdapterBase):
             device.instance_type = device_raw.get('hardware_profile', {}).get('vm_size')
             image = device_raw.get('storage_profile', {}).get('image_reference')
             os_disk = device_raw.get('storage_profile', {}).get('os_disk')
+            tags = device_raw.get('tags') or {}
+
+            if tags:
+                try:
+                    for tag_name, tag_value in tags.items():
+                        device.add_key_value_tag(tag_name, tag_value)
+                except Exception:
+                    logger.exception(f'Could not get tags')
+
             os_info = []
             if os_disk is not None:
                 # Add the OS's HD as a hard-drive
