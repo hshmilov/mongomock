@@ -76,7 +76,11 @@
         if (!this.entity) return []
         return this.getDataFieldsByPlugin(this.entity).map(category => {
           return {
-            ...category, fields: category.fields.filter(field => {
+            ...category,
+            fields: category.fields.filter(field => {
+              if (!field.name.startsWith('specific_data') && !field.name.startsWith('adapters_data')) {
+                return false
+              }
               return !field.branched && field.type !== 'array' || this.chartView === 'histogram'
             })
           }
