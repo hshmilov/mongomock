@@ -247,16 +247,18 @@
           filterStack.push('not ')
         }
         if (this.expression.obj) {
-          let filteredAdapters = []
+          let excludedAdapters = []
           if(this.expression.fieldType === 'axonius' &&  this.expression.filteredAdapters && this.expression.field.indexOf('specific_data.data') !== -1){
               if(!this.expression.filteredAdapters.selectAll) {
-                filteredAdapters = Object.keys(this.expression.filteredAdapters.selectedValues).filter(key => this.expression.filteredAdapters.selectedValues[key]);
+                  excludedAdapters = Object.keys(this.expression.filteredAdapters.selectedValues).filter(key => !this.expression.filteredAdapters.selectedValues[key]);
               }
           }
-          if(filteredAdapters.length > 0) {
+          if(excludedAdapters.length > 0) {
               let cond = '({val})'
-              let currentConditions = filteredAdapters.map(adapter => this.getMatchExpression(this.expression.field, this.nestedExpressionCond, adapter))
-              filterStack.push(cond.replace(/{val}/g,  currentConditions.join(' or ')))
+              let excludedAdaptersString = excludedAdapters.join("', '")
+              let fieldCondition = this.getMatchExpression(this.expression.field, this.nestedExpressionCond, true)
+              filterStack.push(cond.replace(/{val}/g,`specific_data == match([plugin_name not in ['${excludedAdaptersString}'] and ${fieldCondition}])`))
+
           } else {
               filterStack.push(this.getMatchExpression(this.expression.field, this.nestedExpressionCond))
           }
@@ -269,9 +271,9 @@
         }
         this.$emit('change', { filter: filterStack.join(''), bracketWeight })
       },
-      getMatchExpression(field, condition, adapter){
-          if(adapter) {
-              field = field.replace('specific_data.data.', 'adapters_data.' + adapter + '.')
+      getMatchExpression(field, condition, filteredAdapters){
+          if(filteredAdapters) {
+              field = field.replace('specific_data.data.', 'data.')
           }
           return `${field} == match([${condition}])`
       },

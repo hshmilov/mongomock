@@ -364,26 +364,24 @@
       composeCondition () {
           let cond = '({val})'
           let currentOption = this.schema.find(option => this.condition.fieldType === option.name)
-          let filteredAdapters = [];
+          let excludedAdapters = [];
           if(currentOption && currentOption.plugins && this.condition.filteredAdapters && !this.condition.filteredAdapters.selectAll) {
-              filteredAdapters = this.condition.filteredAdapters.selectedValues ?
-                  Object.keys(this.condition.filteredAdapters.selectedValues).filter(key => this.condition.filteredAdapters.selectedValues[key]) : null;
+              excludedAdapters = Object.keys(this.condition.filteredAdapters.selectedValues).filter(key => !this.condition.filteredAdapters.selectedValues[key])
           }
-          if(this.field.indexOf('specific_data.data') === -1 ||
-              !filteredAdapters ||
-              filteredAdapters.length === 0) {
-              cond = this.getConditionExpression('', cond);
+          if(this.field.indexOf('specific_data.data') === -1 || !excludedAdapters || excludedAdapters.length === 0) {
+              cond = this.getConditionExpression(false, cond);
           } else {
-              let conditions = filteredAdapters.map(adapter => this.getConditionExpression(adapter, cond))
-              cond = cond.replace(/{val}/g,  conditions.join(' or '))
+              let currentCondition = this.getConditionExpression(true, cond)
+              let excludedAdaptersString = excludedAdapters.join("', '")
+              cond = cond.replace(/{val}/g,`specific_data == match([plugin_name not in ['${excludedAdaptersString}'] and ${currentCondition}])`)
           }
           return cond;
         },
-        getConditionExpression(adapter, cond) {
+        getConditionExpression(filteredAdapterCond, cond) {
           if (this.opsMap[this.compOp]) {
                 let field = this.field
-                if(adapter) {
-                    field = field.replace('specific_data.data.', 'adapters_data.' + adapter + '.')
+                if(filteredAdapterCond) {
+                    field = field.replace('specific_data.data.', 'data.')
                 }
                 cond = this.opsMap[this.compOp].replace(/{field}/g, field)
             } else if (this.opsList.length) {

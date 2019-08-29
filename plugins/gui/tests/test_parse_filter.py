@@ -1,8 +1,9 @@
 from axonius.utils.axonius_query_language import parse_filter
 
 
-def assert_equal(axonius_query: str, mongo_dict: dict):
+# pylint: disable=C0330
 
+def assert_equal(axonius_query: str, mongo_dict: dict):
     result = parse_filter(axonius_query)
     print(f'{axonius_query} -> {mongo_dict}, got {result}')
     assert result == mongo_dict
@@ -78,3 +79,59 @@ def test_and_no_dups_adpater_data():
                                                                        {'data._old': {'$ne': True}},
                                                                        {'type': 'adapterdata'}]}}}]}]}]}
     )
+
+
+def test_match_specific():
+    assert_equal(
+        'specific_data.data.network_interfaces == match([mac == "1"])',
+        {'$and': [
+            {'$or': [{'adapters': {'$elemMatch': {'$and': [{'data.network_interfaces': {'$elemMatch': {'mac': '1'}}},
+                                                           {'pending_delete': {'$ne': True}},
+                                                           {'data._old': {'$ne': True}}]}}},
+                     {'tags': {'$elemMatch': {'$and': [{'data.network_interfaces': {'$elemMatch': {'mac': '1'}}},
+                                                       {'pending_delete': {'$ne': True}},
+                                                       {'data._old': {'$ne': True}},
+                                                       {'type': 'adapterdata'}]}}}]}]}
+    )
+
+
+def test_match_adapters():
+    assert_equal('adapters_data.cisco_prime_adapter.network_interfaces == match([mac == "2" and manufacturer == "4"])',
+                 {'$and': [{'$or': [{'adapters': {'$elemMatch': {'$and': [{'plugin_name': 'cisco_prime_adapter'},
+                                                                          {'pending_delete': {'$ne': True}},
+                                                                          {'data.network_interfaces': {
+                                                                              '$elemMatch': {
+                                                                                  '$and': [{'mac': '2'},
+                                                                                           {
+                                                                                               'manufacturer': '4'
+                                                                                  }]}}},
+                                                                          {'data._old': {'$ne': True}}]}}},
+                                    {'tags': {'$elemMatch': {'$and': [{'plugin_name': 'cisco_prime_adapter'},
+                                                                      {'pending_delete': {'$ne': True}},
+                                                                      {'data.network_interfaces': {
+                                                                          '$elemMatch':
+                                                                              {'$and':
+                                                                               [{'mac': '2'},
+                                                                                {
+                                                                                   'manufacturer': '4'
+                                                                               }]}}},
+                                                                      {'data._old': {'$ne': True}},
+                                                                      {'type': 'adapterdata'}]}}}]}]}
+                 )
+
+
+def test_inner_match():
+    assert_equal('specific_data == match([plugin_name not in ["esx_adapter"] '
+                 'and data.network_interfaces == match([manufacturer == "C"])])',
+                 {'$and': [{'$or': [
+                     {'adapters': {'$elemMatch': {'$and': [{'$and': [{'plugin_name': {'$nin': ['esx_adapter']}},
+                                                                     {'data.network_interfaces': {
+                                                                         '$elemMatch': {'manufacturer': 'C'}}}]},
+                                                           {'pending_delete': {'$ne': True}},
+                                                           {'data._old': {'$ne': True}}]}}},
+                     {'tags': {'$elemMatch': {'$and': [{'$and': [{'plugin_name': {'$nin': ['esx_adapter']}},
+                                                                 {'data.network_interfaces': {
+                                                                     '$elemMatch': {'manufacturer': 'C'}}}]},
+                                                       {'pending_delete': {'$ne': True}},
+                                                       {'data._old': {'$ne': True}},
+                                                       {'type': 'adapterdata'}]}}}]}]})

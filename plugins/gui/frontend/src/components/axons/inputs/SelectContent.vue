@@ -26,7 +26,7 @@
         >
           <x-checkbox
             v-if="multiSelect"
-            :data="selectedValues[currentOption.name]"
+            :data="getAdapterValue(currentOption.name)"
             @change="(value) => selectOption(currentOption.name, value)"
           />
           <slot :option="getOption(currentOption)">{{ currentOption.title }}</slot>
@@ -257,6 +257,9 @@
                     }
                 }
                 return currentOption
+            },
+            getAdapterValue(adapterName){
+                return this.selectedValues[adapterName] === undefined ? true : this.selectedValues[adapterName]
             }
         }
     }

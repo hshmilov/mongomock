@@ -19,10 +19,14 @@ currently unsupported:
 2. geospatial
 """
 import ast
+
+import astor
 import bson
 import datetime
 import dateutil.parser
 from calendar import timegm
+
+from astor.source_repr import split_lines
 
 
 def parse_date(node):
@@ -44,8 +48,8 @@ class AstHandler(object):
         try:
             handler = getattr(self, 'handle_' + thing_name)
         except AttributeError:
-            raise ParseError('Unsupported syntax ({0}).'.format(thing_name,
-                                                                self.get_options()),
+            raise ParseError(f'Unsupported syntax ({0}) on {self.__class__}.'.format(thing_name,
+                                                                                     self.get_options()),
                              col_offset=thing.col_offset if hasattr(thing, 'col_offset') else None,
                              options=self.get_options())
         return handler
@@ -437,6 +441,24 @@ class DictField(Field):
     def handle_Dict(self, node):
         return dict((StringField().handle(key), (self._field or GenericField()).handle(value))
                     for key, value in zip(node.keys, node.values))
+
+    def handle_List(self, node):
+        """
+        This is an addition to PQL to allow handing the FE's historic syntax of x = match([...])
+        PQL didn't natively support match queries with a PQL inside the match(), it only supported it when
+        it had an actual mongo query inside, which was unpleasant.
+        At first it was regex-ed out during pre-processing of the query, however that couldn't deal
+        with embedded match queries, e.g. specific_data = match([ data.network_interfaces = match([...]) ])
+        So instead this is implemented here as a specific case.
+        """
+        # Importing pql here to remove recursive import
+        import axonius.pql
+
+        # Rebuilding the original string
+        source = astor.to_source(node.elts[0], pretty_source=lambda s: ''.join(split_lines(s, 6000)))
+
+        # Using pql to compile it to a dict, and returning it
+        return axonius.pql.find(source)
 
 
 class DateTimeField(AlgebricField):

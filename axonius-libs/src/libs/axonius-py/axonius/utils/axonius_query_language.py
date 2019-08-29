@@ -1,5 +1,4 @@
 import datetime
-import json
 import logging
 import re
 from collections import defaultdict
@@ -16,22 +15,33 @@ import axonius.pql
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
+def convert_many_queries_to_elemmatch_helper(name: str, value: object, length_of_prefix: int):
+    # This deals with the case where we're using the GUI to select only a subset of adapters
+    # to query from whilst in specific_data
+    # This case leads to a very complicated output from PQL that we have to carefully fix here
+    if name == 'specific_data' and isinstance(value, dict) and len(value) == 1 and list(value)[0] == '$elemMatch':
+        return value['$elemMatch']
+    return {
+        name[length_of_prefix:]: value
+    }
+
+
 def convert_many_queries_to_elemmatch(datas, prefix, include_outdated: bool):
     """
     Helper for fix_specific_data
     """
+    length_of_prefix = len(prefix) + 1
     if len(datas) == 1:
         k, v = datas[0]
+
         _and = [
-            {k[len(prefix):]: v}
+            convert_many_queries_to_elemmatch_helper(k, v, length_of_prefix)
         ]
     else:
         _and = [
             {
                 '$or': [
-                    {
-                        k[len(prefix):]: v
-                    }
+                    convert_many_queries_to_elemmatch_helper(k, v, length_of_prefix)
                     for k, v
                     in datas]
             }
@@ -140,7 +150,7 @@ def fix_specific_data(find, include_outdated: bool):
     """
     Helper for post_process_add_old_filtering
     """
-    prefix = 'specific_data.'
+    prefix = 'specific_data'
     datas = [(k, v) for k, v in find.items() if k.startswith(prefix)]
     if datas:
         adapters_query = convert_many_queries_to_elemmatch(datas, prefix, include_outdated)
@@ -350,10 +360,6 @@ def process_filter(filter_str, history_date):
     while matches:
         filter_str = filter_str.replace(matches.group(0), f'not ({matches.group(1)})')
         matches = re.search(r'NOT\s*\[(.*)\]', filter_str)
-
-    matches = re.findall(re.compile(r'match\s*\((\[.*?\])\)'), filter_str)
-    for match in matches:
-        filter_str = filter_str.replace(match, json.dumps(axonius.pql.find(match[1:-1]), default=default_iso_date))
 
     matches = re.findall(re.compile(r'({"\$date": (.*?)})'), filter_str)
     for match in matches:
