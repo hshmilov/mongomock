@@ -340,16 +340,6 @@ export const adapters = {
 		getAdapterById: (state, getters) => id => {
 			const pluginNameIndex = getters.getAdaptersMap
 			return pluginNameIndex.get(id)
-		},
-		getClientById: (state, getters) => id => {
-			return getters.getClientsMap[id]
-		},
-		getInstanceByNodeId: (state, getters) => id => {
-			return getters.getInstancesMap[id]
-
-		},
-		getInstanceByName: (state, getters) => name => {
-			return Array.from(getters.getInstancesMap.values()).find(i => i.node_name === name)
 		}
 	}
 }

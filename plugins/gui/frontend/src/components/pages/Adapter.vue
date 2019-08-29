@@ -89,7 +89,7 @@
             id="serverInstance"
             align="left"
             :options="instances"
-            v-model="defaultInstance"
+            v-model="serverModal.instanceName"
           />
         </div>
       </div>
@@ -205,15 +205,6 @@
                     }
                 })
             },
-            defaultInstance: {
-                get: function () {
-                    const defaultInstance = this.instances.find(i => i.title.toLowerCase() === 'master') || this.instances[0]
-                    return this.instanceName ||  defaultInstance ? defaultInstance.name  : ''  
-                },
-                set(newValue) {
-                    this.instanceName = newValue
-                }
-            },
             adapterSchema() {
                 return _get(this.currentAdapter, 'schema', null)
             },
@@ -228,16 +219,15 @@
                 
             },
             uploadFileEndpoint() {
-                return `adapters/${this.adapterId}/${this.serverModal.instanceName || this.defaultInstance}`
+                return `adapters/${this.adapterId}/${this.serverModal.instanceName}`
             }
         },
         data() {
             return {
-                instanceName: this.defaultInstance,
                 serverModal: {
                     open: false,
                     serverData: {},
-                    instanceName: this.defaultInstance,
+                    instanceName: '',
                     error: '',
                     serverName: 'New Server',
                     uuid: null,
@@ -275,7 +265,7 @@
                     // this.serverModal.instanceName = this.currentAdapter.title
                     this.serverModal = {
                         ...this.serverModal,
-                        serverData: {instanceName: this.defaultInstance},
+                        serverData: {},
                         serverName: 'New Server',
                         uuid: clientId,
                         error: '',
@@ -323,7 +313,7 @@
                 this.message = 'Connecting to Server...'
                 this.updateServer({
                     adapterId: this.adapterId,
-                    serverData: {...this.serverModal.serverData, instanceName: this.serverModal.instanceName || this.defaultInstance},
+                    serverData: {...this.serverModal.serverData, instanceName: this.serverModal.instanceName},
                     uuid: this.serverModal.uuid
                 }).then((updateRes) => {
                     if (this.selectedServers.includes('')) {
@@ -391,9 +381,6 @@
                     config: config
                 }).then(() => this.message = 'Adapter configuration saved.')
             },
-            removeToast() {
-                this.message = ''
-            },
             toggleSettings() {
                 if (this.advancedSettings) {
                     this.$refs.tabs.$el.classList.add('shrinking-y')
@@ -401,12 +388,18 @@
                 } else {
                     this.advancedSettings = true
                 }
+            },
+            setDefaultInstance () {
+                let instance = this.instances.find(i => i.title === 'Master') || this.instances[0]
+                this.serverModal.instanceName = instance.name
             }
         },
         created() {
             this.hintAdapterUp(this.adapterId)
             if (_isEmpty(this.currentAdapter)) {
-                this.fetchAdapters()
+                this.fetchAdapters().then(this.setDefaultInstance)
+            } else {
+              this.setDefaultInstance()
             }
             this.changeState({name: 'addServer'})
         }
