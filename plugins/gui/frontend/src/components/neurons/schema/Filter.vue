@@ -8,7 +8,6 @@
       v-model="expressions[i]"
       :first="!i"
       :module="module"
-      :rebuild="rebuild"
       @change="(filter) => compileFilter(i, filter)"
       @remove="() => removeExpression(i)"
     />
@@ -48,8 +47,7 @@
       return {
         filters: [],
         bracketWeights: [],
-        error: '',
-        rebuild: false
+        error: ''
       }
     },
     computed: {
@@ -61,26 +59,17 @@
           this.$emit('input', expressions)
         }
       },
-      isFilterEmpty () {
-        return !this.expressions.length || (this.expressions.length === 1 && !this.expressions[0].field)
-      },
       calculateI () {
         return calcMaxIndex(this.expressions)
       }
     },
-    created () {
+    mounted () {
       if (!this.expressions.length) {
         this.addExpression()
-      }
-      if (!this.isFilterEmpty) {
-        // Filter was created with existing expressions and the filters list should be updated accordingly,
-        // but final result should not be emitted since it was created externally to begin with.
-        this.rebuild = true
       }
     },
     methods: {
       compileFilter (index, payload) {
-
         if (payload.error) {
           this.error = payload.error
           this.filters[index] = ''
@@ -101,13 +90,11 @@
         // No compilation error - can remove existing error
         this.error = ''
 
-        if (this.rebuild && this.filters.length !== this.expressions.length) {
-          // Rebuild state is when expressions are given on initialization
-          // and filters should be updated but not passed on, in case the user edited the filter
+        if (this.filters.length !== this.expressions.length) {
+          // Rebuild state - expressions are given on initialization of the component
+          // and filters should be updated but not passed on, to prevent calls with partial filter
           return
         }
-        this.rebuild = false
-        // In ongoing update state - propagating the filter and expression values
         this.$emit('change', this.filters.join(' '))
       },
       addExpression () {

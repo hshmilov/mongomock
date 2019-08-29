@@ -111,10 +111,6 @@
       first: {
         type: Boolean,
         default: false
-      },
-      rebuild: {
-        type: Boolean,
-        default: false
       }
     },
     data () {
@@ -156,7 +152,7 @@
             compOp: condition.compOp,
             filteredAdapters: condition.filteredAdapters,
             fieldType: condition.fieldType
-          })
+          }, false)
         }
       },
       logicOp: {
@@ -187,12 +183,14 @@
       ...mapMutations({
         changeState: CHANGE_TOUR_STATE
       }),
-      updateExpression (update) {
+      updateExpression (update, compile = true) {
         this.$emit('input', {
           ...this.expression,
           ...update
         })
-        this.$nextTick(this.compileExpression)
+        if (compile) {
+          this.$nextTick(this.compileExpression)
+        }
       },
       toggleLeftBracket () {
         this.updateExpression({
@@ -224,7 +222,7 @@
         return ''
       },
       compileExpression (force = false) {
-        if (!force && !this.autoQuery && !this.rebuild) {
+        if (!force && !this.autoQuery) {
           return
         }
         if (!this.expression.field || (this.expression.obj && !this.nestedExpressionCond)) {
@@ -287,9 +285,10 @@
       onChangeCondition (condition, nestedIndex) {
         if (nestedIndex !== undefined) {
           this.expression.nested[nestedIndex].condition = condition
-        } else if(condition !== undefined){
+        } else if (condition !== undefined) {
           this.condition = condition
         }
+        this.errorCondition = ''
         this.compileExpression()
       },
       onErrorCondition (error) {

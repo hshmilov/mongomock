@@ -116,7 +116,9 @@
         this.queryExpressions = []
         this.isUniqueAdapters = false
         this.$nextTick(() => {
+          this.$refs.filter.filters = []
           this.$refs.filter.addExpression()
+          this.$refs.filter.error = ''
           this.onChangeFilter('')
         })
       },

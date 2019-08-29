@@ -231,11 +231,6 @@
         }
       }
     },
-    mounted () {
-      if (this.field) {
-        this.compileCondition()
-      }
-    },
     methods: {
       updateCondition (update) {
         this.$emit('input', { ...this.condition, ...update })
@@ -411,8 +406,8 @@
             return
         }
         let error = this.error || this.formatCondition()
-        this.$emit('error', error)
         if (error) {
+          this.$emit('error', error)
           return
         }
         this.$emit('change', this.composeCondition())

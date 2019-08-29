@@ -366,14 +366,19 @@ class TestDevicesQuery(TestBase):
 
         assert len(self.devices_page.get_all_data()) == 20
         self.devices_page.fill_query_value('2')
+        self.devices_page.wait_for_table_to_load()
         assert len(self.devices_page.get_all_data()) == 0
         self.devices_page.select_query_comp_op(self.devices_page.QUERY_COMP_SIZE_BELOW)
+        self.devices_page.wait_for_table_to_load()
         assert len(self.devices_page.get_all_data()) == 20
         self.devices_page.select_query_comp_op(self.devices_page.QUERY_COMP_SIZE_ABOVE)
+        self.devices_page.wait_for_table_to_load()
         assert len(self.devices_page.get_all_data()) == 0
         self.devices_page.fill_query_value('1')
+        self.devices_page.wait_for_table_to_load()
         assert len(self.devices_page.get_all_data()) == 0
         self.devices_page.fill_query_value('0')
+        self.devices_page.wait_for_table_to_load()
         assert len(self.devices_page.get_all_data()) == 20
         self.devices_page.clear_query_wizard()
 
