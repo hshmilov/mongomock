@@ -52,8 +52,9 @@ def usage():
     {name} rta - run reimage tags analysis
     {name} re [service/adapter] - restart some service/adapter
     {name} migrate [service/adapter] - run db migrations on some service/adapter. e.g. `migrate aggregator`
-    {name} db rf [device/user] [adapter] [field] - removes a field from an adapter. e.g. `db rf device aws _old`
-                                                   will remove '_old' from all aws devices.
+    {name} db rf [device/user] [plugin_name] [field] - removes a field from an adapter. 
+                                                       e.g. `db rf device aws_adapter _old`
+                                                       will remove '_old' from all aws devices.
     '''
 
 
@@ -161,7 +162,7 @@ def main():
     elif component == 'db':
         if action == 'rf':
             try:
-                entity, adapter, field = sys.argv[3], sys.argv[4], sys.argv[5]
+                entity, plugin_name, field = sys.argv[3], sys.argv[4], sys.argv[5]
             except Exception:
                 print(usage())
                 return -1
@@ -172,16 +173,19 @@ def main():
             entity_type = EntityType.Devices if entity == 'device' else EntityType.Users
 
             entity_db = ag._entity_db_map[entity_type]
+            match_type = 'adapters' if 'adapter' in plugin_name else 'tags'
+            print(f'Note - searching in "{match_type}"')
+
             match = {
-                'adapters': {
+                match_type: {
                     '$elemMatch': {
-                        'plugin_name': f'{adapter}_adapter',
+                        'plugin_name': plugin_name,
                         f'data.{field}': {'$exists': True}
                     }
                 }
             }
             count = entity_db.count(match)
-            redprint(f'You are going to remove the field {field} from {count} {adapter} {entity}s. '
+            redprint(f'You are going to remove the field {field} from {count} {plugin_name} {entity}s. '
                      f'This is unrecoverable!')
             redprint(f'Are you sure? [yes/no]')
             res = input()
@@ -192,7 +196,7 @@ def main():
             result = entity_db.update_many(
                 match,
                 {
-                    '$unset': {f'adapters.$.data.{field}': 1}
+                    '$unset': {f'{match_type}.$.data.{field}': 1}
                 }
             )
 
@@ -200,9 +204,9 @@ def main():
 
             new_count = entity_db.count(match)
             if new_count > 0:
-                yellowprint(f'Warning - {adapter} {entity}s with {field} still exist. '
-                            f'This happens because only the first occurrence of {adapter} in the {entity} is deleted.'
-                            f'please run this script again.')
+                yellowprint(f'Warning - {plugin_name} {entity}s with {field} still exist. '
+                            f'This happens because only the first occurrence of {plugin_name} in the {entity} '
+                            f'is deleted. please run this script again.')
             else:
                 print('Done')
         else:
