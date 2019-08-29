@@ -2,8 +2,7 @@ import os
 import re
 
 from services.adapters import stresstest_scanner_service, stresstest_service
-from services.standalone_services.maildiranasaurus_server import \
-    MailDiranasaurusService, generate_test_random_valid_email
+from services.standalone_services.maildiranasaurus_server import MailDiranasaurusService
 from services.standalone_services.smtp_server import SMTPService, generate_random_valid_email
 from ui_tests.pages.reports_page import ReportFrequency
 from ui_tests.tests import ui_consts
@@ -226,7 +225,7 @@ class TestReport(TestBase):
             data_query2 = 'specific_data.data.name == regex(\'avig\', \'i\')'
             self.devices_page.create_saved_query(data_query2, self.TEST_REPORT_EDIT_QUERY1)
 
-            recipient = generate_test_random_valid_email()
+            recipient = generate_random_valid_email()
 
             self.reports_page.create_report(report_name=self.TEST_REPORT_EDIT, add_dashboard=True,
                                             queries=[{'entity': 'Devices', 'name': self.TEST_REPORT_EDIT_QUERY}],

@@ -12,7 +12,7 @@ def generate_random_valid_email() -> str:
     """
     Generates a valid, random and unique email address
     """
-    return f'{uuid.uuid4().hex}@avigdor.ru'
+    return f'test@avigdor_{uuid.uuid4().hex}.ru'
 
 
 class SMTPService(WeaveService):

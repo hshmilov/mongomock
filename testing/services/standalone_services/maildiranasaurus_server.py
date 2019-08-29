@@ -1,18 +1,8 @@
 import os
-import uuid
 import mailbox
 import errno
 
-from typing import Iterable
-
 from services.standalone_services.smtp_server import SMTPService
-
-
-def generate_test_random_valid_email() -> str:
-    """
-    Generates a valid, random and unique email address
-    """
-    return f'test@{uuid.uuid4().hex}.ru'
 
 
 def create_maildir_folders():
@@ -59,13 +49,6 @@ class MailDiranasaurusService(SMTPService):
            CMD ["/go/src/github.com/flashmob/maildiranasaurus/maildiranasaurus", "serve"]
            '''[1:]
 
-    def get_email_sent(self) -> Iterable[str]:
-        """
-        Get all lines from the syslog
-        """
-        out, _, _ = self.get_file_contents_from_container('/var/log/maildiranasaurus.log')
-        return out.splitlines()
-
     def get_email_first_csv_content(self):
         """
         Get the first csv attachment content of the mail that was sent
@@ -89,13 +72,6 @@ class MailDiranasaurusService(SMTPService):
             # get the third message in the payload -
             # the first is the content and the 2nd is the pdf, the 3rd is the csv
             return message.get_payload()[2].get_payload(decode=True)
-
-    def get_emails_sent(self) -> Iterable[str]:
-        """
-        Get all lines from the syslog
-        """
-        out, _, _ = self.get_file_contents_from_container('/var/log/maildiranasaurus.log')
-        return out.splitlines()
 
     @property
     def image(self):
