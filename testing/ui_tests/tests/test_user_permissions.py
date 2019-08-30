@@ -259,7 +259,7 @@ class TestUserPermissions(TestBase):
 
             assert self.reports_page.is_form_disabled()
 
-    def test_new_user_with_role(self):
+    def _enter_user_management_and_create_restricted_user(self):
         self.settings_page.switch_to_page()
         self.settings_page.click_manage_users_settings()
 
@@ -270,6 +270,9 @@ class TestUserPermissions(TestBase):
                                            ui_consts.LAST_NAME,
                                            self.settings_page.RESTRICTED_ROLE)
         self.settings_page.wait_for_user_created_toaster()
+
+    def test_new_user_with_role(self):
+        self._enter_user_management_and_create_restricted_user()
         for label in self.settings_page.get_permission_labels():
             assert self.settings_page.get_permissions_text(label) == self.settings_page.RESTRICTED_PERMISSION
         self.settings_page.refresh()
@@ -311,3 +314,11 @@ class TestUserPermissions(TestBase):
         self.settings_page.click_manage_users_settings()
         for label in self.settings_page.get_permission_labels():
             assert self.settings_page.get_permissions_text(label) == self.settings_page.RESTRICTED_PERMISSION
+
+    def test_user_role_change_to_custom(self):
+        self._enter_user_management_and_create_restricted_user()
+        self.settings_page.select_permissions(self.settings_page.PERMISSION_LABEL_DEVICES,
+                                              self.settings_page.READ_ONLY_PERMISSION)
+        role = self.settings_page.get_role_select_placeholder()
+
+        assert role == 'CUSTOM'

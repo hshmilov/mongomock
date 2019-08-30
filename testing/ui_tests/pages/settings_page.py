@@ -91,6 +91,10 @@ class SettingsPage(Page):
     UPDATE_USER_BUTTON = 'Update User'
     USER_DETAILS_SELECTOR = '.user-details-title'
 
+    ROLE_PLACEHOLDER_CSS = '.user-role .x-select .placeholder'
+
+    PERMISSION_LABEL_DEVICES = 'Devices'
+
     @property
     def url(self):
         return f'{self.base_url}/settings'
@@ -560,3 +564,6 @@ class SettingsPage(Page):
         self.click_global_settings()
         self.click_toggle_button(self.find_send_emails_toggle(), make_yes=False, scroll_to_toggle=False)
         self.save_and_wait_for_toaster()
+
+    def get_role_select_placeholder(self):
+        return self.driver.find_element_by_css_selector(self.ROLE_PLACEHOLDER_CSS).text
