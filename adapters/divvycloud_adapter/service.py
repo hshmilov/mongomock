@@ -71,7 +71,8 @@ class DivvycloudAdapter(AdapterBase):
                                               password=client_config['password'],
                                               headers={
                                                   'Content-Type': 'application/json;charset=UTF-8',
-                                                  'Accept': 'application/json'}
+                                                  'Accept': 'application/json'},
+                                              https_proxy=client_config.get('https_proxy')
                                               )
             with connection:
                 pass  # check that the connection credentials are valid
@@ -117,6 +118,11 @@ class DivvycloudAdapter(AdapterBase):
                     "name": "verify_ssl",
                     "title": "Verify SSL",
                     "type": "bool"
+                },
+                {
+                    'name': 'https_proxy',
+                    'title': 'HTTPS Proxy',
+                    'type': 'string'
                 }
             ],
             "required": [
