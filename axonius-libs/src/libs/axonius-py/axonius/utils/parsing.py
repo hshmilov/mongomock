@@ -1498,6 +1498,12 @@ def remove_duplicates_by_reference(seq):
     return result
 
 
+def int_to_mac(macint):
+    if type(macint) != int:
+        raise ValueError('invalid integer')
+    return ':'.join(['{}{}'.format(a, b) for a, b in zip(*[iter('{:012x}'.format(macint))] * 2)])
+
+
 def remove_large_ints(data, name: str):
     """
     Go over a dict and remove any number which is larger than 8 bytes, since MongoDB can't eat it.

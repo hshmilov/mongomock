@@ -182,7 +182,8 @@ class SymantecAdapter(AdapterBase):
                                 device.last_used_users = [device_raw.get('logonUserName') +
                                                           '@' + device_raw.get('loginDomain')]
                         else:
-                            device.last_used_users = [device_raw.get('logonUserName')]
+                            device.last_used_users = [device_raw.get('logonUserName')] \
+                                if device_raw.get('logonUserName') != 'None' else None
                 except Exception:
                     logger.exception(f'Problem adding user to {device_raw}')
                 device.cids_defset_version = device_raw.get('cidsDefsetVersion')
