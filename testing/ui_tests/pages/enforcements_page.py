@@ -1,10 +1,13 @@
 import os
 import time
 from enum import Enum
-from typing import List, Tuple
+from typing import List, Tuple, Iterable
+from collections import namedtuple
 
 from testing.test_credentials.test_ad_credentials import WMI_QUERIES_DEVICE
 from ui_tests.pages.entities_page import EntitiesPage
+
+Task = namedtuple('Task', 'status stats name main_action trigger_query_name started_at completed_at')
 
 ENFORCEMENT_WMI_EVERY_CYCLE = 'Run WMI on every cycle'
 ENFORCEMENT_WMI_SAVED_QUERY = f'adapters_data.active_directory_adapter.hostname == "{WMI_QUERIES_DEVICE}"'
@@ -61,6 +64,7 @@ class ActionCategory:
 
 
 class EnforcementsPage(EntitiesPage):
+    SAVE_AND_RUN_BUTTON_TEXT = 'Save & Run'
     NEW_ENFORCEMENT_BUTTON = '+ New Enforcement'
     ENFORCEMENT_NAME_ID = 'enforcement_name'
     TRIGGER_CONTAINER_CSS = '.x-trigger'
@@ -104,6 +108,8 @@ class EnforcementsPage(EntitiesPage):
     SECOND_ENFORCEMENT_EXECUTION_DIR_SEPERATOR = 'second-seperator'
 
     USE_ACTIVE_DIRECTORY_CREDENTIALS_CHECKBOX_LABEL = 'Use stored credentials from the Active Directory adapter'
+
+    CLICKABLE_TABLE_ROW = '.x-table-row.clickable'
 
     @property
     def url(self):
@@ -375,7 +381,7 @@ class EnforcementsPage(EntitiesPage):
         self.click_button('Save & Exit')
 
     def click_run_button(self):
-        self.click_button('Save & Run', partial_class=True)
+        self.click_button(self.SAVE_AND_RUN_BUTTON_TEXT, partial_class=True)
 
     def click_tasks_button(self):
         self.click_button('View Tasks', partial_class=True)
@@ -589,3 +595,23 @@ class EnforcementsPage(EntitiesPage):
         self.wait_for_element_present_by_text(action_name)
         self.wait_for_action_result()
         self.find_task_action_success(action_name).click()
+
+    def get_tasks_data_from_table(self) -> Iterable[Task]:
+
+        table = self.driver.find_element_by_css_selector(self.TABLE_CLASS)
+
+        # Start from index 1 to avoid the table head
+        rows = table.find_elements_by_css_selector(self.CLICKABLE_TABLE_ROW)[1:]
+        for row in rows:
+            # Get all columns [status, stats, name, main_action, trigger_query_name, started_at, completed_at]
+            status = row.find_elements_by_tag_name('td')[0].text
+            stats = row.find_elements_by_tag_name('td')[1].text
+            name = row.find_elements_by_tag_name('td')[2].text
+            main_action = row.find_elements_by_tag_name('td')[3].text
+            trigger_query_name = row.find_elements_by_tag_name('td')[4].text
+            started_at = row.find_elements_by_tag_name('td')[5].text
+            completed_at = row.find_elements_by_tag_name('td')[6].text
+
+            yield Task(status=status, stats=stats, name=name,
+                       main_action=main_action, trigger_query_name=trigger_query_name,
+                       started_at=started_at, completed_at=completed_at)

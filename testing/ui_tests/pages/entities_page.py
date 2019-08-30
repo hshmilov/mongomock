@@ -47,6 +47,7 @@ class EntitiesPage(Page):
     QUERY_LOGIC_AND = 'and'
     QUERY_LOGIC_OR = 'or'
     OUTDATED_TOGGLE_CSS = 'div.md-switch.md-theme-default > div > div'
+    TABLE_CLASS = '.table'
     TABLE_SELECT_ALL_CURRENT_PAGE_CHECKBOX_CSS = 'thead .x-checkbox'
     TABLE_SELECT_ALL_CSS = 'div.selection > .x-button.link'
     TABLE_COUNT_CSS = '.table-header .title .count'
