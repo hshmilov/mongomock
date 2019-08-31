@@ -94,6 +94,9 @@ USER_VIEW_QUERY_TYPE = 'saved'
 
 ALERT_NAME = 'Test Alert 3'
 
+CSV_FILENAME = 'input.csv'
+CSV_FILEBYTES = b'\xef\xbb\xbffield1,field2,mac,field4,field5\r\na,b,0:00,d,e\r\nf,g,06:37:53:6E:A2:9C,h,i\r\n'  # noqa
+
 
 class RESTExample:
     """ class that implement Axonius REST API usage.
@@ -136,7 +139,8 @@ class RESTExample:
                               cls.check_connectivity,
                               cls.add_and_delete_client,
                               cls.get_devices_fields,
-                              cls.get_users_fields,)
+                              cls.get_users_fields,
+                              cls.create_csv_client)
 
         examples_functions = {function.__name__ for function in examples_functions}
         all_examples_functions = set(filter(lambda x: 'get_examples' not in x and not x.startswith('__'),
@@ -544,6 +548,42 @@ class RESTExample:
         master_node = list(filter(lambda node: node['node_name'] == 'Master', nodes))[0]
 
         assert master_node['clients'], 'No clients in master node'
+
+    def create_csv_client(self):
+        status_code, adapters = self._client.get_adapters()
+        assert status_code == 200, 'Failed to get adapter and client list'
+
+        adapter_name = 'csv_adapter'
+        nodes = adapters[adapter_name]
+        master_node = list(filter(lambda node: node['node_name'] == 'Master', nodes))[0]
+
+        node_id = master_node['node_id']
+        fieldname = CSV_FILENAME + 'test'
+
+        self._logger.info('Uploading file')
+        status_code, resp = self._client.upload_file_adapter(
+            adapter_name=adapter_name, node_id=node_id,
+            filename=CSV_FILENAME, binary=CSV_FILEBYTES,
+            content_type='text/csv', fieldname=fieldname
+        )
+        assert status_code == 200, 'Failed to upload CSV file for CSV adapter'
+        assert 'uuid' in resp, 'No UUID returned in CSV file upload'
+
+        client_config = {
+            'is_users_csv': False,
+            'is_installed_sw': False,
+            'user_id': fieldname,
+            'csv': {'uuid': resp['uuid'], 'filename': CSV_FILENAME},
+        }
+
+        status_code, resp = self._client.add_client(adapter_name, client_config, node_id)
+        assert status_code == 200, resp
+        id_ = resp['id']
+
+        self._logger.info(f'deleting client id : {id_}')
+
+        status_code, resp = self._client.delete_client(adapter_name, id_, node_id)
+        assert status_code == 200, resp
 
     def check_connectivity(self):
         status_code, adapters = self._client.get_adapters()

@@ -368,6 +368,16 @@ class API:
     def api_adapters_clients(self, adapter_name):
         return self._adapters_clients(adapter_name)
 
+    @api_add_rule('adapters/<adapter_name>/<node_id>/upload_file', methods=['POST'],
+                  required_permissions={Permission(PermissionType.Adapters, PermissionLevel.ReadWrite)})
+    def api_adapter_upload_file(self, adapter_name, node_id):
+        adapter_unique_name = self.request_remote_plugin(
+            f'find_plugin_unique_name/nodes/{node_id}/plugins/{adapter_name}'
+        )
+        adapter_unique_name = adapter_unique_name.json().get('plugin_unique_name')
+        ret = self._upload_file(adapter_unique_name)
+        return ret
+
     @api_add_rule('adapters', methods=['GET'],
                   required_permissions={Permission(PermissionType.Adapters, PermissionLevel.ReadOnly)})
     def api_adapters(self):

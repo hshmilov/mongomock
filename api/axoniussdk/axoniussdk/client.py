@@ -252,6 +252,21 @@ class RESTClient:
         }
         return self.do_request('delete', '/users/labels', json=data)
 
+    def upload_file_adapter(self, adapter_name: str, node_id: str,
+                            filename: str, binary: typing.io.BinaryIO,
+                            content_type: str = '', fieldname: str = '',):
+        """ Upload a file to the system, that later can be use for deployment """
+        path = f'/adapters/{adapter_name}/{node_id}/upload_file'
+
+        if content_type:
+            files = {'userfile': (filename, binary, content_type)}
+        else:
+            files = {'userfile': (filename, binary)}
+
+        fieldname = fieldname or filename
+        data = {'field_name': fieldname}
+        return self.do_request('post', path, data=data, files=files)
+
     def upload_file(self, binary: typing.io.BinaryIO):
         """ Upload a file to the system, that later can be use for deployment """
         return self.do_request('post', '/actions/upload_file', data={'field_name': 'binary'},
