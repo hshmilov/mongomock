@@ -1,3 +1,4 @@
+import datetime
 import logging
 logger = logging.getLogger(f'axonius.{__name__}')
 from axonius.adapter_base import AdapterBase, AdapterProperty
@@ -15,6 +16,35 @@ from axonius.clients.rest.connection import RESTConnection
 class FireeyeHxAdapter(AdapterBase):
     class MyDeviceAdapter(DeviceAdapter):
         excluded_from_containment = Field(bool, 'Excluded From Containment')
+        reported_clone = Field(bool, 'Reported Clone')
+        fips = Field(str, 'FIPS')
+        bios_date = Field(datetime.datetime, 'Bios Date')
+        bios_type = Field(str, 'Bios Type')
+        build_number = Field(int, 'Build Number')
+        clock_skew = Field(str, 'Clock Skew')
+        last_poll_ip = Field(str, 'Last Poll IP')
+        last_poll_timestamp = Field(datetime.datetime, 'Last Poll Timestamp')
+        app_created = Field(datetime.datetime, 'App Created')
+        app_started = Field(datetime.datetime, 'App Started')
+        install_date = Field(datetime.datetime, 'Install Date')
+        kernel_services_status = Field(str, 'Kernel Services Status')
+        alerting_conditions = Field(int, 'Alerting Conditions')
+        acqs = Field(int, 'Acqs')
+        stats_alerts = Field(int, 'Stats Alerts')
+        execution_hits_count = Field(int, 'Execution Hits Count')
+        exploit_alerts = Field(int, 'Exploit Alerts')
+        exploit_blocks = Field(int, 'Exploit Blocks')
+        false_positive_alerts = Field(int, 'False Positive Alerts')
+        generic_alerts = Field(int, 'Generic Alerts')
+        has_execution_hits = Field(bool, 'Has Execution Hits')
+        has_presence_hits = Field(bool, 'Has Presence Hits')
+        last_hit = Field(datetime.datetime, 'Last Hit')
+        malware_alerts = Field(int, 'Malware Alerts')
+        malware_cleaned_count = Field(int, 'Malware Cleaned Count')
+        malware_false_positive_alerts = Field(int, 'Malware False Positive Alerts')
+        malware_quarantined_count = Field(int, 'Malware Quarantined Count')
+        presence_hits_count = Field(int, 'Presence Hits Count')
+        containment_state = Field(str, 'Containment State')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -118,12 +148,15 @@ class FireeyeHxAdapter(AdapterBase):
                     device.last_seen = parse_date(str(device_raw.get("last_audit_timestamp")))
                 except Exception:
                     logger.exception(f"Problem getting last seen for {device_raw}")
+                if isinstance(device_raw.get('KernelServices'), dict):
+                    device.kernel_services_status = device_raw.get('KernelServices').get('Status')
                 try:
                     os_raw = device_raw.get("os")
                     device.figure_os((os_raw.get("product_name") or "") + " " + (os_raw.get("bitness") or ""))
                 except Exception:
                     logger.exception(f"Problem getting os for {device_raw}")
-                device.add_agent_version(agent=AGENT_NAMES.fireeye_hx, version=device_raw.get('agent_version'))
+                device.add_agent_version(agent=AGENT_NAMES.fireeye_hx, version=device_raw.get('agent_version'),
+                                         status=device_raw.get('stateAgentStatus'))
                 try:
                     hostname = device_raw.get("hostname")
                     device.hostname = hostname
@@ -134,8 +167,47 @@ class FireeyeHxAdapter(AdapterBase):
                 except Exception:
                     logger.exception(f"Problem getting hostname {device_raw}")
                 device.first_seen = parse_date(device_raw.get('initial_agent_checkin'))
+                device.last_poll_ip = device_raw.get('last_poll_ip')
                 device.excluded_from_containment = bool(device_raw.get('excluded_from_containment'))
+                device.app_created = parse_date(device_raw.get('appCreated'))
+                device.app_started = parse_date(device_raw.get('appStarted'))
                 device.time_zone = device_raw.get("timezone")
+                device.install_date = parse_date(device_raw.get('installDate'))
+                device.bios_type = device_raw.get('biosType')
+                device.bios_date = parse_date(device_raw.get('biosDate'))
+                device.bios_version = device_raw.get('biosVersion')
+                device.reported_clone = bool(device_raw.get('reported_clone'))
+                device.last_poll_timestamp = parse_date(device_raw.get('last_poll_timestamp'))
+                device.fips = device_raw.get('FIPS')
+                device.clock_skew = device_raw.get('clockSkew')
+                device.containment_state = device_raw.get('containment_state')
+                try:
+                    device_stats = device_raw.get('stats')
+                    if not isinstance(device_stats, dict):
+                        device_stats = {}
+                    device.acqs = device_stats.get('acqs')
+                    device.alerting_conditions = device_stats.get('alerting_conditions')
+                    device.stats_alerts = device_stats.get('alerts')
+                    device.execution_hits_count = device_stats.get('execution_hits_count')
+                    device.exploit_alerts = device_stats.get('exploit_alerts')
+                    device.exploit_blocks = device_stats.get('exploit_blocks')
+                    device.false_positive_alerts = device_stats.get('false_positive_alerts')
+                    device.has_execution_hits = device_stats.get('has_execution_hits')
+                    device.has_presence_hits = device_stats.get('has_presence_hits')
+                    device.last_hit = parse_date(device_stats.get('last_hit'))
+                    device.malware_alerts = device_stats.get('malware_alerts')
+                    device.malware_cleaned_count = device_stats.get('malware_cleaned_count')
+                    device.malware_false_positive_alerts = device_stats.get('malware_false_positive_alerts')
+                    device.malware_quarantined_count = device_stats.get('malware_quarantined_count')
+                    device.presence_hits_count = device_stats.get('presence_hits_count')
+
+                except Exception:
+                    logger.exception(f'Problem adding stats {device_raw}')
+                try:
+                    device.build_number = int(device_raw.get('buildNumber'))
+                except Exception:
+                    pass
+
                 device.set_raw(device_raw)
                 yield device
             except Exception:

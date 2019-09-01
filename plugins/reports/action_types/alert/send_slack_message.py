@@ -1,6 +1,8 @@
 import logging
 import requests
 
+from axonius.utils import gui_helpers
+from axonius.utils.axonius_query_language import parse_filter
 from axonius.types.enforcement_classes import AlertActionResult
 from reports.action_types.action_type_alert import ActionTypeAlert
 
@@ -52,6 +54,33 @@ class SlackSendMessageAction(ActionTypeAlert):
 
     def _run(self) -> AlertActionResult:
         query_name = self._run_configuration.view.name
+        query = self._plugin_base.gui_dbs.entity_query_views_db_map[self._entity_type].find_one(
+            {
+                'name': query_name
+            })
+        if query:
+            parsed_query_filter = parse_filter(query['view']['query']['filter'])
+            field_list = query['view'].get('fields', [])
+            sort = gui_helpers.get_sort(query['view'])
+        else:
+            parsed_query_filter = self._create_query(self._internal_axon_ids)
+            field_list = ['specific_data.data.name', 'specific_data.data.hostname',
+                          'specific_data.data.os.type', 'specific_data.data.last_used_users']
+            sort = {}
+        all_gui_entities = gui_helpers.get_entities(None, None, parsed_query_filter,
+                                                    sort,
+                                                    {
+                                                        field: 1
+                                                        for field
+                                                        in field_list
+                                                    },
+                                                    self._entity_type)
+
+        entities_str = ''
+        for i, entity in enumerate(all_gui_entities):
+            entities_str += str(entity) + '\n'
+            if i == 5:
+                break
         old_results_num_of_devices = len(self._internal_axon_ids) + len(self._removed_axon_ids) - \
             len(self._added_axon_ids)
         alert_name = self._report_data['name']
@@ -62,7 +91,7 @@ class SlackSendMessageAction(ActionTypeAlert):
                 'attachments': [
                     {
                         'color': '#fd662c',
-                        'text': 'Description: ' + log_message_full,
+                        'text': 'Description: ' + log_message_full + '\n' + 'First 5 Results Are: \n' + entities_str,
                         'pretext': f'An Axonius alert - "{alert_name}" was trigered '
                                    f'because of {self._get_trigger_description()}.',
                         'title': f'Query "{query_name}"',

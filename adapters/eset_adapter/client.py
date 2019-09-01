@@ -14,6 +14,8 @@ class EsetClient(object):
         super().__init__()
         self.client = library
         self.host = host
+        if '\\' in username and not '\\\\' in username:
+            username = username.replace('\\', '\\\\')
         self.username = username
         self.password = password
         self.is_domain_user = is_domain_user

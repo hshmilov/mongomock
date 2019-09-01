@@ -93,6 +93,7 @@ DOCKER_PORTS = {
     'cisco-adapter':                    6001,
     'zabbix-adapter':                   6005,
     'tripwire-enterprise-adapter':      6007,
+    'specops-adapter':                  6008,
     'minerva-adapter':                  6010,
     'bigfix-adapter':                   6012,
     'ensilo-adapter':                   6013,

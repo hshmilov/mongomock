@@ -34,6 +34,7 @@ class LansweeperAdapter(AdapterBase, Configurable):
         last_triggered = Field(datetime.datetime, 'Last Triggered')
         last_scan_fallback = Field(datetime.datetime, 'Last Scan Fallback')
         last_performance_scan = Field(datetime.datetime, 'Last Performance Scan')
+        state_name = Field(str, 'State Name')
 
         def add_registry_information(self, **kwargs):
             self.registry_information.append(RegistryInfomation(**kwargs))
@@ -79,6 +80,27 @@ class LansweeperAdapter(AdapterBase, Configurable):
     def _query_devices_by_client(self, client_name, client_data):
         client_data.set_devices_paging(self.__devices_fetched_at_a_time)
         with client_data:
+            state_name_dict = dict()
+            try:
+                for state_name_data in client_data.query(consts.STATE_NAMES_QUERY):
+                    state_id = state_name_data.get('State')
+                    state_name = state_name_data.get('Statename')
+                    if not state_id or not state_name:
+                        continue
+                    state_name_dict[state_id] = state_name
+            except Exception:
+                logger.exception(f'Problem getting state names')
+
+            custom_data_dict = dict()
+            try:
+                for custom_data in client_data.query(consts.CUSTOM_DATA_QUERY):
+                    asset_id = custom_data.get('AssetID')
+                    if not asset_id:
+                        continue
+                    custom_data_dict[asset_id] = custom_data
+            except Exception:
+                logger.exception(f'Problem getting custom data')
+
             errors_dict = dict()
             try:
                 for errors_data in client_data.query(consts.ERRORS_QUERY):
@@ -227,7 +249,8 @@ class LansweeperAdapter(AdapterBase, Configurable):
                        hotfix_id_to_hotfix_data_dict,
                        asset_reg_dict, bios_data_dict,
                        asset_autoruns_dict, autoruns_id_to_autoruns_data_dict, autoruns_id_to_autoruns_loc_dict,
-                       asset_processes_dict, users_groups_dict, disks_dict, encryption_dict, errors_dict)
+                       asset_processes_dict, users_groups_dict, disks_dict, encryption_dict, errors_dict,
+                       custom_data_dict, state_name_dict)
 
     @staticmethod
     def _clients_schema():
@@ -277,7 +300,7 @@ class LansweeperAdapter(AdapterBase, Configurable):
                 users_groups_dict,
                 disks_dict,
                 encryption_dict,
-                errors_dict
+                errors_dict, custom_data_dict, state_name_dict
         ) in devices_raw_data:
             try:
                 device = self._new_device_adapter()
@@ -286,6 +309,14 @@ class LansweeperAdapter(AdapterBase, Configurable):
                     logger.error(f'Found a device with no id: {device_raw}, skipping')
                     continue
                 device.id = device_id + '_' + (device_raw.get('FQDN') or '')
+                try:
+                    custom_data = custom_data_dict.get(device_raw.get('AssetID'))
+                    if isinstance(custom_data, dict):
+                        state_id = custom_data.get('State')
+                        if state_id:
+                            device.state_name = state_name_dict.get(state_id)
+                except Exception:
+                    logger.exception(f'Problem getting custom data')
                 try:
                     bios_data = bios_data_dict.get(device_raw.get('AssetID'))
                     if bios_data:

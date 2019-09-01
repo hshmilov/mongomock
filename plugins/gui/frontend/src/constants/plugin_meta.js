@@ -1,4 +1,8 @@
 export const pluginMeta = {
+    specops_adapter: {
+        title: 'Specops Inventory',
+        description: 'Inventory collects and reports information on hardware, software, registry, user settings, operating system, security data, and Active Directory data. The tool can help with your license compliance needs, saving you time and money. It scales with any size of Active Directory, and can be up and running in under 60 minutes.'
+    },
     vcloud_director_adapter: {
         title: 'VMware vCloud Director',
         link: 'https://docs.axonius.com/docs/vmware-vcloud-director',
@@ -334,7 +338,7 @@ export const pluginMeta = {
         description: 'The Linux Secure Shell Adapter uses remote command execution over the SSH protocol to gather information about the endpoint Linux machine.'
     },
     malwarebytes_adapter: {
-        title: 'Malwarebytes - BETA',
+        title: 'Malwarebytes',
         link: 'https://docs.axonius.com/docs/malwarebytes',
         description: 'Malwarebytes protects endpoints from ransomware, automates endpoint remediation, and provides continuous visibility and monitoring.'
     },

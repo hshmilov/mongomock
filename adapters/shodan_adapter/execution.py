@@ -10,6 +10,8 @@ from axonius.utils.gui_helpers import find_entity_field
 from axonius.utils.datetime import parse_date
 from axonius.clients.shodan.connection import ShodanConnection
 from axonius.devices.device_adapter import ShodanVuln
+from axonius.blacklists import DANGEROUS_IPS
+
 logger = logging.getLogger(f'axonius.{__name__}')
 
 INVALID_HOSTS = ['localhost', 'ubuntu']
@@ -83,6 +85,7 @@ class ShodanExecutionMixIn(Triggerable):
         ips = get_entity_field_list(device.data, 'specific_data.data.network_interfaces.ips')
         ips = filter(lambda ip: re.match(IP_REGEX, ip), ips)
         ips = list(filter(lambda ip: not ipaddress.ip_address(ip).is_private, ips))
+        ips = list(filter(lambda ip: ip not in DANGEROUS_IPS, ips))
 
         return ips
 

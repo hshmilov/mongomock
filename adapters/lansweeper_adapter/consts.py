@@ -21,6 +21,8 @@ USERS_GROUPS_QUERY = 'Select * from tblUsersInGroup'
 DISKS_QUERY = 'Select * from tblDiskdrives'
 ENCRYPTION_QUERY = 'Select * from tblEncryptableVolume'
 ERRORS_QUERY = 'Select * from tblErrors'
+STATE_NAMES_QUERY = 'Select * from tblState'
+CUSTOM_DATA_QUERY = 'Select * from tblAssetCustom'
 LANSWEEPER_TYPE_DICT = {'-1': 'Windows',
                         '0': 'Unknown',
                         '1': 'Network device',

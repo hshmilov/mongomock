@@ -375,6 +375,8 @@ class RESTConnection(ABC):
         # Take care of headers, timeout and ssl verification
         aio_req['headers'] = self._permanent_headers.copy()
         aio_req['headers'].update(self._session_headers)
+        if req.get('headers'):
+            aio_req['headers'].update(req.get('headers'))
         aio_req['timeout'] = self._session_timeout
         # setting verify_ssl=false makes auth cert skip
         if self._session and not self._session.cert:

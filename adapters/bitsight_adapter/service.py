@@ -1,5 +1,7 @@
 import datetime
 import logging
+import ipaddress
+import chardet
 
 from axonius.adapter_base import AdapterProperty
 from axonius.scanner_adapter_base import ScannerAdapterBase
@@ -10,10 +12,12 @@ from axonius.fields import Field, ListField
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.utils.files import get_local_config_file
 from axonius.utils.datetime import parse_date
+from axonius.utils.parsing import make_dict_from_csv
 from axonius.smart_json_class import SmartJsonClass
 from bitsight_adapter.connection import BitsightConnection
 from bitsight_adapter.client_id import get_client_id
 from bitsight_adapter.consts import DEFAULT_DOMAIN
+
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -39,6 +43,10 @@ class DeviceObservation(SmartJsonClass):
 class BitsightAdapter(ScannerAdapterBase):
     # pylint: disable=too-many-instance-attributes
     class MyDeviceAdapter(DeviceAdapter):
+        country = Field(str, 'Country')
+        attributed_to = Field(str, 'Attributed To')
+        as_number = Field(str, 'AS Number')
+        source = Field(str, 'Source')
         observations = ListField(DeviceObservation, 'Observations')
 
     def __init__(self, *args, **kwargs):
@@ -64,7 +72,17 @@ class BitsightAdapter(ScannerAdapterBase):
 
     def _connect_client(self, client_config):
         try:
-            return self.get_connection(client_config)
+            connection = self.get_connection(client_config)
+            cidr_csv_data = None
+            try:
+                csv_data_bytes = self._grab_file_contents(client_config['cidr_csv'])
+                encoding = chardet.detect(csv_data_bytes)['encoding']  # detect decoding automatically
+                encoding = encoding or 'utf-8'
+                csv_data = csv_data_bytes.decode(encoding)
+                cidr_csv_data = make_dict_from_csv(csv_data)
+            except Exception:
+                pass
+            return connection, cidr_csv_data
         except RESTException as e:
             message = 'Error connecting to client with domain {0}, reason: {1}'.format(
                 client_config['domain'], str(e))
@@ -81,8 +99,11 @@ class BitsightAdapter(ScannerAdapterBase):
 
         :return: A json with all the attributes returned from the Server
         """
-        with client_data:
-            yield from client_data.get_device_list()
+        connection, cidr_csv_data = client_data
+        yield cidr_csv_data, 'cidr'
+        with connection:
+            for device_raw in connection.get_device_list():
+                yield device_raw, 'device_raw'
 
     @staticmethod
     def _clients_schema():
@@ -114,6 +135,11 @@ class BitsightAdapter(ScannerAdapterBase):
                     'name': 'https_proxy',
                     'title': 'HTTPS Proxy',
                     'type': 'string'
+                },
+                {
+                    'name': 'cidr_csv',
+                    'title': 'CIDR Data CSV File',
+                    'type': 'file'
                 }
             ],
             'required': [
@@ -171,9 +197,14 @@ class BitsightAdapter(ScannerAdapterBase):
             logger.exception(f'Problem with fetching Bitsight Device for {observation_raw}')
             return None
 
+    # pylint: disable=too-many-branches, too-many-statements, too-many-locals, too-many-nested-blocks
     def _parse_raw_data(self, devices_raw_data):
         ips_observations_dict = dict()
-        for device_raw in devices_raw_data:
+        cidr_csv_data = None
+        for device_raw, data_type in devices_raw_data:
+            if data_type == 'cidr':
+                cidr_csv_data = list(device_raw)
+                continue
             try:
                 observation_value = self._create_observation(device_raw)
                 if observation_value:
@@ -209,6 +240,22 @@ class BitsightAdapter(ScannerAdapterBase):
                         logger.exception(f'Problem with port data {port}')
                 device.last_seen = last_seen_ip
                 device.id = ip
+                try:
+                    for cidr_data in cidr_csv_data:
+                        try:
+                            cidr_block = cidr_data.get('CIDR Block')
+                            if '/' not in cidr_block:
+                                cidr_block += '/32'
+                            if ipaddress.ip_address(ip) in ipaddress.ip_network(cidr_block):
+                                device.country = cidr_data.get('Country')
+                                device.attributed_to = cidr_data.get('Attributed To')
+                                device.source = cidr_data.get('Source')
+                                device.as_number = cidr_data.get('AS Number')
+                                break
+                        except Exception:
+                            logger.debug(f'Problem with cidr data {cidr_data}')
+                except Exception:
+                    pass
                 device.set_raw(raw_data)
                 yield device
             except Exception:

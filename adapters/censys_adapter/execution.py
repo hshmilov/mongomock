@@ -8,6 +8,8 @@ from axonius.plugin_base import EntityType
 from axonius.types.correlation import CorrelationReason, CorrelationResult
 from axonius.utils.gui_helpers import find_entity_field
 from axonius.clients.censys.connection import CensysConnection
+from axonius.blacklists import DANGEROUS_IPS
+
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -85,7 +87,7 @@ class CensysExecutionMixIn(Triggerable):
         ips = get_entity_field_list(device.data, 'specific_data.data.network_interfaces.ips')
         ips = filter(None, filter(lambda ip: isinstance(ipaddress.ip_address(ip), ipaddress.IPv4Address)
                                   and not ipaddress.ip_address(ip).is_private
-                                  and not ipaddress.ip_address(ip).is_loopback, ips))
+                                  and not ipaddress.ip_address(ip).is_loopback and ip not in DANGEROUS_IPS, ips))
         return ips
 
     @staticmethod

@@ -38,3 +38,6 @@ def compare_reg_mac(reg_mac, mac):
         if reg_mac[i] != mac[i]:
             return False
     return True
+
+
+DANGEROUS_IPS = ['1.1.1.1', '8.8.8.8', '2.4.2.4', '8.8.4.4', '1.0.0.1']

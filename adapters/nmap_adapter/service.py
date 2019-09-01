@@ -21,6 +21,11 @@ from axonius.utils.xml2json_parser import Xml2Json
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
+class ScriptInformation(SmartJsonClass):
+    script_id = Field(str, 'Script Id')
+    script_output = Field(str, 'Script Output')
+
+
 class NmapPortInfo(SmartJsonClass):
     protocol = Field(str, 'Protocol')
     portid = Field(str, 'Port Id')
@@ -32,6 +37,7 @@ class NmapPortInfo(SmartJsonClass):
     service_conf = Field(str, 'Service Configuration')
     service_extra_info = Field(str, 'Service Extra Info')
     cpe = Field(str, 'cpe')
+    script_information = ListField(ScriptInformation, 'Script Information')
 
 
 class NmapAdapter(ScannerAdapterBase):
@@ -165,9 +171,18 @@ class NmapAdapter(ScannerAdapterBase):
                             port_info.cpe = port_xml_property[0].text
                     except Exception:
                         pass
-                if port_xml_property.tag == 'state':
+                elif port_xml_property.tag == 'state':
                     port_info.state = port_xml_property.attrib.get('state')
                     port_info.reason = port_xml_property.attrib.get('reason')
+                elif port_xml_property.tag == 'script':
+                    try:
+                        script_id = port_xml_property.attrib.get('id')
+                        script_output = port_xml_property.attrib.get('output')
+                        if script_id and script_output:
+                            port_info.script_information.append(ScriptInformation(script_id=script_id,
+                                                                                  script_output=script_output))
+                    except Exception:
+                        logger.exception(f'Problem with scripts')
             except Exception:
                 logger.exception(f'Problem getting port info service')
         device.ports_info.append(port_info)
