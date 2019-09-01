@@ -581,7 +581,6 @@ def get_entities(limit: int, skip: int,
         if not projection:
             yield beautify_db_entry(entity)
         else:
-            logger.info(f'Parsing {field_filters}')
             yield parse_entity_fields(entity, projection.keys(), include_details=include_details,
                                       field_filters=field_filters)
 
@@ -1027,20 +1026,15 @@ def get_csv_iterable(mongo_filter, mongo_sort, mongo_projection, entity_type: En
     return _get_csv(mongo_filter, mongo_sort, mongo_projection, entity_type, s, default_sort, history, field_filters)
 
 
-def get_csv_canonized_value(
-        value: Union[str, list, int, datetime, float, bool], field_filter: str) -> Union[List[str], str]:
+def get_csv_canonized_value(value: Union[str, list, int, datetime, float, bool]) -> Union[List[str], str]:
     """
     Format dates as a pretty string or convert all value to a string
-    Values containing given filter are removed
     """
     def _process_item(item):
         return item.strftime('%Y-%m-%d %H:%M:%S') if isinstance(item, datetime) else str(item)
-    if isinstance(value, list):
-        return ', '.join([_process_item(item) for item in value
-                          if not isinstance(item, str) or field_filter in item.lower()])
-    if isinstance(value, str) and field_filter not in value.lower():
-        return ''
 
+    if isinstance(value, list):
+        return ', '.join([_process_item(item) for item in value])
     return _process_item(value)
 
 
@@ -1058,7 +1052,8 @@ def _get_csv(mongo_filter, mongo_sort, mongo_projection, entity_type: EntityType
                             default_sort=default_sort,
                             run_over_projection=False,
                             history_date=history,
-                            ignore_errors=True)
+                            ignore_errors=True,
+                            field_filters=field_filters)
 
     # Beautifying the resulting csv.
     mongo_projection.pop(ADAPTERS_LIST_LENGTH, None)
@@ -1087,8 +1082,7 @@ def _get_csv(mongo_filter, mongo_sort, mongo_projection, entity_type: EntityType
         for field in mongo_projection.keys():
             # Replace field paths with their pretty titles
             if field in current_entity:
-                field_filter = field_filters.get(field, '') if field_filters else ''
-                current_entity[mongo_projection[field]] = get_csv_canonized_value(current_entity[field], field_filter)
+                current_entity[mongo_projection[field]] = get_csv_canonized_value(current_entity[field])
                 del current_entity[field]
 
         yield dw.writerow(current_entity)
