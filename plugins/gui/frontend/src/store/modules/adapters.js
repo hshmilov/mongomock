@@ -89,7 +89,7 @@ export const adapters = {
 							description: adapterMetaData.description || '',
 							link: adapterMetaData.link,
 							config,
-							status: countClients && successClients ? 'success' : countClients ? 'warning' : '',
+							status: countClients && countClients === successClients ? 'success' : countClients ? 'warning' : '',
 							schema,
 							supported_features,
 							clients: clientsList.map(c => c.uuid),
@@ -148,7 +148,7 @@ export const adapters = {
 		},
 		[UPDATE_EXISTING_CLIENT](state, payload){
 			// update exsiting client
-			const { adapterId, uuidToSwap = payload.uuid, ...updatedClient } = payload
+			const { adapterId, uuidToSwap = payload.uuid, status: clientStatus, ...updatedClient } = payload
 
 			const newAdaptersList = state.adapters.data.map(adapter => {
 				if (adapterId !== adapter.id) {
@@ -165,15 +165,18 @@ export const adapters = {
 					return updatedClient.uuid
 				})
 
+				const { errorClients, successClients } = adapter
 				return {
 					...adapter,
+					errorClients: clientStatus !== 'success' ? errorClients + 1 : errorClients,
+					successClients: successClients === 'success' ? successClients + 1 : successClients,
 					clients: newClientsList
 				}
 			})
 
 			state.adapters.data = newAdaptersList
 
-			state.clients.push(updatedClient)
+			state.clients.push({...updatedClient, status: clientStatus})
 		},
 		[REMOVE_CLIENT](state, { clientId, adapterId }) {
 

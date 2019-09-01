@@ -3,11 +3,10 @@
     <div class="adapters-search">
       <x-search-input class="adapters-search_input" v-model="searchText" placeholder="Search Adapters..." />
       <md-switch
-        v-model="showOnlyConnected"
+        v-model="showOnlyConfigured"
         class="md-primary"
-        @change="toggleAdaptersFilterbyConnection"
         >
-            Connected Only ({{connectedAdapterCount}})
+            Configured Only ({{configuredAfaptersCount}})
         </md-switch>
     </div>
     <div class="adapters-table">
@@ -57,10 +56,9 @@
     import {FETCH_ADAPTERS} from '../../store/modules/adapters'
     import {CHANGE_TOUR_STATE} from '../../store/modules/onboarding'
 
-    function getConnectedAdapters(adapter) {
-        // connected adapter is one that a least one of its clients is
-        // successfuly connected        
-        return adapter.successClients
+    function getConfiguredAdapters(adapter) {
+        // configured adapter is one that has at least 1 client configured
+        return adapter.clients.length
     }
 
     export default {
@@ -81,19 +79,19 @@
                 if (this.searchText) {
                     res = res.filter(a => a.title.toLowerCase().includes(serachTerm))
                 }
-                if (this.showOnlyConnected) {
-                    res = res.filter(getConnectedAdapters)
+                if (this.showOnlyConfigured) {
+                    res = res.filter(getConfiguredAdapters)
                 }
                 return res
             },
-            connectedAdapterCount() {
-                return this.filteredData.filter(getConnectedAdapters).length
+            configuredAfaptersCount() {
+                return this.filteredData.filter(getConfiguredAdapters).length
             }
         },
         data() {
             return {
                 searchText: '',
-                showOnlyConnected: false,
+                showOnlyConfigured: false,
             }
         },
         methods: {
@@ -105,9 +103,6 @@
                     configuration page, so it will return meanwhile
                  */
                 this.$router.push({path: `adapters/${adapterId}`})
-            },
-            toggleAdaptersFilterbyConnection(showOnlyConnected) {
-                this.showOnlyConnected = showOnlyConnected
             }
         },
         created() {
