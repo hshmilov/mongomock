@@ -1096,7 +1096,7 @@ def compare_bios_serial_serial_no_s(adapter_device1, adapter_device2):
 
 
 def get_asset_name(adapter_device):
-    if adapter_device['data'].get('name'):
+    if adapter_device['data'].get('name') and not is_qualys_adapter(adapter_device):
         return adapter_device['data'].get('name').upper()
     return None
 
