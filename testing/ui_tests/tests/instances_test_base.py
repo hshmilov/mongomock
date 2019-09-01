@@ -1,8 +1,10 @@
 import io
+import json
 import os
 import re
 import subprocess
 import sys
+from datetime import datetime
 from pathlib import Path
 
 import paramiko
@@ -15,6 +17,7 @@ from builds import Builds
 from builds.builds_factory import BuildsInstance
 from devops.scripts.instances.system_boot import \
     BOOTED_FOR_PRODUCTION_MARKER_PATH
+from scripts.instances.instances_consts import CORTEX_PATH
 from test_credentials.test_nexpose_credentials import client_details
 from ui_tests.tests.ui_test_base import TestBase
 from deployment.install import SYSTEM_BOOT_CRON_SCRIPT_PATH
@@ -37,144 +40,168 @@ NEXPOSE_ADAPTER_NAME = 'Rapid7 Nexpose'
 NEXPOSE_ADAPTER_FILTER = 'adapters == "nexpose_adapter"'
 PRIVATE_IP_ADDRESS_REGEX = r'inet (10\..*|192\.168.*|172\..*)\/'
 
-CUSTOMER_CONF = '''
-{
-  "exclude-list": {
-    "add-to-exclude": [
-      "nessus",
-      "carbonblack_defense",
-      "minerva",
-      "desktop_central",
-      "tenable_io",
-      "clearpass",
-      "device42",
-      "symantec_cloud_workload",
-      "cisco_meraki",
-      "paloalto_panorama",
-      "infinite_sleep",
-      "openstack",
-      "quest_kace",
-      "alibaba",
-      "tripwire_enterprise",
-      "jamf",
-      "azure",
-      "cisco_prime",
-      "observeit",
-      "alertlogic",
-      "lansweeper",
-      "nmap",
-      "duo",
-      "unifi",
-      "promisec",
-      "symantec_ee",
-      "proxmox",
-      "kaseya",
-      "aws",
-      "mssql",
-      "blackberry_uem",
-      "azure_ad",
-      "aruba",
-      "gotoassist",
-      "cynet",
-      "riverbed",
-      "sentinelone",
-      "ibm_tivoli_taddm",
-      "okta",
-      "chef",
-      "redseal",
-      "armis",
-      "qualys_scans",
-      "truefort",
-      "illusive",
-      "fireeye_hx",
-      "traiana_lab_machines",
-      "malwarebytes",
-      "sccm",
-      "twistlock",
-      "linux_ssh",
-      "cybereason",
-      "foreman",
-      "esx",
-      "bluecat",
-      "bomgar",
-      "checkpoint_r80",
-      "junos",
-      "fortigate",
-      "juniper",
-      "nimbul",
-      "infoblox",
-      "epo",
-      "google_mdm",
-      "mobi_control",
-      "cisco_amp",
-      "dynatrace",
-      "logrhythm",
-      "deep_security",
-      "absolute",
-      "carbonblack_response",
-      "forcepoint_csv",
-      "sophos",
-      "zabbix",
-      "mobileiron",
-      "cisco_umbrella",
-      "tenable_security_center",
-      "saltstack_enterprise",
-      "cloudflare",
-      "json_file",
-      "stresstest",
-      "softlayer",
-      "opswat",
-      "saltstack",
-      "counter_act",
-      "qcore",
-      "splunk",
-      "divvycloud",
-      "airwatch",
-      "cylance",
-      "redcloack",
-      "cisco_ise",
-      "dropbox",
-      "spacewalk",
-      "carbonblack_protection",
-      "oracle_vm",
-      "redcanary",
-      "stresstest_scanner",
-      "eset",
-      "ensilo",
-      "service_now",
-      "puppet",
-      "code42",
-      "hyper_v",
-      "gce",
-      "csv",
-      "snipeit",
-      "sysaid",
-      "oracle_cloud",
-      "nessus_csv",
-      "claroty",
-      "symantec",
-      "stresstest_users",
-      "datadog",
-      "symantec_altiris",
-      "tanium",
-      "crowd_strike",
-      "bigfix",
-      "shodan",
-      "cisco",
-      "cloudpassage",
-      "webroot",
-      "samange",
-      "bitdefender",
-      "secdo",
-      "bitsight"
-    ],
-    "remove-from-exclude": []
-  }
-}
-'''
+# Don't add Nexpose, AD
+CUSTOMER_CONF = json.dumps({
+    'exclude-list': {
+        'add-to-exclude': [
+            'nessus',
+            'carbonblack_defense',
+            'minerva',
+            'desktop_central',
+            'tenable_io',
+            'clearpass',
+            'device42',
+            'symantec_cloud_workload',
+            'cisco_meraki',
+            'paloalto_panorama',
+            'infinite_sleep',
+            'openstack',
+            'quest_kace',
+            'alibaba',
+            'tripwire_enterprise',
+            'jamf',
+            'azure',
+            'cisco_prime',
+            'observeit',
+            'alertlogic',
+            'lansweeper',
+            'nmap',
+            'duo',
+            'unifi',
+            'promisec',
+            'symantec_ee',
+            'proxmox',
+            'kaseya',
+            'aws',
+            'mssql',
+            'blackberry_uem',
+            'azure_ad',
+            'aruba',
+            'gotoassist',
+            'cynet',
+            'riverbed',
+            'sentinelone',
+            'ibm_tivoli_taddm',
+            'okta',
+            'chef',
+            'redseal',
+            'armis',
+            'qualys_scans',
+            'truefort',
+            'illusive',
+            'fireeye_hx',
+            'traiana_lab_machines',
+            'malwarebytes',
+            'sccm',
+            'twistlock',
+            'linux_ssh',
+            'cybereason',
+            'foreman',
+            'esx',
+            'bluecat',
+            'bomgar',
+            'checkpoint_r80',
+            'junos',
+            'fortigate',
+            'juniper',
+            'nimbul',
+            'infoblox',
+            'epo',
+            'google_mdm',
+            'mobi_control',
+            'cisco_amp',
+            'dynatrace',
+            'logrhythm',
+            'deep_security',
+            'absolute',
+            'carbonblack_response',
+            'forcepoint_csv',
+            'sophos',
+            'zabbix',
+            'mobileiron',
+            'cisco_umbrella',
+            'tenable_security_center',
+            'saltstack_enterprise',
+            'cloudflare',
+            'json_file',
+            'stresstest',
+            'softlayer',
+            'opswat',
+            'saltstack',
+            'counter_act',
+            'qcore',
+            'splunk',
+            'divvycloud',
+            'airwatch',
+            'cylance',
+            'redcloack',
+            'cisco_ise',
+            'dropbox',
+            'spacewalk',
+            'carbonblack_protection',
+            'oracle_vm',
+            'redcanary',
+            'stresstest_scanner',
+            'eset',
+            'ensilo',
+            'service_now',
+            'puppet',
+            'code42',
+            'hyper_v',
+            'gce',
+            'csv',
+            'snipeit',
+            'sysaid',
+            'oracle_cloud',
+            'nessus_csv',
+            'claroty',
+            'symantec',
+            'stresstest_users',
+            'datadog',
+            'symantec_altiris',
+            'tanium',
+            'crowd_strike',
+            'bigfix',
+            'shodan',
+            'cisco',
+            'cloudpassage',
+            'webroot',
+            'samange',
+            'bitdefender',
+            'secdo',
+            'bitsight',
+            'ca_cmdb',
+            'cisco_firepower_management_center',
+            'datto_rmm',
+            'endgame',
+            'censys',
+            'druva',
+            'f5_icontrol',
+            'cycognito',
+            'automox',
+            'haveibeenpwned',
+            'indegy',
+            'kaspersky_sc',
+            'maas360',
+            'imperva_dam',
+            'jumpcloud',
+            'librenms',
+            'netbox',
+            'office_scan',
+            'paloalto_cortex',
+            'signalsciences',
+            'symantec_12',
+            'rumble',
+            'solarwinds_orion',
+            'symantec_sep_cloud',
+            'zscaler'
+        ],
+        'remove-from-exclude': []
+    }
+})
 
 
-@retry(stop_max_attempt_number=90, wait_fixed=1000 * 20)
+@retry(stop_max_attempt_number=120, wait_fixed=1000 * 20)
 def wait_for_booted_for_production(instance: BuildsInstance):
     print('Waiting for server to be booted for production...')
     test_ready_command = f'ls -al {BOOTED_FOR_PRODUCTION_MARKER_PATH.absolute().as_posix()}'
@@ -190,6 +217,13 @@ def bring_restart_on_reboot_node_log(instance: BuildsInstance, logger):
         get_log_command = f'cat {RESTART_LOG_PATH.as_posix()}'
         restart_log_tail = instance.ssh(get_log_command)
         logger.info(f'{RESTART_LOG_PATH} : {restart_log_tail[1]}')
+
+        logs_path = Path(CORTEX_PATH) / 'logs'
+        logs_dir = instance.ssh(f'ls -la {logs_path}')
+        logger.info(f'\n\nLogs dir:\n {logs_dir}')
+        folder_as_tar = instance.get_folder_as_tar(logs_path)
+        logger.info(f'Got {len(folder_as_tar)} bytes from instance')
+        (logs_path / 'ui_logger' / 'instance_logs_tar.tar').write_bytes(folder_as_tar)
     except Exception:
         logger.info(f'Failed bringing full log', exc_info=True)
 
@@ -222,8 +256,16 @@ def setup_instances(logger, instance_name, export_name=None):
     for current_instance in instances:
         current_instance.wait_for_ssh()
         try:
-            wait_for_booted_for_production(current_instance)
-            logger.info('Server is booted for production.')
+            now = datetime.now()
+            logger.info('Waiting for server to boot to production')
+            try:
+                wait_for_booted_for_production(current_instance)
+            except Exception:
+                bring_restart_on_reboot_node_log(current_instance, logger)
+                logger.info(f'Failed once, trying again, failed after {(datetime.now() - now).total_seconds()}')
+                wait_for_booted_for_production(current_instance)
+
+            logger.info(f'Server is booted for production, took {(datetime.now() - now).total_seconds()}')
         except Exception:
             bring_restart_on_reboot_node_log(current_instance, logger)
             # If we fail in setup_method, teardown will not be called. lets terminate the instance.

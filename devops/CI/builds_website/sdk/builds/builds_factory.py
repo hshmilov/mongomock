@@ -159,7 +159,7 @@ class BuildsInstance(BuildsAPI):
         output = output.decode('utf-8').strip()
         return rc, output
 
-    def get_file(self, file_path):
+    def get_file(self, file_path) -> bytes:
         assert self.initialized, 'Instance is not initialized, please use wait_for_ssh'
         with self.sftp.open(file_path, 'r') as remote_file:
             return remote_file.read()
@@ -167,7 +167,7 @@ class BuildsInstance(BuildsAPI):
     def put_file(self, file_object, remote_file_path):
         self.sftp.putfo(file_object, remote_file_path)
 
-    def get_folder_as_tar(self, remote_file_path):
+    def get_folder_as_tar(self, remote_file_path) -> bytes:
         assert self.initialized, 'Instance is not initialized, please use wait_for_ssh'
         rc, output = self.ssh(f'tar -czf /tmp/tmp.tar {remote_file_path}')
         assert rc == 0, f'Error in compressing remote folder: {output}'
