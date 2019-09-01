@@ -17,9 +17,8 @@
                 &lt;
         </x-button>
         <div class="pagintator-text" >
-            Top
             <template v-if="page === 1">
-               <strong> {{ to }}</strong>
+               Top <strong> {{ to }}</strong>
             </template>
             <template v-else>
                 <strong> {{ from }} </strong>
