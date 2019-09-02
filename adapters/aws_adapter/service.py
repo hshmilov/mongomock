@@ -1793,7 +1793,7 @@ class AwsAdapter(AdapterBase, Configurable):
                             more_ips.append(specific_private_ip_address)
 
                     specific_public_ip_address = device_raw.get('PublicIpAddress')
-                    if specific_public_ip_address not in ec2_ips:
+                    if specific_public_ip_address and specific_public_ip_address not in ec2_ips:
                         more_ips.append(specific_public_ip_address)
                         device.add_public_ip(specific_public_ip_address)
 

@@ -797,6 +797,7 @@ class PluginBase(Configurable, Feature):
                 logger.error(f"Not registered to core (got response {response.status_code}), Exiting")
                 # TODO: Think about a better way for exiting this process
                 os._exit(1)
+            self.comm_failure_counter = 0
         except Exception as e:
             self.comm_failure_counter += 1
             if self.comm_failure_counter > retries:  # Two minutes
