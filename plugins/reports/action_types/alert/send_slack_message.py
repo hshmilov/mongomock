@@ -78,7 +78,7 @@ class SlackSendMessageAction(ActionTypeAlert):
 
         entities_str = ''
         for i, entity in enumerate(all_gui_entities):
-            entities_str += str(entity) + '\n'
+            entities_str += str(entity) + '\n\n'
             if i == 5:
                 break
         old_results_num_of_devices = len(self._internal_axon_ids) + len(self._removed_axon_ids) - \
