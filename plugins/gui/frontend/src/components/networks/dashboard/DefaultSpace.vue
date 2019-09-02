@@ -106,9 +106,14 @@
       runFilter (filter, module) {
         if (this.isEntityRestricted(module)) return
         this.updateView({
-          module, view: {
-            page: 0, query: { filter, expressions: [] }
-          }
+          module,
+          view: {
+            page: 0,
+            query: {
+              filter, expressions: []
+            }
+          },
+          uuid: null
         })
         this.$router.push({ path: module })
       },

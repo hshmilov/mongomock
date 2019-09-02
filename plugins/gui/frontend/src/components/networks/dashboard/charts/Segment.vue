@@ -69,7 +69,9 @@
           return this.config.field.name
         },
         set (fieldName) {
-          this.config = { ...this.config, field: this.schemaByName[fieldName]}
+          this.config = { ...this.config,
+            field: this.schemaByName[fieldName] || { name: '' }
+          }
         }
       },
       fieldOptions () {

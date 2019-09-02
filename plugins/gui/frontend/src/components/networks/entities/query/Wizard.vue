@@ -113,17 +113,16 @@
       },
       clearFilter () {
         // Restart the expressions, search input and filter
+        this.onChangeFilter('', true)
         this.queryExpressions = []
-        this.isUniqueAdapters = false
         this.$nextTick(() => {
           this.$refs.filter.filters = []
           this.$refs.filter.addExpression()
           this.$refs.filter.error = ''
-          this.onChangeFilter('')
         })
       },
-      onChangeFilter (filter) {
-        if (this.isUniqueAdapters) {
+      onChangeFilter (filter, cancelUniqueAdapters) {
+        if (this.isUniqueAdapters && !cancelUniqueAdapters) {
           this.sendFilter(`${INCLUDE_OUDATED_MAGIC}${filter}`)
         } else {
           this.sendFilter(filter)
