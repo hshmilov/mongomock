@@ -4083,7 +4083,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
                     'value': -1
                 }
             }
-        ])
+        ], allowDiskUse=True)
         base_filter = f'({base_view["query"]["filter"]}) and ' if base_view['query']['filter'] else ''
         data = []
         all_values = defaultdict(int)
