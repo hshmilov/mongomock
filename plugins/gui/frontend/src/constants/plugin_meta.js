@@ -1,7 +1,8 @@
 export const pluginMeta = {
     specops_adapter: {
         title: 'Specops Inventory',
-        description: 'Inventory collects and reports information on hardware, software, registry, user settings, operating system, security data, and Active Directory data. The tool can help with your license compliance needs, saving you time and money. It scales with any size of Active Directory, and can be up and running in under 60 minutes.'
+        link: 'https://docs.axonius.com/docs/specops-inventory',
+        description: 'Specops Inventory collects and reports information on hardware, software, registry, user settings, operating system, security data, and Active Directory data.'
     },
     vcloud_director_adapter: {
         title: 'VMware vCloud Director',
@@ -21,12 +22,12 @@ export const pluginMeta = {
     automox_adapter: {
         title: 'Automox',
         link: 'https://docs.axonius.com/docs/automox',
-        description: 'Automox’s cloud-based, automated patch management solution simplifies patching and configuration management across Windows, Linux, Mac OS X, and third-party software.'
+        description: 'Automox is a cloud-based patch and configuration management solution for Windows, Linux, Mac, and third-party software.'
     },
     kaspersky_sc_adapter: {
         title: 'Kaspersky Security Center',
         link: 'https://docs.axonius.com/docs/kaspersky-security-center',
-        description: 'Kaspersky Security Center simplifies security administration and IT systems management.'
+        description: 'Kaspersky Security Center is an administration console for Kaspersky Labs security solutions and systems management tools.'
     },
     symantec_12_adapter: {
         title: 'Symantec Endpoint Protection 12.x',
