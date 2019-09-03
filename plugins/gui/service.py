@@ -4088,12 +4088,8 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         data = []
         all_values = defaultdict(int)
         for item in aggregate_results:
-            for value in item['name']:
-                if isinstance(value, list):
-                    for subvalue in set(value):
-                        all_values[subvalue] += item['value']
-                else:
-                    all_values[value] += item['value']
+            for value in set(gui_helpers.flatten_list(item['name'])):
+                all_values[value] += item['value']
         for field_value, field_count in all_values.items():
             if field_value == 'No Value':
                 value_filter = f'not ({field_name} == exists(true))'

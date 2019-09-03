@@ -1174,3 +1174,11 @@ def add_labels_to_entities(db, namespace: EntitiesNamespace, entities: Iterable[
 
     namespace.add_many_labels(entities, labels=labels,
                               are_enabled=not to_delete, is_huge=is_huge)
+
+
+def flatten_list(input_list):
+    for item in input_list:
+        if not isinstance(item, list):
+            yield item
+        else:
+            yield from flatten_list(item)
