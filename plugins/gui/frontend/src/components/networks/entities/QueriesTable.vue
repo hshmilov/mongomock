@@ -6,6 +6,7 @@
       @keyup.enter.native="onSearchConfirm"
     />
     <x-table
+      ref="table"
       v-model="readOnly? undefined: selection"
       :module="stateLocation"
       title="Saved Queries"
@@ -145,6 +146,7 @@
             page: 0
           }
         })
+        this.$refs.table.fetchContentPages(true)
       }
     }
   }

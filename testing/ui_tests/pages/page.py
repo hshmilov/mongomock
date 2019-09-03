@@ -127,6 +127,8 @@ class Page:
 
     RENAME_TAB_INPUT_ID = 'rename_tab'
 
+    TABLE_SEARCH_INPUT = '.x-search-input .input-value'
+
     def __init__(self, driver, base_url, test_base, local_browser: bool):
         self.driver = driver
         self.base_url = base_url
@@ -738,3 +740,7 @@ class Page:
 
     def click_table_checkbox(self):
         self.driver.find_element_by_css_selector(self.TABLE_ALL_CHECKBOX_CSS).click()
+
+    def fill_enter_table_search(self, text):
+        self.fill_text_field_by_css_selector(self.TABLE_SEARCH_INPUT, text)
+        self.key_down_enter(self.driver.find_element_by_css_selector(self.TABLE_SEARCH_INPUT))

@@ -262,7 +262,6 @@
                 this.message = ''
                 this.serverModal.valid = true
                 if (clientId === 'new') {
-                    // this.serverModal.instanceName = this.currentAdapter.title
                     this.serverModal = {
                         ...this.serverModal,
                         serverData: {},

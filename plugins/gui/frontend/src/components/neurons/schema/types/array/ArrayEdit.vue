@@ -151,6 +151,31 @@
     },
     mounted () {
       this.validate(true)
+      // When loaded, update data with default values, as defined
+      let updateData = false
+      this.schemaItems.forEach(item => {
+        if (item.type === 'array') {
+          // An array, no need to handle recursively
+          return
+        }
+        if (this.data[item.name] !== undefined && this.data[item.name] !== null) {
+          // Value exists, no need to process
+          return
+        }
+        if (item.type === 'bool') {
+          this.data[item.name] = false
+          updateData = true
+        }
+        if (!item.default) {
+          // Nothing defined to set
+          return
+        }
+        this.data[item.name] = item.default
+        updateData = true
+      })
+      if (updateData) {
+        this.data = { ...this.data }
+      }
     },
     updated () {
       if (this.needsValidation) {

@@ -124,7 +124,7 @@
       }),
       processedPanels () {
         return this.panels.map(chart => {
-          if (chart.metric === 'timeline') return chart
+          if (chart.metric === 'timeline' || !chart.data) return chart
           return { ...chart,
             historical: this.cardToDate[chart.uuid],
             data: chart.data.map(item => {

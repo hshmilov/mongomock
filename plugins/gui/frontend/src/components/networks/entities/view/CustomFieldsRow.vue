@@ -117,7 +117,11 @@
           return this.field.type
         },
         set (type) {
-          this.$emit('input', { ...this.field, type })
+          this.$emit('input', {
+            ...this.field,
+            value: type === 'bool'? false : null,
+            type
+          })
         }
       },
       fieldValue: {

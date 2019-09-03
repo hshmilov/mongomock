@@ -126,7 +126,7 @@
           return
         }
         if (this.value) {
-          let fieldMatch = /\w+_data\.\w+\.(\w+)/.exec(this.value)
+          let fieldMatch = /\w+_data\.\w+(\.\w+)/.exec(this.value)
           if (fieldMatch && fieldMatch.length > 1) {
             let currentField = this.currentFields.find(field => field.name.includes(fieldMatch[1]))
             if (currentField) {

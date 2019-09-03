@@ -130,6 +130,7 @@ class TestSavedQuery(TestBase):
         self.devices_queries_page.switch_to_page()
 
         self.devices_page.wait_for_spinner_to_end()
+        self.devices_queries_page.fill_enter_table_search('system')
         windows_query_row = self.devices_queries_page.find_query_row_by_name('Windows Operating System')
         self.devices_page.wait_for_spinner_to_end()
         windows_query_row.click()

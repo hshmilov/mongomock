@@ -15,12 +15,6 @@
 			isEmpty() {
 				return this.data === undefined || typeof this.data !== 'boolean'
             }
-        },
-        created() {
-			if (!this.data) {
-				this.data = false
-				this.$emit('input', this.data)
-            }
         }
 	}
 </script>

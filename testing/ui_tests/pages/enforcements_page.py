@@ -102,8 +102,6 @@ class EnforcementsPage(EntitiesPage):
     TASK_RESULT_SUCCESS_CSS = TASK_RESULT_CSS.format(child_count=1)
     TASK_RESULT_FAILURE_CSS = TASK_RESULT_CSS.format(child_count=3)
 
-    TABLE_SEARCH_INPUT = '.x-search-input .input-value'
-
     FIRST_ENFORCEMENT_EXECUTION_DIR_SEPERATOR = 'first-seperator'
     SECOND_ENFORCEMENT_EXECUTION_DIR_SEPERATOR = 'second-seperator'
 
@@ -564,10 +562,6 @@ class EnforcementsPage(EntitiesPage):
     def find_action_library_tip(self, tip_text):
         library_tip = self.wait_for_element_present_by_css('.x-action-library-tip')
         return self.find_element_by_text(tip_text, element=library_tip)
-
-    def fill_enter_table_search(self, text):
-        self.fill_text_field_by_css_selector(self.TABLE_SEARCH_INPUT, text)
-        self.key_down_enter(self.driver.find_element_by_css_selector(self.TABLE_SEARCH_INPUT))
 
     def fill_send_email_config(self, name, recipient=None, body=None):
         self.wait_for_action_config()

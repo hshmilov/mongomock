@@ -37,8 +37,6 @@ export default {
 		value(newValue, oldValue) {
 			if (newValue !== oldValue) {
 				this.data = newValue
-			}
-			if (newValue) {
 				this.validate()
 			}
 		}
@@ -80,9 +78,6 @@ export default {
 	created() {
 		if (this.value !== undefined && this.value !== null) {
 			this.data = this.value
-		} else if (this.schema.default) {
-			this.data = this.schema.default
-			this.$emit('input', this.data)
 		}
 	},
 	destroyed() {

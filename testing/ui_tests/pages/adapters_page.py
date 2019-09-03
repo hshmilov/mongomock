@@ -25,7 +25,7 @@ class AdaptersPage(EntitiesPage):
 
     TEST_CONNECTIVITY_CONNECTION_IS_VALID = 'Connection is valid.'
     TEST_CONNECTIVITY_NOT_SUPPORTED = 'Test reachability is not supported for this adapter.'
-    TEST_CONNECTIVITY_PROBLEM = 'Problem connecting to server.'
+    TEST_CONNECTIVITY_PROBLEM = 'Problem connecting'
 
     SERVER_ORANGE_COLOR_ID = 'svgicon_symbol_warning_a'
     SERVER_RED_COLOR_ID = 'svgicon_symbol_error_a'
