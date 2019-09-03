@@ -9,7 +9,7 @@ import sys
 import time
 
 from enum import Enum
-from typing import List
+from typing import List, Tuple
 
 import paramiko
 import requests
@@ -117,13 +117,13 @@ class BuildsInstance(BuildsAPI):
         self.debug_print('Connected via SSH.')
         self.initialized = True
 
-    def ssh(self, command, quiet=True, timeout=None):
+    def ssh(self, command, quiet=True) -> Tuple[int, str]:
         """
         Runs a command and returns its output. not interactive.
         :param quiet: Should not write debug print.
         :param command: the command.
         :param timeout: optional timeout for command
-        :return: (stdout, stderr).
+        :return: (rc, stderr).
         """
         assert self.initialized, 'Instance is not initialized, please use wait_for_ssh'
 
@@ -170,7 +170,7 @@ class BuildsInstance(BuildsAPI):
     def get_folder_as_tar(self, remote_file_path) -> bytes:
         assert self.initialized, 'Instance is not initialized, please use wait_for_ssh'
         rc, output = self.ssh(f'tar -czf /tmp/tmp.tar {remote_file_path}')
-        assert rc == 0, f'Error in compressing remote folder: {output}'
+        assert rc == 0 or 'Removing leading' in output, f'Error in compressing remote folder: {output}'
         return self.get_file('/tmp/tmp.tar')
 
     @retry(stop_max_attempt_number=3, wait_fixed=5000)

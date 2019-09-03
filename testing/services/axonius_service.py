@@ -439,8 +439,9 @@ class AxoniusService:
         if len(errors) > 0:
             # plugins contains failed ones and should be removed to make sure the state is stable for next time.
             try:
-                print(f'Logs of {service.container_name}:')
-                os.system(f'docker logs {service.container_name}')
+                for plugin in errors:
+                    print(f'Logs of {plugin.container_name}:')
+                    os.system(f'docker logs {plugin.container_name}')
             except Exception as e:
                 print(f'Failed getting logs, {e}')
             for service in errors:
