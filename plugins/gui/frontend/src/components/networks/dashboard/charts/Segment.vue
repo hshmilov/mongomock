@@ -29,6 +29,7 @@
   import xSelectSymbol from '../../../neurons/inputs/SelectSymbol.vue'
   import xSelectTypedField from '../../../neurons/inputs/SelectTypedField.vue'
   import chartMixin from './chart'
+  import {isObjectListField} from '../../../../constants/utils'
 
   import { mapGetters } from 'vuex'
   import { GET_DATA_FIELDS_BY_PLUGIN, GET_DATA_SCHEMA_BY_NAME } from '../../../../store/getters'
@@ -81,6 +82,9 @@
             ...category,
             fields: category.fields.filter(field => {
               if (!field.name.startsWith('specific_data') && !field.name.startsWith('adapters_data')) {
+                return false
+              }
+              if (isObjectListField(field)) {
                 return false
               }
               return !field.branched && field.type !== 'array' || this.chartView === 'histogram'

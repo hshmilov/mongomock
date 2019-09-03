@@ -1,4 +1,5 @@
 import {pluginMeta} from '../constants/plugin_meta.js'
+import {isObjectListField} from '../constants/utils'
 
 export const GET_DATA_FIELDS_BY_PLUGIN = 'GET_DATA_FIELDS_BY_PLUGIN'
 export const getDataFieldsByPlugin = (state) => (module, objectView) => {
@@ -27,7 +28,7 @@ export const getDataFieldsByPlugin = (state) => (module, objectView) => {
 
 const selectFields = (schema, objectView) => {
     return objectView
-      ? schema.filter(field => field.items && !Array.isArray(field.items) && field.items.type === 'array')
+      ? schema.filter(isObjectListField)
       : schema
 }
 

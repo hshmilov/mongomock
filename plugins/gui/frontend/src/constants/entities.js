@@ -9,14 +9,14 @@ export const entities = [
 
 export const defaultFields = {
     devices: [
-        'adapters', 'specific_data.data.hostname', 'specific_data.data.name',
-        'specific_data.data.last_seen', 'specific_data.data.os.type',
-        'specific_data.data.network_interfaces.ips', 'specific_data.data.network_interfaces.mac',
+        'adapters', 'specific_data.data.name', 'specific_data.data.hostname', 'specific_data.data.last_seen',
+        'specific_data.data.network_interfaces.mac', 'specific_data.data.network_interfaces.ips',
+        'specific_data.data.os.type',
         'labels'
     ],
     users: [
         'adapters', 'specific_data.data.image', 'specific_data.data.username', 'specific_data.data.domain',
-        'specific_data.data.last_seen', 'specific_data.data.is_admin', 'labels'
+        'specific_data.data.is_admin', 'specific_data.data.last_seen', 'labels'
     ]
 }
 

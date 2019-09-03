@@ -35,7 +35,7 @@
         slot="table"
         v-model="pageSelection"
         :data="pageData"
-        :fields="viewFields"
+        :fields="viewFieldsPaths"
         :page-size="view.pageSize"
         :sort="view.sort"
         :col-filters="view.colFilters"
@@ -199,28 +199,24 @@
       view () {
         return this.moduleState.view
       },
-      fields () {
-        if (this.staticFields) {
-          return this.staticFields.reduce((map, item) => {
-            map[item.name] = item
-            return map
-          }, {})
-        }
-        return this.getFieldSchemaByName(this.module)
+      schemaFields () {
+        return this.staticFields? {} : this.getFieldSchemaByName(this.module)
       },
       viewFields () {
-        if (!this.view.fields || !Object.keys(this.fields).length) {
+        if (!this.view.fields || !Object.keys(this.schemaFields).length) {
           return this.staticFields || []
         }
         return this.view.fields
-                .filter(field => this.fields[field] || this.fields[field] === 0 || this.fields[field] === false)
-                .map(field => {
-                  let fieldDef = this.fields[field]
-                  return {
-                    ...fieldDef,
-                    path: (fieldDef.path ? fieldDef.path : []).concat([fieldDef.name])
-                  }
-                })
+                .filter(field => this.schemaFields[field] !== undefined)
+                .map(field => this.schemaFields[field])
+      },
+      viewFieldsPaths () {
+        return this.viewFields.map(field => {
+          return {
+            ...field,
+            path: (field.path ? field.path : []).concat([field.name])
+          }
+        })
       },
       ids () {
         return this.data.map(item => item[this.idField])
