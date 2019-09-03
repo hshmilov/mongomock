@@ -1,9 +1,8 @@
 <template>
     <div :class="severity">
         <a v-if="hyperlink" :href="hyperlink.href" @click="onClickLink(hyperlink)">{{ displaying }}</a>
-        <template v-else>
-            {{ displaying }}
-        </template>
+        <template v-else-if="displaying">{{ displaying }}</template>
+        <template v-else>&nbsp;</template>
     </div>
 </template>
 

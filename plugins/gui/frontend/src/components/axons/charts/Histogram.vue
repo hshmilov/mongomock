@@ -1,13 +1,15 @@
 <template>
   <div
     class="x-histogram"
-    :class="{disabled: readOnly, condensed}">
+    :class="{disabled: readOnly, condensed}"
+  >
     <div class="histogram-container">
       <div
         v-for="(item, index) in limitedData"
         :key="index"
         class="histogram-item"
-        @click="() => $emit('click-one', index)">
+        @click="() => onClick(index)"
+      >
         <div class="item-bar">
           <img
             v-if="condensed"
@@ -26,14 +28,18 @@
         <div
           v-if="!condensed"
           class="item-title"
-          :title="item.name">
-          {{item.name}}
-        </div>
+          :title="item.name"
+        >{{item.name}}</div>
       </div>
     </div>
     <template v-if="dataLength">
       <div class="separator"></div>
-      <x-paginator :limit="limit" :data="data" v-model="limitedData"></x-paginator>
+      <x-paginator
+        ref="paginator"
+        v-model="limitedData"
+        :limit="limit"
+        :data="data"
+      />
     </template>
   </div>
 </template>
@@ -58,8 +64,8 @@ export default {
   },
   computed: {
     maxWidth() {
-      if (this.condensed) return 280;
-      return 240;
+      if (this.condensed) return 280
+      return 240
     },
     maxQuantity() {
       let max = this.data[0].value;
@@ -77,10 +83,16 @@ export default {
   methods: {
     calculateBarHeight(quantity) {
       return (this.maxWidth * quantity) / this.maxQuantity;
+    },
+    onClick(pageIndex) {
+      let dataIndex = pageIndex
+      if (this.$refs.paginator && this.$refs.paginator.page) {
+        dataIndex += (this.$refs.paginator.page - 1) * this.limit
+      }
+      this.$emit('click-one', dataIndex)
     }
   }
-
-};
+}
 </script>
 
 <style lang="scss">
