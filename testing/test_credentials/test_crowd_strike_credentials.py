@@ -1,8 +1,8 @@
 
 client_details = {
-    'domain': 'falconapi.crowdstrike.com',
-    'username': 'TY66X1GXR9THY7HWXG4N',
-    'apikey': 'MaxcBoguaRzLlTLYGHrAfcUXS0r2HJ',
+    'domain': 'api.crowdstrike.com',
+    'username': 'ca5474ed12ae450eb6f16e08e774a746',
+    'apikey': '7yimc40G2FBKRJgxC8lapsU931Dohnv5bqEI6tjQ',
     'verify_ssl': True
 }
 
