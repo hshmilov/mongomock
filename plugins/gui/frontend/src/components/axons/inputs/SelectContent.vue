@@ -77,7 +77,7 @@
                 default: () => []
             },
             value: {
-                type: [String, Object],
+                type: [String, Number, Boolean, Object],
                 default: null
             },
             placeholder: {

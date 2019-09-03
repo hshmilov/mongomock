@@ -57,7 +57,7 @@
         default: () => []
       },
       value: {
-        type: [String, Object],
+        type: [String, Number, Boolean, Object],
         default: null
       },
       placeholder: {
@@ -111,7 +111,10 @@
         }
       },
       stringValue() {
-          return !this.value || typeof(this.value) === 'string' ? this.value : this.value['value']
+        if (this.value && typeof this.value === 'object') {
+          return this.value.value
+        }
+        return this.value
       }
     },
     methods: {

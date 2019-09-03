@@ -229,6 +229,9 @@
         if (newSchema.type !== oldSchema.type || newSchema.format !== oldSchema.format) {
           this.value = null
         }
+        if (newSchema.enum && !newSchema.includes(this.value)) {
+          this.value = null
+        }
       }
     },
     methods: {
