@@ -38,7 +38,8 @@ export const getDataSchemaByName = (state) => (module) => {
 
     let allFieldsList = [...fields.generic]
     if (fields.specific) {
-        allFieldsList = Object.values(fields.specific).reduce((aggregatedList, currentList) => {
+        allFieldsList = Object.entries(fields.specific).reduce((aggregatedList, [specificName, currentList]) => {
+            currentList.map(field => field.logo = (singleAdapter(state)? undefined: specificName))
             return aggregatedList.concat(currentList)
         }, allFieldsList)
     }

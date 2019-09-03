@@ -177,6 +177,10 @@
       }
     }
 
+    > .logo {
+      margin-right: 4px;
+    }
+
     &.sortable {
       cursor: pointer;
 
