@@ -2355,7 +2355,13 @@ class PluginBase(Configurable, Feature):
                     logger.debug(f'{entity}, {plugin_unique_name}, {adapter_id} has  {amount_of_adapters}')
                     self.__perform_unlink_with_session(adapter_id, plugin_unique_name, session, entity,
                                                        entity_to_split=axonius_entity)
-                self.__archive_axonius_device(plugin_unique_name, adapter_id, _entities_db, session)
+        # By not having this a part of the transaction, we significantly mitigate
+        try:
+            self.__archive_axonius_device(plugin_unique_name, adapter_id, _entities_db)
+        except pymongo.errors.PyMongoError:
+            logger.warning(f'Failed archiving axnoius device {plugin_unique_name}, {adapter_id}', exc_info=True)
+        except Exception:
+            logger.exception(f'Failed archiving axnoius device {plugin_unique_name}, {adapter_id}')
 
     def __add_many_labels_to_entity_huge(self, entity: EntityType, identity_by_adapter, labels,
                                          are_enabled=True, with_results=False):

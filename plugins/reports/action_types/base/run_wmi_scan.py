@@ -1,5 +1,7 @@
 import logging
 
+from funcy import chunks
+
 from axonius.consts.plugin_consts import GENERAL_INFO_PLUGIN_NAME
 from axonius.types.enforcement_classes import EntitiesResult, EntityResult
 
@@ -72,27 +74,28 @@ class RunWMIScan(ActionTypeBase):
                 'password': self._config.get('wmi_password')
             }
 
-        action_data = {
-            'internal_axon_ids': self._internal_axon_ids,
-            'action_type': 'shell',
-            'action_name': self._action_saved_name,
-            'command': self._config,
-            'custom_credentials': credentials
-        }
-        # pylint: disable=protected-access
-        logger.info(f'Sending wmi scan request to {len(self._internal_axon_ids)} devices using general info')
-        action_result = self._plugin_base._trigger_remote_plugin(
-            GENERAL_INFO_PLUGIN_NAME,
-            priority=True, blocking=True, data=action_data
-        ).json()
+        for chunk in chunks(30000, self._internal_axon_ids):
+            action_data = {
+                'internal_axon_ids': chunk,
+                'action_type': 'shell',
+                'action_name': self._action_saved_name,
+                'command': self._config,
+                'custom_credentials': credentials
+            }
+            # pylint: disable=protected-access
+            logger.info(f'Sending wmi scan request to {len(chunk)} devices using general info')
+            action_result = self._plugin_base._trigger_remote_plugin(
+                GENERAL_INFO_PLUGIN_NAME,
+                priority=True, blocking=True, data=action_data
+            ).json()
 
-        def prettify_output(id_, result: dict) -> EntityResult:
-            value = result['value']
-            success = result['success']
-            return EntityResult(id_, success, value)
+            def prettify_output(id_, result: dict) -> EntityResult:
+                value = result['value']
+                success = result['success']
+                return EntityResult(id_, success, value)
 
-        return [
-            prettify_output(k, v)
-            for k, v
-            in action_result.items()
-        ]
+            yield from (
+                prettify_output(k, v)
+                for k, v
+                in action_result.items()
+            )

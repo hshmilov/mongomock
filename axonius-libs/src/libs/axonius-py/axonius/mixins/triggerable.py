@@ -10,6 +10,7 @@ from typing import DefaultDict
 
 import func_timeout
 import pymongo
+import pymongo.errors
 from pymongo.collection import Collection
 from pymongo.results import UpdateResult
 from bson import ObjectId
@@ -334,7 +335,7 @@ class Triggerable(Feature, ABC):
         :param state: The stored state object for the job
         :return:
         """
-        inserted_id = self.__triggerable_db.insert_one(state.serialize()).inserted_id
+        inserted_id = self.__safe_insert(state).inserted_id
         failed = None
         try:
             run_id = RunIdentifier(self.__triggerable_db, inserted_id)
@@ -453,8 +454,7 @@ class Triggerable(Feature, ABC):
                     return None
                 job_state.last_started_time = datetime.utcnow()
                 db_state.started_at = job_state.last_started_time
-                job_state.associated_stored_job_state_id = self.__triggerable_db. \
-                    insert_one(db_state.serialize()).inserted_id
+                job_state.associated_stored_job_state_id = self.__safe_insert(db_state).inserted_id
             run_id = RunIdentifier(self.__triggerable_db, job_state.associated_stored_job_state_id)
             return self._triggered(job_name, post_json, run_id, *args, **kwargs)
 
@@ -492,15 +492,48 @@ class Triggerable(Feature, ABC):
             job_state.promise = None
         job_state.scheduled = False
         job_state.last_error = last_error
-        self.__triggerable_db.update_one({
-            '_id': job_state.associated_stored_job_state_id
-        }, update={
-            '$set': {
-                'result': last_error,
-                'finished_at': datetime.utcnow(),
-                'job_completed_state': job_completed_state.name
+        try:
+            self.__triggerable_db.update_one({
+                '_id': job_state.associated_stored_job_state_id
+            }, update={
+                '$set': {
+                    'result': last_error,
+                    'finished_at': datetime.utcnow(),
+                    'job_completed_state': job_completed_state.name
+                }
+            })
+        except pymongo.errors.DocumentTooLarge:
+            logger.warning(f'DocumentTooLarge on {job_state.associated_stored_job_state_id}', exc_info=True)
+
+            self.__triggerable_db.update_one({
+                '_id': job_state.associated_stored_job_state_id
+            }, update={
+                '$set': {
+                    'result': {
+                        'error': 'DocumentTooLarge'
+                    },
+                    'finished_at': datetime.utcnow(),
+                    'job_completed_state': job_completed_state.name
+                }
+            })
+
+    def __safe_insert(self, state: StoredJobState) -> pymongo.results.InsertOneResult:
+        """
+        Inserts state into the DB while taking care of DocumentTooLarge by ignoring the issue
+        :return: the result from the DB
+        """
+        serialized = state.serialize()
+        try:
+            return self.__triggerable_db.insert_one(serialized)
+        except pymongo.errors.DocumentTooLarge:
+            serialized['post_json'] = {
+                'error': 'DocumentTooLarge'
             }
-        })
+            serialized['result'] = {
+                'error': 'DocumentTooLarge'
+            }
+            logger.warning(f'DocumentTooLarge, Removed post_json and result from {serialized}', exc_info=True)
+            return self.__triggerable_db.insert_one(serialized)
 
     def get_last_job(self, criteria, by_field='started_at'):
         last_triggered_data = self.__triggerable_db.find(criteria).sort(by_field, -1).limit(1)
