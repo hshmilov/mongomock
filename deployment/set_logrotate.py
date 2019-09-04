@@ -2,6 +2,26 @@ import argparse
 import os
 import sys
 
+from pathlib import Path
+
+
+def get_docker_volume_mount():
+    default_mount = '/var/lib'
+    try:
+        root_conf = Path('/etc/systemd/system/docker.service.d/docker.root.conf')
+        if not root_conf.is_file():
+            return default_mount
+        content = root_conf.read_text().split('\n')
+        for line in content:
+            start_marker = 'ExecStart=/usr/bin/dockerd -g'
+            if line.startswith(start_marker):
+                return line.split(start_marker)[1].split('-H')[0].strip()
+
+        return default_mount
+    except Exception as e:
+        print(f'Failed to read mount - {e}')
+        return default_mount
+
 
 def set_logrotate(args):
     parser = argparse.ArgumentParser()
@@ -17,7 +37,8 @@ def set_logrotate(args):
 
     ops = list()
     # docker logs
-    ops.append(write_logrotate('/etc/logrotate.d/docker-container', '/var/lib/docker/containers/*/*.log'))
+    docker_logs_mount = get_docker_volume_mount()
+    ops.append(write_logrotate('/etc/logrotate.d/docker-container', f'{docker_logs_mount}/docker/containers/*/*.log'))
     # our logs
     ops.append(write_logrotate('/etc/logrotate.d/axonius', os.path.join(cortex_path, 'logs', '*', '*.log')))
 
