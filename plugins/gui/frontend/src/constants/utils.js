@@ -24,3 +24,19 @@ export const calcMaxIndex = (list) => {
 export const isObjectListField = (field) => {
     return field.items !== undefined && !Array.isArray(field.items) && field.items.type === 'array'
 }
+
+export const getExcludedAdaptersFilter = (fieldType, field, filteredAdapters, condition) => {
+    let excludedAdapters = ''
+    if(fieldType === 'axonius' &&
+        filteredAdapters &&
+        field.indexOf('specific_data.data') !== -1 &&
+        !filteredAdapters.selectAll &&
+        !filteredAdapters.clearAll
+    ){
+        condition = condition.replace('specific_data.data.', 'data.')
+        excludedAdapters = Object.keys(filteredAdapters.selectedValues).filter(key => !filteredAdapters.selectedValues[key]).join("', '");
+    } else {
+        return condition
+    }
+    return `specific_data == match([plugin_name not in [\'${excludedAdapters}\'] and ${condition}])`
+}

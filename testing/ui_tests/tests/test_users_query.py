@@ -39,3 +39,40 @@ class TestUsersQuery(TestBase):
         assert len(self.users_page.find_rows_with_data()) == min(20, real_count)
         self.users_page.select_page_size(50)
         assert len(self.users_page.find_rows_with_data()) == real_count
+
+    def test_username_and_adapter_filters_query(self):
+        self.settings_page.switch_to_page()
+        self.base_page.run_discovery()
+        self.users_page.switch_to_page()
+        self.users_page.click_query_wizard()
+        expressions = self.users_page.find_expressions()
+        assert len(expressions) == 1
+        self.users_page.select_query_field(self.users_page.FIELD_USERNAME_TITLE, parent=expressions[0])
+        self.users_page.select_query_comp_op(self.users_page.QUERY_COMP_CONTAINS, parent=expressions[0])
+        self.users_page.fill_query_value('avi', parent=expressions[0])
+        self.users_page.wait_for_spinner_to_end()
+        self.users_page.wait_for_table_to_load()
+        assert self.users_page.count_entities() == 1
+        self.users_page.click_on_select_all_filter_adapters(parent=expressions[0])
+        self.users_page.click_on_filter_adapter(self.users_page.VALUE_ADAPTERS_AD, parent=expressions[0])
+        self.users_page.wait_for_spinner_to_end()
+        self.users_page.wait_for_table_to_load()
+
+        assert self.users_page.count_entities() == 0
+
+        self.users_page.click_on_select_all_filter_adapters()
+        self.users_page.click_on_filter_adapter(self.users_page.VALUE_ADAPTERS_JSON, parent=expressions[0])
+        self.users_page.wait_for_spinner_to_end()
+        self.users_page.wait_for_table_to_load()
+        assert self.users_page.count_entities() == 1
+
+        self.users_page.fill_query_value('ofri', parent=expressions[0])
+        self.users_page.wait_for_spinner_to_end()
+        self.users_page.wait_for_table_to_load()
+        assert self.users_page.count_entities() == 1
+
+        self.users_page.click_on_select_all_filter_adapters()
+        self.users_page.click_on_filter_adapter(self.users_page.VALUE_ADAPTERS_AD, parent=expressions[0])
+        self.users_page.wait_for_spinner_to_end()
+        self.users_page.wait_for_table_to_load()
+        assert self.users_page.count_entities() == 1

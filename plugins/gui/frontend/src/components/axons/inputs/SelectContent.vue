@@ -112,7 +112,8 @@
         data() {
             return {
                 activeOptionIndex: -1,
-                selectAll: false,
+                selectAll: true,
+                clearAll: false,
                 searchValue: ''
             }
         },
@@ -185,6 +186,8 @@
                     }
                     if(!newValue){
                         this.selectAll = false
+                    } else {
+                        this.clearAll = false
                     }
                     this.selectedValues = {...this.selectedValues, [name]: newValue}
 
@@ -193,7 +196,8 @@
             onOptionChanged(selectedValues){
                 if(this.multiSelect){
                     this.selectAll = Object.keys(selectedValues).filter(key => selectedValues[key]).length === this.options.length
-                    this.$emit('input', { selectedValues: selectedValues, selectAll: this.selectAll })
+                    this.clearAll = Object.keys(selectedValues).filter(key => !selectedValues[key]).length === this.options.length
+                    this.$emit('input', { selectedValues: selectedValues, selectAll: this.selectAll, clearAll: this.clearAll })
                 } else {
                     this.$emit('input', selectedValues)
                 }

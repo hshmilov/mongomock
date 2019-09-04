@@ -88,7 +88,7 @@
   import {mapGetters, mapMutations} from 'vuex'
   import { CHANGE_TOUR_STATE } from '../../../store/modules/onboarding'
   import { AUTO_QUERY } from "../../../store/getters"
-  import { calcMaxIndex } from '../../../constants/utils'
+  import { calcMaxIndex, getExcludedAdaptersFilter } from '../../../constants/utils'
 
   export default {
     name: 'XExpression',
@@ -247,21 +247,9 @@
           filterStack.push('not ')
         }
         if (this.expression.obj) {
-          let excludedAdapters = []
-          if(this.expression.fieldType === 'axonius' &&  this.expression.filteredAdapters && this.expression.field.indexOf('specific_data.data') !== -1){
-              if(!this.expression.filteredAdapters.selectAll) {
-                  excludedAdapters = Object.keys(this.expression.filteredAdapters.selectedValues).filter(key => !this.expression.filteredAdapters.selectedValues[key]);
-              }
-          }
-          if(excludedAdapters.length > 0) {
-              let cond = '({val})'
-              let excludedAdaptersString = excludedAdapters.join("', '")
-              let fieldCondition = this.getMatchExpression(this.expression.field, this.nestedExpressionCond, true)
-              filterStack.push(cond.replace(/{val}/g,`specific_data == match([plugin_name not in ['${excludedAdaptersString}'] and ${fieldCondition}])`))
-
-          } else {
-              filterStack.push(this.getMatchExpression(this.expression.field, this.nestedExpressionCond))
-          }
+            let expression = this.getMatchExpression(this.expression.field, this.nestedExpressionCond)
+            filterStack.push('({val})'.replace(/{val}/g, getExcludedAdaptersFilter(this.expression.fieldType,
+                this.expression.field, this.expression.filteredAdapters, expression)))
         } else {
           filterStack.push(this.condition)
         }
@@ -271,10 +259,7 @@
         }
         this.$emit('change', { filter: filterStack.join(''), bracketWeight })
       },
-      getMatchExpression(field, condition, filteredAdapters){
-          if(filteredAdapters) {
-              field = field.replace('specific_data.data.', 'data.')
-          }
+      getMatchExpression(field, condition){
           return `${field} == match([${condition}])`
       },
       addNestedExpression () {

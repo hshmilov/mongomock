@@ -9,6 +9,7 @@
       <div class="x-type-img">
         <img
           v-if="option && isFiltered(option)"
+          class="img-filtered"
           src="/src/assets/icons/logo/general_filtered.png"
           :alt="option.name"
         >

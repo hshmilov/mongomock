@@ -68,7 +68,10 @@ class EntitiesPage(Page):
     TABLE_HEADER_FIELD_XPATH = '//div[contains(@class, \'x-entity-general\')]//div[contains(@class, \'x-tab active\')]'\
                                '//div[@class=\'x-table\']//thead/tr'
     VALUE_ADAPTERS_JSON = 'JSON File'
+    NAME_ADAPTERS_JSON = 'json_file_adapter'
     VALUE_ADAPTERS_AD = 'Microsoft Active Directory (AD)'
+    NAME_ADAPTERS_AD = 'active_directory_adapter'
+    VALUE_ADAPTERS_GENERAL = 'General'
     TABLE_HEADER_CELLS_CSS = 'th'
     TABLE_HEADER_CELLS_XPATH = '//th[child::img[contains(@class, \'logo\')]]'
     TABLE_HEADER_SORT_XPATH = '//th[contains(@class, \'sortable\') and contains(text(), \'{col_name_text}\')]'
@@ -127,6 +130,10 @@ class EntitiesPage(Page):
     ENFORCEMENT_RESULTS_SUBTITLE = 'results of "{action_name}" action'
     MISSING_EMAIL_SETTINGS_TEXT = 'In order to send alerts through mail, configure it under settings'
 
+    FILTER_ADAPTERS_CSS = '.filter-adapters'
+    FILTER_ADAPTERS_BOX_CSS = '.x-secondary-select-content'
+    FILTERED_ADAPTER_ICON_CSS = '.img-filtered'
+
     @property
     def url(self):
         raise NotImplementedError
@@ -164,12 +171,41 @@ class EntitiesPage(Page):
                            text,
                            parent=parent)
 
-    def open_query_adapters_list(self):
-        self.driver.find_element_by_css_selector(self.QUERY_ADAPTER_DROPDOWN_CSS).click()
+    def open_query_adapters_list(self, parent=None):
+        if not parent:
+            parent = self.driver
+        parent.find_element_by_css_selector(self.QUERY_ADAPTER_DROPDOWN_CSS).click()
 
     def get_query_adapters_list(self):
         self.open_query_adapters_list()
         return self.get_adapters_list()
+
+    def open_query_adapters_list_and_open_adapter_filter(self, parent=None):
+        if not parent:
+            parent = self.driver
+        self.open_query_adapters_list(parent)
+        actions = ActionChains(self.driver)
+        actions.move_to_element(parent.find_element_by_css_selector(self.FILTER_ADAPTERS_CSS))
+        actions.perform()
+
+    def click_on_filter_adapter(self, adapter, parent=None):
+        self.open_query_adapters_list_and_open_adapter_filter(parent)
+        filter_adapter_box = self.driver.find_element_by_css_selector(self.FILTER_ADAPTERS_BOX_CSS)
+        self.find_element_by_text(adapter, filter_adapter_box).click()
+        self.driver.find_element_by_css_selector(self.FILTER_ADAPTERS_CSS).click()
+
+    def click_on_select_all_filter_adapters(self, parent=None):
+        self.click_on_filter_adapter('Select all', parent)
+
+    def click_on_clear_all_filter_adapters(self, parent=None):
+        self.click_on_filter_adapter('Clear all', parent)
+
+    def is_filtered_adapter_icon_exists(self):
+        try:
+            self.driver.find_element_by_css_selector(self.FILTERED_ADAPTER_ICON_CSS)
+        except NoSuchElementException:
+            return False
+        return True
 
     def open_edit_columns_adapters_list(self):
         self.driver.find_element_by_css_selector(self.EDIT_COLUMNS_ADAPTER_DROPDOWN_CSS).click()

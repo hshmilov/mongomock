@@ -69,6 +69,25 @@ class TestDevicesQuery(TestBase):
         self.devices_page.select_query_comp_op(self.devices_page.QUERY_COMP_EQUALS)
         assert not self.devices_page.get_query_value()
 
+    def _test_adapters_filter_change_icon(self):
+        """
+        Testing the change in the field type icon - when using the adapters filter the icon changes to a special icon
+        """
+        assert not self.devices_page.is_filtered_adapter_icon_exists()
+        self.devices_page.click_on_filter_adapter(self.devices_page.JSON_ADAPTER_NAME)
+        assert self.devices_page.is_filtered_adapter_icon_exists()
+        self.devices_page.clear_query_wizard()
+        expressions = self.devices_page.find_expressions()
+        self.devices_page.toggle_obj(expressions[0])
+        assert not self.devices_page.is_filtered_adapter_icon_exists()
+        self.devices_page.click_on_filter_adapter(self.devices_page.JSON_ADAPTER_NAME)
+        assert self.devices_page.is_filtered_adapter_icon_exists()
+        self.devices_page.toggle_obj(expressions[0])
+        self.devices_page.select_query_field(self.devices_page.FIELD_HOSTNAME_TITLE, parent=expressions[0])
+        self.devices_page.select_query_comp_op(self.devices_page.QUERY_COMP_EXISTS, parent=expressions[0])
+        assert self.devices_page.is_filtered_adapter_icon_exists()
+        self.devices_page.clear_query_wizard()
+
     def _test_and_expression(self):
         self.devices_page.add_query_expression()
         expressions = self.devices_page.find_expressions()
@@ -81,6 +100,76 @@ class TestDevicesQuery(TestBase):
         self.devices_page.wait_for_spinner_to_end()
         assert len(self.devices_page.get_all_data()) <= results_count
         self.devices_page.clear_query_wizard()
+
+    def test_host_name_and_adapter_filters_query(self):
+        self.settings_page.switch_to_page()
+        self.base_page.run_discovery()
+        self.devices_page.switch_to_page()
+        self.devices_page.click_query_wizard()
+        expressions = self.devices_page.find_expressions()
+        assert len(expressions) == 1
+        self.devices_page.select_query_field(self.devices_page.FIELD_HOSTNAME_TITLE, parent=expressions[0])
+        self.devices_page.select_query_comp_op(self.devices_page.QUERY_COMP_EXISTS, parent=expressions[0])
+        self.devices_page.wait_for_spinner_to_end()
+        self.devices_page.wait_for_table_to_load()
+        results_count = self.devices_page.count_entities()
+        self.devices_page.click_on_clear_all_filter_adapters(parent=expressions[0])
+        self.devices_page.wait_for_spinner_to_end()
+        self.devices_page.wait_for_table_to_load()
+        assert results_count == self.devices_page.count_entities()
+        self.devices_page.click_on_select_all_filter_adapters(parent=expressions[0])
+        self.devices_page.wait_for_spinner_to_end()
+        self.devices_page.wait_for_table_to_load()
+        assert results_count == self.devices_page.count_entities()
+
+        self.devices_page.click_on_filter_adapter(self.devices_page.VALUE_ADAPTERS_AD, parent=expressions[0])
+        self.devices_page.wait_for_spinner_to_end()
+        self.devices_page.wait_for_table_to_load()
+
+        non_ad_count = self.devices_page.count_entities()
+        assert results_count > non_ad_count
+        self.devices_page.click_on_filter_adapter(self.devices_page.VALUE_ADAPTERS_AD, parent=expressions[0])
+        self.devices_page.click_on_filter_adapter(self.devices_page.VALUE_ADAPTERS_JSON, parent=expressions[0])
+        self.devices_page.wait_for_spinner_to_end()
+        self.devices_page.wait_for_table_to_load()
+        non_json_count = self.devices_page.count_entities()
+        assert results_count > non_json_count
+        assert non_json_count > non_ad_count
+
+        self.devices_page.click_search()
+
+        host_name_query = 'test host name'
+        self.devices_page.click_save_query()
+        self.devices_page.fill_query_name(host_name_query)
+        self.devices_page.click_save_query_save_button()
+
+        self.devices_page.click_query_wizard()
+        self.devices_page.clear_query_wizard()
+        self.devices_page.click_search()
+
+        self.devices_page.execute_saved_query(host_name_query)
+
+        self.devices_page.click_query_wizard()
+        assert self.devices_page.is_filtered_adapter_icon_exists()
+
+    def test_obj_network_and_adapter_filters_query(self):
+        self.settings_page.switch_to_page()
+        self.base_page.run_discovery()
+        self.devices_page.switch_to_page()
+        self.devices_page.click_query_wizard()
+        expressions = self.devices_page.find_expressions()
+        assert len(expressions) == 1
+        self.devices_page.toggle_obj(expressions[0])
+        self.devices_page.select_query_field(self.devices_page.FIELD_NETWORK_INTERFACES, parent=expressions[0])
+        conditions = self.devices_page.find_conditions(expressions[0])
+        assert len(conditions) == 2
+        self.devices_page.select_query_field(self.devices_page.FIELD_IPS, conditions[1])
+        self.devices_page.select_query_comp_op(self.devices_page.QUERY_COMP_EXISTS, conditions[1])
+        self.devices_page.wait_for_spinner_to_end()
+        self.devices_page.wait_for_table_to_load()
+        results_count = self.devices_page.count_entities()
+        self.devices_page.click_on_filter_adapter(self.devices_page.VALUE_ADAPTERS_AD, parent=expressions[0])
+        assert results_count > self.devices_page.count_entities()
 
     def _test_last_seen_query(self):
         self.devices_page.add_query_expression()
@@ -97,6 +186,51 @@ class TestDevicesQuery(TestBase):
         self.devices_page.fill_query_value(1, parent=expressions[1])
         self.devices_page.wait_for_spinner_to_end()
         assert len(self.devices_page.get_all_data()) < results_count
+        self.devices_page.clear_query_wizard()
+
+    def _test_last_seen_query_with_filter_adapters(self):
+        self.devices_page.add_query_expression()
+        expressions = self.devices_page.find_expressions()
+        assert len(expressions) == 2
+        self.devices_page.click_on_select_all_filter_adapters(parent=expressions[0])
+        self.devices_page.click_on_filter_adapter(self.devices_page.VALUE_ADAPTERS_AD, parent=expressions[0])
+        self.devices_page.select_query_field(self.devices_page.FIELD_LAST_SEEN, parent=expressions[0])
+        self.devices_page.select_query_comp_op('days', parent=expressions[0])
+        self.devices_page.fill_query_value(365, parent=expressions[0])
+        self.devices_page.wait_for_table_to_load()
+        results_count = len(self.devices_page.get_all_data())
+        self.devices_page.select_query_logic_op(self.devices_page.QUERY_LOGIC_AND)
+        self.devices_page.click_on_select_all_filter_adapters(parent=expressions[1])
+        self.devices_page.click_on_filter_adapter(self.devices_page.VALUE_ADAPTERS_AD, parent=expressions[1])
+        self.devices_page.select_query_field(self.devices_page.FIELD_LAST_SEEN, parent=expressions[1])
+        self.devices_page.select_query_comp_op('days', parent=expressions[1])
+        self.devices_page.fill_query_value(1, parent=expressions[1])
+        self.devices_page.wait_for_table_to_load()
+        assert self.devices_page.find_search_value().count(self.devices_page.NAME_ADAPTERS_AD) == 2
+        assert len(self.devices_page.get_all_data()) < results_count
+
+        self.devices_page.click_on_select_all_filter_adapters(parent=expressions[0])
+        self.devices_page.click_on_filter_adapter(self.devices_page.VALUE_ADAPTERS_JSON, parent=expressions[0])
+        self.devices_page.wait_for_spinner_to_end()
+        assert len(self.devices_page.get_all_data()) == 0
+        assert self.devices_page.find_search_value().count(self.devices_page.NAME_ADAPTERS_AD) == 1
+        assert self.devices_page.find_search_value().count(self.devices_page.NAME_ADAPTERS_JSON) == 1
+
+        self.devices_page.clear_query_wizard()
+
+    def _test_asset_name_query_with_filter_adapters(self):
+        expressions = self.devices_page.find_expressions()
+        assert len(expressions) == 1
+        self.devices_page.toggle_not(expressions[0])
+        self.devices_page.click_on_select_all_filter_adapters(parent=expressions[0])
+        self.devices_page.click_on_filter_adapter(self.devices_page.VALUE_ADAPTERS_AD, parent=expressions[0])
+        self.devices_page.select_query_field(self.devices_page.FIELD_ASSET_NAME, parent=expressions[0])
+        self.devices_page.select_query_comp_op(self.devices_page.QUERY_COMP_EXISTS, parent=expressions[0])
+        self.devices_page.wait_for_spinner_to_end()
+        self.devices_page.wait_for_table_to_load()
+        assert len(self.devices_page.get_all_data()) > 1
+        assert self.devices_page.find_search_value().count(self.devices_page.NAME_ADAPTERS_AD) == 1
+
         self.devices_page.clear_query_wizard()
 
     def _test_query_brackets(self):
@@ -387,10 +521,13 @@ class TestDevicesQuery(TestBase):
         self.base_page.run_discovery()
         self.devices_page.switch_to_page()
         self.devices_page.click_query_wizard()
+        self._test_adapters_filter_change_icon()
         self._test_complex_obj()
         self._test_comp_op_change()
         self._test_and_expression()
         self._test_last_seen_query()
+        self._test_last_seen_query_with_filter_adapters()
+        self._test_asset_name_query_with_filter_adapters()
         self._test_query_brackets()
         self._test_remove_query_expressions()
         self._test_remove_query_expression_does_not_reset_values()

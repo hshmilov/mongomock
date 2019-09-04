@@ -42,6 +42,7 @@
   import IP from 'ip'
   import { mapState, mapGetters } from 'vuex'
   import { GET_DATA_FIELDS_BY_PLUGIN, GET_DATA_SCHEMA_BY_NAME } from '../../../store/getters'
+  import { getExcludedAdaptersFilter } from '../../../constants/utils'
 
   export default {
     name: 'XCondition',
@@ -366,26 +367,12 @@
       },
       composeCondition () {
           let cond = '({val})'
-          let currentOption = this.schema.find(option => this.condition.fieldType === option.name)
-          let excludedAdapters = [];
-          if(currentOption && currentOption.plugins && this.condition.filteredAdapters && !this.condition.filteredAdapters.selectAll) {
-              excludedAdapters = Object.keys(this.condition.filteredAdapters.selectedValues).filter(key => !this.condition.filteredAdapters.selectedValues[key])
-          }
-          if(this.field.indexOf('specific_data.data') === -1 || !excludedAdapters || excludedAdapters.length === 0) {
-              cond = this.getConditionExpression(false, cond);
-          } else {
-              let currentCondition = this.getConditionExpression(true, cond)
-              let excludedAdaptersString = excludedAdapters.join("', '")
-              cond = cond.replace(/{val}/g,`specific_data == match([plugin_name not in ['${excludedAdaptersString}'] and ${currentCondition}])`)
-          }
-          return cond;
+          return cond.replace(/{val}/g, getExcludedAdaptersFilter(this.condition.fieldType, this.condition.field,
+              this.condition.filteredAdapters, this.getConditionExpression(cond)));
         },
-        getConditionExpression(filteredAdapterCond, cond) {
+        getConditionExpression(cond) {
           if (this.opsMap[this.compOp]) {
                 let field = this.field
-                if(filteredAdapterCond) {
-                    field = field.replace('specific_data.data.', 'data.')
-                }
                 cond = this.opsMap[this.compOp].replace(/{field}/g, field)
             } else if (this.opsList.length) {
                 this.compOp = ''
@@ -404,6 +391,7 @@
       compileCondition () {
         if (!this.field) return
         if (this.isParent) {
+            this.$emit('change')
             return
         }
         let error = this.error || this.formatCondition()
