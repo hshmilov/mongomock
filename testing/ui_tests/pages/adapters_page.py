@@ -76,7 +76,7 @@ class AdaptersPage(EntitiesPage):
         self.wait_for_table_to_load()
 
     def click_save(self):
-        self.click_button(self.SAVE_BUTTON)
+        self.click_button(self.SAVE_AND_CONNECT_BUTTON)
 
     def click_cancel(self):
         self.click_button(self.CANCEL_BUTTON, button_class='x-button link')

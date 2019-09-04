@@ -100,7 +100,7 @@
           @click="testServer"
           :disabled="!serverModal.valid"
         >Test Reachability</x-button>
-        <x-button id="save_server" @click="saveServer" :disabled="!serverModal.valid">Save</x-button>
+        <x-button id="save_server" @click="saveServer" :disabled="!serverModal.valid">Save and Connect</x-button>
       </template>
     </x-modal>
     <x-modal
@@ -462,20 +462,14 @@
 
         .config-server {
             .x-title {
-                i {
-                    text-decoration: none;
-                }
-            }
-        }
-
-        .config-server {
-            .x-title {
                 display: flex;
                 margin-bottom: 24px;
                 .text {
                     flex-grow: 1;
                 }
-
+                i {
+                  text-decoration: none;
+                }
                 &:hover {
                     box-shadow: none;
                     i {
@@ -489,6 +483,12 @@
                         font-size: 20px!important;
                     }
                 }
+            }
+
+            &.x-modal {
+              .x-button {
+                width: auto;
+              }
             }
 
             .server-error {
@@ -507,5 +507,6 @@
                 width: 120px;
             }
         }
+
     }
 </style>

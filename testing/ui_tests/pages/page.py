@@ -87,6 +87,7 @@ class Page:
     FEEDBACK_MODAL_MESSAGE_XPATH = './/div[contains(@class, \'t-center\') and .//text()=\'{message}\']'
     CANCEL_BUTTON = 'Cancel'
     SAVE_BUTTON = 'Save'
+    SAVE_AND_CONNECT_BUTTON = 'Save and Connect'
     SAVE_AS_BUTTON = 'Save as'
     OK_BUTTON = 'OK'
     REMOVE_BUTTON = 'Remove'

@@ -7,6 +7,7 @@
   "scripts": {
     "build": "webpack --config webpack.prod.js",
     "dev": "webpack --config webpack.dev.js",
+    "dev-watch": "webpack --config webpack.dev.js --watch",
     "start": "webpack-dev-server --config webpack.server.js",
     "svg": "vsvg -s src/assets/icons -t src/components/axons/icons/",
     "lint": "eslint --ext .js,.vue src"
