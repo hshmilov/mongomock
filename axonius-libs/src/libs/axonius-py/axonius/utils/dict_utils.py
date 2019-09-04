@@ -34,4 +34,4 @@ def is_filter_in_value(value, str_filter):
         return any(is_filter_in_value(item, str_filter) for item in value)
     if isinstance(value, dict):
         return any(is_filter_in_value(item, str_filter) for key, item in value.items())
-    return True
+    return False

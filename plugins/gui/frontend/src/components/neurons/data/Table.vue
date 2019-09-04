@@ -314,6 +314,9 @@
         fetchContent: FETCH_DATA_CONTENT
       }),
       fetchContentPages (loading, isRefresh) {
+        if (this.staticData) {
+          return
+        }
         if (!this.pageLinkNumbers || !this.pageLinkNumbers.length) {
           return this.fetchContentSegment(0, this.view.pageSize)
         }
@@ -362,14 +365,15 @@
           sort.field = ''
         }
         this.updateModuleView({ sort, page: 0 })
-        if (!this.staticData) {
-          this.fetchContentPages(true)
-        }
+        this.fetchContentPages(true)
       },
       updateModuleView (view) {
         this.updateView({ module: this.module, view })
       },
       startRefreshTimeout () {
+        if (this.staticData) {
+          return
+        }
         const fetchAuto = () => {
           this.fetchContentPages(false, true).then(() => {
             if (this._isDestroyed) return
