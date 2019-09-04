@@ -780,7 +780,7 @@ class PluginBase(Configurable, Feature):
 
         return self.wsgi_app(*args, **kwargs)
 
-    def _check_registered_thread(self, retries=12):
+    def _check_registered_thread(self, retries=6):
         """Function for check that the plugin is still registered.
 
         This function will issue a get request to the Core to see if we are still registered.
@@ -791,7 +791,7 @@ class PluginBase(Configurable, Feature):
         try:
             response = self.request_remote_plugin("register?unique_name={0}".format(self.plugin_unique_name),
                                                   plugin_unique_name=CORE_UNIQUE_NAME,
-                                                  timeout=10,
+                                                  timeout=120,
                                                   fail_on_plugin_down=True)
             if response.status_code in [404, 499, 502, 409]:  # Fault values
                 logger.error(f"Not registered to core (got response {response.status_code}), Exiting")

@@ -185,7 +185,7 @@ class CoreService(Triggerable, PluginBase, Configurable):
                 plugin_is_debug = temp_list[plugin_unique_name].get('is_debug', False)
                 should_delete = False
                 if not plugin_is_debug:
-                    for _ in range(4):
+                    for _ in range(8):
                         should_delete = not self._check_plugin_online(plugin_unique_name)
                         if should_delete is False:
                             break
@@ -309,7 +309,7 @@ class CoreService(Triggerable, PluginBase, Configurable):
     @staticmethod
     def _request_plugin(resource, plugin_unique_name, method='get', **kwargs):
         url = f'https://{plugin_unique_name}.{AXONIUS_DNS_SUFFIX}/api/{resource}'
-        return requests.request(method=method, url=url, timeout=10, **kwargs)
+        return requests.request(method=method, url=url, timeout=30, **kwargs)
 
     def _triggered(self, job_name: str, post_json: dict, run_identifier: RunIdentifier, *args):
         """

@@ -21,6 +21,10 @@ from test_helpers.exceptions import DockerException
 from test_helpers.parallel_runner import ParallelRunner
 
 
+# 2 minutes until we bail out from stopping an adapter gracefully. after that period, we will send a SIGKILL
+STOP_GRACE_PERIOD = '120'
+
+
 def retry_if_timeout(exception):
     """Return True if we should retry (in this case when it's a TimeoutException), False otherwise"""
     return isinstance(exception, TimeoutException)
@@ -422,8 +426,8 @@ else:
 
         # killing the container is faster than down. but killing it will make some apps not flush their data
         # to the disk, so we give it a second.
-        process = subprocess.Popen(['docker', 'stop', '--time', '30', self.container_name], cwd=self.service_dir,
-                                   stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        process = subprocess.Popen(['docker', 'stop', '--time', STOP_GRACE_PERIOD, self.container_name],
+                                   cwd=self.service_dir, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         yield process
         process.wait()
         self.remove_container(remove_volumes=remove_volume)

@@ -56,9 +56,9 @@ class AggregatorService(PluginService, UpdatablePluginMixin):
         if self.db_schema_version < 14:
             self._update_schema_version_14()
         if self.db_schema_version < 15:
-            self._update_schema_version_15()
+            self.db_schema_version = 15  # self._update_schema_version_15() disabled due to a very long migration
         if self.db_schema_version < 16:
-            self._update_schema_version_16()
+            self.db_schema_version = 16  # self._update_schema_version_16() disabled due to a very long migration
 
         if self.db_schema_version != 16:
             print(f'Upgrade failed, db_schema_version is {self.db_schema_version}')
