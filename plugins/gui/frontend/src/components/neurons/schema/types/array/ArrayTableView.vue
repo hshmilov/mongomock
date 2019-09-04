@@ -60,7 +60,7 @@
         }
         let processedData = this.processedData
         return this.dataSchemaItems.filter(item => this.hasFilter(processedData[item.name]))
-q      },
+      },
       limit () {
         if (this.schemaItems.length && this.schemaItems[0].format === 'logo') {
           return null

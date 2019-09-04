@@ -161,6 +161,14 @@ class Page:
         full_url = urllib.parse.urljoin(self.base_url, url)
         self.driver.get(full_url)
 
+    @staticmethod
+    def has_class(element, lookup_class):
+        classes = element.get_attribute('class')
+        for c in classes.split(' '):
+            if c == lookup_class:
+                return True
+        return False
+
     def switch_to_page(self):
         self.switch_to_page_allowing_failure()
         if self.url != self.driver.current_url:

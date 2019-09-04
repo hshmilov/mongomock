@@ -41,6 +41,7 @@ class DashboardPage(Page):
     SUMMARY_CARD_TEXT_CSS = 'div.x-summary > div.summary'
     CARD_CLOSE_BTN_CSS = '.actions > .remove'
     CARD_EDIT_BTN_CSS = '.actions > .edit'
+    CARD_EXPORT_TO_CSV_BTN_CSS = '.actions > .export'
     BANNER_BY_TEXT_XPATH = '//div[contains(@class, \'x-banner\') and .//text() = \'{banner_text}\']'
 
     SPACES_XPATH = '//div[@class=\'x-spaces\']'
@@ -49,8 +50,22 @@ class DashboardPage(Page):
     SPACE_HEADER_CSS = '.x-spaces .x-tabs .header-tab:nth-child({tab_index})'
     NEW_SPACE_BUTTON_XPATH = f'{SPACES_XPATH}//li[@class=\'add-tab\']'
     PANEL_BY_NAME_XPATH = '//div[contains(@class, \'x-tab active\')]//div[@class=\'x-card\' ' \
-        'and .//text()=\'{panel_name}\']'
+                          'and .//text()=\'{panel_name}\']'
     NO_DATA_FOUND_TEXT = 'No data found'
+    PAGINATOR_CLASS = '.x-paginator'
+    PAGINATOR_LIMIT = '.num-of-items'
+    PAGINATOR_TO = ' .to-item'
+    PAGINATOR_BUTTON = f'{PAGINATOR_CLASS} .x-button'
+    PAGINATOR_FIRST_PAGE_BUTTON = f'{PAGINATOR_BUTTON}.link.first'
+    PAGINATOR_PREVIOUS_PAGE_BUTTON = f'{PAGINATOR_BUTTON}.link.previous'
+    PAGINATOR_NEXT_PAGE_BUTTON = f'{PAGINATOR_BUTTON}.link.next'
+    PAGINATOR_LAST_PAGE_BUTTON = f'{PAGINATOR_BUTTON}.link.last'
+    PAGINATOR_TEXT = f'{PAGINATOR_CLASS} .pagintator-text'
+    HISTOGRAM_ITEMS = '.histogram-container .histogram-item'
+    PAGINATOR_NUM_OF_ITEMS = f'{PAGINATOR_CLASS} {PAGINATOR_LIMIT}'
+    PAGINATOR_TOTAL_NUM_OF_ITEMS = f'{PAGINATOR_CLASS} .total-num-of-items'
+    PAGINATOR_FROM_VALUE = f'{PAGINATOR_CLASS} .from-item'
+    PAGINATOR_TO_VALUE = f'{PAGINATOR_CLASS} {PAGINATOR_TO}'
 
     @property
     def root_page_css(self):
@@ -126,10 +141,12 @@ class DashboardPage(Page):
         self.select_option_without_search(self.CHART_MODULE_DROP_DOWN_CSS, self.WIZARD_OPTIONS_CSS,
                                           entity, parent=parent)
 
-    def select_chart_wizard_field(self, prop):
+    def select_chart_wizard_field(self, prop, partial_text=True):
         self.select_option(self.CHART_FIELD_DROP_DOWN_CSS,
                            self.CHART_FIELD_TEXT_BOX_CSS,
-                           self.WIZARD_OPTIONS_CSS, prop, parent=None)
+                           self.WIZARD_OPTIONS_CSS, prop,
+                           parent=None,
+                           partial_text=partial_text)
 
     def select_chart_summary_function(self, func_name):
         self.select_option_without_search(self.CHART_FUNCTION_CSS, self.WIZARD_OPTIONS_CSS, func_name, parent=None)
@@ -183,7 +200,7 @@ class DashboardPage(Page):
         self.click_button('Save')
         self.wait_for_element_absent_by_css(self.MODAL_OVERLAY_CSS, interval=1)
 
-    def add_segmentation_card(self, module, field, title, chart_type='histogram', view_name=''):
+    def add_segmentation_card(self, module, field, title, chart_type='histogram', view_name='', partial_text=True):
         try:
             self.open_new_card_wizard()
             self.select_chart_metric('Field Segmentation')
@@ -191,7 +208,7 @@ class DashboardPage(Page):
             self.select_chart_wizard_module(module)
             if view_name:
                 self.select_chart_view_name(view_name)
-            self.select_chart_wizard_field(field)
+            self.select_chart_wizard_field(field, partial_text)
             self.fill_text_field_by_element_id(self.CHART_TITLE_ID, title)
             self.click_button('Save')
             self.wait_for_element_absent_by_css(self.MODAL_OVERLAY_CSS, interval=1)
@@ -232,6 +249,11 @@ class DashboardPage(Page):
         self.wait_for_element_present_by_css(self.MODAL_OVERLAY_CSS)
         self.click_button('Remove Chart')
         wait_until(lambda: self.is_missing_panel(card_title))
+
+    def export_card(self, card_title):
+        card = self.get_card(card_title)
+        ActionChains(self.driver).move_to_element(card).perform()
+        card.find_element_by_css_selector(self.CARD_EXPORT_TO_CSV_BTN_CSS).click()
 
     def find_query_search_input(self):
         return self.driver.find_element_by_css_selector(self.QUERY_SEARCH_INPUT_CSS)
@@ -274,11 +296,118 @@ class DashboardPage(Page):
 
     @staticmethod
     def get_histogram_chart_from_card(card):
-        return card.find_element_by_css_selector('div.x-histogram')
+        return card.find_element_by_css_selector('.x-histogram')
 
     @staticmethod
     def get_histogram_line_from_histogram(histogram, number):
-        return histogram.find_element_by_css_selector(f'div:nth-child({number}) > div.item-bar div.quantity')
+        return histogram.find_element_by_css_selector(f'div:nth-child({number}) > .item-bar div.quantity')
+
+    def get_count_histogram_lines_from_histogram(self, histogram):
+        return len(histogram.find_elements_by_css_selector(self.HISTOGRAM_ITEMS))
+
+    def get_histogram_items_on_pagination(self, histogram):
+        return histogram.find_elements_by_css_selector(self.HISTOGRAM_ITEMS)
+
+    def get_histogram_items_title_on_pagination(self, histogram):
+        histogram_items_title = []
+        histogram_items = self.get_histogram_items_on_pagination(histogram)
+        for line_item in histogram_items:
+            histogram_items_title.append(line_item.find_element_by_css_selector('.item-bar~div[title]').text)
+        return histogram_items_title
+
+    def get_paginator_num_of_items(self, histogram):
+        return histogram.find_element_by_css_selector(self.PAGINATOR_NUM_OF_ITEMS).text
+
+    def get_paginator_total_num_of_items(self, histogram):
+        return histogram.find_element_by_css_selector(self.PAGINATOR_TOTAL_NUM_OF_ITEMS).text
+
+    def get_paginator_from_item_number(self, histogram):
+        return histogram.find_element_by_css_selector(self.PAGINATOR_FROM_VALUE).text
+
+    def get_paginator_to_item_number(self, histogram, page_number):
+        if page_number == 1:
+            to_val = self.PAGINATOR_LIMIT
+        else:
+            to_val = self.PAGINATOR_TO
+        return histogram.find_element_by_css_selector(f'{self.PAGINATOR_CLASS} {to_val}').text
+
+    @staticmethod
+    def calculate_from_item_value(total_num_of_items, num_of_items, num_of_pages, curr_page, to_val, limit):
+        if num_of_items % limit != 0 and curr_page == num_of_pages:
+            return num_of_items - (num_of_items % limit) + 1
+        return to_val - limit + 1
+
+    @staticmethod
+    def calculate_to_item_value(total_num_of_items, num_of_items, page_number, limit):
+        if limit > num_of_items:
+            return num_of_items
+        return min(page_number * limit, num_of_items)
+
+    def get_first_page_button_in_paginator(self, histogram):
+        return histogram.find_element_by_css_selector(self.PAGINATOR_FIRST_PAGE_BUTTON)
+
+    def get_previous_page_button_in_paginator(self, histogram):
+        return histogram.find_element_by_css_selector(self.PAGINATOR_PREVIOUS_PAGE_BUTTON)
+
+    def get_next_page_button_in_paginator(self, histogram):
+        return histogram.find_element_by_css_selector(self.PAGINATOR_NEXT_PAGE_BUTTON)
+
+    def get_last_page_button_in_paginator(self, histogram):
+        return histogram.find_element_by_css_selector(self.PAGINATOR_LAST_PAGE_BUTTON)
+
+    def click_to_next_page(self, histogram):
+        self.get_next_page_button_in_paginator(histogram).click()
+
+    def click_to_previous_page(self, histogram):
+        self.get_previous_page_button_in_paginator(histogram).click()
+
+    def click_to_first_page(self, histogram):
+        self.get_first_page_button_in_paginator(histogram).click()
+
+    def click_to_last_page(self, histogram):
+        self.get_last_page_button_in_paginator(histogram).click()
+
+    def check_paginator_buttons_state(self, histogram, first, previous, next_r, last):
+        paginator_current_buttons_state = [
+            self.has_class(self.get_first_page_button_in_paginator(histogram), 'disabled'),
+            self.has_class(self.get_previous_page_button_in_paginator(histogram), 'disabled'),
+            self.has_class(self.get_next_page_button_in_paginator(histogram), 'disabled'),
+            self.has_class(self.get_last_page_button_in_paginator(histogram), 'disabled')
+        ]
+        paginator_state_buttons_to_validate = [first, previous, next_r, last]
+        return paginator_current_buttons_state == paginator_state_buttons_to_validate
+
+    def is_missing_paginator_navigation(self, histogram):
+        try:
+            histogram.find_elements_by_css_selector(self.PAGINATOR_BUTTON)
+        except NoSuchElementException:
+            # Good, it is missing
+            return True
+        return False
+
+    def is_missing_paginator_from_item(self, histogram):
+        try:
+            histogram.find_element_by_css_selector(self.PAGINATOR_FROM_VALUE)
+        except NoSuchElementException:
+            # Good, it is missing
+            return True
+        return False
+
+    def is_missing_paginator_to_item(self, histogram):
+        try:
+            histogram.find_element_by_css_selector(self.PAGINATOR_TO_VALUE)
+        except NoSuchElementException:
+            # Good, it is missing
+            return True
+        return False
+
+    def is_missing_paginator_num_of_items(self, histogram):
+        try:
+            histogram.find_element_by_css_selector(f'{self.PAGINATOR_CLASS} {self.PAGINATOR_LIMIT}')
+        except NoSuchElementException:
+            # Good, it is missing
+            return True
+        return False
 
     @staticmethod
     def get_cycle_from_card(card):

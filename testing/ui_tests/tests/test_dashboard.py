@@ -1,6 +1,8 @@
 import time
+from math import ceil
 import pytest
 
+import requests
 from ui_tests.tests.ui_test_base import TestBase
 from ui_tests.tests.ui_consts import (READ_WRITE_USERNAME, READ_ONLY_USERNAME, NEW_PASSWORD, FIRST_NAME, LAST_NAME)
 from axonius.utils.wait import wait_until
@@ -8,9 +10,9 @@ from axonius.consts.gui_consts import (DASHBOARD_SPACE_DEFAULT, DASHBOARD_SPACE_
 
 
 class TestDashboard(TestBase):
-    UNCOVERED_QUERY = 'not (((specific_data.data.adapter_properties == "Agent"'\
+    UNCOVERED_QUERY = 'not (((specific_data.data.adapter_properties == "Agent"' \
                       ' or specific_data.data.adapter_properties == "Manager")))'
-    COVERED_QUERY = '((specific_data.data.adapter_properties == "Agent" '\
+    COVERED_QUERY = '((specific_data.data.adapter_properties == "Agent" ' \
                     'or specific_data.data.adapter_properties == "Manager"))'
     SUMMARY_CARD_QUERY_DEVICES = 'specific_data.data.hostname == exists(true)'
     SUMMARY_CARD_QUERY_USERS = 'specific_data.data.logon_count == exists(true) and specific_data.data.logon_count > 0'
@@ -26,6 +28,9 @@ class TestDashboard(TestBase):
     TEST_SUMMARY_TITLE_USERS = 'test summary users'
     TEST_INTERSECTION_TITLE = 'test intersection'
     TEST_SEGMENTATION_HISTOGRAM_TITLE = 'test segmentation histogram'
+    TEST_PAGINATOR_ON_SEGMENTATION_HISTOGRAM = 'test paginator on segmentation histogram - devices'
+    TEST_PAGINATOR_ON_SEGMENTATION_USERS = 'test paginator on segmentation - users'
+    SEGMENTATION_QUERY_USER_AD = 'Segmentation_User_name_AD'
     TEST_SEGMENTATION_PIE_TITLE = 'test segmentation pie'
     TEST_EDIT_CHART_TITLE = 'test edit'
 
@@ -33,6 +38,7 @@ class TestDashboard(TestBase):
     VULNERABILITY_SPACE_NAME = 'Vulnerability Dashboard'
     CUSTOM_SPACE_PANEL_NAME = 'Segment OS'
     PERSONAL_SPACE_PANEL_NAME = 'Private Segment OS'
+    NON_EMPTY_TABLE_ROWS = '.x-table tbody tr[id]'
 
     TEST_EMPTY_TITLE = 'test empty'
 
@@ -63,7 +69,6 @@ class TestDashboard(TestBase):
         uncovered = self.dashboard_page.get_uncovered_from_pie(mdc_pie)
         assert uncovered < 20
         assert covered + uncovered == 100
-
         sl_card = self.dashboard_page.find_system_lifecycle_card()
         assert self.dashboard_page.get_title_from_card(sl_card) == self.dashboard_page.SYSTEM_LIFECYCLE
         sl_cycle = self.dashboard_page.get_cycle_from_card(sl_card)
@@ -170,6 +175,256 @@ class TestDashboard(TestBase):
         for j in range(10):
             self.dashboard_page.remove_card(f'{self.TEST_SUMMARY_TITLE_DEVICES}{j}')
             self.dashboard_page.wait_for_spinner_to_end()
+
+    def _create_get_paginator_segmentation_card(self, run_discovery, module, field, title, view_name):
+        self.dashboard_page.switch_to_page()
+        if run_discovery:
+            self.base_page.run_discovery()
+        self.dashboard_page.add_segmentation_card(module=module,
+                                                  field=field,
+                                                  title=title,
+                                                  view_name=view_name,
+                                                  partial_text=False)
+        # create reference to the segmentation card with title
+        segmentation_card = self.dashboard_page.get_card(title)
+        # create reference to the histogram within the card
+        return self.dashboard_page.get_histogram_chart_from_card(segmentation_card)
+
+    def _test_paginator_state_first_page(self, histograms_chart, page_number, to_val):
+        assert not self.dashboard_page.is_missing_paginator_num_of_items(histograms_chart)
+        assert self.dashboard_page.is_missing_paginator_from_item(histograms_chart)
+        assert self.dashboard_page.is_missing_paginator_to_item(histograms_chart)
+        assert int(self.dashboard_page.get_paginator_to_item_number(histograms_chart, page_number)) == to_val
+        assert self.dashboard_page.check_paginator_buttons_state(histograms_chart, True, True, False, False)
+
+    def _test_paginator_state_middle_page(self, histograms_chart, page_number, to_val, from_val):
+        assert self.dashboard_page.is_missing_paginator_num_of_items(histograms_chart)
+        assert not self.dashboard_page.is_missing_paginator_from_item(histograms_chart)
+        assert not self.dashboard_page.is_missing_paginator_to_item(histograms_chart)
+        assert self.dashboard_page.check_paginator_buttons_state(histograms_chart, False, False, False, False)
+        assert int(self.dashboard_page.get_paginator_to_item_number(histograms_chart, page_number)) == to_val
+        assert int(self.dashboard_page.get_paginator_from_item_number(histograms_chart)) == from_val
+
+    def _test_paginator_state_last_page(self, histograms_chart, page_number, to_val, from_val):
+        assert self.dashboard_page.is_missing_paginator_num_of_items(histograms_chart)
+        assert not self.dashboard_page.is_missing_paginator_from_item(histograms_chart)
+        assert not self.dashboard_page.is_missing_paginator_to_item(histograms_chart)
+        assert not self.dashboard_page.is_missing_paginator_from_item(histograms_chart)
+        assert not self.dashboard_page.is_missing_paginator_to_item(histograms_chart)
+        assert int(self.dashboard_page.get_paginator_to_item_number(histograms_chart, page_number)) == to_val
+        assert int(self.dashboard_page.get_paginator_from_item_number(histograms_chart)) == from_val
+        assert self.dashboard_page.check_paginator_buttons_state(histograms_chart, False, False, True, True)
+
+    @staticmethod
+    def _check_num_of_histograms_items_fit_paginator_number(page_number, num_of_pages, num_of_histogram_lines,
+                                                            num_of_items, total_num_of_items, limit):
+        # num_of_items: it represents the number of items that we reached on the current page...
+        #               it is the so called "TO" number in the pagination"
+        # if number of histogram items fit the "To" value of the Paginator
+        if page_number != num_of_pages:
+            # in case we are not in the last page we expect the num_of_histogram_lines to fit
+            # the num_of_items divided by the current page number
+            assert num_of_histogram_lines == num_of_items / page_number
+        else:
+            # in case we are in last page we expect the num_of_histogram_lines to be:
+            # the reminder of total_num_of_items % limit
+            # if total_num_of_items != limit == 0
+            # otherwise should as in previous case
+            if total_num_of_items % limit == 0:
+                assert num_of_histogram_lines == num_of_items / page_number
+            else:
+                assert num_of_histogram_lines == total_num_of_items % limit
+
+    def _gather_paginator_iteration_data(self, histograms_chart, page_number, num_of_pages, total_num_of_items,
+                                         limit):
+        num_of_histogram_lines = self.dashboard_page.get_count_histogram_lines_from_histogram(histograms_chart)
+        num_of_items = int(self.dashboard_page.get_paginator_to_item_number(histograms_chart, page_number))
+        # calculate Paginator 'To' value
+        to_val = self.dashboard_page.calculate_to_item_value(total_num_of_items, num_of_items, page_number, limit)
+        # calculate Paginator 'From' value
+        from_val = self.dashboard_page.calculate_from_item_value(total_num_of_items, num_of_items, num_of_pages,
+                                                                 page_number, to_val, limit)
+        return num_of_histogram_lines, num_of_items, to_val, from_val
+
+    def grab_all_host_names_from_devices(self):
+        self.devices_page.switch_to_page()
+        self.devices_page.select_page_size(50)
+        return self.devices_page.get_column_data(self.devices_page.FIELD_HOSTNAME_TITLE)
+
+    @staticmethod
+    def assert_data_devices_fit_pagination_data(histogram_items_title, host_names_list):
+        # Checking the lists are equal by one sided containment + equal length
+        assert len(histogram_items_title) == len(host_names_list)
+        assert all(item in host_names_list for item in histogram_items_title)
+
+    def generate_csv_from_segmentation_graph(self, panel_id):
+        session = requests.Session()
+        cookies = self.driver.get_cookies()
+        for cookie in cookies:
+            session.cookies.set(cookie['name'], cookie['value'])
+        return session.get(f'https://127.0.0.1/api/dashboards/panels/{panel_id}/csv')
+
+    def grab_all_host_names_from_csv(self, panel_id):
+        result = self.generate_csv_from_segmentation_graph(panel_id)
+        all_csv_rows = result.content.decode('utf-8').split('\r\n')
+        csv_headers = all_csv_rows[0].split(',')
+        csv_data_rows = all_csv_rows[1:-1]
+        return [str.split(',')[0] for str in csv_data_rows]
+
+    def get_segmentation_card_id(self):
+        segmentation_card = self.dashboard_page.get_card(self.TEST_PAGINATOR_ON_SEGMENTATION_HISTOGRAM)
+        card_id = segmentation_card.get_property('id')
+        return card_id
+
+    def test_check_segmentation_csv(self):
+        histogram_items_title = []
+        histograms_chart = \
+            self._create_get_paginator_segmentation_card(run_discovery=True,
+                                                         module='Devices',
+                                                         field='Host Name',
+                                                         title=self.TEST_PAGINATOR_ON_SEGMENTATION_HISTOGRAM,
+                                                         view_name='')
+        panel_id = self.get_segmentation_card_id()
+        limit = int(self.dashboard_page.get_paginator_num_of_items(histograms_chart))
+        total_num_of_items = int(self.dashboard_page.get_paginator_total_num_of_items(histograms_chart))
+        # calculate the total number of pages in Paginator
+        # by this wat we ensure to have the exact num of pages and cover all the cases even if the
+        # total_num_of_items % limit has a remainder (round up the result)
+        num_of_pages = ceil(total_num_of_items / limit)
+        # iterate incrementaly on all the pages (next)
+        for page_number in range(1, num_of_pages + 1):
+            histogram_items_title.append(self.dashboard_page.get_histogram_items_title_on_pagination(histograms_chart))
+            if page_number == 1:
+                self.dashboard_page.click_to_next_page(histograms_chart)
+            elif page_number == num_of_pages:
+                break
+            else:
+                self.dashboard_page.click_to_next_page(histograms_chart)
+        # flatten list
+        histogram_titles_list = [item for sublist in histogram_items_title for item in sublist]
+        host_names_list = self.grab_all_host_names_from_csv(panel_id)
+        # compare histograms_item_titles of pagination with data grabbed from devices table
+        self.assert_data_devices_fit_pagination_data(histogram_titles_list, host_names_list)
+        self.dashboard_page.remove_card(self.TEST_PAGINATOR_ON_SEGMENTATION_HISTOGRAM)
+
+    def test_paginator_paginator_update_after_discovery(self):
+        self.users_page.switch_to_page()
+        self.base_page.run_discovery()
+        wait_until(lambda: self.devices_queries_page.get_table_count() > 0)
+        self.devices_page.click_query_wizard()
+        expressions = self.devices_page.find_expressions()
+        assert len(expressions) == 1
+        self.users_page.select_query_adapter(self.users_page.VALUE_ADAPTERS_JSON)
+        self.devices_page.toggle_not(expressions[0])
+        self.users_page.click_search()
+        self.users_page.wait_for_table_to_load()
+        self.users_page.click_save_query()
+        self.users_page.fill_query_name(self.SEGMENTATION_QUERY_USER_AD)
+        self.users_page.click_save_query_save_button()
+        first_result_count = self.users_page.count_entities()
+        self.users_page.click_row_checkbox(1)
+        self.users_page.click_row_checkbox(2)
+        self.users_page.click_row_checkbox(3)
+        self.users_page.open_delete_dialog()
+        self.users_page.confirm_delete()
+        self.users_page.wait_for_table_to_load()
+        second_result_count = self.users_page.count_entities()
+        assert second_result_count == first_result_count - 3
+        histograms_chart = \
+            self._create_get_paginator_segmentation_card(run_discovery=False,
+                                                         module='Users',
+                                                         field='User Name',
+                                                         title=self.TEST_PAGINATOR_ON_SEGMENTATION_USERS,
+                                                         view_name=self.SEGMENTATION_QUERY_USER_AD)
+        total_num_of_items = int(self.dashboard_page.get_paginator_total_num_of_items(histograms_chart))
+        assert total_num_of_items == second_result_count
+        self.base_page.run_discovery()
+        wait_until(lambda: int(
+            self.dashboard_page.get_paginator_total_num_of_items(histograms_chart)) == first_result_count)
+        self.dashboard_page.remove_card(self.TEST_PAGINATOR_ON_SEGMENTATION_USERS)
+
+    def test_paginator_on_segmentation_chart(self):
+        histogram_items_title = []
+        first_page = 1
+        histograms_chart = self._create_get_paginator_segmentation_card(
+            run_discovery=True,
+            module='Devices',
+            field='Host Name',
+            title=self.TEST_PAGINATOR_ON_SEGMENTATION_HISTOGRAM,
+            view_name='')
+        assert not self.dashboard_page.is_missing_paginator_navigation(histograms_chart)
+        limit = int(self.dashboard_page.get_paginator_num_of_items(histograms_chart))
+        total_num_of_items = int(self.dashboard_page.get_paginator_total_num_of_items(histograms_chart))
+        # calculate the total number of pages in Paginator
+        # by this wat we ensure to have the exact num of pages and cover all the cases even if the
+        # total_num_of_items % limit has a remainder ((round up the result)
+        num_of_pages = ceil(total_num_of_items / limit)
+        # iterate incrementaly on all the pages (next)
+        for page_number in range(1, num_of_pages + 1):
+            num_of_histogram_lines, num_of_items, to_val, from_val = \
+                self._gather_paginator_iteration_data(histograms_chart, page_number, num_of_pages,
+                                                      total_num_of_items, limit)
+            self._check_num_of_histograms_items_fit_paginator_number(page_number, num_of_pages,
+                                                                     num_of_histogram_lines,
+                                                                     num_of_items,
+                                                                     total_num_of_items,
+                                                                     limit)
+            if page_number == 1:
+                self._test_paginator_state_first_page(histograms_chart, page_number, to_val)
+                self.dashboard_page.click_to_next_page(histograms_chart)
+            elif page_number == num_of_pages:
+                self._test_paginator_state_last_page(histograms_chart, page_number, to_val,
+                                                     from_val)
+            else:
+                self._test_paginator_state_middle_page(histograms_chart, page_number, to_val,
+                                                       from_val)
+                self.dashboard_page.click_to_next_page(histograms_chart)
+        # iterate decrementaly on all the  pages (back)
+        for page_number in range(num_of_pages, 0, -1):
+            num_of_histogram_lines, num_of_items, to_val, from_val = \
+                self._gather_paginator_iteration_data(histograms_chart, page_number, num_of_pages,
+                                                      total_num_of_items, limit)
+            self._check_num_of_histograms_items_fit_paginator_number(page_number, num_of_pages,
+                                                                     num_of_histogram_lines,
+                                                                     num_of_items,
+                                                                     total_num_of_items,
+                                                                     limit)
+            histogram_items_title.append(self.dashboard_page.get_histogram_items_title_on_pagination(histograms_chart))
+            if page_number == 1:
+                self._test_paginator_state_first_page(histograms_chart, page_number, to_val)
+            elif page_number == num_of_pages:
+                self._test_paginator_state_last_page(histograms_chart, page_number, to_val, from_val)
+                self.dashboard_page.click_to_previous_page(histograms_chart)
+            else:
+                self._test_paginator_state_middle_page(histograms_chart, page_number, to_val, from_val)
+                self.dashboard_page.click_to_previous_page(histograms_chart)
+        # flatten list
+        histogram_titles_list = [item for sublist in histogram_items_title for item in sublist]
+        devices_tiles_list = self.grab_all_host_names_from_devices()
+        self.assert_data_devices_fit_pagination_data(histogram_titles_list, devices_tiles_list)
+        self.dashboard_page.switch_to_page()
+        # create reference to the histogram within the card
+        segmentation_card = self.dashboard_page.get_card(self.TEST_PAGINATOR_ON_SEGMENTATION_HISTOGRAM)
+        # set focus back on the histogram chart (after switching page)
+        histograms_chart = self.dashboard_page.get_histogram_chart_from_card(segmentation_card)
+        # Got to Last Page
+        page_number = num_of_pages
+        self.dashboard_page.click_to_last_page(histograms_chart)
+        num_of_items = int(self.dashboard_page.get_paginator_to_item_number(histograms_chart, page_number))
+        # calculate Paginator 'To' value
+        to_val = self.dashboard_page.calculate_to_item_value(total_num_of_items, num_of_items, page_number, limit)
+        # calculate Paginator 'From' value
+        from_val = self.dashboard_page.calculate_from_item_value(total_num_of_items, num_of_items, num_of_pages,
+                                                                 page_number, to_val, limit)
+        self._test_paginator_state_last_page(histograms_chart, page_number, to_val, from_val)
+        # Go to First Page
+        page_number = 1
+        self.dashboard_page.click_to_first_page(histograms_chart)
+        num_of_items = int(self.dashboard_page.get_paginator_to_item_number(histograms_chart, page_number))
+        # calculate Paginator 'To' value
+        to_val = self.dashboard_page.calculate_to_item_value(total_num_of_items, num_of_items, page_number, limit)
+        self._test_paginator_state_first_page(histograms_chart, page_number, to_val)
+        self.dashboard_page.remove_card(self.TEST_PAGINATOR_ON_SEGMENTATION_HISTOGRAM)
 
     def test_dashboard_segmentation_chart(self):
         self.dashboard_page.switch_to_page()
@@ -295,6 +550,7 @@ class TestDashboard(TestBase):
         # Add a panel to a custom space
         self.dashboard_page.find_space_header(3).click()
         self.dashboard_page.add_segmentation_card('Devices', 'OS: Type', self.CUSTOM_SPACE_PANEL_NAME)
+        self.dashboard_page.wait_for_spinner_to_end()
         segment_card = self.dashboard_page.get_card(self.CUSTOM_SPACE_PANEL_NAME)
         assert segment_card and self.dashboard_page.get_histogram_chart_from_card(segment_card)
         self.dashboard_page.find_space_header(1).click()

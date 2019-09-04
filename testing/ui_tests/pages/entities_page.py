@@ -759,6 +759,7 @@ class EntitiesPage(Page):
 
     def confirm_delete(self):
         self.click_button(self.DELETE_BUTTON)
+        self.wait_for_element_absent_by_css(self.MODAL_OVERLAY_CSS)
 
     def refresh_table(self):
         self.enter_search()

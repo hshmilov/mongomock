@@ -3,6 +3,7 @@
         <x-button
             v-if="this.numOfItems > this.limit"
             link
+            class="first"
             :disabled="isBackDisabled"
             @click="onClickPage(1)"
             @keyup.enter="onClickPage(1)">
@@ -11,6 +12,7 @@
         <x-button
             v-if="this.numOfItems > this.limit"
             link
+            class="previous"
             :disabled="isBackDisabled"
             @click="onClickPage(page-1)"
             @keyup.enter="onClickPage(page-1)">
@@ -18,17 +20,18 @@
         </x-button>
         <div class="pagintator-text" >
             <template v-if="page === 1">
-               Top <strong> {{ to }}</strong>
+               Top <strong class="num-of-items"> {{ to }}</strong>
             </template>
             <template v-else>
-                <strong> {{ from }} </strong>
-                    - <strong> {{ to }}</strong>
+                 <strong class="from-item"> {{ from }} </strong>
+                    - <strong class="to-item"> {{ to }}</strong>
             </template>
-            of <strong> {{ numOfItems }}</strong>
+            of <strong class="total-num-of-items"> {{ numOfItems }}</strong>
         </div>
         <x-button
             v-if="this.numOfItems > this.limit"
             link
+             class="next"
             :disabled="isNextDisabled"
             @click="onClickPage(page+1)"
             @keyup.enter="onClickPage(page+1)">
@@ -37,6 +40,7 @@
         <x-button
             v-if="this.numOfItems > this.limit"
             link
+            class="last"
             :disabled="isNextDisabled"
             @click="onClickPage(pageCount)"
             @keyup.enter="onClickPage(pageCount)">
