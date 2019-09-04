@@ -127,26 +127,6 @@
       "script": "./fetch_chef_secret_and_mark.sh"
     },
     {
-      "type": "file",
-      "source": "./chef_scheduled_provision.sh",
-      "destination": "/home/ubuntu/chef_scheduled_provision.sh"
-    },
-    {
-      "type": "file",
-      "source": "./sched_prov.py",
-      "destination": "/home/ubuntu/sched_prov.py"
-    },
-    {
-      "type": "shell",
-      "inline": [
-        "mv /home/ubuntu/chef_scheduled_provision.sh /home/ubuntu/sched_prov.py /etc/cron.d/",
-        "chown root:root /etc/cron.d/chef_scheduled_provision.sh /etc/cron.d/sched_prov.py",
-        "chmod  0700 /etc/cron.d/chef_scheduled_provision.sh /etc/cron.d/sched_prov.py",
-        "crontab -l | { cat; echo \"*/1 * * * * /etc/cron.d/chef_scheduled_provision.sh\"; } | crontab -"
-      ],
-      "execute_command": "echo {{user `password`}} | sudo -S sh -c '{{ .Vars }} {{ .Path }}'"
-    },
-    {
       "type": "shell",
       "inline": [
         "rm -f /home/ubuntu/axonius_{{user `build_name`}}.py"

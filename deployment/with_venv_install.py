@@ -4,6 +4,7 @@ import pwd
 import shutil
 import subprocess
 import zipfile
+from pathlib import Path
 
 from axonius.consts.system_consts import PYRUN_PATH_HOST
 from axonius.utils.network.docker_network import read_weave_network_range
@@ -25,13 +26,42 @@ from lists import OLD_CRONJOBS
 from scripts.host_installation.watchdog_cron import WATCHDOG_CRON_SCRIPT_PATH
 from scripts.instances.network_utils import get_weave_subnet_ip_range
 from sysctl_editor import set_sysctl_value
-from utils import AXONIUS_DEPLOYMENT_PATH, print_state, current_file_system_path, VENV_WRAPPER, run_as_root
+from utils import (AXONIUS_DEPLOYMENT_PATH,
+                   print_state,
+                   current_file_system_path,
+                   VENV_WRAPPER,
+                   run_as_root,
+                   RESOURCES_PATH)
+
+CRON_D_PATH = Path('/etc/cron.d')
+
+
+def copy_file(local_path, dest_path, mode=0o700, user='root', group='root'):
+    local_path = Path(local_path)
+    dest_path = Path(dest_path)
+    print(f'placing {local_path} in {dest_path} as {oct(mode)} {user}:{group}')
+    shutil.copyfile(local_path, dest_path)
+    dest_path.chmod(mode)
+    shutil.chown(dest_path, user=user, group=group)
+
+
+def place_sched_prov():
+    print(f'First time - placing sched_prov files')
+    resources_as_path = Path(RESOURCES_PATH)
+    sh_file = 'chef_scheduled_provision.sh'
+    py_file = 'sched_prov.py'
+    copy_file(resources_as_path / sh_file, CRON_D_PATH / sh_file)
+    copy_file(resources_as_path / py_file, CRON_D_PATH / py_file)
 
 
 def after_venv_activation(first_time, root_pass):
     print(f'installing on top of customer_conf: {get_customer_conf_json()}')
     if not first_time:
         stop_old(keep_diag=True, keep_tunnel=True)
+
+    if first_time:
+        place_sched_prov()
+
     setup_host()
     load_images()
     set_logrotate(root_pass)
@@ -105,14 +135,10 @@ def create_cronjob(script_path, cronjob_timing, specific_run_env='', keep_script
         crontab_command = 'crontab -l | {{ cat; echo "{timing} {specific_run_env}{script_name} > ' \
                           '/var/log/{log_name} 2>&1"; }} | crontab -'
     else:
-        crontab_command = 'crontab -l | {{ cat; echo "{timing} {specific_run_env}/etc/cron.d/{script_name} > ' \
-                          '/var/log/{log_name} 2>&1"; }} | crontab -'
+        crontab_command = 'crontab -l | {{ cat; echo "{timing} {specific_run_env}' \
+                          + str(CRON_D_PATH) + '/{script_name} > /var/log/{log_name} 2>&1"; }} | crontab -'
 
-        shutil.copyfile(script_path,
-                        f'/etc/cron.d/{os.path.basename(script_path)}')
-        subprocess.check_call(
-            ['chown', 'root:root', f'/etc/cron.d/{os.path.basename(script_path)}'])
-        subprocess.check_call(['chmod', '0700', f'/etc/cron.d/{os.path.basename(script_path)}'])
+        copy_file(script_path, CRON_D_PATH / os.path.basename(script_path))
 
     try:
         cron_jobs = subprocess.check_output(['crontab', '-l']).decode('utf-8')
@@ -127,8 +153,7 @@ def create_cronjob(script_path, cronjob_timing, specific_run_env='', keep_script
     if os.path.basename(script_path) not in cron_jobs:
         subprocess.check_call(crontab_command.format(timing=cronjob_timing, script_name=script_path,
                                                      log_name=f'{os.path.basename(script_path).split(".")[0]}.log',
-                                                     specific_run_env=specific_run_env),
-                              shell=True)
+                                                     specific_run_env=specific_run_env), shell=True)
 
 
 def cleanup_old_cronjobs():
@@ -153,6 +178,11 @@ def create_system_cronjobs():
                    cronjob_timing='*/15 * * * *',
                    specific_run_env=str(PYRUN_PATH_HOST),
                    keep_script_location=True)
+
+    sched_prov_cron = 'chef_scheduled_provision'
+    remove_cronjob(sched_prov_cron)
+    create_cronjob(script_path=f'{CRON_D_PATH}/{sched_prov_cron}.sh',
+                   cronjob_timing='*/1 * * * *', keep_script_location=True)
 
 
 def push_old_instances_settings():
