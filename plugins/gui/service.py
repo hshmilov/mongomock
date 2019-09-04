@@ -370,27 +370,36 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         """
         success_rate = '0 / 0'
         status = 'In Progress'
-        if task['job_completed_state'] == StoredJobStateCompletion.Successful.name:
-            main_results = task['result'][ACTIONS_MAIN_FIELD]['action']['results']
+        result = task.get('result', {})
+        if not isinstance(result, dict):
+            result = {}
+        try:
+            if task.get('job_completed_state') == StoredJobStateCompletion.Successful.name:
+                main_results = result.get(ACTIONS_MAIN_FIELD, {}).get('action', {}).get('results', {})
 
-            main_successful_count = get_chunks_length(self.enforcement_tasks_action_results_id_lists,
-                                                      main_results['successful_entities'])
+                main_successful_count = get_chunks_length(self.enforcement_tasks_action_results_id_lists,
+                                                          main_results.get('successful_entities', 0))
 
-            main_unsuccessful_count = get_chunks_length(self.enforcement_tasks_action_results_id_lists,
-                                                        main_results['unsuccessful_entities'])
-            success_rate = f'{main_successful_count} / {main_successful_count + main_unsuccessful_count}'
-            status = 'Completed'
+                main_unsuccessful_count = get_chunks_length(self.enforcement_tasks_action_results_id_lists,
+                                                            main_results.get('unsuccessful_entities', 0))
+                status = 'Completed'
 
-        return gui_helpers.beautify_db_entry({
-            '_id': task['_id'],
-            'result.metadata.success_rate': success_rate,
-            'post_json.report_name': task['post_json']['report_name'],
-            'status': status,
-            f'result.{ACTIONS_MAIN_FIELD}.name': task['result']['main']['name'],
-            'result.metadata.trigger.view.name': task['result']['metadata']['trigger']['view']['name'],
-            'started_at': task['started_at'] or '',
-            'finished_at': task['finished_at'] or ''
-        })
+            return gui_helpers.beautify_db_entry({
+                '_id': task.get('_id'),
+                'result.metadata.success_rate': f'{main_successful_count} / {main_successful_count + main_unsuccessful_count}',
+                'post_json.report_name': task.get('post_json', {}).get('report_name', ''),
+                'status': status,
+                f'result.{ACTIONS_MAIN_FIELD}.name': result.get('main', {}).get('name', ''),
+                'result.metadata.trigger.view.name': result.get('metadata', {}).get('trigger', {}).get('view', {}).get('name', ''),
+                'started_at': task.get('started_at', ''),
+                'finished_at': task.get('finished_at', '')
+            })
+        except Exception as e:
+            logger.exception(f'Invalid task {task.get("_id")}')
+            return gui_helpers.beautify_db_entry({
+                '_id': task.get('_id', 'Invalid ID'),
+                'status': 'Invalid'
+            })
 
     def __add_defaults(self):
         self._add_default_roles()
