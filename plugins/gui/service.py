@@ -2233,7 +2233,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
             'report_name': enforcement['name'],
             'configuration_name': enforcement[TRIGGERS_FIELD][0]['name'],
             'manual': True
-        })
+        }, priority=True)
         return response.text, response.status_code
 
     @add_rule('enforcements/<entity_type>/custom', methods=['POST'])
