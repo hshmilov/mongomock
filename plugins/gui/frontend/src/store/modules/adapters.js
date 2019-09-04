@@ -168,6 +168,7 @@ export const adapters = {
 				const { errorClients, successClients } = adapter
 				return {
 					...adapter,
+					countClients: adapter.countClients + 1,
 					errorClients: clientStatus !== 'success' ? errorClients + 1 : errorClients,
 					successClients: successClients === 'success' ? successClients + 1 : successClients,
 					clients: newClientsList

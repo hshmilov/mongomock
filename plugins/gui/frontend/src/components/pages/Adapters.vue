@@ -5,9 +5,7 @@
       <md-switch
         v-model="showOnlyConfigured"
         class="md-primary"
-        >
-            Configured Only ({{configuredAfaptersCount}})
-        </md-switch>
+        >Configured Only ({{configuredAfaptersCount}})</md-switch>
     </div>
     <div class="adapters-table">
       <table class="table">
@@ -22,11 +20,11 @@
           <tr v-for="item in filteredData" @click="configAdapter(item['id'])" class="table-row">
             <td class="status">
               <div class="symbol">
-                  <div v-if="item.successClients">
+                  <div v-if="item.successClients" class="status_success">
                     <svg-icon class="status_icon" :name="`symbol/success`" :original="true" height="13px"></svg-icon>
                     <p class="status_clients-count">{{item.successClients}}</p>
                   </div>
-                  <div  v-if="item.errorClients">
+                  <div  v-if="item.errorClients" class="status_error">
                     <svg-icon class="status_icon" :name="`symbol/error`" :original="true" height="13px"></svg-icon>
                     <p class="status_clients-count">{{item.errorClients}}</p>
                   </div>

@@ -43,7 +43,8 @@ export const dashboard = {
 		firstUse: { data: null, fetching: false, error: '' }
 	},
 	mutations: {
-		[UPDATE_LIFECYCLE](state, payload) {
+		[ UPDATE_LIFECYCLE ] (state, payload) {
+			
 			state.lifecycle.fetching = payload.fetching
 			state.lifecycle.error = payload.error
 

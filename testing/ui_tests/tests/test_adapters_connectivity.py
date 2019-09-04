@@ -4,15 +4,13 @@ from services.adapters.cisco_service import CiscoService
 from services.adapters.gotoassist_service import GotoassistService
 from test_credentials.test_ad_credentials import ad_client1_details
 from ui_tests.pages.adapters_page import AD_NAME
-from ui_tests.tests.ui_test_base import TestBase
+from ui_tests.tests.adapters_test_base import AdapterTestBase
 
 GOTOASSIST_NAME = 'RescueAssist'
 GOTOASSIST_PLUGIN_NAME = 'gotoassist_adapter'
-CISCO_NAME = 'Cisco'
-CISCO_PLUGIN_NAME = 'cisco_adapter'
 
 
-class TestAdaptersConnectivity(TestBase):
+class TestAdaptersConnectivity(AdapterTestBase):
     def fill_gotoassist_creds_with_junk(self):
         self.adapters_page.fill_creds(client_id='asdf',
                                       user_name='password',
@@ -22,12 +20,6 @@ class TestAdaptersConnectivity(TestBase):
     def fill_cisco_creds_with_junk(self):
         self.adapters_page.fill_creds(host='asdf',
                                       community='asdf')
-
-    def fill_ad_creds_with_junk(self):
-        self.adapters_page.fill_creds(user='asdf',
-                                      password='asdf',
-                                      dc_name='asdfasdf',
-                                      dns_server_address='asdf.net')
 
     def test_connectivity(self):
         try:
@@ -45,8 +37,8 @@ class TestAdaptersConnectivity(TestBase):
                 self.adapters_page.click_cancel()
 
             with CiscoService().contextmanager(take_ownership=True):
-                self.adapters_page.wait_for_adapter(CISCO_NAME)
-                self.adapters_page.click_adapter(CISCO_NAME)
+                self.adapters_page.wait_for_adapter(self.CISCO_NAME)
+                self.adapters_page.click_adapter(self.CISCO_NAME)
                 self.adapters_page.wait_for_spinner_to_end()
                 self.adapters_page.wait_for_table_to_load()
                 self.adapters_page.click_new_server()
@@ -72,9 +64,9 @@ class TestAdaptersConnectivity(TestBase):
             self.adapters_page.click_cancel()
         finally:
             self.adapters_page.clean_adapter_servers(GOTOASSIST_NAME)
-            self.adapters_page.clean_adapter_servers(CISCO_NAME)
+            self.adapters_page.clean_adapter_servers(self.CISCO_NAME)
             self.wait_for_adapter_down(GOTOASSIST_PLUGIN_NAME)
-            self.wait_for_adapter_down(CISCO_PLUGIN_NAME)
+            self.wait_for_adapter_down(self.CISCO_PLUGIN_NAME)
 
     def test_icon_color(self):
         self.adapters_page.switch_to_page()
@@ -107,7 +99,7 @@ class TestAdaptersConnectivity(TestBase):
 
                 self.adapters_page.wait_for_spinner_to_end()
                 self.adapters_page.search(AD_NAME)
-                self.adapters_page.wait_for_adapter_orange()
+                self.adapters_page.wait_for_adapter_warning()
             finally:
                 self.adapters_page.clean_adapter_servers(AD_NAME)
         finally:

@@ -1,6 +1,7 @@
 import time
 from collections import namedtuple
 from copy import copy
+import re
 
 from selenium.common.exceptions import NoSuchElementException
 
@@ -18,6 +19,7 @@ class AdaptersPage(EntitiesPage):
     ROOT_PAGE_CSS = 'li#adapters.x-nav-item'
     SEARCH_TEXTBOX_CSS = 'div.x-search-input > input.input-value'
     TABLE_ROW_CLASS = 'table-row'
+    TABLE_CLASS = '.table'
     TEST_CONNECTIVITY = 'Test Reachability'
     DEVICE_CHECKBOX = 'div.x-checkbox-container'
     RT_CHECKBOX_CSS = '[for=realtime_adapter]+div'
@@ -30,7 +32,8 @@ class AdaptersPage(EntitiesPage):
     SERVER_ORANGE_COLOR_ID = 'svgicon_symbol_warning_a'
     SERVER_RED_COLOR_ID = 'svgicon_symbol_error_a'
     SERVER_GREEN_COLOR_ID = 'svgicon_symbol_success_a'
-    ORANGE_COLOR_ID = 'svgicon_symbol_error_b'
+    ERROR_SYMBOL_ID = 'svgicon_symbol_error_b'
+    WARNING_MARKER_CSS = '.marker.indicator-bg-warning'
     RED_COLOR_ID = 'svgicon_symbol_error_b'
     GREEN_COLOR_ID = 'svgicon_symbol_success_b'
     NEW_SERVER_BUTTON_ID = 'new_server'
@@ -56,13 +59,15 @@ class AdaptersPage(EntitiesPage):
     def get_adapter_list(self):
         result = []
 
-        adapter_table = self.driver.find_elements_by_class_name(self.TABLE_ROW_CLASS)
+        adapter_table = self.driver.find_element_by_css_selector(self.TABLE_CLASS)
 
-        # Skip the title row
-        adapter_table = adapter_table[1:]
-
-        for adapter_element in adapter_table:
-            count, name, description = adapter_element.text.split('\n')
+        # Use from index 1 to avoid selecting the table head
+        rows = adapter_table.find_elements_by_tag_name('tr')[1:]
+        for row in rows:
+            # Get the columns in order [status, name, description]
+            # count = row.find_elements(By.TAG_NAME, 'td')[0]
+            name = row.find_elements_by_tag_name('td')[1].text
+            description = row.find_elements_by_tag_name('td')[2].text
             result.append(Adapter(name=name, description=description))
 
         return result
@@ -122,8 +127,9 @@ class AdaptersPage(EntitiesPage):
     def wait_for_adapter_red(self):
         self.wait_for_element_present_by_id(self.RED_COLOR_ID)
 
-    def wait_for_adapter_orange(self):
-        self.wait_for_element_present_by_id(self.ORANGE_COLOR_ID)
+    def wait_for_adapter_warning(self):
+        self.wait_for_element_present_by_id(self.ERROR_SYMBOL_ID)
+        self.wait_for_element_present_by_css(self.WARNING_MARKER_CSS)
 
     def wait_for_connect_valid(self):
         self.wait_for_element_present_by_text(self.TEST_CONNECTIVITY_CONNECTION_IS_VALID)
@@ -208,3 +214,27 @@ class AdaptersPage(EntitiesPage):
 
     def click_help_link(self):
         self.find_help_link().click()
+
+    def find_status_symbol(self, status_type):
+        return self.wait_for_element_present_by_css(f'#svgicon_symbol_{status_type}_b')
+
+    def find_status_count(self, status_type):
+        element = self.wait_for_element_present_by_css(f'.status_{status_type} .status_clients-count')
+        return element.text
+
+    def get_adapters_table_length(self):
+        adapters = self.get_adapter_list()
+        return len(adapters)
+
+    def click_connected_adapters_filter_switch(self):
+        element = self.wait_for_element_present_by_css('.adapters-search .md-switch-thumb')
+        element.click()
+
+    def get_connected_adapters_number_form_switch_label(self):
+        pattern = r'configured only \((\d)\)'
+
+        element = self.wait_for_element_present_by_css('.adapters-search .md-switch-label')
+        element_text = element.text
+
+        match_object = re.match(pattern, element_text, re.I | re.M)
+        return match_object.group(1)
