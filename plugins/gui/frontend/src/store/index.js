@@ -62,6 +62,7 @@ import {
 } from './mutations'
 import {
   GET_DATA_FIELDS_BY_PLUGIN, getDataFieldsByPlugin,
+  GET_DATA_SCHEMA_LIST, getDataSchemaList,
   GET_DATA_SCHEMA_BY_NAME, getDataSchemaByName,
   SINGLE_ADAPTER, singleAdapter,
   AUTO_QUERY, autoQuery,
@@ -100,6 +101,7 @@ export default new Vuex.Store({
   },
   getters: {
     [GET_DATA_FIELDS_BY_PLUGIN]: getDataFieldsByPlugin,
+    [GET_DATA_SCHEMA_LIST]: getDataSchemaList,
     [GET_DATA_SCHEMA_BY_NAME]: getDataSchemaByName,
     [SINGLE_ADAPTER]: singleAdapter,
     [AUTO_QUERY]: autoQuery,

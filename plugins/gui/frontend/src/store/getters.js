@@ -32,8 +32,8 @@ const selectFields = (schema, objectView) => {
       : schema
 }
 
-export const GET_DATA_SCHEMA_BY_NAME = 'GET_DATA_SCHEMA_BY_NAME'
-export const getDataSchemaByName = (state) => (module) => {
+export const GET_DATA_SCHEMA_LIST = 'GET_DATA_SCHEMA_LIST'
+export const getDataSchemaList = (state) => (module) => {
     let fields = state[module].fields.data
     if (!fields.generic || !fields.generic.length) return []
 
@@ -44,8 +44,12 @@ export const getDataSchemaByName = (state) => (module) => {
             return aggregatedList.concat(currentList)
         }, allFieldsList)
     }
+    return allFieldsList
+}
 
-    return allFieldsList.reduce((map, schema) => {
+export const GET_DATA_SCHEMA_BY_NAME = 'GET_DATA_SCHEMA_BY_NAME'
+export const getDataSchemaByName = (state) => (module) => {
+    return getDataSchemaList(state)(module).reduce((map, schema) => {
         map[schema.name] = schema
         return map
     }, {})
