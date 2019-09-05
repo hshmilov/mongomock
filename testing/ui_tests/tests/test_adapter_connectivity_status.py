@@ -1,4 +1,3 @@
-import pytest
 from ui_tests.pages.adapters_page import AD_NAME
 from ui_tests.tests.adapters_test_base import AdapterTestBase
 
@@ -30,8 +29,8 @@ class TestAdaptersConnectivityStatus(AdapterTestBase):
         self.adapters_page.click_save()
         self.adapters_page.wait_for_element_absent_by_css(self.adapters_page.MODAL_OVERLAY_CSS)
         self.adapters_page.wait_for_element_present_by_text(dc_name)
+        self.adapters_page.wait_for_problem_connecting_try_again()
 
-    @pytest.mark.skip('Not working')
     def test_clients_indicators(self):
 
         try:

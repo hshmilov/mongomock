@@ -38,6 +38,7 @@ class AdaptersPage(EntitiesPage):
     GREEN_COLOR_ID = 'svgicon_symbol_success_b'
     NEW_SERVER_BUTTON_ID = 'new_server'
     DATA_COLLECTION_TOASTER = 'Connection established. Data collection initiated...'
+    TEXT_PROBLEM_CONNECTING_TRY_AGAIN = 'Problem connecting. Review error and try again.'
 
     DELETE_ASSOCIATED_ENTITIES_CHECKBOX_ID = 'deleteEntitiesCheckbox'
     AD_SERVER_SEARCH_FIELD = ('dc_name', 'DC Address')
@@ -139,6 +140,9 @@ class AdaptersPage(EntitiesPage):
 
     def wait_for_problem_connecting_to_server(self):
         self.wait_for_element_present_by_text(self.TEST_CONNECTIVITY_PROBLEM)
+
+    def wait_for_problem_connecting_try_again(self):
+        self.wait_for_element_present_by_text(self.TEXT_PROBLEM_CONNECTING_TRY_AGAIN)
 
     def clean_adapter_servers(self, name, delete_associated_entities=False):
         self.remove_server(None, name, delete_associated_entities=delete_associated_entities)
