@@ -1,15 +1,14 @@
-import time
 import logging
+import time
 from datetime import datetime, timedelta
-
-from typing import List, Dict
+from typing import Dict, List
+from funcy import chunks
 
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.exception import RESTException, RESTRequestException
 from crowd_strike_adapter import consts
 
 logger = logging.getLogger(f'axonius.{__name__}')
-
 
 # XXX: For some reason this file doesn't ignore logging-fstring-interpolation
 # although we got it in pylintrc ignore. add disable for it, and disable the disable warning
@@ -125,6 +124,36 @@ class CrowdStrikeConnection(RESTConnection):
         self.get_policies(prevention_policies, consts.PolicyTypes.Prevention)
         self.get_policies(sensor_update_policies, consts.PolicyTypes.SensorUpdate)
 
+    def get_devices_groups(self, devices_data: dict):
+        """
+        Get devices groups data from the api
+        :param devices_data: device data
+        :return: None
+        """
+        groups = {}
+        for device in devices_data:
+            device_groups = device.get('groups', [])
+            for group_id in device_groups:
+                groups.setdefault(group_id, []).append(device)
+        if not groups:
+            return
+        group_ids = groups.keys()
+        for chunk in chunks(consts.MAX_GROUPS_PER_REQUEST, group_ids):
+            try:
+                groups_res = self._get(f'devices/entities/host-groups/v1',
+                                       url_params={'ids': chunk},
+                                       do_basic_auth=not self._got_token)
+                groups_data = groups_res.get('resources', [])
+                logger.debug(f'Got {len(groups_data)} groups')
+                for group_data in groups_data:
+                    group_id = group_data.get('id')
+                    if group_id:
+                        devices = groups.get(group_id)
+                        for device in devices:
+                            device.setdefault('groups_data', []).append(group_data)
+            except Exception:
+                logger.error('Error getting device groups')
+
     def get_devices_data(self, devices_ids: List[str], should_get_policies: bool) -> List[Dict]:
         """
         Get devices data from crowdstrike api endpoint: devices/entities/devices/v1
@@ -143,6 +172,7 @@ class CrowdStrikeConnection(RESTConnection):
                 devices_data = devices.get('resources')
                 if should_get_policies:
                     self.get_devices_policies(devices_data)
+                self.get_devices_groups(devices_data)
                 return devices
             except RESTRequestException as e:
                 logger.error(f'Error getting devices data: {e}')
@@ -175,7 +205,6 @@ class CrowdStrikeConnection(RESTConnection):
                     raise e
 
     # pylint: disable=arguments-differ
-
     def get_device_list(self, should_get_policies):
         """
         Get devices data list from CrowdStrike Api

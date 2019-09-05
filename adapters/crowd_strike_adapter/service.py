@@ -26,7 +26,7 @@ class Group(SmartJsonClass):
     id = Field(str, 'Id')
     modified_by = Field(str, 'Modified By')
     modified_time = Field(datetime.datetime, 'Modified Time')
-    name = Field(str, 'name')
+    name = Field(str, 'Name')
 
 
 class PolicySettingValue(SmartJsonClass):
@@ -64,6 +64,7 @@ class Policy(SmartJsonClass):
 class CrowdStrikeAdapter(AdapterBase, Configurable):
     class MyDeviceAdapter(DeviceAdapter):
         external_ip = Field(str, 'External IP')
+        groups = ListField(Group, 'Groups')
         prevention_policy = Field(Policy, 'Prevention Policy')
         sensor_update_policy = Field(Policy, 'Sensor Update Policy')
 
@@ -154,6 +155,19 @@ class CrowdStrikeAdapter(AdapterBase, Configurable):
         }
 
     @staticmethod
+    def parse_groups(groups):
+        parsed_groups = []
+        if groups and isinstance(groups, list):
+            for group in groups:
+                parsed_groups.append(Group(created_by=group.get('created_by'),
+                                           created_timestamp=parse_date(group.get('created_timestamp')),
+                                           description=group.get('description'), group_type=group.get('group_type'),
+                                           id=group.get('id'), modified_by=group.get('modified_by'),
+                                           modified_time=parse_date(group.get('modified_time')),
+                                           name=group.get('name')))
+        return parsed_groups
+
+    @staticmethod
     def parse_policy(policy, settings_type):
         if not policy:
             return None
@@ -164,14 +178,7 @@ class CrowdStrikeAdapter(AdapterBase, Configurable):
         try:
             groups = policy.get('groups')
             # parse policies groups
-            if groups and isinstance(groups, list):
-                for group in groups:
-                    parsed_groups.append(Group(created_by=group.get('created_by'),
-                                               created_timestamp=parse_date(group.get('')),
-                                               description=group.get('description'), group_type=group.get('group_type'),
-                                               id=group.get('id'), modified_by=group.get('modified_by'),
-                                               modified_time=parse_date(group.get('modified_time')),
-                                               name=group.get('name')))
+            parsed_groups = CrowdStrikeAdapter.parse_groups(groups)
 
             # parse policies settings
             if settings_type == 'prevention_settings':
@@ -205,6 +212,7 @@ class CrowdStrikeAdapter(AdapterBase, Configurable):
             logger.exception('Error getting policy %s', policy.get('id'))
         return parsed_policy
 
+    # pylint: disable=too-many-statements
     def _parse_raw_data(self, devices_raw_data):
         for device_raw in devices_raw_data:
             try:
@@ -238,6 +246,10 @@ class CrowdStrikeAdapter(AdapterBase, Configurable):
                     logger.exception(f'Problem getting last seen for {device_raw}')
                 device.external_ip = device_raw.get('external_ip')
                 device.device_manufacturer = device_raw.get('bios_manufacturer')
+                try:
+                    device.groups = self.parse_groups(device_raw.get('groups_data'))
+                except Exception:
+                    logger.exception(f'Problem getting groups for {device_raw}')
                 try:
                     policies = device_raw.get('device_policies')
                     if policies:
