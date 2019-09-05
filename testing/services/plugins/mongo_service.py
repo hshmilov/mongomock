@@ -42,7 +42,7 @@ class MongoService(WeaveService):
     @property
     def max_allowed_memory(self):
         total_memory = psutil.virtual_memory().total / (1024 ** 2)  # total memory, in mb
-        total_memory = int(total_memory * 0.50)  # We want mongodb to always catch 50% of ram.
+        total_memory = int(total_memory * 0.60)  # We want mongodb to always catch 60% of ram.
         return total_memory
 
     @property
@@ -123,12 +123,10 @@ class MongoService(WeaveService):
 
     @property
     def _additional_parameters(self):
-        cache_size = int(0.5 * (self.max_allowed_memory - 1024) / 1024)
         return ['mongod',
                 '--keyFile', '/docker-entrypoint-initdb.d/mongodb.key',
                 '--replSet', 'axon-cluster',
                 '--config', '/etc/mongod.conf',
-                f'--wiredTigerCacheSizeGB={cache_size}'
                 ]
 
     def get_dockerfile(self, *args, **kwargs):
