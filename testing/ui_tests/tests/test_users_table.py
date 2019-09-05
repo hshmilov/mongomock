@@ -3,6 +3,7 @@ import pytz
 import pytest
 
 from ui_tests.tests.test_entities_table import TestEntitiesTable
+from ui_tests.tests.ui_consts import AD_ADAPTER_NAME
 from test_credentials.json_file_credentials import USER_NAME_UNICODE
 
 from axonius.utils.parsing import parse_date_with_timezone
@@ -17,6 +18,7 @@ class TestUsersTable(TestEntitiesTable):
     LAST_SEEN_COLUMN = 'Last Seen In Domain'
     ADAPTERS_COLUMN = 'Adapters'
     ACCOUNT_DISABLED_COLUMN = 'Account Disabled'
+    ACCOUNT_LOCKOUT_COLUMN = 'Account Lockout'
     QUERY_FILTER_USERNAME = 'specific_data.data.username == regex("m")'
     QUERY_FIELDS = 'adapters,specific_data.data.image,specific_data.data.username,specific_data.' \
                    'data.domain,specific_data.data.last_seen,specific_data.data.is_admin,labels'
@@ -74,11 +76,12 @@ class TestUsersTable(TestEntitiesTable):
         self.settings_page.switch_to_page()
         self.base_page.run_discovery()
         self.users_page.switch_to_page()
-        self.users_page.select_columns([self.MAIL_COLUMN, self.DOMAIN_COLUMN])
+        self.users_page.edit_columns([self.MAIL_COLUMN, self.DOMAIN_COLUMN])
         assert len(self.users_page.get_column_data(self.MAIL_COLUMN))
         with pytest.raises(ValueError):
             # The coloumn is expected to be gone, therefore this throws an exception
             self.users_page.get_column_data(self.DOMAIN_COLUMN)
+        self.users_page.edit_columns_of_adapter([self.MAIL_COLUMN, self.ACCOUNT_LOCKOUT_COLUMN], AD_ADAPTER_NAME)
 
     def test_user_save_query(self):
         self.settings_page.switch_to_page()
@@ -190,7 +193,7 @@ class TestUsersTable(TestEntitiesTable):
             self.users_page.query_user_name_contains('Administrator')
             self.users_page.open_edit_columns()
             self.users_page.select_column_name(self.ACCOUNT_DISABLED_COLUMN)
-            self.users_page.select_column_adapter(self.users_page.VALUE_ADAPTERS_AD)
+            self.users_page.select_column_adapter(AD_ADAPTER_NAME)
             self.users_page.select_column_name(self.ACCOUNT_DISABLED_COLUMN)
             self.users_page.close_edit_columns()
             self.users_page.wait_for_table_to_load()

@@ -8,11 +8,11 @@ from selenium.common.exceptions import NoSuchElementException
 from test_helpers.file_mock_credentials import FileForCredentialsMock
 from ui_tests.pages.entities_page import EntitiesPage
 from ui_tests.pages.page import PAGE_BODY
+from ui_tests.tests.ui_consts import AD_ADAPTER_NAME
 
 # NamedTuple doesn't need to be uppercase
 # pylint: disable=C0103
 Adapter = namedtuple('Adapter', 'name description')
-AD_NAME = 'Microsoft Active Directory (AD)'
 
 
 class AdaptersPage(EntitiesPage):
@@ -147,7 +147,7 @@ class AdaptersPage(EntitiesPage):
     def clean_adapter_servers(self, name, delete_associated_entities=False):
         self.remove_server(None, name, delete_associated_entities=delete_associated_entities)
 
-    def remove_server(self, ad_client=None, adapter_name=AD_NAME, adapter_search_field=AD_SERVER_SEARCH_FIELD,
+    def remove_server(self, ad_client=None, adapter_name=AD_ADAPTER_NAME, adapter_search_field=AD_SERVER_SEARCH_FIELD,
                       delete_associated_entities=False):
         self.switch_to_page()
         self.wait_for_spinner_to_end()
@@ -183,7 +183,7 @@ class AdaptersPage(EntitiesPage):
     def wait_for_data_collection_toaster_absent(self):
         self.wait_for_toaster_to_end(self.DATA_COLLECTION_TOASTER, retries=1200)
 
-    def add_server(self, ad_client, adapter_name=AD_NAME):
+    def add_server(self, ad_client, adapter_name=AD_ADAPTER_NAME):
         self.switch_to_page()
         self.click_adapter(adapter_name)
         self.wait_for_table_to_load()

@@ -4,7 +4,8 @@ import pytest
 
 import requests
 from ui_tests.tests.ui_test_base import TestBase
-from ui_tests.tests.ui_consts import (READ_WRITE_USERNAME, READ_ONLY_USERNAME, NEW_PASSWORD, FIRST_NAME, LAST_NAME)
+from ui_tests.tests.ui_consts import (READ_WRITE_USERNAME, READ_ONLY_USERNAME, NEW_PASSWORD, FIRST_NAME, LAST_NAME,
+                                      JSON_ADAPTER_NAME)
 from axonius.utils.wait import wait_until
 from axonius.consts.gui_consts import (DASHBOARD_SPACE_DEFAULT, DASHBOARD_SPACE_PERSONAL)
 
@@ -314,7 +315,7 @@ class TestDashboard(TestBase):
         self.devices_page.click_query_wizard()
         expressions = self.devices_page.find_expressions()
         assert len(expressions) == 1
-        self.users_page.select_query_adapter(self.users_page.VALUE_ADAPTERS_JSON)
+        self.users_page.select_query_adapter(JSON_ADAPTER_NAME)
         self.devices_page.toggle_not(expressions[0])
         self.users_page.click_search()
         self.users_page.wait_for_table_to_load()

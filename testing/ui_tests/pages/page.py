@@ -101,7 +101,6 @@ class Page:
     TABLE_COUNTER = 'div.count'
     UPLOADING_FILE_CSS = '//div[@class=\'name-placeholder\' and text()=\'Uploading...\']'
 
-    JSON_ADAPTER_NAME = 'JSON File'
     CUSTOM_ADAPTER_NAME = 'Custom Data'
 
     DATEPICKER_INPUT_CSS = '.md-datepicker .md-input'

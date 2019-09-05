@@ -1,4 +1,5 @@
 from ui_tests.tests.ui_test_base import TestBase
+from ui_tests.tests.ui_consts import JSON_ADAPTER_NAME, AD_ADAPTER_NAME
 
 
 class TestUsersQuery(TestBase):
@@ -11,10 +12,10 @@ class TestUsersQuery(TestBase):
 
         expressions = self.users_page.find_expressions()
         assert len(expressions) == 2
-        self.users_page.select_query_adapter(self.users_page.VALUE_ADAPTERS_JSON, parent=expressions[0])
+        self.users_page.select_query_adapter(JSON_ADAPTER_NAME, parent=expressions[0])
         self.users_page.wait_for_spinner_to_end()
         self.users_page.select_query_logic_op('and')
-        self.users_page.select_query_adapter(self.users_page.VALUE_ADAPTERS_AD, parent=expressions[1])
+        self.users_page.select_query_adapter(AD_ADAPTER_NAME, parent=expressions[1])
         self.users_page.wait_for_spinner_to_end()
         assert self.users_page.count_entities() == 2
 
@@ -22,7 +23,7 @@ class TestUsersQuery(TestBase):
         self.users_page.switch_to_page()
         self.users_page.wait_for_table_to_load()
         self.users_page.click_query_wizard()
-        self.users_page.select_query_adapter(self.users_page.VALUE_ADAPTERS_AD)
+        self.users_page.select_query_adapter(AD_ADAPTER_NAME)
         assert self.users_page.get_query_field() == self.users_page.ID_FIELD
         assert self.users_page.get_query_comp_op() == self.users_page.QUERY_COMP_EXISTS
 
@@ -54,14 +55,14 @@ class TestUsersQuery(TestBase):
         self.users_page.wait_for_table_to_load()
         assert self.users_page.count_entities() == 1
         self.users_page.click_on_select_all_filter_adapters(parent=expressions[0])
-        self.users_page.click_on_filter_adapter(self.users_page.VALUE_ADAPTERS_AD, parent=expressions[0])
+        self.users_page.click_on_filter_adapter(AD_ADAPTER_NAME, parent=expressions[0])
         self.users_page.wait_for_spinner_to_end()
         self.users_page.wait_for_table_to_load()
 
         assert self.users_page.count_entities() == 0
 
         self.users_page.click_on_select_all_filter_adapters()
-        self.users_page.click_on_filter_adapter(self.users_page.VALUE_ADAPTERS_JSON, parent=expressions[0])
+        self.users_page.click_on_filter_adapter(JSON_ADAPTER_NAME, parent=expressions[0])
         self.users_page.wait_for_spinner_to_end()
         self.users_page.wait_for_table_to_load()
         assert self.users_page.count_entities() == 1
@@ -72,7 +73,7 @@ class TestUsersQuery(TestBase):
         assert self.users_page.count_entities() == 1
 
         self.users_page.click_on_select_all_filter_adapters()
-        self.users_page.click_on_filter_adapter(self.users_page.VALUE_ADAPTERS_AD, parent=expressions[0])
+        self.users_page.click_on_filter_adapter(AD_ADAPTER_NAME, parent=expressions[0])
         self.users_page.wait_for_spinner_to_end()
         self.users_page.wait_for_table_to_load()
         assert self.users_page.count_entities() == 1

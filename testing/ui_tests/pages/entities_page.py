@@ -10,12 +10,13 @@ from axonius.utils.datetime import parse_date
 from axonius.utils.parsing import normalize_timezone_date
 from axonius.utils.wait import wait_until
 from ui_tests.pages.page import Page
+from ui_tests.tests.ui_consts import AD_ADAPTER_NAME
 
 
 class EntitiesPage(Page):
     EXPORT_CSV_LOADING_CSS = '.loading-button'
     EXPORT_CSV_BUTTON_TEXT = 'Export CSV'
-    EDIT_COLUMNS_ADAPTER_DROPDOWN_CSS = 'div.x-dropdown.x-select.x-select-symbol'
+    EDIT_COLUMNS_ADAPTER_DROPDOWN_CSS = '.x-dropdown.x-select.x-select-symbol'
     QUERY_WIZARD_ID = 'query_wizard'
     QUERY_EXPRESSIONS_CSS = '.x-filter .x-expression'
     QUERY_CONDITIONS_CSS = '.x-condition'
@@ -67,9 +68,7 @@ class EntitiesPage(Page):
     TABLE_HEADER_XPATH = '//div[@class=\'x-table\']/table/thead/tr'
     TABLE_HEADER_FIELD_XPATH = '//div[contains(@class, \'x-entity-general\')]//div[contains(@class, \'x-tab active\')]'\
                                '//div[@class=\'x-table\']//thead/tr'
-    VALUE_ADAPTERS_JSON = 'JSON File'
     NAME_ADAPTERS_JSON = 'json_file_adapter'
-    VALUE_ADAPTERS_AD = 'Microsoft Active Directory (AD)'
     NAME_ADAPTERS_AD = 'active_directory_adapter'
     VALUE_ADAPTERS_GENERAL = 'General'
     TABLE_HEADER_CELLS_CSS = 'th'
@@ -368,7 +367,7 @@ class EntitiesPage(Page):
 
     def build_query_active_directory(self):
         self.click_query_wizard()
-        self.select_query_adapter(self.VALUE_ADAPTERS_AD)
+        self.select_query_adapter(AD_ADAPTER_NAME)
         self.wait_for_table_to_load()
         self.close_dropdown()
 
@@ -512,8 +511,16 @@ class EntitiesPage(Page):
     def close_edit_columns(self):
         self.click_button('Done')
 
-    def select_columns(self, col_names):
+    def edit_columns(self, col_names):
         self.open_edit_columns()
+        self.select_columns(col_names)
+
+    def edit_columns_of_adapter(self, col_names, adapter_title):
+        self.open_edit_columns()
+        self.select_column_adapter(adapter_title)
+        self.select_columns(col_names)
+
+    def select_columns(self, col_names):
         for col_name in col_names:
             self.select_column_name(col_name)
         self.wait_for_spinner_to_end()
@@ -592,7 +599,7 @@ class EntitiesPage(Page):
         self.wait_for_table_to_load()
         self.click_sort_column(sort_field)
         self.wait_for_table_to_load()
-        self.select_columns(toggle_columns)
+        self.edit_columns(toggle_columns)
         self.wait_for_table_to_load()
         self.run_filter_and_save(query_name, query_filter)
 

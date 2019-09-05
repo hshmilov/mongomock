@@ -55,7 +55,7 @@ class TestSavedQuery(TestBase):
         self.devices_page.save_query_as(self.CUSTOM_QUERY_SAVE_NAME_2)
         assert self.devices_page.find_query_status_text() == ''
         assert self.devices_page.find_query_title_text() == self.CUSTOM_QUERY_SAVE_NAME_2
-        self.devices_page.select_columns([self.devices_page.FIELD_HOSTNAME_TITLE])
+        self.devices_page.edit_columns([self.devices_page.FIELD_HOSTNAME_TITLE])
         assert self.devices_page.FIELD_HOSTNAME_TITLE not in self.devices_page.get_columns_header_text()
         assert self.devices_page.find_query_status_text() == self.EDITED_QUERY_STATUS
         self.devices_page.save_existing_query()

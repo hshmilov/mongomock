@@ -1,7 +1,7 @@
 from axonius.utils.wait import wait_until
 from test_credentials.test_ad_credentials import ad_client1_details
-from ui_tests.pages.adapters_page import AD_NAME
 from ui_tests.tests.ui_test_base import TestBase
+from ui_tests.tests.ui_consts import AD_ADAPTER_NAME
 
 
 class TestAdaptersDelete(TestBase):
@@ -27,7 +27,7 @@ class TestAdaptersDelete(TestBase):
         # Execute action
 
         try:
-            self.adapters_page.clean_adapter_servers(AD_NAME, with_entities_deletion)
+            self.adapters_page.clean_adapter_servers(AD_ADAPTER_NAME, with_entities_deletion)
             self.adapters_page.wait_for_spinner_to_end()
 
             # check action was executed

@@ -3,8 +3,8 @@ from services.adapters.ad_service import AdService
 from services.adapters.cisco_service import CiscoService
 from services.adapters.gotoassist_service import GotoassistService
 from test_credentials.test_ad_credentials import ad_client1_details
-from ui_tests.pages.adapters_page import AD_NAME
 from ui_tests.tests.adapters_test_base import AdapterTestBase
+from ui_tests.tests.ui_consts import AD_ADAPTER_NAME
 
 GOTOASSIST_NAME = 'RescueAssist'
 GOTOASSIST_PLUGIN_NAME = 'gotoassist_adapter'
@@ -51,7 +51,7 @@ class TestAdaptersConnectivity(AdapterTestBase):
             self.adapters_page.switch_to_page()
             self.adapters_page.wait_for_spinner_to_end()
 
-            self.adapters_page.click_adapter(AD_NAME)
+            self.adapters_page.click_adapter(AD_ADAPTER_NAME)
             self.adapters_page.wait_for_spinner_to_end()
             self.adapters_page.wait_for_table_to_load()
             self.adapters_page.click_new_server()
@@ -72,7 +72,7 @@ class TestAdaptersConnectivity(AdapterTestBase):
         self.adapters_page.switch_to_page()
         self.adapters_page.wait_for_spinner_to_end()
         try:
-            self.adapters_page.clean_adapter_servers(AD_NAME)
+            self.adapters_page.clean_adapter_servers(AD_ADAPTER_NAME)
             self.adapters_page.wait_for_data_collection_toaster_absent()
             try:
 
@@ -81,10 +81,10 @@ class TestAdaptersConnectivity(AdapterTestBase):
 
                 self.adapters_page.switch_to_page()
                 self.adapters_page.wait_for_spinner_to_end()
-                self.adapters_page.search(AD_NAME)
+                self.adapters_page.search(AD_ADAPTER_NAME)
                 self.adapters_page.wait_for_adapter_green()
             finally:
-                self.adapters_page.clean_adapter_servers(AD_NAME)
+                self.adapters_page.clean_adapter_servers(AD_ADAPTER_NAME)
 
             try:
                 self.adapters_page.click_new_server()
@@ -98,10 +98,10 @@ class TestAdaptersConnectivity(AdapterTestBase):
                 self.adapters_page.switch_to_page()
 
                 self.adapters_page.wait_for_spinner_to_end()
-                self.adapters_page.search(AD_NAME)
+                self.adapters_page.search(AD_ADAPTER_NAME)
                 self.adapters_page.wait_for_adapter_warning()
             finally:
-                self.adapters_page.clean_adapter_servers(AD_NAME)
+                self.adapters_page.clean_adapter_servers(AD_ADAPTER_NAME)
         finally:
             self.adapters_page.switch_to_page()
             self.adapters_page.wait_for_spinner_to_end()

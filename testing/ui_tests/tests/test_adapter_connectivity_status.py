@@ -1,5 +1,5 @@
-from ui_tests.pages.adapters_page import AD_NAME
 from ui_tests.tests.adapters_test_base import AdapterTestBase
+from ui_tests.tests.ui_consts import AD_ADAPTER_NAME
 
 from services.adapters.cisco_service import CiscoService
 
@@ -16,10 +16,10 @@ class TestAdaptersConnectivityStatus(AdapterTestBase):
     def _go_to_adapters_and_search_ad(self):
         self.adapters_page.switch_to_page()
         self.adapters_page.wait_for_spinner_to_end()
-        self.adapters_page.search(AD_NAME)
+        self.adapters_page.search(AD_ADAPTER_NAME)
 
     def _insert_bad_client_to_ad(self, dc_name=AD_DC_NAME):
-        self.adapters_page.click_adapter(AD_NAME)
+        self.adapters_page.click_adapter(AD_ADAPTER_NAME)
         self.adapters_page.wait_for_spinner_to_end()
         self.adapters_page.wait_for_table_to_load()
 

@@ -3,6 +3,7 @@ from uuid import uuid4
 
 from axonius.utils.wait import wait_until
 from ui_tests.tests.ui_test_base import TestBase
+from ui_tests.tests.ui_consts import AD_ADAPTER_NAME, JSON_ADAPTER_NAME
 from services.plugins.general_info_service import GeneralInfoService
 from test_credentials.json_file_credentials import (DEVICE_FIRST_IP,
                                                     DEVICE_THIRD_IP,
@@ -35,7 +36,7 @@ class TestDevicesQuery(TestBase):
         self.devices_page.switch_to_page()
         self.devices_page.wait_for_table_to_load()
         self.devices_page.click_query_wizard()
-        self.devices_page.select_query_adapter(self.devices_page.VALUE_ADAPTERS_AD)
+        self.devices_page.select_query_adapter(AD_ADAPTER_NAME)
         assert self.devices_page.get_query_field() == self.devices_page.ID_FIELD
         assert self.devices_page.get_query_comp_op() == self.devices_page.QUERY_COMP_EXISTS
 
@@ -74,13 +75,13 @@ class TestDevicesQuery(TestBase):
         Testing the change in the field type icon - when using the adapters filter the icon changes to a special icon
         """
         assert not self.devices_page.is_filtered_adapter_icon_exists()
-        self.devices_page.click_on_filter_adapter(self.devices_page.JSON_ADAPTER_NAME)
+        self.devices_page.click_on_filter_adapter(JSON_ADAPTER_NAME)
         assert self.devices_page.is_filtered_adapter_icon_exists()
         self.devices_page.clear_query_wizard()
         expressions = self.devices_page.find_expressions()
         self.devices_page.toggle_obj(expressions[0])
         assert not self.devices_page.is_filtered_adapter_icon_exists()
-        self.devices_page.click_on_filter_adapter(self.devices_page.JSON_ADAPTER_NAME)
+        self.devices_page.click_on_filter_adapter(JSON_ADAPTER_NAME)
         assert self.devices_page.is_filtered_adapter_icon_exists()
         self.devices_page.toggle_obj(expressions[0])
         self.devices_page.select_query_field(self.devices_page.FIELD_HOSTNAME_TITLE, parent=expressions[0])
@@ -92,11 +93,11 @@ class TestDevicesQuery(TestBase):
         self.devices_page.add_query_expression()
         expressions = self.devices_page.find_expressions()
         assert len(expressions) == 2
-        self.devices_page.select_query_adapter(self.devices_page.VALUE_ADAPTERS_JSON, parent=expressions[0])
+        self.devices_page.select_query_adapter(JSON_ADAPTER_NAME, parent=expressions[0])
         self.devices_page.wait_for_spinner_to_end()
         results_count = len(self.devices_page.get_all_data())
         self.devices_page.select_query_logic_op(self.devices_page.QUERY_LOGIC_AND)
-        self.devices_page.select_query_adapter(self.devices_page.VALUE_ADAPTERS_AD, parent=expressions[1])
+        self.devices_page.select_query_adapter(AD_ADAPTER_NAME, parent=expressions[1])
         self.devices_page.wait_for_spinner_to_end()
         assert len(self.devices_page.get_all_data()) <= results_count
         self.devices_page.clear_query_wizard()
@@ -122,14 +123,14 @@ class TestDevicesQuery(TestBase):
         self.devices_page.wait_for_table_to_load()
         assert results_count == self.devices_page.count_entities()
 
-        self.devices_page.click_on_filter_adapter(self.devices_page.VALUE_ADAPTERS_AD, parent=expressions[0])
+        self.devices_page.click_on_filter_adapter(AD_ADAPTER_NAME, parent=expressions[0])
         self.devices_page.wait_for_spinner_to_end()
         self.devices_page.wait_for_table_to_load()
 
         non_ad_count = self.devices_page.count_entities()
         assert results_count > non_ad_count
-        self.devices_page.click_on_filter_adapter(self.devices_page.VALUE_ADAPTERS_AD, parent=expressions[0])
-        self.devices_page.click_on_filter_adapter(self.devices_page.VALUE_ADAPTERS_JSON, parent=expressions[0])
+        self.devices_page.click_on_filter_adapter(AD_ADAPTER_NAME, parent=expressions[0])
+        self.devices_page.click_on_filter_adapter(JSON_ADAPTER_NAME, parent=expressions[0])
         self.devices_page.wait_for_spinner_to_end()
         self.devices_page.wait_for_table_to_load()
         non_json_count = self.devices_page.count_entities()
@@ -168,7 +169,7 @@ class TestDevicesQuery(TestBase):
         self.devices_page.wait_for_spinner_to_end()
         self.devices_page.wait_for_table_to_load()
         results_count = self.devices_page.count_entities()
-        self.devices_page.click_on_filter_adapter(self.devices_page.VALUE_ADAPTERS_AD, parent=expressions[0])
+        self.devices_page.click_on_filter_adapter(AD_ADAPTER_NAME, parent=expressions[0])
         assert results_count > self.devices_page.count_entities()
 
     def _test_last_seen_query(self):
@@ -193,7 +194,7 @@ class TestDevicesQuery(TestBase):
         expressions = self.devices_page.find_expressions()
         assert len(expressions) == 2
         self.devices_page.click_on_select_all_filter_adapters(parent=expressions[0])
-        self.devices_page.click_on_filter_adapter(self.devices_page.VALUE_ADAPTERS_AD, parent=expressions[0])
+        self.devices_page.click_on_filter_adapter(AD_ADAPTER_NAME, parent=expressions[0])
         self.devices_page.select_query_field(self.devices_page.FIELD_LAST_SEEN, parent=expressions[0])
         self.devices_page.select_query_comp_op('days', parent=expressions[0])
         self.devices_page.fill_query_value(365, parent=expressions[0])
@@ -201,7 +202,7 @@ class TestDevicesQuery(TestBase):
         results_count = len(self.devices_page.get_all_data())
         self.devices_page.select_query_logic_op(self.devices_page.QUERY_LOGIC_AND)
         self.devices_page.click_on_select_all_filter_adapters(parent=expressions[1])
-        self.devices_page.click_on_filter_adapter(self.devices_page.VALUE_ADAPTERS_AD, parent=expressions[1])
+        self.devices_page.click_on_filter_adapter(AD_ADAPTER_NAME, parent=expressions[1])
         self.devices_page.select_query_field(self.devices_page.FIELD_LAST_SEEN, parent=expressions[1])
         self.devices_page.select_query_comp_op('days', parent=expressions[1])
         self.devices_page.fill_query_value(1, parent=expressions[1])
@@ -210,7 +211,7 @@ class TestDevicesQuery(TestBase):
         assert len(self.devices_page.get_all_data()) < results_count
 
         self.devices_page.click_on_select_all_filter_adapters(parent=expressions[0])
-        self.devices_page.click_on_filter_adapter(self.devices_page.VALUE_ADAPTERS_JSON, parent=expressions[0])
+        self.devices_page.click_on_filter_adapter(JSON_ADAPTER_NAME, parent=expressions[0])
         self.devices_page.wait_for_spinner_to_end()
         assert len(self.devices_page.get_all_data()) == 0
         assert self.devices_page.find_search_value().count(self.devices_page.NAME_ADAPTERS_AD) == 1
@@ -223,7 +224,7 @@ class TestDevicesQuery(TestBase):
         assert len(expressions) == 1
         self.devices_page.toggle_not(expressions[0])
         self.devices_page.click_on_select_all_filter_adapters(parent=expressions[0])
-        self.devices_page.click_on_filter_adapter(self.devices_page.VALUE_ADAPTERS_AD, parent=expressions[0])
+        self.devices_page.click_on_filter_adapter(AD_ADAPTER_NAME, parent=expressions[0])
         self.devices_page.select_query_field(self.devices_page.FIELD_ASSET_NAME, parent=expressions[0])
         self.devices_page.select_query_comp_op(self.devices_page.QUERY_COMP_EXISTS, parent=expressions[0])
         self.devices_page.wait_for_spinner_to_end()
@@ -238,9 +239,9 @@ class TestDevicesQuery(TestBase):
         self.devices_page.add_query_expression()
         expressions = self.devices_page.find_expressions()
         assert len(expressions) == 3
-        self.devices_page.select_query_adapter(self.users_page.VALUE_ADAPTERS_JSON, parent=expressions[0])
+        self.devices_page.select_query_adapter(JSON_ADAPTER_NAME, parent=expressions[0])
         self.devices_page.select_query_logic_op(self.devices_page.QUERY_LOGIC_OR)
-        self.devices_page.select_query_adapter(self.users_page.VALUE_ADAPTERS_AD, parent=expressions[1])
+        self.devices_page.select_query_adapter(AD_ADAPTER_NAME, parent=expressions[1])
         self.devices_page.toggle_left_bracket(expressions[0])
         assert self.devices_page.is_query_error(self.ERROR_TEXT_QUERY_BRACKET.format(direction='right'))
         self.devices_page.toggle_right_bracket(expressions[1])
@@ -266,7 +267,7 @@ class TestDevicesQuery(TestBase):
         self.devices_page.select_query_comp_op(self.devices_page.QUERY_COMP_SUBNET, parent=expressions[0])
         self.devices_page.fill_query_value('192.168.0.0/16', parent=expressions[0])
         self.devices_page.select_query_logic_op(self.devices_page.QUERY_LOGIC_AND)
-        self.devices_page.select_query_adapter(self.users_page.VALUE_ADAPTERS_AD, parent=expressions[1])
+        self.devices_page.select_query_adapter(AD_ADAPTER_NAME, parent=expressions[1])
         self.devices_page.select_query_field(self.devices_page.FIELD_LAST_SEEN, parent=expressions[2])
         self.devices_page.select_query_comp_op('days', parent=expressions[2])
         self.devices_page.fill_query_value(30, parent=expressions[2])
@@ -569,14 +570,14 @@ class TestDevicesQuery(TestBase):
         assert 'Total Swap GB' not in fields
         assert 'Host Name' in fields
 
-        self.devices_page.select_query_adapter(self.users_page.VALUE_ADAPTERS_JSON, parent=expressions[0])
+        self.devices_page.select_query_adapter(JSON_ADAPTER_NAME, parent=expressions[0])
         fields = list(self.devices_page.get_all_fields_in_field_selection())
         assert 'Last Contact' in fields
         assert 'Cloud ID' not in fields
         assert 'Last Seen' not in fields
         assert 'AD Use DES Key Only' not in fields
 
-        self.devices_page.select_query_adapter(self.users_page.VALUE_ADAPTERS_AD, parent=expressions[0])
+        self.devices_page.select_query_adapter(AD_ADAPTER_NAME, parent=expressions[0])
         fields = list(self.devices_page.get_all_fields_in_field_selection())
         assert 'AD Use DES Key Only' in fields
 

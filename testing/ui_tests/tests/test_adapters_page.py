@@ -6,11 +6,10 @@ from services.adapters.gotoassist_service import GotoassistService
 from test_credentials.test_eset_credentials import eset_details
 from test_credentials.test_gotoassist_credentials import client_details
 from ui_tests.tests.ui_test_base import TestBase
+from ui_tests.tests.ui_consts import AD_ADAPTER_NAME, JSON_ADAPTER_NAME
 
 GOTOASSIST_NAME = 'RescueAssist'
 GOTOASSIST_PLUGIN_NAME = 'gotoassist_adapter'
-ACTIVE_DIRECTORY_NAME = 'Microsoft Active Directory (AD)'
-JSON_ADAPTER_NAME = 'JSON File'
 ESET_NAME = 'ESET Endpoint Security'
 ESET_PLUGIN_NAME = 'eset_adapter'
 
@@ -65,8 +64,8 @@ class TestAdaptersPage(TestBase):
             self.wait_for_adapter_down(ESET_PLUGIN_NAME)
 
     def test_adapters_page_help_link(self):
-        self.adapters_page.wait_for_adapter(ACTIVE_DIRECTORY_NAME)
-        self.adapters_page.click_adapter(ACTIVE_DIRECTORY_NAME)
+        self.adapters_page.wait_for_adapter(AD_ADAPTER_NAME)
+        self.adapters_page.click_adapter(AD_ADAPTER_NAME)
         self.adapters_page.wait_for_spinner_to_end()
         self.adapters_page.wait_for_table_to_load()
         self.adapters_page.click_new_server()
