@@ -39,7 +39,6 @@
         height: 24px;
         display: flex;
         align-items: center;
-        font-weight: 300;
 
         .item {
             margin-right: 8px;
