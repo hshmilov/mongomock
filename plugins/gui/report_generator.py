@@ -77,7 +77,7 @@ class ReportGenerator:
         Generates the report data from the report.
         :return: the generated report data.
         """
-        saved_views = report['views'] if report else None
+        saved_views = report.get('views') if report else None
         include_dashboard = report['include_dashboard'] if report.get('include_dashboard') else False
         include_all_saved_views = report['include_all_saved_views'] if report.get('include_all_saved_views') else False
         include_saved_views = report['include_saved_views'] if report.get('include_saved_views') else False
@@ -648,6 +648,8 @@ class ReportGenerator:
         """
         logger.info('Getting views data')
         views_data = {}
+        if not saved_queries:
+            return views_data
         query_per_entity = {}
         for saved_query in saved_queries:
             entity = saved_query['entity']

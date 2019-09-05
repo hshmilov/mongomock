@@ -436,6 +436,9 @@
       initData () {
         if (this.reportData && this.reportData.name) {
           this.report = this.reportData ? { ...this.reportData } : {}
+          if(this.report.views === undefined){
+                this.report.views = []
+          }
           if (this.report.views.length === 0) {
             this.report.views.push({ entity: '', name: '' })
           }
