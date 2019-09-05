@@ -563,7 +563,7 @@ class EnforcementsPage(EntitiesPage):
         library_tip = self.wait_for_element_present_by_css('.x-action-library-tip')
         return self.find_element_by_text(tip_text, element=library_tip)
 
-    def fill_send_email_config(self, name, recipient=None, body=None):
+    def fill_send_email_config(self, name, recipient=None, body=None, attach_csv=False):
         self.wait_for_action_config()
         self.fill_text_field_by_element_id(self.ACTION_NAME_ID, name)
         if recipient:
@@ -574,6 +574,10 @@ class EnforcementsPage(EntitiesPage):
             )
             self.fill_text_field_by_tag_name('textarea', body, context=custom_message_element)
             assert custom_message_element.find_element_by_tag_name('textarea').get_attribute('value') == body[:200]
+        if attach_csv:
+            attach_csv_checkbox = self.driver.find_element_by_xpath(
+                self.DIV_BY_LABEL_TEMPLATE.format(label_text='Attach CSV with Query results'))
+            attach_csv_checkbox.find_element_by_class_name('x-checkbox').click()
         self.click_button(self.SAVE_BUTTON)
         self.wait_for_element_present_by_text(name)
 

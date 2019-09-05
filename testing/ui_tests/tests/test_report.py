@@ -253,7 +253,7 @@ class TestReport(TestBase):
 
             self.reports_page.click_send_email()
             self.reports_page.find_email_sent_toaster()
-            mail_content = smtp_service.get_email_first_csv_content()
+            mail_content = smtp_service.get_email_first_csv_content(recipient)
             assert len(mail_content.splitlines()) == 11
 
     def test_read_only_click_add_scheduling(self):

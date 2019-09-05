@@ -4856,7 +4856,8 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
                             email.add_pdf(EXEC_REPORT_FILE_NAME.format(report_name), bytes(report_file.read()))
                         for attachment_path in attachments_paths:
                             with open(attachment_path, 'rb') as attachment_file:
-                                email.add_pdf(os.path.basename(attachment_path), bytes(attachment_file.read()))
+                                email.add_attachment(os.path.basename(attachment_path), bytes(attachment_file.read()),
+                                                     'text/csv')
                         email.send(EXEC_REPORT_EMAIL_CONTENT)
                         self.reports_config_collection.update_one({
                             'name': report_name,

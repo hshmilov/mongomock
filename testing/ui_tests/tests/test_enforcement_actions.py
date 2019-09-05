@@ -9,8 +9,8 @@ from retrying import retry
 
 from axonius.consts.system_consts import AXONIUS_DNS_SUFFIX
 from axonius.utils.wait import wait_until
-from services.standalone_services.smtp_server import (SMTPService,
-                                                      generate_random_valid_email)
+from services.standalone_services.smtp_server import generate_random_valid_email
+from services.standalone_services.maildiranasaurus_server import MailDiranasaurusService as SMTPService
 from services.standalone_services.syslog_server import SyslogService
 from ui_tests.tests.ui_test_base import TestBase
 from test_credentials.json_file_credentials import client_details as json_file_creds
@@ -244,6 +244,7 @@ class TestEnforcementActions(TestBase):
             self.settings_page.add_email_server(smtp_service.fqdn, smtp_service.port)
 
             self.devices_page.switch_to_page()
+            self.base_page.run_discovery()
             self.devices_page.run_filter_and_save(ENFORCEMENT_CHANGE_NAME, AD_LAST_OR_ADDED_QUERY.format(
                 added_filter=self.devices_page.JSON_ADAPTER_FILTER))
             self.enforcements_page.switch_to_page()
@@ -260,10 +261,15 @@ class TestEnforcementActions(TestBase):
                               'center of the best Cybersecurity Asset Management system. Axonius is the most ' \
                               'confident place to secure your precious network assets.'
             self.enforcements_page.fill_send_email_config('Special Customized Email', recipient,
-                                                          customized_body)
+                                                          customized_body, True)
             self.enforcements_page.click_save_button()
             self.base_page.run_discovery()
+            self.devices_page.switch_to_page()
+            self.devices_page.execute_saved_query(ENFORCEMENT_CHANGE_NAME)
+            devices_count = self.devices_page.count_entities()
             smtp_service.verify_email_send(recipient)
+            mail_content = smtp_service.get_email_first_csv_content(recipient)
+            assert len(mail_content.splitlines()) == devices_count + 1
         self.settings_page.remove_email_server()
 
     def test_enforcement_email_validation(self):

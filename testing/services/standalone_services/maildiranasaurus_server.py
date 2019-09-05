@@ -49,7 +49,7 @@ class MailDiranasaurusService(SMTPService):
            CMD ["/go/src/github.com/flashmob/maildiranasaurus/maildiranasaurus", "serve"]
            '''[1:]
 
-    def get_email_first_csv_content(self):
+    def get_email_first_csv_content(self, recipient):
         """
         Get the first csv attachment content of the mail that was sent
         :return:
@@ -67,11 +67,17 @@ class MailDiranasaurusService(SMTPService):
             file.write(out)
 
         m = mailbox.Maildir('/tmp/mail_dir')
+        payload = None
         for key in m.iterkeys():
             message = m.get_message(key)
-            # get the third message in the payload -
-            # the first is the content and the 2nd is the pdf, the 3rd is the csv
-            return message.get_payload()[2].get_payload(decode=True)
+            if message.get('To') != recipient:
+                continue
+            for attachment in message.get_payload():
+                if attachment.get_content_type() == 'text/csv':
+                    payload = attachment.get_payload(decode=True)
+                    break
+        m.clear()
+        return payload
 
     @property
     def image(self):
