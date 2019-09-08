@@ -2,7 +2,7 @@
   <div class="x-query">
     <x-query-state
       :module="module"
-      :valid="queryValid"
+      :valid="filterValid"
       :read-only="readOnly"
       @done="$emit('done')"
       @tour="tour"
@@ -99,9 +99,6 @@
             this.$emit('done')
           }
         }
-      },
-      queryValid () {
-        return this.queryFilter !== '' && this.filterValid
       }
     },
     methods: {

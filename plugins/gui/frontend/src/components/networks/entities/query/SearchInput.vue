@@ -147,6 +147,9 @@
         return this.queryMenuIndex === this.queryMenuCount - 1
       },
       textSearchPattern () {
+        if (!this.searchValue) {
+          return ''
+        }
         /* Create a template for the search everywhere filter, from all currently selected fields */
         if (!this.fields || !this.fields.length) return ''
         let patternParts = []
@@ -228,6 +231,7 @@
           this.inTextSearch = false
 
         }
+        this.$emit('validate')
         this.closeInput()
       },
       searchText () {

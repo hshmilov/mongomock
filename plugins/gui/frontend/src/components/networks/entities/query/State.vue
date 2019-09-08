@@ -126,7 +126,7 @@
         return this.view.enforcement
       },
       disabled () {
-        return !this.valid || this.readOnly
+        return !this.valid || this.readOnly || this.isDefaultView
       },
       historical: {
         get () {
@@ -151,9 +151,15 @@
         }
         return 'New Query'
       },
+      isDefaultView () {
+        return this.view.query.filter === ''
+                && this.arraysEqual(this.view.fields, defaultFields[this.module])
+                && this.view.sort.field === ''
+                && (!Object.keys(this.view.colFilters).length || !Object.values(this.view.colFilters).find(val => val))
+      },
       isEdited () {
-        if (!this.selectedView || !this.selectedView.view) return false
-        return ((this.selectedView.view.query.filter !== this.view.query.filter)
+        return this.selectedView && this.selectedView.view &&
+                (this.selectedView.view.query.filter !== this.view.query.filter
                 || !this.arraysEqual(this.view.fields, this.selectedView.view.fields)
                 || this.view.sort.field !== this.selectedView.view.sort.field
                 || this.view.sort.desc !== this.selectedView.view.sort.desc

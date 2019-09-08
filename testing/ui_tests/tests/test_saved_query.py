@@ -20,18 +20,46 @@ class TestSavedQuery(TestBase):
         self.devices_page.wait_for_table_to_load()
         assert self.devices_page.find_query_title_text() == self.NEW_QUERY_TITLE
         assert self.devices_page.find_query_status_text() == self.UNSAVED_QUERY_STATUS
+        assert self.devices_page.is_query_save_disabled()
+
+        # Save is enabled when user changes: Filter \ Columns \ Sort \ Column Filters
         self.devices_page.build_query_active_directory()
+        assert not self.devices_page.is_query_save_disabled()
+        # Remove host name field
+        self.devices_page.edit_columns([self.devices_page.FIELD_HOSTNAME_TITLE])
+        assert not self.devices_page.is_query_save_disabled()
+        self.devices_page.fill_enter_table_search('')
+        assert not self.devices_page.is_query_save_disabled()
+        # Add host name field
+        self.devices_page.edit_columns([self.devices_page.FIELD_HOSTNAME_TITLE])
+        assert self.devices_page.is_query_save_disabled()
+        # Sort host name field
+        self.devices_page.click_sort_column(self.devices_page.FIELD_HOSTNAME_TITLE)
+        assert not self.devices_page.is_query_save_disabled()
+        # No sort host name field
+        self.devices_page.click_sort_column(self.devices_page.FIELD_HOSTNAME_TITLE)
+        self.devices_page.click_sort_column(self.devices_page.FIELD_HOSTNAME_TITLE)
+        assert self.devices_page.is_query_save_disabled()
+        # Filter host name field
+        self.devices_page.filter_column(self.devices_page.FIELD_HOSTNAME_TITLE, 'test')
+        assert not self.devices_page.is_query_save_disabled()
+        # No filter host name field
+        self.devices_page.filter_column(self.devices_page.FIELD_HOSTNAME_TITLE, '')
+        assert self.devices_page.is_query_save_disabled()
+        self.devices_page.build_query_active_directory()
+
+        # Save query from current view
         self.devices_page.save_query(self.CUSTOM_QUERY_SAVE_NAME_1)
         assert self.devices_page.find_query_title_text() == self.CUSTOM_QUERY_SAVE_NAME_1
+        # Save query from currently presented query
         self.devices_page.save_query_as(self.CUSTOM_QUERY_SAVE_NAME_2)
         assert self.devices_page.find_query_title_text() == self.CUSTOM_QUERY_SAVE_NAME_2
         self.devices_page.check_search_list_for_names([self.CUSTOM_QUERY_SAVE_NAME_1, self.CUSTOM_QUERY_SAVE_NAME_2])
+        # Rename currently presented query
         self.devices_page.rename_query(self.CUSTOM_QUERY_SAVE_NAME_2, self.CUSTOM_QUERY_SAVE_NAME_3)
         assert self.devices_page.find_query_title_text() == self.CUSTOM_QUERY_SAVE_NAME_3
         self.devices_page.check_search_list_for_names([self.CUSTOM_QUERY_SAVE_NAME_1, self.CUSTOM_QUERY_SAVE_NAME_3])
         assert self.devices_page.find_query_status_text() == ''
-        self.devices_page.add_query_last_seen()
-        assert self.devices_page.find_query_status_text() == self.EDITED_QUERY_STATUS
 
     def test_edit_saved_query(self):
         self.dashboard_page.switch_to_page()

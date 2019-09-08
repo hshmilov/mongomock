@@ -48,74 +48,74 @@
   import xDateEdit from './DateEdit.vue'
   import { validateEmail } from '../../../../../constants/validations'
 
-	export default {
-		name: 'XStringEdit',
+  export default {
+    name: 'XStringEdit',
     components: { xSelect, xDateEdit },
     mixins: [primitiveMixin],
     props: {
-		  clearable: {
-		    type: Boolean,
-            default: true
-          }
-        },
-        data() {
-            return {
-                data: '',
-                valid: true,
-                error: ''
-            }
-        },
-        computed: {
-            processedData: {
-                get() {
-                  return this.isUnchangedPassword ? '********' : this.data
-                },
-                set(new_val) {
-                    this.data = new_val
-                }
-            },
-            isEmailValid: function() {
-               return (!this.data || validateEmail(this.data)) ? '' : 'error-border';
-            },
-            isDate() {
-		           return (this.schema.format === 'date-time' || this.schema.format === 'date')
-            },
-            isText() {
-                return this.schema.format === 'text'
-            },
-            isMail() {
-               return this.schema.format === 'email'
-            },
-		        isUnchangedPassword() {
-		            return this.inputType === 'password' && this.data && this.data[0] === 'unchanged'
-            },
-           
-            inputType() {
-              if (this.schema.format && this.schema.format === 'password') {
-                return 'password'
-              } else if (this.schema.enum) {
-                return ''
-              }
-              return 'text'
-            }
-        },
-        methods: {
-		        formatData() {
-              return this.data
-            },
-            onFocusIn(){
-              if(this.isUnchangedPassword){
-                this.data = ''
-              }
-            },
-            onValidate (validity) {
-                    this.$emit('validate', validity)
-            },
-            checkData() {
-			        return !this.isMail ? true: !this.isEmailValid
-		        }
-        }
+      clearable: {
+        type: Boolean,
+        default: true
       }
+    },
+    data () {
+      return {
+        data: '',
+        valid: true,
+        error: ''
+      }
+    },
+    computed: {
+      processedData: {
+        get () {
+          return this.isUnchangedPassword ? '********' : this.data
+        },
+        set (new_val) {
+          this.data = new_val
+        }
+      },
+      isEmailValid: function () {
+        return (!this.data || validateEmail(this.data)) ? '' : 'error-border'
+      },
+      isDate () {
+        return (this.schema.format === 'date-time' || this.schema.format === 'date')
+      },
+      isText () {
+        return this.schema.format === 'text'
+      },
+      isMail () {
+        return this.schema.format === 'email'
+      },
+      isUnchangedPassword () {
+        return this.inputType === 'password' && this.data && this.data[0] === 'unchanged'
+      },
+
+      inputType () {
+        if (this.schema.format && this.schema.format === 'password') {
+          return 'password'
+        } else if (this.schema.enum) {
+          return ''
+        }
+        return 'text'
+      }
+    },
+    methods: {
+      formatData () {
+        return this.data
+      },
+      onFocusIn () {
+        if (this.isUnchangedPassword) {
+          this.data = ''
+        }
+      },
+      onValidate (validity) {
+        this.$emit('validate', validity)
+      },
+      checkData () {
+        return !this.isMail ? true : !this.isEmailValid
+      }
+    }
+  }
 </script>
 
 <style lang="scss">

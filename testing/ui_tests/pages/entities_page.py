@@ -393,6 +393,15 @@ class EntitiesPage(Page):
         sort = header.find_element_by_css_selector('.sort')
         assert sort.get_attribute('class') == ('sort down' if desc else 'sort up')
 
+    def filter_column(self, col_name, filter_str):
+        header = self.driver.find_element_by_xpath(self.TABLE_HEADER_SORT_XPATH.format(col_name_text=col_name))
+        ActionChains(self.driver).move_to_element(header).perform()
+        filter_container = header.find_element_by_css_selector('.filter')
+        filter_container.find_element_by_css_selector('.md-icon').click()
+        filter_search = filter_container.find_element_by_css_selector(self.TABLE_SEARCH_INPUT)
+        self.fill_text_by_element(filter_search, filter_str)
+        self.key_down_enter(filter_search)
+
     @staticmethod
     def _get_column_title(head):
         return head.text.strip().split('\n')[0]
