@@ -321,7 +321,6 @@ account_data.tmp
 # gui
 plugins/gui/frontend/.idea/
 plugins/gui/frontend/node_modules/
-plugins/gui/frontend/package-lock.json
 
 
 # Vim

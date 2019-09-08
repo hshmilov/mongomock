@@ -582,6 +582,7 @@ RUN cd ./gui/frontend/ && npm run build
         install_command = '' if self.is_dev else '''
 # Prepare build packages
 COPY ./frontend/package.json ./gui/frontend/package.json
+COPY ./frontend/package-lock.json ./gui/frontend/package-lock.json
 RUN cd ./gui/frontend && npm set progress=false && npm install
 # This must be the first thing so subsequent rebuilds will use this cache image layer
 # Docker builds the image from the dockerfile in stages [called layers], each layer is cached and reused if not changed
