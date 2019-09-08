@@ -36,7 +36,7 @@ RUN curl -o /usr/bin/aws-iam-authenticator https://amazon-eks.s3-us-west-2.amazo
 
 # Install more gui dependencies.
 
-RUN curl -sL https://deb.nodesource.com/setup_6.x | bash - && \
+RUN curl -sL https://deb.nodesource.com/setup_8.x | bash - && \
     apt-get install -y nodejs && nodejs -v && node -v && npm -v
 
 # Install python requirements
