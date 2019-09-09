@@ -9,6 +9,7 @@ from retrying import retry
 
 from axonius.consts.system_consts import AXONIUS_DNS_SUFFIX
 from axonius.utils.wait import wait_until
+from axonius.utils.parsing import make_dict_from_csv
 from services.standalone_services.smtp_server import generate_random_valid_email
 from services.standalone_services.maildiranasaurus_server import MailDiranasaurusService as SMTPService
 from services.standalone_services.syslog_server import SyslogService
@@ -245,8 +246,9 @@ class TestEnforcementActions(TestBase):
 
             self.devices_page.switch_to_page()
             self.base_page.run_discovery()
-            self.devices_page.run_filter_and_save(ENFORCEMENT_CHANGE_NAME, AD_LAST_OR_ADDED_QUERY.format(
-                added_filter=self.devices_page.JSON_ADAPTER_FILTER))
+            test_query = AD_LAST_OR_ADDED_QUERY.format(added_filter=self.devices_page.JSON_ADAPTER_FILTER)
+            self.devices_page.run_filter_and_save(ENFORCEMENT_CHANGE_NAME, test_query,
+                                                  optional_sort=self.devices_page.FIELD_HOSTNAME_TITLE)
             self.enforcements_page.switch_to_page()
             self.enforcements_page.click_new_enforcement()
             self.enforcements_page.wait_for_spinner_to_end()
@@ -269,7 +271,13 @@ class TestEnforcementActions(TestBase):
             devices_count = self.devices_page.count_entities()
             smtp_service.verify_email_send(recipient)
             mail_content = smtp_service.get_email_first_csv_content(recipient)
+
             assert len(mail_content.splitlines()) == devices_count + 1
+
+            # Testing that it is truly sorted
+            hostnames = [x[self.devices_page.FIELD_HOSTNAME_TITLE] for x in make_dict_from_csv(str(mail_content))]
+            assert hostnames == sorted(hostnames, reverse=True)
+
         self.settings_page.remove_email_server()
 
     def test_enforcement_email_validation(self):

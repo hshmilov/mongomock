@@ -13,6 +13,7 @@ import os
 import socket
 import ssl
 import subprocess
+
 from jira import JIRA
 import sys
 import threading
@@ -43,6 +44,7 @@ from retrying import retry
 from tlssyslog import TLSSysLogHandler
 
 import axonius.entities
+from axonius.utils.axonius_query_language import parse_filter
 from axonius import adapter_exceptions, plugin_exceptions
 from axonius.adapter_exceptions import TagDeviceError
 from axonius.background_scheduler import LoggedBackgroundScheduler
@@ -76,7 +78,8 @@ from axonius.consts.plugin_consts import (ADAPTERS_LIST_LENGTH,
                                           NODE_USER_PASSWORD, REPORTS_PLUGIN_NAME, EXECUTION_PLUGIN_NAME,
                                           NODE_ID_ENV_VAR_NAME,
                                           HEAVY_LIFTING_PLUGIN_NAME, SOCKET_READ_TIMEOUT,
-                                          DEFAULT_SOCKET_READ_TIMEOUT, DEFAULT_SOCKET_RECV_TIMEOUT, STATIC_ANALYSIS_SETTINGS, FETCH_EMPTY_VENDOR_SOFTWARE_VULNERABILITES)
+                                          DEFAULT_SOCKET_READ_TIMEOUT, DEFAULT_SOCKET_RECV_TIMEOUT,
+                                          STATIC_ANALYSIS_SETTINGS, FETCH_EMPTY_VENDOR_SOFTWARE_VULNERABILITES)
 from axonius.consts.plugin_subtype import PluginSubtype
 from axonius.consts.core_consts import CORE_CONFIG_NAME
 from axonius.consts.gui_consts import FEATURE_FLAGS_CONFIG, FeatureFlagsNames
@@ -1338,7 +1341,7 @@ class PluginBase(Configurable, Feature):
             for action_id, (action_promise, time_started) in open_actions_lock_copy.items():
                 if time_started + timedelta(seconds=TIMEOUT_FOR_EXECUTION_THREADS_IN_SECONDS) < datetime.now():
                     err_msg = f"Timeout {TIMEOUT_FOR_EXECUTION_THREADS_IN_SECONDS} reached for " \
-                        f"action_id {action_id}, rejecting the promise."
+                              f"action_id {action_id}, rejecting the promise."
                     logger.error(err_msg)
 
                     # We must reject or resolve the promise with a thread, so that we wouldn't catch the lock
@@ -1705,8 +1708,9 @@ class PluginBase(Configurable, Feature):
         nodes = []
         for current_node in self.core_configs_collection.distinct('node_id'):
             node_data = db_connection['core']['nodes_metadata'].find_one({'node_id': current_node})
-            node = {'node_id': current_node, 'last_seen': self.request_remote_plugin(f'nodes/last_seen/{current_node}').json()[
-                'last_seen']}
+            node = {'node_id': current_node,
+                    'last_seen': self.request_remote_plugin(f'nodes/last_seen/{current_node}').json()[
+                        'last_seen']}
 
             if node_data:
                 node['node_name'] = node_data.get('node_name', '')
@@ -1787,7 +1791,7 @@ class PluginBase(Configurable, Feature):
         pretty_ids_to_distribute = list(self._get_pretty_ids(len(adapter_devices_ids_to_add)))
 
         for (_id, adapter_id), pretty_id_to_add in zip(adapter_devices_ids_to_add, pretty_ids_to_distribute):
-            res = self.devices_db.update_one({
+            self.devices_db.update_one({
                 '_id': _id,
                 'adapters': {
                     '$elemMatch': {
@@ -1906,7 +1910,7 @@ class PluginBase(Configurable, Feature):
 
                     if len(final_data) != 1:
                         msg = f"Got {name}/{tag_type} with " \
-                            f"action_if_exists=update, but final_data is not of length 1: {final_data}"
+                              f"action_if_exists=update, but final_data is not of length 1: {final_data}"
                         logger.error(msg)
                         raise TagDeviceError(msg)
 
@@ -1947,7 +1951,7 @@ class PluginBase(Configurable, Feature):
 
                 if result.matched_count != 1:
                     msg = f"tried to update tag {tag_data}. " \
-                        f"expected matched_count == 1 but got {result.matched_count}"
+                          f"expected matched_count == 1 but got {result.matched_count}"
                     logger.error(msg)
                     raise TagDeviceError(msg)
             elif virtual_plugin_name == "gui" and tag_type == 'label' and tag_type is False:

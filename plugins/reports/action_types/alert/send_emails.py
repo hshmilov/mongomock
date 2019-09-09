@@ -1,9 +1,9 @@
 import logging
 import mimetypes
 from email.utils import make_msgid
+from typing import Iterable
 import os
 from jinja2 import Environment, FileSystemLoader
-
 
 from axonius.consts.plugin_consts import GUI_SYSTEM_CONFIG_COLLECTION, GUI_PLUGIN_NAME
 
@@ -15,6 +15,7 @@ from axonius.utils import gui_helpers
 from axonius.consts import report_consts
 from axonius.utils.axonius_query_language import parse_filter
 from axonius.types.enforcement_classes import AlertActionResult
+from axonius.utils.db_querying_helper import perform_saved_view_converted, get_entities
 from reports.action_types.action_type_alert import ActionTypeAlert
 
 logger = logging.getLogger(f'axonius.{__name__}')
@@ -44,6 +45,7 @@ REPORTS_TEMPLATES = {
     'table_row': __get_template('report_table_row'),
     'table_data': __get_template('report_table_data')
 }
+
 
 # pylint: disable=W0212
 # This is oldcode, and these pylint disables come with that
@@ -216,30 +218,32 @@ class SendEmailsAction(ActionTypeAlert):
         query = self._plugin_base.gui_dbs.entity_query_views_db_map[self._entity_type].find_one({
             'name': query_name
         })
-        try:
-            parsed_query_filter = parse_filter(query['view']['query']['filter'])
-            field_filters = query['view'].get('colFilters', {})
+        projection = {
+            'adapters': 1
+        }
+        if self._entity_type == EntityType.Devices:
+            projection['specific_data.data.hostname'] = 1
+        elif self._entity_type == EntityType.Users:
+            projection['specific_data.data.username'] = 1
 
-            self.__create_table_in_email(email, parsed_query_filter, html_sections, images_cid,
-                                         10, 'Top 10 results', field_filters)
-        except Exception:
-            parsed_query_filter = self._create_query(self._internal_axon_ids)
-            self.__create_table_in_email(email, parsed_query_filter, html_sections, images_cid,
-                                         10, 'Top 10 results', field_filters)
+        if query:
+            results = perform_saved_view_converted(self._entity_type, query, projection, limit=10)
+        else:
+            get_entities(10, 0, self._create_query(self._internal_axon_ids), {},
+                         projection, self._entity_type)
 
+        self.__create_table_in_email(email, results, html_sections, images_cid, 'Top 10 results')
         if added_result_count > 0:
-            parsed_added_query_filter = self._create_query(self._added_axon_ids)
-
-            self.__create_table_in_email(email, parsed_added_query_filter, html_sections, images_cid,
-                                         5, f'Top 5 new {self._entity_type} in query', field_filters)
-            logger.info(parsed_added_query_filter)
+            results = get_entities(5, 0, self._create_query(self._added_axon_ids), {},
+                                   projection, self._entity_type)
+            self.__create_table_in_email(email, results, html_sections, images_cid,
+                                         f'Top 5 new {self._entity_type} in query')
         if removed_result_count > 0:
-            parsed_removed_query_filter = self._create_query(self._removed_axon_ids)
+            results = get_entities(5, 0, self._create_query(self._removed_axon_ids), {},
+                                   projection, self._entity_type)
 
-            self.__create_table_in_email(email, parsed_removed_query_filter, html_sections, images_cid, 5,
-                                         f'Top 5 {self._entity_type} removed from query', field_filters)
-            logger.info(parsed_removed_query_filter)
-        logger.info(parsed_query_filter)
+            self.__create_table_in_email(email, results, html_sections, images_cid,
+                                         f'Top 5 {self._entity_type} removed from query')
 
         html_data = REPORTS_TEMPLATES['report'].render(
             {'query_link': query_link, 'image_cid': image_cid[1:-1], 'content': ''.join(html_sections)})
@@ -247,32 +251,20 @@ class SendEmailsAction(ActionTypeAlert):
         email.send(html_data)
         return AlertActionResult(True, 'Sent email')
 
-    def __create_table_in_email(self, email, query_filter, sections: list, images_cids: dict,
-                                limit: int, header: str, field_filters: dict = None):
+    def __create_table_in_email(self, email, data: Iterable[dict], sections: list, images_cids: dict,
+                                header: str):
         """
         Undocumented - migrated from reports/service.py
         :param email: the email instance
-        :param query_filter: the query to run for the diff
+        :param data: the devices to send
         :param sections: list of html sections
         :param images_cids: images cids for the email html attachments
-        :param limit: for the query result
         :param header: of the section contains the table
         :return:
         """
-        heads = []
-        data = {}
-        if self._entity_type == EntityType.Devices:
-            data = gui_helpers.get_entities(limit, 0, query_filter, {},
-                                            {'adapters': 1, 'specific_data.data.hostname': 1},
-                                            self._entity_type, field_filters=field_filters)
-            heads = [REPORTS_TEMPLATES['table_head'].render({'content': 'Adapters'}),
-                     REPORTS_TEMPLATES['table_head'].render({'content': 'Host Name'})]
-        elif self._entity_type == EntityType.Users:
-            data = gui_helpers.get_entities(limit, 0, query_filter, {},
-                                            {'adapters': 1, 'specific_data.data.username': 1},
-                                            self._entity_type, field_filters=field_filters)
-            heads = [REPORTS_TEMPLATES['table_head'].render({'content': 'Adapters'}),
-                     REPORTS_TEMPLATES['table_head'].render({'content': 'User Name'})]
+        heads = [REPORTS_TEMPLATES['table_head'].render({'content': 'Adapters'}),
+                 REPORTS_TEMPLATES['table_head'].render({'content': 'Host Name'})]
+
         rows = []
         for entity in data:
             item_values = []

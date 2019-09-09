@@ -1,7 +1,7 @@
 import random
 from typing import Tuple
 
-from axonius.utils.gui_helpers import _normalize_db_projection_for_aggregation
+from axonius.utils.db_querying_helper import _normalize_db_projection_for_aggregation
 
 
 def test_regular():

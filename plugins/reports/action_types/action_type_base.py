@@ -9,6 +9,7 @@ from axonius.consts.plugin_consts import GUI_SYSTEM_CONFIG_COLLECTION, GUI_PLUGI
 from axonius.entities import EntityType
 from axonius.plugin_base import PluginBase
 from axonius.types.enforcement_classes import Trigger, ActionRunResults, EntitiesResult, EntityResult, TriggeredReason
+from axonius.utils.db_querying_helper import iterate_axonius_entities
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -170,17 +171,14 @@ class ActionTypeBase(ABC):
             raise Exception('Error: can not contact node')
         return node_id
 
-    def _get_entities_from_view(self, projection=None):
+    def _get_entities_from_view(self, projection=None) -> Iterable[dict]:
         """
         Gets the relevant entities for this action from the view (using internal_axon_ids)
         :param projection: optional projection to the DB
-        :return: Cursor
+        :return: Iterable
         """
-        return self.entity_db.find({
-            'internal_axon_id': {
-                '$in': self._internal_axon_ids
-            }
-        }, projection=projection)
+        return iterate_axonius_entities(self._entity_type, self._internal_axon_ids,
+                                        projection=projection)
 
     def _generate_query_link(self, view_name):
         # Getting system config from the gui.

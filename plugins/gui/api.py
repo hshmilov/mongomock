@@ -10,6 +10,7 @@ from axonius.consts.plugin_consts import DEVICE_CONTROL_PLUGIN_NAME, AXONIUS_USE
 from axonius.logging.metric_helper import log_metric
 from axonius.plugin_base import EntityType, return_error, PluginBase
 from axonius.utils import gui_helpers
+from axonius.utils.db_querying_helper import get_entities
 from axonius.utils.gui_helpers import (Permission, PermissionLevel,
                                        PermissionType, ReadOnlyJustForGet,
                                        check_permissions,
@@ -142,11 +143,10 @@ class API:
         return_doc = {
             'page': get_page_metadata(skip, limit,
                                       gui_helpers.get_entities_count(mongo_filter, devices_collection)),
-            'assets': list(
-                gui_helpers.get_entities(limit, skip, mongo_filter, mongo_sort,
-                                         mongo_projection,
-                                         EntityType.Devices,
-                                         default_sort=self._system_settings['defaultSort']))
+            'assets': list(get_entities(limit, skip, mongo_filter, mongo_sort,
+                                        mongo_projection,
+                                        EntityType.Devices,
+                                        default_sort=self._system_settings['defaultSort']))
         }
 
         return jsonify(return_doc)
@@ -195,11 +195,10 @@ class API:
         self._save_query_to_history(EntityType.Users, mongo_filter, skip, limit, mongo_sort, mongo_projection)
         return_doc = {
             'page': get_page_metadata(skip, limit, gui_helpers.get_entities_count(mongo_filter, users_collection)),
-            'assets': list(
-                gui_helpers.get_entities(limit, skip, mongo_filter, mongo_sort,
-                                         mongo_projection,
-                                         EntityType.Users,
-                                         default_sort=self._system_settings['defaultSort']))
+            'assets': list(get_entities(limit, skip, mongo_filter, mongo_sort,
+                                        mongo_projection,
+                                        EntityType.Users,
+                                        default_sort=self._system_settings['defaultSort']))
         }
 
         return jsonify(return_doc)

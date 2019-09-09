@@ -13,6 +13,7 @@ from axonius.mixins.feature import Feature
 from axonius.mixins.triggerable import Triggerable, RunIdentifier
 from axonius.plugin_base import PluginBase
 from axonius.types.correlation import CorrelationResult
+from axonius.utils.db_querying_helper import iterate_axonius_entities
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -132,11 +133,7 @@ class CorrelatorBase(Triggerable, PluginBase, Feature, ABC):
         """
         db = self._entity_db_map[self._entity_to_correlate]
         if entities_ids:
-            return list(db.find({
-                'internal_axon_id': {
-                    '$in': entities_ids
-                }
-            }))
+            return list(iterate_axonius_entities(self._entity_to_correlate, entities_ids))
 
         return list(db.find({}))
 

@@ -19,7 +19,7 @@ from axonius.consts.plugin_subtype import PluginSubtype
 from axonius.entities import EntityType
 from axonius.mixins.triggerable import Triggerable, RunIdentifier
 from axonius.plugin_base import PluginBase, add_rule, return_error
-from axonius.utils.axonius_query_language import parse_filter
+from axonius.utils.db_querying_helper import perform_saved_view_by_name
 from axonius.utils.files import get_local_config_file
 from axonius.utils.mongo_escaping import unescape_dict
 from axonius.consts.report_consts import (ACTIONS_FIELD, ACTIONS_MAIN_FIELD, ACTIONS_SUCCESS_FIELD,
@@ -386,27 +386,23 @@ class ReportsService(Triggerable, PluginBase):
             }
             for action_name, action_class in AllActionTypes.items()})
 
-    def get_view_results(self, view_name: str, view_entity: EntityType) -> List:
+    @staticmethod
+    def get_view_results(view_name: str, view_entity: EntityType) -> List[str]:
         """
         Gets a query's results from the DB.
 
         :param view_name: The query name.
         :param view_entity: The query entity type name.
-        :return: The results of the query.
+        :return: The results of the query in internal_axon_ids
         """
         projection = {
             'internal_axon_id': 1
         }
 
-        query = self.gui_dbs.entity_query_views_db_map[view_entity].find_one({'name': view_name})
-        if query is None:
-            raise ValueError(f'Missing query "{view_name}"')
-        parsed_query_filter = parse_filter(query['view']['query']['filter'])
-
         # Projection to get only the needed data to differentiate between results.
         return [x['internal_axon_id']
                 for x
-                in self._entity_db_map[view_entity].find(parsed_query_filter, projection)]
+                in perform_saved_view_by_name(view_entity, view_name, projection=projection)]
 
     @staticmethod
     def _get_triggered_reports(current_result, diff_dict: QueryResultDiff,

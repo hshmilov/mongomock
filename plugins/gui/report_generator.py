@@ -13,6 +13,7 @@ from axonius.entities import EntityType
 from axonius.logging.metric_helper import log_metric
 from axonius.plugin_base import PluginBase
 from axonius.utils import gui_helpers
+from axonius.utils.db_querying_helper import get_entities
 from axonius.utils.axonius_query_language import parse_filter
 from gui.gui_logic import filter_utils
 from gui.gui_logic.dashboard_data import adapter_data
@@ -697,15 +698,15 @@ class ReportGenerator:
                         views_data[entity.name].append({
                             'name': view_doc.get('name'), 'entity': entity.value,
                             'fields': [{field_to_title.get(field, field): field} for field in view.get('fields', [])],
-                            'data': list(gui_helpers.get_entities(limit=view.get('pageSize',
-                                                                                 20 if not attach_views_csvs else 5),
-                                                                  skip=0,
-                                                                  view_filter=parse_filter(filter_query),
-                                                                  sort=gui_helpers.get_sort(view),
-                                                                  projection=projection,
-                                                                  entity_type=entity,
-                                                                  default_sort=self.report_params['default_sort'],
-                                                                  field_filters=field_filters)),
+                            'data': list(get_entities(limit=view.get('pageSize',
+                                                                     20 if not attach_views_csvs else 5),
+                                                      skip=0,
+                                                      view_filter=parse_filter(filter_query),
+                                                      sort=gui_helpers.get_sort(view),
+                                                      projection=projection,
+                                                      entity_type=entity,
+                                                      default_sort=self.report_params['default_sort'],
+                                                      field_filters=field_filters)),
                             'count': count,
                             'csv':
                                 get_csv_file_from_heavy_lifting_plugin(self.output_path,

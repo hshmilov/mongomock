@@ -106,6 +106,7 @@ from axonius.types.ssl_state import (COMMON_SSL_CONFIG_SCHEMA,
                                      SSLState)
 from axonius.users.user_adapter import UserAdapter
 from axonius.utils import gui_helpers
+from axonius.utils.db_querying_helper import get_entities
 from axonius.utils.axonius_query_language import (convert_db_entity_to_view_entity,
                                                   parse_filter)
 from axonius.utils.datetime import next_weekday, time_from_now
@@ -893,8 +894,10 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
                     }
                 ]
             }, projection={'internal_axon_id': 1})]
-            add_labels_to_entities(
-                db, namespace, internal_axon_ids, entities_and_labels['labels'], request.method == 'DELETE')
+            add_labels_to_entities(namespace,
+                                   internal_axon_ids,
+                                   entities_and_labels['labels'],
+                                   request.method == 'DELETE')
         except Exception as e:
             logger.exception(f'Tagging did not complete')
             return return_error(f'Tagging did not complete. First error: {e}', 400)
@@ -1116,12 +1119,11 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
             return self.__delete_entities_by_internal_axon_id(
                 EntityType.Devices, self.get_request_data_as_object(), mongo_filter)
         self._save_query_to_history(EntityType.Devices, mongo_filter, skip, limit, mongo_sort, mongo_projection)
-        return jsonify(
-            gui_helpers.get_entities(limit, skip, mongo_filter, mongo_sort, mongo_projection,
-                                     EntityType.Devices,
-                                     default_sort=self._system_settings.get('defaultSort'),
-                                     history_date=history,
-                                     include_details=True))
+        return jsonify(get_entities(limit, skip, mongo_filter, mongo_sort, mongo_projection,
+                                    EntityType.Devices,
+                                    default_sort=self._system_settings.get('defaultSort'),
+                                    history_date=history,
+                                    include_details=True))
 
     @gui_helpers.historical()
     @gui_helpers.filtered_entities()
@@ -1299,12 +1301,11 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
             return self.__delete_entities_by_internal_axon_id(
                 EntityType.Users, self.get_request_data_as_object(), mongo_filter)
         self._save_query_to_history(EntityType.Users, mongo_filter, skip, limit, mongo_sort, mongo_projection)
-        return jsonify(
-            gui_helpers.get_entities(limit, skip, mongo_filter, mongo_sort, mongo_projection,
-                                     EntityType.Users,
-                                     default_sort=self._system_settings['defaultSort'],
-                                     history_date=history,
-                                     include_details=True))
+        return jsonify(get_entities(limit, skip, mongo_filter, mongo_sort, mongo_projection,
+                                    EntityType.Users,
+                                    default_sort=self._system_settings['defaultSort'],
+                                    history_date=history,
+                                    include_details=True))
 
     @gui_helpers.historical()
     @gui_helpers.filtered_entities()

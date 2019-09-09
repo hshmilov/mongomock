@@ -1477,7 +1477,7 @@ def and_function(*functions) -> FunctionType:
     return tmp
 
 
-def make_dict_from_csv(csv_data):
+def make_dict_from_csv(csv_data) -> csv.DictReader:
     return csv.DictReader(csv_data.splitlines(), dialect=csv.Sniffer().sniff(csv_data.splitlines()[0],
                                                                              delimiters=[';', ',', '\t']))
 

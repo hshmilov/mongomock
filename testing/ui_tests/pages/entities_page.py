@@ -596,11 +596,15 @@ class EntitiesPage(Page):
         self.fill_query_name(new_query_name)
         self.click_save_query_save_button()
 
-    def run_filter_and_save(self, query_name, query_filter):
+    def run_filter_and_save(self, query_name, query_filter, optional_sort: str = None):
         self.reset_query()
         self.fill_filter(query_filter)
         self.enter_search()
         self.wait_for_table_to_load()
+        if optional_sort:
+            self.click_sort_column(optional_sort)
+            self.wait_for_table_to_load()
+
         self.save_query(query_name)
 
     def customize_view_and_save(self, query_name, page_size, sort_field, toggle_columns, query_filter):
