@@ -27,7 +27,7 @@ MANDATORY_SSL_CONFIG_SCHEMA_DEFAULTS = {
     'private_key': None
 }
 
-COMMON_SSL_CONFIG_SCHEMA = [
+COMMON_SSL_CONFIG_SCHEMA_CA_ONLY = [
     {
         'name': 'use_ssl',
         'title': 'Use SSL for connection',
@@ -40,7 +40,11 @@ COMMON_SSL_CONFIG_SCHEMA = [
         'title': 'CA File',
         'description': 'The binary contents of the ca_file',
         'type': 'file',
-    },
+    }
+]
+
+COMMON_SSL_CONFIG_SCHEMA = [
+    *COMMON_SSL_CONFIG_SCHEMA_CA_ONLY,
     *MANDATORY_SSL_CONFIG_SCHEMA
 ]
 

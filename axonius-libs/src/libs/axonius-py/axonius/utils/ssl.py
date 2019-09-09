@@ -1,7 +1,31 @@
+import logging
+import os
+
 import OpenSSL
+
 SSL_CERT_PATH = '/etc/ssl/certs/nginx-selfsigned.crt'
 SSL_KEY_PATH = '/etc/ssl/private/nginx-selfsigned.key'
 CA_CERT_PATH = '/usr/local/share/ca-certificates/'
+CA_BUNDLE_ENV_NAME = 'REQUESTS_CA_BUNDLE'
+
+logger = logging.getLogger(f'axonius.{__name__}')
+
+
+def get_ca_bundle() -> str:
+    """
+    Getting trusted ca bundle file using requests environment data
+    :return: ca bundle binary data
+    """
+    ca_file_data = None
+    filename = None
+    try:
+        filename = os.getenv(CA_BUNDLE_ENV_NAME)
+        if filename:
+            with open(filename, 'r') as f:
+                ca_file_data = f.read()
+    except Exception:
+        logger.exception(f'Error getting ca file {filename}')
+    return ca_file_data
 
 
 def check_associate_cert_with_private_key(cert: str, private_key: str) -> bool:

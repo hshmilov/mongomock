@@ -6,10 +6,9 @@ import os.path
 import subprocess
 import tempfile
 import threading
-import time
 from collections import defaultdict
 from datetime import datetime, timedelta
-from typing import List, Tuple, Dict, Optional
+from typing import List, Tuple, Dict, Optional, Iterator
 
 from apscheduler.executors.pool import ThreadPoolExecutor
 from apscheduler.triggers.interval import IntervalTrigger
@@ -39,10 +38,10 @@ from axonius.mixins.devicedisabelable import Devicedisabelable
 from axonius.mixins.userdisabelable import Userdisabelable
 from axonius.plugin_base import add_rule, return_error
 from axonius.smart_json_class import SmartJsonClass
-from axonius.types.ssl_state import SSLState, COMMON_SSL_CONFIG_SCHEMA
+from axonius.types.ssl_state import SSLState, COMMON_SSL_CONFIG_SCHEMA_CA_ONLY
 from axonius.users.user_adapter import UserAdapter
 from axonius.utils.datetime import parse_date, is_date_real
-from axonius.utils.dns import query_dns
+from axonius.utils.dns import query_dns, async_query_dns_list
 from axonius.utils.entity_finder import EntityFinder
 from axonius.utils.files import get_local_config_file
 from axonius.utils.parsing import (ad_integer8_to_timedelta,
@@ -53,10 +52,12 @@ from axonius.utils.parsing import (ad_integer8_to_timedelta,
                                    get_member_of_list_from_memberof,
                                    get_organizational_units_from_dn,
                                    parse_bool_from_raw)
+from axonius.utils.ssl import get_ca_bundle
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
 TEMP_FILES_FOLDER = "/home/axonius/temp_dir/"
+
 
 LDAP_DONT_EXPIRE_PASSWORD = 0x10000
 LDAP_PASSWORD_NOT_REQUIRED = 0x0020
@@ -196,8 +197,7 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
                                                                               "date": datetime.now(),
                                                                               "data": d
                                                                           }
-            },
-                upsert=True)
+            }, upsert=True)
 
             time_needed = datetime.now() - time_needed
             logger.info(f"Statistics end (took {time_needed}), modified {update_result.modified_count} document in db")
@@ -207,6 +207,7 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
 
     def _on_config_update(self, config):
         logger.info(f"Loading AD config: {config}")
+        self.__dns_query_chunk_size = config['dns_chunk_size']
         self.__sync_resolving = config['sync_resolving']
         self.__resolving_enabled = config['resolving_enabled']
         self.__report_generation_interval = config['report_generation_interval']
@@ -259,13 +260,19 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
             return False
 
     def _get_ldap_connection(self, dc_details):
+        ca_file_data = None
+        if dc_details.get('ca_file'):
+            ca_file_data = self._grab_file_contents(dc_details.get('ca_file'))
+        else:
+            ca_file_data = get_ca_bundle()
+
         return LdapConnection(dc_details['dc_name'],
                               dc_details['user'],
                               dc_details['password'],
                               dc_details.get('dns_server_address'),
                               self.__ldap_page_size,
                               SSLState[dc_details.get('use_ssl', SSLState.Unencrypted.name)],
-                              self._grab_file_contents(dc_details.get('ca_file')),
+                              ca_file_data,
                               self._grab_file_contents(dc_details.get('cert_file')),
                               self._grab_file_contents(dc_details.get('private_key')),
                               dc_details.get('fetch_disabled_devices', False),
@@ -326,7 +333,6 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
     def _clients_schema(self):
         """
         The keys AdAdapter expects from configs.abs
-
         :return: json schema
         """
         return {
@@ -358,7 +364,7 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
                     'description': 'Alternative DNS suffix to append to hosts for ip resolving',
                     'type': 'string'
                 },
-                *COMMON_SSL_CONFIG_SCHEMA,
+                *COMMON_SSL_CONFIG_SCHEMA_CA_ONLY,
                 {
                     "name": "fetch_disabled_devices",
                     "title": "Fetch Disabled Devices",
@@ -591,7 +597,6 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
         :param user_raw_data: the raw data we get.
         :return:
         """
-
         parsed_users_ids = []
         for user_raw in raw_data:
             try:
@@ -730,60 +735,75 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
             except Exception:
                 logger.exception(f"Exception while parsing user {user_raw.get('distinguishedName')}, bypassing")
 
-    def _resolve_hosts_addresses(self, hosts):
+    def _resolve_hosts_addresses(self, hosts: Iterator[dict], timeout: float = 2) -> Iterator[dict]:
+        """
+        Resolve a list of hosts
+        :param hosts: hosts to resolve
+        :param timeout: dns request timeout (seconds_
+        :return: resolved hosts
+        """
+        i = 0
+        resolve_hosts = []
         for host in hosts:
-            time_before_resolve = datetime.now()
-            dns_name = host.get('AXON_DNS_ADDR')
-            dc_name = host.get('AXON_DC_ADDR')
-            current_resolved_host = dict(host)
+            host['hostname'] = host.get('resolvable_hostname') or host.get('hostname')
+            host['nameservers'] = [host.get('AXON_DNS_ADDR'), host.get('AXON_DC_ADDR'), None]
+            resolve_hosts.append(host)
+            i += 1
+            if i % self.__dns_query_chunk_size == 0:
+                logger.debug(f'DNS Requesting hosts {i}')
+                for host_data, response in zip(resolve_hosts, async_query_dns_list(resolve_hosts, timeout, True)):
+                    yield self.handle_dns_response(host_data, response)
+                resolve_hosts = []
+        # resolve all the remaining hosts
+        if resolve_hosts:
+            for host_data, response in zip(resolve_hosts, async_query_dns_list(resolve_hosts, timeout, True)):
+                yield self.handle_dns_response(host_data, response)
+
+    def handle_dns_response(self, host, response):
+        """
+        Handle hosts dns query responses
+        :param host: resolved hostname
+        :param response: dns query results
+        :return: resolved host dict
+        """
+        current_resolved_host = dict(host)
+        if response:
+            ips_and_dns_servers = response
+            ips = [ip for ip, _ in ips_and_dns_servers]
+            ips = list(set(ips))  # make it unique
+
+            current_resolved_host[IPS_FIELDNAME] = ips
+            current_resolved_host[DNS_RESOLVE_STATUS] = DNSResolveStatus.Resolved.name
             try:
-                hostname = host.get('resolvable_hostname') or host.get('hostname')
-                ips_and_dns_servers = self._resolve_device_name(hostname,
-                                                                {"dns_name": dns_name,
-                                                                 "dc_name": dc_name})
-                ips = [ip for ip, _ in ips_and_dns_servers]
-                ips = list(set(ips))  # make it unique
+                if self.__add_ip_conflict:
+                    available_ips = {ip: dns for ip, dns in ips_and_dns_servers}
+                    if len(available_ips) > 1:
+                        # If we have more than one key in available_ips that means
+                        # that this device got two different IP's
+                        # i.e duplicate! we need to tag this device
+                        logger.info(f"Found ip conflict. details: {str(available_ips)} on {host['id']}")
+                        self.devices.add_label([(self.plugin_unique_name, host['id'])], "IP Conflicts")
 
-                current_resolved_host[IPS_FIELDNAME] = ips
-                current_resolved_host[DNS_RESOLVE_STATUS] = DNSResolveStatus.Resolved.name
-
+                        serialized_available_ips = AvailableIps(
+                            available_ips=[AvailableIp(ip=ip, source_dns=dns)
+                                           for ip, dns in available_ips.items()]
+                        )
+                        self.devices.add_data([(self.plugin_unique_name, host['id'])], "IP Conflicts",
+                                              serialized_available_ips.to_dict())
+                    else:
+                        # no conflicts - let's reflect that
+                        self.devices.add_label([(self.plugin_unique_name, host['id'])], "IP Conflicts", False)
+                        self.devices.add_data([(self.plugin_unique_name, host['id'])], "IP Conflicts", False)
+            except TagDeviceError:
+                pass  # if the device wasn't yet inserted this will be raised
             except Exception:
-                # Don't log here, it will happen for every failed resolving (Can happen a lot of times)
-                current_resolved_host = dict(host)
-                current_resolved_host[IPS_FIELDNAME] = []
-                current_resolved_host[DNS_RESOLVE_STATUS] = DNSResolveStatus.Failed.name
-            else:
-                try:
-                    if self.__add_ip_conflict:
-                        available_ips = {ip: dns for ip, dns in ips_and_dns_servers}
-                        if len(available_ips) > 1:
-                            # If we have more than one key in available_ips that means
-                            # that this device got two different IP's
-                            # i.e duplicate! we need to tag this device
-                            logger.info(f"Found ip conflict. details: {str(available_ips)} on {host['id']}")
-                            self.devices.add_label([(self.plugin_unique_name, host['id'])], "IP Conflicts")
-
-                            serialized_available_ips = AvailableIps(
-                                available_ips=[AvailableIp(ip=ip, source_dns=dns)
-                                               for ip, dns in available_ips.items()]
-                            )
-                            self.devices.add_data([(self.plugin_unique_name, host['id'])], "IP Conflicts",
-                                                  serialized_available_ips.to_dict())
-                        else:
-                            # no conflicts - let's reflect that
-                            self.devices.add_label([(self.plugin_unique_name, host['id'])], "IP Conflicts", False)
-                            self.devices.add_data([(self.plugin_unique_name, host['id'])], "IP Conflicts", False)
-                except TagDeviceError:
-                    pass  # if the device wasn't yet inserted this will be raised
-                except Exception:
-                    logger.exception("Exception while checking for DNS conflicts")
-
-            finally:
-                # yield first, so that if the handling takes more then the dns resolving time we won't wait it
-                yield current_resolved_host
-                resolve_time = (datetime.now() - time_before_resolve).microseconds / 1e6  # seconds
-                time_to_sleep = max(0.0, 0.05 - resolve_time)
-                time.sleep(time_to_sleep)
+                logger.exception("Exception while checking for DNS conflicts")
+        else:
+            # Don't log here, it will happen for every failed resolving (Can happen a lot of times)
+            current_resolved_host = dict(host)
+            current_resolved_host[IPS_FIELDNAME] = []
+            current_resolved_host[DNS_RESOLVE_STATUS] = DNSResolveStatus.Failed.name
+        return current_resolved_host
 
     def _resolve_hosts_addr_thread(self):
         """ Thread for ip resolving of devices.
@@ -1219,7 +1239,6 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
                 yield device
             except Exception:
                 logger.exception(f"Exception when parsing device {device_raw.get('distinguishedName')}, bypassing")
-
         if len(dns_resolving_devices_to_insert_to_db) > 0:
             dns_resolved_devices_collection.insert_many(dns_resolving_devices_to_insert_to_db)
         if no_timestamp_count != 0:
@@ -1715,6 +1734,11 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
                     'type': 'bool'
                 },
                 {
+                    'name': 'dns_chunk_size',
+                    'title': 'Max parallel DNS queries',
+                    'type': 'number'
+                },
+                {
                     "name": "sync_resolving",
                     "title": "Wait for DNS resolving",
                     "type": "bool"
@@ -1788,6 +1812,7 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
     def _db_config_default(cls):
         return {
             'resolving_enabled': True,
+            'dns_chunk_size': 1000,
             "sync_resolving": False,
             "report_generation_interval": 30,
             'verbose_auth_notifications': False,
