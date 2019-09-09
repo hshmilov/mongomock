@@ -2,7 +2,8 @@
   <div class="x-entity-advanced">
     <div class="header">
       <x-search-input
-        v-model="searchValue"
+        :value="searchValue"
+        @input="onInput"
         :placeholder="`Search ${schema.title}...`"
       />
     </div>
@@ -277,6 +278,15 @@
         this.fetchDataCSV({
           module: this.stateLocation,
           endpoint: `${this.module}/${this.entityId}/${this.schema.name}`
+        })
+      },
+      onInput(value) {
+        this.searchValue = value
+        this.updateView({
+          module: this.stateLocation,
+          view: {
+            page: 0
+          }
         })
       }
     }

@@ -232,7 +232,7 @@
       },
       pageCount () {
         let count = this.count.data || this.count.data_to_show
-        if (!count) return 1
+        if (!count) return 0
         return Math.ceil(count / this.view.pageSize) - 1
       },
       pageLinkNumbers () {
@@ -315,6 +315,7 @@
       }),
       fetchContentPages (loading, isRefresh) {
         if (this.staticData) {
+          this.loading = false
           return
         }
         if (!this.pageLinkNumbers || !this.pageLinkNumbers.length) {
