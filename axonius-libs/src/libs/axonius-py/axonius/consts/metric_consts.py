@@ -10,9 +10,9 @@ class SystemMetric:
     ENFORCEMENT_RAW = 'system.alert.raw'
     TIMED_ENDPOINT = 'timed_endpoint'
     NETIFACES_COUNT = 'netifaces.count'
-    HOST_DB_DISK_FREE_BYTES = 'host.db_disk_free_bytes'
+    HOST_DB_DISK_FREE = 'host.db_disk_free'
     HOST_DB_DISK_FREE_PERC = 'host.db_disk_free_percentage'
-    HOST_ROOT_DISK_FREE_BYTES = 'host.root_disk_free_bytes'
+    HOST_ROOT_DISK_FREE = 'host.root_disk_free'
     HOST_ROOT_DISK_FREE_PERC = 'host.root_disk_free_percentage'
 
 
