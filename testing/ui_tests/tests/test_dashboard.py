@@ -540,11 +540,11 @@ class TestDashboard(TestBase):
 
         # Add new space and name it
         self.dashboard_page.add_new_space(self.COVERAGE_SPACE_NAME)
-        assert self.dashboard_page.find_space_header_title(3) == self.COVERAGE_SPACE_NAME
+        wait_until(lambda: self.dashboard_page.find_space_header_title(3) == self.COVERAGE_SPACE_NAME)
 
         # Rename an existing space
         self.dashboard_page.rename_space(self.VULNERABILITY_SPACE_NAME, 3)
-        assert self.dashboard_page.find_space_header_title(3) == self.VULNERABILITY_SPACE_NAME
+        wait_until(lambda: self.dashboard_page.find_space_header_title(3) == self.VULNERABILITY_SPACE_NAME)
         assert self.dashboard_page.is_missing_space(self.COVERAGE_SPACE_NAME)
         self.dashboard_page.add_new_space(self.COVERAGE_SPACE_NAME)
 
