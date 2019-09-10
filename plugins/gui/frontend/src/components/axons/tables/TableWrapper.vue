@@ -45,7 +45,7 @@
         default: false
       },
       count: {
-        type: [Number, undefined],
+        type: [Number, String],
         default: undefined
       },
       error: {
