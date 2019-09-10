@@ -262,9 +262,14 @@ class EntitiesPage(Page):
     def find_first_id(self):
         return self.driver.find_element_by_css_selector(self.TABLE_FIRST_ROW_CSS).get_attribute('id')
 
-    def click_row(self):
+    def click_row(self) -> str:
+        """
+        Click on the first entity in the table
+        :return: the internal_axon_id of the axonius entity
+        """
         self.driver.find_element_by_css_selector(self.TABLE_FIRST_ROW_CSS).click()
         self.wait_for_spinner_to_end()
+        return self.driver.current_url.split('/')[-1]
 
     def click_specific_row_checkbox(self, field_name, field_value):
         values = self.get_column_data(field_name)
@@ -306,6 +311,10 @@ class EntitiesPage(Page):
         return self.driver.find_element_by_css_selector(self.TABLE_COUNT_CSS).text
 
     def count_entities(self):
+        """
+        How many entities are in the current table?
+        :return:
+        """
         wait_until(lambda: 'loading' not in self.get_raw_count_entities())
         match_count = re.search(r'\((\d+)\)', self.get_raw_count_entities())
         assert match_count and len(match_count.groups()) == 1
@@ -754,7 +763,12 @@ class EntitiesPage(Page):
     def query_json_adapter(self):
         self.run_filter_query(self.JSON_ADAPTER_FILTER)
 
-    def run_filter_query(self, filter_value):
+    def run_filter_query(self, filter_value: str):
+        """
+        Performs a filter on the entities table and waits for results
+        :param filter_value: the filter to run
+        :return:
+        """
         self.fill_filter(filter_value)
         self.enter_search()
         self.wait_for_table_to_load()

@@ -1,6 +1,6 @@
 <template>
     <x-checkbox v-model="data" @focusout.stop="focusout" @change="input" :class="{'error-border': error}"
-                :read-only="readOnly" />
+                :read-only="readOnly" :id="schema.name" />
 </template>
 
 <script>

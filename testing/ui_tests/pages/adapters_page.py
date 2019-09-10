@@ -177,6 +177,8 @@ class AdaptersPage(EntitiesPage):
             if isinstance(value, FileForCredentialsMock):
                 value: FileForCredentialsMock
                 self.upload_file_on_element(element, value.file_contents)
+            elif isinstance(value, bool):
+                self.click_toggle_button(element, make_yes=value)
             else:
                 self.fill_text_by_element(element, value)
 
