@@ -186,24 +186,29 @@
             }
         }
 
-        > .x-nav > .x-nav-item {
-            border-left: 2px solid transparent;
+        > .x-nav {
+            width: 100%;
+            > .x-nav-item {
+                border-left: 2px solid transparent;
 
-            > .item-link {
-                width: 58px;
-            }
+                > .item-link {
+                    width: 100%;
+                    height: 100%;
+                    text-align: left;
+                }
 
-            &.active {
-                border-left: 2px solid $theme-orange;
-            }
+                &.active {
+                    border-left: 2px solid $theme-orange;
+                }
 
-            .x-nav {
-                display: none;
+                .x-nav {
+                    display: none;
 
-            }
+                }
 
-            &.active > .x-nav {
-                display: block;
+                &.active > .x-nav {
+                    display: block;
+                }
             }
         }
     }
