@@ -1,7 +1,7 @@
 <template>
   <div class="x-panels">
     <slot name="pre" />
-      <x-card
+    <x-card
       v-for="(chart, chartInd) in processedPanels"
       :id="chart.uuid"
       :key="chart.uuid"
@@ -30,7 +30,8 @@
         :is="`x-${chart.view}`"
         v-if="!isChartEmpty(chart)"
         :data="chart.data"
-        @click-one="runChartFilter(chartInd, $event)"
+        @click-one="($event) => runChartFilter(chartInd, $event)"
+        @fetch="(skip) => fetchMorePanel(chart.uuid, skip)"
       />
       <div
         v-if="isChartEmpty(chart)"
@@ -84,9 +85,13 @@
   import xModal from '../../axons/popover/Modal.vue'
 
   import {mapState, mapGetters, mapMutations, mapActions} from 'vuex'
-  import {REMOVE_DASHBOARD_PANEL, FETCH_HISTORICAL_SAVED_CARD, FETCH_CHART_SEGMENTS_CSV} from '../../../store/modules/dashboard'
+  import {
+    REMOVE_DASHBOARD_PANEL, FETCH_HISTORICAL_SAVED_CARD,
+    FETCH_CHART_SEGMENTS_CSV, FETCH_DASHBOARD_PANEL
+  } from '../../../store/modules/dashboard'
   import {IS_ENTITY_RESTRICTED} from '../../../store/modules/auth'
   import {UPDATE_DATA_VIEW} from '../../../store/mutations'
+
   export default {
     name: 'XPanels',
     components: {
@@ -125,20 +130,22 @@
       processedPanels () {
         return this.panels.map(chart => {
           if (chart.metric === 'timeline' || !chart.data) return chart
+
+          let historicalCard = this.cardToHistory[chart.uuid]
+          if (!historicalCard) {
+            return chart
+          }
           return { ...chart,
             historical: this.cardToDate[chart.uuid],
             data: chart.data.map(item => {
-              let historicalCard = this.cardToHistory[chart.uuid]
-              if (historicalCard) {
-                let historicalCardData = historicalCard[item.name]
-                if (!historicalCardData) return null
-                return {
-                  ...item,
-                  value: historicalCardData.value,
-                }
+              if (!historicalCard[item.name]) {
+                return undefined
               }
-              return item
-            }).filter(x => x)
+              return {
+                ...item,
+                value: historicalCard[item.name].value,
+              }
+            }).filter(item => item)
           }
         })
         // Filter out spaces without data or with hide_empty and remainder 100%
@@ -153,7 +160,8 @@
       ...mapActions({
         removePanel: REMOVE_DASHBOARD_PANEL,
         fetchHistoricalCard: FETCH_HISTORICAL_SAVED_CARD,
-        fetchChartSegmentsCSV: FETCH_CHART_SEGMENTS_CSV
+        fetchChartSegmentsCSV: FETCH_CHART_SEGMENTS_CSV,
+        fetchDashboardPanel: FETCH_DASHBOARD_PANEL
       }),
       addNewPanel() {
         this.$emit('add')
@@ -183,7 +191,6 @@
           }
         })
       },
-
       exportCSV (panelId, panelName) {
         this.fetchChartSegmentsCSV({
           panelId: panelId,
@@ -231,6 +238,13 @@
       },
       isChartEmpty(chart) {
         return (!chart.data || (chart.data.length === 0) || (chart.data.length === 1 && chart.data[0].value === 0))
+      },
+      fetchMorePanel(panelId, skip) {
+        this.fetchDashboardPanel({
+          uuid: panelId,
+          skip,
+          limit: 100
+        })
       }
     }
   }
@@ -268,7 +282,7 @@
           }
 
             > .body {
-              height: calc(100% - 40px);
+              flex: 1 0 auto;
               display: flex;
               flex-direction: column;
             }

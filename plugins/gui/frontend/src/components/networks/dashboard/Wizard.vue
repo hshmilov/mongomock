@@ -87,7 +87,7 @@
   import viewsMixin from '../../../mixins/views'
 
   import { mapMutations, mapActions } from 'vuex'
-  import { SAVE_DASHBOARD_PANEL, UPDATE_DASHBOARD_PANEL } from '../../../store/modules/dashboard'
+  import { SAVE_DASHBOARD_PANEL, CHANGE_DASHBOARD_PANEL } from '../../../store/modules/dashboard'
   import { NEXT_TOUR_STATE, CHANGE_TOUR_STATE, UPDATE_TOUR_STATE } from '../../../store/modules/onboarding'
 
   const dashboard = {
@@ -172,7 +172,7 @@
         nextState: NEXT_TOUR_STATE, changeState: CHANGE_TOUR_STATE, updateState: UPDATE_TOUR_STATE
       }),
       ...mapActions({
-        saveDashboard: SAVE_DASHBOARD_PANEL, updateDashboard: UPDATE_DASHBOARD_PANEL
+        saveDashboard: SAVE_DASHBOARD_PANEL, changeDashboard: CHANGE_DASHBOARD_PANEL
       }),
       updateMetric (metric) {
         this.dashboard.metric = metric
@@ -188,7 +188,7 @@
       },
       saveNewDashboard () {
         if (this.panel && this.panel.uuid) {
-          return this.updateDashboard({
+          return this.changeDashboard({
             uuid: this.panel.uuid,
             data: this.dashboard
           })

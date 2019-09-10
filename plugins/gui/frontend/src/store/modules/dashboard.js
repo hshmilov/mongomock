@@ -10,6 +10,9 @@ export const FETCH_DASHBOARD_SPACES = 'FETCH_DASHBOARD_SPACES'
 export const UPDATE_DASHBOARD_SPACES = 'UPDATE_DASHBOARD_SPACES'
 export const FETCH_DASHBOARD_PANELS = 'FETCH_DASHBOARD_PANELS'
 export const UPDATE_DASHBOARD_PANELS = 'UPDATE_DASHBOARD_PANELS'
+export const FETCH_DASHBOARD_PANEL = 'FETCH_DASHBOARD_PANEL'
+export const UPDATE_DASHBOARD_PANEL = 'UPDATE_DASHBOARD_PANEL'
+
 export const SAVE_DASHBOARD_SPACE = 'SAVE_DASHBOARD_SPACE'
 export const UPDATE_ADDED_SPACE = 'UPDATE_ADDED_SPACE'
 export const CHANGE_DASHBOARD_SPACE = 'CHANGE_DASHBOARD_SPACE'
@@ -18,7 +21,7 @@ export const REMOVE_DASHBOARD_SPACE = 'REMOVE_DASHBOARD_SPACE'
 export const UPDATE_REMOVED_SPACE = 'UPDATE_REMOVED_SPACE'
 
 export const SAVE_DASHBOARD_PANEL = 'SAVE_DASHBOARD_PANEL'
-export const UPDATE_DASHBOARD_PANEL = 'UPDATE_DASHBOARD_PANEL'
+export const CHANGE_DASHBOARD_PANEL = 'CHANGE_DASHBOARD_PANEL'
 export const REMOVE_DASHBOARD_PANEL = 'REMOVE_DASHBOARD_PANEL'
 export const UPDATE_REMOVED_PANEL = 'UPDATE_REMOVED_PANEL'
 
@@ -84,13 +87,47 @@ export const dashboard = {
 				state.panels.data = payload.data
 			} else {
 				payload.data.forEach((item, index) => {
+					let dataTail = item['data_tail']
 					if (payload.skip + index < state.panels.data.length) {
-						state.panels.data[payload.skip + index] = item
+						let oldItem = state.panels.data[payload.skip + index]
+						if (!oldItem.data.length) {
+							if (dataTail && dataTail.length) {
+								item.data[item.count - 1] = null
+								item.data.splice(item.count - dataTail.length, dataTail.length, ...dataTail)
+							}
+							state.panels.data[payload.skip + index] = item
+						} else {
+							oldItem.data.splice(0, item.data.length, ...item.data)
+							if (dataTail && dataTail.length) {
+								if (item.count > oldItem.data.length) {
+									oldItem.data[item.count - 1] = null
+								}
+								oldItem.data.splice(item.count - dataTail.length, dataTail.length, ...dataTail)
+							}
+						}
 					} else {
+						if (dataTail && dataTail.length) {
+							item.data[item.count - 1] = null
+							item.data.splice(item.count - dataTail.length, dataTail.length, ...dataTail)
+						}
 						state.panels.data.push(item)
 					}
 				})
 				state.panels.data = [...state.panels.data]
+			}
+		},
+		[UPDATE_DASHBOARD_PANEL](state, payload) {
+			if (!payload.data) {
+				return
+			}
+			let panel = state.panels.data.find(panel => panel.uuid === payload.uuid)
+			if (!panel) {
+				return
+			}
+			if (!payload.data.length) {
+				panel.data = []
+			} else {
+				panel.data.splice(payload.skip, payload.data.length, ...payload.data)
 			}
 		},
 		[UPDATE_ADDED_SPACE](state, payload) {
@@ -165,6 +202,13 @@ export const dashboard = {
 				}
 			})
 		},
+		[FETCH_DASHBOARD_PANEL]({ dispatch, commit }, payload) {
+			return dispatch(REQUEST_API, {
+				rule: `dashboards/panels/${payload.uuid}?skip=${payload.skip}&limit=${payload.limit}`,
+				type: UPDATE_DASHBOARD_PANEL,
+				payload
+			})
+		},
 		[SAVE_DASHBOARD_SPACE]({ dispatch, commit }, name) {
 			return dispatch(REQUEST_API, {
 				rule: 'dashboards',
@@ -217,13 +261,18 @@ export const dashboard = {
 				return response
 			})
 		},
-		[UPDATE_DASHBOARD_PANEL]({ dispatch }, payload) {
+		[CHANGE_DASHBOARD_PANEL]({ dispatch, commit }, payload) {
 			return dispatch(REQUEST_API, {
 				rule: `dashboards/panels/${payload.uuid}`,
 				method: 'POST',
 				data: payload.data
 			}).then(response => {
 				if (response.status === 200) {
+					commit(UPDATE_DASHBOARD_PANEL, {
+						uuid: payload.uuid,
+						skip: 0,
+						data: []
+					})
 					dispatch(FETCH_DASHBOARD_PANELS)
 				}
 				return response

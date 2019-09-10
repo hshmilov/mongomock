@@ -480,6 +480,9 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
             user_db['permissions'] = deserialize_db_permissions(user_db['permissions'])
             session = {'user': user_db}
 
+    def _delayed_initialization(self):
+        self.__init_all_dashboards()
+
     @staticmethod
     def is_proxy_allows_web(config):
         if config['enabled'] is False:
@@ -3641,15 +3644,25 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         """
         return jsonify(self._get_dashboard(skip, limit))
 
-    @gui_add_rule_logged_in('dashboards/panels/<panel_id>', methods=['DELETE', 'POST'],
-                            required_permissions={Permission(PermissionType.Dashboard,
-                                                             PermissionLevel.ReadWrite)})
-    def update_dashboard_panel(self, panel_id):
+    @gui_helpers.paginated()
+    @gui_add_rule_logged_in('dashboards/panels/<panel_id>', methods=['GET', 'DELETE', 'POST'],
+                            required_permissions={Permission(PermissionType.Dashboard, PermissionLevel.ReadWrite)})
+    def update_dashboard_panel(self, panel_id, skip, limit):
         """
-        DELETE an existing Dashboard Panel, by its id
+        DELETE an existing Dashboard Panel
+        GET partial data of the Dashboard Panel
+        POST an update of the configuration for an existing Dashboard Panel
+
+        :param panel_id: The mongo id of the panel to handle
+        :param skip: For GET, requested offset of panel's data
+        :param limit: For GET, requested limit of panel's data
         :return: ObjectId of the Panel to delete
         """
         panel_id = ObjectId(panel_id)
+        if request.method == 'GET':
+            generated_dashboard = self.__generate_dashboard(panel_id)
+            return jsonify(generated_dashboard.get('data', [])[skip: skip + limit])
+
         if request.method == 'DELETE':
             update_data = {
                 'archived': True
@@ -3665,7 +3678,6 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         if not update_result.modified_count:
             return return_error(f'No dashboard by the id {str(panel_id)} found or updated', 400)
         args = [self, panel_id]
-        self.__generate_dashboard_fast.clean_cache(args)
         self.__generate_dashboard.clean_cache(args)
         return ''
 
@@ -3699,7 +3711,6 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         """
         if clear_slow:
             self.__generate_dashboard.update_cache()
-        self.__generate_dashboard_fast.update_cache()
         adapter_data.update_cache()
         get_fielded_plugins.update_cache()
         first_historical_date.clean_cache()
@@ -3734,23 +3745,32 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         try:
             dashboard['data'] = handler_by_metric[dashboard_metric](ChartViews[dashboard['view']], **config)
         except Exception:
+            dashboard['data'] = []
             logger.exception(f'Problem handling dashboard {dashboard}')
         dashboard['space'] = str(dashboard['space'])
         return gui_helpers.beautify_db_entry(dashboard)
 
-    @rev_cached(ttl=3600 * 4, key_func=lambda self, dashboard_id: dashboard_id)
+    # there's no trivial way to remove the TTL functionality entirely, so let's just make it long enough
+    @rev_cached(ttl=3600 * 24 * 31, key_func=lambda self, dashboard_id: dashboard_id)
     def __generate_dashboard(self, dashboard_id: ObjectId):
         """
         See _get_dashboard
         """
         return self.__generate_dashboard_uncached(dashboard_id)
 
-    @rev_cached(ttl=120, key_func=lambda self, dashboard_id: dashboard_id)
-    def __generate_dashboard_fast(self, dashboard_id: ObjectId):
+    def __init_all_dashboards(self):
         """
-        See _get_dashboard
+        Warms up the cache for all dashboards for all users
         """
-        return self.__generate_dashboard_uncached(dashboard_id)
+        for dashboard in self.__dashboard_collection.find(
+                filter=filter_archived(),
+                projection={
+                    '_id': True
+                }):
+            try:
+                self.__generate_dashboard(dashboard['_id'])
+            except Exception:
+                logger.warning(f'Failed generating dashboard for {dashboard}', exc_info=True)
 
     def _get_dashboard(self, skip=0, limit=0, uncached: bool = False,
                        space_ids: list = None, exclude_personal=False):
@@ -3795,20 +3815,25 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
                 skip=skip,
                 limit=limit,
                 projection={
-                    '_id': True,
-                    'metric': True
+                    '_id': True
                 }):
-            # Let's fetch and execute them query filters, depending on the chart's type
+            # Let's fetch and execute them query filters
             try:
-                dashboard_metric = ChartMetrics[dashboard['metric']]
                 if uncached:
-                    yield self.__generate_dashboard_uncached(dashboard['_id'])
-                elif dashboard_metric == ChartMetrics.timeline:
-                    # slow dashboard cache
-                    yield self.__generate_dashboard(dashboard['_id'])
+                    generated_dashboard = self.__generate_dashboard_uncached(dashboard['_id'])
                 else:
-                    yield self.__generate_dashboard_fast(dashboard['_id'])
-
+                    generated_dashboard = self.__generate_dashboard(dashboard['_id'])
+                dashboard_data = generated_dashboard.get('data', [])
+                data_length = len(dashboard_data)
+                data_limit, data_tail_limit = 50, -50
+                if data_length <= 100:
+                    data_limit, data_tail_limit = 100, data_length
+                yield {
+                    **generated_dashboard,
+                    'data': dashboard_data[:data_limit],
+                    'data_tail': dashboard_data[data_tail_limit:],
+                    'count': data_length
+                }
             except Exception:
                 # Since there is no data, not adding this chart to the list
                 logger.exception(f'Error fetching data for chart ({dashboard["_id"]})')

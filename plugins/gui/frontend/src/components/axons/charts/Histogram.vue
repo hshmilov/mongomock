@@ -5,7 +5,7 @@
   >
     <div class="histogram-container">
       <div
-        v-for="(item, index) in limitedData"
+        v-for="(item, index) in pageData"
         :key="index"
         class="histogram-item"
         @click="() => onClick(index)"
@@ -35,64 +35,93 @@
     <template v-if="dataLength">
       <div class="separator"></div>
       <x-paginator
-        ref="paginator"
-        v-model="limitedData"
+        :from.sync="dataFrom"
+        :to.sync="dataTo"
         :limit="limit"
-        :data="data"
+        :count="dataLength"
       />
     </template>
   </div>
 </template>
 
 <script>
+  import xPaginator from '../layout/Paginator.vue'
 
-import xPaginator from '../layout/Paginator.vue'
-
-export default {
-  name: "x-histogram",
-  components: { xPaginator },
-  props: {
-    data: { required: true },
-    limit: { default: 5 },
-    condensed: { default: false },
-    readOnly: { default: false }
-  },
-  data() {
-    return {
-      limitedData: []
-    }
-  },
-  computed: {
-    maxWidth() {
-      if (this.condensed) return 280
-      return 240
-    },
-    maxQuantity() {
-      let max = this.data[0].value;
-      this.data.slice(1).forEach(item => {
-        if (item.value > max) {
-          max = item.value;
-        }
-      });
-      return max;
-    },
-    dataLength() {
-      return this.data.length;
-    }
-  },
-  methods: {
-    calculateBarHeight(quantity) {
-      return (this.maxWidth * quantity) / this.maxQuantity;
-    },
-    onClick(pageIndex) {
-      let dataIndex = pageIndex
-      if (this.$refs.paginator && this.$refs.paginator.page) {
-        dataIndex += (this.$refs.paginator.page - 1) * this.limit
+  export default {
+    name: 'XHistogram',
+    components: { xPaginator },
+    props: {
+      data: {
+        type: Array,
+        required: true
+      },
+      limit: {
+        type: Number,
+        default: 5
+      },
+      condensed: {
+        type: Boolean,
+        default: false
+      },
+      readOnly: {
+        type: Boolean,
+        default: false
       }
-      this.$emit('click-one', dataIndex)
+    },
+    data () {
+      return {
+        dataFrom: 1,
+        dataTo: 0
+      }
+    },
+    computed: {
+      maxWidth () {
+        if (this.condensed) return 280
+        return 240
+      },
+      maxQuantity () {
+        if (!this.pageData.length) {
+          return 0
+        }
+        let max = this.pageData[0].value
+        this.pageData.slice(1).forEach(item => {
+          if (item && item.value > max) {
+            max = item.value
+          }
+        })
+        return max
+      },
+      dataLength () {
+        return this.data.length
+      },
+      nextFetchFrom () {
+        return this.dataTo + this.limit
+      },
+      prevFetchFrom () {
+        return this.dataFrom - 1 - this.limit
+      },
+      pageData () {
+        if (this.nextFetchFrom < this.dataLength && !this.data[this.nextFetchFrom]) {
+          this.$emit('fetch', this.nextFetchFrom)
+        }
+        if (this.prevFetchFrom >= 0 && !this.data[this.prevFetchFrom]) {
+          this.$emit('fetch', this.prevFetchFrom - 100 + this.limit)
+        }
+        if (!this.data[this.dataFrom - 1]) {
+          return []
+        }
+        return this.data.slice(this.dataFrom - 1, this.dataTo)
+      }
+    },
+    methods: {
+      calculateBarHeight (quantity) {
+        return (this.maxWidth * quantity) / this.maxQuantity
+      },
+      onClick (pageIndex) {
+        this.$emit('click-one', this.dataFrom + pageIndex - 1)
+      }
     }
   }
-}
 </script>
 
 <style lang="scss">
@@ -101,11 +130,11 @@ export default {
         flex-direction: column;
         align-items: flex-start;
         position: relative;
-        flex:1;
+        flex: 1 0 auto;
         .histogram-container {
           display: flex;
           flex-direction: column;
-          height: 100%;
+          flex: 1 0 auto;
         }
         .histogram-item {
             width: 100%;

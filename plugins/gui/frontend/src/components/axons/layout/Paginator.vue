@@ -1,128 +1,130 @@
 <template>
-    <div class="x-paginator">
-        <x-button
-            v-if="this.numOfItems > this.limit"
-            link
-            class="first"
-            :disabled="isBackDisabled"
-            @click="onClickPage(1)"
-            @keyup.enter="onClickPage(1)">
-                &lt;&lt;
-        </x-button>
-        <x-button
-            v-if="this.numOfItems > this.limit"
-            link
-            class="previous"
-            :disabled="isBackDisabled"
-            @click="onClickPage(page-1)"
-            @keyup.enter="onClickPage(page-1)">
-                &lt;
-        </x-button>
-        <div class="pagintator-text" >
-            <template v-if="page === 1">
-               Top <strong class="num-of-items"> {{ to }}</strong>
-            </template>
-            <template v-else>
-                 <strong class="from-item"> {{ from }} </strong>
-                    - <strong class="to-item"> {{ to }}</strong>
-            </template>
-            of <strong class="total-num-of-items"> {{ numOfItems }}</strong>
-        </div>
-        <x-button
-            v-if="this.numOfItems > this.limit"
-            link
-             class="next"
-            :disabled="isNextDisabled"
-            @click="onClickPage(page+1)"
-            @keyup.enter="onClickPage(page+1)">
-                &gt;
-        </x-button>
-        <x-button
-            v-if="this.numOfItems > this.limit"
-            link
-            class="last"
-            :disabled="isNextDisabled"
-            @click="onClickPage(pageCount)"
-            @keyup.enter="onClickPage(pageCount)">
-                    &gt;&gt;
-        </x-button>
+  <div class="x-paginator">
+    <x-button
+      v-if="count > limit"
+      link
+      class="first"
+      :disabled="isBackDisabled"
+      @click="onClickPage(1)"
+      @keyup.enter="onClickPage(1)"
+    >
+      &lt;&lt;
+    </x-button>
+    <x-button
+      v-if="count > limit"
+      link
+      class="previous"
+      :disabled="isBackDisabled"
+      @click="onClickPage(page-1)"
+      @keyup.enter="onClickPage(page-1)"
+    >
+      &lt;
+    </x-button>
+    <div class="pagintator-text">
+      <template v-if="page === 1">
+        Top <strong class="num-of-items"> {{ to }}</strong>
+      </template>
+      <template v-else>
+        <strong class="from-item"> {{ from }} </strong>
+        - <strong class="to-item"> {{ to }}</strong>
+      </template>
+      of <strong class="total-num-of-items"> {{ count }}</strong>
     </div>
+    <x-button
+      v-if="count > limit"
+      link
+      class="next"
+      :disabled="isNextDisabled"
+      @click="onClickPage(page+1)"
+      @keyup.enter="onClickPage(page+1)"
+    >
+      &gt;
+    </x-button>
+    <x-button
+      v-if="count > limit"
+      link
+      class="last"
+      :disabled="isNextDisabled"
+      @click="onClickPage(pageCount)"
+      @keyup.enter="onClickPage(pageCount)"
+    >
+      &gt;&gt;
+    </x-button>
+  </div>
 </template>
 <script>
-import xButton from '../../axons/inputs/Button.vue'
+  import xButton from '../../axons/inputs/Button.vue'
 
-export default {
-    name: "x-paginator",
+  export default {
+    name: 'XPaginator',
     components: { xButton },
-    data() {
-        return {
-            from: 1,
-            page: 1,
-        };
-    },
     props: {
-        limit: {
-            type: Number,
-            default: 5
-        },
-        value: {
-            type: Array,
-            required: true
-        },
-        data:  {
-            type: Array,
-            required: true
-        }
+      limit: {
+        type: Number,
+        default: 5
+      },
+      from: {
+        type: Number,
+        required: true
+      },
+      to: {
+        type: Number,
+        required: true
+      },
+      count: {
+        type: Number,
+        required: true
+      }
+    },
+    data () {
+      return {
+        page: 1
+      }
     },
     computed: {
-        to() {
-            if(this.limit > this.numOfItems) {
-                return this.numOfItems
-            }
-            return Math.min(this.page * this.limit, this.numOfItems)
-        },
-        numOfItems() {
-            return this.data.length
-        },
-        pageCount() {
-            return this.numOfItems % this.limit === 0 ?
-                            Math.floor(this.numOfItems / this.limit) :
-                            Math.floor(this.numOfItems / this.limit) + 1
-        },
-        isNextDisabled() {
-            return !(this.page + 1 <= this.pageCount && this.to < this.numOfItems)
-        },
-        isBackDisabled() {
-            return !(this.page - 1 >= 1);
+      pageTo () {
+        if (this.limit <= this.count) {
+          return Math.min(this.page * this.limit, this.count)
         }
+        return this.count
+      },
+      pageFrom () {
+        if (this.count % this.limit !== 0 && this.page === this.pageCount) {
+          return this.count - this.count % this.limit + 1
+        }
+        return this.pageTo - this.limit + 1
+      },
+      pageCount () {
+        return this.count % this.limit === 0 ?
+          Math.floor(this.count / this.limit) :
+          Math.floor(this.count / this.limit) + 1
+      },
+      isNextDisabled () {
+        return !(this.page + 1 <= this.pageCount && this.to < this.count)
+      },
+      isBackDisabled () {
+        return !(this.page - 1 >= 1)
+      }
     },
     watch: {
-        to(val , oldVal) {
-            if( val !== oldVal) {
-                this.$emit('input', this.data.slice(this.from - 1, this.to))
-            }
-        },
-        data() {
-            this.$emit('input', this.data.slice(this.from - 1, this.to))
-        }
+      count () {
+        this.emitRange()
+      }
+    },
+    mounted () {
+      this.onClickPage(1)
     },
     methods: {
-        onClickPage(page) {
-            this.page = page;
-            if( this.page < 0 || this.page > this.pageCount) {
-                return
-            }
-            this.from = this.to - this.limit + 1;
-            if( this.numOfItems % this.limit !== 0 && this.page === this.pageCount) {
-                this.from = this.numOfItems - this.numOfItems % this.limit + 1
-            }
-            this.$emit('input', this.data.slice(this.from - 1, this.to))
-        }
-    },
-    created() {
-        this.$emit('input', this.data.slice(0, this.limit))
+      onClickPage (page) {
+        this.page = page
+        this.emitRange()
+      },
+      emitRange () {
+        this.$emit('update:from', this.pageFrom)
+        this.$emit('update:to', this.pageTo)
+      }
     }
-}
+  }
 </script>
 <style lang="scss">
   .x-paginator {
