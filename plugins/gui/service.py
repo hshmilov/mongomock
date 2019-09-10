@@ -383,15 +383,17 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
 
                 main_unsuccessful_count = get_chunks_length(self.enforcement_tasks_action_results_id_lists,
                                                             main_results.get('unsuccessful_entities', 0))
+                success_rate = f'{main_successful_count} / {main_successful_count + main_unsuccessful_count}'
                 status = 'Completed'
 
             return gui_helpers.beautify_db_entry({
                 '_id': task.get('_id'),
-                'result.metadata.success_rate': f'{main_successful_count} / {main_successful_count + main_unsuccessful_count}',
+                'result.metadata.success_rate': success_rate,
                 'post_json.report_name': task.get('post_json', {}).get('report_name', ''),
                 'status': status,
                 f'result.{ACTIONS_MAIN_FIELD}.name': result.get('main', {}).get('name', ''),
-                'result.metadata.trigger.view.name': result.get('metadata', {}).get('trigger', {}).get('view', {}).get('name', ''),
+                'result.metadata.trigger.view.name': result.get('metadata', {}).get('trigger', {}).get('view', {}).get(
+                    'name', ''),
                 'started_at': task.get('started_at', ''),
                 'finished_at': task.get('finished_at', '')
             })
