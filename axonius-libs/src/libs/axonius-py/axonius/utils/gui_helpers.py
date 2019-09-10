@@ -271,7 +271,7 @@ def paginated(limit_max=PAGINATION_LIMIT_MAX):
             # it's fine to raise here - an exception will be nicely JSONly displayed by add_rule
             content = self.get_request_data_as_object() if request.method == 'POST' else request.args
             try:
-                limit = content.get('limit', limit_max, int)
+                limit = int(content.get('limit'))
             except TypeError:
                 limit = limit_max
             if limit < 0:
@@ -282,8 +282,7 @@ def paginated(limit_max=PAGINATION_LIMIT_MAX):
             try:
                 skip = int(content.get('skip'))
             except TypeError:
-                skip = None
-            skip = skip or int(request.args.get('skip', 0, int))
+                skip = 0
             if skip < 0:
                 raise ValueError('start must not be negative')
             return func(self, limit=limit, skip=skip, *args, **kwargs)
