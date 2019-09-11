@@ -456,6 +456,8 @@ def get_entities_count(entities_filter, entity_collection, history_date: datetim
     if quick:
         return entity_collection.count_documents(processed_filter, limit=1000)
 
+    if not processed_filter:
+        return entity_collection.estimated_document_count()
     return entity_collection.count_documents(processed_filter)
 
 
