@@ -484,7 +484,7 @@
       startDownload () {
         if (this.disableDownloadReport) return
         this.downloading = true
-        this.downloadReport(this.report.name).then(() => {
+        this.downloadReport( {reportId: this.id, name: this.report.name}).then(() => {
           this.downloading = false
         }).catch((error) => {
           this.downloading = false

@@ -142,9 +142,9 @@ export const reports = {
                 })
 
         },
-        [ DOWNLOAD_REPORT ] ({dispatch}, name) {
+        [ DOWNLOAD_REPORT ] ({dispatch}, { reportId, name } ) {
             return dispatch(REQUEST_API, {
-                rule: `export_report/${name}`,
+                rule: `export_report/${reportId}`,
                 binary: true
             }).then((response) => {
                 downloadPdfReportFile(name, response)

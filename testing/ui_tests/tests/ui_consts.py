@@ -43,6 +43,9 @@ JSON_ADAPTER_PLUGIN_NAME = 'json_file_adapter'
 
 AD_ADAPTER_NAME = 'Microsoft Active Directory (AD)'
 
+STRESSTEST_ADAPTER = 'stresstest_adapter'
+STRESSTEST_SCANNER_ADAPTER = 'stresstest_scanner_adapter'
+
 
 class EmailSettings:
     port = '25'

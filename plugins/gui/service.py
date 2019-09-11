@@ -456,6 +456,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         self._job_scheduler = LoggedBackgroundScheduler(executors={'default': ThreadPoolExecutorApscheduler(20)})
         current_exec_reports_setting = self._get_exec_report_settings(self.reports_config_collection)
         for current_exec_report_setting in current_exec_reports_setting:
+            current_exec_report_setting['uuid'] = str(current_exec_report_setting['_id'])
             self._schedule_exec_report(current_exec_report_setting)
         self._job_scheduler.start()
         if self._maintenance_config.get('timeout'):
@@ -1946,7 +1947,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         if request.method == 'PUT':
             report_to_add = request.get_json()
             reports_collection = self.reports_config_collection
-            report_name = report_to_add['name']
+            report_name = report_to_add['name'] = report_to_add['name'].strip()
             report_to_add['user_id'] = get_connected_user_id()
             report = reports_collection.find_one({
                 'name': report_name
@@ -1956,8 +1957,8 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
 
             report_to_add['last_updated'] = datetime.now()
             upsert_result = self._upsert_report_config(report_to_add['name'], report_to_add, False)
-            self._generate_and_schedule_report(report_to_add)
             report_to_add['uuid'] = str(upsert_result)
+            self._generate_and_schedule_report(report_to_add)
             return jsonify(report_to_add), 201
 
         # Handle remaining method - DELETE
@@ -4711,9 +4712,9 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
                 logger.info(f'DELETE: {uuid}')
                 fs.delete(ObjectId(uuid))
 
-    @gui_add_rule_logged_in('export_report/<report_name>', required_permissions={Permission(PermissionType.Dashboard,
-                                                                                            PermissionLevel.ReadOnly)})
-    def export_report(self, report_name):
+    @gui_add_rule_logged_in('export_report/<report_id>', required_permissions={Permission(PermissionType.Dashboard,
+                                                                                          PermissionLevel.ReadOnly)})
+    def export_report(self, report_id):
         """
         Gets definition of report from DB for the dynamic content.
         Gets all the needed data for both pre-defined and dynamic content definitions.
@@ -4724,17 +4725,19 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         TBD Should receive ID of the report to export (once there will be an option to save many report definitions)
         :return:
         """
-        report_path, attachments_paths = self._get_existing_executive_report_and_attachments(report_name)
+        report_path, attachments_paths = self._get_existing_executive_report_and_attachments(report_id)
         return send_file(report_path, mimetype='application/pdf', as_attachment=True,
                          attachment_filename=report_path)
 
-    def _get_existing_executive_report_and_attachments(self, name) -> Tuple[str, List[str]]:
+    def _get_existing_executive_report_and_attachments(self, report_id) -> Tuple[str, List[str]]:
         """
         Opens the report pdf and attachment csv's from the db,
         save them in a temp files and return their path
         :param name: a report name string
         :return: A tuple of the report pdf path and a list of attachments paths
          """
+        report_config = self.reports_config_collection.find_one({'_id': ObjectId(report_id)})
+        name = report_config.get('name', '')
         report = self._get_collection('reports').find_one({'filename': f'most_recent_{name}'})
         logger.info(f'exporting report "{name}"')
         if not report:
@@ -4846,21 +4849,6 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         logger.info(f'Scheduling an exec_report sending for {next_run_time} and period of {time_period}.')
         return 'Scheduled next run.'
 
-    @gui_add_rule_logged_in('exec_report', methods=['POST', 'GET'],
-                            required_permissions={Permission(PermissionType.Reports,
-                                                             ReadOnlyJustForGet)})
-    def exec_report(self):
-        """
-        Makes the apscheduler schedule a research phase right now.
-        :return:
-        """
-        if request.method == 'GET':
-            return jsonify(self._get_exec_report_settings(self.exec_report_collection))
-
-        elif request.method == 'POST':
-            exec_report_data = self.get_request_data_as_object()
-            return self._schedule_exec_report(exec_report_data)
-
     def _send_report_thread(self, report):
         if self.trial_expired():
             logger.error('Report email not sent - system trial has expired')
@@ -4870,7 +4858,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         lock = self.exec_report_locks[report_name] if self.exec_report_locks.get(report_name) else threading.RLock()
         self.exec_report_locks[report_name] = lock
         with lock:
-            report_path, attachments_paths = self._get_existing_executive_report_and_attachments(report_name)
+            report_path, attachments_paths = self._get_existing_executive_report_and_attachments(report['uuid'])
             if self.mail_sender:
                 try:
                     mail_properties = report['mail_properties']

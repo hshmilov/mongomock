@@ -27,6 +27,7 @@ class ReportsPage(EntitiesPage):
     EMAIL_BOX_RECIPIENTS = 'Recipients'
     EDIT_REPORT_XPATH = '//div[@title=\'{report_name}\']'
     REPORT_GENERATED_XPATH = '//div[@title=\'{report_name}\']/parent::td/following::td/following::td//div'
+    REPORT_TR_XPATH = '//div[@title=\'{report_name}\']/parent::td/parent::tr'
     EMAIL_SUBJECT_ID = 'mailSubject'
     SELECT_VIEW_ENTITY_ELEMENT_CSS = '.saved-query .x-select-symbol'
     SELECT_VIEW_ENTITY_CSS = '.saved-query .x-select-symbol .x-select-trigger'
@@ -203,6 +204,10 @@ class ReportsPage(EntitiesPage):
     def click_report(self, report_name):
         self.driver.find_element_by_xpath(self.EDIT_REPORT_XPATH.format(report_name=report_name)).click()
         self.wait_for_element_present_by_css(self.REPORT_CSS)
+
+    def get_report_id(self, report_name):
+        return self.driver.find_element_by_xpath(self.REPORT_TR_XPATH.format(report_name=report_name))\
+            .get_attribute('id')
 
     def select_saved_view(self, text, entity='Devices'):
         self.select_option_without_search(self.SELECT_VIEW_ENTITY_CSS, self.DROPDOWN_SELECTED_OPTION_CSS, entity)

@@ -199,62 +199,66 @@ class TestReport(TestBase):
         self.settings_page.remove_email_server()
 
     def test_create_and_edit_report(self):
-
         smtp_service = MailDiranasaurusService()
         smtp_service.take_process_ownership()
         stress = stresstest_service.StresstestService()
         stress_scanner = stresstest_scanner_service.StresstestScannerService()
-        with smtp_service.contextmanager(), stress.contextmanager(take_ownership=True), stress_scanner.contextmanager(
-                take_ownership=True):
-            device_dict = {'device_count': 10, 'name': 'blah'}
-            stress.add_client(device_dict)
-            stress_scanner.add_client(device_dict)
+        try:
+            with smtp_service.contextmanager(), \
+                    stress.contextmanager(take_ownership=True), \
+                    stress_scanner.contextmanager(take_ownership=True):
+                device_dict = {'device_count': 10, 'name': 'blah'}
+                stress.add_client(device_dict)
+                stress_scanner.add_client(device_dict)
 
-            self.base_page.run_discovery()
+                self.base_page.run_discovery()
 
-            self.settings_page.switch_to_page()
-            self.settings_page.click_global_settings()
-            toggle = self.settings_page.find_send_emails_toggle()
-            self.settings_page.click_toggle_button(toggle, make_yes=True, scroll_to_toggle=False)
-            self.settings_page.fill_email_host(smtp_service.fqdn)
-            self.settings_page.fill_email_port(smtp_service.port)
-            self.settings_page.save_and_wait_for_toaster()
+                self.settings_page.switch_to_page()
+                self.settings_page.click_global_settings()
+                toggle = self.settings_page.find_send_emails_toggle()
+                self.settings_page.click_toggle_button(toggle, make_yes=True, scroll_to_toggle=False)
+                self.settings_page.fill_email_host(smtp_service.fqdn)
+                self.settings_page.fill_email_port(smtp_service.port)
+                self.settings_page.save_and_wait_for_toaster()
 
-            data_query1 = 'specific_data.data.name == regex(\'avigdor no\', \'i\')'
-            self.devices_page.create_saved_query(data_query1, self.TEST_REPORT_EDIT_QUERY)
-            data_query2 = 'specific_data.data.name == regex(\'avig\', \'i\')'
-            self.devices_page.create_saved_query(data_query2, self.TEST_REPORT_EDIT_QUERY1)
+                data_query1 = 'specific_data.data.name == regex(\'avigdor no\', \'i\')'
+                self.devices_page.create_saved_query(data_query1, self.TEST_REPORT_EDIT_QUERY)
+                data_query2 = 'specific_data.data.name == regex(\'avig\', \'i\')'
+                self.devices_page.create_saved_query(data_query2, self.TEST_REPORT_EDIT_QUERY1)
 
-            recipient = generate_random_valid_email()
+                recipient = generate_random_valid_email()
 
-            self.reports_page.create_report(report_name=self.TEST_REPORT_EDIT, add_dashboard=True,
-                                            queries=[{'entity': 'Devices', 'name': self.TEST_REPORT_EDIT_QUERY}],
-                                            add_scheduling=True, email_subject=self.TEST_REPORT_EDIT,
-                                            emails=[recipient], period=ReportFrequency.weekly)
-            self.reports_page.wait_for_table_to_load()
-            self.reports_page.click_report(self.TEST_REPORT_EDIT)
-            self.reports_page.wait_for_spinner_to_end()
-            self.reports_page.click_include_dashboard()
-            self.reports_page.select_saved_view(self.TEST_REPORT_EDIT_QUERY1, 'Devices')
-            new_subject = self.TEST_REPORT_EDIT + '_changed'
-            self.reports_page.fill_email_subject(new_subject)
-            self.reports_page.select_frequency(ReportFrequency.monthly)
-            self.reports_page.click_save()
-            self.reports_page.wait_for_table_to_load()
-            self.reports_page.wait_for_spinner_to_end()
-            self.reports_page.wait_for_report_generation(self.TEST_REPORT_EDIT)
-            self.reports_page.click_report(self.TEST_REPORT_EDIT)
-            self.reports_page.wait_for_spinner_to_end()
+                self.reports_page.create_report(report_name=self.TEST_REPORT_EDIT, add_dashboard=True,
+                                                queries=[{'entity': 'Devices', 'name': self.TEST_REPORT_EDIT_QUERY}],
+                                                add_scheduling=True, email_subject=self.TEST_REPORT_EDIT,
+                                                emails=[recipient], period=ReportFrequency.weekly)
+                self.reports_page.wait_for_table_to_load()
+                self.reports_page.click_report(self.TEST_REPORT_EDIT)
+                self.reports_page.wait_for_spinner_to_end()
+                self.reports_page.click_include_dashboard()
+                self.reports_page.select_saved_view(self.TEST_REPORT_EDIT_QUERY1, 'Devices')
+                new_subject = self.TEST_REPORT_EDIT + '_changed'
+                self.reports_page.fill_email_subject(new_subject)
+                self.reports_page.select_frequency(ReportFrequency.monthly)
+                self.reports_page.click_save()
+                self.reports_page.wait_for_table_to_load()
+                self.reports_page.wait_for_spinner_to_end()
+                self.reports_page.wait_for_report_generation(self.TEST_REPORT_EDIT)
+                self.reports_page.click_report(self.TEST_REPORT_EDIT)
+                self.reports_page.wait_for_spinner_to_end()
 
-            assert not self.reports_page.is_include_dashboard()
-            assert self.reports_page.is_frequency_set(ReportFrequency.monthly)
-            assert self.reports_page.get_email_subject() == new_subject
-            assert self.reports_page.get_saved_view() == self.TEST_REPORT_EDIT_QUERY1
+                assert not self.reports_page.is_include_dashboard()
+                assert self.reports_page.is_frequency_set(ReportFrequency.monthly)
+                assert self.reports_page.get_email_subject() == new_subject
+                assert self.reports_page.get_saved_view() == self.TEST_REPORT_EDIT_QUERY1
 
-            self.reports_page.click_send_email()
-            self.reports_page.find_email_sent_toaster()
-            mail_content = smtp_service.get_email_first_csv_content(recipient)
-            assert len(mail_content.splitlines()) == 11
+                self.reports_page.click_send_email()
+                self.reports_page.find_email_sent_toaster()
+                mail_content = smtp_service.get_email_first_csv_content(recipient)
+                assert len(mail_content.splitlines()) == 11
+        finally:
+            self.wait_for_adapter_down(ui_consts.STRESSTEST_ADAPTER)
+            self.wait_for_adapter_down(ui_consts.STRESSTEST_SCANNER_ADAPTER)
 
     def test_read_only_click_add_scheduling(self):
         smtp_service = SMTPService()
