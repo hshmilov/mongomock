@@ -1,0 +1,67 @@
+{
+    "data": [
+        {
+            "title": "Connect Adapters",
+            "completed": true,
+            "path": "adapters",
+            "link": "https://www.google.com",
+            "description": "You can collect and correlate information about your assets by using Axonius' adapters, which integrate with a wide array of security and IT management solutions.\n\nGo to the Adapters screen to connect at least three adapters to fetch data for your devices and users from at least three different sources."
+        },
+        {
+            "title": "Examine a device profile",
+            "completed": false,
+            "path": "devices",
+            "link": "https://www.google.com",
+            "description": "You can examine the details about your devices by looking at their profiles, which displays the data that Axonius collected and correlated from multiple sources.\n\nUse the Devices screen or the search bar on Axonius Dashboard to search for a device and examine its profile."
+        },
+        {
+            "title": "Save a query",
+            "completed": false,
+            "path": "adapters",
+            "link": "https://www.google.com",
+            "description": "You can identify security gaps by running and saving a query about your assets.\n\nUse the Query Wizard on the Devices screen to create a query, then save it so you can easily access it in the future."
+        },
+        {
+            "title": "Connect Adapters",
+            "completed": true,
+            "path": "adapters",
+            "link": "https://www.google.com",
+            "description": "You can collect and correlate information about your assets by using Axonius' adapters, which integrate with a wide array of security and IT management solutions.\n\nGo to the Adapters screen to connect at least three adapters to fetch data for your devices and users from at least three different sources."
+        },
+        {
+            "title": "Examine a device profile",
+            "completed": false,
+            "path": "devices",
+            "link": "https://www.google.com",
+            "description": "You can examine the details about your devices by looking at their profiles, which displays the data that Axonius collected and correlated from multiple sources.\n\nUse the Devices screen or the search bar on Axonius Dashboard to search for a device and examine its profile."
+        },
+        {
+            "title": "Save a query",
+            "completed": false,
+            "path": "adapters",
+            "link": "https://www.google.com",
+            "description": "You can identify security gaps by running and saving a query about your assets.\n\nUse the Query Wizard on the Devices screen to create a query, then save it so you can easily access it in the future."
+        },
+        {
+            "title": "Connect Adapters",
+            "completed": true,
+            "path": "adapters",
+            "link": "https://www.google.com",
+            "description": "You can collect and correlate information about your assets by using Axonius' adapters, which integrate with a wide array of security and IT management solutions.\n\nGo to the Adapters screen to connect at least three adapters to fetch data for your devices and users from at least three different sources."
+        },
+        {
+            "title": "Examine a device profile",
+            "completed": false,
+            "path": "devices",
+            "link": "https://www.google.com",
+            "description": "You can examine the details about your devices by looking at their profiles, which displays the data that Axonius collected and correlated from multiple sources.\n\nUse the Devices screen or the search bar on Axonius Dashboard to search for a device and examine its profile."
+        },
+        {
+            "title": "Save a query",
+            "completed": false,
+            "path": "adapters",
+            "link": "https://www.google.com",
+            "description": "You can identify security gaps by running and saving a query about your assets.\n\nUse the Query Wizard on the Devices screen to create a query, then save it so you can easily access it in the future."
+        }
+    ]
+}

@@ -1,10 +1,8 @@
 import Vue from 'vue';
-import { stories } from './index.stories';
+import { storiesOfAxons } from './index.stories';
 import { withKnobs, text, boolean } from '@storybook/addon-knobs';
 
-stories.addDecorator(withKnobs);
-
-stories.add('XButton', () => ({
+storiesOfAxons.add('XButton', () => ({
   props: {
     disabled: {
       default: boolean('disabled', false)

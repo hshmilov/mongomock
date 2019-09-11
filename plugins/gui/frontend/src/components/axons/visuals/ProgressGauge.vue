@@ -6,8 +6,8 @@
       fill="transparent"
       :stroke-width="stroke"
       :r="normalizedRadius"
-      :cx="radius"
-      :cy="radius"
+      cx="50%"
+      cy="50%"
     />
     <circle
       :stroke="color"
@@ -16,8 +16,8 @@
       :style="{ strokeDashoffset }"
       :stroke-width="stroke"
       :r="normalizedRadius"
-      :cx="radius"
-      :cy="radius"
+      cx="50%"
+      cy="50%"
     />
     <text
       class="gauge-state"
@@ -37,7 +37,7 @@
         props: {
             radius: {
                 type: Number,
-                default: 60,
+                default: 45,
             },
             color: {
                 type: String,
@@ -56,7 +56,7 @@
             },
             stroke: {
                 type: Number,
-                default: 4,
+                default: 3,
             },
             progress: {
                 type: Number,
@@ -91,6 +91,7 @@
     }
     .gauge-state {
         font-size: 16px;
+        padding-bottom: 2px;
     }
     .gauge-title {
         font-size: 12px;
