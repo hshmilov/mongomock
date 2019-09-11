@@ -346,7 +346,7 @@ class ReportGenerator:
         })
 
     def _create_query_histogram(self, queries_data):
-        return self._create_histogram(queries_data, 5, True)
+        return self._create_histogram(queries_data, 6, True)
 
     def _create_histogram(self, data, limit, textual=False):
         """
