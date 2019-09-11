@@ -33,7 +33,8 @@
         </div>
         <div class="cycle-time">
           <div class="cycle-next">
-            Next cycle starts in <div class="blue">{{ nextRunTime }}</div>
+            <div>Next cycle starts in:</div>
+            <div class="cycle-next-time blue">{{ nextRunTime }}</div>
           </div>
         </div>
       </div>
@@ -162,11 +163,10 @@
           justify-content: flex-end;
 
           .cycle-next {
-            display: inline-block;
-            height: 20px;
-
-            .blue {
-              display: inline-block;
+            display: flex;
+            flex-direction: column;
+            .cycle-next-time {
+              text-align: left;
             }
           }
         }
