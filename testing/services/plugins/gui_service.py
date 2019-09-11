@@ -71,8 +71,9 @@ class GuiService(PluginService, UpdatablePluginMixin):
             self._update_schema_version_15()
         if self.db_schema_version < 16:
             self._update_schema_version_16()
-
-        if self.db_schema_version != 16:
+        if self.db_schema_version < 17:
+            self._update_schema_version_17()
+        if self.db_schema_version != 17:
             print(f'Upgrade failed, db_schema_version is {self.db_schema_version}')
 
     def _update_schema_version_1(self):
@@ -522,6 +523,27 @@ class GuiService(PluginService, UpdatablePluginMixin):
             self.db_schema_version = 16
         except Exception as e:
             print(f'Exception while upgrading gui db to version 15. Details: {e}')
+
+    def _update_schema_version_17(self):
+        """
+        For version 2.10, remove duplicated spaces
+        """
+        print('Upgrade to schema 17')
+        try:
+            self._remove_unused_spaces(DASHBOARD_SPACE_TYPE_DEFAULT)
+            self._remove_unused_spaces(DASHBOARD_SPACE_TYPE_PERSONAL)
+            self.db_schema_version = 17
+        except Exception as e:
+            print(f'Exception while upgrading gui db to version 17. Details: {e}')
+
+    def _remove_unused_spaces(self, spaces_type):
+        dashboard_spaces_collection = self.db.get_collection(self.plugin_name, DASHBOARD_SPACES_COLLECTION)
+        dashboards = dashboard_spaces_collection.find({
+            'type': spaces_type
+        })
+        if dashboards.count() > 1:
+            indexes_to_delete = [space.get('_id') for space in dashboards[1:]]
+            dashboard_spaces_collection.delete_many({'_id': {'$in': indexes_to_delete}})
 
     def _update_default_locked_actions(self, new_actions):
         """

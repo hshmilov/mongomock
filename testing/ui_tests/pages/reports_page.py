@@ -42,7 +42,6 @@ class ReportsPage(EntitiesPage):
     BEFORE_SAVE_MESSAGE = 'Saving the report...'
     REPORT_NAME_DUPLICATE_ERROR = 'Report name already taken by another report'
     SPACES_LABEL = 'Dashboard spaces'
-    SPACES_VALUE_ELEMENTS = '.dashboard-spaces .md-selected .md-list-item-text'
     SEND_EMAIL_BUTTON_TEXT = 'Send Email'
 
     @property
@@ -242,6 +241,11 @@ class ReportsPage(EntitiesPage):
         element = self.find_element_following_label(self.SPACES_LABEL)
         return [elm.get_attribute('value')
                 for elm in element.find_elements_by_css_selector('.md-select .md-input.md-select-value')]
+
+    def get_spaces_options(self):
+        self.click_spaces_select()
+        self.wait_for_element_present_by_css('.md-list-item-text')
+        return [e.text for e in self.driver.find_elements_by_css_selector('.md-list-item-text')]
 
     def create_report(self, report_name, add_dashboard=True, queries=None, add_scheduling=False, email_subject=None,
                       emails=None, period=ReportFrequency.daily, wait_for_toaster=True, spaces=None):

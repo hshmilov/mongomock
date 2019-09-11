@@ -285,8 +285,13 @@
           return this.downloading
         },
         dashboard_spaces(state) {
-          return state.dashboard.spaces.data.filter(space => space.type !== 'personal').map((space) => {
-            return {name: space.uuid, title: space.name}
+          let custom_spaces = state.dashboard.spaces.data.filter(space => space.type === 'custom')
+          let default_space = state.dashboard.spaces.data.find(space => space.type === 'default')
+          if(default_space) {
+            custom_spaces.unshift(default_space)
+          }
+          return custom_spaces.map((space) => {
+              return {name: space.uuid, title: space.name}
           })
         },
       }),
