@@ -7,7 +7,7 @@ from selenium.common.exceptions import NoSuchElementException
 
 from test_helpers.file_mock_credentials import FileForCredentialsMock
 from ui_tests.pages.entities_page import EntitiesPage
-from ui_tests.pages.page import PAGE_BODY
+from ui_tests.pages.page import PAGE_BODY, SLEEP_INTERVAL, RETRY_WAIT_FOR_ELEMENT
 from ui_tests.tests.ui_consts import AD_ADAPTER_NAME
 
 # NamedTuple doesn't need to be uppercase
@@ -22,7 +22,7 @@ class AdaptersPage(EntitiesPage):
     TABLE_CLASS = '.table'
     TEST_CONNECTIVITY = 'Test Reachability'
     RT_CHECKBOX_CSS = '[for=realtime_adapter]+div'
-    ADVANCED_SETTINGS_SAVE_BUTTON_CSS = '.configuration>.x-button'
+    ADVANCED_SETTINGS_SAVE_BUTTON_CSS = '.x-tab.active .configuration>.x-button'
 
     TEST_CONNECTIVITY_CONNECTION_IS_VALID = 'Connection is valid.'
     TEST_CONNECTIVITY_NOT_SUPPORTED = 'Test reachability is not supported for this adapter.'
@@ -100,6 +100,11 @@ class AdaptersPage(EntitiesPage):
 
     def click_advanced_settings(self):
         self.find_element_by_text('Advanced Settings').click()
+        time.sleep(1.5)
+
+    def click_advanced_configuration(self):
+        self.find_element_by_text('Adapter Configuration').click()
+        time.sleep(1.5)
 
     def save_advanced_settings(self):
         self.driver.find_element_by_css_selector(self.ADVANCED_SETTINGS_SAVE_BUTTON_CSS).click()
@@ -140,8 +145,11 @@ class AdaptersPage(EntitiesPage):
     def wait_for_problem_connecting_to_server(self):
         self.wait_for_element_present_by_text(self.TEST_CONNECTIVITY_PROBLEM)
 
-    def wait_for_problem_connecting_try_again(self):
-        self.wait_for_element_present_by_text(self.TEXT_PROBLEM_CONNECTING_TRY_AGAIN)
+    def wait_for_problem_connecting_try_again(self, retries=RETRY_WAIT_FOR_ELEMENT, interval=SLEEP_INTERVAL):
+        self.wait_for_element_present_by_text(
+            self.TEXT_PROBLEM_CONNECTING_TRY_AGAIN,
+            retries=retries,
+            interval=interval)
 
     def clean_adapter_servers(self, name, delete_associated_entities=False):
         self.remove_server(None, name, delete_associated_entities=delete_associated_entities)
@@ -183,6 +191,9 @@ class AdaptersPage(EntitiesPage):
 
     def wait_for_data_collection_toaster_absent(self):
         self.wait_for_toaster_to_end(self.DATA_COLLECTION_TOASTER, retries=1200)
+
+    def wait_for_data_collection_failed_toaster_absent(self):
+        self.wait_for_toaster_to_end(self.TEXT_PROBLEM_CONNECTING_TRY_AGAIN, retries=1200)
 
     def add_server(self, ad_client, adapter_name=AD_ADAPTER_NAME):
         self.switch_to_page()
