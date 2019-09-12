@@ -16,7 +16,11 @@ from ui_tests.tests.ui_consts import AD_ADAPTER_NAME
 class EntitiesPage(Page):
     EXPORT_CSV_LOADING_CSS = '.loading-button'
     EXPORT_CSV_BUTTON_TEXT = 'Export CSV'
+
     EDIT_COLUMNS_ADAPTER_DROPDOWN_CSS = '.x-dropdown.x-select.x-select-symbol'
+    EDIT_COLUMNS_SELECT_XPATH = '//div[@class=\'field-list {list_type}\']' \
+                                '//div[@class=\'x-checkbox\' and .//text()=\'{col_title}\']'
+
     QUERY_WIZARD_ID = 'query_wizard'
     QUERY_EXPRESSIONS_CSS = '.x-filter .x-expression'
     QUERY_CONDITIONS_CSS = '.x-condition'
@@ -517,9 +521,6 @@ class EntitiesPage(Page):
     def open_edit_columns(self):
         self.click_button('Edit Columns', partial_class=True, should_scroll_into_view=False)
 
-    def select_column_name(self, col_name):
-        self.driver.find_element_by_xpath(self.CHECKBOX_XPATH_TEMPLATE.format(label_text=col_name)).click()
-
     def select_column_adapter(self, adapter_title):
         self.select_option(self.EDIT_COLUMNS_ADAPTER_DROPDOWN_CSS,
                            self.DROPDOWN_TEXT_BOX_CSS,
@@ -529,20 +530,42 @@ class EntitiesPage(Page):
     def close_edit_columns(self):
         self.click_button('Done')
 
-    def edit_columns(self, col_names):
+    def edit_columns(self, add_col_names: list = None, remove_col_names: list = None, adapter_title: str = None):
         self.open_edit_columns()
-        self.select_columns(col_names)
-
-    def edit_columns_of_adapter(self, col_names, adapter_title):
-        self.open_edit_columns()
-        self.select_column_adapter(adapter_title)
-        self.select_columns(col_names)
-
-    def select_columns(self, col_names):
-        for col_name in col_names:
-            self.select_column_name(col_name)
-        self.wait_for_spinner_to_end()
+        if adapter_title:
+            self.select_column_adapter(adapter_title)
+        if add_col_names:
+            self.add_columns(add_col_names)
+        if remove_col_names:
+            self.remove_columns(remove_col_names)
         self.close_edit_columns()
+        self.wait_for_spinner_to_end()
+        self.wait_for_table_to_load()
+
+    def add_columns(self, col_names, adapter_title: str = None):
+        if adapter_title:
+            self.select_column_adapter(adapter_title)
+        for col_name in col_names:
+            self.select_column_available(col_name)
+        self.click_button('Add >>')
+
+    def remove_columns(self, col_names, adapter_title: str = None):
+        if adapter_title:
+            self.select_column_adapter(adapter_title)
+        for col_name in col_names:
+            self.select_column_displayed(col_name)
+        self.click_button('<< Remove')
+
+    def select_column_available(self, col_title):
+        self.select_column('stock', col_title)
+
+    def select_column_displayed(self, col_title):
+        self.select_column('view', col_title)
+
+    def select_column(self, col_type, col_title):
+        self.fill_text_field_by_css_selector(f'.{col_type} .x-search-input .input-value', col_title)
+        self.driver.find_element_by_xpath(
+            self.EDIT_COLUMNS_SELECT_XPATH.format(list_type=col_type, col_title=col_title)).click()
 
     def is_query_error(self, text=None):
         if not text:
@@ -616,12 +639,12 @@ class EntitiesPage(Page):
 
         self.save_query(query_name)
 
-    def customize_view_and_save(self, query_name, page_size, sort_field, toggle_columns, query_filter):
+    def customize_view_and_save(self, query_name, page_size, sort_field, add_columns, remove_columns, query_filter):
         self.select_page_size(page_size)
         self.wait_for_table_to_load()
         self.click_sort_column(sort_field)
         self.wait_for_table_to_load()
-        self.edit_columns(toggle_columns)
+        self.edit_columns(add_columns, remove_columns)
         self.wait_for_table_to_load()
         self.run_filter_and_save(query_name, query_filter)
 

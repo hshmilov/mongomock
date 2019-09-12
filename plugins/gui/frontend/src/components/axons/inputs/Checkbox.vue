@@ -1,25 +1,30 @@
 <template>
   <div
     class="x-checkbox"
-    :class="{'x-checked': isChecked, disabled: readOnly}"
-    @click.stop="$refs.checkbox.click()"
-    @keyup.enter.stop="$refs.checkbox.click()"
+    :class="{
+      checked,
+      disabled: readOnly
+    }"
+    @click.stop="clickCheckbox"
+    @keyup.enter.stop="clickCheckbox"
   >
     <div
-      class="x-checkbox-container"
-      :class="{'x-checkbox-indeterminate': indeterminate}"
+      class="container"
+      :class="{ indeterminate }"
     >
       <input
         ref="checkbox"
-        v-model="isChecked"
+        v-model="checked"
         type="checkbox"
         :disabled="readOnly"
       >
     </div>
-    <label
-      v-if="label"
-      class="x-checkbox-label"
-    >{{ label }}</label>
+    <slot>
+      <label
+        v-if="label"
+        class="label"
+      >{{ label }}</label>
+    </slot>
   </div>
 </template>
 
@@ -53,7 +58,7 @@
       }
     },
     computed: {
-      isChecked: {
+      checked: {
         get () {
           if (Array.isArray(this.data) && !Array.isArray(this.value)) {
             return this.data.includes(this.value)
@@ -89,6 +94,9 @@
         } else {
           this.change(checked ? this.value : (Array.isArray(this.data) ? [] : null))
         }
+      },
+      clickCheckbox () {
+        this.$refs.checkbox.click()
       }
     }
   }
@@ -102,16 +110,16 @@
             cursor: default;
             opacity: 0.6;
 
-            .x-checkbox-container:hover {
+            .container:hover {
                 border-color: $grey-3;
             }
 
-            &.x-checked .x-checkbox-container:hover {
+            &.checked .container:hover {
                 border-color: $grey-5;
             }
         }
 
-        .x-checkbox-container {
+        .container {
             width: 16px;
             height: 16px;
             position: relative;
@@ -121,7 +129,7 @@
             display: inline-block;
             vertical-align: middle;
 
-            &.x-checkbox-indeterminate {
+            &.indeterminate {
                 background-color: $grey-5;
                 border-color: $grey-5;
 
@@ -162,7 +170,7 @@
             }
         }
 
-        &.x-checked .x-checkbox-container {
+        &.checked .container {
             background-color: $grey-5;
             border-color: $grey-5;
 
@@ -174,7 +182,7 @@
             }
         }
 
-        .x-checkbox-label {
+        .label {
             margin-left: 8px;
             cursor: pointer;
             vertical-align: middle;

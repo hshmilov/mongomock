@@ -104,7 +104,7 @@
   import xTable from '../../axons/tables/Table.vue'
   import xButton from '../../axons/inputs/Button.vue'
 
-  import { GET_DATA_SCHEMA_LIST } from '../../../store/getters'
+  import { GET_DATA_SCHEMA_BY_NAME } from '../../../store/getters'
   import { UPDATE_DATA_VIEW, UPDATE_DATA_VIEW_FILTER } from '../../../store/mutations'
   import { FETCH_DATA_CONTENT } from '../../../store/actions'
   import { mapState, mapGetters, mapMutations, mapActions } from 'vuex'
@@ -147,7 +147,7 @@
       },
       filterable: {
         type: Boolean,
-        default: true
+        default: false
       },
       onClickRow: {
         type: Function,
@@ -178,7 +178,7 @@
         }
       }),
       ...mapGetters({
-        getFieldSchemaList: GET_DATA_SCHEMA_LIST
+        getFieldSchemaByName: GET_DATA_SCHEMA_BY_NAME
       }),
       tableTitle () {
         if (this.title) return this.title
@@ -199,11 +199,18 @@
       view () {
         return this.moduleState.view
       },
+      schemaFieldsByName () {
+        return this.getFieldSchemaByName(this.module)
+      },
       viewFields () {
         if (!this.view.fields) {
           return this.staticFields || []
         }
-        return this.getFieldSchemaList(this.module).filter(field => this.view.fields.includes(field.name))
+        let schemaFieldsByName = this.schemaFieldsByName
+        if (!schemaFieldsByName || !Object.keys(schemaFieldsByName).length) {
+          return []
+        }
+        return this.view.fields.map(fieldName => schemaFieldsByName[fieldName]).filter(field => field)
       },
       viewFieldsPaths () {
         return this.viewFields.map(field => {

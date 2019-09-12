@@ -11,6 +11,7 @@
       :module="module"
       id-field="internal_axon_id"
       :expandable="true"
+      :filterable="true"
       :on-click-row="configEntity"
       @input="updateSelection"
       @data="onTableData"

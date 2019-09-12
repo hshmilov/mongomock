@@ -21,7 +21,6 @@ class AdaptersPage(EntitiesPage):
     TABLE_ROW_CLASS = 'table-row'
     TABLE_CLASS = '.table'
     TEST_CONNECTIVITY = 'Test Reachability'
-    DEVICE_CHECKBOX = 'div.x-checkbox-container'
     RT_CHECKBOX_CSS = '[for=realtime_adapter]+div'
     ADVANCED_SETTINGS_SAVE_BUTTON_CSS = '.configuration>.x-button'
 
@@ -114,7 +113,7 @@ class AdaptersPage(EntitiesPage):
         self.click_ok_button()
 
     def select_all_servers(self):
-        self.driver.find_element_by_css_selector(self.DEVICE_CHECKBOX).click()
+        self.driver.find_element_by_css_selector(self.CHECKBOX_CSS).click()
 
     def wait_for_server_green(self):
         self.wait_for_element_present_by_id(self.SERVER_GREEN_COLOR_ID)

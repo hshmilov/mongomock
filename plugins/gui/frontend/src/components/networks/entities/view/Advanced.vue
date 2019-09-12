@@ -12,7 +12,6 @@
       :module="stateLocation"
       :static-fields="fields"
       :static-data="filteredData"
-      :filterable="false"
     >
       <template slot="actions">
         <x-button
@@ -222,7 +221,7 @@
       }
     },
     mounted () {
-      if (!this.sort.field) {
+      if (!this.sort.field && this.fields.length) {
         this.updateView({
           module: this.stateLocation,
           view: {

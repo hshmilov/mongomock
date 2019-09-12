@@ -82,9 +82,9 @@ class EnforcementsPage(EntitiesPage):
     SELECT_VIEW_ENTITY_CSS = '.base-query .x-select-symbol .x-select-trigger'
     SELECT_VIEW_NAME_CSS = '.base-query .query-name .x-select-trigger'
     SELECT_SAVED_VIEW_TEXT_CSS = 'div.trigger-text'
-    ENFORCEMENTS_CHECKBOX = 'div.x-checkbox-container'
+    ENFORCEMENTS_CHECKBOX = '.x-checkbox .container'
     TRIGGER_SECTION_CHECKBOX_XPATH = '//div[@class=\'header\' and child::*[@class=\'title\' and ' \
-                                     'text()=\'{section_name}\']]//div[@class=\'x-checkbox-container\']'
+                                     'text()=\'{section_name}\']]//div[@class=\'container\']'
     ABOVE_INPUT_CSS = '.config .config-item .above'
     BELOW_INPUT_CSS = '.config .config-item .below'
     EDIT_ENFORCEMENT_XPATH = '//div[@title=\'{enforcement_name}\']'
@@ -532,7 +532,7 @@ class EnforcementsPage(EntitiesPage):
 
     def is_trigger_selected(self, trigger):
         element = self.find_checkbox_container_by_label(trigger)
-        return element.get_attribute('class') == 'x-checkbox grid-span2 x-checked'
+        return element.get_attribute('class') == 'x-checkbox grid-span2 checked'
 
     def find_checkbox_container_by_label(self, label_text):
         return self.driver.find_element_by_xpath(self.DIV_BY_LABEL_TEMPLATE.format(label_text=label_text))

@@ -26,12 +26,12 @@ class TestSavedQuery(TestBase):
         self.devices_page.build_query_active_directory()
         assert not self.devices_page.is_query_save_disabled()
         # Remove host name field
-        self.devices_page.edit_columns([self.devices_page.FIELD_HOSTNAME_TITLE])
+        self.devices_page.edit_columns(remove_col_names=[self.devices_page.FIELD_TAGS])
         assert not self.devices_page.is_query_save_disabled()
         self.devices_page.fill_enter_table_search('')
         assert not self.devices_page.is_query_save_disabled()
         # Add host name field
-        self.devices_page.edit_columns([self.devices_page.FIELD_HOSTNAME_TITLE])
+        self.devices_page.edit_columns(add_col_names=[self.devices_page.FIELD_TAGS])
         assert self.devices_page.is_query_save_disabled()
         # Sort host name field
         self.devices_page.click_sort_column(self.devices_page.FIELD_HOSTNAME_TITLE)
@@ -83,7 +83,7 @@ class TestSavedQuery(TestBase):
         self.devices_page.save_query_as(self.CUSTOM_QUERY_SAVE_NAME_2)
         assert self.devices_page.find_query_status_text() == ''
         assert self.devices_page.find_query_title_text() == self.CUSTOM_QUERY_SAVE_NAME_2
-        self.devices_page.edit_columns([self.devices_page.FIELD_HOSTNAME_TITLE])
+        self.devices_page.edit_columns(remove_col_names=[self.devices_page.FIELD_HOSTNAME_TITLE])
         assert self.devices_page.FIELD_HOSTNAME_TITLE not in self.devices_page.get_columns_header_text()
         assert self.devices_page.find_query_status_text() == self.EDITED_QUERY_STATUS
         self.devices_page.save_existing_query()

@@ -66,7 +66,7 @@ BUTTON_DEFAULT_CLASS = 'x-button'
 BUTTON_TYPE_A = 'a'
 PAGE_BODY = '.x-page > .body'
 TAB_BODY = '.x-tabs > .body'
-TOGGLE_CHECKED_CLASS = 'x-checkbox x-checked'
+TOGGLE_CHECKED_CLASS = 'x-checkbox checked'
 TOASTER_BY_TEXT_XPATH = '//div[@class=\'x-toast\']//div[@class=\'content\' and text()=\'{toast_text}\']'
 TABLE_SPINNER_NOT_DISPLAYED_XPATH = '//div[@class=\'v-spinner\' and @style=\'display: none;\']'
 RETRY_WAIT_FOR_ELEMENT = 150
@@ -80,7 +80,7 @@ class Page:
     CHECKBOX_WITH_LABEL_XPATH = '//div[contains(@class, \'x-checkbox\') and child::label[text()=\'{label_text}\']]'
     CHECKBOX_WITH_SIBLING_LABEL_XPATH = '//div[contains(@class, \'x-checkbox\') and ' \
                                         'preceding-sibling::label[text()=\'{label_text}\']]'
-    CHECKBOX_CSS = 'div.x-checkbox-container'
+    CHECKBOX_CSS = '.x-checkbox .container'
     DIV_BY_LABEL_TEMPLATE = '//div[child::label[text()=\'{label_text}\']]'
     DROPDOWN_OVERLAY_CSS = '.x-dropdown-bg'
     MODAL_OVERLAY_CSS = '.modal-overlay'

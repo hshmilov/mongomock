@@ -297,7 +297,7 @@ class ReportGenerator:
 
     def _render_chart_content(self, chart_data, custom_chart):
         if custom_chart['view'] == ChartViews.histogram.name:
-            return self._create_query_histogram(custom_chart['data'])
+            return self._create_query_histogram(custom_chart['data'], custom_chart['count'])
         if custom_chart['view'] == ChartViews.pie.name:
             return self._create_pie_chart(chart_data, custom_chart)
         if custom_chart['view'] == ChartViews.summary.name:
@@ -345,10 +345,10 @@ class ReportGenerator:
             'unique': discovery_data['unique']
         })
 
-    def _create_query_histogram(self, queries_data):
-        return self._create_histogram(queries_data, 6, True)
+    def _create_query_histogram(self, queries_data, data_count):
+        return self._create_histogram(queries_data, 6, True, data_count)
 
-    def _create_histogram(self, data, limit, textual=False):
+    def _create_histogram(self, data, limit, textual=False, data_count=None):
         """
         Create a bar for each item of given data, with width according to its count and relative to the largest data.
         Combine create bars to a histogram, with remainder indicating amount of bars not shown due to limit.
@@ -379,9 +379,11 @@ class ReportGenerator:
             bars.append(self.templates['histogram_bar'].render(parameters))
         if not bars:
             return ''
+        if not data_count:
+            data_count = len(data)
         return self.templates['histogram'].render(
             {'content': '\n'.join(bars),
-             'remainder': f'Top {limit} of {len(data)}' if len(data) > limit else ''})
+             'remainder': f'Top {limit} of {data_count}' if len(data) > limit else ''})
 
     def _create_query_pie(self, queries_data):
         """

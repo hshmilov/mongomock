@@ -76,12 +76,13 @@ class TestUsersTable(TestEntitiesTable):
         self.settings_page.switch_to_page()
         self.base_page.run_discovery()
         self.users_page.switch_to_page()
-        self.users_page.edit_columns([self.MAIL_COLUMN, self.DOMAIN_COLUMN])
+        self.users_page.edit_columns(add_col_names=[self.MAIL_COLUMN], remove_col_names=[self.DOMAIN_COLUMN])
         assert len(self.users_page.get_column_data(self.MAIL_COLUMN))
         with pytest.raises(ValueError):
             # The coloumn is expected to be gone, therefore this throws an exception
             self.users_page.get_column_data(self.DOMAIN_COLUMN)
-        self.users_page.edit_columns_of_adapter([self.MAIL_COLUMN, self.ACCOUNT_LOCKOUT_COLUMN], AD_ADAPTER_NAME)
+        self.users_page.edit_columns(add_col_names=[self.MAIL_COLUMN, self.ACCOUNT_LOCKOUT_COLUMN],
+                                     adapter_title=AD_ADAPTER_NAME)
 
     def test_user_save_query(self):
         self.settings_page.switch_to_page()
@@ -90,7 +91,7 @@ class TestUsersTable(TestEntitiesTable):
         self.users_page.wait_for_table_to_load()
 
         self.users_page.customize_view_and_save('test_save_query', 50, self.USER_NAME_COLUMN,
-                                                [self.MAIL_COLUMN, self.DOMAIN_COLUMN],
+                                                [self.MAIL_COLUMN], [self.DOMAIN_COLUMN],
                                                 self.users_page.JSON_ADAPTER_FILTER)
         view_data = self.users_page.get_all_data_proper()
 
@@ -192,9 +193,8 @@ class TestUsersTable(TestEntitiesTable):
             self.users_page.switch_to_page()
             self.users_page.query_user_name_contains('Administrator')
             self.users_page.open_edit_columns()
-            self.users_page.select_column_name(self.ACCOUNT_DISABLED_COLUMN)
-            self.users_page.select_column_adapter(AD_ADAPTER_NAME)
-            self.users_page.select_column_name(self.ACCOUNT_DISABLED_COLUMN)
+            self.users_page.add_columns([self.ACCOUNT_DISABLED_COLUMN])
+            self.users_page.add_columns([self.ACCOUNT_DISABLED_COLUMN], AD_ADAPTER_NAME)
             self.users_page.close_edit_columns()
             self.users_page.wait_for_table_to_load()
             assert self.users_page.get_column_data_count_false(self.ACCOUNT_DISABLED_COLUMN)[0] == 1

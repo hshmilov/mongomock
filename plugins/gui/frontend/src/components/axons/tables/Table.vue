@@ -119,7 +119,7 @@
       },
       filterable: {
         type: Boolean,
-        default: true
+        default: false
       },
       onClickRow: {
         type: Function,
@@ -181,7 +181,7 @@
       filterCol (fieldName, filter) {
         this.$emit('filter', {
           ...this.colFilters,
-          [fieldName]: filter.toLowerCase()
+          [fieldName]: filter.toLowerCase() || undefined
         })
       },
       getFilter(fieldName) {

@@ -40,3 +40,15 @@ export const getExcludedAdaptersFilter = (fieldType, field, filteredAdapters, co
     }
     return `specific_data == match([plugin_name not in [\'${excludedAdapters}\'] and ${condition}])`
 }
+
+export const getTypeFromField = (fieldName) => {
+    /*
+    Parse a field path to extract the prefix that indicates which Adapter it is from.
+    If no such prefix, return the general field type
+     */
+    let fieldSpaceMatch = /adapters_data\.(\w+)\./.exec(fieldName)
+    if (fieldSpaceMatch && fieldSpaceMatch.length > 1) {
+        return fieldSpaceMatch[1]
+    }
+    return 'axonius'
+}

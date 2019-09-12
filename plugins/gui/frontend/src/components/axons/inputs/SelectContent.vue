@@ -5,7 +5,7 @@
     @keydown.down="incActiveOption"
     @keydown.up="decActiveOption"
     @keyup.enter="selectActive"
-    @keyup.esc="closeDropdown"
+    @keyup.esc="this.$emit('close')"
   >
     <x-search-input
       v-if="searchable"
@@ -202,9 +202,6 @@
                     this.$emit('input', selectedValues)
                 }
 
-            },
-            closeDropdown() {
-                this.$refs.dropdown.close()
             },
             incActiveOption() {
                 this.focusOptions()

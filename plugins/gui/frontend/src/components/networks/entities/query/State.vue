@@ -76,6 +76,7 @@
   import xHistoricalDate from '../../../neurons/inputs/HistoricalDate.vue'
   import xSaveModal from './SaveModal.vue'
   import {defaultFields} from '../../../../constants/entities'
+  import _isEqual from 'lodash/isEqual'
 
   import {mapState, mapMutations, mapActions} from 'vuex'
   import {UPDATE_DATA_VIEW} from '../../../../store/mutations'
@@ -153,17 +154,17 @@
       },
       isDefaultView () {
         return this.view.query.filter === ''
-                && this.arraysEqual(this.view.fields, defaultFields[this.module])
+                && _isEqual(this.view.fields, defaultFields[this.module])
                 && this.view.sort.field === ''
                 && (!Object.keys(this.view.colFilters).length || !Object.values(this.view.colFilters).find(val => val))
       },
       isEdited () {
         return this.selectedView && this.selectedView.view &&
                 (this.selectedView.view.query.filter !== this.view.query.filter
-                || !this.arraysEqual(this.view.fields, this.selectedView.view.fields)
+                || !_isEqual(this.view.fields, this.selectedView.view.fields)
                 || this.view.sort.field !== this.selectedView.view.sort.field
                 || this.view.sort.desc !== this.selectedView.view.sort.desc
-                || !this.objsEqual(this.view.colFilters, this.selectedView.view.colFilters))
+                || !this.objsValuesMatch(this.view.colFilters, this.selectedView.view.colFilters))
       },
       status () {
         if (this.enforcement) return ''
@@ -227,15 +228,17 @@
         })
         this.$emit('done')
       },
-      arraysEqual (arrA, arrB) {
-        return !arrA.filter(x => !arrB.includes(x)).length && !arrB.filter(x => !arrA.includes(x)).length
+      objContained (superset, subset) {
+        return Object.entries(subset).every(([key, value]) => _isEqual(superset[key], value))
       },
-      objsEqual (objA, objB) {
-        if (!objA || !objB) {
-          return true
-        }
-        return this.arraysEqual(Object.keys(objA), Object.keys(objB))
-                && this.arraysEqual(Object.values(objA), Object.values(objB))
+      objsValuesMatch (objA, objB) {
+        /*
+        This is checking that any key in objA has the same value as the key in objB
+        (including undefined - if it is undefined in one and non existent in the other, it passes)
+         */
+        objA = objA || {}
+        objB = objB || {}
+        return this.objContained(objA, objB) && this.objContained(objB, objA)
       }
     }
   }

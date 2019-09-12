@@ -1,19 +1,36 @@
 <template>
-    <div class="x-title" :class="{disabled}">
-        <img :src="require(`Logos/${logo}.png`)" height="24" class="md-image">
-        <div class="text"><slot /></div>
-        <slot name="actions" />
-    </div>
+  <div
+    class="x-title"
+    :class="{disabled}"
+  >
+    <img
+      :src="require(`Logos/${logo}.png`)"
+      :height="height"
+      class="md-image"
+    >
+    <div class="text"><slot /></div>
+    <slot name="actions" />
+  </div>
 </template>
 
 <script>
-    export default {
-        name: 'x-title',
-        props: {
-            logo: String,
-            disabled: Boolean
-        }
+  export default {
+    name: 'XTitle',
+    props: {
+      logo: {
+        type: String,
+        required: true
+      },
+      disabled: {
+        type: Boolean,
+        default: false
+      },
+      height: {
+        type: Number,
+        default: 24
+      }
     }
+  }
 </script>
 
 <style lang="scss">
@@ -27,10 +44,12 @@
             overflow: hidden;
             text-overflow: ellipsis;
         }
+
         &.disabled {
             .md-image {
                 opacity: 0.6;
             }
+
             .text {
                 color: $grey-3;
             }

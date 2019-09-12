@@ -1,32 +1,134 @@
 <template>
-    <div class="x-checkbox-list">
-        <x-checkbox v-for="item in items" :key="item.name" :value="item.name" :label="item.title"
-                    :data="value" @change="$emit('input', $event)"/>
-    </div>
+  <div class="x-checkbox-list">
+    <component
+      :is="listWrapperType"
+      v-model="orderedItems"
+      ghost-class="ghost"
+      class="list"
+      :class="{ draggable }"
+      @start="onStartDrag"
+      @end="onEndDrag"
+    >
+      <div
+        v-for="item in items"
+        :key="item.name"
+        class="list__item"
+        :class="{ dragging }"
+      >
+        <md-icon md-src="src/assets/icons/action/drag.svg"></md-icon>
+        <x-checkbox
+          :value="item.name"
+          :label="item.title"
+          :data="value"
+          @change="onChangeCheckbox"
+        >
+          <slot :item="item" />
+        </x-checkbox>
+
+      </div>
+    </component>
+  </div>
 </template>
 
 <script>
-    import xCheckbox from '../../axons/inputs/Checkbox.vue'
+  import draggable from 'vuedraggable'
+  import xCheckbox from '../../axons/inputs/Checkbox.vue'
 
-    export default {
-        name: 'x-checkbox-list',
-        components: {xCheckbox},
-        props: {items: {required: true}, value: {}}
+  export default {
+    name: 'XCheckboxList',
+    components: {
+      draggable, xCheckbox
+    },
+    props: {
+      items: {
+        type: Array,
+        required: true
+      },
+      value: {
+        type: Array,
+        default: () => []
+      },
+      draggable: {
+        type: Boolean,
+        default: false
+      }
+    },
+    data () {
+      return {
+        dragging: false
+      }
+    },
+    computed: {
+      listWrapperType () {
+        return this.draggable? 'draggable' : 'div'
+      },
+      orderedItems: {
+        get () {
+          return this.items
+        },
+        set (newItems) {
+          this.$emit('change', newItems)
+        }
+      }
+    },
+    methods: {
+      onChangeCheckbox (checked) {
+        this.$emit('input', checked)
+      },
+      onStartDrag () {
+        this.dragging = true
+      },
+      onEndDrag () {
+        this.dragging = false
+      }
     }
+  }
 </script>
 
 <style lang="scss">
     .x-checkbox-list {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        margin-top: 16px;
-        font-size: 12px;
-        color: $theme-black;
-        max-height: 360px;
-        overflow: auto;
+        margin-top: 8px;
+        .list {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            font-size: 12px;
+            color: $theme-black;
+            max-height: 360px;
+            overflow: auto;
 
-        .x-checkbox {
-            line-height: 24px;
+            &__item {
+                background: $theme-white;
+                display: flex;
+
+                .md-icon {
+                  visibility: hidden;
+                    font-size: 24px !important;
+                    fill: $grey-3;
+                    min-width: 16px;
+                    width: 16px;
+                    margin: 0 -8px 0 -4px;
+                }
+
+
+                .x-checkbox {
+                    margin-left: -4px;
+                }
+            }
+
+            &.draggable {
+              .list__item:not(.dragging):hover {
+                border: 1px solid $grey-2;
+
+                .md-icon {
+                  visibility: visible;
+                }
+              }
+
+              .ghost {
+                  border: 1px solid rgba($theme-blue, 0.4);
+              }
+            }
+
         }
     }
 </style>

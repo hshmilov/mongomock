@@ -19,6 +19,7 @@ class TestDevicesTable(TestEntitiesTable):
         self.devices_page.wait_for_table_to_load()
 
         self.devices_page.customize_view_and_save('test_save_query', 50, self.devices_page.FIELD_HOSTNAME_TITLE,
+                                                  [],
                                                   [self.devices_page.FIELD_LAST_SEEN, self.devices_page.FIELD_OS_TYPE],
                                                   self.devices_page.JSON_ADAPTER_FILTER)
         view_data = self.devices_page.get_all_data()

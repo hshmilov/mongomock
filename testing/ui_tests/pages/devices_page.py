@@ -52,9 +52,9 @@ class DevicesPage(EntitiesPage):
     VALUE_SAVED_QUERY_WINDOWS = 'Windows Operating System'
     VALUE_SAVED_QUERY_LINUX = 'Linux Operating System'
     VALUE_OS_WINDOWS = 'Windows'
-    TAG_CHECKBOX_CSS = 'div.modal-container.w-xl > div.modal-body > div > div.x-checkbox-list > div > div'
-    TAG_SAVE_BUTTON_CSS = 'div.modal-container.w-xl > div.modal-footer > div > button:nth-child(2)'
-    LABELS_TEXTBOX_CSS = 'div.modal-body > div > div.x-search-input > input'
+    TAG_MODAL_CSS = '.x-tag-modal'
+    TAG_CHECKBOX_CSS = f'{TAG_MODAL_CSS} .x-checkbox-list .x-checkbox'
+    TAGS_TEXTBOX_CSS = f'{TAG_MODAL_CSS} .x-search-input .input-value'
     TAGGING_X_DEVICE_MESSAGE = 'Tagged {number} devices!'
     MULTI_LINE_CSS = 'div.x-data-table.multiline'
     FILTER_HOSTNAME = 'specific_data.data.hostname == regex("{filter_value}", "i")'
@@ -71,7 +71,7 @@ class DevicesPage(EntitiesPage):
         return 'li#devices.x-nav-item'
 
     def click_tag_save_button(self):
-        self.driver.find_element_by_css_selector(self.TAG_SAVE_BUTTON_CSS).click()
+        self.click_button(self.SAVE_BUTTON, context=self.driver.find_element_by_css_selector(self.TAG_MODAL_CSS))
 
     def check_if_table_is_multi_line(self):
         self.wait_for_element_present_by_css(self.MULTI_LINE_CSS)
@@ -109,7 +109,7 @@ class DevicesPage(EntitiesPage):
         self.create_save_tag(tag_text, number)
 
     def create_save_tag(self, tag_text, number=1):
-        self.fill_text_field_by_css_selector(self.LABELS_TEXTBOX_CSS, tag_text)
+        self.fill_text_field_by_css_selector(self.TAGS_TEXTBOX_CSS, tag_text)
         self.wait_for_element_present_by_css(self.TAG_CHECKBOX_CSS).click()
         self.click_tag_save_button()
         self.wait_for_success_tagging_message(number)

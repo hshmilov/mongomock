@@ -23,6 +23,7 @@
 <script>
   import xSelectSymbol from './SelectSymbol.vue'
   import xSelect from '../../axons/inputs/Select.vue'
+  import { getTypeFromField } from '../../../constants/utils'
 
   export default {
     name: 'XSelectTypedField',
@@ -103,12 +104,7 @@
     },
     methods: {
       updateFieldType () {
-        let fieldSpaceMatch = /adapters_data\.(\w+)\./.exec(this.value)
-        if (fieldSpaceMatch && fieldSpaceMatch.length > 1) {
-          this.fieldType = fieldSpaceMatch[1]
-        } else {
-          this.fieldType = 'axonius'
-        }
+        this.fieldType = getTypeFromField(this.value)
       },
       updateAutoField (value) {
         let secondaryValues = null

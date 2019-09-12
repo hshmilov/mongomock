@@ -17,7 +17,6 @@ class SettingsPage(Page):
     MANAGE_USERS_CSS = 'li#user-settings-tab'
     FEATURE_FLAGS_CSS = 'li#feature-flags-tab'
     ABOUT_CSS = 'li#about-settings-tab'
-    SEND_EMAILS_CHECKBOX_CSS = 'div.x-checkbox-container'
     SEND_EMAILS_LABEL = 'Send emails'
     GLOBAL_SSL_LABEL = 'Override default SSL settings'
     REMOTE_SUPPORT_LABEL_OLD = 'Remote Support - Warning: turning off this feature prevents Axonius from' \

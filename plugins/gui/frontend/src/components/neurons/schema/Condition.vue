@@ -220,6 +220,9 @@
     },
     watch: {
       field () {
+        if (!Object.keys(this.opsMap).includes(this.compOp)) {
+          this.compOp = ''
+        }
         if (this.field.endsWith('.id')) {
           this.compOp = 'exists'
         }

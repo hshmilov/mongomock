@@ -123,6 +123,9 @@
         this.closeDropdown()
       },
       closeDropdown () {
+        if (!this.$refs.dropdown) {
+          return
+        }
         this.$refs.dropdown.close()
       }
     },
