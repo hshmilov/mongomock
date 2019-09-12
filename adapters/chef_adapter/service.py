@@ -1,5 +1,6 @@
 import datetime
 import logging
+from copy import copy
 
 import pytz
 
@@ -36,6 +37,7 @@ class ChefAdapter(AdapterBase):
         environment = Field(str, "Chef environment")
         instance_id = Field(str, "AWS instance ID")
         chef_tags = ListField(str, 'Chef tags')
+        runlist = ListField(str, 'Run list')
 
     def __init__(self):
         super().__init__(get_local_config_file(__file__))
@@ -111,6 +113,7 @@ class ChefAdapter(AdapterBase):
                 device.name = device_raw['name']  # exception is thrown and logged if we don't have an id
                 device.id = device.name
                 device.environment = device_raw.get('chef_environment')
+                device.runlist = device_raw.get('run_list', [])
                 device_raw_automatic = device_raw.get('automatic', {})
                 device_raw_normal = device_raw.get('normal', {})
                 device.figure_os(
@@ -145,7 +148,7 @@ class ChefAdapter(AdapterBase):
                             pytz.timezone(device.time_zone).localize(device.last_seen).astimezone(pytz.UTC)
                         )
                 except Exception as e:
-                    logger.warning(f'Error adjusting timezone {e}')
+                    logger.warning(f'Error adjusting timezone for {device.name} {e}')
                 # domain assign won't work for cloud clients (but hostname will contain the domain)
                 device.domain = device_raw_automatic.get('domain')
                 try:
@@ -269,13 +272,27 @@ class ChefAdapter(AdapterBase):
 
                 axonius_features = device_raw_automatic.get('axonius_features', {})
                 if axonius_features:
-                    features = axonius_features.get('data', {})
-                    raw = {'axonius_features': features}
-                    device.set_raw(raw)
-
+                    features = axonius_features.get('data', {}) or {}
                     for k, v in features.items():
                         v = 'not-set' if not v else v
                         device.set_dynamic_field(f'axonius_feature_{k}', str(v))
+
+                    raw_copy = copy(device_raw)
+                    raw_copy['normal'] = {}  # can contain sensitive data
+                    raw_copy['default'] = {}  # can contain sensitive data
+
+                    automatic = raw_copy.get('automatic', {}) or {}  # remove long sections
+                    automatic['dmi'] = {}
+                    automatic['packages'] = {}
+                    automatic['filesystem'] = {}
+
+                    net = automatic.get('network')
+                    net['interfaces'] = {}
+
+                    counters = automatic.get('counters', {}) or {}
+                    counters['network'] = {}
+
+                    device.set_raw(raw_copy)  # store selected data for axonius node
 
                 yield device
             except Exception:
