@@ -3747,6 +3747,9 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
                 del config['entity']
         try:
             dashboard['data'] = handler_by_metric[dashboard_metric](ChartViews[dashboard['view']], **config)
+            if dashboard['data'] is None:
+                dashboard['data'] = []
+                logger.error(f'Problematic queries in dashboard {dashboard}')
         except Exception:
             dashboard['data'] = []
             logger.exception(f'Problem handling dashboard {dashboard}')
@@ -3930,6 +3933,8 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         base_queries = []
         if base:
             base_view = self._find_filter_by_name(entity, base)
+            if not base_view or not base_view.get('query'):
+                return None
             base_queries = [parse_filter(base_view['query']['filter'])]
 
         if for_date:
@@ -3946,6 +3951,8 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
                      'view': {**base_view, 'query': {'filter': base_view['query']['filter']}}, 'module': entity.value}]
 
         child1_view = self._find_filter_by_name(entity, intersecting[0])
+        if not child1_view or not child1_view.get('query'):
+            return None
         child1_filter = child1_view['query']['filter']
         child1_query = parse_filter(child1_filter)
         base_filter = f'({base_view["query"]["filter"]}) and ' if base_view['query']['filter'] else ''
@@ -3959,6 +3966,8 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
                          }) / total})
         else:
             child2_view = self._find_filter_by_name(entity, intersecting[1])
+            if not child2_view or not child2_view.get('query'):
+                return None
             child2_filter = child2_view['query']['filter']
             child2_query = parse_filter(child2_filter)
 
@@ -4018,6 +4027,8 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         base_queries = []
         if view:
             base_view = self._find_filter_by_name(entity, view)
+            if not base_view or not base_view.get('query'):
+                return None
             base_queries.append(parse_filter(base_view['query']['filter']))
         if for_date:
             # If history requested, fetch from appropriate historical db
@@ -4212,6 +4223,8 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         }
         if view:
             base_view = self._find_filter_by_name(entity, view)
+            if not base_view or not base_view.get('query'):
+                return None
             base_query = {
                 '$and': [
                     parse_filter(base_view['query']['filter']),
@@ -4338,6 +4351,8 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
                 continue
             entity = EntityType(view['entity'])
             base_view = self._find_filter_by_name(entity, view['name'])
+            if not base_view or not base_view.get('query'):
+                return None
             yield {
                 'title': view['name'],
                 'points': self._fetch_timeline_points(entity, parse_filter(base_view['query']['filter']), date_ranges)
@@ -4346,14 +4361,17 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
     def _intersect_timeline_lines(self, views, date_ranges):
         if len(views) != 2 or not views[0].get('name'):
             logger.error(f'Unexpected number of views for performing intersection {len(views)}')
-            return
+            return []
         first_entity_type = EntityType(views[0]['entity'])
         second_entity_type = EntityType(views[1]['entity'])
 
         # first query handling
         base_query = {}
         if views[0].get('name'):
-            base_query = parse_filter(self._find_filter_by_name(first_entity_type, views[0]['name'])['query']['filter'])
+            base_view = self._find_filter_by_name(first_entity_type, views[0]['name'])['query']['filter']
+            if not base_view or not base_view.get('query'):
+                return []
+            base_query = parse_filter(base_view)
         yield {
             'title': views[0]['name'],
             'points': self._fetch_timeline_points(first_entity_type, base_query, date_ranges)
@@ -4361,6 +4379,8 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
 
         # second query handling
         intersecting_view = self._find_filter_by_name(second_entity_type, views[1]['name'])
+        if not intersecting_view or not intersecting_view.get('query'):
+            return []
         intersecting_query = parse_filter(intersecting_view['query']['filter'])
         if base_query:
             intersecting_query = {
