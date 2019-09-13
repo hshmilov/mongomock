@@ -26,6 +26,8 @@ class TestStopDiscovery(TestBase):
         # Add AD clients.
         self.adapters_page.add_server(ad_client1_details)
         self.adapters_page.add_server(ad_client2_details)
+        self.adapters_page.wait_for_toaster(self.adapters_page.DATA_COLLECTION_TOASTER)
+        self.adapters_page.wait_for_data_collection_toaster_absent()
 
         # Wait for discovery to start.
         self.base_page.run_discovery(wait=False)

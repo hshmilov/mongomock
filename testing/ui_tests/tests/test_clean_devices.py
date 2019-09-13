@@ -1,4 +1,5 @@
 import copy
+import time
 import datetime
 
 from test_credentials.test_ad_credentials import ad_client1_details
@@ -52,16 +53,22 @@ class TestCleanDB(AdapterTestBase):
             self.adapters_page.wait_for_problem_connecting_try_again()
             self.adapters_page.wait_for_server_red()
             self.adapters_page.wait_for_data_collection_failed_toaster_absent()
-            self.dashboard_page.switch_to_page()
             update_result = self.axonius_system.get_devices_db().update_many(
                 {'adapters.plugin_name': 'active_directory_adapter'},
                 {'$set': {'adapters.$.data.last_seen': datetime.datetime.now() - datetime.timedelta(hours=24)}})
             assert update_result.modified_count > 0
+            self.dashboard_page.switch_to_page()
+            self.dashboard_page.refresh()
+            self.dashboard_page.wait_for_spinner_to_end()
+            time.sleep(10)
             self.base_page.run_discovery()
             assert initial_count == self._get_ad_device_count()
             self._set_last_seen(1)
             # === Step 5 === #
             self.dashboard_page.switch_to_page()
+            self.dashboard_page.refresh()
+            self.dashboard_page.wait_for_spinner_to_end()
+            time.sleep(10)
             self.base_page.run_discovery()
             count = self._get_ad_device_count()
             assert self._get_ad_device_count() == 0
@@ -78,6 +85,9 @@ class TestCleanDB(AdapterTestBase):
             self.adapters_page.wait_for_server_green()
             self._set_last_seen('')
             self.dashboard_page.switch_to_page()
+            self.dashboard_page.refresh()
+            self.dashboard_page.wait_for_spinner_to_end()
+            time.sleep(10)
             self.base_page.run_discovery()
 
     def _set_last_seen(self, value):

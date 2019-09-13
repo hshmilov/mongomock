@@ -86,6 +86,8 @@ class EntitiesPage(Page):
     TABLE_ACTIONS_DELETE_CSS = 'div.content.w-sm > div > div:nth-child(2) > div.item-content'
     TABLE_ACTIONS_ENFORCE_CSS = 'div.content.w-sm > div > div:nth-child(5) > div.item-content'
     TABLE_ACTION_ITEM_XPATH = '//div[@class=\'actions\']//div[@class=\'item-content\' and text()=\'{action}\']'
+    TABLE_FIRST_TABLE_ROW_CSS = 'div.details-table-container'
+
     SAVE_QUERY_ID = 'query_save'
     SAVE_QUERY_NAME_ID = 'saveName'
     SAVE_QUERY_SAVE_BUTTON_ID = 'query_save_confirm'
@@ -279,6 +281,10 @@ class EntitiesPage(Page):
         values = self.get_column_data(field_name)
         row_num = values.index(field_value)
         self.click_row_checkbox(row_num + 1)
+
+    def click_table_container_first_row(self):
+        self.driver.find_element_by_css_selector(self.TABLE_FIRST_TABLE_ROW_CSS).click()
+        self.wait_for_spinner_to_end()
 
     def find_query_search_input(self):
         return self.driver.find_element_by_css_selector(self.QUERY_SEARCH_INPUT_CSS)
@@ -840,7 +846,7 @@ class EntitiesPage(Page):
             self.fill_filter(entities_filter)
             self.enter_search()
         self.wait_for_table_to_load()
-        self.click_row()
+        self.click_table_container_first_row()
         self.wait_for_spinner_to_end()
         self.click_notes_tab()
 

@@ -1,7 +1,5 @@
 import time
 
-import pytest
-
 from devops.scripts.automate_dev import credentials_inputer
 from services.adapters.cisco_service import CiscoService
 from services.adapters.stresstest_service import StresstestService
@@ -119,7 +117,6 @@ class TestHyperlinks(TestBase):
             if clients_db:
                 clients_db.delete_many({})
 
-    @pytest.mark.skip('AX-4476')
     def test_entity_field_links(self):
         self.enforcements_page.switch_to_page()
         with CiscoService().contextmanager(take_ownership=True):
