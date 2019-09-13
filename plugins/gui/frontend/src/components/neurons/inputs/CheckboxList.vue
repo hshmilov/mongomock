@@ -88,13 +88,14 @@
 <style lang="scss">
     .x-checkbox-list {
         margin-top: 8px;
+        overflow: auto;
+        height: 360px;
+
         .list {
             display: grid;
             grid-template-columns: 1fr 1fr;
             font-size: 12px;
             color: $theme-black;
-            max-height: 360px;
-            overflow: auto;
 
             &__item {
                 background: $theme-white;

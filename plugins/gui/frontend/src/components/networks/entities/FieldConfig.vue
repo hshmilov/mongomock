@@ -37,8 +37,8 @@
           <x-button
             link
             :disabled="!viewFields.length"
-            @click="removeAll"
-          >Remove All</x-button>
+            @click="reset"
+          >Reset</x-button>
         </div>
         <div class="field-list view">
           <h4 class="field-list__title">Displayed Columns</h4>
@@ -79,6 +79,7 @@
   import xCheckboxList from '../../neurons/inputs/CheckboxList.vue'
   import xTitle from '../../axons/layout/Title.vue'
   import xButton from '../../axons/inputs/Button.vue'
+  import {defaultFields} from '../../../constants/entities'
 
   import { mapState, mapGetters, mapMutations } from 'vuex'
   import { GET_DATA_FIELDS_BY_PLUGIN, GET_DATA_SCHEMA_BY_NAME } from '../../../store/getters'
@@ -186,8 +187,8 @@
         this.viewFields = this.viewFields.filter(field => !this.select.view.includes(field))
         this.select.view = []
       },
-      removeAll () {
-        this.viewFields = []
+      reset () {
+        this.viewFields = [ ...defaultFields[this.module] ]
       },
       updateViewFields (viewFieldsSchema) {
         this.viewFields = viewFieldsSchema.map(schema => schema.name)
@@ -224,6 +225,7 @@
 
           &__filter {
             display: flex;
+            height: 32px;
 
             .x-search-input {
               width: 100%;
@@ -231,7 +233,6 @@
           }
 
           .x-checkbox-list {
-            height: 360px;
             border: 1px solid $grey-2;
             padding: 8px 0;
 
@@ -245,13 +246,12 @@
 
                 .x-title, .label {
                   margin-left: 8px;
-                  width: calc(100% - 24px);
                   white-space: nowrap;
-                  text-overflow: ellipsis;
-                  overflow: hidden;
 
                   .text {
                     margin-left: 4px;
+                    text-overflow: initial;
+                    overflow: initial;
                   }
                 }
               }
