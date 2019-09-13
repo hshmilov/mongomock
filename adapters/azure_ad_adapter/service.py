@@ -230,6 +230,13 @@ class AzureAdAdapter(AdapterBase):
             device.is_encrypted = device_raw.get('isEncrypted')
             device.user_principal_name = device_raw.get('userPrincipalName')
             device.azure_ad_id = device_raw.get('azureADDeviceId')
+            try:
+                installed_apps = device_raw.get('installed_apps') or []
+                for app in installed_apps:
+                    if app.get('displayName'):
+                        device.add_installed_software(name=app.get('displayName'), version=app.get('version'))
+            except Exception:
+                logger.exception(f'Cant parse installed apps for device {device_id}')
             device.set_raw(device_raw)
             return device
         except Exception:

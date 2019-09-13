@@ -1,8 +1,8 @@
 import logging
 from datetime import datetime, timedelta
+from typing import Dict, List
 
 import adal
-
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.exception import RESTException
 
@@ -16,6 +16,7 @@ TEMPLATE_AUTHZ_URL = 'https://login.windows.net/{tenant_id}/oauth2/authorize?res
                      '&prompt=admin_consent'
 DEFAULT_EXPIRATION_IN_SECONDS = 60 * 20     # 20 min
 MAX_PAGE_NUM_TO_AVOID_INFINITE_LOOP = 20000
+LOG_DEVICES_COUNT = 50
 USERS_ATTRIBUTES = [
     'accountEnabled',
     'city',
@@ -142,11 +143,44 @@ class AzureAdClient(RESTConnection):
             yield from result['value']
             page_num += 1
 
+    def get_installed_apps(self) -> Dict[str, List[Dict]]:
+        """
+        Get installed apps on azure Intune.
+        first request is for deviceManagement/detectedApps for getting app data
+        the next request is for deviceManagement/detectedApps/{app_id}/managedDevices
+        for getting devices that have this app installed on them.
+        so the best thing to do is save a dict containing devices ids and their installed apps.
+        :return:dict of devices and their apps, for example: devices_apps[DEVICE_ID] = [{app_data}, ..]
+        """
+        devices_apps = {}
+        try:
+            logger.info('Getting Installed Apps')
+            apps_got = 0
+            for app_raw in self._paged_get('deviceManagement/detectedApps'):
+                app_id = app_raw.get('id')
+                if not app_id:
+                    continue
+                for device_raw in self._paged_get(f'deviceManagement/detectedApps/{app_id}/managedDevices'):
+                    device_id = device_raw.get('id')
+                    if not device_id:
+                        continue
+                    devices_apps.setdefault(device_id, []).append(app_raw)
+                apps_got += 1
+                if apps_got % LOG_DEVICES_COUNT == 0:
+                    logger.info(f'Got {apps_got} installed apps')
+        except Exception:
+            logger.exception('Cant get Intune installed apps')
+        return devices_apps
+
     def get_device_list(self):
         for device_raw in self._paged_get(f'devices?$select={",".join(DEVICE_ATTRIBUTES)}'):
             yield device_raw, 'Azure AD'
         try:
+            devices_apps = self.get_installed_apps()
             for device_raw in self._paged_get(f'deviceManagement/managedDevices'):
+                dev_id = device_raw.get('id')
+                installed_apps = devices_apps.get(dev_id) if devices_apps.get(dev_id) else []
+                device_raw['installed_apps'] = installed_apps
                 yield device_raw, 'Intune'
         except Exception:
             logger.exception(f'Cant get Intune')
