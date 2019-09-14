@@ -75,6 +75,9 @@ class AggregatorService(Triggerable, PluginBase):
             db.create_index(
                 [(f'adapters.{PLUGIN_UNIQUE_NAME}', pymongo.ASCENDING), ('adapters.data.id', pymongo.ASCENDING)
                  ], unique=True, background=True)
+            db.create_index(
+                [(f'adapters.data.last_seen', pymongo.ASCENDING), ('adapters.data.id', pymongo.ASCENDING)
+                 ], background=True)
             db.create_index([('internal_axon_id', pymongo.ASCENDING)], unique=True, background=True)
 
         def historic_indexes(db):
@@ -105,8 +108,12 @@ class AggregatorService(Triggerable, PluginBase):
             db.create_index([(f'adapters.data.network_interfaces.ips_raw', pymongo.ASCENDING)], background=True)
             db.create_index([(f'adapters.data.last_used_users', pymongo.ASCENDING)], background=True)
             db.create_index([(f'adapters.data.username', pymongo.ASCENDING)], background=True)
+            db.create_index([(f'adapters.data.domain', pymongo.ASCENDING)], background=True)
             db.create_index([(f'adapters.data.installed_software.name', pymongo.ASCENDING)], background=True)
             db.create_index([(f'adapters.data.fetch_time', pymongo.ASCENDING)], background=True)
+            db.create_index([(f'adapters.data.software_cves.cve_id', pymongo.ASCENDING)], background=True)
+            db.create_index([(f'adapters.data.software_cves.cvss', pymongo.ASCENDING)], background=True)
+            db.create_index([(f'adapters.data.installed_software.name', pymongo.ASCENDING)], background=True)
 
             db.create_index([('tags.data.id', pymongo.ASCENDING)], background=True)
             db.create_index([(f'tags.{PLUGIN_NAME}', pymongo.ASCENDING)], background=True)
@@ -123,7 +130,11 @@ class AggregatorService(Triggerable, PluginBase):
             db.create_index([(f'tags.data.network_interfaces.ips_raw', pymongo.ASCENDING)], background=True)
             db.create_index([(f'tags.data.last_used_users', pymongo.ASCENDING)], background=True)
             db.create_index([(f'tags.data.username', pymongo.ASCENDING)], background=True)
+            db.create_index([(f'tags.data.domain', pymongo.ASCENDING)], background=True)
             db.create_index([(f'tags.data.fetch_time', pymongo.ASCENDING)], background=True)
+            db.create_index([(f'tags.data.software_cves.cve_id', pymongo.ASCENDING)], background=True)
+            db.create_index([(f'tags.data.software_cves.cvss', pymongo.ASCENDING)], background=True)
+            db.create_index([(f'tags.data.installed_software.name', pymongo.ASCENDING)], background=True)
 
             # For labels
             db.create_index([(f'tags.name', pymongo.ASCENDING)], background=True)

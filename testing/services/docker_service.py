@@ -5,7 +5,7 @@ import subprocess
 from abc import abstractmethod
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Iterable
+from typing import Iterable, Optional
 
 from retrying import retry
 
@@ -128,6 +128,10 @@ class DockerService(AxonService):
         return None
 
     @property
+    def memory_swappiness(self) -> Optional[int]:
+        return None
+
+    @property
     def max_allowed_cpu(self) -> int:
         """
         Max allowed cpu usage. e.g. if you have 2 cpu's, return 1.5 to use only 1.5 of them.
@@ -226,6 +230,9 @@ else:
             allowed_memory = [f'--memory={max_allowed_memory}m',
                               '--oom-kill-disable']  # don't kill my container
             print(f'Memory constraint: {max_allowed_memory}MB')
+        if self.memory_swappiness is not None:
+            allowed_memory.append(f'--memory-swappiness={self.memory_swappiness}')
+            print(f'Memory Swappiness: {self.memory_swappiness}')
         return allowed_memory
 
     def _get_allowed_cpu(self):

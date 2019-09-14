@@ -121,7 +121,7 @@ pip3 install --upgrade setuptools
 pip3 install ipython
 pip3 install netifaces==0.10.9
 echo "Installing docker-ce..."
-_wait_for_apt install -yq docker-ce=18.06.3~ce~3-0~ubuntu
+_wait_for_apt install -yq docker-ce=5:19.03.2~3-0~ubuntu-xenial
 systemctl enable docker
 echo "Adding ubuntu to the docker group, please note that you must logout and login!"
 usermod -aG docker ubuntu
@@ -195,6 +195,16 @@ if [ $(cat /etc/sysctl.conf | grep 'kernel.threads-max' | wc -l) -ne 0 ]; then
     sed -i 's/^\(kernel\.threads-max\s*=\s*\).*/\1200000/' /etc/sysctl.conf
 else
     echo "kernel.threads-max = 200000" >> /etc/sysctl.conf
+fi
+
+echo "Disable ICMP Redirection"
+if [ $(cat /etc/sysctl.conf | grep 'net.ipv4' | wc -l) -ne 0 ]; then
+    echo "configuration already exist"
+else
+    echo "net.ipv4.conf.all.accept_redirects = 0" >> /etc/sysctl.conf
+    echo "net.ipv4.conf.default.accept_redirects = 0" >> /etc/sysctl.conf
+    echo "net.ipv4.conf.all.secure_redirects = 0" >> /etc/sysctl.conf
+    echo "net.ipv4.conf.default.secure_redirects = 0" >> /etc/sysctl.conf
 fi
 
 sysctl --load

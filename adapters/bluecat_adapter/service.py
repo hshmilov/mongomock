@@ -8,6 +8,7 @@ from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.connection import RESTException
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.fields import Field
+from axonius.mixins.configurable import Configurable
 from axonius.utils.datetime import parse_date
 from axonius.utils.files import get_local_config_file
 from axonius.clients.postgres.connection import PostgresConnection
@@ -21,7 +22,7 @@ API_CLIENT_TYPE = 'api'
 SQL_CLIENT_TYPE = 'sql'
 
 
-class BluecatAdapter(AdapterBase):
+class BluecatAdapter(AdapterBase, Configurable):
     # pylint: disable=too-many-instance-attributes
     class MyDeviceAdapter(DeviceAdapter):
         device_state = Field(str, 'Device State')
@@ -78,8 +79,7 @@ class BluecatAdapter(AdapterBase):
                 raise ClientConnectionException(message)
 
     # pylint: disable=arguments-differ
-    @staticmethod
-    def _query_devices_by_client(client_name, client_data_and_type):
+    def _query_devices_by_client(self, client_name, client_data_and_type):
         """
         Get all devices from a specific  domain
 
@@ -91,7 +91,7 @@ class BluecatAdapter(AdapterBase):
         client_data, client_type = client_data_and_type
         if client_type == API_CLIENT_TYPE:
             with client_data:
-                for device in client_data.get_device_list():
+                for device in client_data.get_device_list(self.__sleep_between_requests_in_sec):
                     yield device, API_CLIENT_TYPE
         elif client_type == SQL_CLIENT_TYPE:
             with client_data:
@@ -166,6 +166,7 @@ class BluecatAdapter(AdapterBase):
                 if device:
                     yield device
 
+    # pylint: disable=too-many-statements
     def _parse_db_raw_data(self, device_raw_data):
         try:
             device = self._new_device_adapter()
@@ -173,8 +174,19 @@ class BluecatAdapter(AdapterBase):
             if not device_id:
                 return None
 
+            try:
+                expire_time = parse_date(device_raw_data.get('lc_expire_time'))
+                if not expire_time:
+                    return None
+                expire_time = expire_time.replace(tzinfo=None)
+                time_before_day = (datetime.datetime.now().replace(tzinfo=None) - datetime.timedelta(days=1))
+                if expire_time < time_before_day:
+                    return None
+            except Exception:
+                logger.exception(f'Error determining expire time')
+
             device_state = device_raw_data.get('lc_current_dhcp_status')
-            if device_state and str(device_state).upper() in ['RESERVED', 'DHCP_FREE', 'DHCP_RESERVED']:
+            if device_state and str(device_state).upper() in ['RESERVED', 'DHCP_FREE', 'FREE', 'DHCP_RESERVED']:
                 return None
             device.device_state = device_state
 
@@ -224,7 +236,7 @@ class BluecatAdapter(AdapterBase):
 
         return None
 
-    # pylint: disable=R1702,R0912
+    # pylint: disable=R1702,R0912, too-many-statements, inconsistent-return-statements
     def _parse_api_raw_data(self, devices_raw_data):
         for device_raw in devices_raw_data:
             try:
@@ -240,6 +252,7 @@ class BluecatAdapter(AdapterBase):
                 device_properties = device_raw.get('properties')
                 mac = None
                 ips = None
+                expire_time = None
                 try:
                     if isinstance(device_properties, str) and device_properties:
                         for property_raw in \
@@ -259,15 +272,27 @@ class BluecatAdapter(AdapterBase):
                             elif property_raw[0] == 'vendorClassIdentifier':
                                 device.vendor_class_identifier = property_raw[1]
                             elif property_raw[0] == 'expiryTime':
-                                device.expiry_time = parse_date(property_raw[1])
+                                expire_time = parse_date(property_raw[1])
+                                device.expiry_time = expire_time
                             elif property_raw[0] == 'leaseTime':
                                 device.lease_time = parse_date(property_raw[1])
                     if mac or ips:
                         device.add_nic(mac, ips)
                 except Exception:
                     logger.exception(f'Problem getting properties for {device_raw}')
+
+                try:
+                    if not expire_time:
+                        return None
+                    expire_time = expire_time.replace(tzinfo=None)
+                    time_before_day = (datetime.datetime.now().replace(tzinfo=None) - datetime.timedelta(days=1))
+                    if expire_time < time_before_day:
+                        continue
+                except Exception:
+                    logger.exception(f'Error determining expire time')
+
                 device.set_raw(device_raw)
-                if device_state in ['RESERVED', 'DHCP_FREE', 'DHCP_RESERVED']:
+                if str(device_state).upper() in ['RESERVED', 'DHCP_FREE', 'FREE', 'DHCP_RESERVED']:
                     continue
                 yield device
             except Exception:
@@ -276,3 +301,27 @@ class BluecatAdapter(AdapterBase):
     @classmethod
     def adapter_properties(cls):
         return [AdapterProperty.Network]
+
+    @classmethod
+    def _db_config_schema(cls) -> dict:
+        return {
+            'items': [
+                {
+                    'name': 'sleep_between_requests_in_sec',
+                    'type': 'integer',
+                    'title': 'time in seconds to sleep between each request'
+                }
+            ],
+            'required': [],
+            'pretty_name': 'BlueCat Configuration',
+            'type': 'array'
+        }
+
+    @classmethod
+    def _db_config_default(cls):
+        return {
+            'sleep_between_requests_in_sec': 0
+        }
+
+    def _on_config_update(self, config):
+        self.__sleep_between_requests_in_sec = config.get('sleep_between_requests_in_sec')

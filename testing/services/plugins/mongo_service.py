@@ -1,5 +1,6 @@
 import time
 from collections import defaultdict
+from typing import Optional
 
 import psutil
 import pymongo
@@ -42,8 +43,18 @@ class MongoService(WeaveService):
     @property
     def max_allowed_memory(self):
         total_memory = psutil.virtual_memory().total / (1024 ** 2)  # total memory, in mb
-        total_memory = int(total_memory * 0.60)  # We want mongodb to always catch 60% of ram.
+        total_memory = int(total_memory * 0.75)  # We want mongodb to always catch 75% of ram.
         return total_memory
+
+    @property
+    def memory_swappiness(self) -> Optional[int]:
+        """
+        A swappiness setting of zero means that the disk will be avoided unless
+        absolutely necessary (you run out of memory), while a swappiness setting of 100 means that programs will be
+        swapped to disk almost instantly.
+        :return:
+        """
+        return 0
 
     @property
     def image(self):

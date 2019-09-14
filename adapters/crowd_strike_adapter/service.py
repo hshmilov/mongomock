@@ -67,6 +67,7 @@ class CrowdStrikeAdapter(AdapterBase, Configurable):
         groups = ListField(Group, 'Groups')
         prevention_policy = Field(Policy, 'Prevention Policy')
         sensor_update_policy = Field(Policy, 'Sensor Update Policy')
+        cs_agent_version = Field(str, 'CrowdStrike Agent Version')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -222,6 +223,7 @@ class CrowdStrikeAdapter(AdapterBase, Configurable):
                     continue
                 device.id = device_id
                 device.add_agent_version(agent=AGENT_NAMES.crowd_strike, version=device_raw.get('agent_version'))
+                device.cs_agent_version = device_raw.get('agent_version')
                 mac_address = device_raw.get('mac_address')
                 local_ip = device_raw.get('local_ip')
                 device.add_ips_and_macs(mac_address, local_ip.split(',') if local_ip is not None else None)

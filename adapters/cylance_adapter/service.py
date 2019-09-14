@@ -25,6 +25,7 @@ class CylanceAdapter(AdapterBase):
         policy_name = Field(str, 'Policy Name')
         policies_details = ListField(str, 'Policies Details')
         tenant_tag = Field(str, 'Tenant Tag')
+        agent_version = Field(str, 'Cylance Agent Version')
 
     def __init__(self):
         super().__init__(get_local_config_file(__file__))
@@ -165,6 +166,7 @@ class CylanceAdapter(AdapterBase):
             except Exception:
                 logger.exception(f'Problem with adding nic to Cylance device {device_raw}')
             device.add_agent_version(agent=AGENT_NAMES.cylance, version=device_raw.get('agent_version', ''))
+            device.agent_version = device_raw.get('agent_version')
             try:
                 if device_raw.get('date_offline'):
                     device.last_seen = parse_date(str(device_raw.get('date_offline')))

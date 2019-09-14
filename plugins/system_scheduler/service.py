@@ -191,7 +191,11 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
             return return_error('Job not ran - system trial has expired', 400)
 
         logger.info(f'Started system scheduler')
-        self.__start_research()
+        try:
+            self.__start_research()
+        except Exception:
+            logger.critical(f'Error - Did not finish a cycle due to an exception!')
+            raise
 
     @contextmanager
     def _start_research(self):
@@ -419,14 +423,14 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
         Trigger cleaning all devices from all adapters
         :return:
         """
-        self._run_blocking_request(plugin_consts.AGGREGATOR_PLUGIN_NAME, 'clean_db', timeout=3600)
+        self._run_blocking_request(plugin_consts.AGGREGATOR_PLUGIN_NAME, 'clean_db', timeout=3600 * 6)
 
     def _run_historical_phase(self):
         """
         Trigger saving history
         :return:
         """
-        self._run_blocking_request(plugin_consts.AGGREGATOR_PLUGIN_NAME, 'save_history', timeout=3600)
+        self._run_blocking_request(plugin_consts.AGGREGATOR_PLUGIN_NAME, 'save_history', timeout=3600 * 3)
 
     def _run_aggregator_phase(self, plugin_subtype: PluginSubtype):
         """

@@ -561,7 +561,7 @@ class StaticAnalysisService(Triggerable, PluginBase):
 
         logger.info('Finished associating users with devices')
 
-    # pylint: disable=invalid-name
+    # pylint: disable=invalid-name, too-many-nested-blocks
     def __parse_devices_last_used_users_departments(self):
         users_to_department = dict()
         users_to_ad_display_name = dict()
@@ -597,13 +597,51 @@ class StaticAnalysisService(Triggerable, PluginBase):
                     if users_to_ad_display_name.get(last_used_user):
                         device_last_used_users_ad_display_name.add(users_to_ad_display_name[last_used_user])
                 else:
+                    llu_username = last_used_user
+                    llu_domain = None
+                    try:
+                        if '\\' in last_used_user:
+                            llu_domain, llu_username = last_used_user.split('\\')
+                        elif '@' in last_used_user:
+                            llu_username, llu_domain = last_used_user.split('@')
+                    except Exception:
+                        pass
+                    if llu_username:
+                        llu_username = re.escape(llu_username)
+                    if llu_domain:
+                        llu_domain = re.escape(llu_domain)
+
                     user = list(self.users.get(
                         axonius_query_language=f'specific_data.data.id == regex("^{re.escape(last_used_user)}$", "i")'))
 
-                    if len(user) == 1:
-                        user = user[0]
-                        user_department = user.get_first_data('user_department')
-                        ad_display_name = user.get_first_data('ad_display_name')
+                    if not user and llu_domain:
+                        # If we couldn't find by id, search by username and domain
+                        user = list(self.users.get(
+                            axonius_query_language=f'specific_data.data.username == regex("^{llu_username}$", "i") '
+                            f'and specific_data.data.domain == regex("^{llu_domain}$", "i")'
+                        ))
+
+                    if not user:
+                        # On last resort, search only by username
+                        user = list(self.users.get(
+                            axonius_query_language=f'specific_data.data.username == regex("^{llu_username}$", "i")'
+                        ))
+
+                    if len(user) > 0:
+                        user_department = None
+                        ad_display_name = None
+                        for one_user in user:
+                            ud_candidate = one_user.get_first_data('user_department')
+                            if ud_candidate:
+                                user_department = ud_candidate
+                                break
+
+                        for one_user in user:
+                            addn_candidate = one_user.get_first_data('ad_display_name')
+                            if addn_candidate:
+                                ad_display_name = addn_candidate
+                                break
+
                         if user_department:
                             device_last_used_users_departments.add(user_department)
                         if ad_display_name:

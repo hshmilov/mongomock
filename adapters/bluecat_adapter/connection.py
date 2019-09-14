@@ -1,5 +1,6 @@
 import datetime
 import logging
+import time
 
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.exception import RESTException
@@ -15,6 +16,13 @@ class BluecatConnection(RESTConnection):
         super().__init__(*args, url_base_prefix='Services/REST/v1',
                          headers={'Content-Type': 'application/json',
                                   'Accept': 'application/json'}, **kwargs)
+        self.sleep_between_requests_in_sec = None
+
+    # pylint: disable=arguments-differ
+    def _do_request(self, *args, **kwargs):
+        if self.sleep_between_requests_in_sec and isinstance(self.sleep_between_requests_in_sec, int):
+            time.sleep(self.sleep_between_requests_in_sec)
+        return super()._do_request(*args, **kwargs)
 
     def _refresh_token(self):
         try:
@@ -43,8 +51,9 @@ class BluecatConnection(RESTConnection):
             raise RESTException('No username or password')
         self._refresh_token()
 
-    # pylint: disable=R0912
-    def get_device_list(self):
+    # pylint: disable=R0912,arguments-differ
+    def get_device_list(self, sleep_between_requests_in_sec):
+        self.sleep_between_requests_in_sec = sleep_between_requests_in_sec
         networks_ids = set()
         for key_num in range(1, 256):
             try:
