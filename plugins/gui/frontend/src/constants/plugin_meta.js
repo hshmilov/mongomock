@@ -1,4 +1,9 @@
 export const pluginMeta = {
+    icinga_adapter: {
+        title: 'Icinga',
+        link: 'https://docs.axonius.com/docs/icinga',
+        description: 'Icinga is an open-source computer system and network monitoring application. It monitors data centers and clouds availability and performance, gives access to data and raises alerts.'
+    },
     packetfence_adapter: {
         title: 'PacketFence',
         link: 'https://docs.axonius.com/docs/packetfence',

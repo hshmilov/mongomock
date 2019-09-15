@@ -187,6 +187,7 @@ DOCKER_PORTS = {
     'vcloud-director-adapter':          9980,
     'medigate-adapter':                 9981,
     'packetfence-adapter':              9982,
+    'icinga-adapter':                   9983,
     'mongo':                            27017,
     'mockingbird-db':                   28017
 }
