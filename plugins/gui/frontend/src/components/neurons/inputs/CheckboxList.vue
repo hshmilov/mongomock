@@ -12,6 +12,7 @@
       <div
         v-for="item in items"
         :key="item.name"
+        :title="item.title"
         class="list__item"
         :class="{ dragging }"
       >
@@ -69,11 +70,14 @@
         set (newItems) {
           this.$emit('change', newItems)
         }
+      },
+      itemNames () {
+        return this.orderedItems.map(item => item.name)
       }
     },
     methods: {
       onChangeCheckbox (checked) {
-        this.$emit('input', checked)
+        this.$emit('input', this.itemNames.filter(itemName => checked.includes(itemName)))
       },
       onStartDrag () {
         this.dragging = true
@@ -100,6 +104,7 @@
             &__item {
                 background: $theme-white;
                 display: flex;
+                padding-right: 16px;
 
                 .md-icon {
                   visibility: hidden;

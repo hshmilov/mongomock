@@ -14,6 +14,7 @@
           <div class="field-list__filter">
             <x-select-symbol
               v-model="fieldType"
+              @input="resetSelectStock"
               :options="schemaByPlugin"
               minimal
               :tabindex="1"
@@ -46,6 +47,7 @@
             <x-search-input v-model="search.view" />
           </div>
           <x-checkbox-list
+            ref="checklist"
             v-model="select.view"
             :items="viewFieldsSchema"
             :draggable="true"
@@ -182,6 +184,10 @@
       addFields () {
         this.viewFields = this.viewFields.concat(this.select.stock)
         this.select.stock = []
+        this.$nextTick(() => {
+          const list = this.$refs.checklist.$el
+          list.scrollTop = list.scrollHeight
+        })
       },
       removeFields () {
         this.viewFields = this.viewFields.filter(field => !this.select.view.includes(field))
@@ -195,6 +201,9 @@
       },
       isFieldInSearch (field, searchValue) {
         return field.title.toLowerCase().includes(searchValue.toLowerCase())
+      },
+      resetSelectStock() {
+        this.select.stock = []
       }
     }
   }
