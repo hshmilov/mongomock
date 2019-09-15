@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import math
 import time
@@ -15,6 +16,7 @@ logger = logging.getLogger(f'axonius.{__name__}')
 
 
 PARALLEL_REQUESTS_MAX = 75
+DEFAULT_SLEEP_TIME = 60
 
 
 class OktaConnection:
@@ -50,6 +52,15 @@ class OktaConnection:
             return True
         raise Exception(f'Probelm fetching users. Got: {response.content}')
 
+    async def handle_429(self, response: aiohttp.ClientResponse):
+        """
+        Handle 429 responses for async requests
+        :param response: http response
+        :return: None
+        """
+        logger.info(f'Got 429 response, waiting for {DEFAULT_SLEEP_TIME} seconds.')
+        await asyncio.sleep(DEFAULT_SLEEP_TIME)
+
     def _get_apps_async(self, users_page):
         aio_requests = []
         aio_ids = []
@@ -76,7 +87,7 @@ class OktaConnection:
 
             all_answers = async_request(
                 aio_requests[PARALLEL_REQUESTS_MAX * chunk_id:
-                             PARALLEL_REQUESTS_MAX * (chunk_id + 1)])
+                             PARALLEL_REQUESTS_MAX * (chunk_id + 1)], handle_429_function=self.handle_429)
 
             # We got the requests,
             # time to check if they are valid and transform them to what the user wanted.

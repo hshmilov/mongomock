@@ -1,3 +1,4 @@
+import asyncio
 import http.client
 import logging
 import math
@@ -25,8 +26,10 @@ logger = logging.getLogger(f'axonius.{__name__}')
 
 ASYNC_REQUESTS_DEFAULT_CHUNK_SIZE = 50
 MAX_REQUESTS_PER_MINUTE = 1000
-
-
+# default sleep time on 429 error
+DEFAULT_429_SLEEP_TIME = 60
+# max sleep time - 2 hours
+MAX_SLEEP_TIME = 60 * 60 * 2
 # pylint: disable=R0902
 
 
@@ -415,6 +418,27 @@ class RESTConnection(ABC):
         req = self.create_async_dict(request, method)
         return async_http_request(session, **req)
 
+    async def handle_429(self, response: aiohttp.ClientResponse):
+        """
+        function for handling 429 - Too many requests response.
+        override this function for custom handling
+        :param response: http response object
+        :param err: aiohttp response error
+        :return: None
+        """
+        try:
+            sleep_time = DEFAULT_429_SLEEP_TIME
+            if response and response.headers:
+                # usually servers replies with 'Retry-After' header on 429 responses.
+                sleep_time = int(response.headers.get('Retry-After', DEFAULT_429_SLEEP_TIME))
+                if sleep_time > MAX_SLEEP_TIME:
+                    sleep_time = MAX_SLEEP_TIME
+            logger.info(f'Got 429 response, waiting for {sleep_time} seconds.')
+            await asyncio.sleep(sleep_time)
+        except Exception as e:
+            logger.error(f'Error getting retry header from 429 response: {e}. sleeping for {DEFAULT_429_SLEEP_TIME}')
+            await asyncio.sleep(DEFAULT_429_SLEEP_TIME)
+
     # pylint: disable=R0915
     def _do_async_request(self, method, list_of_requests, chunks, max_requests_per_minute):
         """
@@ -443,7 +467,7 @@ class RESTConnection(ABC):
         for chunk_id in range(int(math.ceil(len(aio_requests) / chunks))):
             logger.debug(f'Async requests: sending {chunk_id * chunks} out of {len(aio_requests)}')
             all_answers = async_request(aio_requests[chunks * chunk_id: chunks * (chunk_id + 1)],
-                                        cert=self._session.cert)
+                                        self.handle_429, cert=self._session.cert)
 
             # We got the requests, time to check if they are valid and transform them to what the user wanted.
             for i, raw_answer in enumerate(all_answers):
