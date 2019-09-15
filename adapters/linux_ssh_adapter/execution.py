@@ -1,18 +1,27 @@
 import logging
 import re
 from multiprocessing.dummy import Pool
-
+from pathlib import PosixPath
+from typing import List
 from axonius.clients.linux_ssh.consts import (ACTION_TYPES, CMD_ACTION_SCHEMA,
-                                              COMMAND, COMMAND_NAME, HOSTNAME,
+                                              COMMAND, COMMAND_NAME,
+                                              DEFAULT_UPLOAD_PATH,
+                                              EXTRA_FILES_NAME, HOSTNAME,
                                               IS_SUDOER, PASSWORD, PORT,
                                               PRIVATE_KEY, SCAN_ACTION_SCHEMA,
-                                              USERNAME)
-from axonius.clients.linux_ssh.data import DynamicFieldCommand
+                                              SHOULD_DELETE_AFTER_EXEC_NAME,
+                                              UPLOAD_PATH_NAME,
+                                              UPLOAD_PERMISSIONS_NAME,
+                                              USERNAME, DEFAULT_UPLOAD_PERMISSIONS)
+from axonius.clients.linux_ssh.data import (ChmodCommand, DynamicFieldCommand,
+                                            RmCommand)
 from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME
+
 from axonius.mixins.triggerable import RunIdentifier, Triggerable
 from axonius.plugin_base import EntityType
 from axonius.types.correlation import CorrelationReason, CorrelationResult
 from axonius.utils.gui_helpers import find_entity_field
+from axonius.utils.memfiles import temp_memfd
 from linux_ssh_adapter.connection import LinuxSshConnection
 
 logger = logging.getLogger(f'axonius.{__name__}')
@@ -124,6 +133,67 @@ class LinuxSshExecutionMixIn(Triggerable):
         device = list(self._parse_raw_data(data))[0]
         return device
 
+    def _upload_files(self, client_config: dict, connection: LinuxSshConnection) -> List[str]:
+        """
+        Upload file to a remote server
+        :param client_config: config dict
+        :param connection: ssh connection object
+        :return: list of uploaded filenames.
+        """
+        extra_files_raw = client_config.get(EXTRA_FILES_NAME)
+        dst_path = client_config.get(UPLOAD_PATH_NAME, DEFAULT_UPLOAD_PATH)
+        filenames = []
+        if extra_files_raw:
+            for file_raw in extra_files_raw:
+                try:
+                    # get file data
+                    binary_arr = self._grab_file_contents(file_raw)
+                    assert isinstance(binary_arr, bytes)
+                    with temp_memfd('upload_file', binary_arr) as filepath:
+                        # upload file to the server
+                        remote_path = PosixPath(dst_path).joinpath(file_raw.get('filename'))
+                        if connection.upload_file(filepath, str(remote_path)):
+                            filenames.append(str(remote_path))
+                except Exception:
+                    logger.exception('Cant upload file')
+        return filenames
+
+    @staticmethod
+    def _delete_files(files: list, connection: LinuxSshConnection) -> str:
+        """
+        Delete files from remote server
+        :param files: list of filenames to delete
+        :param connection: ssh connection object
+        :return: shell command output
+        """
+        # pylint: disable=protected-access
+        try:
+            command = RmCommand(files)
+            return command.shell_execute(connection._execute_ssh_cmdline)
+        except Exception:
+            logger.exception('Cannot delete files')
+            return None
+
+    @staticmethod
+    def _chmod_files(permissions: int, files: list, connection: LinuxSshConnection) -> str:
+        """
+        chmod files on remote server
+        :param permissions: chmod permissions
+        :param files: files to change their permissions
+        :param connection: ssh connection object
+        :return: shell command output
+        """
+        # pylint: disable=protected-access
+        try:
+            if not isinstance(permissions, int) or any([int(d) > 7 for d in str(permissions)]) or permissions > 777:
+                logger.error(f'Bad file permissions {permissions}')
+                return None
+            command = ChmodCommand(permissions, files)
+            return command.shell_execute(connection._execute_ssh_cmdline)
+        except Exception:
+            logger.exception('Cannot chmod files')
+        return None
+
     def _run_cmd(self, client_config, client_id):
         """ run the actual command """
         # pylint: disable=protected-access
@@ -135,8 +205,15 @@ class LinuxSshExecutionMixIn(Triggerable):
                                         key=client_config[PRIVATE_KEY],
                                         is_sudoer=client_config[IS_SUDOER],
                                         timeout=self._timeout)
+
         with connection:
+            uploaded_files = self._upload_files(client_config, connection)
+            chmod_permissions = client_config.get(UPLOAD_PERMISSIONS_NAME, DEFAULT_UPLOAD_PERMISSIONS)
+            if isinstance(chmod_permissions, int) and uploaded_files:
+                self._chmod_files(chmod_permissions, uploaded_files, connection)
             command.shell_execute(connection._execute_ssh_cmdline, client_config[PASSWORD])
+            if client_config.get(SHOULD_DELETE_AFTER_EXEC_NAME, True) and uploaded_files:
+                self._delete_files(uploaded_files, connection)
         command.parse()
         new_device = self._new_device_adapter()
         command.to_axonius(client_id, new_device)

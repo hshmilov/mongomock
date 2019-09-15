@@ -2,6 +2,7 @@ import logging
 import socket
 
 import paramiko
+from scp import SCPClient
 
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.linux_ssh.data import CommandExecutor, MD5FilesCommand
@@ -66,6 +67,23 @@ class LinuxSshConnection:
             self._client.close()
             self._client = None
 
+    def upload_file(self, source_path, remote_path):
+        """
+        Upload file to remote server via scp
+        :param source_path: source file path
+        :param remote_path: remote file path
+        :return: true on success, otherwise false.
+        :notes: file will be overridden if exists on server.
+        """
+        try:
+            logger.debug(f'Trying to upload {source_path} to {remote_path}')
+            with SCPClient(self._client.get_transport()) as scp:
+                scp.put(source_path, remote_path)
+            return True
+        except Exception:
+            logger.exception('Upload Error')
+            return False
+
     def _execute_ssh_cmdline(self, cmdline):
         """
             This function get command class and should
@@ -101,7 +119,7 @@ class LinuxSshConnection:
             test_client = paramiko.Transport(sock)
             test_client.connect()
         except Exception as e:
-            logger.exception('test_reachability exception')
+            logger.exception(f'test_reachability exception on {hostname}')
             return False
         finally:
             if test_client:

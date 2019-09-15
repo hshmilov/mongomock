@@ -114,6 +114,41 @@ class AbstractCommand:
         return raw_data[raw_data.index(start) + len(start):raw_data.index(end)]
 
 
+class RmCommand(AbstractCommand):
+    COMMAND = 'rm -f {filenames}'
+
+    def __init__(self, filenames: List[str]):
+        filenames = ' '.join([shlex.quote(file_) for file_ in filenames])
+        self._filenames = filenames
+        super().__init__()
+
+    def _get_command(self):
+        command = super()._get_command()
+        command = command.format(filenames=self._filenames)
+        return command
+
+    def _parse(self, raw_data):
+        return raw_data
+
+
+class ChmodCommand(AbstractCommand):
+    COMMAND = 'chmod {permissions} {filenames}'
+
+    def __init__(self, permissions: int, filenames: List[str]):
+        filenames = ' '.join([shlex.quote(file_) for file_ in filenames])
+        self._filenames = filenames
+        self._permissions = permissions
+        super().__init__()
+
+    def _get_command(self):
+        command = super()._get_command()
+        command = command.format(permissions=self._permissions, filenames=self._filenames)
+        return command
+
+    def _parse(self, raw_data):
+        return raw_data
+
+
 class LocalInfoCommand(AbstractCommand):
 
     @staticmethod
