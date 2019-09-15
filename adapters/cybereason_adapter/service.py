@@ -234,7 +234,6 @@ class CybereasonAdapter(AdapterBase, Configurable):
                 }
             ],
             'required': [
-                'white_list_tags',
             ],
             'pretty_name': 'Cybereason Configuration',
             'type': 'array'
