@@ -1,10 +1,12 @@
 export const pluginMeta = {
     packetfence_adapter: {
         title: 'PacketFence',
+        link: 'https://docs.axonius.com/docs/packetfence',
         description: 'PacketFence is a free open source network access control (NAC) solution which provides the following features: registration, detection of abnormal network activities, proactive vulnerability scans, isolation of problematic devices, remediation through a captive portal, 802.1X, wireless integration and User-Agent / DHCP fingerprinting.'
     },
     medigate_adapter: {
         title: 'Medigate',
+        link: 'https://docs.axonius.com/docs/medigate',
         description: 'Medigate is a medical device security platform that protects connected medical devices on health care provider networks, allowing inventory management and facilitating detection and prevention capabilities.'
     },
     specops_adapter: {

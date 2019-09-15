@@ -288,7 +288,7 @@ class CrowdStrikeAdapter(AdapterBase, Configurable):
             'required': [
                 'get_policies'
             ],
-            'pretty_name': 'Crowdstrike Configuration',
+            'pretty_name': 'CrowdStrike Configuration',
             'type': 'array'
         }
 

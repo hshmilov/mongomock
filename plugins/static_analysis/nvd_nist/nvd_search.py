@@ -70,7 +70,7 @@ class NVDSearcher:
 
     @staticmethod
     def _get_software_data(vendor_data):
-        multiple_vendors = 'Multiple vendors'
+        multiple_vendors = 'Multiple Vendors'
         multiple_software = 'Multiple Software'
 
         software_name = None

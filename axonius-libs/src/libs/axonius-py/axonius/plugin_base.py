@@ -3009,7 +3009,7 @@ class PluginBase(Configurable, Feature):
                     "items": [
                         {
                             'name': FETCH_EMPTY_VENDOR_SOFTWARE_VULNERABILITES,
-                            'title': 'Fetch software vulnerabilites even when the vendor name is unknown',
+                            'title': 'Fetch software vulnerabilities even when the vendor name is unknown',
                             'type': 'bool'
                         }
                     ],

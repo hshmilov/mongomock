@@ -88,7 +88,7 @@ class PacketfenceAdapter(AdapterBase):
             'items': [
                 {
                     'name': 'domain',
-                    'title': 'Packetfence Domain',
+                    'title': 'PacketFence Domain',
                     'type': 'string'
                 },
                 {
