@@ -166,8 +166,7 @@ class DashboardPage(Page):
         self.select_chart_wizard_module(second_module, views_list[1])
         self.select_chart_view_name(second_query, views_list[1])
         self.fill_text_field_by_element_id(self.CHART_TITLE_ID, title)
-        self.click_button('Save')
-        self.wait_for_element_absent_by_css(self.MODAL_OVERLAY_CSS, interval=1)
+        self.click_card_save()
 
     def add_comparison_card_view(self, module, query):
         self.click_button('+', partial_class=True,
@@ -175,8 +174,7 @@ class DashboardPage(Page):
         views_list = self.get_views_list()
         self.select_chart_wizard_module(module, views_list[2])
         self.select_chart_view_name(query, views_list[2])
-        self.click_button('Save')
-        self.wait_for_element_absent_by_css(self.MODAL_OVERLAY_CSS, interval=1)
+        self.click_card_save()
 
     def add_intersection_card(self, module, first_query, second_query, title, view_name=''):
         self.open_new_card_wizard()
@@ -187,8 +185,7 @@ class DashboardPage(Page):
         self.select_intersection_chart_first_query(first_query)
         self.select_intersection_chart_second_query(second_query)
         self.fill_text_field_by_element_id(self.CHART_TITLE_ID, title)
-        self.click_button('Save')
-        self.wait_for_element_absent_by_css(self.MODAL_OVERLAY_CSS, interval=1)
+        self.click_card_save()
 
     def add_summary_card(self, module, field, func_name, title):
         self.open_new_card_wizard()
@@ -197,6 +194,9 @@ class DashboardPage(Page):
         self.select_chart_wizard_field(field)
         self.select_chart_summary_function(func_name)
         self.fill_text_field_by_element_id(self.CHART_TITLE_ID, title)
+        self.click_card_save()
+
+    def click_card_save(self):
         self.click_button('Save')
         self.wait_for_element_absent_by_css(self.MODAL_OVERLAY_CSS, interval=1)
 
@@ -210,8 +210,7 @@ class DashboardPage(Page):
                 self.select_chart_view_name(view_name)
             self.select_chart_wizard_field(field, partial_text)
             self.fill_text_field_by_element_id(self.CHART_TITLE_ID, title)
-            self.click_button('Save')
-            self.wait_for_element_absent_by_css(self.MODAL_OVERLAY_CSS, interval=1)
+            self.click_card_save()
         except NoSuchElementException:
             self.close_dropdown()
             self.click_button('Cancel', partial_class=True)
@@ -332,13 +331,13 @@ class DashboardPage(Page):
         return histogram.find_element_by_css_selector(f'{self.PAGINATOR_CLASS} {to_val}').text
 
     @staticmethod
-    def calculate_from_item_value(total_num_of_items, num_of_items, num_of_pages, curr_page, to_val, limit):
+    def calculate_from_item_value(num_of_items, num_of_pages, curr_page, to_val, limit):
         if num_of_items % limit != 0 and curr_page == num_of_pages:
             return num_of_items - (num_of_items % limit) + 1
         return to_val - limit + 1
 
     @staticmethod
-    def calculate_to_item_value(total_num_of_items, num_of_items, page_number, limit):
+    def calculate_to_item_value(num_of_items, page_number, limit):
         if limit > num_of_items:
             return num_of_items
         return min(page_number * limit, num_of_items)
@@ -532,3 +531,9 @@ class DashboardPage(Page):
 
     def find_no_data_label(self):
         return self.find_element_by_text(self.NO_DATA_FOUND_TEXT)
+
+    def is_chart_save_disabled(self) -> bool:
+        return self.is_element_disabled_by_id('chart_save')
+
+    def fill_current_chart_title(self, value):
+        self.fill_text_field_by_element_id(self.CHART_TITLE_ID, value)

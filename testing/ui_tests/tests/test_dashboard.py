@@ -1,13 +1,16 @@
 import time
 from math import ceil
-import pytest
 
+import pytest
 import requests
-from ui_tests.tests.ui_test_base import TestBase
-from ui_tests.tests.ui_consts import (READ_WRITE_USERNAME, READ_ONLY_USERNAME, NEW_PASSWORD, FIRST_NAME, LAST_NAME,
-                                      JSON_ADAPTER_NAME)
+from selenium.common.exceptions import NoSuchElementException
+
+from axonius.consts.gui_consts import (DASHBOARD_SPACE_DEFAULT,
+                                       DASHBOARD_SPACE_PERSONAL)
 from axonius.utils.wait import wait_until
-from axonius.consts.gui_consts import (DASHBOARD_SPACE_DEFAULT, DASHBOARD_SPACE_PERSONAL)
+from ui_tests.tests.ui_consts import (READ_WRITE_USERNAME, READ_ONLY_USERNAME, NEW_PASSWORD,
+                                      FIRST_NAME, LAST_NAME, JSON_ADAPTER_NAME)
+from ui_tests.tests.ui_test_base import TestBase
 
 
 class TestDashboard(TestBase):
@@ -49,6 +52,23 @@ class TestDashboard(TestBase):
         assert self.dashboard_page.find_show_me_how_button()
         assert self.dashboard_page.find_see_all_message()
         self.dashboard_page.assert_congratulations_message_found()
+
+    def test_dashboard_empty_title(self):
+        """
+        Test empty dashboard card with no title, save won't be clickable (disabled) and will "fail" then we actually
+        add title and save and it should work
+        """
+        self.dashboard_page.switch_to_page()
+        self.base_page.run_discovery()
+        with pytest.raises(NoSuchElementException):
+            self.dashboard_page.add_comparison_card('Devices', 'Windows Operating System',
+                                                    'Devices', 'Linux Operating System', '')
+
+        assert self.dashboard_page.is_chart_save_disabled()
+        # this should work after we add the title
+        self.dashboard_page.fill_current_chart_title(self.TEST_EDIT_CHART_TITLE)
+        assert not self.dashboard_page.is_chart_save_disabled()
+        self.dashboard_page.click_card_save()
 
     def test_dashboard_sanity(self):
         self.dashboard_page.switch_to_page()
@@ -241,9 +261,9 @@ class TestDashboard(TestBase):
         num_of_histogram_lines = self.dashboard_page.get_count_histogram_lines_from_histogram(histograms_chart)
         num_of_items = int(self.dashboard_page.get_paginator_to_item_number(histograms_chart, page_number))
         # calculate Paginator 'To' value
-        to_val = self.dashboard_page.calculate_to_item_value(total_num_of_items, num_of_items, page_number, limit)
+        to_val = self.dashboard_page.calculate_to_item_value(num_of_items, page_number, limit)
         # calculate Paginator 'From' value
-        from_val = self.dashboard_page.calculate_from_item_value(total_num_of_items, num_of_items, num_of_pages,
+        from_val = self.dashboard_page.calculate_from_item_value(num_of_items, num_of_pages,
                                                                  page_number, to_val, limit)
         return num_of_histogram_lines, num_of_items, to_val, from_val
 
@@ -413,9 +433,9 @@ class TestDashboard(TestBase):
         self.dashboard_page.click_to_last_page(histograms_chart)
         num_of_items = int(self.dashboard_page.get_paginator_to_item_number(histograms_chart, page_number))
         # calculate Paginator 'To' value
-        to_val = self.dashboard_page.calculate_to_item_value(total_num_of_items, num_of_items, page_number, limit)
+        to_val = self.dashboard_page.calculate_to_item_value(num_of_items, page_number, limit)
         # calculate Paginator 'From' value
-        from_val = self.dashboard_page.calculate_from_item_value(total_num_of_items, num_of_items, num_of_pages,
+        from_val = self.dashboard_page.calculate_from_item_value(num_of_items, num_of_pages,
                                                                  page_number, to_val, limit)
         self._test_paginator_state_last_page(histograms_chart, page_number, to_val, from_val)
         # Go to First Page
@@ -423,7 +443,7 @@ class TestDashboard(TestBase):
         self.dashboard_page.click_to_first_page(histograms_chart)
         num_of_items = int(self.dashboard_page.get_paginator_to_item_number(histograms_chart, page_number))
         # calculate Paginator 'To' value
-        to_val = self.dashboard_page.calculate_to_item_value(total_num_of_items, num_of_items, page_number, limit)
+        to_val = self.dashboard_page.calculate_to_item_value(num_of_items, page_number, limit)
         self._test_paginator_state_first_page(histograms_chart, page_number, to_val)
         self.dashboard_page.remove_card(self.TEST_PAGINATOR_ON_SEGMENTATION_HISTOGRAM)
 
