@@ -284,7 +284,7 @@ def _juniper_add_nic(device, raw_device):
         try:
             vlan_list = []
             raw_vlan = _get_vlans_for_iface(raw_device, interface.get('name', ''))
-            port_type = None
+            port_type = interface.get('interface-port-mode')
             if raw_vlan:
                 port_type = raw_vlan.get('interface-port-mode')
                 for raw_vlan in raw_vlan.get('vlans', []):

@@ -1,5 +1,5 @@
 """ xml basic info parser for juniper """
-
+# pylint: disable=too-many-branches
 import logging
 import copy
 import re
@@ -94,12 +94,21 @@ def parse_interface_list(xml):
                             tag = gettag(address_family_field.tag)
                             text = gettext(address_family_field.text)
                             _parse_interface_entry(logical_interface, tag, text)
+                            if tag == 'address-family-flags':
+                                for family_flags in address_family_field:
+                                    tag = gettag(family_flags.tag)
+                                    text = gettext(family_flags.text)
+                                    if tag == 'ifff-port-mode-trunk':
+                                        logical_interface['interface-port-mode'] = 'Trunk'
+                                        break
+                                else:
+                                    logical_interface['interface-port-mode'] = 'Access'
+
                             if tag == 'interface-address':
                                 for interface_address_field in address_family_field:
                                     tag = gettag(interface_address_field.tag)
                                     text = gettext(interface_address_field.text)
                                     _parse_interface_entry(logical_interface, tag, text)
-
                 logical_interfaces.append(logical_interface)
 
         if 'current-physical-address' not in entry:
@@ -226,9 +235,6 @@ def parse_l2ald_interface(xml):
             result[interface_name] = {'interface-name': interface_name, 'vlans': []}
 
         if 'interface-port-mode' in entry:
-            if str(entry['interface-port-mode']) == '0' and \
-                    not result[interface_name].get('interface-port-mode'):
-                result[interface_name]['interface-port-mode'] = 'Trunk'
             del entry['interface-port-mode']
 
         result[interface_name]['vlans'].append(entry)

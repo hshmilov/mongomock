@@ -1,15 +1,20 @@
 import logging
+
 import pytest
 
-from axonius.clients.juniper.device import JuniperDeviceAdapter, create_device, update_connected
-from axonius.clients.juniper.rpc import (parse_device, parse_hardware,
-                                         parse_interface_list, parse_version,
-                                         parse_vlans, prepare, parse_lldp, parse_base_mac)
-
-from axonius.clients.juniper.rpc.mock import (HARDWARE_MOCK, INTERFACE_MOCK,
-                                              VERSION_MOCK, VLAN_MOCK,
-                                              VLAN_MOCK2, VERSION_MOCK2, BASE_MAC_MOCK,
-                                              mock_query_basic_info, LLDP_MOCK, LLDP_MOCK2)
+from axonius.clients.juniper.device import (JuniperDeviceAdapter,
+                                            create_device, update_connected)
+from axonius.clients.juniper.rpc import (parse_base_mac, parse_device,
+                                         parse_hardware, parse_interface_list,
+                                         parse_lldp, parse_version,
+                                         parse_vlans, prepare)
+from axonius.clients.juniper.rpc.mock import (BASE_MAC_MOCK, HARDWARE_MOCK,
+                                              INTERFACE_MOCK,
+                                              LLDP_MOCK, LLDP_MOCK2,
+                                              VERSION_MOCK, VERSION_MOCK2,
+                                              VLAN_MOCK, VLAN_MOCK2,
+                                              mock_query_basic_info,
+                                              mock_query_basic_info2)
 
 logging.basicConfig()
 
@@ -56,6 +61,34 @@ def test_interface_list():
     data = prepare(INTERFACE_MOCK)
     result = parse_interface_list(data)[0]
     assert len(result) == 7
+
+
+def test_interface_list2():
+    result = parse_device('Juniper Device', mock_query_basic_info2())
+    assert result
+    result = list(create_device(lambda: JuniperDeviceAdapter(set(), set()), 'Juniper Device', result))[0]
+    interfaces = result.to_dict()['network_interfaces']
+    interfaces_name = [interface.get('name') for interface in interfaces if interface.get('port_type')]
+    assert 'ge-0/0/43' not in interfaces_name
+    interfaces_name = [interface.get('name') for interface in interfaces if interface.get('port_type') == 'Trunk']
+    assert set(interfaces_name) == set(['ge-0/0/42.0',
+                                        'ge-0/0/43.0',
+                                        'ge-0/0/44.0',
+                                        'ge-0/0/45.0',
+                                        'ge-0/0/46.0',
+                                        'ge-0/0/47.0',
+                                        'xe-0/2/0.0',
+                                        'ge-0/2/1.0',
+                                        'ge-0/2/2.0',
+                                        'ge-1/0/42.0',
+                                        'ge-1/0/43.0',
+                                        'ge-1/0/44.0',
+                                        'ge-1/0/45.0',
+                                        'ge-1/0/46.0',
+                                        'ge-1/0/47.0',
+                                        'xe-1/2/0.0',
+                                        'ge-1/2/1.0',
+                                        'ge-1/2/2.0'])
 
 
 def test_version():
