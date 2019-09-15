@@ -8,8 +8,9 @@ import json
 import functools
 import datetime
 import socket
+from collections import defaultdict
 from enum import Enum, auto
-from typing import Dict, Tuple, List
+from typing import Dict, Tuple, List, Optional
 
 import boto3
 import kubernetes
@@ -26,6 +27,7 @@ from axonius.clients.rest.connection import RESTConnection
 from axonius.devices.device_adapter import DeviceRunningState, ShodanVuln
 from axonius.devices.device_or_container_adapter import DeviceOrContainerAdapter
 from axonius.fields import Field, ListField, JsonStringFormat
+from axonius.users.user_adapter import UserAdapter
 from axonius.utils.parsing import format_ip
 from axonius.smart_json_class import SmartJsonClass
 from axonius.utils.files import get_local_config_file
@@ -73,6 +75,7 @@ POWER_STATE_MAP = {
 class AwsRawDataTypes(Enum):
     Regular = auto()
     SSM = auto()
+    Users = auto()
 
 
 class AwsSSMSchemas(Enum):
@@ -205,6 +208,17 @@ class AWSTagKeyValue(SmartJsonClass):
     value = Field(str, 'AWS Tag Value')
 
 
+class AWSIAMPolicy(SmartJsonClass):
+    policy_name = Field(str, 'Policy Name')
+    policy_type = Field(str, 'Policy Type', enum=['Managed', 'Inline', 'Group Managed'])
+
+
+class AWSIAMAccessKey(SmartJsonClass):
+    access_key_id = Field(str, 'ID')
+    status = Field(str, 'Status', enum=['Active', 'Inactive'])
+    create_date = Field(datetime.datetime, 'Creation Date')
+
+
 class AWSIPRule(SmartJsonClass):
     from_port = Field(int, 'From Port')
     to_port = Field(int, 'To Port')
@@ -225,6 +239,29 @@ class AWSRole(SmartJsonClass):
     role_description = Field(str, 'Description')
     role_permissions_boundary_policy_name = Field(str, 'Permissions Boundary Policy')
     role_attached_policies_named = ListField(str, 'Attached Policies')
+
+
+class AWSEBSVolumeAttachment(SmartJsonClass):
+    attach_time = Field(datetime.datetime, 'Attach Time')
+    device = Field(str, 'Device')
+    state = Field(str, 'State')
+    delete_on_termination = Field(bool, 'Delete On Termination')
+
+
+class AWSEBSVolume(SmartJsonClass):
+    attachments = ListField(AWSEBSVolumeAttachment, 'Attachments')
+    name = Field(str, 'Name')
+    availability_zone = Field(str, 'Availability Zone')
+    create_time = Field(datetime.datetime, 'Create Time')
+    encrypted = Field(bool, 'Encrypted')
+    kms_key_id = Field(str, 'Kms Key ID')
+    size = Field(str, 'Size (GB)')
+    snapshot_id = Field(str, 'Snapshot ID')
+    state = Field(str, 'State')
+    volume_id = Field(str, 'Volume ID')
+    iops = Field(int, 'Iops')
+    tags = ListField(AWSTagKeyValue, 'Tags')
+    volume_type = Field(str, 'Volume Type')
 
 
 class AWSLoadBalancer(SmartJsonClass):
@@ -355,22 +392,44 @@ class RDSInfo(SmartJsonClass):
     endpoint_port = Field(int, 'Endpoint Port')
 
 
+class AWSS3BucketACL(SmartJsonClass):
+    grantee_display_name = Field(str, 'Grantee Display Name')
+    grantee_email_address = Field(str, 'Grantee Email Address')
+    grantee_id = Field(str, 'Grantee ID')
+    grantee_type = Field(str, 'Grantee Type')
+    grantee_uri = Field(str, 'Grantee URI')
+    grantee_permission = Field(str, 'Grantee Permission')
+
+
 class AwsAdapter(AdapterBase, Configurable):
-    class MyDeviceAdapter(DeviceOrContainerAdapter):
+    class AWSAdapter:
         account_tag = Field(str, 'Account Tag')
         aws_account_alias = ListField(str, 'Account Alias')
         aws_region = Field(str, 'Region')
-        aws_source = Field(str, 'Source')    # Specifiy if it is from a user, a role, or what.
+        aws_source = Field(str, 'Source')  # Specify if it is from a user, a role, or what.
+        aws_tags = ListField(AWSTagKeyValue, 'AWS Tags')
+
+    class MyUserAdapter(UserAdapter, AWSAdapter):
+        user_path = Field(str, 'User Path')
+        user_arn = Field(str, 'User Arn')
+        user_create_date = Field(datetime.datetime, 'User Create Date')
+        user_pass_last_used = Field(datetime.datetime, 'User Password Last User')
+        user_permission_boundary_arn = Field(str, 'User Permission Boundary Arn')
+
+        user_attached_policies = ListField(AWSIAMPolicy, 'Policies')
+        user_attached_keys = ListField(AWSIAMAccessKey, 'Access Keys')
+        user_groups = ListField(str, 'Groups')
+
+    class MyDeviceAdapter(DeviceOrContainerAdapter, AWSAdapter):
         aws_availability_zone = Field(str, 'Availability Zone')
         aws_device_type = Field(
             str,
-            'Device Type (EC2/ECS/EKS/ELB/Managed/NAT/RDS)',
-            enum=['EC2', 'ECS', 'EKS', 'ELB', 'Managed', 'NAT', 'RDS']
+            'Device Type (EC2/ECS/EKS/ELB/Managed/NAT/RDS/S3)',
+            enum=['EC2', 'ECS', 'EKS', 'ELB', 'Managed', 'NAT', 'RDS', 'S3']
         )
         security_groups = ListField(AWSSecurityGroup, 'Security Groups')
 
         # EC2-specific fields
-        aws_tags = ListField(AWSTagKeyValue, 'AWS Tags')
         instance_type = Field(str, 'Instance Type')
         key_name = Field(str, 'Key Name')
         private_dns_name = Field(str, 'Private Dns Name')
@@ -379,6 +438,7 @@ class AwsAdapter(AdapterBase, Configurable):
         image_id = Field(str, 'AMI (Image) ID')
         aws_attached_role = Field(AWSRole, 'Attached Role')
         aws_load_balancers = ListField(AWSLoadBalancer, 'Load Balancer (ELB)')
+        ebs_volumes = ListField(AWSEBSVolume, 'EBS Volumes')
 
         # VPC Generic Fields
         subnet_id = Field(str, 'Subnet Id')
@@ -396,6 +456,15 @@ class AwsAdapter(AdapterBase, Configurable):
 
         # RDS specific fields
         rds_data = Field(RDSInfo, 'RDS Information')
+
+        # S3 specific fields
+        s3_bucket_name = Field(str, 'S3 Bucket Name')
+        s3_creation_date = Field(str, 'S3 Bucket Creation Date')
+        s3_owner_name = Field(str, 'S3 Owner Display Name')
+        s3_owner_id = Field(str, 'S3 Owner ID')
+        s3_bucket_is_public = Field(bool, 'S3 Bucket Public')
+        s3_bucket_location = Field(str, 'S3 Bucket Location')
+        s3_bucket_acls = ListField(AWSS3BucketACL, 'S3 ACL')
 
         def add_aws_ec2_tag(self, **kwargs):
             self.aws_tags.append(AWSTagKeyValue(**kwargs))
@@ -598,73 +667,86 @@ class AwsAdapter(AdapterBase, Configurable):
             if 'Request would have succeeded, but DryRun flag is set.' not in str(e):
                 raise
 
-    def _connect_client_by_source(self, session: boto3.Session, region_name: str, client_config: dict):
+    def _connect_client_by_source(self, session: boto3.Session, region_name: str, client_config: dict,
+                                  asset_type: str = 'device'):
         params = {AWS_CONFIG: client_config.get(AWS_CONFIG), REGION_NAME: region_name}
         clients = dict()
         errors = dict()
 
-        try:
-            c = session.client('ec2', **params)
-            c.describe_instances()
-            clients['ec2'] = c
-        except Exception as e:
-            errors['ec2'] = str(e)
+        if asset_type == 'users':
+            clients['iam'] = session.client('iam', **params)
+            clients['iam'].list_users()  # if no privileges, propagate
 
-        try:
-            c = session.client('ecs', **params)
-            c.list_clusters()
-            clients['ecs'] = c
-        except Exception as e:
-            errors['ecs'] = str(e)
+        else:
+            try:
+                c = session.client('ec2', **params)
+                c.describe_instances()
+                clients['ec2'] = c
+            except Exception as e:
+                errors['ec2'] = str(e)
 
-        try:
-            c = session.client('eks', **params)
-            c.list_clusters()
-            clients['eks'] = c
-        except Exception as e:
-            if not 'Could not connect to the endpoint URL' in str(e):
-                # This means EKS is not supported in this region, this is not an error.
-                errors['eks'] = str(e)
+            try:
+                c = session.client('ecs', **params)
+                c.list_clusters()
+                clients['ecs'] = c
+            except Exception as e:
+                errors['ecs'] = str(e)
 
-        try:
-            c = session.client('iam', **params)
-            c.list_roles()
-            clients['iam'] = c
-        except Exception as e:
-            errors['iam'] = str(e)
+            try:
+                c = session.client('eks', **params)
+                c.list_clusters()
+                clients['eks'] = c
+            except Exception as e:
+                if not 'Could not connect to the endpoint URL' in str(e):
+                    # This means EKS is not supported in this region, this is not an error.
+                    errors['eks'] = str(e)
 
-        try:
-            c = session.client('elb', **params)
-            c.describe_load_balancers()
-            clients['elbv1'] = c
-        except Exception as e:
-            errors['elbv1'] = str(e)
+            try:
+                c = session.client('iam', **params)
+                c.list_roles()
+                clients['iam'] = c
+            except Exception as e:
+                errors['iam'] = str(e)
 
-        try:
-            c = session.client('elbv2', **params)
-            c.describe_load_balancers()
-            clients['elbv2'] = c
-        except Exception as e:
-            errors['elbv2'] = str(e)
+            try:
+                c = session.client('elb', **params)
+                c.describe_load_balancers()
+                clients['elbv1'] = c
+            except Exception as e:
+                errors['elbv1'] = str(e)
 
-        try:
-            c = session.client('ssm', **params)
-            c.get_inventory_schema()
-            clients['ssm'] = c
-        except Exception as e:
-            errors['ssm'] = str(e)
+            try:
+                c = session.client('elbv2', **params)
+                c.describe_load_balancers()
+                clients['elbv2'] = c
+            except Exception as e:
+                errors['elbv2'] = str(e)
 
-        try:
-            c = session.client('rds', **params)
-            c.describe_db_instances()
-            clients['rds'] = c
-        except Exception as e:
-            errors['rds'] = str(e)
+            try:
+                c = session.client('ssm', **params)
+                c.get_inventory_schema()
+                clients['ssm'] = c
+            except Exception as e:
+                errors['ssm'] = str(e)
 
-        # the only service we truely need is ec2. all the rest are optional.
-        # If this has failed we raise an exception
-        if not clients.get('ec2'):
-            raise ClientConnectionException(f'Could not connect: {errors.get("ec2")}')
+            try:
+                c = session.client('rds', **params)
+                c.describe_db_instances()
+                clients['rds'] = c
+            except Exception as e:
+                errors['rds'] = str(e)
+
+            try:
+                c = session.client('s3', **params)
+                c.list_buckets()
+                clients['s3'] = c
+            except Exception as e:
+                errors['s3'] = str(e)
+
+            # the only service we truely need is ec2. all the rest are optional.
+            # If this has failed we raise an exception
+            if not clients.get('ec2'):
+                raise ClientConnectionException(f'Could not connect: {errors.get("ec2")}')
 
         clients['account_tag'] = client_config.get(ACCOUNT_TAG)
         clients['credentials'] = client_config
@@ -710,7 +792,7 @@ class AwsAdapter(AdapterBase, Configurable):
 
         if self.__verbose_auth_notifications is True or len(successful_connections) == 0:
             self.create_notification(
-                f'AWS Adapter: {len(successful_connections)} / {total_connections} successful connections, '
+                f'AWS Adapter (Devices): {len(successful_connections)} / {total_connections} successful connections, '
                 f'{len(warnings_messages)} warnings.',
                 content=content)
 
@@ -734,6 +816,164 @@ class AwsAdapter(AdapterBase, Configurable):
                         yield source_name, account_metadata, parse_data_for_source, AwsRawDataTypes.SSM
                 except Exception:
                     logger.exception(f'Problem querying source {source_name}')
+
+    def _query_users_by_client(self, client_name, client_data_credentials):
+        # This is relevant just for IAM users, so we bail out if its not enabled.
+        if not self.__fetch_iam_users:
+            return
+
+        # we must re-create all credentials (const and temporary)
+        client_data, client_config = self._connect_client_once(client_data_credentials, False)
+        # First, we must get clients for everything we need
+        client_data_aws_clients = dict()
+        successful_connections = []
+        failed_connections = []
+        warnings_messages = []
+        for account, account_regions_clients in client_data.items():
+            if account not in client_data_aws_clients:
+                client_data_aws_clients[account] = dict()
+            for region_name, client_data_by_region in account_regions_clients.items():
+                current_try = f'{account}_{region_name}'
+                try:
+                    client_data_aws_clients[account][region_name], warnings = \
+                        self._connect_client_by_source(client_data_by_region, region_name, client_config, 'users')
+                    successful_connections.append(current_try)
+                    if warnings:
+                        for service_name, service_error in warnings.items():
+                            error_string = f'{current_try}: {service_name} - {service_error}'
+                            logger.warning(error_string)
+                            warnings_messages.append(error_string)
+                except Exception as e:
+                    logger.exception(f'problem with {current_try}')
+                    failed_connections.append(f'{current_try}: {str(e)}')
+
+        total_connections = len(successful_connections) + len(failed_connections)
+        content = ''
+        if len(failed_connections) > 0:
+            connections_failures = '\n'.join(failed_connections)
+            content = f'Failed connections: \n{connections_failures}\n\n'
+        if len(warnings_messages) > 0:
+            warnings_str = '\n'.join(warnings_messages)
+            content = f'Warnings: \n{warnings_str}'
+
+        if self.__verbose_auth_notifications is True or len(successful_connections) == 0:
+            self.create_notification(
+                f'AWS Adapter (Users): {len(successful_connections)} / {total_connections} successful connections, '
+                f'{len(warnings_messages)} warnings.',
+                content=content)
+
+        for account, account_regions_clients in client_data_aws_clients.items():
+            logger.info(f'query_users_by_client account: {account}')
+            parsed_data_for_all_regions = None
+            for region_name, client_data_by_region in account_regions_clients.items():
+                source_name = f'{account}_{region_name}'
+                try:
+                    account_metadata = self._get_account_metadata(client_data_by_region)
+                    if parsed_data_for_all_regions is None:
+                        parsed_data_for_all_regions = self._query_users_by_client_for_all_sources(client_data_by_region)
+                        yield source_name, account_metadata, parsed_data_for_all_regions, AwsRawDataTypes.Users
+                        break
+                except Exception:
+                    logger.exception(f'Problem querying source {source_name}')
+
+    @staticmethod
+    def _query_users_by_client_for_all_sources(client_data):
+        iam_client = client_data.get('iam')
+        result = dict()
+        result['account_tag'] = client_data.get('account_tag')
+        result['region'] = client_data.get('region')
+
+        error_logs_triggered = []
+
+        if iam_client:
+            users = []
+
+            for users_page in get_paginated_marker_api(iam_client.list_users):
+                for user in (users_page.get('Users') or []):
+                    username = user.get('UserName')
+                    if not username:
+                        continue
+
+                    try:
+                        groups = []
+                        groups_attached_policies = []
+                        for page in get_paginated_marker_api(
+                                functools.partial(iam_client.list_groups_for_user, UserName=username)
+                        ):
+                            for group_raw in (page.get('Groups') or []):
+                                group_name = group_raw.get('GroupName')
+                                if group_name:
+                                    groups.append(group_name)
+
+                                    try:
+                                        for agp_page in get_paginated_marker_api(
+                                            functools.partial(
+                                                iam_client.list_attached_group_policies, GroupName=group_name
+                                            )
+                                        ):
+                                            for attached_policy in agp_page['AttachedPolicies']:
+                                                policy_name = attached_policy.get('PolicyName')
+                                                if policy_name:
+                                                    groups_attached_policies.append(policy_name)
+                                    except Exception:
+                                        if 'list_attached_group_policies' not in error_logs_triggered:
+                                            logger.exception(f'Problem with list_attached_group_policies')
+                                            error_logs_triggered.append('list_attached_group_policies')
+
+                        user['groups'] = groups
+                        user['group_attached_policies'] = groups_attached_policies
+                    except Exception:
+                        if 'list_groups_for_users' not in error_logs_triggered:
+                            logger.exception(f'Problem with list_groups_for_user')
+                            error_logs_triggered.append('list_groups_for_users')
+
+                    try:
+                        attached_user_policies = []
+                        for page in get_paginated_marker_api(
+                                functools.partial(iam_client.list_attached_user_policies, UserName=username)
+                        ):
+                            for attached_policy in (page.get('AttachedPolicies') or []):
+                                policy_name = attached_policy.get('PolicyName')
+                                if policy_name:
+                                    attached_user_policies.append(policy_name)
+
+                        user['attached_policies'] = attached_user_policies
+                    except Exception:
+                        if 'list_attached_user_policies' not in error_logs_triggered:
+                            logger.exception(f'Problem with list_attached_user_policies')
+                            error_logs_triggered.append('list_attached_user_policies')
+
+                    try:
+                        inline_policies = []
+                        for page in get_paginated_marker_api(
+                                functools.partial(iam_client.list_user_policies, UserName=username)
+                        ):
+                            inline_policies.extend(page.get('PolicyNames') or [])
+
+                        user['inline_policies'] = inline_policies
+                    except Exception:
+                        if 'list_user_policies' not in error_logs_triggered:
+                            logger.exception(f'Problem with list_user_policies')
+                            error_logs_triggered.append('list_user_policies')
+
+                    try:
+                        access_keys = []
+                        for page in get_paginated_marker_api(
+                                functools.partial(iam_client.list_access_keys, UserName=username)
+                        ):
+                            access_keys.extend(page.get('AccessKeyMetadata') or [])
+
+                        user['access_keys'] = access_keys
+                    except Exception:
+                        if 'list_access_keys' not in error_logs_triggered:
+                            logger.exception(f'Problem with list_access_keys')
+                            error_logs_triggered.append('list_access_keys')
+
+                    users.append(user)
+
+            result['users'] = users
+
+        return result
 
     def _get_account_metadata(self, client_data):
         iam_client = client_data.get('iam')
@@ -1051,11 +1291,31 @@ class AwsAdapter(AdapterBase, Configurable):
                 except Exception:
                     logger.exception('Problem getting NAT Gateways')
 
+                volumes = defaultdict(list)    # dict between instance-id and volumes
+                try:
+                    for volumes_page in get_paginated_next_token_api(ec2_client_data.describe_volumes):
+                        for volume_raw in (volumes_page.get('Volumes') or []):
+                            volume_instance_id = None
+                            for volume_attachment in (volume_raw.get('Attachments') or []):
+                                if volume_attachment.get('InstanceId'):
+                                    volume_instance_id = volume_attachment.get('InstanceId')
+                                    # According to the docs (and UI) a volume can not be attached to multiple instances.
+                                    break
+
+                            if not volume_instance_id:
+                                # This is a detached ebs volume.
+                                continue
+
+                            volumes[volume_instance_id].append(volume_raw)
+                except Exception:
+                    logger.exception(f'Problem getting volumes')
+
                 raw_data['ec2'] = reservations
                 raw_data['vpcs'] = described_vpcs
                 raw_data['security_groups'] = security_groups_dict
                 raw_data['subnets'] = subnets_dict
                 raw_data['nat'] = nat_gateways
+                raw_data['volumes'] = volumes
             except (botocore.exceptions.NoCredentialsError, botocore.exceptions.PartialCredentialsError,
                     botocore.exceptions.CredentialRetrievalError, botocore.exceptions.UnknownCredentialError) as e:
                 raise CredentialErrorException(repr(e))
@@ -1444,6 +1704,41 @@ class AwsAdapter(AdapterBase, Configurable):
                 raw_data['rds'] = all_rds_instances
             except Exception:
                 logger.exception(f'Problem fetching information about RDS')
+        if client_data.get('s3') is not None and self.__fetch_s3 is True:
+            try:
+                s3_buckets = []
+                s3_client = client_data.get('s3')
+                # No pagination for this api..
+                list_buckets_response = s3_client.list_buckets()
+                owner_display_name = (list_buckets_response.get('Owner') or {}).get('DisplayName')
+                owner_id = (list_buckets_response.get('Owner') or {}).get('ID')
+                for bucket_raw in (list_buckets_response.get('Buckets') or []):
+                    bucket_raw['owner_display_name'] = owner_display_name
+                    bucket_raw['owner_id'] = owner_id
+
+                    try:
+                        bucket_acl = s3_client.get_bucket_acl(Bucket=bucket_raw.get('Name'))
+                        if bucket_acl.get('Grants'):
+                            bucket_raw['acls'] = bucket_acl.get('Grants')
+                    except Exception:
+                        pass
+
+                    try:
+                        bucket_policy_status = s3_client.get_bucket_policy_status(Bucket=bucket_raw.get('Name'))
+                        bucket_raw['is_public'] = (bucket_policy_status.get('PolicyStatus') or {}).get('IsPublic')
+                    except Exception:
+                        pass
+
+                    try:
+                        bucket_location_status = s3_client.get_bucket_location(Bucket=bucket_raw.get('Name'))
+                        bucket_raw['location'] = bucket_location_status.get('LocationConstraint')
+                    except Exception:
+                        pass
+                    s3_buckets.append(bucket_raw)
+
+                raw_data['s3_buckets'] = s3_buckets
+            except Exception:
+                logger.exception(f'Problem fetching information about S3')
         return raw_data
 
     def _clients_schema(self):
@@ -1511,13 +1806,13 @@ class AwsAdapter(AdapterBase, Configurable):
                 if raw_data_type == AwsRawDataTypes.Regular:
                     for device in self._parse_raw_data_inner_regular(devices_raw_data_by_source, aws_source):
                         if device:
-                            self.append_metadata_to_device(device, account_metadata)
+                            self.append_metadata_to_entity(device, account_metadata)
                             yield device
                 elif raw_data_type == AwsRawDataTypes.SSM:
                     try:
                         device = self._parse_raw_data_inner_ssm(devices_raw_data_by_source, aws_source)
                         if device:
-                            self.append_metadata_to_device(device, account_metadata)
+                            self.append_metadata_to_entity(device, account_metadata)
                             yield device
                     except Exception:
                         logger.exception(f'Problem parsing device from ssm')
@@ -1527,11 +1822,100 @@ class AwsAdapter(AdapterBase, Configurable):
             except Exception:
                 logger.exception(f'Problem parsing data from source {aws_source}')
 
-    def append_metadata_to_device(self, device: MyDeviceAdapter, account_metadata: dict):
+    def _parse_users_raw_data(self, users_raw_data):
+        for aws_source, account_metadata, users_raw_data_by_source, raw_data_type in users_raw_data:
+            try:
+                if raw_data_type == AwsRawDataTypes.Users:
+                    try:
+                        for user in self._parse_raw_data_inner_users(users_raw_data_by_source, aws_source):
+                            self.append_metadata_to_entity(user, account_metadata)
+                            yield user
+                    except Exception:
+                        logger.exception(f'Problem parsing user')
+                else:
+                    logger.critical(f'Can not parse data for aws source {aws_source}, '
+                                    f'unknown type {raw_data_type.name}')
+            except Exception:
+                logger.exception(f'Problem parsing data from source {aws_source}')
+
+    def _parse_raw_data_inner_users(self, users_raw_data: Dict, aws_source):
+        for user_raw in users_raw_data.get('users'):
+            user = self._new_user_adapter()
+            if not user_raw.get('UserId'):
+                logger.warning(f'Bad user {user_raw}')
+                continue
+            user.aws_source = aws_source
+            if users_raw_data.get('region'):
+                user.aws_region = users_raw_data.get('region')
+            if users_raw_data.get('account_tag'):
+                user.account_tag = users_raw_data.get('account_tag')
+
+            user.id = user_raw['UserId']
+            user.username = user_raw.get('UserName')
+            user.user_path = user_raw.get('Path')
+            user.user_arn = user_raw.get('Arn')
+            user.user_create_date = parse_date(user_raw.get('CreateDate'))
+            user.user_pass_last_used = parse_date(user_raw.get('PasswordLastUsed'))
+            user.user_permission_boundary_arn = (
+                user_raw.get('PermissionsBoundary') or {}).get('PermissionsBoundaryArn')
+
+            try:
+                tags_dict = {i['Key']: i['Value'] for i in (user_raw.get('Tags') or [])}
+                for key, value in tags_dict.items():
+                    user.aws_tags.append(AWSTagKeyValue(key=key, value=value))
+            except Exception:
+                logger.exception(f'Problem adding tags')
+
+            try:
+                user_groups = user_raw.get('groups')
+                if isinstance(user_groups, list):
+                    user.user_groups = user_groups
+            except Exception:
+                logger.exception(f'Problem adding user groups')
+
+            try:
+                policies = user_raw.get('attached_policies') or []
+                for policy in policies:
+                    user.user_attached_policies.append(AWSIAMPolicy(policy_name=policy, policy_type='Managed'))
+            except Exception:
+                logger.exception(f'Problem adding user managed policies')
+
+            try:
+                policies = user_raw.get('inline_policies') or []
+                for policy in policies:
+                    user.user_attached_policies.append(AWSIAMPolicy(policy_name=policy, policy_type='Inline'))
+            except Exception:
+                logger.exception(f'Problem adding user inline policies')
+
+            try:
+                policies = user_raw.get('group_attached_policies') or []
+                for policy in policies:
+                    user.user_attached_policies.append(AWSIAMPolicy(policy_name=policy, policy_type='Group Managed'))
+            except Exception:
+                logger.exception(f'Problem adding user group managed policies')
+
+            try:
+                access_keys = user_raw.get('access_keys') or []
+                for access_key_raw in access_keys:
+                    access_key_status = access_key_raw.get('Status')
+                    user.user_attached_keys.append(
+                        AWSIAMAccessKey(
+                            access_key_id=access_key_raw.get('AccessKeyId'),
+                            status=access_key_status if access_key_status in ['Active', 'Inactive'] else None,
+                            create_date=parse_date(access_key_raw.get('CreateDate'))
+                        )
+                    )
+            except Exception:
+                logger.exception(f'Problem adding user access keys')
+
+            user.set_raw(user_raw)
+            yield user
+
+    def append_metadata_to_entity(self, entity, account_metadata: dict):
         try:
             account_aliases = account_metadata.get('aliases')
             if account_aliases and isinstance(account_aliases, list):
-                device.aws_account_alias = account_aliases
+                entity.aws_account_alias = account_aliases
         except Exception:
             pass
 
@@ -1625,6 +2009,8 @@ class AwsAdapter(AdapterBase, Configurable):
         all_elbs = devices_raw_data.get('all_elbs') or []
         nat_gateways = devices_raw_data.get('nat') or {}
         rds_instances = devices_raw_data.get('rds') or []
+        volumes_by_iid = devices_raw_data.get('volumes') or {}
+        s3_buckets = devices_raw_data.get('s3_buckets') or []
 
         ec2_id_to_ips = dict()
         private_ips_to_ec2 = dict()
@@ -1830,7 +2216,7 @@ class AwsAdapter(AdapterBase, Configurable):
                                         'attached_policies_names')
                                 )
                     except Exception:
-                        logger.exception(f'Could not parse iam instance profile {iam_instance_profile_raw}')
+                        logger.exception(f'Could not parse iam instance profile')
 
                     try:
                         # Parse load balancers info
@@ -1863,6 +2249,53 @@ class AwsAdapter(AdapterBase, Configurable):
                                 logger.exception(f'Error parsing lb: {lb_raw}')
                     except Exception:
                         logger.exception(f'Error parsing load balancers information')
+
+                    try:
+                        instance_volumes = volumes_by_iid.get(device_id) or []
+                        device.ebs_volumes = []
+                        for volume_raw in instance_volumes:
+                            volume_attachments = []
+                            for attachment_raw in (volume_raw.get('Attachments') or []):
+                                volume_attachments.append(
+                                    AWSEBSVolumeAttachment(
+                                        attach_time=parse_date(attachment_raw.get('AttachTime')),
+                                        device=attachment_raw.get('Device'),
+                                        state=attachment_raw.get('State'),
+                                        delete_on_termination=attachment_raw.get('DeleteOnTermination')
+                                    )
+                                )
+
+                            ebs_tags_dict = {i['Key']: i['Value'] for i in (volume_raw.get('Tags') or [])}
+                            ebs_tags_list = []
+                            for key, value in ebs_tags_dict.items():
+                                ebs_tags_list.append(AWSTagKeyValue(key=key, value=value))
+
+                            name = ebs_tags_dict.get('Name')
+                            device.ebs_volumes.append(
+                                AWSEBSVolume(
+                                    attachments=volume_attachments,
+                                    name=name,
+                                    availability_zone=volume_raw.get('AvailabilityZone'),
+                                    create_time=parse_date(volume_raw.get('CreateTime')),
+                                    encrypted=volume_raw.get('Encrypted'),
+                                    kms_key_id=volume_raw.get('KmsKeyId'),
+                                    size=volume_raw.get('Size'),
+                                    snapshot_id=volume_raw.get('SnapshotId'),
+                                    state=volume_raw.get('State'),
+                                    volume_id=volume_raw.get('VolumeId'),
+                                    iops=volume_raw.get('Iops'),
+                                    tags=ebs_tags_list,
+                                    volume_type=volume_raw.get('VolumeType')
+                                )
+                            )
+
+                            device.add_hd(
+                                total_size=volume_raw.get('Size'),
+                                is_encrypted=volume_raw.get('Encrypted')
+                            )
+
+                    except Exception:
+                        logger.exception(f'Error parsing instance volumes')
 
                     device.set_raw(device_raw)
                     yield device
@@ -2428,6 +2861,54 @@ class AwsAdapter(AdapterBase, Configurable):
         except Exception:
             logger.exception(f'Failure parsing RDSs')
 
+        # Parse S3 Buckets
+        try:
+            for s3_bucket_raw in s3_buckets:
+                try:
+                    device = self._new_device_adapter()
+                    device.id = s3_bucket_raw.get('Name')
+                    device.name = s3_bucket_raw.get('Name')
+                    device.aws_device_type = 'S3'
+                    device.aws_source = aws_source
+                    device.aws_region = aws_region
+                    device.account_tag = account_tag
+                    device.cloud_provider = 'AWS'
+
+                    device.s3_bucket_name = s3_bucket_raw.get('Name')
+                    device.s3_creation_date = s3_bucket_raw.get('CreationDate')
+                    device.s3_owner_name = s3_bucket_raw.get('owner_display_name')
+                    device.s3_owner_id = s3_bucket_raw.get('owner_id')
+
+                    has_public_acl = False
+                    for acl_raw in (s3_bucket_raw.get('acls') or []):
+                        acl_raw_grantee = acl_raw.get('Grantee') or {}
+                        device.s3_bucket_acls.append(
+                            AWSS3BucketACL(
+                                grantee_display_name=acl_raw_grantee.get('DisplayName'),
+                                grantee_email_address=acl_raw_grantee.get('EmailAddress'),
+                                grantee_id=acl_raw_grantee.get('ID'),
+                                grantee_type=acl_raw_grantee.get('Type'),
+                                grantee_uri=acl_raw_grantee.get('URI'),
+                                grantee_permission=acl_raw.get('Permission'),
+                            )
+                        )
+                        if acl_raw_grantee.get('URI') and 'groups/global/AllUsers' in acl_raw_grantee.get('URI'):
+                            has_public_acl = True
+
+                    if has_public_acl:
+                        device.s3_bucket_is_public = True
+                    else:
+                        device.s3_bucket_is_public = s3_bucket_raw.get('is_public')
+
+                    device.s3_bucket_location = s3_bucket_raw.get('location')
+
+                    device.set_raw(s3_bucket_raw)
+                    yield device
+                except Exception:
+                    logger.exception(f'Problem parsing s3 bucket')
+        except Exception:
+            logger.exception(f'Failure parsing S3 Buckets')
+
     def _parse_raw_data_inner_ssm(
             self,
             device_raw_data_all: Tuple[Dict[str, Dict], Dict[str, Dict], Dict[str, str]],
@@ -2653,6 +3134,8 @@ class AwsAdapter(AdapterBase, Configurable):
         self.__fetch_instance_roles = config.get('fetch_instance_roles') or False
         self.__fetch_load_balancers = config.get('fetch_load_balancers') or False
         self.__fetch_rds = config.get('fetch_rds') or False
+        self.__fetch_s3 = config.get('fetch_s3') or False
+        self.__fetch_iam_users = config.get('fetch_iam_users') or False
         self.__fetch_ssm = config.get('fetch_ssm') or False
         self.__fetch_nat = config.get('fetch_nat') or False
         self.__parse_elb_ips = config.get('parse_elb_ips') or False
@@ -2704,6 +3187,16 @@ class AwsAdapter(AdapterBase, Configurable):
                     'type': 'bool'
                 },
                 {
+                    'name': 'fetch_s3',
+                    'title': 'Fetch information about S3',
+                    'type': 'bool'
+                },
+                {
+                    'name': 'fetch_iam_users',
+                    'title': 'Fetch information about IAM Users',
+                    'type': 'bool'
+                },
+                {
                     'name': 'verbose_auth_notifications',
                     'title': 'Show verbose notifications about connection failures',
                     'type': 'bool'
@@ -2721,6 +3214,8 @@ class AwsAdapter(AdapterBase, Configurable):
                 'fetch_instance_roles',
                 'fetch_load_balancers',
                 'fetch_rds',
+                'fetch_s3',
+                'fetch_iam_users',
                 'fetch_ssm',
                 'fetch_nat',
                 'parse_elb_ips',
@@ -2738,6 +3233,8 @@ class AwsAdapter(AdapterBase, Configurable):
             'fetch_instance_roles': False,
             'fetch_load_balancers': False,
             'fetch_rds': False,
+            'fetch_s3': False,
+            'fetch_iam_users': False,
             'fetch_ssm': False,
             'fetch_nat': False,
             'parse_elb_ips': False,

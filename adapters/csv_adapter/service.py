@@ -8,6 +8,7 @@ from smb.SMBHandler import SMBHandler
 
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import GetDevicesError
+from axonius.clients.aws.utils import get_s3_object
 from axonius.clients.csv.utils import get_column_types
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.users.user_adapter import UserAdapter
@@ -48,8 +49,9 @@ class CsvAdapter(AdapterBase):
         raise NotImplementedError()
 
     def _connect_client(self, client_config):
-        if not client_config.get('csv_http') and 'csv' not in client_config and not client_config.get('csv_share'):
-            raise ClientConnectionException('Bad params. No File or URL or Share for CSV')
+        if not client_config.get('csv_http') and 'csv' not in client_config and not client_config.get('csv_share') \
+                and not client_config.get('s3_bucket'):
+            raise ClientConnectionException('Bad params. No File / URL / Share / S3 Bucket for CSV')
         self.create_csv_info_from_client_config(client_config)
         return client_config
 
@@ -83,8 +85,33 @@ class CsvAdapter(AdapterBase):
                     csv_data_bytes = fh.read()
             except Exception:
                 logger.exception(f'Couldn\'t get csv info from share')
+        elif client_config.get('s3_bucket') or client_config.get('s3_object_location'):
+            s3_bucket = client_config.get('s3_bucket')
+            s3_object_location = client_config.get('s3_object_location')
+            s3_access_key_id = client_config.get('s3_access_key_id')
+            s3_secret_access_key = client_config.get('s3_secret_access_key')
+
+            if not (s3_bucket and s3_object_location):
+                raise ClientConnectionException(f'Error - Please specify both S3 Bucket and S3 Object Location')
+
+            if (s3_access_key_id or s3_secret_access_key) and not (s3_access_key_id and s3_secret_access_key):
+                raise ClientConnectionException(f'Error - Please specify both access key id and secret access key, '
+                                                f'or leave blank to use the attached IAM role')
+
+            try:
+                csv_data_bytes = get_s3_object(
+                    bucket_name=s3_bucket,
+                    object_location=s3_object_location,
+                    access_key_id=s3_access_key_id,
+                    secret_access_key=s3_secret_access_key
+                )
+            except Exception as e:
+                if 'SignatureDoesNotMatch' in str(e):
+                    raise ClientConnectionException(f'S3 Bucket - Invalid Credentials. Response is: {str(e)}')
+                raise
         elif 'csv' in client_config:
             csv_data_bytes = self._grab_file_contents(client_config['csv'])
+
         if csv_data_bytes is None:
             raise Exception('Bad CSV, could not parse the data')
         encoding = chardet.detect(csv_data_bytes)['encoding']  # detect decoding automatically
@@ -167,6 +194,29 @@ class CsvAdapter(AdapterBase):
                     'type': 'string',
                     'format': 'password'
                 },
+                {
+                    'name': 's3_bucket',
+                    'title': 'S3 Bucket Name',
+                    'type': 'string',
+                },
+                {
+                    'name': 's3_object_location',
+                    'title': 'S3 Object Location (Key)',
+                    'type': 'string',
+                },
+                {
+                    'name': 's3_access_key_id',
+                    'title': 'S3 Access Key Id',
+                    'description': 'Leave blank to use the attached IAM role',
+                    'type': 'string',
+                },
+                {
+                    'name': 's3_secret_access_key',
+                    'title': 'S3 Secret Access Key',
+                    'description': 'Leave blank to use the attached IAM role',
+                    'type': 'string',
+                    'format': 'password'
+                }
             ],
             'required': [
                 'user_id',
