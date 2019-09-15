@@ -73,7 +73,9 @@ class GuiService(PluginService, UpdatablePluginMixin):
             self._update_schema_version_16()
         if self.db_schema_version < 17:
             self._update_schema_version_17()
-        if self.db_schema_version != 17:
+        if self.db_schema_version < 18:
+            self._update_schema_version_18()
+        if self.db_schema_version != 18:
             print(f'Upgrade failed, db_schema_version is {self.db_schema_version}')
 
     def _update_schema_version_1(self):
@@ -532,6 +534,7 @@ class GuiService(PluginService, UpdatablePluginMixin):
         try:
             self._remove_unused_spaces(DASHBOARD_SPACE_TYPE_DEFAULT)
             self._remove_unused_spaces(DASHBOARD_SPACE_TYPE_PERSONAL)
+
             self.db_schema_version = 17
         except Exception as e:
             print(f'Exception while upgrading gui db to version 17. Details: {e}')
@@ -544,6 +547,55 @@ class GuiService(PluginService, UpdatablePluginMixin):
         if dashboards.count() > 1:
             indexes_to_delete = [space.get('_id') for space in dashboards[1:]]
             dashboard_spaces_collection.delete_many({'_id': {'$in': indexes_to_delete}})
+
+    def _update_schema_version_18(self):
+        """
+        For version 2.10, fix order of fields for all saved queries
+        """
+        print('Upgrade to schema 18')
+        try:
+            fields_order = {
+                EntityType.Devices: [
+                    'adapters', 'specific_data.data.name', 'specific_data.data.hostname',
+                    'specific_data.data.last_seen', 'specific_data.data.network_interfaces.mac',
+                    'specific_data.data.network_interfaces.ips', 'specific_data.data.os.type'
+                ],
+                EntityType.Users: [
+                    'adapters', 'specific_data.data.image', 'specific_data.data.username', 'specific_data.data.domain',
+                    'specific_data.data.is_admin', 'specific_data.data.last_seen'
+                ]
+            }
+            for entity_type in EntityType:
+                views_collection = self._entity_views_map[entity_type]
+                saved_views = views_collection.find({
+                    'query_type': 'saved'
+                })
+                for view_doc in saved_views:
+                    original_fields = view_doc.get('view', {}).get('fields', [])
+                    reordered_fields = []
+                    for field in fields_order[entity_type]:
+                        try:
+                            original_fields.remove(field)
+                        except ValueError:
+                            # Field from definition is not in saved fields - nothing to do
+                            continue
+                        reordered_fields.append(field)
+
+                    reordered_fields.extend([field for field in original_fields if 'specific_data.data' in field])
+                    if 'labels' in original_fields:
+                        reordered_fields.append('labels')
+                    reordered_fields.extend([field for field in original_fields if 'adapters_data.' in field])
+                    views_collection.update_one({
+                        '_id': view_doc['_id']
+                    }, {
+                        '$set': {
+                            'view.fields': reordered_fields
+                        }
+                    })
+
+            self.db_schema_version = 18
+        except Exception as e:
+            print(f'Exception while upgrading gui db to version 18. Details: {e}')
 
     def _update_default_locked_actions(self, new_actions):
         """

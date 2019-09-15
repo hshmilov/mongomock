@@ -117,9 +117,6 @@ class EnforcementsPage(EntitiesPage):
     def root_page_css(self):
         return 'li#enforcements.x-nav-item'
 
-    def find_checkbox_by_label(self, text):
-        return self.driver.find_element_by_xpath(self.CHECKBOX_XPATH_TEMPLATE.format(label_text=text))
-
     def find_checkbox_with_label_before(self, text):
         return self.driver.find_element_by_xpath(self.CHECKBOX_WITH_SIBLING_LABEL_XPATH.format(label_text=text))
 
