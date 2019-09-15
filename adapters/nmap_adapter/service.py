@@ -104,7 +104,7 @@ class NmapAdapter(ScannerAdapterBase):
         nmap_xml = ET.fromstring(nmap_data)
         if not 'nmaprun' in nmap_xml.tag:
             raise Exception(f'Bad Nmap XML, basic tag is {nmap_xml}')
-        return nmap_xml
+        return nmap_xml, client_config['user_id']
 
     def _query_devices_by_client(self, client_name, client_data):
         return self.create_nmap_info_from_client_config(client_data)
@@ -220,19 +220,23 @@ class NmapAdapter(ScannerAdapterBase):
             except Exception:
                 logger.exception(f'Problem with xml elem')
 
-    # pylint: disable=too-many-branches, too-many-statements, too-many-nested-blocks
-    def _parse_raw_data(self, devices_raw_data):
+    # pylint: disable=too-many-branches, too-many-statements, too-many-nested-blocks, arguments-differ
+    def _parse_raw_data(self, devices_raw_data_full):
+        devices_raw_data, file_name = devices_raw_data_full
         for xml_device_raw in devices_raw_data:
             try:
                 if xml_device_raw.tag != 'host':
                     continue
                 device = self._new_device_adapter()
+                device.file_name = file_name
                 try:
-                    device.start_time = datetime.datetime.fromtimestamp(int(xml_device_raw.attrib.get('starttime')))
+                    if xml_device_raw.attrib.get('starttime'):
+                        device.start_time = datetime.datetime.fromtimestamp(int(xml_device_raw.attrib.get('starttime')))
                 except Exception:
                     logger.exception(f'Problem getting start time')
                 try:
-                    device.end_time = datetime.datetime.fromtimestamp(int(xml_device_raw.attrib.get('endtime')))
+                    if xml_device_raw.attrib.get('endtime'):
+                        device.end_time = datetime.datetime.fromtimestamp(int(xml_device_raw.attrib.get('endtime')))
                 except Exception:
                     logger.exception(f'Problem getting end time')
                 for xml_property in xml_device_raw:

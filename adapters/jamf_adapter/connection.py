@@ -279,8 +279,10 @@ class JamfConnection(object):
                 for policy in reversed(policies):
                     try:
                         policy_key = policy.get('policy_id')
-                        policy_date = parse_date(policy.get('date_completed_utc')
-                                                 ) or parse_date(policy.get('date_completed')).replace(tzinfo=None)
+                        date_completed = parse_date(policy.get('date_completed'))
+                        if date_completed:
+                            date_completed = date_completed.replace(tzinfo=None)
+                        policy_date = parse_date(policy.get('date_completed_utc')) or date_completed
                         if not policy_date:
                             logging.warning(f'Bad Policy with no date or key {policy}')
                             continue

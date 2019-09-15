@@ -15,6 +15,8 @@ from axonius.devices.device_adapter import DeviceAdapter, AGENT_NAMES
 from axonius.clients.rest.connection import RESTConnection
 from axonius.mixins.configurable import Configurable
 from axonius.clients.tenable_io.connection import TenableIoConnection
+from axonius.clients.tenable_io.consts import AGENT_TYPE, ASSET_TYPE
+from tenable_io_adapter.client_id import get_client_id
 
 
 logger = logging.getLogger(f'axonius.{__name__}')
@@ -94,8 +96,9 @@ class TenableIoAdapter(ScannerAdapterBase, Configurable):
             return str(e), 400
         return 'Failure', 400
 
-    def _get_client_id(self, client_config):
-        return client_config['domain'] + '_' + client_config['access_key']
+    @staticmethod
+    def _get_client_id(client_config):
+        return get_client_id(client_config)
 
     def _test_reachability(self, client_config):
         return RESTConnection.test_reachability(client_config.get('domain'))
@@ -129,16 +132,13 @@ class TenableIoAdapter(ScannerAdapterBase, Configurable):
 
         :return: A json with all the attributes returned from the Server
         """
-        try:
-            client_data.connect()
+        with client_data:
             logger.info('Getting all assets')
             devices_list = client_data.get_device_list(use_cache=self.__use_cache)
-            logger.info(f'Got {len(devices_list)} assets, starting agents')
-            agents_list = client_data.get_agents()
-            logger.info(f'Got {len(agents_list)} agents')
-            return [devices_list, agents_list, client_data]
-        finally:
-            client_data.close()
+            yield devices_list, ASSET_TYPE, client_data
+            logger.info('Getting all agent')
+            for device_raw in client_data.get_agents():
+                yield device_raw, AGENT_TYPE, client_data
 
     def _clients_schema(self):
         """
@@ -190,10 +190,7 @@ class TenableIoAdapter(ScannerAdapterBase, Configurable):
         device = self._new_device_adapter()
         device.id = device_id
         device.has_agent = bool(device_raw.get('has_agent'))
-        try:
-            device.last_seen = parse_date(device_raw.get('last_seen', ''))
-        except Exception:
-            logger.exception(f'Problem with last seen for {device_raw}')
+        device.last_seen = parse_date(device_raw.get('last_seen'))
         ipv4_raw = device_raw.get('ipv4s') or []
         ipv6_raw = device_raw.get('ipv6s') or []
         mac_addresses_raw = device_raw.get('mac_addresses') or []
@@ -210,12 +207,12 @@ class TenableIoAdapter(ScannerAdapterBase, Configurable):
         fqdns = device_raw.get('fqdns', [])
         hostnames = device_raw.get('hostnames', [])
         netbios = device_raw.get('netbios_names', [])
-        if len(fqdns) > 0 and fqdns[0] != '':
-            device.hostname = fqdns[0]
+        if len(netbios) > 0 and netbios[0] != '':
+            device.hostname = netbios[0]
         elif len(hostnames) > 0 and hostnames[0] != '':
             device.hostname = hostnames[0]
-        elif len(netbios) > 0 and netbios[0] != '':
-            device.hostname = netbios[0]
+        if len(fqdns) > 0 and fqdns[0] != '':
+            device.name = fqdns[0]
         plugin_and_severity = []
         vulns_info = device_raw.get('vulns_info', [])
         device.software_cves = []
@@ -275,62 +272,60 @@ class TenableIoAdapter(ScannerAdapterBase, Configurable):
 
         try:
             device.set_raw(device_raw)
-        except exception as e:
+        except Exception as e:
             logger.exception('failed to set raw')
 
         return device
 
     def _parse_raw_data(self, devices_raw_data_all):
-        client_data = None
-        try:
-            devices_raw_data, agents_data, client_data = devices_raw_data_all
-            client_data.connect()
-            devices_raw_data, connection_type = devices_raw_data
-            if connection_type == 'export':
-                for device_id, device_raw in devices_raw_data:
-                    try:
-                        yield self._parse_export_device(device_id, device_raw, client_data)
-                    except Exception:
-                        logger.exception(f'Problem with parsing device {device_raw}')
-            elif connection_type == 'csv':
-                yield from self._parse_raw_data_csv(devices_raw_data)
-            yield from self._parse_agents(agents_data)
-        finally:
-            if client_data:
-                client_data.close()
-
-    def _parse_agents(self, agents_data):
-        try:
-            for agent_raw in agents_data:
-                try:
-                    device = self._new_device_adapter()
-                    device_id = agent_raw.get('id')
-                    if not device_id:
-                        logger.warning(f'Bad agent with no ID {agent_raw}')
+        agent_ids = set()
+        for device_raw, device_type, client_data in devices_raw_data_all:
+            try:
+                if AGENT_TYPE == device_type:
+                    if device_raw.get('id') in agent_ids:
                         continue
-                    hostname = agent_raw.get('name')
-                    device.id = str(device_id) + hostname or ''
-                    device.hostname = hostname
-                    ip = agent_raw.get('ip')
-                    if ip:
-                        device.add_nic(None, [ip])
-                    try:
-                        if agent_raw.get('last_connect'):
-                            device.last_seen = datetime.datetime.fromtimestamp(agent_raw.get('last_connect'))
-                    except Exception:
-                        logger.exception(f'Problem getting last seen at {agent_raw}')
-                    device.has_agent = True
-                    device.status = agent_raw.get('status')
-                    device.add_agent_version(agent=AGENT_NAMES.tenable_io, version=agent_raw.get('core_version'))
-                    device.adapter_properties = [AdapterProperty.Agent.name,
-                                                 AdapterProperty.Vulnerability_Assessment.name]
-                    device.set_raw(agent_raw)
-                    yield device
-                except Exception:
-                    logger.exception(f'Problem parsing {agent_raw}')
+                    agent_ids.add(device_raw.get('id'))
+                    device = self._create_agent_device(device_raw)
+                    if device:
+                        yield device
+                elif ASSET_TYPE == device_type:
+                    devices_raw_data_and_type = device_raw
+                    devices_raw_data, connection_type = devices_raw_data_and_type
+                    if connection_type == 'export':
+                        for device_id, device_asset_raw in devices_raw_data:
+                            try:
+                                yield self._parse_export_device(device_id, device_asset_raw, client_data)
+                            except Exception:
+                                logger.exception(f'Problem with parsing device {device_asset_raw}')
+                    elif connection_type == 'csv':
+                        yield from self._parse_raw_data_csv(devices_raw_data)
+            except Exception:
+                logger.exception(f'Problem with device raw {device_raw}')
+
+    def _create_agent_device(self, agent_raw):
+        try:
+            device = self._new_device_adapter()
+            device_id = agent_raw.get('id')
+            if not device_id:
+                logger.warning(f'Bad agent with no ID {agent_raw}')
+                return None
+            hostname = agent_raw.get('name')
+            device.id = str(device_id) + hostname or ''
+            device.hostname = hostname
+            ip = agent_raw.get('ip')
+            if ip:
+                device.add_nic(None, [ip])
+            device.last_seen = parse_date(agent_raw.get('last_connect'))
+            device.has_agent = True
+            device.status = agent_raw.get('status')
+            device.add_agent_version(agent=AGENT_NAMES.tenable_io, version=agent_raw.get('core_version'))
+            device.adapter_properties = [AdapterProperty.Agent.name,
+                                         AdapterProperty.Vulnerability_Assessment.name]
+            device.set_raw(agent_raw)
+            return device
         except Exception:
-            logger.exception('Problem with all agents')
-        return
+            logger.exception(f'Problem parsing {agent_raw}')
+            return None
 
     def _parse_raw_data_csv(self, devices_raw_data):
         assets_dict = defaultdict(list)

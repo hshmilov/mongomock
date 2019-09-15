@@ -190,6 +190,7 @@ class AzureAdAdapter(AdapterBase):
             logger.exception(f'Got exception for raw_device_data: {raw_device_data}')
             return None
 
+    # pylint: disable=too-many-branches, too-many-statements, too-many-nested-blocks
     def _create_intune_device(self, device_raw):
         try:
             device = self._new_device_adapter()
@@ -212,6 +213,11 @@ class AzureAdAdapter(AdapterBase):
             try:
                 device.figure_os((device_raw.get('osVersion') or '') + ' ' +
                                  ((device_raw.get('operatingSystem')) or ''))
+                try:
+                    if device.os.type == 'Windows':
+                        device.hostname = device.name
+                except Exception:
+                    pass
             except Exception:
                 logger.exception(f'Problem getting os for {device_raw}')
             device.imei = device_raw.get('imei')

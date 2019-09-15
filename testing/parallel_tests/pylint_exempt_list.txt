@@ -460,7 +460,6 @@ testing/test_credentials/test_solarwinds_orion_credentials.py
 testing/test_credentials/test_splunk_credentials.py
 testing/test_credentials/test_symantec_altiris_credentials.py
 testing/test_credentials/test_symantec_credentials.py
-testing/test_credentials/test_tenable_io_credentials.py
 testing/test_credentials/test_tenable_security_center_credentials.py
 testing/test_credentials/test_traiana_lab_machines_credentials.py
 testing/test_helpers/device_helper.py

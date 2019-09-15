@@ -1,3 +1,4 @@
+import datetime
 import logging
 
 from airwatch_adapter.connection import AirwatchConnection
@@ -15,12 +16,14 @@ logger = logging.getLogger(f'axonius.{__name__}')
 
 class AirwatchAdapter(AdapterBase):
 
+    # pylint: disable=too-many-instance-attributes
     class MyDeviceAdapter(DeviceAdapter):
         imei = Field(str, 'IMEI')
         phone_number = Field(str, 'Phone Number')
         udid = Field(str, 'UdId')
         email = Field(str, 'Email')
         friendly_name = Field(str, 'Friendly Name')
+        last_enrolled_on = Field(datetime.datetime, 'Last Enrolled On')
 
     def __init__(self):
         super().__init__(get_local_config_file(__file__))
@@ -165,6 +168,8 @@ class AirwatchAdapter(AdapterBase):
                     name = name.replace('.', '-')
                 device.name = name + '_' + str(device_raw.get('MacAddress'))
                 device.friendly_name = device_raw.get('DeviceFriendlyName')
+
+                device.last_enrolled_on = parse_date(device_raw.get('LastEnrolledOn'))
 
                 device.last_used_users = (device_raw.get('UserName') or '').split(',')
                 try:

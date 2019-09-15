@@ -724,7 +724,7 @@ class ReportGenerator:
                         })
                 except Exception:
                     logger.exception(f'Problem with View {view_doc["name"]} ViewDoc {str(view_doc)}')
-        logger.info(f'query.saved_views {views_data}')
+        logger.debug(f'query.saved_views {views_data}')
         return views_data
 
     @staticmethod

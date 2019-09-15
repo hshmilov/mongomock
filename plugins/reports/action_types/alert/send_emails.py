@@ -131,7 +131,7 @@ class SendEmailsAction(ActionTypeAlert):
         subject = self._config.get('mailSubject') if \
             self._config.get('mailSubject') else report_consts.REPORT_TITLE.format(name=self._report_data['name'],
                                                                                    query=query_name)
-        logger.info(self._config)
+        logger.debug(self._config)
         if not self._config.get('emailList'):
             logger.info('Email cannot be sent because no recipients are configured')
             return AlertActionResult(False, 'Email required Recipients')
@@ -152,7 +152,7 @@ class SendEmailsAction(ActionTypeAlert):
                 else:
                     parsed_query_filter = self._create_query(self._internal_axon_ids)
                     field_list = ['specific_data.data.name', 'specific_data.data.hostname',
-                                  'specific_data.data.os.type', 'specific_data.data.last_used_users']
+                                  'specific_data.data.os.type', 'specific_data.data.last_used_users', 'labels']
                     sort = {}
                     field_filters = {}
                 csv_string = gui_helpers.get_csv(parsed_query_filter,

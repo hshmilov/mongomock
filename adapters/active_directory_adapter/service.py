@@ -584,6 +584,9 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
 
         ad_entity.parse_user_account_control(raw_data.get("userAccountControl"))
 
+        ad_entity.physical_delivery_office_name = raw_data.get('physicalDeliveryOfficeName')
+        ad_entity.delivery_office_name = raw_data.get('DeliveryOfficeName')
+
     def _parse_users_raw_data(self, client_data_result_dict: dict):
         for client_data_name, client_data_result in client_data_result_dict:
             try:
@@ -620,7 +623,6 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
                 if domain_name == "":
                     logger.error(f"Error, domain name turned out to be empty. Do we have DC=? its {domain}. Bypassing")
                     continue
-
                 user.username = username
                 user.ad_dc_source = user_raw.get('AXON_DC_ADDR')
                 user.description = user_raw.get('description')

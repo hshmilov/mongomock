@@ -189,6 +189,12 @@ class NetboxAdapter(AdapterBase):
                     device[normalized_column_name] = str(attribute_raw_value)
                 except Exception:
                     logger.exception(f'Problem adding attribute {attribute_raw}')
+            try:
+                prim = (device_raw.get('primary_ip') or {}).get('address')
+                if prim:
+                    device.add_nic(ips=[prim.split('/')[0]])
+            except Exception:
+                logger.exception(f'Problem getting ip for {device_raw}')
             device.set_raw(device_raw)
             return device
         except Exception:

@@ -1,4 +1,12 @@
 export const pluginMeta = {
+    packetfence_adapter: {
+        title: 'PacketFence',
+        description: 'PacketFence is a free open source network access control (NAC) solution which provides the following features: registration, detection of abnormal network activities, proactive vulnerability scans, isolation of problematic devices, remediation through a captive portal, 802.1X, wireless integration and User-Agent / DHCP fingerprinting.'
+    },
+    medigate_adapter: {
+        title: 'Medigate',
+        description: 'Medigate is a medical device security platform that protects connected medical devices on health care provider networks, allowing inventory management and facilitating detection and prevention capabilities.'
+    },
     specops_adapter: {
         title: 'Specops Inventory',
         link: 'https://docs.axonius.com/docs/specops-inventory',
@@ -125,7 +133,7 @@ export const pluginMeta = {
         description: 'Datto RMM (formerly Autotask Endpoint Management) is a cloud-based Remote Monitoring and Management (RMM) platform that provides device auditing, real-time monitoring, and automatic patching.'
     },
     ca_cmdb_adapter: {
-        title: 'CA Service Management - BETA',
+        title: 'CA Service Management',
         link: 'https://docs.axonius.com/docs/ca-service-management',
         description: 'CA Service Management is an IT service management (ITSM) solution that offers incident management and IT asset management.'
     },

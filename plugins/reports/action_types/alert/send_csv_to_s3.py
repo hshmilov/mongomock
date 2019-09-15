@@ -74,7 +74,7 @@ class SendCsvToS3(ActionTypeAlert):
             else:
                 parsed_query_filter = self._create_query(self._internal_axon_ids)
                 field_list = ['specific_data.data.name', 'specific_data.data.hostname',
-                              'specific_data.data.os.type', 'specific_data.data.last_used_users']
+                              'specific_data.data.os.type', 'specific_data.data.last_used_users', 'labels']
                 sort = {}
                 field_filters = {}
             csv_string = gui_helpers.get_csv(parsed_query_filter,

@@ -141,7 +141,7 @@ class DeviceAdapterOS(SmartJsonClass):
     type = Field(
         str, 'Type', enum=['Windows', 'Linux', 'OS X', 'iOS', 'AirOS',
                            'Android', 'FreeBSD', 'VMWare', 'Cisco', 'Mikrotik', 'VxWorks',
-                           'F5 Networks Big-IP']
+                           'F5 Networks Big-IP', 'Solaris']
     )
     distribution = Field(str, 'Distribution')
     bitness = Field(int, 'Bitness', enum=[32, 64])
@@ -990,10 +990,12 @@ class DeviceAdapter(SmartJsonClass):
         self.tags.append(DeviceTagKeyValue(tag_key=key, tag_value=value))
 
     def add_agent_version(self, agent=None, version=None, status=None):
-        if not version:
+        if not version and not status:
             return
+        if not version:
+            version = None
         if not status:
-            status = 'Not Provided'
+            status = None
         try:
             self.agent_versions.append(DeviceAdapterAgentVersion(adapter_name=agent,
                                                                  agent_version=version,

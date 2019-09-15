@@ -8,14 +8,15 @@ from axonius.clients.rest.connection import RESTException
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.utils.files import get_local_config_file
 from axonius.plugin_base import EntityType, add_rule, return_error
-from axonius.fields import Field
+from axonius.mixins.configurable import Configurable
+from axonius.fields import Field, ListField
 from cybereason_adapter.connection import CybereasonConnection
 from cybereason_adapter.client_id import get_client_id
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
-class CybereasonAdapter(AdapterBase):
+class CybereasonAdapter(AdapterBase, Configurable):
     # pylint: disable=R0902
     class MyDeviceAdapter(DeviceAdapter):
         agent_status = Field(str, 'Agent Status')
@@ -25,6 +26,7 @@ class CybereasonAdapter(AdapterBase):
         isolated = Field(bool, 'Isolated')
         prevention_status = Field(str, 'Prevention Status')
         pylum_id = Field(str, 'Pylum ID')
+        custom_tags = ListField(str, 'Custom Tags')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -118,6 +120,7 @@ class CybereasonAdapter(AdapterBase):
             'type': 'array'
         }
 
+    # pylint: disable=too-many-branches, too-many-statements, too-many-nested-blocks
     def _create_device(self, device_raw):
         try:
             device = self._new_device_adapter()
@@ -144,6 +147,17 @@ class CybereasonAdapter(AdapterBase):
             device.isolated = device_raw.get('isolated')
             agent_status = device_raw.get('status')
             device.agent_status = agent_status
+            try:
+                custom_tags = device_raw.get('customTags')
+                if not custom_tags:
+                    custom_tags = []
+                else:
+                    custom_tags = custom_tags.split(',')
+                    device.custom_tags = custom_tags
+                if self.__white_list_tags and self.__white_list_tags not in custom_tags:
+                    return None
+            except Exception:
+                logger.exception(f'Problem with tags')
             if agent_status == 'Online':
                 device.last_seen = datetime.datetime.utcnow()
             elif isinstance(device_raw.get('disconnectionTime'), int):
@@ -202,8 +216,35 @@ class CybereasonAdapter(AdapterBase):
             return return_error(str(e), 500)
         return '', 200
 
+    # pylint: disable=no-self-use
     def outside_reason_to_live(self) -> bool:
         """
         This adapter might be called from outside, let it live
         """
         return True
+
+    @classmethod
+    def _db_config_schema(cls) -> dict:
+        return {
+            'items': [
+                {
+                    'name': 'white_list_tags',
+                    'title': 'Custom Tags White List',
+                    'type': 'string'
+                }
+            ],
+            'required': [
+                'white_list_tags',
+            ],
+            'pretty_name': 'Cybereason Configuration',
+            'type': 'array'
+        }
+
+    @classmethod
+    def _db_config_default(cls):
+        return {
+            'white_list_tags': None
+        }
+
+    def _on_config_update(self, config):
+        self.__white_list_tags = config['white_list_tags']

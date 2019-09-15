@@ -22,6 +22,7 @@ class FireeyeHxAdapter(AdapterBase):
         bios_type = Field(str, 'Bios Type')
         build_number = Field(int, 'Build Number')
         clock_skew = Field(str, 'Clock Skew')
+        availphysical = Field(int, 'Available Physical')
         last_poll_ip = Field(str, 'Last Poll IP')
         last_poll_timestamp = Field(datetime.datetime, 'Last Poll Timestamp')
         app_created = Field(datetime.datetime, 'App Created')
@@ -45,6 +46,10 @@ class FireeyeHxAdapter(AdapterBase):
         malware_quarantined_count = Field(int, 'Malware Quarantined Count')
         presence_hits_count = Field(int, 'Presence Hits Count')
         containment_state = Field(str, 'Containment State')
+        recent_triage_action = Field(str, 'Recent Triage Action')
+        recent_triage_id = Field(str, 'Recent Triage Id')
+        recent_triage_state = Field(str, 'Recent Triage State')
+        intel_version = Field(str, 'Intel Version')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -169,18 +174,53 @@ class FireeyeHxAdapter(AdapterBase):
                 device.first_seen = parse_date(device_raw.get('initial_agent_checkin'))
                 device.last_poll_ip = device_raw.get('last_poll_ip')
                 device.excluded_from_containment = bool(device_raw.get('excluded_from_containment'))
-                device.app_created = parse_date(device_raw.get('appCreated'))
-                device.app_started = parse_date(device_raw.get('appStarted'))
                 device.time_zone = device_raw.get("timezone")
-                device.install_date = parse_date(device_raw.get('installDate'))
-                device.bios_type = device_raw.get('biosType')
-                device.bios_date = parse_date(device_raw.get('biosDate'))
-                device.bios_version = device_raw.get('biosVersion')
                 device.reported_clone = bool(device_raw.get('reported_clone'))
                 device.last_poll_timestamp = parse_date(device_raw.get('last_poll_timestamp'))
-                device.fips = device_raw.get('FIPS')
-                device.clock_skew = device_raw.get('clockSkew')
+                try:
+                    uptime = device_raw.get('uptime')
+                    if uptime:
+                        uptime = str(uptime).strip('PT').strip('S')
+                        device.set_boot_time(uptime=datetime.timedelta(seconds=int(uptime)))
+                except Exception:
+                    pass
+                try:
+                    sys_info = device_raw.get('sysinfo')
+                    if isinstance(sys_info, dict):
+                        device.fips = sys_info.get('FIPS')
+                        device.intel_version = sys_info.get('intelVersion')
+                        device.clock_skew = sys_info.get('clockSkew')
+                        try:
+                            bios_info = sys_info.get('biosInfo')
+                            if isinstance(bios_info, dict):
+                                device.bios_type = sys_info.get('biosType')
+                                device.bios_version = sys_info.get('biosVersion')
+                                device.bios_date = parse_date(sys_info.get('biosDate'))
+                        except Exception:
+                            logger.exception(f'Problem with bios data')
+                        device.app_created = parse_date(sys_info.get('appCreated'))
+                        device.app_started = parse_date(sys_info.get('appStarted'))
+                        device.install_date = parse_date(sys_info.get('installDate'))
+                        try:
+                            device.availphysical = int(sys_info.get('availphysical'))
+                        except Exception:
+                            pass
+                        try:
+                            device.build_number = int(sys_info.get('buildNumber'))
+                        except Exception:
+                            pass
+
+                except Exception:
+                    logger.exception(f'Problem getting sys info')
                 device.containment_state = device_raw.get('containment_state')
+                try:
+                    triages = device_raw.get('triages')
+                    if isinstance(triages, dict):
+                        device.recent_triage_action = triages.get('recent_triage_action')
+                        device.recent_triage_id = triages.get('recent_triage_id')
+                        device.recent_triage_state = triages.get('recent_triage_state')
+                except Exception:
+                    logger.exception('Problem with triages')
                 try:
                     device_stats = device_raw.get('stats')
                     if not isinstance(device_stats, dict):
@@ -192,6 +232,7 @@ class FireeyeHxAdapter(AdapterBase):
                     device.exploit_alerts = device_stats.get('exploit_alerts')
                     device.exploit_blocks = device_stats.get('exploit_blocks')
                     device.false_positive_alerts = device_stats.get('false_positive_alerts')
+                    device.generic_alerts = device_stats.get('generic_alerts')
                     device.has_execution_hits = device_stats.get('has_execution_hits')
                     device.has_presence_hits = device_stats.get('has_presence_hits')
                     device.last_hit = parse_date(device_stats.get('last_hit'))
@@ -203,10 +244,6 @@ class FireeyeHxAdapter(AdapterBase):
 
                 except Exception:
                     logger.exception(f'Problem adding stats {device_raw}')
-                try:
-                    device.build_number = int(device_raw.get('buildNumber'))
-                except Exception:
-                    pass
 
                 device.set_raw(device_raw)
                 yield device

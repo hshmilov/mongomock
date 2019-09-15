@@ -1,3 +1,4 @@
+import datetime
 import logging
 
 from axonius.clients.rest.connection import RESTConnection
@@ -13,6 +14,12 @@ class SymantecConnection(RESTConnection):
         self._username_domain = username_domain
         self.__token = None
         self.__adminId = None
+        self._connection_dict = {
+            'username': self._username,
+            'password': self._password,
+            'domain': self._username_domain
+        }
+        self._refresh_time = None
 
     def __set_token(self, token, adminId):
         """ Sets the API token (as the connection credentials)
@@ -24,30 +31,41 @@ class SymantecConnection(RESTConnection):
         self.__adminId = adminId
         self._session_headers['Authorization'] = 'Bearer ' + self.__token
 
+    def _create_token(self):
+        response = self._post('identity/authenticate', body_params=self._connection_dict)
+        if 'token' not in response:
+            error = response.get('errorCode', 'unknown connection error')
+            message = response.get('errorMessage', '')
+            if message != '':
+                error += ':' + message
+            raise RESTException(error)
+        self.__set_token(response['token'], response['adminId'])
+        self._refresh_time = datetime.datetime.now()
+        self._expiration_time = response.get('tokenExpiration')
+        logger.info(f'Expiration time is {self._expiration_time}')
+        if not isinstance(self._expiration_time, int) or not self._expiration_time:
+            self._expiration_time = None
+
     def _connect(self):
         if self._username is not None and self._password is not None and self._username_domain is not None:
-            connection_dict = {
-                'username': self._username,
-                'password': self._password,
-                'domain': self._username_domain
-            }
-            response = self._post('identity/authenticate', body_params=connection_dict)
-            if 'token' not in response:
-                error = response.get('errorCode', 'unknown connection error')
-                message = response.get('errorMessage', '')
-                if message != '':
-                    error += ':' + message
-                raise RESTException(error)
-            self.__set_token(response['token'], response['adminId'])
+            if '+' in self._password:
+                raise RESTException('SEPM 14 API does not support the character plus in password')
+            self._create_token()
             self._get('computers', url_params={'pageSize': 1, 'pageIndex': 1})
         else:
             raise RESTException('no username or password and no token')
 
+    def _logout(self):
+        try:
+            if self.__token:
+                self._post('identity/logout', body_params={'token': self.__token,
+                                                           'adminId': self.__adminId}, use_json_in_response=False)
+        except Exception:
+            logger.exception(f'Problem logout')
+
     def close(self):
         """ Closes the connection """
-        if self.__token:
-            self._post('identity/logout', body_params={'token': self.__token,
-                                                       'adminId': self.__adminId}, use_json_in_response=False)
+        self._logout()
         super().close()
 
     def get_device_list(self):
@@ -61,6 +79,7 @@ class SymantecConnection(RESTConnection):
         exception_in_row = 0
         while not last_page and page_num <= totalPages:
             try:
+                self._refresh_token()
                 current_clients_page = self._get('computers',
                                                  url_params={'pageSize': consts.DEVICES_PER_PAGE,
                                                              'pageIndex': page_num})
@@ -74,3 +93,9 @@ class SymantecConnection(RESTConnection):
                     break
             page_num += 1
             logger.debug(f'Got {page_num*consts.DEVICES_PER_PAGE} devices so far')
+
+    def _refresh_token(self, *args, **kwargs):
+        if self._expiration_time and self._refresh_time\
+                and self._refresh_time + datetime.timedelta(seconds=self._expiration_time) < datetime.datetime.now():
+            self._logout()
+            self._create_token()

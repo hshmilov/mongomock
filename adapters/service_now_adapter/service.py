@@ -60,6 +60,8 @@ class ServiceNowAdapter(AdapterBase, Configurable):
                            users_table_dict=None,
                            snow_alm_asset_table_dict=None,
                            companies_table_dict=None):
+        got_nic = False
+        got_serial = False
         if snow_location_table_dict is None:
             snow_location_table_dict = dict()
         if snow_alm_asset_table_dict is None:
@@ -92,6 +94,7 @@ class ServiceNowAdapter(AdapterBase, Configurable):
                     ip_addresses = None
                 mac_address = device_raw.get('mac_address')
                 if mac_address or ip_addresses:
+                    got_nic = True
                     device.add_nic(mac_address, ip_addresses)
             except Exception:
                 logger.warning(f'Problem getting NIC at {device_raw}', exc_info=True)
@@ -117,6 +120,8 @@ class ServiceNowAdapter(AdapterBase, Configurable):
                             'VMware Virtual Platform',
                             'AT&T', 'unknown',
                             'Instance']):
+                    if device_serial:
+                        got_serial = True
                     device.device_serial = device_serial
             except Exception:
                 logger.warning(f'Problem getting serial at {device_raw}', exc_info=True)
@@ -243,6 +248,8 @@ class ServiceNowAdapter(AdapterBase, Configurable):
             device.domain = device_raw.get('dns_domain')
             device.used_for = device_raw.get('used_for')
             device.set_raw(device_raw)
+            if not got_serial and not got_nic and self.__exclude_no_strong_identifier:
+                return None
             return device
         except Exception:
             logger.exception(f'Problem with fetching ServiceNow Device {device_raw}')
@@ -464,13 +471,19 @@ class ServiceNowAdapter(AdapterBase, Configurable):
                     'name': 'exclude_disposed_devices',
                     'title': 'Exclude Disposed Devices',
                     'type': 'bool'
+                },
+                {
+                    'name': 'exclude_no_strong_identifier',
+                    'title': 'Exclude Devices With No IP/MAC/Serial',
+                    'type': 'bool'
                 }
             ],
             "required": [
                 'fetch_users',
                 'fetch_ips',
                 'exclude_disposed_devices',
-                'fetch_users_info_for_devices'
+                'fetch_users_info_for_devices',
+                'exclude_no_strong_identifier'
             ],
             "pretty_name": "ServiceNow Configuration",
             "type": "array"
@@ -482,7 +495,8 @@ class ServiceNowAdapter(AdapterBase, Configurable):
             'fetch_users': True,
             'fetch_ips': True,
             'fetch_users_info_for_devices': True,
-            'exclude_disposed_devices': False
+            'exclude_disposed_devices': False,
+            'exclude_no_strong_identifier': False
         }
 
     def _on_config_update(self, config):
@@ -490,6 +504,7 @@ class ServiceNowAdapter(AdapterBase, Configurable):
         self.__fetch_ips = config['fetch_ips']
         self.__fetch_users_info_for_devices = config['fetch_users_info_for_devices']
         self.__exclude_disposed_devices = config['exclude_disposed_devices']
+        self.__exclude_no_strong_identifier = config['exclude_no_strong_identifier']
 
     def outside_reason_to_live(self) -> bool:
         """

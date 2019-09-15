@@ -700,7 +700,6 @@ def test_rule_correlate_asset_host():
 
 def test_rule_correlate_hostname_only():
     device1 = get_raw_device(plugin_name='deep_security_adapter', device_id='SomeDeviceId', hostname='ofir',
-                             network_interfaces=[{IPS_FIELD: ['1.1.1.1']}],
                              more_params=[('name', 'Ofir')])
     device2 = get_raw_device(plugin_name='esx_adapter', device_id='SomeDeviceId', hostname='ofir',
                              more_params=[('name', 'Ofir'), ('device_type', 'Juniper Space Device')])

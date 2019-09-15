@@ -404,7 +404,9 @@ class GeneralInfoService(Triggerable, PluginBase):
                 return
 
             logger.info('Failed running wmi query on device {0}! error: {1}'
-                        .format(device_hostname, str(exc)))
+                        .format(device_hostname, str(exc)[:300]))
+            logger.debug('Failed running wmi query on device {0}! error: {1}'
+                         .format(device_hostname, str(exc)))
 
             # We need to tag that device, but we have no associated adapter devices. we must use the first one.
             if len(device['adapters']) > 0:

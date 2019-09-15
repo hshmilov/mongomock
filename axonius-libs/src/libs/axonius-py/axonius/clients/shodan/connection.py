@@ -37,6 +37,10 @@ class ShodanConnection(RESTConnection):
         time.sleep(1)
         return self._get(f'host/search?key={self._apikey}&query=net:{cidr}')['matches']
 
+    def get_search_info(self, search_str):
+        time.sleep(1)
+        return self._get(f'host/search?key={self._apikey}&query={search_str}')['matches']
+
     def _connect(self):
         pass
 

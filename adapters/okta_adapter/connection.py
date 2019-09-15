@@ -142,6 +142,8 @@ class OktaConnection:
                         group_name = (group_raw.get('profile') or {}).get('name')
                         group_data = self.__make_request(f'api/v1/groups/{group_id}/users').json()
                         for user_data_in_group in group_data:
+                            if not isinstance(user_data_in_group, dict):
+                                user_data_in_group = {}
                             user_id_for_group = user_data_in_group.get('id')
                             if user_id_for_group:
                                 if user_id_for_group not in users_to_group:

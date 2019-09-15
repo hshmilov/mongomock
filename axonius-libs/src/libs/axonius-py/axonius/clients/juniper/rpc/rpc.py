@@ -211,7 +211,8 @@ def parse_lldp(xmls):
         try:
             xml = prepare(xml)
             json = Xml2Json(xml).result
-            if 'lldp-neighbors-information' not in json:
+            if not json or 'lldp-neighbors-information' not in json:
+                json = {}
                 logger.debug(
                     'neighbors not found , got %s', list(json.keys()))
                 continue

@@ -3,9 +3,10 @@ import time
 
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.exception import RESTException
-from axonius.thread_stopper import StopThreadException
 from axonius.utils.parsing import make_dict_from_csv
-from axonius.clients.tenable_io import consts
+from axonius.clients.tenable_io.consts import AGENTS_PER_PAGE, DEVICES_PER_PAGE,\
+    NUMBER_OF_SLEEPS, SECONDS_IN_DAY, TIME_TO_SLEEP,\
+    DAYS_UNTIL_FETCH_AGAIN, DAYS_FOR_VULNS_IN_CSV, DAYS_VULNS_FETCH, MAX_AGENTS
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -134,7 +135,7 @@ class TenableIoConnection(RESTConnection):
     def _get_export_data(self, export_type, action=None, epoch=None):
         if epoch is None:
             epoch = self._epoch_last_run_time
-        export_body_params = {'chunk_size': consts.DEVICES_PER_PAGE[export_type]}
+        export_body_params = {'chunk_size': DEVICES_PER_PAGE[export_type]}
         if action is not None:
             export_body_params[action] = epoch
         export_uuid = self._post(f'{export_type}/export',
@@ -143,25 +144,23 @@ class TenableIoConnection(RESTConnection):
         response = self._get(f'{export_type}/export/{export_uuid}/status')
         available_chunks.update(response.get('chunks_available', []))
         number_of_sleeps = 0
-        while response.get('status') != 'FINISHED' and number_of_sleeps < consts.NUMBER_OF_SLEEPS:
+        while response.get('status') != 'FINISHED' and number_of_sleeps < NUMBER_OF_SLEEPS:
             try:
                 response = self._get(f'{export_type}/export/{export_uuid}/status')
                 available_chunks.update(response.get('chunks_available'))
             except Exception:
                 logger.exception(f'Problem with getting chunks for {export_uuid}')
-            time.sleep(consts.TIME_TO_SLEEP)
+            time.sleep(TIME_TO_SLEEP)
             number_of_sleeps += 1
-        export_list = []
         for chunk_id in available_chunks:
             try:
-                export_list.extend(self._get(f'{export_type}/export/{export_uuid}/chunks/{chunk_id}'))
+                yield from self._get(f'{export_type}/export/{export_uuid}/chunks/{chunk_id}')
             except Exception:
                 logger.exception(f'Problem in getting specific chunk {chunk_id} from {export_uuid} type {export_type}')
-        return export_list
 
     def _get_assets(self, use_cache):
         if use_cache and \
-                self._epoch_last_run_time + consts.SECONDS_IN_DAY * consts.DAYS_UNTIL_FETCH_AGAIN > int(time.time()):
+                self._epoch_last_run_time + SECONDS_IN_DAY * DAYS_UNTIL_FETCH_AGAIN > int(time.time()):
             return
         if self._assets_list_dict is None:
             new_assets = self._get_export_data('assets')
@@ -198,11 +197,10 @@ class TenableIoConnection(RESTConnection):
                 logger.exception(f'Problem updating asset {updated_asset}')
 
     def _get_vulns(self):
-        vulns_list = self._get_export_data('vulns', action='updated_at',
-                                           epoch=int(time.time()) - (consts.SECONDS_IN_DAY * consts.DAYS_VULNS_FETCH))
-        vulns_list += self._get_export_data('vulns', action='created_at',
-                                            epoch=int(time.time()) - (consts.SECONDS_IN_DAY * consts.DAYS_VULNS_FETCH))
-        return vulns_list
+        yield from self._get_export_data('vulns', action='updated_at',
+                                         epoch=int(time.time()) - (SECONDS_IN_DAY * DAYS_VULNS_FETCH))
+        yield from self._get_export_data('vulns', action='created_at',
+                                         epoch=int(time.time()) - (SECONDS_IN_DAY * DAYS_VULNS_FETCH))
 
     # pylint: disable=W0221
     def get_device_list(self, use_cache):
@@ -216,16 +214,19 @@ class TenableIoConnection(RESTConnection):
         except Exception:
             vulns_list = []
             logger.exception('General error while getting vulnerabilities')
-        for vuln_raw in vulns_list:
-            try:
-                # Trying to find the correct asset for all vulnerability line in the array
-                asset_id_for_vuln = vuln_raw.get('asset', {}).get('uuid', '')
-                if asset_id_for_vuln is None or asset_id_for_vuln == '':
-                    logger.warning(f'No id for vuln {vuln_raw}')
-                    continue
-                self._assets_list_dict[asset_id_for_vuln]['vulns_info'].append(vuln_raw)
-            except Exception:
-                logger.debug(f'Problem with vuln raw {vuln_raw}')
+        try:
+            for vuln_raw in vulns_list:
+                try:
+                    # Trying to find the correct asset for all vulnerability line in the array
+                    asset_id_for_vuln = (vuln_raw.get('asset') or {}).get('uuid')
+                    if not asset_id_for_vuln:
+                        logger.warning(f'No id for vuln {vuln_raw}')
+                        continue
+                    self._assets_list_dict[asset_id_for_vuln]['vulns_info'].append(vuln_raw)
+                except Exception:
+                    logger.debug(f'Problem with vuln raw {vuln_raw}')
+        except Exception:
+            logger.exception('General error while getting vulnerabilities fetch')
         self._epoch_last_run_time = int(time.time())
         assets_list_dict = self._assets_list_dict
         if not use_cache:
@@ -236,11 +237,11 @@ class TenableIoConnection(RESTConnection):
         file_id = self._get('workbenches/export', url_params={'format': 'csv',
                                                               'report': 'vulnerabilities',
                                                               'chapter': 'vuln_by_asset',
-                                                              'date_range': consts.DAYS_FOR_VULNS_IN_CSV})['file']
+                                                              'date_range': DAYS_FOR_VULNS_IN_CSV})['file']
         status = self._get(f'workbenches/export/{file_id}/status')['status']
         sleep_times = 0
-        while status != 'ready' and sleep_times < consts.NUMBER_OF_SLEEPS:
-            time.sleep(consts.TIME_TO_SLEEP)
+        while status != 'ready' and sleep_times < NUMBER_OF_SLEEPS:
+            time.sleep(TIME_TO_SLEEP)
             status = self._get(f'workbenches/export/{file_id}/status')['status']
             sleep_times += 1
         return make_dict_from_csv(self._get(f'workbenches/export/{file_id}/download',
@@ -260,32 +261,27 @@ class TenableIoConnection(RESTConnection):
         return None
 
     def get_agents(self):
-        agents_raw = []
         try:
             scanners = self._get('scanners')['scanners']
             logger.info(f'Got {len(scanners)} scanners')
-            scanners_ids = [scanner.get('id') for scanner in scanners]
+            scanners_ids = [scanner.get('id') for scanner in scanners if scanner.get('id')]
             for scanner_id in scanners_ids:
                 try:
                     response = self._get(f'scanners/{scanner_id}/agents', url_params={'offset': 0,
-                                                                                      'limit': consts.AGENTS_PER_PAGE})
+                                                                                      'limit': AGENTS_PER_PAGE})
                     total = response['pagination']['total']
                     logger.info(f'Got {total} number of agents in {scanner_id}')
-                    agents_raw.extend(response['agents'])
-                    offset = consts.AGENTS_PER_PAGE
-                    while offset < min(total, consts.MAX_AGENTS):
+                    yield from response['agents']
+                    offset = AGENTS_PER_PAGE
+                    while offset < min(total, MAX_AGENTS):
                         try:
-                            agents_raw.extend(self._get(f'scanners/{scanner_id}/agents',
-                                                        url_params={'offset': offset,
-                                                                    'limit': consts.AGENTS_PER_PAGE})['agents'])
-                        except StopThreadException:
-                            raise
-                        except BaseException:
+                            yield from self._get(f'scanners/{scanner_id}/agents',
+                                                 url_params={'offset': offset,
+                                                             'limit': AGENTS_PER_PAGE})['agents']
+                        except Exception:
                             logger.exception(f'Problem with offset {offset}')
-                        offset += consts.MAX_AGENTS
+                        offset += AGENTS_PER_PAGE
                 except Exception:
                     logger.exception(f'Problem getting agents from scanner id {scanner_id}')
-            return agents_raw
         except Exception:
-            logger.exception(f'Problem getting agents return []')
-            return agents_raw
+            logger.exception(f'Problem getting agents return none')

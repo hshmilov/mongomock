@@ -51,7 +51,7 @@ logger = logging.getLogger(f'axonius.{__name__}')
 
 
 ALLOW_OLD_MAC_LIST = ['clearpass_adapter']
-DANGEROUS_ADAPTERS = ['lansweeper_adapter', 'carbonblack_protection_adapter', 'infoblox_adapter']
+DANGEROUS_ADAPTERS = ['lansweeper_adapter', 'carbonblack_protection_adapter', 'infoblox_adapter', 'azure_ad_adapter']
 DOMAIN_TO_DNS_DICT = dict()
 
 
@@ -299,7 +299,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
         logger.info('Starting to correlate on Hostname-only')
         filtered_adapters_list = filter(get_normalized_hostname_str, adapters_to_correlate)
         # pylint: disable=line-too-long
-        filtered_adapters_list = filter(lambda x: not x.get(NORMALIZED_MACS) or not get_normalized_ip(x) or not is_only_host_adapter_not_localhost(x),
+        filtered_adapters_list = filter(lambda x: (not x.get(NORMALIZED_MACS) and not get_normalized_ip(x)) or not is_only_host_adapter_not_localhost(x),
                                         filtered_adapters_list)
         filtered_adapters_list = filter(hostname_not_problematic, filtered_adapters_list)
         filtered_adapters_list = filter(not_aruba_adapter, filtered_adapters_list)

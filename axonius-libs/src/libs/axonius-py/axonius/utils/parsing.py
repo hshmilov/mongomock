@@ -322,6 +322,8 @@ def figure_out_os(s):
         os_type = 'Mikrotik'
     elif 'f5 networks big-ip' == s.lower():
         os_type = 'F5 Networks Big-IP'
+    elif 'solaris' in s.lower():
+        os_type = 'Solaris'
 
     return {'type': os_type,
             'distribution': distribution,
@@ -793,10 +795,14 @@ def is_dangerous_asset_names_adapter(adapter_device):
 
 def hostname_not_problematic(adapter_device):
     if (not get_normalized_hostname_str(adapter_device) or
-            ('localhost' not in get_normalized_hostname_str(adapter_device).strip().lower()
-             and 'iphone' not in get_normalized_hostname_str(adapter_device).strip().lower()
-             and 'ipad' not in get_normalized_hostname_str(adapter_device).strip().lower()
-             and 'macbook-pro' != get_normalized_hostname_str(adapter_device).strip().lower())):
+            ('localhost' not in get_normalized_hostname_str(adapter_device).split('.')[0].strip().lower()
+             and 'iphone' not in get_normalized_hostname_str(adapter_device).split('.')[0].strip().lower()
+             and 'ipad' not in get_normalized_hostname_str(adapter_device).split('.')[0].strip().lower()
+             and 'blank' != get_normalized_hostname_str(adapter_device).split('.')[0].strip().lower()
+             and 'loaner' != get_normalized_hostname_str(adapter_device).split('.')[0].strip().lower()
+             and 'macbook-air' != get_normalized_hostname_str(adapter_device).split('.')[0].strip().lower()
+             and 'mac-mini' != get_normalized_hostname_str(adapter_device).split('.')[0].strip().lower()
+             and 'macbook-pro' != get_normalized_hostname_str(adapter_device).split('.')[0].strip().lower())):
         return True
     return False
 
@@ -809,10 +815,10 @@ def is_only_host_adapter(adapter_device):
                                               'csv_adapter',
                                               'mssql_adapter',
                                               'code42_adapter',
+                                              'signalsciences_adapter',
                                               'sysaid_adapter',
                                               'logrhythm_adapter',
                                               'symantec_ee_adapter',
-                                              'symantec_12_adapter',
                                               'druva_adapter']):
         return True
     return False
@@ -1331,7 +1337,9 @@ def contain_jamf_generic_names(adapter_device):
     if not hostname:
         return False
     if 'MacBook' in hostname or 'MBP' in hostname or 'localhost' in hostname or\
-            'iPad' in hostname or 'iPhone' in hostname or 'iMac' in hostname or 'mini' in hostname:
+            'iPad' in hostname or 'iPhone' in hostname or 'iMac' in hostname or 'mini' in hostname\
+            or 'Mac-mini' in hostname or 'Tests-MacBook-Pro' in hostname \
+            or 'loaner' in hostname or 'blank' in hostname or 'MacBook-Air' in hostname:
         return True
     return False
 

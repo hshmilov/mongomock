@@ -57,9 +57,11 @@ class CensysPort(SmartJsonClass):
     # protocol_raw = Field(str, 'Protocol')   # This will be implemented soon. We don't have much data on possibilities
 
 
+# pylint: disable=no-self-use
 class CensysAdapter(CensysExecutionMixIn, ScannerAdapterBase):
     class MyDeviceAdapter(DeviceAdapter):
         # pylint: disable=R0902
+        search_query = Field(str, 'Search Query')
         protocols = ListField(str, 'Protocols')
         alexa_rank = Field(int, 'Alexa Rank')
         censys_tags = Field(str, 'Censys Tags')
@@ -124,7 +126,7 @@ class CensysAdapter(CensysExecutionMixIn, ScannerAdapterBase):
         """
         return ADAPTER_SCHEMA
 
-    def _create_device(self, device_raw):
+    def _create_device(self, device_raw, search_query=None):
         try:
             device = self._new_device_adapter()
 
@@ -147,6 +149,7 @@ class CensysAdapter(CensysExecutionMixIn, ScannerAdapterBase):
             if device_raw.get('ports'):
                 device.ports = list(CensysPort(port=p) for p in device_raw.get('ports'))
 
+            device.search_query = search_query
             for port_and_service in device_raw.get('protocols') or []:
                 try:
                     split_info = port_and_service.split('/', 1)
@@ -194,8 +197,8 @@ class CensysAdapter(CensysExecutionMixIn, ScannerAdapterBase):
             return None
 
     def _parse_raw_data(self, devices_raw_data):
-        for device_raw in devices_raw_data:
-            device = self._create_device(device_raw)
+        for device_raw, search_query in devices_raw_data:
+            device = self._create_device(device_raw, search_query)
             if device:
                 yield device
 

@@ -302,7 +302,10 @@ class DeviceControlService(Triggerable, PluginBase):
         """
         logger.info(f'Got failure (attempt no {attempt_number}/{MAX_TRIES_FOR_EXECUTION_REQUEST}) for '
                     f'device {device.internal_axon_id}. retrying in {SLEEP_BETWEEN_EXECUTION_TRIES_IN_SECONDS}. '
-                    f'exc is {str(exc)}')
+                    f'exc is {str(exc)[:300]}')
+        logger.debug(f'Got failure (attempt no {attempt_number}/{MAX_TRIES_FOR_EXECUTION_REQUEST}) for '
+                     f'device {device.internal_axon_id}. retrying in {SLEEP_BETWEEN_EXECUTION_TRIES_IN_SECONDS}. '
+                     f'exc is {str(exc)}')
         try:
             if attempt_number >= MAX_TRIES_FOR_EXECUTION_REQUEST:
                 logger.error(f'Failed ({attempt_number}) with action {action_name}: '

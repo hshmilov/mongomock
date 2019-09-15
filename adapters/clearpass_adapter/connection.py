@@ -27,6 +27,7 @@ class ClearpassConnection(RESTConnection):
             raise RESTException('Bad login Credentials')
         token = response['access_token']
         self._session_headers['Authorization'] = f'Bearer {token}'
+        self._get('endpoint', url_params={'calculate_count': 'true', 'offset': 0, 'limit': DEVICE_PER_PAGE})
 
     # pylint: disable=arguments-differ
     def get_device_list(self, get_extended_info):

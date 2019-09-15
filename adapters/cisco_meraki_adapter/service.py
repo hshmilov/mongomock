@@ -364,11 +364,12 @@ class CiscoMerakiAdapter(AdapterBase):
             device.is_rooted = device_raw.get('isRooted')
             device.imei = device_raw.get('imei')
             device.system_type = device_raw.get('systemType')
-            if device_raw.get('lastUser'):
-                device.last_used_users = device_raw.get('lastUser')
+            if device_raw.get('lastUser') and isinstance(device_raw.get('lastUser'), str):
+                device.last_used_users = device_raw.get('lastUser').split(',')
 
             try:
-                device.last_seen = datetime.datetime.fromtimestamp(device_raw.get('lastConnected'))
+                if device_raw.get('lastConnected'):
+                    device.last_seen = datetime.datetime.fromtimestamp(device_raw.get('lastConnected'))
             except Exception:
                 logger.exception(f'Problem getting last seen for {device_raw}')
             device.phone_number = device_raw.get('phoneNumber')

@@ -131,6 +131,8 @@ class ADEntity(object):
 
     # Other
     ad_last_dc_fetched = Field(str, 'Last DC Fetched from')
+    physical_delivery_office_name = Field(str, 'Physical Delivery Office Name')
+    delivery_office_name = Field(str, 'Delivery Office Name')
 
     def figure_out_exchange_server_roles(self, exchange_server_roles):
         assert type(exchange_server_roles) == int

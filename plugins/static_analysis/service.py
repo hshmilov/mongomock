@@ -221,6 +221,8 @@ class StaticAnalysisService(Triggerable, PluginBase):
         :param cve_data: CVE data fetched from the NVD
         :return:
         """
+        if not cve_data:
+            return
         cvss = cve_data.get('cvss_v3') or cve_data.get('cvss_v2')
         cve_severity = cve_data.get('severity_v3') or cve_data.get('severity_v2')
         cvss_metric_version = 'v3.0' if cve_data.get('severity_v3') else 'v2.0'

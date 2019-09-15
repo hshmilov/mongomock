@@ -22,18 +22,32 @@ class KasperskyScConnection(RESTConnection):
             raise RESTException('No username or password')
         username = base64.b64encode(self._username.encode('utf-8')).decode('utf-8')
         password = base64.b64encode(self._password.encode('utf-8')).decode('utf-8')
+        internal = '1'
         extra_headers = {
             'Authorization': 'KSCBasic user="' + username +
-                             '", pass="' + password + '", internal="1"'
+                             '", pass="' + password + '", internal="' + internal + '"'
         }
-        self._post('login',
-                   body_params={},
-                   extra_headers=extra_headers)
+        try:
+            self._post('login',
+                       body_params={},
+                       extra_headers=extra_headers)
+        except Exception:
+            internal = '0'
+            extra_headers = {
+                'Authorization': 'KSCBasic user="' + username +
+                                 '", pass="' + password + '", internal="' + internal + '"'
+            }
+            self._post('login',
+                       body_params={},
+                       extra_headers=extra_headers)
 
     def _get_group_hosts(self, group_id):
         url = 'HostGroup.FindHosts'
         body_params = {'wstrFilter': '(KLHST_WKS_GROUPID = ' + str(group_id) + ')',
-                       'vecFieldsToReturn': ['KLHST_WKS_FQDN', 'KLHST_WKS_HOSTNAME'], 'lMaxLifeTime': 100}
+                       'vecFieldsToReturn': ['KLHST_WKS_FQDN', 'KLHST_WKS_HOSTNAME', 'KLHST_WKS_IP_LONG',
+                                             'KLHST_WKS_LAST_VISIBLE',
+                                             'KLHST_WKS_WINDOMAIN', 'KLHST_WKS_STATUS_MASK', 'KLHST_WKS_STATUS'],
+                       'lMaxLifeTime': 100}
         response = self._post(url,
                               body_params=body_params)
         if 'strAccessor' in response:
@@ -66,7 +80,10 @@ class KasperskyScConnection(RESTConnection):
         try:
             url = 'HostGroup.GetHostInfo'
             body_params = {'strHostName': device_id,
-                           'pFields2Return': ['KLHST_WKS_OS_NAME', 'KLHST_WKS_LAST_FULLSCAN', 'KLHST_WKS_VIRUS_COUNT']}
+                           'pFields2Return': ['KLHST_WKS_OS_NAME',
+                                              'KLHST_WKS_LAST_FULLSCAN',
+                                              'KLHST_WKS_VIRUS_COUNT',
+                                              ]}
 
             response = self._post(url, body_params=body_params)
             return response['PxgRetVal']
@@ -76,7 +93,7 @@ class KasperskyScConnection(RESTConnection):
 
     def get_device_list(self):
         body_params = {'wstrFilter': '', 'vecFieldsToReturn': ['id', 'name'], 'lMaxLifeTime': 100}
-        response = self._post('ostGroup.FindGroups',
+        response = self._post('HostGroup.FindGroups',
                               body_params=body_params)
         if 'strAccessor' not in response:
             raise RESTException(f'Bad Groups Data Response: {response}')
@@ -90,6 +107,7 @@ class KasperskyScConnection(RESTConnection):
                         device_id = device_raw['value']['KLHST_WKS_HOSTNAME']
                         device_raw['apps'] = self._get_apps_for_host(device_id)
                         device_raw['details'] = self._get_details_for_host(device_id)
+                        yield device_raw
                     except Exception:
                         logger.exception(f'Problem with device_raw {device_raw}')
             except Exception:
@@ -106,7 +124,7 @@ class KasperskyScConnection(RESTConnection):
             try:
                 body_params = {'strAccessor': str_accessor,
                                'nStart': start, 'nCount': DEVICE_PER_PAGE}
-                response = self._post('ChunkAccessor.GetItemsCount',
+                response = self._post('ChunkAccessor.GetItemsChunk',
                                       body_params=body_params)
                 yield from response['pChunk']['KLCSP_ITERATOR_ARRAY']
                 start += step

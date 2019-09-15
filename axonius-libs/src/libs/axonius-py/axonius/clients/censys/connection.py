@@ -172,6 +172,6 @@ class CensysConnection(RESTConnection):
 
         for result in search_results:
             try:
-                yield self._get_view_details(result.get(result_id_key))
+                yield self._get_view_details(result.get(result_id_key)), search_query
             except Exception:
                 logger.exception(f'Problem getting information for search result: {result}')

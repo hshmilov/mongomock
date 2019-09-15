@@ -247,6 +247,7 @@ def _get_id_for_juniper(raw_device):
     if serial:
         return serial
     list_, rr = raw_device.get('interface list', ([], None))
+    mac = None
     if list_:
         mac = list_[0].get('current-physical-address', '')
     if mac:

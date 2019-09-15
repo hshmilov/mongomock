@@ -5,7 +5,7 @@ from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.mssql.connection import MSSQLConnection
 from axonius.devices.device_adapter import DeviceAdapter
-from axonius.fields import Field, ListField
+from axonius.fields import Field
 from axonius.mixins.configurable import Configurable
 from axonius.utils.datetime import parse_date
 from axonius.utils.files import get_local_config_file
@@ -19,7 +19,7 @@ class SpecopsAdapter(AdapterBase, Configurable):
     # pylint: disable=too-many-instance-attributes
     class MyDeviceAdapter(DeviceAdapter):
         last_full_inventory = Field(datetime.datetime, 'Last Full Inventory')
-        last_heartbeat = ListField(datetime.datetime, 'Last Heartbeat')
+        last_heartbeat = Field(datetime.datetime, 'Last Heartbeat')
 
     def __init__(self):
         super().__init__(get_local_config_file(__file__))

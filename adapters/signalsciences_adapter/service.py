@@ -21,6 +21,7 @@ class SignalsciencesAdapter(AdapterBase):
         instance_type = Field(str, 'Instance Type')
         last_rule_update = Field(datetime.datetime, 'Last Rule Update')
         is_active = Field(bool, 'Is Active')
+        remote_address = Field(str, 'Remote Address')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -125,10 +126,9 @@ class SignalsciencesAdapter(AdapterBase):
                                      version=device_raw.get('agent.version'),
                                      status=device_raw.get('agent.status'))
             device.figure_os(device_raw.get('host.os'))
-            if isinstance(device_raw.get('host.remote_addr'), str):
-                device.add_nic(ips=device_raw.get('host.remote_addr').split(','))
+            device.remote_address = device_raw.get('host.remote_addr')
             device.instance_type = device_raw.get('host.instance_type')
-            device.last_rule_update = device_raw.get('agent.last_rule_update')
+            device.last_rule_update = parse_date(device_raw.get('agent.last_rule_update'))
             device.is_active = bool(device_raw.get('agent.active'))
             try:
                 if isinstance(device_raw.get('agent.uptime'), int):

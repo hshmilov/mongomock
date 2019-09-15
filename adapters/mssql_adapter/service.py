@@ -20,8 +20,11 @@ logger = logging.getLogger(f'axonius.{__name__}')
 
 
 class MssqlAdapter(AdapterBase, Configurable):
+    # pylint: disable=too-many-instance-attributes
     class MyDeviceAdapter(DeviceAdapter):
-        pass
+        server_tag = Field(str, 'Server Tag')
+        database = Field(str, 'DB Name')
+        table = Field(str, 'Table Name')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -67,7 +70,8 @@ class MssqlAdapter(AdapterBase, Configurable):
         table = client_config['table']
         connection.set_devices_paging(self.__devices_fetched_at_a_time)
         with connection:
-            yield from connection.query(f'Select * from {table}')
+            for device_raw in connection.query(f'Select * from {table}'):
+                yield device_raw, client_config
 
     @staticmethod
     def _clients_schema():
@@ -108,6 +112,11 @@ class MssqlAdapter(AdapterBase, Configurable):
                     'name': 'table',
                     'title': 'Mssql Table',
                     'type': 'string'
+                },
+                {
+                    'name': 'server_tag',
+                    'title': 'Server Tag',
+                    'type': 'string'
                 }
             ],
             'required': [
@@ -125,7 +134,7 @@ class MssqlAdapter(AdapterBase, Configurable):
     def _parse_raw_data(self, devices_raw_data):
         first_time = True
         fields = {}
-        for device_raw in devices_raw_data:
+        for device_raw, client_config in devices_raw_data:
             try:
                 if first_time:
                     fields = get_csv_field_names(device_raw.keys())
@@ -146,6 +155,9 @@ class MssqlAdapter(AdapterBase, Configurable):
                     continue
 
                 device.id = device_id
+                device.server_tag = client_config.get('server_tag')
+                device.table = client_config.get('table')
+                device.database = client_config.get('database')
                 device.device_serial = vals.get('serial')
                 device.name = vals.get('name')
                 device.hostname = vals.get('hostname')

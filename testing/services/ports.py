@@ -185,6 +185,8 @@ DOCKER_PORTS = {
     'signalsciences-adapter':           9978,
     'indegy-adapter':                   9979,
     'vcloud-director-adapter':          9980,
+    'medigate-adapter':                 9981,
+    'packetfence-adapter':              9982,
     'mongo':                            27017,
     'mockingbird-db':                   28017
 }

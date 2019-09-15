@@ -11,6 +11,7 @@ from axonius.utils.files import get_local_config_file
 from axonius.clients.shodan.connection import ShodanConnection
 from axonius.clients.shodan.consts import DEFAULT_DOMAIN
 from axonius.utils.parsing import make_dict_from_csv
+from axonius.fields import Field
 from axonius.utils.parsing import remove_large_ints
 from shodan_adapter.client_id import get_client_id
 from shodan_adapter.execution import ShodanExecutionMixIn
@@ -19,9 +20,13 @@ from shodan_adapter.execution import ShodanExecutionMixIn
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
+CIDR_TYPE = 'cidr_type'
+SEARCH_TYPE = 'search_type'
+
+
 class ShodanAdapter(ShodanExecutionMixIn, ScannerAdapterBase):
     class MyDeviceAdapter(DeviceAdapter):
-        pass
+        query_search = Field(str, 'Search Query')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -41,9 +46,12 @@ class ShodanAdapter(ShodanExecutionMixIn, ScannerAdapterBase):
                                   https_proxy=client_config.get('https_proxy')) as connection:
                 if client_config.get('cidr'):
                     connection.get_cidr_info(client_config['cidr'].split(',')[0])
-                    return connection, client_config['cidr'].split(',')
+                    return connection, client_config['cidr'].split(','), CIDR_TYPE
+                if client_config.get('query_search'):
+                    connection.get_search_info(client_config['query_search'].split(',')[0])
+                    return connection, client_config['query_search'].split(','), SEARCH_TYPE
                 if not client_config.get('csv') or not client_config.get('user_id'):
-                    raise ClientConnectionException('Please Enter CIDR CSV File or CIDR list')
+                    raise ClientConnectionException('Please Enter CIDR CSV File or CIDR list or Query Search String')
                 csv_data_bytes = self._grab_file_contents(client_config['csv'])
                 encoding = chardet.detect(csv_data_bytes)['encoding']  # detect decoding automatically
                 encoding = encoding or 'utf-8'
@@ -62,7 +70,7 @@ class ShodanAdapter(ShodanExecutionMixIn, ScannerAdapterBase):
                         if dns_field_name:
                             cidr_dns_name = cidr_raw.get(dns_field_name)
                         cidr_list.append([cidr_raw.get('CIDR'), cidr_dns_name])
-                return connection, cidr_list
+                return connection, cidr_list, CIDR_TYPE
         except RESTException as e:
             message = 'Error connecting to client with domain {0}, reason: {1}'.format(
                 client_config.get('domain'), str(e))
@@ -79,7 +87,7 @@ class ShodanAdapter(ShodanExecutionMixIn, ScannerAdapterBase):
 
         :return: A json with all the attributes returned from the Server
         """
-        connection, cidr_list = client_data
+        connection, cidr_list, shodan_type = client_data
         with connection:
             for cidr in cidr_list:
                 try:
@@ -92,14 +100,20 @@ class ShodanAdapter(ShodanExecutionMixIn, ScannerAdapterBase):
                         cidr_str = cidr
                     ip_dict = dict()
                     cidr_str = cidr_str.strip()
-                    matches = connection.get_cidr_info(cidr_str)
+                    if shodan_type == CIDR_TYPE:
+                        matches = connection.get_cidr_info(cidr_str)
+                    else:
+                        matches = connection.get_search_info(cidr_str)
                     for match_data in matches:
                         ip = match_data.get('ip_str')
                         if ip:
                             if ip not in ip_dict:
                                 ip_dict[ip] = []
                             ip_dict[ip].append(match_data)
-                    yield ip_dict, shodan_dns_name
+                    query_search = None
+                    if shodan_type == SEARCH_TYPE:
+                        query_search = cidr_list
+                    yield ip_dict, shodan_dns_name, query_search
                 except Exception:
                     logger.debug(f'Problem getting cidr {cidr}')
 
@@ -145,6 +159,11 @@ class ShodanAdapter(ShodanExecutionMixIn, ScannerAdapterBase):
                     'description': 'The binary contents of the csv',
                     'type': 'file'
                 },
+                {
+                    'name': 'query_search',
+                    'title': 'Query Search',
+                    'type': 'string'
+                }
 
 
             ],
@@ -156,11 +175,12 @@ class ShodanAdapter(ShodanExecutionMixIn, ScannerAdapterBase):
 
     def _parse_raw_data(self, devices_raw_data):
         # pylint: disable=R1702,R0912,R0915,R0914
-        for ip_dict, shodan_dns_name in devices_raw_data:
+        for ip_dict, shodan_dns_name, query_search in devices_raw_data:
             for ip_str, device_raw_list in ip_dict.items():
                 try:
                     device = self._new_device_adapter()
                     device.id = ip_str
+                    device.query_search = query_search
                     device.add_public_ip(ip_str)
                     device.add_nic(None, [ip_str])
                     device.software_cves = []

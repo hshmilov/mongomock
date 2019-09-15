@@ -25,6 +25,7 @@ class CylanceAdapter(AdapterBase):
         policy_name = Field(str, 'Policy Name')
         policies_details = ListField(str, 'Policies Details')
         tenant_tag = Field(str, 'Tenant Tag')
+        zone_names = ListField(str, 'Zone Names')
         agent_version = Field(str, 'Cylance Agent Version')
 
     def __init__(self):
@@ -200,6 +201,14 @@ class CylanceAdapter(AdapterBase):
             except Exception:
                 logger.exception(f'Problem getting policy info for {device_raw}')
 
+            try:
+                if isinstance(device_raw.get('zone_raw'), dict) \
+                        and isinstance(device_raw['zone_raw'].get('page_items'), list):
+                    for zone_data_raw in device_raw['zone_raw']['page_items']:
+                        if isinstance(zone_data_raw, dict):
+                            device.zone_names.append(zone_data_raw.get('name'))
+            except Exception:
+                logger.exception(f'Problem getting zone for {device_raw}')
             device.set_raw(device_raw)
             return device
         except Exception:

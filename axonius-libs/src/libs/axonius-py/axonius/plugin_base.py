@@ -2510,7 +2510,7 @@ class PluginBase(Configurable, Feature):
             # Starting the messages with the tag Axonius
             getattr(syslog_logger, log_level)(message)
 
-    def send_https_log_message(self, message):
+    def send_https_log_message(self, message, authorization_header=None, files=None):
         https_log_setting = self._https_logs_settings
         if https_log_setting['enabled'] is True and https_log_setting.get('https_log_server'):
             host = https_log_setting.get('https_log_server')
@@ -2520,7 +2520,11 @@ class PluginBase(Configurable, Feature):
             proxies = dict()
             proxies['http'] = None
             proxies['https'] = https_proxy
-            r = requests.post(url=url, data=message, proxies=proxies)
+            headers = None
+            if authorization_header:
+                headers = dict()
+                headers['Authorization'] = authorization_header
+            r = requests.post(url=url, data=message, proxies=proxies, headers=headers, files=files)
             r.raise_for_status()
 
     def set_global_keyval(self, key: str, val):

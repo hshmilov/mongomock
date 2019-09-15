@@ -59,7 +59,8 @@ class HaveibeenpwnedExecutionMixIn(Triggerable):
                         results[id_] = {'success': False, 'value': f'Internal axon id {id_} not found'}
                         continue
                     user = user[0]
-                    internal_axon_id, result = self._handle_user(user, connection)
+                    internal_axon_id, result = self._handle_user(user, connection,
+                                                                 client_config.get('alternative_suffix'))
                     results[internal_axon_id] = result
                 except Exception as e:
                     logger.exception(f'Error handling internal axon id {id_}')
@@ -79,10 +80,16 @@ class HaveibeenpwnedExecutionMixIn(Triggerable):
     def _get_enrichment_client_id(id_, email):
         return '_'.join(('haveibeenpwnedenrichment', id_, email))
 
-    def _handle_email(self, user, email, connection):
+    def _handle_email(self, user, email, connection, alternative_suffix=None):
         try:
             client_id = self._get_enrichment_client_id(user.internal_axon_id, email)
-            user_data = connection.get_breach_account_info(email)
+            try:
+                user_data = connection.get_breach_account_info(email)
+            except Exception:
+                if not alternative_suffix:
+                    raise
+                alternative_email = email.split('@')[0] + '@' + alternative_suffix
+                user_data = connection.get_breach_account_info(alternative_email)
 
             new_user = self._create_user(user_data, email)
 
@@ -99,7 +106,7 @@ class HaveibeenpwnedExecutionMixIn(Triggerable):
             logger.warning(f'Failed to fetch email info for {email}, {e}', exc_info=True)
             return False
 
-    def _handle_user(self, user, connection):
+    def _handle_user(self, user, connection, alternative_suffix=None):
         try:
             if not user.specific_data:
                 json = {'success': False, 'value': 'Haveibeenpwned Error: Adapters not found'}
@@ -110,7 +117,7 @@ class HaveibeenpwnedExecutionMixIn(Triggerable):
                 json = {'success': False, 'value': 'Haveibeenpwned Error: Missing Email'}
                 return (user.internal_axon_id, json)
 
-            if not any([self._handle_email(user, email, connection) for email in emails]):
+            if not any([self._handle_email(user, email, connection, alternative_suffix) for email in emails]):
                 return (user.internal_axon_id, {'success': False, 'value': 'Haveibeenpwned Enrichment - no results'})
 
             return (user.internal_axon_id, {'success': True, 'value': 'Haveibeenpwned Enrichment success'})
