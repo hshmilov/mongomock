@@ -87,7 +87,7 @@
               if (isObjectListField(field)) {
                 return false
               }
-              return !field.branched && field.type !== 'array' || this.chartView === 'histogram'
+              return !field.branched
             })
           }
         })
@@ -112,9 +112,6 @@
         }
       },
       updateView(view) {
-        if (view != 'histogram') {
-            this.config = { ...this.config, field: { name: ''}}
-        }
       },
     }
   }

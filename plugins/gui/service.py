@@ -4167,7 +4167,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
             })
         data = sorted(data, key=lambda x: x['value'], reverse=True)
         if chart_view == ChartViews.pie:
-            total = data_collection.count_documents(base_query)
+            total = sum([x['value'] for x in data])
             return [{'name': view or 'ALL', 'value': 0}, *[{**x, 'value': x['value'] / total} for x in data]]
         return data
 

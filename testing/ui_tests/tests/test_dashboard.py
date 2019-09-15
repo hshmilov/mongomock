@@ -430,8 +430,6 @@ class TestDashboard(TestBase):
     def test_dashboard_segmentation_chart(self):
         self.dashboard_page.switch_to_page()
         self.base_page.run_discovery()
-        assert not self.dashboard_page.add_segmentation_card(
-            'Devices', 'network interfaces', 'test segmentation', 'pie')
         self.dashboard_page.add_segmentation_card('Devices', 'OS: Type', self.TEST_SEGMENTATION_HISTOGRAM_TITLE)
         shc_card = self.dashboard_page.get_card(self.TEST_SEGMENTATION_HISTOGRAM_TITLE)
         shc_chart = self.dashboard_page.get_histogram_chart_from_card(shc_card)
