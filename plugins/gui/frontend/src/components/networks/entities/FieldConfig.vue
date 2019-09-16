@@ -225,7 +225,6 @@
         align-items: center;
 
         .field-list {
-          flex-basis: 40%;
           width: 40%;
 
           &__title {
