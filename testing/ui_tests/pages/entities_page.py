@@ -1,15 +1,16 @@
 import re
 import time
+import typing
 
 import requests
 from retrying import retry
-from selenium.webdriver.common.action_chains import ActionChains
 from selenium.common.exceptions import NoSuchElementException
+from selenium.webdriver.common.action_chains import ActionChains
 
 from axonius.utils.datetime import parse_date
 from axonius.utils.parsing import normalize_timezone_date
 from axonius.utils.wait import wait_until
-from ui_tests.pages.page import Page
+from ui_tests.pages.page import Page, TableRow
 from ui_tests.tests.ui_consts import AD_ADAPTER_NAME
 
 
@@ -138,6 +139,9 @@ class EntitiesPage(Page):
     FILTER_ADAPTERS_CSS = '.filter-adapters'
     FILTER_ADAPTERS_BOX_CSS = '.x-secondary-select-content'
     FILTERED_ADAPTER_ICON_CSS = '.img-filtered'
+
+    ACTIVE_TAB_TABLE_ROWS = '.body .x-tabs.vertical .body .x-tab.active .x-table-row'
+    ACTIVE_TAB_TABLE_ROWS_HEADERS = '.body .x-tabs.vertical .body .x-tab.active .x-table thead th'
 
     @property
     def url(self):
@@ -277,14 +281,14 @@ class EntitiesPage(Page):
         self.wait_for_spinner_to_end()
         return self.driver.current_url.split('/')[-1]
 
+    def click_table_container_first_row(self):
+        self.driver.find_element_by_css_selector(self.TABLE_FIRST_TABLE_ROW_CSS).click()
+        self.wait_for_spinner_to_end()
+
     def click_specific_row_checkbox(self, field_name, field_value):
         values = self.get_column_data(field_name)
         row_num = values.index(field_value)
         self.click_row_checkbox(row_num + 1)
-
-    def click_table_container_first_row(self):
-        self.driver.find_element_by_css_selector(self.TABLE_FIRST_TABLE_ROW_CSS).click()
-        self.wait_for_spinner_to_end()
 
     def find_query_search_input(self):
         return self.driver.find_element_by_css_selector(self.QUERY_SEARCH_INPUT_CSS)
@@ -979,3 +983,16 @@ class EntitiesPage(Page):
 
     def find_query_status_text(self):
         return self.find_query_header().find_element_by_css_selector('.status').text
+
+    def fill_custom_data_search_input(self, text):
+        self.fill_text_field_by_css_selector(self.CUSTOM_DATA_SEARCH_INPUT, text)
+        self.key_down_enter(self.driver.find_element_by_css_selector(self.CUSTOM_DATA_SEARCH_INPUT))
+
+    def get_all_entity_active_custom_data_tab_table_rows(self) -> typing.List[TableRow]:
+        """
+        Note: this only returns the first page only
+        """
+        headers = [header.text for header in self.driver.find_elements_by_css_selector(
+            self.ACTIVE_TAB_TABLE_ROWS_HEADERS) if header.text]
+        return [TableRow(elem, headers=headers) for elem in
+                self.driver.find_elements_by_css_selector(self.ACTIVE_TAB_TABLE_ROWS) if elem.text]

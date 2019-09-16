@@ -9,9 +9,9 @@ from selenium.common.exceptions import (ElementNotVisibleException,
                                         NoSuchElementException,
                                         StaleElementReferenceException,
                                         WebDriverException)
+from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
-from selenium.webdriver.common.action_chains import ActionChains
 
 from axonius.utils.parsing import normalize_timezone_date
 from services.axon_service import TimeoutException
@@ -73,6 +73,19 @@ RETRY_WAIT_FOR_ELEMENT = 150
 SLEEP_INTERVAL = 0.2
 
 
+class TableRow:
+    """
+    TableRow - container for a single row in entity custom data table
+    """
+
+    def __init__(self, element, headers=None):
+        self.element = element
+        if headers is None:
+            headers = []
+        self.headers = headers
+        self.columns = element.text.split('\n')
+
+
 class Page:
     LOADING_SPINNER_CSS = '.v-spinner-bg'
     LOADING_SPINNER_CSS2 = '.v-spinner'
@@ -96,6 +109,7 @@ class Page:
     CONFIRM_BUTTON = 'Confirm'
     DISABLED_BUTTON_XPATH = './/button[@class=\'x-button disabled\' and .//text()=\'{button_text}\']'
     VERTICAL_TABS_CSS = '.x-tabs.vertical .header .header-tab'
+
     NAMED_TAB_XPATH = '//div[@class=\'x-tabs\']/ul/li[contains(@class, "header-tab")]//div[text()=\'{tab_title}\']'
     TABLE_ROWS_CSS = 'tbody .x-table-row.clickable'
     TABLE_COUNTER = 'div.count'
@@ -128,6 +142,8 @@ class Page:
     RENAME_TAB_INPUT_ID = 'rename_tab'
 
     TABLE_SEARCH_INPUT = '.x-search-input .input-value'
+
+    CUSTOM_DATA_SEARCH_INPUT = '.body .x-tabs.vertical .body .x-tab.active .x-search-input input'
 
     def __init__(self, driver, base_url, test_base, local_browser: bool):
         self.driver = driver
@@ -681,6 +697,9 @@ class Page:
             if tab.text:
                 vertical_tabs.append(tab.text)
         return vertical_tabs
+
+    def get_vertical_tab_elements(self):
+        return [tab for tab in self.driver.find_elements_by_css_selector(self.VERTICAL_TABS_CSS) if tab.text != '']
 
     def get_filename_by_input_id(self, input_id):
         return self.driver.find_element_by_xpath(

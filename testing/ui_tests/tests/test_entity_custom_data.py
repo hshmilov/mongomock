@@ -1,9 +1,17 @@
+import copy
+import time
+
 from selenium.common.exceptions import (ElementNotVisibleException,
                                         ElementNotInteractableException,
                                         NoSuchElementException)
 
-from ui_tests.tests.ui_test_base import TestBase
+from services.adapters.kaseya_service import KaseyaService
+from testing.test_credentials.test_kaseya_credentials import client_details as kaseya_client_details
 from ui_tests.tests.ui_consts import JSON_ADAPTER_NAME
+from ui_tests.tests.ui_test_base import TestBase
+
+KASEYA_VSA_ADAPTER_NAME = 'Kaseya VSA'
+KASEYA_DOCKER_ADAPTER_NAME = 'kaseya_adapter'
 
 
 class TestEntityCustomData(TestBase):
@@ -164,3 +172,57 @@ class TestEntityCustomData(TestBase):
         self._test_new_fields(self.users_page)
         self._test_error_fields(self.users_page, self.users_page.FIELD_USERNAME_TITLE)
         self._test_custom_data_bulk(self.users_page, self.users_page.FIELD_USERNAME_TITLE)
+
+    def test_entity_data_search(self):
+        """
+        In the entity page under `General Data` there are tables that contain search input
+        for example Installed Software for Kaseya adapter. This test checks that search works and returns
+        information when used.
+        """
+        try:
+            with KaseyaService().contextmanager(take_ownership=True):
+
+                self.adapters_page.switch_to_page()
+                self.adapters_page.wait_for_adapter(KASEYA_VSA_ADAPTER_NAME)
+                self.adapters_page.click_adapter(KASEYA_VSA_ADAPTER_NAME)
+                self.adapters_page.wait_for_spinner_to_end()
+                self.adapters_page.wait_for_table_to_load()
+                self.adapters_page.click_new_server()
+                kaseya_client_details_2 = copy.copy(kaseya_client_details)
+                kaseya_client_details_2.pop('verify_ssl')
+                self.adapters_page.fill_creds(**kaseya_client_details_2)
+                self.adapters_page.click_save()
+                self.adapters_page.wait_for_data_collection_toaster_start()
+                self.adapters_page.wait_for_data_collection_toaster_absent()
+                self.base_page.run_discovery()
+                self.devices_page.switch_to_page()
+                self.devices_page.wait_for_table_to_load()
+                self.devices_page.click_query_wizard()
+                self.devices_page.select_query_adapter(KASEYA_VSA_ADAPTER_NAME)
+                self.devices_page.click_search()
+                self.devices_page.wait_for_table_to_load()
+                self.devices_page.click_table_container_first_row()
+                self.devices_page.click_general_tab()
+                tabs = self.devices_page.get_vertical_tab_elements()
+                # Go over every tab, and over every header, pick the first rows data, and search it
+                # Expect that row to show in search
+                for tab in tabs:
+                    tab.click()
+                    # check if tab has a search element
+                    try:
+                        self.devices_page.fill_custom_data_search_input('')
+                    except NoSuchElementException:
+                        continue
+                    rows = self.devices_page.get_all_entity_active_custom_data_tab_table_rows()
+                    if len(rows) == 0:
+                        continue
+                    tr = rows[0]
+                    for column in tr.columns:
+                        self.devices_page.fill_custom_data_search_input('')
+                        time.sleep(0.1)
+                        self.devices_page.fill_custom_data_search_input(f'{column.strip()}')
+                        tr2 = self.devices_page.get_all_entity_active_custom_data_tab_table_rows()[0]
+                        assert tr2.columns == tr.columns
+        finally:
+            self.adapters_page.clean_adapter_servers(KASEYA_VSA_ADAPTER_NAME)
+            self.wait_for_adapter_down(KASEYA_DOCKER_ADAPTER_NAME)

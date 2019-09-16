@@ -14,11 +14,10 @@ import socket
 import ssl
 import subprocess
 import time
-
-from jira import JIRA
 import sys
 import threading
 import traceback
+import typing
 from collections import defaultdict
 from datetime import datetime, timedelta
 from itertools import groupby
@@ -35,22 +34,24 @@ from apscheduler.triggers.interval import IntervalTrigger
 from bson import ObjectId, json_util
 from flask import Flask, has_request_context, jsonify, request, session
 from funcy import chunks
+from jira import JIRA
 from namedlist import namedtuple
 from promise import Promise
 from pymongo import MongoClient, ReplaceOne
-from pymongo.errors import DuplicateKeyError, OperationFailure
 from pymongo.collection import Collection
+from pymongo.errors import DuplicateKeyError, OperationFailure
 from retrying import retry
 # bson is requirement of mongo and its not recommended to install it manually
 from tlssyslog import TLSSysLogHandler
 
 import axonius.entities
-from axonius.utils.axonius_query_language import parse_filter
 from axonius import adapter_exceptions, plugin_exceptions
 from axonius.adapter_exceptions import TagDeviceError
 from axonius.background_scheduler import LoggedBackgroundScheduler
 from axonius.clients.rest.connection import RESTConnection
 from axonius.consts.adapter_consts import IGNORE_DEVICE
+from axonius.consts.core_consts import CORE_CONFIG_NAME
+from axonius.consts.gui_consts import FEATURE_FLAGS_CONFIG, FeatureFlagsNames
 from axonius.consts.plugin_consts import (ADAPTERS_LIST_LENGTH,
                                           AGGREGATION_SETTINGS,
                                           AGGREGATOR_PLUGIN_NAME,
@@ -82,8 +83,6 @@ from axonius.consts.plugin_consts import (ADAPTERS_LIST_LENGTH,
                                           DEFAULT_SOCKET_READ_TIMEOUT, DEFAULT_SOCKET_RECV_TIMEOUT,
                                           STATIC_ANALYSIS_SETTINGS, FETCH_EMPTY_VENDOR_SOFTWARE_VULNERABILITES)
 from axonius.consts.plugin_subtype import PluginSubtype
-from axonius.consts.core_consts import CORE_CONFIG_NAME
-from axonius.consts.gui_consts import FEATURE_FLAGS_CONFIG, FeatureFlagsNames
 from axonius.devices import deep_merge_only_dict
 from axonius.devices.device_adapter import LAST_SEEN_FIELD, DeviceAdapter
 from axonius.email_server import EmailServer
@@ -98,16 +97,16 @@ from axonius.types.ssl_state import (COMMON_SSL_CONFIG_SCHEMA,
                                      MANDATORY_SSL_CONFIG_SCHEMA_DEFAULTS,
                                      SSLState)
 from axonius.users.user_adapter import UserAdapter
+from axonius.utils.datetime import parse_date
 from axonius.utils.debug import is_debug_attached
 from axonius.utils.hash import get_preferred_internal_axon_id_from_dict
 from axonius.utils.json_encoders import IteratorJSONEncoder
 from axonius.utils.mongo_retries import CustomRetryOperation, mongo_retry
 from axonius.utils.parsing import get_exception_string, remove_large_ints
-from axonius.utils.ssl import SSL_CERT_PATH, SSL_KEY_PATH, CA_CERT_PATH
 from axonius.utils.revving_cache import rev_cached
+from axonius.utils.ssl import SSL_CERT_PATH, SSL_KEY_PATH, CA_CERT_PATH
 from axonius.utils.threading import (LazyMultiLocker, run_and_forget,
                                      run_in_executor_helper, ThreadPoolExecutorReusable, singlethreaded)
-from axonius.utils.datetime import parse_date
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -989,7 +988,7 @@ class PluginBase(Configurable, Feature):
     def request_remote_plugin(self, resource, plugin_unique_name=CORE_UNIQUE_NAME, method='get',
                               raise_on_network_error: bool = False,
                               fail_on_plugin_down: bool = False,
-                              **kwargs) -> requests.Response:
+                              **kwargs) -> typing.Optional[requests.Response]:
         """
         Provides an interface to access other plugins, with the current plugin's API key.
         :type resource: str
@@ -1018,7 +1017,7 @@ class PluginBase(Configurable, Feature):
         if json_data:
             data = json.dumps(json_data, default=json_util.default)
             headers['Content-Type'] = 'application/json'
-
+        result = None
         try:
             result = requests.request(method, url, headers=headers, data=data, **kwargs)
         except Exception:
@@ -1037,8 +1036,8 @@ class PluginBase(Configurable, Feature):
             except Exception:
                 if raise_on_network_error:
                     raise
-                logger.error(f'Request failed for {url}, {result}')
-                return None
+                logger.exception(f'Request failed for {url}, {result}')
+                return
         return result
 
     def async_request_remote_plugin(self, *args, **kwargs) -> Promise:
