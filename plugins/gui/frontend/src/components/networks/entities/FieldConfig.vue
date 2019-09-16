@@ -130,10 +130,10 @@
         let schemaByName = this.schemaByName
         return this.viewFields
                 .map(fieldName => {
-                  return {
+                  return !schemaByName[fieldName] ? null : {
                     ...schemaByName[fieldName], logo: `adapters/${getTypeFromField(fieldName)}`
                   }
-                }).filter(field => this.isFieldInSearch(field, this.search.view))
+                }).filter(field => field && this.isFieldInSearch(field, this.search.view))
       },
       firstType () {
         if (!this.schemaByPlugin || !this.schemaByPlugin.length) return 'axonius'
