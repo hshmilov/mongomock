@@ -10,7 +10,7 @@ from axonius.plugin_base import EntityType, return_error, PluginBase
 from axonius.utils.gui_helpers import (get_historized_filter, parse_entity_fields, merge_entities_fields,
                                        flatten_fields, get_generic_fields, get_csv_canonized_value)
 from axonius.utils.axonius_query_language import (convert_db_entity_to_view_entity, convert_db_projection_to_view)
-from axonius.consts.plugin_consts import NOTES_DATA_TAG
+from axonius.consts.plugin_consts import NOTES_DATA_TAG, PLUGIN_UNIQUE_NAME
 from axonius.consts.gui_consts import PREDEFINED_ROLE_ADMIN
 from axonius.entities import AXONIUS_ENTITY_BY_CLASS, AxoniusEntity
 
@@ -34,6 +34,33 @@ def _fetch_historical_entity(entity_type: EntityType, entity_id, projection=None
                                                 'internal_axon_id': entity_id
                                             }, history_date), projection=convert_db_projection_to_view(projection)),
                                             ignore_errors=True)
+
+
+def fetch_raw_data(entity_type: EntityType, plugin_unique_name: str, id_: str, history_date: datetime = None) -> dict:
+    """
+    Returns the raw data of the entity
+    :param entity_type: Entity type
+    :param plugin_unique_name: plugin unique name of the entity adapter
+    :param id_: the data.id of the entity
+    :param history_date: whether or not to check historical dates
+    :return: the raw data or None
+    """
+    # pylint: disable=W0212
+    if history_date:
+        col = PluginBase.Instance._raw_adapter_historical_entity_db_map[entity_type]
+    else:
+        col = PluginBase.Instance._raw_adapter_entity_db_map[entity_type]
+    query = {
+        PLUGIN_UNIQUE_NAME: plugin_unique_name,
+        'id': id_
+    }
+    if history_date:
+        query['accurate_for_datetime'] = history_date
+    res = col.find_one(query)
+    if not res:
+        logger.error(f'Raw data is not present for {plugin_unique_name}, {id_}')
+        return None
+    return res.get('raw_data')
 
 
 def get_entity_data(entity_type: EntityType, entity_id, history_date: datetime = None):
@@ -71,9 +98,15 @@ def get_entity_data(entity_type: EntityType, entity_id, history_date: datetime =
         return new_data
 
     for specific in entity['specific_data']:
-        if not specific.get('data') or not specific['data'].get('raw'):
-            continue
-        specific['data']['raw'] = _filter_long_data(specific['data']['raw'])
+        if specific.get('data') and specific['data'].get('raw'):
+            specific['data']['raw'] = _filter_long_data(specific['data']['raw'])
+        else:
+            raw_data = fetch_raw_data(entity_type,
+                                      specific[PLUGIN_UNIQUE_NAME],
+                                      specific['data']['id'],
+                                      history_date=history_date)
+            if raw_data:
+                specific['data']['raw'] = _filter_long_data(raw_data)
 
     def _is_table(schema):
         return schema['type'] == 'array' and schema.get('format', '') == 'table'

@@ -13,6 +13,7 @@ import os
 import socket
 import ssl
 import subprocess
+import time
 
 from jira import JIRA
 import sys
@@ -36,7 +37,7 @@ from flask import Flask, has_request_context, jsonify, request, session
 from funcy import chunks
 from namedlist import namedtuple
 from promise import Promise
-from pymongo import MongoClient
+from pymongo import MongoClient, ReplaceOne
 from pymongo.errors import DuplicateKeyError, OperationFailure
 from pymongo.collection import Collection
 from retrying import retry
@@ -476,6 +477,15 @@ class PluginBase(Configurable, Feature):
             EntityType.Devices: self.devices_db,
         }
 
+        self._raw_adapter_entity_db_map = {
+            EntityType.Users: self.aggregator_db_connection['user_adapters_raw_db'],
+            EntityType.Devices: self.aggregator_db_connection['device_adapters_raw_db'],
+        }
+        self._raw_adapter_historical_entity_db_map = {
+            EntityType.Users: self.aggregator_db_connection['user_adapters_historical_raw_db'],
+            EntityType.Devices: self.aggregator_db_connection['device_adapters_historical_raw_db'],
+        }
+
         self._historical_entity_views_db_map = {
             EntityType.Users: self.historical_users_db_view,
             EntityType.Devices: self.historical_devices_db_view,
@@ -591,6 +601,8 @@ class PluginBase(Configurable, Feature):
         :return:
         """
         try:
+            # Supposed to be delayed
+            time.sleep(2)
             self._delayed_initialization()
         except BaseException:
             logger.exception('Exception when calling _delayed_initialization')
@@ -1452,7 +1464,9 @@ class PluginBase(Configurable, Feature):
         """
         multilocker = LazyMultiLocker()
         db_to_use = self._entity_db_map.get(entity_type)
-        assert db_to_use, f"got unexpected {entity_type}"
+        raw_db_to_use = self._raw_adapter_entity_db_map.get(entity_type)
+
+        assert db_to_use and raw_db_to_use, f"got unexpected {entity_type}"
         try:
             plugin_type, plugin_name, plugin_unique_name = plugin_identity
         except Exception:
@@ -1514,6 +1528,20 @@ class PluginBase(Configurable, Feature):
                             for k, v
                             in data_to_update.items()
                         }
+
+                    # Inserts 'raw' into the DB and removes it from the device
+                    raw_db_to_use.update_one(
+                        {
+                            PLUGIN_UNIQUE_NAME: parsed_to_insert[PLUGIN_UNIQUE_NAME],
+                            'id': parsed_to_insert['data']['id'],
+                        },
+                        {
+                            '$set': {
+                                'raw_data': parsed_to_insert['data'].pop('raw', {})
+                            }
+                        },
+                        upsert=True
+                    )
 
                     # trying to update the device if it is already in the DB
                     update_result = db_to_use.update_one({
@@ -1588,6 +1616,21 @@ class PluginBase(Configurable, Feature):
             promises = []
 
             def insert_quickpath_to_db(devices):
+                # trying to update the device if it is already in the DB
+                raw_db_to_use.bulk_write([
+                    ReplaceOne(filter={
+                        PLUGIN_UNIQUE_NAME: plugin_unique_name,
+                        'id': device['id'],
+                    },
+                        replacement={
+                            PLUGIN_UNIQUE_NAME: plugin_unique_name,
+                            'id': device['id'],
+                            'raw_data': device.pop('raw', {})
+                    },
+                        upsert=True)
+                    for device
+                    in devices])
+
                 all_parsed = [self._create_axonius_entity(
                     client_name,
                     data,
@@ -1608,8 +1651,7 @@ class PluginBase(Configurable, Feature):
                 }
                     for parsed_to_insert
                     in all_parsed),
-                    ordered=False,
-                    bypass_document_validation=True
+                    ordered=False
                 )
 
             inserter = self.__first_time_inserter
@@ -1648,11 +1690,12 @@ class PluginBase(Configurable, Feature):
                     data_to_update = {f"adapters.$.{key}": value
                                       for key, value in parsed_to_insert.items() if key != 'data'}
 
-                    fields_to_update = data.keys() - ['id']
+                    fields_to_update: Iterable[str] = data.keys() - ['id']
 
                     for field in fields_to_update:
-                        field_of_data = data.get(field, [])
-                        data_to_update[f"adapters.$.data.{field}"] = field_of_data
+                        if not field == 'raw':
+                            field_of_data = data.get(field, [])
+                            data_to_update[f"adapters.$.data.{field}"] = field_of_data
 
                     inserted_data_count += 1
                     promises.append(Promise(functools.partial(run_in_executor_helper,
@@ -2297,7 +2340,7 @@ class PluginBase(Configurable, Feature):
 
         return internal_axon_id, entity_to_split['internal_axon_id']
 
-    def __archive_axonius_device(self, plugin_unique_name, device_id, db_to_use, session=None):
+    def __archive_axonius_device(self, plugin_unique_name, device_id, entity_type: EntityType, session=None):
         """
         Finds the axonius device with the given plugin_unique_name and device id,
         assumes that the axonius device has only this single adapter device.
@@ -2306,7 +2349,11 @@ class PluginBase(Configurable, Feature):
 
         writes the device to the archive db, then deletes it
         """
-        axonius_device = db_to_use.find_one_and_delete({
+        self._raw_adapter_entity_db_map[entity_type].find_one_and_delete({
+            PLUGIN_UNIQUE_NAME: plugin_unique_name,
+            'id': device_id
+        })
+        axonius_device = self._entity_db_map[entity_type].find_one_and_delete({
             'adapters': {
                 '$elemMatch': {
                     PLUGIN_UNIQUE_NAME: plugin_unique_name,
@@ -2361,7 +2408,7 @@ class PluginBase(Configurable, Feature):
                                                        entity_to_split=axonius_entity)
         # By not having this a part of the transaction, we significantly mitigate
         try:
-            self.__archive_axonius_device(plugin_unique_name, adapter_id, _entities_db)
+            self.__archive_axonius_device(plugin_unique_name, adapter_id, entity)
         except pymongo.errors.PyMongoError:
             logger.warning(f'Failed archiving axnoius device {plugin_unique_name}, {adapter_id}', exc_info=True)
         except Exception:

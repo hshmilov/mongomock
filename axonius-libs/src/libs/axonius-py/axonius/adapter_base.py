@@ -318,7 +318,10 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
         if self._notify_on_adapters is True and (devices_cleaned or users_cleaned):
             self.create_notification(f"Cleaned {devices_cleaned} devices and {users_cleaned} users")
         logger.info(f"Cleaned {devices_cleaned} devices and {users_cleaned} users")
-        return {EntityType.Devices.value: devices_cleaned, EntityType.Users.value: users_cleaned}
+        return {
+            EntityType.Devices.value: devices_cleaned,
+            EntityType.Users.value: users_cleaned
+        }
 
     def _triggered(self, job_name: str, post_json: dict, *args):
         if job_name == 'insert_to_db':

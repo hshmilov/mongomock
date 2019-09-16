@@ -5,6 +5,8 @@ import time
 from datetime import datetime
 
 import pymongo
+from pymongo.collection import Collection
+
 from axonius.adapter_base import is_plugin_adapter
 from axonius.consts.plugin_consts import (ADAPTERS_LIST_LENGTH,
                                           AGGREGATOR_PLUGIN_NAME, PLUGIN_NAME,
@@ -65,13 +67,54 @@ class AggregatorService(Triggerable, PluginBase):
         # Setting up db
         self.__insert_indexes()
 
+        # Clean all raw data from the db and move it to the relevant db, only if they exist
+        for entity_type in EntityType:
+            count_of_entities = 0
+
+            main_col = self._entity_db_map[entity_type]
+            raw_col = self._raw_adapter_entity_db_map[entity_type]
+            for entity in main_col.find({
+                'adapters.data.raw': {
+                    '$exists': True,
+                    '$nin': ['', None, {}, []]
+                }
+            }, projection={
+                'adapters.data.raw': True,
+                f'adapters.{PLUGIN_UNIQUE_NAME}': True,
+                'adapters.data.id': True,
+                '_id': True
+            }):
+                count_of_entities += 1
+                for adapter_entity in entity['adapters']:
+                    raw_col.update_one(
+                        {
+                            PLUGIN_UNIQUE_NAME: adapter_entity[PLUGIN_UNIQUE_NAME],
+                            'id': adapter_entity['data']['id'],
+                        },
+                        {
+                            '$set': {
+                                'raw_data': adapter_entity['data'].get('raw')
+                            }
+                        },
+                        upsert=True
+                    )
+                main_col.update_one({
+                    '_id': entity['_id']
+                },
+                    {
+                        '$set': {
+                            'adapters.$[].data.raw': None
+                        }
+                })
+            logger.info(f'Cleaned {count_of_entities} for {entity_type}')
+
     def __insert_indexes(self):
         """
         Insert useful indexes.
         :return: None
         """
 
-        def non_historic_indexes(db):
+        def non_historic_indexes(db: Collection):
             db.create_index(
                 [(f'adapters.{PLUGIN_UNIQUE_NAME}', pymongo.ASCENDING), ('adapters.data.id', pymongo.ASCENDING)
                  ], unique=True, background=True)
@@ -80,7 +123,7 @@ class AggregatorService(Triggerable, PluginBase):
                  ], background=True)
             db.create_index([('internal_axon_id', pymongo.ASCENDING)], unique=True, background=True)
 
-        def historic_indexes(db):
+        def historic_indexes(db: Collection):
             db.create_index(
                 [(f'adapters.{PLUGIN_UNIQUE_NAME}', pymongo.ASCENDING), ('adapters.data.id', pymongo.ASCENDING)
                  ], background=True)
@@ -88,7 +131,7 @@ class AggregatorService(Triggerable, PluginBase):
             db.create_index([('short_axon_id', pymongo.ASCENDING)], background=True)
             db.create_index([('accurate_for_datetime', pymongo.ASCENDING)], background=True)
 
-        def common_db_indexes(db):
+        def common_db_indexes(db: Collection):
             db.create_index([(f'adapters.{PLUGIN_NAME}', pymongo.ASCENDING)], background=True)
             db.create_index([(f'adapters.{PLUGIN_UNIQUE_NAME}', pymongo.ASCENDING)], background=True)
             db.create_index([(ADAPTERS_LIST_LENGTH, pymongo.DESCENDING)], background=True)
@@ -143,9 +186,47 @@ class AggregatorService(Triggerable, PluginBase):
             # this is commonly sorted by
             db.create_index([('adapter_list_length', pymongo.DESCENDING)], background=True)
 
+        def adapter_entity_raw_index(db: Collection):
+            """
+            Adds indices to the raw collection.
+            A document in the raw collection looks as follows:
+            {
+                'plugin_unique_name': '',
+                'id': '',
+                'raw_data': {
+                    ...
+                }
+            }
+            :param db: Collection to add indices too
+            """
+            db.create_index(
+                [(f'{PLUGIN_UNIQUE_NAME}', pymongo.ASCENDING), ('id', pymongo.ASCENDING)
+                 ], unique=True, background=True)
+
+        def adapter_entity_historical_raw_index(db: Collection):
+            """
+            Adds indices to the historical raw collection.
+            A document in the raw collection looks as follows:
+            {
+                'plugin_unique_name': '',
+                'id': '',
+                'accurate_for_datetime': '',
+                'raw_data': {
+                    ...
+                }
+            }
+            :param db: Collection to add indices too
+            """
+            db.create_index(
+                [(f'{PLUGIN_UNIQUE_NAME}', pymongo.ASCENDING), ('id', pymongo.ASCENDING),
+                 ('accurate_for_datetime', pymongo.ASCENDING)
+                 ], unique=True, background=True)
+
         for entity_type in EntityType:
             common_db_indexes(self._entity_db_map[entity_type])
             non_historic_indexes(self._entity_db_map[entity_type])
+            adapter_entity_raw_index(self._raw_adapter_entity_db_map[entity_type])
+            adapter_entity_historical_raw_index(self._raw_adapter_historical_entity_db_map[entity_type])
 
             common_db_indexes(self._historical_entity_views_db_map[entity_type])
             historic_indexes(self._historical_entity_views_db_map[entity_type])
@@ -193,7 +274,10 @@ class AggregatorService(Triggerable, PluginBase):
 
     def _save_entity_views_to_historical_db(self, entity_type: EntityType, now):
         from_db = self._entity_db_map[entity_type]
+        raw_from_db = self._raw_adapter_entity_db_map[entity_type]
+
         to_db = self._historical_entity_views_db_map[entity_type]
+        raw_to_db = self._raw_adapter_historical_entity_db_map[entity_type]
 
         # using a tmp collection because $out can write with a lot of constraints
         # https://docs.mongodb.com/manual/reference/operator/aggregation/out/
@@ -207,7 +291,12 @@ class AggregatorService(Triggerable, PluginBase):
         # it is also an easy way for some modifications without involving python code
         # benchmark: 1-2k/sec devices (docker, mongo 3.6) - 100k devices ~ a minute
 
+        # 2019 september update: This will be slower due to further 'raw' processing, but will also be faster
+        # because every document is smaller. So the actual performance is now unknown, although is guessed to be
+        # similar.
+
         tmp_collection = self._get_db_connection()[to_db.database.name][f"temp_{to_db.name}"]
+        tmp_raw_collection = self._get_db_connection()[to_db.database.name][f"temp_raw_{to_db.name}"]
 
         val = to_db.find_one(filter={},
                              sort=[('accurate_for_datetime', -1)],
@@ -243,10 +332,32 @@ class AggregatorService(Triggerable, PluginBase):
             }
         ])
 
+        raw_from_db.aggregate([
+            {
+                "$project": {
+                    "_id": 0
+                }
+            },
+            {
+                "$addFields": {
+                    "accurate_for_datetime": {
+                        "$literal": now
+                    }
+                }
+            },
+            {
+                "$out": tmp_raw_collection.name
+            }
+        ])
+
         for chunk in chunks(10000, tmp_collection.find({})):
             to_db.insert_many(chunk)
 
+        for chunk in chunks(10000, tmp_raw_collection.find({})):
+            raw_to_db.insert_many(chunk)
+
         tmp_collection.drop()
+        tmp_raw_collection.drop()
 
     def _triggered(self, job_name, post_json, *args):
         if job_name == 'clean_db':

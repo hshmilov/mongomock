@@ -642,6 +642,8 @@ class GuiService(PluginService, UpdatablePluginMixin):
         # extend volumes by mapping specifically each python file, to be able to debug much better.
         volumes.extend([f'{self.service_dir}/{fn}:/home/axonius/app/{self.package_name}/{fn}:ro'
                         for fn in os.listdir(self.service_dir) if fn.endswith('.py')])
+        volumes.extend([f'{self.service_dir}/gui_logic/{fn}:/home/axonius/app/{self.package_name}/gui_logic/{fn}:ro'
+                        for fn in os.listdir(f'{self.service_dir}/gui_logic') if fn.endswith('.py')])
 
         return volumes
 

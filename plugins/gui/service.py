@@ -911,9 +911,28 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         return str(len(internal_axon_ids)), 200
 
     def __delete_entities_by_internal_axon_id(self, entity_type: EntityType, entities_selection, mongo_filter):
-        self._entity_db_map[entity_type].delete_many({'internal_axon_id': {
-            '$in': self.get_selected_entities(entity_type, entities_selection, mongo_filter)
-        }})
+        entities = self._entity_db_map[entity_type].find({
+            'internal_axon_id': {
+                '$in': self.get_selected_entities(entity_type, entities_selection, mongo_filter)
+            }
+        }, projection={
+            f'adapters.{PLUGIN_UNIQUE_NAME}': 1,
+            f'adapters.data.id': 1
+        })
+        raw_col = self._raw_adapter_entity_db_map[entity_type]
+        with ThreadPool(15) as pool:
+            def delete_raw(axonius_entity):
+                for adapter in axonius_entity['adapters']:
+                    raw_col.delete_one({
+                        PLUGIN_UNIQUE_NAME: adapter[PLUGIN_UNIQUE_NAME],
+                        'id': adapter['data']['id']
+                    })
+            pool.map(delete_raw, entities)
+        self._entity_db_map[entity_type].delete_many({
+            'internal_axon_id': {
+                '$in': self.get_selected_entities(entity_type, entities_selection, mongo_filter)
+            }
+        })
         self._trigger('clear_dashboard_cache', blocking=False)
 
         return '', 200
