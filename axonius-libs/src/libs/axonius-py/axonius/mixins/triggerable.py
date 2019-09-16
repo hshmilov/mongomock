@@ -6,7 +6,7 @@ from collections import defaultdict
 from datetime import datetime
 from enum import Enum, auto
 from threading import RLock
-from typing import DefaultDict
+from typing import DefaultDict, Set
 
 import func_timeout
 import pymongo
@@ -138,8 +138,9 @@ class Triggerable(Feature, ABC):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+
         self.__state: DefaultDict[str, JobState] = defaultdict(JobState)
-        self.__last_error = ''
+        self.__prioritized_state: Set[str] = set()
 
         # Triggerable will log the state (Running, Completed, Failed) of every job it has been given
         self.__triggerable_db = self._get_collection('triggerable_history')
@@ -284,6 +285,8 @@ class Triggerable(Feature, ABC):
             with task.lock:
                 if task.triggered or task.scheduled:
                     return name
+        for name in self.__prioritized_state:
+            return name
         return None
 
     def __perform_stop_job(self, job_name, job_state):
@@ -333,7 +336,17 @@ class Triggerable(Feature, ABC):
         """
         Implements a trigger that is prioritized, i.e. runs without respect to the queue
         :param state: The stored state object for the job
-        :return:
+        :return: The result
+        """
+        try:
+            self.__prioritized_state.add(state.job_name)
+            return self.__trigger_prioritized_impl(state, timeout)
+        finally:
+            self.__prioritized_state.remove(state.job_name)
+
+    def __trigger_prioritized_impl(self, state: StoredJobState, timeout: int = None):
+        """
+        See __trigger_prioritized
         """
         inserted_id = self.__safe_insert(state).inserted_id
         failed = None

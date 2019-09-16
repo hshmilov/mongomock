@@ -324,6 +324,7 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
         }
 
     def _triggered(self, job_name: str, post_json: dict, *args):
+        self.__has_a_reason_to_live = True
         if job_name == 'insert_to_db':
             client_name = post_json and post_json.get('client_name')
             check_fetch_time = False
