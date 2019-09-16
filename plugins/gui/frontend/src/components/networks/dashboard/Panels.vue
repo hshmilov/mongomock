@@ -228,11 +228,12 @@
         if (this.isEntityRestricted(query.module) || query.view === undefined || query.view === null) {
           return
         }
+        let historical = this.cardToDate[this.processedPanels[chartInd].uuid]
         this.updateView({
           module: query.module,
-          view: query.view,
+          view: historical ? { ...query.view, historical } : query.view,
           name: this.processedPanels[chartInd].metric === 'compare' ? query.name : undefined,
-          uuid: null
+          uuid: null,
         })
         this.$router.push({ path: query.module })
       },
