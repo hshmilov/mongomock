@@ -64,7 +64,7 @@ class CensysConnection(RESTConnection):
         if token_type == 'Bearer' and expires_in > 0:
             self._session_headers = {'Content-Type': 'application/json',
                                      'Accept': 'application/json',
-                                     'Authorization': access_token}
+                                     'Authorization': f'Bearer {access_token}'}
         else:
             message = f'Invalid access_token type or token already expired!'
             logger.exception(message)
