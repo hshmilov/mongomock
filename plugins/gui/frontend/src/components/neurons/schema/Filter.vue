@@ -85,7 +85,7 @@
             return
           }
         }
-        this.bracketWeights[index] = payload.bracketWeight
+        this.bracketWeights[index] = payload.bracketWeight || 0
         if (!this.validateBrackets()) return
         // No compilation error - can remove existing error
         this.error = ''
@@ -106,14 +106,15 @@
       },
       removeExpression (index) {
         if (index >= this.expressions.length) return
+        if (this.expressions.length === 1) {
+          this.$emit('clear')
+          return
+        }
         this.expressions.splice(index, 1)
         this.filters.splice(index, 1)
         this.bracketWeights.splice(index, 1)
         if (!this.validateBrackets()) return
-        if (!this.expressions.length) {
-          // Expressions list should never stay empty, but have at least one empty expression
-          this.addExpression()
-        } else if (this.expressions[0].logicOp) {
+        if (this.expressions[0].logicOp) {
           this.expressions[0].logicOp = ""
           // Not ready for publishing yet, since first expression should not have a logical operation
           return
@@ -131,6 +132,11 @@
       },
       compile () {
         this.$refs.expression.forEach((expression) => expression.compileExpression(true))
+      },
+      reset () {
+        this.filters = []
+        this.addExpression()
+        this.error = ''
       }
     }
   }

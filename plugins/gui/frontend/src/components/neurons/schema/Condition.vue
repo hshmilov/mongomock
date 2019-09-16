@@ -233,7 +233,7 @@
         if (newSchema.type !== oldSchema.type || newSchema.format !== oldSchema.format) {
           this.value = null
         }
-        if (newSchema.enum && !newSchema.includes(this.value)) {
+        if (newSchema.enum && !newSchema.enum.find(item => (item.name || item) === this.value)) {
           this.value = null
         }
       }

@@ -124,7 +124,8 @@
         if (!fieldSchema) {
           return []
         }
-        return fieldSchema.fields.filter(field => !this.viewFields.includes(field.name) && this.isFieldInSearch(field, this.search.stock))
+        return fieldSchema.fields.filter(field =>
+                !this.viewFields.includes(field.name) && this.isFieldInSearch(field, this.search.stock))
       },
       viewFieldsSchema () {
         let schemaByName = this.schemaByName

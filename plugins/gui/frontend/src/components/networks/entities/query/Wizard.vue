@@ -19,12 +19,13 @@
         v-model="queryExpressions"
         :module="module"
         @change="onChangeFilter"
+        @clear="clearFilter"
         @error="$emit('error')"
       />
       <md-switch
         v-model="isUniqueAdapters"
         :disabled="!value"
-        v-if="module == 'devices'"
+        v-if="module === 'devices'"
       >Include outdated Adapter {{ prettyModule }}
         in query
       </md-switch>
@@ -84,8 +85,7 @@
             view: {
               query: { filter: this.query.filter, expressions },
               page: 0
-            },
-            uuid: this.query.filter ? undefined : null
+            }
           })
         }
       },
@@ -113,16 +113,18 @@
       },
       clearFilter () {
         // Restart the expressions, search input and filter
-        this.onChangeFilter('', true)
+        this.sendFilter('')
         this.queryExpressions = []
+        this.updateView({
+          module: this.module,
+          uuid: null
+        })
         this.$nextTick(() => {
-          this.$refs.filter.filters = []
-          this.$refs.filter.addExpression()
-          this.$refs.filter.error = ''
+          this.$refs.filter.reset()
         })
       },
-      onChangeFilter (filter, cancelUniqueAdapters) {
-        if (this.isUniqueAdapters && !cancelUniqueAdapters) {
+      onChangeFilter (filter) {
+        if (this.isUniqueAdapters) {
           this.sendFilter(`${INCLUDE_OUDATED_MAGIC}${filter}`)
         } else {
           this.sendFilter(filter)

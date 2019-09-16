@@ -184,6 +184,12 @@
         changeState: CHANGE_TOUR_STATE
       }),
       updateExpression (update, compile = true) {
+        const isPropUpdated = ([key, value]) => {
+          return this.expression[key] === value && (value !== 0 || this.expression[key] === 0)
+        }
+        if (Object.entries(update).every(isPropUpdated)) {
+          return
+        }
         this.$emit('input', {
           ...this.expression,
           ...update
@@ -223,6 +229,9 @@
       },
       compileExpression (force = false) {
         if (!force && !this.autoQuery) {
+          this.$emit('change', {
+            error: this.errorCondition
+          })
           return
         }
         if (!this.expression.field || (this.expression.obj && !this.nestedExpressionCond)) {
