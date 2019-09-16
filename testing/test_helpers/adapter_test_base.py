@@ -265,6 +265,7 @@ class AdapterTestBase:
             assert cleaned_count == 1
             assert entity_db.count_documents({'internal_axon_id': deleted_entity_id}) == 0
 
+    @pytest.mark.skip('Useless and takes a lot of time')
     def test_restart(self):
         service = self.adapter_service
         # it's ok to restart adapter in adapter test

@@ -423,14 +423,14 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
         Trigger cleaning all devices from all adapters
         :return:
         """
-        self._run_blocking_request(plugin_consts.AGGREGATOR_PLUGIN_NAME, 'clean_db', timeout=3600)
+        self._run_blocking_request(plugin_consts.AGGREGATOR_PLUGIN_NAME, 'clean_db', timeout=3600 * 6)
 
     def _run_historical_phase(self):
         """
         Trigger saving history
         :return:
         """
-        self._run_blocking_request(plugin_consts.AGGREGATOR_PLUGIN_NAME, 'save_history', timeout=3600)
+        self._run_blocking_request(plugin_consts.AGGREGATOR_PLUGIN_NAME, 'save_history', timeout=3600 * 3)
 
     def _run_aggregator_phase(self, plugin_subtype: PluginSubtype):
         """
