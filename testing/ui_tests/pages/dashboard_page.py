@@ -366,6 +366,13 @@ class DashboardPage(Page):
     def click_to_last_page(self, histogram):
         self.get_last_page_button_in_paginator(histogram).click()
 
+    def click_on_histogram_item(self, histogram, item_number):
+        histogram.find_element_by_css_selector(f'{self.HISTOGRAM_ITEMS}:nth-child({item_number})').click()
+
+    def get_histogram_bar_item_title(self, histogram, item_number):
+        return histogram.find_element_by_css_selector(
+            f'{self.HISTOGRAM_ITEMS}:nth-child({item_number}) div.item-title').text
+
     def check_paginator_buttons_state(self, histogram, first, previous, next_r, last):
         paginator_current_buttons_state = [
             self.has_class(self.get_first_page_button_in_paginator(histogram), 'disabled'),

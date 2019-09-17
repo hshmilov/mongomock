@@ -34,6 +34,7 @@ class TestDashboard(TestBase):
     TEST_SEGMENTATION_HISTOGRAM_TITLE = 'test segmentation histogram'
     TEST_PAGINATOR_ON_SEGMENTATION_HISTOGRAM = 'test paginator on segmentation histogram - devices'
     TEST_PAGINATOR_ON_SEGMENTATION_USERS = 'test paginator on segmentation - users'
+    TEST_PAGINATOR_LINKED_TO_CORRECT_FILTER = 'test paginator linked to correct filter'
     SEGMENTATION_QUERY_USER_AD = 'Segmentation_User_name_AD'
     TEST_SEGMENTATION_PIE_TITLE = 'test segmentation pie'
     TEST_EDIT_CHART_TITLE = 'test edit'
@@ -363,6 +364,34 @@ class TestDashboard(TestBase):
         wait_until(lambda: int(
             self.dashboard_page.get_paginator_total_num_of_items(histograms_chart)) == first_result_count)
         self.dashboard_page.remove_card(self.TEST_PAGINATOR_ON_SEGMENTATION_USERS)
+
+    def test_multi_page_histogram_linked_to_correct_filter(self):
+        histograms_chart = \
+            self._create_get_paginator_segmentation_card(run_discovery=True,
+                                                         module='Devices',
+                                                         field='Host Name',
+                                                         title=self.TEST_PAGINATOR_LINKED_TO_CORRECT_FILTER,
+                                                         view_name='')
+        # on First Page
+        selected_item_bart_title = self.dashboard_page.get_histogram_bar_item_title(histograms_chart, 1)
+        self.dashboard_page.click_on_histogram_item(histograms_chart, 1)
+        # assert that the query is correct
+        assert self.devices_page.find_query_search_input().get_attribute('value') == \
+            f'specific_data.data.hostname == "{selected_item_bart_title}"'
+        self.dashboard_page.switch_to_page()
+        # create reference to the histogram within the card
+        segmentation_card = self.dashboard_page.get_card(self.TEST_PAGINATOR_LINKED_TO_CORRECT_FILTER)
+        # set focus back on the histogram chart (after switching page)
+        histograms_chart = self.dashboard_page.get_histogram_chart_from_card(segmentation_card)
+        # Got to Last Page
+        self.dashboard_page.click_to_last_page(histograms_chart)
+        selected_item_bart_title = self.dashboard_page.get_histogram_bar_item_title(histograms_chart, 1)
+        self.dashboard_page.click_on_histogram_item(histograms_chart, 1)
+        # assert that the query is correct
+        assert self.devices_page.find_query_search_input().get_attribute('value') == \
+            f'specific_data.data.hostname == "{selected_item_bart_title}"'
+        self.dashboard_page.switch_to_page()
+        self.dashboard_page.remove_card(self.TEST_PAGINATOR_LINKED_TO_CORRECT_FILTER)
 
     def test_paginator_on_segmentation_chart(self):
         histogram_items_title = []
