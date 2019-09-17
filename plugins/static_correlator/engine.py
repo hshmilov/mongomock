@@ -453,7 +453,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
         """
         logger.info('Starting to correlate on SCCM-AD')
         filtered_adapters_list = filter(is_sccm_or_ad, adapters_to_correlate)
-        filtered_adapters_list = filter(is_windows, adapters_to_correlate)
+        filtered_adapters_list = filter(is_windows, filtered_adapters_list)
         return self._bucket_correlate(list(filtered_adapters_list),
                                       [get_id],
                                       [compare_id],
