@@ -49,14 +49,23 @@ class CaCmdbAdapter(AdapterBase):
         return client, sid, data
 
     def _connect_client(self, client_config):
+        client = None
+        data = None
+        sid = None
         try:
-            self.get_connection(client_config)
+            client, sid, data = self.get_connection(client_config)
             return client_config
         except RESTException as e:
             message = 'Error connecting to client with domain {0}, reason: {1}'.format(
                 client_config['domain'], str(e))
             logger.exception(message)
             raise ClientConnectionException(message)
+        finally:
+            if client and data and sid:
+                list_handle = data['listHandle']
+                client.service.freeListHandles(sid=sid,
+                                               handles=[list_handle])
+                client.service.logout(sid=sid)
 
     # pylint: disable=too-many-nested-blocks, too-many-branches, too-many-statements
     def _query_devices_by_client(self, client_name, client_data):
@@ -69,54 +78,59 @@ class CaCmdbAdapter(AdapterBase):
         :return: A json with all the attributes returned from the Server
         """
         client, sid, data = self.get_connection(client_data)
-        list_handle = data['listHandle']
-        list_length = data['listLength']
-        max_rows = 250
-        current = 1
+        try:
+            list_handle = data['listHandle']
+            list_length = data['listLength']
+            max_rows = 250
+            current = 1
 
-        while current <= min(list_length, MAX_ROWS_FLOOD_NUM):
-            try:
-                data = client.service.getListValues(
-                    sid=sid,
-                    listHandle=list_handle,
-                    startIndex=current,
-                    endIndex=current + max_rows - 1,
-                    attributeNames={
-                        'string': [
-                            'serial_number',  # serial number
-                            'family.sym',  # what type of device it is
-                            'name',  # asset name as its listed in SDM
-                            'alarm_id',  # ip address
-                        ]
-                    }
-                )
-                xml_data = ET.fromstring(data)
-                if not xml_data.tag == 'UDSObjectList':
-                    logger.error(f'Bad first tag {xml_data.tag}')
+            while current <= min(list_length, MAX_ROWS_FLOOD_NUM):
+                try:
+                    data = client.service.getListValues(
+                        sid=sid,
+                        listHandle=list_handle,
+                        startIndex=current,
+                        endIndex=current + max_rows - 1,
+                        attributeNames={
+                            'string': [
+                                'serial_number',  # serial number
+                                'family.sym',  # what type of device it is
+                                'name',  # asset name as its listed in SDM
+                                'alarm_id',  # ip address
+                            ]
+                        }
+                    )
+                    xml_data = ET.fromstring(data)
+                    if not xml_data.tag == 'UDSObjectList':
+                        logger.error(f'Bad first tag {xml_data.tag}')
+                        break
+                    for xml_object in xml_data:
+                        try:
+                            if not xml_object.tag == 'UDSObject':
+                                logger.error(f'Bad object tag {xml_object.tag}')
+                                continue
+                            xml_attributes = xml_object[1]
+                            if not xml_attributes.tag == 'Attributes':
+                                logger.error(f'Bad Attributes tag {xml_attributes.tag}')
+                                continue
+                            device_raw = dict()
+                            for xml_attribute in xml_attributes:
+                                try:
+                                    if xml_attribute[0].tag == 'AttrName' and xml_attribute[1].tag == 'AttrValue':
+                                        device_raw[xml_attribute[0].text] = xml_attribute[1].text
+                                except Exception:
+                                    logger.exception(f'Problem with xml attribute')
+                            yield device_raw
+                        except Exception:
+                            logger.exception(f'Problem with xml object')
+                    current = current + max_rows
+                except Exception:
+                    logger.exception(f'Problem with current {current}')
                     break
-                for xml_object in xml_data:
-                    try:
-                        if not xml_object.tag == 'UDSObject':
-                            logger.error(f'Bad object tag {xml_object.tag}')
-                            continue
-                        xml_attributes = xml_object[1]
-                        if not xml_attributes.tag == 'Attributes':
-                            logger.error(f'Bad Attributes tag {xml_attributes.tag}')
-                            continue
-                        device_raw = dict()
-                        for xml_attribute in xml_attributes:
-                            try:
-                                if xml_attribute[0].tag == 'AttrName' and xml_attribute[1].tag == 'AttrValue':
-                                    device_raw[xml_attribute[0].text] = xml_attribute[1].text
-                            except Exception:
-                                logger.exception(f'Problem with xml attribute')
-                        yield device_raw
-                    except Exception:
-                        logger.exception(f'Problem with xml object')
-                current = current + max_rows
-            except Exception:
-                logger.exception(f'Problem with current {current}')
-                break
+        finally:
+            client.service.freeListHandles(sid=sid,
+                                           handles=[list_handle])
+            client.service.logout(sid=sid)
 
     @staticmethod
     def _clients_schema():
