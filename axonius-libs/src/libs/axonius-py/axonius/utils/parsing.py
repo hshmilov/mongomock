@@ -259,7 +259,7 @@ def figure_out_os(s):
             distribution = version[0]
     elif any(x in s for x in linux_names):
         os_type = 'Linux'
-        linux_distributions = [ubuntu_full, 'Ubuntu', 'Red Hat', 'Debian', 'Fedora', 'RHEL', 'Gentoo', 'Arch']
+        linux_distributions = [ubuntu_full, 'Ubuntu', 'Red Hat', 'Debian', 'Fedora', 'RHEL', 'Gentoo', 'Arch', 'Oracle']
         for dist in linux_distributions:
             if isinstance(dist, str):
                 if dist.lower() in s:
@@ -324,6 +324,8 @@ def figure_out_os(s):
         os_type = 'F5 Networks Big-IP'
     elif 'solaris' in s.lower():
         os_type = 'Solaris'
+    elif 'aix' in s.lower():
+        os_type = 'AIX'
 
     return {'type': os_type,
             'distribution': distribution,

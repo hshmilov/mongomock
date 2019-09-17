@@ -141,7 +141,7 @@ class DeviceAdapterOS(SmartJsonClass):
     type = Field(
         str, 'Type', enum=['Windows', 'Linux', 'OS X', 'iOS', 'AirOS',
                            'Android', 'FreeBSD', 'VMWare', 'Cisco', 'Mikrotik', 'VxWorks',
-                           'F5 Networks Big-IP', 'Solaris']
+                           'F5 Networks Big-IP', 'Solaris', 'AIX']
     )
     distribution = Field(str, 'Distribution')
     bitness = Field(int, 'Bitness', enum=[32, 64])
