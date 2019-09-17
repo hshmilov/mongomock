@@ -1,7 +1,7 @@
 import logging
 import requests
 
-from axonius.utils import gui_helpers
+from axonius.utils import gui_helpers, db_querying_helper
 from axonius.utils.axonius_query_language import parse_filter
 from axonius.types.enforcement_classes import AlertActionResult
 from reports.action_types.action_type_alert import ActionTypeAlert
@@ -67,14 +67,14 @@ class SlackSendMessageAction(ActionTypeAlert):
             field_list = ['specific_data.data.name', 'specific_data.data.hostname',
                           'specific_data.data.os.type', 'specific_data.data.last_used_users', 'labels']
             sort = {}
-        all_gui_entities = gui_helpers.get_entities(None, None, parsed_query_filter,
-                                                    sort,
-                                                    {
-                                                        field: 1
-                                                        for field
-                                                        in field_list
-                                                    },
-                                                    self._entity_type)
+        all_gui_entities = db_querying_helper.get_entities(None, None, parsed_query_filter,
+                                                           sort,
+                                                           {
+                                                               field: 1
+                                                               for field
+                                                               in field_list
+                                                           },
+                                                           self._entity_type)
 
         entities_str = ''
         for i, entity in enumerate(all_gui_entities):

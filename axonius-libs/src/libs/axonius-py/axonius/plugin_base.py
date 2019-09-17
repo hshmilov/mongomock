@@ -2545,7 +2545,7 @@ class PluginBase(Configurable, Feature):
         except Exception:
             logger.exception(f'Problem sending syslog message {message}')
         try:
-            self.send_https_log_message(message)
+            self.send_https_log_message(message, timeout=5)
         except Exception:
             logger.exception(f'Problem sending https log message {message}')
 
@@ -2556,7 +2556,7 @@ class PluginBase(Configurable, Feature):
             # Starting the messages with the tag Axonius
             getattr(syslog_logger, log_level)(message)
 
-    def send_https_log_message(self, message, authorization_header=None, files=None):
+    def send_https_log_message(self, message, authorization_header=None, files=None, timeout=60):
         https_log_setting = self._https_logs_settings
         if https_log_setting['enabled'] is True and https_log_setting.get('https_log_server'):
             host = https_log_setting.get('https_log_server')
@@ -2570,7 +2570,7 @@ class PluginBase(Configurable, Feature):
             if authorization_header:
                 headers = dict()
                 headers['Authorization'] = authorization_header
-            r = requests.post(url=url, data=message, proxies=proxies, headers=headers, files=files)
+            r = requests.post(url=url, data=message, proxies=proxies, headers=headers, files=files, timeout=timeout)
             r.raise_for_status()
 
     def set_global_keyval(self, key: str, val):

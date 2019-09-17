@@ -1,6 +1,6 @@
 import logging
 
-from axonius.utils import gui_helpers
+from axonius.utils import gui_helpers, db_querying_helper
 from axonius.utils.json import to_json
 
 from axonius.consts import report_consts
@@ -118,14 +118,14 @@ class SendHttpsLogAction(ActionTypeAlert):
             self._plugin_base.send_https_log_message(log_message_full, authorization_header)
             return AlertActionResult(True, 'Sent Https message')
 
-        all_gui_entities = gui_helpers.get_entities(None, None, parsed_query_filter,
-                                                    sort,
-                                                    {
-                                                        field: 1
-                                                        for field
-                                                        in field_list
-                                                    },
-                                                    self._entity_type)
+        all_gui_entities = db_querying_helper.get_entities(None, None, parsed_query_filter,
+                                                           sort,
+                                                           {
+                                                               field: 1
+                                                               for field
+                                                               in field_list
+                                                           },
+                                                           self._entity_type)
 
         for entity in all_gui_entities:
             entity['alert_name'] = self._report_data['name']

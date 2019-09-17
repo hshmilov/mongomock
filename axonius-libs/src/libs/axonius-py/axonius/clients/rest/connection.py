@@ -108,8 +108,12 @@ class RESTConnection(ABC):
         url_parsed = parse_url(domain)
         url_scheme = url_parsed.scheme or 'https'
         url_port = url_parsed.port or port
+
         if use_domain_path:
-            path = url_parsed.path + '/'
+            if not url_parsed.path:
+                path = '/'
+            else:
+                path = url_parsed.path + '/'
         else:
             path = url_base_prefix
         return uritools.compose.uricompose(
