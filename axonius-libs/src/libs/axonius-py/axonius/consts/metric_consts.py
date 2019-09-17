@@ -14,6 +14,7 @@ class SystemMetric:
     HOST_DB_DISK_FREE_PERC = 'host.db_disk_free_percentage'
     HOST_ROOT_DISK_FREE = 'host.root_disk_free'
     HOST_ROOT_DISK_FREE_PERC = 'host.root_disk_free_percentage'
+    CYCLE_FINISHED = 'cycle_finished'
 
 
 class ApiMetric:

@@ -11,11 +11,13 @@ from apscheduler.executors.pool import \
 from apscheduler.triggers.interval import IntervalTrigger
 
 from axonius.adapter_base import AdapterBase
+from axonius.consts.metric_consts import SystemMetric
 
 from axonius.consts.plugin_consts import PLUGIN_NAME, PLUGIN_UNIQUE_NAME, CONFIGURABLE_CONFIGS_COLLECTION, \
     STATIC_CORRELATOR_PLUGIN_NAME, CORE_UNIQUE_NAME, REIMAGE_TAGS_ANALYSIS_PLUGIN_NAME, STATIC_ANALYSIS_PLUGIN_NAME, \
     GENERAL_INFO_PLUGIN_NAME, REPORTS_PLUGIN_NAME
 from axonius.consts.scheduler_consts import SchedulerState
+from axonius.logging.metric_helper import log_metric
 
 from axonius.plugin_exceptions import PhaseExecutionException
 from axonius.background_scheduler import LoggedBackgroundScheduler
@@ -192,7 +194,10 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
 
         logger.info(f'Started system scheduler')
         try:
+            now = time.time()
             self.__start_research()
+            log_metric(logger, metric_name=SystemMetric.CYCLE_FINISHED,
+                       metric_value=round(time.time() - now, 1))
         except Exception:
             logger.critical(f'Error - Did not finish a cycle due to an exception!')
             raise

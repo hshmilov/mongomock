@@ -53,6 +53,9 @@ class TestMetrics(TestBase):
             wait_until(lambda: tester.is_metric_in_log('adapter.users.active_directory_adapter.entities', r'\d+'))
             wait_until(lambda: tester.is_metric_in_log('adapter.users.active_directory_adapter.entities.meta', r'\d+'))
 
+            system_scheduler_log_tester = self.axonius_system.scheduler.log_tester
+            wait_until(lambda: system_scheduler_log_tester.is_metric_in_log(SystemMetric.CYCLE_FINISHED, r'\d+'))
+
             report = re.escape(metric_query)
 
             self._create_report(metric_query)
