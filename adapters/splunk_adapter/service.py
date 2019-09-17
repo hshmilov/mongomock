@@ -291,7 +291,7 @@ class SplunkAdapter(AdapterBase, Configurable):
                 },
                 {
                     'name': 'win_logs_fetch_hours',
-                    'title': 'Winodws Login Fetch Hours',
+                    'title': 'Windows Login Fetch Hours',
                     'type': 'number'
                 },
                 {
