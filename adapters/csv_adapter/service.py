@@ -51,7 +51,7 @@ class CsvAdapter(AdapterBase):
     def _connect_client(self, client_config):
         if not client_config.get('csv_http') and 'csv' not in client_config and not client_config.get('csv_share') \
                 and not client_config.get('s3_bucket'):
-            raise ClientConnectionException('Bad params. No File / URL / Share / S3 Bucket for CSV')
+            raise ClientConnectionException('Bad params. No File / URL / Share / Amazon S3 Bucket for CSV')
         self.create_csv_info_from_client_config(client_config)
         return client_config
 
@@ -92,7 +92,8 @@ class CsvAdapter(AdapterBase):
             s3_secret_access_key = client_config.get('s3_secret_access_key')
 
             if not (s3_bucket and s3_object_location):
-                raise ClientConnectionException(f'Error - Please specify both S3 Bucket and S3 Object Location')
+                raise ClientConnectionException(
+                    f'Error - Please specify both Amazon S3 Bucket and Amazon S3 Object Location')
 
             if (s3_access_key_id or s3_secret_access_key) and not (s3_access_key_id and s3_secret_access_key):
                 raise ClientConnectionException(f'Error - Please specify both access key id and secret access key, '
@@ -107,7 +108,7 @@ class CsvAdapter(AdapterBase):
                 )
             except Exception as e:
                 if 'SignatureDoesNotMatch' in str(e):
-                    raise ClientConnectionException(f'S3 Bucket - Invalid Credentials. Response is: {str(e)}')
+                    raise ClientConnectionException(f'Amazon S3 Bucket - Invalid Credentials. Response is: {str(e)}')
                 raise
         elif 'csv' in client_config:
             csv_data_bytes = self._grab_file_contents(client_config['csv'])
@@ -196,23 +197,23 @@ class CsvAdapter(AdapterBase):
                 },
                 {
                     'name': 's3_bucket',
-                    'title': 'S3 Bucket Name',
+                    'title': 'Amazon S3 Bucket Name',
                     'type': 'string',
                 },
                 {
                     'name': 's3_object_location',
-                    'title': 'S3 Object Location (Key)',
+                    'title': 'Amazon S3 Object Location (Key)',
                     'type': 'string',
                 },
                 {
                     'name': 's3_access_key_id',
-                    'title': 'S3 Access Key Id',
+                    'title': 'Amazon S3 Access Key Id',
                     'description': 'Leave blank to use the attached IAM role',
                     'type': 'string',
                 },
                 {
                     'name': 's3_secret_access_key',
-                    'title': 'S3 Secret Access Key',
+                    'title': 'Amazon S3 Secret Access Key',
                     'description': 'Leave blank to use the attached IAM role',
                     'type': 'string',
                     'format': 'password'

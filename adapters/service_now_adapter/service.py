@@ -474,7 +474,7 @@ class ServiceNowAdapter(AdapterBase, Configurable):
                 },
                 {
                     'name': 'exclude_no_strong_identifier',
-                    'title': 'Exclude Devices Without IP,MAC and Serial Number',
+                    'title': 'Exclude Devices Without IP, MAC and Serial Number',
                     'type': 'bool'
                 }
             ],

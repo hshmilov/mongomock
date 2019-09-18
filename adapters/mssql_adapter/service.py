@@ -105,12 +105,12 @@ class MssqlAdapter(AdapterBase, Configurable):
                 },
                 {
                     'name': 'database',
-                    'title': 'Mssql Database',
+                    'title': 'MS SQL Server Database',
                     'type': 'string'
                 },
                 {
                     'name': 'table',
-                    'title': 'Mssql Table',
+                    'title': 'MS SQL Server Table',
                     'type': 'string'
                 },
                 {

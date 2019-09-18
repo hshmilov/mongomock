@@ -229,7 +229,7 @@ class CybereasonAdapter(AdapterBase, Configurable):
             'items': [
                 {
                     'name': 'white_list_tags',
-                    'title': 'Custom Tags White List',
+                    'title': 'Custom Tags Whitelist',
                     'type': 'string'
                 }
             ],

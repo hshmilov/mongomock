@@ -335,7 +335,7 @@ export const pluginMeta = {
     },
     absolute_adapter: {
         title: 'Absolute',
-        link: '',
+        link: 'https://docs.axonius.com/docs/absolute',
         description: 'Absolute specializes in software to manage and secure Windows computers and Android smartphones.'
     },
     landesk_adapter: {

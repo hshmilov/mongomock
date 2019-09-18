@@ -43,7 +43,7 @@ class SendHttpsLogAction(ActionTypeAlert):
                     'type': 'bool'
                 },                {
                     'name': 'authorization_header',
-                    'title': 'Authorization Headers',
+                    'title': 'Authorization Header',
                     'type': 'string',
                     'format': 'password'
                 }
