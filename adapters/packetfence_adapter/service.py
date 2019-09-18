@@ -50,7 +50,8 @@ class PacketfenceAdapter(AdapterBase):
         connection = PacketfenceConnection(domain=client_config['domain'],
                                            verify_ssl=client_config['verify_ssl'],
                                            https_proxy=client_config.get('https_proxy'),
-                                           apikey=client_config['apikey'])
+                                           username=client_config['username'],
+                                           password=client_config['password'])
         with connection:
             pass
         return connection
@@ -92,8 +93,13 @@ class PacketfenceAdapter(AdapterBase):
                     'type': 'string'
                 },
                 {
-                    'name': 'apikey',
-                    'title': 'API Key',
+                    'name': 'username',
+                    'title': 'User Name',
+                    'type': 'string'
+                },
+                {
+                    'name': 'password',
+                    'title': 'Password',
                     'type': 'string',
                     'format': 'password'
                 },
@@ -110,7 +116,8 @@ class PacketfenceAdapter(AdapterBase):
             ],
             'required': [
                 'domain',
-                'apikey',
+                'username',
+                'password',
                 'verify_ssl'
             ],
             'type': 'array'

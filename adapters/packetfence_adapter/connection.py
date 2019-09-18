@@ -14,11 +14,17 @@ class PacketfenceConnection(RESTConnection):
                          headers={'Content-Type': 'application/json',
                                   'Accept': 'application/json'},
                          **kwargs)
-        self._permanent_headers['Authorization'] = f'Bearer {self._apikey}'
 
     def _connect(self):
-        if not self._apikey:
-            raise RESTException('No API Key')
+        if not self._username or not self._password:
+            raise RESTException('No username or password')
+        response = self._post('login',
+                              body_params={'username': self._username,
+                                           'password': self._password})
+        if 'token' not in response:
+            raise RESTException(f'Bad response: {response}')
+        self._token = response['token']
+        self._permanent_headers['Authorization'] = f'Bearer {self._token}'
         self._get('nodes')
 
     def get_device_list(self):
