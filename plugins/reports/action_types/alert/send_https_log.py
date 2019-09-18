@@ -1,3 +1,4 @@
+import io
 import logging
 
 from axonius.utils import gui_helpers, db_querying_helper
@@ -94,9 +95,10 @@ class SendHttpsLogAction(ActionTypeAlert):
                                                  {field: 1 for field in field_list},
                                                  self._entity_type,
                                                  field_filters=field_filters)
+                csv_bytes = io.BytesIO(csv_string.getvalue().encode('utf-8'))
                 self._plugin_base.send_https_log_message(
                     '', authorization_header,
-                    files={'file': ('report.csv', csv_string.read().encode('utf-8'))}
+                    files={'file': ('report.csv', csv_bytes)}
                 )
         except Exception:
             logger.exception(f'Problem sending CSV https log')
