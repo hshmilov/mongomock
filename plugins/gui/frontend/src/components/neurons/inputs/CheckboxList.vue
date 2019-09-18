@@ -77,7 +77,9 @@
     },
     methods: {
       onChangeCheckbox (checked) {
-        this.$emit('input', this.itemNames.filter(itemName => checked.includes(itemName)))
+        const hiddenChecked = checked.filter(itemName => !this.itemNames.includes(itemName))
+        const visibleOrderedChecked = this.itemNames.filter(itemName => checked.includes(itemName))
+        this.$emit('input', [...hiddenChecked, ...visibleOrderedChecked])
       },
       onStartDrag () {
         this.dragging = true
