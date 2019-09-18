@@ -57,11 +57,13 @@ class BluecatConnection(RESTConnection):
         networks_ids = set()
         for key_num in range(1, 256):
             try:
+                if (datetime.datetime.now() - self._token_time) > datetime.timedelta(minutes=5):
+                    self._refresh_token()
                 response = self._get(f'searchByObjectTypes?'
                                      f'keyword={key_num}$&types=IP4Network&start=0&'
                                      f'count={DEVICE_PER_PAGE}')
                 for network_raw in response:
-                    if network_raw.get('id'):
+                    if isinstance(network_raw, dict) and network_raw.get('id'):
                         networks_ids.add(network_raw.get('id'))
             except Exception:
                 logger.exception(f'Problem getting key num')
