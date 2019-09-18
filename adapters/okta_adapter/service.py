@@ -48,7 +48,7 @@ class OktaAdapter(AdapterBase, Configurable):
 
     # pylint: disable=W0221
     def _query_users_by_client(self, client_name, client_data):
-        return client_data.get_users()
+        return client_data.get_users(self.__parallel_requests)
 
     def _clients_schema(self):
         return {
@@ -127,10 +127,16 @@ class OktaAdapter(AdapterBase, Configurable):
                     'name': 'fetch_apps',
                     'title': 'Should fetch Users Apps',
                     'type': 'bool'
+                },
+                {
+                    'name': 'parallel_requests',
+                    'title': 'Number of parallel requests',
+                    'type': 'integer'
                 }
             ],
             'required': [
-                'fetch_apps'
+                'fetch_apps',
+                'parallel_requests'
             ],
             'pretty_name': 'Okta Configuration',
             'type': 'array'
@@ -139,8 +145,10 @@ class OktaAdapter(AdapterBase, Configurable):
     @classmethod
     def _db_config_default(cls):
         return {
-            'fetch_apps': False
+            'fetch_apps': False,
+            'parallel_requests': 75
         }
 
     def _on_config_update(self, config):
         self.__fetch_apps = config['fetch_apps']
+        self.__parallel_requests = config['parallel_requests']

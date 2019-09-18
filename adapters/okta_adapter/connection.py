@@ -15,7 +15,7 @@ from axonius.clients.rest.connection import RESTConnection
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
-PARALLEL_REQUESTS_MAX = 75
+PARALLEL_REQUESTS_DEFAULT = 75
 DEFAULT_SLEEP_TIME = 60
 
 
@@ -25,6 +25,7 @@ class OktaConnection:
         self.__base_url = url
         self.__api_key = api_key
         self.__fetch_apps = fetch_apps
+        self.__parallel_requests = PARALLEL_REQUESTS_DEFAULT
 
     # pylint: disable=W0102
     def __make_request(self, api='', params={}, forced_url=None):
@@ -81,19 +82,19 @@ class OktaConnection:
             aio_requests.append(aio_req)
             aio_ids.append(i)
 
-        for chunk_id in range(int(math.ceil(len(aio_requests) / PARALLEL_REQUESTS_MAX))):
+        for chunk_id in range(int(math.ceil(len(aio_requests) / self.__parallel_requests))):
             logger.debug(f'Async requests: sending '
-                         f'{chunk_id * PARALLEL_REQUESTS_MAX} out of {len(aio_requests)}')
+                         f'{chunk_id * self.__parallel_requests} out of {len(aio_requests)}')
 
             all_answers = async_request(
-                aio_requests[PARALLEL_REQUESTS_MAX * chunk_id:
-                             PARALLEL_REQUESTS_MAX * (chunk_id + 1)], handle_429_function=self.handle_429)
+                aio_requests[self.__parallel_requests * chunk_id:
+                             self.__parallel_requests * (chunk_id + 1)], handle_429_function=self.handle_429)
 
             # We got the requests,
             # time to check if they are valid and transform them to what the user wanted.
 
             for i, raw_answer in enumerate(all_answers):
-                request_id_absolute = PARALLEL_REQUESTS_MAX * chunk_id + i
+                request_id_absolute = self.__parallel_requests * chunk_id + i
                 current_user = users_page[aio_ids[request_id_absolute]]
                 try:
                     # The answer could be an exception
@@ -129,13 +130,16 @@ class OktaConnection:
             time.sleep(60)
 
     # pylint: disable=R1702,R0912,R0915
-    def get_users(self) -> Iterable[dict]:
+    def get_users(self, parallel_requests) -> Iterable[dict]:
         """
         Fetches all users
         :return: iterable of dict
         """
         groups = []
         _MAX_PAGE_COUNT = 1000
+        if parallel_requests <= 0:
+            parallel_requests = PARALLEL_REQUESTS_DEFAULT
+        self.__parallel_requests = parallel_requests
         users_to_group = dict()
         page_count = 0
         try:
