@@ -575,7 +575,7 @@ class DeviceAdapter(SmartJsonClass):
     organizational_unit = ListField(str, "Organizational Unit")
     security_patch_level = Field(datetime.datetime, "Security Patch Level")
     scanner = Field(bool, 'Scanner')
-    tags = ListField(DeviceTagKeyValue, "Tags")
+    tags = ListField(DeviceTagKeyValue, "Adapter Tags")
     cloud_provider = Field(str, "Cloud Provider")
     cloud_id = Field(str, "Cloud ID")
     shodan_data = Field(ShodanData, 'Shodan Data')
