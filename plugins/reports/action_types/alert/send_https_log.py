@@ -94,8 +94,10 @@ class SendHttpsLogAction(ActionTypeAlert):
                                                  {field: 1 for field in field_list},
                                                  self._entity_type,
                                                  field_filters=field_filters)
-                self._plugin_base.send_https_log_message('Axonius CSV data', authorization_header,
-                                                         files={'file': ('report.csv', csv_string)})
+                self._plugin_base.send_https_log_message(
+                    '', authorization_header,
+                    files={'file': ('report.csv', csv_string.read().encode('utf-8'))}
+                )
         except Exception:
             logger.exception(f'Problem sending CSV https log')
 
