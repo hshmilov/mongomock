@@ -82,31 +82,8 @@ def get_entity_data(entity_type: EntityType, entity_id, history_date: datetime =
         if item.get('name') == 'Notes' and item.get('data'):
             item['data'] = [{**note, **{'user_id': str(note['user_id'])}} for note in item['data']]
 
-    def _filter_long_data(data):
-        if not isinstance(data, dict):
-            return data
-        new_data = {}
-        for k, v in data.items():
-            if isinstance(v, dict):
-                new_data[k] = _filter_long_data(v)
-            if isinstance(v, list):
-                new_data[k] = [_filter_long_data(x) for x in v if not isinstance(x, bytes)]
-            elif isinstance(v, str) and len(v) > 128:
-                new_data[k] = f'{v[:128]}...'
-            elif not isinstance(v, bytes):
-                new_data[k] = v
-        return new_data
-
     for specific in entity['specific_data']:
-        if specific.get('data') and specific['data'].get('raw'):
-            specific['data']['raw'] = _filter_long_data(specific['data']['raw'])
-        else:
-            raw_data = fetch_raw_data(entity_type,
-                                      specific[PLUGIN_UNIQUE_NAME],
-                                      specific['data']['id'],
-                                      history_date=history_date)
-            if raw_data:
-                specific['data']['raw'] = _filter_long_data(raw_data)
+        fix_raw_data(specific, entity_type, history_date)
 
     def _is_table(schema):
         return schema['type'] == 'array' and schema.get('format', '') == 'table'
@@ -140,6 +117,50 @@ def get_entity_data(entity_type: EntityType, entity_id, history_date: datetime =
         'labels': entity['labels'],
         'updated': entity.get('accurate_for_datetime', None)
     }
+
+
+def _filter_long_data(data):
+    """
+    Used by fix_raw_data
+    Used to remove long old data
+    """
+    if not isinstance(data, dict):
+        return data
+    new_data = {}
+    for k, v in data.items():
+        if isinstance(v, dict):
+            new_data[k] = _filter_long_data(v)
+        if isinstance(v, list):
+            new_data[k] = [_filter_long_data(x) for x in v if not isinstance(x, bytes)]
+        elif isinstance(v, str) and len(v) > 128:
+            new_data[k] = f'{v[:128]}...'
+        elif not isinstance(v, bytes):
+            new_data[k] = v
+    return new_data
+
+
+def fix_raw_data(specific: dict, entity_type: EntityType, history_date: datetime):
+    """
+    Fixes raw for specific_data
+    :param specific: the specific data to fix for
+    :param entity_type: The entity type used
+    :param history_date: the date to fix for
+    :return:
+    """
+    specific_data = specific.get('data')
+    if specific_data:
+        specific_raw = specific['data'].get('raw')
+        if specific_raw:
+            specific['data']['raw'] = _filter_long_data(specific_raw)
+        else:
+            id_ = specific_data.get('id')
+            if id_:
+                raw_data = fetch_raw_data(entity_type,
+                                          specific[PLUGIN_UNIQUE_NAME],
+                                          id_,
+                                          history_date=history_date)
+                if raw_data:
+                    specific['data']['raw'] = _filter_long_data(raw_data)
 
 
 def entity_data_field_csv(entity_type: EntityType, entity_id, field_name, mongo_sort=None,
