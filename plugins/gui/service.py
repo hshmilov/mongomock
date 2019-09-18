@@ -3668,7 +3668,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
 
     @gui_helpers.paginated()
     @gui_add_rule_logged_in('dashboards/panels/<panel_id>', methods=['GET', 'DELETE', 'POST'],
-                            required_permissions={Permission(PermissionType.Dashboard, PermissionLevel.ReadWrite)})
+                            required_permissions={Permission(PermissionType.Dashboard, ReadOnlyJustForGet)})
     def update_dashboard_panel(self, panel_id, skip, limit):
         """
         DELETE an existing Dashboard Panel
