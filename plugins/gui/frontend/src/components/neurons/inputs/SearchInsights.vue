@@ -47,7 +47,7 @@
       }),
       searchValue: {
         get () {
-          return this.entitiesView[entities[0].name].query.search
+          return this.entitiesView[entities[0].name].query.search || ''
         },
         set (value) {
           this.updateSearchValue(value)
