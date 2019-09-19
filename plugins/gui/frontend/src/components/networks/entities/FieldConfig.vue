@@ -169,8 +169,13 @@
         this.viewFields = this.view.fields
         this.fieldType = this.firstType
       },
+      clearSelections () {
+        this.select.view = []
+        this.select.stock = []
+      },
       closeModal () {
         this.isActive = false
+        this.clearSelections()
       },
       onClickDone () {
         this.updateView({
@@ -196,6 +201,7 @@
       },
       reset () {
         this.viewFields = [ ...defaultFields[this.module] ]
+        this.clearSelections()
       },
       updateViewFields (viewFieldsSchema) {
         this.viewFields = viewFieldsSchema.map(schema => schema.name)
