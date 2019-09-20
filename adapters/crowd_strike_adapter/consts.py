@@ -17,4 +17,6 @@ class PolicyTypes(Enum):
     SensorUpdate = 'sensor_update'
 
     def replace_to_dash(self):
+        # pylint: disable=no-member
         return self.value.replace('_', '-')
+        # pylint: enable=no-member

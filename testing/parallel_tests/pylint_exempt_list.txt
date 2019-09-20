@@ -215,14 +215,10 @@ adapters/traiana_lab_machines_adapter/service.py
 axonius-libs/src/app/main.py
 axonius-libs/src/hacks/periodic_version.py
 axonius-libs/src/libs/axonius-py/setup.py
-axonius-libs/src/libs/axonius-py/axonius/adapter_base.py
-axonius-libs/src/libs/axonius-py/axonius/adapter_exceptions.py
 axonius-libs/src/libs/axonius-py/axonius/background_scheduler.py
 axonius-libs/src/libs/axonius-py/axonius/config_reader.py
 axonius-libs/src/libs/axonius-py/axonius/correlator_engine_base.py
-axonius-libs/src/libs/axonius-py/axonius/entities.py
 axonius-libs/src/libs/axonius-py/axonius/execution_correlator_engine_base.py
-axonius-libs/src/libs/axonius-py/axonius/plugin_base.py
 axonius-libs/src/libs/axonius-py/axonius/plugin_exceptions.py
 axonius-libs/src/libs/axonius-py/axonius/scanner_adapter_base.py
 axonius-libs/src/libs/axonius-py/axonius/smart_json_class.py
@@ -245,7 +241,6 @@ axonius-libs/src/libs/axonius-py/axonius/mixins/userdisabelable.py
 axonius-libs/src/libs/axonius-py/axonius/profiling/memory.py
 axonius-libs/src/libs/axonius-py/axonius/utils/debug.py
 axonius-libs/src/libs/axonius-py/axonius/utils/entity_finder.py
-axonius-libs/src/libs/axonius-py/axonius/utils/gui_helpers.py
 axonius-libs/src/libs/axonius-py/axonius/utils/json.py
 axonius-libs/src/libs/axonius-py/axonius/utils/json_encoders.py
 axonius-libs/src/libs/axonius-py/axonius/utils/parsing.py

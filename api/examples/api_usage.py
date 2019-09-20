@@ -1,9 +1,9 @@
 #!/usr/bin/env python36
 import logging
 
-#pylint: disable=E0611
+# pylint: disable=E0611
 from axoniussdk import argument_parser
-#pylint: disable=E0611
+# pylint: disable=E0611
 from axoniussdk.client import RESTClient
 
 __author__ = 'Axonius, Inc'

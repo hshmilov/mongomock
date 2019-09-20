@@ -4,6 +4,7 @@ import logging
 import urllib
 import requests
 import chardet
+# pylint: disable=import-error
 from smb.SMBHandler import SMBHandler
 
 from axonius.adapter_base import AdapterBase, AdapterProperty

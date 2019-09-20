@@ -2,26 +2,30 @@
 Axonius entities class wrappers. Implement methods to be used on devices/users from the db.
 """
 import logging
+import functools
+from enum import Enum, EnumMeta
 
 from promise import Promise
 from dataclasses import dataclass
+from bson import ObjectId
 
 from axonius.consts.gui_consts import SPECIFIC_DATA
 from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME
 from axonius.utils.axonius_query_language import parse_filter, convert_db_entity_to_view_entity
 
-import functools
-from enum import Enum, EnumMeta
-from bson import ObjectId
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
+# pylint: disable=protected-access
+
 
 class EntityTypeMeta(EnumMeta):
-    def __new__(mcs, *args):
-        enum_class = super().__new__(mcs, *args)
+    # pylint: disable=W0221
+    def __new__(cls, *args):
+        enum_class = super().__new__(cls, *args)
         enum_class._value2member_map_ = {m.value: m for m in enum_class.__members__.values()}
         return enum_class
+    # pylint: enable=W0221
 
 
 @dataclass()
@@ -52,7 +56,7 @@ class EntityType(Enum, metaclass=EntityTypeMeta):
     Users = EntityTypeClass('users', is_old_calculated=False)
 
 
-class EntitiesNamespace(object):
+class EntitiesNamespace:
     """ Just a namespace so that we could do self.devices.add_label or self.users.add_data"""
 
     def __init__(self, plugin_base, entity: EntityType):
@@ -77,11 +81,11 @@ class EntitiesNamespace(object):
         entity_object = AXONIUS_ENTITY_BY_CLASS[self.entity]
 
         if internal_axon_id is not None:
-            final_mongo_filter = {"internal_axon_id": internal_axon_id}
+            final_mongo_filter = {'internal_axon_id': internal_axon_id}
         elif axonius_query_language is not None:
             final_mongo_filter = parse_filter(axonius_query_language)
         else:
-            raise ValueError("None of the query methods were provided, can't query {self.entity}")
+            raise ValueError('None of the query methods were provided, can\'t query {self.entity}')
 
         # Now we have the mongo filter, lets query the entities and return the entity.
         for entity_in_db in db.find(final_mongo_filter):
@@ -102,7 +106,7 @@ class UsersNamespace(EntitiesNamespace):
         super().__init__(plugin_base, EntityType.Users)
 
 
-class AxoniusEntity(object):
+class AxoniusEntity:
     """
     An axonius entity, like a device or a user.
     """
@@ -111,7 +115,7 @@ class AxoniusEntity(object):
         """
 
         :param plugin_base: a plugin_base instance.
-        :param EntityType entity: "devices" or "users" as a string, to identiy what is this entity.
+        :param EntityType entity: 'devices' or 'users' as a string, to identiy what is this entity.
         :param dict entity_in_db: a dict representing the entity in the db.
         """
         self.plugin_base = plugin_base
@@ -131,7 +135,7 @@ class AxoniusEntity(object):
         return self.data['generic_data']
 
     def __get_all_identities(self):
-        return [(plugin[PLUGIN_UNIQUE_NAME], plugin["data"]["id"])
+        return [(plugin[PLUGIN_UNIQUE_NAME], plugin['data']['id'])
                 for plugin in self.specific_data
                 if plugin.get('type') == 'entitydata']
 
@@ -141,11 +145,11 @@ class AxoniusEntity(object):
         we will have an exception here.
         :return: None
         """
-        data = self.plugin_base._entity_db_map[self.entity].find_one({"_id": ObjectId(self.data.get("_id"))})
+        data = self.plugin_base._entity_db_map[self.entity].find_one({'_id': ObjectId(self.data.get('_id'))})
 
         if data is None:
-            raise ValueError("Couldn't flush from db, _id wasn't found. This might happen if the document"
-                             "was deleted because of a link or unlink")
+            raise ValueError('Couldn\'t flush from db, _id wasn\'t found. This might happen if the document'
+                             'was deleted because of a link or unlink')
 
         self.data = convert_db_entity_to_view_entity(data)
 
@@ -156,7 +160,7 @@ class AxoniusEntity(object):
         :param bool is_enabled: true if enabled, false otherwise.
         :param identity_by_adapter: an optional list of tuples of (plugin_unique_name, data.id) to tag by.
                                     if not provided, will tag by all identities.
-                                    e.g. [("active_directory_adapter_123", "CN=....")]
+                                    e.g. [('active_directory_adapter_123', 'CN=....')]
         :return: the response
         """
 
@@ -172,7 +176,7 @@ class AxoniusEntity(object):
         :param str data: the data of the data
         :param identity_by_adapter: an optional list of tuples of (plugin_unique_name, data.id) to tag by.
                                     if not provided, will tag by all identities.
-                                    e.g. [("active_directory_adapter_123", "CN=....")]
+                                    e.g. [('active_directory_adapter_123', 'CN=....')]
         :return: the response
         """
 
@@ -182,16 +186,17 @@ class AxoniusEntity(object):
         return self.plugin_base.add_data_to_entity(self.entity, identity_by_adapter, name, data,
                                                    action_if_exists=action_if_exists)
 
-    def add_adapterdata(self, data, identity_by_adapter=None, action_if_exists="replace",
-                        client_used=None, additional_data={}):
+    def add_adapterdata(self, data, identity_by_adapter=None, action_if_exists='replace',
+                        client_used=None, additional_data=None):
         """
         adds an adapterdata to that device.
         :param str data: the adapterdata
         :param identity_by_adapter: an optional list of tuples of (plugin_unique_name, data.id) to tag by.
                                     if not provided, will tag by all identities.
-                                    e.g. [("active_directory_adapter_123", "CN=....")]
-        :param action_if_exists: "replace" to replace the tag, "update" to update the tag (in case its a dict)
+                                    e.g. [('active_directory_adapter_123', 'CN=....')]
+        :param action_if_exists: 'replace' to replace the tag, 'update' to update the tag (in case its a dict)
         :param client_used: an optional string to indicate the client of the adapter used
+        :param additional_data: See add_adapterdata_to_entity
         :return: the response
         """
 
@@ -200,41 +205,41 @@ class AxoniusEntity(object):
 
         return self.plugin_base.add_adapterdata_to_entity(self.entity, identity_by_adapter, data,
                                                           action_if_exists=action_if_exists, client_used=client_used,
-                                                          additional_data=additional_data)
+                                                          additional_data=additional_data or {})
 
     def get_first_data(self, name, plugin_unique_name=None):
         """
         returns the value of some root-level property of the data section.
-        e.g, "hostname" will find the specific_data item of plugin_unique_name, and return it.
+        e.g, 'hostname' will find the specific_data item of plugin_unique_name, and return it.
         if plugin_unique_name is empty, selects the first.
 
-        >> get_first_data("hostname") ->
+        >> get_first_data('hostname') ->
             return (self.specific_data[0].plugin_unique_name, self.specific_data[0].data.hostname)
-        >> get_first_name("hostname", "ad-123") ->
-            return ("ad-123-index", self.specific_data[{ad-123-index}].data.hostname)
+        >> get_first_name('hostname', 'ad-123') ->
+            return ('ad-123-index', self.specific_data[{ad-123-index}].data.hostname)
         :param name: the name. e.g. hostname
         :param plugin_unique_name: the plugin unique name. if empty selects the first.
         :return:
         """
 
-        assert len(self.specific_data) > 0, "specific data should always have at least 1!"
+        assert len(self.specific_data) > 0, 'specific data should always have at least 1!'
         if plugin_unique_name is None:
             for sd in self.specific_data:
                 value = sd['data'].get(name)
                 if value is not None:
                     return value
             return None
-        else:
-            data = [d for d in self.specific_data if d[PLUGIN_UNIQUE_NAME] == plugin_unique_name]
-            if len(data) != 1:
-                raise ValueError(f"Expected to find 1 {plugin_unique_name} but found {len(data)}")
 
-            return data[0]['data'].get(name)
+        data = [d for d in self.specific_data if d[PLUGIN_UNIQUE_NAME] == plugin_unique_name]
+        if len(data) != 1:
+            raise ValueError(f'Expected to find 1 {plugin_unique_name} but found {len(data)}')
+
+        return data[0]['data'].get(name)
 
     def request_action(self, name, data) -> Promise:
         """
         Requests an action from the execution service.
-        :param name: the name of the action, e.g. "execute_shell".
+        :param name: the name of the action, e.g. 'execute_shell'.
         :param data: a json representing the data.
         :return: a promise.
         """

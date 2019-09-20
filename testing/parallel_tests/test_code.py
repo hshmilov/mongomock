@@ -9,7 +9,7 @@ import pytest
 
 pytestmark = pytest.mark.sanity
 
-NUMBER_OF_PROCESSES = 3
+NUMBER_OF_PROCESSES = 6
 GOOD_EXIT_CODE = 0
 EXCLUDE_PATHS = [
     'devops',

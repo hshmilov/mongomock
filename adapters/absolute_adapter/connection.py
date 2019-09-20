@@ -1,3 +1,4 @@
+# pylint: disable=import-error
 import hmac
 import hashlib
 import logging

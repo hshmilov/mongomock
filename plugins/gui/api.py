@@ -121,7 +121,7 @@ def get_page_metadata(skip, limit, number_of_assets):
     }
 
 
-class API:
+class APIMixin:
 
     ###########
     # DEVICES #

@@ -65,7 +65,8 @@ class CiscoIseConnection(RESTConnection):
                 for item in value:
                     if not isinstance(value, dict):
                         continue
-                    self._strip_instance(item)
+                    # https://axonius.atlassian.net/browse/AX-5135
+                    # self._strip_instance(item)
                 continue
             if key in SECRETS:
                 device_raw[key] = '*******'

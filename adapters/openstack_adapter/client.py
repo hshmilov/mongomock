@@ -2,6 +2,7 @@
 import logging
 from collections import defaultdict
 
+# pylint: disable=import-error
 from openstack.connection import Connection
 
 from axonius.adapter_exceptions import ClientConnectionException

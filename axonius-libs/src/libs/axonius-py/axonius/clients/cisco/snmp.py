@@ -113,7 +113,7 @@ class AbstractSnmpClient(AbstractCiscoClient):
         super().__init__()
         for required_arg in self.REQUIRED_ARGS:
             if required_arg not in kwargs or not kwargs[required_arg]:
-                raise ClientConnectionException(f'{self.PROTOCOL} - missing required parmeter "{required_arg}"')
+                raise ClientConnectionException(f'{self.PROTOCOL} - missing required parameter "{required_arg}"')
             setattr(self, '_' + required_arg, kwargs[required_arg])
 
     @staticmethod

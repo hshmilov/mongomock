@@ -15,14 +15,12 @@ class ClientConnectionException(AdapterException):
     """
     Exception to be thrown from specific adapter when they are unable to connect to a client, according to given config.
     """
-    pass
 
 
 class ClientConnectionAlreadyConnected(ClientConnectionException):
     """
     Exception to be thrown from specific adapter when they are unable to connect to a client, according to given config.
     """
-    pass
 
 
 class TagDeviceError(AdapterException):
@@ -44,5 +42,4 @@ class ParseDevicesError(AdapterException):
 
 
 class NoIpFoundError(AdapterException):
-    def __init__(self, message=""):
-        super().__init__(message)
+    pass

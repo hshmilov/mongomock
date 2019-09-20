@@ -1,6 +1,7 @@
 """
 fortigate
 """
+# pylint: disable=import-error
 import logging
 from contextlib import contextmanager
 from json.decoder import JSONDecodeError

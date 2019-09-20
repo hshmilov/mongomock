@@ -1,3 +1,4 @@
+# pylint: disable=import-error
 import logging
 
 from axonius.adapter_base import AdapterBase, AdapterProperty

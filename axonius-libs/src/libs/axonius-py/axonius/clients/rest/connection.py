@@ -173,7 +173,9 @@ class RESTConnection(ABC):
             return True
         except requests.exceptions.ConnectionError as conn_err:
             # if 'Remote end closed connection without response' in conn_err:
+            # pylint: disable=no-member
             if isinstance(conn_err.args[0].args[-1], http.client.RemoteDisconnected):
+                # pylint: enable=no-member
                 return True
             return False
 

@@ -6,11 +6,11 @@ from pymongo.database import Database
 
 from services.plugin_service import PluginService
 from services.simple_fixture import initialize_fixture
-from services.triggerable_service import TriggerableService
+from services.triggerable_service import TriggerableServiceMixin
 from services.updatable_service import UpdatablePluginMixin
 
 
-class DeviceControlService(PluginService, TriggerableService, UpdatablePluginMixin):
+class DeviceControlService(PluginService, TriggerableServiceMixin, UpdatablePluginMixin):
     def __init__(self):
         super().__init__('device-control')
 

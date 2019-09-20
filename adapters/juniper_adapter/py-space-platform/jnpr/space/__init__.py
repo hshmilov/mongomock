@@ -16,6 +16,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+# pylint: disable=import-error
+# pylint: disable=no-member
 
 import requests.packages.urllib3
 requests.packages.urllib3.disable_warnings()

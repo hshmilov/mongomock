@@ -1,5 +1,6 @@
 # This module comes from docker file, ignore no mmodule name error
-#pylint: disable=E0611
+# pylint: disable=E0611
+# pylint: disable=import-error
 import logging
 from collections import defaultdict
 import lxml

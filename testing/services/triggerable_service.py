@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 
 
-class TriggerableService(ABC):
+class TriggerableServiceMixin(ABC):
     @property
     @abstractmethod
     def api_key(self):

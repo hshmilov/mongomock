@@ -12,8 +12,8 @@ from axonius.utils.get_plugin_base_instance import plugin_base_instance
 from axonius.consts.plugin_consts import ADAPTERS_LIST_LENGTH
 from axonius.utils.axonius_query_language import convert_db_entity_to_view_entity, parse_filter, \
     convert_db_projection_to_view
-from axonius.utils.gui_helpers import beautify_db_entry, parse_entity_fields, get_historized_filter, \
-    FIELDS_TO_PROJECT, FIELDS_TO_PROJECT_FOR_GUI, get_sort
+from axonius.utils.gui_helpers import parse_entity_fields, get_historized_filter, \
+    FIELDS_TO_PROJECT, FIELDS_TO_PROJECT_FOR_GUI, get_sort, nongui_beautify_db_entry
 from axonius.entities import EntityType
 
 logger = logging.getLogger(f'axonius.{__name__}')
@@ -155,7 +155,7 @@ def convert_entities_to_frontend_entities(data_list: Iterable[dict],
     for entity in data_list:
         entity = convert_db_entity_to_view_entity(entity, ignore_errors=ignore_errors)
         if not projection:
-            yield beautify_db_entry(entity)
+            yield nongui_beautify_db_entry(entity)
         else:
             yield parse_entity_fields(entity, projection.keys(), include_details=include_details,
                                       field_filters=field_filters)

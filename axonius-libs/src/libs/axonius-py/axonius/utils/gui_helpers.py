@@ -12,11 +12,12 @@ from typing import NamedTuple, Iterable, List, Union
 import cachetools
 import dateutil
 import pymongo
-from bson import ObjectId
 
-from axonius.consts.gui_consts import SPECIFIC_DATA, ADAPTERS_DATA, UNCHANGED_MAGIC_FOR_GUI
-from axonius.entities import EntitiesNamespace
+from bson import ObjectId
 from flask import request, session, g
+
+from axonius.consts.gui_consts import SPECIFIC_DATA, ADAPTERS_DATA
+from axonius.entities import EntitiesNamespace
 
 from axonius.consts.plugin_consts import (ADAPTERS_LIST_LENGTH, PLUGIN_NAME,
                                           PLUGIN_UNIQUE_NAME, GUI_PLUGIN_NAME)
@@ -83,7 +84,9 @@ def deserialize_db_permissions(permissions):
 # This is sort of an extension for the enum below, this can be used instead of PermissionLevel.* for
 # marking required permissions for endpoints and it means that ReadOnly is required for GET requests
 # while any other type (DELETE, PUT, POST) require ReadWrite permissions
+# pylint: disable=invalid-name
 ReadOnlyJustForGet = object()
+# pylint: enable=invalid-name
 
 
 # Represent the level of access granted to a user
@@ -148,7 +151,7 @@ def filtered():
                 history_date = request.args.get('history')
                 filter_obj = parse_filter_non_entities(filter_expr, history_date)
             except Exception as e:
-                logger.warning(f'Failed in mongo filter {func} with "{filter_expr}"')
+                logger.warning(f'Failed in mongo filter {func} with \'{filter_expr}\'')
                 return return_error('Could not create mongo filter. Details: {0}'.format(e), 400)
             return func(self, mongo_filter=filter_obj, *args, **kwargs)
 
@@ -171,7 +174,7 @@ def filtered_entities():
                 history_date = content.get('history')
                 filter_obj = parse_filter(filter_expr, history_date)
             except Exception as e:
-                logger.warning(f'Failed in mongo filter on {func} on "{filter_expr}"')
+                logger.warning(f'Failed in mongo filter on {func} on \'{filter_expr}\'')
                 return return_error('Could not create mongo filter. Details: {0}'.format(e), 400)
             return func(self, mongo_filter=filter_obj, *args, **kwargs)
 
@@ -199,7 +202,6 @@ def sorted_endpoint():
                     direction = pymongo.DESCENDING if desc_param == '1' else pymongo.ASCENDING
 
                     if sort_param == 'labels':
-                        # TODO: Update script for this, otherwise we have to wait for a retag for sorting to work
                         sort_obj['tags.label_value'] = direction
                     else:
                         splitted = sort_param.split('.')
@@ -302,7 +304,6 @@ def historical_range(force: bool = False):
         def raise_or_return(err):
             if force:
                 raise ValueError(err)
-            return None
 
         def try_get_date():
             from_given_date = request.args.get('date_from')
@@ -358,8 +359,11 @@ if os.environ.get('HOT') == 'true':
         """
         Returns the current connected user's id
         """
+        # pylint: disable=no-member
+        # pylint: disable=protected-access
         return PluginBase.Instance._users_collection.find_one({'user_name': 'admin'})['_id']
-
+        # pylint: enable=no-member
+        # pylint: disable=protected-access
 else:
     def get_connected_user_id() -> ObjectId:
         """
@@ -368,61 +372,6 @@ else:
         if 'api_request_user' in g:
             return g.api_request_user['_id']
         return session['user']['_id']
-
-
-@cachetools.cached(cachetools.TTLCache(maxsize=5000, ttl=24 * 3600))
-def translate_user_id_to_user_name(user_id: ObjectId):
-    if user_id == '*':
-        return 'Global'
-    user = PluginBase.Instance._users_collection.find_one({
-        '_id': user_id
-    })
-    if not user:
-        return '[user has been deleted]'
-    user_source = user['source']
-    user_name = user['user_name']
-    return f'{user_source}/{user_name}'
-
-
-def beautify_db_entry(entry):
-    """
-    Renames the '_id' to 'date_fetched', and stores it as an id to 'uuid' in a dict from mongo
-    :type entry: dict
-    :param entry: dict from mongodb
-    :return: dict
-    """
-    tmp = {
-        **entry,
-        'date_fetched': entry['_id'],
-    }
-    tmp['uuid'] = str(entry['_id'])
-    del tmp['_id']
-    user_id = tmp.get('user_id')
-    if user_id is not None:
-        tmp['associated_user_name'] = translate_user_id_to_user_name(user_id)
-    return tmp
-
-
-def beautify_user_entry(user):
-    """
-    Takes a user from DB form and converts it to the form the GUI accepts.
-    Takes off password field and other sensitive information.
-    :param entry:
-    :return:
-    """
-    user = beautify_db_entry(user)
-    user = {k: v for k, v in user.items() if k in ['uuid',
-                                                   'user_name',
-                                                   'first_name',
-                                                   'last_name',
-                                                   'pic_name',
-                                                   'permissions',
-                                                   'role_name',
-                                                   'admin',
-                                                   'source',
-                                                   'additional_userinfo']}
-    user['password'] = UNCHANGED_MAGIC_FOR_GUI
-    return user
 
 
 def get_historized_filter(entities_filter, history_date: datetime):
@@ -449,7 +398,7 @@ def get_historized_filter(entities_filter, history_date: datetime):
 def get_entities_count(entities_filter, entity_collection, history_date: datetime = None, quick: bool = False):
     """
     Count total number of devices answering given mongo_filter.
-    If "quick" is True, then will only count until 1000.
+    If 'quick' is True, then will only count until 1000.
     """
     processed_filter = get_historized_filter(entities_filter, history_date)
 
@@ -533,7 +482,7 @@ def find_entity_field(entity_data, field_path):
                     return True
                 return True
 
-            if type(child_value) == list:
+            if isinstance(child_value, list):
                 # Check which elements of found value can be added to children
                 add = list(filter(new_instance, child_value))
                 if add:
@@ -565,6 +514,7 @@ def parse_entity_fields(entity_data, fields, include_details=False, field_filter
         match_name = re.match(r'specific_data\.data\.([\w._]*)', field_path)
         if match_name and len(match_name.groups()) == 1:
             return match_name[1]
+        return None
 
     field_to_value = {}
     if include_details:
@@ -572,7 +522,7 @@ def parse_entity_fields(entity_data, fields, include_details=False, field_filter
                          for item in entity_data['adapters_data'][value]]
     for field_path in fields:
         val = find_entity_field(entity_data, field_path)
-        if val is not None and (type(val) not in [str, list] or len(val)):
+        if val is not None and (not isinstance(val, (str, list)) or len(val)):
             if field_filters and field_filters.get(field_path):
                 if isinstance(val, list):
                     val = [item for item in val if is_filter_in_value(item, field_filters[field_path])]
@@ -693,9 +643,9 @@ def get_sort(view):
 
 def _filter_out_nonexisting_fields(field_schema: dict, existing_fields: List[str]):
     """
-    Returns a schema that consists only of fields that exist in "existing_fields"
-    :param field_schema: See "devices_fields" collection in any adapter, where name=parsed
-    :param existing_fields: See "devices_fields" collection in any adapter, where name=exist
+    Returns a schema that consists only of fields that exist in 'existing_fields'
+    :param field_schema: See 'devices_fields' collection in any adapter, where name=parsed
+    :param existing_fields: See 'devices_fields' collection in any adapter, where name=exist
     """
     if not existing_fields:
         return
@@ -717,11 +667,12 @@ def get_generic_fields(entity_type: EntityType):
     """
     if entity_type == EntityType.Devices:
         return DeviceAdapter.get_fields_info()
-    elif entity_type == EntityType.Users:
+    if entity_type == EntityType.Users:
         return UserAdapter.get_fields_info()
     raise AssertionError
 
 
+# pylint: disable=too-many-locals
 @rev_cached_entity_type(ttl=60)
 def entity_fields(entity_type: EntityType):
     """
@@ -731,7 +682,9 @@ def entity_fields(entity_type: EntityType):
     :return:
     """
     generic_fields = dict(get_generic_fields(entity_type))
+    # pylint: disable=protected-access
     fields_collection = PluginBase.Instance._all_fields_db_map[entity_type]
+    # pylint: enable=protected-access
 
     all_data_from_fields = list(fields_collection.find({}))
 
@@ -786,17 +739,19 @@ def entity_fields(entity_type: EntityType):
         }
     }
 
+    generic_in_fields = [adapters_json, axon_id_json] \
+        + flatten_fields(generic_fields, 'specific_data.data', ['scanner'])\
+        + [tags_json]
     fields = {
         'schema': {
             'generic': generic_fields,
             'specific': {}
         },
-        'generic': [adapters_json, axon_id_json]
-        + flatten_fields(generic_fields, 'specific_data.data', ['scanner'])
-        + [tags_json],
+        'generic': generic_in_fields,
         'specific': {},
     }
 
+    # pylint: disable=protected-access
     plugins_available = PluginBase.Instance._get_collection('configs', 'core').find({
         '$or': [{
             'plugin_type': {
@@ -814,6 +769,7 @@ def entity_fields(entity_type: EntityType):
     }, {
         PLUGIN_UNIQUE_NAME: 1, PLUGIN_NAME: 1
     })
+    # pylint: enable=protected-access
 
     exclude_specific_schema = set(item['name'] for item in generic_fields.get('items', []))
     for plugin in plugins_available:
@@ -844,6 +800,7 @@ def entity_fields(entity_type: EntityType):
             fields['specific'][plugin_name] = specific_items
 
     return fields
+# pylint: enable=too-many-locals
 
 
 def get_csv(mongo_filter, mongo_sort, mongo_projection, entity_type: EntityType,
@@ -920,7 +877,8 @@ def _get_csv(mongo_filter, mongo_sort, mongo_projection, entity_type: EntityType
     for type_ in current_entity_fields['specific']:
         for field in current_entity_fields['specific'][type_]:
             if field['name'] in mongo_projection:
-                mongo_projection[field['name']] = f"{' '.join(type_.split('_')).capitalize()}: {field['title']}"
+                name = ' '.join(type_.split('_')).capitalize()
+                mongo_projection[field['name']] = f'{name}: {field["title"]}'
 
     dw = csv.DictWriter(file_obj, mongo_projection.values())
 
@@ -941,7 +899,10 @@ def _get_csv(mongo_filter, mongo_sort, mongo_projection, entity_type: EntityType
         yield dw.writerow(current_entity)
 
 
-def flatten_fields(schema, name='', exclude=[], branched=False):
+# pylint: disable=too-many-return-statements
+def flatten_fields(schema, name='', exclude=None, branched=False):
+    exclude = exclude or []
+
     def _merge_title(schema, title):
         """
         If exists, add given title before that of given schema or set it if none existing
@@ -951,16 +912,16 @@ def flatten_fields(schema, name='', exclude=[], branched=False):
         """
         new_schema = {**schema}
         if title:
-            new_schema['title'] = f"{title}: {new_schema['title']}" if new_schema.get('title') else title
+            new_schema['title'] = f'{title}: {new_schema["title"]}' if new_schema.get('title') else title
         return new_schema
 
     if schema.get('name'):
         if schema['name'] in exclude:
             return []
-        name = f"{name}.{schema['name']}" if name else schema['name']
+        name = f'{name}.{schema["name"]}' if name else schema['name']
 
     if schema['type'] == 'array' and schema.get('items'):
-        if type(schema['items']) == list:
+        if isinstance(schema['items'], list):
             children = []
             for item in schema['items']:
                 if not item.get('title'):
@@ -987,6 +948,7 @@ def flatten_fields(schema, name='', exclude=[], branched=False):
     if branched:
         schema['branched'] = True
     return [{**schema, 'name': name}]
+# pylint: enable=too-many-return-statements
 
 
 def get_entity_labels(db) -> List[str]:
@@ -995,7 +957,6 @@ def get_entity_labels(db) -> List[str]:
     :param db: the entities view db
     :return: all label strings
     """
-    # TODO: This will be slow. Cache this? It's not trivial
     return [x for x in db.distinct('tags.label_value') if x]
 
 
@@ -1015,7 +976,6 @@ def add_labels_to_entities(namespace: EntitiesNamespace, entities: Iterable[str]
         f'adapters.data.id': 1,
     })
 
-    # TODO: Figure out exactly what we want to tag and how, AX-2183
     entities = [(entity['adapters'][0][PLUGIN_UNIQUE_NAME],
                  entity['adapters'][0]['data']['id']) for entity in entities_from_db]
 
@@ -1029,3 +989,19 @@ def flatten_list(input_list):
             yield item
         else:
             yield from flatten_list(item)
+
+
+def nongui_beautify_db_entry(entry):
+    """
+    Renames the '_id' to 'date_fetched', and stores it as an id to 'uuid' in a dict from mongo
+    :type entry: dict
+    :param entry: dict from mongodb
+    :return: dict
+    """
+    tmp = {
+        **entry,
+        'date_fetched': entry['_id'],
+    }
+    tmp['uuid'] = str(entry['_id'])
+    del tmp['_id']
+    return tmp

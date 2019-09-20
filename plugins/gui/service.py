@@ -32,6 +32,7 @@ from passlib.hash import bcrypt
 from urllib3.util.url import parse_url
 import OpenSSL
 
+# pylint: disable=import-error
 from onelogin.saml2.auth import OneLogin_Saml2_Auth
 from onelogin.saml2.idp_metadata_parser import OneLogin_Saml2_IdPMetadataParser
 
@@ -114,7 +115,7 @@ from axonius.utils.files import get_local_config_file
 from axonius.utils.gui_helpers import (Permission, PermissionLevel,
                                        PermissionType, ReadOnlyJustForGet,
                                        add_labels_to_entities,
-                                       beautify_user_entry, check_permissions,
+                                       check_permissions,
                                        deserialize_db_permissions,
                                        get_entity_labels, entity_fields, get_connected_user_id)
 from axonius.utils.metric import remove_ids
@@ -127,12 +128,13 @@ from axonius.utils.parsing import bytes_image_to_base64
 from axonius.utils.proxy_utils import to_proxy_string
 from axonius.utils.revving_cache import rev_cached
 from axonius.utils.threading import run_and_forget
-from gui.api import API
+from gui.api import APIMixin
 from gui.cached_session import CachedSessionInterface
 from gui.feature_flags import FeatureFlags
 from gui.gui_logic.entity_data import (get_entity_data, entity_data_field_csv,
                                        entity_notes, entity_notes_update, entity_tasks)
 from gui.gui_logic.dashboard_data import adapter_data
+from gui.gui_logic.db_helpers import beautify_db_entry
 from gui.gui_logic.ec_helpers import extract_actions_from_ec
 from gui.gui_logic.fielded_plugins import get_fielded_plugins
 from gui.gui_logic.filter_utils import filter_archived
@@ -140,13 +142,11 @@ from gui.gui_logic.generate_csv import get_csv_from_heavy_lifting_plugin
 from gui.gui_logic.historical_dates import (all_historical_dates,
                                             first_historical_date)
 from gui.gui_logic.views_data import get_views, get_views_count
+from gui.gui_logic.users_helper import beautify_user_entry
 from gui.okta_login import OidcData, try_connecting_using_okta
 from gui.report_generator import ReportGenerator
 
-# pylint: disable=line-too-long,superfluous-parens,too-many-statements,too-many-lines,keyword-arg-before-vararg,invalid-name,too-many-instance-attributes,inconsistent-return-statements,no-self-use,dangerous-default-value,unidiomatic-typecheck,inconsistent-return-statements,no-else-return,no-self-use,unnecessary-pass,useless-return,cell-var-from-loop,logging-not-lazy,singleton-comparison,redefined-builtin,comparison-with-callable,too-many-return-statements,too-many-boolean-expressions,logging-format-interpolation,fixme
-
-# TODO: the following ones are real errors, we should fix them first
-# pylint: disable=invalid-sequence-index,method-hidden
+# pylint: disable=line-too-long,superfluous-parens,too-many-statements,too-many-lines,keyword-arg-before-vararg,invalid-name,too-many-instance-attributes,inconsistent-return-statements,no-self-use,inconsistent-return-statements,no-else-return,no-self-use,unnecessary-pass,useless-return,cell-var-from-loop,logging-not-lazy,singleton-comparison,redefined-builtin,comparison-with-callable,too-many-return-statements,too-many-boolean-expressions,logging-format-interpolation,fixme
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -332,7 +332,7 @@ if os.environ.get('HOT') == 'true':
     session = None
 
 
-class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
+class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
     class MyDeviceAdapter(DeviceAdapter):
         pass
 
@@ -386,7 +386,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
                 success_rate = f'{main_successful_count} / {main_successful_count + main_unsuccessful_count}'
                 status = 'Completed'
 
-            return gui_helpers.beautify_db_entry({
+            return beautify_db_entry({
                 '_id': task.get('_id'),
                 'result.metadata.success_rate': success_rate,
                 'post_json.report_name': task.get('post_json', {}).get('report_name', ''),
@@ -399,7 +399,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
             })
         except Exception as e:
             logger.exception(f'Invalid task {task.get("_id")}')
-            return gui_helpers.beautify_db_entry({
+            return beautify_db_entry({
                 '_id': task.get('_id', 'Invalid ID'),
                 'status': 'Invalid'
             })
@@ -825,7 +825,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         entity_views_collection = self.gui_dbs.entity_query_views_db_map[entity_type]
         if method == 'GET':
             mongo_filter['query_type'] = query_type
-            return [gui_helpers.beautify_db_entry(entry)
+            return [beautify_db_entry(entry)
                     for entry
                     in get_views(entity_type, limit, skip, mongo_filter, mongo_sort)]
 
@@ -1015,8 +1015,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
 
         errors = {}
         for k, v in post_data['data'].items():
-            allowed_types = [str, int, bool, float]
-            if type(v) not in allowed_types:
+            if not isinstance(v, (str, int, bool, float)):
                 errors[k] = f'{k} is of type {type(v)} which is not allowed'
             try:
                 if k.startswith('custom_'):
@@ -1571,7 +1570,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
                 # but it still hasn't written it's schema
                 continue
 
-            clients = [gui_helpers.beautify_db_entry(client)
+            clients = [beautify_db_entry(client)
                        for client
                        in db_connection[adapter_name]['clients'].find()
                        .sort([('_id', pymongo.DESCENDING)])]
@@ -1935,7 +1934,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
                 beautify_object['period'] = report.get('period').capitalize()
                 if report.get('mail_properties'):
                     beautify_object['mailSubject'] = report.get('mail_properties').get('mailSubject')
-            return gui_helpers.beautify_db_entry(beautify_object)
+            return beautify_db_entry(beautify_object)
 
         reports_collection = self.reports_config_collection
         result = [beautify_report(enforcement) for enforcement in reports_collection.find(
@@ -2006,7 +2005,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
             if not report:
                 return return_error(f'Report with id {report_id} was not found', 400)
 
-            return jsonify(gui_helpers.beautify_db_entry(report))
+            return jsonify(beautify_db_entry(report))
 
         # Handle remaining request - POST
         report_to_update = request.get_json(silent=True)
@@ -2027,7 +2026,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         def beautify_enforcement(enforcement):
             actions = enforcement[ACTIONS_FIELD]
             trigger = enforcement[TRIGGERS_FIELD][0] if enforcement[TRIGGERS_FIELD] else None
-            return gui_helpers.beautify_db_entry({
+            return beautify_db_entry({
                 '_id': enforcement['_id'], 'name': enforcement['name'],
                 f'{ACTIONS_FIELD}.{ACTIONS_MAIN_FIELD}': actions[ACTIONS_MAIN_FIELD],
                 f'{TRIGGERS_FIELD}.view.name': trigger['view']['name'] if trigger else '',
@@ -2146,7 +2145,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
                 action_type = saved_action['action']['action_name']
                 schema = self._get_actions_from_reports_plugin()[action_type]['schema']
                 saved_action['action']['config'] = clear_passwords_fields(saved_action['action']['config'], schema)
-                return gui_helpers.beautify_db_entry(saved_action)
+                return beautify_db_entry(saved_action)
 
             enforcement = self.enforcements_collection.find_one({
                 '_id': ObjectId(enforcement_id)
@@ -2162,7 +2161,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
 
             for trigger in enforcement[TRIGGERS_FIELD]:
                 trigger['id'] = trigger['name']
-            return jsonify(gui_helpers.beautify_db_entry(enforcement))
+            return jsonify(beautify_db_entry(enforcement))
 
         # Handle remaining request - POST
         enforcement_to_update = request.get_json(silent=True)
@@ -2410,7 +2409,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
                     normalize_saved_action_results(x['action']['results'])
 
             task_metadata = task['result']['metadata']
-            return gui_helpers.beautify_db_entry({
+            return beautify_db_entry({
                 '_id': task['_id'],
                 'enforcement': task['post_json']['report_name'],
                 'view': task_metadata['trigger']['view']['name'],
@@ -2468,7 +2467,9 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
                     processed_plugin['status'] = 'error'
                 else:
                     processed_plugin['state'] = response.json()
+                    # pylint: disable=invalid-sequence-index
                     if processed_plugin['state']['state'] != 'Disabled':
+                        # pylint: enable=invalid-sequence-index
                         processed_plugin['status'] = 'success'
             plugins_to_return.append(processed_plugin)
 
@@ -2730,14 +2731,14 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
                 notifications = []
                 for n in notification_collection.aggregate(pipeline):
                     n['_id'] = n['date']
-                    notifications.append(gui_helpers.beautify_db_entry(n))
+                    notifications.append(beautify_db_entry(n))
             else:
                 sort = []
                 for field, direction in mongo_sort.items():
                     sort.append(('_id' if field == 'date_fetched' else field, direction))
                 if not sort:
                     sort.append(('_id', pymongo.DESCENDING))
-                notifications = [gui_helpers.beautify_db_entry(n) for n in notification_collection.find(
+                notifications = [beautify_db_entry(n) for n in notification_collection.find(
                     mongo_filter, projection={'_id': 1, 'who': 1, 'plugin_name': 1, 'type': 1, 'title': 1,
                                               'seen': 1, 'severity': 1}).sort(sort).skip(skip).limit(limit)]
 
@@ -2781,7 +2782,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         db = self._get_db_connection()
         notification_collection = db['core']['notifications']
         return jsonify(
-            gui_helpers.beautify_db_entry(notification_collection.find_one({'_id': ObjectId(notification_id)})))
+            beautify_db_entry(notification_collection.find_one({'_id': ObjectId(notification_id)})))
 
     @gui_helpers.add_rule_unauth('get_login_options')
     def get_login_options(self):
@@ -3009,7 +3010,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
                     user.get('photo') or \
                     user.get('thumbnailLogo')
                 if thumbnail_photo is not None:
-                    if type(thumbnail_photo) == list:
+                    if isinstance(thumbnail_photo, list):
                         thumbnail_photo = thumbnail_photo[0]  # I think this can happen from some reason..
                     image = bytes_image_to_base64(thumbnail_photo)
             except Exception:
@@ -3316,7 +3317,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         """
         if request.method == 'GET':
             return jsonify(
-                [gui_helpers.beautify_db_entry(entry) for entry in self.__roles_collection.find(filter_archived())])
+                [beautify_db_entry(entry) for entry in self.__roles_collection.find(filter_archived())])
 
         role_data = self.get_request_data_as_object()
         if 'name' not in role_data:
@@ -3414,8 +3415,11 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         Invalidate all sessions for this user except the current one
         """
         for k, v in self.__all_sessions.items():
+            # Pylint is angry because it thinks session is a dict, which is true for HOT=True
+            # pylint: disable=no-member
             if k == session.sid:
                 continue
+            # pylint: enable=no-member
             d = v.get('d')
             if not d:
                 continue
@@ -3773,7 +3777,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
             dashboard['data'] = []
             logger.exception(f'Problem handling dashboard {dashboard}')
         dashboard['space'] = str(dashboard['space'])
-        return gui_helpers.beautify_db_entry(dashboard)
+        return beautify_db_entry(dashboard)
 
     # there's no trivial way to remove the TTL functionality entirely, so let's just make it long enough
     @rev_cached(ttl=3600 * 24 * 31, key_func=lambda self, dashboard_id: dashboard_id)
@@ -4453,6 +4457,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
             raise RuntimeError(f'Error fetching status of system scheduler. Reason: {state_response.text}')
 
         state_response = state_response.json()
+        # pylint: disable=no-member
         state = SchedulerState(**state_response['state'])
         is_research = state.Phase == Phases.Research.name
 
@@ -4479,6 +4484,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
             else:
                 # Set 0 or 1, depending if reached current status yet
                 sub_phases.append({'name': sub_phase.name, 'status': 0 if found_current else 1})
+        # pylint: enable=no-member
 
         return {
             'sub_phases': sub_phases,

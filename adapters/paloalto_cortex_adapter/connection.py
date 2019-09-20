@@ -4,6 +4,7 @@ import time
 
 from datetime import datetime, timedelta
 
+# pylint: disable=import-error
 from pancloud import LoggingService, Credentials
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.exception import RESTException

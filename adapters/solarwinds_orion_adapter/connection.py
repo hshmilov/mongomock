@@ -23,7 +23,9 @@ class SolarwindsConnection:
         :return: an instance if the Orion Swis client
         """
         if not self.verify_ssl:
+            # pylint: disable=import-error
             from requests.packages.urllib3.exceptions import InsecureRequestWarning
+            # pylint: enable=import-error
             requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 
         # password can be none, username cannot

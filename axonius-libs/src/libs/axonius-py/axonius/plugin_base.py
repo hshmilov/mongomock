@@ -17,17 +17,20 @@ import time
 import sys
 import threading
 import traceback
-import typing
+from typing import List, Set, Dict, Tuple, Iterable, Optional, Callable
+from abc import ABC
 from collections import defaultdict
 from datetime import datetime, timedelta
 from itertools import groupby
 from pathlib import Path
-from typing import List, Set, Dict, Tuple, Iterable
 
 import cachetools
 import func_timeout
 import gridfs
 import pymongo
+from pymongo import MongoClient, ReplaceOne
+from pymongo.collection import Collection
+from pymongo.errors import DuplicateKeyError, OperationFailure
 import requests
 from apscheduler.executors.pool import ThreadPoolExecutor
 from apscheduler.triggers.interval import IntervalTrigger
@@ -37,9 +40,6 @@ from funcy import chunks
 from jira import JIRA
 from namedlist import namedtuple
 from promise import Promise
-from pymongo import MongoClient, ReplaceOne
-from pymongo.collection import Collection
-from pymongo.errors import DuplicateKeyError, OperationFailure
 from retrying import retry
 # bson is requirement of mongo and its not recommended to install it manually
 from tlssyslog import TLSSysLogHandler
@@ -107,6 +107,7 @@ from axonius.utils.revving_cache import rev_cached
 from axonius.utils.ssl import SSL_CERT_PATH, SSL_KEY_PATH, CA_CERT_PATH
 from axonius.utils.threading import (LazyMultiLocker, run_and_forget,
                                      run_in_executor_helper, ThreadPoolExecutorReusable, singlethreaded)
+# pylint: disable=C0302
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -123,13 +124,12 @@ TIME_WAIT_FOR_REGISTER = 60 * 5
 TIMEOUT_FOR_EXECUTION_THREADS_IN_SECONDS = 60 * 25
 
 try:
-    _create_unverified_https_context = ssl._create_unverified_context
+    # pylint: disable=protected-access
+    ssl._create_default_https_context = ssl._create_unverified_context
+    # pylint: enable=protected-access
 except AttributeError:
     # Legacy Python that doesn't verify HTTPS certificates by default
     pass
-else:
-    # Handle target environment that doesn't support HTTPS verification
-    ssl._create_default_https_context = _create_unverified_https_context
 
 
 @AXONIUS_REST.after_request
@@ -155,7 +155,7 @@ def after_request(response):
 ROUTED_FUNCTIONS = list()
 
 
-def add_rule(rule, methods=['GET'], should_authenticate: bool = True):
+def add_rule(rule, methods=('GET',), should_authenticate: bool = True):
     """ Decorator for adding function to URL.
 
     This decorator will add a flask rule to a wanted method from a class derived
@@ -179,7 +179,7 @@ def add_rule(rule, methods=['GET'], should_authenticate: bool = True):
             the exception name with the Exception string.
             In case of exception, a detailed traceback will be sent to log
             """
-            logger.debug(f"Rule={rule} request={request}")
+            logger.debug(f'Rule={rule} request={request}')
 
             try:
                 if should_authenticate:
@@ -188,7 +188,7 @@ def add_rule(rule, methods=['GET'], should_authenticate: bool = True):
                         # clearing cache before failing
                         self.authorized_api_keys.clean_cache()
                         if request.headers.get('x-api-key') not in self.authorized_api_keys():
-                            raise RuntimeError(f"Bad api key. got {request.headers.get('x-api-key')}")
+                            raise RuntimeError(f'Bad api key. got {request.headers.get("x-api-key")}')
                 return func(self, *args, **kwargs)
             except Exception as err:
                 try:
@@ -202,11 +202,11 @@ def add_rule(rule, methods=['GET'], should_authenticate: bool = True):
                         extra_log['err_traceback'] = tb
                         extra_log['err_type'] = err_type
                         extra_log['err_message'] = err_message
-                        logger.exception("Unhandled exception thrown from plugin", extra=extra_log)
-                    return json.dumps({"status": "error", "type": err_type, "message": get_exception_string()}), 400
+                        logger.exception('Unhandled exception thrown from plugin', extra=extra_log)
+                    return json.dumps({'status': 'error', 'type': err_type, 'message': get_exception_string()}), 400
                 except Exception as second_err:
-                    return json.dumps({"status": "error", "type": type(second_err).__name__,
-                                       "message": str(second_err)}), 400
+                    return json.dumps({'status': 'error', 'type': type(second_err).__name__,
+                                       'message': str(second_err)}), 400
 
         return actual_wrapper
 
@@ -227,20 +227,18 @@ def return_error(error_message, http_status=500, additional_data=None):
     return jsonify({'status': 'error', 'message': error_message, 'additional_data': additional_data}), http_status
 
 
-"""
-entity_query_views_db_map   - map between EntityType and views collection from the GUI (e.g. user_views)
-"""
-GUI_DBs = namedtuple("GUI_DBs", ['entity_query_views_db_map'])
+# entity_query_views_db_map   - map between EntityType and views collection from the GUI (e.g. user_views)
+GuiDB = namedtuple('GuiDB', ['entity_query_views_db_map'])
 
 
 def recalculate_adapter_oldness(adapter_list: list, entity_type: EntityType):
     """
     Updates (in place) all adapters given.
     This assumes that they all comprise a single axonius entity.
-    All groups of adapters by plugin_name (i.e. "duplicate" adapter entities from the same adapter)
-    will have they're "old" value recalculated
+    All groups of adapters by plugin_name (i.e. 'duplicate' adapter entities from the same adapter)
+    will have they're 'old' value recalculated
     https://axonius.atlassian.net/wiki/spaces/AX/pages/794230909/Handle+Duplicates+of+adapter+entity+of+the+same+adapter+entity
-    Only the newest adapter entity will have an "old" value of False, all others will have "new".
+    Only the newest adapter entity will have an 'old' value of False, all others will have 'new'.
     (Adapters that don't have duplicates are unaffected)
     :param adapter_list: list of adapter entities
     :param entity_type: Used to verify whether or not this calculation should take palce
@@ -269,7 +267,8 @@ def is_plugin_on_demand(plugin_unique_name: str) -> bool:
     return 'adapter' in plugin_unique_name
 
 
-class PluginBase(Configurable, Feature):
+# pylint: disable=too-many-instance-attributes
+class PluginBase(Configurable, Feature, ABC):
     """ This is an abstract class containing the implementation
     For the base capabilities of the Plugin.
 
@@ -280,14 +279,14 @@ class PluginBase(Configurable, Feature):
     The user request.
 
     """
-    MyDeviceAdapter = None
-    MyUserAdapter = None
-    """
-    This is effectively a singleton anyway
-    """
+    MyDeviceAdapter: Callable = None
+    MyUserAdapter: Callable = None
+    # This is effectively a singleton anyway
     Instance = None
 
-    def __init__(self, config_file_path: str, core_data=None, requested_unique_plugin_name=None, *args, **kwargs):
+    # pylint: disable=too-many-branches
+    # pylint: disable=too-many-statements
+    def __init__(self, config_file_path: str, *args, core_data=None, requested_unique_plugin_name=None, **kwargs):
         """ Initialize the class.
 
         This will automatically add the rule of '/version' to get the Plugin version.
@@ -296,7 +295,7 @@ class PluginBase(Configurable, Feature):
 
         :raise KeyError: In case of environment variables missing
         """
-        print(f"{datetime.now()} Hello docker from {type(self)}")
+        print(f'{datetime.now()} Hello docker from {type(self)}')
 
         PluginBase.Instance = self
         super().__init__(*args, **kwargs)
@@ -328,11 +327,11 @@ class PluginBase(Configurable, Feature):
 
         # MyDeviceAdapter things.
         self._entity_adapter_fields = {entity_type: {
-            "fields_set": set(),
-            "raw_fields_set": set(),
-            "fields_db_lock": threading.RLock()
+            'fields_set': set(),
+            'raw_fields_set': set(),
+            'fields_db_lock': threading.RLock()
         } for entity_type in EntityType}
-        print(f"{datetime.now()} {self.plugin_name} is starting")
+        print(f'{datetime.now()} {self.plugin_name} is starting')
 
         # Debug values. On production, flask is not the server, its just a wsgi app that uWSGI uses.
         try:
@@ -347,10 +346,10 @@ class PluginBase(Configurable, Feature):
                 self.core_address = self.config['DEBUG']['core_address'] + '/api'
             except KeyError:
                 # This is the default value, which is what nginx sets for us.
-                self.host = "0.0.0.0"
+                self.host = '0.0.0.0'
                 self.port = 443  # We listen on https.
                 # This should be dns resolved.
-                self.core_address = "https://core.axonius.local/api"
+                self.core_address = 'https://core.axonius.local/api'
 
         try:
             self.plugin_unique_name = self.temp_config['registration'][PLUGIN_UNIQUE_NAME]
@@ -393,11 +392,11 @@ class PluginBase(Configurable, Feature):
                     })
 
         if not core_data:
-            core_data = self._register(self.core_address + "/register",
+            core_data = self._register(self.core_address + '/register',
                                        self.plugin_unique_name, self.api_key, self.node_id,
                                        os.environ.get('NODE_INIT_NAME', None))
         if not core_data or core_data['status'] == 'error':
-            raise RuntimeError("Register process failed, Exiting. Reason: {0}".format(core_data))
+            raise RuntimeError('Register process failed, Exiting. Reason: {0}'.format(core_data))
         if 'registration' not in self.temp_config:
             self.temp_config['registration'] = {}
 
@@ -429,12 +428,12 @@ class PluginBase(Configurable, Feature):
                 print(f'{rule}, {wanted_function}, {wanted_function.__name__} {local_function}, {wanted_methods}')
                 AXONIUS_REST.add_url_rule('/' + rule, rule,
                                           local_function,
-                                          methods=wanted_methods)
+                                          methods=list(wanted_methods))
             else:
-                logger.info(f"Skipped rule {rule}, {wanted_function.__qualname__}, {wanted_methods}")
+                logger.info(f'Skipped rule {rule}, {wanted_function.__qualname__}, {wanted_methods}')
 
-        # Adding "keepalive" thread
-        if self.plugin_unique_name != "core":
+        # Adding 'keepalive' thread
+        if self.plugin_unique_name != 'core':
             self.comm_failure_counter = 0
             executors = {'default': ThreadPoolExecutor(1)}
             self.online_plugins_scheduler = LoggedBackgroundScheduler(executors=executors)
@@ -456,13 +455,16 @@ class PluginBase(Configurable, Feature):
 
         # Add some more changes to the app.
         AXONIUS_REST.json_encoder = IteratorJSONEncoder
-        AXONIUS_REST.url_map.strict_slashes = False  # makes routing to "page" and "page/" the same.
+        AXONIUS_REST.url_map.strict_slashes = False  # makes routing to 'page' and 'page/' the same.
         self.wsgi_app = AXONIUS_REST
 
+        # https://github.com/PyCQA/pylint/issues/2315
+        # pylint bug
         for section in self.config.sections():
-            logger.info(f"Config {section}: {dict(self.config[section])}")
+            to_print = dict(self.config[section])
+            logger.info(f'Config {section}: {to_print}')
 
-        logger.info(f"Running on ip {socket.gethostbyname(socket.gethostname())}")
+        logger.info(f'Running on ip {socket.gethostbyname(socket.gethostname())}')
 
         # DB's
         self.aggregator_db_connection = self._get_db_connection()[AGGREGATOR_PLUGIN_NAME]
@@ -476,6 +478,7 @@ class PluginBase(Configurable, Feature):
             EntityType.Devices: self.devices_db,
         }
 
+        # pylint: disable=invalid-name
         self._raw_adapter_entity_db_map = {
             EntityType.Users: self.aggregator_db_connection['user_adapters_raw_db'],
             EntityType.Devices: self.aggregator_db_connection['device_adapters_raw_db'],
@@ -495,7 +498,7 @@ class PluginBase(Configurable, Feature):
             EntityType.Devices: self.aggregator_db_connection['devices_fields'],
         }
 
-        self._my_adapters_map = {
+        self._my_adapters_map: Dict[EntityType, Callable] = {
             EntityType.Users: self.MyUserAdapter,
             EntityType.Devices: self.MyDeviceAdapter
         }
@@ -504,27 +507,28 @@ class PluginBase(Configurable, Feature):
             EntityType.Users: set(),
             EntityType.Devices: set()
         }
+        # pylint: enable=invalid-name
 
         # GUI Stuff
         gui_db_connection = self._get_db_connection()[GUI_PLUGIN_NAME]
-        user_view = gui_db_connection["user_views"]
-        device_view = gui_db_connection["device_views"]
 
-        entity_query_views_db_map = {
-            EntityType.Users: user_view,
-            EntityType.Devices: device_view,
-        }
-
-        self.gui_dbs = GUI_DBs(entity_query_views_db_map)
+        self.gui_dbs = GuiDB({
+            EntityType.Users: gui_db_connection['user_views'],
+            EntityType.Devices: gui_db_connection['device_views'],
+        })
+        del gui_db_connection
 
         self.core_configs_collection = self._get_db_connection()[CORE_UNIQUE_NAME]['configs']
 
         # Reports collections
         reports_db = self._get_db_connection()[REPORTS_PLUGIN_NAME]
+        # pylint: disable=invalid-name
         self.enforcements_collection = reports_db['reports']
         self.enforcement_tasks_runs_collection = reports_db['triggerable_history']
         self.enforcements_saved_actions_collection = reports_db['saved_actions']
         self.enforcement_tasks_action_results_id_lists = reports_db['action_results']
+        del reports_db
+        # pylint: enable=invalid-name
 
         # Namespaces
         self.devices = axonius.entities.DevicesNamespace(self)
@@ -543,7 +547,7 @@ class PluginBase(Configurable, Feature):
         # An executor dedicated for running execution promises
         self.execution_promises = concurrent.futures.ThreadPoolExecutor(max_workers=20 * multiprocessing.cpu_count())
 
-        if "ScannerAdapter" not in self.specific_supported_features():
+        if 'ScannerAdapter' not in self.specific_supported_features():
             # This is only used if it's the first time inserting to the DB - i.e. the DB is empty of any device
             # from this plugin. After it is exhausted, it should be None.
             # Also, for complexity reasons, we currently don't support scanners, because they
@@ -558,7 +562,7 @@ class PluginBase(Configurable, Feature):
 
         # the execution monitor has its own mechanism. this thread will make exceptions if we run it in execution,
         # since it will try to reject functions and not promises.
-        if self.plugin_name != "execution":
+        if self.plugin_name != 'execution':
             # An executor dedicated to deleting forgotten execution requests
             self.execution_monitor_scheduler = LoggedBackgroundScheduler(executors={'default': ThreadPoolExecutor(1)})
             self.execution_monitor_scheduler.add_job(func=self.execution_monitor_thread,
@@ -586,9 +590,10 @@ class PluginBase(Configurable, Feature):
             cache.delayed_initialization()
 
         # Finished, Writing some log
-        logger.info("Plugin {0}:{1} with axonius-libs:{2} started successfully".format(self.plugin_unique_name,
-                                                                                       self.version,
-                                                                                       self.lib_version))
+        logger.info(f'Plugin {self.plugin_unique_name}:{self.version} '
+                    f'with axonius-libs:{self.lib_version} started successfully')
+    # pylint: enable=too-many-branches
+    # pylint: enable=too-many-statements
 
     @retry(stop_max_attempt_number=3,
            wait_fixed=5000)
@@ -628,7 +633,6 @@ class PluginBase(Configurable, Feature):
         Strive to make this code as simple as possible
         :return:
         """
-        pass
 
     @rev_cached(ttl=600)
     def authorized_api_keys(self) -> List[str]:
@@ -687,7 +691,7 @@ class PluginBase(Configurable, Feature):
         # or maybe after the insertion of X entities)
 
         with entity_fields['fields_db_lock']:
-            logger.debug(f"Persisting {entity_type.name} fields to DB")
+            logger.debug(f'Persisting {entity_type.name} fields to DB')
             raw_fields = list(entity_fields['raw_fields_set'])  # copy
 
             # Upsert new fields
@@ -770,29 +774,24 @@ class PluginBase(Configurable, Feature):
         """ Returns a new empty device associated with this adapter. """
         if self.MyDeviceAdapter is None:
             raise ValueError('class MyDeviceAdapter(Device) class was not declared inside this Adapter class')
+        # pylint: disable=not-callable
         return self.MyDeviceAdapter(self._entity_adapter_fields[EntityType.Devices]['fields_set'],
                                     self._entity_adapter_fields[EntityType.Devices]['raw_fields_set'])
+        # pylint: enable=not-callable
 
     # Users.
     def _new_user_adapter(self) -> UserAdapter:
         """ Returns a new empty User associated with this adapter. """
         if self.MyUserAdapter is None:
             raise ValueError('class MyUserAdapter(user) class was not declared inside this Adapter class')
+        # pylint: disable=not-callable
         return self.MyUserAdapter(self._entity_adapter_fields[EntityType.Users]['fields_set'],
                                   self._entity_adapter_fields[EntityType.Users]['raw_fields_set'])
+        # pylint: enable=not-callable
 
     @classmethod
     def specific_supported_features(cls) -> list:
-        return ["Plugin"]
-
-    def wsgi_app(self, *args, **kwargs):
-        """
-        A proxy to our wsgi app. Should be used by anyone inheriting from PluginBase that wants access
-        to the wsgi function, like uWSGI.
-        :return: what the actual wsgi app returns.
-        """
-
-        return self.wsgi_app(*args, **kwargs)
+        return ['Plugin']
 
     def _check_registered_thread(self, retries=6):
         """Function for check that the plugin is still registered.
@@ -803,21 +802,24 @@ class PluginBase(Configurable, Feature):
         :param int retries: Number of retries before exiting the plugin.
         """
         try:
-            response = self.request_remote_plugin("register?unique_name={0}".format(self.plugin_unique_name),
+            response = self.request_remote_plugin('register?unique_name={0}'.format(self.plugin_unique_name),
                                                   plugin_unique_name=CORE_UNIQUE_NAME,
                                                   timeout=120,
                                                   fail_on_plugin_down=True)
             if response.status_code in [404, 499, 502, 409]:  # Fault values
-                logger.error(f"Not registered to core (got response {response.status_code}), Exiting")
-                # TODO: Think about a better way for exiting this process
+                logger.error(f'Not registered to core (got response {response.status_code}), Exiting')
+                # pylint: disable=protected-access
                 os._exit(1)
+                # pylint: enable=protected-access
             self.comm_failure_counter = 0
         except Exception as e:
             self.comm_failure_counter += 1
             if self.comm_failure_counter > retries:  # Two minutes
-                logger.exception(("Error communicating with Core for more than 2 minutes, "
-                                  "exiting. Reason: {0}").format(e))
+                logger.exception(f'Error communicating with Core for more than 2 minutes, '
+                                 'exiting. Reason: {e}')
+                # pylint: disable=protected-access
                 os._exit(1)
+                # pylint: enable=protected-access
 
     @retry(wait_fixed=10 * 1000,
            stop_max_delay=60 * 5 * 1000,
@@ -831,12 +833,12 @@ class PluginBase(Configurable, Feature):
         :return requests.response: The register response from the core
         """
         register_doc = {
-            "plugin_name": self.plugin_name,
-            "plugin_type": self.plugin_type,
-            "plugin_subtype": self.plugin_subtype.value,
-            "plugin_port": self.port,
-            "is_debug": is_debug_attached(),
-            "supported_features": list(self.supported_features)
+            'plugin_name': self.plugin_name,
+            'plugin_type': self.plugin_type,
+            'plugin_subtype': self.plugin_subtype.value,
+            'plugin_port': self.port,
+            'is_debug': is_debug_attached(),
+            'supported_features': list(self.supported_features)
         }
 
         if plugin_unique_name is not None:
@@ -854,21 +856,23 @@ class PluginBase(Configurable, Feature):
             return response.json()
         except Exception as e:
             # this is in print because this is called before logger is available
-            print(f"Exception on register: {repr(e)}")
+            print(f'Exception on register: {repr(e)}')
             raise
 
     def start_serve(self):
         """Start Http server.
 
         This function is blocking as long as the Http server is up.
-        .. warning:: Do not use it in production! nginx->uwsgi is the one that loads us on production, so it does not call start_serve.
+        .. warning:: Do not use it in production!
+        nginx->uwsgi is the one that loads us on production, so it does not call start_serve.
         """
         context = ('/etc/ssl/certs/nginx-selfsigned.crt', '/etc/ssl/private/nginx-selfsigned.key')
 
         # uncomment the following lines run under profiler
         # from werkzeug.contrib.profiler import ProfilerMiddleware
         # AXONIUS_REST.config['PROFILE'] = True
-        # AXONIUS_REST.wsgi_app = ProfilerMiddleware(AXONIUS_REST.wsgi_app, restrictions=[100], sort_by=('time', 'calls'))
+        # AXONIUS_REST.wsgi_app = ProfilerMiddleware(AXONIUS_REST.wsgi_app,
+        # restrictions=[100], sort_by=('time', 'calls'))
 
         AXONIUS_REST.run(host=self.host,
                          port=self.port,
@@ -876,14 +880,16 @@ class PluginBase(Configurable, Feature):
                          debug=True,
                          use_reloader=False)
 
-    def get_method(self):
+    @staticmethod
+    def get_method():
         """Getting the method type of the request.
 
         :return: The method type of the current request
         """
         return request.method
 
-    def get_url_param(self, param_name):
+    @staticmethod
+    def get_url_param(param_name):
         """ Getting params from the URL entered.
 
         This function is getting parameters only from the URL. For example '/somthing?param1=somthing'
@@ -894,37 +900,40 @@ class PluginBase(Configurable, Feature):
         """
         return request.args.get(param_name)
 
-    def get_request_header(self, header_name):
+    @staticmethod
+    def get_request_header(header_name):
         return request.headers.get(header_name)
 
-    def get_request_data(self):
+    @staticmethod
+    def get_request_data():
         """Get the data (raw) from the request.
 
         :return:The content of the post request
         """
         return request.data
 
-    def get_request_data_as_object(self, prefer_none: bool = False):
+    @staticmethod
+    def get_request_data_as_object(prefer_none: bool = False):
         """ Get data from HTTP request as python object.
 
         :param prefer_none: The old behavior of request.get_json(silent=True) was to return None on failure, mimic it
 
         :return: The contest of the post request as a python object (An output of the json.loads function)
         """
-        post_data = self.get_request_data()
+        post_data = PluginBase.get_request_data()
         if post_data:
             # To make it string instead of bytes
             decoded_data = post_data.decode('utf-8')
             # object_hook is needed to unserialize specific not json-serializable things, like Datetime.
             data = json.loads(decoded_data, object_hook=json_util.object_hook)
             return data
-        else:
-            if prefer_none:
-                return None
-            else:
-                return {}
 
-    def get_caller_plugin_name(self):
+        if prefer_none:
+            return None
+        return {}
+
+    @staticmethod
+    def get_caller_plugin_name():
         """
         Figures out who called us from
         :return: tuple(plugin_unique_name, plugin_name)
@@ -967,7 +976,7 @@ class PluginBase(Configurable, Feature):
     def _verify_plugin_is_up(self, plugin_unique_name: str):
         if not is_plugin_on_demand(plugin_unique_name):
             # Core is assumed to be up
-            return
+            return False
 
         plugin_data = self.core_configs_collection.find_one({
             PLUGIN_UNIQUE_NAME: plugin_unique_name
@@ -988,7 +997,7 @@ class PluginBase(Configurable, Feature):
     def request_remote_plugin(self, resource, plugin_unique_name=CORE_UNIQUE_NAME, method='get',
                               raise_on_network_error: bool = False,
                               fail_on_plugin_down: bool = False,
-                              **kwargs) -> typing.Optional[requests.Response]:
+                              **kwargs) -> Optional[requests.Response]:
         """
         Provides an interface to access other plugins, with the current plugin's API key.
         :type resource: str
@@ -1037,7 +1046,7 @@ class PluginBase(Configurable, Feature):
                 if raise_on_network_error:
                     raise
                 logger.exception(f'Request failed for {url}, {result}')
-                return
+                return None
         return result
 
     def async_request_remote_plugin(self, *args, **kwargs) -> Promise:
@@ -1184,24 +1193,23 @@ class PluginBase(Configurable, Feature):
             found_plugins = [x
                              for x
                              in plugins_available.values()
-                             if (
-                                 x[PLUGIN_UNIQUE_NAME] == plugin_name) or (x['plugin_name'] == plugin_name)]
+                             if plugin_name in (x[PLUGIN_UNIQUE_NAME], x['plugin_name'])]
 
         if verify_single:
             if len(found_plugins) == 0:
                 if verify_exists:
                     raise plugin_exceptions.PluginNotFoundException(
-                        "There is no plugin {0} currently registered".format(plugin_name))
+                        'There is no plugin {0} currently registered'.format(plugin_name))
                 return None
             if len(found_plugins) != 1:
                 raise RuntimeError(
-                    "There are {0} plugins or {1}, there should only be one".format(len(found_plugins), plugin_name))
+                    'There are {0} plugins or {1}, there should only be one'.format(len(found_plugins), plugin_name))
             return found_plugins[0]
-        else:
-            if verify_exists and (not found_plugins):
-                raise plugin_exceptions.PluginNotFoundException(
-                    "There is no plugin {0} currently registered".format(plugin_name))
-            return found_plugins
+
+        if verify_exists and (not found_plugins):
+            raise plugin_exceptions.PluginNotFoundException(
+                'There is no plugin {0} currently registered'.format(plugin_name))
+        return found_plugins
 
     @add_rule('supported_features', should_authenticate=False)
     def get_supported_features(self):
@@ -1214,11 +1222,11 @@ class PluginBase(Configurable, Feature):
         Accepts:
             GET - In order to retrieve the plugin version
         """
-        version_object = {"plugin_name": self.plugin_name,
-                          "plugin_unique_name": self.plugin_unique_name,
-                          "plugin": self.version,
-                          "node_id": self.node_id,
-                          "axonius-libs": self.lib_version}
+        version_object = {'plugin_name': self.plugin_name,
+                          'plugin_unique_name': self.plugin_unique_name,
+                          'plugin': self.version,
+                          'node_id': self.node_id,
+                          'axonius-libs': self.lib_version}
 
         return jsonify(version_object)
 
@@ -1233,6 +1241,7 @@ class PluginBase(Configurable, Feature):
         self._check_registered_thread(retries=0)
         return ''
 
+    # pylint: disable=no-self-use
     @add_rule('debug/run_gc/<generation>', methods=['POST'])
     def run_gc(self, generation: int):
         """
@@ -1255,6 +1264,7 @@ class PluginBase(Configurable, Feature):
             'count': count,
             'stats': stats
         })
+    # pylint: enable=no-self-use
 
     @add_rule('action_update/<action_id>', methods=['POST'])
     def action_callback(self, action_id):
@@ -1269,37 +1279,42 @@ class PluginBase(Configurable, Feature):
             POST - For posting a status update (or sending results) on a specific action
         """
         try:
-            if self.plugin_name == "execution":
+            if self.plugin_name == 'execution':
                 # This is a special case for the execution_controller plugin. In that case, The EC plugin knows how to
                 # handle other actions such as reset_update. In case of ec plugin, we know for sure what is the
                 # callback, we use this fact to just call the callback and not search for it on the _open_actions
                 # list (because the current action id will not be there)
+
+                # This is a TERRIBLE hack ofir did and everyone hates that
+                # pylint: disable=no-member
                 self.ec_callback(action_id)
+                # pylint: enable=no-member
                 return ''
 
             with self._open_actions_lock:
-                if action_id in self._open_actions:
-                    # We recognize this action id, should call its callback
-                    action_promise, started_time = self._open_actions[action_id]
-                    # logger.info(f"action id {action_id} returned after time {datetime.now() - started_time}")
-                    # Calling the needed function
-                    request_content = self.get_request_data_as_object()
-
-                    # We must reject or resolve the promise with a thread, so that we wouldn't catch the lock
-                    # and return the http request immediately.
-
-                    if request_content['status'] == 'failed':
-                        self.execution_promises.submit(action_promise.do_reject, Exception(request_content))
-                        self._open_actions.pop(action_id)
-                    elif request_content['status'] == 'finished':
-                        self.execution_promises.submit(action_promise.do_resolve, request_content)
-                        self._open_actions.pop(action_id)
-                    return ''
-                else:
+                if action_id not in self._open_actions:
                     logger.error(f'Got unrecognized action_id update. Action ID: {action_id}. Was it resolved?')
                     return return_error('Unrecognized action_id {action_id}. Was it resolved?', 404)
+
+                # We recognize this action id, should call its callback
+                action_promise, started_time = self._open_actions[action_id]
+                # logger.info(f'action id {action_id} returned after time {datetime.now() - started_time}')
+                # Calling the needed function
+                request_content = self.get_request_data_as_object()
+
+                # We must reject or resolve the promise with a thread, so that we wouldn't catch the lock
+                # and return the http request immediately.
+
+                if request_content['status'] == 'failed':
+                    self.execution_promises.submit(action_promise.do_reject, Exception(request_content))
+                    self._open_actions.pop(action_id)
+                elif request_content['status'] == 'finished':
+                    self.execution_promises.submit(action_promise.do_resolve, request_content)
+                    self._open_actions.pop(action_id)
+                return ''
+
         except Exception as e:
-            logger.exception("General exception in action callback")
+            logger.exception('General exception in action callback')
             raise e
 
     def request_action(self, action_type, axon_id, data_for_action=None):
@@ -1318,7 +1333,7 @@ class PluginBase(Configurable, Feature):
             data = data_for_action.copy()
 
         # Building the uri for the request
-        uri = f"action/{action_type}?axon_id={axon_id}"
+        uri = f'action/{action_type}?axon_id={axon_id}'
 
         result = self.request_remote_plugin(uri,
                                             plugin_unique_name=EXECUTION_PLUGIN_NAME,
@@ -1329,9 +1344,9 @@ class PluginBase(Configurable, Feature):
             result.raise_for_status()
             action_id = result.json()['action_id']
         except Exception as e:
-            err_msg = f"Failed to request remote plugin, got response {result.status_code}: {result.content}"
+            err_msg = f'Failed to request remote plugin, got response {result.status_code}: {result.content}'
             logger.exception(err_msg)
-            raise ValueError(f"{err_msg}. Exception is {e}")
+            raise ValueError(f'{err_msg}. Exception is {e}')
 
         promise_for_action = Promise()
 
@@ -1351,8 +1366,8 @@ class PluginBase(Configurable, Feature):
             open_actions_lock_copy = self._open_actions.copy()
             for action_id, (action_promise, time_started) in open_actions_lock_copy.items():
                 if time_started + timedelta(seconds=TIMEOUT_FOR_EXECUTION_THREADS_IN_SECONDS) < datetime.now():
-                    err_msg = f"Timeout {TIMEOUT_FOR_EXECUTION_THREADS_IN_SECONDS} reached for " \
-                              f"action_id {action_id}, rejecting the promise."
+                    err_msg = f'Timeout {TIMEOUT_FOR_EXECUTION_THREADS_IN_SECONDS} reached for ' \
+                              f'action_id {action_id}, rejecting the promise.'
                     logger.error(err_msg)
 
                     # We must reject or resolve the promise with a thread, so that we wouldn't catch the lock
@@ -1402,6 +1417,7 @@ class PluginBase(Configurable, Feature):
         if field_data:
             db_name = self.plugin_unique_name if stored_locally else CORE_UNIQUE_NAME
             return gridfs.GridFS(self._get_db_connection()[db_name]).get(ObjectId(field_data['uuid']))
+        return None
 
     def _grab_file_contents(self, field_data, stored_locally=True) -> gridfs.GridOut:
         """
@@ -1413,6 +1429,7 @@ class PluginBase(Configurable, Feature):
         """
         if field_data:
             return self._grab_file(field_data, stored_locally).read()
+        return None
 
     @add_rule('schema/<schema_type>', methods=['GET'])
     def schema(self, schema_type):
@@ -1421,22 +1438,22 @@ class PluginBase(Configurable, Feature):
 
         Accepts:
             GET - Get schema. name of the schema is given in the url.
-                  For example: "https://<address>/schema/general_schema
+                  For example: 'https://<address>/schema/general_schema
 
         :return: list(str)
         """
-        schema_type = "_" + schema_type + "_schema"
-        if schema_type in dir(self):
-            # We have a schema like this
-            schema_func = getattr(self, schema_type)
-            return jsonify(schema_func())
-        else:
-            logger.warning("Someone tried to get wrong schema '{0}'".format(schema_type))
-            return return_error("No such schema. should implement {0}".format(schema_type), 400)
+        schema_type = '_' + schema_type + '_schema'
+        if schema_type not in dir(self):
+            logger.warning(f'Someone tried to get wrong schema \'{schema_type}\'')
+            return return_error(f'No such schema. should implement {schema_type}', 400)
+
+        # We have a schema like this
+        schema_func = getattr(self, schema_type)
+        return jsonify(schema_func())
 
     @property
     def plugin_type(self):
-        return "Plugin"
+        return 'Plugin'
 
     @property
     def plugin_subtype(self) -> PluginSubtype:
@@ -1450,9 +1467,12 @@ class PluginBase(Configurable, Feature):
         try:
             return self.__do_save_data_from_plugin(client_name, *args, **kwargs)
         except func_timeout.exceptions.FunctionTimedOut:
-            logger.exception(f"Timeout for {client_name} on {self.plugin_unique_name}")
-            raise adapter_exceptions.AdapterException(f"Fetching has timed out")
+            logger.exception(f'Timeout for {client_name} on {self.plugin_unique_name}')
+            raise adapter_exceptions.AdapterException(f'Fetching has timed out')
 
+    # pylint: disable=too-many-locals
+    # pylint: disable=too-many-branches
+    # pylint: disable=too-many-statements
     def __do_save_data_from_plugin(self, client_name, data_of_client, entity_type: EntityType,
                                    should_log_info: bool = True, plugin_identity: Tuple[str, str, str] = None) -> int:
         """
@@ -1465,7 +1485,7 @@ class PluginBase(Configurable, Feature):
         db_to_use = self._entity_db_map.get(entity_type)
         raw_db_to_use = self._raw_adapter_entity_db_map.get(entity_type)
 
-        assert db_to_use and raw_db_to_use, f"got unexpected {entity_type}"
+        assert db_to_use and raw_db_to_use, f'got unexpected {entity_type}'
         try:
             plugin_type, plugin_name, plugin_unique_name = plugin_identity
         except Exception:
@@ -1551,7 +1571,7 @@ class PluginBase(Configurable, Feature):
                             }
                         }
                     }, {
-                        "$set": data_to_update
+                        '$set': data_to_update
                     }, array_filters=array_filters)
 
                     if update_result.matched_count > 0 and update_result.modified_count == 0:
@@ -1563,7 +1583,7 @@ class PluginBase(Configurable, Feature):
                     if update_result.modified_count == 0:
                         # if it's not in the db
                         if correlates:
-                            # for scanner adapters this is case B - see "scanner_adapter_base.py"
+                            # for scanner adapters this is case B - see 'scanner_adapter_base.py'
                             # we need to add this device to the list of adapters in another device
                             correlate_plugin_unique_name, correlated_id = correlates
                             update_result = db_to_use.update_one({
@@ -1574,17 +1594,17 @@ class PluginBase(Configurable, Feature):
                                     }
                                 }
                             }, {
-                                "$addToSet": {
-                                    "adapters": parsed_to_insert
+                                '$addToSet': {
+                                    'adapters': parsed_to_insert
                                 },
                                 '$inc': {
                                     ADAPTERS_LIST_LENGTH: 1
                                 }
                             })
                             if update_result.modified_count == 0:
-                                logger.error("No devices update for case B for scanner device "
-                                             f"{parsed_to_insert['data']['id']} from "
-                                             f"{parsed_to_insert[PLUGIN_UNIQUE_NAME]}")
+                                logger.error('No devices update for case B for scanner device '
+                                             f'{parsed_to_insert["data"]["id"]} from '
+                                             f'{parsed_to_insert[PLUGIN_UNIQUE_NAME]}')
                         else:
                             # this is regular first-seen device, make its own value
                             try:
@@ -1607,7 +1627,7 @@ class PluginBase(Configurable, Feature):
                 raise
 
         if should_log_info is True:
-            logger.info(f"Starting to fetch data (devices/users) for {client_name}")
+            logger.info(f'Starting to fetch data (devices/users) for {client_name}')
         try:
             time_before_client = datetime.now()
 
@@ -1620,13 +1640,11 @@ class PluginBase(Configurable, Feature):
                     ReplaceOne(filter={
                         PLUGIN_UNIQUE_NAME: plugin_unique_name,
                         'id': device['id'],
-                    },
-                        replacement={
-                            PLUGIN_UNIQUE_NAME: plugin_unique_name,
-                            'id': device['id'],
-                            'raw_data': device.pop('raw', {})
-                    },
-                        upsert=True)
+                    }, replacement={
+                        PLUGIN_UNIQUE_NAME: plugin_unique_name,
+                        'id': device['id'],
+                        'raw_data': device.pop('raw', {})
+                    }, upsert=True)
                     for device
                     in devices])
 
@@ -1641,25 +1659,31 @@ class PluginBase(Configurable, Feature):
                     for key in adapter_entity['data']:
                         self.__existing_fields[entity_type].add(key)
 
-                db_to_use.insert_many(({
-                    "internal_axon_id": get_preferred_internal_axon_id_from_dict(parsed_to_insert, entity_type),
-                    "accurate_for_datetime": datetime.now(),
-                    "adapters": [parsed_to_insert],
-                    "tags": [],
+                # Pylint contradicts autopep8
+                # pylint: disable=bad-continuation
+                insertion_iterable = ({
+                    'internal_axon_id': get_preferred_internal_axon_id_from_dict(parsed_to_insert, entity_type),
+                    'accurate_for_datetime': datetime.now(),
+                    'adapters': [parsed_to_insert],
+                    'tags': [],
                     ADAPTERS_LIST_LENGTH: 1
                 }
                     for parsed_to_insert
-                    in all_parsed),
-                    ordered=False
-                )
+                    in all_parsed)
+                # pylint: enable=bad-continuation
+
+                db_to_use.insert_many(insertion_iterable, ordered=False)
 
             inserter = self.__first_time_inserter
             # quickest way to find if there are any devices from this plugin in the DB
-            if inserter and not self._is_last_seen_prioritized and \
+            # pylint: disable=bad-continuation
+            if inserter and not\
+                    self._is_last_seen_prioritized and \
                     db_to_use.count_documents({
                         f'adapters.{PLUGIN_UNIQUE_NAME}': plugin_unique_name
                     }, limit=1) == 0:
-                logger.info("Fast path! First run.")
+                # pylint: enable=bad-continuation
+                logger.info('Fast path! First run.')
                 # DB is empty! no need for slow path, can just bulk-insert all.
                 for devices in chunks(500, data_of_client['parsed']):
                     promises.append(Promise(functools.partial(run_in_executor_helper,
@@ -1668,7 +1692,7 @@ class PluginBase(Configurable, Feature):
                                                               args=[devices])))
 
                     inserted_data_count += len(devices)
-                    logger.info(f"Over {inserted_data_count} to DB")
+                    logger.info(f'Over {inserted_data_count} to DB')
 
             else:
                 # DB is not empty. Should go for slow path.
@@ -1686,7 +1710,7 @@ class PluginBase(Configurable, Feature):
 
                     # Note that this updates fields that are present. If some fields are not present but are present
                     # in the db they will stay there.
-                    data_to_update = {f"adapters.$.{key}": value
+                    data_to_update = {f'adapters.$.{key}': value
                                       for key, value in parsed_to_insert.items() if key != 'data'}
 
                     fields_to_update: Iterable[str] = data.keys() - ['id']
@@ -1694,7 +1718,7 @@ class PluginBase(Configurable, Feature):
                     for field in fields_to_update:
                         if not field == 'raw':
                             field_of_data = data.get(field, [])
-                            data_to_update[f"adapters.$.data.{field}"] = field_of_data
+                            data_to_update[f'adapters.$.data.{field}'] = field_of_data
 
                     inserted_data_count += 1
                     promises.append(Promise(functools.partial(run_in_executor_helper,
@@ -1705,35 +1729,35 @@ class PluginBase(Configurable, Feature):
                     promises = [p for p in promises if p.is_pending or p.is_rejected]
 
                     if inserted_data_count % 1000 == 0:
-                        logger.info(f"Entities went through: {inserted_data_count}; " +
-                                    f"promises active: {len(promises)}; " +
-                                    f"in DB: {inserted_data_count - len(promises)}")
+                        logger.info(f'Entities went through: {inserted_data_count}; ' +
+                                    f'promises active: {len(promises)}; ' +
+                                    f'in DB: {inserted_data_count - len(promises)}')
 
             promise_all = Promise.all(promises)
             Promise.wait(promise_all, timedelta(minutes=20).total_seconds())
             if promise_all.is_rejected:
-                logger.error(f"Error in insertion of {entity_type} to DB", exc_info=promise_all.reason)
+                logger.error(f'Error in insertion of {entity_type} to DB', exc_info=promise_all.reason)
 
             if entity_type == EntityType.Devices:
                 added_pretty_ids_count = self._add_pretty_id_to_missing_adapter_devices()
-                logger.info(f"{added_pretty_ids_count} devices had their pretty_id set")
+                logger.info(f'{added_pretty_ids_count} devices had their pretty_id set')
 
             time_for_client = datetime.now() - time_before_client
             if self._notify_on_adapters is True and (time_for_client.seconds or inserted_data_count) \
                     and not 'general_info' in plugin_name and not should_log_info:
                 self.create_notification(
-                    f"Finished aggregating {entity_type} for client {client_name}, "
-                    f" aggregation took {time_for_client.seconds} seconds and returned {inserted_data_count}.")
-                self.send_external_info_log(f"Finished aggregating {entity_type} for client {client_name}, "
-                                            f" aggregation took {time_for_client.seconds} seconds and "
-                                            f"returned {inserted_data_count}.")
+                    f'Finished aggregating {entity_type} for client {client_name}, '
+                    f' aggregation took {time_for_client.seconds} seconds and returned {inserted_data_count}.')
+                self.send_external_info_log(f'Finished aggregating {entity_type} for client {client_name}, '
+                                            f' aggregation took {time_for_client.seconds} seconds and '
+                                            f'returned {inserted_data_count}.')
             if should_log_info is True:
                 logger.info(
-                    f"Finished aggregating {entity_type} for client {client_name}, "
-                    f" aggregation took {time_for_client.seconds} seconds and returned {inserted_data_count}.")
+                    f'Finished aggregating {entity_type} for client {client_name}, '
+                    f' aggregation took {time_for_client.seconds} seconds and returned {inserted_data_count}.')
 
         except Exception as e:
-            logger.exception("Thread {0} encountered error: {1}".format(threading.current_thread(), str(e)))
+            logger.exception(f'Thread {threading.current_thread()} encountered error: {e}')
             raise
         finally:
             # whether or not it was successful, next time we shouldn't try first-time optimization and
@@ -1741,9 +1765,13 @@ class PluginBase(Configurable, Feature):
             self.__first_time_inserter = None
 
         if should_log_info is True:
-            logger.info(f"Finished inserting {entity_type} of client {client_name}")
+            logger.info(f'Finished inserting {entity_type} of client {client_name}')
 
         return inserted_data_count
+
+    # pylint: enable=too-many-locals
+    # pylint: enable=too-many-branches
+    # pylint: enable=too-many-statements
 
     def _get_nodes_table(self):
         db_connection = self._get_db_connection()
@@ -1770,16 +1798,19 @@ class PluginBase(Configurable, Feature):
         # 'plugin_unique_name')
 
         if response.status_code != 200 or not response.text:
-            raise RuntimeError(f'Unable to find adapter for instance "{node_id}"')
+            raise RuntimeError(f'Unable to find adapter for instance \'{node_id}\'')
 
         return response.json().get(PLUGIN_UNIQUE_NAME)
 
+    @staticmethod
     def _create_axonius_entity(
-            self, client_name, data, entity_type: EntityType, plugin_identity: Tuple[str, str, str]
-    ) -> dict:
+            client_name: str,
+            data: dict,
+            entity_type: EntityType,
+            plugin_identity: Tuple[str, str, str]) -> dict:
         """
         Virtual.
-        Creates an axonius entity ("Parsed data")
+        Creates an axonius entity ('Parsed data')
         :param client_name: the name of the client
         :param data: the parsed data
         :param entity_type: the type of the entity (see EntityType)
@@ -1795,9 +1826,9 @@ class PluginBase(Configurable, Feature):
         parsed_to_insert = {
             'client_used': client_name,
             'plugin_type': plugin_type,
-            "plugin_name": plugin_name,
-            "plugin_unique_name": plugin_unique_name,
-            "type": "entitydata",
+            'plugin_name': plugin_name,
+            'plugin_unique_name': plugin_unique_name,
+            'type': 'entitydata',
             'accurate_for_datetime': datetime.now(),
             'data': data
         }
@@ -1813,13 +1844,12 @@ class PluginBase(Configurable, Feature):
         devices = self.devices_db.find(filter={'adapters': {
             '$elemMatch': {
                 PLUGIN_UNIQUE_NAME: self.plugin_unique_name,
-                'data.pretty_id': {"$exists": False}
+                'data.pretty_id': {'$exists': False}
             }
-        }},
-            projection={
-                '_id': 1,
-                'adapters.data.id': 1,
-                'adapters.data.pretty_id': 1
+        }}, projection={
+            '_id': 1,
+            'adapters.data.id': 1,
+            'adapters.data.pretty_id': 1
         })
 
         adapter_devices_ids_to_add = []
@@ -1841,7 +1871,7 @@ class PluginBase(Configurable, Feature):
                         'data.id': adapter_id
                     }
                 }
-            }, {"$set":
+            }, {'$set':
                 {'adapters.$.data.pretty_id': pretty_id_to_add}})
         return len(adapter_devices_ids_to_add)
 
@@ -1875,14 +1905,14 @@ class PluginBase(Configurable, Feature):
         """
         try:
             self.aggregator_db_connection['raw'].insert_one({'raw': device,
-                                                             "plugin_name": self.plugin_name,
-                                                             "plugin_unique_name": self.plugin_unique_name,
+                                                             'plugin_name': self.plugin_name,
+                                                             'plugin_unique_name': self.plugin_unique_name,
                                                              'plugin_type': self.plugin_type})
         except pymongo.errors.PyMongoError as e:
-            logger.exception("Error in pymongo. details: {}".format(e))
+            logger.exception(f'Error in pymongo. details: {e}')
         except pymongo.errors.DocumentTooLarge:
-            # wanna see my "something too large"?
-            logger.warn(f"Got DocumentTooLarge with client.")
+            # wanna see my 'something too large'?
+            logger.warning(f'Got DocumentTooLarge with client.')
 
     @mongo_retry()
     def __perform_tag(self, entity: EntityType, associated_adapters, name: str, data, tag_type: str, action_if_exists,
@@ -1907,8 +1937,8 @@ class PluginBase(Configurable, Feature):
         virtual_plugin_name = additional_data[PLUGIN_NAME]
 
         additional_data['accurate_for_datetime'] = datetime.utcnow()
-        with _entities_db.start_session() as session:
-            entities_candidates_list = list(session.find({"$or": [
+        with _entities_db.start_session() as db_session:
+            entities_candidates_list = list(db_session.find({'$or': [
                 {
                     'adapters': {
                         '$elemMatch': {
@@ -1921,16 +1951,16 @@ class PluginBase(Configurable, Feature):
             ]}))
 
             if len(entities_candidates_list) != 1:
-                raise TagDeviceError(f"A tag must be associated with just one adapter, "
-                                     f"0 != {len(entities_candidates_list)}")
+                raise TagDeviceError(f'A tag must be associated with just one adapter, '
+                                     f'0 != {len(entities_candidates_list)}')
 
             # take (assumed single) candidate
             entities_candidate = entities_candidates_list[0]
 
-            if tag_type == "adapterdata":
+            if tag_type == 'adapterdata':
                 relevant_adapter = [x for x in entities_candidate['adapters']
                                     if x[PLUGIN_UNIQUE_NAME] == associated_adapters[0][0]]
-                assert relevant_adapter, "Couldn't find adapter in axon device"
+                assert relevant_adapter, 'Couldn\'t find adapter in axon device'
                 additional_data['associated_adapter_plugin_name'] = relevant_adapter[0][PLUGIN_NAME]
 
             if any(x['name'] == name and
@@ -1941,18 +1971,18 @@ class PluginBase(Configurable, Feature):
 
                 # We found the tag. If action_if_exists is replace just replace it. but if its update, lets
                 # make a deep merge here.
-                if action_if_exists == "update" and tag_type == "adapterdata":
+                if action_if_exists == 'update' and tag_type == 'adapterdata':
                     # Take the old value of this tag.
                     final_data = [
-                        x["data"] for x in entities_candidate["tags"] if
-                        x["plugin_unique_name"] == virtual_plugin_unique_name
-                        and x["type"] == "adapterdata"
-                        and x["name"] == name
+                        x['data'] for x in entities_candidate['tags'] if
+                        x['plugin_unique_name'] == virtual_plugin_unique_name
+                        and x['type'] == 'adapterdata'
+                        and x['name'] == name
                     ]
 
                     if len(final_data) != 1:
-                        msg = f"Got {name}/{tag_type} with " \
-                              f"action_if_exists=update, but final_data is not of length 1: {final_data}"
+                        msg = f'Got {name}/{tag_type} with ' \
+                              f'action_if_exists=update, but final_data is not of length 1: {final_data}'
                         logger.error(msg)
                         raise TagDeviceError(msg)
 
@@ -1962,61 +1992,61 @@ class PluginBase(Configurable, Feature):
                     # for us (for example ip). Usually when we get some list variable we get all of it so we don't need
                     # any update things
                     data = deep_merge_only_dict(data, final_data)
-                    logger.debug("action if exists on tag!")
+                    logger.debug('action if exists on tag!')
 
                 tag_data = {
                     'association_type': 'Tag',
                     'associated_adapters': associated_adapters,
-                    "name": name,
-                    "data": data,
-                    "type": tag_type,
-                    "entity": entity.value,
-                    "action_if_exists": action_if_exists,
+                    'name': name,
+                    'data': data,
+                    'type': tag_type,
+                    'entity': entity.value,
+                    'action_if_exists': action_if_exists,
                     **additional_data
                 }
 
-                result = session.update_one({
-                    "internal_axon_id": entities_candidate['internal_axon_id'],
-                    "tags": {
-                        "$elemMatch":
+                result = db_session.update_one({
+                    'internal_axon_id': entities_candidate['internal_axon_id'],
+                    'tags': {
+                        '$elemMatch':
                             {
-                                "name": name,
-                                "plugin_unique_name": virtual_plugin_unique_name,
-                                "type": tag_type
+                                'name': name,
+                                'plugin_unique_name': virtual_plugin_unique_name,
+                                'type': tag_type
                             }
                     }
                 }, {
-                    "$set": {
-                        "tags.$": tag_data
+                    '$set': {
+                        'tags.$': tag_data
                     }
                 })
 
                 if result.matched_count != 1:
-                    msg = f"tried to update tag {tag_data}. " \
-                          f"expected matched_count == 1 but got {result.matched_count}"
+                    msg = f'tried to update tag {tag_data}. ' \
+                          f'expected matched_count == 1 but got {result.matched_count}'
                     logger.error(msg)
                     raise TagDeviceError(msg)
-            elif virtual_plugin_name == "gui" and tag_type == 'label' and tag_type is False:
+            elif virtual_plugin_name == 'gui' and tag_type == 'label' and tag_type is False:
                 # Gui is a special plugin. It can delete any label it wants (even if it has come from
                 # another service)
 
-                result = session.update_one({
-                    "internal_axon_id": entities_candidate['internal_axon_id'],
-                    "tags": {
-                        "$elemMatch":
+                result = db_session.update_one({
+                    'internal_axon_id': entities_candidate['internal_axon_id'],
+                    'tags': {
+                        '$elemMatch':
                             {
-                                "name": name,
-                                "type": "label"
+                                'name': name,
+                                'type': 'label'
                             }
                     }
                 }, {
-                    "$set": {
-                        "tags.$.data": False
+                    '$set': {
+                        'tags.$.data': False
                     }
                 })
 
                 if result.matched_count != 1:
-                    msg = f"tried to update label {name}. expected matched_count == 1 but got {result.matched_count}"
+                    msg = f'tried to update label {name}. expected matched_count == 1 but got {result.matched_count}'
                     logger.error(msg)
                     raise TagDeviceError(msg)
 
@@ -2024,24 +2054,24 @@ class PluginBase(Configurable, Feature):
                 tag_data = {
                     'association_type': 'Tag',
                     'associated_adapters': associated_adapters,
-                    "name": name,
-                    "data": data,
-                    "type": tag_type,
-                    "entity": entity.value,
-                    "action_if_exists": action_if_exists,
+                    'name': name,
+                    'data': data,
+                    'type': tag_type,
+                    'entity': entity.value,
+                    'action_if_exists': action_if_exists,
                     **additional_data
                 }
 
-                result = session.update_one(
-                    {"internal_axon_id": entities_candidate['internal_axon_id']},
+                result = db_session.update_one(
+                    {'internal_axon_id': entities_candidate['internal_axon_id']},
                     {
-                        "$addToSet": {
-                            "tags": tag_data
+                        '$addToSet': {
+                            'tags': tag_data
                         }
                     })
 
                 if result.modified_count != 1:
-                    msg = f"tried to add tag {tag_data}. expected modified_count == 1 but got {result.modified_count}"
+                    msg = f'tried to add tag {tag_data}. expected modified_count == 1 but got {result.modified_count}'
                     logger.error(msg)
                     raise TagDeviceError(msg)
         return entities_candidates_list
@@ -2052,24 +2082,24 @@ class PluginBase(Configurable, Feature):
         """ Function for tagging adapter devices.
         This function will tag a wanted device. The tag will be related only to this adapter
         :param identity_by_adapter: a list of tuples of (adapter_unique_name, unique_id).
-                                           e.g. [("ad-adapter-1234", "CN=EC2AMAZ-3B5UJ01,OU=D....")]
+                                           e.g. [('ad-adapter-1234', 'CN=EC2AMAZ-3B5UJ01,OU=D....')]
         :param name: the name of the tag. should be a string.
         :param data: the data of the tag. could be any object.
-        :param tag_type: the type of the tag. "label" for a regular tag, "data" for a data tag.
-        :param entity: "devices" or "users" -> what is the entity we are tagging.
-        :param action_if_exists: "replace" to replace the tag, "update" to update the tag (in case its a dict)
+        :param tag_type: the type of the tag. 'label' for a regular tag, 'data' for a data tag.
+        :param entity: 'devices' or 'users' -> what is the entity we are tagging.
+        :param action_if_exists: 'replace' to replace the tag, 'update' to update the tag (in case its a dict)
         :param client_used: an optional parameter to indicate client_used. This is important since we show this in
                             the gui (we can know where the data came from)
         :param additional_data: additional data to the dict sent to the aggregator
         :return: List of affected entities
         """
 
-        assert action_if_exists == "replace" or (action_if_exists == "update" and tag_type == "adapterdata") or \
+        assert action_if_exists == 'replace' or (action_if_exists == 'update' and tag_type == 'adapterdata') or \
             (action_if_exists == 'merge' and tag_type == 'data')
         additional_data = additional_data or {}
 
         if client_used is not None:
-            assert type(client_used) == str
+            assert isinstance(client_used, str)
             additional_data['client_used'] = client_used
 
         return self.__perform_tag(entity, identity_by_adapter, name, data, tag_type, action_if_exists, additional_data)
@@ -2086,17 +2116,17 @@ class PluginBase(Configurable, Feature):
         :return: Internal axon ID of the entity built
         """
         _entities_db = self._entity_db_map[entity]
-        with _entities_db.start_session() as session:
+        with _entities_db.start_session() as db_session:
             try:
-                with session.start_transaction():
+                with db_session.start_transaction():
                     if entities_candidates_hint:
-                        entities_candidates = list(session.find({
+                        entities_candidates = list(db_session.find({
                             'internal_axon_id': {
                                 '$in': entities_candidates_hint
                             }
                         }))
                     else:
-                        entities_candidates = list(session.find({"$or": [
+                        entities_candidates = list(db_session.find({'$or': [
                             {
                                 'adapters': {
                                     '$elemMatch': {
@@ -2109,8 +2139,8 @@ class PluginBase(Configurable, Feature):
                         ]}))
 
                     if len(entities_candidates) < 2:
-                        raise CorrelateException(f"No entities given or all entities given don't exist. "
-                                                 f"Associated adapters: {correlation.associated_adapters}")
+                        raise CorrelateException(f'No entities given or all entities given don\'t exist. '
+                                                 f'Associated adapters: {correlation.associated_adapters}')
 
                     if len(entities_candidates) > MAX_LINK_AMOUNT:
                         logger.critical('Data loss prevented: '
@@ -2150,12 +2180,14 @@ class PluginBase(Configurable, Feature):
                     internal_axon_id = remaining_entity['internal_axon_id']
 
                     # now, let us delete all other AxoniusDevices
-                    session.delete_many({'$or':
-                                         [
-                                             {'internal_axon_id': axonius_entity['internal_axon_id']}
-                                             for axonius_entity in entities_candidates
-                                         ]
-                                         })
+                    db_session.delete_many({
+                        '$or': [
+                            {
+                                'internal_axon_id': axonius_entity['internal_axon_id']
+                            }
+                            for axonius_entity
+                            in entities_candidates]
+                    })
 
                     if len(all_unique_adapter_entities_data) > 30:
                         logger.info(f'Over sized adapter link occurred on {internal_axon_id}, '
@@ -2166,16 +2198,16 @@ class PluginBase(Configurable, Feature):
                     if any(x > 10 for x in adapters_by_plugin_name.values()):
                         logger.info(f'Too many from a single adapter: {adapters_by_plugin_name} for {internal_axon_id}')
 
-                    session.insert_one({
+                    db_session.insert_one({
                         '_id': remaining_entity['_id'],
-                        "internal_axon_id": internal_axon_id,
-                        "accurate_for_datetime": datetime.now(),
-                        "adapters": all_unique_adapter_entities_data,
-                        ADAPTERS_LIST_LENGTH: len(set([x[PLUGIN_NAME] for x in all_unique_adapter_entities_data])),
-                        "tags": list(tags_for_new_device.values())  # Turn it to a list
+                        'internal_axon_id': internal_axon_id,
+                        'accurate_for_datetime': datetime.now(),
+                        'adapters': all_unique_adapter_entities_data,
+                        ADAPTERS_LIST_LENGTH: len({x[PLUGIN_NAME] for x in all_unique_adapter_entities_data}),
+                        'tags': list(tags_for_new_device.values())  # Turn it to a list
                     })
             except CorrelateException:
-                logger.exception("Unlink logic exception")
+                logger.exception('Unlink logic exception')
                 raise
 
         return internal_axon_id
@@ -2190,23 +2222,24 @@ class PluginBase(Configurable, Feature):
         :return: all internal_axon_ids altered
         """
         _entities_db = self._entity_db_map[entity]
-        with _entities_db.start_session() as session:
-            with session.start_transaction():
-                return self.__perform_unlink_with_session(adapter_id, plugin_unique_name, session, entity)
+        with _entities_db.start_session() as db_session:
+            with db_session.start_transaction():
+                return self.__perform_unlink_with_session(adapter_id, plugin_unique_name, db_session, entity)
 
+    # pylint: disable=too-many-locals
     @staticmethod
     def __perform_unlink_with_session(adapter_id: str, plugin_unique_name: str,
-                                      session, entity_type: EntityType, entity_to_split=None) -> Tuple[str, str]:
+                                      db_session, entity_type: EntityType, entity_to_split=None) -> Tuple[str, str]:
         """
         Perform an unlink given a session on a particular adapter entity
         :param adapter_id: the id of the adapter to unlink
         :param plugin_unique_name: the plugin unique name of the adapter
-        :param session: the session to use, this also implies the DB to use
+        :param db_session: the session to use, this also implies the DB to use
         :param entity_type: the entity type
         :param entity_to_split: if not none, uses this as the entity (optimization)
         :return: Tuple of two strings that represent the internal_axon_ids altered
         """
-        entity_to_split = entity_to_split or session.find_one({
+        entity_to_split = entity_to_split or db_session.find_one({
             'adapters': {
                 '$elemMatch': {
                     PLUGIN_UNIQUE_NAME: plugin_unique_name,
@@ -2215,9 +2248,9 @@ class PluginBase(Configurable, Feature):
             }
         })
         if not entity_to_split:
-            raise CorrelateException(f"Could not find given entity {plugin_unique_name}:{adapter_id}")
+            raise CorrelateException(f'Could not find given entity {plugin_unique_name}:{adapter_id}')
         if len(entity_to_split['adapters']) == 1:
-            raise CorrelateException("Only one adapter entity in axonius entity, can't split that")
+            raise CorrelateException('Only one adapter entity in axonius entity, can\'t split that')
         adapter_to_extract = [x for x in entity_to_split['adapters'] if
                               x[PLUGIN_UNIQUE_NAME] == plugin_unique_name and
                               x['data']['id'] == adapter_id]
@@ -2228,10 +2261,10 @@ class PluginBase(Configurable, Feature):
 
         internal_axon_id = get_preferred_internal_axon_id_from_dict(adapter_to_extract, entity_type)
         new_axonius_entity = {
-            "internal_axon_id": internal_axon_id,
-            "accurate_for_datetime": datetime.now(),
-            "adapters": [adapter_to_extract],
-            "tags": []
+            'internal_axon_id': internal_axon_id,
+            'accurate_for_datetime': datetime.now(),
+            'adapters': [adapter_to_extract],
+            'tags': []
         }
 
         update_internal_axon_id = False
@@ -2277,7 +2310,7 @@ class PluginBase(Configurable, Feature):
         if update_internal_axon_id:
             update_dict['$set']['internal_axon_id'] = update_internal_axon_id
 
-        session.update_one({
+        db_session.update_one({
             'internal_axon_id': entity_to_split['internal_axon_id']
         }, update_dict)
 
@@ -2310,10 +2343,10 @@ class PluginBase(Configurable, Feature):
         if pull_those:
             pull_query = {
                 'tags': {
-                    "$or": [
+                    '$or': [
                         {
                             PLUGIN_UNIQUE_NAME: pull_this_tag[PLUGIN_UNIQUE_NAME],
-                            "name": pull_this_tag['name']
+                            'name': pull_this_tag['name']
                         }
                         for pull_this_tag
                         in pull_those
@@ -2322,24 +2355,25 @@ class PluginBase(Configurable, Feature):
                 }
             }
             full_query = {
-                "$pull": pull_query,
-                "$set": set_query
+                '$pull': pull_query,
+                '$set': set_query
             }
         else:
             full_query = {
-                "$set": set_query
+                '$set': set_query
             }
-        session.update_one({
+        db_session.update_one({
             'internal_axon_id': entity_to_split['internal_axon_id']
         }, full_query)
-        new_axonius_entity[ADAPTERS_LIST_LENGTH] = len(set([x[PLUGIN_NAME] for x in new_axonius_entity['adapters']]))
+        new_axonius_entity[ADAPTERS_LIST_LENGTH] = len({x[PLUGIN_NAME] for x in new_axonius_entity['adapters']})
 
         recalculate_adapter_oldness(new_axonius_entity['adapters'], entity_type)
-        session.insert_one(new_axonius_entity)
+        db_session.insert_one(new_axonius_entity)
 
         return internal_axon_id, entity_to_split['internal_axon_id']
+    # pylint: disable=too-many-locals
 
-    def __archive_axonius_device(self, plugin_unique_name, device_id, entity_type: EntityType, session=None):
+    def __archive_axonius_device(self, plugin_unique_name, device_id, entity_type: EntityType, db_session=None):
         """
         Finds the axonius device with the given plugin_unique_name and device id,
         assumes that the axonius device has only this single adapter device.
@@ -2359,13 +2393,13 @@ class PluginBase(Configurable, Feature):
                     'data.id': device_id
                 }
             }
-        }, session=session)
+        }, session=db_session)
         if axonius_device is None:
-            logger.error(f"Tried to archive nonexisting device: {plugin_unique_name}: {device_id}")
+            logger.error(f'Tried to archive nonexisting device: {plugin_unique_name}: {device_id}')
             return False
 
         axonius_device['archived_at'] = datetime.utcnow()
-        self.aggregator_db_connection['old_device_archive'].insert_one(axonius_device, session=session)
+        self.aggregator_db_connection['old_device_archive'].insert_one(axonius_device, session=db_session)
         return True
 
     @mongo_retry()
@@ -2385,9 +2419,9 @@ class PluginBase(Configurable, Feature):
                 }
             }
         }
-        with _entities_db.start_session() as session:
-            with session.start_transaction():
-                axonius_entity = session.find_one(db_filter)
+        with _entities_db.start_session() as db_session:
+            with db_session.start_transaction():
+                axonius_entity = db_session.find_one(db_filter)
                 if not axonius_entity:
                     logger.debug(f'{entity}, {plugin_unique_name}, {adapter_id} not found for deletion')
 
@@ -2403,7 +2437,7 @@ class PluginBase(Configurable, Feature):
                 amount_of_adapters = len(axonius_entity['adapters'])
                 if amount_of_adapters > 1:
                     logger.debug(f'{entity}, {plugin_unique_name}, {adapter_id} has  {amount_of_adapters}')
-                    self.__perform_unlink_with_session(adapter_id, plugin_unique_name, session, entity,
+                    self.__perform_unlink_with_session(adapter_id, plugin_unique_name, db_session, entity,
                                                        entity_to_split=axonius_entity)
         # By not having this a part of the transaction, we significantly mitigate
         try:
@@ -2421,6 +2455,7 @@ class PluginBase(Configurable, Feature):
         sometimes adding a lot of tags can take a long while on a non-SMP process.
         """
         for label in labels:
+            # pylint: disable=cell-var-from-loop
             def perform_tag(specific_identities_chunk: Iterable[dict]):
                 try:
                     res = self.request_remote_plugin('tag_entities', HEAVY_LIFTING_PLUGIN_NAME,
@@ -2437,6 +2472,7 @@ class PluginBase(Configurable, Feature):
                     return None
                 except Exception:
                     logger.exception(f'Problem adding label: {label}')
+            # pylint: enable=cell-var-from-loop
 
             yield from self._common_executor.map(perform_tag, chunks(1000, identity_by_adapter))
 
@@ -2464,7 +2500,7 @@ class PluginBase(Configurable, Feature):
     def add_label_to_entity(self, entity: EntityType, identity_by_adapter, label, is_enabled=True,
                             additional_data=None) -> List[dict]:
         """
-        A shortcut to __tag with type "label" . if is_enabled = False, the label is grayed out.
+        A shortcut to __tag with type 'label' . if is_enabled = False, the label is grayed out.
         :return: List of affected entities
         """
         if additional_data is None:
@@ -2474,36 +2510,36 @@ class PluginBase(Configurable, Feature):
         additional_data[PLUGIN_UNIQUE_NAME], additional_data[PLUGIN_NAME] = GUI_PLUGIN_NAME, GUI_PLUGIN_NAME
         additional_data['label_value'] = label if is_enabled else ''
 
-        result = self._tag(entity, identity_by_adapter, label, is_enabled, "label", "replace", None,
+        result = self._tag(entity, identity_by_adapter, label, is_enabled, 'label', 'replace', None,
                            additional_data)
         return result
 
     def add_data_to_entity(self, entity: EntityType, identity_by_adapter, name, data, additional_data=None,
                            action_if_exists='replace') -> List[dict]:
         """
-        A shortcut to __tag with type "data"
+        A shortcut to __tag with type 'data'
         :return: List of affected entities
         """
         if additional_data is None:
             additional_data = {}
-        result = self._tag(entity, identity_by_adapter, name, data, "data", action_if_exists, None, additional_data)
+        result = self._tag(entity, identity_by_adapter, name, data, 'data', action_if_exists, None, additional_data)
         return result
 
     def add_adapterdata_to_entity(self, entity: EntityType, identity_by_adapter, data,
-                                  action_if_exists="replace", client_used=None, additional_data=None) -> List[dict]:
+                                  action_if_exists='replace', client_used=None, additional_data=None) -> List[dict]:
         """
-        A shortcut to __tag with type "adapterdata"
+        A shortcut to __tag with type 'adapterdata'
         :return: List of affected entities
         """
         if additional_data is None:
             additional_data = {}
-        result = self._tag(entity, identity_by_adapter, self.plugin_unique_name, data, "adapterdata",
+        result = self._tag(entity, identity_by_adapter, self.plugin_unique_name, data, 'adapterdata',
                            action_if_exists, client_used, additional_data)
         for key in data:
             self.__existing_fields[entity].add(key)
         return result
 
-    @add_rule("update_config", methods=['POST'], should_authenticate=False)
+    @add_rule('update_config', methods=['POST'], should_authenticate=False)
     def update_config(self):
         return self._update_config_inner()
 
@@ -2511,13 +2547,12 @@ class PluginBase(Configurable, Feature):
         """
         hook that is called when global settings are updated
         """
-        pass
 
     def _update_config_inner(self):
         self.renew_config_from_db()
         self.__renew_global_settings_from_db()
         self._global_config_updated()
-        return ""
+        return ''
 
     def create_jira_ticket(self, porject_key, summary, description, issue_type):
         jira_settings = self._jira_settings
@@ -2552,7 +2587,7 @@ class PluginBase(Configurable, Feature):
     def send_syslog_message(self, message, log_level):
         syslog_settings = self._syslog_settings
         if syslog_settings['enabled'] is True:
-            syslog_logger = logging.getLogger("axonius.syslog")
+            syslog_logger = logging.getLogger('axonius.syslog')
             # Starting the messages with the tag Axonius
             getattr(syslog_logger, log_level)(message)
 
@@ -2608,7 +2643,8 @@ class PluginBase(Configurable, Feature):
         return self.get_selected_ids(self._entity_db_map[entity_type], entities_selection,
                                      mongo_filter, 'internal_axon_id')
 
-    def get_selected_ids(self, mongo_collection, entities_selection: dict, mongo_filter: dict, id_field='_id'):
+    @staticmethod
+    def get_selected_ids(mongo_collection, entities_selection: dict, mongo_filter: dict, id_field='_id'):
         """
 
         :param id_field: the field of the relevant id
@@ -2665,10 +2701,13 @@ class PluginBase(Configurable, Feature):
     # Adding or changing a settings requires a full restart of the system
     # and making sure you don't break a setting somebody else uses.
 
+    # pylint: disable=too-many-branches
+    # pylint: disable=too-many-statements
     def __renew_global_settings_from_db(self):
         config = self._get_db_connection()[CORE_UNIQUE_NAME][CONFIGURABLE_CONFIGS_COLLECTION].find_one(
             {'config_name': CORE_CONFIG_NAME})['config']
-        logger.info(f"Loading global config: {config}")
+        logger.info(f'Loading global config: {config}')
+        # pylint: disable=invalid-name
         self._email_settings = config['email_settings']
         self._https_logs_settings = config['https_log_settings']
         self._notify_on_adapters = config[NOTIFICATIONS_SETTINGS].get(NOTIFY_ADAPTERS_FETCH)
@@ -2679,6 +2718,7 @@ class PluginBase(Configurable, Feature):
         self._correlate_ad_sccm = config[CORRELATION_SETTINGS].get(CORRELATE_AD_SCCM, True)
         self._jira_settings = config['jira_settings']
         self._proxy_settings = config[PROXY_SETTINGS]
+        # enable: disable=invalid-name
 
         self._aggregation_max_workers = None
         try:
@@ -2748,7 +2788,8 @@ class PluginBase(Configurable, Feature):
 
         else:
             pass
-            # TODO: Restore default SSL keys, for now we will just continue using them
+    # pylint: enable=too-many-branches
+    # pylint: enable=too-many-statements
 
     def __create_syslog_handler(self, syslog_settings: dict):
         """
@@ -2757,8 +2798,8 @@ class PluginBase(Configurable, Feature):
         try:
             # No syslog handler defined yet or settings changed.
             # We should replace the current handler with a new one.
-            logger.info("Initializing new handler to syslog logger (deleting old if exist)")
-            syslog_logger = logging.getLogger("axonius.syslog")
+            logger.info('Initializing new handler to syslog logger (deleting old if exist)')
+            syslog_logger = logging.getLogger('axonius.syslog')
             syslog_logger.handlers = []  # Removing all previous handlers
             # Making a new handler with most up to date settings
             use_ssl = SSLState[syslog_settings['use_ssl']]
@@ -2775,10 +2816,11 @@ class PluginBase(Configurable, Feature):
                                                   facility=logging.handlers.SysLogHandler.LOG_DAEMON,
                                                   ssl_kwargs=ssl_kwargs)
             else:
-                syslog_handler = logging.handlers.SysLogHandler(address=(syslog_settings['syslogHost'],
-                                                                         syslog_settings.get('syslogPort',
-                                                                                             logging.handlers.SYSLOG_UDP_PORT)),
-                                                                facility=logging.handlers.SysLogHandler.LOG_DAEMON)
+                syslog_handler = logging.handlers.SysLogHandler(
+                    address=(syslog_settings['syslogHost'],
+                             syslog_settings.get('syslogPort',
+                                                 logging.handlers.SYSLOG_UDP_PORT)),
+                    facility=logging.handlers.SysLogHandler.LOG_DAEMON)
             syslog_handler.setLevel(logging.INFO)
             syslog_logger.addHandler(syslog_handler)
         except Exception:
@@ -2800,7 +2842,7 @@ class PluginBase(Configurable, Feature):
     @staticmethod
     def global_settings_schema():
         return {
-            "items": [
+            'items': [
                 {
                     'items': [
                         {
@@ -2848,10 +2890,10 @@ class PluginBase(Configurable, Feature):
                     'required': ['proxy_addr', 'proxy_port'],
                     'items': [
                         {
-                            "name": "enabled",
-                            "title": "Proxy Enabled",
-                            "type": "bool",
-                            "required": True
+                            'name': 'enabled',
+                            'title': 'Proxy Enabled',
+                            'type': 'bool',
+                            'required': True
                         },
                         {
                             'name': PROXY_ADDR,
@@ -2882,33 +2924,33 @@ class PluginBase(Configurable, Feature):
                     ]
                 },
                 {
-                    "items": [
+                    'items': [
                         {
-                            "name": "enabled",
-                            "title": "Send emails",
-                            "type": "bool"
+                            'name': 'enabled',
+                            'title': 'Send emails',
+                            'type': 'bool'
                         },
                         {
-                            "name": "smtpHost",
-                            "title": "Email Host",
-                            "type": "string"
+                            'name': 'smtpHost',
+                            'title': 'Email Host',
+                            'type': 'string'
                         },
                         {
-                            "name": "smtpPort",
-                            "title": "Port",
-                            "type": "integer",
-                            "format": "port"
+                            'name': 'smtpPort',
+                            'title': 'Port',
+                            'type': 'integer',
+                            'format': 'port'
                         },
                         {
-                            "name": "smtpUser",
-                            "title": "User Name",
-                            "type": "string"
+                            'name': 'smtpUser',
+                            'title': 'User Name',
+                            'type': 'string'
                         },
                         {
-                            "name": "smtpPassword",
-                            "title": "Password",
-                            "type": "string",
-                            "format": "password"
+                            'name': 'smtpPassword',
+                            'title': 'Password',
+                            'type': 'string',
+                            'format': 'password'
                         },
                         *COMMON_SSL_CONFIG_SCHEMA,
                         {
@@ -2917,57 +2959,57 @@ class PluginBase(Configurable, Feature):
                             'type': 'string'
                         }
                     ],
-                    "name": "email_settings",
-                    "title": "Email Settings",
-                    "type": "array",
-                    "required": ["smtpHost", "smtpPort"]
+                    'name': 'email_settings',
+                    'title': 'Email Settings',
+                    'type': 'array',
+                    'required': ['smtpHost', 'smtpPort']
                 },
                 {
-                    "items": [
+                    'items': [
                         {
-                            "name": "enabled",
-                            "title": "Use syslog",
-                            "type": "bool"
+                            'name': 'enabled',
+                            'title': 'Use syslog',
+                            'type': 'bool'
                         },
                         {
-                            "name": "syslogHost",
-                            "title": "Syslog Host",
-                            "type": "string"
+                            'name': 'syslogHost',
+                            'title': 'Syslog Host',
+                            'type': 'string'
                         },
                         {
-                            "name": "syslogPort",
-                            "title": "Port",
-                            "type": "integer",
-                            "format": "port"
+                            'name': 'syslogPort',
+                            'title': 'Port',
+                            'type': 'integer',
+                            'format': 'port'
                         },
                         *COMMON_SSL_CONFIG_SCHEMA
                     ],
-                    "name": "syslog_settings",
-                    "title": "Syslog Settings",
-                    "type": "array",
-                    "required": ["syslogHost"]
+                    'name': 'syslog_settings',
+                    'title': 'Syslog Settings',
+                    'type': 'array',
+                    'required': ['syslogHost']
                 },
                 {
                     'https_log_settings': {
-                        "enabled": False,
+                        'enabled': False,
                         'https_log_server': None
                     },
-                    "items": [
+                    'items': [
                         {
-                            "name": "enabled",
-                            "title": "Use HTTPS logs",
-                            "type": "bool"
+                            'name': 'enabled',
+                            'title': 'Use HTTPS logs',
+                            'type': 'bool'
                         },
                         {
-                            "name": "https_log_server",
-                            "title": "HTTPS Logs Host",
-                            "type": "string"
+                            'name': 'https_log_server',
+                            'title': 'HTTPS Logs Host',
+                            'type': 'string'
                         },
                         {
-                            "name": "https_log_port",
-                            "title": "Port",
-                            "type": "integer",
-                            "format": "port"
+                            'name': 'https_log_port',
+                            'title': 'Port',
+                            'type': 'integer',
+                            'format': 'port'
                         },
                         {
                             'name': 'https_proxy',
@@ -2975,10 +3017,10 @@ class PluginBase(Configurable, Feature):
                             'type': 'string'
                         }
                     ],
-                    "name": "https_log_settings",
-                    "title": "HTTPS Logs Settings",
-                    "type": "array",
-                    "required": ["https_log_server"]
+                    'name': 'https_log_settings',
+                    'title': 'HTTPS Logs Settings',
+                    'type': 'array',
+                    'required': ['https_log_server']
                 },
                 {
                     'type': 'array',
@@ -2988,39 +3030,39 @@ class PluginBase(Configurable, Feature):
                                  'username', 'password', 'verify_ssl'],
                     'items': [
                         {
-                            "name": "enabled",
-                            "title": "Use Jira",
-                            "type": "bool"
+                            'name': 'enabled',
+                            'title': 'Use Jira',
+                            'type': 'bool'
                         },
                         {
-                            "name": "domain",
-                            "title": "Jira Domain",
-                            "type": "string"
+                            'name': 'domain',
+                            'title': 'Jira Domain',
+                            'type': 'string'
                         },
                         {
-                            "name": "username",
-                            "title": "User Name",
-                            "type": "string"
+                            'name': 'username',
+                            'title': 'User Name',
+                            'type': 'string'
                         },
                         {
-                            "name": "password",
-                            "title": "Password",
-                            "type": "string",
-                            "format": "password"
+                            'name': 'password',
+                            'title': 'Password',
+                            'type': 'string',
+                            'format': 'password'
                         },
                         {
-                            "name": "verify_ssl",
-                            "title": "Verify SSL",
-                            "type": "bool"
+                            'name': 'verify_ssl',
+                            'title': 'Verify SSL',
+                            'type': 'bool'
                         }
                     ],
                 },
                 {
-                    "items": [
+                    'items': [
                         {
-                            "name": NOTIFY_ADAPTERS_FETCH,
-                            "title": "Notify On Adapters Fetch",
-                            "type": "bool"
+                            'name': NOTIFY_ADAPTERS_FETCH,
+                            'title': 'Notify On Adapters Fetch',
+                            'type': 'bool'
                         },
                         {
                             'name': ADAPTERS_ERRORS_MAIL_ADDRESS,
@@ -3028,48 +3070,49 @@ class PluginBase(Configurable, Feature):
                             'type': 'string'
                         }
                     ],
-                    "name": NOTIFICATIONS_SETTINGS,
-                    "title": "Notifications Settings",
-                    "type": "array",
-                    "required": [NOTIFY_ADAPTERS_FETCH]
+                    'name': NOTIFICATIONS_SETTINGS,
+                    'title': 'Notifications Settings',
+                    'type': 'array',
+                    'required': [NOTIFY_ADAPTERS_FETCH]
                 },
                 {
-                    "items": [
+                    'items': [
                         {
-                            "name": CORRELATE_BY_EMAIL_PREFIX,
-                            "title": "Correlate Users by Email Prefix",
-                            "type": "bool"
+                            'name': CORRELATE_BY_EMAIL_PREFIX,
+                            'title': 'Correlate Users by Email Prefix',
+                            'type': 'bool'
                         },
                         {
                             'name': CORRELATE_AD_SCCM,
-                            'title': 'Correlate Microsoft Active Directory (AD) and Microsoft SCCM data based on Distinguished Names',
+                            'title': 'Correlate Microsoft Active Directory (AD) and '
+                                     'Microsoft SCCM data based on Distinguished Names',
                             'type': 'bool'
                         }
                     ],
-                    "name": CORRELATION_SETTINGS,
-                    "title": "Correlation Settings",
-                    "type": "array",
-                    "required": [CORRELATE_BY_EMAIL_PREFIX, CORRELATE_AD_SCCM]
+                    'name': CORRELATION_SETTINGS,
+                    'title': 'Correlation Settings',
+                    'type': 'array',
+                    'required': [CORRELATE_BY_EMAIL_PREFIX, CORRELATE_AD_SCCM]
                 },
                 {
-                    "items": [
+                    'items': [
                         {
                             'name': FETCH_EMPTY_VENDOR_SOFTWARE_VULNERABILITES,
                             'title': 'Fetch software vulnerabilities even when the vendor name is unknown',
                             'type': 'bool'
                         }
                     ],
-                    "name": STATIC_ANALYSIS_SETTINGS,
-                    "title": "Static Analysis Settings",
-                    "type": "array",
-                    "required": [FETCH_EMPTY_VENDOR_SOFTWARE_VULNERABILITES]
+                    'name': STATIC_ANALYSIS_SETTINGS,
+                    'title': 'Static Analysis Settings',
+                    'type': 'array',
+                    'required': [FETCH_EMPTY_VENDOR_SOFTWARE_VULNERABILITES]
                 },
                 {
-                    "items": [
+                    'items': [
                         {
-                            "name": MAX_WORKERS,
-                            "title": "Maximum Adapters to Execute Asynchronously",
-                            "type": "integer",
+                            'name': MAX_WORKERS,
+                            'title': 'Maximum Adapters to Execute Asynchronously',
+                            'type': 'integer',
                         },
                         {
                             'name': SOCKET_READ_TIMEOUT,
@@ -3077,10 +3120,10 @@ class PluginBase(Configurable, Feature):
                             'type': 'integer'
                         }
                     ],
-                    "name": AGGREGATION_SETTINGS,
-                    "title": "Aggregation Settings",
-                    "type": "array",
-                    "required": []
+                    'name': AGGREGATION_SETTINGS,
+                    'title': 'Aggregation Settings',
+                    'type': 'array',
+                    'required': []
                 },
             ],
             'pretty_name': 'Global Configuration',
@@ -3097,19 +3140,19 @@ class PluginBase(Configurable, Feature):
                 'password': None,
                 'verify_ssl': False
             },
-            "email_settings": {
-                "enabled": False,
-                "smtpHost": None,
-                "smtpPort": None,
-                "smtpUser": None,
-                "smtpPassword": None,
+            'email_settings': {
+                'enabled': False,
+                'smtpHost': None,
+                'smtpPort': None,
+                'smtpUser': None,
+                'smtpPassword': None,
                 **COMMON_SSL_CONFIG_SCHEMA_DEFAULTS,
                 'sender_address': None
             },
-            "syslog_settings": {
-                "enabled": False,
-                "syslogHost": None,
-                "syslogPort": logging.handlers.SYSLOG_UDP_PORT,
+            'syslog_settings': {
+                'enabled': False,
+                'syslogHost': None,
+                'syslogPort': logging.handlers.SYSLOG_UDP_PORT,
                 **COMMON_SSL_CONFIG_SCHEMA_DEFAULTS
             },
             'global_ssl': {
@@ -3122,7 +3165,7 @@ class PluginBase(Configurable, Feature):
                 'ca_files': []
             },
             'https_log_settings': {
-                "enabled": False,
+                'enabled': False,
                 'https_log_server': None,
                 'https_log_port': 443,
                 'https_proxy': None

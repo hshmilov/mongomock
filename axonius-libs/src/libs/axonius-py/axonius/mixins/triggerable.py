@@ -143,7 +143,9 @@ class Triggerable(Feature, ABC):
         self.__prioritized_state: Set[str] = set()
 
         # Triggerable will log the state (Running, Completed, Failed) of every job it has been given
+        # pylint: disable=no-member
         self.__triggerable_db = self._get_collection('triggerable_history')
+        # pylint: enable=no-member
         self.__triggerable_db.create_index([('job_completed_state', pymongo.ASCENDING)], background=True)
         self.__triggerable_db.create_index([('job_name', pymongo.ASCENDING)], background=True)
         self.__fix_db_for_pending()
@@ -234,6 +236,7 @@ class Triggerable(Feature, ABC):
         else:
             timeout = None
 
+        # pylint: disable=no-member
         message = f'Triggered {job_name} ' + ('blocking' if blocking else 'unblocked') + ' with ' + \
                   ('prioritized' if priority else 'unprioritized') + f' from {self.get_caller_plugin_name()}' + \
                   f'with timeout {timeout}'
@@ -245,6 +248,7 @@ class Triggerable(Feature, ABC):
                             self.get_request_data_as_object(prefer_none=True),
                             timeout, reschedulable)
         return normalize_triggerable_request_result(res)
+        # pylint: enable=no-member
 
     @add_rule('wait/<job_name>', methods=['GET'])
     def wait_for_job(self, job_name):
@@ -258,7 +262,9 @@ class Triggerable(Feature, ABC):
         else:
             timeout = None
 
+        # pylint: disable=no-member
         logger.debug(f'Waiting for {job_name} from {self.get_caller_plugin_name()}, timeout = {timeout}')
+        # pylint: enable=no-member
         job_state = self.__state[job_name]
 
         promise = job_state.promise
@@ -395,12 +401,14 @@ class Triggerable(Feature, ABC):
 
     def _trigger(self, job_name='execute', blocking=True, priority=False, post_json=None, timeout=None,
                  reschedulable: bool = True):
+        # pylint: disable=no-member
         state = StoredJobState(job_name=job_name,
                                blocking=blocking,
                                priority=priority,
                                post_json=post_json,
                                reschedulable=reschedulable,
                                caller_name=self.get_caller_plugin_name())
+        # pylint: enable=no-member
 
         if priority:
             if blocking:

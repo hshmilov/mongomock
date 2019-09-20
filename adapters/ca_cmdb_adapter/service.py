@@ -1,3 +1,4 @@
+# pylint: disable=import-error
 import logging
 import xml.etree.ElementTree as ET
 from zeep import Client

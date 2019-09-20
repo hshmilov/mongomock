@@ -14,7 +14,7 @@ from static_analysis.nvd_nist.nvd_update import (ARTIFACT_FOLDER,
 from static_analysis.service import StaticAnalysisService
 from static_analysis.tests import consts
 
-# pylint: disable=protected-access, redefined-outer-name
+# pylint: disable=protected-access, redefined-outer-name, no-member
 @pytest.fixture(scope='module')
 def nvd_searcher():
     print('\nSetting up NVD searcher')

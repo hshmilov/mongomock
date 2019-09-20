@@ -9,12 +9,14 @@ from ui_tests.tests.ui_test_base import TestBase
 def _get_peer_ssl(address, verify):
     # pylint: disable=W0212
     # pylint: disable=C0103
+    # pylint: disable=no-member
     # Getting the peer ssl cert isn't trivial
     # https://stackoverflow.com/questions/16903528/how-to-get-response-ssl-certificate-from-requests-in-python
     HTTPResponse = requests.packages.urllib3.response.HTTPResponse
     orig_HTTPResponse__init__ = HTTPResponse.__init__
     HTTPAdapter = requests.adapters.HTTPAdapter
     orig_HTTPAdapter_build_response = HTTPAdapter.build_response
+    # pylint: enable=no-member
 
     try:
         def new_HTTPResponse__init__(self, *args, **kwargs):

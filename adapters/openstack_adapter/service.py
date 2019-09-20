@@ -1,3 +1,4 @@
+# pylint: disable=import-error
 import logging
 logger = logging.getLogger(f'axonius.{__name__}')
 from axonius.adapter_base import AdapterBase, AdapterProperty

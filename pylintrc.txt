@@ -39,17 +39,29 @@ extension-pkg-whitelist=lxml
 # can either give multiple identifier separated by comma (,) or put this option
 # multiple time (only on the command line, not in the configuration file where
 # it should appear only once).
-disable=E1103,W0141,W0311,W0312,W0612,W0613,W0614,R0901,R0903,R0904,C0111,C0322,C0323,C0324,F0401,W0201,C1001,C1801,W1203,assign-to-new-keyword,no-init
+disable=W0141,W0311,W0312,W0612,W0613,W0614,R0901,R0903,R0904,C0111,C0322,C0323,C0324,W0201,C1001,C1801,W1203,assign-to-new-keyword,no-init
 
-# E1103: %s %r has no %r member. Caused probably by wxPython.
+# W0141: Used builtin function %r
+# W0311: Bad indentation. Found %s %s, expected %s
+# W0312: Found indentation with %ss instead of %ss
+         #
+         # Found indentation with tabs instead of spaces
+         # Found indentation with spaces instead of tabs
+# W0612: Unused variable
 # W0613: unused arg -> solve somewhere here using event
-# C0103: Invalid %s name %s. Names not defined.
+# W0614: Unused wildcard import
+# R0901: Too many ancestors (%s/%s)
+# R0903: Too few public methods (%s/%s)
+# R0904: Too many public methods (%s/%s)
+# C0111: Missing %s docstring
+# C0322: Old: Operator not preceded by a space
+# C0323: Old: Operator not followed by a space
+# C0324: Old: Comma not followed by a space
 # W0201: Attribute %r defined outside __init__
-# W0622: Redefining built-in %r: needs complex solution
-# E1101: %s %r has no %r member: why?
-# R0201: Method could be a function
+# C1001: Old-style class defined.
+# C1801: Do not use len(SEQUENCE) as condition value
+# W1203: Use % formatting in logging functions and pass the % parameters as arguments
 # R0903: Class has too few public methods
-# F0401: Unable to import %s
 
 
 [REPORTS]
@@ -151,12 +163,14 @@ ignore-mixin-members=yes
 
 # List of classes names for which member attributes should not be checked
 # (useful for classes with attributes dynamically set).
-ignored-classes=SQLObject,pyodbc
+# Resource - is for GCE
+# AbstractSnmpClient - is schwartzcode
+ignored-classes=SQLObject,pyodbc,ListField,Resource,AbstractSnmpClient,CiscoSnmpClient,CiscoSnmpV3Client,AbstractCiscoClient,pytest
 
 # List of members which are set dynamically and missed by pylint inference
 # system, and so shouldn't trigger E0201 when accessed. Python regular
 # expressions are accepted.
-generated-members=REQUEST,acl_users,aq_parent
+generated-members=REQUEST,acl_users,aq_parent,clean_cache,clear_cache,update_cache,session.sid,urllib3
 
 
 [FORMAT]

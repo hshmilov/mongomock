@@ -4,11 +4,11 @@ from pymongo.database import Database
 from axonius.consts.plugin_consts import GENERAL_INFO_PLUGIN_NAME
 from services.plugin_service import PluginService
 from services.simple_fixture import initialize_fixture
-from services.triggerable_service import TriggerableService
+from services.triggerable_service import TriggerableServiceMixin
 from services.updatable_service import UpdatablePluginMixin
 
 
-class GeneralInfoService(PluginService, TriggerableService, UpdatablePluginMixin):
+class GeneralInfoService(PluginService, TriggerableServiceMixin, UpdatablePluginMixin):
     def __init__(self):
         super().__init__('general-info')
 

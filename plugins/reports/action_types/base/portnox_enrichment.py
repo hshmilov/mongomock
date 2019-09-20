@@ -95,4 +95,4 @@ class PortnoxEnrichment(ActionTypeBase):
             return self.__run()
         except Exception as e:
             logger.exception('Error while running Portnox Enrichment')
-            return self._Portnox_fail(e)
+            return self._portnox_fail(e)
