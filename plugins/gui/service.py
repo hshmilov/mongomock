@@ -5264,7 +5264,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
             return jsonify({Signup.SignupField: bool(signup) or has_customer_login_happened()})
 
         # POST from here
-        if signup:
+        if signup or has_customer_login_happened():
             return return_error('Signup already completed', 400)
 
         signup_data = self.get_request_data_as_object() or {}
