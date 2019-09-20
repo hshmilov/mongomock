@@ -200,10 +200,10 @@ class BitsightAdapter(ScannerAdapterBase):
     # pylint: disable=too-many-branches, too-many-statements, too-many-locals, too-many-nested-blocks
     def _parse_raw_data(self, devices_raw_data):
         ips_observations_dict = dict()
-        cidr_csv_data = None
+        cidr_csv_data = []
         for device_raw, data_type in devices_raw_data:
             if data_type == 'cidr':
-                cidr_csv_data = list(device_raw)
+                cidr_csv_data = list(device_raw) if device_raw else []
                 continue
             try:
                 observation_value = self._create_observation(device_raw)
