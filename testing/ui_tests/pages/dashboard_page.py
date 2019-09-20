@@ -21,7 +21,7 @@ class DashboardPage(Page):
     UNCOVERED_PIE_SLICE_CSS = 'svg > g.slice-0 > text.scaling'
     COVERED_PIE_SLICE_CSS = 'svg > g.slice-1 > text.scaling'
     INTERSECTION_PIE_INTERSECTION_SLICE_CSS = 'svg > g.slice-2 > text'
-    SYMMETRIC_DIFFERENCE_FROM_BASE_QUERY_SLICE_CSS = 'svg > g.slice-0 > text'
+    SYMMETRIC_DIFFERENCE_FROM_BASE_QUERY_SLICE_CSS = 'svg > g.slice-0'
     SYMMETRIC_DIFFERENCE_FROM_FIRST_QUERY_SLICE_CSS = 'svg > g.slice-1 > text'
     SYMMETRIC_DIFFERENCE_FROM_SECOND_QUERY_SLICE_CSS = 'svg > g.slice-3 > text'
     NEW_CARD_WIZARD_CSS = '.x-tab.active .x-card.chart-new'
