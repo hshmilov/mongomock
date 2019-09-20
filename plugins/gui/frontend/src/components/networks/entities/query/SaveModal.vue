@@ -4,6 +4,7 @@
     approve-id="query_save_confirm"
     size="md"
     class="x-save-modal"
+    :disabled="!name"
     @close="close"
     @confirm="confirmSave"
     @enter="$emit('enter')"
