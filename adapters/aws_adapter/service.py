@@ -217,6 +217,9 @@ class AWSIAMAccessKey(SmartJsonClass):
     access_key_id = Field(str, 'ID')
     status = Field(str, 'Status', enum=['Active', 'Inactive'])
     create_date = Field(datetime.datetime, 'Creation Date')
+    last_used_time = Field(datetime.datetime, 'Last Used Time')
+    last_used_service = Field(str, 'Last Used Service Name')
+    last_used_region = Field(str, 'Last Used Region')
 
 
 class AWSIPRule(SmartJsonClass):
@@ -401,6 +404,11 @@ class AWSS3BucketACL(SmartJsonClass):
     grantee_permission = Field(str, 'Grantee Permission')
 
 
+class AWSMFADevice(SmartJsonClass):
+    serial_number = Field(str, 'Serial Number')
+    enable_date = Field(datetime.datetime, 'Enable Date')
+
+
 class AwsAdapter(AdapterBase, Configurable):
     class AWSAdapter:
         account_tag = Field(str, 'Account Tag')
@@ -413,12 +421,15 @@ class AwsAdapter(AdapterBase, Configurable):
         user_path = Field(str, 'User Path')
         user_arn = Field(str, 'User Arn')
         user_create_date = Field(datetime.datetime, 'User Create Date')
-        user_pass_last_used = Field(datetime.datetime, 'User Password Last User')
+        user_pass_last_used = Field(datetime.datetime, 'User Password Last Used')
         user_permission_boundary_arn = Field(str, 'User Permission Boundary Arn')
 
         user_attached_policies = ListField(AWSIAMPolicy, 'Policies')
         user_attached_keys = ListField(AWSIAMAccessKey, 'Access Keys')
         user_groups = ListField(str, 'Groups')
+
+        user_associated_mfa_devices = ListField(AWSMFADevice, 'Associated MFA Devices')
+        user_is_password_enabled = Field(bool, 'User Is Password Enabled')
 
     class MyDeviceAdapter(DeviceOrContainerAdapter, AWSAdapter):
         aws_availability_zone = Field(str, 'Availability Zone')
@@ -961,13 +972,40 @@ class AwsAdapter(AdapterBase, Configurable):
                         for page in get_paginated_marker_api(
                                 functools.partial(iam_client.list_access_keys, UserName=username)
                         ):
-                            access_keys.extend(page.get('AccessKeyMetadata') or [])
+                            for access_key_metadata in page.get('AccessKeyMetadata') or []:
+                                access_key_id = access_key_metadata.get('AccessKeyId')
+                                if access_key_id:
+                                    try:
+                                        response = iam_client.get_access_key_last_used(AccessKeyId=access_key_id)
+                                        access_key_metadata['AccessKeyLastUsed'] = response['AccessKeyLastUsed']
+                                    except Exception:
+                                        pass
+                                    access_keys.append(access_key_metadata)
 
                         user['access_keys'] = access_keys
                     except Exception:
                         if 'list_access_keys' not in error_logs_triggered:
                             logger.exception(f'Problem with list_access_keys')
                             error_logs_triggered.append('list_access_keys')
+
+                    try:
+                        response = iam_client.get_login_profile(UserName=username)
+                        # If there is no login profile, it means password is not assigned, only access keys.
+                        if response:
+                            user['user_is_password_enabled'] = True
+                    except Exception:
+                        pass
+
+                    try:
+                        user['mfa_devices'] = []
+                        for mfa_devices_page in get_paginated_marker_api(
+                                functools.partial(iam_client.list_mfa_devices, UserName=username)
+                        ):
+                            user['mfa_devices'].extend(mfa_devices_page.get('MFADevices') or [])
+                    except Exception:
+                        if 'list_mfa_devices' not in error_logs_triggered:
+                            logger.exception(f'Problem with list_mfa_devices')
+                            error_logs_triggered.append('list_mfa_devices')
 
                     users.append(user)
 
@@ -1856,6 +1894,7 @@ class AwsAdapter(AdapterBase, Configurable):
             user.user_arn = user_raw.get('Arn')
             user.user_create_date = parse_date(user_raw.get('CreateDate'))
             user.user_pass_last_used = parse_date(user_raw.get('PasswordLastUsed'))
+            user.user_is_password_enabled = user_raw.get('user_is_password_enabled') or False
             user.user_permission_boundary_arn = (
                 user_raw.get('PermissionsBoundary') or {}).get('PermissionsBoundaryArn')
 
@@ -1898,15 +1937,31 @@ class AwsAdapter(AdapterBase, Configurable):
                 access_keys = user_raw.get('access_keys') or []
                 for access_key_raw in access_keys:
                     access_key_status = access_key_raw.get('Status')
+                    access_key_last_used = access_key_raw.get('AccessKeyLastUsed') or {}
                     user.user_attached_keys.append(
                         AWSIAMAccessKey(
                             access_key_id=access_key_raw.get('AccessKeyId'),
                             status=access_key_status if access_key_status in ['Active', 'Inactive'] else None,
-                            create_date=parse_date(access_key_raw.get('CreateDate'))
+                            create_date=parse_date(access_key_raw.get('CreateDate')),
+                            last_used_time=parse_date(access_key_last_used.get('LastUsedDate')),
+                            last_used_service=access_key_last_used.get('ServiceName'),
+                            last_used_region=access_key_last_used.get('Region')
                         )
                     )
             except Exception:
                 logger.exception(f'Problem adding user access keys')
+
+            try:
+                associated_mfa_devices = user_raw.get('mfa_devices') or []
+                for associated_mfa_device_raw in associated_mfa_devices:
+                    user.user_associated_mfa_devices.append(
+                        AWSMFADevice(
+                            serial_number=associated_mfa_device_raw.get('SerialNumber'),
+                            enable_date=associated_mfa_device_raw.get('EnableDate')
+                        )
+                    )
+            except Exception:
+                logger.exception(f'Problem parsing mfa devices')
 
             user.set_raw(user_raw)
             yield user
