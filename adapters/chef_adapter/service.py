@@ -7,9 +7,11 @@ import pytz
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
+from axonius.consts.gui_consts import FeatureFlagsNames
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.fields import Field, ListField
 from axonius.utils.files import get_local_config_file
+from axonius.utils.datetime import parse_date
 from axonius.utils.parsing import format_mac, is_valid_ip
 from chef_adapter.connection import ChefConnection
 from chef_adapter.exceptions import ChefException
@@ -273,9 +275,19 @@ class ChefAdapter(AdapterBase):
                 axonius_features = device_raw_automatic.get('axonius_features', {})
                 if axonius_features:
                     features = axonius_features.get('data', {}) or {}
-                    for k, v in features.items():
-                        v = 'not-set' if not v else v
-                        device.set_dynamic_field(f'axonius_feature_{k}', str(v))
+                    for key, value in features.items():
+                        device.set_dynamic_field(f'axonius_feature_{key}', str(value))
+
+                        if FeatureFlagsNames.TrialEnd in key and value:
+                            try:
+                                as_date = parse_date(value)
+                                now_obj = pytz.utc.localize(datetime.datetime.utcnow())
+                                if as_date:
+                                    device.set_dynamic_field('axonius_trial_expires_in',
+                                                             (as_date - now_obj).days,
+                                                             int)
+                            except Exception as e:
+                                logger.error(f'Failed to parse axonius trial end {value}:{e}')
 
                     raw_copy = copy(device_raw)
                     raw_copy['normal'] = {}  # can contain sensitive data

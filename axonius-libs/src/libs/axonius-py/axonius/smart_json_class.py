@@ -177,11 +177,12 @@ class SmartJsonClass(metaclass=SmartJsonClassMetaclass):
 
         logger.info(f'Successfully declared dynamic field {field_name} - {str(field_value)}')
 
-    def set_dynamic_field(self, field_name, field_value):
+    def set_dynamic_field(self, field_name, field_value, field_type=None):
+        field_type = field_type or str
         field_name = normalize_var_name(field_name)
         capitalized = ' '.join([word.capitalize() for word in field_name.split(' ')])
         if not self.does_field_exist(field_name):
-            self.declare_new_field(field_name, Field(str, f'{capitalized}'))
+            self.declare_new_field(field_name, Field(field_type, f'{capitalized}'))
         self[field_name] = field_value
 
     def set_field_by_title(self, field_title: str, field_value) -> bool:
