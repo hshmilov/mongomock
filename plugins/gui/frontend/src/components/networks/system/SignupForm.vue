@@ -56,7 +56,8 @@
               name: 'contactEmail',
               title: 'Your Email',
               type: 'string',
-              format: 'email'
+              format: 'email',
+              errorMsg: 'Please enter a valid email address'
             },
             {
               name: 'userName',
@@ -86,6 +87,13 @@
         submitSignup: SUBMIT_SIGNUP, fetchExpired: FETCH_SYSTEM_EXPIRED
       }),
       onValidate(valid) {
+        const confirmPasswordValue = this.signupData.confirmNewPassword
+        if(this.signupData.newPassword !== confirmPasswordValue && !!confirmPasswordValue ) {
+          this.error = 'Passwords do not match'
+          this.valid = false
+          return
+        }
+        this.error = ''
         this.valid = valid
       },
       onSave () {
@@ -112,6 +120,9 @@
     }
     .subtitle {
       margin-bottom: 12px;
+    }
+    .x-button {
+      width: 100%;
     }
   }
 </style>

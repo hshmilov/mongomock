@@ -37,7 +37,7 @@ export default {
 		value(newValue, oldValue) {
 			if (newValue !== oldValue) {
 				this.data = newValue
-				this.validate()
+				this.validate(true)
 			}
 		}
 	},
@@ -51,9 +51,10 @@ export default {
 			this.error = ''
 			if (!silent && !this.valid) {
 				// Error is added if the data is invalid, unless silent is set to true.
-				this.error = `'${this.schema.title}' has an illegal value`
+				// added check if schema has custom error message
+				this.error = this.schema['errorMsg'] || `'${this.schema.title}' has an illegal value`
 			}
-			this.emitValidity()
+			this.emitValidity(silent)
 		},
 		focusout() {
 			this.validate(false)

@@ -771,3 +771,9 @@ class Page:
     def fill_enter_table_search(self, text):
         self.fill_text_field_by_css_selector(self.TABLE_SEARCH_INPUT, text)
         self.key_down_enter(self.driver.find_element_by_css_selector(self.TABLE_SEARCH_INPUT))
+
+    def focus_on_element(self, elem_id):
+        return self.driver.execute_script(f'document.querySelector("#{elem_id}").focus()')
+
+    def blur_on_element(self, elem_id):
+        return self.driver.execute_script(f'document.querySelector("#{elem_id}").blur()')
