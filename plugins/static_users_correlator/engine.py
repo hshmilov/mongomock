@@ -20,6 +20,12 @@ def get_ad_upn(adapter_data):
     return None
 
 
+def get_aws_username(adapter_data):
+    if adapter_data.get('plugin_name') == 'aws_adapter' and get_username(adapter_data):
+        return get_username(adapter_data)
+    return None
+
+
 def get_username(adapter_data):
     username = adapter_data['data'].get('username')
     if username and username not in BAD_USER_NAMES:
@@ -75,6 +81,24 @@ def get_ad_upn_mail(adapter_data):
     if email:
         return email
     return None
+
+
+def get_aws_username_mail(adapter_data):
+    aws_username = get_aws_username(adapter_data)
+    if aws_username:
+        return aws_username
+    email = adapter_data.get(NORMALIZED_MAIL)
+    if email:
+        return email
+    return None
+
+
+def compare_aws_username_mail(adapter_data1, adapter_data2):
+    aws_username_1_mail = get_aws_username_mail(adapter_data1)
+    aws_username_2_mail = get_aws_username_mail(adapter_data2)
+    if aws_username_1_mail and aws_username_2_mail and aws_username_1_mail == aws_username_2_mail:
+        return True
+    return False
 
 
 def compare_ad_display_name(adapter_data1, adapter_data2):
@@ -200,6 +224,17 @@ class StaticUserCorrelatorEngine(CorrelatorEngineBase):
                                           {'Reason': 'They have the same ad upn mail'},
                                           CorrelationReason.StaticAnalysis)
 
+    def _correlate_aws_username_mail(self, entities):
+        logger.info('Starting to correlate on aws username mail')
+        filtered_adapters_list = filter(get_aws_username_mail, entities)
+        yield from self._bucket_correlate(list(filtered_adapters_list),
+                                          [get_aws_username_mail],
+                                          [compare_aws_username_mail],
+                                          [],
+                                          [],
+                                          {'Reason': 'They have the same ad upn mail'},
+                                          CorrelationReason.StaticAnalysis)
+
     def _correlate_email_prefix(self, entities):
         logger.info('Starting to correlate on mail prefix')
         mails_indexed = {}
@@ -269,5 +304,6 @@ class StaticUserCorrelatorEngine(CorrelatorEngineBase):
         yield from self._correlate_ad_upn_mail(normalize_adapter_users(entities))
         yield from self._correlate_ad_display_name(normalize_adapter_users(entities))
         yield from self._correlate_ad_display_name_username(normalize_adapter_users(entities))
+        yield from self._correlate_aws_username_mail(normalize_adapter_users(entities))
         if self._correlation_config and self._correlation_config.get('email_prefix_correlation') is True:
             yield from self._correlate_email_prefix(normalize_adapter_users(entities))
