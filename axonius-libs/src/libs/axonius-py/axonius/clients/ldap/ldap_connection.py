@@ -84,10 +84,18 @@ def connect_to_server(
         )
     else:
         ldap_server = ldap3.Server(server_address, connect_timeout=ldap_connection_timeout, port=port)
-    ldap_connection = ldap3.Connection(
-        ldap_server, user=user_name, password=user_password,
-        raise_exceptions=True, receive_timeout=ldap_recieve_timeout)
-    ldap_connection.bind()
+
+    try:
+        ldap_connection = ldap3.Connection(
+            ldap_server, user=user_name, password=user_password,
+            raise_exceptions=True, receive_timeout=ldap_recieve_timeout)
+        ldap_connection.bind()
+    except Exception:
+        # Try NTLM authentication as well. Username must be in the format of domain\username
+        ldap_connection = ldap3.Connection(
+            ldap_server, user=user_name, password=user_password,
+            raise_exceptions=True, receive_timeout=ldap_recieve_timeout, authentication=ldap3.NTLM)
+        ldap_connection.bind()
     return ldap_connection
 
 
