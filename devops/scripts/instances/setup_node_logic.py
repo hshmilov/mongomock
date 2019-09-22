@@ -43,7 +43,6 @@ def change_instance_setup_user_pass():
         print(f'failed to read node_id from all of the running adapters')
         raise Exception('node_id not found')
 
-    print(f'sudo usermod --password $(openssl passwd -1 <password>) node_maker')
     print(f'Password len is {len(new_password)}')
     subprocess.check_call(f'sudo usermod --password $(openssl passwd -1 {new_password}) node_maker',
                           shell=True)
@@ -51,7 +50,6 @@ def change_instance_setup_user_pass():
 
 
 def setup_node(connection_string):
-    # Edit the /etc/sudoers to allow for longer sudo timeout
     master_ip, weave_pass, init_name = connection_string
     master_ip = master_ip.strip()
     weave_pass = weave_pass.strip()
