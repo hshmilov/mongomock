@@ -48,7 +48,7 @@
                             fontSize: 12
                         },
                         showColorCode: true,
-                        ignoreBounds: true,
+                        ignoreBounds: false,
                         isHtml: true
                     },
                     interpolateNulls: true
