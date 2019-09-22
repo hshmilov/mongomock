@@ -30,6 +30,7 @@ def get_weave_subnet_ip_range():
 def update_weave_connection_params(weave_encryption_key, master_ip):
     ENCRYPTION_KEY_HOST_PATH.write_text(weave_encryption_key)
     MASTER_ADDR_HOST_PATH.write_text(master_ip)
+    print('Done update weave connection params')
 
 
 def run_tunnler():
@@ -69,13 +70,17 @@ def run_proxy_socat():
 
 
 def connect_to_master(master_ip, weave_pass):
+    print('Connecting to master')
     subnet_ip_range = get_weave_subnet_ip_range()
     subprocess.check_call(shlex.split(f'weave reset --force'))
     subprocess.check_call(shlex.split(
         f'weave launch --dns-domain=axonius.local --ipalloc-range {subnet_ip_range} --password {weave_pass}'))
     subprocess.check_call(shlex.split(f'weave connect {master_ip}'))
+    print('Done weave connect')
     run_tunnler()
+    print('Done run tunnler')
     run_proxy_socat()
+    print('Done connecting to master')
 
 
 def get_encryption_key():

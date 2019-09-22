@@ -271,7 +271,7 @@ class CoreService(Triggerable, PluginBase, Configurable):
                 return return_error('Node is not connected.', 404)
 
             node_metadata = self._get_collection('nodes_metadata').find_one({'node_id': node_id})
-            if node_metadata is None or node_metadata.get(NODE_USER_PASSWORD) is None:
+            if node_metadata is None or not node_metadata.get(NODE_USER_PASSWORD):
                 password = generate_password(32)
                 self._set_node_metadata(node_id, NODE_USER_PASSWORD, password)
             else:
@@ -280,11 +280,11 @@ class CoreService(Triggerable, PluginBase, Configurable):
             return password
 
     def _set_node_metadata(self, node_id, key, value):
-        self._get_collection('nodes_metadata').find_one_and_update({NODE_ID: node_id}, {
+        self._get_collection('nodes_metadata').update_one({NODE_ID: node_id}, {
             '$set': {key: value}}, upsert=True)
 
     def _delete_node_name(self, node_name):
-        self._get_collection('nodes_metadata').find_one_and_delete({NODE_NAME: node_name})
+        self._get_collection('nodes_metadata').delete_one({NODE_NAME: node_name})
 
     def _set_node_name(self, node_id, node_name):
         self._set_node_metadata(node_id, NODE_NAME, node_name)

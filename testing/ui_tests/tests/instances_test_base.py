@@ -303,7 +303,8 @@ class TestInstancesBase(TestBase):
             data = b''
             try:
                 for _ in range(MAX_CHARS):
-                    received = ssh_chan.recv(1024)
+                    received = ssh_chan.recv(30)
+                    self.logger.info(f'Data read is: {received.decode("utf-8")}')
                     if not received:
                         raise RuntimeError('Connection Closed')
                     data += received

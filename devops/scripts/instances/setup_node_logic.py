@@ -15,38 +15,43 @@ from axonius.consts.system_consts import NODE_MARKER_PATH
 
 def shut_down_system():
     subprocess.check_call(['./axonius.sh', 'system', 'down', '--all'], cwd=CORTEX_PATH)
+    print('Done shut down system')
 
 
 def restart_all_adapters(init_name):
+    print('Restarting all adapters')
     command = shlex.split(ADAPTER_RESTART_COMMAND.format(init_name=init_name))
     subprocess.check_call(command, cwd=CORTEX_PATH)
+    print('Done restart all adapters')
 
 
 def change_instance_setup_user_pass():
     axonius_service = get_service()
     node_id = ''
-    for adapter_name, adapter in axonius_service.get_all_adapters():
+    for plugin_name, plugin in axonius_service.get_all_plugins():
         try:
-            adapter_service = adapter()
-            node_id = adapter_service.vol_conf.node_id
+            plugin_service = plugin()
+            node_id = plugin_service.vol_conf.node_id
             if node_id:
+                new_password, _, _ = \
+                    plugin_service.run_command_in_container(f'curl -kfsSL {PASSWORD_GET_URL}{node_id}')
                 break
         except Exception as e:
-            print(f'failed to read node_id from {adapter_name} {adapter} - {e}')
+            print(f'failed to read node_id from {plugin_name} {plugin} - {e}')
 
     if not node_id:
         print(f'failed to read node_id from all of the running adapters')
         raise Exception('node_id not found')
 
-    client = docker.from_env(environment={'DOCKER_HOST': 'unix:///var/run/weave/weave.sock'})
-    new_password = client.containers.run('appropriate/curl', auto_remove=True,
-                                         command=f'-kfsSL {PASSWORD_GET_URL}{node_id}').decode('utf-8')
-
+    print(f'sudo usermod --password $(openssl passwd -1 <password>) node_maker')
+    print(f'Password len is {len(new_password)}')
     subprocess.check_call(f'sudo usermod --password $(openssl passwd -1 {new_password}) node_maker',
                           shell=True)
+    print('done!')
 
 
 def setup_node(connection_string):
+    # Edit the /etc/sudoers to allow for longer sudo timeout
     master_ip, weave_pass, init_name = connection_string
     master_ip = master_ip.strip()
     weave_pass = weave_pass.strip()
