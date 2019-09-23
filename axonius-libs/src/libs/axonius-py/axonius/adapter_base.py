@@ -1326,7 +1326,7 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
                 },
                 {
                     'name': 'connect_client_timeout',
-                    'title': 'Adapter server connection timeout in seconds',
+                    'title': 'Adapter connection timeout in seconds',
                     'type': 'number',
                 },
                 {

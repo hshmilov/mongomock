@@ -35,7 +35,7 @@ class AdaptersPage(EntitiesPage):
     WARNING_MARKER_CSS = '.marker.indicator-bg-warning'
     RED_COLOR_ID = 'svgicon_symbol_error_b'
     GREEN_COLOR_ID = 'svgicon_symbol_success_b'
-    NEW_SERVER_BUTTON_ID = 'new_server'
+    NEW_CONNECTION_BUTTON_ID = 'new_connection'
     DATA_COLLECTION_TOASTER = 'Connection established. Data collection initiated...'
     TEXT_PROBLEM_CONNECTING_TRY_AGAIN = 'Problem connecting. Review error and try again.'
 
@@ -90,10 +90,10 @@ class AdaptersPage(EntitiesPage):
         self.click_button(self.TEST_CONNECTIVITY)
 
     def assert_new_server_button_is_disabled(self):
-        assert self.is_element_disabled_by_id(self.NEW_SERVER_BUTTON_ID)
+        assert self.is_element_disabled_by_id(self.NEW_CONNECTION_BUTTON_ID)
 
     def click_new_server(self):
-        self.click_button_by_id(self.NEW_SERVER_BUTTON_ID,
+        self.click_button_by_id(self.NEW_CONNECTION_BUTTON_ID,
                                 call_space=False,
                                 should_scroll_into_view=False,
                                 scroll_into_view_container=PAGE_BODY)
