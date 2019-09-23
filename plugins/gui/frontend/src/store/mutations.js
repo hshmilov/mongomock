@@ -292,8 +292,9 @@ export const updateDataCurrent = (state, payload) => {
 	if (payload.data) {
 		moduleState.data = { ...payload.data,
       advanced: payload.data.advanced.map(item => {
+	  	const itemData = Object.keys(item.data[0]).length > 0 ? item.data : []
         return {
-          data: item.data,
+          data: itemData,
           view: {
             page: 0, pageSize: 20,
             coloumnSizes: [], query: {
