@@ -263,7 +263,7 @@ export const auth = {
       return dispatch(REQUEST_API, {
         rule: `system/users/${payload.uuid}`,
         method: 'POST',
-        data: payload
+        data: payload.user
       })
     },
     [REMOVE_USER] ({ dispatch }, payload) {

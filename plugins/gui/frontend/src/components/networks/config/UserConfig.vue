@@ -120,7 +120,12 @@
       },
       performUserConfig () {
         if(this.editMode){
-          this.updateUser(this.userToConfig).then(response => {
+          let userToUpdate = {}
+          let updateFields = ['first_name', 'last_name', 'password']
+          updateFields.forEach(field =>{
+              userToUpdate[field] = this.userToConfig[field]
+          })
+          this.updateUser({uuid: this.userToConfig.uuid, user: userToUpdate}).then(response => {
             this.showToasterMessage({ message: response && response.status === 200 ? 'User updated.' : response.data.message })
             this.onClose()
           }).catch(error => this.$emit('toast', error.response.data.message))
