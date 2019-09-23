@@ -201,7 +201,7 @@ CUSTOMER_CONF = json.dumps({
 })
 
 
-@retry(stop_max_attempt_number=120, wait_fixed=1000 * 20)
+@retry(stop_max_attempt_number=180, wait_fixed=1000 * 20)
 def wait_for_booted_for_production(instance: BuildsInstance):
     print('Waiting for server to be booted for production...')
     test_ready_command = f'ls -al {BOOTED_FOR_PRODUCTION_MARKER_PATH.absolute().as_posix()}'

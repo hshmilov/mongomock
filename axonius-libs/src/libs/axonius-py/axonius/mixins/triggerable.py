@@ -348,7 +348,7 @@ class Triggerable(Feature, ABC):
             self.__prioritized_state.add(state.job_name)
             return self.__trigger_prioritized_impl(state, timeout)
         finally:
-            self.__prioritized_state.remove(state.job_name)
+            self.__prioritized_state.discard(state.job_name)
 
     def __trigger_prioritized_impl(self, state: StoredJobState, timeout: int = None):
         """
