@@ -228,6 +228,9 @@
         }
       },
       valueSchema (newSchema, oldSchema) {
+        if (!this.value) {
+          return
+        }
         if (!newSchema || !oldSchema || this.isParent) return
         if (!oldSchema.type && !oldSchema.format) return
         if (newSchema.type !== oldSchema.type || newSchema.format !== oldSchema.format) {
