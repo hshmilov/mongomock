@@ -3,8 +3,10 @@ import uuid
 
 import pytest
 from requests import HTTPError
+from retrying import retry
 
 from axonius.consts.gui_consts import FeatureFlagsNames
+from axonius.consts.plugin_consts import PLUGIN_NAME
 from test_helpers.device_helper import get_entity_axonius_dict_multiadapter
 from services.axonius_service import get_service
 from test_credentials.test_gui_credentials import DEFAULT_USER
@@ -355,31 +357,37 @@ def test_api_devices():
         test_get_specific_device()
 
 
-@pytest.mark.skip("Flaky 4668")
 def test_api_users():
+    # Retrying because it's impossible to atomically fetch multiple values from the system,
+    # thus it's impossible to make sure that the values must be the same
+    @retry(stop_max_attempt_number=3, wait_fixed=30)
     def test_get_all_users():
-        axonius_system = get_service()
-        gui_service = axonius_system.gui
+        try:
+            axonius_system = get_service()
+            gui_service = axonius_system.gui
 
-        for x in [4, 5, 6]:
-            # insert_device(get_entity_axonius_dict('GUI_TEST', str(x), GUI_TEST_PLUGIN, 'GUI_TEST_PLUGIN_2'))
-            axonius_system.insert_user(get_user_dict('GUI_TEST', str(x), GUI_TEST_PLUGIN, 'GUI_TEST_PLUGIN_2'))
+            for x in [4, 5, 6]:
+                axonius_system.insert_user(get_user_dict('GUI_TEST', str(x), GUI_TEST_PLUGIN, 'GUI_TEST_PLUGIN_2'))
 
-        users_response = gui_service.get_api_users(auth=API_TOKEN)
-        assert users_response.status_code == 200, f'Error in response. got response: {str(users_response)}, ' \
-                                                  f'{users_response.content}'
+            users_response = gui_service.get_api_users(auth=API_TOKEN)
+            assert users_response.status_code == 200, f'Error in response. got response: {str(users_response)}, ' \
+                                                      f'{users_response.content}'
 
-        gui_service.login_user(DEFAULT_USER)
-        users_count_response = gui_service.get_users_count()
-        assert users_count_response.status_code == 200, f'Error in response. Got: {str(users_count_response)}, ' \
-                                                        f'{users_count_response.content}'
+            gui_service.login_user(DEFAULT_USER)
+            users_count_response = gui_service.get_users_count()
+            assert users_count_response.status_code == 200, f'Error in response. Got: {str(users_count_response)}, ' \
+                                                            f'{users_count_response.content}'
 
-        assert isinstance(users_count_response.json(),
-                          int), f'Unexpected response type: {users_count_response.json()}'
+            assert isinstance(users_count_response.json(),
+                              int), f'Unexpected response type: {users_count_response.json()}'
 
-        assert users_count_response.json() == len(
-            users_response.json()['assets']), f'Error in device count. Got: {str(users_response.json())}, ' \
-                                              f'{users_count_response.json()}'
+            assert users_count_response.json() == len(
+                users_response.json()['assets']), f'Error in device count. Got: {str(users_response.json())}, ' \
+                                                  f'{users_count_response.json()}'
+        finally:
+            axonius_system.get_users_db().delete_many({
+                f'adapters.{PLUGIN_NAME}': GUI_TEST_PLUGIN
+            })
 
     def test_get_specific_user():
         axonius_system = get_service()
