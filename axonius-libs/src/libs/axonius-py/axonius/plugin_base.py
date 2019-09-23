@@ -1914,6 +1914,7 @@ class PluginBase(Configurable, Feature, ABC):
             # wanna see my 'something too large'?
             logger.warning(f'Got DocumentTooLarge with client.')
 
+    # pylint: disable=too-many-locals
     @mongo_retry()
     def __perform_tag(self, entity: EntityType, associated_adapters, name: str, data, tag_type: str, action_if_exists,
                       additional_data) -> List[dict]:
@@ -1936,7 +1937,10 @@ class PluginBase(Configurable, Feature, ABC):
         virtual_plugin_unique_name = additional_data[PLUGIN_UNIQUE_NAME]
         virtual_plugin_name = additional_data[PLUGIN_NAME]
 
-        additional_data['accurate_for_datetime'] = datetime.utcnow()
+        additional_data['accurate_for_datetime'] = datetime.now()
+        update_accurate_for_datetime = {
+            'accurate_for_datetime': datetime.now()
+        }
         with _entities_db.start_session() as db_session:
             entities_candidates_list = list(db_session.find({'$or': [
                 {
@@ -2017,7 +2021,8 @@ class PluginBase(Configurable, Feature, ABC):
                     }
                 }, {
                     '$set': {
-                        'tags.$': tag_data
+                        'tags.$': tag_data,
+                        **update_accurate_for_datetime
                     }
                 })
 
@@ -2041,7 +2046,8 @@ class PluginBase(Configurable, Feature, ABC):
                     }
                 }, {
                     '$set': {
-                        'tags.$.data': False
+                        'tags.$.data': False,
+                        **update_accurate_for_datetime
                     }
                 })
 
@@ -2065,6 +2071,7 @@ class PluginBase(Configurable, Feature, ABC):
                 result = db_session.update_one(
                     {'internal_axon_id': entities_candidate['internal_axon_id']},
                     {
+                        '$set': update_accurate_for_datetime,
                         '$addToSet': {
                             'tags': tag_data
                         }
@@ -2338,7 +2345,8 @@ class PluginBase(Configurable, Feature, ABC):
                              for assoc_adapter
                              in tag_from_old['associated_adapters'])]
         set_query = {
-            ADAPTERS_LIST_LENGTH: len(set(x[PLUGIN_NAME] for x in adapter_entities_left))
+            ADAPTERS_LIST_LENGTH: len(set(x[PLUGIN_NAME] for x in adapter_entities_left)),
+            'accurate_for_datetime': datetime.now()
         }
         if pull_those:
             pull_query = {

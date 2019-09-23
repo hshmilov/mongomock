@@ -148,7 +148,7 @@ class CoreService(Triggerable, PluginBase, Configurable):
         connection = self._get_db_connection()
         # this makes sure we're consistent on the version we assume and run on
         connection['admin'].command({
-            'setFeatureCompatibilityVersion': '4.0'
+            'setFeatureCompatibilityVersion': '4.2'
         })
 
         # this command sets mongo's query space to be larger default

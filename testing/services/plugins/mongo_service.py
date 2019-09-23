@@ -58,7 +58,7 @@ class MongoService(WeaveService):
 
     @property
     def image(self):
-        return 'mongo:4.0'
+        return 'mongo:4.2'
 
     @retry(stop_max_attempt_number=3, wait_fixed=5)
     def configure_replica_set(self):
@@ -142,7 +142,7 @@ class MongoService(WeaveService):
 
     def get_dockerfile(self, *args, **kwargs):
         return f"""
-    FROM mongo:4.0
+    FROM mongo:4.2
     
     COPY docker-entrypoint-initdb.d/* /docker-entrypoint-initdb.d/
     COPY mongod.conf /etc/mongod.conf
