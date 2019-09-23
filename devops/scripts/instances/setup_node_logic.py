@@ -35,6 +35,7 @@ def change_instance_setup_user_pass():
             if node_id:
                 new_password, _, _ = \
                     plugin_service.run_command_in_container(f'curl -kfsSL {PASSWORD_GET_URL}{node_id}')
+                new_password = new_password.decode('ascii')
                 break
         except Exception as e:
             print(f'failed to read node_id from {plugin_name} {plugin} - {e}')
@@ -43,7 +44,7 @@ def change_instance_setup_user_pass():
         print(f'failed to read node_id from all of the running adapters')
         raise Exception('node_id not found')
 
-    print(f'Password len is {len(new_password)}')
+    print(f'Password len is {len(new_password)}, "{new_password[:4]}..."')
     subprocess.check_call(f'sudo usermod --password $(openssl passwd -1 {new_password}) node_maker',
                           shell=True)
     print('done!')

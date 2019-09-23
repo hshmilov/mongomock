@@ -21,7 +21,6 @@ def wait_until(func,
     :type tolerated_exceptions_list: list
     :param error_message: The message that should be written in the TimeoutError when raised (For logging purposes).
     :type error_message: str
-    :param exception_expected: If you want to wait for a specific Exception to be raised by func.
     :return: The value returned by func.
     """
     start_time = time.time()
@@ -32,7 +31,7 @@ def wait_until(func,
             if not check_return_value or (check_return_value and return_value):
                 return return_value
         except Exception as e:
-            if tolerated_exceptions_list and any(isinstance(e, x) for x in tolerated_exceptions_list):
+            if tolerated_exceptions_list and isinstance(e, tuple(tolerated_exceptions_list)):
                 pass
             else:
                 raise

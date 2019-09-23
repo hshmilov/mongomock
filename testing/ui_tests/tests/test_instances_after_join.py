@@ -2,6 +2,7 @@ import subprocess
 import time
 
 import paramiko
+from retry.api import retry_call
 from selenium.common.exceptions import NoSuchElementException
 
 from axonius.utils.wait import wait_until, expect_specific_exception_to_be_raised
@@ -90,7 +91,8 @@ class TestInstancesAfterNodeJoin(TestInstancesBase):
         # caused because of the restart_system_on_boot because the master is derived
         # by test and not by export it is not subjected to a restart and the adapters_unique_name of it stay "_0".
         node_maker_password = self.instances_page.get_node_password(NODE_NAME)
-        self.connect_node_maker(self._instances[0], node_maker_password)
+        self.logger.info(f'Trying password len({len(node_maker_password)}): "{node_maker_password[:4]}..."')
+        retry_call(lambda: self.connect_node_maker(self._instances[0], node_maker_password), tries=5, delay=10)
 
     def check_correct_ip_is_shown_in_table(self):
         node_ip_from_table = self.instances_page.get_node_ip(NODE_NAME)
