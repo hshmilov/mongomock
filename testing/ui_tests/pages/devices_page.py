@@ -29,6 +29,7 @@ class DevicesPage(EntitiesPage):
     FIELD_SID_NAME = 'user_sid'
     FIELD_USERS_LAST_USE = 'Last Use Time'
     FIELD_USERS_LAST_USE_NAME = 'last_use_date'
+    FIELD_LAST_USED_USERS = 'Last Used Users'
     FIELD_USERS_LOCAL = 'Is Local'
     FIELD_USERS_LOCAL_NAME = 'is_local'
     FIELD_USERS_USERNAME = 'Users: Username'

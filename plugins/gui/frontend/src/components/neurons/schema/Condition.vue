@@ -165,7 +165,7 @@
       },
       valueSchema () {
         if (this.fieldSchema && this.fieldSchema.type === 'array'
-          && ['contains', 'equals', 'subnet', 'notInSubnet'].includes(this.compOp)) {
+          && ['contains', 'equals', 'subnet', 'notInSubnet', 'starts', 'ends'].includes(this.compOp)) {
           return this.fieldSchema.items
         }
         if (this.fieldSchema && this.fieldSchema.format && this.fieldSchema.format === 'date-time'

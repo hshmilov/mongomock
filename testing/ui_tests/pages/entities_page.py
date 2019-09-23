@@ -50,6 +50,7 @@ class EntitiesPage(Page):
     QUERY_COMP_SIZE_ABOVE = 'count >'
     QUERY_COMP_SIZE_BELOW = 'count <'
     QUERY_COMP_DAYS = 'days'
+    QUERY_COMP_STARTS = 'starts'
     QUERY_LOGIC_AND = 'and'
     QUERY_LOGIC_OR = 'or'
     OUTDATED_TOGGLE_CSS = 'div.md-switch.md-theme-default > div > div'

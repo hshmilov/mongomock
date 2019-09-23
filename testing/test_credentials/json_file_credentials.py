@@ -19,6 +19,7 @@ client_details = {
             "id": "cb_id1",
             "name": "CB 1",
             "hostname": "CB First",
+            "last_used_users": ["test 1", "test 2"],
             "network_interfaces": [{
                 "mac": "''' + DEVICE_MAC + '''",
                 "ips": ["''' + DEVICE_FIRST_IP + '''", "''' + DEVICE_SECOND_IP + '''"],
@@ -61,7 +62,8 @@ client_details = {
             "sensor_version": "0.4.1",
             "test_enforcement_change" : 5
         }],
-       "fields" : ["id", "network_interfaces", "av_status", "last_contact", "sensor_version", "name", "hostname", 
+       "fields" : ["id", "network_interfaces", "last_used_users", 
+                   "av_status", "last_contact", "sensor_version", "name", "hostname", 
                    "test_enforcement_change"],
        "additional_schema" : [
             {"name": "av_status", "title": "AvStatus", "type": "string"},

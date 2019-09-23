@@ -40,6 +40,23 @@ class TestDevicesQuery(TestBase):
         assert self.devices_page.get_query_field() == self.devices_page.ID_FIELD
         assert self.devices_page.get_query_comp_op() == self.devices_page.QUERY_COMP_EXISTS
 
+    def test_devices_query_wizard_list_field(self):
+        self.dashboard_page.switch_to_page()
+        self.base_page.run_discovery()
+        self.devices_page.switch_to_page()
+        self.devices_page.wait_for_table_to_load()
+        self.devices_page.click_query_wizard()
+        self.devices_page.select_query_field(self.devices_page.FIELD_LAST_USED_USERS)
+        self.devices_page.select_query_comp_op(self.devices_page.QUERY_COMP_STARTS)
+        self.devices_page.fill_query_value('test')
+        self.devices_page.wait_for_spinner_to_end()
+        self.devices_page.wait_for_table_to_load()
+        assert self.devices_page.count_entities() == 1
+        self.devices_page.fill_query_value('test 3')
+        self.devices_page.wait_for_spinner_to_end()
+        self.devices_page.wait_for_table_to_load()
+        assert self.devices_page.count_entities() == 0
+
     def _check_search_text_result(self, text):
         self.devices_page.wait_for_table_to_load()
         all_data = self.devices_page.get_all_data()
