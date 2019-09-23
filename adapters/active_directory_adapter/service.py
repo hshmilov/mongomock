@@ -58,7 +58,6 @@ logger = logging.getLogger(f'axonius.{__name__}')
 
 TEMP_FILES_FOLDER = "/home/axonius/temp_dir/"
 
-
 LDAP_DONT_EXPIRE_PASSWORD = 0x10000
 LDAP_PASSWORD_NOT_REQUIRED = 0x0020
 
@@ -67,6 +66,7 @@ LDAP_PASSWORD_NOT_REQUIRED = 0x0020
 # For exactly this reason we have another mechanism to reject execution promises on the execution-requester side.
 # This value should be for times we are really really sure there is a problem.
 MAX_SUBPROCESS_TIMEOUT_FOR_EXEC_IN_SECONDS = 60 * 60 * 1  # 1 hour
+RESOLVE_CHANGE_STATUS_INTERVAL = 60 * 60 * 1  # 1 hour
 
 
 # TODO ofir: Change the return values protocol
@@ -140,8 +140,9 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
                                            max_instances=1)
         # Thread for resetting the resolving process
         self._background_scheduler.add_job(func=self._resolve_change_status_thread,
-                                           trigger=IntervalTrigger(seconds=60 * 60 * 5),  # Every five hours
-                                           next_run_time=datetime.now() + timedelta(hours=2),
+                                           trigger=IntervalTrigger(
+                                               seconds=RESOLVE_CHANGE_STATUS_INTERVAL),  # Every 1 hour
+                                           next_run_time=datetime.now(),
                                            name='change_resolve_status_thread',
                                            id='change_resolve_status_thread',
                                            max_instances=1)
@@ -1344,12 +1345,7 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
                     for ip in device_data['data'].get(NETWORK_INTERFACES_FIELDNAME, []):
                         number_of_previously_resolved_ips += len(ip.get(IPS_FIELDNAME, []))
 
-                    if number_of_previously_resolved_ips > 0:
-                        # If a device has been resolved already, our theory is that the resolving time will be
-                        # close to immediate. that is why we re-resolve it.
-                        device_ip, _ = self._resolve_device_name(wanted_hostname, client_config)[0]
-                    else:
-                        raise IpResolveError(f"hostname {wanted_hostname} has never been resolved, not resolving")
+                    device_ip, _ = self._resolve_device_name(wanted_hostname, client_config)[0]
                 except Exception:
                     logger.exception(f"Exception - could not resolve ip for execution.")
                     raise
@@ -1505,7 +1501,7 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
         # Many validity check
         if len(product) != len(commands):
             err_log = f"Error, needed to run {commands} and expected the same length in return " \
-                f"but got {product}"
+                      f"but got {product}"
             logger.error(err_log)
             raise ValueError(err_log)
 
@@ -1518,7 +1514,7 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
 
         if len(product['data']) != len(axr_commands):
             err_log = f"Error, needed to run {axr_commands} and expected the same length in return " \
-                f"but got {product}"
+                      f"but got {product}"
             logger.error(err_log)
             raise ValueError(err_log)
 
@@ -1595,7 +1591,7 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
         # Some more validity check
         if len(product) != len(wmi_smb_commands):
             err_log = f"Error, needed to run {wmi_smb_commands} and expected the same length in return " \
-                f"but got {product}"
+                      f"but got {product}"
             logger.error(err_log)
             raise ValueError(err_log)
 
