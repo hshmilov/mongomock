@@ -7,7 +7,7 @@ from services.ports import DOCKER_PORTS
 from axonius.consts.system_consts import AXONIUS_DNS_SUFFIX
 
 
-# pylint: disable=too-many-locals
+# pylint: disable=too-many-locals, unexpected-keyword-arg
 class SeleniumService(WeaveService):
     def is_up(self, *args, **kwargs):
         return True

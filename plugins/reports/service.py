@@ -59,7 +59,7 @@ def query_result_diff(current_result: list, last_result: list) -> QueryResultDif
     return QueryResultDiff(list(current_result - last_result), list(last_result - current_result))
 
 
-# pylint: disable=E0213
+# pylint: disable=E0213, E1101
 
 
 class ReportsService(Triggerable, PluginBase):

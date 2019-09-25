@@ -92,9 +92,7 @@ class CachedEntry:
         helper for get_value
         """
         # pylint  mistakes this for a 'field'
-        # pylint: disable=no-member
         if not self.event.wait(900):
-            # pylint: enable=no-member
             logger.error(f'Timeout on {self}!')
             self.job.modify(next_run_time=datetime.now())
             plugin_base_instance().cached_operation_scheduler.wakeup()
@@ -102,7 +100,7 @@ class CachedEntry:
 
         self.last_accessed = datetime.now()
         if self.exception:
-            raise self.exception  # pylint: disable=E0702
+            raise self.exception
         return self.calculated_value
 
 
