@@ -3,12 +3,14 @@ import logging
 
 import pyodbc
 
+from axonius.clients.abstract.abstract_sql_connection import AbstractSQLConnection
+
 logger = logging.getLogger(f'axonius.{__name__}')
 TDS_DRIVER = 'FreeTDS'
 TDS_VERSION = '8.0'
 
 
-class MSSQLConnection:
+class MSSQLConnection(AbstractSQLConnection):
     def __init__(self, database, server, port, devices_paging, tds_version=TDS_VERSION):
         self.database = database
         assert isinstance(port, int), f'the port {port} is not a valid int!'
@@ -62,7 +64,7 @@ class MSSQLConnection:
             pass
         self.db = None
 
-    def query(self, sql, *args):
+    def query(self, sql: str):
         """
         Performs a database query with connected database.
         :param sql: SQL query
@@ -71,7 +73,7 @@ class MSSQLConnection:
         self.reconnect()    # Reconnect on every query to ensure a valid-state cursor.
         try:
             cursor = self.db.cursor()
-            results = cursor.execute(sql, args)
+            results = cursor.execute(sql)
             columns = [column[0] for column in cursor.description]
             devices_count = 0
             batch = True

@@ -1,7 +1,7 @@
 # pylint: disable=import-error
 import logging
 
-import psycopg2
+import mysql.connector
 
 from axonius.clients.abstract.abstract_sql_connection import AbstractSQLConnection
 
@@ -9,7 +9,7 @@ logger = logging.getLogger(f'axonius.{__name__}')
 DEFAULT_PAGINATION = 1000
 
 
-class PostgresConnection(AbstractSQLConnection):
+class MySQLConnection(AbstractSQLConnection):
     def __init__(self, host, port, username, password, db_name):
         self.host = host
         self.port = port
@@ -39,7 +39,7 @@ class PostgresConnection(AbstractSQLConnection):
     def connect(self):
         """ Connects to the service """
         try:
-            self.db = psycopg2.connect(
+            self.db = mysql.connector.connect(
                 user=self.username,
                 password=self.password,
                 host=self.host,
@@ -69,8 +69,8 @@ class PostgresConnection(AbstractSQLConnection):
         :return: Array of dictionaries
         """
         self.reconnect()    # Reconnect on every query to ensure a valid-state cursor.
+        cursor = self.db.cursor()
         try:
-            cursor = self.db.cursor()
             cursor.execute(sql)
             columns = [column[0] for column in cursor.description]
             sql_pages = 0
@@ -87,6 +87,11 @@ class PostgresConnection(AbstractSQLConnection):
         except Exception:
             logger.exception('Unable to perform query: ')
             raise
+        finally:
+            try:
+                cursor.close()
+            except Exception:
+                pass
 
     def __enter__(self):
         self.connect()

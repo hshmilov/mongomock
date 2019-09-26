@@ -6,6 +6,8 @@ from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.adapter_exceptions import GetDevicesError
 from axonius.clients.mssql.connection import MSSQLConnection
+from axonius.clients.mysql.connection import MySQLConnection
+from axonius.clients.postgres.connection import PostgresConnection
 from axonius.mixins.configurable import Configurable
 from axonius.utils.parsing import normalize_var_name
 from axonius.fields import Field
@@ -14,6 +16,7 @@ from axonius.utils.datetime import parse_date
 from axonius.utils.files import get_local_config_file
 from axonius.utils.parsing import get_exception_string
 from axonius.consts.csv_consts import get_csv_field_names
+from axonius.utils.sql import SQLServers
 from mssql_adapter.client_id import get_client_id
 
 logger = logging.getLogger(f'axonius.{__name__}')
@@ -39,10 +42,33 @@ class MssqlAdapter(AdapterBase, Configurable):
 
     def _connect_client(self, client_config):
         try:
-            connection = MSSQLConnection(database=client_config.get('database'),
-                                         server=client_config['domain'],
-                                         port=int(client_config.get('port')),
-                                         devices_paging=self.__devices_fetched_at_a_time)
+            # For migration purposes, if database_type is not there, leave it as MSSQL
+            db_type = client_config.get('database_type') or SQLServers.MSSQL.value
+
+            if db_type == SQLServers.MSSQL.value:
+                connection = MSSQLConnection(database=client_config.get('database'),
+                                             server=client_config['domain'],
+                                             port=int(client_config.get('port')),
+                                             devices_paging=self.__devices_fetched_at_a_time)
+            elif db_type == SQLServers.Postgres.value:
+                connection = PostgresConnection(
+                    client_config['domain'],
+                    int(client_config.get('port')),
+                    client_config['username'],
+                    client_config['password'],
+                    client_config.get('database'),
+                )
+            elif db_type == SQLServers.MySQL.value:
+                connection = MySQLConnection(
+                    client_config['domain'],
+                    int(client_config.get('port')),
+                    client_config['username'],
+                    client_config['password'],
+                    client_config.get('database'),
+                )
+            else:
+                raise ClientConnectionException(f'Unknown DB Type {db_type}!')
+
             connection.set_credentials(username=client_config['username'],
                                        password=client_config['password'])
             with connection:
@@ -84,12 +110,12 @@ class MssqlAdapter(AdapterBase, Configurable):
             'items': [
                 {
                     'name': 'domain',
-                    'title': 'MS SQL Server Domain',
+                    'title': 'SQL Server Host',
                     'type': 'string'
                 },
                 {
                     'name': 'port',
-                    'title': 'MS SQL Server Port',
+                    'title': 'SQL Server Port',
                     'type': 'string'
                 },
                 {
@@ -105,13 +131,19 @@ class MssqlAdapter(AdapterBase, Configurable):
                 },
                 {
                     'name': 'database',
-                    'title': 'MS SQL Server Database',
+                    'title': 'SQL Server Database Name',
                     'type': 'string'
                 },
                 {
                     'name': 'table',
-                    'title': 'MS SQL Server Table',
+                    'title': 'SQL Server Table Name',
                     'type': 'string'
+                },
+                {
+                    'name': 'database_type',
+                    'title': 'Database Type',
+                    'type': 'string',
+                    'enum': [db_type.value for db_type in SQLServers]
                 },
                 {
                     'name': 'server_tag',
@@ -125,7 +157,8 @@ class MssqlAdapter(AdapterBase, Configurable):
                 'password',
                 'port',
                 'database',
-                'table'
+                'table',
+                'database_type'
             ],
             'type': 'array'
         }

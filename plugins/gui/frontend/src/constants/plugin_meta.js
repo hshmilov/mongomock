@@ -284,9 +284,9 @@ export const pluginMeta = {
         description: 'SysAid is an integrated ITSM, Service Desk and Help Desk software solution.'
     },
     mssql_adapter: {
-        title: 'Microsoft SQL Server Adapter',
+        title: 'SQL Server',
         link: 'https://docs.axonius.com/docs/microsoft-sql-server-mssql',
-        description: 'The Microsoft SQL Server Adapter imports device information from arbitrary SQL servers.'
+        description: 'The SQL Server Adapter imports device information from arbitrary SQL servers.'
     },
     quest_kace_adapter: {
         title: 'Quest KACE Endpoint Systems Management Appliances',
