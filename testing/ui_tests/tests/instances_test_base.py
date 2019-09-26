@@ -7,6 +7,7 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
+import docker
 import paramiko
 import pytest
 from retrying import retry
@@ -15,12 +16,12 @@ from axonius.consts.system_consts import CUSTOMER_CONF_PATH
 from axonius.utils.wait import wait_until
 from builds import Builds
 from builds.builds_factory import BuildsInstance
+from deployment.install import SYSTEM_BOOT_CRON_SCRIPT_PATH
 from devops.scripts.instances.system_boot import \
     BOOTED_FOR_PRODUCTION_MARKER_PATH
 from scripts.instances.instances_consts import CORTEX_PATH
 from test_credentials.test_nexpose_credentials import client_details
 from ui_tests.tests.ui_test_base import TestBase
-from deployment.install import SYSTEM_BOOT_CRON_SCRIPT_PATH
 
 NODE_MAKER_USERNAME = 'node_maker'
 NODE_MAKER_PASSWORD = 'M@ke1tRain'
@@ -362,3 +363,30 @@ class TestInstancesBase(TestBase):
         def to_check():
             assert self._check_device_count() == 0
         to_check()
+
+    def check_ssh_tunnel(self):
+        test_string = 'I Am Here'
+        test_filename = 'successful_ssh.txt'
+
+        # Writing file to test ssh using the tunnel.
+        for instance in self._instances:
+            rc, out = instance.ssh(f'echo "{test_string}" > {test_filename}')
+            if rc != 0:
+                self.logger.info(f'Writing test ssh tunnel file failed.')
+
+        # Commands to execute from a container (in-order to make use of our weave net vx-lan).
+        commands = ['apt update', 'apt install sshpass',
+                    f'sshpass -p{DEFAULT_IMAGE_PASSWORD} ssh -o StrictHostKeyChecking=no -p 9958 '
+                    f'{DEFAULT_IMAGE_USERNAME}@tunnler.axonius.local "cat {test_filename}"']
+        client = docker.from_env()
+        core = client.containers.list(filters={'name': 'core'})[0]
+
+        res = None
+        for current_command in commands:
+            res = core.exec_run(current_command)
+
+            if res.exit_code != 0:
+                self.logger.error(f'Failed to run command on core container: {current_command}')
+                raise Exception(f'Failed to run command on core container: {current_command}')
+
+        assert test_string in res.output.decode('utf-8'), 'Failed to use ssh tunnel to ssh to instance.'

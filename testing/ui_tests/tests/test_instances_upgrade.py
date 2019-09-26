@@ -14,6 +14,7 @@ class TestInstancesUpgrade(TestInstancesBase):
 
         # upgrade
         self.check_upgrade()
+        self.check_ssh_tunnel()
 
     def check_upgrade(self):
         self.logger.info('Starting an upgrade')

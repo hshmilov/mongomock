@@ -29,6 +29,7 @@ class TestInstancesAfterNodeJoin(TestInstancesBase):
         self.check_add_adapter_to_node()
         self.check_correct_ip_is_shown_in_table()
         self.check_correct_hostname_is_shown_in_table()
+        self.check_ssh_tunnel()
         self.check_node_restart()
         self.check_master_disconnect()
 
