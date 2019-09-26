@@ -404,9 +404,48 @@ class AWSS3BucketACL(SmartJsonClass):
     grantee_permission = Field(str, 'Grantee Permission')
 
 
+class AWSS3BucketPolicyStatement(SmartJsonClass):
+    action = ListField(str, 'Action')
+    effect = Field(str, 'Effect')
+    principal = Field(str, 'Principal')
+    resource = Field(str, 'Resource')
+    sid = Field(str, 'Sid')
+    condition = Field(str, 'Condition')
+
+
+class AWSS3BucketPolicy(SmartJsonClass):
+    bucket_policy = Field(str, 'Contents (Json)')
+    bucket_policy_id = Field(str, 'ID')
+    statements = ListField(AWSS3BucketPolicyStatement, 'Statements')
+
+
 class AWSMFADevice(SmartJsonClass):
     serial_number = Field(str, 'Serial Number')
     enable_date = Field(datetime.datetime, 'Enable Date')
+
+
+class AWSWorkspaceDevice(SmartJsonClass):
+    workspace_id = Field(str, 'ID')
+    directory_id = Field(str, 'Directory ID')
+    directory_alias = Field(str, 'Directory Alias')
+    directory_name = Field(str, 'Directory Name')
+
+    username = Field(str, 'Username')
+    state = Field(str, 'State')
+    bundle_id = Field(str, 'Bundle ID')
+    error_message = Field(str, 'Error Message')
+    error_code = Field(str, 'Error Code')
+    volume_encryption_key = Field(str, 'Volume Encryption Key')
+    running_mode = Field(str, 'Running Mode')
+    running_mode_auto_stop_timeout_in_minutes = Field(int, 'Running Mode Auto Stop Timeout In Minutes')
+    user_volume_size_gib = Field(int, 'User Volume Size (GiB)')
+    root_volume_size_gib = Field(int, 'Root Volume Size (GiB)')
+    user_volume_encryption_enabled = Field(bool, 'User Volume Encryption Enabled')
+    root_volume_encryption_enabled = Field(bool, 'Root Volume Encryption Enabled')
+    compute_type_name = Field(str, 'Compute Type Name')
+    connection_state = Field(str, 'Connection State')
+    connection_state_check_timestamp = Field(datetime.datetime, 'Connection State Check Timestamp')
+    last_known_user_connection_timestamp = Field(datetime.datetime, 'Last Known User Connection Timestamp')
 
 
 class AwsAdapter(AdapterBase, Configurable):
@@ -435,8 +474,8 @@ class AwsAdapter(AdapterBase, Configurable):
         aws_availability_zone = Field(str, 'Availability Zone')
         aws_device_type = Field(
             str,
-            'Device Type (EC2/ECS/EKS/ELB/Managed/NAT/RDS/S3)',
-            enum=['EC2', 'ECS', 'EKS', 'ELB', 'Managed', 'NAT', 'RDS', 'S3']
+            'Device Type (EC2/ECS/EKS/ELB/Managed/NAT/RDS/S3/Workspace)',
+            enum=['EC2', 'ECS', 'EKS', 'ELB', 'Managed', 'NAT', 'RDS', 'S3', 'Workspace']
         )
         security_groups = ListField(AWSSecurityGroup, 'Security Groups')
 
@@ -468,6 +507,9 @@ class AwsAdapter(AdapterBase, Configurable):
         # RDS specific fields
         rds_data = Field(RDSInfo, 'RDS Information')
 
+        # Workspace specific fields
+        workspace_data = Field(AWSWorkspaceDevice, 'Workspace Information')
+
         # S3 specific fields
         s3_bucket_name = Field(str, 'S3 Bucket Name')
         s3_creation_date = Field(str, 'S3 Bucket Creation Date')
@@ -476,6 +518,7 @@ class AwsAdapter(AdapterBase, Configurable):
         s3_bucket_is_public = Field(bool, 'S3 Bucket Public')
         s3_bucket_location = Field(str, 'S3 Bucket Location')
         s3_bucket_acls = ListField(AWSS3BucketACL, 'S3 ACL')
+        s3_bucket_policy = Field(AWSS3BucketPolicy, 'S3 Bucket Policy')
 
         def add_aws_ec2_tag(self, **kwargs):
             self.aws_tags.append(AWSTagKeyValue(**kwargs))
@@ -753,6 +796,13 @@ class AwsAdapter(AdapterBase, Configurable):
                 clients['s3'] = c
             except Exception as e:
                 errors['s3'] = str(e)
+
+            try:
+                c = session.client('workspaces', **params)
+                c.describe_workspaces()
+                clients['workspaces'] = c
+            except Exception as e:
+                errors['workspaces'] = str(e)
 
             # the only service we truely need is ec2. all the rest are optional.
             # If this has failed we raise an exception
@@ -1768,6 +1818,12 @@ class AwsAdapter(AdapterBase, Configurable):
                         pass
 
                     try:
+                        bucket_policy = s3_client.get_bucket_policy(Bucket=bucket_raw.get('Name'))
+                        bucket_raw['policy'] = (bucket_policy.get('Policy') or {})
+                    except Exception:
+                        pass
+
+                    try:
                         bucket_location_status = s3_client.get_bucket_location(Bucket=bucket_raw.get('Name'))
                         bucket_raw['location'] = bucket_location_status.get('LocationConstraint')
                     except Exception:
@@ -1777,6 +1833,60 @@ class AwsAdapter(AdapterBase, Configurable):
                 raw_data['s3_buckets'] = s3_buckets
             except Exception:
                 logger.exception(f'Problem fetching information about S3')
+
+        if client_data.get('workspaces') is not None and self.__fetch_workspaces is True:
+            try:
+                errors_reported = []
+                workspaces = []
+                workspaces_client = client_data.get('workspaces')
+                for workspaces_page in get_paginated_next_token_api(workspaces_client.describe_workspaces):
+                    for workspace_raw in (workspaces_page.get('Workspaces') or []):
+                        workspace_id = workspace_raw.get('WorkspaceId')
+                        if workspace_id:
+                            try:
+                                workspace_raw['tags'] = workspaces_client.describe_tags(
+                                    ResourceId=workspace_id
+                                )['TagList']
+                            except Exception:
+                                if 'workspace_tags' not in errors_reported:
+                                    errors_reported.append('workspace_tags')
+                                    logger.exception(f'Problem while fetching workspace_tags')
+                            workspaces.append(workspace_raw)
+
+                workspace_directories = dict()
+                try:
+                    for workspace_directory_page in get_paginated_next_token_api(
+                            workspaces_client.describe_workspace_directories
+                    ):
+                        for workspace_directory_raw in (workspace_directory_page.get('Directories') or []):
+                            directory_id = workspace_directory_raw.get('DirectoryId')
+                            if directory_id:
+                                workspace_directories[directory_id] = workspace_directory_raw
+                except Exception:
+                    if 'workspace_directories' not in errors_reported:
+                        errors_reported.append('workspace_directories')
+                        logger.exception(f'Problem while fetching workspace directories')
+
+                workspace_connection_status = dict()
+                try:
+                    for workspace_connection_statuses_page in get_paginated_next_token_api(
+                            workspaces_client.describe_workspaces_connection_status):
+                        for workspace_connection_status_raw in (workspace_connection_statuses_page.get(
+                                'WorkspacesConnectionStatus') or []):
+                            workspace_id = workspace_connection_status_raw.get('WorkspaceId')
+                            if workspace_id:
+                                workspace_connection_status[workspace_id] = workspace_connection_status_raw
+                except Exception:
+                    if 'workspace_connection_status' not in errors_reported:
+                        errors_reported.append('workspace_connection_status')
+                        logger.exception(f'Problem while fetching workspace_connection_status')
+
+                raw_data['workspaces'] = workspaces
+                raw_data['workspace_directories'] = workspace_directories
+                raw_data['workspace_connection_status'] = workspace_connection_status
+            except Exception:
+                logger.exception(f'Problem fetching information about Workspaces')
+
         return raw_data
 
     def _clients_schema(self):
@@ -2066,6 +2176,9 @@ class AwsAdapter(AdapterBase, Configurable):
         rds_instances = devices_raw_data.get('rds') or []
         volumes_by_iid = devices_raw_data.get('volumes') or {}
         s3_buckets = devices_raw_data.get('s3_buckets') or []
+        workspaces = devices_raw_data.get('workspaces') or []
+        workspace_directories = devices_raw_data.get('workspace_directories') or {}
+        workspace_connection_statuses = devices_raw_data.get('workspace_connection_status') or {}
 
         ec2_id_to_ips = dict()
         private_ips_to_ec2 = dict()
@@ -2957,12 +3070,149 @@ class AwsAdapter(AdapterBase, Configurable):
 
                     device.s3_bucket_location = s3_bucket_raw.get('location')
 
+                    try:
+                        bucket_policy = s3_bucket_raw.get('policy')
+                        bucket_policy_parsed = {}
+                        try:
+                            bucket_policy_parsed = json.loads(bucket_policy)
+                        except Exception:
+                            pass
+                        s3_bucket_raw['policy_parsed'] = bucket_policy_parsed
+                        statements = []
+                        for statement_raw in (bucket_policy_parsed.get('Statement') or []):
+                            statement_action = statement_raw.get('Action')
+                            if isinstance(statement_action, str):
+                                statement_action = statement_action.split(',')
+                            elif not isinstance(statement_action, list):
+                                statement_action = [str(statement_action)]
+
+                            statements.append(AWSS3BucketPolicyStatement(
+                                sid=statement_raw.get('Sid'),
+                                principal=statement_raw.get('Principal'),
+                                effect=statement_raw.get('Effect'),
+                                resource=statement_raw.get('Resource'),
+                                condition=statement_raw.get('Condition'),
+                                action=statement_action
+                            ))
+
+                        if bucket_policy:
+                            device.s3_bucket_policy = AWSS3BucketPolicy(
+                                bucket_policy_id=bucket_policy_parsed.get('Id'),
+                                bucket_policy=bucket_policy,
+                                statements=statements
+                            )
+                    except Exception:
+                        logger.exception(f'Problem parsing bucket policy')
+
                     device.set_raw(s3_bucket_raw)
                     yield device
                 except Exception:
                     logger.exception(f'Problem parsing s3 bucket')
         except Exception:
             logger.exception(f'Failure parsing S3 Buckets')
+
+        # Parse Workspaces
+        try:
+            for workspace_raw in workspaces:
+                try:
+                    workspace_id = workspace_raw['WorkspaceId']
+
+                    device = self._new_device_adapter()
+                    device.id = workspace_id
+                    device.aws_device_type = 'Workspace'
+                    device.aws_source = aws_source
+                    device.aws_region = aws_region
+                    device.account_tag = account_tag
+                    device.cloud_provider = 'AWS'
+
+                    directory_data = workspace_directories.get(workspace_raw.get('DirectoryId')) or {}
+                    workspace_properties = (workspace_raw.get('WorkspaceProperties') or {})
+
+                    user_volume_encryption_enabled = workspace_raw.get('UserVolumeEncryptionEnabled')
+                    root_volume_encryption_enabled = workspace_raw.get('RootVolumeEncryptionEnabled')
+                    user_volume_size_gib = workspace_properties.get('UserVolumeSizeGib')
+                    root_volume_size_gib = workspace_properties.get('RootVolumeSizeGib')
+
+                    if user_volume_size_gib is not None or user_volume_encryption_enabled is not None:
+                        try:
+                            device.add_hd(
+                                total_size=user_volume_size_gib,
+                                is_encrypted=user_volume_encryption_enabled,
+                                description='User Volume'
+                            )
+                        except Exception:
+                            logger.exception(f'Can not add user volume information')
+
+                    if root_volume_size_gib is not None or root_volume_encryption_enabled is not None:
+                        try:
+                            device.add_hd(
+                                total_size=root_volume_size_gib,
+                                is_encrypted=root_volume_encryption_enabled,
+                                description='Root Volume'
+                            )
+                        except Exception:
+                            logger.exception(f'Can not add root volume information')
+
+                    workspace_connection_status = workspace_connection_statuses.get(workspace_id)
+                    workspace_connection_status_timestamp = None
+                    try:
+                        workspace_connection_status_timestamp = parse_date(
+                            workspace_connection_status.get('ConnectionStateCheckTimestamp')
+                        )
+                        device.last_seen = workspace_connection_status_timestamp
+                    except Exception:
+                        pass
+
+                    device.workspace_data = AWSWorkspaceDevice(
+                        workspace_id=workspace_raw.get('WorkspaceId'),
+                        directory_id=workspace_raw.get('DirectoryId'),
+                        directory_alias=directory_data.get('Alias'),
+                        directory_name=directory_data.get('DirectoryName'),
+                        username=workspace_raw.get('UserName'),
+                        state=workspace_raw.get('State'),
+                        bundle_id=workspace_raw.get('BundleId'),
+                        error_message=workspace_raw.get('ErrorMessage'),
+                        error_code=workspace_raw.get('ErrorCode'),
+                        volume_encryption_key=workspace_raw.get('VolumeEncryptionKey'),
+                        running_mode=workspace_properties.get('RunningMode'),
+                        running_mode_auto_stop_timeout_in_minutes=workspace_properties.get(
+                            'RunningModeAutoStopTimeoutInMinutes'
+                        ),
+                        compute_type_name=workspace_properties.get('ComputeTypeName'),
+                        user_volume_encryption_enabled=user_volume_encryption_enabled,
+                        root_volume_encryption_enabled=root_volume_encryption_enabled,
+                        user_volume_size_gib=user_volume_size_gib,
+                        root_volume_size_gib=root_volume_size_gib,
+                        connection_state=workspace_connection_status.get('ConnectionState'),
+                        connection_state_check_timestamp=workspace_connection_status_timestamp,
+                        last_known_user_connection_timestamp=parse_date(
+                            workspace_connection_status.get('LastKnownUserConnectionTimestamp')
+                        )
+                    )
+
+                    if workspace_raw.get('IpAddress'):
+                        device.add_nic(ips=[workspace_raw.get('IpAddress')])
+
+                    device.subnet_id = workspace_raw.get('SubnetId')
+                    device.subnet_name = (subnets_by_id.get(workspace_raw.get('SubnetId')) or {}).get('name')
+                    device.hostname = workspace_raw.get('ComputerName')
+                    if workspace_raw.get('UserName'):
+                        device.last_used_users = [workspace_raw.get('UserName')]
+
+                    try:
+                        tags_dict = {i['Key']: i['Value'] for i in (workspace_raw.get('tags') or {})}
+                        for key, value in tags_dict.items():
+                            device.add_aws_ec2_tag(key=key, value=value)
+                            device.add_key_value_tag(key, value)
+                    except Exception:
+                        logger.exception(f'Problem parsing tags')
+
+                    device.set_raw(workspace_raw)
+                    yield device
+                except Exception:
+                    logger.exception(f'Problem parsing workspace')
+        except Exception:
+            logger.exception(f'Failure parsing workspaces')
 
     def _parse_raw_data_inner_ssm(
             self,
@@ -3190,6 +3440,7 @@ class AwsAdapter(AdapterBase, Configurable):
         self.__fetch_load_balancers = config.get('fetch_load_balancers') or False
         self.__fetch_rds = config.get('fetch_rds') or False
         self.__fetch_s3 = config.get('fetch_s3') or False
+        self.__fetch_workspaces = config.get('fetch_workspaces') or False
         self.__fetch_iam_users = config.get('fetch_iam_users') or False
         self.__fetch_ssm = config.get('fetch_ssm') or False
         self.__fetch_nat = config.get('fetch_nat') or False
@@ -3252,6 +3503,11 @@ class AwsAdapter(AdapterBase, Configurable):
                     'type': 'bool'
                 },
                 {
+                    'name': 'fetch_workspaces',
+                    'title': 'Fetch information about Workspaces',
+                    'type': 'bool'
+                },
+                {
                     'name': 'verbose_auth_notifications',
                     'title': 'Show verbose notifications about connection failures',
                     'type': 'bool'
@@ -3271,6 +3527,7 @@ class AwsAdapter(AdapterBase, Configurable):
                 'fetch_rds',
                 'fetch_s3',
                 'fetch_iam_users',
+                'fetch_workspaces',
                 'fetch_ssm',
                 'fetch_nat',
                 'parse_elb_ips',
@@ -3290,6 +3547,7 @@ class AwsAdapter(AdapterBase, Configurable):
             'fetch_rds': False,
             'fetch_s3': False,
             'fetch_iam_users': False,
+            'fetch_workspaces': False,
             'fetch_ssm': False,
             'fetch_nat': False,
             'parse_elb_ips': False,
