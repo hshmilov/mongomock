@@ -20,12 +20,21 @@
           link
           @click="createEnforcement"
         >+ New Enforcement</x-button>
-        <x-button
+        <x-safeguard-button
           v-if="hasSelection"
           :disabled="readOnly"
           link
+          :approve-text="numberOfSelections > 1 ? 'Remove Saved Queries' : 'Remove Saved Query' "
           @click="removeQuery"
-        >Remove</x-button>
+        >
+          <div slot="button-text">Remove</div>
+          <div slot="message">
+            The selected Saved {{ numberOfSelections > 1 ? 'Queries' : 'Query' }} will be completely removed from the
+            system and no other user will be able to use it.<br>
+            Removing the Saved {{ numberOfSelections > 1 ? 'Queries' : 'Query' }} is an irreversible action.<br>
+            Do you wish to continue?
+          </div>
+        </x-safeguard-button>
       </template>
     </x-table>
   </div>
@@ -35,6 +44,7 @@
   import xSearch from '../../neurons/inputs/SearchInput.vue'
   import xTable from '../../neurons/data/Table.vue'
   import xButton from '../../axons/inputs/Button.vue'
+  import xSafeguardButton from '../../axons/inputs/SafeguardButton.vue'
 
   import { mapState, mapMutations, mapActions } from 'vuex'
   import { UPDATE_DATA_VIEW } from '../../../store/mutations'
@@ -44,7 +54,7 @@
   export default {
     name: 'XQueriesTable',
     components: {
-      xSearch, xTable, xButton
+      xSearch, xTable, xButton, xSafeguardButton
     },
     props: {
       module: {
@@ -78,6 +88,9 @@
       },
       hasSelection () {
         return (this.selection.ids && this.selection.ids.length) || this.selection.include === false
+      },
+      numberOfSelections() {
+        return this.selection.ids ? this.selection.ids.length : 0
       },
       fields() {
         return [{

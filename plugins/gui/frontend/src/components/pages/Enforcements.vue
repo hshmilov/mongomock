@@ -18,11 +18,19 @@
       :on-click-row="navigateEnforcement"
     >
       <template slot="actions">
-        <x-button
+        <x-safeguard-button
           v-if="hasSelection"
           link
+          :approve-text="numberOfSelections > 1 ? 'Remove Enforcement Sets' : 'Remove Enforcement Set' "
           @click="remove"
-        >Remove</x-button>
+        >
+          <div slot="button-text">Remove</div>
+          <div slot="message">
+            The selected Enforcement Sets will be completely removed from the system.<br>
+            Removing the Enforcement {{ numberOfSelections > 1 ? 'Sets' : 'Set' }} is an irreversible action.<br>
+            Do you wish to continue?
+          </div>
+        </x-safeguard-button>
         <x-button
           id="enforcement_new"
           :disabled="isReadOnly"
@@ -43,6 +51,7 @@
   import xSearch from '../neurons/inputs/SearchInput.vue'
   import xTable from '../neurons/data/Table.vue'
   import xButton from '../axons/inputs/Button.vue'
+  import xSafeguardButton from '../axons/inputs/SafeguardButton.vue'
 
   import { mapState, mapMutations, mapActions } from 'vuex'
   import { UPDATE_DATA_VIEW } from '../../store/mutations'
@@ -52,7 +61,7 @@
   export default {
     name: 'XEnforcements',
     components: {
-      xPage, xSearch, xTable, xButton
+      xPage, xSearch, xTable, xButton, xSafeguardButton
     },
     data () {
       return {
@@ -94,6 +103,9 @@
       },
       hasSelection () {
         return (this.selection.ids && this.selection.ids.length) || this.selection.include === false
+      },
+      numberOfSelections() {
+        return this.selection.ids ? this.selection.ids.length : 0
       },
       searchFilter() {
         let patternParts = []

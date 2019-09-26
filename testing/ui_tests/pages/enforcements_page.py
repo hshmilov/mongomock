@@ -386,6 +386,7 @@ class EnforcementsPage(EntitiesPage):
 
     def remove_selected_enforcements(self):
         self.find_element_by_text('Remove').click()
+        self.find_element_by_text('Remove Enforcement Set').click()
 
     def choose_period(self, period):
         self.wait_for_element_present_by_id(period).click()

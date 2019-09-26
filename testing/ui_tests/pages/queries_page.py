@@ -1,4 +1,7 @@
 import logging
+
+from selenium.common.exceptions import NoSuchElementException
+
 from ui_tests.pages.page import Page
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -36,6 +39,10 @@ class QueriesPage(Page):
 
     def remove_selected_queries(self):
         self.find_element_by_text(self.REMOVE_BUTTON).click()
+        try:
+            self.find_element_by_text(self.SAFEGUARD_REMOVE_BUTTON_SINGLE).click()
+        except NoSuchElementException:
+            self.find_element_by_text(self.SAFEGUARD_REMOVE_BUTTON_MULTI).click()
         self.wait_for_element_absent_by_css('.x-checkbox.checked')
 
     def enforce_selected_query(self):

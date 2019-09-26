@@ -13,6 +13,7 @@ class ReportFrequency:
 class ReportsPage(EntitiesPage):
     NEW_REPORT_BUTTON = '+ New Report'
     REMOVE_REPORTS_BUTTON = 'Remove'
+    SAFEGUARD_REMOVE_REPORTS_BUTTON = 'Remove Reports'
     REPORT_CSS = '.x-report'
     REPORT_NAME_ID = 'report_name'
     REPORT_FREQUENCY = 'report_frequency'
@@ -63,6 +64,7 @@ class ReportsPage(EntitiesPage):
 
     def click_remove_reports(self):
         self.find_remove_reports_button().click()
+        self.find_element_by_text(self.SAFEGUARD_REMOVE_REPORTS_BUTTON).click()
 
     def click_select_all_reports(self):
         self.select_all_current_page_rows_checkbox()

@@ -104,6 +104,8 @@ class Page:
     SAVE_AS_BUTTON = 'Save as'
     OK_BUTTON = 'OK'
     REMOVE_BUTTON = 'Remove'
+    SAFEGUARD_REMOVE_BUTTON_SINGLE = 'Remove Saved Query'
+    SAFEGUARD_REMOVE_BUTTON_MULTI = 'Remove Saved Queries'
     DELETE_BUTTON = 'Delete'
     ACTIONS_BUTTON = 'Actions'
     CONFIRM_BUTTON = 'Confirm'

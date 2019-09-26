@@ -65,6 +65,7 @@ class SettingsPage(Page):
     READ_ONLY_ROLE = 'Read Only User'
     RESTRICTED_ROLE = 'Restricted User'
     USE_PROXY = 'Proxy Enabled'
+    SAFEGUARD_REMOVE_BUTTON_TEXT = 'Remove Role'
     # sorry - but it's not my fault
     # https://axonius.atlassian.net/browse/AX-2991
     # those are the fully fledged css selectors for the elements
@@ -500,6 +501,7 @@ class SettingsPage(Page):
 
     def remove_role(self):
         self.click_button_by_id('remove-role-button')
+        self.find_element_by_text(self.SAFEGUARD_REMOVE_BUTTON_TEXT).click()
 
     def click_done(self):
         self.click_button('Done')

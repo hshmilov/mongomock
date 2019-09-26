@@ -1,25 +1,52 @@
 <template>
-    <x-page title="Reports" class="x-reports" :class="{disabled: isReadOnly}" >
-        <x-table module="reports" :on-click-row="navigateReport" title="Saved Reports" v-model="isReadOnly? undefined: selection">
-            <template slot="actions">
-                <x-button link v-if="hasSelection" @click="remove">Remove</x-button>
-                <x-button @click="navigateReport('new')" id="report_new" :disabled="isReadOnly">+ New Report</x-button>
-            </template>
-        </x-table>
-    </x-page>
+  <x-page
+    :class="{disabled: isReadOnly}"
+    class="x-reports"
+    title="Reports"
+  >
+    <x-table
+      v-model="isReadOnly? undefined: selection"
+      :on-click-row="navigateReport"
+      module="reports"
+      title="Saved Reports"
+    >
+      <template slot="actions">
+        <x-safeguard-button
+          v-if="hasSelection"
+          :approve-text="numberOfSelections > 1 ? 'Remove Reports' : 'Remove Report'"
+          link
+          @click="remove"
+        >
+          <div slot="button-text">Remove</div>
+          <div slot="message">
+            The selected {{ numberOfSelections > 1 ? 'reports' : 'report' }} will be completely removed
+            from the system.<br>
+            Removing the {{ numberOfSelections > 1 ? 'reports' : 'report' }} is an irreversible action.<br>
+            Do you wish to continue?
+          </div>
+        </x-safeguard-button>
+        <x-button
+          id="report_new"
+          :disabled="isReadOnly"
+          @click="navigateReport('new')"
+        >+ New Report</x-button>
+      </template>
+    </x-table>
+  </x-page>
 </template>
 <script>
     import xPage from '../axons/layout/Page.vue'
     import xTable from '../neurons/data/Table.vue'
     import xButton from '../axons/inputs/Button.vue'
+    import xSafeguardButton from '../axons/inputs/SafeguardButton.vue'
 
     import {mapState, mapMutations, mapActions} from 'vuex'
     import {REMOVE_REPORTS, FETCH_REPORT} from '../../store/modules/reports'
     import {CHANGE_TOUR_STATE} from '../../store/modules/onboarding'
 
     export default {
-        name: 'x-reports',
-        components: {xPage, xTable, xButton},
+        name: 'XReports',
+        components: {xPage, xTable, xButton, xSafeguardButton},
         computed: {
             ...mapState({
                 tourReports(state) {
@@ -36,7 +63,10 @@
             },
             hasSelection() {
                 return (this.selection.ids && this.selection.ids.length) || this.selection.include === false
-            }
+            },
+            numberOfSelections() {
+                return this.selection.ids ? this.selection.ids.length : 0
+            },
         },
         data() {
             return {

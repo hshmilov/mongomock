@@ -73,7 +73,7 @@ class TestEnforcementNoQuery(TestBase):
         # Check remove enforcement allows re-use of names
         self.enforcements_page.wait_for_table_to_load()
         self.enforcements_page.click_row_checkbox(2)
-        self.enforcements_page.remove_selected()
+        self.enforcements_page.remove_selected_enforcements()
         self.enforcements_page.create_basic_enforcement(duplicate_name, COMMON_ENFORCEMENT_QUERY)
         self.enforcements_page.add_push_system_notification(ENFORCEMENT_CHANGE_NAME)
         self.enforcements_page.click_save_button()
