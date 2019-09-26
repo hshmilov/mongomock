@@ -10,6 +10,7 @@ import json
 from typing import List
 
 import paramiko
+import requests
 
 from pymongo import MongoClient, DESCENDING
 from bson.objectid import ObjectId
@@ -62,6 +63,7 @@ class BuildsManager(object):
             credentials_file_contents = json.loads(f.read())
 
         self.__exports_credentials = credentials_file_contents['exports']['data']
+        self.__teamcity_credentials = credentials_file_contents['teamcity']['data']
 
     def get_instances(self, cloud=None, instance_id=None, vm_type=None):
         last_instances = self.db.realtime.find_one({'name': 'instances'})['value']
@@ -338,6 +340,34 @@ class BuildsManager(object):
         with ssh.open_sftp().open('/home/ubuntu/exports/build_{0}.log'.format(export_version), 'r') as remote_file:
             return {'value': remote_file.read().decode('utf-8')}
 
+    def notify_teamcity_on_export(self, export, ami_id):
+        tc_user = self.__teamcity_credentials['username']
+        tc_pass = self.__teamcity_credentials['password']
+
+        version = export['version']
+        owner = export['owner']
+        fork = export['fork']
+        branch = export['branch']
+        test_params = ''  # no params by default
+
+        response = requests.post(url='https://10.0.3.55/httpAuth/app/rest/buildQueue',
+                                 auth=(tc_user, tc_pass),
+                                 json={"branchName": version,
+                                       "buildType": {"id": "SeCi_SeCiConf", "projectId": "SeCi"},
+                                       "properties": {
+                                           "property": [{"name": "ami_id", "value": ami_id},
+                                                        {"name": "test_params", "value": test_params},
+                                                        {"name": "owner", "value": owner},
+                                                        {"name": "fork", "value": fork},
+                                                        {"name": "branch", "value": branch},
+                                                        {"name": "version", "value": version}
+                                                        ]}},
+                                 headers={'Content-Type': 'application/json',
+                                          'Accept': 'application/json'},
+                                 verify=False)
+        if response.status_code != 200:
+            print(f'failed to trigger teamcity - {response.content}')
+
     def update_export_status(self, export_id, status, git_hash):
         try:
             log = self.bcm.aws_s3.s3_client.get_object(
@@ -370,6 +400,7 @@ class BuildsManager(object):
                     }
             }
         )
+        self.notify_teamcity_on_export(export=export, ami_id=ami_id)
 
         return export is not None
 
