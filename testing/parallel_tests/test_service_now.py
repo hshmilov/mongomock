@@ -24,3 +24,7 @@ class TestServiceNowAdapter(AdapterTestBase):
     @pytest.mark.skip("not working, ask Ofri Shur for more details")
     def test_fetch_devices(self):
         pass
+
+    @pytest.mark.skip('no server')
+    def test_check_reachability(self):
+        pass
