@@ -6,7 +6,7 @@
     ]"
     class="x-adapter"
   >
-    <x-table-wrapper title="Add or Edit Connection" :loading="loading">
+    <x-table-wrapper title="Add or Edit Connections" :loading="loading">
       <template slot="actions">
         <x-button
           v-if="selectedServers && selectedServers.length"
