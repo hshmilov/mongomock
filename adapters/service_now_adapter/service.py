@@ -22,6 +22,7 @@ class ServiceNowAdapter(AdapterBase, Configurable):
     class MyUserAdapter(UserAdapter):
         snow_source = Field(str, 'ServiceNow Source')
         snow_roles = Field(str, 'Roles')
+        updated_on = Field(datetime.datetime, 'Updated On')
 
     class MyDeviceAdapter(DeviceAdapter):
         table_type = Field(str, 'Table Type')
@@ -58,12 +59,15 @@ class ServiceNowAdapter(AdapterBase, Configurable):
                            fetch_ips=True,
                            snow_department_table_dict=None,
                            users_table_dict=None,
+                           snow_nics_table_dict=None,
                            snow_alm_asset_table_dict=None,
                            companies_table_dict=None):
         got_nic = False
         got_serial = False
         if snow_location_table_dict is None:
             snow_location_table_dict = dict()
+        if snow_nics_table_dict is None:
+            snow_nics_table_dict = dict()
         if snow_alm_asset_table_dict is None:
             snow_alm_asset_table_dict = dict()
         if users_table_dict is None:
@@ -177,6 +181,17 @@ class ServiceNowAdapter(AdapterBase, Configurable):
                             (snow_asset.get('location') or {}).get('value'))
                         if snow_location:
                             device.snow_location = snow_location.get('name')
+                    except Exception:
+                        logger.warning(f'Problem adding assigned_to to {device_raw}', exc_info=True)
+
+                    try:
+                        snow_nics = snow_nics_table_dict.get(device_raw.get('sys_id'))
+                        if isinstance(snow_nics, list):
+                            for snow_nic in snow_nics:
+                                try:
+                                    device.add_nic(mac=snow_nic.get('mac_address'), ips=[snow_nic.get('ip_address')])
+                                except Exception:
+                                    logger.exception(f'Problem with snow nic {snow_nic}')
                     except Exception:
                         logger.warning(f'Problem adding assigned_to to {device_raw}', exc_info=True)
             except Exception:
@@ -412,6 +427,17 @@ class ServiceNowAdapter(AdapterBase, Configurable):
                 user.first_name = user_raw.get('first_name')
                 user.last_name = user_raw.get('last_name')
                 user.username = user_raw.get('name')
+                updated_on = parse_date(user_raw.get('sys_updated_on'))
+                user.updated_on = updated_on
+                last_logon = parse_date(user_raw.get('last_login_time'))
+                user.last_logon = last_logon
+                try:
+                    if last_logon and updated_on:
+                        user.last_seen = max(last_logon, updated_on)
+                    elif last_logon or updated_on:
+                        user.last_seen = last_logon or updated_on
+                except Exception:
+                    logger.exception(f'Problem getting last seen for {user_raw}')
                 user.user_title = user_raw.get('title')
                 try:
                     user.user_manager = (user_raw.get('manager_full') or {}).get('name')
@@ -430,6 +456,7 @@ class ServiceNowAdapter(AdapterBase, Configurable):
             users_table_dict = table_devices_data.get(USERS_TABLE_KEY)
             snow_department_table_dict = table_devices_data.get(DEPARTMENT_TABLE_KEY)
             snow_location_table_dict = table_devices_data.get(LOCATION_TABLE_KEY)
+            snow_nics_table_dict = table_devices_data.get(NIC_TABLE_KEY)
             snow_alm_asset_table_dict = table_devices_data.get(ALM_ASSET_TABLE)
             companies_table_dict = table_devices_data.get(COMPANY_TABLE)
             for device_raw in table_devices_data[DEVICES_KEY]:
@@ -437,6 +464,7 @@ class ServiceNowAdapter(AdapterBase, Configurable):
                                                  snow_department_table_dict=snow_department_table_dict,
                                                  snow_location_table_dict=snow_location_table_dict,
                                                  snow_alm_asset_table_dict=snow_alm_asset_table_dict,
+                                                 snow_nics_table_dict=snow_nics_table_dict,
                                                  users_table_dict=users_table_dict,
                                                  companies_table_dict=companies_table_dict,
                                                  fetch_ips=self.__fetch_ips,

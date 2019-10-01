@@ -3,7 +3,8 @@ import time
 import logging
 
 from axonius.clients.rest.connection import RESTConnection
-from axonius.clients.haveibeenpwned.consts import HAVEIBEENPWNED_DOMAIN
+from axonius.clients.rest.exception import RESTException
+from axonius.clients.haveibeenpwned.consts import HAVEIBEENPWNED_DOMAIN, MAX_RATE_LIMIT_TRY
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -74,7 +75,23 @@ class HaveibeenpwnedConnection(RESTConnection):
         if self._internal_haveibeenpwned:
             self._refresh_token()
             url = f'hibp/api/v3/breachedaccount/{email}'
-        return self._get(url)
+        return self._hibp_get(url)
+
+    def _hibp_get(self, path, url_params=None):
+        for try_ in range(MAX_RATE_LIMIT_TRY):
+            response = self._get(path, url_params=url_params,
+                                 raise_for_status=False,
+                                 return_response_raw=True,
+                                 use_json_in_response=False
+                                 )
+            if response.status_code == 429:
+                # Sleeping 2 seconds to be on the safe side
+                time.sleep(2)
+                continue
+            break
+        else:
+            raise RESTException(f'Failed to fetch path {path} because rate limit')
+        return self._handle_response(response)
 
     def _connect(self):
         pass

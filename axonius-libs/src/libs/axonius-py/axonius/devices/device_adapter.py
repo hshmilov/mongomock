@@ -35,8 +35,8 @@ AGENTS = namedtuple('Agents', (
     'observeit', 'opswat', 'paloalto_cortex', 'qualys_scans', 'quest_kace', 'redcloak', 'sccm',
     'secdo', 'sentinelone', 'signalsciences',
     'sophos', 'symantec', 'symantec_cloud_workload', 'symantec_ee', 'symantec_12', 'tanium', 'tenable_io', 'tripwire',
-    'truefort',
-    'twistlock', 'webroot'
+    'truefort', 'guardicore', 'deep_security',
+    'twistlock', 'webroot', 'aqua', 'symantec_dlp'
 ))
 
 AGENT_NAMES = AGENTS(
@@ -57,7 +57,9 @@ AGENT_NAMES = AGENTS(
     symantec_cloud_workload='Symantec Cloud Agent', symantec_ee='Symantec Endpoint Encryption Agent',
     tanium='Tanium Agent', tenable_io='Tenable io Agent',
     tripwire='Tripwire Agent', truefort='TrueFort Agent', twistlock='Twistlock Agent',
-    webroot='Webroot Agent', symantec_12='Symantec SEP 12 Agent'
+    webroot='Webroot Agent', symantec_12='Symantec SEP 12 Agent',
+    aqua='Aqua Enforcer', symantec_dlp='Symantec DLP Agent', guardicore='Guardicore Agent',
+    deep_security='DeepSecurity Agent'
 )
 
 logger = logging.getLogger(f'axonius.{__name__}')
@@ -141,7 +143,7 @@ class DeviceAdapterOS(SmartJsonClass):
     type = Field(
         str, 'Type', enum=['Windows', 'Linux', 'OS X', 'iOS', 'AirOS',
                            'Android', 'FreeBSD', 'VMWare', 'Cisco', 'Mikrotik', 'VxWorks',
-                           'F5 Networks Big-IP', 'Solaris', 'AIX']
+                           'F5 Networks Big-IP', 'Solaris', 'AIX', 'Printer', 'PlayStation']
     )
     distribution = Field(str, 'Distribution')
     bitness = Field(int, 'Bitness', enum=[32, 64])
@@ -167,7 +169,7 @@ class DeviceAdapterNetworkInterface(SmartJsonClass):
     """ A definition for the json-scheme for a network interface """
 
     name = Field(str, 'Iface Name')
-    mac = Field(str, 'Mac', converter=format_mac)
+    mac = Field(str, 'MAC', converter=format_mac)
     manufacturer = Field(str, 'Manufacturer')
     ips = ListField(str, 'IPs', converter=format_ip, json_format=JsonStringFormat.ip)
     subnets = ListField(
@@ -1050,6 +1052,7 @@ class DeviceAdapter(SmartJsonClass):
 
 NETWORK_INTERFACES_FIELD = DeviceAdapter.network_interfaces.name
 LAST_SEEN_FIELD = DeviceAdapter.last_seen.name
+LAST_SEEN_FIELDS = [LAST_SEEN_FIELD, 'ssm_data_last_seen', 'last_sign_in']
 OS_FIELD = DeviceAdapter.os.name
 
 MAC_FIELD = DeviceAdapterNetworkInterface.mac.name

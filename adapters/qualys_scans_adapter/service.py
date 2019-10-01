@@ -161,12 +161,16 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
 
     def _parse_raw_data(self, devices_raw_data):
         for device_raw in devices_raw_data:
-            device = self._create_agent_device(device_raw)
+            device = self._create_agent_device(device_raw, self.__qualys_tags_white_list)
             if device:
                 yield device
 
     # pylint: disable=R0912,R0915,too-many-nested-blocks
-    def _create_agent_device(self, device_raw):
+    def _create_agent_device(self, device_raw, qualys_tags_white_list=None):
+        tags_ok = False
+        if not qualys_tags_white_list or not isinstance(qualys_tags_white_list, list):
+            qualys_tags_white_list = []
+            tags_ok = True
         try:
             device_raw = device_raw.get('HostAsset')
             device_id = device_raw.get('id')
@@ -176,6 +180,10 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
             device = self._new_device_adapter()
             device.id = str(device_id) + '_' + (device_raw.get('name') or '')
             device.hostname = (device_raw.get('netbiosName') or device_raw.get('dnsHostName')) or device_raw.get('name')
+            if device_raw.get('netbiosName') and device_raw.get('dnsHostName') and \
+                    device_raw.get('dnsHostName').split('.')[0].lower() ==\
+                    device_raw.get('netbiosName').split('.')[0].lower():
+                device.hostname = device_raw.get('dnsHostName')
             if (device_raw.get('dnsHostName') or device_raw.get('dnsHostName')) and device_raw.get('name'):
                 device.name = device_raw.get('name')
             try:
@@ -213,6 +221,8 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
             try:
                 for tag_raw in (device_raw.get('tags') or {}).get('list') or []:
                     try:
+                        if (tag_raw.get('TagSimple') or {}).get('name') in qualys_tags_white_list:
+                            tags_ok = True
                         device.qualys_tags.append((tag_raw.get('TagSimple') or {}).get('name'))
                     except Exception:
                         logger.exception(f'Problem with tag {tag_raw}')
@@ -222,7 +232,8 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
             try:
                 for user_raw in (device_raw.get('account') or {}).get('list') or []:
                     try:
-                        device.last_used_users.append((user_raw.get('HostAssetAccount') or {}).get('username'))
+                        if (user_raw.get('HostAssetAccount') or {}).get('username'):
+                            device.last_used_users.append((user_raw.get('HostAssetAccount') or {}).get('username'))
                     except Exception:
                         logger.exception(f'Problem with user {user_raw}')
             except Exception:
@@ -283,6 +294,8 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
 
             device.adapter_properties = [AdapterProperty.Vulnerability_Assessment.name]
             device.set_raw(device_raw)
+            if not tags_ok:
+                return None
             return device
         except Exception:
             logger.exception(f'Problem with device {device_raw}')
@@ -306,6 +319,11 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
                     'name': 'devices_per_page',
                     'title': 'Devices Per Page',
                     'type': 'integer',
+                },
+                {
+                    'name': 'qualys_tags_white_list',
+                    'type': 'string',
+                    'title': 'Qualys Tags White List'
                 }
             ],
             'required': [
@@ -322,12 +340,15 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
             'request_timeout': 200,
             'async_chunk_size': 50,
             'devices_per_page': consts.DEVICES_PER_PAGE,
+            'qualys_tags_white_list': None
         }
 
     def _on_config_update(self, config):
         self.__request_timeout = config['request_timeout']
         self.__async_chunk_size = config['async_chunk_size']
         self.__devices_per_page = config.get('devices_per_page', consts.DEVICES_PER_PAGE)
+        self.__qualys_tags_white_list = config.get('qualys_tags_white_list').split(',') \
+            if config.get('qualys_tags_white_list') else None
 
     @classmethod
     def adapter_properties(cls):

@@ -465,12 +465,12 @@ class AwsAdapter(AdapterBase, Configurable):
 
         user_attached_policies = ListField(AWSIAMPolicy, 'Policies')
         user_attached_keys = ListField(AWSIAMAccessKey, 'Access Keys')
-        user_groups = ListField(str, 'Groups')
 
         user_associated_mfa_devices = ListField(AWSMFADevice, 'Associated MFA Devices')
         user_is_password_enabled = Field(bool, 'User Is Password Enabled')
 
     class MyDeviceAdapter(DeviceOrContainerAdapter, AWSAdapter):
+        ssm_data_last_seen = Field(str)
         aws_availability_zone = Field(str, 'Availability Zone')
         aws_device_type = Field(
             str,
@@ -2018,7 +2018,7 @@ class AwsAdapter(AdapterBase, Configurable):
             try:
                 user_groups = user_raw.get('groups')
                 if isinstance(user_groups, list):
-                    user.user_groups = user_groups
+                    user.groups = user_groups
             except Exception:
                 logger.exception(f'Problem adding user groups')
 
@@ -3240,6 +3240,7 @@ class AwsAdapter(AdapterBase, Configurable):
         ssm_data.ping_status = basic_data.get('PingStatus')
         ssm_data.last_ping_date = parse_date(basic_data.get('LastPingDateTime'))
         # Do not set device.last_seen! otherwise filtering devices will not work without 'Include outdated adapter...'
+        device.ssm_data_last_seen = parse_date(basic_data.get('LastPingDateTime'))
         ssm_data.last_seen = parse_date(basic_data.get('LastPingDateTime'))
         ssm_data.agent_version = basic_data.get('AgentVersion')
         try:

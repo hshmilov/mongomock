@@ -2840,9 +2840,11 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
         }))
         if user_from_db is None:
             logger.info(f'Unknown user {user_name} tried logging in')
+            self.send_external_info_log(f'Unknown user {user_name} tried logging in')
             return return_error('Wrong user name or password', 401)
 
         if not bcrypt.verify(password, user_from_db['password']):
+            self.send_external_info_log(f'User {user_name} tried logging in with wrong password')
             logger.info(f'User {user_name} tried logging in with wrong password')
             return return_error('Wrong user name or password', 401)
         if request and request.referrer and 'localhost' not in request.referrer \

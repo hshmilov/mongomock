@@ -79,6 +79,11 @@ class TenableScAddIPsToAsset(ActionTypeBase):
                     'name': 'override_ips',
                     'title': 'Override Current IPs List',
                     'type': 'bool',
+                },
+                {
+                    'name': 'cidr_exclude_list',
+                    'type': 'string',
+                    'title': 'CIDRs exclude list'
                 }
             ],
             'required': [
@@ -101,6 +106,7 @@ class TenableScAddIPsToAsset(ActionTypeBase):
             'asset_name': None,
             'create_new_asset': False,
             'use_private_ips': True,
+            'cidr_exclude_list': None,
             'use_public_ips': True,
             'use_adapter': True,
             'verify_ssl': False,
@@ -123,7 +129,8 @@ class TenableScAddIPsToAsset(ActionTypeBase):
         ips, results = get_ips_from_view(current_result,
                                          self._config['use_public_ips'],
                                          self._config['use_private_ips'],
-                                         self._config.get('exclude_ipv6') or False)
+                                         self._config.get('exclude_ipv6') or False,
+                                         cidr_exclude_list=self._config.get('cidr_exclude_list'))
         asset_name = self._config['asset_name']
         create_new_asset = self._config['create_new_asset']
         override = self._config.get('override_ips') or False

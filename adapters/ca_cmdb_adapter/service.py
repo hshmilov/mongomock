@@ -7,6 +7,7 @@ from zeep import Client
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
+from axonius.mixins.configurable import Configurable
 from axonius.clients.rest.connection import RESTException
 from axonius.fields import Field
 from axonius.devices.device_adapter import DeviceAdapter
@@ -18,7 +19,7 @@ logger = logging.getLogger(f'axonius.{__name__}')
 MAX_ROWS_FLOOD_NUM = 1000000
 
 
-class CaCmdbAdapter(AdapterBase):
+class CaCmdbAdapter(AdapterBase, Configurable):
     class MyDeviceAdapter(DeviceAdapter):
         device_type = Field(str, 'Device Type')
 
@@ -167,7 +168,7 @@ class CaCmdbAdapter(AdapterBase):
             'type': 'array'
         }
 
-    def _create_device(self, device_raw):
+    def _create_device(self, device_raw, ca_cmdb_white_list=None):
         try:
             device = self._new_device_adapter()
             device_id = device_raw.get('serial_number')
@@ -177,7 +178,11 @@ class CaCmdbAdapter(AdapterBase):
             device.id = device_id + '_' + (device_raw.get('name') or '')
             device.name = device_raw.get('name')
             device.device_serial = device_raw.get('serial_number')
-            device.device_type = device_raw.get('family.sym')
+            device_type = device_raw.get('family.sym')
+            device.device_type = device_type
+            if ca_cmdb_white_list and isinstance(ca_cmdb_white_list, list) \
+                    and (not device_type or device_type not in ca_cmdb_white_list):
+                return None
             if device_raw.get('alarm_id') and device_raw.get('alarm_id').strip().lower() not in ['test',
                                                                                                  'dhcp',
                                                                                                  'undefined',
@@ -192,10 +197,35 @@ class CaCmdbAdapter(AdapterBase):
 
     def _parse_raw_data(self, devices_raw_data):
         for device_raw in devices_raw_data:
-            device = self._create_device(device_raw)
+            device = self._create_device(device_raw, ca_cmdb_white_list=self.__ca_cmdb_white_list)
             if device:
                 yield device
 
     @classmethod
     def adapter_properties(cls):
         return [AdapterProperty.Assets]
+
+    @classmethod
+    def _db_config_schema(cls) -> dict:
+        return {
+            'items': [
+                {
+                    'name': 'ca_cmdb_white_list',
+                    'type': 'string',
+                    'title': 'CA CMDB Device Type White List'
+                }
+            ],
+            'required': [],
+            'pretty_name': 'CA CMDB Configuration',
+            'type': 'array'
+        }
+
+    @classmethod
+    def _db_config_default(cls):
+        return {
+            'ca_cmdb_white_list': None
+        }
+
+    def _on_config_update(self, config):
+        self.__ca_cmdb_white_list = config.get('ca_cmdb_white_list').split(',') \
+            if config.get('ca_cmdb_white_list') else None

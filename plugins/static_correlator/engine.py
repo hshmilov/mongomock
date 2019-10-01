@@ -15,7 +15,7 @@ from axonius.utils.parsing import (NORMALIZED_MACS,
                                    compare_asset_hosts, compare_asset_name,
                                    compare_bios_serial_serial, compare_clouds,
                                    compare_device_normalized_hostname,
-                                   compare_hostname, is_windows,
+                                   compare_hostname,
                                    compare_id, compare_last_used_users,
                                    get_ad_name_or_azure_display_name,
                                    get_asset_name, get_asset_or_host,
@@ -33,6 +33,7 @@ from axonius.utils.parsing import (NORMALIZED_MACS,
                                    is_only_host_adapter,
                                    is_different_plugin,
                                    is_from_juniper_and_asset_name,
+                                   is_windows,
                                    is_junos_space_device,
                                    is_old_device, is_sccm_or_ad, is_snow_device,
                                    is_splunk_vpn, normalize_adapter_devices,
@@ -71,6 +72,17 @@ def get_prefix_private_dns_or_hostname(adapter_device):
     return None
 
 
+def is_ca_cmdb_adapter(adapter_device):
+    return adapter_device.get('plugin_name') == 'ca_cmdb_adapter'
+
+
+# pylint: disable=invalid-name
+def ips_do_not_contradict_or_mac_intersection_or_ca_cmdb(adapter_device1, adapter_device2):
+    return ips_do_not_contradict_or_mac_intersection(adapter_device1, adapter_device2) \
+        or is_ca_cmdb_adapter(adapter_device1) or is_ca_cmdb_adapter(adapter_device2)
+# pylint: enable=invalid-name
+
+
 def compare_hostname_or_private_dns(adapter_device1, adapter_device2):
     private_dns_or_hostname1 = get_prefix_private_dns_or_hostname(adapter_device1)
     private_dns_or_hostname2 = get_prefix_private_dns_or_hostname(adapter_device2)
@@ -92,6 +104,10 @@ def not_solarwinds_node(adapter_device):
             and adapter_device['data'].get('node_id') == adapter_device['data'].get('id'):
         return False
     return True
+
+
+def get_normalized_ip_or_is_ca_cmdb(adapter_device):
+    return get_normalized_ip(adapter_device) or is_ca_cmdb_adapter(adapter_device)
 
 
 def not_lansweeper_assetname_no_hostname(adapter_device):
@@ -494,12 +510,13 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
         :return:
         """
         logger.info('Starting to correlate on Asset-Host')
-        filtered_adapters_list = filter(get_asset_or_host, filter(get_normalized_ip, adapters_to_correlate))
+        filtered_adapters_list = filter(get_asset_or_host, filter(
+            get_normalized_ip_or_is_ca_cmdb, adapters_to_correlate))
         return self._bucket_correlate(list(filtered_adapters_list),
                                       [get_asset_or_host],
                                       [compare_asset_hosts],
                                       [get_asset_name],
-                                      [ips_do_not_contradict_or_mac_intersection,
+                                      [ips_do_not_contradict_or_mac_intersection_or_ca_cmdb,
                                        not_aruba_adapters,
                                        asset_hostnames_do_not_contradict,
                                        serials_do_not_contradict],

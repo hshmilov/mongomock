@@ -58,8 +58,24 @@ class CiscoMerakiConnection(RESTConnection):
             except Exception:
                 logger.exception(f'Problem getting devices in network {network_raw}')
 
-    def _get_devices_and_clients(self, networks_raw, serial_statuses_dict):
+    def _get_clients_data_from_networks(self, networks_raw):
+        clients_data_dict = dict()
+        for network_raw in networks_raw:
+            try:
+                if network_raw and network_raw.get('id'):
+                    clients_network_raw = self._meraki_get('networks/' + network_raw.get('id') +
+                                                           f'/clients?timespan={86400 * 2}&perPage=1000')
+                    for client_raw in clients_network_raw:
+                        clients_data_dict[client_raw.get('id')] = client_raw
+                        clients_data_dict[client_raw.get('id')]['network_id'] = network_raw.get('id')
+            except Exception:
+                logger.exception(f'Problem getting devices in network {network_raw}')
+        return clients_data_dict
+
+    # pylint: disable=too-many-nested-blocks
+    def _get_devices_and_clients(self, networks_raw, serial_statuses_dict, fetch_history=False):
         devices_raw = self._get_devices(networks_raw)
+        clients_data_dict = self._get_clients_data_from_networks(networks_raw)
         for device_raw in devices_raw:
             try:
                 device_status = {}
@@ -71,7 +87,23 @@ class CiscoMerakiConnection(RESTConnection):
                     continue
                 serial = device_raw.get('serial')
                 clients_device_raw = self._meraki_get(f'devices/{serial}/clients?timespan={86400 * 2}')
-                for client_raw in clients_device_raw:
+                logger.debug(f'Len is {len(clients_device_raw)}')
+                for ind, client_raw in enumerate(clients_device_raw):
+                    logger.debug(f'index is {ind}')
+                    if fetch_history:
+                        try:
+                            client_id = client_raw.get('id')
+                            network_id = None
+                            if client_id and clients_data_dict.get(client_id):
+                                network_id = clients_data_dict.get(client_id).get('network_id')
+                            if client_id and network_id:
+                                starting = int(time.time()) - 43200
+                                client_raw['history_raw'] = self._meraki_get(
+                                    f'networks/{network_id}/clients/{client_id}'
+                                    f'/trafficHistory?perPage=1000&startingAfter={starting}')
+                        except Exception:
+                            logger.exception(f'Problem getting history for {client_raw}')
+                    client_raw['extra_data'] = clients_data_dict.get(client_raw.get('id'))
                     client_raw['associated_device'] = serial
                     client_raw['name'] = device_raw.get('name')
                     client_raw['address'] = device_raw.get('address')
@@ -121,10 +153,11 @@ class CiscoMerakiConnection(RESTConnection):
                 logger.exception(f'Problem with organization {organization}')
         return serial_statuses_dict
 
-    def get_device_list(self):
+    # pylint: disable=arguments-differ
+    def get_device_list(self, fetch_history=False):
         organizations = [str(organization_raw['id']) for organization_raw in self._meraki_get('organizations')
                          if organization_raw.get('id')]
         serial_statuses_dict = self._get_device_statuses(organizations)
         networks_raw = list(self._get_networks(organizations))
-        yield from self._get_devices_and_clients(networks_raw, serial_statuses_dict)
+        yield from self._get_devices_and_clients(networks_raw, serial_statuses_dict, fetch_history)
         yield from self._get_mdm_devices(networks_raw)

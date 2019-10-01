@@ -326,6 +326,10 @@ def figure_out_os(s):
         os_type = 'Solaris'
     elif 'aix' in s.lower():
         os_type = 'AIX'
+    elif 'printer' in s.lower():
+        os_type = 'Printer'
+    elif 'playstation' in s.lower():
+        os_type = 'PlayStation'
 
     return {'type': os_type,
             'distribution': distribution,

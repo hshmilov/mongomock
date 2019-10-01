@@ -12,6 +12,7 @@ PORT = 'port'
 PRIVATE_KEY = 'private_key'
 IS_SUDOER = 'is_sudoer'
 PASSPHRASE = 'passphrase'
+SUDO_PATH = 'sudo_path'
 COMMAND = 'command'
 COMMAND_NAME = 'command_name'
 ACTION_TYPES = namedtuple('ActionTypes', ('scan', 'cmd'))(scan='execute_scan', cmd='execute_cmd')
@@ -52,6 +53,11 @@ BASE_SCHEMA = {
                 'Use sudo to execute privileged commands. If left unchecked, privileged commands may fail.'
             ),
             'type': 'bool',
+        },
+        {
+            'name': SUDO_PATH,
+            'title': 'Sudo Path',
+            'type': 'string'
         },
     ],
     'required': [USERNAME, IS_SUDOER],

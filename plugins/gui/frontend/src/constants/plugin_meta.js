@@ -1,4 +1,32 @@
 export const pluginMeta = {
+    guardicore_adapter: {
+        title: 'Guardicore',
+        description: 'Guardicore is a data center and cloud security company that protects the organization’s core assets.'
+    },
+    omnivista_adapter: {
+        title: 'OmniVista - BETA',
+        description: 'The Alcatel-Lucent OmniVista 2500 Network Management System (NMS) provides management tools and network-wide visibility. This single platform enables operators to provision, manage and maintain a Campus Mobile infrastructure with its network elements, alarms, unified access security policies, and virtualization. It also provides advanced network analytics for full visibility into wireless, devices and applications, as well as predictive analysis for forward planning.'
+    },
+    symantec_dlp_adapter: {
+        title: 'Symantec DLP - BETA',
+        description: 'Symantec DLP is a data loss protection and prevention solution. Its unified management console, the DLP Enforce Platform, and its business intelligence reporting tool, IT Analytics for DLP, allows writing and enforce policies to reduce information risks.'
+    },
+    cisco_ucm_adapter: {
+        title: 'Cisco Unified Communications Manager - BETA',
+        description: 'Cisco Unified Communications Manager provides secure and manageable call control and session management.'
+    },
+    randori_adapter: {
+        title: 'Randori',
+        description: 'Randori is an attack platform which combines continuous reconnaissance, real-time target analysis, and the ability to safely execute attacks on-demand to provide an attacker’s perspective.'
+    },
+    masscan_adapter: {
+        title: 'Masscan',
+        description: 'Masscan is a free internet port scanner utility.'
+    },
+    aqua_adapter: {
+        title: 'Aqua Security',
+        description: 'Aqua Security provides container and cloud native cybersecurity for teams using Docker, Kubernetes, serverless, and other cloud native technologies.'
+    },
     icinga_adapter: {
         title: 'Icinga',
         link: 'https://docs.axonius.com/docs/icinga',
@@ -130,7 +158,7 @@ export const pluginMeta = {
         description: 'Rumble Network Discovery is a cloud-based network discovery platform that identifies and monitors network-connected IT assets.'
     },
     office_scan_adapter: {
-        title: 'Trend Micro Apex One (formerly OfficeScan) - BETA',
+        title: 'Trend Micro Apex One (formerly OfficeScan)',
         link: 'https://docs.axonius.com/docs/trend-micro-apex-one',
         description: 'Trend Micro Apex One (formerly OfficeScan) is an endpoint security solution protecting against malware, scripts, injection, ransomware, memory and browser attacks, and exploits.'
     },

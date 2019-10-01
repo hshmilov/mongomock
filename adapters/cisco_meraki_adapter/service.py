@@ -6,6 +6,8 @@ from axonius.adapter_exceptions import ClientConnectionException
 from axonius.devices.device_adapter import DeviceAdapter, SmartJsonClass
 from axonius.utils.files import get_local_config_file
 from axonius.fields import Field, ListField
+from axonius.utils.datetime import parse_date
+from axonius.mixins.configurable import Configurable
 from axonius.clients.rest.connection import RESTConnection, RESTException
 from axonius.devices.device_adapter import DeviceAdapterNetworkInterface, DeviceAdapterNeighbor, \
     DeviceAdapterVlan, ConnectionType
@@ -31,7 +33,18 @@ class AssociatedDeviceAdapter(SmartJsonClass):
     public_ip = Field(str, 'Public IP')
 
 
-class CiscoMerakiAdapter(AdapterBase):
+class UrlInformation(SmartJsonClass):
+    application = Field(str, 'Application')
+    destination = Field(str, 'Destination')
+    protocol = Field(str, 'Protocol')
+    port = Field(int, 'Port')
+    recv = Field(int, 'KBytes Recieved')
+    sent = Field(int, 'KByte Sent')
+    num_flows = Field(int, 'Number of Flows')
+    active_seconds = Field(int, 'Active Seconds')
+
+
+class CiscoMerakiAdapter(AdapterBase, Configurable):
 
     # pylint: disable=too-many-instance-attributes
     class MyDeviceAdapter(DeviceAdapter):
@@ -56,6 +69,9 @@ class CiscoMerakiAdapter(AdapterBase):
         is_rooted = Field(str, 'Is Rooted')
         imei = Field(str, 'IMEI')
         auto_tags = ListField(str, 'Auto Tags')
+        bytes_recv = Field(int, 'KBytes Recieved')
+        bytes_sent = Field(int, 'KBytes Sent')
+        traffic_history = ListField(UrlInformation, 'Traffic History')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -88,8 +104,7 @@ class CiscoMerakiAdapter(AdapterBase):
             logger.exception(message)
             raise ClientConnectionException(message)
 
-    @staticmethod
-    def _query_devices_by_client(client_name, client_data):
+    def _query_devices_by_client(self, client_name, client_data):
         """
         Get all devices from a specific CiscoMeraki domain
 
@@ -106,7 +121,7 @@ class CiscoMerakiAdapter(AdapterBase):
         if exclude_no_vlan_clients:
             vlan_exclude_list.append(None)
         with connection:
-            for deivce_raw, device_type in connection.get_device_list():
+            for deivce_raw, device_type in connection.get_device_list(fetch_history=self.__fetch_history):
                 yield deivce_raw, device_type, vlan_exclude_list
 
     @staticmethod
@@ -167,6 +182,17 @@ class CiscoMerakiAdapter(AdapterBase):
             device.id = client_id
             device.associated_user = client_raw.get('user')
             device.device_type = CLIENT_TYPE
+            try:
+                device.figure_os((client_raw.get('extra_data') or {}).get('os'))
+                device.device_manufacturer = (client_raw.get('extra_data') or {}).get('manufacturer')
+                device.ssid = (client_raw.get('extra_data') or {}).get('ssid')
+                device.first_seen = parse_date((client_raw.get('extra_data') or {}).get('firstSeen'))
+                usage = (client_raw.get('extra_data') or {}).get('usage')
+                if isinstance(usage, dict):
+                    device.bytes_recv = usage.get('recv') if isinstance(usage.get('recv'), int) else None
+                    device.bytes_sent = usage.get('sent') if isinstance(usage.get('sent'), int) else None
+            except Exception:
+                logger.exception(f'Problem getting OS for {client_raw}')
             mac_address = client_raw.get('mac')
             hostname = client_raw.get('dhcpHostname') or client_raw.get('mdnsName')
             if client_raw.get('mdnsName') and client_raw.get('dhcpHostname') and \
@@ -182,6 +208,26 @@ class CiscoMerakiAdapter(AdapterBase):
                     device.add_nic(mac_address, ip_addresses)
             except Exception:
                 logger.exception(f'Problem with fetching NIC in CiscoMeraki Client {client_raw}')
+            if isinstance(client_raw.get('history_raw'), list):
+                for link_raw in client_raw.get('history_raw'):
+                    try:
+                        device.traffic_history.append(UrlInformation(application=link_raw.get('application'),
+                                                                     destination=link_raw.get('destination'),
+                                                                     protocol=link_raw.get('protocol'),
+                                                                     port=link_raw.get('port')
+                                                                     if isinstance(link_raw.get('port'), int) else None,
+                                                                     recv=link_raw.get('recv')
+                                                                     if isinstance(link_raw.get('recv'), int) else None,
+                                                                     sent=link_raw.get('sent')
+                                                                     if isinstance(link_raw.get('sent'), int) else None,
+                                                                     num_flows=link_raw.get('num_flows')
+                                                                     if isinstance(link_raw.get('num_flows'),
+                                                                                   int) else None,
+                                                                     active_seconds=link_raw.get('active_seconds')
+                                                                     if isinstance(link_raw.get('active_seconds'),
+                                                                                   int) else None))
+                    except Exception:
+                        logger.exception(f'Problem with link {link_raw}')
             device.description = client_raw.get('description')
             device.associated_devices = []
             found_regular_vlan = False
@@ -274,7 +320,8 @@ class CiscoMerakiAdapter(AdapterBase):
             device.adapter_properties = [AdapterProperty.Network.name, AdapterProperty.Manager.name]
             try:
                 device_status = device_raw.get('device_status')
-                device.add_public_ip(device_status.get('publicIp'))
+                if device_status.get('publicIp'):
+                    device.add_public_ip(device_status.get('publicIp'))
                 device.device_status = device_status.get('status')
             except Exception:
                 logger.exception('Problem with status')
@@ -287,9 +334,6 @@ class CiscoMerakiAdapter(AdapterBase):
     @staticmethod
     def _add_client_raw_to_clients_dict(clients_id_dict, client_raw):
         try:
-            for key in client_raw:
-                if client_raw[key] is not None:
-                    client_raw[key] = str(client_raw[key])
             device_id = client_raw.get('mac') or client_raw.get('id') or ''
             if not device_id:
                 logger.info(f'No ID (MAC) for device: {client_raw}')
@@ -303,6 +347,7 @@ class CiscoMerakiAdapter(AdapterBase):
             if device_id not in clients_id_dict:
                 clients_id_dict[device_id] = client_raw
                 clients_id_dict[device_id]['associated_devices'] = set()
+                clients_id_dict[device_id]['history_raw'] = []
             clients_id_dict[device_id]['ip'].union(client_raw['ip'])
             clients_id_dict[device_id]['associated_devices'].add(
                 (client_raw.get('associated_device'), client_raw.get('switchport'),
@@ -311,6 +356,8 @@ class CiscoMerakiAdapter(AdapterBase):
                  client_raw.get('notes'), client_raw.get('tags'),
                  client_raw.get('wan1Ip'), client_raw.get('wan2Ip'), client_raw.get('lanIp'),
                  client_raw.get('public_ip')))
+            if isinstance(client_raw.get('history_raw'), list):
+                clients_id_dict[device_id]['history_raw'].extend(client_raw.get('history_raw'))
         except Exception:
             logger.exception(f'Problem with fetching CiscoMeraki Client {client_raw}')
 
@@ -318,6 +365,7 @@ class CiscoMerakiAdapter(AdapterBase):
         try:
             device = self._new_device_adapter()
             device_id = device_raw.get('id')
+            device.device_type = MDM_TYPE
             if device_id is None:
                 logger.warning(f'Bad device with no ID {device_raw}')
                 return None
@@ -404,3 +452,29 @@ class CiscoMerakiAdapter(AdapterBase):
     @classmethod
     def adapter_properties(cls):
         return [AdapterProperty.Network]
+
+    @classmethod
+    def _db_config_schema(cls) -> dict:
+        return {
+            'items': [
+                {
+                    'name': 'fetch_history',
+                    'title': 'Should fetch Clients URLs History',
+                    'type': 'bool'
+                }
+            ],
+            'required': [
+                'fetch_history'
+            ],
+            'pretty_name': 'Cisco Meraki Configuration',
+            'type': 'array'
+        }
+
+    @classmethod
+    def _db_config_default(cls):
+        return {
+            'fetch_history': False
+        }
+
+    def _on_config_update(self, config):
+        self.__fetch_history = config['fetch_history']

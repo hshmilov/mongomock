@@ -91,7 +91,8 @@ class BluecatAdapter(AdapterBase, Configurable):
         client_data, client_type = client_data_and_type
         if client_type == API_CLIENT_TYPE:
             with client_data:
-                for device in client_data.get_device_list(self.__sleep_between_requests_in_sec):
+                for device in client_data.get_device_list(self.__sleep_between_requests_in_sec,
+                                                          self.__get_extra_host_data):
                     yield device, API_CLIENT_TYPE
         elif client_type == SQL_CLIENT_TYPE:
             with client_data:
@@ -310,9 +311,14 @@ class BluecatAdapter(AdapterBase, Configurable):
                     'name': 'sleep_between_requests_in_sec',
                     'type': 'integer',
                     'title': 'time in seconds to sleep between each request'
+                },
+                {
+                    'name': 'get_extra_host_data',
+                    'title': 'Get Extra Host Data',
+                    'type': 'bool'
                 }
             ],
-            'required': [],
+            'required': ['get_extra_host_data'],
             'pretty_name': 'BlueCat Configuration',
             'type': 'array'
         }
@@ -320,8 +326,10 @@ class BluecatAdapter(AdapterBase, Configurable):
     @classmethod
     def _db_config_default(cls):
         return {
-            'sleep_between_requests_in_sec': 0
+            'sleep_between_requests_in_sec': 0,
+            'get_extra_host_data': True
         }
 
     def _on_config_update(self, config):
         self.__sleep_between_requests_in_sec = config.get('sleep_between_requests_in_sec')
+        self.__get_extra_host_data = config.get('get_extra_host_data')

@@ -33,6 +33,29 @@ def get_username(adapter_data):
     return None
 
 
+def get_username_prefix(adapter_data):
+    username = get_username(adapter_data)
+    if not username:
+        return None
+    return username.split('@')[0]
+
+
+def compare_username_prefix(adapter_data1, adapter_data2):
+    username_1 = get_username_prefix(adapter_data1)
+    username_2 = get_username_prefix(adapter_data2)
+    if not username_1 or not username_2:
+        return True
+    return username_1 == username_2
+
+
+def compare_username(adapter_data1, adapter_data2):
+    username_1 = get_username(adapter_data1)
+    username_2 = get_username(adapter_data2)
+    if not username_1 or not username_2:
+        return True
+    return username_1 == username_2
+
+
 def get_ad_display_name(adapter_data):
     ad_display_name = adapter_data['data'].get('ad_display_name')
     if ad_display_name and ad_display_name.lower().strip() not in ['unknown']:
@@ -232,7 +255,7 @@ class StaticUserCorrelatorEngine(CorrelatorEngineBase):
                                           [compare_aws_username_mail],
                                           [],
                                           [],
-                                          {'Reason': 'They have the same ad upn mail'},
+                                          {'Reason': 'They have the same mail plus AWS username'},
                                           CorrelationReason.StaticAnalysis)
 
     def _correlate_email_prefix(self, entities):
@@ -270,6 +293,17 @@ class StaticUserCorrelatorEngine(CorrelatorEngineBase):
                                                   {'Reason': 'They have the same mail'},
                                                   CorrelationReason.StaticAnalysis)
 
+    def _correlate_username_aws(self, entities):
+        logger.info('Starting to correlate on aws username')
+        filtered_adapters_list = filter(get_username_prefix, entities)
+        yield from self._bucket_correlate(list(filtered_adapters_list),
+                                          [get_username_prefix],
+                                          [compare_username_prefix],
+                                          [get_aws_username],
+                                          [],
+                                          {'Reason': 'They have the same username and one is AWS'},
+                                          CorrelationReason.StaticAnalysis)
+
     def _correlate_ad_display_name(self, entities):
         """
         Correlate Azure AD and AD
@@ -305,5 +339,6 @@ class StaticUserCorrelatorEngine(CorrelatorEngineBase):
         yield from self._correlate_ad_display_name(normalize_adapter_users(entities))
         yield from self._correlate_ad_display_name_username(normalize_adapter_users(entities))
         yield from self._correlate_aws_username_mail(normalize_adapter_users(entities))
+        yield from self._correlate_username_aws(normalize_adapter_users(entities))
         if self._correlation_config and self._correlation_config.get('email_prefix_correlation') is True:
             yield from self._correlate_email_prefix(normalize_adapter_users(entities))

@@ -11,7 +11,7 @@ from axonius.clients.linux_ssh.consts import (ADAPTER_SCHEMA, COMMAND,
                                               COMMAND_NAME,
                                               DEFAULT_NETWORK_TIMEOUT,
                                               DEFAULT_POOL_SIZE, DEFAULT_PORT,
-                                              HOSTNAME, IS_SUDOER, PASSPHRASE,
+                                              HOSTNAME, IS_SUDOER, PASSPHRASE, SUDO_PATH,
                                               PASSWORD, PORT, PRIVATE_KEY,
                                               USERNAME)
 from axonius.clients.linux_ssh.data import LinuxDeviceAdapter
@@ -88,7 +88,8 @@ class LinuxSshAdapter(LinuxSshExecutionMixIn, AdapterBase, Configurable):
                                     key=client_config[PRIVATE_KEY],
                                     is_sudoer=client_config[IS_SUDOER],
                                     passphrase=client_config[PASSPHRASE],
-                                    timeout=self._timeout) as connection:
+                                    timeout=self._timeout,
+                                    sudo_path=client_config.get(SUDO_PATH)) as connection:
                 return connection
         except Exception as e:
             message = 'Error connecting to client {0}, reason: {1}'.format(

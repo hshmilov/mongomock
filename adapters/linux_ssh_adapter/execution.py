@@ -10,7 +10,7 @@ from axonius.clients.linux_ssh.consts import (ACTION_TYPES, CMD_ACTION_SCHEMA,
                                               IS_SUDOER, PASSWORD, PORT,
                                               PRIVATE_KEY, SCAN_ACTION_SCHEMA,
                                               SHOULD_DELETE_AFTER_EXEC_NAME,
-                                              UPLOAD_PATH_NAME,
+                                              UPLOAD_PATH_NAME, SUDO_PATH,
                                               UPLOAD_PERMISSIONS_NAME,
                                               USERNAME, DEFAULT_UPLOAD_PERMISSIONS)
 from axonius.clients.linux_ssh.data import (ChmodCommand, DynamicFieldCommand,
@@ -125,7 +125,8 @@ class LinuxSshExecutionMixIn(Triggerable):
                                         password=client_config[PASSWORD],
                                         key=client_config[PRIVATE_KEY],
                                         is_sudoer=client_config[IS_SUDOER],
-                                        timeout=self._timeout)
+                                        timeout=self._timeout,
+                                        sudo_path=client_config.get(SUDO_PATH))
 
         data = self._query_devices_by_client(client_id, connection)
         # SSH adapter only yield one device per config
@@ -204,14 +205,16 @@ class LinuxSshExecutionMixIn(Triggerable):
                                         password=client_config[PASSWORD],
                                         key=client_config[PRIVATE_KEY],
                                         is_sudoer=client_config[IS_SUDOER],
-                                        timeout=self._timeout)
+                                        timeout=self._timeout,
+                                        sudo_path=client_config.get(SUDO_PATH))
 
         with connection:
             uploaded_files = self._upload_files(client_config, connection)
             chmod_permissions = client_config.get(UPLOAD_PERMISSIONS_NAME, DEFAULT_UPLOAD_PERMISSIONS)
             if isinstance(chmod_permissions, int) and uploaded_files:
                 self._chmod_files(chmod_permissions, uploaded_files, connection)
-            command.shell_execute(connection._execute_ssh_cmdline, client_config[PASSWORD])
+            command.shell_execute(connection._execute_ssh_cmdline, client_config[PASSWORD],
+                                  client_config.get(SUDO_PATH))
             if client_config.get(SHOULD_DELETE_AFTER_EXEC_NAME, True) and uploaded_files:
                 self._delete_files(uploaded_files, connection)
         command.parse()

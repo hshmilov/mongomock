@@ -20,7 +20,6 @@ class CarbonblackDefenseAdapter(AdapterBase, Configurable):
     class MyDeviceAdapter(DeviceAdapter):
         av_status = Field(str, 'AV Status')
         policy_name = Field(str, 'Policy Name')
-        email = Field(str, 'Email')
         basic_device_id = Field(str, 'Basic ID')
 
     def __init__(self):
@@ -174,7 +173,8 @@ class CarbonblackDefenseAdapter(AdapterBase, Configurable):
             except Exception:
                 logger.exception('Problem getting Last seen in CarbonBlackDefense')
             device.av_status = str(device_raw.get('avStatus')) if device_raw.get('avStatus') else None
-            device.email = device_raw.get('email')
+            if device_raw.get('email'):
+                device.last_used_users = [device_raw.get('email')]
             device.add_agent_version(agent=AGENT_NAMES.carbonblack_defense,
                                      version=device_raw.get('sensorVersion'),
                                      status=device_raw.get('status'))

@@ -52,19 +52,21 @@ class AbstractCommand:
     START_MAGIC = 'STARTSTART'
     CHECK_RET_VALUE = True
     REQUIRE_ROOT_PRIVILEGES = False
+    SUDO_DEFAULT_PATH = 'sudo'
 
     def __init__(self):
         self._raw_data = ''
         self._parsed_data = {}
 
-    def shell_execute(self, execute_callback: Callable[[str], str], password: str = None):
+    def shell_execute(self, execute_callback: Callable[[str], str], password: str = None, sudo_path: str = None):
         """ factory to create the class given shell_execute function """
         shell_cmdline = self._get_command()
-
+        if not sudo_path:
+            sudo_path = self.SUDO_DEFAULT_PATH
         # If we have password and the command require root privilege add sudo
         # if not, just try to execute it - maybe it will work
         if self.REQUIRE_ROOT_PRIVILEGES and password is not None:
-            shell_cmdline = f'echo \'{password}\' | sudo -S sh -c \'{shell_cmdline}\''
+            shell_cmdline = f'echo \'{password}\' | {sudo_path} -S sh -c \'{shell_cmdline}\''
 
         self._raw_data = execute_callback(shell_cmdline)
 
@@ -715,10 +717,11 @@ class CommandExecutor:
         HardwareCommand(),
     ]
 
-    def __init__(self, shell_execute: Callable[[str], str], password: str = None):
+    def __init__(self, shell_execute: Callable[[str], str], password: str = None, sudo_path: str = None):
         self._shell_execute = shell_execute
         self._password = password
         self._dynamic_commands = []
+        self._sudo_path = sudo_path
 
     def add_dynamic_command(self, command):
         self._dynamic_commands.append(command)
@@ -743,7 +746,7 @@ class CommandExecutor:
     def yield_command(self, command, dynamic_cmd=None):
         result = False
         try:
-            command.shell_execute(self._shell_execute, self._password)
+            command.shell_execute(self._shell_execute, self._password, sudo_path=self._sudo_path)
             if command.parse():
                 result = True
             yield command

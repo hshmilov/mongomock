@@ -10,6 +10,7 @@ from axonius.plugin_base import EntityType, add_rule, return_error
 from axonius.utils.atomicint import AtomicInteger
 from axonius.utils.files import get_local_config_file
 from axonius.utils.datetime import parse_date
+from axonius.mixins.configurable import Configurable
 from axonius.utils.parsing import is_domain_valid
 from carbonblack_response_adapter.connection import \
     CarbonblackResponseConnection
@@ -17,13 +18,14 @@ from carbonblack_response_adapter.connection import \
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
-class CarbonblackResponseAdapter(AdapterBase):
+class CarbonblackResponseAdapter(AdapterBase, Configurable):
     # pylint: disable=too-many-instance-attributes
     class MyDeviceAdapter(DeviceAdapter):
         sensor_health_message = Field(str, 'Sensor Health Message')
         is_isolating = Field(bool, 'Is Isolating')
         network_isolation_enabled = Field(bool, 'Network Isolation Enabled')
         sensor_id = Field(str, 'Sensor Id')
+        uninstall = Field(bool, 'Uninstall Status')
 
     def __init__(self):
         super().__init__(get_local_config_file(__file__))
@@ -193,6 +195,9 @@ class CarbonblackResponseAdapter(AdapterBase):
                     device.add_hd(total_size=total_size, free_size=free_size)
             except Exception:
                 logger.exception(f'Problem setting hd. freesize is {free_size} totalsize is {total_size}')
+            uninstall = device_raw.get('uninstall')
+            if self.__fetch_uninstall is False and uninstall is True:
+                return None
             device.set_raw(device_raw)
             return device
         except Exception:
@@ -247,3 +252,29 @@ class CarbonblackResponseAdapter(AdapterBase):
         Whether or not anything is in isolate/unisolate device
         """
         return self.__working.value > 0
+
+    @classmethod
+    def _db_config_schema(cls) -> dict:
+        return {
+            'items': [
+                {
+                    'name': 'fetch_uninstall',
+                    'title': 'Fetch Uninstalled Devices',
+                    'type': 'bool'
+                }
+            ],
+            'required': [
+                'fetch_uninstall'
+            ],
+            'pretty_name': 'Carbonblack Response Configuration',
+            'type': 'array'
+        }
+
+    @classmethod
+    def _db_config_default(cls):
+        return {
+            'fetch_uninstall': True
+        }
+
+    def _on_config_update(self, config):
+        self.__fetch_uninstall = config['fetch_uninstall']

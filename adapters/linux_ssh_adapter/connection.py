@@ -23,7 +23,8 @@ class LinuxSshConnection:
                  key=None,
                  is_sudoer=False,
                  timeout=DEFAULT_NETWORK_TIMEOUT,
-                 passphrase=None):
+                 passphrase=None,
+                 sudo_path=None):
 
         if password is None and key is None:
             raise ClientConnectionException('password/key is required')
@@ -37,6 +38,7 @@ class LinuxSshConnection:
         self._passphrase = passphrase
 
         self._is_sudoer = is_sudoer
+        self._sudo_path = sudo_path
 
         self._client = None
 
@@ -103,7 +105,8 @@ class LinuxSshConnection:
     def get_commands(self, md5_files_list=None):
         # Pass password if only if sudoer
         password = self._password if self._is_sudoer else None
-        command_executor = CommandExecutor(self._execute_ssh_cmdline, password)
+        sudo_path = self._sudo_path if (self._is_sudoer and self._sudo_path) else None
+        command_executor = CommandExecutor(self._execute_ssh_cmdline, password, sudo_path=sudo_path)
 
         if md5_files_list:
             command_executor.add_dynamic_command(MD5FilesCommand(md5_files_list))

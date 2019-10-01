@@ -16,6 +16,20 @@ class UserAdapterDevice(SmartJsonClass):
     last_use_date = Field(datetime.datetime)
 
 
+class UserFactor(SmartJsonClass):
+    factor_type = Field(str, 'Factor Type')
+    factor_status = Field(str, 'Factor Status')
+    last_updated = Field(datetime.datetime, 'Last Updated')
+    vendor_name = Field(str, 'Vendor Name')
+    provider = Field(str, 'Provider')
+    created = Field(datetime.datetime, 'Created')
+
+
+class UserApplication(SmartJsonClass):
+    app_name = Field(str, 'Application Name')
+    app_links = ListField(str, 'Application Links')
+
+
 class UserAdapter(SmartJsonClass):
     """ A definition for the json-scheme for a User """
     image = Field(str, 'Image', json_format=JsonStringFormat.image)
@@ -64,6 +78,11 @@ class UserAdapter(SmartJsonClass):
     employee_number = Field(str, 'Employee Number')     # could have letters so its a string
     employee_type = Field(str, 'Employee Type')     # could have letters so its a string
 
+    user_status = Field(str, 'User Status')
+    user_apps = ListField(UserApplication, 'Applications')
+    user_factors = ListField(UserFactor, 'Authentication Factors')
+    groups = ListField(str, 'Groups')
+
     required = ['id', 'username']
 
     def __init__(self, user_fields: typing.MutableSet[str], user_raw_fields: typing.MutableSet[str]):
@@ -92,6 +111,12 @@ class UserAdapter(SmartJsonClass):
 
     def add_associated_device(self, **kwargs):
         self.associated_devices.append(UserAdapterDevice(**kwargs))
+
+    def add_user_factor(self, **kwargs):
+        self.user_factors.append(UserFactor(**kwargs))
+
+    def add_user_application(self, **kwargs):
+        self.user_apps.append(UserApplication(**kwargs))
 
     def set_raw(self, raw_data: dict):
         """ Sets the raw fields associated with this device and also updates user_raw_fields.

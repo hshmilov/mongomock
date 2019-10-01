@@ -188,6 +188,13 @@ DOCKER_PORTS = {
     'medigate-adapter':                 9981,
     'packetfence-adapter':              9982,
     'icinga-adapter':                   9983,
+    'aqua-adapter':                     9984,
+    'masscan-adapter':                  9985,
+    'randori-adapter':                  9986,
+    'cisco-ucm-adapter':                9987,
+    'symantec-dlp-adapter':             9988,
+    'omnivista-adapter':                9989,
+    'guardicore-adapter':               9990,
     'mongo':                            27017,
     'mockingbird-db':                   28017
 }

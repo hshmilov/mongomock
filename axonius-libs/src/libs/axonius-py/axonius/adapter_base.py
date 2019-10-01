@@ -29,7 +29,7 @@ from axonius import adapter_exceptions
 from axonius.consts import adapter_consts
 from axonius.consts.plugin_consts import PLUGIN_NAME, PLUGIN_UNIQUE_NAME, CORE_UNIQUE_NAME
 from axonius.consts.plugin_subtype import PluginSubtype
-from axonius.devices.device_adapter import LAST_SEEN_FIELD, DeviceAdapter, AdapterProperty
+from axonius.devices.device_adapter import LAST_SEEN_FIELD, DeviceAdapter, AdapterProperty, LAST_SEEN_FIELDS
 from axonius.mixins.configurable import Configurable
 from axonius.mixins.feature import Feature
 from axonius.mixins.triggerable import Triggerable, RunIdentifier
@@ -974,8 +974,10 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
     def __is_entity_old_by_last_seen(parsed_entity_data, seen_cutoff: date):
         if not seen_cutoff:
             return False
-        if LAST_SEEN_FIELD in parsed_entity_data:
-            return parsed_entity_data[LAST_SEEN_FIELD].astimezone(seen_cutoff.tzinfo) < seen_cutoff
+        for last_seen_field in LAST_SEEN_FIELDS:
+            if last_seen_field in parsed_entity_data:
+                if parsed_entity_data[last_seen_field].astimezone(seen_cutoff.tzinfo) < seen_cutoff:
+                    return True
         return False
 
     @staticmethod

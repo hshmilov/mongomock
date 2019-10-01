@@ -82,6 +82,11 @@ class TenableIoAddIPsToTargetGroup(ActionTypeBase):
                     'title': 'Override Current IPs List',
                     'type': 'bool',
                 },
+                {
+                    'name': 'cidr_exclude_list',
+                    'type': 'string',
+                    'title': 'CIDRs exclude list'
+                }
             ],
             'required': [
                 'target_group_name',
@@ -101,6 +106,7 @@ class TenableIoAddIPsToTargetGroup(ActionTypeBase):
     def default_config() -> dict:
         return add_node_default({
             'target_group_name': None,
+            'cidr_exclude_list': None,
             'create_new_asset': False,
             'exclude_ipv6': False,
             'use_private_ips': True,
@@ -124,7 +130,8 @@ class TenableIoAddIPsToTargetGroup(ActionTypeBase):
         ips, results = get_ips_from_view(current_result,
                                          self._config['use_public_ips'],
                                          self._config['use_private_ips'],
-                                         self._config.get('exclude_ipv6') or False)
+                                         self._config.get('exclude_ipv6') or False,
+                                         cidr_exclude_list=self._config.get('cidr_exclude_list'))
         target_group_name = self._config['target_group_name']
         create_new_asset = self._config['create_new_asset']
         override = self._config.get('override_ips') or False

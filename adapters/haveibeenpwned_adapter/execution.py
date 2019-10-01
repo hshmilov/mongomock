@@ -83,13 +83,7 @@ class HaveibeenpwnedExecutionMixIn(Triggerable):
     def _handle_email(self, user, email, connection, alternative_suffix=None):
         try:
             client_id = self._get_enrichment_client_id(user.internal_axon_id, email)
-            try:
-                user_data = connection.get_breach_account_info(email)
-            except Exception:
-                if not alternative_suffix:
-                    raise
-                alternative_email = email.split('@')[0] + '@' + alternative_suffix
-                user_data = connection.get_breach_account_info(alternative_email)
+            user_data = connection.get_breach_account_info(email)
 
             new_user = self._create_user(user_data, email)
 
@@ -116,8 +110,16 @@ class HaveibeenpwnedExecutionMixIn(Triggerable):
             if not emails:
                 json = {'success': False, 'value': 'Haveibeenpwned Error: Missing Email'}
                 return (user.internal_axon_id, json)
+            if not alternative_suffix or not isinstance(alternative_suffix, str):
+                alternative_suffix_list = []
+            else:
+                alternative_suffix_list = alternative_suffix.split(',')
+            emails_full = emails.copy()
+            for email_str in emails:
+                for alternative_suffix_str in alternative_suffix_list:
+                    emails_full.append(email_str.split('@')[0] + '@' + alternative_suffix_str)
 
-            if not any([self._handle_email(user, email, connection, alternative_suffix) for email in emails]):
+            if not any([self._handle_email(user, email, connection) for email in emails_full]):
                 return (user.internal_axon_id, {'success': False, 'value': 'Haveibeenpwned Enrichment - no results'})
 
             return (user.internal_axon_id, {'success': True, 'value': 'Haveibeenpwned Enrichment success'})

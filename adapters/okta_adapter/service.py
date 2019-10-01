@@ -5,7 +5,7 @@ from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
 from axonius.devices.device_adapter import DeviceAdapter
-from axonius.fields import Field, ListField
+from axonius.fields import Field
 from axonius.users.user_adapter import UserAdapter
 from axonius.utils.files import get_local_config_file
 from axonius.utils.datetime import parse_date
@@ -22,9 +22,6 @@ class OktaAdapter(AdapterBase, Configurable):
     class MyUserAdapter(UserAdapter):
         # pylint: disable=R0902
         manager_id = Field(str, 'Manager ID')
-        apps = ListField(str, 'Assigned Applications')
-        groups = ListField(str, 'Groups')
-        user_status = Field(str, 'User Status')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -38,8 +35,7 @@ class OktaAdapter(AdapterBase, Configurable):
 
     def _connect_client(self, client_config):
         connection = OktaConnection(url=client_config['url'],
-                                    api_key=client_config['api_key'],
-                                    fetch_apps=self.__fetch_apps)
+                                    api_key=client_config['api_key'])
         try:
             connection.is_alive()
         except Exception as e:
@@ -48,7 +44,9 @@ class OktaAdapter(AdapterBase, Configurable):
 
     # pylint: disable=W0221
     def _query_users_by_client(self, client_name, client_data):
-        return client_data.get_users(self.__parallel_requests)
+        return client_data.get_users(self.__parallel_requests,
+                                     fetch_apps=self.__fetch_apps,
+                                     fetch_factors=self.__fetch_factors)
 
     def _clients_schema(self):
         return {
@@ -73,6 +71,7 @@ class OktaAdapter(AdapterBase, Configurable):
         }
 
     # pylint: disable=W0221
+    # pylint: disable=too-many-branches, too-many-statements, too-many-locals, too-many-nested-blocks
     def _parse_users_raw_data(self, raw_data):
         for user_raw in raw_data:
             try:
@@ -95,7 +94,9 @@ class OktaAdapter(AdapterBase, Configurable):
                 user.first_name = profile.get('firstName')
                 user.last_name = profile.get('lastName')
                 user.user_telephone_number = profile.get('mobilePhone')
-                user.user_title = profile.get('title')
+                user.user_title = profile.get('Job_Title') or profile.get('title')
+                user.last_logon = parse_date(user_raw.get('lastLogin'))
+                user.last_password_change = parse_date(user_raw.get('passwordChanged'))
                 user.user_department = profile.get('department')
                 user.user_country = profile.get('countryCode')
                 user.manager_id = profile.get('managerId')
@@ -107,9 +108,33 @@ class OktaAdapter(AdapterBase, Configurable):
                         app_name = app.get('label') or app.get('name')
                         if not app_name:
                             continue
-                        user.apps.append(app_name)
+                        app_links = []
+                        try:
+                            for link_raw in app.get('_links').get('appLinks'):
+                                if link_raw.get('href'):
+                                    app_links.append(link_raw.get('href'))
+                        except Exception:
+                            logger.exception(f'Problem getting link for {app}')
+                        if not app_links:
+                            app_links = None
+                        user.add_user_application(app_name=app_name,
+                                                  app_links=app_links)
+
                 except Exception:
                     logger.exception(f'Problem getting apps for {user_raw}')
+                try:
+                    for factor_raw in (user_raw.get('factors_raw') or []):
+                        try:
+                            user.add_user_factor(factor_type=factor_raw.get('factorType'),
+                                                 factor_status=factor_raw.get('status'),
+                                                 vendor_name=factor_raw.get('vendorName'),
+                                                 provider=factor_raw.get('provider'),
+                                                 last_updated=parse_date(factor_raw.get('lastUpdated')),
+                                                 created=parse_date(factor_raw.get('created')))
+                        except Exception:
+                            logger.exception(f'Problem with factor {factor_raw}')
+                except Exception:
+                    logger.exception(f'Problem parsing factors')
                 user.set_raw(user_raw)
                 yield user
             except Exception:
@@ -129,6 +154,11 @@ class OktaAdapter(AdapterBase, Configurable):
                     'type': 'bool'
                 },
                 {
+                    'name': 'fetch_factors',
+                    'title': 'Should fetch Users Authentication Factors',
+                    'type': 'bool'
+                },
+                {
                     'name': 'parallel_requests',
                     'title': 'Number of parallel requests',
                     'type': 'integer'
@@ -136,7 +166,8 @@ class OktaAdapter(AdapterBase, Configurable):
             ],
             'required': [
                 'fetch_apps',
-                'parallel_requests'
+                'parallel_requests',
+                'fetch_factors'
             ],
             'pretty_name': 'Okta Configuration',
             'type': 'array'
@@ -146,9 +177,11 @@ class OktaAdapter(AdapterBase, Configurable):
     def _db_config_default(cls):
         return {
             'fetch_apps': False,
+            'fetch_factors': False,
             'parallel_requests': 75
         }
 
     def _on_config_update(self, config):
         self.__fetch_apps = config['fetch_apps']
         self.__parallel_requests = config['parallel_requests']
+        self.__fetch_factors = config.get('fetch_factors')

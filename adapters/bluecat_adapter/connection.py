@@ -17,6 +17,7 @@ class BluecatConnection(RESTConnection):
                          headers={'Content-Type': 'application/json',
                                   'Accept': 'application/json'}, **kwargs)
         self.sleep_between_requests_in_sec = None
+        self._token_time = None
 
     # pylint: disable=arguments-differ
     def _do_request(self, *args, **kwargs):
@@ -25,6 +26,15 @@ class BluecatConnection(RESTConnection):
         return super()._do_request(*args, **kwargs)
 
     def _refresh_token(self):
+        seconds_in_last_minute = 59
+        if self.sleep_between_requests_in_sec \
+                and isinstance(self.sleep_between_requests_in_sec, int) and self.sleep_between_requests_in_sec < 60:
+            seconds_in_last_minute = 59 - self.sleep_between_requests_in_sec
+        if self._token_time and \
+                (datetime.datetime.now() - self._token_time) \
+                < datetime.timedelta(minutes=4, seconds=seconds_in_last_minute):
+            return
+        logger.info('Do token request')
         try:
             response = self._get(f'login?username={self._username}&password={self._password}',
                                  use_json_in_response=False)
@@ -49,16 +59,17 @@ class BluecatConnection(RESTConnection):
     def _connect(self):
         if not self._username or not self._password:
             raise RESTException('No username or password')
+        self._token_time = None
         self._refresh_token()
 
     # pylint: disable=R0912,arguments-differ
-    def get_device_list(self, sleep_between_requests_in_sec):
+    def get_device_list(self, sleep_between_requests_in_sec, get_extra_host_data=True):
         self.sleep_between_requests_in_sec = sleep_between_requests_in_sec
         networks_ids = set()
         for key_num in range(1, 256):
             try:
-                if (datetime.datetime.now() - self._token_time) > datetime.timedelta(minutes=5):
-                    self._refresh_token()
+                logger.info(f'Key Num is {key_num}')
+                self._refresh_token()
                 response = self._get(f'searchByObjectTypes?'
                                      f'keyword={key_num}$&types=IP4Network&start=0&'
                                      f'count={DEVICE_PER_PAGE}')
@@ -67,23 +78,22 @@ class BluecatConnection(RESTConnection):
                         networks_ids.add(network_raw.get('id'))
             except Exception:
                 logger.exception(f'Problem getting key num')
-        if (datetime.datetime.now() - self._token_time) > datetime.timedelta(minutes=5):
-            self._refresh_token()
+        self._refresh_token()
         # pylint: disable=R1702
         networks_ids = list(networks_ids)
         logger.info(f'Got {len(networks_ids)} networks')
-        for network_id in networks_ids:
+        for i, network_id in enumerate(networks_ids):
             try:
-                if (datetime.datetime.now() - self._token_time) > datetime.timedelta(minutes=5):
-                    self._refresh_token()
+                if i % 100 == 0:
+                    logger.info(f'Got networks count {i}')
+                self._refresh_token()
                 response = self._get(f'getEntities?parentId={network_id}&type=IP4Address'
                                      f'&start=0&count={DEVICE_PER_PAGE}')
                 for device_raw in response:
                     try:
                         host_id = device_raw.get('id')
-                        if host_id:
-                            if (datetime.datetime.now() - self._token_time) > datetime.timedelta(minutes=5):
-                                self._refresh_token()
+                        if host_id and get_extra_host_data:
+                            self._refresh_token()
                             dns_name_raw = self._get(f'getLinkedEntities?entityId={host_id}&type=HostRecord&'
                                                      f'start=0&count={DEVICE_PER_PAGE}')
                             if isinstance(dns_name_raw, list) and len(dns_name_raw) > 0:

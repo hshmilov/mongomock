@@ -7,7 +7,7 @@ from axonius.clients.linux_ssh.data import *
 class LocalInfoMockMixin:
     RAW_DATA = None
 
-    def shell_execute(self, execute_callback: Callable[[str], str] = None, password: str = None):
+    def shell_execute(self, execute_callback: Callable[[str], str] = None, password: str = None, sudo_path: str = None):
         self._raw_data = self.START_MAGIC + self.RAW_DATA + self.END_MAGIC
 
 
@@ -124,7 +124,7 @@ Codename:	buster
 class FailDistroMock(LocalInfoMockMixin, DebianDistroCommand):
     RAW_DATA = 'fail'
 
-    def shell_execute(self, execute_callback: Callable[[str], str] = None, password: str = None):
+    def shell_execute(self, execute_callback: Callable[[str], str] = None, password: str = None, sudo_path: str = None):
         self._raw_data = self.RAW_DATA
 
 

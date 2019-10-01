@@ -228,7 +228,8 @@ class SolarwindsOrionAdapter(AdapterBase, Configurable):
                 logger.exception(f'Either memory used or available memory does not exist in {raw_device_data}')
 
             device.physical_memory_percentage = raw_device_data.get('PercentMemoryUsed')
-            device.figure_os(raw_device_data.get('NodeDescription'))
+            device.figure_os((raw_device_data.get('Description') or '') + ' '
+                             + (raw_device_data.get('NodeDescription') or ''))
             try:
                 if raw_device_data.get('CPUCount'):
                     device.add_cpu(cores=int(raw_device_data.get('CPUCount')))
