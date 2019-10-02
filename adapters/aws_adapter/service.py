@@ -700,7 +700,8 @@ class AwsAdapter(AdapterBase, Configurable):
                         failed_connections.append(f'{current_try}: {str(e)}')
                 except Exception as e:
                     logger.exception(f'Error assuming role {role_arn}')
-                    raise ClientConnectionException(f'Error assuming role {role_arn}: {str(e)}')
+                    if self.__verify_all_roles:
+                        raise ClientConnectionException(f'Error assuming role {role_arn}: {str(e)}')
 
         # If should_validate remained True, it means nothing has passed any validation.
         # It its False, then something passed validation, or we did not require any.
@@ -3448,6 +3449,7 @@ class AwsAdapter(AdapterBase, Configurable):
         self.__parse_elb_ips = config.get('parse_elb_ips') or False
         self.__verbose_auth_notifications = config.get('verbose_auth_notifications') or False
         self.__shodan_key = config.get('shodan_key')
+        self.__verify_all_roles = config.get('verify_all_roles')
 
     @classmethod
     def _db_config_schema(cls) -> dict:
@@ -3518,7 +3520,12 @@ class AwsAdapter(AdapterBase, Configurable):
                     'title': 'Shodan API key for more IP info',
                     'type': 'string',
                     'format': 'password'
-                }
+                },
+                {
+                    'name': 'verify_all_roles',
+                    'title': 'Verify all IAM roles',
+                    'type': 'bool'
+                },
             ],
             "required": [
                 'correlate_ecs_ec2',
@@ -3532,7 +3539,8 @@ class AwsAdapter(AdapterBase, Configurable):
                 'fetch_ssm',
                 'fetch_nat',
                 'parse_elb_ips',
-                'verbose_auth_notifications'
+                'verbose_auth_notifications',
+                'verify_all_roles'
             ],
             "pretty_name": "AWS Configuration",
             "type": "array"
@@ -3553,7 +3561,8 @@ class AwsAdapter(AdapterBase, Configurable):
             'fetch_nat': False,
             'parse_elb_ips': False,
             'verbose_auth_notifications': False,
-            'shodan_key': None
+            'shodan_key': None,
+            'verify_all_roles': True
         }
 
     @classmethod

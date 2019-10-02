@@ -1,3 +1,4 @@
+import ipaddress
 import logging
 
 from axonius.clients.rest.connection import RESTConnection
@@ -56,8 +57,33 @@ class InfobloxConnection(RESTConnection):
             raise
 
     def get_device_list(self):
+        # First, get all networks to get additional data about the leases
+        networks = dict()
+        logger.info(f'Getting networks')
+        try:
+            for network_raw in self.__get_items_from_url(
+                    'network',
+                    url_params={'_return_fields': 'network,extattrs'}
+            ):
+                if not network_raw.get('network'):
+                    continue
+                networks[ipaddress.IPv4Network(network_raw.get('network'))] = network_raw
+        except Exception:
+            logger.exception(f'Problem getting networks')
+        logger.info(f'Finished getting {len(networks)} networks. Getting leases')
+        # Then, get leases
         fields_to_return = 'served_by,starts,ends,address,binding_state,hardware,client_hostname,network_view'
         if self.__api_version >= 2.5:
             fields_to_return += ',fingerprint'
-        yield from self.__get_items_from_url('lease',
-                                             url_params={'_return_fields': fields_to_return})
+        for lease_raw in self.__get_items_from_url('lease', url_params={'_return_fields': fields_to_return}):
+            try:
+                lease_address = lease_raw.get('address')
+                if lease_address:
+                    lease_address = ipaddress.IPv4Address(lease_address)
+                    for network, network_data in networks.items():
+                        if lease_address in network:
+                            lease_raw['network_data'] = network_data
+                            break
+            except Exception:
+                pass
+            yield lease_raw

@@ -132,6 +132,15 @@ class MongoService(WeaveService):
 
         print("Finished setting up mongo")
 
+    def wait_for_service(self, timeout=60 * 45):
+        # We wait much longer for mongo, because in some customers, a hard restart can cause a corruption in the db
+        # which needs a restore. Depending on the size of the environment and the speed of the hard disk, this can
+        # be very fast or very slow.
+        #
+        # On the other hand if we don't wait enough, a restart will be made (to identify weave bugs) which will lead
+        # to the db being corrupt again. we are trying to avoid that.
+        super().wait_for_service(timeout)
+
     @property
     def _additional_parameters(self):
         return ['mongod',

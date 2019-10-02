@@ -1,13 +1,14 @@
-import logging
 import datetime
+import logging
 
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.exception import RESTException
 from axonius.devices.device_adapter import DeviceAdapter
-from axonius.utils.files import get_local_config_file
 from axonius.fields import Field
+from axonius.utils.files import get_local_config_file
+from axonius.utils.parsing import normalize_var_name
 from infoblox_adapter.connection import InfobloxConnection
 
 logger = logging.getLogger(f'axonius.{__name__}')
@@ -176,6 +177,24 @@ class InfobloxAdapter(AdapterBase):
                         device.last_seen = datetime.datetime.fromtimestamp(end_time)
                 except Exception:
                     logger.exception(f'Problem getting end time {end_time}')
+
+                try:
+                    network_data = device_raw.get('network_data') or {}
+                    for attr_name, attr_value_raw in (network_data.get('extattrs') or {}).items():
+                        attr_value = attr_value_raw.get('value')
+                        if not attr_value:
+                            continue
+                        normalized_column_name = 'infoblox_' + normalize_var_name(attr_name)
+                        if not device.does_field_exist(normalized_column_name):
+                            # Currently we treat all columns as str
+                            cn_capitalized = ' '.join([word.capitalize() for word in attr_name.split(' ')])
+                            device.declare_new_field(
+                                normalized_column_name, Field(str, f'Infoblox {cn_capitalized}'))
+
+                        device[normalized_column_name] = str(attr_value)
+                except Exception:
+                    logger.exception(f'Problem setting external attributes')
+
                 device.set_raw(device_raw)
                 yield device
             except Exception:
