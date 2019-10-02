@@ -179,7 +179,7 @@ def figure_out_cloud(s):
 
 def figure_out_windows_dist(s):
     s = s.replace('Windows ', '').replace('Windows', '').replace('Win', '')
-    dist_name = 'NT' if ' nt ' in s else ''
+    dist_name = ''
     if 'server' in s:
         dist_name = f'{dist_name} Server'
     else:
