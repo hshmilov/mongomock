@@ -96,6 +96,7 @@ class EntitiesPage(Page):
     ALL_ENTITIES_CSS = 'tbody>tr'
 
     JSON_ADAPTER_FILTER = 'adapters == "json_file_adapter"'
+    PRINTER_DEVICE_FILTER = 'specific_data.data.hostname == "Computer-next-to-printer.TestDomain.test"'
     SPECIFIC_JSON_ADAPTER_FILTER = 'adapters_data.json_file_adapter.username == "ofri" or ' \
                                    'adapters_data.json_file_adapter.hostname == "CB First"'
     AD_ADAPTER_FILTER = 'adapters == "active_directory_adapter"'
@@ -796,6 +797,9 @@ class EntitiesPage(Page):
 
     def query_json_adapter(self):
         self.run_filter_query(self.JSON_ADAPTER_FILTER)
+
+    def query_printer_device(self):
+        self.run_filter_query(self.PRINTER_DEVICE_FILTER)
 
     def run_filter_query(self, filter_value: str):
         """

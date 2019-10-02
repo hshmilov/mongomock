@@ -138,9 +138,24 @@ class TestDevicesTable(TestEntitiesTable):
 
         # Test merged rows of Network Interfaces
         self.devices_page.click_tab(self.devices_page.FIELD_NETWORK_INTERFACES)
+        assert int(self.devices_page.get_raw_count_entities()[1:-1]) == 2
         field_data = self.devices_page.get_field_table_data()
         assert ['06:3A:9B:D7:D7:A8', '10.0.2.1\n10.0.2.2', '10.0.2.0/24', 'vlan0, vlan1', '1, 2'] == field_data[0]
         assert ['06:3A:9B:D7:D7:A8', '10.0.2.3', '', 'vlan0, vlan1', '1, 2'] == field_data[1]
+
+        self.devices_page.switch_to_page()
+        self.devices_page.wait_for_spinner_to_end()
+        self.devices_page.clear_filter()
+        self.devices_page.query_printer_device()
+        self.devices_page.wait_for_table_to_load()
+        self.devices_page.click_row()
+        self.devices_page.click_general_tab()
+        self.devices_page.click_tab(self.devices_page.FIELD_NETWORK_INTERFACES)
+        # the text in the front surrounded with ()
+        # so remove the first and last char and cast it to int will give the requested value
+        number_of_network_interfaces = int(self.devices_page.get_raw_count_entities()[1:-1])
+        # test the front show correct number of network interfaces
+        assert number_of_network_interfaces == 0
 
     def test_select_all_devices(self):
         with AwsService().contextmanager(take_ownership=True):
