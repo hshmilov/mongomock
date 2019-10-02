@@ -289,7 +289,6 @@ class TestDashboard(TestBase):
     def grab_all_host_names_from_csv(self, panel_id):
         result = self.generate_csv_from_segmentation_graph(panel_id)
         all_csv_rows = result.content.decode('utf-8').split('\r\n')
-        csv_headers = all_csv_rows[0].split(',')
         csv_data_rows = all_csv_rows[1:-1]
         return [str.split(',')[0] for str in csv_data_rows]
 
@@ -395,7 +394,6 @@ class TestDashboard(TestBase):
 
     def test_paginator_on_segmentation_chart(self):
         histogram_items_title = []
-        first_page = 1
         histograms_chart = self._create_get_paginator_segmentation_card(
             run_discovery=True,
             module='Devices',

@@ -40,7 +40,6 @@ class GetAvailableSecurityPatches(GeneralInfoSubplugin):
                                 pm_publish_date = parse_date(pm_publish_date)
                     except Exception:
                         self.logger.exception(f"Error parsing publish date of patch {patch}")
-                        pass
 
                     pm_title = patch.get("Title")
                     pm_msrc_severity = patch.get("MsrcSeverity")

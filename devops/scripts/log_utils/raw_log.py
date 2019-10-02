@@ -20,8 +20,6 @@ def main(filename='/dev/stdin'):
                 log_level = log.get('level', '')
                 log_message = log.get('message', '')
                 log_timestamp = parse(log.get('@timestamp', '00:00')).strftime('%d/%m/%y %S:%M:%H')
-                log_funcname, log_linenumber = log.get('funcName', ''), log.get('lineNumber', '')
-                log_filename = log.get('filename', '')
                 log_exc_info = log.get('exc_info', '')
                 log_exception_message = log.get('exception_message', '')
                 if log_exception_message:

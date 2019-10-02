@@ -777,7 +777,7 @@ class LdapConnection(object):
 
         logger.info(f"{self.server_addr}: Finished with {devices_count} users.")
         if one_device is None:
-            return []
+            return
 
     @retry_generator(wait_fixed=DEFAULT_WAIT_TIME_BETWEEN_RETRIES_IN_MS, stop_max_attempt_number=LDAP_MAX_TRIES)
     def get_users_list(self, should_get_nested_groups_for_user=True):
@@ -959,7 +959,7 @@ class LdapConnection(object):
                                    f"search_base to only self.domaindnszones_naming_context to search the whole dns")
         except Exception:
             logger.exception("exception while querying dns")
-            return []
+            return
 
     def get_extended_devices_list(self):
         """

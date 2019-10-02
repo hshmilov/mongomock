@@ -158,7 +158,6 @@ class CiscoTelnetClient(CiscoConsoleClient):
 
     @staticmethod
     def test_reachability(host, port):
-        test_client = None
         try:
             sock = socket.create_connection((host, port), DEFAULT_VALIDATE_TIMEOUT)
             sock.close()

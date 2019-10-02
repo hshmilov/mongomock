@@ -586,7 +586,7 @@ def parse_versions_raw(version):
 
 def extend_to_n_digits(value, n_chars_to_extend):
     try:
-        extended_value = ''.join(['0' for i in range(n_chars_to_extend - len(value))])
+        extended_value = ''.join(['0' for _ in range(n_chars_to_extend - len(value))])
         extended_value += value
         return extended_value
     except Exception:

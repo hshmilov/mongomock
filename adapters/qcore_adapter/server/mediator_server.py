@@ -52,7 +52,6 @@ class MyTCPHandler(socketserver.StreamRequestHandler):
 class ThreadedTCPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
     timeout = 35
     allow_reuse_address = True
-    pass
 
 
 def run_mediator_server():

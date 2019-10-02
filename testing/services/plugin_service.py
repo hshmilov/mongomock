@@ -238,7 +238,7 @@ class PluginService(WeaveService):
                 # We should not have any other ip associated with this hostname. Lets remove it.
                 for ip in response.splitlines():
                     print(f'Found stale weave-dns record: {self.fqdn} -> {ip}. Removing')
-                    for i in range(3):
+                    for _ in range(3):
                         # Try 3 times, because weave is not always working
                         requests.delete(f'{WEAVE_API_URL}/name/*/{ip.strip()}?fqdn={self.fqdn}')
                         # We do not raise for status or fail, as this is too risky.

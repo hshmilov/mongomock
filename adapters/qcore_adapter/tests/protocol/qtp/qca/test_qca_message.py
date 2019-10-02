@@ -21,15 +21,12 @@ class TestQcaMessage(object):
     def test_second_qca(self):
         qca = QcaHeader.parse(bytearray.fromhex('67d552b9290000000070667736f2ec05006700010000'))
         assert qca.checksum == 112
-        pass
 
     def test_third_qca(self):
         qca = QcaHeader.parse(bytearray.fromhex('67d552b92900000000706696d9a7e0050067000a0000'))
-        pass
 
     def test_qca_to_register(self):
         qca = QtpPayloadRoot.parse(bytearray.fromhex('68679302000000000000fc667736f2ec05006700010000'))
-        pass
 
 
 if __name__ == '__main__':

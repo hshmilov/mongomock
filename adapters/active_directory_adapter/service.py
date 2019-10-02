@@ -1341,10 +1341,6 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
                     # We resolve ip only for devices who have been resolved before.
                     # We do this to reduce the time execution tasks take for devices that we are sure
                     # will not be resolved.
-                    number_of_previously_resolved_ips = 0
-                    for ip in device_data['data'].get(NETWORK_INTERFACES_FIELDNAME, []):
-                        number_of_previously_resolved_ips += len(ip.get(IPS_FIELDNAME, []))
-
                     device_ip, _ = self._resolve_device_name(wanted_hostname, client_config)[0]
                 except Exception:
                     logger.exception(f"Exception - could not resolve ip for execution.")

@@ -70,7 +70,6 @@ class TestCleanDB(AdapterTestBase):
             self.dashboard_page.wait_for_spinner_to_end()
             time.sleep(10)
             self.base_page.run_discovery()
-            count = self._get_ad_device_count()
             assert self._get_ad_device_count() == 0
         # always revert AD adapter
         finally:

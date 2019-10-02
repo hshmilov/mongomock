@@ -203,7 +203,6 @@ class CorrelatorEngineBase(ABC):
             adapters_to_correlate.sort(key=func)
 
         bucket = [adapters_to_correlate[0]]
-        pair_number = 0
         for a, b in pairwise(adapters_to_correlate):
             if all(compare(a, b) for compare in bucket_insertion_comparators):
                 bucket.append(b)
@@ -211,7 +210,6 @@ class CorrelatorEngineBase(ABC):
                 if len(bucket) > 1:
                     yield bucket
                 bucket = [b]
-            pair_number += 1
         if len(bucket) > 1:
             yield bucket
 

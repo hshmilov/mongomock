@@ -170,9 +170,6 @@ class ServiceNowIncidentAction(ActionTypeAlert):
                                                           query_link=self._generate_query_link(query_name))
         impact = report_consts.SERVICE_NOW_SEVERITY.get(self._config['severity'],
                                                         report_consts.SERVICE_NOW_SEVERITY['error'])
-        log_message_full = self._config['incident_description']
-        if self._config.get('description_default') is True:
-            log_message_full += '\n' + log_message
         message = self._create_service_now_incident(short_description=self._config['incident_title'],
                                                     description=log_message,
                                                     impact=impact,

@@ -133,7 +133,6 @@ class SymantecAdapter(AdapterBase):
             try:
                 device = self._new_device_adapter()
                 device.client_id = client_id
-                domain_strip_upper = str(device_raw.get('domainOrWorkgroup', '')).strip().upper()
                 computer_name = device_raw.get('computerName') or ''
                 if not any(elem in computer_name for elem in [' ', '.']) or \
                         ('Mac' not in str(device_raw.get('operatingSystem'))):

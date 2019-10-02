@@ -184,7 +184,7 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
                     device_raw.get('dnsHostName').split('.')[0].lower() ==\
                     device_raw.get('netbiosName').split('.')[0].lower():
                 device.hostname = device_raw.get('dnsHostName')
-            if (device_raw.get('dnsHostName') or device_raw.get('dnsHostName')) and device_raw.get('name'):
+            if device_raw.get('dnsHostName') and device_raw.get('name'):
                 device.name = device_raw.get('name')
             try:
                 device.figure_os(device_raw.get('os'))

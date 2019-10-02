@@ -4377,7 +4377,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
             entity = EntityType(view['entity'])
             base_view = self._find_filter_by_name(entity, view['name'])
             if not base_view or not base_view.get('query'):
-                return None
+                return
             yield {
                 'title': view['name'],
                 'points': self._fetch_timeline_points(entity, parse_filter(base_view['query']['filter']), date_ranges)
@@ -4386,7 +4386,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
     def _intersect_timeline_lines(self, views, date_ranges):
         if len(views) != 2 or not views[0].get('name'):
             logger.error(f'Unexpected number of views for performing intersection {len(views)}')
-            return []
+            return
         first_entity_type = EntityType(views[0]['entity'])
         second_entity_type = EntityType(views[1]['entity'])
 

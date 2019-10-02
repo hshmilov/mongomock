@@ -72,7 +72,6 @@ class TestQtpMessage(object):
     def test_file_deployment_enquiry(self):
         m = QtpMessage()
         m.extend_bytes(self.FILE_DEPLOYMENT_ENQUIRY_REQUEST)
-        pass
 
 
 if __name__ == '__main__':

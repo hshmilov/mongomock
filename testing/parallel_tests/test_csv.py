@@ -38,7 +38,7 @@ class TestCsvAdapter(AdapterTestBase):
 
         gui_service = self.axonius_system.gui
         gui_service.login_user(DEFAULT_USER)
-        out_client_object_id = self.adapter_service.add_client(self.some_client_details)['id']
+        self.adapter_service.add_client(self.some_client_details)['id']
         devices_response = get_devices(self.adapter_service.plugin_name)
 
         for device in devices_response:

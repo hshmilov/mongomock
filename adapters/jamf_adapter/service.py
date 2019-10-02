@@ -211,11 +211,9 @@ class JamfAdapter(AdapterBase, Configurable):
                 # Ofri: Sometimes name is also the hostname.
                 #  I saw that if we have one of these fields it can't be the host name.
                 if not any(elem in device.name for elem in [' ', '.']):
-                    asset_is_host = True
                     hostname = device.name
                     device.hostname = hostname
                 else:
-                    asset_is_host = False
                     host_no_spaces_list = device.name.replace(' ', '-').split('-')
                     host_no_spaces_list[0] = ''.join(char for char in host_no_spaces_list[0] if char.isalnum())
                     if len(host_no_spaces_list) > 1:

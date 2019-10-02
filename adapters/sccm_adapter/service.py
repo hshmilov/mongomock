@@ -105,7 +105,7 @@ class SccmAdapter(AdapterBase, Configurable):
             )
             connection.set_credentials(username=client_config[consts.USER], password=client_config[consts.PASSWORD])
             with connection:
-                for device_raw in connection.query('select ResourceID from v_R_SYSTEM'):
+                for _ in connection.query('select ResourceID from v_R_SYSTEM'):
                     break
             return connection
         except Exception as err:
@@ -444,7 +444,6 @@ class SccmAdapter(AdapterBase, Configurable):
                             # Field stuff I saw pushed me to use
                     except Exception:
                         logger.warning(f"Caught weird NIC {mac} for device id {device.id}")
-                        pass
                 ips_empty_mac = []
                 try:
                     ips_raw = (device_raw.get('IP Addresses') or '').split(';')
