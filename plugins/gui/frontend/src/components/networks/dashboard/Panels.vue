@@ -26,15 +26,27 @@
           @input="confirmPickDate(chart.uuid, chart.name)"
         />
       </div>
+      <div
+        v-if="chart.loading"
+        class="chart-spinner"
+      >
+        <md-progress-spinner
+          class="progress-spinner"
+          md-mode="indeterminate"
+          :md-stroke="3"
+          :md-diameter="25"
+        />
+        <span>Fetching data...</span>
+      </div>
       <component
         :is="`x-${chart.view}`"
-        v-if="!isChartEmpty(chart)"
+        v-else-if="!isChartEmpty(chart)"
         :data="chart.data"
         @click-one="($event) => runChartFilter(chartInd, $event)"
         @fetch="(skip) => fetchMorePanel(chart.uuid, skip)"
       />
       <div
-        v-if="isChartEmpty(chart)"
+        v-else
         class="no-data-found"
       >
         <svg-icon name="illustration/binocular" :original="true" height="50"/>
@@ -320,6 +332,21 @@
                 width: 100%;
             }
         }
+      .chart-spinner{
+        margin: 10px auto auto auto;
+        width: 70%;
+        padding: 10px;
+        span {
+          padding-left: 5px;
+          text-transform: uppercase;
+          font-size: 20px;
+          vertical-align: super;
+        }
+
+        .md-progress-spinner-circle{
+          stroke: $theme-orange;
+        }
+      }
     }
 
 </style>

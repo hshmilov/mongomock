@@ -104,8 +104,8 @@
       getDashboardData () {
         return Promise.all([
           this.fetchDiscoveryData({ module: 'devices' }), this.fetchDiscoveryData({ module: 'users' }),
-          this.fetchSpaces(), this.fetchPanels()
-        ]).then(() => {
+          this.fetchSpaces()
+        ]).then(this.fetchPanels).then(() => {
           if (this._isDestroyed) return
           this.timer = setTimeout(this.getDashboardData, 30000)
         })

@@ -361,7 +361,8 @@ class TestDashboard(TestBase):
         assert total_num_of_items == second_result_count
         self.base_page.run_discovery()
         wait_until(lambda: int(
-            self.dashboard_page.get_paginator_total_num_of_items(histograms_chart)) == first_result_count)
+            self.dashboard_page.get_paginator_total_num_of_items(
+                self.dashboard_page.get_card(self.TEST_PAGINATOR_ON_SEGMENTATION_USERS))) == first_result_count)
         self.dashboard_page.remove_card(self.TEST_PAGINATOR_ON_SEGMENTATION_USERS)
 
     def test_multi_page_histogram_linked_to_correct_filter(self):

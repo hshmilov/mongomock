@@ -24,6 +24,8 @@ export const SAVE_DASHBOARD_PANEL = 'SAVE_DASHBOARD_PANEL'
 export const CHANGE_DASHBOARD_PANEL = 'CHANGE_DASHBOARD_PANEL'
 export const REMOVE_DASHBOARD_PANEL = 'REMOVE_DASHBOARD_PANEL'
 export const UPDATE_REMOVED_PANEL = 'UPDATE_REMOVED_PANEL'
+export const ADD_NEW_PANEL = 'ADD_NEW_PANEL'
+export const UPDATE_CHANGED_PANEL = 'UPDATE_CHANGED_PANEL'
 
 export const FETCH_HISTORICAL_SAVED_CARD = 'FETCH_HISTORICAL_SAVED_CARD'
 
@@ -75,7 +77,20 @@ export const dashboard = {
 			if (!payload.data) {
 				return
 			}
-			state.spaces.data = payload.data
+			state.spaces.data = payload.data.spaces
+			if(state.panels.data && state.panels.data.length > 0) {
+				let currentPanels = {}
+				state.panels.data.forEach(panel => {
+					currentPanels[panel.uuid] = panel
+				})
+				payload.data.panels.forEach(panel => {
+					if(!currentPanels[panel.uuid]){
+						state.panels.data.push(panel)
+					}
+				})
+			} else {
+				state.panels.data = payload.data.panels
+			}
 		},
 		[UPDATE_DASHBOARD_PANELS](state, payload) {
 			state.panels.fetching = payload.fetching
@@ -116,6 +131,16 @@ export const dashboard = {
 				state.panels.data = [...state.panels.data]
 			}
 		},
+        [ADD_NEW_PANEL](state, payload) {
+            let newPanel = {
+                uuid: payload.panel_id,
+                name: payload.name,
+                space: payload.space,
+                data: [],
+                loading: true
+            }
+            state.panels.data.push(newPanel)
+        },
 		[UPDATE_DASHBOARD_PANEL](state, payload) {
 			if (!payload.data) {
 				return
@@ -126,8 +151,10 @@ export const dashboard = {
 			}
 			if (!payload.data.length) {
 				panel.data = []
+				panel.loading = payload.loading
 			} else {
 				panel.data.splice(payload.skip, payload.data.length, ...payload.data)
+				panel.loading = false
 			}
 		},
 		[UPDATE_ADDED_SPACE](state, payload) {
@@ -249,13 +276,19 @@ export const dashboard = {
 				}
 			})
 		},
-		[SAVE_DASHBOARD_PANEL]({ dispatch }, payload) {
+		[SAVE_DASHBOARD_PANEL]({ dispatch, commit }, payload) {
 			return dispatch(REQUEST_API, {
 				rule: `dashboards/${payload.space}/panels`,
 				method: 'POST',
 				data: payload.data
 			}).then(response => {
 				if (response.status === 200 && response.data) {
+					commit(ADD_NEW_PANEL, {
+						space: payload.space,
+						panel_id: response.data,
+						name: payload.data.name,
+						data: []
+					})
 					dispatch(FETCH_DASHBOARD_PANELS)
 				}
 				return response
@@ -271,7 +304,8 @@ export const dashboard = {
 					commit(UPDATE_DASHBOARD_PANEL, {
 						uuid: payload.uuid,
 						skip: 0,
-						data: []
+						data: [],
+                        loading: true
 					})
 					dispatch(FETCH_DASHBOARD_PANELS)
 				}

@@ -67,6 +67,8 @@ class DashboardPage(Page):
     PAGINATOR_FROM_VALUE = f'{PAGINATOR_CLASS} .from-item'
     PAGINATOR_TO_VALUE = f'{PAGINATOR_CLASS} {PAGINATOR_TO}'
 
+    CARD_SPINNER_CSS = '.chart-spinner'
+
     @property
     def root_page_css(self):
         return 'li#dashboard.x-nav-item'
@@ -167,6 +169,8 @@ class DashboardPage(Page):
         self.select_chart_view_name(second_query, views_list[1])
         self.fill_text_field_by_element_id(self.CHART_TITLE_ID, title)
         self.click_card_save()
+        self.wait_for_element_absent_by_css(self.MODAL_OVERLAY_CSS, interval=1)
+        self.wait_for_card_spinner_to_end()
 
     def add_comparison_card_view(self, module, query):
         self.click_button('+', partial_class=True,
@@ -175,6 +179,8 @@ class DashboardPage(Page):
         self.select_chart_wizard_module(module, views_list[2])
         self.select_chart_view_name(query, views_list[2])
         self.click_card_save()
+        self.wait_for_element_absent_by_css(self.MODAL_OVERLAY_CSS, interval=1)
+        self.wait_for_card_spinner_to_end()
 
     def add_intersection_card(self, module, first_query, second_query, title, view_name=''):
         self.open_new_card_wizard()
@@ -186,6 +192,8 @@ class DashboardPage(Page):
         self.select_intersection_chart_second_query(second_query)
         self.fill_text_field_by_element_id(self.CHART_TITLE_ID, title)
         self.click_card_save()
+        self.wait_for_element_absent_by_css(self.MODAL_OVERLAY_CSS, interval=1)
+        self.wait_for_card_spinner_to_end()
 
     def add_summary_card(self, module, field, func_name, title):
         self.open_new_card_wizard()
@@ -199,6 +207,7 @@ class DashboardPage(Page):
     def click_card_save(self):
         self.click_button('Save')
         self.wait_for_element_absent_by_css(self.MODAL_OVERLAY_CSS, interval=1)
+        self.wait_for_card_spinner_to_end()
 
     def add_segmentation_card(self, module, field, title, chart_type='histogram', view_name='', partial_text=True):
         try:
@@ -211,6 +220,8 @@ class DashboardPage(Page):
             self.select_chart_wizard_field(field, partial_text)
             self.fill_text_field_by_element_id(self.CHART_TITLE_ID, title)
             self.click_card_save()
+            self.wait_for_element_absent_by_css(self.MODAL_OVERLAY_CSS, interval=1)
+            self.wait_for_card_spinner_to_end()
         except NoSuchElementException:
             self.close_dropdown()
             self.click_button('Cancel', partial_class=True)
@@ -239,6 +250,7 @@ class DashboardPage(Page):
         ActionChains(self.driver).move_to_element(card).perform()
         card.find_element_by_css_selector(self.CARD_EDIT_BTN_CSS).click()
         self.wait_for_element_present_by_css(self.MODAL_OVERLAY_CSS)
+        self.wait_for_card_spinner_to_end()
 
     def remove_card(self, card_title):
         panel = self.wait_for_element_present_by_xpath(self.PANEL_BY_NAME_XPATH.format(panel_name=card_title))
@@ -544,3 +556,13 @@ class DashboardPage(Page):
 
     def fill_current_chart_title(self, value):
         self.fill_text_field_by_element_id(self.CHART_TITLE_ID, value)
+
+    def wait_for_card_spinner_to_end(self):
+        # This method wants to wait for the card spinner to appear and finish.
+
+        # It's impossible to wait for the card spinner to begin
+        # because it might already be gone when we got here, so we optimistically
+        # wait a bit to simulate waiting for the spinner to appear.
+        time.sleep(0.3)
+
+        self.wait_for_element_absent_by_css(self.CARD_SPINNER_CSS)

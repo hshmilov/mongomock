@@ -3595,11 +3595,17 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
         :return:
         """
         if request.method == 'GET':
-            return jsonify([{
+            spaces = [{
                 'uuid': str(space['_id']),
                 'name': space['name'],
-                'type': space['type'],
-            } for space in self.__dashboard_spaces_collection.find(filter_archived())])
+                'type': space['type']
+            } for space in self.__dashboard_spaces_collection.find(filter_archived())]
+
+            panels = self._get_dashboard(generate_data=False)
+            return jsonify({
+                'spaces': spaces,
+                'panels': panels
+            })
 
         # Handle 'POST' request method - save new custom dashboard space
         space_data = dict(self.get_request_data_as_object())
@@ -3804,7 +3810,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
                 logger.warning(f'Failed generating dashboard for {dashboard}', exc_info=True)
 
     def _get_dashboard(self, skip=0, limit=0, uncached: bool = False,
-                       space_ids: list = None, exclude_personal=False):
+                       space_ids: list = None, exclude_personal=False, generate_data=True):
         """
         GET Fetch current dashboard chart definitions. For each definition, fetch each of it's views and
         fetch devices_db with their view. Amount of results is mapped to each views' name, under 'data' key,
@@ -3846,25 +3852,36 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
                 skip=skip,
                 limit=limit,
                 projection={
-                    '_id': True
+                    '_id': True,
+                    'space': True,
+                    'name': True
                 }):
             # Let's fetch and execute them query filters
             try:
-                if uncached:
-                    generated_dashboard = self.__generate_dashboard_uncached(dashboard['_id'])
+                if generate_data:
+                    if uncached:
+                        generated_dashboard = self.__generate_dashboard_uncached(dashboard['_id'])
+                    else:
+                        generated_dashboard = self.__generate_dashboard(dashboard['_id'])
+                    dashboard_data = generated_dashboard.get('data', [])
+                    data_length = len(dashboard_data)
+                    data_limit, data_tail_limit = 50, -50
+                    if data_length <= 100:
+                        data_limit, data_tail_limit = 100, data_length
+                    yield {
+                        **generated_dashboard,
+                        'data': dashboard_data[:data_limit],
+                        'data_tail': dashboard_data[data_tail_limit:],
+                        'count': data_length
+                    }
                 else:
-                    generated_dashboard = self.__generate_dashboard(dashboard['_id'])
-                dashboard_data = generated_dashboard.get('data', [])
-                data_length = len(dashboard_data)
-                data_limit, data_tail_limit = 50, -50
-                if data_length <= 100:
-                    data_limit, data_tail_limit = 100, data_length
-                yield {
-                    **generated_dashboard,
-                    'data': dashboard_data[:data_limit],
-                    'data_tail': dashboard_data[data_tail_limit:],
-                    'count': data_length
-                }
+                    yield {
+                        'uuid': str(dashboard['_id']),
+                        'name': dashboard['name'],
+                        'space': str(dashboard['space']),
+                        'data': [],
+                        'loading': True
+                    }
             except Exception:
                 # Since there is no data, not adding this chart to the list
                 logger.exception(f'Error fetching data for chart ({dashboard["_id"]})')
