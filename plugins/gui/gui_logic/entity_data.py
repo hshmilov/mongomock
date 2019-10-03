@@ -29,11 +29,21 @@ def _fetch_historical_entity(entity_type: EntityType, entity_id, projection=None
     :param history_date: The date from which to retrieve the data
     :return:
     """
-    return convert_db_entity_to_view_entity(PluginBase.Instance.get_appropriate_view(history_date, entity_type).
-                                            find_one(get_historized_filter({
-                                                'internal_axon_id': entity_id
-                                            }, history_date), projection=convert_db_projection_to_view(projection)),
-                                            ignore_errors=True)
+    historized_filter = None
+    entity = None
+    try:
+        historized_filter = get_historized_filter({
+            'internal_axon_id': entity_id
+        }, history_date)
+
+        entity = PluginBase.Instance.get_appropriate_view(history_date, entity_type). \
+            find_one(historized_filter, projection=convert_db_projection_to_view(projection))
+
+        return convert_db_entity_to_view_entity(entity, ignore_errors=True)
+    except Exception:
+        logger.exception(f'Error on {entity_type} on {entity_id}, projection {projection}, history '
+                         f'{history_date}, with filter {historized_filter} and entity {entity}')
+        raise
 
 
 def fetch_raw_data(entity_type: EntityType, plugin_unique_name: str, id_: str, history_date: datetime = None) -> dict:

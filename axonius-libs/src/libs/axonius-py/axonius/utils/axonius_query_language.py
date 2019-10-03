@@ -413,66 +413,71 @@ def convert_db_entity_to_view_entity(entity: dict, ignore_errors: bool = False) 
                             to pass a very narrowly projected object. In this case, this pass TRUE here,
                             and the method will ignore as many missing fields as it can.
     """
-    filtered_adapters = [adapter
-                         for adapter in entity['adapters']
-                         if adapter.get('pending_delete') is not True]
-
     try:
-        labels = [tag['name']
-                  for tag in entity['tags']
-                  if tag['type'] == 'label' and tag['data'] is True]
-    except Exception:
-        if ignore_errors:
-            labels = []
-        else:
-            raise
+        filtered_adapters = [adapter
+                             for adapter in entity['adapters']
+                             if adapter.get('pending_delete') is not True]
 
-    specific_data = list(filtered_adapters)
-    specific_data.extend(tag
-                         for tag in entity['tags']
-                         if (ignore_errors and 'type' not in tag) or tag['type'] == 'adapterdata')
-    adapters_data = defaultdict(list)
-    try:
-        for adapter in specific_data:
-            adapters_data[adapter[PLUGIN_NAME]].append(adapter.get('data'))
-    except Exception:
-        if ignore_errors:
-            adapters_data = {}
-        else:
-            raise
-    adapters_data = dict(adapters_data)
+        try:
+            labels = [tag['name']
+                      for tag in entity['tags']
+                      if tag['type'] == 'label' and tag['data'] is True]
+        except Exception:
+            if ignore_errors:
+                labels = []
+            else:
+                raise
 
-    try:
-        generic_data = [tag
-                        for tag in entity['tags']
-                        if tag['type'] == 'data' and tag['data'] is not False]
-    except Exception:
-        if ignore_errors:
-            generic_data = []
-        else:
-            raise
+        specific_data = list(filtered_adapters)
+        specific_data.extend(tag
+                             for tag in entity['tags']
+                             if (ignore_errors and 'type' not in tag) or tag['type'] == 'adapterdata')
+        adapters_data = defaultdict(list)
+        try:
+            for adapter in specific_data:
+                adapters_data[adapter[PLUGIN_NAME]].append(adapter.get('data'))
+        except Exception:
+            if ignore_errors:
+                adapters_data = {}
+            else:
+                raise
+        adapters_data = dict(adapters_data)
 
-    try:
-        adapters = [adapter[PLUGIN_NAME]
-                    for adapter
-                    in filtered_adapters]
-    except Exception:
-        if ignore_errors:
-            adapters = []
-        else:
-            raise
+        try:
+            generic_data = [tag
+                            for tag in entity['tags']
+                            if tag['type'] == 'data' and tag['data'] is not False]
+        except Exception:
+            if ignore_errors:
+                generic_data = []
+            else:
+                raise
 
-    return {
-        '_id': entity.get('_id'),
-        'internal_axon_id': entity.get('internal_axon_id'),
-        ADAPTERS_LIST_LENGTH: entity.get(ADAPTERS_LIST_LENGTH),
-        'generic_data': generic_data,
-        SPECIFIC_DATA: specific_data,
-        ADAPTERS_DATA: adapters_data,
-        'adapters': adapters,
-        'labels': labels,
-        'accurate_for_datetime': entity.get('accurate_for_datetime')
-    }
+        try:
+            adapters = [adapter[PLUGIN_NAME]
+                        for adapter
+                        in filtered_adapters]
+        except Exception:
+            if ignore_errors:
+                adapters = []
+            else:
+                raise
+
+        return {
+            '_id': entity.get('_id'),
+            'internal_axon_id': entity.get('internal_axon_id'),
+            ADAPTERS_LIST_LENGTH: entity.get(ADAPTERS_LIST_LENGTH),
+            'generic_data': generic_data,
+            SPECIFIC_DATA: specific_data,
+            ADAPTERS_DATA: adapters_data,
+            'adapters': adapters,
+            'labels': labels,
+            'accurate_for_datetime': entity.get('accurate_for_datetime')
+        }
+    except Exception:
+        logger.exception(f'Failed converting {entity}, when ignoring errors = {ignore_errors}')
+        # This is a legit exception, still has to be raised.
+        raise
 
 
 def convert_db_projection_to_view(projection):
