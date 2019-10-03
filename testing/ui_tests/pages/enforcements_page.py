@@ -592,6 +592,9 @@ class EnforcementsPage(EntitiesPage):
         self.wait_for_action_result()
         self.find_task_action_success(action_name).click()
 
+    def get_task_status(self, row_index=1):
+        return self.get_row_cell_text(row_index=row_index, cell_index=1)
+
     def get_tasks_data_from_table(self) -> Iterable[Task]:
 
         table = self.driver.find_element_by_css_selector(self.TABLE_CLASS)

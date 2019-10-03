@@ -131,6 +131,7 @@ class Page:
                             '//input[@type=\'checkbox\']'
     TABLE_ALL_CHECKBOX_CSS = 'thead tr th:nth-child(1) .x-checkbox'
     TABLE_ROW_CHECKBOX_CSS = 'tbody .x-table-row.clickable:nth-child({child_index}) td:nth-child(1) .x-checkbox'
+    TABLE_ROW_TEXT_CELL_CSS = 'tbody .x-table-row.clickable:nth-child({row_index}) td:nth-child({cell_index}) div'
 
     FIELD_WITH_LABEL_XPATH = '//div[child::label[text()=\'{label_text}\']]/div[contains(@class, \'md-field\')]'
 
@@ -769,6 +770,10 @@ class Page:
 
     def click_table_checkbox(self):
         self.driver.find_element_by_css_selector(self.TABLE_ALL_CHECKBOX_CSS).click()
+
+    def get_row_cell_text(self, row_index=1, cell_index=1):
+        return self.driver.find_element_by_css_selector(
+            self.TABLE_ROW_TEXT_CELL_CSS.format(row_index=row_index, cell_index=cell_index)).text
 
     def fill_enter_table_search(self, text):
         self.fill_text_field_by_css_selector(self.TABLE_SEARCH_INPUT, text)

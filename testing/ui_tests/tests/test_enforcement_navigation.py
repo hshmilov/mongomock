@@ -39,3 +39,39 @@ class TestEnforcementNavigation(TestBase):
 
         for task in tasks:
             assert task.name == ENFORCEMENT_NAME_INCLUDE
+
+    def test_enforcement_long_running_task_status(self):
+        self.enforcements_page.switch_to_page()
+        self.enforcements_page.wait_for_table_to_load()
+
+        # Add new enforcement (1)
+        self.enforcements_page.create_notifying_enforcement(enforcement_name='long_running',
+                                                            enforcement_view='Devices')
+        self.enforcements_page.edit_enforcement('long_running')
+        self.enforcements_page.click_run_button()
+        self.enforcements_page.wait_for_toaster_to_end(TOASTER_TEXT)
+
+        self.adapters_page.wait_for_element_present_by_text(self.enforcements_page.SAVE_AND_RUN_BUTTON_TEXT)
+        self.notification_page.wait_for_count(1)
+        self.enforcements_page.click_tasks_button()
+        self.enforcements_page.wait_for_table_to_load()
+
+        assert self.enforcements_page.get_task_status(1) == 'Completed'
+
+        # mock long running task by changing directly the values in the db
+        self.axonius_system.get_tasks_db().update_one({
+            'post_json.report_name': 'long_running'
+        }, {
+            '$set': {
+                'job_completed_state': 'Running'
+            }
+        })
+        #
+        self.enforcements_page.switch_to_page()
+        self.enforcements_page.wait_for_table_to_load()
+        self.enforcements_page.edit_enforcement('long_running')
+        self.enforcements_page.click_tasks_button()
+        # test if gui show 'in progress' task
+        assert self.enforcements_page.get_task_status(1) == 'In Progress'
+        # delete the mutated task from the db
+        self.axonius_system.get_tasks_db().delete_one({'post_json.report_name': 'long_running'})
