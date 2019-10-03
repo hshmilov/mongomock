@@ -216,7 +216,9 @@ class ReportsService(Triggerable, PluginBase):
         """
         if request.method == 'POST':
             processed_trigger = self.__process_trigger(self.get_request_data_as_object())
+            # remove trigger field for EC update
             processed_trigger.pop(LAST_TRIGGERED_FIELD, None)
+            processed_trigger.pop(TIMES_TRIGGERED_FIELD, None)
 
             with self.__reports_collection.start_session() as session:
                 with session.start_transaction():
