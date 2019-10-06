@@ -332,7 +332,7 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
                 {
                     'name': 'qualys_tags_white_list',
                     'type': 'string',
-                    'title': 'Qualys Tags White List'
+                    'title': 'Qualys Tags Whitelist'
                 }
             ],
             'required': [

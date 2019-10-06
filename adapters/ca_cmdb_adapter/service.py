@@ -212,7 +212,7 @@ class CaCmdbAdapter(AdapterBase, Configurable):
                 {
                     'name': 'ca_cmdb_white_list',
                     'type': 'string',
-                    'title': 'CA CMDB Device Type White List'
+                    'title': 'CA CMDB Device Type Whitelist'
                 }
             ],
             'required': [],

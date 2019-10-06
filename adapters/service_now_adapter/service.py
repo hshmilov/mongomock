@@ -483,7 +483,7 @@ class ServiceNowAdapter(AdapterBase, Configurable):
                 {
                     'name': 'fetch_users',
                     'type': 'bool',
-                    'title': 'Should Fetch Users'
+                    'title': 'Fetch Users'
                 },
                 {
                     'name': 'fetch_users_info_for_devices',
@@ -493,7 +493,7 @@ class ServiceNowAdapter(AdapterBase, Configurable):
                 {
                     'name': 'fetch_ips',
                     'type': 'bool',
-                    'title': 'Should Fetch IPs'
+                    'title': 'Fetch IPs'
                 },
                 {
                     'name': 'exclude_disposed_devices',

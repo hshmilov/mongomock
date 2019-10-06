@@ -1,6 +1,7 @@
 export const pluginMeta = {
     guardicore_adapter: {
         title: 'Guardicore',
+        link: 'https://docs.axonius.com/docs/guardicore',
         description: 'Guardicore is a data center and cloud security company that protects the organization’s core assets.'
     },
     omnivista_adapter: {
@@ -13,10 +14,12 @@ export const pluginMeta = {
     },
     cisco_ucm_adapter: {
         title: 'Cisco Unified Communications Manager - BETA',
+        link: 'https://docs.axonius.com/docs/cisco-unified-communications-manager-ucm',
         description: 'Cisco Unified Communications Manager provides secure and manageable call control and session management.'
     },
     randori_adapter: {
         title: 'Randori',
+        link: 'https://docs.axonius.com/docs/randori',
         description: 'Randori is an attack platform which combines continuous reconnaissance, real-time target analysis, and the ability to safely execute attacks on-demand to provide an attacker’s perspective.'
     },
     masscan_adapter: {
@@ -25,6 +28,7 @@ export const pluginMeta = {
     },
     aqua_adapter: {
         title: 'Aqua Security',
+        link: 'https://docs.axonius.com/docs/aqua-security',
         description: 'Aqua Security provides container and cloud native cybersecurity for teams using Docker, Kubernetes, serverless, and other cloud native technologies.'
     },
     icinga_adapter: {
@@ -534,7 +538,7 @@ export const pluginMeta = {
     aws_adapter: {
         title: 'Amazon Web Services (AWS)',
         link: 'https://docs.axonius.com/docs/amazon-web-services-aws',
-        description: 'The Amazon Web Services Adapters (ECS/EKS/EC2) includes the high-performance container orchestration service that supports Docker containers and containerized applications on AWS, Kubernetes Management Infrastructure across Multiple AWS Zones, as well as the EC2 instances themselves.'
+        description: 'The Amazon Web Services (AWS) adapter includes a broad set of global cloud based products. It supports EC2, ECS, EKS, IAM, EBS, ELB, RDS, S3, VPC and Workspaces.'
     },
     jamf_adapter: {
         title: 'Jamf Pro',

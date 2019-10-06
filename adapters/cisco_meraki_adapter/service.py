@@ -459,7 +459,7 @@ class CiscoMerakiAdapter(AdapterBase, Configurable):
             'items': [
                 {
                     'name': 'fetch_history',
-                    'title': 'Should fetch Clients URLs History',
+                    'title': 'Fetch Clients URLs History',
                     'type': 'bool'
                 }
             ],

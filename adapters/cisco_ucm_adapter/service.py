@@ -73,7 +73,7 @@ class CiscoUcmAdapter(AdapterBase):
             'items': [
                 {
                     'name': 'domain',
-                    'title': 'CiscoUcm Domain',
+                    'title': 'Cisco UCM Domain',
                     'type': 'string'
                 },
                 {

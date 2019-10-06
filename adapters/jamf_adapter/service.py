@@ -530,7 +530,7 @@ class JamfAdapter(AdapterBase, Configurable):
                 {
                     'name': 'should_fetch_policies',
                     'type': 'bool',
-                    'title': 'Should Fetch Policies'
+                    'title': 'Fetch Policies'
                 },
                 {
                     'name': 'num_of_threads',
