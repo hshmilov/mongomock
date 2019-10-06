@@ -35,7 +35,10 @@ class CoreService(PluginService, UpdatablePluginMixin):
         if self.db_schema_version < 4:
             self._update_schema_version_4()
 
-        if self.db_schema_version != 4:
+        if self.db_schema_version < 5:
+            self._update_schema_version_5()
+
+        if self.db_schema_version != 5:
             print(f'Upgrade failed, db_schema_version is {self.db_schema_version}')
 
     def _update_schema_version_1(self):
@@ -192,6 +195,30 @@ class CoreService(PluginService, UpdatablePluginMixin):
             self.db_schema_version = 4
         except Exception as e:
             print(f'Exception while upgrading core db to version 4. Details: {e}')
+            traceback.print_exc()
+            raise
+
+    def _update_schema_version_5(self):
+        # https://axonius.atlassian.net/browse/AX-5222
+        # This fixes the hyperlinks by removing all existing hyperlinks data and allowing
+        # the system to replace it with new data.
+        # This is only needed once because of historical changes that caused issues with clients.
+        print('Upgrade to schema 5')
+        try:
+            devices_field_col = self.db.client['aggregator']['devices_fields']
+            users_field_col = self.db.client['aggregator']['users_fields']
+
+            devices_res = devices_field_col.delete_many({
+                'name': 'hyperlinks'
+            })
+            users_res = users_field_col.delete_many({
+                'name': 'hyperlinks'
+            })
+            print(f'Deleted {devices_res.deleted_count} hyperlinks for devices and {users_res.deleted_count} '
+                  f'hyperlinks for users')
+            self.db_schema_version = 5
+        except Exception as e:
+            print(f'Exception while upgrading core db to version 5. Details: {e}')
             traceback.print_exc()
             raise
 
