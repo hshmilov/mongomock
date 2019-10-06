@@ -1,9 +1,13 @@
+import time
+
 from ui_tests.tests.test_entities_table import TestEntitiesTable
 from services.adapters.aws_service import AwsService
+from services.adapters import stresstest_service
 from services.plugins.general_info_service import GeneralInfoService
 from test_credentials.test_aws_credentials import client_details
 
 AWS_NAME = 'Amazon Web Services (AWS)'
+STRESS_NAME = 'stresstest_adapter'
 
 
 class TestDevicesTable(TestEntitiesTable):
@@ -171,3 +175,47 @@ class TestDevicesTable(TestEntitiesTable):
             self.devices_page.click_select_all_entities()
             assert self.devices_page.count_entities() == self.devices_page.count_selected_entities()
             self.adapters_page.clean_adapter_servers(AWS_NAME, delete_associated_entities=True)
+
+    def test_select_devices(self):
+        stress = stresstest_service.StresstestService()
+        with stress.contextmanager(take_ownership=True):
+            self.adapters_page.wait_for_adapter(STRESS_NAME)
+            device_dict = {'device_count': 2500, 'name': 'testonius'}
+            stress.add_client(device_dict)
+            self.base_page.run_discovery()
+            self.devices_page.switch_to_page()
+            self.devices_page.wait_for_table_to_load()
+            assert self.devices_page.find_active_page_number() == '1'
+            self.devices_page.select_page_size(20)
+            self.devices_page.select_all_current_page_rows_checkbox()
+            self.devices_page.select_page_size(50)
+            assert self.devices_page.count_selected_entities() == 20
+            self.devices_page.select_all_current_page_rows_checkbox()
+            assert self.devices_page.verify_no_entities_selected()
+            self.devices_page.select_all_current_page_rows_checkbox()
+            assert self.devices_page.count_selected_entities() == 50
+            self.devices_page.select_pagination_index(4)
+            assert self.devices_page.find_active_page_number() == '2'
+            self.devices_page.select_all_current_page_rows_checkbox()
+            assert self.devices_page.count_selected_entities() == 100
+            self.devices_page.select_pagination_index(5)
+            assert self.devices_page.find_active_page_number() == '3'
+            self.devices_page.click_row_checkbox(1)
+            self.devices_page.click_row_checkbox(3)
+            self.devices_page.click_row_checkbox(7)
+            self.devices_page.select_pagination_index(11)
+            self.devices_page.wait_for_spinner_to_end()
+            self.devices_page.select_all_current_page_rows_checkbox()
+            assert self.devices_page.count_selected_entities() == 103 + (self.devices_page.count_entities() % 50)
+            self.devices_page.click_select_all_entities()
+            assert self.devices_page.count_selected_entities() == self.devices_page.count_entities()
+            self.devices_page.click_clear_all_entities()
+            assert self.devices_page.verify_no_entities_selected()
+
+            # test pagination refresh
+            self.devices_page.execute_saved_query('AD Devices Missing Agents')
+            assert self.devices_page.find_active_page_number() == '1'
+            self.adapters_page.clean_adapter_servers(STRESS_NAME, delete_associated_entities=True)
+            # deleting the server takes time, and when this function over the adapter will be down
+            # we cant delete his devices if he is down. so... we sleep a bit
+            time.sleep(10)

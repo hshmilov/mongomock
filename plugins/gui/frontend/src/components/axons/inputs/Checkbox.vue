@@ -63,7 +63,7 @@
           if (Array.isArray(this.data) && !Array.isArray(this.value)) {
             return this.data.includes(this.value)
           } else if (typeof this.data === 'boolean') {
-            return this.data === true
+            return this.indeterminate || this.data === true
           } else {
             return this.data === this.value
           }
@@ -119,6 +119,18 @@
             }
         }
 
+        &.checked .container {
+          background-color: $grey-5;
+          border-color: $grey-5;
+
+          &:after {
+            opacity: 1;
+            transform: rotate(45deg) scale3D(1, 1, 1);
+            transition: .4s cubic-bezier(.25, .8, .25, 1);
+            border-color: $theme-white;
+          }
+        }
+
         .container {
             width: 16px;
             height: 16px;
@@ -167,18 +179,6 @@
                 position: absolute;
                 transition: .4s cubic-bezier(.55, 0, .55, .2);
                 content: ' ';
-            }
-        }
-
-        &.checked .container {
-            background-color: $grey-5;
-            border-color: $grey-5;
-
-            &:after {
-                opacity: 1;
-                transform: rotate(45deg) scale3D(1, 1, 1);
-                transition: .4s cubic-bezier(.25, .8, .25, 1);
-                border-color: $theme-white;
             }
         }
 

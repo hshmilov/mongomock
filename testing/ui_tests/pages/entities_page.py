@@ -68,9 +68,11 @@ class EntitiesPage(Page):
     TABLE_CELL_EXPAND_CSS = 'tbody .x-table-row.clickable:nth-child({row_index}) td:nth-child({cell_index}) .md-icon'
     TABLE_DATA_ROWS_XPATH = '//tr[@id]'
     TABLE_SCHEMA_CUSTOM = '//div[contains(@class, \'x-schema-custom\')]'
-    TABLE_FIELD_ROWS_XPATH = '//div[contains(@class, \'x-tabs\')]//div[contains(@class, \'x-tab active\')]'\
+    TABLE_FIELD_ROWS_XPATH = '//div[contains(@class, \'x-tabs\')]//div[contains(@class, \'x-tab active\')]' \
                              '//div[@class=\'x-table\']//tr[@class=\'x-table-row\']'
     TABLE_PAGE_SIZE_XPATH = '//div[@class=\'x-pagination\']/div[@class=\'x-sizes\']/div[text()=\'{page_size_text}\']'
+    TABLE_PAGE_SELECT_XPATH = '//div[@class=\'x-pagination\']/div[@class=\'x-pages\']/div'
+    TABLE_PAGE_ACTIVE_XPATH = '//div[@class=\'x-pagination\']/div[@class=\'x-pages\']/div[@class=\'x-link active\']'
     TABLE_HEADER_XPATH = '//div[@class=\'x-table\']/table/thead/tr'
     TABLE_HEADER_FIELD_XPATH = '//div[contains(@class, \'x-entity-general\')]//div[contains(@class, \'x-tab active\')]'\
                                '//div[@class=\'x-table\']//thead/tr'
@@ -343,10 +345,19 @@ class EntitiesPage(Page):
         assert match_count and len(match_count.groups()) == 1
         return int(match_count.group(1))
 
+    def verify_no_entities_selected(self):
+        return self.wait_for_element_absent_by_css(self.TABLE_SELECTED_COUNT_CSS) is None
+
     def click_select_all_entities(self):
+        self.click_select_all_label('Select all')
+
+    def click_select_all_label(self, text):
         element = self.driver.find_element_by_css_selector(self.TABLE_SELECT_ALL_BUTTON_CSS)
-        if element.text == 'Select all':
+        if element.text == text:
             self.driver.find_element_by_css_selector(self.TABLE_SELECT_ALL_BUTTON_CSS).click()
+
+    def click_clear_all_entities(self):
+        self.click_select_all_label('Clear all')
 
     def add_query_expression(self):
         self.driver.find_element_by_css_selector(self.QUERY_ADD_EXPRESSION_CSS).click()
@@ -409,6 +420,12 @@ class EntitiesPage(Page):
 
     def select_page_size(self, page_size):
         self.driver.find_element_by_xpath(self.TABLE_PAGE_SIZE_XPATH.format(page_size_text=page_size)).click()
+
+    def select_pagination_index(self, link_order):
+        self.driver.find_elements_by_xpath(self.TABLE_PAGE_SELECT_XPATH)[link_order - 1].click()
+
+    def find_active_page_number(self):
+        return self.driver.find_element_by_xpath(self.TABLE_PAGE_ACTIVE_XPATH).text
 
     def click_sort_column(self, col_name):
         self.driver.find_element_by_xpath(self.TABLE_HEADER_SORT_XPATH.format(col_name_text=col_name)).click()
