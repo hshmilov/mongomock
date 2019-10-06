@@ -110,6 +110,15 @@ class OktaAdapter(AdapterBase, Configurable):
                             continue
                         app_links = []
                         try:
+                            for item_raw in ((app.get('settings') or {}).get('app') or {}).values():
+                                try:
+                                    if isinstance(item_raw, str) and item_raw.lower().startswith('http'):
+                                        app_links.append(item_raw)
+                                except Exception:
+                                    pass
+                        except Exception:
+                            logger.exception(f'Problem getting loginURl')
+                        try:
                             for link_raw in app.get('_links').get('appLinks'):
                                 if link_raw.get('href'):
                                     app_links.append(link_raw.get('href'))

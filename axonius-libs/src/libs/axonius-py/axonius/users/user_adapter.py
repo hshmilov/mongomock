@@ -27,7 +27,7 @@ class UserFactor(SmartJsonClass):
 
 class UserApplication(SmartJsonClass):
     app_name = Field(str, 'Application Name')
-    app_links = ListField(str, 'Application Links')
+    app_links = ListField(str, 'Application URLs')
 
 
 class UserAdapter(SmartJsonClass):

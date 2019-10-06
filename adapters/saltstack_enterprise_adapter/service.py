@@ -90,7 +90,7 @@ class SaltstackEnterpriseAdapter(AdapterBase):
                 },
                 {
                     'name': 'config_name',
-                    'title': 'config_name',
+                    'title': 'Config Name',
                     'type': 'string',
                     'default': DEFAULT_CONFIG_NAME,
                 },

@@ -213,7 +213,7 @@ class CrowdStrikeAdapter(AdapterBase, Configurable):
             logger.exception('Error getting policy %s', policy.get('id'))
         return parsed_policy
 
-    # pylint: disable=too-many-statements
+    # pylint: disable=too-many-statements,too-many-branches
     def _parse_raw_data(self, devices_raw_data):
         for device_raw in devices_raw_data:
             try:
@@ -230,6 +230,9 @@ class CrowdStrikeAdapter(AdapterBase, Configurable):
                 try:
                     hostname = device_raw.get('hostname')
                     domain = device_raw.get('machine_domain')
+                    if isinstance(self.__machine_domain_whitelist, list) \
+                            and self.__machine_domain_whitelist and domain not in self.__machine_domain_whitelist:
+                        continue
                     if not is_domain_valid(domain):
                         domain = None
                     device.domain = domain
@@ -283,6 +286,11 @@ class CrowdStrikeAdapter(AdapterBase, Configurable):
                     'name': 'get_policies',
                     'title': 'Get Devices Policies',
                     'type': 'bool'
+                },
+                {
+                    'name': 'machine_domain_whitelist',
+                    'title': 'Machine Domain Whitelist',
+                    'type': 'string'
                 }
             ],
             'required': [
@@ -295,8 +303,11 @@ class CrowdStrikeAdapter(AdapterBase, Configurable):
     @classmethod
     def _db_config_default(cls):
         return {
-            'get_policies': False
+            'get_policies': False,
+            'machine_domain_whitelist': None
         }
 
     def _on_config_update(self, config):
         self._get_policies = config['get_policies']
+        self.__machine_domain_whitelist = config.get('machine_domain_whitelist').split(',') \
+            if config.get('machine_domain_whitelist') else None

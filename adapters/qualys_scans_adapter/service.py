@@ -41,6 +41,8 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
         qualys_agent_vulns = ListField(QualysAgentVuln, 'Vulnerabilities')
         qualys_agnet_ports = ListField(QualysAgentPort, 'Qualys Open Ports')
         qualys_tags = ListField(str, 'Qualys Tags')
+        last_vuln_scan = Field(datetime.datetime, 'Last Vuln Scan')
+        agent_last_seen = Field(datetime.datetime, 'Agent Last Seen')
 
         def add_qualys_vuln(self, **kwargs):
             self.qualys_agent_vulns.append(QualysAgentVuln(**kwargs))
@@ -191,7 +193,14 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
             except Exception:
                 logger.exception(f'Problem getting OS from {device_raw}')
             try:
-                device.last_seen = parse_date(device_raw.get('lastVulnScan'))
+                last_vuln_scan = parse_date(device_raw.get('lastVulnScan'))
+                device.last_vuln_scan = last_vuln_scan
+                agent_last_seen = parse_date((device_raw.get('agentInfo') or {}).get('lastCheckedIn'))
+                device.agent_last_seen = agent_last_seen
+                if agent_last_seen and last_vuln_scan:
+                    device.last_seen = max(last_vuln_scan, agent_last_seen)
+                elif agent_last_seen or last_vuln_scan:
+                    device.last_seen = agent_last_seen or last_vuln_scan
             except Exception:
                 logger.exception(f'Problem getting last seen for {device_raw}')
             device.add_agent_version(agent=AGENT_NAMES.qualys_scans,

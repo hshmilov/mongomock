@@ -1,5 +1,8 @@
 import datetime
 import logging
+from oauthlib.oauth2 import BackendApplicationClient
+from requests.auth import HTTPBasicAuth
+from requests_oauthlib import OAuth2Session
 
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.exception import RESTException
@@ -22,10 +25,10 @@ class DruvaConnection(RESTConnection):
         if self._last_refresh and self._expires_in \
                 and self._last_refresh + datetime.timedelta(seconds=self._expires_in) > datetime.datetime.now():
             return
-        response = self._post('token',
-                              use_json_in_body=False,
-                              do_basic_auth=True,
-                              body_params='grant_type=client_credentials&scope=read')
+        auth = HTTPBasicAuth(self._username, self._password)
+        client = BackendApplicationClient(client_id=self._username)
+        oauth = OAuth2Session(client=client)
+        response = oauth.fetch_token(token_url=self._get_url_request('token'), auth=auth)
         if 'access_token' not in response:
             raise RESTException(f'Bad response: {response}')
         self._token = response['access_token']

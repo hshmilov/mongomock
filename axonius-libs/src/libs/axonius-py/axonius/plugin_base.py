@@ -2595,13 +2595,15 @@ class PluginBase(Configurable, Feature, ABC):
     def send_syslog_message(self, message, log_level):
         syslog_settings = self._syslog_settings
         if syslog_settings['enabled'] is True:
+            full_message = str({'data': message, 'timestamp': str(datetime.now().isoformat())})
             syslog_logger = logging.getLogger('axonius.syslog')
             # Starting the messages with the tag Axonius
-            getattr(syslog_logger, log_level)(message)
+            getattr(syslog_logger, log_level)(full_message)
 
     def send_https_log_message(self, message, authorization_header=None, files=None, timeout=60):
         https_log_setting = self._https_logs_settings
         if https_log_setting['enabled'] is True and https_log_setting.get('https_log_server'):
+            full_message = str({'data': message, 'timestamp': str(datetime.now().isoformat())})
             host = https_log_setting.get('https_log_server')
             port = https_log_setting.get('https_log_port') or 443
             https_proxy = https_log_setting.get('https_proxy')
@@ -2613,7 +2615,8 @@ class PluginBase(Configurable, Feature, ABC):
             if authorization_header:
                 headers = dict()
                 headers['Authorization'] = authorization_header
-            r = requests.post(url=url, data=message, proxies=proxies, headers=headers, files=files, timeout=timeout)
+            r = requests.post(url=url, data=full_message, proxies=proxies,
+                              headers=headers, files=files, timeout=timeout)
             r.raise_for_status()
 
     def set_global_keyval(self, key: str, val):
