@@ -5,12 +5,14 @@ export const pluginMeta = {
         description: 'Guardicore is a data center and cloud security company that protects the organization’s core assets.'
     },
     omnivista_adapter: {
-        title: 'OmniVista - BETA',
-        description: 'The Alcatel-Lucent OmniVista 2500 Network Management System (NMS) provides management tools and network-wide visibility. This single platform enables operators to provision, manage and maintain a Campus Mobile infrastructure with its network elements, alarms, unified access security policies, and virtualization. It also provides advanced network analytics for full visibility into wireless, devices and applications, as well as predictive analysis for forward planning.'
+        title: 'OmniVista 2500 NMS - BETA',
+        link: 'https://docs.axonius.com/docs/omnivista-2500-nms',
+        description: 'Alcatel-Lucent OmniVista 2500 Network Management System (NMS) provides management tools and network-wide visibility. This single platform enables operators to provision, manage and maintain a Campus Mobile infrastructure with its network elements, alarms, unified access security policies, and virtualization. It also provides advanced network analytics for full visibility into wireless, devices and applications, as well as predictive analysis for forward planning.'
     },
     symantec_dlp_adapter: {
         title: 'Symantec DLP - BETA',
-        description: 'Symantec DLP is a data loss protection and prevention solution. Its unified management console, the DLP Enforce Platform, and its business intelligence reporting tool, IT Analytics for DLP, allows writing and enforce policies to reduce information risks.'
+        link: 'https://docs.axonius.com/docs/symantec-dlp',
+        description: 'Symantec DLP is a data loss protection and prevention solution. Its management console, the DLP Enforce Platform, and its reporting tool, IT Analytics for DLP, allows writing and enforce policies to reduce information risks.'
     },
     cisco_ucm_adapter: {
         title: 'Cisco Unified Communications Manager - BETA',
@@ -24,6 +26,7 @@ export const pluginMeta = {
     },
     masscan_adapter: {
         title: 'Masscan',
+        link: 'https://docs.axonius.com/docs/masscan',
         description: 'Masscan is a free internet port scanner utility.'
     },
     aqua_adapter: {
@@ -317,8 +320,8 @@ export const pluginMeta = {
     },
     mssql_adapter: {
         title: 'SQL Server',
-        link: 'https://docs.axonius.com/docs/microsoft-sql-server-mssql',
-        description: 'The SQL Server Adapter imports device information from arbitrary SQL servers.'
+        link: 'https://docs.axonius.com/docs/sql-server',
+        description: 'The SQL Server adapter imports device information from arbitrary SQL servers: Microsoft SQL Server, MySQL and PostgreSQL.'
     },
     quest_kace_adapter: {
         title: 'Quest KACE Endpoint Systems Management Appliances',
@@ -481,9 +484,9 @@ export const pluginMeta = {
         description: 'Trend Micro Deep Security can automatically virtually patch server, cloud, VDI and application vulnerabilities.'
     },
     gce_adapter: {
-        title: 'Google Compute/Kubernetes Engine',
-        link: 'https://docs.axonius.com/docs/google-compute-kubernetes-engine',
-        description: 'The Google Compute/Kubernetes Engine Adapter supports both GCE\'s virtual machines as well as the GKE environment for deploying containerized applications.'
+        title: 'Google Cloud Platform (GCP)',
+        link: 'https://docs.axonius.com/docs/google-cloud-platform-gcp',
+        description: 'Google Cloud Platform (GCP) is a suite of cloud computing services. Alongside a set of management tools, it provides a series of modular cloud services including computing, data storage, data analytics and machine learning.'
     },
     duo_adapter: {
         title: 'Duo Beyond',
