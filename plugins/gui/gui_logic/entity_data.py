@@ -190,7 +190,6 @@ def entity_data_field_csv(entity_type: EntityType, entity_id, field_name, mongo_
         field_name_full: 1
     }, history_date)
 
-    string_output = io.StringIO()
     # Make a flat list of all fields under requested tabular field
     fields = next(flatten_fields(field['items']) for field in get_generic_fields(entity_type)['items']
                   if field['name'] == field_name)
@@ -202,15 +201,63 @@ def entity_data_field_csv(entity_type: EntityType, entity_id, field_name, mongo_
         parse_entity_fields(entity, [field_name_full], field_filters=field_filters).get(field_name_full, []),
         field_by_name.keys())
 
-    if not len(entity_field_data):
-        return string_output
+    return get_export_csv(entity_field_data, field_by_name, mongo_sort)
+
+
+def entity_tasks(entity_id: str):
+    """
+    Get any task that ran on the id
+
+    """
+    return TaskData.schema().dump(list(get_all_task_data(entity_id)), many=True)
+
+
+def entity_tasks_actions(entity_id: str):
+    """
+    Get any task actions that ran on the id
+
+    """
+    tasks = entity_tasks(entity_id)
+    actions = []
+    for task in tasks:
+        for action in task.get('actions'):
+            actions.append({
+                'action_id': f'{task.get("uuid")} {action.get("action_name")}',
+                'uuid': task.get('uuid'),
+                'recipe_name': f'{task.get("recipe_name")} - {task.get("recipe_pretty_id")}',
+                **action
+            })
+    return actions
+
+
+def entity_tasks_actions_csv(entity_id: str, fields: list, mongo_sort: dict):
+    actions = entity_tasks_actions(entity_id)
 
     field_by_name = {
-        field: field_by_name[field] for field in field_by_name.keys()
-        if any(data.get(field) is not None for data in entity_field_data)
+        field['name']: field for field in fields
+        if not isinstance(field.get('items'), list)
     }
-    if mongo_sort:
-        sort_field, sort_desc = mongo_sort.popitem()
+
+    actions_data = []
+    for row in actions:
+        new_action = {}
+        for field in field_by_name.keys():
+            new_action[field] = row[field]
+        actions_data.append(new_action)
+
+    return get_export_csv(actions_data, field_by_name, mongo_sort)
+
+
+def sort_data(data: list, field_by_name: dict, sort: dict):
+    """
+    sort the data by the sort parameter
+    :param data: array made of dictionaries
+    :param field_by_name: a dictionary of fields
+    :param sort: an object containing the field and desc of the sort
+    :return: the data sorted
+    """
+    if sort:
+        sort_field, sort_desc = sort.popitem()
         default_value = None
         if field_by_name[sort_field]['type'] == 'string':
             if field_by_name[sort_field].get('format') and 'date' in field_by_name[sort_field]['format']:
@@ -230,28 +277,35 @@ def entity_data_field_csv(entity_type: EntityType, entity_id, field_name, mongo_
                 return ''.join(sort_value)
             return sort_value
 
-        entity_field_data.sort(key=sort_key, reverse=(int(sort_desc) == DESCENDING))
+        data.sort(key=sort_key, reverse=(int(sort_desc) == DESCENDING))
 
-    for data in entity_field_data:
+
+def get_export_csv(rows: list, field_by_name: dict, sort: dict):
+    """
+    Export a csv of the rows by the sort
+    :param rows: array made of dictionaries
+    :param field_by_name: a dictionary of fields
+    :param sort: an object containing the field and desc of the sort
+    :return: a StringIO containing the csv
+    """
+    string_output = io.StringIO()
+    if not len(rows):
+        return string_output
+    field_by_name = {
+        field: field_by_name[field] for field in field_by_name.keys()
+        if any(data.get(field) is not None for data in rows)
+    }
+    sort_data(rows, field_by_name, sort)
+    for data in rows:
         for field in field_by_name.keys():
             # Replace field paths with their pretty titles
             if field in data:
                 data[field_by_name[field]['title']] = get_csv_canonized_value(data[field])
                 del data[field]
-
     dw = csv.DictWriter(string_output, [field['title'] for field in field_by_name.values()])
     dw.writeheader()
-    dw.writerows(entity_field_data)
+    dw.writerows(rows)
     return string_output
-
-
-def entity_tasks(entity_id):
-    """
-    Get any task that ran on the id
-
-    """
-    return TaskData.schema().dump(list(get_all_task_data(entity_id)), many=True)
-
 
 ##############
 # User Notes #

@@ -54,6 +54,10 @@
       filter: {
         type: String,
         default: ''
+      },
+      link: {
+          type: String,
+          default: ''
       }
     },
     computed: {

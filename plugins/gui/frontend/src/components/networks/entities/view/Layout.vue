@@ -62,7 +62,12 @@
         key="tasks"
         title="Enforcement Tasks"
       >
-        <x-entity-tasks :tasks="entityTasks" />
+        <x-entity-tasks
+          :entity-type="module"
+          :entity-id="entityId"
+          :tasks="entityTasks"
+          :module="module + '/current/tasks'"
+        />
       </x-tab>
       <x-tab
         id="notes"

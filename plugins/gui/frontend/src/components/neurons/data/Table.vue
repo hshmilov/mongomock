@@ -1,7 +1,7 @@
 <template>
   <div
     class="x-data-table"
-    :class="{ multiline }"
+    :class="{ multiline, searchable }"
   >
     <x-table-wrapper
       :title="tableTitle"
@@ -9,6 +9,18 @@
       :loading="loading"
       :error="content.error"
     >
+      <div
+        v-if="searchable"
+        slot="search"
+        class="header"
+      >
+        <x-search-input
+
+          :value="searchValue"
+          :placeholder="`Search ${tableTitle}...`"
+          @input="onInput"
+        />
+      </div>
       <div
         v-if="selectionCount"
         slot="state"
@@ -100,6 +112,7 @@
 </template>
 
 <script>
+  import xSearchInput from '../../neurons/inputs/SearchInput.vue'
   import xTableWrapper from '../../axons/tables/TableWrapper.vue'
   import xTable from '../../axons/tables/Table.vue'
   import xButton from '../../axons/inputs/Button.vue'
@@ -108,10 +121,11 @@
   import { UPDATE_DATA_VIEW, UPDATE_DATA_VIEW_FILTER } from '../../../store/mutations'
   import { FETCH_DATA_CONTENT } from '../../../store/actions'
   import { mapState, mapGetters, mapMutations, mapActions } from 'vuex'
+  import _orderBy from 'lodash/orderBy'
 
   export default {
     name: 'XDataTable',
-    components: { xTableWrapper, xTable, xButton },
+    components: { xTableWrapper, xTable, xButton, xSearchInput },
     props: {
       module: {
         type: String,
@@ -152,13 +166,30 @@
       onClickRow: {
         type: Function,
         default: undefined
+      },
+      staticSort: {
+          type: Boolean,
+          default: false
+      },
+      searchable: {
+        type: Boolean,
+        default: false
+      },
+      sort: {
+          type: Object,
+          default: () => {
+              return {
+                  field: '', desc: true
+              }
+          }
       }
     },
     data () {
       return {
         loading: true,
         enableSelectAll: false,
-        allSelected: false
+        allSelected: false,
+        searchValue: ''
       }
     },
     computed: {
@@ -189,7 +220,7 @@
         return this.moduleState.content
       },
       data () {
-        if (this.staticData) return this.staticData
+        if (this.staticData) return this.filteredData
         return this.content.data
       },
       count () {
@@ -203,7 +234,7 @@
         return this.getFieldSchemaByName(this.module)
       },
       viewFields () {
-        if (!this.view.fields) {
+        if (this.staticFields || !this.view.fields) {
           return this.staticFields || []
         }
         let schemaFieldsByName = this.schemaFieldsByName
@@ -280,7 +311,30 @@
           return this.count.data - this.value.ids.length
         }
         return this.value.ids.length
-      }
+      },
+      sortedData() {
+          return _orderBy(this.staticData, [(item) => {
+              if (!this.view.sort.field) return 1
+              let value = item[this.view.sort.field] || ''
+              if (Array.isArray(value)) {
+                  value = value.join('')
+              }
+              let dateValue = Date.parse(value)
+              if (dateValue) {
+                  value = dateValue
+              }
+              return value
+          }], [this.view.sort.desc ? 'desc' : 'asc' ])
+        },
+        searchValueLower() {
+            return this.searchValue.toLowerCase()
+        },
+        filteredData () {
+            if (!this.searchValue) return this.sortedData
+            return this.sortedData.filter(item => {
+                return Object.values(item).find(val => val.toString().toLowerCase().includes(this.searchValueLower))
+            })
+        }
     },
     watch: {
       loading (newLoading) {
@@ -299,6 +353,17 @@
     },
     mounted () {
       if (this.staticData) {
+          if (!this.sort.field && this.staticFields && this.staticFields.length) {
+              this.updateView({
+                  module: this.module,
+                  view: {
+                      sort: {
+                          field: this.staticFields[0].name, desc: false
+                      },
+                      schema_fields: this.staticFields
+                  }
+              })
+          }
         this.loading = false
         return
       }
@@ -308,6 +373,7 @@
       if (this.refresh) {
         this.startRefreshTimeout()
       }
+
     },
     beforeDestroy () {
       clearTimeout(this.timer)
@@ -403,6 +469,15 @@
       },
       updateColFilters(colFilters) {
         this.updateViewFilter({ module: this.module, view: {colFilters} })
+      },
+      onInput(value) {
+          this.searchValue = value
+          this.updateView({
+              module: this.module,
+              view: {
+                  page: 0
+              }
+          })
       }
     }
   }
@@ -411,6 +486,17 @@
 <style lang="scss">
     .x-data-table {
         height: calc(100% - 66px);
+
+        .header {
+          .x-search-input {
+            width: 60%;
+            display: block;
+          }
+        }
+
+      &.searchable .x-table{
+        height: calc(100% - 75px);
+      }
 
         .selection {
             display: flex;

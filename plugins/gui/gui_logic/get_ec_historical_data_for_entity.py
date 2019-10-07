@@ -16,6 +16,7 @@ class TaskActionData(DataClassJsonMixin):
 
 @dataclass(frozen=True)
 class TaskData(DataClassJsonMixin):
+    uuid: str
     recipe_name: str
     recipe_pretty_id: int
     actions: List[TaskActionData]
@@ -116,5 +117,6 @@ def get_all_task_data(internal_axon_id: str) -> Iterable[TaskData]:
                                             relevant_group['status'])
                 actions.append(action_run)
 
-        data = TaskData(recipe['post_json']['report_name'], result_data['metadata']['pretty_id'], actions)
+        data = TaskData(recipe['_id'], recipe['post_json']['report_name'],
+                        result_data['metadata']['pretty_id'], actions)
         yield data

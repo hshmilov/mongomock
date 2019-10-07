@@ -151,9 +151,12 @@ const createPostContentRequest = (state, payload) => {
 		params['limit'] = payload.limit
 	}
 	if (view.fields && view.fields.length) {
-        // fields is array, we want to foramt it as string
-        // so we are using ${}
+		// fields is array, we want to format it as string
+		// so we are using ${}
 		params['fields'] = `${view.fields}`
+	}
+	if (view.schema_fields && view.schema_fields.length) {
+		params['schema_fields'] = view.schema_fields
 	}
 	if (view.query && view.query.filter) {
 		params['filter'] = view.query.filter

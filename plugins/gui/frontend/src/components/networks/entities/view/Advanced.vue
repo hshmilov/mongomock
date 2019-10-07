@@ -1,17 +1,11 @@
 <template>
   <div class="x-entity-advanced">
-    <div class="header">
-      <x-search-input
-        :value="searchValue"
-        @input="onInput"
-        :placeholder="`Search ${schema.title}...`"
-      />
-    </div>
     <x-table
       :title="schema.title"
       :module="stateLocation"
       :static-fields="fields"
-      :static-data="filteredData"
+      :static-data="mergedData"
+      :searchable="true"
     >
       <template slot="actions">
         <x-button
@@ -25,18 +19,16 @@
 </template>
 
 <script>
-  import xSearchInput from '../../../neurons/inputs/SearchInput.vue'
   import xTable from '../../../neurons/data/Table.vue'
   import xButton from '../../../axons/inputs/Button.vue'
 
-  import { mapMutations, mapActions } from 'vuex'
+  import { mapActions } from 'vuex'
   import { FETCH_DATA_CONTENT_CSV } from '../../../../store/actions'
-  import { UPDATE_DATA_VIEW } from '../../../../store/mutations'
 
   export default {
     name: 'XEntityAdvanced',
     components: {
-      xSearchInput, xTable, xButton
+      xTable, xButton
     },
     props: {
       index: {
@@ -175,42 +167,6 @@
 
         return result
       },
-      sortedData () {
-        return [...this.mergedData].sort((first, second) => {
-          if (!this.sort.field) return 1
-          first = first[this.sort.field] || ''
-          second = second[this.sort.field] || ''
-          if (Array.isArray(first)) {
-            first = first.join('')
-          }
-          if (Array.isArray(second)) {
-            second = second.join('')
-          }
-          if (this.sort.desc) {
-            let temp = first
-            first = second
-            second = temp
-          }
-          let firstDate = new Date(first)
-          let secondDate = new Date(second)
-          if (firstDate.getDate() && secondDate.getDate()) {
-            return (firstDate < secondDate)? -1 : 1
-          }
-          if (typeof (first) === 'string') {
-            return (first < second) ? -1 : 1
-          }
-          return first - second
-        })
-      },
-      searchValueLower() {
-        return this.searchValue.toLowerCase()
-      },
-      filteredData () {
-        if (!this.searchValue) return this.sortedData
-        return this.sortedData.filter(item => {
-          return Object.values(item).find(val => val.toString().toLowerCase().includes(this.searchValueLower))
-        })
-      },
       fields () {
         return this.schema.items
         .filter(item => {
@@ -220,22 +176,7 @@
           })
       }
     },
-    mounted () {
-      if (!this.sort.field && this.fields.length) {
-        this.updateView({
-          module: this.stateLocation,
-          view: {
-            sort: {
-              field: this.fields[0].name, desc: false
-            }
-          }
-        })
-      }
-    },
     methods: {
-      ...mapMutations({
-        updateView: UPDATE_DATA_VIEW
-      }),
       ...mapActions({
         fetchDataCSV: FETCH_DATA_CONTENT_CSV
       }),
@@ -278,15 +219,6 @@
           module: this.stateLocation,
           endpoint: `${this.module}/${this.entityId}/${this.schema.name}`
         })
-      },
-      onInput(value) {
-        this.searchValue = value
-        this.updateView({
-          module: this.stateLocation,
-          view: {
-            page: 0
-          }
-        })
       }
     }
   }
@@ -295,12 +227,6 @@
 <style lang="scss">
     .x-entity-advanced {
         height: calc(100% - 30px);
-
-        .header {
-            .x-search-input {
-                width: 60%;
-            }
-        }
     }
 
 </style>

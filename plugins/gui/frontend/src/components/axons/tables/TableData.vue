@@ -4,6 +4,7 @@
     :schema="schema"
     :value="value"
     :filter="filter"
+    :link="link"
   />
 </template>
 
@@ -14,6 +15,7 @@
   import bool from '../../neurons/schema/types/boolean/BooleanView.vue'
   import file from '../../neurons/schema/types/array/FileView.vue'
   import array from '../../neurons/schema/types/array/ArrayTableView.vue'
+  import {formatStringTemplate} from '../../../constants/utils.js'
 
   export default {
     name: 'XTableData',
@@ -56,6 +58,12 @@
           return [...value].reverse()
         }
         return value
+      },
+      link () {
+          if(this.schema.link){
+              return formatStringTemplate(this.schema.link, this.data)
+          }
+          return ''
       }
     }
   }

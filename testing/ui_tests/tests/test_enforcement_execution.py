@@ -64,10 +64,10 @@ class TestEnforcementExecution(TestBase):
             self.devices_page.click_row()
             self.devices_page.wait_for_spinner_to_end()
             self.devices_page.click_enforcement_tasks_tab()
-            self.devices_page.click_tab(f'{RUN_CMD_ENFORCEMENT_NAME} - Task 1')
-            table_data = self.devices_page.get_field_table_data()
+            table_data = self.devices_page.get_field_table_data_with_ids()
             assert len(table_data) == 1
-            enforcement_set_name, action_name, is_success, output = table_data[0]
+            enforcement_set_id, enforcement_set_name, action_name, is_success, output = table_data[0]
+            assert enforcement_set_id == f'{RUN_CMD_ENFORCEMENT_NAME} - 1'
             assert enforcement_set_name == RUN_CMD_ACTION_NAME
             assert action_name == Action.run_windows_shell_command.value
             assert is_success == 'Yes'

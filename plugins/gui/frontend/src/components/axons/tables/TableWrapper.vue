@@ -8,6 +8,7 @@
       :loading="loading"
       color="#FF7D46"
     />
+    <slot name="search" />
     <div class="table-header">
       <div
         v-if="title"

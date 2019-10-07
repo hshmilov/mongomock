@@ -132,7 +132,8 @@ from gui.api import APIMixin
 from gui.cached_session import CachedSessionInterface
 from gui.feature_flags import FeatureFlags
 from gui.gui_logic.entity_data import (get_entity_data, entity_data_field_csv,
-                                       entity_notes, entity_notes_update, entity_tasks)
+                                       entity_notes, entity_notes_update, entity_tasks_actions,
+                                       entity_tasks_actions_csv)
 from gui.gui_logic.dashboard_data import adapter_data
 from gui.gui_logic.db_helpers import beautify_db_entry
 from gui.gui_logic.ec_helpers import extract_actions_from_ec
@@ -389,7 +390,8 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
             return beautify_db_entry({
                 '_id': task.get('_id'),
                 'result.metadata.success_rate': success_rate,
-                'post_json.report_name': task.get('post_json', {}).get('report_name', ''),
+                'post_json.report_name':
+                    f'{task.get("post_json", {}).get("report_name", "")} {result.get("metadata", {}).get("pretty_id", "")}',
                 'status': status,
                 f'result.{ACTIONS_MAIN_FIELD}.name': result.get('main', {}).get('name', ''),
                 'result.metadata.trigger.view.name': result.get('metadata', {}).get('trigger', {}).get('view', {}).get(
@@ -1267,12 +1269,32 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
     @gui_add_rule_logged_in('devices/<device_id>/tasks', methods=['GET'],
                             required_permissions={Permission(PermissionType.Devices, PermissionLevel.ReadOnly)})
     def device_tasks(self, device_id):
-        return jsonify(entity_tasks(device_id))
+        return jsonify(entity_tasks_actions(device_id))
 
     @gui_add_rule_logged_in('devices/<device_id>/notes', methods=['PUT', 'DELETE'],
                             required_permissions={Permission(PermissionType.Devices, PermissionLevel.ReadWrite)})
     def device_notes(self, device_id):
         return entity_notes(EntityType.Devices, device_id, self.get_request_data_as_object())
+
+    @gui_helpers.schema_fields()
+    @gui_helpers.sorted_endpoint()
+    @gui_add_rule_logged_in('devices/<device_id>/tasks/csv', methods=['POST'],
+                            required_permissions={Permission(PermissionType.Devices, PermissionLevel.ReadOnly)})
+    def device_tasks_csv(self, device_id, mongo_sort, schema_fields):
+        """
+        Create a csv file for a enforcement tasks of a specific device
+
+        :param device_id:   internal_axon_id of the Device tasks to create csv for
+        :param mongo_sort:  the sort of the csv
+        :param schema_fields:   the fields to show
+        :return:            Response containing csv data, that can be downloaded into a csv file
+        """
+        csv_string = entity_tasks_actions_csv(device_id, schema_fields, mongo_sort)
+        output = make_response(csv_string.getvalue().encode('utf-8'))
+        timestamp = datetime.now().strftime('%d%m%Y-%H%M%S')
+        output.headers['Content-Disposition'] = f'attachment; filename=axonius-data_enforcement_tasks_{timestamp}.csv'
+        output.headers['Content-type'] = 'text/csv'
+        return output
 
     @gui_add_rule_logged_in('devices/<device_id>/notes/<note_id>', methods=['POST'],
                             required_permissions={Permission(PermissionType.Devices,
@@ -1448,7 +1470,27 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
     @gui_add_rule_logged_in('users/<user_id>/tasks', methods=['GET'],
                             required_permissions={Permission(PermissionType.Users, PermissionLevel.ReadOnly)})
     def user_tasks(self, user_id):
-        return jsonify(entity_tasks(user_id))
+        return jsonify(entity_tasks_actions(user_id))
+
+    @gui_helpers.schema_fields()
+    @gui_helpers.sorted_endpoint()
+    @gui_add_rule_logged_in('users/<user_id>/tasks/csv', methods=['POST'],
+                            required_permissions={Permission(PermissionType.Devices, PermissionLevel.ReadOnly)})
+    def user_tasks_csv(self, user_id, mongo_sort, schema_fields):
+        """
+        Create a csv file for a enforcement tasks of a specific device
+
+        :param user_id:   internal_axon_id of the User tasks to create csv for
+        :param mongo_sort:  the sort of the csv
+        :param schema_fields:   the fields to show
+        :return:            Response containing csv data, that can be downloaded into a csv file
+        """
+        csv_string = entity_tasks_actions_csv(user_id, schema_fields, mongo_sort)
+        output = make_response(csv_string.getvalue().encode('utf-8'))
+        timestamp = datetime.now().strftime('%d%m%Y-%H%M%S')
+        output.headers['Content-Disposition'] = f'attachment; filename=axonius-data_enforcement_tasks_{timestamp}.csv'
+        output.headers['Content-type'] = 'text/csv'
+        return output
 
     @gui_add_rule_logged_in('users/<user_id>/notes', methods=['PUT', 'DELETE'],
                             required_permissions={Permission(PermissionType.Users, PermissionLevel.ReadWrite)})
@@ -2417,7 +2459,8 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
                 'condition': task_metadata['triggered_reason'],
                 'started': task['started_at'],
                 'finished': task['finished_at'],
-                'result': task['result']
+                'result': task['result'],
+                'task_name': f'{task["post_json"]["report_name"]} - {task_metadata["pretty_id"]}'
             })
 
         return jsonify(beautify_task(self.enforcement_tasks_runs_collection.find_one({

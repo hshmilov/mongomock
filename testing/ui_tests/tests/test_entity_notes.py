@@ -73,7 +73,7 @@ class TestEntityNotes(TestBase):
         assert not len(entities_page.get_all_data())
         entities_page.search_note('This text should not be in table')
         assert not len(entities_page.get_all_data())
-        entities_page.search_note('')
+        entities_page.search_note(' ')
         entities_page.remove_note()
 
     def _test_notes_sort(self, entities_page):

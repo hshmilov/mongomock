@@ -35,7 +35,7 @@ class TestTasks(TestBase):
 
     def _check_enforcement_data(self):
         # Check Enforcement's Task details in table
-        assert ENFORCEMENT_NAME in self.enforcements_page.get_column_data(self.FIELD_NAME)
+        assert f'{ENFORCEMENT_NAME} 1' in self.enforcements_page.get_column_data(self.FIELD_NAME)
         assert ENFORCEMENT_NAME in self.enforcements_page.get_column_data(self.FIELD_MAIN_ACTION)
         assert ENFORCEMENT_QUERY in self.enforcements_page.get_column_data(self.FIELD_QUERY_NAME)
         assert datetime.now().strftime('%Y-%m-%d') in normalize_timezone_date(
@@ -94,14 +94,16 @@ class TestTasks(TestBase):
         self.enforcements_page.wait_for_spinner_to_end()
         self.enforcements_page.wait_for_table_to_load()
 
+        self.enforcements_page.click_sort_column(self.FIELD_STATUS)
+        self.enforcements_page.wait_for_table_to_load()
         original_order = self.enforcements_page.get_column_data(self.FIELD_NAME)
         self.enforcements_page.click_sort_column(self.FIELD_NAME)
         self.enforcements_page.wait_for_table_to_load()
-        assert self.enforcements_page.get_column_data(self.FIELD_NAME) == sorted(enforcement_names, reverse=True)
+        assert self.enforcements_page.get_column_data(self.FIELD_NAME) == sorted(original_order, reverse=True)
         self.enforcements_page.click_sort_column(self.FIELD_NAME)
         self.enforcements_page.wait_for_table_to_load()
-        assert self.enforcements_page.get_column_data(self.FIELD_NAME) == sorted(enforcement_names)
-        self.enforcements_page.click_sort_column(self.FIELD_NAME)
+        assert self.enforcements_page.get_column_data(self.FIELD_NAME) == sorted(original_order)
+        self.enforcements_page.click_sort_column(self.FIELD_STATUS)
         self.enforcements_page.wait_for_table_to_load()
         assert self.enforcements_page.get_column_data(self.FIELD_NAME) == original_order
 
@@ -112,7 +114,7 @@ class TestTasks(TestBase):
         self.enforcements_page.click_sort_column(self.FIELD_QUERY_NAME)
         self.enforcements_page.wait_for_table_to_load()
         assert self.enforcements_page.get_column_data(self.FIELD_QUERY_NAME) == sorted(query_names)
-        self.enforcements_page.click_sort_column(self.FIELD_QUERY_NAME)
+        self.enforcements_page.click_sort_column(self.FIELD_STATUS)
         self.enforcements_page.wait_for_table_to_load()
         assert self.enforcements_page.get_column_data(self.FIELD_QUERY_NAME) == original_order
 
@@ -140,7 +142,7 @@ class TestTasks(TestBase):
 
         self.enforcements_page.fill_enter_table_search(TEST_ENFORCEMENT_NAME)
         self.enforcements_page.wait_for_table_to_load()
-        assert self.enforcements_page.get_column_data(self.FIELD_NAME) == [TEST_ENFORCEMENT_NAME]
+        assert TEST_ENFORCEMENT_NAME in self.enforcements_page.get_column_data(self.FIELD_NAME)[0]
 
         self.enforcements_page.fill_enter_table_search(ENFORCEMENT_CHANGE_NAME)
         self.enforcements_page.wait_for_table_to_load()
@@ -208,4 +210,4 @@ class TestTasks(TestBase):
         self.enforcements_page.wait_for_spinner_to_end()
         self.enforcements_page.wait_for_table_to_load()
         assert len(self.enforcements_page.get_all_data()) == 2
-        assert ENFORCEMENT_QUERY in self.enforcements_page.get_column_data(self.FIELD_QUERY_NAME)
+        assert ENFORCEMENT_QUERY in self.enforcements_page.get_column_data(self.FIELD_QUERY_NAME)[0]

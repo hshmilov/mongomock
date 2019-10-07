@@ -52,3 +52,15 @@ export const getTypeFromField = (fieldName) => {
     }
     return 'axonius'
 }
+
+export const formatStringTemplate = (str, data = {}) => {
+    /*
+    Format a string template
+    str - the string template with '{{<parameter>}}' placeholders
+    data - the parameters map
+     */
+    Object.keys(data).forEach(function(key) {
+        str = str.replace(new RegExp('{{' + key + '}}', 'g'), data[key]);
+    });
+    return str;
+}

@@ -112,9 +112,7 @@
         return this.$route.params.taskId
       },
       name () {
-        if (!this.taskData || !this.taskData.enforcement) return ''
-
-        return this.taskData.enforcement
+        return  (this.taskData && this.taskData.task_name) ? this.taskData.task_name : ''
       },
       enforcement () {
         return this.view.enforcement || null

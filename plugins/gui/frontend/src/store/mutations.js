@@ -96,7 +96,7 @@ export const updateDataContent = (state, payload) => {
 }
 
 export const UPDATE_DATA_VIEW = 'UPDATE_DATA_VIEW'
-export const updateDataView = (state, payload) => {UPDATE_DATA_VIEW
+export const updateDataView = (state, payload) => {
 	let module = getModule(state, payload)
 	if (!module) return
 	if (payload.view) {

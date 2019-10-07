@@ -48,7 +48,14 @@ export const devices = {
 			fetching: false, data: {}, error: '',
 
 			tasks: {
-				fetching: false, data: [], error: ''
+				fetching: false, data: [], error: '',
+				view: {
+					page: 0, pageSize: 20, columnSizes: [], query: {
+						filter: '', expressions: []
+					}, sort: {
+						field: '', desc: true
+					}
+				},
 			}
 		}
 

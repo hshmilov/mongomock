@@ -247,6 +247,24 @@ def projected():
     return wrap
 
 
+def schema_fields():
+    """
+    Relevant only if the request.method is POST
+    Decorator stating that the schema array of schema_fields=[{'name': <field name>, 'title': <field title>},...]
+    """
+
+    def wrap(func):
+        def actual_wrapper(self, *args, **kwargs):
+            fields = []
+            if request.method == 'POST':
+                content = self.get_request_data_as_object()
+                fields = content.get('schema_fields')
+            return func(self, schema_fields=fields, *args, **kwargs)
+        return actual_wrapper
+
+    return wrap
+
+
 def filtered_fields():
     """
     Assumes the request.method is POST

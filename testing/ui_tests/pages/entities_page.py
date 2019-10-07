@@ -70,6 +70,8 @@ class EntitiesPage(Page):
     TABLE_SCHEMA_CUSTOM = '//div[contains(@class, \'x-schema-custom\')]'
     TABLE_FIELD_ROWS_XPATH = '//div[contains(@class, \'x-tabs\')]//div[contains(@class, \'x-tab active\')]' \
                              '//div[@class=\'x-table\']//tr[@class=\'x-table-row\']'
+    TABLE_FIELD_ROWS_XPATH_WITH_IDS = '//div[contains(@class, \'x-tabs\')]//div[contains(@class, \'x-tab active\')]'\
+                                      '//div[@class=\'x-table\']//tr[@class=\'x-table-row\' and @id]'
     TABLE_PAGE_SIZE_XPATH = '//div[@class=\'x-pagination\']/div[@class=\'x-sizes\']/div[text()=\'{page_size_text}\']'
     TABLE_PAGE_SELECT_XPATH = '//div[@class=\'x-pagination\']/div[@class=\'x-pages\']/div'
     TABLE_PAGE_ACTIVE_XPATH = '//div[@class=\'x-pagination\']/div[@class=\'x-pages\']/div[@class=\'x-link active\']'
@@ -136,7 +138,7 @@ class EntitiesPage(Page):
     CUSTOM_DATA_ERROR_CSS = '.x-entity-custom-fields .footer .error-text'
     CUSTOM_DATA_BULK_CONTAINER_CSS = '.actions'
 
-    ENFORCEMENT_RESULTS_TITLE = '{enforcement_name} - Task 1'
+    ENFORCEMENT_RESULTS_TITLE_END = '- Task 1'
     ENFORCEMENT_RESULTS_SUBTITLE = 'results of "{action_name}" action'
     MISSING_EMAIL_SETTINGS_TEXT = 'In order to send alerts through mail, configure it under settings'
 
@@ -509,6 +511,10 @@ class EntitiesPage(Page):
     def get_field_table_data(self):
         return [[data_cell.text for data_cell in data_row.find_elements_by_tag_name('td')]
                 for data_row in self.find_elements_by_xpath(self.TABLE_FIELD_ROWS_XPATH)]
+
+    def get_field_table_data_with_ids(self):
+        return [[data_cell.text for data_cell in data_row.find_elements_by_tag_name('td')]
+                for data_row in self.find_elements_by_xpath(self.TABLE_FIELD_ROWS_XPATH_WITH_IDS)]
 
     def get_all_custom_data(self):
         return [data.text for data in self.find_elements_by_xpath(self.TABLE_SCHEMA_CUSTOM)]
@@ -967,7 +973,8 @@ class EntitiesPage(Page):
 
     def is_enforcement_results_header(self, enforcement_name, action_name):
         header_text = self.driver.find_element_by_css_selector('.x-query-state .header').text
-        return (self.ENFORCEMENT_RESULTS_TITLE.format(enforcement_name=enforcement_name) in header_text
+        return (self.ENFORCEMENT_RESULTS_TITLE_END in header_text
+                and enforcement_name in header_text
                 and self.ENFORCEMENT_RESULTS_SUBTITLE.format(action_name=action_name) in header_text)
 
     def find_missing_email_server_notification(self):
