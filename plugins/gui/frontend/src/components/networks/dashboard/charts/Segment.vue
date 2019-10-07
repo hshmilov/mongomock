@@ -84,10 +84,7 @@
               if (!field.name.startsWith('specific_data') && !field.name.startsWith('adapters_data')) {
                 return false
               }
-              if (isObjectListField(field)) {
-                return false
-              }
-              return !field.branched
+              return !isObjectListField(field)
             })
           }
         })
