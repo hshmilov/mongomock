@@ -113,7 +113,8 @@ class ReportGenerator:
         timestamp = now.strftime('%d%m%Y-%H%M%S')
         temp_report_filename = f'{self.output_path}axonius-report_{timestamp}.pdf'
         logger.info(f'Report Generator: PDF generated and saved to ${temp_report_filename}')
-        return self.render_html(now).write_pdf(temp_report_filename)
+        html, attachments = self.render_html(now)
+        return html.write_pdf(temp_report_filename)
 
     def render_html(self, current_time):
         sections = []
@@ -582,7 +583,7 @@ class ReportGenerator:
         :param viewa_data:
         :return:
         """
-        view_data['fields'] = [field for field in view_data['fields'] if
+        view_data['fields'] = [field for field in view_data.get('fields') if
                                list(field.values())[0] != 'specific_data.data.last_seen_in_devices']
         good_fields = [field for field in view_data['fields'] if
                        list(field.values())[0] != 'specific_data.data.image' and
@@ -614,10 +615,10 @@ class ReportGenerator:
                 'body_content': '\n'.join(rows)
             })
         render_params = {
-            'title': view_data['name'],
-            'cols_total': len(view_data['fields']), 'cols_current': min(len(good_fields), self.NUMBER_OF_COLUMNS),
+            'title': view_data.get('name'),
+            'cols_total': len(view_data.get('fields')), 'cols_current': min(len(good_fields), self.NUMBER_OF_COLUMNS),
             'row_count': number_of_rows,
-            'total_count': view_data['count'],
+            'total_count': view_data.get('count'),
             'content': table
         }
         if view_data.get('csv'):
