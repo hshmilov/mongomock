@@ -2,12 +2,30 @@ import json_log_formatter
 from datetime import datetime
 import inspect
 import traceback
+from pathlib import Path
+import json
 from flask import has_request_context, session, request
 
-from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME, X_UI_USER, X_UI_USER_SOURCE
+from axonius.consts import system_consts
+from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME, X_UI_USER, X_UI_USER_SOURCE, METADATA_PATH
 
 MAX_LOG_MESSAGE_LEN = 1024 * 4
 LOGGER_LIB_STACKTRACE_PATTERN = 'File "/usr/lib/python3.6/logging/'
+
+
+def read_version():
+    try:
+        path = METADATA_PATH
+        if not path.is_file():
+            path = system_consts.METADATA_PATH
+        metadata = Path(path).read_text()
+        return json.loads(metadata)['Version']
+    except Exception as e:
+        print(f'Failed to read metadata {e} {traceback.format_exc()}')
+    return ''
+
+
+VERSION = read_version()
 
 
 # Custumized logger formatter in order to enter some extra fields to the log message
@@ -20,6 +38,10 @@ class CustomisedJSONFormatter(json_log_formatter.JSONFormatter):
         try:
             extra['level'] = record.levelname
             extra['thread'] = record.thread
+
+            if VERSION:
+                extra['version'] = VERSION
+
             if len(message) < MAX_LOG_MESSAGE_LEN:
                 extra['message'] = message
             else:
