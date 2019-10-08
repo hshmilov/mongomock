@@ -1,3 +1,4 @@
+import codecs
 import csv
 import io
 import json
@@ -898,9 +899,10 @@ def _get_csv(mongo_filter, mongo_sort, mongo_projection, entity_type: EntityType
                 name = ' '.join(type_.split('_')).capitalize()
                 mongo_projection[field['name']] = f'{name}: {field["title"]}'
 
+    file_obj.write(codecs.BOM_UTF8.decode('utf-8'))
     dw = csv.DictWriter(file_obj, mongo_projection.values())
 
-    # instead of using `writeheader` so we can get the stirng output here as well
+    # instead of using `writeheader` so we can get the string output here as well
     yield dw.writerow(dict(zip(dw.fieldnames, dw.fieldnames)))
 
     for current_entity in entities:
