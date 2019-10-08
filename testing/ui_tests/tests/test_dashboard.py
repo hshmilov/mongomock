@@ -38,7 +38,6 @@ class TestDashboard(TestBase):
     SEGMENTATION_QUERY_USER_AD = 'Segmentation_User_name_AD'
     TEST_SEGMENTATION_PIE_TITLE = 'test segmentation pie'
     TEST_EDIT_CHART_TITLE = 'test edit'
-
     COVERAGE_SPACE_NAME = 'Coverage Dashboard'
     VULNERABILITY_SPACE_NAME = 'Vulnerability Dashboard'
     CUSTOM_SPACE_PANEL_NAME = 'Segment OS'
@@ -143,6 +142,8 @@ class TestDashboard(TestBase):
         self.dashboard_page.add_intersection_card('Devices', 'Windows Operating System',
                                                   'Devices Not Seen In Last 7 Days', self.TEST_INTERSECTION_TITLE)
         self.dashboard_page.wait_for_spinner_to_end()
+        # verify card config reset
+        self.dashboard_page.verify_card_config_reset_intersection_chart(self.TEST_INTERSECTION_TITLE)
         self.dashboard_page.click_intersection_pie_slice(self.TEST_INTERSECTION_TITLE)
         self.devices_page.wait_for_table_to_load()
         assert self.devices_page.find_search_value() == self.INTERSECTION_QUERY
@@ -165,6 +166,8 @@ class TestDashboard(TestBase):
         self.base_page.run_discovery()
         self.dashboard_page.add_summary_card('Devices', 'Host Name', 'Count', self.TEST_SUMMARY_TITLE_DEVICES)
         self.dashboard_page.wait_for_spinner_to_end()
+        # verify card reset config
+        self.dashboard_page.verify_card_config_reset_summary_chart(self.TEST_SUMMARY_TITLE_DEVICES)
         summary_chart = self.dashboard_page.get_summary_card_text(self.TEST_SUMMARY_TITLE_DEVICES)
         result_count = int(summary_chart.text)
         summary_chart.click()
@@ -173,8 +176,9 @@ class TestDashboard(TestBase):
         assert self.devices_page.find_search_value() == self.SUMMARY_CARD_QUERY_DEVICES
         self.dashboard_page.switch_to_page()
         self.dashboard_page.remove_card(self.TEST_SUMMARY_TITLE_DEVICES)
-
         self.dashboard_page.add_summary_card('Users', 'Logon Count', 'Count', self.TEST_SUMMARY_TITLE_USERS)
+        # verify card reset config
+        self.dashboard_page.verify_card_config_reset_summary_chart(self.TEST_SUMMARY_TITLE_USERS)
         summary_chart = self.dashboard_page.get_summary_card_text(self.TEST_SUMMARY_TITLE_USERS)
         result_count = int(summary_chart.text)
         summary_chart.click()
@@ -357,6 +361,9 @@ class TestDashboard(TestBase):
                                                          field='User Name',
                                                          title=self.TEST_PAGINATOR_ON_SEGMENTATION_USERS,
                                                          view_name=self.SEGMENTATION_QUERY_USER_AD)
+        # verify reset chart
+        self.dashboard_page.verify_card_config_reset_segmentation_chart(self.TEST_PAGINATOR_ON_SEGMENTATION_USERS)
+
         total_num_of_items = int(self.dashboard_page.get_paginator_total_num_of_items(histograms_chart))
         assert total_num_of_items == second_result_count
         self.base_page.run_discovery()
@@ -479,6 +486,8 @@ class TestDashboard(TestBase):
         self.dashboard_page.switch_to_page()
         self.base_page.run_discovery()
         self.dashboard_page.add_segmentation_card('Devices', 'OS: Type', self.TEST_SEGMENTATION_HISTOGRAM_TITLE)
+        # verify config reset
+        self.dashboard_page.verify_card_config_reset_segmentation_chart(self.TEST_SEGMENTATION_HISTOGRAM_TITLE)
         shc_card = self.dashboard_page.get_card(self.TEST_SEGMENTATION_HISTOGRAM_TITLE)
         shc_chart = self.dashboard_page.get_histogram_chart_from_card(shc_card)
         line = self.dashboard_page.get_histogram_line_from_histogram(shc_chart, 1)
@@ -646,8 +655,11 @@ class TestDashboard(TestBase):
         self.dashboard_page.switch_to_page()
         self.base_page.run_discovery()
         self.dashboard_page.add_comparison_card('Devices', 'Windows Operating System',
-                                                'Devices', 'Linux Operating System',
+                                                'Users', 'Local Users',
                                                 self.TEST_EDIT_CHART_TITLE)
+        # verify reset config
+        self.dashboard_page.verify_card_config_reset_comparison_chart(self.TEST_EDIT_CHART_TITLE)
+
         self.dashboard_page.edit_card(self.TEST_EDIT_CHART_TITLE)
         self.dashboard_page.add_comparison_card_view('Devices', 'IOS Operating System')
 
@@ -686,3 +698,13 @@ class TestDashboard(TestBase):
 
         assert self.dashboard_page.find_no_data_label()
         self.dashboard_page.remove_card(self.TEST_EMPTY_TITLE)
+
+    def test_dashboard_intersection_chart_config_reset(self):
+        self.dashboard_page.switch_to_page()
+        self.base_page.run_discovery()
+        self.dashboard_page.add_intersection_card('Users', 'Locked Users',
+                                                  'AD Disabled Users', self.TEST_INTERSECTION_TITLE)
+        self.dashboard_page.wait_for_spinner_to_end()
+        # verify card config reset
+        self.dashboard_page.verify_card_config_reset_intersection_chart(self.TEST_INTERSECTION_TITLE)
+        self.dashboard_page.remove_card(self.TEST_INTERSECTION_TITLE)

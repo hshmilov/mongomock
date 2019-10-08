@@ -66,6 +66,15 @@ class DashboardPage(Page):
     PAGINATOR_TOTAL_NUM_OF_ITEMS = f'{PAGINATOR_CLASS} .total-num-of-items'
     PAGINATOR_FROM_VALUE = f'{PAGINATOR_CLASS} .from-item'
     PAGINATOR_TO_VALUE = f'{PAGINATOR_CLASS} {PAGINATOR_TO}'
+    CHART_QUERY_DEFAULT = 'QUERY...'
+    CHART_QUERY_ALL_DEFAULT = 'QUERY (OR EMPTY FOR ALL)'
+    CHART_QUERY_FIELD_DEFAULT = 'FIELD...'
+    CARD_FILTER_CSS = '.x-select .x-select-trigger .placeholder'
+    CARD_FIELD_CSS = '.x-select-typed-field .x-select-trigger .placeholder'
+    COMPARISON_CARD_1ST_CHILD_MODLUE_CSS = 'div:nth-child(1) > div.x-dropdown.x-select.x-select-symbol'
+    COMPARISON_CARD_2ND_CHILD_MODULE_CSS = 'div:nth-child(2) > div.x-dropdown.x-select.x-select-symbol'
+    COMPARISON_CARD_1ST_QUERY_CSS = 'div:nth-child(1) > div.x-dropdown.x-select.view-name'
+    COMPARISON_CARD_2ND_QUERY_CSS = 'div:nth-child(2) > div.x-dropdown.x-select.view-name'
 
     CARD_SPINNER_CSS = '.chart-spinner'
 
@@ -566,3 +575,100 @@ class DashboardPage(Page):
         time.sleep(0.3)
 
         self.wait_for_element_absent_by_css(self.CARD_SPINNER_CSS)
+
+    def click_card_cancel(self):
+        self.click_button('Cancel', partial_class=True)
+        self.wait_for_element_absent_by_css(self.MODAL_OVERLAY_CSS, interval=1)
+
+    def toggle_chart_wizard_module(self, selector_element_css=CHART_MODULE_DROP_DOWN_CSS,
+                                   ddl_selector_css=CHART_MODULE_DROP_DOWN_CSS,
+                                   options_css=WIZARD_OPTIONS_CSS,
+                                   parent=None):
+
+        module = self.driver.find_element_by_css_selector(selector_element_css)
+
+        if module.text == 'Devices':
+            self.select_option_without_search(text='Users',
+                                              dropdown_css_selector=ddl_selector_css,
+                                              selected_options_css_selector=options_css,
+                                              parent=parent)
+        else:
+            self.select_option_without_search(text='Devices',
+                                              dropdown_css_selector=ddl_selector_css,
+                                              selected_options_css_selector=options_css,
+                                              parent=parent)
+
+    def assert_intersection_chart_first_query_default(self):
+        select = self.driver.find_element_by_css_selector(self.INTERSECTION_CHART_FIRST_QUERY_DROP_DOWN_CSS)
+        assert select.text == self.CHART_QUERY_DEFAULT
+
+    def assert_intersection_chart_secound_query_default(self):
+        select = self.driver.find_element_by_css_selector(self.INTERSECTION_CHART_SECOND_QUERY_DROP_DOWN_CSS)
+        assert select.text == self.CHART_QUERY_DEFAULT
+
+    def assert_summary_chart_query_filter_default(self):
+        select = self.driver.find_element_by_css_selector(self.CARD_FILTER_CSS)
+        assert select.text == self.CHART_QUERY_ALL_DEFAULT
+
+    def assert_summary_chart_query_field_default(self):
+        select = self.driver.find_element_by_css_selector(self.CARD_FIELD_CSS)
+        assert select.text == self.CHART_QUERY_FIELD_DEFAULT
+
+    def assert_compression_chart_first_query_field_default(self):
+        select = self.driver.find_element_by_css_selector(self.COMPARISON_CARD_1ST_QUERY_CSS)
+        assert select.text == self.CHART_QUERY_DEFAULT
+
+    def assert_compression_chart_second_query_field_default(self):
+        select = self.driver.find_element_by_css_selector(self.COMPARISON_CARD_2ND_QUERY_CSS)
+        assert select.text == self.CHART_QUERY_DEFAULT
+
+    def assert_segmentation_chart_query_field_default(self):
+        select = self.driver.find_element_by_css_selector(self.SELECT_VIEW_NAME_CSS)
+        assert select.text == self.CHART_QUERY_ALL_DEFAULT
+
+    def assert_segmentation_chart_field_default(self):
+        select = self.driver.find_element_by_css_selector(self.CHART_FIELD_DROP_DOWN_CSS)
+        assert select.text == self.CHART_QUERY_FIELD_DEFAULT
+
+    def verify_card_config_reset_intersection_chart(self, chart_title):
+        self.edit_card(chart_title)
+        try:
+            self.toggle_chart_wizard_module()
+            self.assert_intersection_chart_first_query_default()
+            self.assert_intersection_chart_secound_query_default()
+        finally:
+            self.click_card_cancel()
+
+    def verify_card_config_reset_summary_chart(self, chat_title):
+        self.edit_card(chat_title)
+        try:
+            self.toggle_chart_wizard_module()
+            self.assert_summary_chart_query_filter_default()
+            self.assert_summary_chart_query_field_default()
+
+        finally:
+            self.click_card_cancel()
+
+    def verify_card_config_reset_comparison_chart(self, chart_title):
+        self.edit_card(chart_title)
+        try:
+            self.toggle_chart_wizard_module()
+            self.assert_compression_chart_first_query_field_default()
+
+            self.toggle_chart_wizard_module(selector_element_css=self.COMPARISON_CARD_2ND_CHILD_MODULE_CSS,
+                                            ddl_selector_css=self.COMPARISON_CARD_2ND_CHILD_MODULE_CSS,
+                                            options_css=self.WIZARD_OPTIONS_CSS)
+            self.assert_compression_chart_second_query_field_default()
+
+        finally:
+            self.click_card_cancel()
+
+    def verify_card_config_reset_segmentation_chart(self, chart_title):
+        self.edit_card(chart_title)
+        try:
+            self.toggle_chart_wizard_module()
+            self.assert_segmentation_chart_query_field_default()
+            self.assert_segmentation_chart_field_default()
+
+        finally:
+            self.click_card_cancel()
