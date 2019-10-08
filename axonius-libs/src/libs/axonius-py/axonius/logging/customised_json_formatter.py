@@ -7,6 +7,7 @@ from flask import has_request_context, session, request
 from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME, X_UI_USER, X_UI_USER_SOURCE
 
 MAX_LOG_MESSAGE_LEN = 1024 * 4
+LOGGER_LIB_STACKTRACE_PATTERN = 'File "/usr/lib/python3.6/logging/'
 
 
 # Custumized logger formatter in order to enter some extra fields to the log message
@@ -33,7 +34,9 @@ class CustomisedJSONFormatter(json_log_formatter.JSONFormatter):
                 try:
                     # Sometimes, just the stack trace isn't enough, since the message is generated in a try/except
                     # which we have no idea how we got into. so we print the full call stack
-                    extra['full_callstack'] = ''.join(traceback.format_stack())
+                    stack = traceback.format_stack()
+                    stack = [line for line in stack if LOGGER_LIB_STACKTRACE_PATTERN not in line]
+                    extra['full_callstack'] = ''.join(stack)
                 except Exception:
                     pass
             extra[PLUGIN_UNIQUE_NAME] = self.plugin_unique_name
@@ -59,10 +62,10 @@ class CustomisedJSONFormatter(json_log_formatter.JSONFormatter):
                         continue
                     else:
                         # This is the frame that we are looking for (The one who initiated a log print)
-                        extra['funcName'] = current_frame.function
-                        extra['lineNumber'] = current_frame.lineno
-                        extra['filename'] = current_frame.filename
-                        extra['location'] = f"{extra['filename']}:{extra['funcName']}:{extra['lineNumber']}"
+                        function = current_frame.function
+                        line = current_frame.lineno
+                        filename = current_frame.filename
+                        extra['location'] = f"{filename}:{function}:{line}"
 
                         break
 
