@@ -4,6 +4,8 @@ from enum import Enum
 from typing import List, Tuple, Iterable
 from collections import namedtuple
 
+from selenium.common.exceptions import NoSuchElementException
+
 from testing.test_credentials.test_ad_credentials import WMI_QUERIES_DEVICE
 from ui_tests.pages.entities_page import EntitiesPage
 
@@ -108,6 +110,8 @@ class EnforcementsPage(EntitiesPage):
     USE_ACTIVE_DIRECTORY_CREDENTIALS_CHECKBOX_LABEL = 'Use stored credentials from the Active Directory adapter'
 
     CLICKABLE_TABLE_ROW = '.x-table-row.clickable'
+    CONFIRM_REMOVE_SINGLE = 'Remove Enforcement Set'
+    CONFIRM_REMOVE_MULTI = 'Remove Enforcement Sets'
 
     @property
     def url(self):
@@ -384,9 +388,22 @@ class EnforcementsPage(EntitiesPage):
     def select_all_enforcements(self):
         self.driver.find_element_by_css_selector(self.ENFORCEMENTS_CHECKBOX).click()
 
-    def remove_selected_enforcements(self):
+    def remove_selected_enforcements(self, confirm=False):
+        """
+        the remove button is a safeguard button ( need to confirm )
+        @param confirm: determine click on cancel or confirm
+        @return: none
+        """
         self.find_element_by_text('Remove').click()
-        self.find_element_by_text('Remove Enforcement Set').click()
+        if confirm:
+            # the button can have text of multiple items or single item ( set or sets )
+            # try to click on the single button, if no element exist click on multiple button
+            try:
+                self.find_element_by_text(self.CONFIRM_REMOVE_SINGLE).click()
+            except NoSuchElementException:
+                self.find_element_by_text(self.CONFIRM_REMOVE_MULTI).click()
+        else:
+            self.find_element_by_text('Cancel').click()
 
     def choose_period(self, period):
         self.wait_for_element_present_by_id(period).click()

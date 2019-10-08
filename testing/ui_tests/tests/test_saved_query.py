@@ -180,7 +180,7 @@ class TestSavedQuery(TestBase):
         data_count = self.devices_queries_page.get_table_count()
 
         def _remove_queries_wait_count(data_count):
-            self.devices_queries_page.remove_selected_queries()
+            self.devices_queries_page.remove_selected_queries(confirm=True)
             wait_until(lambda: self.devices_queries_page.get_table_count() == data_count)
             return data_count
 
@@ -207,5 +207,8 @@ class TestSavedQuery(TestBase):
         # Test remove all
         self.devices_queries_page.click_table_checkbox()
         self.devices_queries_page.click_button('Select all', partial_class=True)
+        # test cancel remove
+        self.devices_queries_page.remove_selected_queries()
+        assert self.devices_queries_page.get_all_table_rows()[:3] == [all_data[2], all_data[5], all_data[8]]
         _remove_queries_wait_count(0)
         assert self.devices_queries_page.get_all_table_rows() == []

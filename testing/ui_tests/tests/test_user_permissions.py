@@ -188,13 +188,21 @@ class TestUserPermissions(TestBase):
         self.settings_page.save_role()
         self.settings_page.click_done()
         self.settings_page.wait_for_role_saved_toaster()
-
+        # test cancel delete role
+        self.settings_page.click_roles_button()
+        self.settings_page.select_role(self.settings_page.RESTRICTED_ROLE)
+        self.settings_page.select_role(role_name)
+        self.settings_page.remove_role()
+        self.settings_page.click_done()
+        # at this point the test assume the role didnt deleted
+        # the test will fail if the role deleted when we try to select it again
+        # test delete role
         self.settings_page.click_roles_button()
         self.settings_page.select_role(self.settings_page.RESTRICTED_ROLE)
         self.settings_page.select_role(role_name)
         for label in self.settings_page.get_permission_labels():
             assert self.settings_page.get_permissions_text(label) == self.settings_page.READ_ONLY_PERMISSION
-        self.settings_page.remove_role()
+        self.settings_page.remove_role(confirm=True)
         self.settings_page.click_done()
         self.settings_page.wait_for_role_removed_toaster()
 

@@ -499,9 +499,17 @@ class SettingsPage(Page):
     def save_role(self):
         self.click_button_by_id('save-role-button')
 
-    def remove_role(self):
+    def remove_role(self, confirm=False):
+        """
+        the remove button is a safeguard button ( need to confirm )
+        @param confirm: determine click on cancel or confirm
+        @return: none
+        """
         self.click_button_by_id('remove-role-button')
-        self.find_element_by_text(self.SAFEGUARD_REMOVE_BUTTON_TEXT).click()
+        if confirm:
+            self.find_element_by_text(self.SAFEGUARD_REMOVE_BUTTON_TEXT).click()
+        else:
+            self.find_element_by_text('Cancel').click()
 
     def click_done(self):
         self.click_button('Done')

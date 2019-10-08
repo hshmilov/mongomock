@@ -13,7 +13,8 @@ class ReportFrequency:
 class ReportsPage(EntitiesPage):
     NEW_REPORT_BUTTON = '+ New Report'
     REMOVE_REPORTS_BUTTON = 'Remove'
-    SAFEGUARD_REMOVE_REPORTS_BUTTON = 'Remove Reports'
+    SAFEGUARD_REMOVE_REPORTS_BUTTON_SINGLE = 'Remove Report'
+    SAFEGUARD_REMOVE_REPORTS_BUTTON_MULTI = 'Remove Reports'
     REPORT_CSS = '.x-report'
     REPORT_NAME_ID = 'report_name'
     REPORT_FREQUENCY = 'report_frequency'
@@ -62,9 +63,22 @@ class ReportsPage(EntitiesPage):
         self.wait_for_element_present_by_css(self.REPORT_CSS)
         self.wait_for_spinner_to_end()
 
-    def click_remove_reports(self):
+    def click_remove_reports(self, confirm=False):
+        """
+        the remove button is a safeguard button ( need to confirm )
+        @param confirm: determine click on cancel or confirm
+        @return: none
+        """
         self.find_remove_reports_button().click()
-        self.find_element_by_text(self.SAFEGUARD_REMOVE_REPORTS_BUTTON).click()
+        if confirm:
+            # the button can have text of multiple items or single item ( report or reports )
+            # try to click on the single button, if no element exist click on multiple button
+            try:
+                self.find_element_by_text(self.SAFEGUARD_REMOVE_REPORTS_BUTTON_SINGLE).click()
+            except NoSuchElementException:
+                self.find_element_by_text(self.SAFEGUARD_REMOVE_REPORTS_BUTTON_MULTI).click()
+        else:
+            self.find_element_by_text('Cancel').click()
 
     def click_select_all_reports(self):
         self.select_all_current_page_rows_checkbox()

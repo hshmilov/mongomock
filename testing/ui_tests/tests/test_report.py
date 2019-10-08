@@ -317,7 +317,13 @@ class TestReport(TestBase):
 
         self.reports_page.click_select_report(1)
         self.reports_page.click_select_report(3)
+        # test cancel deletion
         self.reports_page.click_remove_reports()
+        self.reports_page.wait_for_spinner_to_end()
+        # test if no task deleted
+        assert self.reports_page.get_report_count() == 5
+        # test deletion
+        self.reports_page.click_remove_reports(confirm=True)
         self.reports_page.wait_for_spinner_to_end()
 
         assert self.reports_page.get_report_count() == 3
@@ -337,6 +343,6 @@ class TestReport(TestBase):
         self.reports_page.click_select_all_reports()
         self.reports_page.click_select_report(1)
         self.reports_page.click_select_report(3)
-        self.reports_page.click_remove_reports()
+        self.reports_page.click_remove_reports(confirm=True)
         self.reports_page.wait_for_spinner_to_end()
         assert self.reports_page.get_report_count() == 2

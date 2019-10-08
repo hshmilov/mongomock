@@ -9,6 +9,8 @@ logger = logging.getLogger(f'axonius.{__name__}')
 class QueriesPage(Page):
     QUERY_ROW_BY_NAME_XPATH = '//tr[child::td[child::div[text()=\'{query_name}\']]]'
     QUERY_NAME_BY_PART_XPATH = '//div[contains(text(), \'{query_name_part}\')]'
+    SAFEGUARD_REMOVE_BUTTON_SINGLE = 'Remove Saved Query'
+    SAFEGUARD_REMOVE_BUTTON_MULTI = 'Remove Saved Queries'
 
     @property
     def url(self):
@@ -37,13 +39,23 @@ class QueriesPage(Page):
         row = self.find_query_row_by_name(query_name)
         row.find_element_by_css_selector(self.CHECKBOX_CSS).click()
 
-    def remove_selected_queries(self):
+    def remove_selected_queries(self, confirm=False):
+        """
+        the remove button is a safeguard button ( need to confirm )
+        @param confirm: determine click on cancel or confirm
+        @return: none
+        """
         self.find_element_by_text(self.REMOVE_BUTTON).click()
-        try:
-            self.find_element_by_text(self.SAFEGUARD_REMOVE_BUTTON_SINGLE).click()
-        except NoSuchElementException:
-            self.find_element_by_text(self.SAFEGUARD_REMOVE_BUTTON_MULTI).click()
-        self.wait_for_element_absent_by_css('.x-checkbox.checked')
+        if confirm:
+            # the button can have text of multiple items or single item ( query or queries )
+            # try to click on the single button, if no element exist click on multiple button
+            try:
+                self.find_element_by_text(self.SAFEGUARD_REMOVE_BUTTON_SINGLE).click()
+            except NoSuchElementException:
+                self.find_element_by_text(self.SAFEGUARD_REMOVE_BUTTON_MULTI).click()
+            self.wait_for_element_absent_by_css('.x-checkbox.checked')
+        else:
+            self.find_element_by_text('Cancel').click()
 
     def enforce_selected_query(self):
         self.find_element_by_text(self.test_base.enforcements_page.NEW_ENFORCEMENT_BUTTON).click()

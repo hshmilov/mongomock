@@ -42,7 +42,11 @@ class TestEnforcementNoQuery(TestBase):
         self.enforcements_page.switch_to_page()
         self.enforcements_page.wait_for_table_to_load()
         self.enforcements_page.select_all_enforcements()
+        assert self.enforcements_page.count_entities() == 1
         self.enforcements_page.remove_selected_enforcements()
+        self.enforcements_page.wait_for_table_to_load()
+        assert self.enforcements_page.count_entities() == 1
+        self.enforcements_page.remove_selected_enforcements(confirm=True)
 
         self.base_page.run_discovery()
         new_length = len(self.notification_page.get_peek_notifications())
@@ -73,7 +77,7 @@ class TestEnforcementNoQuery(TestBase):
         # Check remove enforcement allows re-use of names
         self.enforcements_page.wait_for_table_to_load()
         self.enforcements_page.click_row_checkbox(2)
-        self.enforcements_page.remove_selected_enforcements()
+        self.enforcements_page.remove_selected_enforcements(confirm=True)
         self.enforcements_page.create_basic_enforcement(duplicate_name, COMMON_ENFORCEMENT_QUERY)
         self.enforcements_page.add_push_system_notification(ENFORCEMENT_CHANGE_NAME)
         self.enforcements_page.click_save_button()

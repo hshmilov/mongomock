@@ -26,7 +26,7 @@
         >
           <div slot="button-text">Remove</div>
           <div slot="message">
-            The selected Enforcement Sets will be completely removed from the system.<br>
+            The selected Enforcement {{ numberOfSelections > 1 ? 'Sets' : 'Set' }} will be completely removed from the system.<br>
             Removing the Enforcement {{ numberOfSelections > 1 ? 'Sets' : 'Set' }} is an irreversible action.<br>
             Do you wish to continue?
           </div>

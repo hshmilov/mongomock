@@ -129,7 +129,7 @@ class TestEnforcementSanity(TestBase):
         self.devices_queries_page.switch_to_page()
         self.devices_queries_page.wait_for_spinner_to_end()
         self.devices_queries_page.check_query_by_name(ENFORCEMENT_CHANGE_NAME)
-        self.devices_queries_page.remove_selected_queries()
+        self.devices_queries_page.remove_selected_queries(confirm=True)
         self.driver.refresh()
         with pytest.raises(NoSuchElementException):
             self.devices_queries_page.find_query_row_by_name(ENFORCEMENT_CHANGE_NAME)
