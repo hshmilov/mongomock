@@ -50,6 +50,25 @@ class CrowdStrikeConnection(RESTConnection):
                   do_basic_auth=not self._got_token,
                   url_params={'limit': consts.DEVICES_PER_PAGE, 'offset': 0})
 
+    def __get(self, *args, **kwargs):
+        """
+        Calls _get but tries a couple of times.
+        :param args: args
+        :param kwargs: kwargs
+        :return:
+        """
+        retries = 0
+        while retries < consts.REQUEST_RETRIES:
+            try:
+                return self._get(*args, **kwargs)
+            except RESTRequestException as e:
+                logger.error(f'Error getting with args {str(args)}')
+                time.sleep(consts.RETRIES_SLEEP_TIME)
+                self.refresh_access_token()
+                retries += 1
+                if retries >= consts.REQUEST_RETRIES:
+                    raise e
+
     @staticmethod
     def _add_policy(policies: PoliciesType, device: dict, policy: dict):
         """
@@ -76,9 +95,9 @@ class CrowdStrikeConnection(RESTConnection):
             return
         policies_ids = policies.keys()
         req_type = p_type.replace_to_dash()
-        policies_data = self._get(f'policy/entities/{req_type}/v1',
-                                  url_params={'ids': policies_ids},
-                                  do_basic_auth=not self._got_token)
+        policies_data = self.__get(f'policy/entities/{req_type}/v1',
+                                   url_params={'ids': policies_ids},
+                                   do_basic_auth=not self._got_token)
         logger.debug(f'Got {len(policies_data)} policies')
         resources = policies_data.get('resources')
         if not isinstance(resources, list):
@@ -140,9 +159,9 @@ class CrowdStrikeConnection(RESTConnection):
         group_ids = groups.keys()
         for chunk in chunks(consts.MAX_GROUPS_PER_REQUEST, group_ids):
             try:
-                groups_res = self._get(f'devices/entities/host-groups/v1',
-                                       url_params={'ids': chunk},
-                                       do_basic_auth=not self._got_token)
+                groups_res = self.__get(f'devices/entities/host-groups/v1',
+                                        url_params={'ids': chunk},
+                                        do_basic_auth=not self._got_token)
                 groups_data = groups_res.get('resources', [])
                 logger.debug(f'Got {len(groups_data)} groups')
                 for group_data in groups_data:
@@ -161,26 +180,22 @@ class CrowdStrikeConnection(RESTConnection):
         :param devices_ids: devices ids
         :return: list of devices
         """
-        retries = 0
         if len(devices_ids) > consts.MAX_DEVICES_PER_PAGE:
             logger.warning(f'Request too many devices_ids: {devices_ids}, max: {consts.MAX_DEVICES_PER_PAGE}')
-        while retries < consts.REQUEST_RETRIES:
+        devices = self.__get('devices/entities/devices/v1',
+                             url_params={'ids': devices_ids},
+                             do_basic_auth=not self._got_token)
+        devices_data = devices.get('resources')
+        if should_get_policies:
             try:
-                devices = self._get('devices/entities/devices/v1',
-                                    url_params={'ids': devices_ids},
-                                    do_basic_auth=not self._got_token)
-                devices_data = devices.get('resources')
-                if should_get_policies:
-                    self.get_devices_policies(devices_data)
-                self.get_devices_groups(devices_data)
-                return devices
-            except RESTRequestException as e:
-                logger.error(f'Error getting devices data: {e}')
-                time.sleep(consts.RETRIES_SLEEP_TIME)
-                self.refresh_access_token()
-                retries += 1
-                if retries >= consts.REQUEST_RETRIES:
-                    raise e
+                self.get_devices_policies(devices_data)
+            except Exception:
+                logger.exception(f'Error getting devices policies')
+        try:
+            self.get_devices_groups(devices_data)
+        except Exception:
+            logger.exception(f'Error getting devices groups')
+        return devices
 
     def get_devices_ids(self, offset: int, devices_per_page: int) -> dict:
         """
@@ -189,20 +204,10 @@ class CrowdStrikeConnection(RESTConnection):
         :param devices_per_page: devices per page
         :return:
         """
-        retries = 0
         logger.debug(f'Getting devices offset {offset}, devices per page: {devices_per_page}')
-        while retries < consts.REQUEST_RETRIES:
-            try:
-                return self._get('devices/queries/devices/v1',
-                                 url_params={'limit': devices_per_page, 'offset': offset},
-                                 do_basic_auth=not self._got_token)
-            except RESTRequestException as e:
-                logger.error(f'Error getting devices ids: {e}')
-                time.sleep(consts.RETRIES_SLEEP_TIME)
-                self.refresh_access_token()
-                retries += 1
-                if retries >= consts.REQUEST_RETRIES:
-                    raise e
+        return self.__get('devices/queries/devices/v1',
+                          url_params={'limit': devices_per_page, 'offset': offset},
+                          do_basic_auth=not self._got_token)
 
     # pylint: disable=arguments-differ
     def get_device_list(self, should_get_policies):
