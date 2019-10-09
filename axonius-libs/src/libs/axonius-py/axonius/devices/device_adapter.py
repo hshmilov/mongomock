@@ -979,8 +979,8 @@ class DeviceAdapter(SmartJsonClass):
         else:
             cvss = None
 
+        version_raw = ''
         try:
-            version_raw = ''
             if 'software_version' in kwargs:
                 version_raw = parse_versions_raw(kwargs['software_version'])
         except Exception:

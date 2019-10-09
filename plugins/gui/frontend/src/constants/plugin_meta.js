@@ -1,4 +1,8 @@
 export const pluginMeta = {
+    skybox_adapter: {
+        title: 'Skybox Firewall Assurance',
+        description: 'Skybox Firewall Assurance provides automation of firewall management tasks across different firewall vendors and complex rulesets.'
+    },
     guardicore_adapter: {
         title: 'Guardicore',
         link: 'https://docs.axonius.com/docs/guardicore',
