@@ -108,7 +108,7 @@ with AutoOutputFlush():
                 # placeholder for logs dir
                 zip_file.writestr(f'{SOURCES_FOLDER_NAME}/logs/nonce', ''.encode('utf-8'))
 
-                add_source_folder(zip_file, exclude)
+                add_source_folder(zip_file, os.path.basename(output_path), exclude)
                 zip_file.write(images_tar, 'images.tar')
                 print_state('Closing zip file')
     finally:
@@ -165,12 +165,12 @@ def build_images(pull=False, rebuild=False, exclude=None, prod=True):
     return images
 
 
-def add_source_folder(zip_file, exclude=None):
+def add_source_folder(zip_file: zipfile.ZipFile, output_file_name: str, exclude: list = None):
     """ add source folder CORTEX_PATH to zip_file under /SOURCES_FOLDER_NAME;
         first iterate over all files and sub-folders and prepare a list of white-listed files (variable files)
         then, call write_files to commit those files to zip_file.
     """
-    install_out_regex = re.compile('deployment/axonius_install[^/]*\.py')
+    install_out_regex = re.compile(output_file_name)
     header = SOURCES_FOLDER_NAME
     files = []
     exclude_files = []
