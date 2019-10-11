@@ -104,7 +104,7 @@ from axonius.utils.json_encoders import IteratorJSONEncoder
 from axonius.utils.mongo_retries import CustomRetryOperation, mongo_retry
 from axonius.utils.parsing import get_exception_string, remove_large_ints
 from axonius.utils.revving_cache import rev_cached
-from axonius.utils.ssl import SSL_CERT_PATH, SSL_KEY_PATH, CA_CERT_PATH
+from axonius.utils.ssl import SSL_CERT_PATH, SSL_KEY_PATH, CA_CERT_PATH, get_private_key_without_passphrase
 from axonius.utils.threading import (LazyMultiLocker, run_and_forget,
                                      run_in_executor_helper, ThreadPoolExecutorReusable, singlethreaded)
 # pylint: disable=C0302
@@ -2786,13 +2786,14 @@ class PluginBase(Configurable, Feature, ABC):
         if global_ssl.get('enabled'):
             config_cert = self._grab_file_contents(global_ssl.get('cert_file'), stored_locally=False)
             config_key = self._grab_file_contents(global_ssl.get('private_key'), stored_locally=False)
+            config_key_no_passphrase = get_private_key_without_passphrase(config_key, global_ssl.get('passphrase'))
 
             current_cert = open(SSL_CERT_PATH, 'rb').read()
             current_key = open(SSL_KEY_PATH, 'rb').read()
 
-            if config_cert != current_cert or config_key != current_key:
+            if config_cert != current_cert or config_key_no_passphrase != current_key:
                 open(SSL_CERT_PATH, 'wb').write(config_cert)
-                open(SSL_KEY_PATH, 'wb').write(config_key)
+                open(SSL_KEY_PATH, 'wb').write(config_key_no_passphrase)
 
                 # Restart Openresty (NGINX)
                 subprocess.check_call(['openresty', '-s', 'reload'])
@@ -2867,6 +2868,13 @@ class PluginBase(Configurable, Feature, ABC):
                             'type': 'string'
                         },
                         *MANDATORY_SSL_CONFIG_SCHEMA,
+                        {
+                            'name': 'passphrase',
+                            'title': 'Private Key Passphrase',
+                            'description': 'An optional passphrase for the private key file',
+                            'type': 'string',
+                            'format': 'password'
+                        }
                     ],
                     'name': 'global_ssl',
                     'title': 'GUI SSL Settings',
@@ -3169,7 +3177,8 @@ class PluginBase(Configurable, Feature, ABC):
             'global_ssl': {
                 'enabled': False,
                 'hostname': None,
-                **MANDATORY_SSL_CONFIG_SCHEMA_DEFAULTS
+                **MANDATORY_SSL_CONFIG_SCHEMA_DEFAULTS,
+                'passphrase': b''
             },
             'ssl_trust_settings': {
                 'enabled': False,

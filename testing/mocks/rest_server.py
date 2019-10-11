@@ -6,6 +6,7 @@ import os
 import time
 from functools import wraps
 from flask import Flask, request, Response, jsonify
+from werkzeug.utils import secure_filename
 
 CURRENT_PATH = os.path.abspath(os.path.dirname(__file__))
 APP = Flask('Mock Server')
@@ -86,6 +87,20 @@ def logs():
             data = data.decode('utf-8')
         LOGS.append(str(data))
     return jsonify(LOGS)
+
+
+@APP.route('/https_post', methods=['POST'])
+@mock_services
+def https_post():
+    print(f'Data: {request.get_data()}')
+    print(f'Headers: {request.headers}')
+
+    if request.files.get('file'):
+        print(f'files: {request.files}')
+        file = request.files['file']
+        filename = secure_filename(file.filename)
+        file.save(filename)
+    return ''
 
 
 def main():

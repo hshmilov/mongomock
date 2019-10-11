@@ -127,6 +127,7 @@ from axonius.utils.mongo_retries import mongo_retry
 from axonius.utils.parsing import bytes_image_to_base64
 from axonius.utils.proxy_utils import to_proxy_string
 from axonius.utils.revving_cache import rev_cached
+from axonius.utils.ssl import check_associate_cert_with_private_key
 from axonius.utils.threading import run_and_forget
 from gui.api import APIMixin
 from gui.cached_session import CachedSessionInterface
@@ -147,7 +148,7 @@ from gui.gui_logic.users_helper import beautify_user_entry
 from gui.okta_login import OidcData, try_connecting_using_okta
 from gui.report_generator import ReportGenerator
 
-# pylint: disable=line-too-long,superfluous-parens,too-many-statements,too-many-lines,keyword-arg-before-vararg,invalid-name,too-many-instance-attributes,inconsistent-return-statements,no-self-use,inconsistent-return-statements,no-else-return,no-self-use,unnecessary-pass,useless-return,cell-var-from-loop,logging-not-lazy,singleton-comparison,redefined-builtin,comparison-with-callable,too-many-return-statements,too-many-boolean-expressions,logging-format-interpolation,fixme,no-member
+# pylint: disable=line-too-long,superfluous-parens,too-many-statements,too-many-lines,too-many-locals,too-many-branches,keyword-arg-before-vararg,invalid-name,too-many-instance-attributes,inconsistent-return-statements,no-self-use,inconsistent-return-statements,no-else-return,no-self-use,unnecessary-pass,useless-return,cell-var-from-loop,logging-not-lazy,singleton-comparison,redefined-builtin,comparison-with-callable,too-many-return-statements,too-many-boolean-expressions,logging-format-interpolation,fixme,no-member
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -2542,6 +2543,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
     @gui_add_rule_logged_in('plugins/configs/<plugin_name>/<config_name>', methods=['POST', 'GET'],
                             required_permissions={Permission(PermissionType.Settings, ReadOnlyJustForGet)},
                             enforce_trial=False)
+    # pylint: disable=too-many-branches,too-many-locals
     def plugins_configs_set(self, plugin_name, config_name):
         """
         Set a specific config on a specific plugin
@@ -2602,11 +2604,28 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
             global_ssl = config_to_set.get('global_ssl')
             if global_ssl and global_ssl.get('enabled') is True:
                 config_cert = self._grab_file_contents(global_ssl.get('cert_file'), stored_locally=False)
-                parsed_cert = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, config_cert)
+                config_private = self._grab_file_contents(global_ssl.get('private_key'), stored_locally=False)
+                try:
+                    parsed_cert = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, config_cert)
+                except Exception:
+                    logger.exception(f'Error loading certificate')
+                    return return_error(
+                        f'Error loading certificate file. Please upload a pem-type certificate file.', 400)
                 cn = dict(parsed_cert.get_subject().get_components())[b'CN'].decode('utf8')
                 if cn != global_ssl['hostname']:
                     return return_error(f'Hostname does not match the hostname in the certificate file, '
                                         f'hostname in given cert is {cn}', 400)
+
+                ssl_check_result = False
+                try:
+                    ssl_check_result = check_associate_cert_with_private_key(
+                        config_cert, config_private, global_ssl.get('passphrase')
+                    )
+                except Exception as e:
+                    return return_error(f'Error - can not load ssl settings: {str(e)}', 400)
+
+                if not ssl_check_result:
+                    return return_error(f'Private key and public certificate do not match each other', 400)
 
         self._update_plugin_config(plugin_name, config_name, config_to_set)
         return ''
