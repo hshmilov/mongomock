@@ -196,6 +196,7 @@ DOCKER_PORTS = {
     'omnivista-adapter':                9989,
     'guardicore-adapter':               9990,
     'skybox-adapter':                   9991,
+    'bamboohr-adapter':                 9992,
     'mongo':                            27017,
     'mockingbird-db':                   28017
 }

@@ -1,4 +1,8 @@
 export const pluginMeta = {
+    bamboohr_adapter: {
+        title: 'BambooHR',
+        description: 'BambooHR is all-in-one HR software that makes it easy to collect, maintain, and analyze your people data, improve the way you hire talent, onboard new employees, manage compensation, and develop your company culture.'
+    },
     skybox_adapter: {
         title: 'Skybox Firewall Assurance',
         description: 'Skybox Firewall Assurance provides automation of firewall management tasks across different firewall vendors and complex rulesets.'
