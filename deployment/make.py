@@ -34,7 +34,8 @@ if pip.__version__.startswith('9.'):
 else:
     import pip._internal.pep425tags as pip_pep425tags
     import pip._internal.utils.glibc as pip_glibc
-    from pip._internal import main as pip_main
+    import pip._internal.main
+    from pip._internal.main import main as pip_main
 
 
 def main():
