@@ -1,3 +1,4 @@
+import codecs
 from datetime import datetime
 
 from flask import Response
@@ -25,6 +26,11 @@ def get_csv_from_heavy_lifting_plugin(mongo_filter, mongo_sort, mongo_projection
         default_sort, entity_type, history, mongo_filter, mongo_projection, mongo_sort, field_filters)
 
     def generate():
+        # https://stackoverflow.com/questions/42715966/preserve-utf-8-bom-in-browser-downloads
+        # Quote:
+        # > I found a workaround by prepending two BOMs to the content,
+        # > so there will be a BOM remaining after the first BOM gets removed by the browser.
+        yield codecs.BOM_UTF8
         for chunk in res.iter_content(CHUNK_SIZE):
             yield chunk
 

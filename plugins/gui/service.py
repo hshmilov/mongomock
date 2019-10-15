@@ -1,3 +1,4 @@
+import codecs
 import csv
 import configparser
 import io
@@ -1260,7 +1261,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
         :return:            Response containing csv data, that can be downloaded into a csv file
         """
         csv_string = entity_data_field_csv(EntityType.Devices, device_id, field_name, mongo_sort, history)
-        output = make_response(csv_string.getvalue().encode('utf-8'))
+        output = make_response((codecs.BOM_UTF8 * 2) + csv_string.getvalue().encode('utf-8'))
         timestamp = datetime.now().strftime('%d%m%Y-%H%M%S')
         field_name = field_name.split('.')[-1]
         output.headers['Content-Disposition'] = f'attachment; filename=axonius-data_{field_name}_{timestamp}.csv'
@@ -4813,8 +4814,8 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
 
         db_connection = self._get_db_connection()
         fs = gridfs.GridFS(db_connection[GUI_PLUGIN_NAME])
-        with open(attachment_path, 'r') as attachment_file:
-            written_file_id = fs.put(attachment_file.read(), encoding='UTF-8',
+        with open(attachment_path, 'rb') as attachment_file:
+            written_file_id = fs.put(attachment_file,
                                      filename=os.path.basename(attachment_path))
         logger.info('Attachment successfully placed in the db')
         return str(written_file_id)

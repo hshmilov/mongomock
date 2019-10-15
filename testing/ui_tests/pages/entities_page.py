@@ -786,12 +786,16 @@ class EntitiesPage(Page):
         })
 
     def assert_csv_match_ui_data(self, result, ui_data=None, ui_headers=None):
+        had_bom = 0
         res = result.content
         while isinstance(res, bytes) and res.startswith(codecs.BOM_UTF8):
+            had_bom += 1
             res = res[len(codecs.BOM_UTF8):]
         while isinstance(res, str) and res.startswith(codecs.BOM_UTF8.decode('utf-8')):
+            had_bom += 1
             res = res[len(codecs.BOM_UTF8.decode('utf-8')):]
         all_csv_rows: typing.List[str] = res.decode('utf-8').split('\r\n')
+        assert had_bom == 2
 
         csv_headers = all_csv_rows[0].split(',')
         csv_data_rows = all_csv_rows[1:-1]

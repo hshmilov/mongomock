@@ -900,6 +900,7 @@ def _get_csv(mongo_filter, mongo_sort, mongo_projection, entity_type: EntityType
                 mongo_projection[field['name']] = f'{name}: {field["title"]}'
 
     file_obj.write(codecs.BOM_UTF8.decode('utf-8'))
+    yield codecs.BOM_UTF8.decode('utf-8')
     dw = csv.DictWriter(file_obj, mongo_projection.values())
 
     # instead of using `writeheader` so we can get the string output here as well
