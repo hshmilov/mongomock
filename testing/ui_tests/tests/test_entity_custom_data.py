@@ -193,6 +193,7 @@ class TestEntityCustomData(TestBase):
                 self.adapters_page.fill_creds(**kaseya_client_details_2)
                 self.adapters_page.click_save()
                 self.adapters_page.wait_for_spinner_to_end()
+                self.adapters_page.wait_for_server_green()
                 self.base_page.run_discovery()
                 self.devices_page.switch_to_page()
                 self.devices_page.wait_for_table_to_load()
