@@ -281,25 +281,6 @@ class AggregatorService(Triggerable, PluginBase):
         to_db = self._historical_entity_views_db_map[entity_type]
         raw_to_db = self._raw_adapter_historical_entity_db_map[entity_type]
 
-        # using a tmp collection because $out can write with a lot of constraints
-        # https://docs.mongodb.com/manual/reference/operator/aggregation/out/
-        # > You cannot specify a sharded collection as the output collection.
-        # > The $out operator cannot write results to a capped collection. (Not using - but we might)
-        # > [...] $out stage atomically replaces the existing collection with the new results collection
-        # The last one means that if we use $out we replace everything in the output collection,
-        # while we actually just want to add.
-        # So - why are we even using $out altogether?
-        # $out makes sure we get a consistent view of the DB so if something happens here it won't be affected
-        # it is also an easy way for some modifications without involving python code
-        # benchmark: 1-2k/sec devices (docker, mongo 3.6) - 100k devices ~ a minute
-
-        # 2019 september update: This will be slower due to further 'raw' processing, but will also be faster
-        # because every document is smaller. So the actual performance is now unknown, although is guessed to be
-        # similar.
-
-        tmp_collection = self._get_db_connection()[to_db.database.name][f"temp_{to_db.name}"]
-        tmp_raw_collection = self._get_db_connection()[to_db.database.name][f"temp_raw_{to_db.name}"]
-
         val = to_db.find_one(filter={},
                              sort=[('accurate_for_datetime', -1)],
                              projection={
@@ -308,8 +289,10 @@ class AggregatorService(Triggerable, PluginBase):
         if val:
             val = val['accurate_for_datetime']
             if val.date() == now.date():
-                logger.info(f"For {entity_type} not saving history: save only once a day - last saved at {val}")
-                return
+                logger.info(f'For {entity_type} not saving history: save only once a day - last saved at {val}')
+                return 'skipping saved history'
+
+        # Benchmarked 3k devices/second
 
         from_db.aggregate([
             {
@@ -330,7 +313,7 @@ class AggregatorService(Triggerable, PluginBase):
                 }
             },
             {
-                "$out": tmp_collection.name
+                "$merge": to_db.name
             }
         ])
 
@@ -348,18 +331,10 @@ class AggregatorService(Triggerable, PluginBase):
                 }
             },
             {
-                "$out": tmp_raw_collection.name
+                "$merge": raw_to_db.name
             }
         ])
-
-        for chunk in chunks(10000, tmp_collection.find({})):
-            to_db.insert_many(chunk)
-
-        for chunk in chunks(10000, tmp_raw_collection.find({})):
-            raw_to_db.insert_many(chunk)
-
-        tmp_collection.drop()
-        tmp_raw_collection.drop()
+        return 'saved history'
 
     def _triggered(self, job_name, post_json, *args):
         if job_name == 'clean_db':
@@ -369,9 +344,11 @@ class AggregatorService(Triggerable, PluginBase):
             adapters = self.get_available_plugins_from_core_uncached(post_json).values()
         elif job_name == 'save_history':
             now = datetime.utcnow()
-            for entity_type in EntityType:
-                self._save_entity_views_to_historical_db(entity_type, now)
-            return
+            return {
+                entity_type.name: self._save_entity_views_to_historical_db(entity_type, now)
+                for entity_type
+                in EntityType
+            }
         else:
             adapters = self.get_available_plugins_from_core_uncached({
                 PLUGIN_UNIQUE_NAME: job_name
