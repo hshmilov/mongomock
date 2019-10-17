@@ -171,7 +171,7 @@ class CarbonblackProtectionAdapter(AdapterBase, Configurable):
                 'fetch_uninstall',
                 'devices_per_page'
             ],
-            'pretty_name': 'Carbonblack Protection Configuration',
+            'pretty_name': 'Carbon Black CB Protection Configuration',
             'type': 'array'
         }
 

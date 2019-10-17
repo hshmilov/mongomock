@@ -1,10 +1,12 @@
 export const pluginMeta = {
     bamboohr_adapter: {
         title: 'BambooHR',
+        link: 'https://docs.axonius.com/docs/bamboohr',
         description: 'BambooHR is all-in-one HR software that makes it easy to collect, maintain, and analyze your people data, improve the way you hire talent, onboard new employees, manage compensation, and develop your company culture.'
     },
     skybox_adapter: {
         title: 'Skybox Firewall Assurance',
+        link: 'https://docs.axonius.com/docs/skybox-firewall-assurance',
         description: 'Skybox Firewall Assurance provides automation of firewall management tasks across different firewall vendors and complex rulesets.'
     },
     guardicore_adapter: {
@@ -372,8 +374,8 @@ export const pluginMeta = {
         description: 'Snipe-IT is a free, open source IT asset management system written in PHP.'
     },
     mobi_control_adapter: {
-        title: 'Soti MobiControl - BETA',
-        link: '',
+        title: 'SOTI MobiControl - BETA',
+        link: 'https://docs.axonius.com/docs/soti-mobicontrol',
         description: 'SOTI MobiControl is a software system for managing mobile devices in the enterprise.'
     },
     absolute_adapter: {
@@ -392,9 +394,9 @@ export const pluginMeta = {
         description: 'Lansweeper is an agentless IT asset management and Network Inventory software tool for Microsoft Windows OS.'
     },
     linux_ssh_adapter: {
-        title: 'Linux SSH Adapter',
+        title: 'Linux SSH',
         link: 'https://docs.axonius.com/docs/linux-ssh',
-        description: 'The Linux Secure Shell Adapter uses remote command execution over the SSH protocol to gather information about the endpoint Linux machine.'
+        description: 'Linux Secure Shell uses remote command execution over the SSH protocol to gather information about the endpoint Linux machine.'
     },
     malwarebytes_adapter: {
         title: 'Malwarebytes',
@@ -413,7 +415,7 @@ export const pluginMeta = {
     },
     cisco_umbrella_adapter: {
         title: 'Cisco Umbrella',
-        link: '',
+        link: 'https://docs.axonius.com/docs/cisco-umbrella',
         description: 'Cisco Umbrella is a secure internet gateway in the cloud, including DNS and IP layer enforcement and command and control callback blocking.'
     },
     clearpass_adapter: {
@@ -508,7 +510,7 @@ export const pluginMeta = {
     },
     redseal_adapter: {
         title: 'RedSeal',
-        link: '',
+        link: 'https://docs.axonius.com/docs/redseal',
         description: 'RedSeal’s network modeling and risk scoring platform models customers\' entire hybrid data center of public cloud, private cloud and physical network.'
     },
     google_mdm_adapter: {
@@ -583,7 +585,7 @@ export const pluginMeta = {
     },
     kaseya_adapter: {
         title: 'Kaseya VSA',
-        link: '',
+        link: 'https://docs.axonius.com/docs/kaseya-vsa',
         description: 'Kaseya VSA is a remote monitoring and management solution for remote control, discovery, patch management, and monitoring.'
     },
     puppet_adapter: {

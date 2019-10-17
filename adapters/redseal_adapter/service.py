@@ -73,7 +73,7 @@ class RedsealAdapter(AdapterBase):
             "items": [
                 {
                     "name": "url",
-                    "title": "url",
+                    "title": "URL",
                     "type": "string",
                     "description": "RedSeal url"
                 },

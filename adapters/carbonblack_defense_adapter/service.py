@@ -210,7 +210,7 @@ class CarbonblackDefenseAdapter(AdapterBase, Configurable):
             'required': [
                 'fetch_deregistred'
             ],
-            'pretty_name': 'Carbonblack Defense Configuration',
+            'pretty_name': 'Carbon Black CB Defense Configuration',
             'type': 'array'
         }
 

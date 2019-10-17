@@ -79,7 +79,7 @@ class CiscoUmbrellaAdapter(AdapterBase):
             'items': [
                 {
                     'name': 'domain',
-                    'title': 'CiscoUmbrella Domain',
+                    'title': 'Cisco Umbrella Domain',
                     'type': 'string',
                     'default': DEFAULT_UMBRELLA_DOMAIN
                 },

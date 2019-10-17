@@ -266,7 +266,7 @@ class CarbonblackResponseAdapter(AdapterBase, Configurable):
             'required': [
                 'fetch_uninstall'
             ],
-            'pretty_name': 'Carbonblack Response Configuration',
+            'pretty_name': 'Carbon Black CB Response Configuration',
             'type': 'array'
         }
 
