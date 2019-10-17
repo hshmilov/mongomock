@@ -212,7 +212,7 @@ class TestBase:
         })
         self.axonius_system.get_dashboard_db().delete_many({
             'user_id': {
-                'ne': '*'
+                '$ne': '*'
             }
         })
 

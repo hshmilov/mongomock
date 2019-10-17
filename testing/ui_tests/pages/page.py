@@ -142,7 +142,7 @@ class Page:
 
     RENAME_TAB_INPUT_ID = 'rename_tab'
 
-    TABLE_SEARCH_INPUT = '.x-search-input .input-value'
+    SEARCH_INPUT_CSS = '.x-search-input .input-value'
 
     CUSTOM_DATA_SEARCH_INPUT = '.body .x-tabs.vertical .body .x-tab.active .x-search-input input'
 
@@ -774,8 +774,8 @@ class Page:
             self.TABLE_ROW_TEXT_CELL_CSS.format(row_index=row_index, cell_index=cell_index)).text
 
     def fill_enter_table_search(self, text):
-        self.fill_text_field_by_css_selector(self.TABLE_SEARCH_INPUT, text)
-        self.key_down_enter(self.driver.find_element_by_css_selector(self.TABLE_SEARCH_INPUT))
+        self.fill_text_field_by_css_selector(self.SEARCH_INPUT_CSS, text)
+        self.key_down_enter(self.driver.find_element_by_css_selector(self.SEARCH_INPUT_CSS))
 
     def focus_on_element(self, elem_id):
         return self.driver.execute_script(f'document.querySelector("#{elem_id}").focus()')

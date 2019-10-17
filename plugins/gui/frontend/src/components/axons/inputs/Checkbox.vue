@@ -117,6 +117,14 @@
             &.checked .container:hover {
                 border-color: $grey-5;
             }
+
+          .label {
+            cursor: default;
+
+            &:hover {
+              text-shadow: none;
+            }
+          }
         }
 
         &.checked .container {

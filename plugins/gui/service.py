@@ -3784,12 +3784,11 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
         card = self.__dashboard_collection.find_one({
             '_id': ObjectId(panel_id)
         })
-        if not card.get('view') or not card.get('config') or not card['config'].get('entity') or not card['config'].get('field'):
+        if (not card.get('view') or not card.get('config') or not card['config'].get('entity')
+                or not card['config'].get('field')):
             return return_error('Error: no such data available ', 400)
-        data = self._fetch_chart_segment(ChartViews[card['view']],
-                                         EntityType(card['config']['entity']),
-                                         card['config'].get('view'),
-                                         card['config']['field'])
+        card['config']['entity'] = EntityType(card['config']['entity'])
+        data = self._fetch_chart_segment(ChartViews[card['view']], **card['config'])
         name = card['config']['field']['title']
         string_output = io.StringIO()
         dw = csv.DictWriter(string_output, [name, 'count'])
@@ -4116,7 +4115,8 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
         }, 'module': entity.value}, *data]
 
     # pylint: disable=R0914,R0912
-    def _fetch_chart_segment(self, chart_view: ChartViews, entity: EntityType, view, field, for_date=None):
+    def _fetch_chart_segment(self, chart_view: ChartViews, entity: EntityType, view, field, value_filter: str = '',
+                             include_empty: bool = False, for_date=None):
         """
         Perform aggregation which matching given view's filter and grouping by give field, in order to get the
         number of results containing each available value of the field.
@@ -4246,18 +4246,22 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
                 all_values[value] += item['value']
         for field_value, field_count in all_values.items():
             if field_value == 'No Value':
-                value_filter = f'not ({field_name} == exists(true))'
+                if not include_empty or value_filter:
+                    continue
+                query_filter = f'not ({field_name} == exists(true))'
             elif isinstance(field_value, str):
-                value_filter = f'{field_name} == "{field_value}"'
+                if value_filter.lower() not in field_value.lower():
+                    continue
+                query_filter = f'{field_name} == "{field_value}"'
             elif isinstance(field_value, bool):
-                value_filter = f'{field_name} == {str(field_value).lower()}'
+                query_filter = f'{field_name} == {str(field_value).lower()}'
             elif isinstance(field_value, int):
-                value_filter = f'{field_name} == {field_value}'
+                query_filter = f'{field_name} == {field_value}'
             elif isinstance(field_value, datetime):
-                value_filter = f'{field_name} == date("{field_value}")'
+                query_filter = f'{field_name} == date("{field_value}")'
             else:
                 # you can't search by other types, currently unsupported
-                value_filter = ''
+                query_filter = ''
 
             data.append({
                 'name': field_value,
@@ -4266,7 +4270,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
                 'view': {
                     **base_view,
                     'query': {
-                        'filter': f'{base_filter}{value_filter}'
+                        'filter': f'{base_filter}{query_filter}'
                     }
                 }
             })

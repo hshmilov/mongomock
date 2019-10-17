@@ -12,15 +12,27 @@
       :options="views[entity]"
       :searchable="true"
       placeholder="query (or empty for all)"
-      class="view-name"
+      class="view-name grid-span2"
     />
-    <div />
-    <div />
+    <label>Segment by</label>
     <x-select-typed-field
       v-model="fieldName"
       :options="fieldOptions"
+      class="grid-span2"
     />
-    <div />
+    <template v-if="isFieldFilterable">
+      <label>Filter by</label>
+      <x-search-input
+        v-model="valueFilter"
+        class="grid-span2"
+      />
+    </template>
+    <x-checkbox
+      v-model="includeEmpty"
+      :read-only="Boolean(valueFilter)"
+      label="Include entities with no value"
+      class="grid-span2"
+    />
   </div>
 </template>
 
@@ -28,6 +40,8 @@
   import xSelect from '../../../axons/inputs/Select.vue'
   import xSelectSymbol from '../../../neurons/inputs/SelectSymbol.vue'
   import xSelectTypedField from '../../../neurons/inputs/SelectTypedField.vue'
+  import xSearchInput from '../../../neurons/inputs/SearchInput.vue'
+  import xCheckbox from '../../../axons/inputs/Checkbox.vue'
   import chartMixin from './chart'
   import {isObjectListField} from '../../../../constants/utils'
 
@@ -36,7 +50,9 @@
 
   export default {
     name: 'XChartSegment',
-    components: { xSelect, xSelectSymbol, xSelectTypedField },
+    components: {
+      xSelect, xSelectSymbol, xSelectTypedField, xSearchInput, xCheckbox
+    },
     mixins: [chartMixin],
     computed: {
       ...mapGetters({
@@ -75,6 +91,25 @@
           }
         }
       },
+      valueFilter: {
+        get () {
+          return this.config['value_filter']
+        },
+        set (filter) {
+          this.config = { ...this.config,
+            'value_filter': filter,
+            'include_empty': false
+          }
+        }
+      },
+      includeEmpty: {
+        get () {
+          return this.config['include_empty']
+        },
+        set (includeEmpty) {
+          this.config = { ...this.config, 'include_empty': includeEmpty }
+        }
+      },
       fieldOptions () {
         if (!this.entity) return []
         return this.getDataFieldsByPlugin(this.entity).map(category => {
@@ -92,6 +127,9 @@
       schemaByName () {
         if (!this.entity) return {}
         return this.getDataSchemaByName(this.entity)
+      },
+      isFieldFilterable () {
+        return this.config.field.type === 'string' && !this.config.field.format
       }
     },
     methods: {
@@ -107,9 +145,7 @@
             name: ''
           }
         }
-      },
-      updateView(view) {
-      },
+      }
     }
   }
 </script>

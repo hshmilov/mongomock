@@ -443,7 +443,7 @@ class EntitiesPage(Page):
         ActionChains(self.driver).move_to_element(header).perform()
         filter_container = header.find_element_by_css_selector('.filter')
         filter_container.find_element_by_css_selector('.md-icon').click()
-        filter_search = filter_container.find_element_by_css_selector(self.TABLE_SEARCH_INPUT)
+        filter_search = filter_container.find_element_by_css_selector(self.SEARCH_INPUT_CSS)
         self.fill_text_by_element(filter_search, filter_str)
         self.key_down_enter(filter_search)
 

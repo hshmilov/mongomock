@@ -16,9 +16,5 @@ export default {
 				this.$nextTick(this.validate)
 			}
 		}
-	},
-    methods: {
-        updateView(view) {
-        },
-    },
+	}
 }

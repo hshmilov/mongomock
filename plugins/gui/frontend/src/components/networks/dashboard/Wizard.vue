@@ -120,7 +120,6 @@
           },
           set (value) {
               this.dashboard.view = value
-              this.updateView(this.dashboard.view)
           },
       },
       editMode () {
@@ -211,10 +210,7 @@
       },
       nextWizardState () {
         this.nextState('dashboardWizard')
-      },
-      updateView(view) {
-        this.$refs.dashboardRef.updateView(view)
-      },
+      }
     }
   }
 </script>
@@ -263,6 +259,7 @@
             grid-template-columns: 160px auto 20px;
             grid-gap: 16px 8px;
             min-width: 0;
+            align-items: center;
         }
 
         .x-select {

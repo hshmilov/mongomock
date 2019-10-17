@@ -162,6 +162,15 @@ class DashboardPage(Page):
     def select_chart_summary_function(self, func_name):
         self.select_option_without_search(self.CHART_FUNCTION_CSS, self.WIZARD_OPTIONS_CSS, func_name, parent=None)
 
+    def find_chart_segment_include_empty(self):
+        return self.find_checkbox_with_label_by_label('Include entities with no value')
+
+    def check_chart_segment_include_empty(self):
+        self.find_chart_segment_include_empty().click()
+
+    def fill_chart_segment_filter(self, value_filter):
+        self.fill_text_field_by_css_selector(f'{self.CHART_WIZARD_CSS} {self.SEARCH_INPUT_CSS}', value_filter)
+
     def get_views_list(self):
         return self.wait_for_element_present_by_css(self.SELECT_VIEWS_CSS).find_elements_by_css_selector(
             self.SELECT_VIEWS_VIEW_CSS)
@@ -218,7 +227,8 @@ class DashboardPage(Page):
         self.wait_for_element_absent_by_css(self.MODAL_OVERLAY_CSS, interval=1)
         self.wait_for_card_spinner_to_end()
 
-    def add_segmentation_card(self, module, field, title, chart_type='histogram', view_name='', partial_text=True):
+    def add_segmentation_card(self, module, field, title, chart_type='histogram', view_name='', partial_text=True,
+                              include_empty: bool = True, value_filter: str = ''):
         try:
             self.open_new_card_wizard()
             self.select_chart_metric('Field Segmentation')
@@ -227,6 +237,10 @@ class DashboardPage(Page):
             if view_name:
                 self.select_chart_view_name(view_name)
             self.select_chart_wizard_field(field, partial_text)
+            if include_empty:
+                self.check_chart_segment_include_empty()
+            if value_filter:
+                self.fill_chart_segment_filter(value_filter)
             self.fill_text_field_by_element_id(self.CHART_TITLE_ID, title)
             self.click_card_save()
             self.wait_for_element_absent_by_css(self.MODAL_OVERLAY_CSS, interval=1)
@@ -317,6 +331,9 @@ class DashboardPage(Page):
     @staticmethod
     def get_histogram_chart_from_card(card):
         return card.find_element_by_css_selector('.x-histogram')
+
+    def get_histogram_chart_by_title(self, histogram_title):
+        return self.get_card(histogram_title).find_element_by_css_selector('.x-histogram')
 
     @staticmethod
     def get_histogram_line_from_histogram(histogram, number):

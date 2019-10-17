@@ -482,6 +482,31 @@ class TestDashboard(TestBase):
         self._test_paginator_state_first_page(histograms_chart, page_number, to_val)
         self.dashboard_page.remove_card(self.TEST_PAGINATOR_ON_SEGMENTATION_HISTOGRAM)
 
+    def _test_dashboard_segmentation_filter(self):
+        # Add empty values - expected to generate two bars (Windows and No Value)
+        self.dashboard_page.edit_card(self.TEST_SEGMENTATION_HISTOGRAM_TITLE)
+        self.dashboard_page.check_chart_segment_include_empty()
+        self.dashboard_page.click_card_save()
+        filtered_chart = self.dashboard_page.get_histogram_chart_by_title(self.TEST_SEGMENTATION_HISTOGRAM_TITLE)
+        assert self.dashboard_page.get_paginator_total_num_of_items(filtered_chart) == '1'
+
+        # Change to host and add filter 'domain' - expected to filter out the JSON device
+        self.dashboard_page.edit_card(self.TEST_SEGMENTATION_HISTOGRAM_TITLE)
+        self.dashboard_page.check_chart_segment_include_empty()
+        self.dashboard_page.fill_chart_segment_filter('domain')
+        assert not self.dashboard_page.is_toggle_selected(self.dashboard_page.find_chart_segment_include_empty())
+        self.dashboard_page.select_chart_wizard_field('Host Name')
+        self.dashboard_page.click_card_save()
+        filtered_chart = self.dashboard_page.get_histogram_chart_by_title(self.TEST_SEGMENTATION_HISTOGRAM_TITLE)
+        assert self.dashboard_page.get_paginator_total_num_of_items(filtered_chart) == '21'
+
+        # Remove the filter - expected to generate as many bars as devices
+        self.dashboard_page.edit_card(self.TEST_SEGMENTATION_HISTOGRAM_TITLE)
+        self.dashboard_page.fill_chart_segment_filter('')
+        self.dashboard_page.click_card_save()
+        filtered_chart = self.dashboard_page.get_histogram_chart_by_title(self.TEST_SEGMENTATION_HISTOGRAM_TITLE)
+        assert self.dashboard_page.get_paginator_total_num_of_items(filtered_chart) == '22'
+
     def test_dashboard_segmentation_chart(self):
         self.dashboard_page.switch_to_page()
         self.base_page.run_discovery()
@@ -514,6 +539,8 @@ class TestDashboard(TestBase):
         assert self.SEGMENTATION_PIE_CARD_QUERY in self.devices_page.find_search_value()
         assert self.devices_page.count_entities() == 1
         self.dashboard_page.switch_to_page()
+
+        self._test_dashboard_segmentation_filter()
         self.dashboard_page.remove_card(self.TEST_SEGMENTATION_HISTOGRAM_TITLE)
         self.dashboard_page.remove_card(self.TEST_SEGMENTATION_PIE_TITLE)
 
