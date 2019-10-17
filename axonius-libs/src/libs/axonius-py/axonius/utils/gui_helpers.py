@@ -152,7 +152,7 @@ def filtered():
                 history_date = request.args.get('history')
                 filter_obj = parse_filter_non_entities(filter_expr, history_date)
             except Exception as e:
-                logger.warning(f'Failed in mongo filter {func} with \'{filter_expr}\'')
+                logger.warning(f'Failed in mongo filter {func} with \'{filter_expr}\'', exc_info=True)
                 return return_error('Could not create mongo filter. Details: {0}'.format(e), 400)
             return func(self, mongo_filter=filter_obj, *args, **kwargs)
 
@@ -175,7 +175,7 @@ def filtered_entities():
                 history_date = content.get('history')
                 filter_obj = parse_filter(filter_expr, history_date)
             except Exception as e:
-                logger.warning(f'Failed in mongo filter on {func} on \'{filter_expr}\'')
+                logger.warning(f'Failed in mongo filter on {func} on \'{filter_expr}\'', exc_info=True)
                 return return_error('Could not create mongo filter. Details: {0}'.format(e), 400)
             return func(self, mongo_filter=filter_obj, *args, **kwargs)
 

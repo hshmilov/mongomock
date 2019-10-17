@@ -2,6 +2,7 @@ import datetime
 import logging
 import re
 from collections import defaultdict
+from threading import Lock
 from typing import List
 
 import cachetools
@@ -297,7 +298,7 @@ def figure_out_axon_internal_id_from_query(recipe_run_pretty_id: str, condition:
                             })]
 
 
-@cachetools.cached(cachetools.LRUCache(maxsize=100))
+@cachetools.cached(cachetools.LRUCache(maxsize=100), lock=Lock())
 def parse_filter_cached(filter_str: str, history_date=None) -> frozendict:
     """
     Translates a string representing of a filter to a valid MongoDB query for entities.
