@@ -231,6 +231,12 @@
         return this.moduleState.view
       },
       schemaFieldsByName () {
+        if(this.staticFields){
+            return this.staticFields.reduce((allFields, field) => {
+                allFields[field.name] = field
+                return allFields
+            }, {})
+         }
         return this.getFieldSchemaByName(this.module)
       },
       viewFields () {
@@ -332,7 +338,21 @@
         filteredData () {
             if (!this.searchValue) return this.sortedData
             return this.sortedData.filter(item => {
-                return Object.values(item).find(val => val.toString().toLowerCase().includes(this.searchValueLower))
+                return Object.keys(item).find(key => {
+                    let val = item[key]
+                    let fieldType = this.schemaFieldsByName[key].type
+                    if(fieldType === 'number' && typeof val === 'number'){
+                        val = val.toFixed(2)
+                    }
+                    if(fieldType === 'bool'){
+                        if(val === true){
+                            val = 'Yes'
+                        } else if (val === false){
+                            val = 'No'
+                        }
+                    }
+                    return val.toString().toLowerCase().includes(this.searchValueLower)
+                })
             })
         }
     },

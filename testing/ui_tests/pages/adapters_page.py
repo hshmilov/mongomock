@@ -192,8 +192,8 @@ class AdaptersPage(EntitiesPage):
     def wait_for_data_collection_toaster_absent(self):
         self.wait_for_toaster_to_end(self.DATA_COLLECTION_TOASTER, retries=1200)
 
-    def wait_for_data_collection_toaster_start(self):
-        self.wait_for_toaster(self.DATA_COLLECTION_TOASTER)
+    def wait_for_data_collection_toaster_start(self, retries=1200):
+        self.wait_for_toaster(self.DATA_COLLECTION_TOASTER, retries)
 
     def wait_for_data_collection_failed_toaster_absent(self):
         self.wait_for_toaster_to_end(self.TEXT_PROBLEM_CONNECTING_TRY_AGAIN, retries=1200)
