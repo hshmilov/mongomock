@@ -37,7 +37,7 @@ class TestEntityCustomData(TestBase):
         try:
             entities_page.click_advanced_view()
             assert False
-        except (ElementNotVisibleException, ElementNotInteractableException):
+        except (ElementNotVisibleException, ElementNotInteractableException, NoSuchElementException):
             # Advanced not available on Custom Data tab
             pass
         try:

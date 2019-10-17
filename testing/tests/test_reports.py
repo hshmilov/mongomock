@@ -4,6 +4,7 @@ import datetime
 import time
 
 from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME
+from axonius.utils.hash import get_preferred_quick_adapter_id
 from tests.conftest import axonius_fixture
 
 
@@ -43,6 +44,8 @@ DEVICE_ONE = {'accurate_for_datetime': datetime.datetime(2017, 11, 19, 13, 21, 5
               'adapters': [
                   {'accurate_for_datetime': datetime.datetime(2017, 11, 19, 13, 21, 55, 378000),
                    'client_used': '10.0.229.30',
+                   'quick_id': get_preferred_quick_adapter_id('active_directory_adapter_1',
+                                                              'CN=DESKTOP-123123,CN=Computers,DC=TestDomain,DC=test'),
                    'data': {'id': 'CN=DESKTOP-123123,CN=Computers,DC=TestDomain,DC=test',
                             'name': 'DESKTOP-MPP10U1',
                             'os': {'bitness': None, 'distribution': '10', 'type': 'Windows'},
@@ -100,6 +103,8 @@ DEVICE_TWO = {'accurate_for_datetime': datetime.datetime(2017, 11, 19, 13, 21, 5
                   {'_id': ObjectId('5a118573861256000131ad31'),
                    'accurate_for_datetime': datetime.datetime(2017, 11, 19, 13, 21, 55, 380000),
                    'client_used': '10.0.229.30',
+                   'quick_id': get_preferred_quick_adapter_id('active_directory_adapter_1',
+                                                              'CN=WINDOWS8,CN=Computers,DC=TestDomain,DC=test'),
                    'data': {'id': 'CN=WINDOWS8,CN=Computers,DC=TestDomain,DC=test',
                             'name': 'DESKTOP-MPP10U1',
                             'os': {'bitness': None, 'distribution': '8', 'type': 'Windows'},

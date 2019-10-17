@@ -5,6 +5,7 @@ import pytest
 from flaky import flaky
 
 from axonius.consts.metric_consts import Adapters
+from axonius.utils.hash import get_preferred_quick_adapter_id
 from axonius.utils.wait import wait_until
 from axonius.plugin_base import EntityType
 
@@ -148,6 +149,7 @@ class AdapterTestBase:
         entity_db = self.axonius_system.db.get_entity_db(entity_type)
 
         # this is a fake entity that is 'new' on all forms
+        id2_ = '2-' + uuid.uuid4().hex
         entity_db.insert_one({
             'internal_axon_id': '1-' + uuid.uuid4().hex,
             'accurate_for_datetime': now,
@@ -158,8 +160,9 @@ class AdapterTestBase:
                     'plugin_name': self.adapter_service.plugin_name,
                     'plugin_unique_name': self.adapter_service.unique_name,
                     'accurate_for_datetime': now,
+                    'quick_id': get_preferred_quick_adapter_id(self.adapter_service.unique_name, id2_),
                     'data': {
-                        'id': '2-' + uuid.uuid4().hex,
+                        'id': id2_,
                         'raw': {
                         },
                     }
@@ -173,6 +176,7 @@ class AdapterTestBase:
         if last_fetched:
             # this is a fake entity from a 'long time ago' by last_fetched
             deleted_entity_id = '3-' + uuid.uuid4().hex
+            id4_ = '4-' + uuid.uuid4().hex
             entity_db.insert_one({
                 'internal_axon_id': deleted_entity_id,
                 'accurate_for_datetime': now,
@@ -183,8 +187,9 @@ class AdapterTestBase:
                         'plugin_name': self.adapter_service.plugin_name,
                         'plugin_unique_name': self.adapter_service.unique_name,
                         'accurate_for_datetime': last_fetched_long_time_ago,
+                        'quick_id': get_preferred_quick_adapter_id(self.adapter_service.unique_name, id4_),
                         'data': {
-                            'id': '4-' + uuid.uuid4().hex,
+                            'id': id4_,
                             'raw': {
                             },
                         }
@@ -209,6 +214,8 @@ class AdapterTestBase:
                         'plugin_name': self.adapter_service.plugin_name,
                         'plugin_unique_name': self.adapter_service.unique_name,
                         'accurate_for_datetime': last_fetched_long_time_ago,
+                        'quick_id': get_preferred_quick_adapter_id(self.adapter_service.unique_name,
+                                                                   deleted_adapter_entity_id),
                         'data': {
                             'id': deleted_adapter_entity_id,
                             'raw': {
@@ -221,6 +228,8 @@ class AdapterTestBase:
                         'plugin_name': 'high_capacity_carburetor_adapter',
                         'plugin_unique_name': 'high_capacity_carburetor_adapter_1337',
                         'accurate_for_datetime': now,
+                        'quick_id': get_preferred_quick_adapter_id('high_capacity_carburetor_adapter_1337',
+                                                                   not_deleted_adapter_entity_id),
                         'data': {
                             'raw': {
                             },
@@ -241,6 +250,7 @@ class AdapterTestBase:
         if last_seen:
             # this is a fake entity from a 'long time ago' according to `last_seen`
             deleted_entity_id = '8-' + uuid.uuid4().hex
+            id9_ = '9-' + uuid.uuid4().hex
             entity_db.insert_one({
                 'internal_axon_id': deleted_entity_id,
                 'accurate_for_datetime': now,
@@ -251,8 +261,10 @@ class AdapterTestBase:
                         'plugin_name': self.adapter_service.plugin_name,
                         'plugin_unique_name': self.adapter_service.unique_name,
                         'accurate_for_datetime': now,
+                        'quick_id': get_preferred_quick_adapter_id(self.adapter_service.unique_name,
+                                                                   id9_),
                         'data': {
-                            'id': '9-' + uuid.uuid4().hex,
+                            'id': id9_,
                             'last_seen': last_seen_long_time_ago,
                             'raw': {
                             },

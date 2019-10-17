@@ -1,6 +1,7 @@
 from datetime import datetime
 from uuid import uuid4
 
+from axonius.utils.hash import get_preferred_quick_adapter_id
 from axonius.utils.wait import wait_until
 from ui_tests.tests.ui_test_base import TestBase
 from ui_tests.tests.ui_consts import AD_ADAPTER_NAME, JSON_ADAPTER_NAME
@@ -628,6 +629,7 @@ class TestDevicesQuery(TestBase):
         db = self.axonius_system.get_devices_db()
 
         def generate_fake_device(id_):
+            data_id_ = f'yay-{id_}'
             return {
                 'internal_axon_id': uuid4().hex,
                 'accurate_for_datetime': datetime.now(),
@@ -639,9 +641,10 @@ class TestDevicesQuery(TestBase):
                         'plugin_unique_name': 'stresstest_adapter_0',
                         'type': 'entitydata',
                         'accurate_for_datetime': datetime.now(),
+                        'quick_id': get_preferred_quick_adapter_id(data_id_, 'stresstest_adapter_0'),
                         'data': {
                             'random_text_for_love_and_prosperity': '19',
-                            'id': f'yay-{id_}',
+                            'id': data_id_,
                             'pretty_id': f'AX-{id_}'
                         }
                     }

@@ -7,6 +7,7 @@ import sys
 import uuid
 
 from axonius.entities import EntityType
+from axonius.utils.hash import get_preferred_quick_adapter_id
 from testing.services.plugins import aggregator_service
 
 
@@ -42,6 +43,7 @@ def main():
                 'plugin_unique_name': 'paloalto_cortex_adapter_0',
                 'type': 'entitydata',
                 'accurate_for_datetime': datetime.datetime.now(),
+                'quick_id': get_preferred_quick_adapter_id('paloalto_cortex_adapter_0', new_device_data['id']),
                 'data': new_device_data
             }
             device['adapter_list_length'] += 1

@@ -1118,7 +1118,12 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
                 func=call_raw_as_stoppable,
                 args=(client_id, self._clients[client_id]))
             logger.info('Got raw')
-            _parsed_data = timeout_iterator(parse(_raw_data), timeout=timeout)
+
+            # maxsize=3000 means we won't hold more than 3k devices in memory
+            # and will reduce the chances of thread exhaustion between the fetching thread (the adapter code)
+            # and the insertion to db threads (plugin_base code)
+            _parsed_data = timeout_iterator(parse(_raw_data), timeout=timeout, maxsize=3000)
+
             logger.info('Got parsed')
             return _raw_data, _parsed_data
 

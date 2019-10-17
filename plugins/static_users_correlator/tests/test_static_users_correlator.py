@@ -3,6 +3,7 @@ import uuid
 
 from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME
 from axonius.types.correlation import CorrelationResult
+from axonius.utils.hash import get_preferred_quick_adapter_id
 from static_users_correlator.engine import StaticUserCorrelatorEngine
 
 
@@ -50,6 +51,7 @@ def get_raw_device(mail=None, tag_data=None, principle_name=None):
             {
                 'plugin_name': generate_name,
                 PLUGIN_UNIQUE_NAME: generated_unique_name,
+                'quick_id': get_preferred_quick_adapter_id(generated_unique_name, generated_id),
                 'data': {
                     'id': generated_id,
                     'mail': mail,

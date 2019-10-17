@@ -1,18 +1,22 @@
 import os
+import datetime
 from collections import defaultdict
 import traceback
+from multiprocessing.pool import ThreadPool
 from pathlib import Path
+from threading import Lock
 
 import requests
 from pymongo.collection import Collection
 
 from axonius.consts.system_consts import WEAVE_NETWORK
 from axonius.consts.plugin_consts import CONFIGURABLE_CONFIGS_COLLECTION, GUI_PLUGIN_NAME, \
-    AXONIUS_SETTINGS_DIR_NAME, GUI_SYSTEM_CONFIG_COLLECTION, NODE_ID, PLUGIN_NAME,\
+    AXONIUS_SETTINGS_DIR_NAME, GUI_SYSTEM_CONFIG_COLLECTION, NODE_ID, PLUGIN_NAME, \
     PLUGIN_UNIQUE_NAME, CORE_UNIQUE_NAME, NODE_ID_FILENAME
 from axonius.consts.adapter_consts import ADAPTER_PLUGIN_TYPE
 from axonius.consts.core_consts import CORE_CONFIG_NAME
-from axonius.utils import datetime
+from axonius.entities import EntityType
+from axonius.utils.hash import get_preferred_quick_adapter_id
 from services.plugin_service import PluginService, API_KEY_HEADER, UNIQUE_KEY_PARAM
 from services.updatable_service import UpdatablePluginMixin
 
@@ -38,7 +42,10 @@ class CoreService(PluginService, UpdatablePluginMixin):
         if self.db_schema_version < 5:
             self._update_schema_version_5()
 
-        if self.db_schema_version != 5:
+        if self.db_schema_version < 6:
+            self._update_schema_version_6()
+
+        if self.db_schema_version != 6:
             print(f'Upgrade failed, db_schema_version is {self.db_schema_version}')
 
     def _update_schema_version_1(self):
@@ -219,6 +226,79 @@ class CoreService(PluginService, UpdatablePluginMixin):
             self.db_schema_version = 5
         except Exception as e:
             print(f'Exception while upgrading core db to version 5. Details: {e}')
+            traceback.print_exc()
+            raise
+
+    def _fix_db_for_entity(self, entity_type: EntityType):
+        col = self._entity_db_map[entity_type]
+        estimated_count = col.estimated_document_count()
+        start_time = datetime.datetime.now()
+        print(f'Fixing for entity {entity_type}, count is {estimated_count}, starting at {start_time}')
+
+        class Expando:
+            pass
+
+        o = Expando()
+
+        o.counter = 0
+        o.adapter_entities_counter = 0
+        lock = Lock()
+        cursor = col.find({
+            'adapters': {
+                '$elemMatch': {
+                    'quick_id': {
+                        '$exists': False
+                    }
+                }
+            }
+        }, projection={
+            f'adapters.{PLUGIN_UNIQUE_NAME}': True,
+            'adapters.data.id': True,
+            '_id': True
+        })
+
+        def process_entity(entity):
+            for adapter in entity['adapters']:
+                col.update_one({
+                    '_id': entity['_id'],
+                    'adapters': {
+                        '$elemMatch': {
+                            PLUGIN_UNIQUE_NAME: adapter[PLUGIN_UNIQUE_NAME],
+                            'data.id': adapter['data']['id']
+                        }
+                    }
+                }, {
+                    '$set': {
+                        'adapters.$.quick_id': get_preferred_quick_adapter_id(adapter[PLUGIN_UNIQUE_NAME],
+                                                                              adapter['data']['id'])
+                    }
+                })
+                with lock:
+                    o.adapter_entities_counter += 1
+
+            with lock:
+                o.counter += 1
+                if o.counter % 2000 == 0:
+                    print(f'{o.counter} out of {estimated_count} completed, {(o.counter / estimated_count) * 100}%, '
+                          f'took {(datetime.datetime.now() - start_time).total_seconds()} seconds')
+
+        with ThreadPool(30) as pool:
+            pool.map(process_entity, cursor)
+
+        total_seconds = (datetime.datetime.now() - start_time).total_seconds()
+        print(f'Took {total_seconds} seconds, {o.counter / total_seconds} entities/second, '
+              f'total of {o.adapter_entities_counter} adapte entities, '
+              f'{o.adapter_entities_counter / total_seconds} adapter entities/second')
+
+    def _update_schema_version_6(self):
+        # Adds 'quick_id' to all entities in users/devices db
+        print('Upgrade to schema 6')
+        try:
+            self._fix_db_for_entity(EntityType.Devices)
+            self._fix_db_for_entity(EntityType.Users)
+            self.db_schema_version = 6
+        except Exception as e:
+            print(f'Exception while upgrading core db to version 6. Details: {e}')
             traceback.print_exc()
             raise
 

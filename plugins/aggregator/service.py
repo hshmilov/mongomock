@@ -122,12 +122,14 @@ class AggregatorService(Triggerable, PluginBase):
                 [(f'adapters.data.last_seen', pymongo.ASCENDING), ('adapters.data.id', pymongo.ASCENDING)
                  ], background=True)
             db.create_index([('internal_axon_id', pymongo.ASCENDING)], unique=True, background=True)
+            db.create_index([(f'adapters.quick_id', pymongo.ASCENDING)], background=True, unique=True)
 
         def historic_indexes(db: Collection):
             db.create_index(
                 [(f'adapters.{PLUGIN_UNIQUE_NAME}', pymongo.ASCENDING), ('adapters.data.id', pymongo.ASCENDING)
                  ], background=True)
             db.create_index([('internal_axon_id', pymongo.ASCENDING)], background=True)
+            db.create_index([(f'adapters.quick_id', pymongo.ASCENDING)], background=True)
             db.create_index([('short_axon_id', pymongo.ASCENDING)], background=True)
             db.create_index([('accurate_for_datetime', pymongo.ASCENDING)], background=True)
 

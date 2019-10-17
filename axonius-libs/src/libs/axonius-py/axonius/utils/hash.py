@@ -19,3 +19,11 @@ def get_preferred_internal_axon_id(plugin_unique_name: str, _id: str, entity_typ
     https://axonius.atlassian.net/browse/AX-2980
     """
     return hashlib.md5(f'{entity_type.value}!{plugin_unique_name}!{_id}'.encode('utf-8')).hexdigest()
+
+
+def get_preferred_quick_adapter_id(plugin_unique_name: str, _id: str) -> str:
+    """
+    Improved lookup performance
+    https://axonius.atlassian.net/browse/AX-5214
+    """
+    return f'{plugin_unique_name}!{_id}'

@@ -129,17 +129,18 @@ class ThreadPoolExecutorReusable(BasePoolExecutor):
         super(ThreadPoolExecutorReusable, self).__init__(pool)
 
 
-def timeout_iterator(iterable, timeout):
+def timeout_iterator(iterable, timeout, maxsize=0):
     """
     Iterates over an iterator, and counting time between yields of the given iterator.
     If the iterator stalls for too long since the last yield - this function raises StopThreadException.
     This has been benchmarked to run at about 100k yields per second, which is a latency of 0.01ms per yield.
     :param iterable: iterator to iterate
     :param timeout: timeout, in seconds
+    :param maxsize: maxsize for queue
     :raises: func_timeout.exceptions.FunctionTimedOut
     :return: Whatever the iterator is supposed to return, or exception
     """
-    q = queue.Queue()
+    q = queue.Queue(maxsize=maxsize)
     # this is a dummy object to represent the end of the iterator
     finished_queue = object()
 

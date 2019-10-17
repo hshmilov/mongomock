@@ -99,7 +99,7 @@ from axonius.types.ssl_state import (COMMON_SSL_CONFIG_SCHEMA,
 from axonius.users.user_adapter import UserAdapter
 from axonius.utils.datetime import parse_date
 from axonius.utils.debug import is_debug_attached
-from axonius.utils.hash import get_preferred_internal_axon_id_from_dict
+from axonius.utils.hash import get_preferred_internal_axon_id_from_dict, get_preferred_quick_adapter_id
 from axonius.utils.json_encoders import IteratorJSONEncoder
 from axonius.utils.mongo_retries import CustomRetryOperation, mongo_retry
 from axonius.utils.parsing import get_exception_string, remove_large_ints
@@ -1564,12 +1564,8 @@ class PluginBase(Configurable, Feature, ABC):
 
                     # trying to update the device if it is already in the DB
                     update_result = db_to_use.update_one({
-                        'adapters': {
-                            '$elemMatch': {
-                                PLUGIN_UNIQUE_NAME: parsed_to_insert[PLUGIN_UNIQUE_NAME],
-                                'data.id': parsed_to_insert['data']['id']
-                            }
-                        }
+                        'adapters.quick_id': get_preferred_quick_adapter_id(parsed_to_insert[PLUGIN_UNIQUE_NAME],
+                                                                            parsed_to_insert['data']['id'])
                     }, {
                         '$set': data_to_update
                     }, array_filters=array_filters)
@@ -1587,12 +1583,8 @@ class PluginBase(Configurable, Feature, ABC):
                             # we need to add this device to the list of adapters in another device
                             correlate_plugin_unique_name, correlated_id = correlates
                             update_result = db_to_use.update_one({
-                                'adapters': {
-                                    '$elemMatch': {
-                                        PLUGIN_UNIQUE_NAME: correlate_plugin_unique_name,
-                                        'data.id': correlated_id
-                                    }
-                                }
+                                'adapters.quick_id': get_preferred_quick_adapter_id(correlate_plugin_unique_name,
+                                                                                    correlated_id)
                             }, {
                                 '$addToSet': {
                                     'adapters': parsed_to_insert
@@ -1726,12 +1718,17 @@ class PluginBase(Configurable, Feature, ABC):
                                                               insert_data_to_db,
                                                               args=[data_to_update, parsed_to_insert])))
 
-                    promises = [p for p in promises if p.is_pending or p.is_rejected]
-
                     if inserted_data_count % 1000 == 0:
+                        promises = [p for p in promises if p.is_pending or p.is_rejected]
                         logger.info(f'Entities went through: {inserted_data_count}; ' +
                                     f'promises active: {len(promises)}; ' +
                                     f'in DB: {inserted_data_count - len(promises)}')
+                        while len(promises) > 2000:
+                            # If we have too many promises we can clog up the memory, so let's wait until
+                            # we have fewer
+                            logger.debug(f'Waiting... {len(promises)} active promises')
+                            time.sleep(2)
+                            promises = [p for p in promises if p.is_pending or p.is_rejected]
 
             promise_all = Promise.all(promises)
             Promise.wait(promise_all, timedelta(minutes=20).total_seconds())
@@ -1830,7 +1827,11 @@ class PluginBase(Configurable, Feature, ABC):
             'plugin_unique_name': plugin_unique_name,
             'type': 'entitydata',
             'accurate_for_datetime': datetime.now(),
-            'data': data
+            'data': data,
+            # The justification for this field is that MongoDB doesn't support a multikey compound index
+            # as that would require a cartesian product of all the data in the array.
+            # This field implements that using a single hashed field.
+            'quick_id': get_preferred_quick_adapter_id(plugin_unique_name, data['id'])
         }
         parsed_to_insert['data']['accurate_for_datetime'] = datetime.now()
 
@@ -1865,12 +1866,7 @@ class PluginBase(Configurable, Feature, ABC):
         for (_id, adapter_id), pretty_id_to_add in zip(adapter_devices_ids_to_add, pretty_ids_to_distribute):
             self.devices_db.update_one({
                 '_id': _id,
-                'adapters': {
-                    '$elemMatch': {
-                        PLUGIN_UNIQUE_NAME: self.plugin_unique_name,
-                        'data.id': adapter_id
-                    }
-                }
+                'adapters.quick_id': get_preferred_quick_adapter_id(self.plugin_unique_name, adapter_id)
             }, {'$set':
                 {'adapters.$.data.pretty_id': pretty_id_to_add}})
         return len(adapter_devices_ids_to_add)
@@ -1944,12 +1940,7 @@ class PluginBase(Configurable, Feature, ABC):
         with _entities_db.start_session() as db_session:
             entities_candidates_list = list(db_session.find({'$or': [
                 {
-                    'adapters': {
-                        '$elemMatch': {
-                            PLUGIN_UNIQUE_NAME: associated_plugin_unique_name,
-                            'data.id': associated_id
-                        }
-                    }
+                    'adapters.quick_id': get_preferred_quick_adapter_id(associated_plugin_unique_name, associated_id)
                 }
                 for associated_plugin_unique_name, associated_id in associated_adapters
             ]}))
@@ -2135,12 +2126,8 @@ class PluginBase(Configurable, Feature, ABC):
                     else:
                         entities_candidates = list(db_session.find({'$or': [
                             {
-                                'adapters': {
-                                    '$elemMatch': {
-                                        PLUGIN_UNIQUE_NAME: associated_plugin_unique_name,
-                                        'data.id': associated_id
-                                    }
-                                }
+                                'adapters.quick_id': get_preferred_quick_adapter_id(associated_plugin_unique_name,
+                                                                                    associated_id)
                             }
                             for associated_plugin_unique_name, associated_id in correlation.associated_adapters
                         ]}))
@@ -2247,12 +2234,7 @@ class PluginBase(Configurable, Feature, ABC):
         :return: Tuple of two strings that represent the internal_axon_ids altered
         """
         entity_to_split = entity_to_split or db_session.find_one({
-            'adapters': {
-                '$elemMatch': {
-                    PLUGIN_UNIQUE_NAME: plugin_unique_name,
-                    'data.id': adapter_id
-                }
-            }
+            'adapters.quick_id': get_preferred_quick_adapter_id(plugin_unique_name, adapter_id)
         })
         if not entity_to_split:
             raise CorrelateException(f'Could not find given entity {plugin_unique_name}:{adapter_id}')
@@ -2395,12 +2377,7 @@ class PluginBase(Configurable, Feature, ABC):
             'id': device_id
         })
         axonius_device = self._entity_db_map[entity_type].find_one_and_delete({
-            'adapters': {
-                '$elemMatch': {
-                    PLUGIN_UNIQUE_NAME: plugin_unique_name,
-                    'data.id': device_id
-                }
-            }
+            'adapters.quick_id': get_preferred_quick_adapter_id(plugin_unique_name, device_id)
         }, session=db_session)
         if axonius_device is None:
             logger.error(f'Tried to archive nonexisting device: {plugin_unique_name}: {device_id}')
@@ -2420,12 +2397,7 @@ class PluginBase(Configurable, Feature, ABC):
         """
         _entities_db = self._entity_db_map[entity]
         db_filter = {
-            'adapters': {
-                '$elemMatch': {
-                    PLUGIN_UNIQUE_NAME: plugin_unique_name,
-                    'data.id': adapter_id
-                }
-            }
+            'adapters.quick_id': get_preferred_quick_adapter_id(plugin_unique_name, adapter_id)
         }
         with _entities_db.start_session() as db_session:
             with db_session.start_transaction():
