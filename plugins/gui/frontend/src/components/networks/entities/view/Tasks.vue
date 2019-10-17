@@ -72,7 +72,7 @@
               },
               {
                 'name': 'success',
-                'title': 'Result',
+                'title': 'Success',
                 'type': 'bool'
               },
               {
