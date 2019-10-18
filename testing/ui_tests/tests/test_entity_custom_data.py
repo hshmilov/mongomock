@@ -192,8 +192,6 @@ class TestEntityCustomData(TestBase):
                 kaseya_client_details_2.pop('verify_ssl')
                 self.adapters_page.fill_creds(**kaseya_client_details_2)
                 self.adapters_page.click_save()
-                self.adapters_page.wait_for_data_collection_toaster_start()
-                self.adapters_page.wait_for_data_collection_toaster_absent()
                 self.adapters_page.wait_for_server_green()
                 self.base_page.run_discovery()
                 self.devices_page.switch_to_page()
