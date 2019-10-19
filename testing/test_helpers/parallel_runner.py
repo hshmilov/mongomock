@@ -57,7 +57,7 @@ class ParallelRunner(object):
                     if proc.poll() is not None:
                         if proc.returncode != 0:
                             failed_tasks[name] = proc.returncode
-                            sys.stderr.write(f'{name} failed, code {proc.returncode}')
+                            sys.stderr.write(f'{name} failed, code {proc.returncode}\n')
                             sys.stderr.flush()
                             status = "Failed"
                             if proc.returncode != 0:
@@ -86,9 +86,9 @@ class ParallelRunner(object):
                 for proc in self.running_list:
                     sys.stderr.write(f"{proc} timed out")
                 for future_task in self.waiting_list:
-                    sys.stderr.write(f"{future_task[0]} did not start running because of the timeout")
+                    sys.stderr.write(f"{future_task[0]} did not start running because of the timeout\n")
                 for failed_task_name, failed_task_rc in failed_tasks.items():
-                    sys.stderr.write(f'{failed_task_name} failed with return code {failed_task_rc}')
+                    sys.stderr.write(f'{failed_task_name} failed with return code {failed_task_rc}\n')
                 sys.stderr.flush()
                 raise Exception("Not all tasks finished successfully")
             return ret_code
@@ -100,7 +100,7 @@ class ParallelRunner(object):
 
     def clean(self):
         for procname in self.running_list.keys():
-            sys.stdout.write(f"Killing timed out process {procname}")
+            sys.stdout.write(f"Killing timed out process {procname}\n")
             sys.stdout.flush()
             self.try_kill(procname)
 
@@ -109,5 +109,5 @@ class ParallelRunner(object):
             proc = self.running_list[procname]
             proc.kill()
         except Exception as e:
-            sys.stderr.write(f'Exception while killing {procname}: {str(e)}')
+            sys.stderr.write(f'Exception while killing {procname}: {str(e)}\n')
             sys.stderr.flush()
