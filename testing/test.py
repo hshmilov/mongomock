@@ -380,7 +380,7 @@ class InstanceManager:
             # An exception in the code should fail the script, otherwise the test could pass.
             # Note that this is something that should bearly happen (it indicates problems in the CI, not in the
             # tests)
-            sys.stderr.write(f'The following exceptions happened: {tests_with_exceptions}')
+            sys.stderr.write(f'The following exceptions happened: {tests_with_exceptions}\n')
             sys.stderr.flush()
             # Raise the last exception to make it appear in the test and fail it.
             raise last_exception

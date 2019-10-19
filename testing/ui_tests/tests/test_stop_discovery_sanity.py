@@ -5,18 +5,7 @@ from ui_tests.tests.ui_test_base import TestBase
 from test_credentials.test_ad_credentials import ad_client1_details, ad_client2_details
 
 
-class TestStopDiscovery(TestBase):
-    def test_stop_discovery(self):
-        self.settings_page.switch_to_page()
-        self.base_page.run_discovery(wait=False)
-        self.base_page.stop_discovery()
-
-    def test_stop_discovery_after_full_cycle(self):
-        self.settings_page.switch_to_page()
-        self.base_page.run_discovery()
-        self.base_page.run_discovery(wait=False)
-        self.base_page.stop_discovery()
-
+class TestStopDiscoverySanity(TestBase):
     def test_stop_discovery_sanity(self):
         self.adapters_page.switch_to_page()
         self.adapters_page.wait_for_spinner_to_end()

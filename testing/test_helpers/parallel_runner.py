@@ -84,7 +84,7 @@ class ParallelRunner(object):
 
             if self.running_list or failed_tasks:
                 for proc in self.running_list:
-                    sys.stderr.write(f"{proc} timed out")
+                    sys.stderr.write(f"{proc} timed out\n")
                 for future_task in self.waiting_list:
                     sys.stderr.write(f"{future_task[0]} did not start running because of the timeout\n")
                 for failed_task_name, failed_task_rc in failed_tasks.items():

@@ -68,7 +68,7 @@ def _is_pylint_ok(file_name, is_success_expected):
     good_file = child.returncode == GOOD_EXIT_CODE and \
         any(report in decoded for report in (PERFECT_PYLINT_MESSAGE, PYLINT_EMPTY_FILE))
     if not good_file and is_success_expected:
-        sys.stderr.write(f'ERROR: Found bad pylinted file {file_name}')
+        sys.stderr.write(f'ERROR: Found bad pylinted file {file_name}\n')
         sys.stderr.write(decoded)
     return file_name, good_file, f'{good_file}:\n{decoded}'
 

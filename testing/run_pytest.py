@@ -35,7 +35,7 @@ def run_pytest(pytest_args: List[AnyStr]):
     )
 
     if rc not in VALID_RC_FOR_PYTEST:
-        sys.stderr.write(f'pytest returned value {rc} which is not in the valid values of pytest')
+        sys.stderr.write(f'pytest returned value {rc} which is not in the valid values of pytest\n')
         exit(rc)
 
 
