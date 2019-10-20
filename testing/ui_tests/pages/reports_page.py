@@ -1,3 +1,5 @@
+import time
+
 from selenium.common.exceptions import NoSuchElementException
 
 from ui_tests.pages.entities_page import EntitiesPage
@@ -266,6 +268,8 @@ class ReportsPage(EntitiesPage):
     def get_spaces_options(self):
         self.click_spaces_select()
         self.wait_for_element_present_by_css('.md-list-item-text')
+        # Wait for entrance animation to end
+        time.sleep(0.5)
         return [e.text for e in self.driver.find_elements_by_css_selector('.md-list-item-text')]
 
     def create_report(self, report_name, add_dashboard=True, queries=None, add_scheduling=False, email_subject=None,
