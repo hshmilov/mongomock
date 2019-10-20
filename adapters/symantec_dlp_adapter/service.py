@@ -3,7 +3,7 @@ import logging
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.fields import Field
 from axonius.adapter_exceptions import ClientConnectionException
-from axonius.clients.mssql.connection import MSSQLConnection
+from axonius.clients.oracle_db.connection import OracleDBConnection
 from axonius.utils.datetime import parse_date
 from axonius.devices.device_adapter import DeviceAdapter, AGENT_NAMES
 from axonius.mixins.configurable import Configurable
@@ -31,11 +31,13 @@ class SymantecDlpAdapter(AdapterBase, Configurable):
 
     def _connect_client(self, client_config):
         try:
-            connection = MSSQLConnection(database=client_config.get(consts.SYMANTEC_DLP_DATABASE),
-                                         server=client_config[consts.SYMANTEC_DLP_HOST],
-                                         port=client_config.get(consts.SYMANTEC_DLP_PORT,
-                                                                consts.DEFAULT_SYMANTEC_DLP_PORT),
-                                         devices_paging=self.__devices_fetched_at_a_time)
+            connection = OracleDBConnection(host=client_config[consts.SYMANTEC_DLP_HOST],
+                                            port=client_config.get(consts.SYMANTEC_DLP_PORT,
+                                                                   consts.DEFAULT_SYMANTEC_DLP_PORT),
+                                            devices_paging=self.__devices_fetched_at_a_time,
+                                            username=client_config[consts.USER],
+                                            password=client_config[consts.PASSWORD]
+                                            )
             connection.set_credentials(username=client_config[consts.USER],
                                        password=client_config[consts.PASSWORD])
             with connection:
@@ -70,11 +72,6 @@ class SymantecDlpAdapter(AdapterBase, Configurable):
                     'format': 'port'
                 },
                 {
-                    'name': consts.SYMANTEC_DLP_DATABASE,
-                    'title': 'Database',
-                    'type': 'string'
-                },
-                {
                     'name': consts.USER,
                     'title': 'User Name',
                     'type': 'string'
@@ -90,7 +87,6 @@ class SymantecDlpAdapter(AdapterBase, Configurable):
                 consts.SYMANTEC_DLP_HOST,
                 consts.USER,
                 consts.PASSWORD,
-                consts.SYMANTEC_DLP_DATABASE
             ],
             'type': 'array'
         }

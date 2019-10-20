@@ -1,4 +1,3 @@
-import datetime
 import logging
 
 
@@ -196,16 +195,7 @@ class MssqlAdapter(AdapterBase, Configurable):
                 device.hostname = vals.get('hostname')
                 device.device_model = vals.get('model')
                 device.domain = vals.get('domain')
-                try:
-                    last_seen = None
-                    if isinstance(vals.get('last_seen'), str):
-                        last_seen = parse_date(vals.get('last_seen'))
-                    if last_seen:
-                        device.last_seen = last_seen
-                    elif isinstance(vals.get('last_seen'), int):
-                        device.last_seen = datetime.datetime.fromtimestamp(vals.get('last_seen'))
-                except Exception:
-                    logger.exception(f'Problem adding last seen')
+                device.last_seen = parse_date(vals.get('last_seen'))
 
                 device.device_manufacturer = vals.get('manufacturer')
                 device.total_physical_memory = vals.get('total_physical_memory_gb')

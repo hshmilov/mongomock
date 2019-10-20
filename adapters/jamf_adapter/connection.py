@@ -121,7 +121,8 @@ class JamfConnection(object):
         headers = headers or self.headers
         response = None
         try:
-            response = requests.get(self.get_url_request(name), headers=headers, proxies=self.proxies, timeout=(5, 30))
+            response = requests.get(self.get_url_request(name), headers=headers, proxies=self.proxies, timeout=(5, 30),
+                                    verify=False)
             response.raise_for_status()
             return Xml2Json(response.text).result
         except Exception as e:
@@ -339,6 +340,7 @@ class JamfConnection(object):
 
         # Getting all devices at once so no progress is logged
         # alive_hours/24 evaluates to an int on purpose
+        exception_in_computers = False
         try:
             computers = self.threaded_get_devices(
                 url=consts.COMPUTERS_URL,
@@ -349,6 +351,7 @@ class JamfConnection(object):
                 self.threaded_get_policy_history(computers)
             yield from computers
         except Exception:
+            exception_in_computers = True
             logger.exception(f'Problem with computers')
         try:
             if fetch_mobile_devices:
@@ -357,5 +360,9 @@ class JamfConnection(object):
                     device_list_name=consts.MOBILE_DEVICE_LIST_NAME,
                     device_type=consts.MOBILE_DEVICE_TYPE)
                 yield from mobile_devices
+            elif exception_in_computers:
+                raise JamfConnectionError('Exception During Fetch')
         except Exception:
             logger.exception(f'Problem with mobiles')
+            if exception_in_computers:
+                raise JamfConnectionError('Exception During Fetch')

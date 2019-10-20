@@ -143,7 +143,7 @@ class DeviceAdapterOS(SmartJsonClass):
     type = Field(
         str, 'Type', enum=['Windows', 'Linux', 'OS X', 'iOS', 'AirOS',
                            'Android', 'FreeBSD', 'VMWare', 'Cisco', 'Mikrotik', 'VxWorks',
-                           'F5 Networks Big-IP', 'Solaris', 'AIX', 'Printer', 'PlayStation']
+                           'F5 Networks Big-IP', 'Solaris', 'AIX', 'Printer', 'PlayStation', 'Check Point']
     )
     distribution = Field(str, 'Distribution')
     bitness = Field(int, 'Bitness', enum=[32, 64])
@@ -480,6 +480,7 @@ class DeviceAdapter(SmartJsonClass):
     first_seen = Field(datetime.datetime, 'First Seen')
     last_seen = Field(datetime.datetime, 'Last Seen')
     fetch_time = Field(datetime.datetime, 'Fetch Time')
+    email = Field(str, 'Email Address')
     public_ips = ListField(str, 'Public IPs', converter=format_ip, json_format=JsonStringFormat.ip)
     public_ips_raw = ListField(
         str,

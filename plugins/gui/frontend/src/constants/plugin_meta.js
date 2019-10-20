@@ -1,4 +1,32 @@
 export const pluginMeta = {
+    snow_adapter: {
+        title: 'Snow Software Asset Management',
+        description: 'Snow Software provides Software Asset Management (SAM) products and services. It helps organizations reduce the risk, cost and complexity associated with software assets and licensing.'
+    },
+    pkware_adapter: {
+        title: 'PKWARE',
+        description: 'PKWARE’s data protection platform finds, classifies and protects sensitive data across the entire enterprise. PKWARE allows security managers to define data protection policies and monitor activity across the organization.'
+    },
+    symantec_ccs_adapter: {
+        title: 'Symantec Control Compliance Suite',
+        link: 'https://docs.axonius.com/docs/symantec-control-compliance-suite',
+        description: 'Symantec Control Compliance Suite (CCS) is a solution to help identify security gaps and vulnerabilities and automate compliance assessments for over 100 regulations, mandates, and best practice frameworks including GDPR, HIPAA, NIST, PCI and SWIFT. Symantec CCS discovers and inventories all networks and assets including managed and unmanaged devices allowing for assets to be profiled and ranked for risk potential.'
+    },
+    ca_spectrum_adapter: {
+        title: 'CA Spectrum',
+        link: 'https://docs.axonius.com/docs/ca-spectrum',
+        description: 'CA Spectrum is a services and network infrastructure management system that enables the modeling of LAN, WAN, wired, wireless, physical, and virtual networks.'
+    },
+    bigfix_inventory_adapter: {
+        title: 'IBM BigFix Inventory',
+        link: 'https://docs.axonius.com/docs/ibm-bigfix-inventory',
+        description: 'IBM BigFix Inventory gathers information about installed software and hardware in a your IT infrastructure.'
+    },
+    fresh_service_adapter: {
+        title: 'Freshservice',
+        link: 'https://docs.axonius.com/docs/freshservice',
+        description: 'Freshservice is a cloud-based IT help desk and service management solution that enables organizations to simplify their IT operations.'
+    },
     bamboohr_adapter: {
         title: 'BambooHR',
         link: 'https://docs.axonius.com/docs/bamboohr',
@@ -249,7 +277,7 @@ export const pluginMeta = {
         description: 'Cisco Identity Services Engine (ISE) is a network administration product that enables the creation and enforcement of security and access policies for endpoint devices connected to the company’s routers and switches.'
     },
     symantec_ee_adapter: {
-        title: 'Symantec Endpoint Encryption - BETA',
+        title: 'Symantec Endpoint Encryption',
         link: '',
         description: 'Symantec Endpoint Encryption combines full-disk and removable media encryption with centralized management to protect sensitive information and ensure regulatory compliance.'
     },

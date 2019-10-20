@@ -80,7 +80,8 @@ class StaticCorrelatorService(CorrelatorBase):
                                 'macs_no_ip': '$$adapter.data.macs_no_ip',
                                 'node_id': '$$adapter.data.node_id',
                                 'azure_ad_id': '$$adapter.data.azure_ad_id',
-                                'azure_device_id': '$$adapter.data.azure_device_id'
+                                'azure_device_id': '$$adapter.data.azure_device_id',
+                                'fetch_proto': '$$adapter.data.fetch_proto'
                             }
                         }
                     }

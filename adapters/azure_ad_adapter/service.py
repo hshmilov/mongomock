@@ -35,7 +35,6 @@ class AzureAdAdapter(AdapterBase):
         android_security_patch_level = Field(str, 'Android Security Patch Level')
         phone_number = Field(str, 'Phone Number')
         imei = Field(str, 'IMEI')
-        email = Field(str, 'Email')
         is_encrypted = Field(bool, 'Is Encrypted')
         user_principal_name = Field(str, 'User Principal Name')
         managed_device_name = Field(str, 'Managed Device Name')

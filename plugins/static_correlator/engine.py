@@ -23,7 +23,7 @@ from axonius.utils.parsing import (NORMALIZED_MACS,
                                    get_bios_serial_or_serial, get_cloud_data,
                                    get_hostname, get_id,
                                    get_last_used_users, is_from_ad,
-                                   get_normalized_hostname_str,
+                                   get_normalized_hostname_str, is_snow_adapter,
                                    get_normalized_ip, get_serial,
                                    hostnames_do_not_contradict,
                                    ips_do_not_contradict_or_mac_intersection,
@@ -33,12 +33,12 @@ from axonius.utils.parsing import (NORMALIZED_MACS,
                                    is_only_host_adapter,
                                    is_different_plugin,
                                    is_from_juniper_and_asset_name,
-                                   is_windows,
+                                   is_windows, is_linux,
                                    is_junos_space_device,
                                    is_old_device, is_sccm_or_ad, is_snow_device,
                                    is_splunk_vpn, normalize_adapter_devices,
                                    serials_do_not_contradict, compare_macs_or_one_is_jamf,
-                                   not_aruba_adapters, not_aruba_adapter,
+                                   not_wifi_adapters, not_wifi_adapter,
                                    cloud_id_do_not_contradict,
                                    get_serial_no_s, compare_serial_no_s,
                                    get_bios_serial_or_serial_no_s, compare_bios_serial_serial_no_s,
@@ -102,6 +102,13 @@ def not_solarwinds_node(adapter_device):
     if adapter_device.get('plugin_name') == 'solarwinds_orion_adapter' \
             and adapter_device['data'].get('node_id')\
             and adapter_device['data'].get('node_id') == adapter_device['data'].get('id'):
+        return False
+    return True
+
+
+def not_saltstack_enterprise_linux(adapter_device):
+    if adapter_device.get('plugin_name') == 'saltstack_enterprise_adapter' \
+            and is_linux(adapter_device):
         return False
     return True
 
@@ -216,8 +223,12 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
 
         logger.info('Starting to correlate on MAC')
         mac_indexed = {}
+
         filtered_adapters_list = filter(not_solarwinds_node, adapters_to_correlate)
+        filtered_adapters_list = filter(not_saltstack_enterprise_linux, filtered_adapters_list)
         filtered_adapters_list = filter(not_lansweeper_assetname_no_hostname, filtered_adapters_list)
+        filtered_adapters_list = filter(lambda adap: not is_snow_adapter(adap), filtered_adapters_list)
+
         for adapter in filtered_adapters_list:
             # Don't add to the MAC comparisons devices that haven't seen for more than 30 days
             if is_old_device(adapter, number_of_days=5) and adapter.get('plugin_name') not in ALLOW_OLD_MAC_LIST:
@@ -277,7 +288,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
                                       [compare_device_normalized_hostname],
                                       [],
                                       [ips_do_not_contradict_or_mac_intersection,
-                                       not_aruba_adapters,
+                                       not_wifi_adapters,
                                        cloud_id_do_not_contradict],
                                       {'Reason': 'They have the same hostname and IPs'},
                                       CorrelationReason.StaticAnalysis)
@@ -291,7 +302,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
                                       [compare_device_normalized_hostname],
                                       [lambda x: x.get('plugin_name') == 'illusive_adapter'],
                                       [compare_last_used_users,
-                                       not_aruba_adapters,
+                                       not_wifi_adapters,
                                        serials_do_not_contradict],
                                       {'Reason': 'They have the same hostname and LastUsedUser'},
                                       CorrelationReason.StaticAnalysis)
@@ -306,7 +317,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
                                       [compare_device_normalized_hostname],
                                       [is_from_ad],
                                       [compare_domain_for_correlation,
-                                       not_aruba_adapters,
+                                       not_wifi_adapters,
                                        serials_do_not_contradict],
                                       {'Reason': 'They have the same hostname and domain'},
                                       CorrelationReason.StaticAnalysis)
@@ -318,7 +329,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
         filtered_adapters_list = filter(lambda x: (not x.get(NORMALIZED_MACS) and not get_normalized_ip(x)) or not is_only_host_adapter_not_localhost(x),
                                         filtered_adapters_list)
         filtered_adapters_list = filter(hostname_not_problematic, filtered_adapters_list)
-        filtered_adapters_list = filter(not_aruba_adapter, filtered_adapters_list)
+        filtered_adapters_list = filter(not_wifi_adapter, filtered_adapters_list)
         return self._bucket_correlate(list(filtered_adapters_list),
                                       [get_normalized_hostname_str],
                                       [compare_device_normalized_hostname],
@@ -428,7 +439,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
                                       [get_hostname],
                                       [compare_hostname],
                                       [lambda x: x.get('plugin_name') == ACTIVE_DIRECTORY_PLUGIN_NAME],
-                                      [not_aruba_adapters],
+                                      [not_wifi_adapters],
                                       {'Reason': 'They have the same hostname and one is AD'},
                                       CorrelationReason.StaticAnalysis)
 
@@ -517,7 +528,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
                                       [compare_asset_hosts],
                                       [get_asset_name],
                                       [ips_do_not_contradict_or_mac_intersection_or_ca_cmdb,
-                                       not_aruba_adapters,
+                                       not_wifi_adapters,
                                        asset_hostnames_do_not_contradict,
                                        serials_do_not_contradict],
                                       {'Reason': 'They have the same Asset name'},
@@ -536,7 +547,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
                                       [compare_snow_asset_hosts],
                                       [is_snow_device],
                                       [ips_do_not_contradict_or_mac_intersection,
-                                       not_aruba_adapters,
+                                       not_wifi_adapters,
                                        cloud_id_do_not_contradict,
                                        asset_hostnames_do_not_contradict,
                                        serials_do_not_contradict],
@@ -584,6 +595,18 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
         # for ad specifically we added the option to correlate on hostname basis alone (dns name with the domain)
         yield from self._correlate_with_ad(adapters_to_correlate)
 
+        yield from self._correlate_hostname_domain(adapters_to_correlate)
+
+        yield from self._correlate_hostname_user(adapters_to_correlate)
+
+        yield from self._correlate_hostname_only_host_adapter(adapters_to_correlate)
+
+        # Correlating mac must happen after all the other correlations are DONE.
+        # the actual linking is happend in _process_correlation_result in other thread,
+        # so in order to solve the race condition we yield marker here and
+        # wait for all correlation to end until the marker in _map_correlation
+        yield CorrelationMarker()
+
         yield from self._correlate_with_twistlock(adapters_to_correlate)
 
         # Find adapters that share the same cloud type and cloud id
@@ -601,13 +624,8 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
         # juniper correlation is a little more loose - we allow correlation based on asset name alone,
         yield from self._correlate_with_juniper(adapters_to_correlate)
 
-        yield from self._correlate_hostname_domain(adapters_to_correlate)
-
-        yield from self._correlate_hostname_user(adapters_to_correlate)
-
         yield from self._correlate_asset_host(adapters_to_correlate)
 
-        yield from self._correlate_hostname_only_host_adapter(adapters_to_correlate)
         yield from self._correlate_asset_snow_host(adapters_to_correlate)
 
         yield from self._correlate_splunk_vpn_hostname(adapters_to_correlate)
@@ -623,12 +641,6 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
 
         # Find adapters with the same serial
         # Now let's find devices by MAC, and IPs don't contradict (we allow empty)
-
-        # Correlating mac must happen after all the other correlations are DONE.
-        # the actual linking is happend in _process_correlation_result in other thread,
-        # so in order to solve the race condition we yield marker here and
-        # wait for all correlation to end until the marker in _map_correlation
-        yield CorrelationMarker()
 
         yield from self._correlate_mac(adapters_to_correlate)
 

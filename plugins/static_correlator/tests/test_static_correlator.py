@@ -376,7 +376,7 @@ def test_rule_ip_hostname_os_succeeds_even_with_domain():
     assert_success(correlate([device1, device2]), [device1, device2], 'They have the same hostname and IPs', 1)
 
 
-def test_rule_ip_hostname_os_fails_on_domains_not_default():
+def test_rule_ip_hostname_os_success_on_domains_not_default():
     """
     Test a very simple correlation that should happen
     because IP+hostname+os
@@ -394,6 +394,27 @@ def test_rule_ip_hostname_os_fails_on_domains_not_default():
                                  'type': 'Linux'},
                              network_interfaces=[{MAC_FIELD: 'mymac',
                                                   IPS_FIELD: ['1.1.1.1']}])
+    assert_success(correlate([device1, device2]), [device1, device2], 'They have the same hostname and IPs', 1)
+
+
+def test_rule_ip_hostname_os_fails_on_domains_not_default():
+    """
+    Test a very simple correlation that should happen
+    because IP+hostname+os
+    :return:
+    """
+    device1 = get_raw_device(hostname='ubuntuLolol.local.axonius',
+                             os={'bitness': 32,
+                                 'distribution': 'Ubuntu',
+                                 'type': 'Linux'},
+                             network_interfaces=[{MAC_FIELD: 'myma324c',
+                                                  IPS_FIELD: ['1.1.1.1']}])
+    device2 = get_raw_device(hostname='ubuntulolol.9',
+                             os={'bitness': 32,
+                                 'distribution': 'Ubuntu',
+                                 'type': 'Linux'},
+                             network_interfaces=[{MAC_FIELD: 'mymac',
+                                                  IPS_FIELD: ['1.1.1.2']}])
     assert_success(correlate([device1, device2]), [device1, device2], 'They have the same hostname and IPs', 0)
 
 

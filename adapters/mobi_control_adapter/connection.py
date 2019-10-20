@@ -19,7 +19,7 @@ class MobiControlConnection(RESTConnection):
 
     def _connect(self):
         grant_type = f'grant_type=password&username={self._username}&password={self._password}'
-        self._session_headers['Content-Type'] = ['application/x-www-form-urlencoded']
+        self._session_headers['Content-Type'] = 'application/x-www-form-urlencoded'
         response = self._post('token', body_params=grant_type,
                               use_json_in_body=False,
                               do_basic_auth=True,

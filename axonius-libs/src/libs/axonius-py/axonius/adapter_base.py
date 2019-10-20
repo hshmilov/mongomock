@@ -932,10 +932,10 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
                 raise res
             return res
         except func_timeout.exceptions.FunctionTimedOut:
-            logger.info(f'Timeout on connection for {client_config} with {timeout} time')
+            logger.info(f'Timeout on connection for client config with {timeout} time')
             raise adapter_exceptions.ClientConnectionException(f'Connecting has timed out ({timeout} seconds)')
         except StopThreadException:
-            logger.info(f'Stopped connecting for {client_config}')
+            logger.info(f'Stopped connecting for client config')
             raise adapter_exceptions.ClientConnectionException(f'Connecting has been stopped')
 
     def _route_query_devices_by_client(self):

@@ -26,4 +26,12 @@ INSTALL_STATUS_DICT = {'0': 'Retired',
                        '6': 'In Stock',
                        '7': 'Disposed',
                        '8': 'Missing',
-                       '9': 'In Transit'}
+                       '9': 'In Transit',
+                       '40': 'Decommissioned',
+                       '100': 'Absent',
+                       '20': 'In Build',
+                       '30': 'In Use',
+                       '4': 'Pending Install',
+                       '5': 'Pending Repair',
+                       '50': 'Removed',
+                       '60': 'Absent'}

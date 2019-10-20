@@ -134,7 +134,7 @@ class AutomoxAdapter(AdapterBase):
             for nic in nics:
                 try:
                     mac = nic.get('MAC') if nic.get('MAC') else None
-                    ips = nic.get('IPS') if isinstance(nic.get('IPS')) else None
+                    ips = nic.get('IPS') if isinstance(nic.get('IPS'), list) else None
                     if mac or ips:
                         device.add_nic(mac=mac, ips=ips)
                 except Exception:

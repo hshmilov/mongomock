@@ -47,6 +47,15 @@ class ServiceNowAdapter(AdapterBase, Configurable):
         created_by = Field(str, 'Created By')
         sys_updated_on = Field(str, 'Updated On')
         used_for = Field(str, 'Used For')
+        tenable_asset_group = Field(str, 'Tenable Asset Group')
+        environment = Field(str, 'Environment')
+        cmdb_business_function = Field(str, 'Business Function')
+        management_ip = Field(str, 'Management IP')
+        end_of_support = Field(str, 'End Of Support')
+        firmware_version = Field(str, 'Firmware Version')
+        model_version_number = Field(str, 'Model Version Number')
+        operational_status = Field(str, 'Operational Status')
+        hardware_status = Field(str, 'Hardware Status')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -102,6 +111,12 @@ class ServiceNowAdapter(AdapterBase, Configurable):
                     device.add_nic(mac_address, ip_addresses)
             except Exception:
                 logger.warning(f'Problem getting NIC at {device_raw}', exc_info=True)
+            try:
+                mac_u = device_raw.get('u_mac_address')
+                if mac_u:
+                    device.add_nic(mac=mac_u)
+            except Exception:
+                logger.exception(f'Problem getting mac 2 for {device_raw}')
             device.figure_os(
                 (device_raw.get('os') or '') + ' ' + (device_raw.get('os_address_width') or '') + ' ' +
                 (device_raw.get('os_domain') or '') +
@@ -137,7 +152,7 @@ class ServiceNowAdapter(AdapterBase, Configurable):
             except Exception:
                 logger.warning(f'Problem getting ram at {device_raw}', exc_info=True)
             try:
-                host_name = device_raw.get('host_name') or device_raw.get('fqdn')
+                host_name = device_raw.get('host_name') or device_raw.get('fqdn') or device_raw.get('u_fqdn')
                 if host_name and name and name.lower() in host_name.lower():
                     device.hostname = host_name
             except Exception:
@@ -156,7 +171,8 @@ class ServiceNowAdapter(AdapterBase, Configurable):
                     try:
                         install_status = INSTALL_STATUS_DICT.get(snow_asset.get('install_status'))
                         device.install_status = install_status
-                        if self.__exclude_disposed_devices and install_status == 'Disposed':
+                        if self.__exclude_disposed_devices and install_status \
+                                and install_status in ['Disposed', 'Decommissioned']:
                             return None
                     except Exception:
                         logger.warning(f'Problem getting install status for {device_raw}', exc_info=True)
@@ -212,11 +228,14 @@ class ServiceNowAdapter(AdapterBase, Configurable):
             owned_by = users_table_dict.get((device_raw.get('owned_by') or {}).get('value'))
             if owned_by:
                 device.owner = owned_by.get('name')
+                device.email = owned_by.get('email')
             try:
                 try:
                     manufacturer_link = (device_raw.get('manufacturer') or {}).get('value')
                     if manufacturer_link and companies_table_dict.get(manufacturer_link):
                         device.device_manufacturer = companies_table_dict.get(manufacturer_link).get('name')
+                    else:
+                        device.device_manufacturer = device_raw.get('u_manufacturer_name')
                 except Exception:
                     logger.exception(f'Problem getting manufacturer for {device_raw}')
                 cpu_manufacturer = None
@@ -262,6 +281,15 @@ class ServiceNowAdapter(AdapterBase, Configurable):
                 logger.exception(f'Problem adding disk stuff to {device_raw}')
             device.domain = device_raw.get('dns_domain')
             device.used_for = device_raw.get('used_for')
+            device.tenable_asset_group = device_raw.get('u_tenable_asset_group')
+            device.environment = device_raw.get('u_environment')
+            device.cmdb_business_function = device_raw.get('u_cmdb_business_function')
+            device.management_ip = device_raw.get('u_management_ip')
+            device.end_of_support = device_raw.get('u_end_of_support')
+            device.firmware_version = device_raw.get('u_firmware_version')
+            device.model_version_number = device_raw.get('u_model_version_number')
+            device.operational_status = INSTALL_STATUS_DICT.get(device_raw.get('operational_status'))
+            device.hardware_status = device_raw.get('hardware_status')
             device.set_raw(device_raw)
             if not got_serial and not got_nic and self.__exclude_no_strong_identifier:
                 return None
@@ -497,7 +525,7 @@ class ServiceNowAdapter(AdapterBase, Configurable):
                 },
                 {
                     'name': 'exclude_disposed_devices',
-                    'title': 'Exclude Disposed Devices',
+                    'title': 'Exclude Disposed and Decommissioned Devices',
                     'type': 'bool'
                 },
                 {

@@ -5,15 +5,15 @@ from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
 from axonius.devices.device_adapter import DeviceAdapter, AGENT_NAMES
 from axonius.utils.files import get_local_config_file
-from axonius.mixins.configurable import Configurable
 from axonius.clients.rest.connection import RESTException
 from axonius.utils.datetime import parse_date
 from tanium_adapter.connection import TaniumConnection
+from tanium_adapter.consts import ENDPOINT_TYPE
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
-class TaniumAdapter(AdapterBase, Configurable):
+class TaniumAdapter(AdapterBase):
     class MyDeviceAdapter(DeviceAdapter):
         pass
 
@@ -58,7 +58,7 @@ class TaniumAdapter(AdapterBase, Configurable):
         :return: A json with all the attributes returned from the Tanium Server
         """
         with client_data:
-            yield from client_data.get_device_list(do_pagination=self.__do_pagination)
+            yield from client_data.get_device_list()
 
     @staticmethod
     def _clients_schema():
@@ -106,14 +106,14 @@ class TaniumAdapter(AdapterBase, Configurable):
         }
 
     # pylint: disable=too-many-branches, too-many-statements, too-many-nested-blocks
-    def _create_device(self, device_raw):
+    def _create_endpoint_device(self, device_raw):
         try:
             device = self._new_device_adapter()
             device_id = device_raw.get('computer_id')
             if not device_id:
                 logger.warning(f'Bad device with no ID {device_raw}')
                 return None
-            device.id = device_id + '_' + device_raw.get('host_name')
+            device.id = str(device_id) + '_' + device_raw.get('host_name')
             hostname = device_raw.get('host_name')
             if hostname and hostname.endswith('(none)'):
                 hostname = hostname[:-len('(none)')]
@@ -130,37 +130,13 @@ class TaniumAdapter(AdapterBase, Configurable):
             return None
 
     def _parse_raw_data(self, devices_raw_data):
-        for device_raw in devices_raw_data:
-            device = self._create_device(device_raw)
+        for device_raw, device_type in devices_raw_data:
+            device = None
+            if device_type == ENDPOINT_TYPE:
+                device = self._create_endpoint_device(device_raw)
             if device:
                 yield device
 
     @classmethod
     def adapter_properties(cls):
         return [AdapterProperty.Agent]
-
-    @classmethod
-    def _db_config_schema(cls) -> dict:
-        return {
-            'items': [
-                {
-                    'name': 'do_pagination',
-                    'title': 'Do Pagination',
-                    'type': 'bool'
-                }
-            ],
-            'required': [
-                'do_pagination'
-            ],
-            'pretty_name': 'Tanium Configuration',
-            'type': 'array'
-        }
-
-    @classmethod
-    def _db_config_default(cls):
-        return {
-            'do_pagination': False
-        }
-
-    def _on_config_update(self, config):
-        self.__do_pagination = config['do_pagination']

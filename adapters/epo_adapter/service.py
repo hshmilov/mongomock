@@ -86,6 +86,7 @@ class EpoAdapter(AdapterBase):
         epo_products = ListField(str, "EPO Products")
         node_name = Field(str, 'Node Name')
         epo_tags = ListField(str, 'EPO Tags')
+        epo_host = Field(str, 'EPO Host')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -125,7 +126,8 @@ class EpoAdapter(AdapterBase):
         }
 
     def _parse_raw_data(self, devices_raw_data):
-        for device_raw in json.loads(devices_raw_data):
+        devices_raw_data_json, epo_host = devices_raw_data
+        for device_raw in json.loads(devices_raw_data_json):
             epo_id = device_raw.get('EPOLeafNode.AgentGUID')
             if epo_id is None:
                 # skipping devices without Agent-ID
@@ -149,6 +151,7 @@ class EpoAdapter(AdapterBase):
                 continue
 
             device = self._new_device_adapter()
+            device.epo_host = epo_host
             device.hostname = hostname
             device.name = name
             device.figure_os(device_raw.get('EPOLeafNode.os', ''))
@@ -244,7 +247,7 @@ class EpoAdapter(AdapterBase):
                 except Exception:
                     logger.exception('Exception also in here')
                     raise
-        return json.dumps(raw)
+        return json.dumps(raw), client_data[EPO_HOST]
 
     def _get_client_id(self, client_config):
         return client_config[EPO_HOST]

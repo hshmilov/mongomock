@@ -64,8 +64,8 @@ class FireeyeHxAdapter(AdapterBase):
         try:
             connection = FireeyeHxConnection(domain=client_config["domain"], verify_ssl=client_config["verify_ssl"],
                                              username=client_config["username"], password=client_config["password"],
-                                             url_base_prefix="hx/api/v3",
-                                             port=client_config.get("port", consts.DEFAULT_PORT),
+                                             url_base_prefix="hx/api/v3", https_proxy=client_config.get('https_proxy'),
+                                             port=client_config.get("port") or consts.DEFAULT_PORT,
                                              headers={'Content-Type': 'application/json', 'Accept': 'application/json'})
             with connection:
                 pass  # check that the connection credentials are valid
@@ -108,7 +108,8 @@ class FireeyeHxAdapter(AdapterBase):
                     "name": "port",
                     "title": "Port",
                     "type": "integer",
-                    "format": "port"
+                    "format": "port",
+                    'default': consts.DEFAULT_PORT
                 },
                 {
                     "name": "username",
@@ -125,6 +126,11 @@ class FireeyeHxAdapter(AdapterBase):
                     "name": "verify_ssl",
                     "title": "Verify SSL",
                     "type": "bool"
+                },
+                {
+                    'name': 'https_proxy',
+                    'title': 'HTTPS Proxy',
+                    'type': 'string'
                 }
             ],
             "required": [

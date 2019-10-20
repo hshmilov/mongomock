@@ -1,124 +1,93 @@
-import base64
+import json
+import time
 import logging
-import xml.etree.ElementTree as ET
 
-from axonius.clients.rest.connection import RESTConnection, RESTException
-from tanium_adapter import consts
+from axonius.clients.rest.connection import RESTConnection
+from axonius.clients.rest.exception import RESTException
+from tanium_adapter.consts import MAX_DEVICES_COUNT,\
+    CACHE_EXPIRATION, PAGE_SIZE_GET, SLEEP_GET, ENDPOINT_TYPE
+
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
 class TaniumConnection(RESTConnection):
-
     def __init__(self, *args, **kwargs):
-        super().__init__(*args,
-                         url_base_prefix='/',
-                         headers={'Content-Type': 'text/xml; charset=utf-8', 'Accept': '*/*'},
+        super().__init__(*args, url_base_prefix='',
+                         headers={'Content-Type': 'application/json',
+                                  'Accept': 'application/json, text/plain, */*',
+                                  'User-Agent': 'axonius/tanium_adapter'},
                          **kwargs)
 
     def _connect(self):
-        if not self._username or not self._password:
-            raise RESTException('No user name or password')
-        connection_dict = {'username': base64.b64encode(self._username.encode('utf-8')).decode('utf-8'),
-                           'password': base64.b64encode(self._password.encode('utf-8')).decode('utf-8')}
-        self._session_headers = connection_dict
-        self._session_token = self._post('auth', body_params=connection_dict, use_json_in_response=False)
-        self._session_headers = {'session': self._session_token}
-        xml_str = self._post('soap', use_json_in_response=False, use_json_in_body=False,
-                             body_params=consts.GET_DEVICES_BODY_PARAMS)
-        if '403 Forbidden' in str(xml_str):
-            raise RESTException('Insufficient privilege to get devices')
+        self._test_reachability()
+        self._login()
 
-    def get_device_list_paginated(self):
-        total = 0
-        offset = 0
-        for data_type, data in self.get_device_list_paginated_by_offset(offset=offset):
-            if data_type == 'device':
-                yield data
-            elif data_type == 'total':
-                total = int(data)
-        offset += consts.DEVICE_PER_PAGE
-        while offset < total:
+    def _login(self):
+        body_params = {'username': self._username, 'password': self._password}
+        response = self._post('api/v2/session/login', body_params=body_params)
+        if not response.get('data') or not response['data'].get('session'):
+            raise RESTException(f'Bad login response: {response}')
+        self._session_headers['session'] = response['data']['session']
+
+    def _test_reachability(self):
+        # get the tanium version, could be used as connectivity test as it's not an auth/api call
+        response = self._get('config/console.json')
+        version = response.get('serverVersion')
+        if not version:
+            raise RESTException(f'Bad server with no version')
+        self._platform_version = version
+        logger.debug(f'Running version: {self._platform_version!r}')
+
+    def _get_endpoints(self):
+        """Get all endpoints that have ever registered with Tanium using paging."""
+        cache_id = 0
+        page = 1
+        row_start = 0
+        fetched = 0
+
+        while row_start < MAX_DEVICES_COUNT:
             try:
-                for data_type, data in self.get_device_list_paginated_by_offset(offset=offset):
-                    if data_type == 'device':
-                        yield data
-                offset += consts.DEVICE_PER_PAGE
+                options = dict()
+                options['row_start'] = row_start
+                options['row_count'] = PAGE_SIZE_GET
+                options['cache_expiration'] = CACHE_EXPIRATION
+                if cache_id:
+                    options['cache_id'] = cache_id
+                data = self._tanium_get('system_status', options=options)
+
+                cache = data.pop()  # cache info should be last item
+                data.pop()  # stats entry should be second to last item, we don't need it
+
+                cache_id = cache['cache_id']
+                total = cache['cache_row_count']
+                fetched += len(data)
+                yield from data
+
+                if not data:
+                    msg = f'PAGE #{page}: DONE no rows returned'
+                    logger.debug(msg)
+                    break
+
+                if fetched >= total:
+                    msg = f'PAGE #{page}: DONE hit rows total'
+                    logger.debug(msg)
+                    break
+
+                row_start += PAGE_SIZE_GET
+                page += 1
+                time.sleep(SLEEP_GET)
             except Exception:
-                logger.exception(f'Problem with offset {offset}')
+                logger.exception(f'Problem in the fetch, row is {row_start}')
                 break
 
-    # pylint: disable=too-many-branches, too-many-statements, too-many-locals, too-many-nested-blocks
-    def get_device_list_paginated_by_offset(self, offset):
-        body_params = consts.GET_DEVICES_BODY_PARAMS_PAGINTAED.format(offset,
-                                                                      consts.DEVICE_PER_PAGE,
-                                                                      consts.CACHE_EXPIRATION)
-        xml = ET.fromstring(self._post('soap', use_json_in_response=False, use_json_in_body=False,
-                                       body_params=body_params))
-        if not xml.tag.endswith('Envelope'):
-            raise RESTException(f'Bad xml first tag is {xml.tag}')
-        xml_second_block = xml[0]
-        if not xml_second_block.tag.endswith('Body'):
-            raise RESTException(f'Bad xml second tag is {xml_second_block.tag}')
-        xml_third_block = xml_second_block[0]
-        if not xml_third_block.tag.endswith('return'):
-            raise RESTException(f'Bad xml third tag is {xml_third_block.tag}')
-        clients_xml = []
-        for inner_xml in xml_third_block:
-            if inner_xml.tag == 'result_object':
-                try:
-                    if not inner_xml[0].tag == 'system_status':
-                        raise RESTException(f'Bad xml forth tag is {inner_xml[0].tag}')
-                    clients_xml = inner_xml[0]
-                    break
-                except Exception:
-                    pass
-        for client_xml in clients_xml:
-            try:
-                if client_xml.tag == 'client_status':
-                    device_raw = dict()
-                    for property_xml in client_xml:
-                        device_raw[property_xml.tag] = property_xml.text
-                    yield 'device', device_raw
-                elif client_xml.tag == 'cache_info':
-                    for property_xml in client_xml:
-                        if property_xml.tag == 'cache_row_count':
-                            total_count = property_xml.text
-                            yield 'total', total_count
-            except Exception:
-                logger.exception(f'Problem getting xml in Tanium')
+    def _tanium_get(self, endpoint, options=None):
+        url = 'api/v2/' + endpoint
+        response = self._get(url, extra_headers={'tanium-options': json.dumps(options or {})})
+        if not response.get('data'):
+            raise RESTException(f'Bad response with no data for endpoint {endpoint}')
+        return response['data']
 
-    # pylint: disable=arguments-differ
-    def get_device_list(self, do_pagination=False):
-        if do_pagination:
-            yield from self.get_device_list_paginated()
-            return
-        xml = ET.fromstring(self._post('soap', use_json_in_response=False, use_json_in_body=False,
-                                       body_params=consts.GET_DEVICES_BODY_PARAMS))
-        if not xml.tag.endswith('Envelope'):
-            raise RESTException(f'Bad xml first tag is {xml.tag}')
-        xml_second_block = xml[0]
-        if not xml_second_block.tag.endswith('Body'):
-            raise RESTException(f'Bad xml second tag is {xml_second_block.tag}')
-        xml_third_block = xml_second_block[0]
-        if not xml_third_block.tag.endswith('return'):
-            raise RESTException(f'Bad xml third tag is {xml_third_block.tag}')
-        clients_xml = []
-        for inner_xml in xml_third_block:
-            if inner_xml.tag == 'result_object':
-                try:
-                    if not inner_xml[0].tag == 'system_status':
-                        raise RESTException(f'Bad xml forth tag is {inner_xml[0].tag}')
-                    clients_xml = inner_xml[0]
-                    break
-                except Exception:
-                    pass
-        for client_xml in clients_xml:
-            try:
-                if client_xml.tag == 'client_status':
-                    device_raw = dict()
-                    for property_xml in client_xml:
-                        device_raw[property_xml.tag] = property_xml.text
-                    yield device_raw
-            except Exception:
-                logger.exception(f'Problem getting xml in Tanium')
+    def get_device_list(self):
+        for device_raw in self._get_endpoints():
+            yield device_raw, ENDPOINT_TYPE

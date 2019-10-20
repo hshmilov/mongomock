@@ -163,6 +163,7 @@ class CorrelatorBase(Triggerable, PluginBase, Feature, ABC):
         :param entities_ids:
         :return:
         """
+        logger.info(f'Correlator {self.plugin_unique_name} getting entities')
         entities_to_correlate = self.get_entities_from_ids(entities_ids)
         logger.info(
             f'Correlator {self.plugin_unique_name} started to correlate {len(entities_to_correlate)} entities')

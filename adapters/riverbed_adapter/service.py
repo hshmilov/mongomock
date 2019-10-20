@@ -35,8 +35,9 @@ class RiverbedAdapter(AdapterBase):
         try:
             with RiverbedConnection(domain=client_config['domain'],
                                     verify_ssl=client_config['verify_ssl'],
-                                    username=client_config['username'],
-                                    password=client_config['password']) as connection:
+                                    username=client_config.get('username'),
+                                    password=client_config.get('password'),
+                                    apikey=client_config.get('apikey')) as connection:
                 return connection
         except RESTException as e:
             message = 'Error connecting to client with domain {0}, reason: {1}'.format(
@@ -83,6 +84,11 @@ class RiverbedAdapter(AdapterBase):
                     'format': 'password'
                 },
                 {
+                    'name': 'apikey',
+                    'title': 'API Key',
+                    'type': 'string'
+                },
+                {
                     'name': 'verify_ssl',
                     'title': 'Verify SSL',
                     'type': 'bool'
@@ -90,8 +96,6 @@ class RiverbedAdapter(AdapterBase):
             ],
             'required': [
                 'domain',
-                'username',
-                'password',
                 'verify_ssl'
             ],
             'type': 'array'

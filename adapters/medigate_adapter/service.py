@@ -17,7 +17,7 @@ logger = logging.getLogger(f'axonius.{__name__}')
 class MedigateAdapter(AdapterBase):
     # pylint: disable=too-many-instance-attributes
     class MyDeviceAdapter(DeviceAdapter):
-        vlan = Field(str, 'Vlan')
+        vlan = Field(int, 'Vlan')
         connection_type = Field(str, 'Connection Type')
         ip_assignment = Field(str, 'Ip Assignment')
         sw_version = Field(str, 'SW Version')
@@ -133,7 +133,7 @@ class MedigateAdapter(AdapterBase):
                 ips = None
             if mac or ips:
                 device.add_nic(mac=mac, ips=ips)
-            device.vlan = device_raw.get('vlan')
+            device.vlan = device_raw.get('vlan') if isinstance(device_raw.get('vlan'), int) else None
             device.first_seen = parse_date(device_raw.get('first_seen'))
             device.last_seen = parse_date(device_raw.get('last_seen'))
             device.connection_type = device_raw.get('connection_type')

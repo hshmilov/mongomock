@@ -151,7 +151,8 @@ class CiscoPrimeAdapter(AdapterBase):
                 {'name': 'username', 'title': 'User Name', 'type': 'string'},
                 {'name': 'password', 'title': 'Password', 'type': 'string', 'format': 'password'},
                 {'name': 'wireless_vlan_exclude_list', 'title': 'Wireless VLAN Exclude List', 'type': 'string'},
-                {'name': 'wireless_ssid_exclude_list', 'title': 'Wireless SSID Exclude List', 'type': 'string'}
+                {'name': 'wireless_ssid_exclude_list', 'title': 'Wireless SSID Exclude List', 'type': 'string'},
+                {'name': 'wireless_ssid_white_list', 'title': 'Wireless SSID Whitelist', 'type': 'string'}
             ],
             'required': ['url', 'username', 'password'],
             'type': 'array',

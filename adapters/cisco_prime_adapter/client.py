@@ -36,13 +36,16 @@ class CiscoPrimeException(Exception):
 
 
 class CiscoPrimeClient:
-    def __init__(self, url, username, password, wireless_vlan_exclude_list=None, wireless_ssid_exclude_list=None):
+    def __init__(self, url, username, password, wireless_vlan_exclude_list=None,
+                 wireless_ssid_exclude_list=None, wireless_ssid_white_list=None):
         url = RESTConnection.build_url(url).strip('/')
         self._url = url
         self._username = username
         self._password = password
         self.wireless_vlan_exclude_list = wireless_vlan_exclude_list.split(',') if wireless_vlan_exclude_list else []
         self.wireless_ssid_exclude_list = wireless_ssid_exclude_list.split(',') if wireless_ssid_exclude_list else []
+        self.wireless_ssid_white_list = wireless_ssid_white_list.split(',') if wireless_ssid_white_list else []
+
         self._sess = None
 
     @staticmethod
@@ -182,6 +185,8 @@ class CiscoPrimeClient:
             if prime_client.get('vlan') in self.wireless_vlan_exclude_list:
                 continue
             if prime_client.get('ssid') in self.wireless_ssid_exclude_list:
+                continue
+            if self.wireless_ssid_white_list and prime_client.get('ssid') not in self.wireless_ssid_white_list:
                 continue
             yield 'client', prime_client
         first_result = 0

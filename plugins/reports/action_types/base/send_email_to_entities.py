@@ -47,6 +47,7 @@ class SendEmailToEntities(ActionTypeBase):
             return generic_fail(self._internal_axon_ids, reason='Email is disabled')
         current_result = self._get_entities_from_view({
             'adapters.data.mail': 1,
+            'adapters.data.email': 1,
             'internal_axon_id': 1
         })
         results = []
@@ -60,6 +61,8 @@ class SendEmailToEntities(ActionTypeBase):
                     adapter_data = adapter_data.get('data') or {}
                     if adapter_data.get('mail'):
                         mail_list.add(adapter_data.get('mail'))
+                    if adapter_data.get('email'):
+                        mail_list.add(adapter_data.get('email'))
                     if adapter_data.get('first_name') and not first_name:
                         first_name = adapter_data.get('first_name')
                     if adapter_data.get('username') and not username:

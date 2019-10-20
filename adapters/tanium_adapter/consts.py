@@ -1,20 +1,52 @@
-GET_DEVICES_BODY_PARAMS = '<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/" ' \
-                          'xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:' \
-                          'xsi="http://www.w3.org/2001/XMLSchema-instance">' \
-                          '<SOAP-ENV:Body><typens:tanium_soap_request xmlns:typens="urn:TaniumSOAP">' \
-                          '<command>GetObject</command><object_list><client_status/></object_list>' \
-                          '<options><suppress_object_list>1</suppress_object_list></options>' \
-                          '</typens:tanium_soap_request></SOAP-ENV:Body></SOAP-ENV:Envelope>'
+SLEEP_GET = 1
+SLEEP_GET_RESULT = 1
+SLEEP_POLL = 15
+SLEEP_REFRESH = 2
+SLEEP_DISCOVER = 1
 
-GET_DEVICES_BODY_PARAMS_PAGINTAED = '<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/" ' \
-                                    'xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:' \
-                                    'xsi="http://www.w3.org/2001/XMLSchema-instance">' \
-                                    '<SOAP-ENV:Body><typens:tanium_soap_request xmlns:typens="urn:TaniumSOAP">' \
-                                    '<command>GetObject</command><object_list><client_status/></object_list>' \
-                                    '<options><row_start>{0}</row_start><row_count>{1}</row_count>' \
-                                    '<cache_expiration>{2}</cache_expiration>' \
-                                    '<cache_sort_fields>last_registration</cache_sort_fields>' \
-                                    '</options>' \
-                                    '</typens:tanium_soap_request></SOAP-ENV:Body></SOAP-ENV:Envelope>'
-DEVICE_PER_PAGE = 50
-CACHE_EXPIRATION = 600
+PAGE_SIZE_GET = 1000
+PAGE_SIZE_GET_RESULT = 1000
+PAGE_SIZE_DISCOVER = 100
+
+RETRIES_REFRESH = 15
+
+CACHE_EXPIRATION = 900
+MAX_DEVICES_COUNT = 10000000
+
+KNOWN_SENSORS = [
+    'Computer ID',
+    'Computer Name',
+    'Computer Serial Number',
+    'IP Address',
+    'Installed Applications',
+    'Tanium Client Version',
+    'Last Reboot',
+    'CPU Details',
+    'Custom Tags',
+    'Chassis Type',
+    'Disk Drives',
+    'Last Logged In User',
+    'Manufacturer',
+    'Model',
+    'Operating System',
+    'RAM',
+    'Running Applications',
+    'Running Service',
+    'Service Details',
+    'Service Pack',
+    'x64/x86?',
+    'Virtual Platform',
+    'User Sessions',
+    'USB Device Details',
+    'Tanium Server Name List',
+    'Tanium Server Version',
+    'Time Zone',
+]
+
+REFRESH = True
+MAX_HOURS = 0
+# SQ_NAME = 'Multiplex'
+SQ_NAME = 'Network Adapter Information'
+# SQ_NAME = 'is online'
+GET_DISCOVER_ASSETS = True
+ENDPOINT_TYPE = 'endpoint_type'

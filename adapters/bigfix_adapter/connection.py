@@ -53,7 +53,7 @@ class BigfixConnection(RESTConnection):
             if computer_node.tag == 'Computer':
                 computer_resource = computer_node.attrib.get('Resource')
                 if computer_resource:
-                    # This is not by the protocol!!!! Instead of authing once we are making a do_basic_auth each
+                    # This is not by the protocol. Instead of authing once we are making a do_basic_auth each
                     # time again and again. who said its gonna work on all bigfix versions?
                     async_requests.append(
                         {

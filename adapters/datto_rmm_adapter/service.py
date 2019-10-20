@@ -8,7 +8,7 @@ from axonius.clients.rest.connection import RESTException
 from axonius.fields import Field
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.utils.datetime import parse_date
-from axonius.utils.parsing import is_domain_valid, parse_unix_timestamp
+from axonius.utils.parsing import is_domain_valid
 from axonius.utils.files import get_local_config_file
 from datto_rmm_adapter.connection import DattoRmmConnection
 from datto_rmm_adapter.client_id import get_client_id
@@ -23,6 +23,7 @@ class DattoRmmAdapter(AdapterBase):
         deleted = Field(bool, 'Deleted')
         last_audit_date = Field(datetime.datetime, 'Last Audit Date')
         creation_date = Field(datetime.datetime, 'Creation Date')
+        warranty_date = Field(datetime.datetime, 'Warranty Date')
         device_class = Field(str, 'Device Class')
         display_version = Field(str, 'Display Version')
         cag_version = Field(str, 'Cag Version')
@@ -156,12 +157,13 @@ class DattoRmmAdapter(AdapterBase):
                 device.domain = domain
             if device_raw.get('lastLoggedInUser'):
                 device.last_used_users = [device_raw.get('lastLoggedInUser')]
-            device.last_seen = parse_unix_timestamp(device_raw.get('lastSeen'))
-            device.set_boot_time(boot_time=parse_unix_timestamp(device_raw.get('lastReboot')))
+            device.last_seen = parse_date(device_raw.get('lastSeen'))
+            if parse_date(device_raw.get('lastReboot')):
+                device.set_boot_time(boot_time=parse_date(device_raw.get('lastReboot')))
             device.online = bool(device_raw.get('online'))
-            device.last_audit_date = parse_unix_timestamp(device_raw.get('lastAuditDate'))
+            device.last_audit_date = parse_date(device_raw.get('lastAuditDate'))
             device.description = device_raw.get('description')
-            device.creation_date = parse_unix_timestamp(device_raw.get('creationDate'))
+            device.creation_date = parse_date(device_raw.get('creationDate'))
             device.deleted = bool(device_raw.get('deleted'))
             device.figure_os(device_raw.get('operatingSystem'))
             device.device_class = device_raw.get('deviceClass')

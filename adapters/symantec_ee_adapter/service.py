@@ -109,6 +109,7 @@ class SymantecEeAdapter(AdapterBase, Configurable):
                     continue
                 device.id = str(device_id)
                 domain = device_raw.get('DnsDomName')
+                device.bios_serial = device_raw.get('SMBIOSSerialNum')
                 if is_domain_valid(domain):
                     device.domain = domain
                 try:

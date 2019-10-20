@@ -134,7 +134,7 @@ class MobiControlAdapter(AdapterBase):
                 if not device_id:
                     logger.warning(f'Bad device with no ID {device_raw}')
                     continue
-                device.id = device_id + '_' + (device_raw.get('HostName') or '')
+                device.id = str(device_id) + '_' + (device_raw.get('HostName') or '')
                 device.hostname = device_raw.get('HostName')
                 device.is_online = device_raw.get('IsAgentOnline')
                 device.name = device_raw.get('DeviceName')
@@ -148,7 +148,7 @@ class MobiControlAdapter(AdapterBase):
                 except Exception:
                     logger.exception(f'Problem adding MAC Wifi to {device_raw}')
                 device.add_agent_version(agent=AGENT_NAMES.mobi_control, version=device_raw.get('AgentVersion'))
-                device.in_romaing = device_raw.get('InRoaming')
+                device.in_roaming = device_raw.get('InRoaming')
                 try:
                     device.last_seen = parse_date(device_raw.get('LastCheckInTime'))
                 except Exception:

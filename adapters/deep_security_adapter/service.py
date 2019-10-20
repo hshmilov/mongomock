@@ -24,6 +24,7 @@ def raise_not_exit(msg=''):
 
 
 class DeepSecurityAdapter(AdapterBase):
+    DEFAULT_CONNECT_CLIENT_TIMEOUT = 1800
 
     class MyDeviceAdapter(DeviceAdapter):
         state = Field(str, 'Device running state')
@@ -69,7 +70,8 @@ class DeepSecurityAdapter(AdapterBase):
                                             port=client_config.get('port'),
                                             verify_ssl=client_config['verify_ssl'],
                                             https_proxy=client_config.get('https_proxy'),
-                                            apikey=client_config['rest_apikey'])
+                                            apikey=client_config['rest_apikey'],
+                                            session_timeout=(5, 1800))
         with connection:
             pass
         return connection
@@ -172,7 +174,8 @@ class DeepSecurityAdapter(AdapterBase):
                 {
                     'name': 'rest_apikey',
                     'type': 'string',
-                    'title': 'REST API Key'
+                    'title': 'REST API Key',
+                    'format': 'password'
                 },
                 {
                     'name': 'verify_ssl',
@@ -227,11 +230,13 @@ class DeepSecurityAdapter(AdapterBase):
                 logger.warning(f'Bad device with no ID {device_raw}')
                 return None
             device.id = str(device_id) + '_' + (device_raw.get('hostName') or '')
-            device.hostname = device_raw.get('hostName')
-            device.name = device_raw.get('displayName')
+            device.hostname = device_raw.get('displayName')
             device.description = device_raw.get('description')
-            if device_raw.get('lastIPUsed'):
-                device.add_nic(ips=[device_raw.get('lastIPUsed')])
+            try:
+                if device_raw.get('hostName') and ipaddress.ip_address(device_raw.get('hostName')):
+                    device.add_nic(ips=[device_raw.get('hostName')])
+            except Exception:
+                pass
             try:
                 nics = (device_raw.get('interfaces') or {}).get('interfaces')
                 if not isinstance(nics, list):

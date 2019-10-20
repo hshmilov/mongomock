@@ -39,6 +39,7 @@ from reports.action_types.base.tenable_io_create_asset import TenableIoCreateAss
 from reports.action_types.alert.create_zendesk_ticket import ZendeskTicketAction
 from reports.action_types.alert.create_remedy_ticket import RemedyTicketAction
 from reports.action_types.base.portnox_enrichment import PortnoxEnrichment
+from reports.action_types.alert.create_fresh_service_incident import FreshServiceIncidentAction
 
 
 AllActionTypes: Dict[str, type(ActionTypeBase)] = {
@@ -79,5 +80,6 @@ AllActionTypes: Dict[str, type(ActionTypeBase)] = {
     'tenable_io_create_asset': TenableIoCreateAsset,
     'create_zendesk_ticket': ZendeskTicketAction,
     'create_remedy_ticket': RemedyTicketAction,
-    'portnox_enrichment': PortnoxEnrichment
+    'portnox_enrichment': PortnoxEnrichment,
+    'create_fresh_service_incident': FreshServiceIncidentAction
 }

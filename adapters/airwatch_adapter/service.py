@@ -21,7 +21,6 @@ class AirwatchAdapter(AdapterBase):
         imei = Field(str, 'IMEI')
         phone_number = Field(str, 'Phone Number')
         udid = Field(str, 'UdId')
-        email = Field(str, 'Email')
         friendly_name = Field(str, 'Friendly Name')
         last_enrolled_on = Field(datetime.datetime, 'Last Enrolled On')
 

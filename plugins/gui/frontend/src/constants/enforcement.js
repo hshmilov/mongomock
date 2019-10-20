@@ -53,6 +53,9 @@ export const actionsMeta = {
     tenable_io_create_asset: {
         title: 'Create Tenable.io Asset'
     },
+    create_fresh_service_incident: {
+        title: 'Create Freshservice Ticket'
+    },
     tenable_sc_add_ips_to_asset: {
         title: 'Add IPs to Tenable.sc Asset'
     },
@@ -162,7 +165,7 @@ export const actionsMeta = {
     },
     create_incident: {
         title: 'Create Incident',
-        items: ['create_service_now_incident', 'create_service_now_incident_per_entity', 'create_jira_incident', 'create_sysaid_incident', 'create_zendesk_ticket', 'create_remedy_ticket']
+        items: ['create_service_now_incident', 'create_service_now_incident_per_entity', 'create_jira_incident', 'create_sysaid_incident', 'create_zendesk_ticket', 'create_remedy_ticket', 'create_fresh_service_incident']
     },
     enrich_device_or_user_data: {
         title: 'Enrich Device or User Data',

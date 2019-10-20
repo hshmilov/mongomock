@@ -32,8 +32,12 @@ class CylanceConnection(RESTConnection):
         self._app_secret = app_secret
         self._tid = tid
         self._tokens = {}
+        self._token_times = {}
 
-    def _create_token_for_scopre(self, scope):
+    def _create_token_for_scopre(self, scope, force_get_token=False):
+        # pylint: disable=line-too-long
+        if force_get_token or (self._token_times.get(scope) and (datetime.datetime.now() - self._token_times.get(scope) < datetime.timedelta(minutes=(consts.NUMBER_OF_MINUTES_UNTIL_TOKEN_TIMEOUT - 1)))):
+            return
         if self._tid is not None and self._app_id is not None and self._app_secret is not None:
             int((datetime.datetime.now() - datetime.datetime(1970, 1, 1)).total_seconds())
             epoch_time = int((datetime.datetime.now() - datetime.datetime(1970, 1, 1)).total_seconds())
@@ -45,6 +49,7 @@ class CylanceConnection(RESTConnection):
             if 'access_token' not in response:
                 raise RESTException(f'Couldnt get token from response {response}')
             self._tokens[scope] = response['access_token']
+            self._token_times[scope] = datetime.datetime.now()
         else:
             raise RESTException('No tid or app secrer or app id')
 
@@ -64,15 +69,14 @@ class CylanceConnection(RESTConnection):
         while page_num < total_pages:
             try:
                 page_num += 1
-                if page_num % 100 == 0:
-                    self._create_token_for_scopre(scope)
+                self._create_token_for_scopre(scope)
                 self._session_headers['Authorization'] = 'Bearer ' + self._tokens[scope]
                 yield [basic_device.get('id') for basic_device in
                        self._get(f'{endpoint}/v2', url_params={'page_size': consts.DEVICE_PER_PAGE,
                                                                'page': str(page_num)}).get('page_items', [])]
             except Exception as e:
                 if first_try_to_refresh and '401' in str(e):
-                    self._create_token_for_scopre(scope)
+                    self._create_token_for_scopre(scope, force_get_token=True)
                     first_try_to_refresh = False
                     page_num -= 1
                 logger.exception(f'Problem fetching page number {str(page_num)}')
@@ -83,16 +87,15 @@ class CylanceConnection(RESTConnection):
         for bulk_number, bulk_ids in enumerate(self._get_ids_bulks(endpoint, scope_list)):
             # We must refresh the token sometimes so we won't get to token timeout
             failed_second_scope_first_block = False
-            if bulk_number % 50 == 0:
-                self._create_token_for_scopre(scope_read)
-                if second_scope:
-                    try:
-                        self._create_token_for_scopre(second_scope)
-                    except Exception:
-                        if bulk_number == 0:
-                            failed_second_scope_first_block = True
-                        logger.exception(f'Coudld get second scope')
-                        self._tokens[second_scope] = ''
+            self._create_token_for_scopre(scope_read)
+            if second_scope:
+                try:
+                    self._create_token_for_scopre(second_scope)
+                except Exception:
+                    if bulk_number == 0:
+                        failed_second_scope_first_block = True
+                    logger.exception(f'Coudld get second scope')
+                    self._tokens[second_scope] = ''
             async_requests = []
             for device_id in bulk_ids:
                 try:

@@ -126,7 +126,7 @@ class WebrootAdapter(AdapterBase):
             if device_id is None:
                 logger.warning(f'Bad device with no ID {device_raw}')
                 return None
-            device.id = device_id + '_' + (device_raw.get('HostName') or '')
+            device.id = str(device_id) + '_' + (device_raw.get('HostName') or '')
             device.hostname = device_raw.get('HostName')
             device.add_agent_version(agent=AGENT_NAMES.webroot,
                                      version=device_raw.get('AgentVersion'))

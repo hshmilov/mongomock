@@ -21,7 +21,7 @@ class AquaAdapter(AdapterBase):
         allowed_labels = ListField(str, 'Allowed Labels')
         allowed_registries = ListField(str, 'Allowed Registries')
         total_pass = Field(int, 'Total Pass')
-        total_warn = Field(str, 'Total Warnings')
+        total_warn = Field(int, 'Total Warnings')
         gateways = ListField(str, 'Gateways')
         is_scan = Field(bool, 'Is Scan')
 

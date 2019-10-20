@@ -45,7 +45,7 @@ class MSSQLConnection(AbstractSQLConnection):
         """ Connects to the service """
         try:
             self.db = pyodbc.connect(server=self.server, user=self.username, password=self.password, driver=TDS_DRIVER,
-                                     DATABASE=self.database, tds_version=self.tds_version)
+                                     DATABASE=self.database, tds_version=self.tds_version, UseNTLMv2='yes')
         except Exception as err:
             logger.exception('Connection to database failed')
             raise

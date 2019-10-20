@@ -133,31 +133,45 @@ class MasscanAdapter(ScannerAdapterBase):
     # pylint: disable=too-many-branches, too-many-statements, too-many-nested-blocks, arguments-differ
     def _parse_raw_data(self, devices_raw_data_full):
         devices_raw_data, file_name = devices_raw_data_full
-        for device_raw in devices_raw_data:
+        devices_raw_data_merge = dict()
+        for data_raw in devices_raw_data:
+            try:
+                if not data_raw.get('ip'):
+                    continue
+                if data_raw.get('ip') not in devices_raw_data_merge:
+                    devices_raw_data_merge[data_raw.get('ip')] = []
+                devices_raw_data_merge[data_raw.get('ip')].append(data_raw)
+            except Exception:
+                logger.exception()
+        for device_raw_list in devices_raw_data_merge.values():
             try:
                 device = self._new_device_adapter()
                 device.file_name = file_name
-                if not device_raw.get('ip'):
-                    logger.warning(f'Bad device with no ip {device_raw}')
-                    continue
-                device.id = device_raw.get('ip')
-                device.add_nic(ips=[device_raw.get('ip')])
+                device.id = device_raw_list[0].get('ip')
+                device.add_nic(ips=[device_raw_list[0].get('ip')])
+                last_seen = None
                 try:
-                    device.last_seen = parse_date(int(device_raw.get('timestamp')))
+                    for device_raw in device_raw_list:
+                        if device_raw.get('timestamp'):
+                            last_seen_device = parse_date(int(device_raw.get('timestamp')))
+                            if not last_seen or (last_seen_device and last_seen_device > last_seen):
+                                last_seen = last_seen_device
                 except Exception:
-                    logger.exception(f'Problem getting last seen for {device_raw}')
-                ports_raw = device_raw.get('ports')
-                if not isinstance(ports_raw, list):
-                    ports_raw = []
-                for port_raw in ports_raw:
-                    try:
-                        device.add_open_port(protocol=port_raw.get('proto'),
-                                             port_id=port_raw.get('port'))
-                        if port_raw.get('service') and port_raw.get('service').get('banner'):
-                            device.banners.append(port_raw.get('service').get('banner'))
-                    except Exception:
-                        logger.exception(f'Problem with port raw {port_raw}')
-                device.set_raw(device_raw)
+                    logger.exception(f'Problem getting last seen for {device_raw_list}')
+                device.last_seen = last_seen
+                for device_raw in device_raw_list:
+                    ports_raw = device_raw.get('ports')
+                    if not isinstance(ports_raw, list):
+                        ports_raw = []
+                    for port_raw in ports_raw:
+                        try:
+                            device.add_open_port(protocol=port_raw.get('proto'),
+                                                 port_id=port_raw.get('port'))
+                            if port_raw.get('service') and port_raw.get('service').get('banner'):
+                                device.banners.append(port_raw.get('service').get('banner'))
+                        except Exception:
+                            logger.exception(f'Problem with port raw {port_raw}')
+                device.set_raw({'ips_list': device_raw_list})
                 yield device
             except Exception:
                 logger.exception(f'Problem adding device')

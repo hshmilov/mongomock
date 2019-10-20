@@ -183,23 +183,17 @@ class ScannerCorrelatorBase(object):
         # if a scanner has a hostname or macs this will act as its ID
         my_macs = set(extract_all_macs(parsed_device['data'].get('network_interfaces')))
         hostname = get_hostname(parsed_device)
-
-        parsed_device_copy = copy.deepcopy(parsed_device)  # Deepcopy to prevent changes on parsed device
-        parsed_device_copy = normalize_adapter_device(parsed_device_copy)
-        self_correlation = self._find_correlation_with_self(parsed_device_copy)
-        if self_correlation:
-            # Case "A": The device has been found to be the same as a previous result
-            # meaning that it should get an `id` but not a "correlate" field
-            _, self_correlation_id = self_correlation
-            parsed_device['data']['id'] = self_correlation_id
-            return None
-
         # generate a fake id
         if parsed_device['data'].get('id'):
             device_has_id = True
         else:
             device_has_id = False
             parsed_device['data']['id'] = uuid.uuid4().hex
+        if hostname and device_has_id:
+            return None
+
+        parsed_device_copy = copy.deepcopy(parsed_device)  # Deepcopy to prevent changes on parsed device
+        parsed_device_copy = normalize_adapter_device(parsed_device_copy)
 
         remote_correlation = self._find_correlation_with_real_adapter(parsed_device_copy)
         if remote_correlation:

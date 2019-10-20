@@ -22,7 +22,6 @@ class Maas360Adapter(AdapterBase):
         installed_date = Field(datetime.datetime, 'Installed Date')
         custom_asset_number = Field(str, 'Custom Asset Number')
         device_owner = Field(str, 'Device Owner')
-        email = Field(str, 'Email Address')
         mdm_device_type = Field(str, 'Maas360 Device Type')
         device_status = Field(str, 'Device Status')
         maas_status = Field(str, 'Maas360 Managed Status')

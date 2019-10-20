@@ -22,6 +22,8 @@ MAX_ROWS_FLOOD_NUM = 1000000
 class CaCmdbAdapter(AdapterBase, Configurable):
     class MyDeviceAdapter(DeviceAdapter):
         device_type = Field(str, 'Device Type')
+        is_active = Field(bool, 'Is Active')
+        asset_status = Field(str, 'Asset Lifecycle Status')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -98,7 +100,9 @@ class CaCmdbAdapter(AdapterBase, Configurable):
                                 'serial_number',  # serial number
                                 'family.sym',  # what type of device it is
                                 'name',  # asset name as its listed in SDM
-                                'alarm_id',  # ip address
+                                'alarm_id',  # ip address,
+                                'delete_flag',  # active
+                                'asset_lifecycle_status.name',  # Asset Lifecycle Status
                             ]
                         }
                     )
@@ -168,7 +172,7 @@ class CaCmdbAdapter(AdapterBase, Configurable):
             'type': 'array'
         }
 
-    def _create_device(self, device_raw, ca_cmdb_white_list=None):
+    def _create_device(self, device_raw, ca_cmdb_white_list=None, ca_cmdb_lifecycle_white_list=None):
         try:
             device = self._new_device_adapter()
             device_id = device_raw.get('serial_number')
@@ -179,9 +183,18 @@ class CaCmdbAdapter(AdapterBase, Configurable):
             device.name = device_raw.get('name')
             device.device_serial = device_raw.get('serial_number')
             device_type = device_raw.get('family.sym')
+            is_active = device_raw.get('delete_flag') == '0'
+            device.is_active = is_active
+            if self.__fetch_only_active_device is True and is_active is not True:
+                return None
             device.device_type = device_type
+            asset_status = device_raw.get('asset_lifecycle_status.name')
+            device.asset_status = asset_status
             if ca_cmdb_white_list and isinstance(ca_cmdb_white_list, list) \
                     and (not device_type or device_type not in ca_cmdb_white_list):
+                return None
+            if ca_cmdb_lifecycle_white_list and isinstance(ca_cmdb_lifecycle_white_list, list) \
+                    and (not asset_status or asset_status not in ca_cmdb_lifecycle_white_list):
                 return None
             if device_raw.get('alarm_id') and device_raw.get('alarm_id').strip().lower() not in ['test',
                                                                                                  'dhcp',
@@ -197,7 +210,8 @@ class CaCmdbAdapter(AdapterBase, Configurable):
 
     def _parse_raw_data(self, devices_raw_data):
         for device_raw in devices_raw_data:
-            device = self._create_device(device_raw, ca_cmdb_white_list=self.__ca_cmdb_white_list)
+            device = self._create_device(device_raw, ca_cmdb_white_list=self.__ca_cmdb_white_list,
+                                         ca_cmdb_lifecycle_white_list=self.__ca_cmdb_lifecycle_white_list)
             if device:
                 yield device
 
@@ -213,9 +227,19 @@ class CaCmdbAdapter(AdapterBase, Configurable):
                     'name': 'ca_cmdb_white_list',
                     'type': 'string',
                     'title': 'CA CMDB Device Type Whitelist'
+                },
+                {
+                    'name': 'ca_cmdb_lifecycle_white_list',
+                    'title': 'CA CMDB Asset Lifecycle Whitelist',
+                    'type': 'string'
+                },
+                {
+                    'name': 'fetch_only_active_device',
+                    'title': 'Fetch Only Active Devices',
+                    'type': 'bool'
                 }
             ],
-            'required': [],
+            'required': ['fetch_only_active_device'],
             'pretty_name': 'CA CMDB Configuration',
             'type': 'array'
         }
@@ -223,9 +247,14 @@ class CaCmdbAdapter(AdapterBase, Configurable):
     @classmethod
     def _db_config_default(cls):
         return {
-            'ca_cmdb_white_list': None
+            'ca_cmdb_white_list': None,
+            'ca_cmdb_lifecycle_white_list': None,
+            'fetch_only_active_device': True
         }
 
     def _on_config_update(self, config):
         self.__ca_cmdb_white_list = config.get('ca_cmdb_white_list').split(',') \
             if config.get('ca_cmdb_white_list') else None
+        self.__ca_cmdb_lifecycle_white_list = config.get('ca_cmdb_lifecycle_white_list').split(',') \
+            if config.get('ca_cmdb_lifecycle_white_list') else None
+        self.__fetch_only_active_device = config.get('fetch_only_active_device')

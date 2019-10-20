@@ -159,10 +159,13 @@ class ClearpassAdapter(AdapterBase, Configurable):
                     logger.exception(f'Problem adding extend info for {device_raw}')
                 try:
                     if not last_seen:
-                        device.last_seen = parse_date(extended_info.get('updated_at'))
+                        last_seen = parse_date(extended_info.get('updated_at'))
+                        device.last_seen = last_seen
                 except Exception:
                     logger.exception(f'Problem with last seen at {device_raw}')
                 device.is_online = extended_info.get('is_online')
+            if self.__drop_no_last_seen is True and not last_seen:
+                return None
             device.set_raw(device_raw)
             return device
         except Exception:
@@ -214,6 +217,11 @@ class ClearpassAdapter(AdapterBase, Configurable):
                     'name': 'get_extended_info',
                     'title': 'Get Extended Agent Information',
                     'type': 'bool'
+                },
+                {
+                    'name': 'drop_no_last_seen',
+                    'title': 'Do not fetch Devices without Last Seen',
+                    'type': 'bool'
                 }
             ],
             'required': [
@@ -226,8 +234,10 @@ class ClearpassAdapter(AdapterBase, Configurable):
     @classmethod
     def _db_config_default(cls):
         return {
-            'get_extended_info': True
+            'get_extended_info': True,
+            'drop_no_last_seen': False
         }
 
     def _on_config_update(self, config):
         self.__get_extended_info = config['get_extended_info']
+        self.__drop_no_last_seen = config['drop_no_last_seen']

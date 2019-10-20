@@ -318,6 +318,18 @@ class StaticUserCorrelatorEngine(CorrelatorEngineBase):
                                       {'Reason': 'They have the same AD display name'},
                                       CorrelationReason.StaticAnalysis)
 
+    def _correlate_username_domain(self, entities):
+        logger.info('Starting to correlate on Username Domain')
+        filtered_adapters_list = filter(get_username, entities)
+        filtered_adapters_list = filter(get_user_domain, filtered_adapters_list)
+        return self._bucket_correlate(list(filtered_adapters_list),
+                                      [get_username],
+                                      [compare_username],
+                                      [],
+                                      [domain_do_not_contradict],
+                                      {'Reason': 'They have the username and domain'},
+                                      CorrelationReason.StaticAnalysis)
+
     def _correlate_ad_display_name_username(self, entities):
         """
         Correlate Azure AD and AD
@@ -340,5 +352,6 @@ class StaticUserCorrelatorEngine(CorrelatorEngineBase):
         yield from self._correlate_ad_display_name_username(normalize_adapter_users(entities))
         yield from self._correlate_aws_username_mail(normalize_adapter_users(entities))
         yield from self._correlate_username_aws(normalize_adapter_users(entities))
+        yield from self._correlate_username_domain(normalize_adapter_users(entities))
         if self._correlation_config and self._correlation_config.get('email_prefix_correlation') is True:
             yield from self._correlate_email_prefix(normalize_adapter_users(entities))

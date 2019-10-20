@@ -230,6 +230,8 @@ class TenableIoAdapter(ScannerAdapterBase, Configurable):
                 see_also = None
                 if plugin_id:
                     plugin_data = client_data.get_plugin_info(plugin_id)
+                    if not plugin_data:
+                        plugin_data = []
                 try:
                     for attribute_plugin in plugin_data:
                         try:
