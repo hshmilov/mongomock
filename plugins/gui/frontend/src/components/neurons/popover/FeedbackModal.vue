@@ -94,6 +94,7 @@
         this.handleSave().then(() => {
           this.status.processing = false
           this.status.success = true
+
           setTimeout(() => {
             this.$emit('change', false)
             setTimeout(() => {

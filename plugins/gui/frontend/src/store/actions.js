@@ -42,6 +42,7 @@ export const requestApi = ({commit}, payload) => {
 	if (!payload.method) payload.method = 'GET'
 
 	let request_config = {method: payload.method, url: `${host}/api/${payload.rule}`}
+
 	if (payload.data) request_config['data'] = payload.data
 	if (payload.binary) request_config['responseType'] = 'arraybuffer'
 	return new Promise((resolve, reject) => axios(request_config)

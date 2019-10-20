@@ -32,6 +32,8 @@
 
   import {mapActions} from 'vuex'
   import {SAVE_DATA_VIEW} from '../../../../store/actions'
+  import { SET_GETTING_STARTED_MILESTONE_COMPLETION } from '../../../../store/modules/onboarding';
+  import { SAVE_QUERY } from '../../../../constants/getting-started'
 
   export default {
     name: 'XSaveModal',
@@ -65,7 +67,8 @@
     },
     methods: {
       ...mapActions({
-        saveView: SAVE_DATA_VIEW
+        saveView: SAVE_DATA_VIEW,
+        milestoneCompleted: SET_GETTING_STARTED_MILESTONE_COMPLETION,
       }),
       close () {
         this.$emit('close')
@@ -77,7 +80,12 @@
           module: this.module,
           name: this.name,
           uuid: this.isEdit? this.view.uuid : null
-        }).then(() => this.close())
+        }).then(() => {
+          if (this.module === 'devices') {
+            this.milestoneCompleted({ milestoneName: SAVE_QUERY })
+          }
+          this.close()
+          })
       }
     }
   }

@@ -123,6 +123,8 @@ SPECIFIC_DATA = 'specific_data'
 ADAPTERS_DATA = 'adapters_data'
 PROXY_ERROR_MESSAGE = 'Bad proxy settings or no internet connection'
 
+GETTING_STARTED_CHECKLIST_SETTING = 'getting_started_checklist'
+
 
 class FeatureFlagsNames:
     TrialEnd = 'trial_end'

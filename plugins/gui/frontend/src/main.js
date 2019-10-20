@@ -4,7 +4,7 @@ import router from './router/index'
 import store from './store/index'
 import App from './components/App.vue'
 import {
-	MdSwitch, MdDatepicker, MdField, MdIcon, MdButton, MdDialog, MdCard, MdList, MdChips, MdCheckbox, MdMenu, MdProgress, MdDivider
+	MdSwitch, MdDatepicker, MdField, MdIcon, MdButton, MdDialog, MdCard, MdList, MdChips, MdCheckbox, MdMenu, MdProgress, MdDivider, MdDrawer,
 } from 'vue-material/dist/components'
 Vue.use(MdSwitch)
 Vue.use(MdDatepicker)
@@ -19,6 +19,7 @@ Vue.use(MdCheckbox)
 Vue.use(MdMenu)
 Vue.use(MdProgress)
 Vue.use(MdDivider)
+Vue.use(MdDrawer)
 
 import 'vue-svgicon/dist/polyfill'
 import * as svgicon from 'vue-svgicon'

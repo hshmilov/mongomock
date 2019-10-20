@@ -65,7 +65,7 @@ from axonius.consts.gui_consts import (ADAPTERS_DATA, ENCRYPTION_KEY_PATH,
                                        DASHBOARD_COLLECTION, DASHBOARD_SPACES_COLLECTION,
                                        DASHBOARD_SPACE_PERSONAL, DASHBOARD_SPACE_TYPE_CUSTOM,
                                        Signup, PROXY_DATA_PATH, DASHBOARD_LIFECYCLE_ENDPOINT,
-                                       UNCHANGED_MAGIC_FOR_GUI)
+                                       UNCHANGED_MAGIC_FOR_GUI, GETTING_STARTED_CHECKLIST_SETTING)
 from axonius.consts.metric_consts import ApiMetric, Query, SystemMetric
 from axonius.consts.plugin_consts import (AGGREGATOR_PLUGIN_NAME,
                                           AXONIUS_USER_NAME,
@@ -1128,6 +1128,53 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
                 # Unlink all adapters except the last
                 self.unlink_adapter(entity_type, adapter[PLUGIN_UNIQUE_NAME], adapter['data']['id'])
 
+        return ''
+
+    ##############################
+    # Getting Started Checklist #
+    ##############################
+
+    @gui_add_rule_logged_in('getting_started', methods=['GET'],
+                            required_permissions={Permission(PermissionType.Settings,
+                                                             PermissionLevel.ReadWrite)})
+    def get_getting_started_data(self):
+        """
+        Fetch the Getting Started checklist state from db
+        """
+        data = self._get_collection('getting_started').find({})
+        return jsonify(data)
+
+    @gui_add_rule_logged_in('getting_started/completion', methods=['POST'])
+    def getting_started_set_milestone_completion(self):
+        """
+        Check an item in the Getting Started checklist as done.
+        """
+        milestone_name = self.get_request_data_as_object().get('milestoneName', '')
+
+        self._get_collection('getting_started').update_one({}, {
+            '$set': {
+                'milestones.$[element].completed': True,
+                'milestones.$[element].user_id': gui_helpers.get_connected_user_id(),
+                'milestones.$[element].completionDate': datetime.now()
+            }
+        }, array_filters=[{'element.name': milestone_name}])
+        return ''
+
+    @gui_add_rule_logged_in('getting_started/settings', methods=['POST'],
+                            required_permissions={Permission(PermissionType.Settings,
+                                                             PermissionLevel.ReadWrite)})
+    def getting_started_update_settings(self):
+        """
+        Update the value of the checklist autoOpen setting.
+        """
+        settings = self.get_request_data_as_object().get('settings', {})
+        auto_open = settings.get('autoOpen', False)
+
+        self._get_collection('getting_started').update_one({}, {
+            '$set': {
+                'settings.autoOpen': auto_open
+            }
+        })
         return ''
 
     ##########
@@ -2692,7 +2739,8 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
                 'mail': self._email_settings['enabled'] if self._email_settings else False,
                 'syslog': self._syslog_settings['enabled'] if self._syslog_settings else False,
                 'httpsLog': self._https_logs_settings['enabled'] if self._https_logs_settings else False,
-                'jira': self._jira_settings['enabled'] if self._jira_settings else False
+                'jira': self._jira_settings['enabled'] if self._jira_settings else False,
+                'gettingStartedEnabled': self._getting_started_settings['enabled'],
             }
         })
 
@@ -5384,6 +5432,23 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
                     (datetime.now() + timedelta(days=30)).isoformat()[:10].replace('-', '/')
             }
         })
+
+        # Reset this setting for new (version > 2.11) customers upon signup (Getting Started With Axonius Checklist)
+        self._get_collection(CONFIGURABLE_CONFIGS_COLLECTION, CORE_UNIQUE_NAME).update_one({
+            'config_name': CORE_CONFIG_NAME
+        }, {
+            '$set': {
+                f'config.{GETTING_STARTED_CHECKLIST_SETTING}.enabled': True
+            }
+        })
+
+        # Update Getting Started Checklist to interactive mode (version > 2.10)
+        self._get_collection('getting_started', GUI_PLUGIN_NAME).update_one({}, {
+            '$set': {
+                'settings.interactive': True
+            }
+        })
+        self._getting_started_settings['enabled'] = True
         return jsonify({})
 
     @gui_helpers.add_rule_unauth('provision')

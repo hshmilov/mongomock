@@ -5,7 +5,7 @@
       <md-switch
         v-model="showOnlyConfigured"
         class="md-primary"
-        >Configured Only ({{configuredAfaptersCount}})</md-switch>
+        >Configured Only ({{configuredAdaptersCount}})</md-switch>
     </div>
     <div class="adapters-table">
       <table class="table">
@@ -17,7 +17,7 @@
           </tr>
         </thead>
         <tbody>
-          <tr v-for="item in filteredData" @click="configAdapter(item['id'])" class="table-row">
+          <tr v-for="item in filteredData" @click="configAdapter(item['id'])" class="table-row" :key="item.id">
             <td class="status">
               <div class="symbol">
                   <div v-if="item.successClients" class="status_success">
@@ -52,11 +52,16 @@
 
     import {mapState, mapMutations, mapActions} from 'vuex'
     import {FETCH_ADAPTERS} from '../../store/modules/adapters'
-    import {CHANGE_TOUR_STATE} from '../../store/modules/onboarding'
+    import { CONNECT_ADAPTERS } from '../../constants/getting-started'
+    import { SET_GETTING_STARTED_MILESTONE_COMPLETION } from '../../store/modules/onboarding';
 
     function getConfiguredAdapters(adapter) {
         // configured adapter is one that has at least 1 client configured
         return adapter.clients.length
+    }
+
+    function getConnectedAdapters(adapter) {
+        return adapter.successClients.length
     }
 
     export default {
@@ -66,9 +71,6 @@
             ...mapState({
                 adaptersData(state) {
                     return state.adapters.adapters.data
-                },
-                tourAdapters(state) {
-                    return state.onboarding.tourStates.queues.adapters
                 }
             }),
             filteredData() {
@@ -82,9 +84,9 @@
                 }
                 return res
             },
-            configuredAfaptersCount() {
+            configuredAdaptersCount() {
                 return this.filteredData.filter(getConfiguredAdapters).length
-            }
+            },
         },
         data() {
             return {
@@ -93,20 +95,30 @@
             }
         },
         methods: {
-            ...mapMutations({changeState: CHANGE_TOUR_STATE}),
-            ...mapActions({fetchAdapters: FETCH_ADAPTERS}),
+            ...mapActions({fetchAdapters: FETCH_ADAPTERS, milestoneCompleted: SET_GETTING_STARTED_MILESTONE_COMPLETION}),
             configAdapter(adapterId) {
                 /*
                     Fetch adapters requested to be configured asynchronously, before navigating to the
                     configuration page, so it will return meanwhile
                  */
                 this.$router.push({path: `adapters/${adapterId}`})
+            },
+            notifyIfMilestoneCompleted() {
+                if (this.filteredData.filter(getConnectedAdapters).length >= 3) {
+                    this.milestoneCompleted({ milestoneName: CONNECT_ADAPTERS})
+                }
+            }
+        },
+        watch: {
+            configuredAdaptersCount: function (value) {
+                this.notifyIfMilestoneCompleted()
             }
         },
         created() {
-            this.fetchAdapters().then(() => {
-                this.changeState({name: this.tourAdapters[0]})
-            })
+            this.fetchAdapters()
+        },
+        mounted() {
+            this.notifyIfMilestoneCompleted()
         }
     }
 </script>

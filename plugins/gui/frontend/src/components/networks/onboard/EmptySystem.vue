@@ -5,34 +5,30 @@
         <div class="content">Congratulations! You are one step closer to<br>having all your assets visible in one place.
         </div>
         <div class="footer">
-            <x-button @click="onClickTour">SHOW ME HOW</x-button>
+            <x-button v-if="isUserAdmin" @click="openGettingStarted">SHOW ME HOW</x-button>
         </div>
     </div>
 </template>
 
 <script>
+    import { mapGetters } from 'vuex'
     import xButton from '../../axons/inputs/Button.vue'
+    import { GettingStartedPubSub } from '../../App.vue'
 
-    import {mapMutations} from 'vuex'
-    import {START_TOUR, CHANGE_TOUR_STATE, STOP_TOUR} from '../../../store/modules/onboarding'
+    import { IS_USER_ADMIN } from '../../../store/modules/auth'
 
     export default {
         name: 'x-empty-system',
         components: {xButton},
-        data() {
-            return {
-                isActive: true
-            }
+        computed: {
+            ...mapGetters({
+                isUserAdmin: IS_USER_ADMIN,
+            }),
         },
         methods: {
-            ...mapMutations({initTourState: START_TOUR, changeState: CHANGE_TOUR_STATE, stopTour: STOP_TOUR}),
-            onClickTour() {
-                this.isActive = false
-                this.initTourState()
+            openGettingStarted() {
+                GettingStartedPubSub.$emit('getting-started-open-state')
             }
-        },
-        created() {
-            this.changeState({name: ''})
         }
     }
 </script>

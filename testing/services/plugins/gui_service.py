@@ -75,7 +75,9 @@ class GuiService(PluginService, UpdatablePluginMixin):
             self._update_schema_version_17()
         if self.db_schema_version < 18:
             self._update_schema_version_18()
-        if self.db_schema_version != 18:
+        if self.db_schema_version < 19:
+            self._update_schema_version_19()
+        if self.db_schema_version != 19:
             print(f'Upgrade failed, db_schema_version is {self.db_schema_version}')
 
     def _update_schema_version_1(self):
@@ -596,6 +598,112 @@ class GuiService(PluginService, UpdatablePluginMixin):
             self.db_schema_version = 18
         except Exception as e:
             print(f'Exception while upgrading gui db to version 18. Details: {e}')
+
+    def _update_schema_version_19(self):
+        """
+        For version 2.11, add Getting Started With Axonius collection to db.
+        """
+        print('Upgrade to schema 19')
+        try:
+            self.db.get_collection(GUI_PLUGIN_NAME, 'getting_started').insert_one(
+                {
+                    'settings': {
+                        'autoOpen': False,
+                        'interactive': False
+                    },
+                    'milestones': [
+                        {
+                            'name': 'connect_adapters',
+                            'title': 'Connect adapters',
+                            'completed': False,
+                            'completionDate': None,
+                            'path': '/adapters',
+                            'link': 'https://docs.axonius.com/docs/connect-adapters',
+                            'description': 'You can collect and correlate information '
+                                           'about your assets by using Axonius\' '
+                                           'adapters, which integrate with a wide array of security and IT '
+                                           'management solutions.\n\nGo to the Adapters screen to connect at '
+                                           'least three adapters to fetch data for your devices '
+                                           'and users from at least three different sources.'
+                        },
+                        {
+                            'name': 'examine_device',
+                            'title': 'Examine a device profile',
+                            'completed': False,
+                            'completionDate': None,
+                            'path': '/devices',
+                            'link': 'https://docs.axonius.com/docs/examine-a-device-profile',
+                            'description': 'You can examine the details about your devices by looking '
+                                           'at their profiles, which displays the data that Axonius collected '
+                                           'and correlated from multiple sources.\n\nUse the Devices screen or the '
+                                           'search bar on Axonius Dashboard to search for a device '
+                                           'and examine its profile.'
+                        },
+                        {
+                            'title': 'Save a query',
+                            'completed': False,
+                            'path': '/devices',
+                            'link': 'https://docs.axonius.com/docs/save-a-query',
+                            'description': 'You can identify security gaps by running and '
+                                           'saving a query about your assets.\n\nUse the Query '
+                                           'Wizard on the Devices screen to create a query, '
+                                           'then save it so you can easily access it in the future.'
+                        },
+                        {
+                            'name': 'device_tag',
+                            'title': 'Tag a device',
+                            'completed': False,
+                            'completionDate': None,
+                            'path': '/devices',
+                            'link': 'https://docs.axonius.com/docs/tag-a-device',
+                            'description': 'You can tag a single asset or a group of '
+                                           'assets that share common characteristics. Use tags to assign '
+                                           'context to your assets for granular filters and queries.\n\n '
+                                           'Go to the Devices screen, tag a few devices with shared '
+                                           'characteristics, then issue a query that includes the new tag.'
+                        },
+                        {
+                            'name': 'enforcement_executed',
+                            'title': 'Create and execute an enforcement set',
+                            'completed': False,
+                            'completionDate': None,
+                            'path': '/enforcements',
+                            'link': 'https://docs.axonius.com/docs/create-and-execute-an-enforcement-set',
+                            'description': 'You can take action on the identified security gaps '
+                                           'by defining Enforcement Sets in the Axonius Security Policy '
+                                           'Enforcement Center.\n\nGo to the Enforcement Center screen '
+                                           'to create and execute an Enforcement Set.'
+                        },
+                        {
+                            'name': 'dashboard_created',
+                            'title': 'Create a dashboard chart',
+                            'completed': False,
+                            'completionDate': None,
+                            'path': '/',
+                            'link': 'https://docs.axonius.com/docs/create-a-dashboard-chart',
+                            'description': 'You can customize the Axonius Dashboard with charts that '
+                                           'track the relevant metrics and show immediate insights based '
+                                           'on your saved queries.\n\nGo to the Axonius Dashboard, and add '
+                                           'a chart to a new custom space.'
+                        },
+                        {
+                            'name': 'report_generated',
+                            'title': 'Generate a report',
+                            'completed': False,
+                            'completionDate': None,
+                            'path': '/reports',
+                            'link': 'https://docs.axonius.com/docs/generate-a-report',
+                            'description': 'You can generate a PDF document to share dashboards '
+                                           'and query results in an executive-friendly format.\n\n '
+                                           'Go to the Reports screen, and create a report based on '
+                                           'the query you saved earlier.'
+                        }
+                    ]
+                }
+            )
+            self.db_schema_version = 19
+        except Exception as e:
+            print(f'Exception while upgrading gui db to version 19. Details: {e}')
 
     def _update_default_locked_actions(self, new_actions):
         """

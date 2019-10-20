@@ -144,24 +144,6 @@
           content="In order to create a Jira incident, configure it under settings"
           @dismiss="dismissEmptySetting('jira')"
         />
-
-      </li>
-      <li class="nav-item">
-        <a
-          class="item-link"
-          @click="startTourOnClick"
-        >
-          <svg-icon
-            name="action/help"
-            :original="true"
-            height="20"
-          />
-        </a>
-        <x-tip-info
-          v-if="activateTourTip"
-          content="You can always start the tour again here"
-          @dismiss="activateTourTip = false"
-        />
       </li>
     </ul>
   </header>
@@ -174,7 +156,7 @@
 
   import { mapState, mapGetters, mapMutations, mapActions } from 'vuex'
   import { FETCH_LIFECYCLE } from '../../../store/modules/dashboard'
-  import { UPDATE_EMPTY_STATE, START_TOUR } from '../../../store/modules/onboarding'
+  import { UPDATE_EMPTY_STATE } from '../../../store/modules/onboarding'
   import {IS_EXPIRED} from '../../../store/getters'
   import { TOGGLE_SIDEBAR } from '../../../store/mutations'
   import { START_RESEARCH_PHASE, STOP_RESEARCH_PHASE, FETCH_DATA_FIELDS } from '../../../store/actions'
@@ -188,7 +170,6 @@
     data () {
       return {
         isDown: false,
-        activateTourTip: false,
         researchStatusLocal: ''
       }
     },
@@ -202,9 +183,6 @@
         },
         researchStatus (state) {
           return state.dashboard.lifecycle.data.status
-        },
-        tourActive (state) {
-          return state.onboarding.tourStates.active
         },
         isSettingsRestricted (state) {
           let user = state.auth.currentUser.data
@@ -225,13 +203,6 @@
       }),
       anyEmptySettings () {
         return Object.values(this.emptySettings).find(value => value)
-      }
-    },
-    watch: {
-      tourActive (isActiveNow) {
-        if (!isActiveNow) {
-          this.activateTourTip = true
-        }
       }
     },
     mounted () {
@@ -259,7 +230,7 @@
     },
     methods: {
       ...mapMutations({
-        toggleSidebar: TOGGLE_SIDEBAR, updateEmptyState: UPDATE_EMPTY_STATE, initTourState: START_TOUR
+        toggleSidebar: TOGGLE_SIDEBAR, updateEmptyState: UPDATE_EMPTY_STATE,
       }),
       ...mapActions({
         fetchLifecycle: FETCH_LIFECYCLE,
@@ -268,10 +239,6 @@
         fetchDataFields: FETCH_DATA_FIELDS
 
       }),
-      startTourOnClick(){
-        this.$ga.event('tour', 'start', '', 1)
-        this.initTourState()
-      },
       startResearchNow () {
         this.$ga.event('research', 'start-now', '', 1)
         this.researchStatusLocal = 'starting'

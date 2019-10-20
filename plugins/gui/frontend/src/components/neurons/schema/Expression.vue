@@ -86,7 +86,6 @@
   import { nestedExpression } from '../../../constants/filter'
 
   import {mapGetters, mapMutations} from 'vuex'
-  import { CHANGE_TOUR_STATE } from '../../../store/modules/onboarding'
   import { AUTO_QUERY } from "../../../store/getters"
   import { calcMaxIndex, getExcludedAdaptersFilter } from '../../../constants/utils'
 
@@ -170,19 +169,7 @@
           .join(' and ')
       }
     },
-    updated () {
-      if (this.first) {
-        if (this.expression.field && this.expression.compOp && !this.expression.value) {
-          this.changeState({ name: 'queryValue' })
-        } else if (this.expression.field && !this.expression.compOp) {
-          this.changeState({ name: 'queryOp' })
-        }
-      }
-    },
     methods: {
-      ...mapMutations({
-        changeState: CHANGE_TOUR_STATE
-      }),
       updateExpression (update, compile = true) {
         const isPropUpdated = ([key, value]) => {
           return this.expression[key] === value && (value !== 0 || this.expression[key] === 0)

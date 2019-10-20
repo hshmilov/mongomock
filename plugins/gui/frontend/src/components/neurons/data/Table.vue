@@ -360,14 +360,6 @@
         }
     },
     watch: {
-      loading (newLoading) {
-        if (newLoading) return
-        if (this.data && this.data.length) {
-          this.$emit('data', this.data[0][this.idField])
-        } else {
-          this.$emit('data')
-        }
-      },
       refresh (newRate) {
         if (newRate) {
           this.startRefreshTimeout()

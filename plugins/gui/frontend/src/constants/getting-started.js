@@ -1,0 +1,7 @@
+export const CONNECT_ADAPTERS = 'connect_adapters'
+export const EXAMINE_DEVICE = 'examine_device'
+export const SAVE_QUERY = 'query_saved'
+export const TAG_DEVICE = 'device_tag'
+export const ENFORCEMENT_EXECUTED = 'enforcement_executed'
+export const DASHBOARD_CREATED = 'dashboard_created'
+export const REPORT_GENERATED = 'report_generated'

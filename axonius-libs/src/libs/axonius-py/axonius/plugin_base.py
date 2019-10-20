@@ -51,7 +51,7 @@ from axonius.background_scheduler import LoggedBackgroundScheduler
 from axonius.clients.rest.connection import RESTConnection
 from axonius.consts.adapter_consts import IGNORE_DEVICE
 from axonius.consts.core_consts import CORE_CONFIG_NAME
-from axonius.consts.gui_consts import FEATURE_FLAGS_CONFIG, FeatureFlagsNames
+from axonius.consts.gui_consts import FEATURE_FLAGS_CONFIG, FeatureFlagsNames, GETTING_STARTED_CHECKLIST_SETTING
 from axonius.consts.plugin_consts import (ADAPTERS_LIST_LENGTH,
                                           AGGREGATION_SETTINGS,
                                           AGGREGATOR_PLUGIN_NAME,
@@ -2692,6 +2692,7 @@ class PluginBase(Configurable, Feature, ABC):
         logger.info(f'Loading global config: {config}')
         # pylint: disable=invalid-name
         self._email_settings = config['email_settings']
+        self._getting_started_settings = config[GETTING_STARTED_CHECKLIST_SETTING]
         self._https_logs_settings = config['https_log_settings']
         self._notify_on_adapters = config[NOTIFICATIONS_SETTINGS].get(NOTIFY_ADAPTERS_FETCH)
         self._adapter_errors_mail_address = config[NOTIFICATIONS_SETTINGS].get(ADAPTERS_ERRORS_MAIL_ADDRESS)
@@ -3116,6 +3117,19 @@ class PluginBase(Configurable, Feature, ABC):
                     'type': 'array',
                     'required': []
                 },
+                {
+                    'items': [
+                        {
+                            'name': 'enabled',
+                            'title': 'Enable Getting Started with Axonius Checklist',
+                            'type': 'bool'
+                        },
+                    ],
+                    'name': 'getting_started_checklist',
+                    'title': 'Getting Started with Axonius Settings',
+                    'type': 'array',
+                    'required': ['enabled']
+                },
             ],
             'pretty_name': 'Global Configuration',
             'type': 'array'
@@ -3185,5 +3199,7 @@ class PluginBase(Configurable, Feature, ABC):
                 MAX_WORKERS: 20,
                 SOCKET_READ_TIMEOUT: 5
             },
-
+            'getting_started_checklist': {
+                'enabled': False,
+            },
         }

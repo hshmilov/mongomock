@@ -73,7 +73,6 @@
 
   import {mapState, mapMutations, mapActions} from 'vuex'
   import {SAVE_CUSTOM_DATA, FETCH_DATA_FIELDS} from '../../../../store/actions'
-  import {CHANGE_TOUR_STATE} from '../../../../store/modules/onboarding'
 
   import {pluginMeta} from '../../../../constants/plugin_meta'
   import {guiPluginName, initCustomData} from '../../../../constants/entities'
@@ -162,17 +161,8 @@
         return this.sortedSpecificData[this.sortedSpecificData.length - 1].data
       }
     },
-    mounted() {
-      if (this.module === 'devices') {
-        this.$nextTick(() => {
-          this.changeState({ name: 'adaptersData'})
-        })
-      }
-    },
+
     methods: {
-      ...mapMutations({
-        changeState: CHANGE_TOUR_STATE
-      }),
       ...mapActions({
         saveCustomData: SAVE_CUSTOM_DATA, fetchDataFields: FETCH_DATA_FIELDS,
       }),

@@ -1,5 +1,7 @@
 import { configure } from '@storybook/vue';
 import Vue from 'vue';
+import Vuex from 'vuex'
+
 import 'vue-svgicon/dist/polyfill'
 import * as svgicon from 'vue-svgicon'
 import XButton from '../src/components/axons/inputs/Button';
@@ -8,6 +10,9 @@ import '../src/components/axons/icons'
 import {
   MdSwitch, MdDatepicker, MdField, MdIcon, MdButton, MdDialog, MdCard, MdList, MdChips, MdCheckbox, MdMenu, MdProgress, MdDivider,MdDrawer
 } from 'vue-material/dist/components'
+
+Vue.use(Vuex)
+
 Vue.use(MdSwitch)
 Vue.use(MdDatepicker)
 Vue.use(MdField)

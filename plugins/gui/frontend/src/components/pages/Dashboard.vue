@@ -25,7 +25,6 @@
   } from '../../store/modules/dashboard'
   import { IS_EXPIRED } from '../../store/getters'
   import { SAVE_VIEW } from '../../store/actions'
-  import { CHANGE_TOUR_STATE, NEXT_TOUR_STATE } from '../../store/modules/onboarding'
   import { IS_ENTITY_RESTRICTED, IS_ENTITY_EDITABLE } from '../../store/modules/auth'
   import { mapState, mapGetters, mapMutations, mapActions } from 'vuex'
 
@@ -89,9 +88,6 @@
       clearTimeout(this.timer)
     },
     methods: {
-      ...mapMutations({
-        changeState: CHANGE_TOUR_STATE, nextState: NEXT_TOUR_STATE
-      }),
       ...mapActions({
         fetchDiscoveryData: FETCH_DISCOVERY_DATA,
         fetchDashboardFirstUse: FETCH_DASHBOARD_FIRST_USE,
@@ -113,7 +109,6 @@
       viewsCallback () {
         this.getDashboardData().then(() => {
           if (this._isDestroyed || this.isExpired) return
-          if (!this.isEmptySystem) this.nextState('dashboard')
           let module = 'devices'
           if (this.isEntityRestricted(module)) return
           if (this.devicesViewsList.length && this.devicesViewsList.find((item) => item.name.includes('DEMO'))) return

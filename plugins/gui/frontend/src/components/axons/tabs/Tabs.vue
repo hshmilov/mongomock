@@ -118,9 +118,6 @@ export default {
       this.selectTab(this.$route.hash.slice(1))
     }
   },
-  updated() {
-    this.$emit('updated')
-  },
   methods: {
     selectTab(selectedId) {
       let found = false

@@ -1,4 +1,3 @@
 /* eslint-disable */
-require('./see_all')
 require('./binocular')
-
+require('./see_all')

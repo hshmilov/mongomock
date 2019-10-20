@@ -6,7 +6,6 @@
     :note="note"
     approve-id="chart_save"
     @change="finishNewDashboard"
-    @enter="nextWizardState"
   >
     <h3 v-if="editMode">Edit Dashboard Chart - "{{ panel.data.name }}"</h3>
     <h3 v-else>Create a Dashboard Chart</h3>
@@ -51,7 +50,6 @@
           :views="views"
           :chartView="dashboard.view"
           class="grid-span2"
-          @state="nextWizardState"
           @validate="configValid = $event"
           ref="dashboardRef"
         />
@@ -63,7 +61,6 @@
         id="chart_name"
         v-model="dashboard.name"
         type="text"
-        @input="nameDashboard"
       >
       <div
         v-if="message"
@@ -88,7 +85,9 @@
 
   import { mapMutations, mapActions } from 'vuex'
   import { SAVE_DASHBOARD_PANEL, CHANGE_DASHBOARD_PANEL } from '../../../store/modules/dashboard'
-  import { NEXT_TOUR_STATE, CHANGE_TOUR_STATE, UPDATE_TOUR_STATE } from '../../../store/modules/onboarding'
+  import { SET_GETTING_STARTED_MILESTONE_COMPLETION } from '../../../store/modules/onboarding'
+  import { DASHBOARD_CREATED } from '../../../constants/getting-started'
+
 
   const dashboard = {
     metric: '', view: '', name: '', config: null
@@ -105,6 +104,10 @@
       panel: {
         type: Object,
         default: () => {}
+      },
+      customSpace: {
+        type: Boolean,
+        default: false,
       }
     },
     data () {
@@ -167,11 +170,10 @@
       }
     },
     methods: {
-      ...mapMutations({
-        nextState: NEXT_TOUR_STATE, changeState: CHANGE_TOUR_STATE, updateState: UPDATE_TOUR_STATE
-      }),
       ...mapActions({
-        saveDashboard: SAVE_DASHBOARD_PANEL, changeDashboard: CHANGE_DASHBOARD_PANEL
+        saveDashboard: SAVE_DASHBOARD_PANEL, 
+        changeDashboard: CHANGE_DASHBOARD_PANEL,
+        completeMilestone: SET_GETTING_STARTED_MILESTONE_COMPLETION
       }),
       updateMetric (metric) {
         this.dashboard.metric = metric
@@ -181,9 +183,6 @@
             this.dashboardView = this.availableViews[0]
           }
         })
-      },
-      nameDashboard () {
-        this.changeState({name: 'wizardSave'})
       },
       saveNewDashboard () {
         if (this.panel && this.panel.uuid) {
@@ -195,22 +194,16 @@
         return this.saveDashboard({
           data: this.dashboard,
           space: this.space
-        }).then(response => {
-          if (response.status === 200 && response.data) {
-            this.updateState({
-              name: 'dashboardChart',
-              id: response.data
-            })
-            this.$nextTick(this.nextWizardState)
+        }).then(res => {
+          //complete milestone here
+          if (this.customSpace) {
+            this.completeMilestone({ milestoneName: DASHBOARD_CREATED })
           }
         })
       },
       finishNewDashboard () {
         this.$emit('close')
       },
-      nextWizardState () {
-        this.nextState('dashboardWizard')
-      }
     }
   }
 </script>

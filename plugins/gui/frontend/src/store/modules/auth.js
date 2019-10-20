@@ -33,6 +33,8 @@ export const GET_DEFAULT_ROLE = 'GET_DEFAULT_ROLE'
 export const SET_DEFAULT_ROLE = 'SET_DEFAULT_ROLE'
 export const UPDATE_DEFAULT_ROLE = 'UPDATE_DEFAULT_ROLE'
 
+export const IS_USER_ADMIN = 'IS_USER_ADMIN'
+
 const findEntityTitle = (entityName) => {
   return entities.find(entityType => entityType.name === entityName).title
 }
@@ -47,6 +49,10 @@ export const auth = {
     signup: { fetching: false, data: null, error: '' }
   },
   getters: {
+    [IS_USER_ADMIN] (state) {
+      const user = state.currentUser.data
+      return user.permissions['settings'] === 'ReadWrite' || user.admin
+    },
     [IS_ENTITY_RESTRICTED] (state) {
       return (entity) => {
         if (!entity) return

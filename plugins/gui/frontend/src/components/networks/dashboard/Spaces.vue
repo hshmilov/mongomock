@@ -51,7 +51,7 @@
           v-if="active"
           slot-scope="{ active }"
           :panels="space.panels"
-          @add="() => addNewPanel(space.uuid)"
+          @add="() => addNewPanel(space.uuid, true)"
           @edit="editPanel"
         />
       </x-tab>
@@ -64,6 +64,7 @@
     <x-wizard
       v-if="wizard.active"
       :space="wizard.space"
+      :custom-space="editCustomSpace"
       :panel="wizard.panel"
       @close="closeWizard"
     />
@@ -100,7 +101,8 @@
           active: false,
           space: ''
         },
-        processing: false
+        processing: false,
+        editCustomSpace: false,
       }
     },
     computed: {
@@ -142,7 +144,8 @@
         renameSpace: CHANGE_DASHBOARD_SPACE,
         removeSpace: REMOVE_DASHBOARD_SPACE
       }),
-      addNewPanel (spaceId) {
+      addNewPanel (spaceId, isCustomSpace) {
+        this.editCustomSpace = isCustomSpace
         this.wizard.active = true
         this.wizard.space = spaceId
       },
@@ -150,6 +153,7 @@
         this.wizard.active = false
         this.wizard.space = ''
         this.wizard.panel = null
+        this.editCustomSpace = false
       },
       editPanel (panel) {
         this.wizard.active = true

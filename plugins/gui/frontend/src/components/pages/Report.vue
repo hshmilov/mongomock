@@ -22,7 +22,6 @@
             v-model="report.name"
             :disabled="isReadOnly"
             class="report-name-textbox"
-            @input="tour({name: 'reportsSchedule'})"
             @keyup="onNameChanged"
           >
           <input
@@ -224,11 +223,12 @@
   import {SHOW_TOASTER_MESSAGE, REMOVE_TOASTER} from '../../store/mutations'
 
   import { mapState, mapMutations, mapActions } from 'vuex'
-  import { CHANGE_TOUR_STATE } from '../../store/modules/onboarding'
   import {
     FETCH_REPORT, SAVE_REPORT, RUN_REPORT, DOWNLOAD_REPORT
   } from '../../store/modules/reports'
   import { FETCH_DASHBOARD_SPACES } from '../../store/modules/dashboard'
+  import { SET_GETTING_STARTED_MILESTONE_COMPLETION } from '../../store/modules/onboarding';
+  import { REPORT_GENERATED } from '../../constants/getting-started'
 
   export default {
     name: 'XReport',
@@ -426,17 +426,17 @@
       if (this.$refs.name) {
         this.$refs.name.focus()
       }
-      this.tour({name: 'reportsName'})
     },
     methods: {
       ...mapMutations({
-        tour: CHANGE_TOUR_STATE, showToasterMessage: SHOW_TOASTER_MESSAGE,
-        removeToaster: REMOVE_TOASTER
+        showToasterMessage: SHOW_TOASTER_MESSAGE,
+        removeToaster: REMOVE_TOASTER,
       }),
       ...mapActions({
         fetchReport: FETCH_REPORT, saveReport: SAVE_REPORT,
         runReport: RUN_REPORT, downloadReport: DOWNLOAD_REPORT,
-        fetchDashboard: FETCH_DASHBOARD_SPACES
+        fetchDashboard: FETCH_DASHBOARD_SPACES,
+        milestoneCompleted: SET_GETTING_STARTED_MILESTONE_COMPLETION,
       }),
       initData () {
         if (this.reportData && this.reportData.name) {
@@ -501,7 +501,6 @@
         setTimeout(() => {
           if (this.report.add_scheduling) {
             this.$refs.mail_ref.validate()
-            this.tour({name: 'reportsMails'})
           } else {
             this.removeEmailValidations();
           }
@@ -551,6 +550,7 @@
         this.showToaster('Saving the report...', this.toastTimeout)
         this.saveReport(this.report).then(
                 () => {
+                  this.milestoneCompleted({ milestoneName: REPORT_GENERATED })
                   this.showToaster('Report is saved and being generated in the background', this.toastTimeout)
                   this.exit()
                 }

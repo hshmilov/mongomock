@@ -1,21 +1,21 @@
 <template>
   <div class="x-milestone">
-    <span class="x-milestone-status">
-      <i v-if="completed" class="material-icons" style="color: #0FBC18;">check_circle</i>
-      <i v-else class="material-icons" style="color: #efefef;">radio_button_unchecked</i>
+    <span v-if="interactive" class="x-milestone-status">
+      <md-icon v-if="completed" style="color: #0FBC18;">check_circle</md-icon>
+      <md-icon v-else style="color: #efefef;">radio_button_unchecked</md-icon>
     </span>
     <div class="x-miestone_container">
       <section class="x-milestone_header">
         <h5 class="x-milestone_header_title">{{title}}</h5>
         <div class="x-milestone_header_actions">
           <span v-if="description" class="x-milestone_expand" @click="toggleExpantionPanel">
-            <i v-if="expand" class="material-icons">keyboard_arrow_down</i>
-            <i v-else class="material-icons">keyboard_arrow_up</i>
+            <md-icon v-if="expand">keyboard_arrow_down</md-icon>
+            <md-icon v-else>keyboard_arrow_up</md-icon>
           </span>
           <x-button
             v-if="interactive"
             class="x-milestone_action"
-            @click="goToDocsPage"
+            @click="goToMilestoneRelatedPage"
             :disabled="completed"
           >{{buttonText}}</x-button>
         </div>
@@ -23,7 +23,7 @@
       <X-transition-expand>
         <div v-if="expand">
           <p class="x-milestone_content">{{description}}</p>
-          <x-button v-if="link" @click="goToMilestoneRelatedPage" link>Learn More.</x-button>
+          <x-button v-if="link" @click="goToDocsPage" link>Learn more</x-button>
         </div>
       </X-transition-expand>
     </div>
@@ -31,8 +31,8 @@
 </template>
 
 <script>
-import XButton from '../../axons/inputs/Button'
-import XTransitionExpand from '../../transitions/TransitionExpand'
+import XButton from '../../axons/inputs/Button.vue'
+import XTransitionExpand from '../../transitions/TransitionExpand.vue'
 
 export default {
     components: { XButton, XTransitionExpand },
@@ -72,13 +72,14 @@ export default {
     },
     methods: {
         goToDocsPage() {
-            // redirect in the platform to the designated page for this milestone
+            window.open(this.link, '_blank')
         },
         toggleExpantionPanel() {
             this.expand = !this.expand
         },
         goToMilestoneRelatedPage() {
-            // redirect to the docs
+            // redirect in the platform to the designated page for this milestone
+            this.$router.push({ path: this.path })
         }
     }
 }
@@ -142,6 +143,7 @@ export default {
             word-wrap: break-word;
             max-width: 100%;
             white-space: pre-line;
+            font-weight: 300;
         }
     }
 </style>

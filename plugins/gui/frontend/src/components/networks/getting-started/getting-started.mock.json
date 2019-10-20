@@ -1,67 +1,69 @@
 {
-    "data": [
+    "settings": {
+        "autoOpen": false,
+        "interactive": false
+    },
+    "milestones": [
         {
-            "title": "Connect Adapters",
-            "completed": true,
-            "path": "adapters",
-            "link": "https://www.google.com",
+            "name": "connect_adapters",
+            "title": "Connect שdapters",
+            "completed": false,
+            "completionDate": null,
+            "path": "/adapters",
+            "link": "https://docs.axonius.com/docs/connect-adapters",
             "description": "You can collect and correlate information about your assets by using Axonius' adapters, which integrate with a wide array of security and IT management solutions.\n\nGo to the Adapters screen to connect at least three adapters to fetch data for your devices and users from at least three different sources."
         },
         {
+            "name": "examine_device",
             "title": "Examine a device profile",
             "completed": false,
-            "path": "devices",
-            "link": "https://www.google.com",
+            "completionDate": null,
+            "path": "/devices",
+            "link": "https://docs.axonius.com/docs/examine-a-device-profile",
             "description": "You can examine the details about your devices by looking at their profiles, which displays the data that Axonius collected and correlated from multiple sources.\n\nUse the Devices screen or the search bar on Axonius Dashboard to search for a device and examine its profile."
         },
         {
             "title": "Save a query",
             "completed": false,
-            "path": "adapters",
-            "link": "https://www.google.com",
+            "path": "/devices",
+            "link": "https://docs.axonius.com/docs/save-a-query",
             "description": "You can identify security gaps by running and saving a query about your assets.\n\nUse the Query Wizard on the Devices screen to create a query, then save it so you can easily access it in the future."
         },
         {
-            "title": "Connect Adapters",
-            "completed": true,
-            "path": "adapters",
-            "link": "https://www.google.com",
-            "description": "You can collect and correlate information about your assets by using Axonius' adapters, which integrate with a wide array of security and IT management solutions.\n\nGo to the Adapters screen to connect at least three adapters to fetch data for your devices and users from at least three different sources."
-        },
-        {
-            "title": "Examine a device profile",
+            "name": "device_tag",
+            "title": "Tag a device",
             "completed": false,
-            "path": "devices",
-            "link": "https://www.google.com",
-            "description": "You can examine the details about your devices by looking at their profiles, which displays the data that Axonius collected and correlated from multiple sources.\n\nUse the Devices screen or the search bar on Axonius Dashboard to search for a device and examine its profile."
+            "completionDate": null,
+            "path": "/devices",
+            "link": "https://docs.axonius.com/docs/tag-a-device",
+            "description": "You can tag a single asset or a group of assets that share common characteristics. Use tags to assign context to your assets for granular filters and queries.\n\nGo to the Devices screen, tag a few devices with shared characteristics, then issue a query that includes the new tag."
         },
         {
-            "title": "Save a query",
+            "name": "enforcement_executed",
+            "title": "Create and execute an enforcement set",
             "completed": false,
-            "path": "adapters",
-            "link": "https://www.google.com",
-            "description": "You can identify security gaps by running and saving a query about your assets.\n\nUse the Query Wizard on the Devices screen to create a query, then save it so you can easily access it in the future."
+            "completionDate": null,
+            "path": "/enforcements",
+            "link": "https://docs.axonius.com/docs/create-and-execute-an-enforcement-set",
+            "description": "You can take action on the identified security gaps by defining Enforcement Sets in the Axonius Security Policy Enforcement Center.\n\nGo to the Enforcement Center screen to create and execute an Enforcement Set."
         },
         {
-            "title": "Connect Adapters",
-            "completed": true,
-            "path": "adapters",
-            "link": "https://www.google.com",
-            "description": "You can collect and correlate information about your assets by using Axonius' adapters, which integrate with a wide array of security and IT management solutions.\n\nGo to the Adapters screen to connect at least three adapters to fetch data for your devices and users from at least three different sources."
-        },
-        {
-            "title": "Examine a device profile",
+            "name": "dashboard_created",
+            "title": "Create a dashboard chart",
             "completed": false,
-            "path": "devices",
-            "link": "https://www.google.com",
-            "description": "You can examine the details about your devices by looking at their profiles, which displays the data that Axonius collected and correlated from multiple sources.\n\nUse the Devices screen or the search bar on Axonius Dashboard to search for a device and examine its profile."
+            "completionDate": null,
+            "path": "/",
+            "link": "https://docs.axonius.com/docs/create-a-dashboard-chart",
+            "description": "You can customize the Axonius Dashboard with charts that track the relevant metrics and show immediate insights based on your saved queries.\n\nGo to the Axonius Dashboard, and add a chart to a new custom space."
         },
         {
-            "title": "Save a query",
+            "name": "report_generated",
+            "title": "Generate a report",
             "completed": false,
-            "path": "adapters",
-            "link": "https://www.google.com",
-            "description": "You can identify security gaps by running and saving a query about your assets.\n\nUse the Query Wizard on the Devices screen to create a query, then save it so you can easily access it in the future."
+            "completionDate": null,
+            "path": "/reports",
+            "link": "https://docs.axonius.com/docs/generate-a-report",
+            "description": "You can generate a PDF document to share dashboards and query results in an executive-friendly format.\n\nGo to the Reports screen, and create a report based on the query you saved earlier."
         }
     ]
 }

@@ -5,7 +5,6 @@
       :valid="filterValid"
       :read-only="readOnly"
       @done="$emit('done')"
-      @tour="tour"
     />
     <div class="filter">
       <x-query-search-input
@@ -13,7 +12,6 @@
         :module="module"
         :valid="filterValid"
         :query-search="query.search"
-        @activated="tour('querySelect')"
         @validate="onValid"
       />
       <x-button
@@ -23,7 +21,6 @@
       <x-query-wizard
         v-model="queryFilter"
         :module="module"
-        @activated="() => tour('queryField')"
         @error="onError"
       />
     </div>
@@ -39,7 +36,6 @@
   import { mapState, mapGetters, mapMutations } from 'vuex'
   import { GET_DATA_FIELDS_BY_PLUGIN } from '../../../../store/getters'
   import { UPDATE_DATA_VIEW } from '../../../../store/mutations'
-  import { CHANGE_TOUR_STATE } from '../../../../store/modules/onboarding'
 
   export default {
     name: 'XQuery',
@@ -103,11 +99,8 @@
     },
     methods: {
       ...mapMutations({
-        updateView: UPDATE_DATA_VIEW, changeState: CHANGE_TOUR_STATE
+        updateView: UPDATE_DATA_VIEW
       }),
-      tour (stateName) {
-        this.changeState({ name: stateName })
-      },
       navigateSavedQueries () {
         this.$router.push({ path: `/${this.module}/query/saved` })
       },

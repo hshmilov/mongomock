@@ -7,7 +7,7 @@
             </template>
             <h4 class="title" v-else>
                 <!-- Adding title for each breadcrumb, linked to the page, except last one which is the viewed page -->
-                <div v-for="(breadcrumb, i) in breadcrumbs.slice(0, breadcrumbs.length - 1)" class="crumb">
+                <div v-for="(breadcrumb, i) in breadcrumbs.slice(0, breadcrumbs.length - 1)" :key="i" class="crumb">
                     <router-link :to="breadcrumb.path" active-class="">{{ breadcrumb.title }}</router-link>
                     <md-chip v-if="beta && !i">BETA</md-chip>
                 </div>
@@ -37,11 +37,13 @@
                 default: false
             }
         },
-        computed: mapState({
-            collapseSidebar(state) {
-                return state.interaction.collapseSidebar
-            }
-        })
+        computed: {
+            ...mapState({
+                collapseSidebar(state) {
+                    return state.interaction.collapseSidebar
+                }
+            })
+        }
     }
 </script>
 

@@ -33,6 +33,8 @@
   import {
     FETCH_DATA_LABELS, ADD_DATA_LABELS, REMOVE_DATA_LABELS
   } from '../../../store/actions'
+  import { SET_GETTING_STARTED_MILESTONE_COMPLETION } from '../../../store/modules/onboarding';
+  import { TAG_DEVICE } from '../../../constants/getting-started'
 
   export default {
     name: 'XTagModal',
@@ -94,7 +96,9 @@
     },
     methods: {
       ...mapActions({
-        fetchLabels: FETCH_DATA_LABELS, addLabels: ADD_DATA_LABELS, removeLabels: REMOVE_DATA_LABELS
+        fetchLabels: FETCH_DATA_LABELS, addLabels: ADD_DATA_LABELS, 
+        removeLabels: REMOVE_DATA_LABELS,
+        milestoneCompleted: SET_GETTING_STARTED_MILESTONE_COMPLETION
       }),
       activate () {
         this.isActive = true
@@ -127,6 +131,7 @@
         ]).then(response => {
           if (!response || !response.length || (!response[0] && !response[1])) return
           this.taggedCount = response[0] ? response[0].data : response[1].data
+          this.milestoneCompleted({ milestoneName: TAG_DEVICE })
           this.$emit('done')
         })
       },

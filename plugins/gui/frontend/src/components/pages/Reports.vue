@@ -42,16 +42,12 @@
 
     import {mapState, mapMutations, mapActions} from 'vuex'
     import {REMOVE_REPORTS, FETCH_REPORT} from '../../store/modules/reports'
-    import {CHANGE_TOUR_STATE} from '../../store/modules/onboarding'
 
     export default {
         name: 'XReports',
         components: {xPage, xTable, xButton, xSafeguardButton},
         computed: {
             ...mapState({
-                tourReports(state) {
-                    return state.onboarding.tourStates.queues.reports
-                },
                 isReadOnly(state) {
                     let user = state.auth.currentUser.data
                     if (!user || !user.permissions) return true
@@ -76,7 +72,6 @@
             }
         },
         methods: {
-            ...mapMutations({changeState: CHANGE_TOUR_STATE}),
             ...mapActions({
                 removeReports: REMOVE_REPORTS, fetchReport: FETCH_REPORT
             }),
@@ -87,11 +82,6 @@
             remove() {
                 this.removeReports(this.selection)
                 this.selection = {ids: [], include: true }
-            }
-        },
-        created() {
-            if (this.tourReports && this.tourReports.length) {
-                this.changeState({name: this.tourReports[0]})
             }
         }
     }

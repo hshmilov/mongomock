@@ -14,7 +14,6 @@
       :filterable="true"
       :on-click-row="configEntity"
       @input="updateSelection"
-      @data="onTableData"
     >
       <template slot="actions">
         <x-action-menu
@@ -147,9 +146,6 @@
         })
         this.exporting = true
 
-      },
-      onTableData (dataId) {
-        this.$emit('data', dataId)
       },
       updateSelection (selection) {
         if (!selection.include) {

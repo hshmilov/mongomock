@@ -56,7 +56,6 @@
   import { mapState, mapMutations, mapActions } from 'vuex'
   import { UPDATE_DATA_VIEW } from '../../store/mutations'
   import { REMOVE_ENFORCEMENTS, FETCH_ENFORCEMENT } from '../../store/modules/enforcements'
-  import { CHANGE_TOUR_STATE } from '../../store/modules/onboarding'
 
   export default {
     name: 'XEnforcements',
@@ -71,9 +70,6 @@
     },
     computed: {
       ...mapState({
-        tourEnforcements (state) {
-          return state.onboarding.tourStates.queues.enforcements
-        },
         query (state) {
           return state.enforcements.view.query
         },
@@ -116,16 +112,13 @@
       }
     },
     created () {
-      if (this.tourEnforcements && this.tourEnforcements.length) {
-        this.changeState({ name: this.tourEnforcements[0] })
-      }
       if (this.query) {
         this.searchValue = this.query.search
       }
     },
     methods: {
       ...mapMutations({
-        updateView: UPDATE_DATA_VIEW, changeState: CHANGE_TOUR_STATE
+        updateView: UPDATE_DATA_VIEW
       }),
       ...mapActions({
         removeEnforcements: REMOVE_ENFORCEMENTS, fetchEnforcement: FETCH_ENFORCEMENT

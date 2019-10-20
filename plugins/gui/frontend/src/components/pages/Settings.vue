@@ -5,8 +5,6 @@
   >
     <x-tabs
       ref="tabs"
-      @click="determineState"
-      @updated="initTourState"
     >
       <x-tab
         id="research-settings-tab"
@@ -141,7 +139,6 @@
   import { SAVE_PLUGIN_CONFIG, LOAD_PLUGIN_CONFIG, CHANGE_PLUGIN_CONFIG } from '../../store/modules/settings'
   import { UPDATE_SYSTEM_CONFIG } from '../../store/mutations'
   import { REQUEST_API, START_RESEARCH_PHASE, STOP_RESEARCH_PHASE } from '../../store/actions'
-  import { CHANGE_TOUR_STATE } from '../../store/modules/onboarding'
 
   export default {
     name: 'XSettings',
@@ -205,7 +202,6 @@
           last_name: ''
         },
         userToRemove: null,
-        delayInitTourState: false
       }
     },
     created () {
@@ -220,7 +216,7 @@
       this.loadPluginConfig({
         pluginId: 'system_scheduler',
         configName: 'SystemSchedulerService'
-      }).then(() => this.delayInitTourState = true)
+      })
       this.fetchData({
         rule: 'metadata'
       }).then((response) => {
@@ -233,19 +229,12 @@
       ...mapMutations({
         changePluginConfig: CHANGE_PLUGIN_CONFIG,
         updateSystemConfig: UPDATE_SYSTEM_CONFIG,
-        changeState: CHANGE_TOUR_STATE
       }),
       ...mapActions({
         fetchData: REQUEST_API,
         startResearch: START_RESEARCH_PHASE, stopResearch: STOP_RESEARCH_PHASE,
         updatePluginConfig: SAVE_PLUGIN_CONFIG, loadPluginConfig: LOAD_PLUGIN_CONFIG
       }),
-      initTourState() {
-        if (!this.delayInitTourState) return
-
-        this.changeState({ name: 'lifecycleRate' })
-        this.delayInitTourState = false
-      },
       validNumber (value) {
         return !(value === undefined || isNaN(value) || value <= 0)
 
@@ -261,7 +250,8 @@
             data: {
               global: {
                 mail: this.coreSettings.config.email_settings.enabled,
-                syslog: this.coreSettings.config.syslog_settings.enabled
+                syslog: this.coreSettings.config.syslog_settings.enabled,
+                gettingStartedEnabled: this.coreSettings.config.getting_started_checklist.enabled
               }
             }
           })
@@ -322,9 +312,6 @@
         } else {
           this.message = 'Error: ' + response.data.message
         }
-      },
-      determineState (tabId) {
-        this.changeState({ name: tabId })
       }
     }
   }

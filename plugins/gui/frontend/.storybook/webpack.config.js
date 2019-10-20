@@ -1,4 +1,5 @@
-const path = require('path');
+const path = require('path')
+const webpack = require('webpack')
 // Export a function. Accept the base config as the only param.
 module.exports = async ({ config, mode }) => {
   // `mode` has a value of 'DEVELOPMENT' or 'PRODUCTION'
@@ -31,6 +32,13 @@ module.exports = async ({ config, mode }) => {
         }
     ]
 });
+
+// Add plugins:
+config.plugins.push(new webpack.DefinePlugin({
+    ENV: {
+        medical: false
+    }
+}))
 
   // Return the altered config
   return config;

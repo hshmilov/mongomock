@@ -53,7 +53,6 @@
       class="config-server"
       @close="toggleServerModal"
       @confirm="saveServer"
-      @enter="promptSaveServer"
     >
       <div slot="body">
         <!-- Container for configuration of a single selected / added server -->
@@ -133,18 +132,17 @@
   import xTitle from '../axons/layout/Title.vue'
   import xToast from '../axons/popover/Toast.vue'
 
-  import {mapState, mapMutations, mapGetters, mapActions} from 'vuex'
-  import {
-    FETCH_ADAPTERS,
-    SAVE_ADAPTER_CLIENT,
-    ARCHIVE_CLIENT,
-    TEST_ADAPTER_SERVER,
-    HINT_ADAPTER_UP
-  } from '../../store/modules/adapters'
-  import {SAVE_PLUGIN_CONFIG} from '../../store/modules/settings'
-  import {CHANGE_TOUR_STATE} from '../../store/modules/onboarding'
-  import _get from 'lodash/get'
-  import _isEmpty from 'lodash/isEmpty'
+    import {mapState, mapMutations, mapGetters, mapActions} from 'vuex'
+    import {
+        FETCH_ADAPTERS, 
+        SAVE_ADAPTER_CLIENT, 
+        ARCHIVE_CLIENT, 
+        TEST_ADAPTER_SERVER, 
+        HINT_ADAPTER_UP
+    } from '../../store/modules/adapters'
+    import {SAVE_PLUGIN_CONFIG} from '../../store/modules/settings'
+    import _get from 'lodash/get'
+    import _isEmpty from 'lodash/isEmpty'
 
   export default {
     name: 'x-adapter',
@@ -243,9 +241,6 @@
       }
     },
     methods: {
-      ...mapMutations({
-        changeState: CHANGE_TOUR_STATE
-      }),
       ...mapActions({
         fetchAdapters: FETCH_ADAPTERS,
         updateServer: SAVE_ADAPTER_CLIENT,
@@ -282,9 +277,6 @@
           }
         }
         this.toggleServerModal()
-      },
-      promptSaveServer() {
-        this.changeState({name: 'saveServer'})
       },
       removeConnection() {
         if (this.isReadOnly) return
@@ -323,14 +315,6 @@
           } else {
             this.message = 'Connection established. Data collection initiated...'
           }
-          ((data) => {
-            this.$nextTick(() => {
-              this.changeState({
-                name: `${data.status}Server`,
-                id: data.id
-              })
-            })
-          })(updateRes.data)
         }).catch((error)=>{
           this.message = error.response.data.message
         })
@@ -399,7 +383,6 @@
       } else {
         this.setDefaultInstance()
       }
-      this.changeState({name: 'addServer'})
     }
   }
 </script>

@@ -15,7 +15,6 @@
             ref="name"
             v-model="enforcement.name"
             :disabled="isReadOnly"
-            @input="onNameInput"
           >
           <input
             v-else
@@ -136,7 +135,6 @@
   import xToast from '../axons/popover/Toast.vue'
 
   import { mapState, mapMutations, mapActions } from 'vuex'
-  import { CHANGE_TOUR_STATE } from '../../store/modules/onboarding'
   import {
     initRecipe, initAction, initTrigger,
     FETCH_ENFORCEMENT, SAVE_ENFORCEMENT, RUN_ENFORCEMENT,
@@ -146,6 +144,8 @@
   import {
     successCondition, failCondition, postCondition, mainCondition, actionCategories, actionsMeta
   } from '../../constants/enforcement'
+  import { ENFORCEMENT_EXECUTED } from '../../constants/getting-started'
+import { SET_GETTING_STARTED_MILESTONE_COMPLETION } from '../../store/modules/onboarding';
 
   export default {
     name: 'XEnforcement',
@@ -307,18 +307,15 @@
       if (this.$refs.name) {
         this.$refs.name.focus()
       }
-      this.tour({ name: 'enforcementName' })
       if (!this.enforcementNames || !this.enforcementNames.length) {
         this.fetchSavedEnforcements()
       }
     },
     methods: {
-      ...mapMutations({
-        tour: CHANGE_TOUR_STATE
-      }),
       ...mapActions({
         fetchEnforcement: FETCH_ENFORCEMENT, saveEnforcement: SAVE_ENFORCEMENT,
-        runEnforcement: RUN_ENFORCEMENT, fetchSavedEnforcements: FETCH_SAVED_ENFORCEMENTS
+        runEnforcement: RUN_ENFORCEMENT, fetchSavedEnforcements: FETCH_SAVED_ENFORCEMENTS,
+        milestoneCompleted: SET_GETTING_STARTED_MILESTONE_COMPLETION,
       }),
       initData () {
         this.enforcement = { ...this.enforcementData }
@@ -331,6 +328,7 @@
           }
           this.runEnforcement(this.enforcement.uuid)
           this.message = 'Enforcement Task is in progress'
+          this.milestoneCompleted({ milestoneName: ENFORCEMENT_EXECUTED })
         })
       },
       saveExit () {
@@ -391,7 +389,6 @@
           return
         }
         let condition = this.actionInProcess.position.condition
-        this.updateTour(condition)
         let i = this.actionInProcess.position.i
         if (condition === mainCondition) {
           this.actions[condition] = this.actionInProcess.definition
@@ -408,21 +405,6 @@
           return
         }
         this.selectAction(condition, i + 1)
-      },
-      updateTour (condition) {
-        switch (condition) {
-          case mainCondition:
-            this.tour({ name: 'enforcementTrigger' })
-            break
-          case successCondition:
-            this.tour({ name: 'actionFailure' })
-            break
-          case failCondition:
-            this.tour({ name: 'actionConstant' })
-            break
-          default:
-            this.tour({ name: 'enforcementSave' })
-        }
       },
       selectTrigger (i) {
         this.actionInProcess.position = null
@@ -451,10 +433,6 @@
         }
         this.triggerInProcess.position = null
         this.selectAction(successCondition, 0)
-        this.tour({ name: 'actionSuccess' })
-      },
-      onNameInput () {
-        this.tour({ name: 'actionMain' })
       }
     }
   }
