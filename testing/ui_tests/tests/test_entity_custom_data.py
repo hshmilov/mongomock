@@ -192,7 +192,11 @@ class TestEntityCustomData(TestBase):
                 kaseya_client_details_2.pop('verify_ssl')
                 self.adapters_page.fill_creds(**kaseya_client_details_2)
                 self.adapters_page.click_save()
-                self.adapters_page.wait_for_server_green()
+                try:
+                    self.adapters_page.wait_for_server_green()
+                except Exception:
+                    self._save_screenshot(text='aftergreenfail')
+                    raise
                 self.base_page.run_discovery()
                 self.devices_page.switch_to_page()
                 self.devices_page.wait_for_table_to_load()
