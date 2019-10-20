@@ -26,7 +26,8 @@ RUN apt-get update && \
     apt-get install -y nano && \
     apt-get install -y net-tools && \
     apt-get install -y iputils-ping && \
-    apt-get install -y libpq-dev
+    apt-get install -y libpq-dev && \
+    apt-get install libaio1
 
 RUN /bin/bash -c 'echo -e "[FreeTDS]\nDescription=FreeTDS Driver\nDriver=/usr/lib/x86_64-linux-gnu/odbc/libtdsodbc.so\nSetup=/usr/lib/x86_64-linux-gnu/odbc/libtdsS.so" > /etc/odbcinst.ini'
 
@@ -65,6 +66,11 @@ RUN cd temp && unzip cloud_suite.zip
 RUN cd temp && pip3 install VMware-vCloud-Suite-SDK-Python-6.0.0/client/lib/vapi_runtime-1.0.0.zip --no-deps
 RUN cd temp && pip3 install VMware-vCloud-Suite-SDK-Python-6.0.0/client/lib/vapi_common_client-1.0.0.zip --no-deps
 RUN cd temp && pip3 install VMware-vCloud-Suite-SDK-Python-6.0.0/client/lib/vapi_client_bindings-1.0.0.zip --no-deps
+
+# Install Oracle Instant Client as instructed here
+# https://oracle.github.io/odpi/doc/installation.html#oracle-instant-client-zip
+COPY instantclient-basiclite-linux.x64-19.3.0.0.0dbru.zip /home/axonius/temp/instantclient-basiclite-linux.x64-19.3.0.0.0dbru.zip
+RUN mkdir -p /opt/oracle && cd /opt/oracle && unzip /home/axonius/temp/instantclient-basiclite-linux.x64-19.3.0.0.0dbru.zip && echo /opt/oracle/instantclient_19_3 > /etc/ld.so.conf.d/oracle-instantclient.conf && ldconfig
 
 RUN rm -rf temp
 
