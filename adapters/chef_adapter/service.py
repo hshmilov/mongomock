@@ -129,6 +129,8 @@ class ChefAdapter(AdapterBase):
                     )
                 )
 
+                device.os.kernel_version = (device_raw_automatic.get('kernel', {}) or {}).get('release')
+
                 device.hostname = (device_raw_automatic.get('cloud') or {}).get(
                     'local_hostname'
                 ) or device_raw_automatic.get('fqdn')
