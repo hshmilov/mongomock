@@ -7,7 +7,7 @@
   >
     <td
       v-if="selected !== undefined"
-      class="w-14"
+      class="w-14 top"
     >
       <x-checkbox
         :data="selected"
@@ -15,7 +15,10 @@
         @change="onSelect"
       />
     </td>
-    <td v-if="expandable">
+    <td
+      v-if="expandable"
+      class="top"
+    >
       <md-icon
         v-if="expanded"
         class="active"
@@ -53,7 +56,7 @@
     },
     props: {
       data: {
-        type: Object,
+        type: [String, Number, Boolean, Array, Object],
         required: true
       },
       fields: {
@@ -144,8 +147,11 @@
         }
 
         td {
-            vertical-align: top;
             line-height: 24px;
+
+            &.top {
+              vertical-align: top;
+            }
         }
 
         .x-data {

@@ -165,12 +165,12 @@ class TestSavedQuery(TestBase):
         assert 'devices' in self.driver.current_url and 'query' not in self.driver.current_url
         self.devices_page.wait_for_spinner_to_end()
         assert all(x == self.devices_page.VALUE_OS_WINDOWS for x in
-                   self.devices_page.get_column_data(self.devices_page.FIELD_OS_TYPE))
+                   self.devices_page.get_column_data_slicer(self.devices_page.FIELD_OS_TYPE))
         self.devices_page.fill_filter('linux')
         self.devices_page.open_search_list()
         self.devices_page.select_query_by_name('Linux Operating System')
         self.devices_page.wait_for_spinner_to_end()
-        assert not len(self.devices_page.get_column_data(self.devices_page.FIELD_OS_TYPE))
+        assert not len(self.devices_page.get_column_data_slicer(self.devices_page.FIELD_OS_TYPE))
 
     def test_saved_queries_remove(self):
         self.settings_page.switch_to_page()

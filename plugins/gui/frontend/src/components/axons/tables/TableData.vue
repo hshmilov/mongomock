@@ -1,9 +1,8 @@
 <template>
   <component
-    :is="schema.type"
+    :is="dataType"
     :schema="schema"
     :value="value"
-    :filter="filter"
     :link="link"
   />
 </template>
@@ -16,6 +15,8 @@
   import file from '../../neurons/schema/types/array/FileView.vue'
   import array from '../../neurons/schema/types/array/ArrayTableView.vue'
   import {formatStringTemplate} from '../../../constants/utils.js'
+
+  import {isObject, isObjectListField} from '../../../constants/utils'
 
   export default {
     name: 'XTableData',
@@ -30,34 +31,24 @@
       data: {
         type: [String, Number, Boolean, Array, Object],
         default: undefined
-      },
-      sort: {
-        type: Object,
-        default: () => {
-          return {
-            field: '', desc: true
-          }
-        }
-      },
-      filter: {
-        type: String,
-        default: ''
       }
     },
     computed: {
-      fieldName() {
-        return this.schema.name
-      },
-      isObject() {
-        return this.data && typeof this.data === 'object' && !Array.isArray(this.data)
+      dataType () {
+        if (this.schema.type !== 'array' && Array.isArray(this.data)) {
+          return 'array'
+        }
+        return this.schema.type
       },
       value () {
-        if (!this.fieldName || !this.isObject) return this.data
-        let value = this.data[this.fieldName]
-        if (Array.isArray(value) && this.sort && this.fieldName === this.sort.field && !this.sort.desc) {
-          return [...value].reverse()
+        if (!this.schema.name || !isObject(this.data)) {
+          return this.data
         }
-        return value
+        let value = this.data[this.schema.name]
+        if (value === undefined) {
+          value = this.data
+        }
+        return (isObjectListField(this.schema) && !Array.isArray(value)) ? [value] : value
       },
       link () {
           if(this.schema.link){

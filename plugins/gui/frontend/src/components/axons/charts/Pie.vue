@@ -45,46 +45,47 @@
           class="scaling"
           text-anchor="middle"
           :x="slice.middle.x"
-          :y="slice.middle.y"
-        >{{ Math.round(slice.value * 100) }}%
+          :y="slice.middle.y">
+          {{ Math.round(slice.value * 100) }}%
         </text>
       </g>
     </svg>
-    <div
+    <x-tooltip
       v-show="hoverDetails.title"
       ref="tooltip"
-      class="tooltip"
     >
-      <div class="tooltip-title">{{ hoverDetails.parentTitle }}</div>
-      <div class="tooltip-content">
-        <div class="tooltip-legend">
-          <div
-            class="legend"
-            :class="hoverDetails.class"
-          />
-          {{ hoverDetails.title }}
+      <template slot="body">
+        <div class="tooltip-content">
+          <div class="tooltip-legend">
+            <div
+              class="legend"
+              :class="hoverDetails.class"
+            />{{ hoverDetails.title }}</div>
+          <div>{{ hoverDetails.percentage }}%</div>
         </div>
-        <div>{{ hoverDetails.percentage }}%</div>
-      </div>
-      <div
-        v-for="component in hoverDetails.components"
-        class="tooltip-content"
-      >
-        <div class="tooltip-legend">
-          <div
-            class="legend round"
-            :class="component.class"
-          />
-          {{ component.name }}
+        <div
+          v-for="component in hoverDetails.components"
+          :key="component.name"
+          class="tooltip-content"
+        >
+          <div class="tooltip-legend">
+            <div
+              class="legend round"
+              :class="component.class"
+            />{{ component.name }}</div>
         </div>
-      </div>
-    </div>
+      </template>
+    </x-tooltip>
   </div>
 </template>
 
 <script>
+  import xTooltip from '../../axons/popover/Tooltip.vue'
   export default {
     name: 'XPie',
+    components: {
+      xTooltip
+    },
     props: {
       data: {
         type: Array,
@@ -168,9 +169,9 @@
       },
       onHover (event, index) {
         this.inHover = index
-        if (!this.$refs || !this.$refs.tooltip) return
-        this.$refs.tooltip.style.top = event.clientY + 10 + 'px'
-        this.$refs.tooltip.style.left = event.clientX + 10 + 'px'
+        if (!this.$refs.tooltip || !this.$refs.tooltip.$el) return
+        this.$refs.tooltip.$el.style.top = event.clientY + 10 + 'px'
+        this.$refs.tooltip.$el.style.left = event.clientX + 10 + 'px'
       },
       showPercentageText (val) {
         return (this.forceText && val > 0) || val > 0.04
@@ -187,7 +188,7 @@
     .x-pie {
         margin: auto;
         width: 240px;
-
+        position: relative;
         .fill-intersection-1-2 {
             fill: url(#intersection-1-2);
             background: repeating-linear-gradient(45deg, nth($extra-colours, 1), nth($extra-colours, 1) 4px,
@@ -217,8 +218,10 @@
         }
     }
 
-    .tooltip {
+    .x-tooltip {
+        position: fixed;
         .tooltip-content {
+          display: flex;
             .tooltip-legend {
                 margin-right: 12px;
                 flex: 1 0 auto;

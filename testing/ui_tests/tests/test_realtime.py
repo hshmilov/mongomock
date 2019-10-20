@@ -29,8 +29,8 @@ class TestRealtime(TestBase):
         # make sure it brought some devices
         self.devices_page.switch_to_page()
         self.devices_page.wait_for_table_to_load()
-        all_devices = self.devices_page.get_all_data_proper()
-        assert any(JSON_ADAPTER_PLUGIN_NAME in x['Adapters'] for x in all_devices)
+        device_adapters = self.devices_page.get_column_data_adapter_names()
+        assert any(JSON_ADAPTER_PLUGIN_NAME in x for x in device_adapters)
 
         # delete those devices
         self.axonius_system.get_devices_db().delete_many({})
@@ -39,8 +39,8 @@ class TestRealtime(TestBase):
         self.devices_page.refresh_table()
 
         # make sure they're gone
-        all_devices = self.devices_page.get_all_data_proper()
-        assert not any(JSON_ADAPTER_PLUGIN_NAME in x['Adapters'] for x in all_devices)
+        device_adapters = self.devices_page.get_column_data_adapter_names()
+        assert not any(JSON_ADAPTER_PLUGIN_NAME in x for x in device_adapters)
 
         # wait for a while to make sure that any potential RT cycle would've run
         time.sleep(40)
@@ -48,9 +48,9 @@ class TestRealtime(TestBase):
         # refresh to make sure
         self.devices_page.refresh_table()
 
-        # make sure the adapter haven't brough them again
-        all_devices = self.devices_page.get_all_data_proper()
-        assert not any(JSON_ADAPTER_PLUGIN_NAME in x['Adapters'] for x in all_devices)
+        # make sure the adapter haven't brought them again
+        device_adapters = self.devices_page.get_column_data_adapter_names()
+        assert not any(JSON_ADAPTER_PLUGIN_NAME in x for x in device_adapters)
 
         # make the adapter a RT adapter
         self.adapters_page.switch_to_page()
@@ -68,8 +68,8 @@ class TestRealtime(TestBase):
         self.devices_page.switch_to_page()
         self.devices_page.refresh_table()
 
-        all_devices = self.devices_page.get_all_data_proper()
-        assert any(JSON_ADAPTER_PLUGIN_NAME in x['Adapters'] for x in all_devices)
+        device_adapters = self.devices_page.get_column_data_adapter_names()
+        assert any(JSON_ADAPTER_PLUGIN_NAME in x for x in device_adapters)
 
         # make the adapter a non-RT adapter, again
         self.adapters_page.switch_to_page()
@@ -88,8 +88,8 @@ class TestRealtime(TestBase):
         self.devices_page.refresh_table()
 
         # make sure they're gone
-        all_devices = self.devices_page.get_all_data_proper()
-        assert not any(JSON_ADAPTER_PLUGIN_NAME in x['Adapters'] for x in all_devices)
+        device_adapters = self.devices_page.get_column_data_adapter_names()
+        assert not any(JSON_ADAPTER_PLUGIN_NAME in x for x in device_adapters)
 
         # wait for a while to make sure that any potential RT cycle would've run
         time.sleep(40)
@@ -98,5 +98,5 @@ class TestRealtime(TestBase):
         self.devices_page.refresh_table()
 
         # make sure the adapter haven't brough them again
-        all_devices = self.devices_page.get_all_data_proper()
-        assert not any(JSON_ADAPTER_PLUGIN_NAME in x['Adapters'] for x in all_devices)
+        device_adapters = self.devices_page.get_column_data_adapter_names()
+        assert not any(JSON_ADAPTER_PLUGIN_NAME in x for x in device_adapters)

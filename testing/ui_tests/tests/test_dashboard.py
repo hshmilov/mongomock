@@ -275,7 +275,7 @@ class TestDashboard(TestBase):
     def grab_all_host_names_from_devices(self):
         self.devices_page.switch_to_page()
         self.devices_page.select_page_size(50)
-        return self.devices_page.get_column_data(self.devices_page.FIELD_HOSTNAME_TITLE)
+        return self.devices_page.get_column_data_slicer(self.devices_page.FIELD_HOSTNAME_TITLE)
 
     @staticmethod
     def assert_data_devices_fit_pagination_data(histogram_items_title, host_names_list):

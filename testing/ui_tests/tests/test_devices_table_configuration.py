@@ -21,7 +21,7 @@ class TestDevicesTable(TestEntitiesTable):
         })
 
     def _get_first_hostname(self):
-        return self.devices_page.get_column_data(self.devices_page.FIELD_HOSTNAME_TITLE)[0]
+        return self.devices_page.get_column_data_slicer(self.devices_page.FIELD_HOSTNAME_TITLE)[0]
 
     def test_devices_data_consistency(self):
         self.settings_page.switch_to_page()
@@ -42,7 +42,7 @@ class TestDevicesTable(TestEntitiesTable):
         self._update_device_field(self.devices_page.FIELD_HOSTNAME_NAME, updated_value, initial_value)
 
         self.devices_page.query_json_adapter()
-        all_ips = self.devices_page.get_column_data(self.devices_page.FIELD_NETWORK_INTERFACES_IPS)
+        all_ips = self.devices_page.get_column_data_slicer(self.devices_page.FIELD_NETWORK_INTERFACES_IPS)
         assert len(all_ips) == 1
         assert all_ips[0] == f'{DEVICE_FIRST_IP}\n{DEVICE_SECOND_IP}\n+1'
 
@@ -74,7 +74,7 @@ class TestDevicesTable(TestEntitiesTable):
             self.devices_page.wait_for_spinner_to_end()
             assert self.devices_page.find_element_by_text(TAG_NAME).is_displayed()
             self.devices_page.switch_to_page()
-            assert TAG_NAME in self.devices_page.get_column_data(self.devices_page.FIELD_TAGS)
+            assert TAG_NAME in self.devices_page.get_column_data_slicer(self.devices_page.FIELD_TAGS)
 
             # Testing AD Adapter
             self.devices_page.fill_filter(self.devices_page.AD_WMI_ADAPTER_FILTER)

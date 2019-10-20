@@ -345,24 +345,6 @@ table {
   font-size: 10px;
   line-height: 10px;
 }
-
-.tooltip {
-  background-color: $theme-white;
-  border: 1px solid $grey-2;
-  border-radius: 2px;
-  position: fixed;
-  padding: 12px;
-  z-index: 1000;
-  max-width: 320px;
-  min-width: 120px;
-  .tooltip-title {
-    color: $grey-3;
-  }
-  .tooltip-content {
-    display: flex;
-  }
-}
-
 .v-spinner-bg {
   height: 100%;
   width: 100%;

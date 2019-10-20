@@ -89,7 +89,7 @@ class EnforcementsPage(EntitiesPage):
                                      'text()=\'{section_name}\']]//div[@class=\'container\']'
     ABOVE_INPUT_CSS = '.config .config-item .above'
     BELOW_INPUT_CSS = '.config .config-item .below'
-    EDIT_ENFORCEMENT_XPATH = '//div[@title=\'{enforcement_name}\']'
+    EDIT_ENFORCEMENT_XPATH = '//div[text()=\'{enforcement_name}\']'
     SEND_AN_EMAIL = 'Send an Email'
     DISABLED_ACTION_XPATH = (
         '//div[contains(@class, \'md-list-item-content\')]//div[@class=\'x-title disabled\' '

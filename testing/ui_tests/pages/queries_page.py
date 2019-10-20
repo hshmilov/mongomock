@@ -7,7 +7,7 @@ logger = logging.getLogger(f'axonius.{__name__}')
 
 
 class QueriesPage(Page):
-    QUERY_ROW_BY_NAME_XPATH = '//tr[child::td[child::div[text()=\'{query_name}\']]]'
+    QUERY_ROW_BY_NAME_XPATH = '//tr[child::td[.//text()=\'{query_name}\']]'
     QUERY_NAME_BY_PART_XPATH = '//div[contains(text(), \'{query_name_part}\')]'
     SAFEGUARD_REMOVE_BUTTON_SINGLE = 'Remove Saved Query'
     SAFEGUARD_REMOVE_BUTTON_MULTI = 'Remove Saved Queries'

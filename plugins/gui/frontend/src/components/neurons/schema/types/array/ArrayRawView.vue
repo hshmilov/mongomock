@@ -15,10 +15,10 @@
   export default {
     name: 'XArrayRawView',
     props: {
-        data: {
-          type: Object,
-          required: true
-        },
+      data: {
+        type: Object,
+        required: true
+      },
       schema: {
           type: Object,
         required: true

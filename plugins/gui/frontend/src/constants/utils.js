@@ -1,6 +1,10 @@
+import { date } from '@storybook/addon-knobs'
+
 export const formatDate = (dateString, schema) => {
-    let dateTime = new Date(dateString);
-    if (dateTime == 'Invalid Date') return value
+    if (isNaN(Date.parse(dateString))) {
+        return dateString
+    }
+    let dateTime = new Date(dateString)
     dateTime.setMinutes(dateTime.getMinutes() - dateTime.getTimezoneOffset())
     let dateParts = dateTime.toISOString().split('T')
     dateParts[1] = dateParts[1].split('.')[0]
@@ -23,6 +27,10 @@ export const calcMaxIndex = (list) => {
 
 export const isObjectListField = (field) => {
     return field.items !== undefined && !Array.isArray(field.items) && field.items.type === 'array'
+}
+
+export const isObject = (value) => {
+    return value && typeof value === 'object' && !Array.isArray(value)
 }
 
 export const getExcludedAdaptersFilter = (fieldType, field, filteredAdapters, condition) => {

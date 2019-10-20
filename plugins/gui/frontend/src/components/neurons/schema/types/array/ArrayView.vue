@@ -23,6 +23,7 @@
         v-for="(item, index) in visibleDataSchemaItems"
         :key="index"
         class="item-container"
+        :class="{ collapsable }"
       >
         <!-- In collapsed mode, only first item is revealed -->
         <div
@@ -38,8 +39,20 @@
             v-bind="item"
             :required="true"
           >
+            <x-slicer
+              v-if="isMergedValue(data[item.name], item)"
+              :schema="item"
+              :value="data[item.name]"
+            >
+              <x-array-table-view
+                slot-scope="{ sliced }"
+                :schema="item"
+                :value="sliced"
+              />
+            </x-slicer>
             <component
               :is="item.type"
+              v-else
               :ref="item.type"
               :schema="item"
               :value="data[item.name]"
@@ -57,20 +70,23 @@
 </template>
 
 <script>
+  import xButton from '../../../../axons/inputs/Button.vue'
   import xTypeWrap from './TypeWrap.vue'
+  import xSlicer from '../Slicer.vue'
   import string from '../string/StringView.vue'
   import number from '../numerical/NumberView.vue'
   import integer from '../numerical/IntegerView.vue'
   import bool from '../boolean/BooleanView.vue'
   import file from './FileView.vue'
-  import xButton from '../../../../axons/inputs/Button.vue'
+  import xArrayTableView from './ArrayTableView.vue'
 
   import arrayMixin from './array'
 
   export default {
     name: 'Array',
     components: {
-      xTypeWrap, string, number, integer, bool, file, xButton
+      xButton, xTypeWrap, xSlicer,
+      string, number, integer, bool, file, xArrayTableView
     },
     mixins: [arrayMixin],
     computed: {
@@ -113,8 +129,11 @@
           })
         })
       },
-      isNumbered(item) {
+      isNumbered (item) {
         return typeof item.name === 'number'
+      },
+      isMergedValue (value, schema) {
+        return Array.isArray(value) && schema.type !== 'array'
       }
     }
   }
@@ -135,7 +154,10 @@
             text-align: left;
         }
         .item-container {
-            overflow: hidden;
+            overflow: visible;
+            &.collapsable {
+              overflow: hidden;
+            }
         }
         .placeholder {
             margin-left: 16px;
@@ -152,7 +174,6 @@
             vertical-align: top;
         }
         .object {
-            display: inline-grid;
             white-space: pre-line;
             text-overflow: ellipsis;
         }

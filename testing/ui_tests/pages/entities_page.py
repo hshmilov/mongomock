@@ -67,6 +67,8 @@ class EntitiesPage(Page):
     TABLE_ROW_EXPAND_CSS = 'tbody .x-table-row.clickable:nth-child({child_index}) td:nth-child(2) .md-icon'
     TABLE_CELL_CSS = 'tbody .x-table-row.clickable td:nth-child({cell_index})'
     TABLE_CELL_EXPAND_CSS = 'tbody .x-table-row.clickable:nth-child({row_index}) td:nth-child({cell_index}) .md-icon'
+    TABLE_CELL_HOVER_REMAINDER_CSS = 'tbody .x-table-row.clickable:nth-child({row_index}) td:nth-child({cell_index}) ' \
+                                     '.x-data .x-slicer .remainder'
     TABLE_DATA_ROWS_XPATH = '//tr[@id]'
     TABLE_SCHEMA_CUSTOM = '//div[contains(@class, \'x-schema-custom\')]'
     TABLE_FIELD_ROWS_XPATH = '//div[contains(@class, \'x-tabs\')]//div[contains(@class, \'x-tab active\')]' \
@@ -85,15 +87,21 @@ class EntitiesPage(Page):
     TABLE_HEADER_CELLS_CSS = 'th'
     TABLE_HEADER_CELLS_XPATH = '//th[child::img[contains(@class, \'logo\')]]'
     TABLE_HEADER_SORT_XPATH = '//th[contains(@class, \'sortable\') and contains(text(), \'{col_name_text}\')]'
-    TABLE_DATA_POS_XPATH = '//tr[@id]/td[position()={data_position}]'
-    TABLE_DATA_TITLE_POS_XPATH = '//tr[@id]/td[position()={data_position}]//' \
-                                 'div[@class=\'x-data\' or @class=\'list\']/div'
+
+    TABLE_DATA_XPATH = '//tr[@id]/td[position()={data_position}]'
+    TABLE_DATA_SLICER_XPATH = f'{TABLE_DATA_XPATH}//div[@class=\'x-slicer\']'
+    TABLE_DATA_EXPAND_ROW_XPATH = f'{TABLE_DATA_XPATH}//div[@class=\'details-list-container\']'
+    TABLE_DATA_EXPAND_CELL_XPATH = f'{TABLE_DATA_XPATH}//div[@class=\'details-table-container\']' \
+                                   f'/div[contains(@class, \'popup\')]//*[@class=\'table\']'
+    TABLE_DATA_EXPAND_CELL_BODY_XPATH = f'{TABLE_DATA_EXPAND_CELL_XPATH}/tbody'
+    TABLE_DATA_IMG_XPATH = f'{TABLE_DATA_XPATH}//div[@class=\'x-data\' or @class=\'list\']//img'
+    TABLE_DATA_INLINE_XPATH = f'{TABLE_DATA_XPATH}/div'
+
     TABLE_COLUMNS_MENU_CSS = '.x-field-menu-filter'
     TABLE_ACTIONS_TAG_CSS = 'div.content.w-sm > div > div:nth-child(1) > div.item-content'
     TABLE_ACTIONS_DELETE_CSS = 'div.content.w-sm > div > div:nth-child(2) > div.item-content'
     TABLE_ACTIONS_ENFORCE_CSS = 'div.content.w-sm > div > div:nth-child(5) > div.item-content'
     TABLE_ACTION_ITEM_XPATH = '//div[@class=\'actions\']//div[@class=\'item-content\' and text()=\'{action}\']'
-    TABLE_FIRST_TABLE_ROW_CSS = 'div.details-table-container'
 
     SAVE_QUERY_ID = 'query_save'
     SAVE_QUERY_NAME_ID = 'saveName'
@@ -121,7 +129,7 @@ class EntitiesPage(Page):
     NOTES_EDITED_TOASTER = 'Existing note was edited'
     NOTES_REMOVED_TOASTER = 'Notes were removed'
     NOTES_SEARCH_INUPUT_CSS = '#search-notes .input-value'
-    NOTES_SEARCH_BY_TEXT = 'div[title={note_text}]'
+    NOTES_SEARCH_BY_TEXT_XPATH = '//div[text()=\'{note_text}\']'
 
     CONFIG_ADVANCED_TEXT_CSS = '.x-entity-adapters>div.x-tabs>div.body>div.active>div.content-header>button.link'
     ADVANCED_VIEW_RAW_FIELD = 'raw:'
@@ -146,6 +154,11 @@ class EntitiesPage(Page):
     FILTER_ADAPTERS_CSS = '.filter-adapters'
     FILTER_ADAPTERS_BOX_CSS = '.x-secondary-select-content'
     FILTERED_ADAPTER_ICON_CSS = '.img-filtered'
+
+    REMAINDER_CSS = '.x-data .array.inline .item .remainder>span'
+    TOOLTIP_CSS = '.x-tooltip'
+    TOOLTIP_TABLE_HEAD_CSS = f'{TOOLTIP_CSS} .x-table .table thead .clickable th'
+    TOOLTIP_TABLE_DATA_CSS = f'{TOOLTIP_CSS} .x-table .table tbody .x-table-row td'
 
     ACTIVE_TAB_TABLE_ROWS = '.body .x-tabs.vertical .body .x-tab.active .x-table-row'
     ACTIVE_TAB_TABLE_ROWS_HEADERS = '.body .x-tabs.vertical .body .x-tab.active .x-table thead th'
@@ -288,12 +301,8 @@ class EntitiesPage(Page):
         self.wait_for_spinner_to_end()
         return self.driver.current_url.split('/')[-1]
 
-    def click_table_container_first_row(self):
-        self.driver.find_element_by_css_selector(self.TABLE_FIRST_TABLE_ROW_CSS).click()
-        self.wait_for_spinner_to_end()
-
     def click_specific_row_checkbox(self, field_name, field_value):
-        values = self.get_column_data(field_name)
+        values = self.get_column_data_inline(field_name)
         row_num = values.index(field_value)
         self.click_row_checkbox(row_num + 1)
 
@@ -390,6 +399,7 @@ class EntitiesPage(Page):
         self.click_query_wizard()
         self.clear_query_wizard()
         self.close_dropdown()
+        self.wait_for_table_to_load()
 
     def find_expressions(self):
         return self.driver.find_elements_by_css_selector(self.QUERY_EXPRESSIONS_CSS)
@@ -484,24 +494,46 @@ class EntitiesPage(Page):
         raise ValueError
 
     def get_note_by_text(self, note_text):
-        return self.driver.find_element_by_css_selector(self.NOTES_SEARCH_BY_TEXT.format(note_text=note_text))
+        return self.driver.find_element_by_xpath(self.NOTES_SEARCH_BY_TEXT_XPATH.format(note_text=note_text))
 
     def get_notes_column_data(self, col_name):
         parent = self.driver.find_element_by_css_selector(self.NOTES_CONTENT_CSS)
-        return self.get_column_data(col_name, parent)
+        return self.get_column_data_inline(col_name, parent)
 
-    def get_column_data(self, col_name, parent=None):
+    def get_column_data(self, data_section_xpath, col_name, parent=None, generic_col=True):
         if not parent:
             parent = self.driver
 
-        col_position = self.count_sort_column(col_name, parent)
-        return [el.text.strip() for el in self.find_elements_by_xpath(
-            self.TABLE_DATA_POS_XPATH.format(data_position=col_position), element=parent)]
+        col_position = self.count_sort_column(col_name, parent)\
+            if generic_col else self.count_specific_column(col_name, parent)
+        return [el.text.strip()
+                for el in parent.find_elements_by_xpath(data_section_xpath.format(data_position=col_position))
+                if el.text.strip()]
 
-    def get_column_data_titles(self, col_name):
+    def get_column_data_inline(self, col_name, parent=None):
+        return self.get_column_data(self.TABLE_DATA_INLINE_XPATH, col_name, parent)
+
+    def get_column_data_slicer(self, col_name, parent=None, generic_col=True):
+        return self.get_column_data(self.TABLE_DATA_SLICER_XPATH, col_name, parent, generic_col)
+
+    def get_column_data_expand_row(self, col_name, parent=None):
+        return self.get_column_data(self.TABLE_DATA_EXPAND_ROW_XPATH, col_name, parent)
+
+    def get_column_data_expand_cell(self, col_name, parent=None):
+        return self.get_column_data(self.TABLE_DATA_EXPAND_CELL_BODY_XPATH, col_name, parent)
+
+    def get_expand_cell_column_data(self, col_name, expanded_col_name):
         col_position = self.count_sort_column(col_name)
-        return [el.get_attribute('title') for el in self.find_elements_by_xpath(
-            self.TABLE_DATA_TITLE_POS_XPATH.format(data_position=col_position)) if el.get_attribute('title')]
+        return self.get_column_data('.//td[position()={data_position}]',
+                                    expanded_col_name,
+                                    self.driver.find_element_by_xpath(self.TABLE_DATA_EXPAND_CELL_XPATH.format(
+                                        data_position=col_position)))
+
+    def get_column_data_adapter_names(self):
+        col_position = self.count_sort_column('Adapters')
+        return [el.get_attribute('alt') for el in
+                self.find_elements_by_xpath(self.TABLE_DATA_IMG_XPATH.format(data_position=col_position))
+                if el.get_attribute('alt')]
 
     def get_all_data(self):
         return [data_row.text for data_row in self.find_elements_by_xpath(self.TABLE_DATA_ROWS_XPATH)]
@@ -552,7 +584,7 @@ class EntitiesPage(Page):
         return result
 
     def is_text_in_coloumn(self, col_name, text):
-        return any(text in item for item in self.get_column_data(col_name))
+        return any(text in item for item in self.get_column_data_slicer(col_name))
 
     def open_edit_columns(self):
         self.click_button('Edit Columns', partial_class=True, should_scroll_into_view=False)
@@ -889,7 +921,7 @@ class EntitiesPage(Page):
             self.fill_filter(entities_filter)
             self.enter_search()
         self.wait_for_table_to_load()
-        self.click_table_container_first_row()
+        self.click_row()
         self.wait_for_spinner_to_end()
         self.click_notes_tab()
 
@@ -1000,14 +1032,23 @@ class EntitiesPage(Page):
         self.driver.find_element_by_css_selector(self.TABLE_CELL_EXPAND_CSS.format(
             row_index=row_index, cell_index=cell_index)).click()
 
+    def hover_remainder(self, row_index=1, cell_index=1):
+        remainder = self.driver.find_element_by_css_selector(
+            self.TABLE_CELL_HOVER_REMAINDER_CSS.format(row_index=row_index, cell_index=cell_index))
+        ActionChains(self.driver).move_to_element(remainder).perform()
+        return int(remainder.find_element_by_tag_name('span').text)
+
+    def get_tooltip_table_head(self):
+        return self.driver.find_element_by_css_selector(self.TOOLTIP_TABLE_HEAD_CSS).text
+
+    def get_tooltip_table_data(self):
+        return self.driver.find_elements_by_css_selector(self.TOOLTIP_TABLE_DATA_CSS)
+
     def get_coloumn_data_count_bool(self, col_name, count_true=False, generic_col=True):
         count_class = 'data-true' if count_true else 'data-false'
         col_position = self.count_sort_column(col_name) if generic_col else self.count_specific_column(col_name)
         return [len(el.find_elements_by_css_selector(f'.x-boolean-view .{count_class}')) for el in
-                self.driver.find_elements_by_xpath(self.TABLE_DATA_POS_XPATH.format(data_position=col_position))]
-
-    def get_column_data_count_true(self, col_name, generic_col=True):
-        return self.get_coloumn_data_count_bool(col_name, True, generic_col)
+                self.driver.find_elements_by_xpath(self.TABLE_DATA_XPATH.format(data_position=col_position))]
 
     def get_column_data_count_false(self, col_name, generic_col=True):
         return self.get_coloumn_data_count_bool(col_name, generic_col=generic_col)

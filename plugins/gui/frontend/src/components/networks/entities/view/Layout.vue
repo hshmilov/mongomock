@@ -220,81 +220,108 @@
 </script>
 
 <style lang="scss">
-    .x-entity-view {
-        position: relative;
-        height: 100%;
+  .x-entity-view {
+    position: relative;
+    height: 100%;
 
-        .x-tabs {
-            width: 100%;
-            height: 100%;
+    .x-tabs {
+      width: 100%;
+      height: 100%;
 
-            .header {
-                .x-title .text {
-                    white-space: pre-wrap;
-                }
-            }
-
-            .body {
-                .content-header {
-                    padding-bottom: 4px;
-                    margin-bottom: 12px;
-                    border-bottom: 2px solid rgba($theme-orange, 0.4);
-
-                    .server-info {
-                        text-transform: uppercase;
-                    }
-                }
-
-                .x-list {
-                    height: 100%;
-                    overflow: auto;
-
-                    > .x-array-view > .array {
-                        display: grid;
-                        grid-template-columns: 50% 50%;
-                        grid-gap: 4px 0;
-
-                        .object {
-                            width: 100%;
-                        }
-
-                        .array {
-                            margin-left: 20px;
-                            .object {
-                                width: calc(100% - 24px);
-                            }
-                        }
-                        .numbered > .object > .x-array-view > .array {
-                            margin-left: 0;
-                        }
-                    }
-                }
-
-                .specific .x-list {
-                    height: calc(100% - 36px);
-                    white-space: pre;
-
-                    > .x-array-view > .array {
-                        display: block;
-
-                        > .item-container > .item > .object > .x-array-view > .array {
-                            overflow-wrap: break-word;
-                            display: grid;
-                            grid-template-columns: 50% 50%;
-                            grid-gap: 12px 24px;
-                            margin-left: 0;
-
-                            .separator {
-                                grid-column-end: span 2;
-                            }
-                        }
-                    }
-                }
-            }
-
-            .tag-edit .x-button {
-                text-align: right;
-            }
+      .header {
+        .x-title .text {
+          white-space: pre-wrap;
         }
+      }
+
+      .body {
+        .content-header {
+          padding-bottom: 4px;
+          margin-bottom: 12px;
+          border-bottom: 2px solid rgba($theme-orange, 0.4);
+
+          .server-info {
+            text-transform: uppercase;
+          }
+        }
+
+        .x-list {
+          height: 100%;
+          overflow: auto;
+
+          > .x-array-view > .array {
+            display: grid;
+            grid-template-columns: 50% 50%;
+            grid-gap: 12px 24px;
+            width: calc(100% - 24px);
+
+            .object {
+              width: 100%;
+            }
+
+            .array {
+              margin-left: 20px;
+
+              .object {
+                width: calc(100% - 24px);
+              }
+            }
+
+            .x-slicer {
+              align-items: flex-end;
+
+              .array {
+                margin-left: 0;
+                display: grid;
+                grid-gap: 4px 0;
+                word-break: break-word;
+
+                .item {
+                  &:not(.md-chip) {
+                    line-height: 20px;
+                  }
+
+                  &:first-child .md-chip {
+                    margin-left: 0;
+                  }
+                }
+
+
+              }
+            }
+
+            .numbered > .object > .x-array-view > .array {
+              margin-left: 0;
+            }
+          }
+        }
+
+        .specific .x-list {
+          height: calc(100% - 36px);
+          white-space: pre-line;
+
+          > .x-array-view > .array {
+            display: block;
+
+            > .item-container > .item > .object > .x-array-view > .array {
+              overflow-wrap: break-word;
+              display: grid;
+              grid-template-columns: 50% 50%;
+              grid-gap: 12px 24px;
+              margin-left: 0;
+              width: calc(100% - 24px);
+
+              .separator {
+                grid-column-end: span 2;
+              }
+            }
+          }
+        }
+      }
+
+      .tag-edit .x-button {
+        text-align: right;
+      }
     }
+  }
 </style>

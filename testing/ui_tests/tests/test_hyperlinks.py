@@ -137,4 +137,4 @@ class TestHyperlinks(TestBase):
             link_text = link.text
             link.click()
             self.devices_page.wait_for_table_to_load()
-            assert link_text in self.devices_page.get_column_data(self.devices_page.FIELD_NETWORK_INTERFACES_IPS)
+            assert link_text in self.devices_page.get_column_data_slicer(self.devices_page.FIELD_NETWORK_INTERFACES_IPS)

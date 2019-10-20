@@ -5442,6 +5442,12 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
                             'type': 'bool'
                         },
                         {
+                            'name': 'defaultColumnLimit',
+                            'title': 'Number of values displayed in each column',
+                            'type': 'string',
+                            'enum': [1, 2]
+                        },
+                        {
                             'name': 'percentageThresholds',
                             'title': 'Percentage Fields Severity Scopes',
                             'type': 'array',
@@ -5465,7 +5471,8 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
                             'required': ['error', 'warning', 'success']
                         }
                     ],
-                    'required': ['refreshRate', 'singleAdapter', 'multiLine', 'defaultSort', 'autoQuery'],
+                    'required': ['refreshRate', 'singleAdapter', 'multiLine', 'defaultSort', 'autoQuery',
+                                 'defaultColumnLimit'],
                     'name': SYSTEM_SETTINGS,
                     'title': 'System Settings',
                     'type': 'array'
@@ -5612,6 +5619,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
                 'multiLine': False,
                 'defaultSort': True,
                 'autoQuery': True,
+                'defaultColumnLimit': 2,
                 'percentageThresholds': {
                     'error': 40,
                     'warning': 60,

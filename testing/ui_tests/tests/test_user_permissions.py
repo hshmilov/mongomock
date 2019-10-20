@@ -108,7 +108,7 @@ class TestUserPermissions(TestBase):
         self.users_page.assert_screen_is_restricted()
         self.devices_page.switch_to_page()
         self.devices_page.wait_for_table_to_load()
-        assert len(self.devices_page.get_column_data(self.devices_page.FIELD_ASSET_NAME))
+        assert len(self.devices_page.get_column_data_slicer(self.devices_page.FIELD_ASSET_NAME))
 
     def test_new_user_validation(self):
         self.settings_page.switch_to_page()

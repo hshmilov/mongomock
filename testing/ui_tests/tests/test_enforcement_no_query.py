@@ -124,34 +124,34 @@ class TestEnforcementNoQuery(TestBase):
         self.base_page.run_discovery()
         time.sleep(1)
         self.notification_page.verify_amount_of_notifications(0)
-        assert '0' in self.enforcements_page.get_column_data(FIELD_TIMES_TRIGGERED)
+        assert '0' in self.enforcements_page.get_column_data_slicer(FIELD_TIMES_TRIGGERED)
         self.enforcements_page.edit_enforcement(ENFORCEMENT_CHANGE_NAME)
         self.enforcements_page.click_run_button()
         # Save and Run does not exit the Enforcement Configuration Page
         self.enforcements_page.switch_to_page()
         self.enforcements_page.wait_for_table_to_load()
         self.notification_page.verify_amount_of_notifications(1)
-        wait_until(lambda: '1' in self.enforcements_page.get_column_data(FIELD_TIMES_TRIGGERED), interval=1)
+        wait_until(lambda: '1' in self.enforcements_page.get_column_data_slicer(FIELD_TIMES_TRIGGERED), interval=1)
 
     def test_enforcement_table_content(self):
         self.enforcements_page.create_notifying_enforcement(ENFORCEMENT_NAME, COMMON_ENFORCEMENT_QUERY)
 
         # Check initial state of Enforcement in table
-        assert ENFORCEMENT_NAME in self.enforcements_page.get_column_data(FIELD_NAME)
-        assert COMMON_ENFORCEMENT_QUERY in self.enforcements_page.get_column_data(FIELD_QUERY_NAME)
-        assert '' in self.enforcements_page.get_column_data(FIELD_LAST_TRIGGERED)
-        assert '0' in self.enforcements_page.get_column_data(FIELD_TIMES_TRIGGERED)
+        assert ENFORCEMENT_NAME in self.enforcements_page.get_column_data_slicer(FIELD_NAME)
+        assert COMMON_ENFORCEMENT_QUERY in self.enforcements_page.get_column_data_slicer(FIELD_QUERY_NAME)
+        assert not self.enforcements_page.get_column_data_slicer(FIELD_LAST_TRIGGERED)
+        assert '0' in self.enforcements_page.get_column_data_slicer(FIELD_TIMES_TRIGGERED)
 
         self.base_page.run_discovery()
         self.enforcements_page.refresh()
         self.enforcements_page.wait_for_table_to_load()
 
         # Check triggered state of Enforcement in table
-        assert ENFORCEMENT_NAME in self.enforcements_page.get_column_data(FIELD_NAME)
-        assert COMMON_ENFORCEMENT_QUERY in self.enforcements_page.get_column_data(FIELD_QUERY_NAME)
+        assert ENFORCEMENT_NAME in self.enforcements_page.get_column_data_slicer(FIELD_NAME)
+        assert COMMON_ENFORCEMENT_QUERY in self.enforcements_page.get_column_data_slicer(FIELD_QUERY_NAME)
         assert datetime.now().strftime('%Y-%m-%d') in normalize_timezone_date(
-            self.enforcements_page.get_column_data(FIELD_LAST_TRIGGERED)[0])
-        assert '1' in self.enforcements_page.get_column_data(FIELD_TIMES_TRIGGERED)
+            self.enforcements_page.get_column_data_slicer(FIELD_LAST_TRIGGERED)[0])
+        assert '1' in self.enforcements_page.get_column_data_slicer(FIELD_TIMES_TRIGGERED)
 
     def test_coming_soon(self):
         self.enforcements_page.switch_to_page()
@@ -196,7 +196,7 @@ class TestEnforcementNoQuery(TestBase):
         self.devices_page.switch_to_page()
         self.devices_page.run_filter_query('labels == "Special"')
         assert self.devices_page.count_entities() == 1
-        assert 'CB 1' in self.devices_page.get_column_data(self.devices_page.FIELD_ASSET_NAME)
+        assert 'CB 1' in self.devices_page.get_column_data_slicer(self.devices_page.FIELD_ASSET_NAME)
 
     def test_added_entities_trigger(self):
         """

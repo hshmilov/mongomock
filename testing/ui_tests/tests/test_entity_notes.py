@@ -152,5 +152,5 @@ class TestEntityNotes(TestBase):
         long_text = 'a' * 256
         self.devices_page.create_note(long_text)
         note_box = self.devices_page.get_note_by_text(long_text)
-        user_box = self.devices_page.get_note_by_text('internal\/admin')
+        user_box = self.devices_page.get_note_by_text('internal/admin')
         assert note_box.rect['x'] + note_box.rect['width'] < user_box.rect['x']

@@ -40,6 +40,12 @@ export default {
 					// Use same unified schema and add name
 					return {...this.schema.items, name: index}
 				})
+			} else if (!this.schema.items) {
+				// schema contains one unified definition for type of all data elements (primitive containing array)
+				schemaItems = this.toList(this.processedData).map((item, index) => {
+					// Use same unified schema and add name
+					return {...this.schema, name: index, title: undefined}
+				})
 			}
 			schemaItems.forEach((schema) => {
 				if (this.isFile(schema)) {

@@ -16,7 +16,6 @@ class TestUsersTable(TestEntitiesTable):
     MAIL_COLUMN = 'Mail'
     ADMIN_COLUMN = 'Is Admin'
     LAST_SEEN_COLUMN = 'Last Seen In Domain'
-    ADAPTERS_COLUMN = 'Adapters'
     ACCOUNT_DISABLED_COLUMN = 'Account Disabled'
     ACCOUNT_LOCKOUT_COLUMN = 'Account Lockout'
     QUERY_FILTER_USERNAME = 'specific_data.data.username == regex("m")'
@@ -44,16 +43,16 @@ class TestUsersTable(TestEntitiesTable):
         self.users_page.wait_for_spinner_to_end()
         self.users_page.click_sort_column(col_name)
         self.users_page.wait_for_spinner_to_end()
-        usernames = self.users_page.get_column_data(col_name)
+        usernames = self.users_page.get_column_data_slicer(col_name)
         assert len(usernames) > 2
 
         # Multivalues inside a single entity aren't sorted, let's not test them
         try:
-            usernames.remove('avidor, אבידור')
+            usernames.remove('avidor\nאבידור')
         except Exception:
             pass
         try:
-            usernames.remove('אבידור, avidor')
+            usernames.remove('אבידור\navidor')
         except Exception:
             pass
 
@@ -88,10 +87,10 @@ class TestUsersTable(TestEntitiesTable):
         self.base_page.run_discovery()
         self.users_page.switch_to_page()
         self.users_page.edit_columns(add_col_names=[self.MAIL_COLUMN], remove_col_names=[self.DOMAIN_COLUMN])
-        assert len(self.users_page.get_column_data(self.MAIL_COLUMN))
+        assert len(self.users_page.get_column_data_slicer(self.MAIL_COLUMN))
         with pytest.raises(ValueError):
             # The coloumn is expected to be gone, therefore this throws an exception
-            self.users_page.get_column_data(self.DOMAIN_COLUMN)
+            self.users_page.get_column_data_slicer(self.DOMAIN_COLUMN)
         self.users_page.edit_columns(add_col_names=[self.MAIL_COLUMN, self.ACCOUNT_LOCKOUT_COLUMN],
                                      adapter_title=AD_ADAPTER_NAME)
 
@@ -136,6 +135,11 @@ class TestUsersTable(TestEntitiesTable):
                                               self.QUERY_FILTER_USERNAME)
         self.users_page.assert_csv_match_ui_data(result)
 
+    def _test_column_data_expanded_row(self, col_name):
+        merged_data = self.users_page.get_column_data_slicer(col_name)[0].split('\n')
+        expanded_data = self.users_page.get_column_data_expand_row(col_name)[0].split('\n')
+        assert set(merged_data) == set(expanded_data)
+
     def test_user_expand_row(self):
         self.settings_page.switch_to_page()
         self.base_page.run_discovery()
@@ -144,23 +148,14 @@ class TestUsersTable(TestEntitiesTable):
         self.users_page.click_expand_row()
         self.users_page.find_query_search_input().click()
 
-        user_names = self.users_page.get_column_data(self.USER_NAME_COLUMN)[0].split('\n')
-        assert len(user_names) == 3
-        assert user_names[1] in user_names[0]
-        assert user_names[2] in user_names[0]
+        self._test_column_data_expanded_row(self.USER_NAME_COLUMN)
+        self._test_column_data_expanded_row(self.LAST_SEEN_COLUMN)
+        self._test_column_data_expanded_row(self.ADMIN_COLUMN)
 
-        last_seens = self.users_page.get_column_data(self.LAST_SEEN_COLUMN)[0].split('\n')
-        assert len(last_seens) == 3
-        assert last_seens[2] in last_seens[0]
-        assert last_seens[1] in last_seens[0]
-
-        assert self.users_page.get_column_data_count_true(self.ADMIN_COLUMN)[0] == 2
-        assert self.users_page.get_column_data_count_false(self.ADMIN_COLUMN)[0] == 2
-
-        adapters = self.users_page.get_column_data_titles(self.ADAPTERS_COLUMN)
-        assert len(adapters) == 3
-        assert adapters[1] in adapters[0]
-        assert adapters[2] in adapters[0]
+        adapters = self.users_page.get_column_data_adapter_names()
+        merged_adapters = set(adapters[:2])
+        expanded_adapters = set(adapters[2:])
+        assert merged_adapters == expanded_adapters
 
     @staticmethod
     def _days_since_date(date_str):
@@ -168,9 +163,22 @@ class TestUsersTable(TestEntitiesTable):
         now_obj = pytz.utc.localize(datetime.utcnow()).replace(hour=0, minute=0, second=0)
         return (now_obj - date_obj).days
 
-    def _check_last_seen(self, num, last_seens):
-        days = self._days_since_date(last_seens[-num])
-        assert int(last_seens[-num + 1]) in (days, days + 1)
+    def _test_days_for_last_seen(self, last_seen_date, last_seen_days):
+        days = self._days_since_date(last_seen_date)
+        assert int(last_seen_days) in (days, days + 1)
+
+    def _test_last_seen_expanded_cell(self):
+        self.users_page.click_expand_cell(cell_index=self.users_page.count_sort_column(self.LAST_SEEN_COLUMN))
+        last_seen_merged = self.users_page.get_column_data_slicer(self.LAST_SEEN_COLUMN)[0].split('\n')
+        last_seen_expanded = self.users_page.get_expand_cell_column_data(self.LAST_SEEN_COLUMN, self.LAST_SEEN_COLUMN)
+        assert set(last_seen_merged) == set(last_seen_expanded)
+        last_seen_expanded_days = self.users_page.get_expand_cell_column_data(self.LAST_SEEN_COLUMN, 'Days')
+        self._test_days_for_last_seen(last_seen_expanded[0], last_seen_expanded_days[0])
+        if len(last_seen_expanded_days) > 1:
+            assert int(last_seen_expanded_days[0]) < int(last_seen_expanded_days[1])
+            self._test_days_for_last_seen(last_seen_expanded[1], last_seen_expanded_days[1])
+        self.users_page.click_expand_cell(cell_index=self.users_page.count_sort_column(self.LAST_SEEN_COLUMN))
+        self.users_page.wait_close_column_details_popup()
 
     def test_user_expand_cell(self):
         self.settings_page.switch_to_page()
@@ -179,28 +187,15 @@ class TestUsersTable(TestEntitiesTable):
         self.users_page.query_user_name_contains('avidor')
         self.users_page.click_expand_cell(cell_index=self.users_page.count_sort_column(self.USER_NAME_COLUMN))
 
-        user_names = self.users_page.get_column_data(self.USER_NAME_COLUMN)[0].split('\n')
-        assert user_names[-1] in user_names[0]
-        assert user_names[-2] in user_names[0]
+        user_name_merged = self.users_page.get_column_data_slicer(self.USER_NAME_COLUMN)[0].split('\n')
+        user_name_expanded = self.users_page.get_column_data_expand_cell(self.USER_NAME_COLUMN)[0].split('\n')
+        assert set(user_name_merged) == set(user_name_expanded)
         self.users_page.click_expand_cell(cell_index=self.users_page.count_sort_column(self.USER_NAME_COLUMN))
         self.users_page.wait_close_column_details_popup()
 
-        self.users_page.click_expand_cell(cell_index=self.users_page.count_sort_column(self.LAST_SEEN_COLUMN))
-        last_seens = self.users_page.get_column_data(self.LAST_SEEN_COLUMN)[0].split('\n')
-        assert last_seens[-2] in last_seens[0]
-        assert last_seens[-4] in last_seens[0]
-        assert int(last_seens[-3]) < int(last_seens[-1])
-        self._check_last_seen(4, last_seens)
-        self._check_last_seen(2, last_seens)
-        self.users_page.click_expand_cell(cell_index=self.users_page.count_sort_column(self.LAST_SEEN_COLUMN))
-        self.users_page.wait_close_column_details_popup()
-
+        self._test_last_seen_expanded_cell()
         self.users_page.query_user_name_contains('ofri')
-        self.users_page.click_expand_cell(cell_index=self.users_page.count_sort_column(self.LAST_SEEN_COLUMN))
-        last_seens = self.users_page.get_column_data(self.LAST_SEEN_COLUMN)[0].split('\n')
-        assert last_seens[-2] == last_seens[0]
-        self._check_last_seen(2, last_seens)
-        assert 'Days' in last_seens[-3]
+        self._test_last_seen_expanded_cell()
 
     def test_user_bool_consistency(self):
         self.settings_page.switch_to_page()
@@ -213,5 +208,6 @@ class TestUsersTable(TestEntitiesTable):
             self.users_page.add_columns([self.ACCOUNT_DISABLED_COLUMN], AD_ADAPTER_NAME)
             self.users_page.close_edit_columns()
             self.users_page.wait_for_table_to_load()
-            assert self.users_page.get_column_data_count_false(self.ACCOUNT_DISABLED_COLUMN)[0] == 1
-            assert self.users_page.get_column_data_count_false(self.ACCOUNT_DISABLED_COLUMN, generic_col=False)[0] == 1
+            generic_col_data = self.users_page.get_column_data_slicer(self.ACCOUNT_DISABLED_COLUMN)
+            specific_col_data = self.users_page.get_column_data_slicer(self.ACCOUNT_DISABLED_COLUMN, False)
+            assert generic_col_data == specific_col_data

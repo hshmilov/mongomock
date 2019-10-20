@@ -23,7 +23,7 @@ class TestDevicesTable(TestEntitiesTable):
             self.base_page.run_discovery()
             self.devices_page.switch_to_page()
             self.devices_page.wait_for_table_to_load()
-            wait_until(lambda: any(self.devices_page.get_column_data(
+            wait_until(lambda: any(self.devices_page.get_column_data_slicer(
                 self.devices_page.FIELD_TAGS)), total_timeout=60 * 5)
             self.settings_page.switch_to_page()
             self.devices_page.switch_to_page()

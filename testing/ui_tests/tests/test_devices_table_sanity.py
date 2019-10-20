@@ -144,8 +144,8 @@ class TestDevicesTable(TestEntitiesTable):
         self.devices_page.click_tab(self.devices_page.FIELD_NETWORK_INTERFACES)
         assert int(self.devices_page.get_raw_count_entities()[1:-1]) == 2
         field_data = self.devices_page.get_field_table_data()
-        assert ['06:3A:9B:D7:D7:A8', '10.0.2.1\n10.0.2.2', '10.0.2.0/24', 'vlan0, vlan1', '1, 2'] == field_data[0]
-        assert ['06:3A:9B:D7:D7:A8', '10.0.2.3', '', 'vlan0, vlan1', '1, 2'] == field_data[1]
+        assert ['06:3A:9B:D7:D7:A8', '10.0.2.1\n10.0.2.2', '10.0.2.0/24', 'vlan0\nvlan1', '1\n2'] == field_data[0]
+        assert ['06:3A:9B:D7:D7:A8', '10.0.2.3', '', 'vlan0\nvlan1', '1\n2'] == field_data[1]
 
         self.devices_page.switch_to_page()
         self.devices_page.wait_for_spinner_to_end()
@@ -175,6 +175,44 @@ class TestDevicesTable(TestEntitiesTable):
             self.devices_page.click_select_all_entities()
             assert self.devices_page.count_entities() == self.devices_page.count_selected_entities()
             self.adapters_page.clean_adapter_servers(AWS_NAME, delete_associated_entities=True)
+
+    def change_values_count_per_column_to_be_val(self, val):
+        self.settings_page.switch_to_page()
+        self.settings_page.click_gui_settings()
+        self.settings_page.wait_for_spinner_to_end()
+        self.settings_page.select_values_count_per_column(val)
+        self.settings_page.click_save_gui_settings()
+        self.settings_page.wait_for_saved_successfully_toaster()
+
+    def test_device_hover(self):
+        self.settings_page.switch_to_page()
+        self.settings_page.click_gui_settings()
+        self.settings_page.wait_for_spinner_to_end()
+        default_num_of_val_per_col = self.settings_page.find_values_count_per_column()
+        self.base_page.run_discovery()
+        self.devices_page.switch_to_page()
+        self.devices_page.query_hostname_contains('CB First')
+        remainder_value = self.devices_page.hover_remainder(row_index=1, cell_index=self.devices_page.count_sort_column(
+            self.devices_page.FIELD_NETWORK_INTERFACES_IPS))
+        tooltip_header = self.devices_page.get_tooltip_table_head()
+        assert tooltip_header == self.devices_page.FIELD_NETWORK_INTERFACES_IPS
+        num_of_devices_in_tooltip = len(self.devices_page.get_tooltip_table_data())
+        assert remainder_value == num_of_devices_in_tooltip - default_num_of_val_per_col
+
+    def test_change_values_count_per_column(self):
+        self.change_values_count_per_column_to_be_val('1')
+        self.base_page.run_discovery()
+        self.devices_page.switch_to_page()
+        self.devices_page.query_hostname_contains('CB First')
+        remainder_value = self.devices_page.hover_remainder(row_index=1,
+                                                            cell_index=self.devices_page.count_sort_column(
+                                                                self.devices_page.FIELD_NETWORK_INTERFACES_IPS))
+        tooltip_header = self.devices_page.get_tooltip_table_head()
+        assert tooltip_header == self.devices_page.FIELD_NETWORK_INTERFACES_IPS
+        num_of_devices_in_tooltip = len(self.devices_page.get_tooltip_table_data())
+        assert remainder_value == num_of_devices_in_tooltip - int(1)
+        # reset to default value
+        self.change_values_count_per_column_to_be_val('2')
 
     def test_select_devices(self):
         stress = stresstest_service.StresstestService()

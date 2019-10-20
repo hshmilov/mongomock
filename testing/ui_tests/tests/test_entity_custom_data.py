@@ -200,7 +200,7 @@ class TestEntityCustomData(TestBase):
                 self.devices_page.select_query_adapter(KASEYA_VSA_ADAPTER_NAME)
                 self.devices_page.click_search()
                 self.devices_page.wait_for_table_to_load()
-                self.devices_page.click_table_container_first_row()
+                self.devices_page.click_row()
                 self.devices_page.click_general_tab()
                 tabs = self.devices_page.get_vertical_tab_elements()
                 # Go over every tab, and over every header, pick the first rows data, and search it

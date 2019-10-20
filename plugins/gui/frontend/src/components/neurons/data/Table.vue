@@ -62,7 +62,9 @@
         <slot
           slot-scope="props"
           v-bind="props"
-        />
+        >
+          <x-table-data v-bind="props" />
+        </slot>
       </x-table>
     </x-table-wrapper>
     <div class="x-pagination">
@@ -115,6 +117,7 @@
   import xSearchInput from '../../neurons/inputs/SearchInput.vue'
   import xTableWrapper from '../../axons/tables/TableWrapper.vue'
   import xTable from '../../axons/tables/Table.vue'
+  import xTableData from './TableData.vue'
   import xButton from '../../axons/inputs/Button.vue'
 
   import { GET_DATA_SCHEMA_BY_NAME } from '../../../store/getters'
@@ -125,7 +128,7 @@
 
   export default {
     name: 'XDataTable',
-    components: { xTableWrapper, xTable, xButton, xSearchInput },
+    components: { xTableWrapper, xTable, xTableData, xButton, xSearchInput },
     props: {
       module: {
         type: String,

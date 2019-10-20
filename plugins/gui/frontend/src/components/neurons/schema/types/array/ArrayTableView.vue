@@ -1,10 +1,7 @@
 <template>
-  <div
-    class="array inline"
-    :title="allItems"
-  >
+  <div class="array inline">
     <div
-      v-for="item in limitedItems"
+      v-for="item in dataSchemaItems"
       :key="item.name"
       class="item"
     >
@@ -13,17 +10,23 @@
         :data="processedData[item.name]"
         :schema="item"
       />
-      <component
-        :is="item.type"
-        v-else
-        :schema="item"
-        :value="processedData[item.name]"
-      />
+      <template v-else-if="dataSchemaItems.length > 1 && schema.name !=='adapters' && item.format !== 'tag'">
+        <md-chip>
+          <component
+            :is="item.type"
+            :schema="item"
+            :value="processedData[item.name]"
+          />
+        </md-chip>
+      </template>
+      <template v-else>
+        <component
+          :is="item.type"
+          :schema="item"
+          :value="processedData[item.name]"
+        />
+      </template>
     </div>
-    <div
-      v-if="limit && filteredItems.length > limit"
-      class="item"
-    >+{{ remainder }}</div>
   </div>
 </template>
 
@@ -34,44 +37,35 @@
   import bool from '../boolean/BooleanView.vue'
   import file from './FileView.vue'
   import xArrayRawView from './ArrayRawView.vue'
+  import xTooltip from '../../../../axons/popover/Tooltip.vue'
+  import xTable from '../../../../axons/tables/Table.vue'
 
   import arrayMixin from './array'
-  import { includesIgnoreCase } from '../../../../../constants/utils'
+  import { isObjectListField } from '../../../../../constants/utils'
 
   export default {
     name: 'XArrayTableView',
     components: {
-      string, number, integer, bool, file, xArrayRawView
+      string, number, integer, bool, file, xArrayRawView, xTooltip, xTable
     },
     mixins: [arrayMixin],
-    props: {
-      filter: {
-        type: String,
-        default: ''
+    data () {
+      return {
+        inHoverRemainder: false,
+        position: {
+          top: false,
+          left: false
+        }
       }
     },
     computed: {
       showRaw () {
-        return this.isOrderedObject || this.schema.items.type === 'array'
-      },
-      filteredItems () {
-        if (!this.filter) {
-          return this.dataSchemaItems
-        }
-        let processedData = this.processedData
-        return this.dataSchemaItems.filter(item => this.hasFilter(processedData[item.name]))
-      },
-      limit () {
-        if (this.schemaItems.length && this.schemaItems[0].format === 'logo') {
-          return null
-        }
-        if (this.showRaw) {
-          return 1
-        }
-        return 2
+        return isObjectListField(this.schema)
       },
       processedData () {
-        if (this.isOrderedObject) return this.data
+        if (this.isOrderedObject){
+          return this.data
+        }
         let items = Object.values(this.data)
         if (this.schema.sort) {
           items.sort()
@@ -80,39 +74,6 @@
           items = Array.from(new Set(items))
         }
         return items
-      },
-      limitedItems () {
-        if (!this.filteredItems || !this.limit || (this.filteredItems.length <= this.limit)) {
-          return this.filteredItems
-        }
-        return this.filteredItems.slice(0, this.limit)
-      },
-      remainder () {
-        return this.filteredItems.length - this.limit
-      },
-      allItems () {
-        if (this.showRaw) {
-          return undefined
-        }
-        if (Array.isArray(this.processedData)) {
-          return this.processedData.join(',')
-        }
-        return Object.values(this.processedData).join(',')
-      }
-    },
-    methods: {
-      hasFilter (data) {
-        if (!data) {
-          return false
-        }
-        if (typeof data === 'string') {
-          return includesIgnoreCase(data, this.filter)
-        }
-        if (typeof data !== 'object') {
-          return false
-        }
-        const itemsToCheck = Array.isArray(data) ? data : Object.values(data)
-        return Boolean(itemsToCheck.find(item => this.hasFilter(item)))
       }
     }
   }
@@ -121,12 +82,34 @@
 <style lang="scss">
   .array.inline {
     display: flex;
+    align-items: center;
+    position: relative;
+
+    &:hover .x-tooltip {
+      display: block
+    }
 
     .item {
       margin-right: 8px;
       line-height: 24px;
       display: flex;
-      align-items: center;
+
+      .md-chip {
+          transition: none;
+
+          &:not(.tag):not(.x-array-raw-view) {
+            font-size: 14px;
+            border: 1px solid rgba($theme-orange, 0.2)!important;
+            background-color: transparent!important;
+            height: 24px;
+            line-height: 24px;
+          }
+      }
+
+      &:first-child .md-chip {
+        margin-left: -12px;
+      }
     }
   }
+
 </style>

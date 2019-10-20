@@ -237,6 +237,7 @@
 
 <style lang="scss">
   .x-entity-adapters {
+    height: 100%;
     .json-view-item {
       .data-key {
         padding: 2px;

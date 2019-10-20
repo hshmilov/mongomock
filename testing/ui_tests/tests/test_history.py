@@ -18,8 +18,8 @@ class TestHistory(TestBase):
             self.users_page.fill_datepicker_date(datetime.now() - timedelta(day))
             self.users_page.wait_for_table_to_load()
             assert self.users_page.count_entities() == day_to_user_count[day - 1]
-            for user_name in self.users_page.get_column_data(self.users_page.FIELD_USERNAME_TITLE):
-                assert int(user_name.split(', ')[0].split(' ')[-1]) == day
+            for user_name in self.users_page.get_column_data_slicer(self.users_page.FIELD_USERNAME_TITLE):
+                assert int(user_name.split('\n')[0].split(' ')[-1]) == day
             self.users_page.close_datepicker()
             self.users_page.clear_existing_date()
             wait_until(lambda: tester.is_metric_in_log(Query.QUERY_HISTORY, '.*'))
@@ -36,7 +36,7 @@ class TestHistory(TestBase):
             self.devices_page.close_datepicker()
             self.devices_page.wait_for_table_to_load()
             assert self.devices_page.count_entities() == day_to_device_count[day - 1]
-            for host_name in self.users_page.get_column_data(self.devices_page.FIELD_HOSTNAME_TITLE):
+            for host_name in self.users_page.get_column_data_slicer(self.devices_page.FIELD_HOSTNAME_TITLE):
                 assert int(host_name.split(' ')[-1]) == day
             self.devices_page.clear_existing_date()
             wait_until(lambda: tester.is_metric_in_log(Query.QUERY_HISTORY, '.*'))

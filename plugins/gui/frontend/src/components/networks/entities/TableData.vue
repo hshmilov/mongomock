@@ -1,6 +1,10 @@
 <template>
   <div>
-    <div class="x-data">
+    <div
+      class="x-data"
+      @mouseover="onHoverData"
+      @mouseleave="onLeaveData"
+    >
       <x-table-data
         :schema="schema"
         :data="data"
@@ -8,6 +12,14 @@
         :filter="filter"
         ref="data"
       />
+      <div class="data-table-container">
+        <x-tooltip v-if="hoverData">
+          <x-table
+            slot="body"
+            v-bind="adaptersDetailsTable"
+          />
+        </x-tooltip>
+      </div>
       <div class="details-table-container">
         <md-icon
           v-if="showExpand"
@@ -29,7 +41,13 @@
               v-if="expandData"
               class="content"
             >
-              <x-table v-bind="detailsTable" />
+              <x-table v-bind="detailsTable">
+                <x-table-data
+                  slot-scope="props"
+                  :module="module"
+                  v-bind="props"
+                />
+              </x-table>
             </div>
           </transition>
         </div>
@@ -58,7 +76,9 @@
 
 <script>
   import xTable from '../../axons/tables/Table.vue'
-  import xTableData from '../../axons/tables/TableData.vue'
+  import xTableData from '../../neurons/data/TableData.vue'
+  import xTooltip from '../../axons/popover/Tooltip.vue'
+  import {pluginMeta} from '../../../constants/plugin_meta'
 
   import {mapState} from 'vuex'
 
@@ -66,7 +86,8 @@
     name: 'XEntityTableData',
     components: {
       xTable,
-      xTableData
+      xTableData,
+      xTooltip
     },
     props: {
       module: {
@@ -104,6 +125,7 @@
     },
     data () {
       return {
+        hoverData: false,
         expandData: false,
         position: {
           top: false,
@@ -123,6 +145,9 @@
       adaptersFieldName () {
         return this.adaptersSchema.name
       },
+      isAdaptersField () {
+        return this.fieldName === this.adaptersFieldName
+      },
       adaptersLength () {
         return this.data[this.adaptersFieldName].length
       },
@@ -131,11 +156,11 @@
                 && Boolean(this.$refs.data && this.$refs.data.$el.textContent.trim())
       },
       adaptersListSorted() {
-        return this.data[this.adaptersFieldName].concat().sort()
+        return this.data[this.adaptersFieldName].concat().sort().map(adapter => [adapter])
       },
       details () {
-        if (this.fieldName === this.adaptersFieldName) {
-          return this.adaptersListSorted.map(adapter => [adapter])
+        if (this.isAdaptersField) {
+          return this.adaptersListSorted
         }
         return this.data[`${this.fieldName}_details`]
       },
@@ -147,7 +172,7 @@
           ],
           data: this.details.map((detail, i) => {
             return {
-              [this.adaptersFieldName]: [this.adaptersListSorted[i]],
+              [this.adaptersFieldName]: this.adaptersListSorted[i],
               [this.fieldName]: detail
             }
           }),
@@ -176,6 +201,24 @@
           })
         }
         return baseTable
+      },
+      adaptersDetailsTable () {
+        return {
+          fields: [
+            this.schema, {
+              name: 'name', title: 'Name', type: 'string'
+          }],
+          data: this.adaptersListSorted.map(adapter => {
+            return {
+              [this.fieldName]: adapter,
+              name: pluginMeta[adapter[0]] ? pluginMeta[adapter[0]].title : adapter[0]
+            }
+          }),
+          colFilters: {
+            [this.schema.name]: this.filter
+          },
+          filterable: false
+        }
       }
     },
     methods: {
@@ -190,6 +233,15 @@
             }
           })
         }
+      },
+      onHoverData () {
+        if (!this.isAdaptersField) {
+          return
+        }
+        this.hoverData = true
+      },
+      onLeaveData () {
+        this.hoverData = false
       }
     }
   }
@@ -216,6 +268,7 @@
             }
 
             .popup {
+                overflow: visible;
                 position: absolute;
                 width: min-content;
                 z-index: 200;
@@ -233,14 +286,11 @@
                     box-shadow: $popup-shadow;
                     padding: 4px;
                     border-radius: 4px;
-                    display: grid;
-                    grid-template-columns: 1fr 2fr;
                     max-height: 30vh;
-                    overflow: auto;
-                  
                     .x-table {
                       width: min-content;
                       height: auto;
+                      overflow: visible;
                     }
                 }
 
@@ -258,19 +308,22 @@
                 }
             }
         }
+
+        .data-table-container {
+          position: relative;
+        }
     }
 
-
     .details-list-container {
-        overflow: hidden;
+        overflow: visible;
         margin: 0px -8px;
 
         .list {
-            margin-top: 8px;
+            margin-top: 2px;
             display: grid;
             background-color: rgba($grey-2, 0.6);
 
-            .item {
+            > .item {
                 height: 30px;
                 display: flex;
                 align-items: center;

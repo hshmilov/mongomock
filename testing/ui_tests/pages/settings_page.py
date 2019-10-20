@@ -65,6 +65,7 @@ class SettingsPage(Page):
     READ_ONLY_ROLE = 'Read Only User'
     RESTRICTED_ROLE = 'Restricted User'
     USE_PROXY = 'Proxy Enabled'
+    VALUES_COUNT_PER_COLUMN_DROPDOWN_CSS = 'label[for="defaultColumnLimit"]~.x-dropdown.x-select'
     SAFEGUARD_REMOVE_BUTTON_TEXT = 'Remove Role'
     # sorry - but it's not my fault
     # https://axonius.atlassian.net/browse/AX-2991
@@ -410,6 +411,14 @@ class SettingsPage(Page):
 
     def get_single_adapter_checkbox(self):
         return self.is_toggle_selected(self.find_checkbox_by_label(self.SINGLE_ADAPTER_VIEW))
+
+    def select_values_count_per_column(self, values_count_per_column):
+        self.select_option_without_search(self.VALUES_COUNT_PER_COLUMN_DROPDOWN_CSS,
+                                          self.SELECT_OPTION_CSS, values_count_per_column)
+
+    def find_values_count_per_column(self):
+        x = self.driver.find_element_by_css_selector(self.VALUES_COUNT_PER_COLUMN_DROPDOWN_CSS)
+        return int(x.find_element_by_css_selector('.trigger-text').text)
 
     def set_email_ssl_files(self, ca_data, cert_data, private_data):
         self.upload_file_by_id('ca_file', ca_data)

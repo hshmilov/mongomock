@@ -565,7 +565,7 @@ class TestDevicesQuery(TestBase):
         self.devices_page.select_query_value(self.devices_page.VALUE_SAVED_QUERY_WINDOWS, parent=expressions[0])
         self.devices_page.wait_for_spinner_to_end()
         assert self.devices_page.is_query_error()
-        for os_type in self.devices_page.get_column_data(self.devices_page.FIELD_OS_TYPE):
+        for os_type in self.devices_page.get_column_data_slicer(self.devices_page.FIELD_OS_TYPE):
             assert os_type == self.devices_page.VALUE_OS_WINDOWS
 
         self.devices_page.select_query_value(self.devices_page.VALUE_SAVED_QUERY_LINUX, parent=expressions[0])
