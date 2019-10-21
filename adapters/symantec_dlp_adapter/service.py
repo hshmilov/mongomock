@@ -36,7 +36,8 @@ class SymantecDlpAdapter(AdapterBase, Configurable):
                                                                    consts.DEFAULT_SYMANTEC_DLP_PORT),
                                             devices_paging=self.__devices_fetched_at_a_time,
                                             username=client_config[consts.USER],
-                                            password=client_config[consts.PASSWORD]
+                                            password=client_config[consts.PASSWORD],
+                                            service=client_config[consts.SYMANTEC_DLP_DATABASE]
                                             )
             connection.set_credentials(username=client_config[consts.USER],
                                        password=client_config[consts.PASSWORD])
@@ -72,6 +73,11 @@ class SymantecDlpAdapter(AdapterBase, Configurable):
                     'format': 'port'
                 },
                 {
+                    'name': consts.SYMANTEC_DLP_DATABASE,
+                    'title': 'Database',
+                    'type': 'string'
+                },
+                {
                     'name': consts.USER,
                     'title': 'User Name',
                     'type': 'string'
@@ -87,6 +93,7 @@ class SymantecDlpAdapter(AdapterBase, Configurable):
                 consts.SYMANTEC_DLP_HOST,
                 consts.USER,
                 consts.PASSWORD,
+                consts.SYMANTEC_DLP_DATABASE
             ],
             'type': 'array'
         }

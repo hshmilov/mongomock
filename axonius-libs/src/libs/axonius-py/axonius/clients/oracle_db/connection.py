@@ -9,13 +9,14 @@ DEFAULT_PAGINATION = 1000
 
 
 class OracleDBConnection(AbstractSQLConnection):
-    def __init__(self, host, port, username, password, devices_paging=DEFAULT_PAGINATION):
+    def __init__(self, host, port, username, password, service, devices_paging=DEFAULT_PAGINATION):
         self.host = host
         self.port = port
         self.username = username
         self.password = password
         self.db = None
         self.devices_paging = devices_paging
+        self.service = service
 
         assert isinstance(port, int), f'the port {port} is not a valid int!'
 
@@ -37,7 +38,7 @@ class OracleDBConnection(AbstractSQLConnection):
     def connect(self):
         """ Connects to the service """
         try:
-            self.db = cx_Oracle.connect(f'{self.username}/{self.password}@{self.host}:{self.port}')
+            self.db = cx_Oracle.connect(f'{self.username}/{self.password}@{self.host}:{self.port}/{self.service}')
         except Exception:
             logger.exception('Connection to database failed')
             raise
