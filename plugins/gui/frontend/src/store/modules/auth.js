@@ -1,5 +1,6 @@
 import { REQUEST_API } from '../actions'
 import {entities} from '../../constants/entities'
+import _get from 'lodash/get'
 
 export const IS_ENTITY_RESTRICTED = 'IS_ENTITY_RESTRICTED'
 export const IS_ENTITY_EDITABLE = 'IS_ENTITY_EDITABLE'
@@ -51,7 +52,8 @@ export const auth = {
   getters: {
     [IS_USER_ADMIN] (state) {
       const user = state.currentUser.data
-      return user.permissions['settings'] === 'ReadWrite' || user.admin
+      const userSettingsPermission = _get(user, 'permissions.Settings', undefined)
+      return userSettingsPermission === 'ReadWrite' || user.admin
     },
     [IS_ENTITY_RESTRICTED] (state) {
       return (entity) => {

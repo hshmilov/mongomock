@@ -643,6 +643,7 @@ class GuiService(PluginService, UpdatablePluginMixin):
                                            'and examine its profile.'
                         },
                         {
+                            'name': 'query_saved',
                             'title': 'Save a query',
                             'completed': False,
                             'path': '/devices',

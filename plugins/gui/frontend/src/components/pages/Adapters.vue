@@ -61,7 +61,7 @@
     }
 
     function getConnectedAdapters(adapter) {
-        return adapter.successClients.length
+        return adapter.successClients
     }
 
     export default {
