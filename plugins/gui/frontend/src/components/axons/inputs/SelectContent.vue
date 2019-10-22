@@ -5,15 +5,16 @@
     @keydown.down="incActiveOption"
     @keydown.up="decActiveOption"
     @keyup.enter="selectActive"
-    @keyup.esc="this.$emit('close')"
+    @keyup.esc="close"
   >
     <x-search-input
       v-if="searchable"
       ref="searchInput"
       v-model="searchValue"
       class="x-select-search"
+      :placeholder="placeholder"
     />
-    <div class="x-select-options">
+    <div class="x-select-options" :class="{'with-footer': allowCustomOption}">
       <template v-for="(currentOption, index) in filteredOptions">
         <div
           :key="index"
@@ -21,6 +22,7 @@
           class="x-select-option"
           :class="{active: index === activeOptionIndex, 'filter-adapters': currentOption.plugins}"
           :tabindex="-1"
+          :title="currentOption.name"
           @click="() => selectOption(currentOption.name)"
           @keyup.enter.stop.prevent="selectOption(currentOption.name)"
         >
@@ -42,8 +44,20 @@
         >
           <slot slot-scope="{ option }" :option="option" />
         </x-select-content>
+
       </template>
     </div>
+    <template v-for="(extraOption, index) in extraOptions">
+      <div
+        :key="index+'extra'"
+        class="x-select-option x-footer-option"
+        :tabindex="-1"
+        @click="() => selectOption(extraOption.name)"
+        @keyup.enter.stop.prevent="selectOption(extraOption.name)"
+      >
+        <slot :option="getOption(extraOption)">{{ extraOption.title }}</slot>
+      </div>
+    </template>
     <div v-if="multiSelect" class="all-buttons">
       <div class="select-all">
         <x-button
@@ -64,6 +78,8 @@
     import XCheckbox from "../../axons/inputs/Checkbox.vue";
     import XButton from "../../axons/inputs/Button.vue";
 
+    import _some from 'lodash/some'
+
     export default {
         name: 'XSelectContent',
         components: {XCheckbox, XButton, xSearchInput},
@@ -82,7 +98,7 @@
             },
             placeholder: {
                 type: String,
-                default: ''
+                default: undefined
             },
             searchable: {
                 type: Boolean,
@@ -107,6 +123,14 @@
             readOnly: {
                 type: Boolean,
                 default: false
+            },
+            missingItemsLabel: {
+              type: String,
+              default: 'deleted'
+            },
+            allowCustomOption: {
+              type: Boolean,
+              default: false
             }
         },
         data() {
@@ -121,9 +145,10 @@
             completeOptions() {
                 if (this.value && !this.options.find(item => item.name === this.value)) {
                     let currentOptions = [...this.options];
+                    const title = this.value + ( this.missingItemsLabel !== '' ? ` ${this.missingItemsLabel}` : '')
                     if (this.value.length > 0) {
                         currentOptions.push({
-                            name: this.value, title: `${this.value} (deleted)`
+                            name: this.value, title: title
                         })
                     }
                     return currentOptions;
@@ -134,6 +159,13 @@
                 if (!this.completeOptions || !Array.isArray(this.completeOptions)) return []
                 return this.completeOptions.filter(option =>
                     option.title && option.title.toLowerCase().includes(this.searchValue.toLowerCase()))
+            },
+            extraOptions() {
+              if(!this.allowCustomOption) return false
+              if(this.searchValue !== '' && !_some(this.completeOptions, {name:this.searchValue})) {
+                return [{ name: this.searchValue, title: `${this.searchValue} (create new)` }]
+              }
+              return []
             },
             secondaryValues: {
                 get() {
@@ -171,6 +203,7 @@
                 if (!this.multiSelect) {
                     let currentValue = {'value': name}
                     let currentOption = this.filteredOptions.find(option => option.name === name)
+                    if(!currentOption) currentOption = this.extraOptions.find(option => option.name === name)
                     if (currentOption.plugins && this.secondaryValues) {
                         currentValue['secondaryValues'] = this.secondaryValues;
                     } else {
@@ -261,6 +294,9 @@
             },
             getAdapterValue(adapterName){
                 return this.selectedValues[adapterName] === undefined ? true : this.selectedValues[adapterName]
+            },
+            close() {
+              this.$emit('close')
             }
         }
     }
@@ -279,23 +315,33 @@
       max-height: 30vh;
       overflow: auto;
 
-      .x-select-option {
-        cursor: pointer;
-        margin: 4px 0;
-        padding: 4px 12px;
-        position: relative;
-
-        &:hover, &.active {
-          background-color: $grey-2;
-        }
-
-        &.filter-adapters:after {
-          /*top: 53px !important;*/
-          right: 15px;
-          @include triangle('right', 0.35rem);
-        }
-
+      &.with-footer {
+        max-height: 160px;
+        overflow: scroll;
       }
+    }
+
+    .x-select-option {
+      cursor: pointer;
+      margin: 4px 0;
+      padding: 4px 12px;
+      position: relative;
+
+      &:hover, &.active {
+        background-color: $grey-2;
+      }
+
+      &.filter-adapters:after {
+        /*top: 53px !important;*/
+        right: 15px;
+        @include triangle('right', 0.35rem);
+      }
+
+      &.x-footer-option {
+        margin: 0;
+        border-top: 1px solid $grey-2;;
+      }
+
     }
 
     &.x-secondary-select-content {

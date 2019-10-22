@@ -21,7 +21,14 @@ class UntagAllEntitiesAction(ActionTypeBase):
                 {
                     'name': 'tag_name',
                     'title': 'Tag name',
-                    'type': 'string'
+                    'type': 'string',
+                    'enum': [],
+                    'source': {
+                        'key': 'all-tags',
+                        'options': {
+                            'allow-custom-option': False
+                        }
+                    }
                 },
             ],
             'required': [

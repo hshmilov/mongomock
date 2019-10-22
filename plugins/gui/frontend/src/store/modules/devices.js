@@ -40,7 +40,7 @@ export const devices = {
 			},
 		},
 
-		labels: { data: [], fetching: false, error: ''},
+		labels: { data: false, fetching: false, error: ''},
 
 		current: {
 			id: '',

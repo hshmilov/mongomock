@@ -35,6 +35,9 @@
       :options="options"
       :searchable="searchable"
       :read-only="readOnly"
+      :placeholder="searchPlaceholder"
+      :missing-items-label="missingItemsLabel"
+      :allow-custom-option="allowCustomOption"
       @close="() => closeDropdown()"
     ><slot
       slot-scope="{ option }"
@@ -87,13 +90,31 @@
       readOnly: {
         type: Boolean,
         default: false
+      },
+      searchPlaceholder: {
+        type: String,
+        default: undefined
+      },
+      missingItemsLabel: {
+        type: String,
+        default: 'deleted'
+      },
+      allowCustomOption: {
+        type: Boolean,
+        default: false
+      }
+    },
+    data() {
+      return {
+        searchValue: false
       }
     },
     computed: {
       completeOptions () {
         if (this.stringValue && !this.options.find(item => item.name === this.stringValue)) {
+          const title = this.stringValue + ( this.missingItemsLabel !== '' ? ` (${this.missingItemsLabel})` : '' )
           return [...this.options, {
-            name: this.stringValue, title: `${this.stringValue} (deleted)`
+            name: this.stringValue, title: title
           }]
         }
         return this.options
@@ -175,6 +196,11 @@
                     &:hover, &.active {
                         background-color: $grey-2;
                     }
+                }
+
+                &.with-footer {
+                  max-height: 160px;
+                  overflow: scroll;
                 }
             }
         }

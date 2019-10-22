@@ -133,9 +133,13 @@ class Page:
 
     FIELD_WITH_LABEL_XPATH = '//div[child::label[text()=\'{label_text}\']]/div[contains(@class, \'md-field\')]'
 
+    DROPDOWN_TAGS_CSS = 'div.x-dropdown.x-select.all-tags'
+    DROPDOWN_TAGS_VALUE_CSS = 'div.x-dropdown.x-select.all-tags div.trigger-text'
     DROPDOWN_TEXT_BOX_CSS = 'div.x-search-input.x-select-search > input'
     DROPDOWN_SELECTED_OPTIONS_CSS = 'div.x-select-options'
     DROPDOWN_SELECTED_OPTION_CSS = 'div.x-select-options > div.x-select-option'
+    DROPDOWN_SELECT_OPTION_CSS = 'div.x-select-options > div.x-select-option[title=\'{title}\']'
+    DROPDOWN_NEW_OPTION_CSS = 'div.x-select-options + div.x-footer-option'
 
     TAB_HEADER_XPATH = '//div[contains(@class, \'x-tabs\')]/ul/li[contains(@class, \'header-tab\') and ' \
                        './/text()=\'{tab_title}\']'

@@ -40,7 +40,7 @@ export const users = {
             },
         },
 
-        labels: {data: [], fetching: false, error: ''},
+        labels: {data: false, fetching: false, error: ''},
 
         current: {
             id: '',

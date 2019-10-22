@@ -37,6 +37,7 @@ class Action(Enum):
     cybereason_unisolate = 'Unisolate in Cybereason Deep Detect & Respond'
     notify_syslog = 'Send to Syslog System'
     tag = 'Add Tag'
+    untag = 'Remove Tag'
     run_executable_windows = 'Deploy on Windows Device'
     run_wmi_scan = 'Run WMI Scan'
     run_windows_shell_command = 'Run Windows Shell Command'
@@ -113,6 +114,10 @@ class EnforcementsPage(EntitiesPage):
     CLICKABLE_TABLE_ROW = '.x-table-row.clickable'
     CONFIRM_REMOVE_SINGLE = 'Remove Enforcement Set'
     CONFIRM_REMOVE_MULTI = 'Remove Enforcement Sets'
+    ADDED_ACTION_XPATH = './/div[@class=\'content\' and .//text()=\'{action_name}\']'
+
+    SPECIAL_TAG_ACTION = 'Special Tag Action'
+    DEFAULT_TAG_NAME = 'Special'
 
     @property
     def url(self):
@@ -157,23 +162,53 @@ class EnforcementsPage(EntitiesPage):
         self.find_element_by_text(Action.send_emails.value).click()
 
     def tag_entities(self, name, tag, new=False):
+        # add new tag ( type name in the input and click on the create new option )
         self.wait_for_action_config()
         if new:
             self.fill_text_field_by_element_id(self.ACTION_NAME_ID, name)
-        self.fill_text_field_by_element_id('tag_name', tag)
+        self.select_option(
+            self.DROPDOWN_TAGS_CSS, self.DROPDOWN_TEXT_BOX_CSS, self.DROPDOWN_NEW_OPTION_CSS, tag
+        )
         self.click_button(self.SAVE_BUTTON)
         self.wait_for_element_present_by_text(name)
 
-    def add_tag_entities(self, name='Special Tag Action', tag='Special', action_cond=MAIN_ACTION_TEXT):
+    def tag_entities_from_dropdown(self, name, tag, new=False):
+        # select tag from dropdown ( type name in the input and click on the filtered option )
+        self.wait_for_action_config()
+        if new:
+            self.fill_text_field_by_element_id(self.ACTION_NAME_ID, name)
+        self.select_option(
+            self.DROPDOWN_TAGS_CSS, self.DROPDOWN_TEXT_BOX_CSS, self.DROPDOWN_SELECT_OPTION_CSS.format(title=tag), tag
+        )
+        self.click_button(self.SAVE_BUTTON)
+        self.wait_for_element_present_by_text(name)
+
+    def find_tags_dropdown(self, action_cond):
         self.find_element_by_text(action_cond).click()
         self.wait_for_action_library()
         self.find_element_by_text(ActionCategory.Utils).click()
         # Opening animation time
         time.sleep(0.2)
+
+    def add_tag_entities(self, name=SPECIAL_TAG_ACTION, tag=DEFAULT_TAG_NAME, action_cond=MAIN_ACTION_TEXT):
+        self.find_tags_dropdown(action_cond)
         self.find_element_by_text(Action.tag.value).click()
         self.tag_entities(name, tag, new=True)
 
-    def change_tag_entities(self, name='Special Tag Action', tag='Special'):
+    def remove_tag_entities(self, name=SPECIAL_TAG_ACTION, tag=DEFAULT_TAG_NAME, action_cond=MAIN_ACTION_TEXT):
+        self.find_tags_dropdown(action_cond)
+        self.find_element_by_text(Action.untag.value).click()
+        self.tag_entities_from_dropdown(name, tag, new=True)
+
+    def select_tag_entities(self, name=SPECIAL_TAG_ACTION, tag=DEFAULT_TAG_NAME, action_cond=MAIN_ACTION_TEXT):
+        self.find_tags_dropdown(action_cond)
+        self.find_element_by_text(Action.tag.value).click()
+        self.tag_entities_from_dropdown(name, tag, new=True)
+
+    def get_tag_dropdown_selected_value(self):
+        return self.driver.find_element_by_css_selector(self.DROPDOWN_TAGS_VALUE_CSS).text
+
+    def change_tag_entities(self, name=SPECIAL_TAG_ACTION, tag=DEFAULT_TAG_NAME):
         self.driver.find_element_by_xpath(self.ACTION_BY_NAME_XPATH.format(action_name=name)).click()
         self.tag_entities(name, tag)
 

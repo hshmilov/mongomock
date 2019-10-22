@@ -206,7 +206,7 @@ export const updateDataHyperlinks = (state, payload) => {
 export const UPDATE_DATA_LABELS = 'UPDATE_DATA_LABELS'
 export const updateDataLabels = (state, payload) => {
 	if (!getModule(state, payload)) return
-	const labels = state[payload.module].labels
+	const labels = state[payload.module].labels || {}
 	labels.fetching = payload.fetching
 	labels.error = payload.error
 	if (payload.data) {

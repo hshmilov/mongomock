@@ -36,8 +36,8 @@ export const UPDATE_DEFAULT_ROLE = 'UPDATE_DEFAULT_ROLE'
 
 export const IS_USER_ADMIN = 'IS_USER_ADMIN'
 
-const findEntityTitle = (entityName) => {
-  return entities.find(entityType => entityType.name === entityName).title
+const capitalizeString = (moduleName) => {
+  return moduleName.charAt(0).toUpperCase() + moduleName.slice(1)
 }
 
 export const auth = {
@@ -60,7 +60,8 @@ export const auth = {
         if (!entity) return
         let user = state.currentUser.data
         if (!user || !user.permissions) return true
-        return user.permissions[findEntityTitle(entity)] === 'Restricted'
+        const permission = user.permissions[entity] || user.permissions[capitalizeString(entity)]
+        return permission === 'Restricted'
       }
     },
     [IS_ENTITY_EDITABLE] (state) {
@@ -68,7 +69,7 @@ export const auth = {
         if (!entity) return
         let user = state.currentUser.data
         if (!user || !user.permissions) return true
-        return user.permissions[findEntityTitle(entity)] === 'ReadWrite' || user.admin
+        return user.permissions[capitalizeString(entity)] === 'ReadWrite' || user.admin
       }
     }
   },

@@ -30,7 +30,7 @@
   />
   <!-- Select from enum values -->
   <x-select
-    v-else-if="enumOptions"
+    v-else-if="enumOptions && !schema.source"
     v-model="processedData"
     :options="enumOptions"
     placeholder="value..."
@@ -40,17 +40,29 @@
     @input="input"
     @focusout.stop="validate"
   />
+  <component
+    :is="dynamicType"
+    v-else-if="enumOptions && schema.source"
+    v-model="processedData"
+    :schema="schema"
+    :searchable="true"
+    :class="{'error-border': error, [`${schema.source.key}`]: true}"
+    :read-only="readOnly || schema.readOnly"
+    @input="input"
+    @focusout.stop="validate"
+  />
 </template>
 
 <script>
   import primitiveMixin from '../primitive.js'
   import xSelect from '../../../../axons/inputs/Select.vue'
+  import { xTagSelect } from '../../../../axons/inputs/dynamicSelects.js'
   import xDateEdit from './DateEdit.vue'
   import { validateEmail } from '../../../../../constants/validations'
 
   export default {
     name: 'XStringEdit',
-    components: { xSelect, xDateEdit },
+    components: { xSelect, xDateEdit, xTagSelect },
     mixins: [primitiveMixin],
     props: {
       clearable: {
@@ -89,7 +101,6 @@
       isUnchangedPassword () {
         return this.inputType === 'password' && this.data && this.data[0] === 'unchanged'
       },
-
       inputType () {
         if (this.schema.format && this.schema.format === 'password') {
           return 'password'
@@ -97,6 +108,15 @@
           return ''
         }
         return 'text'
+      },
+      dynamicType () {
+        if(!this.schema.source) return null
+        switch(this.schema.source.key) {
+          case 'all-tags':
+            return 'xTagSelect'
+          default:
+            return null
+        }
       }
     },
     methods: {

@@ -64,7 +64,8 @@
     computed: {
       ...mapState({
         labels (state) {
-          return state[this.module].labels.data.sort()
+          const labels = state[this.module].labels.data
+          return labels ? labels.sort() : []
         }
       }),
       initialSelection () {

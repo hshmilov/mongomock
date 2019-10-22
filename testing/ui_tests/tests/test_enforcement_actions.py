@@ -13,17 +13,21 @@ from axonius.utils.parsing import make_dict_from_csv
 from services.standalone_services.smtp_server import generate_random_valid_email
 from services.standalone_services.maildiranasaurus_server import MailDiranasaurusService as SMTPService
 from services.standalone_services.syslog_server import SyslogService
+from ui_tests.tests.ui_consts import Enforcements
 from ui_tests.tests.ui_test_base import TestBase
 from test_credentials.json_file_credentials import client_details as json_file_creds
 
 ENFORCEMENT_NAME = 'Special enforcement name'
 COMMON_ENFORCEMENT_QUERY = 'Enabled AD Devices'
 ENFORCEMENT_CHANGE_NAME = 'test_enforcement_change'
+ENFORCEMENT_TEST_NAME_1 = 'Test_enforcement_1'
+ENFORCEMENT_TEST_NAME_2 = 'Test_enforcement_2'
 
 SAVED_QUERY_JUST_CBR_NAME = 'just_cbr'
 SAVED_QUERY_JUST_CBR = 'adapters == \'carbonblack_response_adapter\''
 AD_LAST_OR_ADDED_QUERY = '({added_filter}) or adapters_data.active_directory_adapter.ad_last_logon> date("NOW-8d")'
 
+CUSTOM_TAG = 'superTag'
 TAG_ALL_COMMENT = 'tag all'
 TAG_NEW_COMMENT = 'tag new'
 
@@ -306,3 +310,59 @@ class TestEnforcementActions(TestBase):
             # Good - means the button is disabled, as wanted
             assert self.enforcements_page.find_disabled_save_action()
         self.settings_page.remove_email_server()
+
+    def test_tag_entities_dropdown(self):
+        self.enforcements_page.switch_to_page()
+        self.enforcements_page.wait_for_table_to_load()
+        self.base_page.run_discovery()
+        # create new task to add custom tag to all windows based devices
+        self.enforcements_page.click_new_enforcement()
+        self.enforcements_page.fill_enforcement_name(ENFORCEMENT_TEST_NAME_1)
+        self.enforcements_page.select_trigger()
+        self.enforcements_page.select_saved_view(Enforcements.enforcement_query_1)
+        self.enforcements_page.save_trigger()
+        self.enforcements_page.add_push_system_notification(name='first push')
+        self.enforcements_page.add_tag_entities(ENFORCEMENT_TEST_NAME_1, CUSTOM_TAG,
+                                                self.enforcements_page.POST_ACTIONS_TEXT)
+        self.enforcements_page.click_run_button()
+        # go to device page and check if the tag added
+        self.devices_page.switch_to_page()
+        self.devices_page.wait_for_table_to_load()
+        self.devices_page.execute_saved_query(Enforcements.enforcement_query_1)
+        self.devices_page.wait_for_table_to_load()
+        windows_machines_count = self.enforcements_page.count_entities()
+        self.devices_page.fill_filter(CUSTOM_TAG)
+        self.devices_page.enter_search()
+        self.devices_page.wait_for_table_to_load()
+        assert self.devices_page.count_entities() == windows_machines_count
+        self.devices_page.refresh()
+        # create new task to remove custom tag to all windows based devices
+        self.enforcements_page.switch_to_page()
+        self.enforcements_page.wait_for_table_to_load()
+        self.enforcements_page.click_new_enforcement()
+        self.enforcements_page.fill_enforcement_name(ENFORCEMENT_TEST_NAME_2)
+        self.enforcements_page.select_trigger()
+        self.enforcements_page.select_saved_view(Enforcements.enforcement_query_1)
+        self.enforcements_page.save_trigger()
+        self.enforcements_page.add_push_system_notification(name='second push')
+        self.enforcements_page.remove_tag_entities(ENFORCEMENT_TEST_NAME_2, CUSTOM_TAG,
+                                                   self.enforcements_page.POST_ACTIONS_TEXT)
+        self.enforcements_page.click_run_button()
+        # go to device page and check if the tag removed
+        self.devices_page.switch_to_page()
+        self.devices_page.wait_for_table_to_load()
+        self.devices_page.fill_filter(CUSTOM_TAG)
+        self.devices_page.enter_search()
+        self.devices_page.wait_for_table_to_load()
+        assert self.devices_page.count_entities() == 0
+        # check if tag value didnt lost in the task
+        self.enforcements_page.switch_to_page()
+        self.enforcements_page.wait_for_table_to_load()
+        self.enforcements_page.edit_enforcement(ENFORCEMENT_TEST_NAME_2)
+        self.enforcements_page.find_element_by_text(self.enforcements_page.POST_ACTIONS_TEXT).click()
+        self.driver.find_element_by_xpath(
+            self.enforcements_page.ADDED_ACTION_XPATH.format(action_name=ENFORCEMENT_TEST_NAME_2)).click()
+        self.enforcements_page.wait_for_action_config()
+        current_selected_tag = self.enforcements_page.get_tag_dropdown_selected_value()
+        assert current_selected_tag == CUSTOM_TAG
+        self.enforcements_page.click_save_button()
