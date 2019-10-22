@@ -20,6 +20,7 @@
           v-if="active"
           slot-scope="{ active }"
           :panels="defaultSpace.panels"
+          :panelsOrder="defaultSpace.panels_order"
           @add="() => addNewPanel(defaultSpace.uuid)"
           @edit="editPanel"
         />
@@ -34,6 +35,7 @@
           v-if="active"
           slot-scope="{ active }"
           :panels="personalSpace.panels"
+          :panelsOrder="personalSpace.panels_order"
           @add="() => addNewPanel(personalSpace.uuid)"
           @edit="editPanel"
         />
@@ -51,6 +53,7 @@
           v-if="active"
           slot-scope="{ active }"
           :panels="space.panels"
+          :panelsOrder="space.panels_order"
           @add="() => addNewPanel(space.uuid, true)"
           @edit="editPanel"
         />
@@ -158,6 +161,7 @@
       editPanel (panel) {
         this.wizard.active = true
         this.wizard.panel = { ...panel }
+        this.wizard.space = this.currentSpace;
       },
       addNewSpace () {
         if (this.processing) return

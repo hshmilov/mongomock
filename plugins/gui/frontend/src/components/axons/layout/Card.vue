@@ -10,12 +10,13 @@
       <x-title
         v-if="logo"
         :logo="logo"
-      >{{ title }}</x-title>
+      >{{ title }} </x-title>
       <div
         v-else
         class="title"
         :title="title"
-      >{{ title }}</div>
+      ><md-icon v-if="draggable"
+          md-src="src/assets/icons/action/drag.svg"></md-icon>{{ title }}</div>
     </div>
     <div class="actions">
       <x-button
@@ -79,6 +80,10 @@
       reversible: {
         type: Boolean,
         default: false
+      },
+      draggable: {
+        type: Boolean,
+        default: false
       }
     }
   }
@@ -93,6 +98,35 @@
         border-radius: 2px;
         position:relative;
 
+        &.card__item > .header {
+            .title {
+                display: flex;
+
+                .md-icon {
+                  visibility: hidden;
+                  font-size: 24px !important;
+                  fill: $grey-3;
+                  min-width: 16px;
+                  width: 16px;
+                  margin: 0 12px 0 -4px;
+                }
+            }
+            &:hover {
+              cursor: move;
+              border: 1px solid #DEDEDE;
+              .md-icon {
+                display: flex;
+                visibility: visible;
+                fill: $theme-blue!important;
+                position: relative;
+                top: -5px;
+                left: 0px;
+              }
+              .md-svg-loader svg {
+                width: max-content!important;
+              }
+            }
+          }
         > .header {
             display: flex;
             width: 100%;
@@ -134,8 +168,6 @@
           position: absolute;
           right: 4px;
           top: 10px;
-          // justify-content: space-around;
-
           .x-button {
             height: 20px;
             padding: 0;

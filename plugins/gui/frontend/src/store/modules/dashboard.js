@@ -24,11 +24,12 @@ export const SAVE_DASHBOARD_PANEL = 'SAVE_DASHBOARD_PANEL'
 export const CHANGE_DASHBOARD_PANEL = 'CHANGE_DASHBOARD_PANEL'
 export const REMOVE_DASHBOARD_PANEL = 'REMOVE_DASHBOARD_PANEL'
 export const UPDATE_REMOVED_PANEL = 'UPDATE_REMOVED_PANEL'
+
+export const SAVE_REORDERED_PANELS = 'SAVE_REORDERED_PANELS'
+export const UPDATE_DASHBOARDS_ORDER = 'UPDATE_DASHBOARDS_ORDER'
 export const ADD_NEW_PANEL = 'ADD_NEW_PANEL'
-export const UPDATE_CHANGED_PANEL = 'UPDATE_CHANGED_PANEL'
 
 export const FETCH_HISTORICAL_SAVED_CARD = 'FETCH_HISTORICAL_SAVED_CARD'
-
 export const FETCH_DASHBOARD_FIRST_USE = 'FETCH_DASHBOARD_FIRST_USE'
 export const UPDATE_DASHBOARD_FIRST_USE = 'UPDATE_DASHBOARD_FIRST_USE'
 export const FETCH_CHART_SEGMENTS_CSV = 'FETCH_CHART_SEGMENTS_CSV'
@@ -49,7 +50,7 @@ export const dashboard = {
 	},
 	mutations: {
 		[ UPDATE_LIFECYCLE ] (state, payload) {
-			
+
 			state.lifecycle.fetching = payload.fetching
 			state.lifecycle.error = payload.error
 
@@ -182,6 +183,10 @@ export const dashboard = {
 		},
 		[SET_CURRENT_SPACE](state, spaceId) {
 			state.currentSpace = spaceId
+		},
+		[UPDATE_DASHBOARDS_ORDER](state, payload) {
+			let space = state.spaces.data.find( space => space.uuid == payload.spaceId )
+			space.panels_order = payload.panels_order
 		}
 	},
 	actions: {
@@ -231,9 +236,22 @@ export const dashboard = {
 		},
 		[FETCH_DASHBOARD_PANEL]({ dispatch, commit }, payload) {
 			return dispatch(REQUEST_API, {
-				rule: `dashboards/panels/${payload.uuid}?skip=${payload.skip}&limit=${payload.limit}`,
+				rule: `dashboards/${payload.spaceId}/panels/${payload.uuid}?skip=${payload.skip}&limit=${payload.limit}`,
 				type: UPDATE_DASHBOARD_PANEL,
 				payload
+			})
+		},
+		[SAVE_REORDERED_PANELS]({ dispatch, commit }, payload) {
+			commit(UPDATE_DASHBOARDS_ORDER, payload)
+			return dispatch(REQUEST_API, {
+				rule: `dashboards/${payload.spaceId}/panels/reorder`,
+				method: 'POST',
+				data: payload
+			}).then(response => {
+				if (response.status === 200) {
+					dispatch(FETCH_DASHBOARD_SPACES)
+				}
+				return response
 			})
 		},
 		[SAVE_DASHBOARD_SPACE]({ dispatch, commit }, name) {
@@ -273,6 +291,7 @@ export const dashboard = {
 			}).then(response => {
 				if (response.status === 200) {
 					commit(UPDATE_REMOVED_SPACE, spaceId)
+					dispatch(FETCH_DASHBOARD_SPACES)
 				}
 			})
 		},
@@ -290,19 +309,20 @@ export const dashboard = {
 						data: []
 					})
 					dispatch(FETCH_DASHBOARD_PANELS)
+					dispatch(FETCH_DASHBOARD_SPACES)
 				}
 				return response
 			})
 		},
 		[CHANGE_DASHBOARD_PANEL]({ dispatch, commit }, payload) {
 			return dispatch(REQUEST_API, {
-				rule: `dashboards/panels/${payload.uuid}`,
+				rule: `dashboards/${payload.spaceId}/panels/${payload.panelId}`,
 				method: 'POST',
 				data: payload.data
 			}).then(response => {
 				if (response.status === 200) {
 					commit(UPDATE_DASHBOARD_PANEL, {
-						uuid: payload.uuid,
+						uuid: payload.panelId,
 						skip: 0,
 						data: [],
                         loading: true
@@ -312,14 +332,16 @@ export const dashboard = {
 				return response
 			})
 		},
-		[REMOVE_DASHBOARD_PANEL]({ dispatch, commit }, panelId) {
-			if (!panelId) return
+		[REMOVE_DASHBOARD_PANEL]({ dispatch, commit }, payload) {
+			if (!payload.panelId) return
 			return dispatch(REQUEST_API, {
-				rule: `dashboards/panels/${panelId}`,
-				method: 'DELETE'
+				rule: `dashboards/${payload.spaceId}/panels/${payload.panelId}`,
+				method: 'DELETE',
+				data: payload
 			}).then((response) => {
 				if (response.status === 200) {
-					commit(UPDATE_REMOVED_PANEL, panelId)
+					commit(UPDATE_REMOVED_PANEL, payload.panelId)
+					dispatch(FETCH_DASHBOARD_SPACES)
 				}
 			})
 		},

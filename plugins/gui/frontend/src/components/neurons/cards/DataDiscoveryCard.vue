@@ -96,7 +96,9 @@
 </script>
 
 <style lang="scss">
+
     .x-discovery-card {
+       grid-row: 1;
         &.double {
             grid-row: 1 / span 2;
         }
@@ -107,7 +109,6 @@
         .title {
             text-transform: capitalize;
         }
-
         .data-discovery {
             display: flex;
             flex-direction: column;

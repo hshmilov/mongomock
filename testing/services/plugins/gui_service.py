@@ -1,7 +1,8 @@
 import json
 import os
+from collections import defaultdict
 import secrets
-
+import logging
 import requests
 from axonius.consts.gui_consts import (CONFIG_CONFIG, ROLES_COLLECTION, USERS_COLLECTION,
                                        DASHBOARD_COLLECTION, DASHBOARD_SPACES_COLLECTION,
@@ -23,7 +24,7 @@ from axonius.utils.gui_helpers import PermissionLevel, PermissionType
 from gui.gui_logic.filter_utils import filter_archived
 from services.plugin_service import PluginService
 from services.updatable_service import UpdatablePluginMixin
-
+logger = logging.getLogger(f'axonius.{__name__}')
 MAINTENANCE_FILTER = {'type': MAINTENANCE_TYPE}
 
 
@@ -77,7 +78,9 @@ class GuiService(PluginService, UpdatablePluginMixin):
             self._update_schema_version_18()
         if self.db_schema_version < 19:
             self._update_schema_version_19()
-        if self.db_schema_version != 19:
+        if self.db_schema_version < 20:
+            self._update_schema_version_20()
+        if self.db_schema_version != 20:
             print(f'Upgrade failed, db_schema_version is {self.db_schema_version}')
 
     def _update_schema_version_1(self):
@@ -701,9 +704,50 @@ class GuiService(PluginService, UpdatablePluginMixin):
                     ]
                 }
             )
+
             self.db_schema_version = 19
         except Exception as e:
             print(f'Exception while upgrading gui db to version 19. Details: {e}')
+
+    def _update_schema_version_20(self):
+        """
+        For version 2.11, add in every space a new attribute "panels_order" of type array.
+        for each space this array should respectively holds the order of all the existing panels.
+        This is requested as part of the Drag & Drop features in order to allow upgragded systems
+        to benefits from the new feature
+        """
+        panels_order_by_space = defaultdict(list)
+        try:
+            dashboard_spaces_collection = self.db.get_collection(self.plugin_name, DASHBOARD_SPACES_COLLECTION)
+            print('Upgrade to schema 20')
+
+            for dashboard in self.db.get_collection(self.plugin_name, DASHBOARD_COLLECTION).find(
+                    filter=filter_archived(),
+                    projection={
+                        '_id': True,
+                        'space': True
+                    }):
+                try:
+                    panels_order_by_space[dashboard['space']].append(str(dashboard['_id']))
+                except Exception as e:
+                    pass
+
+            for space_id, dashboard_ids in panels_order_by_space.items():
+                try:
+                    dashboard_spaces_collection.update_one({
+                        '_id': space_id
+                    }, {
+                        '$push': {
+                            'panels_order': {'$each': dashboard_ids}
+                        }
+                    })
+
+                except Exception as e:
+                    logger.exception(f'Failed adding panels_order {dashboard_ids} to space {str(space_id)}')
+
+            self.db_schema_version = 20
+        except Exception as e:
+            print(f'Exception while upgrading gui db to version 20. Details: {e}')
 
     def _update_default_locked_actions(self, new_actions):
         """

@@ -580,6 +580,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
 
     def add_default_dashboard_charts(self, default_dashboard_charts_ini_path):
         try:
+            default_dashboards = []
             config = configparser.ConfigParser()
             config.read(os.path.abspath(os.path.join(os.path.dirname(__file__),
                                                      f'configs/{default_dashboard_charts_ini_path}')))
@@ -599,14 +600,26 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
                         logger.info(f'dashboard with {name} already exists, not adding')
                         continue
 
-                    self._insert_dashboard_chart(dashboard_name=name,
-                                                 dashboard_metric=data['metric'],
-                                                 dashboard_view=data['view'],
-                                                 dashboard_data=json.loads(data['config']),
-                                                 hide_empty=bool(data.get('hide_empty', 0)),
-                                                 space_id=default_space['_id'])
+                    dashboard_id = self._insert_dashboard_chart(dashboard_name=name,
+                                                                dashboard_metric=data['metric'],
+                                                                dashboard_view=data['view'],
+                                                                dashboard_data=json.loads(data['config']),
+                                                                hide_empty=bool(data.get('hide_empty', 0)),
+                                                                space_id=default_space['_id'])
+                    default_dashboards.append(str(dashboard_id))
                 except Exception as e:
                     logger.exception(f'Error adding default dashboard chart {name}. Reason: {repr(e)}')
+            if not default_space.get('panels_order'):
+                # if panels_order attribute does not exist on space add it
+                self.__dashboard_spaces_collection.update_one({
+                    'type': 'default',
+                    '_id': default_space['_id']
+                }, {
+                    '$set': {
+                        'panels_order': default_dashboards
+                    }
+                })
+
         except Exception as e:
             logger.exception(f'Error adding default dashboard chart. Reason: {repr(e)}')
 
@@ -695,6 +708,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
             'space': space_id
         }, upsert=True)
         logger.info(f'Added report {dashboard_name} id: {result.upserted_id}')
+        return result.upserted_id
 
     def _set_first_time_use(self):
         """
@@ -3709,6 +3723,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
             spaces = [{
                 'uuid': str(space['_id']),
                 'name': space['name'],
+                'panels_order': space.get('panels_order'),
                 'type': space['type']
             } for space in self.__dashboard_spaces_collection.find(filter_archived())]
 
@@ -3775,7 +3790,33 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
         insert_result = self.__dashboard_collection.insert_one(dashboard_data)
         if not insert_result or not insert_result.inserted_id:
             return return_error('Error saving dashboard chart', 400)
+        # Adding to the 'panels_order' attribute the newly panelId created through the wizard
+        self.__dashboard_spaces_collection.update_one({
+            '_id': ObjectId(space_id)
+        }, {
+            '$push': {
+                'panels_order': str(insert_result.inserted_id)
+            }
+        })
         return str(insert_result.inserted_id)
+
+    @gui_add_rule_logged_in('dashboards/<space_id>/panels/reorder', methods=['POST', 'GET'],
+                            required_permissions={Permission(PermissionType.Dashboard, PermissionLevel.ReadWrite)},
+                            enforce_trial=False)
+    def reorder_dashboard_space_panels(self, space_id):
+        if request.method == 'POST':
+            panels_order = self.get_request_data_as_object().get('panels_order')
+            self.__dashboard_spaces_collection.update_one({
+                '_id': ObjectId(space_id)
+            }, {
+                '$set': {
+                    'panels_order': panels_order
+                }
+            })
+            return ''
+        return jsonify(self.__dashboard_spaces_collection.find_one({
+            '_id': ObjectId(space_id)
+        }))
 
     @gui_helpers.paginated()
     @gui_add_rule_logged_in('dashboards/panels', methods=['GET'],
@@ -3790,15 +3831,18 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
         return jsonify(self._get_dashboard(skip, limit))
 
     @gui_helpers.paginated()
-    @gui_add_rule_logged_in('dashboards/panels/<panel_id>', methods=['GET', 'DELETE', 'POST'],
+    @gui_add_rule_logged_in('dashboards/<space_id>/panels/<panel_id>', methods=['GET', 'DELETE', 'POST'],
                             required_permissions={Permission(PermissionType.Dashboard, ReadOnlyJustForGet)})
-    def update_dashboard_panel(self, panel_id, skip, limit):
+    # def update_dashboard_panel(self, panel_id, space_id, skip, limit):
+    def update_dashboard_panel(self, space_id, panel_id, skip, limit):
         """
-        DELETE an existing Dashboard Panel
+        DELETE an existing Dashboard Panel and DELETE its panelId from the
+        "panels_order" in the "dashboard_space" collection
         GET partial data of the Dashboard Panel
         POST an update of the configuration for an existing Dashboard Panel
 
         :param panel_id: The mongo id of the panel to handle
+        :param space_id: The mongo id of the space where the panel should be removed
         :param skip: For GET, requested offset of panel's data
         :param limit: For GET, requested limit of panel's data
         :return: ObjectId of the Panel to delete
@@ -3809,6 +3853,13 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
             return jsonify(generated_dashboard.get('data', [])[skip: skip + limit])
 
         if request.method == 'DELETE':
+            self.__dashboard_spaces_collection.update_one({
+                '_id': ObjectId(space_id)
+            }, {
+                '$pull': {
+                    'panels_order': str(panel_id)
+                }
+            })
             update_data = {
                 'archived': True
             }

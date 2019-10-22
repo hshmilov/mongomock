@@ -187,7 +187,8 @@
       saveNewDashboard () {
         if (this.panel && this.panel.uuid) {
           return this.changeDashboard({
-            uuid: this.panel.uuid,
+            panelId: this.panel.uuid,
+            spaceId: this.space,
             data: this.dashboard
           })
         }

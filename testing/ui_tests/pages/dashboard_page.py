@@ -49,7 +49,7 @@ class DashboardPage(Page):
     SPACE_HEADERS_XPATH = f'{SPACES_XPATH}//li[contains(@class, \'header-tab\')]'
     SPACE_HEADER_CSS = '.x-spaces .x-tabs .header-tab:nth-child({tab_index})'
     NEW_SPACE_BUTTON_XPATH = f'{SPACES_XPATH}//li[@class=\'add-tab\']'
-    PANEL_BY_NAME_XPATH = '//div[contains(@class, \'x-tab active\')]//div[@class=\'x-card\' ' \
+    PANEL_BY_NAME_XPATH = '//div[contains(@class, \'x-tab active\')]//div[contains(@class, \'x-card\') ' \
                           'and .//text()=\'{panel_name}\']'
     NO_DATA_FOUND_TEXT = 'No data found'
     PAGINATOR_CLASS = '.x-paginator'

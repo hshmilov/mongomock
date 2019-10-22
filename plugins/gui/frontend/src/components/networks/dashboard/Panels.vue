@@ -1,91 +1,104 @@
 <template>
-  <div class="x-panels">
-    <slot name="pre" />
-    <x-card
-      v-for="(chart, chartInd) in processedPanels"
-      :id="chart.uuid"
-      :key="chart.uuid"
-      :title="chart.name"
-      :removable="!isReadOnly && hovered === chartInd"
-      :editable="!isReadOnly && hovered === chartInd && chart.user_id !== '*'"
-      :exportable="chart.metric==='segment' && hovered === chartInd"
-      @mouseenter.native="() => enterPanel(chartInd)"
-      @mouseleave.native="leavePanel"
-      @remove="() => verifyRemovePanel(chart.uuid)"
-      @edit="() => editPanel(chart)"
-      @export="() => exportCSV(chart.uuid, chart.name)"
+  <draggable
+    tag="transition-group"
+    :animation="1000"
+    v-model="orderedPanels"
+    draggable=".card__item"
+    handle=".header"
+    ghost-class="ghost"
+    class="x-panels"
     >
-      <div
-        v-if="chart.metric !== 'timeline'"
-        class="card-history"
+      <x-card
+        v-for="(chart, chartInd) in orderedPanels"
+         class="card__item"
+        :draggable="true"
+        :id="chart.uuid"
+        :key="chart.uuid"
+        :title="chart.name"
+        :removable="!isReadOnly && hovered === chartInd"
+        :editable="!isReadOnly && hovered === chartInd && chart.user_id !== '*'"
+        :exportable="chart.metric==='segment' && hovered === chartInd"
+        @mouseenter.native="() => enterPanel(chartInd)"
+        @mouseleave.native="leavePanel"
+        @remove="() => verifyRemovePanel(chart.uuid)"
+        @edit="() => editPanel(chart)"
+        @export="() => exportCSV(chart.uuid, chart.name)"
       >
-        <x-historical-date
-          v-model="cardToDate[chart.uuid]"
-          :hide="hovered !== chartInd && !cardToDate[chart.uuid]"
-          @clear="clearDate(chart.uuid)"
-          @input="confirmPickDate(chart.uuid, chart.name)"
+        <div
+          v-if="chart.metric !== 'timeline'"
+          class="card-history"
+        >
+          <x-historical-date
+            v-model="cardToDate[chart.uuid]"
+            :hide="hovered !== chartInd && !cardToDate[chart.uuid]"
+            @clear="clearDate(chart.uuid)"
+            @input="confirmPickDate(chart.uuid, chart.name)"
+          />
+        </div>
+        <div
+          v-if="chart.loading"
+          class="chart-spinner"
+        >
+          <md-progress-spinner
+            class="progress-spinner"
+            md-mode="indeterminate"
+            :md-stroke="3"
+            :md-diameter="25"
+          />
+          <span>Fetching data...</span>
+        </div>
+        <component
+          :is="`x-${chart.view}`"
+          v-else-if="!isChartEmpty(chart)"
+          :data="chart.data"
+          @click-one="($event) => runChartFilter(chartInd, $event)"
+          @fetch="(skip) => fetchMorePanel(chart.uuid, skip)"
         />
-      </div>
-      <div
-        v-if="chart.loading"
-        class="chart-spinner"
+        <div
+          v-else
+          class="no-data-found"
+        >
+          <svg-icon name="illustration/binocular" :original="true" height="50"/>
+          <div>No data found</div>
+        </div>
+      </x-card>
+      <slot name="pre"/>
+      <slot name="post" />
+      <x-card
+      :key="9999"
+        title="New Chart"
+        class="chart-new print-exclude"
       >
-        <md-progress-spinner
-          class="progress-spinner"
-          md-mode="indeterminate"
-          :md-stroke="3"
-          :md-diameter="25"
-        />
-        <span>Fetching data...</span>
-      </div>
-      <component
-        :is="`x-${chart.view}`"
-        v-else-if="!isChartEmpty(chart)"
-        :data="chart.data"
-        @click-one="($event) => runChartFilter(chartInd, $event)"
-        @fetch="(skip) => fetchMorePanel(chart.uuid, skip)"
+        <x-button
+          :id="newId"
+          link
+          :disabled="isReadOnly"
+          @click="addNewPanel"
+        >+</x-button>
+      </x-card>
+      <x-toast
+        v-if="message"
+        v-model="message"
       />
-      <div
-        v-else
-        class="no-data-found"
+      <x-modal
+      :key="10000"
+        v-if="removed"
+        size="lg"
+        approve-text="Remove Chart"
+        @confirm="confirmRemovePanel"
+        @close="cancelRemovePanel"
       >
-        <svg-icon name="illustration/binocular" :original="true" height="50"/>
-        <div>No data found</div>
-      </div>
-    </x-card>
-    <slot name="post" />
-    <x-card
-      title="New Chart"
-      class="chart-new print-exclude"
-    >
-      <x-button
-        :id="newId"
-        link
-        :disabled="isReadOnly"
-        @click="addNewPanel"
-      >+</x-button>
-    </x-card>
-    <x-toast
-      v-if="message"
-      v-model="message"
-    />
-    <x-modal
-      v-if="removed"
-      size="lg"
-      approve-text="Remove Chart"
-      @confirm="confirmRemovePanel"
-      @close="cancelRemovePanel"
-    >
-      <div slot="body">
-        <div>This chart will be completely removed from the system.</div>
-        <div>Removing the chart is an irreversible action.</div>
-        <div>Do you want to continue?</div>
-      </div>
-    </x-modal>
-  </div>
+        <div slot="body">
+          <div>This chart will be completely removed from the system.</div>
+          <div>Removing the chart is an irreversible action.</div>
+          <div>Do you want to continue?</div>
+        </div>
+      </x-modal>
+  </draggable>
 </template>
 
 <script>
+  import draggable from 'vuedraggable'
   import xCard from '../../axons/layout/Card.vue'
   import xHistoricalDate from '../../neurons/inputs/HistoricalDate.vue'
   import xHistogram from '../../axons/charts/Histogram.vue'
@@ -99,7 +112,8 @@
   import {mapState, mapGetters, mapMutations, mapActions} from 'vuex'
   import {
     REMOVE_DASHBOARD_PANEL, FETCH_HISTORICAL_SAVED_CARD,
-    FETCH_CHART_SEGMENTS_CSV, FETCH_DASHBOARD_PANEL
+    FETCH_CHART_SEGMENTS_CSV, FETCH_DASHBOARD_PANEL,
+    SAVE_REORDERED_PANELS
   } from '../../../store/modules/dashboard'
   import {IS_ENTITY_RESTRICTED} from '../../../store/modules/auth'
   import {UPDATE_DATA_VIEW} from '../../../store/mutations'
@@ -107,16 +121,18 @@
   export default {
     name: 'XPanels',
     components: {
-      xCard, xHistoricalDate, xHistogram, xPie, xSummary, xLine, xButton, xToast, xModal
+      xCard, xHistoricalDate, xHistogram, xPie, xSummary, xLine, xButton, xToast, xModal, draggable
     },
     props: {
       panels: {
         type: Array,
-        required: true
       },
       newId: {
         type: String,
         default: undefined
+      },
+      panelsOrder: {
+        type: Array,
       }
     },
     data () {
@@ -125,7 +141,7 @@
         cardToHistory: {},
         hovered: null,
         removed: null,
-        message: ''
+        message: '',
       }
     },
     computed: {
@@ -134,13 +150,44 @@
           let user = state.auth.currentUser.data
           if (!user || !user.permissions) return true
           return user.permissions.Dashboard === 'ReadOnly'
+        },
+        currentSpace (state) {
+          return state.dashboard.currentSpace || state.dashboard.spaces.data.find(space => space.type === 'default').uuid
         }
       }),
       ...mapGetters({
-        isEntityRestricted: IS_ENTITY_RESTRICTED
+        isEntityRestricted: IS_ENTITY_RESTRICTED,
       }),
+      orderedPanels: {
+        get () {
+         if(this.panelsOrder){
+            return this.panelsOrder.map( uuid => {
+                return this.panelsById[uuid]
+            }).filter( panel => panel !== undefined )
+          } else {
+            return this.processedPanels
+          }
+        },
+        set (newPanels) {
+          let paneslOrder = [];
+            newPanels.forEach(panel => {
+              paneslOrder.push(panel.uuid)
+            })
+          this.saveReorderedPanels({
+            panels_order: newPanels.map(panel => panel.uuid),
+            spaceId: this.currentSpace
+          })
+        }
+      },
+      panelsById () {
+        return this.processedPanels.reduce((acc, item) => {
+            acc[item.uuid] = item
+            return acc
+        }, {})
+      },
       processedPanels () {
-        return this.panels.map(chart => {
+       return this.panels.map(chart => {
+         if(chart)
           if (chart.metric === 'timeline' || !chart.data) return chart
 
           let historicalCard = this.cardToHistory[chart.uuid]
@@ -173,7 +220,8 @@
         removePanel: REMOVE_DASHBOARD_PANEL,
         fetchHistoricalCard: FETCH_HISTORICAL_SAVED_CARD,
         fetchChartSegmentsCSV: FETCH_CHART_SEGMENTS_CSV,
-        fetchDashboardPanel: FETCH_DASHBOARD_PANEL
+        fetchDashboardPanel: FETCH_DASHBOARD_PANEL,
+        saveReorderedPanels: SAVE_REORDERED_PANELS
       }),
       addNewPanel() {
         this.$emit('add')
@@ -188,7 +236,7 @@
         this.removed = chartId
       },
       confirmRemovePanel () {
-        this.removePanel(this.removed)
+        this.removePanel({panelId: this.removed, spaceId: this.currentSpace})
         this.removed = null
       },
       editPanel (panel) {
@@ -264,16 +312,28 @@
 </script>
 
 <style lang="scss">
+  .flip-list-move {
+  transition: transform .5s;
+}
+
     .x-panels {
         padding: 8px;
         display: grid;
         grid-template-columns: repeat(auto-fill, 344px);
         grid-gap: 12px;
         width: 100%;
-
+               
+        > span {
+          display: contents;
+        }
+        .card__item:not(.dragging):hover {
+          border: 2px solid $grey-2;
+        }
+        .ghost {
+            border: 3px dashed rgba($theme-blue, 0.4);
+        }
         .x-card {
-            min-height: 300px;
-
+          min-height: 300px;
           &.chart-lifecycle {
             .header {
               padding-bottom: 0;
@@ -323,7 +383,6 @@
                 }
             }
         }
-
         .chart-new {
             .link {
                 font-size: 144px;
@@ -343,6 +402,20 @@
           vertical-align: super;
         }
 
+        .md-progress-spinner-circle{
+          stroke: $theme-orange;
+        }
+      }
+      .chart-spinner{
+        margin: 10px auto auto auto;
+        width: 70%;
+        padding: 10px;
+        span {
+          padding-left: 5px;
+          text-transform: uppercase;
+          font-size: 20px;
+          vertical-align: super;
+        }
         .md-progress-spinner-circle{
           stroke: $theme-orange;
         }

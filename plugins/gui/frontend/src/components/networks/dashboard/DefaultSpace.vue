@@ -1,6 +1,7 @@
 <template>
   <x-panels
     :panels="panels"
+    :panelsOrder="panelsOrder"
     new-id="dashboard_wizard"
     class="x-default-space"
     @add="$emit('add')"
@@ -8,17 +9,22 @@
   >
     <template slot="pre">
       <x-data-discovery-card
+        :key="1"
+        class="device-discovery"
         :data="discoveryData.devices.data"
         name="Device"
         @filter="runFilterDevices"
       />
       <x-data-discovery-card
+        :key="2"
+        class="user-discovery"
         :data="discoveryData.users.data"
         name="User"
         @filter="runFilterUsers"
       />
     </template>
     <x-card
+      :key="3"
       slot="post"
       title="System Lifecycle"
       class="chart-lifecycle print-exclude"
@@ -48,7 +54,7 @@
     import xCard from '../../axons/layout/Card.vue'
     import xCycle from '../../axons/charts/Cycle.vue'
 
-    import {mapState, mapGetters, mapMutations} from 'vuex'
+    import {mapState, mapGetters, mapMutations, mapActions} from 'vuex'
     import {IS_ENTITY_RESTRICTED} from '../../../store/modules/auth'
     import {UPDATE_DATA_VIEW} from '../../../store/mutations'
     import {formatDate} from '../../../constants/utils'
@@ -62,6 +68,9 @@
       panels: {
         type: Array,
         required: true
+      },
+      panelsOrder: {
+        type: Array,
       }
     },
     computed: {
@@ -131,7 +140,18 @@
 <style lang="scss">
   .x-default-space {
 
+    .x-discovery-card.device-discovery{
+        grid-column: 1;
+    }
+    .x-discovery-card.user-discovery{
+        grid-column: 2;
+        grid-row: 1;
+    }
     .chart-lifecycle {
+      &.print-exclude{
+        grid-column: 3;
+        grid-row: 1;
+      }
       display: flex;
       flex-direction: column;
 
