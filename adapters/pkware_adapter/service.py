@@ -77,7 +77,7 @@ class PkwareAdapter(AdapterBase):
             'items': [
                 {
                     'name': 'domain',
-                    'title': 'Pkware Domain',
+                    'title': 'PKWARE Domain',
                     'type': 'string'
                 },
                 {

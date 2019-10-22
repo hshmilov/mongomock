@@ -1,11 +1,13 @@
 export const pluginMeta = {
     snow_adapter: {
         title: 'Snow Software Asset Management',
-        description: 'Snow Software provides Software Asset Management (SAM) products and services. It helps organizations reduce the risk, cost and complexity associated with software assets and licensing.'
+        link: 'https://docs.axonius.com/docs/snow-software-asset-management',
+        description: 'Snow Software provides Software Asset Management (SAM) products and services to reduce the risk, cost, and complexity associated with software assets and licensing.'
     },
     pkware_adapter: {
         title: 'PKWARE',
-        description: 'PKWARE’s data protection platform finds, classifies and protects sensitive data across the entire enterprise. PKWARE allows security managers to define data protection policies and monitor activity across the organization.'
+        link:'https://docs.axonius.com/docs/pkware',
+        description: 'PKWARE’s data protection platform finds, classifies, and protects sensitive data, allowing security managers to define data protection policies and monitor activity across the organization.'
     },
     symantec_ccs_adapter: {
         title: 'Symantec Control Compliance Suite',
@@ -20,7 +22,7 @@ export const pluginMeta = {
     bigfix_inventory_adapter: {
         title: 'IBM BigFix Inventory',
         link: 'https://docs.axonius.com/docs/ibm-bigfix-inventory',
-        description: 'IBM BigFix Inventory gathers information about installed software and hardware in a your IT infrastructure.'
+        description: 'IBM BigFix Inventory gathers information about installed software and hardware in your IT infrastructure.'
     },
     fresh_service_adapter: {
         title: 'Freshservice',
@@ -543,7 +545,7 @@ export const pluginMeta = {
     },
     google_mdm_adapter: {
         title: 'Google Mobile Management',
-        link: '',
+        link: 'https://docs.axonius.com/docs/google-mobile-management',
         description: 'Google Mobile Management is an MDM solution for G Suite customers for Android, iOS, Windows and other smartphones.'
     },
     tenable_security_center_adapter: {
