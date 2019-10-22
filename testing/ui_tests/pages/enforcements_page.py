@@ -44,6 +44,7 @@ class Action(Enum):
     shodan_enrichment = 'Enrich Device Data with Shodan'
     censys_enrichment = 'Enrich Device Data with Censys'
     scan_with_qualys = 'Add to Qualys Cloud Platform'
+    change_ldap_attribute = 'Add or Update LDAP Attributes to Users or Devices'
     ScanTenable = 'Add to Tenable'
     carbonblack_defense_change_policy = 'Change Carbon Black CB Defense Policy'
     tenable_sc_add_ips_to_asset = 'Add IPs to Tenable.sc Asset'

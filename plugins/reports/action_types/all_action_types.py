@@ -26,6 +26,7 @@ from reports.action_types.base.run_linux_ssh_scan import RunLinuxSSHScan
 from reports.action_types.base.shodan_enrichment import ShodanEnrichment
 from reports.action_types.base.censys_enrichment import CensysEnrichment
 from reports.action_types.base.run_wmi_scan import RunWMIScan
+from reports.action_types.base.ldap_attributes import ChangeLdapAttribute
 from reports.action_types.base.send_email_to_entities import SendEmailToEntities
 from reports.action_types.base.tag_all_entities import TagAllEntitiesAction
 from reports.action_types.base.add_custom_data import AddCustomDataAction
@@ -71,6 +72,7 @@ AllActionTypes: Dict[str, type(ActionTypeBase)] = {
     'send_csv_to_s3': SendCsvToS3,
     'run_wmi_scan': RunWMIScan,
     'run_linux_ssh_scan': RunLinuxSSHScan,
+    'change_ldap_attribute': ChangeLdapAttribute,
     'shodan_enrichment': ShodanEnrichment,
     'censys_enrichment': CensysEnrichment,
     'create_service_now_incident_per_entity': ServiceNowIncidentPerEntity,

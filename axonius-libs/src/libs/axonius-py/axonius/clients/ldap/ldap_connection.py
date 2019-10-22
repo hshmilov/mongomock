@@ -230,6 +230,12 @@ class LdapConnection(object):
         self.extra_sessions = {}
         self.__ldap_groups = {}
 
+    def __enter__(self):
+        pass
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.disconnect()
+
     @property
     def is_in_gc_mode(self):
         return self.__connect_with_gc_mode is True
@@ -384,7 +390,7 @@ class LdapConnection(object):
             if entry['type'] == 'searchResEntry':
                 yield entry['attributes']
 
-    def _ldap_modify(self, distinguished_name, changes_dict):
+    def _ldap_modify(self, distinguished_name, changes_dict, operation=ldap3.MODIFY_REPLACE):
         """
         Modifies a specific dn.
         :param distinguished_name: the dn
@@ -395,7 +401,7 @@ class LdapConnection(object):
         changes = {}
         for key, value in changes_dict.items():
             assert key not in changes
-            changes[key] = [(ldap3.MODIFY_REPLACE, [value])]
+            changes[key] = [(operation, [value])]
 
         # Note! We must make a try except here and not a @retry of the function:
         # 1. retry doesn't support generators
@@ -998,15 +1004,17 @@ class LdapConnection(object):
 
         return []
 
-    def set_ldap_attribute(self, distinguished_name: str, attribute_name: str, attribute_value):
+    def set_ldap_attribute(self, distinguished_name: str, attribute_name: str, attribute_value,
+                           operation=ldap3.MODIFY_ADD):
         """
         Sets a specific ldap attribute
+        :param operation: ldap3 modify operation: MODIFY_ADD, MODIFY_DELETE, MODIFY_REPLACE, MODIFY_INCREMENT
         :param distinguished_name: the distinguished name of the entity
         :param attribute_name: the attribute name
         :param attribute_value: the attribute value
         :return:
         """
-        return self._ldap_modify(distinguished_name, {attribute_name: attribute_value})
+        return self._ldap_modify(distinguished_name, {attribute_name: attribute_value}, operation)
 
     def change_entity_enabled_state(self, distinguished_name: str, enabled: bool) -> bool:
         """

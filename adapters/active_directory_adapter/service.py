@@ -13,6 +13,7 @@ from typing import List, Tuple, Dict, Optional, Iterator
 from apscheduler.executors.pool import ThreadPoolExecutor
 from apscheduler.triggers.interval import IntervalTrigger
 
+from active_directory_adapter.execution import ActiveDirectoryExecutionMixIn
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import (ClientConnectionException,
                                         TagDeviceError)
@@ -98,7 +99,8 @@ class ADDfsrShare(SmartJsonClass):
     content = ListField(str, "Content")
 
 
-class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Configurable):
+class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, ActiveDirectoryExecutionMixIn, AdapterBase,
+                             Configurable):
     DEFAULT_LAST_SEEN_THRESHOLD_HOURS = None
     DEFAULT_LAST_FETCHED_THRESHOLD_HOURS = 48
     DEFAULT_USER_LAST_SEEN = 24 * 365 * 5
@@ -1692,31 +1694,31 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
         assert client_data.get_session("device_disabler").change_entity_enabled_state(
             dn, False), "Failed disabling device"
 
-    @add_rule('change_ldap_attribute', methods=['POST'])
-    def change_ldap_attribute(self):
+    def change_ldap_attribute_data(self, entity_id, attribute_name, attribute_value, custom_creds=None):
+
         try:
-            if self.get_method() != 'POST':
-                return return_error('Method not supported', 405)
-            ldap_entity_dict = self.get_request_data_as_object()
-            entity_id = ldap_entity_dict['device_id']
-            attribute_name = ldap_entity_dict['attribute_name']
-            attribute_value = ldap_entity_dict['attribute_value']
+            entity_finder = EntityFinder(self.devices_db, self._clients, self.plugin_unique_name)
+            entity_data, client_data_dict = entity_finder.get_data_and_client_data(entity_id)
+        except Exception:
+            # maybe its a user. try that.
+            entity_finder = EntityFinder(self.users_db, self._clients, self.plugin_unique_name)
+            entity_data, client_data_dict = entity_finder.get_data_and_client_data(entity_id)
+        try:
+            if custom_creds and custom_creds.get('username') and custom_creds.get('password'):
+                data = list(client_data_dict.values())
+                if data:
+                    data[0]['user'] = custom_creds.get('username')
+                    data[0]['password'] = custom_creds.get('password')
+        except Exception:
+            logger.exception('Error setting custom credentials')
+            return False
 
-            try:
-                entity_finder = EntityFinder(self.devices_db, self._clients, self.plugin_unique_name)
-                entity_data, client_data_dict = entity_finder.get_data_and_client_data(entity_id)
-            except Exception:
-                # maybe its a user. try that.
-                entity_finder = EntityFinder(self.users_db, self._clients, self.plugin_unique_name)
-                entity_data, client_data_dict = entity_finder.get_data_and_client_data(entity_id)
+        client_data = self._resolve_client_from_client_dict_and_entity(client_data_dict, entity_data)
 
-            client_data = self._resolve_client_from_client_dict_and_entity(client_data_dict, entity_data)
-            with client_data:
-                client_data.set_ldap_attribute(entity_id, attribute_name, attribute_value)
-        except Exception as e:
-            logger.exception(f'Problem during ldap change')
-            return return_error(str(e), 500)
-        return '', 200
+        with client_data:
+            status = client_data.set_ldap_attribute(entity_id, attribute_name, attribute_value)
+
+        return status
 
     @classmethod
     def _db_config_schema(cls) -> dict:

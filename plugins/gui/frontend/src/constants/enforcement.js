@@ -80,6 +80,9 @@ export const actionsMeta = {
     slack_send_message: {
         title: 'Send Slack Message'
     },
+    change_ldap_attribute: {
+        title: 'Add or Update LDAP Attributes to Users or Devices'
+    },
     disable_entities: {
         title: 'Disable Users or Devices'
     },
@@ -161,7 +164,7 @@ export const actionsMeta = {
     },
     manage_directory: {
         title: 'Manage Microsoft Active Directory (AD) Services',
-        items: ['enable_entities', 'disable_entities']
+        items: ['enable_entities', 'disable_entities', 'change_ldap_attribute']
     },
     create_incident: {
         title: 'Create Incident',
