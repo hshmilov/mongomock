@@ -225,7 +225,8 @@ class ClearpassAdapter(AdapterBase, Configurable):
                 }
             ],
             'required': [
-                'get_extended_info'
+                'get_extended_info',
+                'drop_no_last_seen'
             ],
             'pretty_name': 'Clearpass Configuration',
             'type': 'array'

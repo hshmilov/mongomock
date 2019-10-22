@@ -167,13 +167,10 @@ class ServiceNowAdapter(AdapterBase, Configurable):
                 logger.warning(f'Problem adding assigned_to to {device_raw}', exc_info=True)
             try:
                 snow_asset = snow_alm_asset_table_dict.get((device_raw.get('asset') or {}).get('value'))
+                install_status = None
                 if snow_asset:
                     try:
                         install_status = INSTALL_STATUS_DICT.get(snow_asset.get('install_status'))
-                        device.install_status = install_status
-                        if self.__exclude_disposed_devices and install_status \
-                                and install_status in ['Disposed', 'Decommissioned']:
-                            return None
                     except Exception:
                         logger.warning(f'Problem getting install status for {device_raw}', exc_info=True)
                     device.u_loaner = snow_asset.get('u_loaner')
@@ -210,6 +207,12 @@ class ServiceNowAdapter(AdapterBase, Configurable):
                                     logger.exception(f'Problem with snow nic {snow_nic}')
                     except Exception:
                         logger.warning(f'Problem adding assigned_to to {device_raw}', exc_info=True)
+                if not install_status:
+                    install_status = INSTALL_STATUS_DICT.get(device_raw.get('install_status'))
+                if self.__exclude_disposed_devices and install_status \
+                        and install_status in ['Disposed', 'Decommissioned']:
+                    return None
+                device.install_status = install_status
             except Exception:
                 logger.warning(f'Problem at asset table information {device_raw}', exc_info=True)
 

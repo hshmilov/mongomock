@@ -558,7 +558,12 @@ class SccmAdapter(AdapterBase, Configurable):
                 try:
                     if isinstance(clients_dict.get(device_raw.get('ResourceID')), dict):
                         client_data = clients_dict.get(device_raw.get('ResourceID'))
-                        device.last_seen = parse_date(client_data.get('LastActiveTime'))
+                        last_seen = parse_date(client_data.get('LastActiveTime'))
+                        if self.__drop_no_last_seen is True and not last_seen:
+                            continue
+                        device.last_seen = last_seen
+                    elif self.__drop_no_last_seen is True:
+                        continue
                 except Exception:
                     logger.exception(f'Problem getting last seen data dor {device_raw}')
 
@@ -672,12 +677,17 @@ class SccmAdapter(AdapterBase, Configurable):
                     'type': 'bool'
                 },
                 {
+                    'name': 'drop_no_last_seen',
+                    'title': 'Do not fetch Devices without Last Seen',
+                    'type': 'bool'
+                },
+                {
                     'name': 'devices_fetched_at_a_time',
                     'type': 'integer',
                     'title': 'SQL pagination'
                 }
             ],
-            "required": [],
+            "required": ['drop_no_last_seen', 'exclude_ipv6'],
             "pretty_name": "SCCM Configuration",
             "type": "array"
         }
@@ -686,9 +696,11 @@ class SccmAdapter(AdapterBase, Configurable):
     def _db_config_default(cls):
         return {
             'exclude_ipv6': False,
+            'drop_no_last_seen': False,
             'devices_fetched_at_a_time': 1000
         }
 
     def _on_config_update(self, config):
         self.__exclude_ipv6 = config['exclude_ipv6']
         self.__devices_fetched_at_a_time = config['devices_fetched_at_a_time']
+        self.__drop_no_last_seen = config.get('drop_no_last_seen') or False
