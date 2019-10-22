@@ -1,5 +1,8 @@
 import time
 
+import pytest
+from selenium.common.exceptions import NoSuchElementException
+
 from ui_tests.tests.test_entities_table import TestEntitiesTable
 from services.adapters.aws_service import AwsService
 from services.adapters import stresstest_service
@@ -154,12 +157,9 @@ class TestDevicesTable(TestEntitiesTable):
         self.devices_page.wait_for_table_to_load()
         self.devices_page.click_row()
         self.devices_page.click_general_tab()
-        self.devices_page.click_tab(self.devices_page.FIELD_NETWORK_INTERFACES)
-        # the text in the front surrounded with ()
-        # so remove the first and last char and cast it to int will give the requested value
-        number_of_network_interfaces = int(self.devices_page.get_raw_count_entities()[1:-1])
-        # test the front show correct number of network interfaces
-        assert number_of_network_interfaces == 0
+        # there should be no network interface tab
+        with pytest.raises(NoSuchElementException):
+            self.devices_page.click_tab(self.devices_page.FIELD_NETWORK_INTERFACES)
 
     def test_select_all_devices(self):
         with AwsService().contextmanager(take_ownership=True):

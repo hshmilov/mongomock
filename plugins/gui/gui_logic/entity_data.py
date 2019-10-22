@@ -3,6 +3,7 @@ import io
 import logging
 from datetime import datetime
 from uuid import uuid4
+from typing import Generator
 from flask import request, session, jsonify
 from pymongo import DESCENDING
 
@@ -73,6 +74,19 @@ def fetch_raw_data(entity_type: EntityType, plugin_unique_name: str, id_: str, h
     return res.get('raw_data')
 
 
+def _get_entity_actual_data(advance_data: list, items: list) -> Generator[dict, None, None]:
+    """
+    parse advanced fields data
+    @param advance_data: original advanced field data
+    @param items: flatted fields schema
+    @return: generator with all the parsed data ( can be empty generator if no advanced data found )
+    """
+    for row in advance_data:
+        item = parse_entity_fields(row, [field['name'] for field in items])
+        if item:
+            yield item
+
+
 def get_entity_data(entity_type: EntityType, entity_id, history_date: datetime = None):
     """
     Fetch the general data needed for a single entity, excluding advanced fields which are fetched separately
@@ -108,11 +122,12 @@ def get_entity_data(entity_type: EntityType, entity_id, history_date: datetime =
             advanced_field_data = parse_entity_fields(entity, [schema_name]).get(schema_name)
             flat_schema = {**schema, 'items': flatten_fields(schema['items'])}
             if advanced_field_data:
-                advanced_data.append({
-                    'schema': flat_schema,
-                    'data': [parse_entity_fields(row, [field['name'] for field in flat_schema['items']])
-                             for row in advanced_field_data]
-                })
+                data = list(_get_entity_actual_data(advanced_field_data, flat_schema['items']))
+                if data:
+                    advanced_data.append({
+                        'schema': flat_schema,
+                        'data': data
+                    })
         else:
             basic_fields.append(schema)
 
