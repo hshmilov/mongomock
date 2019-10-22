@@ -25,33 +25,6 @@ class FreshServiceIncidentAction(ActionTypeAlert):
         return {
             'items': [
                 {
-                    'name': 'subject',
-                    'title': 'Subject',
-                    'type': 'string'
-                },
-                {
-                    'name': 'incident_description',
-                    'title': 'Incident Description',
-                    'type': 'string',
-                    'format': 'text'
-                },
-                {
-                    'name': 'description_default',
-                    'title': 'Add Incident Description Default',
-                    'type': 'bool'
-                },
-                {
-                    'name': 'ticket_email',
-                    'title': 'Ticket Email',
-                    'type': 'string'
-                },
-                {
-                    'name': 'priority',
-                    'title': 'Priority',
-                    'type': 'string',
-                    'enum': FRESH_SERVICE_PRIORITY.keys()
-                },
-                {
                     'name': 'domain',
                     'title': 'Freshservice Domain',
                     'type': 'string'
@@ -71,11 +44,39 @@ class FreshServiceIncidentAction(ActionTypeAlert):
                     'name': 'https_proxy',
                     'title': 'HTTPS Proxy',
                     'type': 'string'
+                },
+                {
+                    'name': 'subject',
+                    'title': 'Subject',
+                    'type': 'string'
+                },
+                {
+                    'name': 'incident_description',
+                    'title': 'Ticket Description',
+                    'type': 'string',
+                    'format': 'text'
+                },
+                {
+                    'name': 'description_default',
+                    'title': 'Add Ticket Description Default',
+                    'type': 'bool'
+                },
+                {
+                    'name': 'ticket_email',
+                    'title': 'Ticket Requester Email',
+                    'type': 'string'
+                },
+                {
+                    'name': 'priority',
+                    'title': 'Priority',
+                    'type': 'string',
+                    'enum': FRESH_SERVICE_PRIORITY.keys()
                 }
+
 
             ],
             'required': [
-                'use_adapter', 'domain', 'apikey'
+                'use_adapter', 'domain', 'apikey',
                 'description_default', 'ticket_email',
                 'incident_description', 'subject',
             ],
