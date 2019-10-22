@@ -1,4 +1,8 @@
 export const pluginMeta = {
+    airwave_adapter: {
+        title: 'Aruba AirWave',
+        description: 'Aruba AirWave is a network management system that manages wired and wireless infrastructure and provides granular visibility into devices, users and applications on the network.'
+    },
     snow_adapter: {
         title: 'Snow Software Asset Management',
         link: 'https://docs.axonius.com/docs/snow-software-asset-management',

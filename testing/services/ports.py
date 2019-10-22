@@ -203,6 +203,7 @@ DOCKER_PORTS = {
     'symantec-ccs-adapter':             9994,
     'pkware-adapter':                   9995,
     'snow-adapter':                     9996,
+    'airwave-adapter':                  9997,
     'mongo':                            27017,
     'mockingbird-db':                   28017
 }
