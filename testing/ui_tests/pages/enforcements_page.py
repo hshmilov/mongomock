@@ -44,6 +44,7 @@ class Action(Enum):
     run_linux_ssh_scan = 'Run Linux SSH Scan'
     shodan_enrichment = 'Enrich Device Data with Shodan'
     censys_enrichment = 'Enrich Device Data with Censys'
+    webscan_enrichment = 'Enrich Device Data with Web Server Information'
     scan_with_qualys = 'Add to Qualys Cloud Platform'
     change_ldap_attribute = 'Add or Update LDAP Attributes to Users or Devices'
     ScanTenable = 'Add to Tenable'

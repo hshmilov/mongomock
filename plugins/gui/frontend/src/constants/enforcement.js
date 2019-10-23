@@ -29,6 +29,9 @@ export const actionsMeta = {
     haveibeenpwned_enrichment: {
         title: 'Enrich User Data with Have I Been Pwned'
     },
+    webscan_enrichment: {
+        title: 'Enrich Device Data with Web Scan'
+    },
     carbonblack_isolate: {
         title: 'Isolate in Carbon Black CB Response'
     },
@@ -172,7 +175,7 @@ export const actionsMeta = {
     },
     enrich_device_or_user_data: {
         title: 'Enrich Device or User Data',
-        items: ['shodan_enrichment', 'censys_enrichment', 'haveibeenpwned_enrichment', 'portnox_enrichment']
+        items: ['shodan_enrichment', 'censys_enrichment', 'haveibeenpwned_enrichment', 'portnox_enrichment','webscan_enrichment']
     },
     notify: {
         title: 'Notify',

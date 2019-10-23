@@ -1,0 +1,7 @@
+__pycache__/
+*.py[cod]
+*$py.class
+Result/**
+.idea/
+.scan_id
+reports.json

@@ -35,6 +35,7 @@ SHODAN_PLUGIN_NAME = 'shodan_adapter'
 PORTNOX_PLUGIN_NAME = 'portnox'
 CENSYS_PLUGIN_NAME = 'censys_adapter'
 HAVEIBEENPWNED_PLUGIN_NAME = 'haveibeenpwned_adapter'
+WEBSCAN_PLUGIN_NAME = 'webscan_adapter'
 
 # FIELDS #
 ADAPTERS_LIST_LENGTH = 'adapter_list_length'

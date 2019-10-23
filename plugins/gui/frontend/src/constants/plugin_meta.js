@@ -1,4 +1,9 @@
 export const pluginMeta = {
+    webscan_adapter: {
+        title: 'Web Server Information',
+        link: 'https://docs.axonius.com/docs/web-server-information',
+        description: 'Web Server Information provides information about the web server for a given website domain, including the server type, its version and operating system, the content management system (CMS) name and its version, the installed CMS plugins, versions and more.'
+    },
     airwave_adapter: {
         title: 'Aruba AirWave',
         description: 'Aruba AirWave is a network management system that manages wired and wireless infrastructure and provides granular visibility into devices, users and applications on the network.'

@@ -41,6 +41,7 @@ from reports.action_types.alert.create_zendesk_ticket import ZendeskTicketAction
 from reports.action_types.alert.create_remedy_ticket import RemedyTicketAction
 from reports.action_types.base.portnox_enrichment import PortnoxEnrichment
 from reports.action_types.alert.create_fresh_service_incident import FreshServiceIncidentAction
+from reports.action_types.base.webscan_enrichment import WebscanEnrichment
 
 
 AllActionTypes: Dict[str, type(ActionTypeBase)] = {
@@ -83,5 +84,6 @@ AllActionTypes: Dict[str, type(ActionTypeBase)] = {
     'create_zendesk_ticket': ZendeskTicketAction,
     'create_remedy_ticket': RemedyTicketAction,
     'portnox_enrichment': PortnoxEnrichment,
-    'create_fresh_service_incident': FreshServiceIncidentAction
+    'create_fresh_service_incident': FreshServiceIncidentAction,
+    'webscan_enrichment': WebscanEnrichment
 }
