@@ -2,6 +2,7 @@
   "exclude-list": {
     "add-to-exclude": [
       "nimbul",
+      "igar",
       "careful_execution_correlator",
       "traiana_lab_machines",
       "qcore",

@@ -189,7 +189,7 @@ class ScannerCorrelatorBase(object):
         else:
             device_has_id = False
             parsed_device['data']['id'] = uuid.uuid4().hex
-        if hostname and device_has_id:
+        if (hostname or my_macs) and device_has_id:
             return None
 
         parsed_device_copy = copy.deepcopy(parsed_device)  # Deepcopy to prevent changes on parsed device

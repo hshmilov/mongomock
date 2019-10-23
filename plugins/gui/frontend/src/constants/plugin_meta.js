@@ -1,4 +1,12 @@
 export const pluginMeta = {
+    hashicorp_adapter: {
+        title: 'HashiCorp Consul',
+        description: 'HashiCorp Consul is a multi-cloud service networking platform to connect and secure services across any runtime platform and public or private cloud.'
+    },
+    igar_adapter: {
+        title: 'iGAR',
+        description: 'iGAR by ABB'
+    },
     webscan_adapter: {
         title: 'Web Server Information',
         link: 'https://docs.axonius.com/docs/web-server-information',
