@@ -200,8 +200,8 @@
 
                 &.with-footer {
                   max-height: 160px;
-                  overflow: scroll;
                 }
+
             }
         }
     }

@@ -317,8 +317,8 @@
 
       &.with-footer {
         max-height: 160px;
-        overflow: scroll;
       }
+
     }
 
     .x-select-option {
