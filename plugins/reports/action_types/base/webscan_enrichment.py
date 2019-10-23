@@ -58,7 +58,7 @@ class WebscanEnrichment(ActionTypeBase):
     def _webscan_fail(self, reason):
         reason = str(reason)
         reason = f'Error while running Webscan Enrichment: {reason}'
-        yield generic_fail(internal_axon_ids=self._internal_axon_ids, reason=reason)
+        yield from generic_fail(internal_axon_ids=self._internal_axon_ids, reason=reason)
 
     def _run(self) -> EntitiesResult:
         try:

@@ -88,9 +88,9 @@ class WebscanExecutionMixIn(Triggerable):
                         continue
                     ips = interface.get('ips')
                     if ips:
-                        adapter_ips.extend([x for x in ips
-                                            if isinstance(ipaddress.ip_address(x), ipaddress.IPv4Address) and
-                                            not ipaddress.ip_address(x).is_loopback and x not in DANGEROUS_IPS])
+                        adapter_ips.extend(x for x in ips
+                                           if isinstance(ipaddress.ip_address(x), ipaddress.IPv4Address) and
+                                           not ipaddress.ip_address(x).is_loopback and x not in DANGEROUS_IPS)
                 adapter_meta = adapter.copy()
                 adapter_meta.pop('data')
                 adapter_meta['adapter_unique_id'] = adapter.get('data', {}).get('id')
@@ -189,7 +189,7 @@ class WebscanExecutionMixIn(Triggerable):
                 return json
             adapters_hostnames = self._get_scan_hostnames(device)
             if not adapters_hostnames or not \
-                    any([adapter_hostname.hostname or adapter_hostname.ips for adapter_hostname in adapters_hostnames]):
+                    any(adapter_hostname.hostname or adapter_hostname.ips for adapter_hostname in adapters_hostnames):
                 json = {
                     'success': False,
                     'value': f'Webscan Error: Missing Hostname and IPs'
