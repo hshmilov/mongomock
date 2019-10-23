@@ -41,7 +41,7 @@ export const pluginMeta = {
     bamboohr_adapter: {
         title: 'BambooHR',
         link: 'https://docs.axonius.com/docs/bamboohr',
-        description: 'BambooHR is all-in-one HR software that makes it easy to collect, maintain, and analyze your people data, improve the way you hire talent, onboard new employees, manage compensation, and develop your company culture.'
+        description: 'BambooHR is HR software used to collect, maintain, and analyze data for hiring, onboarding employees, and managing company culture.'
     },
     skybox_adapter: {
         title: 'Skybox Firewall Assurance',
