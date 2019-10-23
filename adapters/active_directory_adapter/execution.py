@@ -59,10 +59,10 @@ class ActiveDirectoryExecutionMixIn(Triggerable):
             attribute_value = attr.get('attribute_value')
             try:
                 self.change_ldap_attribute_data(dev_id, attribute_name, attribute_value, credentials)
-                value += f'{attribute_name} to {attribute_value}: Success. '
+                value += f'Success - {attribute_name} : {attribute_value};'
                 status = True
             except Exception as e:
-                value += f'{attribute_name} to {attribute_value}: Error, {e}. '
+                value += f'Error, {e} - {attribute_name} : {attribute_value};'
 
         json = {'success': status, 'value': value}
         return axon_id, json

@@ -34,7 +34,7 @@ class ChangeLdapAttribute(ActionTypeBase):
                 },
                 {
                     'name': 'username',
-                    'title': 'User',
+                    'title': 'User Name',
                     'type': 'string'
                 },
                 {

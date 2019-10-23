@@ -84,7 +84,7 @@ export const actionsMeta = {
         title: 'Send Slack Message'
     },
     change_ldap_attribute: {
-        title: 'Add or Update LDAP Attributes to Users or Devices'
+        title: 'Update LDAP Attributes of Users or Devices'
     },
     disable_entities: {
         title: 'Disable Users or Devices'
