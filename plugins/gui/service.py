@@ -28,10 +28,11 @@ from dateutil import tz
 from dateutil.parser import parse as parse_date
 from dateutil.relativedelta import relativedelta
 from flask import (after_this_request, has_request_context, jsonify,
-                   make_response, redirect, request, send_file, session)
+                   make_response, redirect, request, session)
 from passlib.hash import bcrypt
 from urllib3.util.url import parse_url
 import OpenSSL
+from werkzeug.wrappers import Response
 
 # pylint: disable=import-error
 from onelogin.saml2.auth import OneLogin_Saml2_Auth
@@ -4955,11 +4956,11 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
         TBD Should receive ID of the report to export (once there will be an option to save many report definitions)
         :return:
         """
-        report_path, attachments_paths = self._get_existing_executive_report_and_attachments(report_id)
-        return send_file(report_path, mimetype='application/pdf', as_attachment=True,
-                         attachment_filename=report_path)
+        report_name, report_data, attachments_data = self._get_existing_executive_report_and_attachments(report_id)
+        response = Response(report_data, mimetype='application/pdf', direct_passthrough=True)
+        return response
 
-    def _get_existing_executive_report_and_attachments(self, report_id) -> Tuple[str, List[str]]:
+    def _get_existing_executive_report_and_attachments(self, report_id) -> Tuple[str, object, List[object]]:
         """
         Opens the report pdf and attachment csv's from the db,
         save them in a temp files and return their path
@@ -4977,26 +4978,26 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
 
         logger.info(f'exporting report "{name}" succeeded. most recent report found')
         uuid = report['uuid']
-        report_path = f'/tmp/axonius-{name}_{datetime.now()}.pdf'
+        report_path = f'axonius-{name}_{datetime.now()}.pdf'
+        logger.info(f'report_path: {report_path}')
         db_connection = self._get_db_connection()
 
-        attachments_paths = []
+        attachments_data = []
         gridfs_connection = gridfs.GridFS(db_connection[GUI_PLUGIN_NAME])
         attachments = report.get('attachments')
         if attachments:
             for attachment_uuid in attachments:
                 try:
                     with gridfs_connection.get(ObjectId(attachment_uuid)) as attachment_content:
-                        attachment_path = f'/tmp/{attachment_content.name}'
-                        with open(attachment_path, 'wb') as output_file:
-                            for chunk in iter(attachment_content.readchunk, b''):
-                                output_file.write(chunk)
-                        attachments_paths.append(attachment_path)
+                        attachment_name = f'{attachment_content.name}'.encode().decode('utf-8')
+                        attachments_data.append({
+                            'name': attachment_name,
+                            'content': attachment_content
+                        })
                 except Exception:
                     logger.error(f'failed to retrieve attachment {attachment_uuid}')
-        with gridfs_connection.get(ObjectId(uuid)) as report_content:
-            open(report_path, 'wb').write(report_content.read())
-            return report_path, attachments_paths
+        report_data = gridfs_connection.get(ObjectId(uuid))
+        return report_path, report_data, attachments_data
 
     def generate_report(self, generated_date, report):
         """
@@ -5088,7 +5089,8 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
         lock = self.exec_report_locks[report_name] if self.exec_report_locks.get(report_name) else threading.RLock()
         self.exec_report_locks[report_name] = lock
         with lock:
-            report_path, attachments_paths = self._get_existing_executive_report_and_attachments(report['uuid'])
+            report_path, report_data, attachments_data = self._get_existing_executive_report_and_attachments(
+                report['uuid'])
             if self.mail_sender:
                 try:
                     mail_properties = report['mail_properties']
@@ -5098,12 +5100,11 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
                         email = self.mail_sender.new_email(subject,
                                                            mail_properties.get('emailList', []),
                                                            cc_recipients=mail_properties.get('emailListCC', []))
-                        with open(report_path, 'rb') as report_file:
-                            email.add_pdf(EXEC_REPORT_FILE_NAME.format(report_name), bytes(report_file.read()))
-                        for attachment_path in attachments_paths:
-                            with open(attachment_path, 'rb') as attachment_file:
-                                email.add_attachment(os.path.basename(attachment_path), bytes(attachment_file.read()),
-                                                     'text/csv')
+                        email.add_pdf(EXEC_REPORT_FILE_NAME.format(report_name), report_data.read())
+
+                        for attachment_data in attachments_data:
+                            email.add_attachment(attachment_data['name'], bytes(attachment_data['content'].read()),
+                                                 'text/csv')
                         email.send(EXEC_REPORT_EMAIL_CONTENT)
                         self.reports_config_collection.update_one({
                             'name': report_name,
