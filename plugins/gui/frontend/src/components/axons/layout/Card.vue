@@ -97,8 +97,10 @@
         box-shadow: 0 2px 12px 0px rgba(0, 0, 0, 0.2);
         border-radius: 2px;
         position:relative;
+        border: 2px solid transparent;
 
         &.card__item > .header {
+            border: 1px solid transparent;
             .title {
                 display: flex;
 
