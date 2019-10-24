@@ -284,7 +284,7 @@
         })
       },
       runChartFilter (chartInd, queryInd) {
-        let query = this.processedPanels[chartInd].data[queryInd]
+        let query = this.orderedPanels[chartInd].data[queryInd]
         if (this.isEntityRestricted(query.module) || query.view === undefined || query.view === null) {
           return
         }
@@ -292,7 +292,7 @@
         this.updateView({
           module: query.module,
           view: historical ? { ...query.view, historical } : query.view,
-          name: this.processedPanels[chartInd].metric === 'compare' ? query.name : undefined,
+          name: this.orderedPanels[chartInd].metric === 'compare' ? query.name : undefined,
           uuid: null,
         })
         this.$router.push({ path: query.module })
