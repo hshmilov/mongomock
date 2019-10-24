@@ -3,7 +3,6 @@
     :is="dataType"
     :schema="schema"
     :value="value"
-    :link="link"
   />
 </template>
 
@@ -14,7 +13,6 @@
   import bool from '../../neurons/schema/types/boolean/BooleanView.vue'
   import file from '../../neurons/schema/types/array/FileView.vue'
   import array from '../../neurons/schema/types/array/ArrayTableView.vue'
-  import {formatStringTemplate} from '../../../constants/utils.js'
 
   import {isObject, isObjectListField} from '../../../constants/utils'
 
@@ -44,17 +42,10 @@
         if (!this.schema.name || !isObject(this.data)) {
           return this.data
         }
-        let value = this.data[this.schema.name]
-        if (value === undefined) {
-          value = this.data
+        if (isObjectListField(this.schema)) {
+          return Array.isArray(this.data)? this.data : [this.data]
         }
-        return (isObjectListField(this.schema) && !Array.isArray(value)) ? [value] : value
-      },
-      link () {
-          if(this.schema.link){
-              return formatStringTemplate(this.schema.link, this.data)
-          }
-          return ''
+        return this.data[this.schema.name]
       }
     }
   }

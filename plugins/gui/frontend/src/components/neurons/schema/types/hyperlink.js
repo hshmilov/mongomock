@@ -14,8 +14,8 @@ export default {
             }
         }),
         hyperlink() {
-            if(this.link){
-                return { href: this.link || '#'}
+            if (this.schema.link){
+                return { href: this.schema.link || '#'}
             }
             if (!this.schema.path || !this.schema.path.length || !this.entityToState[this.schema.path[0]]) return null
             let hyperlinks = this.entityToState[this.schema.path[0]].hyperlinks.data

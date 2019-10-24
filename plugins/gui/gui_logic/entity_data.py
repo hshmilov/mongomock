@@ -4,6 +4,7 @@ import logging
 from datetime import datetime
 from uuid import uuid4
 from typing import Generator
+import json
 from flask import request, session, jsonify
 from pymongo import DESCENDING
 
@@ -236,6 +237,7 @@ def entity_tasks_actions(entity_id: str):
     actions = []
     for task in tasks:
         for action in task.get('actions'):
+            action['additional_info'] = json.dumps(action.get('additional_info', ''))
             actions.append({
                 'action_id': f'{task.get("uuid")} {action.get("action_name")}',
                 'uuid': task.get('uuid'),

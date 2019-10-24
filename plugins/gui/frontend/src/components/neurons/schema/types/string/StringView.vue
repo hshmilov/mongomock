@@ -51,10 +51,6 @@
       value: {
         type: [String, Array],
         default: ""
-      },
-      link: {
-          type: String,
-          default: ''
       }
     },
     data () {

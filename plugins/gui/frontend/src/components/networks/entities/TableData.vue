@@ -289,8 +289,7 @@
                     max-height: 30vh;
                     .x-table {
                       width: min-content;
-                      height: auto;
-                      overflow: visible;
+                      max-height: calc(30vh - 8px);
                     }
                 }
 

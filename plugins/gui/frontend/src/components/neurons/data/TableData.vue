@@ -5,7 +5,7 @@
   >
     <x-table-data
       slot-scope="{ sliced }"
-      :schema="schema"
+      :schema="processedSchema"
       :data="sliced"
     />
   </x-slicer>
@@ -15,7 +15,7 @@
   import xSlicer from '../schema/types/Slicer.vue'
   import xTableData from '../../axons/tables/TableData.vue'
 
-  import {isObject, includesIgnoreCase} from '../../../constants/utils'
+  import {isObject, includesIgnoreCase, formatStringTemplate} from '../../../constants/utils'
 
   export default {
     name: 'XTableData',
@@ -69,6 +69,14 @@
           return this.value.filter(item => this.hasFilter(item))
         }
         return this.hasFilter(this.value) ? this.value : null
+      },
+      processedSchema () {
+        if (!this.schema.link) {
+          return this.schema
+        }
+        return { ...this.schema,
+          link: formatStringTemplate(this.schema.link, this.data)
+        }
       }
     },
     methods: {

@@ -29,7 +29,7 @@
     </template>
     <x-checkbox
       v-model="includeEmpty"
-      :read-only="Boolean(valueFilter)"
+      :read-only="Boolean(valueFilter) && isFieldFilterable"
       label="Include entities with no value"
       class="grid-span2"
     />
