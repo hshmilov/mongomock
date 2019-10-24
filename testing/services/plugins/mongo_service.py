@@ -275,7 +275,10 @@ class MongoService(WeaveService):
         return self.client[GUI_PLUGIN_NAME]['dashboard']
 
     def gui_getting_started_auto(self):
-        return self.client[GUI_PLUGIN_NAME]['getting_started'].find_one({}).get('settings', {}).get('autoOpen', False)
+        getting_started_doc = self.client[GUI_PLUGIN_NAME]['getting_started'].find_one({})
+        if getting_started_doc is None:
+            return False
+        return getting_started_doc.get('settings', {}).get('autoOpen', False)
 
     def core_settings_getting_started(self):
         config = self.client[CORE_UNIQUE_NAME][CONFIGURABLE_CONFIGS_COLLECTION].find_one(
