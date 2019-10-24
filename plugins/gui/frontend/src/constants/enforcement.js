@@ -30,7 +30,7 @@ export const actionsMeta = {
         title: 'Enrich User Data with Have I Been Pwned'
     },
     webscan_enrichment: {
-        title: 'Enrich Device Data with Web Information'
+        title: 'Enrich Device Data with Web Server Information'
     },
     carbonblack_isolate: {
         title: 'Isolate in Carbon Black CB Response'
