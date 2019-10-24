@@ -14,6 +14,7 @@ export const pluginMeta = {
     },
     airwave_adapter: {
         title: 'Aruba AirWave',
+        link: 'https://docs.axonius.com/docs/aruba-airwave',
         description: 'Aruba AirWave is a network management system that manages wired and wireless infrastructure and provides granular visibility into devices, users and applications on the network.'
     },
     snow_adapter: {
@@ -64,7 +65,7 @@ export const pluginMeta = {
     omnivista_adapter: {
         title: 'OmniVista 2500 NMS - BETA',
         link: 'https://docs.axonius.com/docs/omnivista-2500-nms',
-        description: 'Alcatel-Lucent OmniVista 2500 Network Management System (NMS) provides management tools and network-wide visibility. This single platform enables operators to provision, manage and maintain a Campus Mobile infrastructure with its network elements, alarms, unified access security policies, and virtualization. It also provides advanced network analytics for full visibility into wireless, devices and applications, as well as predictive analysis for forward planning.'
+        description: 'The Alcatel-Lucent OmniVista 2500 Network Management System (NMS) provides management tools and network-wide visibility, enabling operators to provision, manage and maintain a mobile infrastructure.'
     },
     symantec_dlp_adapter: {
         title: 'Symantec DLP - BETA',
