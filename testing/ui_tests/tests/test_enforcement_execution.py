@@ -67,7 +67,7 @@ class TestEnforcementExecution(TestBase):
             table_data = self.devices_page.get_field_table_data_with_ids()
             assert len(table_data) == 1
             enforcement_set_id, enforcement_set_name, action_name, is_success, output = table_data[0]
-            assert enforcement_set_id == f'{RUN_CMD_ENFORCEMENT_NAME} - 1'
+            assert enforcement_set_id == f'{RUN_CMD_ENFORCEMENT_NAME} - Task 1'
             assert enforcement_set_name == RUN_CMD_ACTION_NAME
             assert action_name == Action.run_windows_shell_command.value
             assert is_success == 'Yes'

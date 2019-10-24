@@ -35,7 +35,7 @@ class TestTasks(TestBase):
 
     def _check_enforcement_data(self):
         # Check Enforcement's Task details in table
-        assert f'{ENFORCEMENT_NAME} 1' in self.enforcements_page.get_column_data_slicer(self.FIELD_NAME)
+        assert f'{ENFORCEMENT_NAME} - Task 1' in self.enforcements_page.get_column_data_slicer(self.FIELD_NAME)
         assert ENFORCEMENT_NAME in self.enforcements_page.get_column_data_slicer(self.FIELD_MAIN_ACTION)
         assert ENFORCEMENT_QUERY in self.enforcements_page.get_column_data_slicer(self.FIELD_QUERY_NAME)
         assert datetime.now().strftime('%Y-%m-%d') in normalize_timezone_date(

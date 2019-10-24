@@ -2,7 +2,7 @@
   <div class="x-query-state">
     <div class="header">
       <template v-if="enforcement">
-        <div class="title">{{ enforcement.name }} - Task {{ enforcement.task }}</div>
+        <div class="title">{{ enforcement.name }}</div>
         <div class="subtitle">{{ enforcement.outcome }} results of "{{ enforcement.action }}" action</div>
       </template>
       <x-button

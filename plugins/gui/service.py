@@ -136,7 +136,7 @@ from gui.cached_session import CachedSessionInterface
 from gui.feature_flags import FeatureFlags
 from gui.gui_logic.entity_data import (get_entity_data, entity_data_field_csv,
                                        entity_notes, entity_notes_update, entity_tasks_actions,
-                                       entity_tasks_actions_csv)
+                                       entity_tasks_actions_csv, get_task_full_name)
 from gui.gui_logic.dashboard_data import adapter_data
 from gui.gui_logic.db_helpers import beautify_db_entry
 from gui.gui_logic.ec_helpers import extract_actions_from_ec
@@ -394,7 +394,8 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
                 '_id': task.get('_id'),
                 'result.metadata.success_rate': success_rate,
                 'post_json.report_name':
-                    f'{task.get("post_json", {}).get("report_name", "")} {result.get("metadata", {}).get("pretty_id", "")}',
+                    get_task_full_name(task.get('post_json', {}).get('report_name', ''),
+                                       result.get('metadata', {}).get('pretty_id', '')),
                 'status': status,
                 f'result.{ACTIONS_MAIN_FIELD}.name': result.get('main', {}).get('name', ''),
                 'result.metadata.trigger.view.name': result.get('metadata', {}).get('trigger', {}).get('view', {}).get(
@@ -2514,7 +2515,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
                 for x in arr:
                     normalize_saved_action_results(x['action']['results'])
 
-            task_metadata = task['result']['metadata']
+            task_metadata = task.get('result', {}).get('metadata', {})
             return beautify_db_entry({
                 '_id': task['_id'],
                 'enforcement': task['post_json']['report_name'],
@@ -2524,7 +2525,8 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
                 'started': task['started_at'],
                 'finished': task['finished_at'],
                 'result': task['result'],
-                'task_name': f'{task["post_json"]["report_name"]} - {task_metadata["pretty_id"]}'
+                'task_name': get_task_full_name(task.get('post_json', {}).get('report_name', ''),
+                                                task_metadata.get('pretty_id', ''))
             })
 
         return jsonify(beautify_task(self.enforcement_tasks_runs_collection.find_one({

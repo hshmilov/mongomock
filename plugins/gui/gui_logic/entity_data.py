@@ -241,7 +241,7 @@ def entity_tasks_actions(entity_id: str):
             actions.append({
                 'action_id': f'{task.get("uuid")} {action.get("action_name")}',
                 'uuid': task.get('uuid'),
-                'recipe_name': f'{task.get("recipe_name")} - {task.get("recipe_pretty_id")}',
+                'recipe_name': get_task_full_name(task.get('recipe_name'), task.get('recipe_pretty_id')),
                 **action
             })
     return actions
@@ -432,3 +432,7 @@ def entity_notes_update(entity_type: EntityType, entity_id, note_id, note_obj):
     entity_obj.add_data(NOTES_DATA_TAG, notes_list, action_if_exists='merge')
     note_doc['user_id'] = str(note_doc['user_id'])
     return jsonify(note_doc)
+
+
+def get_task_full_name(name, pretty_id):
+    return f'{name} - Task {pretty_id}'
