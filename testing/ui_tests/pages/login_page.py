@@ -31,6 +31,9 @@ class LoginPage(Page):
             self.click_remember_me()
         self.click_login_button()
 
+        if self.test_base.should_getting_started_open():
+            self.make_getting_started_disappear()
+
     def fill_username(self, username):
         self.fill_text_field_by_element_id(self.LOGIN_USERNAME_ID, username)
 
@@ -92,3 +95,12 @@ class LoginPage(Page):
         self.logout()
         self.wait_for_login_page_to_load()
         self.login(username=user_name, password=user_password)
+
+    def make_getting_started_disappear(self):
+        try:
+            self.wait_for_element_present_by_css('.md-overlay')
+        except Exception:
+            # if overlay does not exist, most probably logged in user is not admin
+            return
+        self.click_getting_started_overlay()
+        self.wait_for_element_absent_by_css('.md-overlay')

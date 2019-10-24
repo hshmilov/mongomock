@@ -18,6 +18,7 @@
   import xForm from '../../neurons/schema/Form.vue'
   import xButton from '../../axons/inputs/Button.vue'
   import userErrorMixin from '../../../mixins/user_error'
+  import { GettingStartedPubSub } from '../../App.vue'
 
   import {mapActions} from 'vuex'
   import {LOGIN} from '../../../store/modules/auth'
@@ -55,7 +56,12 @@
         this.complete = valid
       },
       onLogin () {
-        this.login(this.credentials)
+        this.login(this.credentials).then(res => {
+          // Set getting started panel state to open=true
+          if (res.status == 200) {
+            GettingStartedPubSub.$emit('getting-started-login')
+          }
+        })
       }
     }
   }

@@ -5,7 +5,7 @@
 <g id="Bounding_Box">
 	<rect fill="none" width="24" height="24"/>
 </g>
-<g id="Flat" fill="orange">
+<g id="Flat" fill="#ff7d46">
 	<g id="ui_x5F_spec_x5F_header_copy_2" fill="white" stroke="green">
 	</g>
 	<path d="M19,5h-2V3H7v2H5C3.9,5,3,5.9,3,7v1c0,2.55,1.92,4.63,4.39,4.94c0.63,1.5,1.98,2.63,3.61,2.96V19H7v2h10v-2h-4v-3.1

@@ -611,7 +611,7 @@ class GuiService(PluginService, UpdatablePluginMixin):
             self.db.get_collection(GUI_PLUGIN_NAME, 'getting_started').insert_one(
                 {
                     'settings': {
-                        'autoOpen': False,
+                        'autoOpen': True,
                         'interactive': False
                     },
                     'milestones': [
@@ -697,10 +697,12 @@ class GuiService(PluginService, UpdatablePluginMixin):
                             'completionDate': None,
                             'path': '/reports',
                             'link': 'https://docs.axonius.com/docs/generate-a-report',
-                            'description': 'You can generate a PDF document to share dashboards '
-                                           'and query results in an executive-friendly format.\n\n '
-                                           'Go to the Reports screen, and create a report based on '
-                                           'the query you saved earlier.'
+                            'description': 'You can customize the Axonius Dashboard with charts '
+                                           'that track the relevant '
+                                           'metrics and show immediate insights based on your saved queries.\n\n '
+                                           'Go to the Axonius Dashboard, and add a chart to any '
+                                           'of the default spaces or to a '
+                                           'new custom space.'
                         }
                     ]
                 }

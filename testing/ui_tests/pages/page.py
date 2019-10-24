@@ -786,3 +786,6 @@ class Page:
 
     def blur_on_element(self, elem_id):
         return self.driver.execute_script(f'document.querySelector("#{elem_id}").blur()')
+
+    def click_getting_started_overlay(self):
+        self.wait_for_element_present_by_css('.md-overlay').click()

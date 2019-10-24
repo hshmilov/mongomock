@@ -310,6 +310,14 @@ class TestBase:
                    self.instances_page)
         return screens
 
+    def should_getting_started_open(self):
+        is_getting_started_enabled = self.axonius_system.db.core_settings_getting_started()
+        is_getting_started_autoopen = self.axonius_system.db.gui_getting_started_auto()
+
+        return is_getting_started_enabled and is_getting_started_autoopen
+
+    # wait for the element and
+
     def login(self):
         self.driver.get(self.base_url)
         self.fill_signup_screen()

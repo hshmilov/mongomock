@@ -32,6 +32,7 @@
 
 <script>
 import XButton from '../../axons/inputs/Button.vue'
+import { GettingStartedPubSub } from '../../App.vue'
 import XTransitionExpand from '../../transitions/TransitionExpand.vue'
 
 export default {
@@ -79,6 +80,7 @@ export default {
         },
         goToMilestoneRelatedPage() {
             // redirect in the platform to the designated page for this milestone
+            GettingStartedPubSub.$emit('getting-started-open-state')
             this.$router.push({ path: this.path })
         }
     }

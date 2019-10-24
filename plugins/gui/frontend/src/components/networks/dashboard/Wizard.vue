@@ -105,10 +105,6 @@
         type: Object,
         default: () => {}
       },
-      customSpace: {
-        type: Boolean,
-        default: false,
-      }
     },
     data () {
       return {
@@ -197,9 +193,7 @@
           space: this.space
         }).then(res => {
           //complete milestone here
-          if (this.customSpace) {
-            this.completeMilestone({ milestoneName: DASHBOARD_CREATED })
-          }
+          this.completeMilestone({ milestoneName: DASHBOARD_CREATED })
         })
       },
       finishNewDashboard () {

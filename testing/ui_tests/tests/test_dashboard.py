@@ -595,23 +595,6 @@ class TestDashboard(TestBase):
         wait_until(self._does_user_appear)
         assert self.dashboard_page.get_all_tables_counters() == [4, 0]
 
-    def test_dashboard_single_demo_view(self):
-        self.settings_page.switch_to_page()
-        self.base_page.run_discovery()
-        self.dashboard_page.switch_to_page()
-
-        self.devices_queries_page.switch_to_page()
-        self.devices_queries_page.wait_for_table_to_load()
-        self.devices_queries_page.wait_for_spinner_to_end()
-        assert len(self.devices_queries_page.find_query_name_by_part('DEMO')) == 1
-
-        self.dashboard_page.switch_to_page()
-        self.driver.refresh()
-        self.devices_queries_page.switch_to_page()
-        self.devices_queries_page.wait_for_table_to_load()
-        self.devices_queries_page.wait_for_spinner_to_end()
-        assert len(self.devices_queries_page.find_query_name_by_part('DEMO')) == 1
-
     def test_dashboard_spaces(self):
         # Default space and Personal space existing
         self.settings_page.switch_to_page()

@@ -23,7 +23,7 @@
       <x-top-bar class="print-exclude" @access-violation="notifyAccess" />
       <x-toast v-if="toastMessage" :timeout="toastData.toastTimeout" v-model="toastMessage" />
       <x-access-modal v-model="blockedComponent" />
-      <x-getting-started v-if="isUserAdmin" v-model="open" />
+      <x-getting-started v-if="isUserAdmin && gettingStartedEnabled" v-model="open" />
     </template>
     <template v-else>
       <x-login />
@@ -102,8 +102,8 @@ export default {
   data() {
     return {
       blockedComponent: '',
-      open: this.gettingStartedAutoOpen,
-      firstLoad: true
+      open: false,
+      justLoggedIn: false
     }
   },
   computed: {
@@ -147,13 +147,6 @@ export default {
     }
   },
   watch: {
-    $route(to, from) {
-      if (!this.firstLoad) {
-        this.changeChecklistOpenState(null, true)
-      } else {
-        this.firstLoad = false
-      }
-    },
     userName(newUserName) {
       if (newUserName) {
         this.fetchGlobalData()
@@ -177,12 +170,8 @@ export default {
       fetchAllowedDates: FETCH_ALLOWED_DATES,
       fetchDataFields: FETCH_DATA_FIELDS
     }),
-    changeChecklistOpenState(e, forceClose) {
-      if (forceClose) {
-        this.open = false
-      } else {
+    changeChecklistOpenState() {
         this.open = !this.open
-      }
     },
     fetchGlobalData() {
       this.fetchConstants()
@@ -195,9 +184,11 @@ export default {
         this.fetchFirstHistoricalDate()
         this.fetchAllowedDates()
         if (this.isUserAdmin) {
-        this.fetchGettingStartedData().then(res => {
-          this.open = this.gettingStartedAutoOpen
-        });
+        this.fetchGettingStartedData().then(() => {
+          if(this.justLoggedIn) {
+            this.open = this.gettingStartedAutoOpen
+          }
+        })
       }
       }
     },
@@ -218,6 +209,11 @@ export default {
     GettingStartedPubSub.$on(
       'getting-started-open-state',
       this.changeChecklistOpenState
+    )
+
+    GettingStartedPubSub.$on(
+      'getting-started-login',
+      () => this.justLoggedIn = true
     )
     this.handleExpiration()
     this.getUser()
@@ -246,7 +242,7 @@ export default {
     right: 20px;
     top: 85px;
     color: #fff;
-    z-index: 9999;
+    z-index: 999;
     background-color: black;
     border-radius: 50%;
     width: 30px;

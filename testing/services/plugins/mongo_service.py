@@ -7,8 +7,10 @@ import pymongo
 from retrying import retry
 
 from axonius.plugin_base import EntityType
+from axonius.consts.core_consts import CORE_CONFIG_NAME
 from axonius.consts.plugin_consts import (PLUGIN_UNIQUE_NAME, AGGREGATOR_PLUGIN_NAME, GUI_PLUGIN_NAME,
-                                          CONFIGURABLE_CONFIGS_COLLECTION)
+                                          CONFIGURABLE_CONFIGS_COLLECTION, CORE_UNIQUE_NAME)
+from axonius.consts.gui_consts import (GETTING_STARTED_CHECKLIST_SETTING)
 from services.ports import DOCKER_PORTS
 from services.weave_service import WeaveService
 
@@ -271,3 +273,11 @@ class MongoService(WeaveService):
 
     def gui_dashboard_collection(self):
         return self.client[GUI_PLUGIN_NAME]['dashboard']
+
+    def gui_getting_started_auto(self):
+        return self.client[GUI_PLUGIN_NAME]['getting_started'].find_one({}).get('settings', {}).get('autoOpen', False)
+
+    def core_settings_getting_started(self):
+        config = self.client[CORE_UNIQUE_NAME][CONFIGURABLE_CONFIGS_COLLECTION].find_one(
+            {'config_name': CORE_CONFIG_NAME}).get('config', {})
+        return config.get(GETTING_STARTED_CHECKLIST_SETTING, {}).get('enabled', False)

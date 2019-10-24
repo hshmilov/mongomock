@@ -67,7 +67,6 @@
     <x-wizard
       v-if="wizard.active"
       :space="wizard.space"
-      :custom-space="editCustomSpace"
       :panel="wizard.panel"
       @close="closeWizard"
     />

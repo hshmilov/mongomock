@@ -107,32 +107,7 @@
         })
       },
       viewsCallback () {
-        this.getDashboardData().then(() => {
-          if (this._isDestroyed || this.isExpired) return
-          let module = 'devices'
-          if (this.isEntityRestricted(module)) return
-          if (this.devicesViewsList.length && this.devicesViewsList.find((item) => item.name.includes('DEMO'))) return
-          // If DEMO view was not yet added, add it now, according to the adapters' devices count
-          if (this.seenDevices && this.isEntityEditable(module)) {
-            let adapter = this.deviceDiscovery.counters.find((item) => !item.name.includes('active_directory'))
-            let name = ''
-            let filter = ''
-            if (adapter) {
-              // Found an adapters other than Active Directory - view will filter it
-              name = adapter.name.split('_').join(' ')
-              filter = `adapters == '${adapter.name}'`
-            } else {
-              // Active Directory is the only adapters - view will filter for Windows 10
-              name = 'Windows 10'
-              filter = 'specific_data.data.os.distribution == "10"'
-            }
-            this.saveView({
-              name: `DEMO - ${name}`, module: 'devices', predefined: true, view: {
-                ...this.devicesView, query: { filter }
-              }
-            })
-          }
-        })
+        this.getDashboardData()
       }
     }
   }

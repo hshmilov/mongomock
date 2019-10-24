@@ -145,24 +145,30 @@ export const auth = {
         Request from server to login a user according to given credentials.
         A valid user name and its password is required.
        */
-      if (!payload || !payload.user_name || !payload.password) {
-        return
-      }
-      dispatch(REQUEST_API, {
-        rule: 'login',
-        method: 'POST',
-        data: payload
-      }).then((response) => {
-        if (!response || !response.status) {
-          commit(SET_USER, { error: 'Login failed.' })
-        } else if (response.status === 200) {
-          dispatch(GET_USER)
-        } else {
-          commit(SET_USER, { error: response.data.message, fetching: false })
+      return new Promise((resolve, reject) => {
+        if (!payload || !payload.user_name || !payload.password) {
+          reject('user_name & password are must')
         }
-      }).catch((error) => {
-        commit(SET_USER, { error: error.response.data.message })
+  
+        dispatch(REQUEST_API, {
+          rule: 'login',
+          method: 'POST',
+          data: payload
+        }).then((response) => {
+          if (!response || !response.status) {
+            commit(SET_USER, { error: 'Login failed.' })
+          } else if (response.status === 200) {
+            dispatch(GET_USER)
+          } else {
+            commit(SET_USER, { error: response.data.message, fetching: false })
+          }
+            resolve(response)
+        }).catch((error) => {
+          commit(SET_USER, { error: error.response.data.message })
+          reject(error)
+        })
       })
+      
     },
     [LDAP_LOGIN] ({ dispatch, commit }, payload) {
       /*

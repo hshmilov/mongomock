@@ -17,7 +17,7 @@
         <br />
         <span>
           Use the
-          <router-link to="/settings#global-settings-tab">Global Settings</router-link>to hide/display the "Getting Started With Axonius" checklist.
+          <router-link to="/settings#global-settings-tab">Global Settings </router-link>to hide/display the "Getting Started With Axonius" checklist.
         </span>
       </div>
     </header>
