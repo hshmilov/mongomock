@@ -142,7 +142,7 @@ class MasscanAdapter(ScannerAdapterBase):
                     devices_raw_data_merge[data_raw.get('ip')] = []
                 devices_raw_data_merge[data_raw.get('ip')].append(data_raw)
             except Exception:
-                logger.exception()
+                logger.exception(f'Problem with data {data_raw}')
         for device_raw_list in devices_raw_data_merge.values():
             try:
                 device = self._new_device_adapter()

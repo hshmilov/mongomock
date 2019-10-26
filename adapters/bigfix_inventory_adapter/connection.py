@@ -39,7 +39,7 @@ class BigfixInventoryConnection(RESTConnection):
                                  f'token={self._apikey}&limit={DEVICE_PER_PAGE}&offset={offset}')
             total = response.get('total')
             logger.info(f'Total sw is {total}')
-            for app_raw in response.get('rows'):
+            for app_raw in (response.get('rows') or []):
                 if app_raw.get('computer_id'):
                     if app_raw.get('computer_id') not in sw_dict:
                         sw_dict[app_raw.get('computer_id')] = []
@@ -53,7 +53,7 @@ class BigfixInventoryConnection(RESTConnection):
                                          f'token={self._apikey}&limit={DEVICE_PER_PAGE}&offset={offset}')
                     if not response.get('rows'):
                         break
-                    for app_raw in response.get('rows'):
+                    for app_raw in (response.get('rows') or []):
                         if app_raw.get('computer_id'):
                             if app_raw.get('computer_id') not in sw_dict:
                                 sw_dict[app_raw.get('computer_id')] = []
@@ -77,6 +77,9 @@ class BigfixInventoryConnection(RESTConnection):
                              'columns[]=is_managed_by_vm_manager&'
                              f'token={self._apikey}&limit={DEVICE_PER_PAGE}&offset={offset}')
         total = response.get('total')
+        if total is None:
+            logger.error(f'bad response: {response}')
+            raise RESTException(f'Error in response')
         logger.info(f'Total number is {total}')
         for device_raw in response.get('rows'):
             yield device_raw, sw_dict

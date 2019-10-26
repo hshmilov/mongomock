@@ -95,7 +95,8 @@ class BigfixInventoryAdapter(AdapterBase):
                 {
                     'name': 'apikey',
                     'title': 'API Token (For MFA Cases)',
-                    'type': 'string'
+                    'type': 'string',
+                    'format': 'password'
                 },
                 {
                     'name': 'verify_ssl',

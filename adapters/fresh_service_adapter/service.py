@@ -140,7 +140,6 @@ class FreshServiceAdapter(AdapterBase, Configurable):
             device.state_name = device_raw.get('state_name')
             try:
                 ci_type_id = device_raw.get('ci_type_id')
-                device_raw.get(f'os_{ci_type_id}')
                 device.figure_os((device_raw.get(f'os_{ci_type_id}') or '') + ' ' +
                                  (device_raw.get(f'os_version_{ci_type_id}') or ''))
                 device.warranty = parse_date(device_raw.get(f'warranty_expiry_date_{ci_type_id}'))

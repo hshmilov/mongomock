@@ -64,14 +64,13 @@ class DeepSecurityAdapter(AdapterBase):
         finally:
             sys.exit = exit_func
 
-    @staticmethod
-    def get_rest_connection(client_config):
+    def get_rest_connection(self, client_config):
         connection = DeepSecurityConnection(domain=client_config['domain'],
                                             port=client_config.get('port'),
                                             verify_ssl=client_config['verify_ssl'],
                                             https_proxy=client_config.get('https_proxy'),
                                             apikey=client_config['rest_apikey'],
-                                            session_timeout=(5, 1800))
+                                            session_timeout=(self._socket_read_timeout, 1800))
         with connection:
             pass
         return connection

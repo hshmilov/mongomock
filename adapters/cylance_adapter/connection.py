@@ -36,7 +36,7 @@ class CylanceConnection(RESTConnection):
 
     def _create_token_for_scopre(self, scope, force_get_token=False):
         # pylint: disable=line-too-long
-        if force_get_token or (self._token_times.get(scope) and (datetime.datetime.now() - self._token_times.get(scope) < datetime.timedelta(minutes=(consts.NUMBER_OF_MINUTES_UNTIL_TOKEN_TIMEOUT - 1)))):
+        if (not force_get_token) and (self._token_times.get(scope) and (datetime.datetime.now() - self._token_times.get(scope) < datetime.timedelta(minutes=(consts.NUMBER_OF_MINUTES_UNTIL_TOKEN_TIMEOUT - 1)))):
             return
         if self._tid is not None and self._app_id is not None and self._app_secret is not None:
             int((datetime.datetime.now() - datetime.datetime(1970, 1, 1)).total_seconds())

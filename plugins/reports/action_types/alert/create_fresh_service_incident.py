@@ -76,7 +76,7 @@ class FreshServiceIncidentAction(ActionTypeAlert):
 
             ],
             'required': [
-                'use_adapter', 'domain', 'apikey',
+                'domain', 'apikey',
                 'description_default', 'ticket_email',
                 'incident_description', 'subject',
             ],
@@ -88,7 +88,6 @@ class FreshServiceIncidentAction(ActionTypeAlert):
         return {
             'description_default': False,
             'incident_description': None,
-            'use_adapter': False,
             'domain': None,
             'apikey': None,
             'https_proxy': None,
