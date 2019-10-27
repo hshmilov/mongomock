@@ -4580,8 +4580,8 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
         base_query = {}
         if views[0].get('name'):
             base_view = self._find_filter_by_name(first_entity_type, views[0]['name'])['query']['filter']
-            if not base_view or not base_view.get('query'):
-                return []
+            if not base_view:
+                return
             base_query = parse_filter(base_view)
         yield {
             'title': views[0]['name'],
@@ -4591,7 +4591,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
         # second query handling
         intersecting_view = self._find_filter_by_name(second_entity_type, views[1]['name'])
         if not intersecting_view or not intersecting_view.get('query'):
-            return []
+            return
         intersecting_query = parse_filter(intersecting_view['query']['filter'])
         if base_query:
             intersecting_query = {
