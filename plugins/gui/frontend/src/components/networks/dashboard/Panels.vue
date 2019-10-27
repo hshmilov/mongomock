@@ -7,6 +7,7 @@
     handle=".header"
     ghost-class="ghost"
     class="x-panels"
+    :move="checkMove"
     >
       <x-card
         v-for="(chart, chartInd) in orderedPanels"
@@ -158,6 +159,7 @@
       ...mapGetters({
         isEntityRestricted: IS_ENTITY_RESTRICTED,
       }),
+
       orderedPanels: {
         get () {
          if(this.panelsOrder){
@@ -223,6 +225,15 @@
         fetchDashboardPanel: FETCH_DASHBOARD_PANEL,
         saveReorderedPanels: SAVE_REORDERED_PANELS
       }),
+      checkMove (evt){
+        // 1. FutureIndex is the index on whish your intend to drop on 
+        // when dragging after the last panel or on the first panel 
+        // the futureIndex is 0
+        // 2. evt.related.id holds the uuid of the targeted panel.
+        // Since whe want to prevent dragging after the last panel (Add New Chart Panel)
+        // but enable dragging on the first panel
+        return evt.draggedContext.futureIndex  === 0  && evt.related.id !== this.panelsOrder[0]? false: true;
+      },
       addNewPanel() {
         this.$emit('add')
       },

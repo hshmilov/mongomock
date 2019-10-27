@@ -125,6 +125,12 @@
 </script>
 
 <style lang="scss">
+
+   .card-history ~.x-histogram {
+      .histogram-container {
+        min-height: 220px
+      }
+    }
     .x-histogram {
         display: flex;
         flex-direction: column;
@@ -135,7 +141,6 @@
           display: flex;
           flex-direction: column;
           flex: 1 0 auto;
-          min-height: 220px;
         }
         .histogram-item {
             width: 100%;

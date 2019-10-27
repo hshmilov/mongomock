@@ -139,14 +139,6 @@
 
 <style lang="scss">
   .x-default-space {
-
-    .x-discovery-card.device-discovery{
-        grid-column: 1;
-    }
-    .x-discovery-card.user-discovery{
-        grid-column: 2;
-        grid-row: 1;
-    }
     .chart-lifecycle {
       &.print-exclude{
         grid-column: 3;

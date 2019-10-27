@@ -96,16 +96,22 @@
 </script>
 
 <style lang="scss">
-
-    .x-discovery-card {
-       grid-row: 1;
+   .x-discovery-card.device-discovery{
+        grid-column: 1;
+    }
+    .x-discovery-card.user-discovery{
+        grid-column: 2;
+        grid-row: 1;
+    }
+   .x-discovery-card.device-discovery, .x-discovery-card.user-discovery{
         &.double {
             grid-row: 1 / span 2;
         }
         &.triple {
             grid-row: 1 / span 3;
         }
-
+    }
+    .x-discovery-card {
         .title {
             text-transform: capitalize;
         }
