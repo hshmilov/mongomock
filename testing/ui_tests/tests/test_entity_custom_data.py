@@ -5,13 +5,13 @@ from selenium.common.exceptions import (ElementNotVisibleException,
                                         ElementNotInteractableException,
                                         NoSuchElementException)
 
-from services.adapters.kaseya_service import KaseyaService
-from testing.test_credentials.test_kaseya_credentials import client_details as kaseya_client_details
+from services.adapters.linux_ssh_service import LinuxSshService
+from testing.test_credentials.test_linux_ssh_credentials import CLIENT_DETAILS as linux_client_details
 from ui_tests.tests.ui_consts import JSON_ADAPTER_NAME
 from ui_tests.tests.ui_test_base import TestBase
 
-KASEYA_VSA_ADAPTER_NAME = 'Kaseya VSA'
-KASEYA_DOCKER_ADAPTER_NAME = 'kaseya_adapter'
+LINUX_SSH_ADAPTER_NAME = 'Linux SSH'
+LINUX_SSH_DOCKER_ADAPTER_NAME = 'linux_ssh_adapter'
 
 
 class TestEntityCustomData(TestBase):
@@ -173,24 +173,24 @@ class TestEntityCustomData(TestBase):
         self._test_error_fields(self.users_page, self.users_page.FIELD_USERNAME_TITLE)
         self._test_custom_data_bulk(self.users_page, self.users_page.FIELD_USERNAME_TITLE)
 
+    # pylint:disable=too-many-statements
     def test_entity_data_search(self):
         """
         In the entity page under `General Data` there are tables that contain search input
-        for example Installed Software for Kaseya adapter. This test checks that search works and returns
+        for example Installed Software for LinuxSSH adapter. This test checks that search works and returns
         information when used.
         """
         try:
-            with KaseyaService().contextmanager(take_ownership=True):
+            with LinuxSshService().contextmanager(take_ownership=True):
 
                 self.adapters_page.switch_to_page()
-                self.adapters_page.wait_for_adapter(KASEYA_VSA_ADAPTER_NAME)
-                self.adapters_page.click_adapter(KASEYA_VSA_ADAPTER_NAME)
+                self.adapters_page.wait_for_adapter(LINUX_SSH_ADAPTER_NAME)
+                self.adapters_page.click_adapter(LINUX_SSH_ADAPTER_NAME)
                 self.adapters_page.wait_for_spinner_to_end()
                 self.adapters_page.wait_for_table_to_load()
                 self.adapters_page.click_new_server()
-                kaseya_client_details_2 = copy.copy(kaseya_client_details)
-                kaseya_client_details_2.pop('verify_ssl')
-                self.adapters_page.fill_creds(**kaseya_client_details_2)
+                linux_client_details_2 = copy.copy(linux_client_details)
+                self.adapters_page.fill_creds(**linux_client_details_2)
                 self.adapters_page.click_save()
                 try:
                     self.adapters_page.wait_for_server_green()
@@ -201,7 +201,7 @@ class TestEntityCustomData(TestBase):
                 self.devices_page.switch_to_page()
                 self.devices_page.wait_for_table_to_load()
                 self.devices_page.click_query_wizard()
-                self.devices_page.select_query_adapter(KASEYA_VSA_ADAPTER_NAME)
+                self.devices_page.select_query_adapter(LINUX_SSH_ADAPTER_NAME)
                 self.devices_page.click_search()
                 self.devices_page.wait_for_table_to_load()
                 self.devices_page.click_row()
@@ -213,7 +213,7 @@ class TestEntityCustomData(TestBase):
                     tab.click()
                     # check if tab has a search element
                     try:
-                        self.devices_page.fill_custom_data_search_input('')
+                        self.devices_page.clear_custom_search_input()
                     except NoSuchElementException:
                         continue
                     rows = self.devices_page.get_all_entity_active_custom_data_tab_table_rows()
@@ -221,11 +221,15 @@ class TestEntityCustomData(TestBase):
                         continue
                     tr = rows[0]
                     for column in tr.columns:
-                        self.devices_page.fill_custom_data_search_input('')
+                        self.devices_page.clear_custom_search_input()
+                        if column.startswith('+') or column == '/bin/false':
+                            continue
                         time.sleep(0.1)
                         self.devices_page.fill_custom_data_search_input(f'{column.strip()}')
                         tr2 = self.devices_page.get_all_entity_active_custom_data_tab_table_rows()[0]
                         assert tr2.columns == tr.columns
         finally:
-            self.adapters_page.clean_adapter_servers(KASEYA_VSA_ADAPTER_NAME)
-            self.wait_for_adapter_down(KASEYA_DOCKER_ADAPTER_NAME)
+            self.adapters_page.clean_adapter_servers(LINUX_SSH_ADAPTER_NAME)
+            # Linux ssh adapter is exempt from going down, because it's adapters on demand, so we "Skip" checking
+            # that the docker went down.
+            # self.wait_for_adapter_down(LINUX_SSH_DOCKER_ADAPTER_NAME)

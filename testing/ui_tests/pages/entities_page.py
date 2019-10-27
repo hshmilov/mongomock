@@ -1065,6 +1065,10 @@ class EntitiesPage(Page):
     def find_query_status_text(self):
         return self.find_query_header().find_element_by_css_selector('.status').text
 
+    def clear_custom_search_input(self):
+        element = self.driver.find_element_by_css_selector(self.CUSTOM_DATA_SEARCH_INPUT)
+        element.clear()
+
     def fill_custom_data_search_input(self, text):
         self.fill_text_field_by_css_selector(self.CUSTOM_DATA_SEARCH_INPUT, text)
         self.key_down_enter(self.driver.find_element_by_css_selector(self.CUSTOM_DATA_SEARCH_INPUT))
