@@ -67,7 +67,7 @@ from axonius.consts.gui_consts import (ADAPTERS_DATA, ENCRYPTION_KEY_PATH,
                                        DASHBOARD_SPACE_PERSONAL, DASHBOARD_SPACE_TYPE_CUSTOM,
                                        Signup, PROXY_DATA_PATH, DASHBOARD_LIFECYCLE_ENDPOINT,
                                        UNCHANGED_MAGIC_FOR_GUI, GETTING_STARTED_CHECKLIST_SETTING)
-from axonius.consts.metric_consts import ApiMetric, Query, SystemMetric
+from axonius.consts.metric_consts import ApiMetric, Query, SystemMetric, GettingStartedMetric
 from axonius.consts.plugin_consts import (AGGREGATOR_PLUGIN_NAME,
                                           AXONIUS_USER_NAME,
                                           CONFIGURABLE_CONFIGS_COLLECTION,
@@ -1167,13 +1167,22 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
         """
         milestone_name = self.get_request_data_as_object().get('milestoneName', '')
 
-        self._get_collection('getting_started').update_one({}, {
+        result = self._get_collection('getting_started').find_one_and_update({}, {
             '$set': {
                 'milestones.$[element].completed': True,
                 'milestones.$[element].user_id': gui_helpers.get_connected_user_id(),
                 'milestones.$[element].completionDate': datetime.now()
             }
-        }, array_filters=[{'element.name': milestone_name}])
+        }, array_filters=[{'element.name': milestone_name}], return_document=pymongo.ReturnDocument.AFTER)
+
+        milestones_len = len(result['milestones'])
+        progress = len([item for item in result['milestones'] if item['completed']])
+        progress_formatted_str = f'{progress} of {milestones_len}'
+
+        log_metric(logger, GettingStartedMetric.COMPLETION_STATE,
+                   metric_value=milestone_name,
+                   details=result['milestones'],
+                   progress=progress_formatted_str)
         return ''
 
     @gui_add_rule_logged_in('getting_started/settings', methods=['POST'],
@@ -1191,6 +1200,18 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
                 'settings.autoOpen': auto_open
             }
         })
+
+        connected_user_id = gui_helpers.get_connected_user_id()
+
+        if auto_open:
+            log_metric(logger, GettingStartedMetric.AUTO_OPEN_SETTING_ENABLED, metric_value={
+                'user_id': connected_user_id
+            })
+        else:
+            log_metric(logger, GettingStartedMetric.AUTO_OPEN_SETTING_DISABLED, metric_value={
+                'user_id': connected_user_id
+            })
+
         return ''
 
     ##########
@@ -2691,6 +2712,20 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
 
                 if not ssl_check_result:
                     return return_error(f'Private key and public certificate do not match each other', 400)
+
+            getting_started_conf = config_to_set.get(GETTING_STARTED_CHECKLIST_SETTING)
+            getting_started_feature_enabled = getting_started_conf.get('enabled')
+
+            user_id = gui_helpers.get_connected_user_id()
+
+            if getting_started_feature_enabled:
+                log_metric(logger, GettingStartedMetric.FEATURE_ENABLED_SETTING_ENABLED, metric_value={
+                    'user_id': user_id
+                })
+            else:
+                log_metric(logger, GettingStartedMetric.FEATURE_ENABLED_SETTING_DISABLED, metric_value={
+                    'user_id': user_id
+                })
 
         self._update_plugin_config(plugin_name, config_name, config_to_set)
         return ''

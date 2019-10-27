@@ -30,3 +30,11 @@ class Query:
 class Adapters:
     CREDENTIALS_CHANGE_OK = 'credentials_change.ok'
     CREDENTIALS_CHANGE_ERROR = 'credentials_change.error'
+
+
+class GettingStartedMetric:
+    AUTO_OPEN_SETTING_ENABLED = 'getting_started.settings.auto_open.enabled'
+    AUTO_OPEN_SETTING_DISABLED = 'getting_started.settings.auto_open.disabled'
+    FEATURE_ENABLED_SETTING_ENABLED = 'getting_started.settings.feature_enabled.enabled'
+    FEATURE_ENABLED_SETTING_DISABLED = 'getting_started.settings.feature_enabled.disabled'
+    COMPLETION_STATE = 'getting_started.state.completion'

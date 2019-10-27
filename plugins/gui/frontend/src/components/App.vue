@@ -184,12 +184,12 @@ export default {
         this.fetchFirstHistoricalDate()
         this.fetchAllowedDates()
         if (this.isUserAdmin) {
-        this.fetchGettingStartedData().then(() => {
-          if(this.justLoggedIn) {
-            this.open = this.gettingStartedAutoOpen
-          }
-        })
-      }
+          this.fetchGettingStartedData().then(() => {
+            if(this.justLoggedIn) {
+              this.open = this.gettingStartedAutoOpen
+            }
+          })
+        }
       }
     },
     notifyAccess(name) {
