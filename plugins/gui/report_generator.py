@@ -700,7 +700,8 @@ class ReportGenerator:
                         projection = {field: 1 for field in view.get('fields', [])}
                         views_data[entity.name].append({
                             'name': view_doc.get('name'), 'entity': entity.value,
-                            'fields': [{field_to_title.get(field, field): field} for field in view.get('fields', [])],
+                            'fields': [{field_to_title.get(field, field): field} for field in
+                                       view.get('fields', []) if field_to_title.get(field)],
                             'data': list(get_entities(limit=view.get('pageSize',
                                                                      20 if not attach_views_csvs else 5),
                                                       skip=0,
