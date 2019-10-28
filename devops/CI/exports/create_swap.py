@@ -1,4 +1,5 @@
 import os
+import platform
 import shutil
 from pathlib import Path
 import subprocess
@@ -14,7 +15,9 @@ def run(cmd):
 
 
 def create_swap(filename, size_gb):
-    run(f'/usr/bin/fallocate -l {size_gb}G {filename}')
+    allocation_command = f'/usr/bin/dd if=/dev/zero of={filename} count={size_gb} bs=1G' if 'centos' in str(
+        platform.linux_distribution()).lower() else f'/usr/bin/fallocate -l {size_gb}G {filename}'
+    run(allocation_command)
     run(f'/bin/chmod 0600 {filename}')
     run(f'/sbin/mkswap {filename}')
     run(f'/sbin/swapon {filename}')

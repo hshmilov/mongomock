@@ -6,6 +6,8 @@ import subprocess
 import zipfile
 from pathlib import Path
 
+import distro
+
 from axonius.consts.system_consts import PYRUN_PATH_HOST
 from axonius.utils.network.docker_network import read_weave_network_range
 from conf_tools import get_customer_conf_json
@@ -115,8 +117,12 @@ def setup_instances_user():
     except KeyError:
         if not os.path.exists(INSTANCE_IS_MASTER_MARKER_PATH):
             print_state(f'Generating {INSTANCE_CONNECT_USER_NAME} user')
+            # sudo group doesn't exist in centos the equivalent is named wheel.
+            sudoers_group_name = 'wheel' if 'centos' in distro.linux_distribution(
+                full_distribution_name=False) else 'sudo'
             subprocess.check_call(['/usr/sbin/useradd', '-s',
-                                   INSTANCES_SETUP_SCRIPT_PATH, '-G', 'docker,sudo', INSTANCE_CONNECT_USER_NAME])
+                                   INSTANCES_SETUP_SCRIPT_PATH, '-G', f'docker,{sudoers_group_name}',
+                                   INSTANCE_CONNECT_USER_NAME])
             subprocess.check_call(
                 f'usermod --password $(openssl passwd -1 {INSTANCE_CONNECT_USER_PASSWORD}) node_maker',
                 shell=True)

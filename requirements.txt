@@ -106,3 +106,4 @@ astor==0.8.0
 frozendict==1.2
 python-redis-lock==3.3.1
 redis==3.3.8
+distro==1.4.0

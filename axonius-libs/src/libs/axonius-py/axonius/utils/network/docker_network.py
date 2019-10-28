@@ -54,7 +54,7 @@ def has_addr_collision(domain):
 
 
 def read_weave_network_range():
-    report = subprocess.check_output('weave report'.split())
+    report = subprocess.check_output(f'/usr/local/bin/weave report'.split())
     report = json.loads(report)
     weave_netrowk_range = report['IPAM']['Range']
     return weave_netrowk_range
