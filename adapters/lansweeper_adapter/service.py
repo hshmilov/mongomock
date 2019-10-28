@@ -35,6 +35,7 @@ class LansweeperAdapter(AdapterBase, Configurable):
         last_scan_fallback = Field(datetime.datetime, 'Last Scan Fallback')
         last_performance_scan = Field(datetime.datetime, 'Last Performance Scan')
         state_name = Field(str, 'State Name')
+        device_version = Field(str, 'Device version')
 
         def add_registry_information(self, **kwargs):
             self.registry_information.append(RegistryInfomation(**kwargs))
@@ -481,6 +482,7 @@ class LansweeperAdapter(AdapterBase, Configurable):
                 else:
                     device.part_of_domain = False
                 device.hostname = device_raw.get('FQDN')
+                device.device_version = device_raw.get('Version')
                 device.name = device_raw.get('AssetName')
                 try:
                     mac = device_raw.get('Mac') if device_raw.get('Mac') else None

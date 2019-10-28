@@ -331,6 +331,8 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
                                         filtered_adapters_list)
         filtered_adapters_list = filter(hostname_not_problematic, filtered_adapters_list)
         filtered_adapters_list = filter(not_wifi_adapter, filtered_adapters_list)
+        filtered_adapters_list = filter(lambda x: x.get('plugin_name') != 'cisco_meraki_adapter',
+                                        filtered_adapters_list)
         return self._bucket_correlate(list(filtered_adapters_list),
                                       [get_normalized_hostname_str],
                                       [compare_device_normalized_hostname],
