@@ -201,7 +201,7 @@ class SolarwindsOrionAdapter(AdapterBase, Configurable):
                 logger.error(f'ID coming from Solarwinds does not have an ID on device {raw_device_data}')
                 return None
 
-            device.id = str(id_check)
+            device.id = str(id_check) + '_' + raw_device_data.get('NodeName')
             device.node_id = device.id
             device.name = raw_device_data.get('NodeName')
             device.description = raw_device_data.get('Description')

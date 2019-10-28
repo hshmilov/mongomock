@@ -859,6 +859,28 @@ def is_from_twistlock_or_aws(adapter_device):
         adapter_device.get('plugin_name') == 'twistlock_adapter'
 
 
+def is_from_deeps_or_aws(adapter_device):
+    return adapter_device.get('plugin_name') == 'aws_adapter' or \
+        adapter_device.get('plugin_name') == 'deep_security_adapter'
+
+
+def get_cloud_id_or_hostname(adapter_device):
+    cloud_id = adapter_device['data'].get('cloud_id')
+    if cloud_id:
+        return cloud_id.lower()
+    if get_hostname(adapter_device):
+        return get_hostname(adapter_device).lower()
+    return None
+
+
+def compare_cloud_id_or_hostname(adapter_device1, adapter_device2):
+    cloud_id_or_hostname_1 = get_cloud_id_or_hostname(adapter_device1)
+    cloud_id_or_hostname_2 = get_cloud_id_or_hostname(adapter_device1)
+    if cloud_id_or_hostname_1 and cloud_id_or_hostname_2:
+        return cloud_id_or_hostname_1 == cloud_id_or_hostname_2
+    return True
+
+
 def is_azuread_or_ad_and_have_name(adapter_device):
     # Its from ad or azuread and it also has one of these fields not None.
     return adapter_device.get('plugin_name') in ('active_directory_adapter', 'azure_ad_adapter') and \

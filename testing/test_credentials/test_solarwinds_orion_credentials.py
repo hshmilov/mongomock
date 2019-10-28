@@ -6,4 +6,4 @@ client_details = {
 }
 
 
-SOME_DEVICE_ID = '1'
+SOME_DEVICE_ID = '1_EC2AMAZ-61GTBER'

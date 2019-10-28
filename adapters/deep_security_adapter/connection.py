@@ -19,8 +19,8 @@ class DeepSecurityConnection(RESTConnection):
     def _connect(self):
         if not self._apikey:
             raise RESTException('No API Key')
-        response = self._get('computers')
-        if not response.get('computers', url_params={'expand': 'none'}):
+        response = self._get('computers', url_params={'expand': 'none'})
+        if not response.get('computers'):
             raise RESTException(f'Bad response: {response}')
 
     def get_device_list(self):

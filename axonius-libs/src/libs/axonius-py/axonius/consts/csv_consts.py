@@ -5,7 +5,7 @@ IDENTIFIERS = {
     'name': ['name', 'vmname', 'displayname', 'assetname', 'machinename', 'instancename', 'samaccountname',
              'endpointname'],
     'hostname': ['host', 'fqdn', 'fullyqualifieddomainname', 'hostname', 'compname', 'computername', 'servername',
-                 'dnsname', 'hosthostname', 'endpointfqdn', 'devicename'],
+                 'dnsname', 'hosthostname', 'endpointfqdn', 'devicename', 'dns', 'nthost'],
     'mac_address': ['mac', 'macaddress', 'macaddresses', 'macs'],
     'ip': ['ipaddresstext', 'ip', 'ipaddress', 'ipaddresses', 'ips', 'primaryip', 'endpointipaddress'],
     'subnetmask': ['ipsubnetmask'],

@@ -33,7 +33,7 @@ from axonius.utils.parsing import (NORMALIZED_MACS,
                                    is_only_host_adapter,
                                    is_different_plugin,
                                    is_from_juniper_and_asset_name,
-                                   is_windows, is_linux,
+                                   is_windows, is_linux, get_cloud_id_or_hostname, compare_cloud_id_or_hostname,
                                    is_junos_space_device,
                                    is_old_device, is_sccm_or_ad, is_snow_device,
                                    is_splunk_vpn, normalize_adapter_devices,
@@ -43,7 +43,8 @@ from axonius.utils.parsing import (NORMALIZED_MACS,
                                    get_serial_no_s, compare_serial_no_s,
                                    get_bios_serial_or_serial_no_s, compare_bios_serial_serial_no_s,
                                    get_hostname_or_serial, compare_hostname_serial,
-                                   is_from_twistlock_or_aws, get_nessus_no_scan_id, compare_nessus_no_scan_id,
+                                   is_from_twistlock_or_aws, is_from_deeps_or_aws, get_nessus_no_scan_id,
+                                   compare_nessus_no_scan_id,
                                    is_domain_valid, compare_uuid, get_uuid,
                                    get_azure_ad_id, compare_azure_ad_id, get_hostname_no_localhost)
 
@@ -476,6 +477,17 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
                                       {'Reason': 'Juniper devices with same asset name'},
                                       CorrelationReason.StaticAnalysis)
 
+    def _correlate_deep_aws_id(self, adapters_to_correlate):
+        logger.info(f'Starting to correlate on deep aws is')
+        filtered_adapters_list = filter(is_from_deeps_or_aws, adapters_to_correlate)
+        return self._bucket_correlate(list(filtered_adapters_list),
+                                      [get_cloud_id_or_hostname],
+                                      [compare_cloud_id_or_hostname],
+                                      [lambda x: x.get('plugin_name') == 'aws_adapter'],
+                                      [],
+                                      {'Reason': 'Cloud ID and Hostname are the same'},
+                                      CorrelationReason.StaticAnalysis)
+
     def _correlate_ad_sccm_id(self, adapters_to_correlate):
         """
         We want to get all the devices with hostname (to reduce amount),
@@ -641,6 +653,8 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
         yield from self._correlate_serial_with_hostname(adapters_to_correlate)
         yield from self._correlate_nessus_no_scan_id(adapters_to_correlate)
         yield from self._correlate_uuid(adapters_to_correlate)
+
+        yield from self._correlate_deep_aws_id(adapters_to_correlate)
 
         # Find adapters with the same serial
         # Now let's find devices by MAC, and IPs don't contradict (we allow empty)
