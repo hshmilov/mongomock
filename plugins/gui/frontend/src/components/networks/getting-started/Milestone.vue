@@ -9,8 +9,8 @@
         <h5 class="x-milestone_header_title">{{title}}</h5>
         <div class="x-milestone_header_actions">
           <span v-if="description" class="x-milestone_expand" @click="toggleExpantionPanel">
-            <md-icon v-if="expand">keyboard_arrow_down</md-icon>
-            <md-icon v-else>keyboard_arrow_up</md-icon>
+            <md-icon v-if="expand">keyboard_arrow_up</md-icon>
+            <md-icon v-else>keyboard_arrow_down</md-icon>
           </span>
           <x-button
             v-if="interactive"
@@ -105,7 +105,7 @@ export default {
             left: 50%;
             position: absolute;
             transform: translate(-50%,0);
-            width: 90%;
+            width: 96%;
         }
 
         .x-milestone-status {

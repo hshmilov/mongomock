@@ -13,26 +13,28 @@
       <div class="completion_info">
         <h4>Congratulations!</h4>
         <br />
-        <span>You have completed all the "Getting Started With Axonius" milestones.</span>
+        <span>You have completed all the "Getting Started with Axonius" milestones.</span>
         <br />
         <span>
           Use the
-          <router-link to="/settings#global-settings-tab">Global Settings </router-link>to hide/display the "Getting Started With Axonius" checklist.
+          <router-link to="/settings#global-settings-tab">Global Settings </router-link>to hide/display the "Getting Started with Axonius" checklist.
         </span>
       </div>
     </header>
-    <md-list class="md-scrollbar x-getting-started_content" :class="{ completed }">
-      <md-list-item v-for="item in milestones" :key="item.id">
-        <x-milestone
-          :completed="item.completed"
-          :title="item.title"
-          :description="item.description"
-          :link="item.link"
-          :path="item.path"
-          :interactive="settings.interactive"
-        />
-      </md-list-item>
-    </md-list>
+    <div class="x-getting-started_content" :class="{ completed }">
+      <md-list class="md-scrollbar">
+        <md-list-item v-for="item in milestones" :key="item.id">
+          <x-milestone
+            :completed="item.completed"
+            :title="item.title"
+            :description="item.description"
+            :link="item.link"
+            :path="item.path"
+            :interactive="settings.interactive"
+          />
+        </md-list-item>
+      </md-list>
+    </div>
     <footer>
       <x-checkbox
         v-model="settings.autoOpen"
@@ -175,6 +177,7 @@ $footer_section: 60px;
 
   .x-getting-started_header {
     @include fixed_section();
+    justify-content: space-between;
     h1 {
       font-size: 20px;
     }
