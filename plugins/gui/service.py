@@ -4901,8 +4901,11 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
 
                 attachment_uuids = []
                 for attachment in attachments:
-                    attachment_uuid = self._upload_attachment(attachment)
-                    attachment_uuids.append(attachment_uuid)
+                    with io.BytesIO() as attachment_data:
+                        attachment_data.write(attachment['stream'].getvalue().encode('utf-8'))
+                        attachment_data.seek(0)
+                        attachment_uuid = self._upload_attachment(attachment['name'], attachment_data)
+                        attachment_uuids.append(attachment_uuid)
 
                 filename = 'most_recent_{}'.format(name)
                 self._get_collection('reports').replace_one(
@@ -4944,20 +4947,20 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
         logger.info('Report successfully placed in the db')
         return str(written_file_id)
 
-    def _upload_attachment(self, attachment_path: str) -> str:
+    def _upload_attachment(self, attachment_name: str, attachment_stream: object) -> str:
         """
         Uploads an attachment for a report to the db
-        :param attachment_path: attachment path
+        :param attachment_name: attachment name
+        :param attachment_stream: attachment stream
         :return: the attachment object id
         """
-        if not attachment_path:
+        if not attachment_name:
             return return_error('Attachment must exist', 401)
 
         db_connection = self._get_db_connection()
         fs = gridfs.GridFS(db_connection[GUI_PLUGIN_NAME])
-        with open(attachment_path, 'rb') as attachment_file:
-            written_file_id = fs.put(attachment_file,
-                                     filename=os.path.basename(attachment_path))
+        written_file_id = fs.put(attachment_stream,
+                                 filename=attachment_name)
         logger.info('Attachment successfully placed in the db')
         return str(written_file_id)
 
@@ -5025,12 +5028,11 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
         if attachments:
             for attachment_uuid in attachments:
                 try:
-                    with gridfs_connection.get(ObjectId(attachment_uuid)) as attachment_content:
-                        attachment_name = f'{attachment_content.name}'.encode().decode('utf-8')
-                        attachments_data.append({
-                            'name': attachment_name,
-                            'content': attachment_content
-                        })
+                    attachment = gridfs_connection.get(ObjectId(attachment_uuid))
+                    attachments_data.append({
+                        'name': attachment.name,
+                        'content': attachment
+                    })
                 except Exception:
                     logger.error(f'failed to retrieve attachment {attachment_uuid}')
         report_data = gridfs_connection.get(ObjectId(uuid))
@@ -5140,7 +5142,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
                         email.add_pdf(EXEC_REPORT_FILE_NAME.format(report_name), report_data.read())
 
                         for attachment_data in attachments_data:
-                            email.add_attachment(attachment_data['name'], bytes(attachment_data['content'].read()),
+                            email.add_attachment(attachment_data['name'], attachment_data['content'].read(),
                                                  'text/csv')
                         email.send(EXEC_REPORT_EMAIL_CONTENT)
                         self.reports_config_collection.update_one({

@@ -1,4 +1,5 @@
 import codecs
+import io
 from datetime import datetime
 
 from flask import Response
@@ -37,9 +38,9 @@ def get_csv_from_heavy_lifting_plugin(mongo_filter, mongo_sort, mongo_projection
     return Response(generate(), headers=headers)
 
 
-def get_csv_file_from_heavy_lifting_plugin(output_path, query_name, mongo_filter, mongo_sort,
+def get_csv_file_from_heavy_lifting_plugin(query_name, mongo_filter, mongo_sort,
                                            mongo_projection, history: datetime, entity_type: EntityType,
-                                           default_sort: bool, field_filters: dict = None) -> str:
+                                           default_sort: bool, field_filters: dict = None) -> object:
     """
     Queries the heavy lifting plugin and asks it to process the csv request.
     All the params are documented in the respected decorators in gui/service.py
@@ -50,11 +51,11 @@ def get_csv_file_from_heavy_lifting_plugin(output_path, query_name, mongo_filter
     res = _get_csv_from_heavy_lifting(
         default_sort, entity_type, history, mongo_filter, mongo_projection, mongo_sort, field_filters)
 
-    temp_csv_filename = f'{output_path}{query_name[0:100]}_{timestamp}.csv'
-    with open(temp_csv_filename, 'wb') as file:
-        for chunk in res.iter_content(CHUNK_SIZE):
-            file.write(chunk)
-    return temp_csv_filename
+    temp_csv_filename = f'{query_name[0:100]}_{timestamp}.csv'
+    csv_stream = io.StringIO()
+    for chunk in res.iter_content(CHUNK_SIZE):
+        csv_stream.write(chunk.decode('utf-8'))
+    return {'name': temp_csv_filename, 'stream': csv_stream}
 
 
 def _get_csv_from_heavy_lifting(default_sort, entity_type, history, mongo_filter, mongo_projection, mongo_sort,

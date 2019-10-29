@@ -19,6 +19,9 @@ class TestReport(TestBase):
     TEST_REPORT_READ_ONLY_NAME = 'report for read only'
     TEST_REPORT_READ_ONLY_QUERY = 'query for read only test'
     TEST_DOWNLOAD_NOW_NAME = 'test download now'
+    HEBREW_TAG = 'טאג בעברית'
+    DATA_QUERY_1 = 'specific_data.data.name == regex(\'avigdor no\', \'i\')'
+    DATA_QUERY_2 = 'specific_data.data.name == regex(\'avig\', \'i\')'
 
     def test_report_name(self):
         self.reports_page.get_to_new_report_page()
@@ -221,10 +224,10 @@ class TestReport(TestBase):
                 self.settings_page.fill_email_port(smtp_service.port)
                 self.settings_page.save_and_wait_for_toaster()
 
-                data_query1 = 'specific_data.data.name == regex(\'avigdor no\', \'i\')'
-                self.devices_page.create_saved_query(data_query1, self.TEST_REPORT_EDIT_QUERY)
-                data_query2 = 'specific_data.data.name == regex(\'avig\', \'i\')'
-                self.devices_page.create_saved_query(data_query2, self.TEST_REPORT_EDIT_QUERY1)
+                self.devices_page.create_saved_query(self.DATA_QUERY_1, self.TEST_REPORT_EDIT_QUERY)
+                self.devices_page.create_saved_query(self.DATA_QUERY_2, self.TEST_REPORT_EDIT_QUERY1)
+                self.devices_page.click_row_checkbox()
+                self.devices_page.add_new_tag(self.HEBREW_TAG)
 
                 recipient = generate_random_valid_email()
 

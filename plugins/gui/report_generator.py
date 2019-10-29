@@ -713,8 +713,7 @@ class ReportGenerator:
                                                       field_filters=field_filters)),
                             'count': count,
                             'csv':
-                                get_csv_file_from_heavy_lifting_plugin(self.output_path,
-                                                                       view_doc.get('name'),
+                                get_csv_file_from_heavy_lifting_plugin(view_doc.get('name'),
                                                                        parse_filter(filter_query),
                                                                        gui_helpers.get_sort(view),
                                                                        projection,

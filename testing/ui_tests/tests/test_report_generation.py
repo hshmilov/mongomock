@@ -6,6 +6,8 @@ from datetime import datetime
 from PyPDF2 import PdfFileReader
 
 from services.adapters import stresstest_scanner_service, stresstest_service
+from services.standalone_services.maildiranasaurus_server import MailDiranasaurusService
+from services.standalone_services.smtp_server import generate_random_valid_email
 from test_credentials.test_gui_credentials import DEFAULT_USER
 from ui_tests.tests.ui_test_base import TestBase
 from ui_tests.tests import ui_consts
@@ -273,6 +275,71 @@ class TestReportGeneration(TestBase):
             self.wait_for_adapter_down(ui_consts.STRESSTEST_ADAPTER)
             self.wait_for_adapter_down(ui_consts.STRESSTEST_SCANNER_ADAPTER)
 
+    def test_report_with_hebrew_name_and_text(self):
+        smtp_service = MailDiranasaurusService()
+        smtp_service.take_process_ownership()
+        stress = stresstest_service.StresstestService()
+        stress_scanner = stresstest_scanner_service.StresstestScannerService()
+        try:
+            with smtp_service.contextmanager(), \
+                    stress.contextmanager(take_ownership=True), \
+                    stress_scanner.contextmanager(take_ownership=True):
+                device_dict = {'device_count': 10, 'name': 'blah'}
+                stress.add_client(device_dict)
+                stress_scanner.add_client(device_dict)
+                self.base_page.run_discovery()
+
+                self.settings_page.switch_to_page()
+                self.settings_page.click_global_settings()
+                toggle = self.settings_page.find_send_emails_toggle()
+                self.settings_page.click_toggle_button(toggle, make_yes=True, scroll_to_toggle=False)
+                self.settings_page.fill_email_host(smtp_service.fqdn)
+                self.settings_page.fill_email_port(smtp_service.port)
+                self.settings_page.save_and_wait_for_toaster()
+
+                self.devices_page.switch_to_page()
+                self.devices_page.wait_for_table_to_load()
+                self.devices_page.click_row_checkbox()
+
+                query_name = 'בדיקת שאילתא'
+                self.devices_page.customize_view_and_save(query_name=query_name,
+                                                          page_size=50,
+                                                          sort_field=self.devices_page.FIELD_HOSTNAME_TITLE,
+                                                          add_columns=[],
+                                                          remove_columns=[self.devices_page.FIELD_LAST_SEEN,
+                                                                          self.devices_page.FIELD_OS_TYPE,
+                                                                          self.devices_page.FIELD_ASSET_NAME,
+                                                                          self.devices_page.FIELD_HOSTNAME_TITLE],
+                                                          query_filter=self.devices_page.STRESSTEST_ADAPTER_FILTER)
+                self.devices_page.click_row_checkbox()
+                tag_name = 'טאג בעברית'
+                self.devices_page.add_new_tag(tag_name)
+                report_name = 'בדיקה'
+                recipient = generate_random_valid_email()
+                self.reports_page.create_report(report_name=report_name,
+                                                add_dashboard=True,
+                                                queries=[{'entity': 'Devices', 'name': query_name}],
+                                                add_scheduling=True,
+                                                email_subject=report_name,
+                                                emails=[recipient])
+                doc = self._extract_report_pdf_doc(report_name)
+                texts = [page.extractText() for page in doc.pages]
+                text = ' '.join(texts)
+                assert 'Device Discovery' in text
+                assert 'User Discovery' in text
+
+                title_texts = self._get_outline_titles(doc.getOutlines())
+
+                assert query_name in title_texts
+
+                self.reports_page.click_send_email()
+                self.reports_page.find_email_sent_toaster()
+                mail_content = smtp_service.get_email_first_csv_content(recipient)
+                assert tag_name in mail_content.decode('utf-8')
+        finally:
+            self.wait_for_adapter_down(ui_consts.STRESSTEST_ADAPTER)
+            self.wait_for_adapter_down(ui_consts.STRESSTEST_SCANNER_ADAPTER)
+
     def _new_generated_date(self, report_name, current_date):
         generated_date_str = self.reports_page.get_report_generated_date(report_name)
         if generated_date_str == '':
@@ -291,3 +358,13 @@ class TestReportGeneration(TestBase):
         report_pdf = self.axonius_system.gui.get_report_pdf(report_id)
         pdf_file = io.BytesIO(report_pdf.content)
         return PdfFileReader(pdf_file)
+
+    def _get_outline_titles(self, outlines):
+        outline_titles = []
+        for outline in outlines:
+            if not isinstance(outline, list):
+                outline_titles.append(str(outline.title))
+            else:
+                for inner_outline in self._get_outline_titles(outline):
+                    outline_titles.append(inner_outline)
+        return outline_titles

@@ -109,6 +109,7 @@ class EntitiesPage(Page):
     ALL_ENTITIES_CSS = 'tbody>tr'
 
     JSON_ADAPTER_FILTER = 'adapters == "json_file_adapter"'
+    STRESSTEST_ADAPTER_FILTER = 'adapters == "stresstest_adapter"'
     PRINTER_DEVICE_FILTER = 'specific_data.data.hostname == "Computer-next-to-printer.TestDomain.test"'
     SPECIFIC_JSON_ADAPTER_FILTER = 'adapters_data.json_file_adapter.username == "ofri" or ' \
                                    'adapters_data.json_file_adapter.hostname == "CB First"'
@@ -696,8 +697,13 @@ class EntitiesPage(Page):
         self.fill_query_name(new_query_name)
         self.click_save_query_save_button()
 
-    def run_filter_and_save(self, query_name, query_filter, optional_sort: str = None):
-        self.reset_query()
+    def run_filter_and_save(self,
+                            query_name,
+                            query_filter,
+                            optional_sort: str = None,
+                            optional_reset_before: bool = True):
+        if optional_reset_before:
+            self.reset_query()
         self.fill_filter(query_filter)
         self.enter_search()
         self.wait_for_table_to_load()
@@ -714,7 +720,7 @@ class EntitiesPage(Page):
         self.wait_for_table_to_load()
         self.edit_columns(add_columns, remove_columns)
         self.wait_for_table_to_load()
-        self.run_filter_and_save(query_name, query_filter)
+        self.run_filter_and_save(query_name, query_filter, None, False)
 
     def execute_saved_query(self, query_name):
         self.fill_filter(query_name)
