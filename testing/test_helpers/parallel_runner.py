@@ -10,6 +10,7 @@ except ModuleNotFoundError:
 
 MAX_PARALLEL_TASKS = 10
 SUBPROCESS_POLLING_INTERVAL_IN_SEC = 5
+MAX_RETRIES = 3
 
 
 class ParallelRunner(object):
@@ -17,6 +18,7 @@ class ParallelRunner(object):
         self.waiting_list = []
         self.running_list = {}
         self.start_times = {}
+        self.all_tasks = {}
         self.logs_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'logs', 'build_log'))
         if not os.path.exists(self.logs_dir):
             os.makedirs(self.logs_dir)
@@ -34,10 +36,18 @@ class ParallelRunner(object):
         process = subprocess.Popen(args, **kwargs)
         self.running_list[task_name] = process
         self.start_times[task_name] = time.time()
+        self.all_tasks[task_name]['running_count'] += 1
         return process
 
     def append_single(self, task_name, args, **kwargs):
         self.waiting_list.append((task_name, args, kwargs))
+        if task_name not in self.all_tasks:
+            self.all_tasks[task_name] = {
+                'name': task_name,
+                'args': args,
+                'kwargs': kwargs,
+                'running_count': 0
+            }
         # runs the task or adds it to the waiting list to be run afterwards.
         if len(self.running_list) < MAX_PARALLEL_TASKS:
             self.__run_next_task()
@@ -55,27 +65,30 @@ class ParallelRunner(object):
                 for name, proc in self.running_list.copy().items():
                     status = "Finished"
                     if proc.poll() is not None:
-                        if proc.returncode != 0:
-                            failed_tasks[name] = proc.returncode
-                            sys.stderr.write(f'{name} failed, code {proc.returncode}\n')
-                            sys.stderr.flush()
-                            status = "Failed"
-                            if proc.returncode != 0:
-                                ret_code = proc.returncode
-
                         seconds = int(time.time() - self.start_times[name])
                         del self.running_list[name]
                         del self.start_times[name]
+                        ret_code = proc.returncode
+                        if proc.returncode != 0:
+                            task = self.all_tasks[name]
+                            run_count = task['running_count']
+                            sys.stderr.write(f'{name} failed, code {proc.returncode}, try: {run_count}\n')
+                            sys.stderr.flush()
+                            status = "Failed"
+                            if run_count < MAX_RETRIES:
+                                self.append_single(task['name'], task['args'], **task['kwargs'])
+                            else:
+                                failed_tasks[name] = proc.returncode
 
                         or_less = ' or less' if first else ''
 
                         print(
-                            f"{status} {name} in {seconds} seconds{or_less}. Still waiting for {list(self.running_list.keys())}")
+                            f"{status} {name} in {seconds} seconds{or_less}. Still waiting for "
+                            f"{list(self.running_list.keys())}")
 
                         # Put a new process to run
                         if len(self.waiting_list) > 0:
                             self.__run_next_task()
-
                 if (len(self.running_list) + len(self.waiting_list)) > 0:
                     time.sleep(SUBPROCESS_POLLING_INTERVAL_IN_SEC)
                     first = False
