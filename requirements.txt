@@ -100,6 +100,7 @@ pysnmp==4.4.4
 PyPDF2==1.26.0
 daemonocle==1.0.1
 netifaces==0.10.9
+plumbum==1.6.7
 aiodns==2.0.0
 xmltodict==0.12.0
 astor==0.8.0
