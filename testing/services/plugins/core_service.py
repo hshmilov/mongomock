@@ -45,7 +45,10 @@ class CoreService(PluginService, UpdatablePluginMixin):
         if self.db_schema_version < 6:
             self._update_schema_version_6()
 
-        if self.db_schema_version != 6:
+        if self.db_schema_version < 7:
+            self._update_schema_version_7()
+
+        if self.db_schema_version != 7:
             print(f'Upgrade failed, db_schema_version is {self.db_schema_version}')
 
     def _update_schema_version_1(self):
@@ -299,6 +302,27 @@ class CoreService(PluginService, UpdatablePluginMixin):
             self.db_schema_version = 6
         except Exception as e:
             print(f'Exception while upgrading core db to version 6. Details: {e}')
+            traceback.print_exc()
+            raise
+
+    def _update_schema_version_7(self):
+        # https://axonius.atlassian.net/browse/AX-5394
+        # DB is corrupted for some customers (and demo-latest)
+        print('Upgrade to schema 7')
+        try:
+            config_match = {
+                'config_name': CORE_CONFIG_NAME
+            }
+            config_collection = self.db.get_collection(self.plugin_name, CONFIGURABLE_CONFIGS_COLLECTION)
+            current_config = config_collection.find_one(config_match)
+            if current_config:
+                ssl_trust_setting = current_config['config'].get('ssl_trust_settings')
+                if ssl_trust_setting and not isinstance(ssl_trust_setting.get('ca_files'), list):
+                    ssl_trust_setting['ca_files'] = []
+                    config_collection.replace_one(config_match, current_config)
+            self.db_schema_version = 7
+        except Exception as e:
+            print(f'Exception while upgrading core db to version 7. Details: {e}')
             traceback.print_exc()
             raise
 
