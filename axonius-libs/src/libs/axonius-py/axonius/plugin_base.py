@@ -81,7 +81,8 @@ from axonius.consts.plugin_consts import (ADAPTERS_LIST_LENGTH,
                                           NODE_ID_ENV_VAR_NAME,
                                           HEAVY_LIFTING_PLUGIN_NAME, SOCKET_READ_TIMEOUT,
                                           DEFAULT_SOCKET_READ_TIMEOUT, DEFAULT_SOCKET_RECV_TIMEOUT,
-                                          STATIC_ANALYSIS_SETTINGS, FETCH_EMPTY_VENDOR_SOFTWARE_VULNERABILITES)
+                                          STATIC_ANALYSIS_SETTINGS, FETCH_EMPTY_VENDOR_SOFTWARE_VULNERABILITES,
+                                          FIRST_FETCH_TIME, FETCH_TIME)
 from axonius.consts.plugin_subtype import PluginSubtype
 from axonius.devices import deep_merge_only_dict
 from axonius.devices.device_adapter import LAST_SEEN_FIELD, DeviceAdapter
@@ -1578,6 +1579,8 @@ class PluginBase(Configurable, Feature, ABC):
 
                     if update_result.modified_count == 0:
                         # if it's not in the db
+                        # save first fetch time for adapter data
+                        parsed_to_insert['data'][FIRST_FETCH_TIME] = parsed_to_insert['data'][FETCH_TIME]
                         if correlates:
                             # for scanner adapters this is case B - see 'scanner_adapter_base.py'
                             # we need to add this device to the list of adapters in another device
@@ -1646,6 +1649,9 @@ class PluginBase(Configurable, Feature, ABC):
                     entity_type,
                     plugin_identity
                 ) for data in devices]
+
+                for parsed in all_parsed:
+                    parsed['data'][FIRST_FETCH_TIME] = parsed['data'][FETCH_TIME]
 
                 for adapter_entity in all_parsed:
                     for key in adapter_entity['data']:

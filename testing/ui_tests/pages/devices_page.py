@@ -30,6 +30,7 @@ class DevicesPage(EntitiesPage):
     FIELD_USERS_LAST_USE = 'Last Use Time'
     FIELD_USERS_LAST_USE_NAME = 'last_use_date'
     FIELD_LAST_USED_USERS = 'Last Used Users'
+    FIELD_FIRST_FETCH_TIME = 'First Fetch Time'
     FIELD_USERS_LOCAL = 'Is Local'
     FIELD_USERS_LOCAL_NAME = 'is_local'
     FIELD_USERS_USERNAME = 'Users: Username'
@@ -165,6 +166,10 @@ class DevicesPage(EntitiesPage):
 
     def get_fetch_time(self):
         return self.driver.find_element_by_css_selector('[format="date-time"] > label[for="fetch_time"] + div').text
+
+    def get_first_fetch_time(self):
+        return self.driver.find_element_by_css_selector(
+            '[format="date-time"] > label[for="first_fetch_time"] + div').text
 
     def create_saved_query(self, data_query, query_name):
         self.switch_to_page()
