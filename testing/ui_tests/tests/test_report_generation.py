@@ -336,6 +336,7 @@ class TestReportGeneration(TestBase):
                 self.reports_page.find_email_sent_toaster()
                 mail_content = smtp_service.get_email_first_csv_content(recipient)
                 assert tag_name in mail_content.decode('utf-8')
+                self.logger.info('We are done with test_report_with_hebrew_name_and_text test')
         finally:
             self.wait_for_adapter_down(ui_consts.STRESSTEST_ADAPTER)
             self.wait_for_adapter_down(ui_consts.STRESSTEST_SCANNER_ADAPTER)
