@@ -165,7 +165,7 @@ class TestUsersTable(TestEntitiesTable):
 
     def _test_days_for_last_seen(self, last_seen_date, last_seen_days):
         days = self._days_since_date(last_seen_date)
-        assert int(last_seen_days) in (days, days + 1)
+        assert int(last_seen_days) in (days, days + 1, days + 2)
 
     def _test_last_seen_expanded_cell(self):
         self.users_page.click_expand_cell(cell_index=self.users_page.count_sort_column(self.LAST_SEEN_COLUMN))
