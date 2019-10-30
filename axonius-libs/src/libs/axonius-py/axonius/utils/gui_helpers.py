@@ -8,7 +8,7 @@ import os
 import re
 from datetime import datetime
 from enum import Enum
-from typing import NamedTuple, Iterable, List, Union
+from typing import NamedTuple, Iterable, List, Union, Dict
 
 import cachetools
 import dateutil
@@ -1026,3 +1026,17 @@ def nongui_beautify_db_entry(entry):
     tmp['uuid'] = str(entry['_id'])
     del tmp['_id']
     return tmp
+
+
+def find_filter_by_name(entity_type: EntityType, name) -> Dict[str, object]:
+    """
+    From collection of views for given entity_type, fetch that with given name.
+    Return its filter, or None if no filter.
+    """
+    if not name:
+        return None
+    view_doc = PluginBase.Instance.gui_dbs.entity_query_views_db_map[entity_type].find_one({'name': name})
+    if not view_doc:
+        logger.info(f'No record found for view {name}')
+        return None
+    return view_doc['view']

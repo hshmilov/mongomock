@@ -13,12 +13,11 @@
     <md-datepicker
       v-show="!hide || datepickerActive"
       ref="date"
-      :value="value"
+      v-model="selectedDate"
       :md-disabled-dates="checkDisabled"
       :md-immediately="true"
       :md-debounce="500"
       :class="{'no-icon': minimal, 'no-clear': !clearable}"
-      @input="onInput"
     >
       <label v-if="label">{{ label }}</label>
     </md-datepicker>
@@ -66,6 +65,19 @@
       }
     },
     computed: {
+      selectedDate: {
+        get () {
+          return this.value
+        },
+        set (selectedDate) {
+          if (selectedDate && typeof selectedDate !== 'string') {
+            selectedDate.setMinutes(selectedDate.getMinutes() - selectedDate.getTimezoneOffset())
+            selectedDate = selectedDate.toISOString().substring(0, 10)
+          }
+          if (this.value === selectedDate) return
+          this.$emit('input', selectedDate)
+        }
+      },
       datepickerActive () {
         if (!this.$refs.date) return false
         return this.$refs.date.showDialog
@@ -79,20 +91,9 @@
       }
     },
     methods: {
-      onInput (selectedDate) {
-        if (selectedDate && typeof selectedDate !== 'string') {
-          selectedDate.setMinutes(selectedDate.getMinutes() - selectedDate.getTimezoneOffset())
-          selectedDate = selectedDate.toISOString().substring(0, 10)
-        }
-        this.$emit('input', selectedDate)
-      },
       onClear () {
         this.$refs.date.modelDate = ''
-        if (typeof this.value === 'string') {
-          this.$emit('input', '')
-        } else {
-          this.$emit('input', null)
-        }
+        this.selectedDate = (typeof this.value === 'string')? '' : null
         this.$emit('clear')
       }
     }

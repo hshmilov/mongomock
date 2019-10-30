@@ -58,7 +58,7 @@
       </x-tab>
       <x-tab
         v-if="entityTasks.length"
-        id="ec_runs"
+        id="tasks"
         key="tasks"
         title="Enforcement Tasks"
       >
@@ -316,6 +316,12 @@
               }
             }
           }
+        }
+      }
+
+      .tasks {
+        .table-header {
+          background: $theme-white;
         }
       }
 

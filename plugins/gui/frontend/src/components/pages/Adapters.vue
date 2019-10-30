@@ -74,10 +74,10 @@
                 }
             }),
             filteredData() {
-                const serachTerm = this.searchText.toLowerCase()
+                const searchTerm = this.searchText.toLowerCase()
                 let res = this.adaptersData
                 if (this.searchText) {
-                    res = res.filter(a => a.title.toLowerCase().includes(serachTerm))
+                    res = res.filter(a => a.title.toLowerCase().includes(searchTerm))
                 }
                 if (this.showOnlyConfigured) {
                     res = res.filter(getConfiguredAdapters)

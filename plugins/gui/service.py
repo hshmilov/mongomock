@@ -12,7 +12,6 @@ import threading
 import time
 from collections import defaultdict
 from datetime import date, datetime, timedelta
-from multiprocessing import cpu_count
 from multiprocessing.pool import ThreadPool
 from typing import Dict, Iterable, Tuple, List
 
@@ -25,7 +24,6 @@ from apscheduler.executors.pool import \
 from apscheduler.triggers.cron import CronTrigger
 from bson import ObjectId
 from dateutil import tz
-from dateutil.parser import parse as parse_date
 from dateutil.relativedelta import relativedelta
 from flask import (after_this_request, has_request_context, jsonify,
                    make_response, redirect, request, session)
@@ -44,7 +42,7 @@ from axonius.clients.ldap.ldap_connection import LdapConnection
 from axonius.clients.rest.connection import RESTConnection
 from axonius.consts import adapter_consts, report_consts
 from axonius.consts.core_consts import CORE_CONFIG_NAME
-from axonius.consts.gui_consts import (ADAPTERS_DATA, ENCRYPTION_KEY_PATH,
+from axonius.consts.gui_consts import (ENCRYPTION_KEY_PATH,
                                        EXEC_REPORT_EMAIL_CONTENT,
                                        EXEC_REPORT_FILE_NAME,
                                        EXEC_REPORT_GENERATE_PDF_THREAD_ID,
@@ -53,15 +51,14 @@ from axonius.consts.gui_consts import (ADAPTERS_DATA, ENCRYPTION_KEY_PATH,
                                        PREDEFINED_ROLE_ADMIN,
                                        PREDEFINED_ROLE_READONLY,
                                        PREDEFINED_ROLE_RESTRICTED,
-                                       PROXY_ERROR_MESSAGE, RANGE_UNIT_DAYS,
+                                       PROXY_ERROR_MESSAGE,
                                        ROLES_COLLECTION,
                                        SIGNUP_TEST_COMPANY_NAME,
-                                       SIGNUP_TEST_CREDS, SPECIFIC_DATA,
+                                       SIGNUP_TEST_CREDS,
                                        TEMP_MAINTENANCE_THREAD_ID,
                                        USERS_COLLECTION,
-                                       USERS_CONFIG_COLLECTION, ChartFuncs,
-                                       ChartMetrics, ChartRangeTypes,
-                                       ChartRangeUnits, ChartViews,
+                                       USERS_CONFIG_COLLECTION,
+                                       ChartViews,
                                        FeatureFlagsNames, ResearchStatus,
                                        DASHBOARD_COLLECTION, DASHBOARD_SPACES_COLLECTION,
                                        DASHBOARD_SPACE_PERSONAL, DASHBOARD_SPACE_TYPE_CUSTOM,
@@ -110,8 +107,7 @@ from axonius.types.ssl_state import (COMMON_SSL_CONFIG_SCHEMA,
 from axonius.users.user_adapter import UserAdapter
 from axonius.utils import gui_helpers
 from axonius.utils.db_querying_helper import get_entities
-from axonius.utils.axonius_query_language import (convert_db_entity_to_view_entity,
-                                                  parse_filter)
+from axonius.utils.axonius_query_language import parse_filter
 from axonius.utils.datetime import next_weekday, time_from_now
 from axonius.utils.files import get_local_config_file
 from axonius.utils.gui_helpers import (Permission, PermissionLevel,
@@ -119,7 +115,8 @@ from axonius.utils.gui_helpers import (Permission, PermissionLevel,
                                        add_labels_to_entities,
                                        check_permissions,
                                        deserialize_db_permissions,
-                                       get_entity_labels, entity_fields, get_connected_user_id)
+                                       get_entity_labels, entity_fields, get_connected_user_id,
+                                       find_filter_by_name)
 from axonius.utils.metric import remove_ids
 from axonius.utils.mongo_administration import (get_collection_capped_size,
                                                 get_collection_stats)
@@ -128,7 +125,7 @@ from axonius.utils.mongo_escaping import escape_dict
 from axonius.utils.mongo_retries import mongo_retry
 from axonius.utils.parsing import bytes_image_to_base64
 from axonius.utils.proxy_utils import to_proxy_string
-from axonius.utils.revving_cache import rev_cached
+from axonius.utils.revving_cache import rev_cached, WILDCARD_ARG
 from axonius.utils.ssl import check_associate_cert_with_private_key
 from axonius.utils.threading import run_and_forget
 from gui.api import APIMixin
@@ -137,14 +134,15 @@ from gui.feature_flags import FeatureFlags
 from gui.gui_logic.entity_data import (get_entity_data, entity_data_field_csv,
                                        entity_notes, entity_notes_update, entity_tasks_actions,
                                        entity_tasks_actions_csv, get_task_full_name)
-from gui.gui_logic.dashboard_data import adapter_data
+from gui.gui_logic.dashboard_data import (adapter_data, fetch_chart_segment, fetch_chart_segment_historical,
+                                          generate_dashboard, generate_dashboard_uncached,
+                                          generate_dashboard_historical)
 from gui.gui_logic.db_helpers import beautify_db_entry
 from gui.gui_logic.ec_helpers import extract_actions_from_ec
 from gui.gui_logic.fielded_plugins import get_fielded_plugins
 from gui.gui_logic.filter_utils import filter_archived
 from gui.gui_logic.generate_csv import get_csv_from_heavy_lifting_plugin
-from gui.gui_logic.historical_dates import (all_historical_dates,
-                                            first_historical_date)
+from gui.gui_logic.historical_dates import (all_historical_dates, first_historical_date)
 from gui.gui_logic.views_data import get_views, get_views_count
 from gui.gui_logic.users_helper import beautify_user_entry
 from gui.okta_login import OidcData, try_connecting_using_okta
@@ -316,22 +314,6 @@ def filter_by_name(names, additional_filter=None):
     return base_names
 
 
-def _get_date_ranges(start: datetime, end: datetime) -> Iterable[Tuple[date, date]]:
-    """
-    Generate date intervals from the given datetimes according to the amount of threads
-    """
-    start = start.date()
-    end = end.date()
-
-    thread_count = min([cpu_count(), (end - start).days]) or 1
-    interval = (end - start) / thread_count
-
-    for i in range(thread_count):
-        start = start + (interval * i)
-        end = start + (interval * (i + 1))
-        yield (start, end)
-
-
 if os.environ.get('HOT') == 'true':
     session = None
 
@@ -477,7 +459,6 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
 
         self.metadata = self.load_metadata()
         self.encryption_key = self.load_encryption_key()
-        self.__aggregate_thread_pool = ThreadPool(processes=cpu_count())
         self._set_first_time_use()
 
         self._trigger('clear_dashboard_cache', blocking=False)
@@ -3633,109 +3614,6 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
         """
         return jsonify(self.__is_system_first_use)
 
-    def _fetch_historical_chart_intersect(self, card, from_given_date, to_given_date):
-        if not card.get('config') or not card['config'].get('entity') or not card.get('view'):
-            return []
-        config = {**card['config'], 'entity': EntityType(card['config']['entity'])}
-        latest_date = self._fetch_latest_date(config['entity'], from_given_date, to_given_date)
-        if not latest_date:
-            return []
-        return self._fetch_chart_intersect(ChartViews[card['view']], **config, for_date=latest_date)
-
-    def _fetch_historical_chart_compare(self, card, from_given_date, to_given_date):
-        """
-        Finds the latest saved result from the given view list (from card) that are in the given date range
-        """
-        if not card.get('view') or not card.get('config') or not card['config'].get('views'):
-            return []
-        historical_views = []
-        for view in card['config']['views']:
-            view_name = view.get('name')
-            if not view.get('entity') or not view_name:
-                continue
-            try:
-                latest_date = self._fetch_latest_date(EntityType(view['entity']), from_given_date, to_given_date)
-                if not latest_date:
-                    continue
-                historical_views.append({'for_date': latest_date, **view})
-
-            except Exception:
-                logger.exception(f'When dealing with {view_name} and {view["entity"]}')
-                continue
-        if not historical_views:
-            return []
-        return self._fetch_chart_compare(ChartViews[card['view']], historical_views)
-
-    def _fetch_historical_chart_segment(self, card, from_given_date, to_given_date):
-        """
-        Get historical data for card of metric 'segment'
-        """
-        if not card.get('view') or not card.get('config') or not card['config'].get('entity'):
-            return []
-        config = {**card['config'], 'entity': EntityType(card['config']['entity'])}
-        latest_date = self._fetch_latest_date(config['entity'], from_given_date, to_given_date)
-        if not latest_date:
-            return []
-        return self._fetch_chart_segment(ChartViews[card['view']], **config, for_date=latest_date)
-
-    def _fetch_historical_chart_abstract(self, card, from_given_date, to_given_date):
-        """
-        Get historical data for card of metric 'abstract'
-        """
-        config = {**card['config'], 'entity': EntityType(card['config']['entity'])}
-        latest_date = self._fetch_latest_date(config['entity'], from_given_date, to_given_date)
-        if not latest_date:
-            return []
-        return self._fetch_chart_abstract(ChartViews[card['view']], **config, for_date=latest_date)
-
-    def _fetch_latest_date(self, entity: EntityType, from_given_date: datetime, to_given_date: datetime):
-        """
-        For given entity and dates, check which is latest date with historical data, within the range
-        """
-        historical = self._historical_entity_views_db_map[entity]
-        latest_date = historical.find_one({
-            'accurate_for_datetime': {
-                '$lt': to_given_date,
-                '$gt': from_given_date,
-            }
-        }, sort=[('accurate_for_datetime', -1)], projection=['accurate_for_datetime'])
-        if not latest_date:
-            return None
-        return latest_date['accurate_for_datetime']
-
-    @gui_helpers.historical_range(force=True)
-    @gui_add_rule_logged_in('saved_card_results/<card_uuid>', methods=['GET'],
-                            required_permissions={Permission(PermissionType.Dashboard,
-                                                             PermissionLevel.ReadOnly)})
-    def saved_card_results(self, card_uuid: str, from_date: datetime, to_date: datetime):
-        """
-        Saved results for cards, i.e. the mechanism used to show the user the results
-        of some "card" (collection of views) in the past
-        """
-
-        card = self.__dashboard_collection.find_one({'_id': ObjectId(card_uuid)})
-        if not card:
-            return return_error('Card doesn\'t exist')
-
-        res = None
-        try:
-            card_metric = ChartMetrics[card['metric']]
-            handler_by_metric = {
-                ChartMetrics.compare: self._fetch_historical_chart_compare,
-                ChartMetrics.intersect: self._fetch_historical_chart_intersect,
-                ChartMetrics.segment: self._fetch_historical_chart_segment,
-                ChartMetrics.abstract: self._fetch_historical_chart_abstract
-            }
-            res = handler_by_metric[card_metric](card, from_date, to_date)
-        except KeyError:
-            logger.exception(f'Card {card["name"]} must have metric field in order to be fetched')
-
-        if res is None:
-            logger.error(f'Unexpected card found - {card["name"]} {card["metric"]}')
-            return return_error('Unexpected error')
-
-        return jsonify({x['name']: x for x in res})
-
     @gui_add_rule_logged_in('first_historical_date', methods=['GET'], required_permissions={
         Permission(PermissionType.Dashboard, PermissionLevel.ReadOnly)})
     def get_first_historical_date(self):
@@ -3868,11 +3746,29 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
         """
         return jsonify(self._get_dashboard(skip, limit))
 
+    def _process_initial_dashboard_data(self, dashboard_data: list) -> Dict[str, object]:
+        """
+        Truncates the given data to allow viewing the beginning and end of the values, if more than 100
+
+        :param dashboard_data: List of values to be shown in the form of some dashboard chart
+        :return: Tail and head of the list (50) or entire list, if up to 100 values and the total count
+        """
+        data_length = len(dashboard_data)
+        data_limit, data_tail_limit = 50, -50
+        if data_length <= 100:
+            data_limit, data_tail_limit = 100, data_length
+        return {
+            'data': dashboard_data[:data_limit],
+            'data_tail': dashboard_data[data_tail_limit:],
+            'count': data_length
+        }
+
     @gui_helpers.paginated()
+    @gui_helpers.historical_range()
     @gui_add_rule_logged_in('dashboards/<space_id>/panels/<panel_id>', methods=['GET', 'DELETE', 'POST'],
                             required_permissions={Permission(PermissionType.Dashboard, ReadOnlyJustForGet)})
     # def update_dashboard_panel(self, panel_id, space_id, skip, limit):
-    def update_dashboard_panel(self, space_id, panel_id, skip, limit):
+    def update_dashboard_panel(self, space_id, panel_id, skip, limit, from_date: datetime, to_date: datetime):
         """
         DELETE an existing Dashboard Panel and DELETE its panelId from the
         "panels_order" in the "dashboard_space" collection
@@ -3887,8 +3783,16 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
         """
         panel_id = ObjectId(panel_id)
         if request.method == 'GET':
-            generated_dashboard = self.__generate_dashboard(panel_id)
-            return jsonify(generated_dashboard.get('data', [])[skip: skip + limit])
+            if from_date and to_date:
+                generated_dashboard = generate_dashboard_historical(panel_id, from_date, to_date)
+            else:
+                generated_dashboard = generate_dashboard(panel_id)
+            dashboard_data = generated_dashboard.get('data', [])
+            if not skip:
+                return jsonify(self._process_initial_dashboard_data(dashboard_data))
+            return jsonify({
+                'data': dashboard_data[skip: skip + limit]
+            })
 
         if request.method == 'DELETE':
             self.__dashboard_spaces_collection.update_one({
@@ -3911,13 +3815,14 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
             {'_id': panel_id}, {'$set': update_data})
         if not update_result.modified_count:
             return return_error(f'No dashboard by the id {str(panel_id)} found or updated', 400)
-        args = [self, panel_id]
-        self.__generate_dashboard.clean_cache(args)
+        generate_dashboard.clean_cache([panel_id])
+        generate_dashboard_historical.clean_cache([panel_id, WILDCARD_ARG, WILDCARD_ARG])
         return ''
 
+    @gui_helpers.historical_range()
     @gui_add_rule_logged_in('dashboards/panels/<panel_id>/csv', methods=['GET'],
                             required_permissions={Permission(PermissionType.Dashboard, PermissionLevel.ReadOnly)})
-    def export_segmentations_chart_to_csv(self, panel_id):
+    def chart_segment_csv(self, panel_id, from_date: datetime, to_date: datetime):
         card = self.__dashboard_collection.find_one({
             '_id': ObjectId(panel_id)
         })
@@ -3925,7 +3830,10 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
                 or not card['config'].get('field')):
             return return_error('Error: no such data available ', 400)
         card['config']['entity'] = EntityType(card['config']['entity'])
-        data = self._fetch_chart_segment(ChartViews[card['view']], **card['config'])
+        if from_date and to_date:
+            data = fetch_chart_segment_historical(card, from_date, to_date)
+        else:
+            data = fetch_chart_segment(ChartViews[card['view']], **card['config'])
         name = card['config']['field']['title']
         string_output = io.StringIO()
         dw = csv.DictWriter(string_output, [name, 'count'])
@@ -3943,7 +3851,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
         :param clear_slow: Also clear the slow cache
         """
         if clear_slow:
-            self.__generate_dashboard.update_cache()
+            generate_dashboard.update_cache()
         adapter_data.update_cache()
         get_fielded_plugins.update_cache()
         first_historical_date.clean_cache()
@@ -3951,48 +3859,6 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
         entity_fields.clean_cache()
         self.__lifecycle.clean_cache()
         self._adapters.clean_cache()
-
-    def __generate_dashboard_uncached(self, dashboard_id: ObjectId):
-        """
-        See _get_dashboard
-        """
-        dashboard = self.__dashboard_collection.find_one({
-            '_id': dashboard_id
-        })
-
-        dashboard_metric = ChartMetrics[dashboard['metric']]
-        handler_by_metric = {
-            ChartMetrics.compare: self._fetch_chart_compare,
-            ChartMetrics.intersect: self._fetch_chart_intersect,
-            ChartMetrics.segment: self._fetch_chart_segment,
-            ChartMetrics.abstract: self._fetch_chart_abstract,
-            ChartMetrics.timeline: self._fetch_chart_timeline
-        }
-        config = {**dashboard['config']}
-        if config.get('entity'):
-            # _fetch_chart_compare crashed in the wild because it got entity as a param.
-            # We don't understand how such a dasbhoard chart was created. But at lease we won't crash now
-            config['entity'] = EntityType(dashboard['config']['entity'])
-            if self._fetch_chart_compare == handler_by_metric[dashboard_metric]:
-                del config['entity']
-        try:
-            dashboard['data'] = handler_by_metric[dashboard_metric](ChartViews[dashboard['view']], **config)
-            if dashboard['data'] is None:
-                dashboard['data'] = []
-                logger.error(f'Problematic queries in dashboard {dashboard}')
-        except Exception:
-            dashboard['data'] = []
-            logger.exception(f'Problem handling dashboard {dashboard}')
-        dashboard['space'] = str(dashboard['space'])
-        return beautify_db_entry(dashboard)
-
-    # there's no trivial way to remove the TTL functionality entirely, so let's just make it long enough
-    @rev_cached(ttl=3600 * 24 * 31, key_func=lambda self, dashboard_id: dashboard_id)
-    def __generate_dashboard(self, dashboard_id: ObjectId):
-        """
-        See _get_dashboard
-        """
-        return self.__generate_dashboard_uncached(dashboard_id)
 
     def __init_all_dashboards(self):
         """
@@ -4004,7 +3870,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
                     '_id': True
                 }):
             try:
-                self.__generate_dashboard(dashboard['_id'])
+                generate_dashboard(dashboard['_id'])
             except Exception:
                 logger.warning(f'Failed generating dashboard for {dashboard}', exc_info=True)
 
@@ -4059,19 +3925,12 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
             try:
                 if generate_data:
                     if uncached:
-                        generated_dashboard = self.__generate_dashboard_uncached(dashboard['_id'])
+                        generated_dashboard = generate_dashboard_uncached(dashboard['_id'])
                     else:
-                        generated_dashboard = self.__generate_dashboard(dashboard['_id'])
-                    dashboard_data = generated_dashboard.get('data', [])
-                    data_length = len(dashboard_data)
-                    data_limit, data_tail_limit = 50, -50
-                    if data_length <= 100:
-                        data_limit, data_tail_limit = 100, data_length
+                        generated_dashboard = generate_dashboard(dashboard['_id'])
                     yield {
                         **generated_dashboard,
-                        'data': dashboard_data[:data_limit],
-                        'data_tail': dashboard_data[data_tail_limit:],
-                        'count': data_length
+                        **self._process_initial_dashboard_data(generated_dashboard.get('data', []))
                     }
                 else:
                     yield {
@@ -4084,592 +3943,6 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
             except Exception:
                 # Since there is no data, not adding this chart to the list
                 logger.exception(f'Error fetching data for chart ({dashboard["_id"]})')
-
-    def _find_filter_by_name(self, entity_type: EntityType, name):
-        """
-        From collection of views for given entity_type, fetch that with given name.
-        Return it's filter, or None if no filter.
-        """
-        if not name:
-            return None
-        view_doc = self.gui_dbs.entity_query_views_db_map[entity_type].find_one({'name': name})
-        if not view_doc:
-            logger.info(f'No record found for view {name}')
-            return None
-        return view_doc['view']
-
-    def _fetch_chart_compare(self, chart_view: ChartViews, views):
-        """
-        Iterate given views, fetch each one's filter from the appropriate query collection, according to its module,
-        and execute the filter on the appropriate entity collection.
-
-        """
-        if not views:
-            raise Exception('No views for the chart')
-
-        data = []
-        total = 0
-        for view in views:
-            # Can be optimized by taking all names in advance and querying each module's collection once
-            # But since list is very short the simpler and more readable implementation is fine
-            entity_name = view.get('entity', EntityType.Devices.value)
-            entity = EntityType(entity_name)
-            view_dict = self._find_filter_by_name(entity, view['name'])
-            if not view_dict:
-                continue
-
-            data_item = {
-                'name': view['name'],
-                'view': view_dict,
-                'module': entity_name,
-                'value': 0
-            }
-            if view.get('for_date'):
-                data_item['value'] = self._historical_entity_views_db_map[entity].count_documents(
-                    {
-                        '$and': [
-                            parse_filter(view_dict['query']['filter']), {
-                                'accurate_for_datetime': view['for_date']
-                            }
-                        ]
-                    })
-                data_item['accurate_for_datetime'] = view['for_date']
-            else:
-                data_item['value'] = self._entity_db_map[entity].count_documents(
-                    parse_filter(view_dict['query']['filter']))
-            data.append(data_item)
-            total += data_item['value']
-
-        def val(element):
-            return element.get('value', 0)
-
-        data.sort(key=val, reverse=True)
-        if chart_view == ChartViews.pie:
-            return_data = [{'name': 'ALL', 'value': 0}]
-            if total:
-                return_data.extend(map(lambda x: {**x, 'value': x['value'] / total}, data))
-            return return_data
-        return data
-
-    def _fetch_chart_intersect(self, _: ChartViews, entity: EntityType, base, intersecting, for_date=None):
-        """
-        This chart shows intersection of 1 or 2 'Child' views with a 'Parent' (expected not to be a subset of them).
-        Module to be queried is defined by the parent query.
-
-        :param _: Placeholder to create uniform interface for the chart fetching methods
-        :param intersecting: List of 1 or 2 views
-        :param for_date: Data will be fetched and calculated according to what is stored on this date
-        :return: List of result portions for the query executions along with their names. First represents Parent query.
-                 If 1 child, second represents Child intersecting with Parent.
-                 If 2 children, intersection between all three is calculated, namely 'Intersection'.
-                                Second and third represent each Child intersecting with Parent, excluding Intersection.
-                                Fourth represents Intersection.
-        """
-        if not intersecting or len(intersecting) < 1:
-            raise Exception('Pie chart requires at least one views')
-        # Query and data collections according to given parent's module
-        data_collection = self._entity_db_map[entity]
-
-        base_view = {'query': {'filter': '', 'expressions': []}}
-        base_queries = []
-        if base:
-            base_view = self._find_filter_by_name(entity, base)
-            if not base_view or not base_view.get('query'):
-                return None
-            base_queries = [parse_filter(base_view['query']['filter'])]
-
-        if for_date:
-            # If history requested, fetch from appropriate historical db
-            data_collection = self._historical_entity_views_db_map[entity]
-            base_queries.append({
-                'accurate_for_datetime': for_date
-            })
-
-        data = []
-        total = data_collection.count_documents({'$and': base_queries} if base_queries else {})
-        if not total:
-            return [{'name': base or 'ALL', 'value': 0, 'remainder': True,
-                     'view': {**base_view, 'query': {'filter': base_view['query']['filter']}}, 'module': entity.value}]
-
-        child1_view = self._find_filter_by_name(entity, intersecting[0])
-        if not child1_view or not child1_view.get('query'):
-            return None
-        child1_filter = child1_view['query']['filter']
-        child1_query = parse_filter(child1_filter)
-        base_filter = f'({base_view["query"]["filter"]}) and ' if base_view['query']['filter'] else ''
-        child2_filter = ''
-        if len(intersecting) == 1:
-            # Fetch the only child, intersecting with parent
-            child1_view['query']['filter'] = f'{base_filter}({child1_filter})'
-            data.append({'name': intersecting[0], 'view': child1_view, 'module': entity.value,
-                         'value': data_collection.count_documents({
-                             '$and': base_queries + [child1_query]
-                         }) / total})
-        else:
-            child2_view = self._find_filter_by_name(entity, intersecting[1])
-            if not child2_view or not child2_view.get('query'):
-                return None
-            child2_filter = child2_view['query']['filter']
-            child2_query = parse_filter(child2_filter)
-
-            # Child1 + Parent - Intersection
-            child1_view['query']['filter'] = f'{base_filter}({child1_filter}) and not ({child2_filter})'
-            data.append({'name': intersecting[0], 'value': data_collection.count_documents({
-                '$and': base_queries + [
-                    child1_query,
-                    {
-                        '$nor': [child2_query]
-                    }
-                ]
-            }) / total, 'module': entity.value, 'view': child1_view})
-
-            # Intersection
-            data.append(
-                {'name': ' + '.join(intersecting),
-                 'intersection': True,
-                 'value': data_collection.count_documents({
-                     '$and': base_queries + [
-                         child1_query, child2_query
-                     ]}) / total,
-                 'view': {**base_view, 'query': {'filter': f'{base_filter}({child1_filter}) and ({child2_filter})'}},
-                 'module': entity.value})
-
-            # Child2 + Parent - Intersection
-            child2_view['query']['filter'] = f'{base_filter}({child2_filter}) and not ({child1_filter})'
-            data.append({'name': intersecting[1], 'value': data_collection.count_documents({
-                '$and': base_queries + [
-                    child2_query,
-                    {
-                        '$nor': [child1_query]
-                    }
-                ]
-            }) / total, 'module': entity.value, 'view': child2_view})
-
-        remainder = 1 - sum([x['value'] for x in data])
-        child2_or = f' or ({child2_filter})' if child2_filter else ''
-        return [{'name': base or 'ALL', 'value': remainder, 'remainder': True, 'view': {
-            **base_view, 'query': {'filter': f'{base_filter}not (({child1_filter}){child2_or})'}
-        }, 'module': entity.value}, *data]
-
-    # pylint: disable=R0914,R0912
-    def _fetch_chart_segment(self, chart_view: ChartViews, entity: EntityType, view, field, value_filter: str = '',
-                             include_empty: bool = False, for_date=None):
-        """
-        Perform aggregation which matching given view's filter and grouping by give field, in order to get the
-        number of results containing each available value of the field.
-        For each such value, add filter combining the original filter with restriction of the field to this value.
-        If the requested view is a pie, divide all found quantities by the total amount, to get proportions.
-
-        :return: Data counting the amount / portion of occurrences for each value of given field, among the results
-                of the given view's filter
-        """
-        # Query and data collections according to given module
-        data_collection = self._entity_db_map[entity]
-        base_view = {'query': {'filter': '', 'expressions': []}}
-        base_queries = []
-        if view:
-            base_view = self._find_filter_by_name(entity, view)
-            if not base_view or not base_view.get('query'):
-                return None
-            base_queries.append(parse_filter(base_view['query']['filter']))
-        if for_date:
-            # If history requested, fetch from appropriate historical db
-            data_collection = self._historical_entity_views_db_map[entity]
-            base_queries.append({
-                'accurate_for_datetime': for_date
-            })
-        base_query = {
-            '$and': base_queries
-        } if base_queries else {}
-
-        field_name = field['name']
-
-        adapter_conditions = [
-            {
-                '$ne': ['$$i.data._old', True]
-            }
-        ]
-
-        if field_name.startswith(SPECIFIC_DATA):
-            empty_field_name = field_name[len(SPECIFIC_DATA) + 1:]
-            adapter_field_name = 'adapters.' + empty_field_name
-            tags_field_name = 'tags.' + empty_field_name
-
-        elif field_name.startswith(ADAPTERS_DATA):
-            # e.g. adapters_data.aws_adapter.some_field
-            splitted = field_name.split('.')
-            adapter_data_adapter_name = splitted[1]
-
-            # this condition is specific for fields that are in a specific adapter, so we
-            # will not take other adapters that might share a field name (although the field itself might differ)
-            adapter_conditions.append({
-                '$eq': [f'$$i.{PLUGIN_NAME}', adapter_data_adapter_name]
-            })
-            empty_field_name = 'data.' + '.'.join(splitted[2:])
-            adapter_field_name = 'adapters.' + empty_field_name
-            tags_field_name = 'tags.' + empty_field_name
-
-        aggregate_results = data_collection.aggregate([
-            {
-                '$match': base_query
-            },
-            {
-                '$project': {
-                    'tags': '$tags',
-                    'adapters': {
-                        '$filter': {
-                            'input': '$adapters',
-                            'as': 'i',
-                            'cond': {
-                                '$and': adapter_conditions
-                            }
-                        }
-                    }
-                }
-            },
-            {
-                '$project': {
-                    'field': {
-                        '$filter': {
-                            'input': {
-                                '$setUnion': [
-                                    '$' + adapter_field_name,
-                                    '$' + tags_field_name
-                                ]
-                            },
-                            'as': 'i',
-                            'cond': {
-                                '$ne': ['$$i', []]
-                            }
-                        }
-                    }
-                }
-            },
-            {
-                '$group': {
-                    '_id': '$field',
-                    'value': {
-                        '$sum': 1
-                    }
-                }
-            },
-            {
-                '$project': {
-                    'value': 1,
-                    'name': {
-                        '$cond': {
-                            'if': {
-                                '$eq': [
-                                    '$_id', []
-                                ]
-                            },
-                            'then': ['No Value'],
-                            'else': '$_id'
-                        }
-                    }
-                }
-            },
-            {
-                '$sort': {
-                    'value': -1
-                }
-            }
-        ], allowDiskUse=True)
-        base_filter = f'({base_view["query"]["filter"]}) and ' if base_view['query']['filter'] else ''
-        data = []
-        all_values = defaultdict(int)
-        for item in aggregate_results:
-            for value in set(gui_helpers.flatten_list(item['name'])):
-                all_values[value] += item['value']
-        for field_value, field_count in all_values.items():
-            if field_value == 'No Value':
-                if not include_empty or value_filter:
-                    continue
-                query_filter = f'not ({field_name} == exists(true))'
-            elif isinstance(field_value, str):
-                if value_filter.lower() not in field_value.lower():
-                    continue
-                query_filter = f'{field_name} == "{field_value}"'
-            elif isinstance(field_value, bool):
-                query_filter = f'{field_name} == {str(field_value).lower()}'
-            elif isinstance(field_value, int):
-                query_filter = f'{field_name} == {field_value}'
-            elif isinstance(field_value, datetime):
-                query_filter = f'{field_name} == date("{field_value}")'
-            else:
-                # you can't search by other types, currently unsupported
-                query_filter = ''
-
-            data.append({
-                'name': field_value,
-                'value': field_count,
-                'module': entity.value,
-                'view': {
-                    **base_view,
-                    'query': {
-                        'filter': f'{base_filter}{query_filter}'
-                    }
-                }
-            })
-        data = sorted(data, key=lambda x: x['value'], reverse=True)
-        if chart_view == ChartViews.pie:
-            total = sum([x['value'] for x in data])
-            return [{'name': view or 'ALL', 'value': 0}, *[{**x, 'value': x['value'] / total} for x in data]]
-        return data
-
-    def _fetch_chart_abstract(self, _: ChartViews, entity: EntityType, view, field, func, for_date=None):
-        """
-        One piece of data that is the calculation of given func on the values of given field, returning from
-                 given view's query
-        """
-        # Query and data collections according to given module
-        data_collection = self._entity_db_map[entity]
-        field_name = field['name']
-        splitted = field_name.split('.')
-
-        additional_elemmatch_data = {}
-
-        if splitted[0] == SPECIFIC_DATA:
-            processed_field_name = '.'.join(splitted[1:])
-        elif splitted[0] == ADAPTERS_DATA:
-            processed_field_name = 'data.' + '.'.join(splitted[2:])
-            additional_elemmatch_data = {
-                PLUGIN_NAME: splitted[1]
-            }
-        else:
-            raise Exception(f'Can\'t handle this field {field_name}')
-
-        adapter_field_name = 'adapters.' + processed_field_name
-        tags_field_name = 'tags.' + processed_field_name
-
-        base_view = {'query': {'filter': ''}}
-        base_query = {
-            '$or': [
-                {
-                    'adapters': {
-                        '$elemMatch': {
-                            processed_field_name: {
-                                '$exists': True
-                            },
-                            **additional_elemmatch_data
-                        }
-                    }
-                },
-                {
-                    'tags': {
-                        '$elemMatch': {
-                            processed_field_name: {
-                                '$exists': True
-                            },
-                            **additional_elemmatch_data
-                        }
-                    }
-                }
-            ]
-        }
-        if view:
-            base_view = self._find_filter_by_name(entity, view)
-            if not base_view or not base_view.get('query'):
-                return None
-            base_query = {
-                '$and': [
-                    parse_filter(base_view['query']['filter']),
-                    base_query
-                ]
-            }
-            base_view['query']['filter'] = f'({base_view["query"]["filter"]}) and ' if view else ''
-
-        field_compare = 'true' if field['type'] == 'bool' else 'exists(true)'
-        if field['type'] in ['number', 'integer']:
-            field_compare = f'{field_compare} and {field["name"]} > 0'
-        base_view['query']['filter'] = f'{base_view["query"]["filter"]}{field["name"]} == {field_compare}'
-        if for_date:
-            # If history requested, fetch from appropriate historical db
-            data_collection = self._historical_entity_views_db_map[entity]
-            base_query = {
-                '$and': [
-                    base_query, {
-                        'accurate_for_datetime': for_date
-                    }
-                ]
-            }
-        results = data_collection.find(base_query, projection={
-            adapter_field_name: 1,
-            tags_field_name: 1,
-            f'adapters.{PLUGIN_NAME}': 1,
-            f'tags.{PLUGIN_NAME}': 1
-        })
-        count = 0
-        sigma = 0
-        for item in results:
-            field_values = gui_helpers.find_entity_field(convert_db_entity_to_view_entity(item, ignore_errors=True),
-                                                         field_name)
-            if not field_values or (isinstance(field_values, list) and all(not val for val in field_values)):
-                continue
-            if ChartFuncs[func] == ChartFuncs.count:
-                count += 1
-                continue
-            if isinstance(field_values, list):
-                count += len(field_values)
-                sigma += sum(field_values)
-            else:
-                count += 1
-                sigma += field_values
-
-        if not count:
-            return [{'name': view, 'value': 0, 'view': base_view, 'module': entity.value}]
-        name = f'{func} of {field["title"]} on {view or "ALL"} results'
-        if ChartFuncs[func] == ChartFuncs.average:
-            return [
-                {'name': name, 'value': (sigma / count), 'schema': field, 'view': base_view, 'module': entity.value}]
-        return [{'name': name, 'value': count, 'view': base_view, 'module': entity.value}]
-
-    def _fetch_chart_timeline(self, _: ChartViews, views, timeframe, intersection=False):
-        """
-        Fetch and count results for each view from given views, per day in given timeframe.
-        Timeframe can be either:
-        - Absolute - defined by a start and end date to fetch between
-        - Relative - defined by a unit (days, weeks, months, years) and an amount, to fetch back from now
-        Create for each view a sequence of points that represent the count for each day in the range.
-
-        :param views: List of view for which to fetch results over timeline
-        :param dateFrom: Date to start fetching from
-        :param dateTo: Date to fetch up to
-        :return:
-        """
-        date_from, date_to = self._parse_range_timeline(timeframe)
-        if not date_from or not date_to:
-            return None
-
-        scale = [(date_from + timedelta(i)) for i in range((date_to - date_from).days + 1)]
-        date_ranges = list(_get_date_ranges(date_from, date_to))
-        if intersection:
-            lines = list(self._intersect_timeline_lines(views, date_ranges))
-        else:
-            lines = list(self._compare_timeline_lines(views, date_ranges))
-        if not lines:
-            return None
-
-        return [
-            ['Day'] + [{
-                'label': line['title'],
-                'type': 'number'
-            } for line in lines],
-            *[[day] + [line['points'].get(day.strftime('%m/%d/%Y')) for line in lines] for day in scale]
-        ]
-
-    def _parse_range_timeline(self, timeframe):
-        """
-        Timeframe dict includes choice of range for the timeline chart.
-        It can be absolute and include a date to start and to end the series,
-        or relative and include a unit and count to fetch back from moment of request.
-
-        :param timeframe:
-        :return:
-        """
-        try:
-            range_type = ChartRangeTypes[timeframe['type']]
-        except KeyError:
-            logger.error(f'Unexpected timeframe type {timeframe["type"]}')
-            return None, None
-        if range_type == ChartRangeTypes.absolute:
-            logger.info(f'Gathering data between {timeframe["from"]} and {timeframe["to"]}')
-            try:
-                date_to = parse_date(timeframe['to'])
-                date_from = parse_date(timeframe['from'])
-            except ValueError:
-                logger.exception('Given date to or from is invalid')
-                return None, None
-        else:
-            logger.info(f'Gathering data from {timeframe["count"]} {timeframe["unit"]} back')
-            date_to = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
-            try:
-                range_unit = ChartRangeUnits[timeframe['unit']]
-            except KeyError:
-                logger.error(f'Unexpected timeframe unit {timeframe["unit"]} for reltaive chart')
-                return None, None
-            date_from = date_to - timedelta(days=timeframe['count'] * RANGE_UNIT_DAYS[range_unit])
-        return date_from, date_to
-
-    def _compare_timeline_lines(self, views, date_ranges):
-        for view in views:
-            if not view.get('name'):
-                continue
-            entity = EntityType(view['entity'])
-            base_view = self._find_filter_by_name(entity, view['name'])
-            if not base_view or not base_view.get('query'):
-                return
-            yield {
-                'title': view['name'],
-                'points': self._fetch_timeline_points(entity, parse_filter(base_view['query']['filter']), date_ranges)
-            }
-
-    def _intersect_timeline_lines(self, views, date_ranges):
-        if len(views) != 2 or not views[0].get('name'):
-            logger.error(f'Unexpected number of views for performing intersection {len(views)}')
-            return
-        first_entity_type = EntityType(views[0]['entity'])
-        second_entity_type = EntityType(views[1]['entity'])
-
-        # first query handling
-        base_query = {}
-        if views[0].get('name'):
-            base_view = self._find_filter_by_name(first_entity_type, views[0]['name'])['query']['filter']
-            if not base_view:
-                return
-            base_query = parse_filter(base_view)
-        yield {
-            'title': views[0]['name'],
-            'points': self._fetch_timeline_points(first_entity_type, base_query, date_ranges)
-        }
-
-        # second query handling
-        intersecting_view = self._find_filter_by_name(second_entity_type, views[1]['name'])
-        if not intersecting_view or not intersecting_view.get('query'):
-            return
-        intersecting_query = parse_filter(intersecting_view['query']['filter'])
-        if base_query:
-            intersecting_query = {
-                '$and': [
-                    base_query, intersecting_query
-                ]
-            }
-        yield {
-            'title': f'{views[0]["name"]} and {views[1]["name"]}',
-            'points': self._fetch_timeline_points(second_entity_type, intersecting_query, date_ranges)
-        }
-
-    def _fetch_timeline_points(self, entity_type: EntityType, match_query, date_ranges):
-        def aggregate_for_date_range(args):
-            range_from, range_to = args
-            return self._historical_entity_views_db_map[entity_type].aggregate([
-                {
-                    '$match': {
-                        '$and': [
-                            match_query, {
-                                'accurate_for_datetime': {
-                                    '$lte': datetime.combine(range_to, datetime.min.time()),
-                                    '$gte': datetime.combine(range_from, datetime.min.time())
-                                }
-                            }
-                        ]
-                    }
-                }, {
-                    '$group': {
-                        '_id': '$accurate_for_datetime',
-                        'count': {
-                            '$sum': 1
-                        }
-                    }
-                }
-            ])
-
-        points = {}
-        for results in self.__aggregate_thread_pool.map_async(aggregate_for_date_range, date_ranges).get():
-            for item in results:
-                # _id here is the grouping id, so in fact it is accurate_for_datetime
-                points[item['_id'].strftime('%m/%d/%Y')] = item.get('count', 0)
-        return points
 
     @rev_cached(ttl=3, key_func=lambda self: 1)
     def __lifecycle(self):
@@ -4809,7 +4082,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
                     if not query.get('name') or not query.get('entity'):
                         continue
                     entity = EntityType(query['entity'])
-                    view_filter = self._find_filter_by_name(entity, query['name'])
+                    view_filter = find_filter_by_name(entity, query['name'])
                     if view_filter:
                         query_filter = view_filter['query']['filter']
                         view_parsed = parse_filter(query_filter)

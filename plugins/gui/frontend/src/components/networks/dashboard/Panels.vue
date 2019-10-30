@@ -1,100 +1,103 @@
 <template>
   <draggable
+    v-model="orderedPanels"
     tag="transition-group"
     :animation="1000"
-    v-model="orderedPanels"
     draggable=".card__item"
     handle=".header"
     ghost-class="ghost"
     class="x-panels"
     :move="checkMove"
+  >
+    <x-card
+      v-for="(chart, chartInd) in orderedPanels"
+      :id="chart.uuid"
+      :key="chart.uuid"
+      class="card__item"
+      :draggable="true"
+      :title="chart.name"
+      :removable="!isReadOnly && hovered === chartInd"
+      :editable="!isReadOnly && hovered === chartInd && chart.user_id !== '*'"
+      :exportable="chart.metric==='segment' && hovered === chartInd"
+      @mouseenter.native="() => enterPanel(chartInd)"
+      @mouseleave.native="leavePanel"
+      @remove="() => verifyRemovePanel(chart.uuid)"
+      @edit="() => editPanel(chart)"
+      @export="() => exportCSV(chart.uuid, chart.name, chart.historical)"
     >
-      <x-card
-        v-for="(chart, chartInd) in orderedPanels"
-         class="card__item"
-        :draggable="true"
-        :id="chart.uuid"
-        :key="chart.uuid"
-        :title="chart.name"
-        :removable="!isReadOnly && hovered === chartInd"
-        :editable="!isReadOnly && hovered === chartInd && chart.user_id !== '*'"
-        :exportable="chart.metric==='segment' && hovered === chartInd"
-        @mouseenter.native="() => enterPanel(chartInd)"
-        @mouseleave.native="leavePanel"
-        @remove="() => verifyRemovePanel(chart.uuid)"
-        @edit="() => editPanel(chart)"
-        @export="() => exportCSV(chart.uuid, chart.name)"
+      <div
+        v-if="chart.metric !== 'timeline'"
+        class="card-history"
       >
-        <div
-          v-if="chart.metric !== 'timeline'"
-          class="card-history"
-        >
-          <x-historical-date
-            v-model="cardToDate[chart.uuid]"
-            :hide="hovered !== chartInd && !cardToDate[chart.uuid]"
-            @clear="clearDate(chart.uuid)"
-            @input="confirmPickDate(chart.uuid, chart.name)"
-          />
-        </div>
-        <div
-          v-if="chart.loading"
-          class="chart-spinner"
-        >
-          <md-progress-spinner
-            class="progress-spinner"
-            md-mode="indeterminate"
-            :md-stroke="3"
-            :md-diameter="25"
-          />
-          <span>Fetching data...</span>
-        </div>
-        <component
-          :is="`x-${chart.view}`"
-          v-else-if="!isChartEmpty(chart)"
-          :data="chart.data"
-          @click-one="($event) => runChartFilter(chartInd, $event)"
-          @fetch="(skip) => fetchMorePanel(chart.uuid, skip)"
+        <x-historical-date
+          :value="chart.historical"
+          :hide="hovered !== chartInd && !chart.historical"
+          @input="(selectedDate) => confirmPickDate(chart, selectedDate)"
         />
-        <div
-          v-else
-          class="no-data-found"
-        >
-          <svg-icon name="illustration/binocular" :original="true" height="50"/>
-          <div>No data found</div>
-        </div>
-      </x-card>
-      <slot name="pre"/>
-      <slot name="post" />
-      <x-card
-      :key="9999"
-        title="New Chart"
-        class="chart-new print-exclude"
-      >
-        <x-button
-          :id="newId"
-          link
-          :disabled="isReadOnly"
-          @click="addNewPanel"
-        >+</x-button>
-      </x-card>
-      <x-toast
-        v-if="message"
-        v-model="message"
+      </div>
+      <component
+        :is="`x-${chart.view}`"
+        v-if="!isChartEmpty(chart)"
+        :data="chart.data"
+        @click-one="(queryInd) => runChartFilter(chartInd, queryInd, chart.historical)"
+        @fetch="(skip) => fetchMorePanel(chart.uuid, skip, chart.historical)"
       />
-      <x-modal
-      :key="10000"
-        v-if="removed"
-        size="lg"
-        approve-text="Remove Chart"
-        @confirm="confirmRemovePanel"
-        @close="cancelRemovePanel"
+      <div
+        v-else-if="chart.loading"
+        class="chart-spinner"
       >
-        <div slot="body">
-          <div>This chart will be completely removed from the system.</div>
-          <div>Removing the chart is an irreversible action.</div>
-          <div>Do you want to continue?</div>
-        </div>
-      </x-modal>
+        <md-progress-spinner
+          class="progress-spinner"
+          md-mode="indeterminate"
+          :md-stroke="3"
+          :md-diameter="25"
+        />
+        <span>Fetching data...</span>
+      </div>
+      <div
+        v-else
+        class="no-data-found"
+      >
+        <svg-icon
+          name="illustration/binocular"
+          :original="true"
+          height="50"
+        />
+        <div>No data found</div>
+      </div>
+    </x-card>
+    <slot name="pre" />
+    <slot name="post" />
+    <x-card
+      :key="9999"
+      title="New Chart"
+      class="chart-new print-exclude"
+    >
+      <x-button
+        :id="newId"
+        link
+        :disabled="isReadOnly"
+        @click="addNewPanel"
+      >+</x-button>
+    </x-card>
+    <x-toast
+      v-if="message"
+      v-model="message"
+    />
+    <x-modal
+      v-if="removed"
+      :key="10000"
+      size="lg"
+      approve-text="Remove Chart"
+      @confirm="confirmRemovePanel"
+      @close="cancelRemovePanel"
+    >
+      <div slot="body">
+        <div>This chart will be completely removed from the system.</div>
+        <div>Removing the chart is an irreversible action.</div>
+        <div>Do you want to continue?</div>
+      </div>
+    </x-modal>
   </draggable>
 </template>
 
@@ -112,9 +115,7 @@
 
   import {mapState, mapGetters, mapMutations, mapActions} from 'vuex'
   import {
-    REMOVE_DASHBOARD_PANEL, FETCH_HISTORICAL_SAVED_CARD,
-    FETCH_CHART_SEGMENTS_CSV, FETCH_DASHBOARD_PANEL,
-    SAVE_REORDERED_PANELS
+    REMOVE_DASHBOARD_PANEL, FETCH_CHART_SEGMENTS_CSV, FETCH_DASHBOARD_PANEL, SAVE_REORDERED_PANELS
   } from '../../../store/modules/dashboard'
   import {IS_ENTITY_RESTRICTED} from '../../../store/modules/auth'
   import {UPDATE_DATA_VIEW} from '../../../store/mutations'
@@ -138,8 +139,6 @@
     },
     data () {
       return {
-        cardToDate: {},
-        cardToHistory: {},
         hovered: null,
         removed: null,
         message: '',
@@ -154,6 +153,9 @@
         },
         currentSpace (state) {
           return state.dashboard.currentSpace || state.dashboard.spaces.data.find(space => space.type === 'default').uuid
+        },
+        allowedDates (state) {
+          return state.constants.allowedDates
         }
       }),
       ...mapGetters({
@@ -188,30 +190,9 @@
         }, {})
       },
       processedPanels () {
-       return this.panels.map(chart => {
-         if(chart)
-          if (chart.metric === 'timeline' || !chart.data) return chart
-
-          let historicalCard = this.cardToHistory[chart.uuid]
-          if (!historicalCard) {
-            return chart
-          }
-          return { ...chart,
-            historical: this.cardToDate[chart.uuid],
-            data: chart.data.map(item => {
-              if (!historicalCard[item.name]) {
-                return undefined
-              }
-              return {
-                ...item,
-                value: historicalCard[item.name].value,
-              }
-            }).filter(item => item)
-          }
-        })
         // Filter out spaces without data or with hide_empty and remainder 100%
-        .filter(chart => (chart && chart.data && chart.data.length && ![0, 1].includes(chart.data[0].value))
-                || !chart.hide_empty || chart.historical)
+        return this.panels.filter(chart => (chart && chart.data && chart.data.length &&
+                ![0, 1].includes(chart.data[0].value)) || !chart.hide_empty)
       }
     },
     methods: {
@@ -220,7 +201,6 @@
       }),
       ...mapActions({
         removePanel: REMOVE_DASHBOARD_PANEL,
-        fetchHistoricalCard: FETCH_HISTORICAL_SAVED_CARD,
         fetchChartSegmentsCSV: FETCH_CHART_SEGMENTS_CSV,
         fetchDashboardPanel: FETCH_DASHBOARD_PANEL,
         saveReorderedPanels: SAVE_REORDERED_PANELS
@@ -247,7 +227,10 @@
         this.removed = chartId
       },
       confirmRemovePanel () {
-        this.removePanel({panelId: this.removed, spaceId: this.currentSpace})
+        this.removePanel({
+          panelId: this.removed,
+          spaceId: this.currentSpace
+        })
         this.removed = null
       },
       editPanel (panel) {
@@ -262,60 +245,54 @@
           }
         })
       },
-      exportCSV (panelId, panelName) {
+      exportCSV (uuid, name, historical) {
         this.fetchChartSegmentsCSV({
-          panelId: panelId,
-          chartName: panelName
+          uuid,
+          name,
+          historical
         })
       },
       cancelRemovePanel () {
         this.removed = null
       },
-      clearDate (cardId) {
-        this.cardToDate = { ...this.cardToDate, [cardId]: null }
-        this.cardToHistory = { ...this.cardToHistory, [cardId]: null }
-      },
-      confirmPickDate (cardId, cardName) {
-        let pendingDateChosen = this.cardToDate[cardId]
-        if (!pendingDateChosen) {
-          this.clearDate(cardId)
+      confirmPickDate (card, selectedDate) {
+        if (selectedDate === card.historical) {
           return
         }
-        this.fetchHistoricalCard({
-          cardId: cardId,
-          date: pendingDateChosen
-        }).then(response => {
-          if (!response.data) {
-            this.message = `No data from ${pendingDateChosen} for '${cardName}'`
-            this.clearDate(cardId)
-          } else {
-            this.cardToDate = { ...this.cardToDate }
-            this.cardToHistory = { ...this.cardToHistory, [cardId]: response.data }
-          }
+        this.fetchDashboardPanel({
+          uuid: card.uuid,
+          spaceId: this.currentSpace,
+          skip: 0,
+          limit: 100,
+          historical: selectedDate
         })
       },
-      runChartFilter (chartInd, queryInd) {
+      runChartFilter (chartInd, queryInd, historical) {
         let query = this.orderedPanels[chartInd].data[queryInd]
         if (this.isEntityRestricted(query.module) || query.view === undefined || query.view === null) {
           return
         }
-        let historical = this.cardToDate[this.processedPanels[chartInd].uuid]
         this.updateView({
           module: query.module,
-          view: historical ? { ...query.view, historical } : query.view,
+          view: historical ? {
+            ...query.view,
+            historical: this.allowedDates[query.module][historical]
+          } : query.view,
           name: this.orderedPanels[chartInd].metric === 'compare' ? query.name : undefined,
-          uuid: null,
+          uuid: null
         })
         this.$router.push({ path: query.module })
       },
       isChartEmpty(chart) {
         return (!chart.data || (chart.data.length === 0) || (chart.data.length === 1 && chart.data[0].value === 0))
       },
-      fetchMorePanel(panelId, skip) {
+      fetchMorePanel(uuid, skip, historical) {
         this.fetchDashboardPanel({
-          uuid: panelId,
+          uuid,
+          spaceId: this.currentSpace,
           skip,
-          limit: 100
+          limit: 100,
+          historical
         })
       }
     }
@@ -402,7 +379,7 @@
                 width: 100%;
             }
         }
-      .chart-spinner{
+      .chart-spinner {
         margin: 10px auto auto auto;
         width: 70%;
         padding: 10px;
@@ -413,20 +390,6 @@
           vertical-align: super;
         }
 
-        .md-progress-spinner-circle{
-          stroke: $theme-orange;
-        }
-      }
-      .chart-spinner{
-        margin: 10px auto auto auto;
-        width: 70%;
-        padding: 10px;
-        span {
-          padding-left: 5px;
-          text-transform: uppercase;
-          font-size: 20px;
-          vertical-align: super;
-        }
         .md-progress-spinner-circle{
           stroke: $theme-orange;
         }

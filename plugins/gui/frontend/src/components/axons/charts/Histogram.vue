@@ -105,7 +105,7 @@
           this.$emit('fetch', this.nextFetchFrom)
         }
         if (this.prevFetchFrom >= 0 && !this.data[this.prevFetchFrom]) {
-          this.$emit('fetch', this.prevFetchFrom - 100 + this.limit)
+          this.$emit('fetch', Math.max(1, this.prevFetchFrom - 100 + this.limit))
         }
         if (!this.data[this.dataFrom - 1]) {
           return []

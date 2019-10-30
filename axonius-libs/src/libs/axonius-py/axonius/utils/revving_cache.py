@@ -106,6 +106,9 @@ class CachedEntry:
 
 ALL_CACHES: List['RevCached'] = []
 
+# When using update_cache or clear_cache, use this as a wildcard arg to clean all matching caches
+WILDCARD_ARG = object()
+
 
 class RevCached:
     """
@@ -246,39 +249,54 @@ class RevCached:
             self.__initial_values[key] = cache_entry
             return cache_entry.get_cached_result()
 
-    def trigger_cache_update_now(self, args: List = None):
+    def get_all_values(self, args: List = None) -> Iterable[CachedEntry]:
+        """
+        Get all CachedEntries from the args list
+        """
+        initial_values = dict(self.__initial_values)
+        if not args:
+            yield from initial_values.values()
+            return
+
+        if WILDCARD_ARG not in args:
+            yield initial_values.get(self.__get_key_from_args(*args))
+            return
+
+        for initial_value in initial_values.values():
+            if all(v is WILDCARD_ARG or (len(initial_value.args) >= index and v == initial_value.args[index])
+                   for index, v
+                   in enumerate(args)):
+                yield initial_value
+
+    def trigger_cache_update_now(self, args: List = None) -> int:
         """
         Triggers a cache update right now, asynchronously
         :param args: If not none, only update that specific parameter set. Otherwise, updates all values
+        :return: The amount of cache entries affected
         """
-        initial_values = dict(self.__initial_values)
-        if args is not None:
-            to_process = [initial_values.get(self.__get_key_from_args(*args))]
-        else:
-            to_process = initial_values.values()
-
-        for cached_entry in to_process:
+        counter = 0
+        for cached_entry in self.get_all_values(args):
             if cached_entry:
                 cached_entry.job.modify(next_run_time=datetime.now())
+                counter += 1
 
         plugin_base_instance().cached_operation_scheduler.wakeup()
+        return counter
 
-    def sync_clean_cache(self, args: List = None):
+    def sync_clean_cache(self, args: List = None) -> int:
         """
         Triggers a cache flush synchronously
         :param args: If not none, only update that specific parameter set. Otherwise, updates all values
+        :return: The amount of cache entries affected
         """
-        initial_values = dict(self.__initial_values)
-        if args is not None:
-            to_clear = [initial_values.get(self.__get_key_from_args(*args))]
-        else:
-            to_clear = initial_values.values()
-
-        for cached_entry in to_clear:
+        counter = 0
+        for cached_entry in self.get_all_values(args):
             if cached_entry:
                 cached_entry.event.clear()
+                counter += 1
 
         self.trigger_cache_update_now(args)
+        return counter
 
     def call_uncached(self, *args, **kwargs):
         """

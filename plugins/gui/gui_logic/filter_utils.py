@@ -1,7 +1,5 @@
 import logging
 
-from axonius.entities import EntityType
-
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
@@ -30,17 +28,3 @@ def filter_by_name(names, additional_filter=None):
     if additional_filter and additional_filter != {}:
         return {'$and': [base_names, additional_filter]}
     return base_names
-
-
-def find_filter_by_name(self, entity_type: EntityType, name):
-    """
-    From collection of views for given entity_type, fetch that with given name.
-    Return it's filter, or None if no filter.
-    """
-    if not name:
-        return None
-    view_doc = self.gui_dbs.entity_query_views_db_map[entity_type].find_one({'name': name})
-    if not view_doc:
-        logger.info(f'No record found for view {name}')
-        return None
-    return view_doc['view']

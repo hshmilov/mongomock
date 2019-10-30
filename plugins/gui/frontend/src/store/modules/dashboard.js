@@ -29,7 +29,6 @@ export const SAVE_REORDERED_PANELS = 'SAVE_REORDERED_PANELS'
 export const UPDATE_DASHBOARDS_ORDER = 'UPDATE_DASHBOARDS_ORDER'
 export const ADD_NEW_PANEL = 'ADD_NEW_PANEL'
 
-export const FETCH_HISTORICAL_SAVED_CARD = 'FETCH_HISTORICAL_SAVED_CARD'
 export const FETCH_DASHBOARD_FIRST_USE = 'FETCH_DASHBOARD_FIRST_USE'
 export const UPDATE_DASHBOARD_FIRST_USE = 'UPDATE_DASHBOARD_FIRST_USE'
 export const FETCH_CHART_SEGMENTS_CSV = 'FETCH_CHART_SEGMENTS_CSV'
@@ -106,6 +105,7 @@ export const dashboard = {
 					let dataTail = item['data_tail']
 					if (payload.skip + index < state.panels.data.length) {
 						let oldItem = state.panels.data[payload.skip + index]
+						if (oldItem.historical) return
 						if (!oldItem.data.length) {
 							if (dataTail && dataTail.length) {
 								item.data[item.count - 1] = null
@@ -132,30 +132,35 @@ export const dashboard = {
 				state.panels.data = [...state.panels.data]
 			}
 		},
-        [ADD_NEW_PANEL](state, payload) {
-            let newPanel = {
-                uuid: payload.panel_id,
-                name: payload.name,
-                space: payload.space,
-                data: [],
-                loading: true
-            }
-            state.panels.data.push(newPanel)
-        },
+		[ADD_NEW_PANEL](state, payload) {
+				let newPanel = {
+						uuid: payload.panel_id,
+						name: payload.name,
+						space: payload.space,
+						data: [],
+						loading: true
+				}
+				state.panels.data.push(newPanel)
+		},
 		[UPDATE_DASHBOARD_PANEL](state, payload) {
-			if (!payload.data) {
-				return
-			}
 			let panel = state.panels.data.find(panel => panel.uuid === payload.uuid)
 			if (!panel) {
 				return
 			}
-			if (!payload.data.length) {
+			panel.loading = payload.fetching
+			if (payload.historical !== panel.historical) {
 				panel.data = []
-				panel.loading = payload.loading
-			} else {
-				panel.data.splice(payload.skip, payload.data.length, ...payload.data)
-				panel.loading = false
+				panel.historical = payload.historical
+			}
+			const response = payload.data
+			if (!response || !response.data.length) {
+				return
+			}
+			panel.data.splice(payload.skip, response.data.length, ...response.data)
+			const dataTail = response['data_tail']
+			if (dataTail && dataTail.length) {
+				panel.data[response.count - 1] = null
+				panel.data.splice(response.count - dataTail.length, dataTail.length, ...dataTail)
 			}
 		},
 		[UPDATE_ADDED_SPACE](state, payload) {
@@ -235,8 +240,13 @@ export const dashboard = {
 			})
 		},
 		[FETCH_DASHBOARD_PANEL]({ dispatch, commit }, payload) {
+			let rule = `dashboards/${payload.spaceId}/panels/${payload.uuid}?skip=${payload.skip}&limit=${payload.limit}`
+			if (payload.historical) {
+				const encodedDate = encodeURI(payload.historical)
+				rule = `${rule}&date_to=${encodedDate} 23:59:59&date_from=${encodedDate}`
+			}
 			return dispatch(REQUEST_API, {
-				rule: `dashboards/${payload.spaceId}/panels/${payload.uuid}?skip=${payload.skip}&limit=${payload.limit}`,
+				rule,
 				type: UPDATE_DASHBOARD_PANEL,
 				payload
 			})
@@ -324,8 +334,11 @@ export const dashboard = {
 					commit(UPDATE_DASHBOARD_PANEL, {
 						uuid: payload.panelId,
 						skip: 0,
-						data: [],
-                        loading: true
+						historical: null,
+						data: {
+							data: []
+						},
+						loading: true
 					})
 					dispatch(FETCH_DASHBOARD_PANELS)
 				}
@@ -345,22 +358,22 @@ export const dashboard = {
 				}
 			})
 		},
-		[FETCH_HISTORICAL_SAVED_CARD]({ dispatch }, { cardId, date }) {
-			return dispatch(REQUEST_API, {
-				rule: `saved_card_results/${encodeURI(cardId)}?date_to=${encodeURI(date)} 23:59:59&date_from=${encodeURI(date)}`
-			})
-		},
 		[FETCH_DASHBOARD_FIRST_USE]({ dispatch }) {
 			return dispatch(REQUEST_API, {
 				rule: 'dashboard/first_use',
 				type: UPDATE_DASHBOARD_FIRST_USE
 			})
 		},
-		[FETCH_CHART_SEGMENTS_CSV]({ state, dispatch }, { panelId, chartName }) {
+		[FETCH_CHART_SEGMENTS_CSV]({ dispatch }, { uuid, name, historical }) {
+			let rule = `dashboards/panels/${uuid}/csv`
+			if (historical) {
+				const encodedDate = encodeURI(historical)
+				rule = `${rule}?date_to=${encodedDate} 23:59:59&date_from=${encodedDate}`
+			}
 			return dispatch(REQUEST_API, {
-				rule: `dashboards/panels/${panelId}/csv`,
+				rule,
 			}).then((response) => {
-				downloadFile('csv', response, chartName)
+				downloadFile('csv', response, name)
 			})
 		}
 	}
