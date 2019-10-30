@@ -2,7 +2,6 @@ import glob
 import importlib
 import inspect
 import os
-import random
 import subprocess
 import sys
 import time
@@ -22,6 +21,7 @@ from scripts.instances.network_utils import (get_encryption_key,
                                              restore_master_connection, get_weave_subnet_ip_range)
 from services import adapters, plugins, standalone_services
 from services.axon_service import TimeoutException
+from services.plugin_service import AdapterService, PluginService
 from services.plugins.aggregator_service import AggregatorService
 from services.plugins.core_service import CoreService
 from services.plugins.execution_service import ExecutionService
@@ -363,11 +363,11 @@ class AxoniusService:
         return getattr(module, ' '.join(name.lower().split('_')).title().replace(' ', '') + 'Service')()
 
     @classmethod
-    def get_plugin(cls, name):
+    def get_plugin(cls, name) -> PluginService:
         return cls._get_docker_service('plugins', name)
 
     @classmethod
-    def get_adapter(cls, name):
+    def get_adapter(cls, name) -> AdapterService:
         return cls._get_docker_service('adapters', name)
 
     @classmethod
@@ -430,7 +430,8 @@ class AxoniusService:
                 if service.should_register_unique_dns:
                     service.register_unique_dns()
                 return None
-            except Exception:
+            except Exception as e:
+                print(e)
                 return service
 
         with ThreadPool(5) as pool:

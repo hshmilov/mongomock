@@ -285,7 +285,13 @@ class PluginBase(Configurable, Feature, ABC):
     # This is effectively a singleton anyway
     Instance = None
 
+    # Use the data we have from the core.
+    db_host = 'mongodb://mongo.axonius.local:27017'
+    db_user = 'ax_user'
+    db_password = 'ax_pass'
+
     # pylint: disable=too-many-branches
+    # pylint: disable=too-many-locals
     # pylint: disable=too-many-statements
     def __init__(self, config_file_path: str, *args, core_data=None, requested_unique_plugin_name=None, **kwargs):
         """ Initialize the class.
@@ -298,13 +304,12 @@ class PluginBase(Configurable, Feature, ABC):
         """
         print(f'{datetime.now()} Hello docker from {type(self)}')
 
+        self.mongo_client = MongoClient(self.db_host, replicaSet='axon-cluster', retryWrites=True,
+                                        username=self.db_user, password=self.db_password,
+                                        localthresholdms=1000)
+
         PluginBase.Instance = self
         super().__init__(*args, **kwargs)
-
-        # Use the data we have from the core.
-        self.db_host = 'mongodb://mongo.axonius.local:27017'
-        self.db_user = 'ax_user'
-        self.db_password = 'ax_pass'
 
         # Basic configurations concerning axonius-libs. This will be changed by the CI.
         # No need to put such a small thing in a version.ini file, the CI changes this string everywhere.
@@ -324,7 +329,7 @@ class PluginBase(Configurable, Feature, ABC):
         self.plugin_unique_name = None
         self.api_key = None
         self.node_id = os.environ.get(NODE_ID_ENV_VAR_NAME, None)
-        self.__mongo_client = None
+        self.core_configs_collection = self._get_db_connection()[CORE_UNIQUE_NAME]['configs']
 
         # MyDeviceAdapter things.
         self._entity_adapter_fields = {entity_type: {
@@ -360,6 +365,22 @@ class PluginBase(Configurable, Feature, ABC):
             # We might have api_key but not have a unique plugin name.
             pass
 
+        if not self.plugin_unique_name and self.node_id:
+            # find if we had been quickly registered
+            ourself = self.core_configs_collection.find_one({
+                NODE_ID: self.node_id,
+                PLUGIN_NAME: self.plugin_name
+            })
+            if ourself:
+                print('found quick registered info')
+                self.plugin_unique_name = ourself[PLUGIN_UNIQUE_NAME]
+                self.api_key = ourself['api_key']
+                if 'registration' not in self.temp_config:
+                    self.temp_config['registration'] = {}
+                self.temp_config['registration'][PLUGIN_UNIQUE_NAME] = self.plugin_unique_name
+                self.temp_config['registration']['api_key'] = self.api_key
+                self.temp_config['registration'][NODE_ID] = self.node_id
+
         if requested_unique_plugin_name is not None:
             if self.plugin_unique_name != requested_unique_plugin_name:
                 self.plugin_unique_name = requested_unique_plugin_name
@@ -367,7 +388,7 @@ class PluginBase(Configurable, Feature, ABC):
         if self.plugin_unique_name:
             # we might have a wrong node_id, according to
             # https://axonius.atlassian.net/browse/AX-4606
-            db_node_id = self._get_db_connection()[CORE_UNIQUE_NAME]['configs'].find_one({
+            db_node_id = self.core_configs_collection.find_one({
                 PLUGIN_UNIQUE_NAME: self.plugin_unique_name
             }, projection={
                 NODE_ID: True
@@ -518,8 +539,6 @@ class PluginBase(Configurable, Feature, ABC):
             EntityType.Devices: gui_db_connection['device_views'],
         })
         del gui_db_connection
-
-        self.core_configs_collection = self._get_db_connection()[CORE_UNIQUE_NAME]['configs']
 
         # Reports collections
         reports_db = self._get_db_connection()[REPORTS_PLUGIN_NAME]
@@ -1383,11 +1402,7 @@ class PluginBase(Configurable, Feature, ABC):
 
         :return: MongoClient
         """
-        if not self.__mongo_client:
-            self.__mongo_client = MongoClient(self.db_host, replicaSet='axon-cluster', retryWrites=True,
-                                              username=self.db_user, password=self.db_password,
-                                              localthresholdms=1000)
-        return self.__mongo_client
+        return self.mongo_client
 
     def _get_collection(self, collection_name, db_name=None) -> Collection:
         """

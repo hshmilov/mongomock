@@ -1,3 +1,4 @@
+import importlib
 import json
 import os
 import shlex
@@ -5,17 +6,21 @@ import subprocess
 import sys
 import time
 from contextlib import contextmanager
-from typing import Dict
+from pathlib import Path
+from typing import Dict, Type
 
 import gridfs
 import requests
+from axonius.adapter_base import AdapterBase
+
 from bson import ObjectId
 from pymongo.collection import Collection
 from retrying import retry
 
 from axonius.config_reader import (AdapterConfig, PluginConfig,
                                    PluginVolatileConfig)
-from axonius.consts.plugin_consts import CONFIGURABLE_CONFIGS_COLLECTION, PLUGIN_UNIQUE_NAME, CORE_UNIQUE_NAME, LIBS_PATH
+from axonius.consts.plugin_consts import CONFIGURABLE_CONFIGS_COLLECTION, PLUGIN_UNIQUE_NAME, CORE_UNIQUE_NAME, \
+    PLUGIN_NAME, NODE_ID, LIBS_PATH
 from axonius.consts.system_consts import AXONIUS_DNS_SUFFIX, WEAVE_NETWORK, WEAVE_PATH
 from axonius.entities import EntityType
 from axonius.plugin_base import VOLATILE_CONFIG_PATH
@@ -386,6 +391,85 @@ class AdapterService(PluginService):
     @property
     def adapter_name(self):
         return self.service_name[:-len('_adapter')]
+
+    def quick_register(self):
+        """
+        Performs a registration of this adapter without raising it
+        """
+        # Makes the logs dir for later
+        Path(self.log_dir).mkdir(exist_ok=True)
+
+        node_id = self.node_id
+
+        additional_data = {}
+        found_document = self.core_configs_collection.find_one({
+            PLUGIN_NAME: self.plugin_name,
+            NODE_ID: {
+                # we want to fix all plugins with the given node_id
+                # in some cases, node_id might have a leading exclamation mark, and we want to catch it too
+                '$in': [node_id, f'!{node_id}']
+            }
+        })
+        if found_document:
+            # if this node_id&plugin_name exists, then re-register with the appropriate information
+            print(f'Already registered as {found_document[PLUGIN_UNIQUE_NAME]}')
+            additional_data[PLUGIN_UNIQUE_NAME] = found_document[PLUGIN_UNIQUE_NAME]
+            additional_data['api_key'] = found_document['api_key']
+
+        del found_document
+
+        # Importing the actual python class for the plugin
+        adapter_module = importlib.import_module(f'adapters.{self.package_name}.service')
+        adapter_class: Type[AdapterBase] = getattr(adapter_module, self.service_class_name)
+
+        class Empty:
+            pass
+
+        # Initializing an instance of the class without calling the constructor
+        empty_instance: AdapterBase = Empty()
+        empty_instance.__class__ = adapter_class
+
+        # override internal DB client
+        empty_instance.mongo_client = self.db.client
+
+        # First, verify we have the schema and don't fail on getting it
+        clients_schema = empty_instance._clients_schema()
+
+        # Second, try to perform a registration with core, so it will actually show up in the list of adapters
+        doc = {
+            PLUGIN_NAME: self.plugin_name,
+            'plugin_type': empty_instance.plugin_type,
+            'plugin_subtype': empty_instance.plugin_subtype.value,
+            'is_debug': False,
+            'supported_features': list(empty_instance._Feature__supported_features()),
+            NODE_ID: node_id,
+            'quick_register': True,  # Implies this adapter isn't actually up,
+            **additional_data
+        }
+        response = self.core.perform_quick_register(doc)
+        response.raise_for_status()
+
+        response_dict: dict = response.json()
+        del response
+
+        plugin_unique_name = response_dict[PLUGIN_UNIQUE_NAME]
+        print(f'Quick registered to {plugin_unique_name}')
+        empty_instance.plugin_unique_name = plugin_unique_name
+
+        adapter_db = self.db.client[plugin_unique_name]
+
+        adapter_db['adapter_schema'].replace_one({
+            'adapter_name': plugin_unique_name
+        }, {
+            'adapter_name': plugin_unique_name,
+            'adapter_version': '%version%',  # leftover
+            'schema': clients_schema
+        }, upsert=True)
+
+        # Insert configurable to DB
+        # If this fails, we need to actually raise the adapter
+        print('Adding configurable')
+        empty_instance._update_schema()
 
     def add_client(self, client_details):
         return self.clients(client_details)

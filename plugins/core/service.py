@@ -545,6 +545,7 @@ class CoreService(Triggerable, PluginBase, Configurable):
             plugin_is_debug = data.get('is_debug', False)
             node_id = data[NODE_ID]
             node_init_name = data.get(NODE_INIT_NAME)
+            quick_register = data.get('quick_register')
         except KeyError:
             logger.exception('Data is missing on register POST request. Registration Failed!')
             logger.info(f'data: {data}')
@@ -583,7 +584,13 @@ class CoreService(Triggerable, PluginBase, Configurable):
                             if plugin_unique_name != HEAVY_LIFTING_PLUGIN_NAME:
                                 logger.warning(
                                     f"Already have instance of {plugin_unique_name}, re-registration detected")
-
+                            self.core_configs_collection.update_one({
+                                PLUGIN_UNIQUE_NAME: plugin_unique_name
+                            }, {
+                                '$set': {
+                                    'status': 'up'
+                                }
+                            })
                             self.online_plugins[plugin_unique_name] = relevant_doc
                             return jsonify(relevant_doc)
             else:
@@ -603,7 +610,7 @@ class CoreService(Triggerable, PluginBase, Configurable):
                     'db_user': plugin_user,
                     'db_password': plugin_password,
                     'last_seen': datetime.utcnow(),
-                    'status': 'up',
+                    'status': 'down' if quick_register else 'up',
                     'hidden': False,
                     NODE_ID: node_id
                 }
@@ -628,10 +635,13 @@ class CoreService(Triggerable, PluginBase, Configurable):
             # This time it must work since we entered the needed document
             relevant_doc = self._get_config_by_plugin_unique_name(plugin_unique_name)
 
-            self.online_plugins[plugin_unique_name] = relevant_doc
+            if not quick_register:
+                self.online_plugins[plugin_unique_name] = relevant_doc
+
             del relevant_doc['_id']  # We dont need the '_id' field
             self.did_adapter_registered = True
-            logger.info("Plugin {0} registered successfully!".format(relevant_doc[PLUGIN_UNIQUE_NAME]))
+            logger.info("Plugin {0} registered successfully{1}!".format(relevant_doc[PLUGIN_UNIQUE_NAME],
+                                                                        ' quickly' if quick_register else ''))
             logger.debug(relevant_doc)
             return jsonify(relevant_doc)
 

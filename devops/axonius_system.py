@@ -1,7 +1,11 @@
 #!/usr/bin/env python3
 import argparse
-import os
 import sys
+import traceback
+
+from datetime import datetime
+
+from pymongo.errors import PyMongoError
 
 from conf_tools import get_customer_conf_json
 from exclude_helper import ExcludeHelper
@@ -27,7 +31,7 @@ def main(command):
 {name} [-h] {system,adapter,service} [<args>]
        {name} system [-h] {up,down,build,register} [--all] [--prod] [--restart] [--rebuild] [--hard] [--pull-base-image] [--skip]
                                 [--services [N [N ...]]] [--adapters [N [N ...]]] [--exclude [N [N ...]]]
-       {name} {adapter,service} [-h] name {up,down,build} [--prod] [--restart] [--rebuild] [--hard] [--rebuild-libs]
+       {name} {adapter,service} [-h] name {up,down,build,quick_register} [--prod] [--restart] [--rebuild] [--hard] [--rebuild-libs]
        {name} ls
 """[1:].replace('{name}', os.path.basename(__file__)))
     parser.add_argument('target', choices=['system', 'adapter', 'service', 'standalone', 'ls'])
@@ -164,12 +168,25 @@ def system_entry_point(args):
             # clear old containers if exists...
             axonius_system.remove_plugin_containers(args.adapters, args.services)
 
+        adapters_to_raise = args.adapters
+        adapters_to_register = []
+
+        # If the adapter count is low, don't bother doing quick register
+        if len(args.adapters) > 10:
+            print('Going to fast flow, only registering the adapters')
+            adapters_to_register = adapters_to_raise
+            adapters_to_raise = []
+
         # Optimization - async build first
-        axonius_system.build(True, args.adapters, args.services, [], 'prod' if args.prod else '', args.rebuild)
+        axonius_system.build(True, adapters_to_raise, args.services, [], 'prod' if args.prod else '', args.rebuild)
+        print('finished building')
+
         axonius_system.start_and_wait(mode, args.restart, hard=args.hard, skip=args.skip, expose_db=args.expose_db,
                                       env_vars=args.env, internal_service_white_list=internal_services,
                                       system_config=system_config)
-        axonius_system.start_plugins(adapter_names=args.adapters,
+        print('finished start and wait')
+
+        axonius_system.start_plugins(adapter_names=adapters_to_raise,
                                      plugin_names=args.services,
                                      standalone_services_names=standalone_services,
                                      mode=mode,
@@ -177,6 +194,38 @@ def system_entry_point(args):
                                      hard=args.hard,
                                      skip=args.skip,
                                      env_vars=args.env, system_config=system_config)
+        now = datetime.now()
+        if adapters_to_register:
+            print(f'Starting to quick register at {now}')
+        failed_quick_register_adapters = set()
+        for adapter in adapters_to_register:
+            print(f'Quick registering {adapter}')
+            try:
+                axonius_system.get_adapter(adapter).quick_register()
+            except PyMongoError as e:
+                tb = ''.join(traceback.format_tb(e.__traceback__))
+                print(f'Failed quick registering {adapter} because of {e}, {tb}')
+                print(f'Reverting to regular start due to mongo error')
+                failed_quick_register_adapters = set(adapters_to_register)
+                break
+            except Exception as e:
+                tb = ''.join(traceback.format_tb(e.__traceback__))
+                print(f'Failed quick registering {adapter} because of {e}, {tb}')
+                failed_quick_register_adapters.add(adapter)
+        if adapters_to_register:
+            print(f'Finished quick registering, took {(datetime.now() - now).total_seconds()} seconds')
+
+        if failed_quick_register_adapters:
+            # Fallback for failed quick register adapters
+            axonius_system.start_plugins(adapter_names=list(failed_quick_register_adapters),
+                                         plugin_names=args.services,
+                                         standalone_services_names=standalone_services,
+                                         mode=mode,
+                                         allow_restart=args.restart,
+                                         hard=args.hard,
+                                         skip=args.skip,
+                                         env_vars=args.env, system_config=system_config)
+
         restart_watchdogs()
     elif args.mode == 'down':
         assert not args.restart and not args.rebuild and not args.skip and not args.prod
@@ -202,6 +251,8 @@ def process_exclude_from_config(exclude):
     conf_exclude = ExcludeHelper(CUSTOMER_CONF_PATH).process_exclude(conf_exclude)
     if NODE_MARKER_PATH.exists():
         conf_exclude = ExcludeHelper(NODE_CONF_PATH).process_exclude(conf_exclude)
+    if 'linux' not in sys.platform.lower():
+        conf_exclude.append('instance_control')
     return set(conf_exclude).union(exclude)
 
 
@@ -218,7 +269,7 @@ def service_entry_point(target, args):
 {name} {target} [-h] name {up,down,build} [--prod] [--restart] [--rebuild] [--hard] [--rebuild-libs]
 """[1:-1].replace('{name}', os.path.basename(__file__)).replace('{target}', target))
     parser.add_argument('name')
-    parser.add_argument('mode', choices=['up', 'down', 'build', 'register'])
+    parser.add_argument('mode', choices=['up', 'down', 'build', 'register', 'quick_register'])
     parser.add_argument('--prod', action='store_true', default=False, help='Prod Mode')
     parser.add_argument('--restart', action='store_true', default=False, help='Restart container')
     parser.add_argument('--rebuild', action='store_true', default=False, help='Rebuild Image')
@@ -274,7 +325,11 @@ def service_entry_point(target, args):
     if is_demo_instance():
         args.env.append(AXONIUS_MOCK_DEMO_ENV_VAR)
 
-    if args.mode == 'up':
+    if args.mode == 'quick_register':
+        for adapter in adapters:
+            print(f'Registering {adapter}')
+            axonius_system.get_adapter(adapter).quick_register()
+    elif args.mode == 'up':
         print(f'Starting {args.name}')
         axonius_system.start_plugins(adapters, services, standalone_services, 'prod' if args.prod else '',
                                      args.restart, args.rebuild, args.hard, env_vars=args.env,

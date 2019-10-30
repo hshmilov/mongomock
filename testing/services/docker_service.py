@@ -278,12 +278,22 @@ else:
                 env_variables.extend(['--env', env])
 
         env_variables.extend(['--env', 'DOCKER=true'])
-        node_id_path = Path(
-            os.path.abspath(os.path.join(self.cortex_root_dir, AXONIUS_SETTINGS_DIR_NAME, NODE_ID_FILENAME)))
-        if node_id_path.is_file():
-            env_variables.extend(['--env', f'{NODE_ID_ENV_VAR_NAME}={node_id_path.read_text().strip()}'])
+        node_id = self.node_id
+        if node_id:
+            env_variables.extend(['--env', f'{NODE_ID_ENV_VAR_NAME}={node_id}'])
 
         return env_variables
+
+    @property
+    def node_id(self) -> str:
+        """
+        Returns the node_id from the NODE_ID_FILENAME, or None if it doesn't exist
+        """
+        node_id_path = Path(os.path.abspath(os.path.join(self.cortex_root_dir,
+                                                         AXONIUS_SETTINGS_DIR_NAME, NODE_ID_FILENAME)))
+        if node_id_path.is_file():
+            return node_id_path.read_text().strip()
+        return None
 
     # pylint: disable=arguments-differ
     def start(self,

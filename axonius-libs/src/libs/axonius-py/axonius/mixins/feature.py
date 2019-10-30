@@ -1,6 +1,7 @@
 from abc import ABC, abstractclassmethod
 
 import itertools
+from typing import Set
 
 
 class Feature(ABC):
@@ -27,7 +28,7 @@ class Feature(ABC):
             yield from cls.__recurse_tree(base)
 
     @classmethod
-    def __supported_features(cls):
+    def __supported_features(cls) -> Set[str]:
         """
         Calculates all the features of the current class by recursing into all base classes
         :return:

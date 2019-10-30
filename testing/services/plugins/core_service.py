@@ -3,7 +3,6 @@ import datetime
 from collections import defaultdict
 import traceback
 from multiprocessing.pool import ThreadPool
-from pathlib import Path
 from threading import Lock
 
 import requests
@@ -11,8 +10,8 @@ from pymongo.collection import Collection
 
 from axonius.consts.system_consts import WEAVE_NETWORK
 from axonius.consts.plugin_consts import CONFIGURABLE_CONFIGS_COLLECTION, GUI_PLUGIN_NAME, \
-    AXONIUS_SETTINGS_DIR_NAME, GUI_SYSTEM_CONFIG_COLLECTION, NODE_ID, PLUGIN_NAME, \
-    PLUGIN_UNIQUE_NAME, CORE_UNIQUE_NAME, NODE_ID_FILENAME
+    AXONIUS_SETTINGS_DIR_NAME, GUI_SYSTEM_CONFIG_COLLECTION, NODE_ID, PLUGIN_NAME,\
+    PLUGIN_UNIQUE_NAME, CORE_UNIQUE_NAME
 from axonius.consts.adapter_consts import ADAPTER_PLUGIN_TYPE
 from axonius.consts.core_consts import CORE_CONFIG_NAME
 from axonius.entities import EntityType
@@ -128,15 +127,9 @@ class CoreService(PluginService, UpdatablePluginMixin):
         print('Upgrade to schema 3')
         # This makes the strong assumption that this deployment of axonius has only a master and no nodes
 
-        try:
-            node_id_file_path = os.path.abspath(os.path.join(self.cortex_root_dir,
-                                                             AXONIUS_SETTINGS_DIR_NAME,
-                                                             NODE_ID_FILENAME))
-            print(f'Reading node_id from {node_id_file_path}')
-            node_id: str = Path(node_id_file_path).read_text().strip()
-            del node_id_file_path
-        except Exception as e:
-            print(f'Core is not registered, nothing to do here, {e}')
+        node_id = self.node_id
+        if not node_id:
+            print(f'Core is not registered, nothing to do here')
             self.db_schema_version = 3
             return
 
@@ -171,6 +164,13 @@ class CoreService(PluginService, UpdatablePluginMixin):
             print(f'Exception while upgrading core db to version 3. Details: {e}')
             traceback.print_exc()
             raise
+
+    def perform_quick_register(self, doc: dict) -> requests.Response:
+        """
+        Performs a POST register call to Core
+        :param doc: the doc to transfer
+        """
+        return requests.post(f'{self.req_url}/register', json=doc)
 
     def _update_schema_version_4(self):
         # https://axonius.atlassian.net/browse/AX-4732
