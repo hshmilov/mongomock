@@ -286,12 +286,6 @@ class ShodanAdapter(ShodanExecutionMixIn, ScannerAdapterBase):
                 except Exception:
                     logger.warning(f'Problem with fetching Shodan Device for {ip_str}', exc_info=True)
 
-    def outside_reason_to_live(self) -> bool:
-        """
-        This adapter might be called from outside, let it live
-        """
-        return True
-
     @classmethod
     def adapter_properties(cls):
         return [AdapterProperty.Network]

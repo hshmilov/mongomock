@@ -161,12 +161,6 @@ class LinuxSshAdapter(LinuxSshExecutionMixIn, AdapterBase, Configurable):
                 'pool_size': DEFAULT_POOL_SIZE,
                 'timeout': DEFAULT_NETWORK_TIMEOUT}
 
-    def outside_reason_to_live(self) -> bool:
-        """
-        This adapter might be called from outside, let it live
-        """
-        return True
-
     def _on_config_update(self, config):
         self._md5_files_list = config['md5_files_list']
         self._pool_size = config['pool_size'] or DEFAULT_POOL_SIZE
