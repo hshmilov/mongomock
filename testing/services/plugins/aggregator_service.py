@@ -1,3 +1,7 @@
+import datetime
+from multiprocessing.pool import ThreadPool
+from threading import Lock
+
 import pymongo
 import shutil
 import traceback
@@ -59,8 +63,10 @@ class AggregatorService(PluginService, UpdatablePluginMixin):
             self.db_schema_version = 15  # self._update_schema_version_15() disabled due to a very long migration
         if self.db_schema_version < 16:
             self.db_schema_version = 16  # self._update_schema_version_16() disabled due to a very long migration
+        if self.db_schema_version < 17:
+            self._update_schema_version_17()  # self._update_schema_version_16() disabled due to a very long migration
 
-        if self.db_schema_version != 16:
+        if self.db_schema_version != 17:
             print(f'Upgrade failed, db_schema_version is {self.db_schema_version}')
 
     def __create_capped_collections(self):
@@ -812,6 +818,79 @@ class AggregatorService(PluginService, UpdatablePluginMixin):
             print(f'Exception while upgrading core db to version 16. Details: {e}')
             traceback.print_exc()
             raise
+
+    def _update_schema_version_17(self):
+        # https://axonius.atlassian.net/browse/AX-5401
+        print('Update to schema 17 - add first fetch time')
+        try:
+            self._fix_db_for_entity(EntityType.Devices)
+            self._fix_db_for_entity(EntityType.Users)
+            self.db_schema_version = 17
+        except Exception as e:
+            print(f'Exception while upgrading core db to version 16. Details: {e}')
+            traceback.print_exc()
+            raise
+
+    def _fix_db_for_entity(self, entity_type: EntityType):
+        col = self._entity_db_map[entity_type]
+        estimated_count = col.estimated_document_count()
+        start_time = datetime.datetime.now()
+        print(f'Fixing for entity {entity_type}, count is {estimated_count}, starting at {start_time}')
+
+        class Expando:
+            pass
+
+        o = Expando()
+
+        o.counter = 0
+        o.adapter_entities_counter = 0
+        lock = Lock()
+        cursor = col.find({
+            'adapters': {
+                '$elemMatch': {
+                    'data.first_fetch_time': {
+                        '$exists': False
+                    }
+                }
+            }
+        }, projection={
+            f'adapters.{PLUGIN_UNIQUE_NAME}': True,
+            'adapters.data.id': True,
+            'adapters.data.fetch_time': True,
+            '_id': True
+        })
+
+        def process_entity(entity):
+            for adapter in entity['adapters']:
+                col.update_one({
+                    '_id': entity['_id'],
+                    'adapters': {
+                        '$elemMatch': {
+                            PLUGIN_UNIQUE_NAME: adapter[PLUGIN_UNIQUE_NAME],
+                            'data.id': adapter['data']['id']
+                        }
+                    }
+                }, {
+                    '$set': {
+                        'adapters.$.data.first_fetch_time': adapter['data']['fetch_time']
+                    }
+                })
+                with lock:
+                    o.adapter_entities_counter += 1
+
+            with lock:
+                o.counter += 1
+                if o.counter % 2000 == 0:
+                    print(f'{o.counter} out of {estimated_count} completed, {(o.counter / estimated_count) * 100}%, '
+                          f'took {(datetime.datetime.now() - start_time).total_seconds()} seconds')
+
+        with ThreadPool(30) as pool:
+            pool.map(process_entity, cursor)
+
+        total_seconds = (datetime.datetime.now() - start_time).total_seconds()
+        print(f'Took {total_seconds} seconds, {o.counter / total_seconds} entities/second, '
+              f'total of {o.adapter_entities_counter} adapte entities, '
+              f'{o.adapter_entities_counter / total_seconds} adapter entities/second')
 
     @retry(wait_random_min=2000, wait_random_max=7000, stop_max_delay=60 * 3 * 1000)
     def query_devices(self, adapter_id):
