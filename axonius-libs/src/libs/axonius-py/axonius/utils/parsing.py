@@ -12,7 +12,7 @@ import re
 import string
 import sys
 from types import FunctionType
-from typing import Callable, NewType, List
+from typing import Callable, NewType, List, Iterable
 
 import pytz
 
@@ -971,6 +971,15 @@ def get_id(adapter_device):
 
 def get_hostname(adapter_device):
     return adapter_device['data'].get('hostname')
+
+
+def calculate_normalized_hostname(adapter_device) -> str:
+    hostname = get_hostname(adapter_device)
+    if hostname:
+        splitted = hostname.split('.')
+        if splitted:
+            return splitted[0].lower()
+    return None
 
 
 def get_hostname_no_localhost(adapter_device):

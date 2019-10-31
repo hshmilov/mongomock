@@ -116,13 +116,16 @@ class CorrelatorBase(Triggerable, PluginBase, Feature, ABC):
         Post data is a list of axon-ids. Otherwise, will query DB-wise.
         :return:
         """
-        if job_name != 'execute':
-            raise ValueError('The only job name supported is execute')
+        if job_name == 'execute':
+            entities_to_correlate = None
+            if post_json is not None:
+                entities_to_correlate = list(post_json)
+            return self.__correlate(entities_to_correlate)
 
-        entities_to_correlate = None
-        if post_json is not None:
-            entities_to_correlate = list(post_json)
-        self.__correlate(entities_to_correlate)
+        if job_name == 'detect_errors':
+            return self.detect_errors(should_fix_errors=bool((post_json or {}).get('should_fix_errors')))
+
+        raise ValueError('The only job name supported is execute')
 
     def get_entities_from_ids(self, entities_ids=None):
         """
@@ -168,6 +171,12 @@ class CorrelatorBase(Triggerable, PluginBase, Feature, ABC):
         logger.info(
             f'Correlator {self.plugin_unique_name} started to correlate {len(entities_to_correlate)} entities')
         self._map_correlation(entities_to_correlate)
+
+    def detect_errors(self, should_fix_errors: bool):
+        """
+        If implemented, will respond to 'detect_errors' triggers, and will detect errors on made correlations
+        :param should_fix_errors: Whether or not to try to fix the errors
+        """
 
     @property
     @abstractmethod

@@ -1,16 +1,28 @@
 import logging
+from collections import defaultdict
 from multiprocessing import cpu_count
 from multiprocessing.dummy import Pool
+from typing import List, Iterable
+
+from dataclasses import dataclass
 
 from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME, STATIC_CORRELATOR_PLUGIN_NAME
 from axonius.correlator_base import CorrelatorBase
 from axonius.devices.device_adapter import NETWORK_INTERFACES_FIELD, OS_FIELD
-from axonius.entities import EntityType
+from axonius.entities import EntityType, AdapterDeviceId
+from axonius.types.correlation import CorrelationResult, CorrelationReason
 from axonius.utils.files import get_local_config_file
+from axonius.utils.parsing import calculate_normalized_hostname
 from static_correlator.engine import (CorrelationMarker,
                                       StaticCorrelatorEngine)
 
 logger = logging.getLogger(f'axonius.{__name__}')
+
+
+@dataclass()
+class ErroneousCorrelation:
+    internal_axon_id: str
+    groups_to_split: List[List[AdapterDeviceId]]
 
 
 class StaticCorrelatorService(CorrelatorBase):
@@ -94,11 +106,13 @@ class StaticCorrelatorService(CorrelatorBase):
     def _correlate(self, entities: list, use_markers=False):
         return self._correlation_engine.correlate(entities, use_markers=use_markers,
                                                   correlation_config={'correlate_ad_sccm': self._correlate_ad_sccm})
+
     # pylint: enable=arguments-differ
 
     def _map_correlation(self, entities_to_correlate):
         """ In static correlator we want slightly different map correlation
             _correlate_mac must be called after all other correlations """
+
         # pylint: disable=stop-iteration-return
         def first_part_iter(correlation_iter):
             """ generator for the first part of the correlation """
@@ -108,6 +122,7 @@ class StaticCorrelatorService(CorrelatorBase):
                     # First marker is the start of mac correlation
                     break
                 yield result
+
         # pylint: enable=stop-iteration-return
 
         correlation_iter = self._correlate(entities_to_correlate, use_markers=True)
@@ -121,3 +136,81 @@ class StaticCorrelatorService(CorrelatorBase):
     @property
     def _entity_to_correlate(self) -> EntityType:
         return EntityType.Devices
+
+    def __find_erroneous_devices(self) -> Iterable[ErroneousCorrelation]:
+        """
+        Returns an iterator of erroneous correlations
+
+        E.g if an iterator yields ( (device1,), (device2,) ) it means we need to seperate device1, device2 into
+        its own group
+        :return:
+        """
+        cursor = self.devices_db.find({
+            'adapters.data.hostname': {
+                '$exists': True,
+            }
+        }, projection={
+            'internal_axon_id': True,
+            'adapters.data.hostname': True,
+            'adapters.data.id': True,
+            f'adapters.{PLUGIN_UNIQUE_NAME}': True,
+        })
+
+        # Loop over all potentially wrong devices
+        for axonius_device in cursor:
+
+            # map from hostnames to adapter devices
+            hostname_to_devices_map = defaultdict(list)
+            for adapter_device in axonius_device['adapters']:
+                hostname = calculate_normalized_hostname(adapter_device)
+                if hostname:
+                    hostname_to_devices_map[hostname].append(adapter_device)
+
+            # if not all non-empty hostnames are the same
+            if len(hostname_to_devices_map) > 1:
+                res = ErroneousCorrelation(axonius_device['internal_axon_id'], [])
+
+                # sorted ascending
+
+                # lambda is necessary! bug in pylint
+                # pylint: disable=unnecessary-lambda
+                sorted_by_length = sorted(hostname_to_devices_map.values(), key=lambda v: len(v))
+                # pylint: enable=unnecessary-lambda
+
+                for devices in sorted_by_length[:-1]:
+                    # yield a group of devices to separate
+                    res.groups_to_split.append([AdapterDeviceId(device[PLUGIN_UNIQUE_NAME], device['data']['id'])
+                                                for device
+                                                in devices])
+                yield res
+
+    def detect_errors(self, should_fix_errors: bool):
+        """
+        If implemented, will respond to 'detect_errors' triggers, and will detect errors on made correlations
+        :param should_fix_errors: Whether or not to try to fix the errors
+        """
+        axonius_devices_count = 0
+        for err in self.__find_erroneous_devices():
+            axonius_devices_count += 1
+            logger.info(f'Found correlation error: {err}')
+
+            if should_fix_errors:
+                for group in err.groups_to_split:
+                    for adapter_device in group:
+                        self.unlink_adapter(EntityType.Devices,
+                                            adapter_device.plugin_unique_name,
+                                            adapter_device.data_id)
+
+                    if len(group) > 1:
+                        devices_to_link = [(adapter_device.plugin_unique_name, adapter_device.data_id)
+                                           for adapter_device
+                                           in group]
+                        correlation_result = CorrelationResult(devices_to_link,
+                                                               {
+                                                                   'reason': 'Split due to error',
+                                                               },
+                                                               CorrelationReason.DetectedError)
+                        self.link_adapters(EntityType.Devices, correlation_result)
+        return {
+            'devices_cleared': axonius_devices_count
+        }

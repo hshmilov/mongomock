@@ -19,6 +19,7 @@ class CorrelationReason(Enum):
     CensysEnrichment = auto()
     HaveibeenpwnedEnrichment = auto()
     PortnoxEnrichment = auto()
+    DetectedError = auto()
 
 
 # the reason for these data types is that it allows separation of the code that figures out correlations

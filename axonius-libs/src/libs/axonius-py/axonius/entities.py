@@ -19,6 +19,15 @@ logger = logging.getLogger(f'axonius.{__name__}')
 # pylint: disable=protected-access
 
 
+@dataclass()
+class AdapterDeviceId:
+    """
+    Represents plugin_unique_name+data.id, the unique ID of an adapter device
+    """
+    plugin_unique_name: str
+    data_id: str
+
+
 class EntityTypeMeta(EnumMeta):
     # pylint: disable=W0221
     def __new__(cls, *args):

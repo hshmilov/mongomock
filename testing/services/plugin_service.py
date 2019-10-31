@@ -192,11 +192,11 @@ class PluginService(WeaveService):
         else:
             return self.fqdn in self.inspect[0]['NetworkSettings']['Networks']['axonius']['Aliases']
 
-    def trigger(self, job_name: str, blocking: bool, reschedulable: bool = True):
+    def trigger(self, job_name: str, blocking: bool, reschedulable: bool = True, post_json: dict = None):
         response = self.post(f'/trigger/{job_name}?blocking={blocking}&reschedulable={reschedulable}',
                              headers={
                                  API_KEY_HEADER: self.api_key
-                             })
+                             }, json=post_json)
         assert response.status_code == 200, \
             f'Error in response: {str(response.status_code)}, ' \
             f'{str(response.content)}'

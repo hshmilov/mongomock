@@ -46,6 +46,7 @@ def usage():
     {name} al - list all running adapters & scanners
     {name} af [plugin_unique_name] - fetches devices from a specific plugin unique name
     {name} sc - run static correlator & static users correlator
+    {name} de [dry/wet] - run static correlator to detect errors, pass 'de wet' to fix errors 
     {name} cd - run clean devices (clean db)
     {name} rr - run reports
     {name} sa - run static analysis [job_name]
@@ -106,6 +107,14 @@ def main():
         sc.correlate(True)
         print('Running static users correlator..')
         scu.correlate(True)
+
+    elif component == 'de':
+        fix_errors = action == 'wet'
+        print(f'Running detect errors on static correlator, fixing errors {fix_errors}')
+        res = sc.trigger('detect_errors', blocking=True, post_json={
+            'should_fix_errors': fix_errors
+        })
+        print(f'Response: {res.json().get("devices_cleared")} errors found')
 
     elif component == 'cd':
         if not action:
