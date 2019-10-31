@@ -202,11 +202,14 @@ CUSTOMER_CONF = json.dumps({
 })
 
 
-@retry(stop_max_attempt_number=180, wait_fixed=1000 * 20)
+@retry(stop_max_attempt_number=30, wait_fixed=1000 * 120)
 def wait_for_booted_for_production(instance: BuildsInstance):
     print('Waiting for server to be booted for production...')
     test_ready_command = f'ls -al {BOOTED_FOR_PRODUCTION_MARKER_PATH.absolute().as_posix()}'
     state = instance.ssh(test_ready_command)
+    get_log_command = f'tail {RESTART_LOG_PATH.as_posix()} -n 100'
+    restart_log_tail = instance.ssh(get_log_command)
+    print(f'Log so far: {restart_log_tail}')
     assert 'root root' in state[1]
 
 
