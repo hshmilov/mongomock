@@ -201,7 +201,7 @@ class TenableSecurityCenterAdapter(ScannerAdapterBase, Configurable):
             hostname_by_netbios = None
             logger.warning(f'Couldn\'t parse hostname from netbios name {netbios_name}')
 
-        hostname = raw_device_data.get('dnsName') or hostname_by_netbios
+        hostname = hostname_by_netbios or raw_device_data.get('dnsName')
         if not raw_device_data.get('macAddress') and not hostname and self.__drop_only_ip_devices:
             return None
         device.hostname = hostname

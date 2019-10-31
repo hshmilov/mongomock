@@ -110,7 +110,7 @@ class KaseyaAdapter(AdapterBase):
                 if not device_id:
                     logger.warning(f'Bad device ID {asset_raw}')
                     continue
-                device.id = str(device_id)
+                device.id = str(device_id) + '_' + (asset_raw.get('HostName', agent_raw.get('ComputerName')) or '')
                 device.name = asset_raw.get('AssetName')
                 device.figure_os(asset_raw.get('OSName'))
                 device.hostname = asset_raw.get('HostName', agent_raw.get('ComputerName'))

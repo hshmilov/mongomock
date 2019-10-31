@@ -76,6 +76,7 @@ class JuniperClient:
             yield ('Juniper Space Device', current_device)
 
         up_devices = [device for device in devices if device.connectionStatus == 'up']
+        logger.info(f'Number of up devices is {len(up_devices)} out of {len(devices)}')
         actions = [
             ('LLDP Device', '<get-lldp-neighbors-information/>'),
             ('ARP Device', '<get-arp-table-information/>'),

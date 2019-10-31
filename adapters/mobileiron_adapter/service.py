@@ -253,7 +253,7 @@ class MobileironAdapter(AdapterBase, Configurable):
             device.imsi = device_raw.get('imsi')
             device.device_manufacturer = device_raw.get('manufacturer')
             device.add_agent_version(agent=AGENT_NAMES.mobileiron, version=device_raw.get('clientVersion'))
-            device.user_email = device_raw.get('emailAddress')
+            device.email = device_raw.get('emailAddress')
             device.user_last_name = device_raw.get('lastName')
             device.display_name = device_raw.get('displayName')
             device.user_first_name = device_raw.get('firstName')

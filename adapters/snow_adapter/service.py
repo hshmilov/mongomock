@@ -6,6 +6,7 @@ from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.connection import RESTException
+from axonius.mixins.configurable import Configurable
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.utils.datetime import parse_date
 from axonius.utils.parsing import is_domain_valid
@@ -17,7 +18,7 @@ from snow_adapter.client_id import get_client_id
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
-class SnowAdapter(AdapterBase):
+class SnowAdapter(AdapterBase, Configurable):
     # pylint: disable=too-many-instance-attributes
     class MyDeviceAdapter(DeviceAdapter):
         organization = Field(str, 'Organization')
@@ -58,8 +59,7 @@ class SnowAdapter(AdapterBase):
             logger.exception(message)
             raise ClientConnectionException(message)
 
-    @staticmethod
-    def _query_devices_by_client(client_name, client_data):
+    def _query_devices_by_client(self, client_name, client_data):
         """
         Get all devices from a specific  domain
 
@@ -69,7 +69,7 @@ class SnowAdapter(AdapterBase):
         :return: A json with all the attributes returned from the Server
         """
         with client_data:
-            yield from client_data.get_device_list()
+            yield from client_data.get_device_list(self.__fetch_apps)
 
     @staticmethod
     def _clients_schema():
@@ -124,8 +124,8 @@ class SnowAdapter(AdapterBase):
             if device_id is None:
                 logger.warning(f'Bad device with no ID {device_raw}')
                 return None
-            device.id = str(device_id) + '_' + (device_raw.get('name') or '')
-            device.hostname = device_raw.get('name')
+            device.id = str(device_id) + '_' + (device_raw.get('Name') or '')
+            device.hostname = device_raw.get('Name')
             device.organization = device_raw.get('Organization')
             device.device_manufacturer = device_raw.get('Manufacturer')
             device.device_model = device_raw.get('Model')
@@ -153,7 +153,7 @@ class SnowAdapter(AdapterBase):
             if is_domain_valid(domain):
                 device.domain = domain
             try:
-                for nic_raw in device_raw.get('NetworkAdapters'):
+                for nic_raw in (device_raw.get('NetworkAdapters') or []):
                     try:
                         mac = nic_raw.get('MacAddress')
                         if not mac:
@@ -201,3 +201,29 @@ class SnowAdapter(AdapterBase):
     @classmethod
     def adapter_properties(cls):
         return [AdapterProperty.Assets]
+
+    @classmethod
+    def _db_config_schema(cls) -> dict:
+        return {
+            'items': [
+                {
+                    'name': 'fetch_apps',
+                    'title': 'Fetch Applications',
+                    'type': 'bool'
+                }
+            ],
+            'required': [
+                'fetch_apps'
+            ],
+            'pretty_name': 'Snow Configuration',
+            'type': 'array'
+        }
+
+    @classmethod
+    def _db_config_default(cls):
+        return {
+            'fetch_apps': False
+        }
+
+    def _on_config_update(self, config):
+        self.__fetch_apps = config['fetch_apps']

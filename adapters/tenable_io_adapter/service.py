@@ -386,9 +386,9 @@ class TenableIoAdapter(ScannerAdapterBase, Configurable):
                 netbios = get_csv_value_filtered(first_asset, 'NetBios')
 
                 if fqdn is not None:
-                    device.hostname = fqdn
-                else:
                     device.hostname = netbios
+                else:
+                    device.hostname = fqdn
 
                 os = get_csv_value_filtered(first_asset, 'OS')
                 device.figure_os(os)

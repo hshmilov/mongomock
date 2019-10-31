@@ -172,6 +172,8 @@ class FireeyeHxAdapter(AdapterBase):
                     hostname = device_raw.get("hostname")
                     device.hostname = hostname
                     domain = device_raw.get("domain")
+                    if not hostname:
+                        hostname = ''
                     if domain is not None and domain != "" and str(domain).lower()\
                             not in ["workgroup", "local", "n/a"] and domain.lower() != hostname.lower():
                         device.domain = domain

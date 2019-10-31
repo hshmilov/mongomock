@@ -199,10 +199,12 @@ class EpoAdapter(AdapterBase):
                     "EPOComputerProperties.TotalPhysicalMemory")) / (1024**3)
 
                 # Set up hard disks
-                device.add_hd(
-                    total_size=(int(device_raw.get("EPOComputerProperties.TotalDiskSpace")) / 1024),
-                    free_size=(int(device_raw.get("EPOComputerProperties.FreeDiskSpace")) / 1024)
-                )
+                if device_raw.get("EPOComputerProperties.TotalDiskSpace") and \
+                        device_raw.get("EPOComputerProperties.FreeDiskSpace"):
+                    device.add_hd(
+                        total_size=(int(device_raw.get("EPOComputerProperties.TotalDiskSpace")) / 1024),
+                        free_size=(int(device_raw.get("EPOComputerProperties.FreeDiskSpace")) / 1024)
+                    )
 
                 # Set up cpu's
                 device.total_number_of_cores = int(device_raw.get("EPOComputerProperties.NumOfCPU"))

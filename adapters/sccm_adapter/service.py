@@ -411,9 +411,7 @@ class SccmAdapter(AdapterBase, Configurable):
                     device.hostname += '.' + domain
                     device.part_of_domain = True
                     device.domain = domain
-                device.figure_os(
-                    (computer_data.get('Caption0') or '') + (device_raw.get("Operating_System_Name_and0") or '')
-                )
+                device.figure_os(device_raw.get('operatingSystem0'))
 
                 mac_total = []
                 ips_total = []

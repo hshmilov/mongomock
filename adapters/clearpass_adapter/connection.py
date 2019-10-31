@@ -37,19 +37,27 @@ class ClearpassConnection(RESTConnection):
         except Exception:
             logger.exception('Problem getting networks')
 
+    def _get_extra_data_and_yield_devices(self, devices_raw, get_extended_info, device_type):
+        if get_extended_info:
+            try:
+                async_requests = []
+                for device_raw in devices_raw:
+                    mac = device_raw.get('mac_address')
+                    async_requests.append({'name': f'insight/endpoint/mac/{mac}'})
+                for i, async_response in enumerate(self._async_get(async_requests, chunks=100)):
+                    if self._is_async_response_good(async_response):
+                        devices_raw[i]['extended_info'] = async_response
+            except Exception:
+                logger.debug(f'Problem getting extended info for')
+
+        for device_raw in devices_raw:
+            yield device_raw, device_type
+
     def _get_device_list_from_api(self, api_name, device_type, get_extended_info):
         response = self._get(api_name, url_params={'calculate_count': 'true',
                                                    'offset': 0, 'limit': DEVICE_PER_PAGE})
         devices_raw = response['_embedded']['items']
-        for device_raw in devices_raw:
-            if get_extended_info:
-                try:
-                    mac = device_raw.get('mac_address')
-                    if mac:
-                        device_raw['extended_info'] = self._get(f'insight/endpoint/mac/{mac}')
-                except Exception:
-                    logger.debug(f'Problem getting extended info for {device_raw}')
-            yield device_raw, device_type
+        yield from self._get_extra_data_and_yield_devices(devices_raw, get_extended_info, device_type)
         count = response['count']
         if count >= MAX_NUMBER_OF_DEVICES:
             logger.error(f'Error, count - {count} is larger than MAX_NUMBER_OF_DEVICES '
@@ -57,21 +65,15 @@ class ClearpassConnection(RESTConnection):
         offset = DEVICE_PER_PAGE
         # pylint: disable=R1702
         while offset < min(count, MAX_NUMBER_OF_DEVICES):
+            if offset % (DEVICE_PER_PAGE * 10) == 0:
+                logger.info(f'Got to offset {offset} out of count {count}')
             try:
                 response = self._get(api_name, url_params={'calculate_count': 'false',
                                                            'offset': offset, 'limit': DEVICE_PER_PAGE})
                 devices_raw = response['_embedded']['items']
                 if not devices_raw:
                     break
-                for device_raw in devices_raw:
-                    if get_extended_info:
-                        try:
-                            mac = device_raw.get('mac_address')
-                            if mac:
-                                device_raw['extended_info'] = self._get(f'insight/endpoint/mac/{mac}')
-                        except Exception:
-                            logger.debug(f'Problem getting extended info for {device_raw}')
-                    yield device_raw, device_type
+                yield from self._get_extra_data_and_yield_devices(devices_raw, get_extended_info, device_type)
             except Exception:
                 logger.exception(f'Problem fetching offset {offset}')
                 break

@@ -470,7 +470,7 @@ class AwsAdapter(AdapterBase, Configurable):
         user_is_password_enabled = Field(bool, 'User Is Password Enabled')
 
     class MyDeviceAdapter(DeviceOrContainerAdapter, AWSAdapter):
-        ssm_data_last_seen = Field(str)
+        ssm_data_last_seen = Field(datetime.datetime)
         aws_availability_zone = Field(str, 'Availability Zone')
         aws_device_type = Field(
             str,

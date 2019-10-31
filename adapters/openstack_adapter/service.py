@@ -95,7 +95,7 @@ class OpenstackAdapter(AdapterBase):
         raw_device, flavor, image = raw_device_data
         # add basic info
         device = self._new_device_adapter()
-        device.id = raw_device['id']
+        device.id = raw_device['id'] + '_' + (raw_device.get('name') or '')
         device.name = raw_device['name']
         device.status = raw_device['status']
 

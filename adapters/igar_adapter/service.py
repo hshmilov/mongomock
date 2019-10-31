@@ -203,7 +203,8 @@ class IgarAdapter(AdapterBase):
                     users_data_dict[server_owner] = []
                 name = device_raw.get('ServerName')
                 system_owner = device_raw.get('System Owner')
-                users_data_dict[server_owner].append(('server', [name, system_owner]))
+                users_data_dict[server_owner].append(('server', [name, system_owner,
+                                                                 device_raw.get('Support Status')]))
             except Exception:
                 logger.exception(f'Problem getting users stuff for: {str(device_raw)}')
         for user_mail, user_data in users_data_dict.items():
@@ -216,11 +217,12 @@ class IgarAdapter(AdapterBase):
                     if data_type == 'app':
                         user.applications_data.append(user_data_raw)
                     elif data_type == 'server':
-                        name, system_owner = user_data_raw
+                        name, system_owner, server_status = user_data_raw
                         if system_owner:
                             user.username = system_owner
                         if name:
-                            user.add_associated_device(device_caption=name)
+                            user.add_associated_device(device_caption=name,
+                                                       device_status=server_status)
                 yield user
             except Exception:
                 logger.exception(f'Problem with user mail {user_mail}')

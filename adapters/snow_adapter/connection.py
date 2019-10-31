@@ -28,6 +28,7 @@ class SnowConnection(RESTConnection):
         skip = 0
         while skip < MAX_DEVICES_COUNT:
             try:
+                logger.info(f'Endpoint {endpoint} with skip {skip}')
                 url_params = {'$format': 'json',
                               '$top': DEVICE_PER_PAGE}
                 if skip > 0:
@@ -70,14 +71,18 @@ class SnowConnection(RESTConnection):
             return snow_obj['Body'].get('Id')
         return None
 
-    def get_device_list(self):
+    # pylint: disable=arguments-differ
+    def get_device_list(self, fetch_apps=True):
         for customer_id in self._get_customers_ids():
             try:
                 for computer_raw in self._get_api_paginated(f'customers/{customer_id}/computers/'):
                     device_id = self._get_obj_id(computer_raw)
                     if device_id:
                         device_raw = computer_raw['Body']
-                        device_raw['application_raw'] = self._get_apps(device_id=device_id, customer_id=customer_id)
+                        if fetch_apps is True:
+                            device_raw['application_raw'] = self._get_apps(device_id=device_id, customer_id=customer_id)
+                        else:
+                            device_raw['application_raw'] = []
                         yield device_raw
             except Exception:
                 logger.exception(f'Problem with customer id {customer_id}')

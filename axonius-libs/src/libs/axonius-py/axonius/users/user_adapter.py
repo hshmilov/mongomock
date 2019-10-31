@@ -14,6 +14,7 @@ class UserAdapterDevice(SmartJsonClass):
     """ A definition for the json-scheme for a device that is associated to a user. """
     device_caption = Field(str, 'Device Name')  # The name of the device to be shown in the gui
     last_use_date = Field(datetime.datetime)
+    device_status = Field(str, 'Device Status')
 
 
 class UserFactor(SmartJsonClass):

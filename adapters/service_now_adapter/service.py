@@ -207,7 +207,7 @@ class ServiceNowAdapter(AdapterBase, Configurable):
                                     logger.exception(f'Problem with snow nic {snow_nic}')
                     except Exception:
                         logger.warning(f'Problem adding assigned_to to {device_raw}', exc_info=True)
-                if not install_status:
+                if not install_status or self.__use_ci_table_for_install_status:
                     install_status = INSTALL_STATUS_DICT.get(device_raw.get('install_status'))
                 if self.__exclude_disposed_devices and install_status \
                         and install_status in ['Disposed', 'Decommissioned']:
@@ -535,11 +535,16 @@ class ServiceNowAdapter(AdapterBase, Configurable):
                     'name': 'exclude_no_strong_identifier',
                     'title': 'Exclude Devices Without IP, MAC and Serial Number',
                     'type': 'bool'
+                },
+                {
+                    'name': 'use_ci_table_for_install_status',
+                    'title': 'Use CMDB_CI Table Instead Of ALM ASSET Table for Install Status',
+                    'type': 'bool'
                 }
             ],
             "required": [
                 'fetch_users',
-                'fetch_ips',
+                'fetch_ips', 'use_ci_table_for_install_status',
                 'exclude_disposed_devices',
                 'fetch_users_info_for_devices',
                 'exclude_no_strong_identifier'
@@ -555,7 +560,8 @@ class ServiceNowAdapter(AdapterBase, Configurable):
             'fetch_ips': True,
             'fetch_users_info_for_devices': True,
             'exclude_disposed_devices': False,
-            'exclude_no_strong_identifier': False
+            'exclude_no_strong_identifier': False,
+            'use_ci_table_for_install_status': False
         }
 
     def _on_config_update(self, config):
@@ -564,6 +570,7 @@ class ServiceNowAdapter(AdapterBase, Configurable):
         self.__fetch_users_info_for_devices = config['fetch_users_info_for_devices']
         self.__exclude_disposed_devices = config['exclude_disposed_devices']
         self.__exclude_no_strong_identifier = config['exclude_no_strong_identifier']
+        self.__use_ci_table_for_install_status = config['use_ci_table_for_install_status']
 
     def outside_reason_to_live(self) -> bool:
         """
