@@ -31,29 +31,22 @@ class StaticUsersCorrelatorService(CorrelatorBase):
                     '$in': entities_ids
                 }
             }
-        return list(self.users_db.aggregate([
-            {'$match': match},
-            {'$project': {
-                'internal_axon_id': 1,
-                'adapters': {
-                    '$map': {
-                        'input': '$adapters',
-                        'as': 'adapter',
-                        'in': {
-                            'plugin_name': '$$adapter.plugin_name',
-                            PLUGIN_UNIQUE_NAME: '$$adapter.plugin_unique_name',
-                            'data': {
-                                'id': '$$adapter.data.id',
-                                'ad_user_principal_name': '$$adapter.data.ad_user_principal_name',
-                                'username': '$$adapter.data.username',
-                                'ad_display_name': '$$adapter.data.ad_display_name',
-                                'mail': '$$adapter.data.mail',
-                                'domain': '$$adapter.data.domain',
+        fields_to_get = ('id', 'ad_user_principal_name', 'username', 'ad_display_name', 'mail', 'domain',
+                         'associated_adapter_plugin_name', 'value', 'type', 'name')
+        projection = {
+            f'adapters.data.{field}': True for field in fields_to_get
+        }
+        projection.update({
+            f'tags.data.{field}': True for field in fields_to_get
+        })
 
-                            }
-                        }
-                    }
-                },
-                'tags': 1
-            }}
-        ]))
+        return list(self.users_db.find(match, projection={
+            'internal_axon_id': True,
+            'adapters.plugin_name': True,
+            f'adapters.{PLUGIN_UNIQUE_NAME}': True,
+            'tags.plugin_name': True,
+            f'tags.{PLUGIN_UNIQUE_NAME}': True,
+            'tags.associated_adapters': True,
+            'tags.name': True,
+            **projection
+        }))

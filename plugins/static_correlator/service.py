@@ -8,7 +8,6 @@ from dataclasses import dataclass
 
 from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME, STATIC_CORRELATOR_PLUGIN_NAME
 from axonius.correlator_base import CorrelatorBase
-from axonius.devices.device_adapter import NETWORK_INTERFACES_FIELD, OS_FIELD
 from axonius.entities import EntityType, AdapterDeviceId
 from axonius.types.correlation import CorrelationResult, CorrelationReason
 from axonius.utils.files import get_local_config_file
@@ -61,46 +60,30 @@ class StaticCorrelatorService(CorrelatorBase):
                     '$in': entities_ids
                 }
             }
-        return list(self.devices_db.aggregate([
-            {'$match': match},
-            {'$project': {
-                'internal_axon_id': 1,
-                'adapters': {
-                    '$map': {
-                        'input': '$adapters',
-                        'as': 'adapter',
-                        'in': {
-                            'plugin_name': '$$adapter.plugin_name',
-                            PLUGIN_UNIQUE_NAME: '$$adapter.plugin_unique_name',
-                            'data': {
-                                'id': '$$adapter.data.id',
-                                OS_FIELD: '$$adapter.data.os',
-                                'name': '$$adapter.data.name',
-                                'hostname': '$$adapter.data.hostname',
-                                NETWORK_INTERFACES_FIELD: '$$adapter.data.network_interfaces',
-                                'device_serial': '$$adapter.data.device_serial',
-                                'last_seen': '$$adapter.data.last_seen',
-                                'bios_serial': '$$adapter.data.bios_serial',
-                                'domain': '$$adapter.data.domain',
-                                'cloud_provider': '$$adapter.data.cloud_provider',
-                                'cloud_id': '$$adapter.data.cloud_id',
-                                'ad_name': '$$adapter.data.ad_name',
-                                'azure_display_name': '$$adapter.data.azure_display_name',
-                                'last_used_users': '$$adapter.data.last_used_users',
-                                'nessus_no_scan_id': '$$adapter.data.nessus_no_scan_id',
-                                'private_dns_name': '$$adapter.data.private_dns_name',
-                                'macs_no_ip': '$$adapter.data.macs_no_ip',
-                                'node_id': '$$adapter.data.node_id',
-                                'azure_ad_id': '$$adapter.data.azure_ad_id',
-                                'azure_device_id': '$$adapter.data.azure_device_id',
-                                'fetch_proto': '$$adapter.data.fetch_proto'
-                            }
-                        }
-                    }
-                },
-                'tags': 1
-            }}
-        ]))
+
+        fields_to_get = ('id', 'os', 'name', 'hostname', 'network_interfaces', 'device_serial',
+                         'last_seen', 'bios_serial', 'domain', 'cloud_provider', 'cloud_id', 'ad_name',
+                         'azure_display_name',
+                         'last_used_users', 'nessus_no_scan_id', 'private_dns_name', 'macs_no_ip',
+                         'node_id', 'azure_ad_id', 'azure_device_id', 'fetch_proto',
+                         'associated_adapter_plugin_name', 'value', 'type', 'name')
+        projection = {
+            f'adapters.data.{field}': True for field in fields_to_get
+        }
+        projection.update({
+            f'tags.data.{field}': True for field in fields_to_get
+        })
+
+        return list(self.devices_db.find(match, projection={
+            'internal_axon_id': True,
+            'adapters.plugin_name': True,
+            f'adapters.{PLUGIN_UNIQUE_NAME}': True,
+            'tags.plugin_name': True,
+            f'tags.{PLUGIN_UNIQUE_NAME}': True,
+            'tags.associated_adapters': True,
+            'tags.name': True,
+            **projection
+        }))
 
     # pylint: disable=arguments-differ
     def _correlate(self, entities: list, use_markers=False):
