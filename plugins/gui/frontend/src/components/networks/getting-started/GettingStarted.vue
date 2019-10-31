@@ -186,7 +186,7 @@ $footer_section: 60px;
     justify-content: flex-start;
   }
   .x-getting-started_content {
-    overflow-y: scroll;
+    overflow-y: auto;
     height: calc(100% - 160px);
 
     &.completed {
