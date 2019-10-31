@@ -161,6 +161,7 @@ class GoogleMdmAdapter(AdapterBase):
             return
         user.set_raw(raw_user_data)
         user.is_admin = raw_user_data.get('isAdmin', None)
+        user.account_disabled = raw_user_data.get('suspended', None)
         try:
             user.last_logon = parse_date(raw_user_data['lastLoginTime'])
         except Exception:
