@@ -3946,8 +3946,14 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
 
     @rev_cached(ttl=3, key_func=lambda self: 1)
     def __lifecycle(self):
-        is_running = self.request_remote_plugin('trigger_state/execute', SYSTEM_SCHEDULER_PLUGIN_NAME). \
-            json()['state'] == TriggerStates.Triggered.name
+        res = self.request_remote_plugin('trigger_state/execute', SYSTEM_SCHEDULER_PLUGIN_NAME)
+        execution_state = res.json()
+        if 'state' not in execution_state:
+            logger.critical(f'Something is deeply wrong with scheduler, result is {execution_state} '
+                            f'on {res}')
+        is_running = execution_state['state'] == TriggerStates.Triggered.name
+        del res, execution_state
+
         state_response = self.request_remote_plugin('state', SYSTEM_SCHEDULER_PLUGIN_NAME)
         if state_response.status_code != 200:
             raise RuntimeError(f'Error fetching status of system scheduler. Reason: {state_response.text}')
