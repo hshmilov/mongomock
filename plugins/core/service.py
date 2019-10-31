@@ -214,7 +214,7 @@ class CoreService(Triggerable, PluginBase, Configurable):
                         })
 
         except Exception as e:
-            logger.critical("Cleaning plugins had an error. message: {0}", str(e))
+            logger.critical("Cleaning plugins had an error. message: {0}", str(e), exc_info=True)
 
     @add_rule('nodes/tags/<node_id>', methods=['GET', 'DELETE', 'POST'], should_authenticate=False)
     def node_tags(self, node_id):

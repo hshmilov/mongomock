@@ -199,7 +199,7 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
             log_metric(logger, metric_name=SystemMetric.CYCLE_FINISHED,
                        metric_value=round(time.time() - now, 1))
         except Exception:
-            logger.critical(f'Error - Did not finish a cycle due to an exception!')
+            logger.critical(f'Error - Did not finish a cycle due to an exception!', exc_info=True)
             raise
 
     @contextmanager
