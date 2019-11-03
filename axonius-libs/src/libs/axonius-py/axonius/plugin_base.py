@@ -2804,7 +2804,11 @@ class PluginBase(Configurable, Feature, ABC):
         try:
             # No syslog handler defined yet or settings changed.
             # We should replace the current handler with a new one.
-            logger.info('Initializing new handler to syslog logger (deleting old if exist)')
+            logger.info(f'Initializing new handler to syslog logger (deleting old if exist) from {syslog_settings}')
+            syslog_port = syslog_settings.get('syslogPort') or 6514
+            if not isinstance(syslog_port, int):
+                raise TypeError(f'Syslog port is not an integer')
+
             syslog_logger = logging.getLogger('axonius.syslog')
             syslog_logger.handlers = []  # Removing all previous handlers
             # Making a new handler with most up to date settings
@@ -2816,9 +2820,9 @@ class PluginBase(Configurable, Feature, ABC):
                     ssl_version=ssl.PROTOCOL_TLS,
                     ca_certs=cert_file.name if cert_file else None
                 )
+
                 syslog_handler = TLSSysLogHandler(address=(syslog_settings['syslogHost'],
-                                                           syslog_settings.get('syslogPort',
-                                                                               6514)),
+                                                           syslog_port),
                                                   facility=logging.handlers.SysLogHandler.LOG_DAEMON,
                                                   ssl_kwargs=ssl_kwargs)
             else:
@@ -2830,7 +2834,7 @@ class PluginBase(Configurable, Feature, ABC):
             syslog_handler.setLevel(logging.INFO)
             syslog_logger.addHandler(syslog_handler)
         except Exception:
-            logger.exception('Failed setting up syslog handler, no syslog handler has been set up')
+            logger.exception(f'Failed setting up syslog handler, no syslog handler has been set up, {syslog_settings}')
 
     @singlethreaded()
     @cachetools.cached(cachetools.TTLCache(maxsize=1, ttl=5))
