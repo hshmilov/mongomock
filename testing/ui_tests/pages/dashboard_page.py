@@ -352,6 +352,11 @@ class DashboardPage(Page):
             histogram_items_title.append(line_item.find_element_by_css_selector('.item-bar~div[title]').text)
         return histogram_items_title
 
+    def get_histogram_items_quantities_on_pagination(self, histogram):
+        histogram_items = self.get_histogram_items_on_pagination(histogram)
+        for line_item in histogram_items:
+            yield line_item.find_element_by_css_selector('.item-bar div.quantity').text
+
     def get_paginator_num_of_items(self, histogram):
         return histogram.find_element_by_css_selector(self.PAGINATOR_NUM_OF_ITEMS).text
 

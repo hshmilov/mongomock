@@ -341,6 +341,84 @@ class TestReportGeneration(TestBase):
             self.wait_for_adapter_down(ui_consts.STRESSTEST_ADAPTER)
             self.wait_for_adapter_down(ui_consts.STRESSTEST_SCANNER_ADAPTER)
 
+    def test_report_histogram_total(self):
+        stress = stresstest_service.StresstestService()
+        stress_scanner = stresstest_scanner_service.StresstestScannerService()
+        try:
+            with stress.contextmanager(take_ownership=True), stress_scanner.contextmanager(take_ownership=True):
+                device_dict = {'device_count': 2000, 'name': 'blah'}
+                stress.add_client(device_dict)
+                stress_scanner.add_client(device_dict)
+
+                self.base_page.run_discovery()
+
+                report_name = 'report histogram test'
+                self.reports_page.create_report(report_name=report_name, add_dashboard=True)
+
+                doc = self._extract_report_pdf_doc(report_name)
+
+                assert doc.pages[0].extractText().count(report_name) == 1
+                assert doc.pages[0].extractText().count('Generated on') == 1
+
+                toc_page = doc.pages[1]
+
+                assert toc_page.extractText().count('Discovery Summary') == 1
+                assert toc_page.extractText().count('Dashboard Charts') == 1
+                assert toc_page.extractText().count('Saved Queries') == 0
+
+                self.dashboard_page.switch_to_page()
+                dd_card = self.dashboard_page.find_device_discovery_card()
+                quantities = self.dashboard_page.find_quantity_in_card(dd_card)
+
+                discovery_charts_page = doc.pages[2]
+
+                for quantity in quantities:
+                    assert str(quantity) in discovery_charts_page.extractText()
+
+                dashboard_chart_page = doc.pages[3]
+
+                assert dashboard_chart_page.extractText().count('Managed Devices') == 2
+
+                new_query = 'histogram_query'
+
+                self.devices_page.switch_to_page()
+                self.devices_page.run_filter_and_save(new_query,
+                                                      '(adapters == "stresstest_scanner_adapter")',
+                                                      self.devices_page.FIELD_HOSTNAME_TITLE)
+
+                histogram_title = 'histogram totals'
+                self.dashboard_page.switch_to_page()
+                self.dashboard_page.add_segmentation_card('Devices',
+                                                          self.devices_page.FIELD_HOSTNAME_TITLE,
+                                                          histogram_title,
+                                                          view_name=new_query)
+
+                self.reports_page.switch_to_page()
+                self.reports_page.wait_for_table_to_load()
+                self.reports_page.wait_for_spinner_to_end()
+                self.reports_page.click_report(report_name)
+                self.reports_page.wait_for_spinner_to_end()
+                self.reports_page.click_save()
+
+                doc = self._extract_report_pdf_doc(report_name)
+
+                self.dashboard_page.switch_to_page()
+                card = self.dashboard_page.get_card(histogram_title)
+                quantities = list(self.dashboard_page.get_histogram_items_quantities_on_pagination(card))[:6]
+                total_items = self.dashboard_page.get_paginator_total_num_of_items(card)
+
+                custom_charts_page = doc.pages[3]
+
+                for quantity in quantities:
+                    assert str(quantity) in custom_charts_page.extractText()
+
+                if int(total_items) > 6:
+                    assert f'Top 6 of {total_items}' in custom_charts_page.extractText()
+
+        finally:
+            self.wait_for_adapter_down(ui_consts.STRESSTEST_ADAPTER)
+            self.wait_for_adapter_down(ui_consts.STRESSTEST_SCANNER_ADAPTER)
+
     def _new_generated_date(self, report_name, current_date):
         generated_date_str = self.reports_page.get_report_generated_date(report_name)
         if generated_date_str == '':
