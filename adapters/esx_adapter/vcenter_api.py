@@ -1,4 +1,5 @@
 import logging
+from threading import Lock
 
 import cachetools
 
@@ -217,7 +218,7 @@ class vCenterApi(object):
                            Details=host)
 
     @singlethreaded()
-    @cachetools.cached(cachetools.TTLCache(maxsize=5000, ttl=120))
+    @cachetools.cached(cachetools.TTLCache(maxsize=5000, ttl=120), lock=Lock())
     def __get_tagdata_from_tagid(self, tag_id: str) -> TagModel:
         """
         Uses tag_svc to get a TagModel form the tag_id given

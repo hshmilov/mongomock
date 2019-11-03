@@ -1,10 +1,12 @@
+from threading import Lock
+
 import cachetools
 from bson import ObjectId
 
 from axonius.utils.get_plugin_base_instance import plugin_base_instance
 
 
-@cachetools.cached(cachetools.TTLCache(maxsize=5000, ttl=24 * 3600))
+@cachetools.cached(cachetools.TTLCache(maxsize=5000, ttl=24 * 3600), lock=Lock())
 def translate_user_id_to_user_name(user_id: ObjectId):
     if user_id == '*':
         return 'Global'

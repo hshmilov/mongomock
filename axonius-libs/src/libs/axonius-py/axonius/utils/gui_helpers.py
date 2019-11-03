@@ -8,6 +8,7 @@ import os
 import re
 from datetime import datetime
 from enum import Enum
+from threading import Lock
 from typing import NamedTuple, Iterable, List, Union, Dict
 
 import cachetools
@@ -679,7 +680,7 @@ def _filter_out_nonexisting_fields(field_schema: dict, existing_fields: List[str
 
 
 @singlethreaded()
-@cachetools.cached(cachetools.LRUCache(maxsize=len(EntityType)))
+@cachetools.cached(cachetools.LRUCache(maxsize=len(EntityType)), lock=Lock())
 def get_generic_fields(entity_type: EntityType):
     """
     Helper for entity_fields

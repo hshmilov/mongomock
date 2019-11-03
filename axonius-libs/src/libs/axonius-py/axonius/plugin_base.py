@@ -992,7 +992,7 @@ class PluginBase(Configurable, Feature, ABC):
             raise
 
     @singlethreaded()
-    @cachetools.cached(cachetools.TTLCache(maxsize=200, ttl=30))
+    @cachetools.cached(cachetools.TTLCache(maxsize=200, ttl=30), lock=threading.Lock())
     def _verify_plugin_is_up(self, plugin_unique_name: str):
         if not is_plugin_on_demand(plugin_unique_name):
             # Core is assumed to be up
@@ -1091,7 +1091,7 @@ class PluginBase(Configurable, Feature, ABC):
         }
 
     @singlethreaded()
-    @cachetools.cached(cachetools.TTLCache(maxsize=1, ttl=10))
+    @cachetools.cached(cachetools.TTLCache(maxsize=1, ttl=10), lock=threading.Lock())
     def get_available_plugins_from_core(self) -> Dict[str, dict]:
         """
         Gets all running plugins from core by querying the DB
@@ -1192,7 +1192,7 @@ class PluginBase(Configurable, Feature, ABC):
                                                                      seen=False)).inserted_id
 
     @singlethreaded()
-    @cachetools.cached(cachetools.TTLCache(maxsize=100, ttl=20))
+    @cachetools.cached(cachetools.TTLCache(maxsize=100, ttl=20), lock=threading.Lock())
     def get_plugin_by_name(self, plugin_name, node_id=None, verify_single=True, verify_exists=True):
         """
         Finds plugin_name in the online plugin list
@@ -2837,7 +2837,7 @@ class PluginBase(Configurable, Feature, ABC):
             logger.exception(f'Failed setting up syslog handler, no syslog handler has been set up, {syslog_settings}')
 
     @singlethreaded()
-    @cachetools.cached(cachetools.TTLCache(maxsize=1, ttl=5))
+    @cachetools.cached(cachetools.TTLCache(maxsize=1, ttl=5), lock=threading.Lock())
     def trial_expired(self):
         """
         Check whether system has a trial expiration that has passed
