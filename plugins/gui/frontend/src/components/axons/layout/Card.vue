@@ -121,8 +121,10 @@
                 visibility: visible;
                 fill: $theme-blue!important;
                 position: relative;
-                top: -5px;
+                top: -3px;
                 left: 0px;
+                height: 24px;
+                width: 24px;
               }
               .md-svg-loader svg {
                 width: max-content!important;
