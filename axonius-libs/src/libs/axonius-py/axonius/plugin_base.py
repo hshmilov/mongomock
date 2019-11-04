@@ -1720,6 +1720,7 @@ class PluginBase(Configurable, Feature, ABC):
 
                     for key in parsed_to_insert['data']:
                         self.__existing_fields[entity_type].add(key)
+                    self.__existing_fields[entity_type].add(FIRST_FETCH_TIME)
 
                     # Note that this updates fields that are present. If some fields are not present but are present
                     # in the db they will stay there.
