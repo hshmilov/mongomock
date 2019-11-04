@@ -216,6 +216,13 @@ class Page:
         element.clear()
 
     @staticmethod
+    def clear_element_text(element):
+        for _ in range(1000):
+            element.send_keys(Keys.BACKSPACE)
+            if element.get_attribute('value') == '':
+                break
+
+    @staticmethod
     def extract_first_int(text):
         return [int(s) for s in text if s.isdigit()][0]
 
@@ -245,7 +252,7 @@ class Page:
 
     def fill_text_by_element(self, element, text, clear=True):
         if clear:
-            self.clear_element(element)
+            self.clear_element_text(element)
         if not isinstance(text, str):
             text = repr(text)
         self.send_keys(element, text)
