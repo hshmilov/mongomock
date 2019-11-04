@@ -572,6 +572,18 @@ class Page:
             next(el for el in self.driver.find_elements_by_css_selector(selected_option_css_selector) if
                  el.text == choice).click()
 
+    def enter_option(self,
+                     dropdown_css_selector,
+                     text_box_css_selector,
+                     choice,
+                     parent=None):
+        if not parent:
+            parent = self.driver
+        parent.find_element_by_css_selector(dropdown_css_selector).click()
+        text_box = self.driver.find_element_by_css_selector(text_box_css_selector)
+        self.send_keys(text_box, choice)
+        text_box.send_keys(Keys.ENTER)
+
     def select_option_from_multiple(self,
                                     index,
                                     dropdown_css_selector,

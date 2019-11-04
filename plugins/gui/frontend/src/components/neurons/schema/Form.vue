@@ -1,5 +1,5 @@
 <template>
-    <form class="x-form" @keyup.enter.stop="$emit('submit')">
+    <form class="x-form" @keyup.enter.stop="$emit('submit')" @submit.prevent>
         <x-array-edit v-model="data" :schema="schema" :api-upload="apiUpload" :read-only="readOnly" @validate="onValidate"/>
         <div class="error" v-if="!silent">
             <template v-if="error">{{error}}</template>

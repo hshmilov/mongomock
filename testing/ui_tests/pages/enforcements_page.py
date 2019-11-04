@@ -162,10 +162,10 @@ class EnforcementsPage(EntitiesPage):
         time.sleep(0.2)
         self.find_element_by_text(Action.send_emails.value).click()
 
-    def tag_entities(self, name, tag, new=False):
+    def tag_entities(self, name, tag, new_action=False):
         # add new tag ( type name in the input and click on the create new option )
         self.wait_for_action_config()
-        if new:
+        if new_action:
             self.fill_text_field_by_element_id(self.ACTION_NAME_ID, name)
         self.select_option(
             self.DROPDOWN_TAGS_CSS, self.DROPDOWN_TEXT_BOX_CSS, self.DROPDOWN_NEW_OPTION_CSS, tag
@@ -173,14 +173,24 @@ class EnforcementsPage(EntitiesPage):
         self.click_button(self.SAVE_BUTTON)
         self.wait_for_element_present_by_text(name)
 
-    def tag_entities_from_dropdown(self, name, tag, new=False):
+    def tag_entities_from_existing_values(self, name, tag, new_action=False, enter_key=False):
         # select tag from dropdown ( type name in the input and click on the filtered option )
         self.wait_for_action_config()
-        if new:
+        if new_action:
             self.fill_text_field_by_element_id(self.ACTION_NAME_ID, name)
-        self.select_option(
-            self.DROPDOWN_TAGS_CSS, self.DROPDOWN_TEXT_BOX_CSS, self.DROPDOWN_SELECT_OPTION_CSS.format(title=tag), tag
-        )
+        if enter_key:
+            self.enter_option(
+                self.DROPDOWN_TAGS_CSS,
+                self.DROPDOWN_TEXT_BOX_CSS,
+                tag
+            )
+        else:
+            self.select_option(
+                self.DROPDOWN_TAGS_CSS,
+                self.DROPDOWN_TEXT_BOX_CSS,
+                self.DROPDOWN_SELECT_OPTION_CSS.format(title=tag),
+                tag
+            )
         self.click_button(self.SAVE_BUTTON)
         self.wait_for_element_present_by_text(name)
 
@@ -194,17 +204,17 @@ class EnforcementsPage(EntitiesPage):
     def add_tag_entities(self, name=SPECIAL_TAG_ACTION, tag=DEFAULT_TAG_NAME, action_cond=MAIN_ACTION_TEXT):
         self.find_tags_dropdown(action_cond)
         self.find_element_by_text(Action.tag.value).click()
-        self.tag_entities(name, tag, new=True)
+        self.tag_entities(name, tag, new_action=True)
 
     def remove_tag_entities(self, name=SPECIAL_TAG_ACTION, tag=DEFAULT_TAG_NAME, action_cond=MAIN_ACTION_TEXT):
         self.find_tags_dropdown(action_cond)
         self.find_element_by_text(Action.untag.value).click()
-        self.tag_entities_from_dropdown(name, tag, new=True)
+        self.tag_entities_from_existing_values(name, tag, new_action=True)
 
     def select_tag_entities(self, name=SPECIAL_TAG_ACTION, tag=DEFAULT_TAG_NAME, action_cond=MAIN_ACTION_TEXT):
         self.find_tags_dropdown(action_cond)
         self.find_element_by_text(Action.tag.value).click()
-        self.tag_entities_from_dropdown(name, tag, new=True)
+        self.tag_entities_from_existing_values(name, tag, new_action=True, enter_key=True)
 
     def get_tag_dropdown_selected_value(self):
         return self.driver.find_element_by_css_selector(self.DROPDOWN_TAGS_VALUE_CSS).text

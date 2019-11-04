@@ -22,6 +22,7 @@ COMMON_ENFORCEMENT_QUERY = 'Enabled AD Devices'
 ENFORCEMENT_CHANGE_NAME = 'test_enforcement_change'
 ENFORCEMENT_TEST_NAME_1 = 'Test_enforcement_1'
 ENFORCEMENT_TEST_NAME_2 = 'Test_enforcement_2'
+ENFORCEMENT_TEST_NAME_3 = 'Test_enforcement_3'
 
 SAVED_QUERY_JUST_CBR_NAME = 'just_cbr'
 SAVED_QUERY_JUST_CBR = 'adapters == \'carbonblack_response_adapter\''
@@ -325,16 +326,7 @@ class TestEnforcementActions(TestBase):
         self.enforcements_page.add_tag_entities(ENFORCEMENT_TEST_NAME_1, CUSTOM_TAG,
                                                 self.enforcements_page.POST_ACTIONS_TEXT)
         self.enforcements_page.click_run_button()
-        # go to device page and check if the tag added
-        self.devices_page.switch_to_page()
-        self.devices_page.wait_for_table_to_load()
-        self.devices_page.execute_saved_query(Enforcements.enforcement_query_1)
-        self.devices_page.wait_for_table_to_load()
-        windows_machines_count = self.enforcements_page.count_entities()
-        self.devices_page.fill_filter(CUSTOM_TAG)
-        self.devices_page.enter_search()
-        self.devices_page.wait_for_table_to_load()
-        assert self.devices_page.count_entities() == windows_machines_count
+        self.check_tag_added(Enforcements.enforcement_query_1, CUSTOM_TAG)
         self.devices_page.refresh()
         # create new task to remove custom tag to all windows based devices
         self.enforcements_page.switch_to_page()
@@ -366,3 +358,26 @@ class TestEnforcementActions(TestBase):
         current_selected_tag = self.enforcements_page.get_tag_dropdown_selected_value()
         assert current_selected_tag == CUSTOM_TAG
         self.enforcements_page.click_save_button()
+        # create new task to add new custom tag to all windows based devices
+        self.enforcements_page.click_new_enforcement()
+        self.enforcements_page.fill_enforcement_name(ENFORCEMENT_TEST_NAME_3)
+        self.enforcements_page.select_trigger()
+        self.enforcements_page.select_saved_view(Enforcements.enforcement_query_1)
+        self.enforcements_page.save_trigger()
+        self.enforcements_page.add_push_system_notification(name='third push')
+        self.enforcements_page.select_tag_entities(ENFORCEMENT_TEST_NAME_3, TAG_ALL_COMMENT,
+                                                   self.enforcements_page.POST_ACTIONS_TEXT)
+        self.enforcements_page.click_run_button()
+        self.check_tag_added(Enforcements.enforcement_query_1, TAG_ALL_COMMENT)
+
+    def check_tag_added(self, query, tag):
+        # go to device page and check if the tag added
+        self.devices_page.switch_to_page()
+        self.devices_page.wait_for_table_to_load()
+        self.devices_page.execute_saved_query(query)
+        self.devices_page.wait_for_table_to_load()
+        count = self.enforcements_page.count_entities()
+        self.devices_page.fill_filter(tag)
+        self.devices_page.enter_search()
+        self.devices_page.wait_for_table_to_load()
+        assert self.devices_page.count_entities() == count

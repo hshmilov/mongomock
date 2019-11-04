@@ -13,6 +13,7 @@
       v-model="searchValue"
       class="x-select-search"
       :placeholder="placeholder"
+      @keyup-enter="onEnter"
     />
     <div class="x-select-options" :class="{'with-footer': allowCustomOption}">
       <template v-for="(currentOption, index) in filteredOptions">
@@ -297,6 +298,9 @@
             },
             close() {
               this.$emit('close')
+            },
+            onEnter() {
+              this.selectOption(this.extraOptions[0].name)
             }
         }
     }

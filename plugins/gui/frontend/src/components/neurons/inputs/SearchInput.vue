@@ -21,6 +21,7 @@
       @input="updateSearchValue"
       @focusout="focused = false"
       @click.stop="focused = true"
+      @keyup.enter="$emit('keyup-enter')"
     >
   </div>
 </template>
