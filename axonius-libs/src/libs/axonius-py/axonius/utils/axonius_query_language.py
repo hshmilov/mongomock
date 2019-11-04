@@ -415,6 +415,9 @@ def convert_db_entity_to_view_entity(entity: dict, ignore_errors: bool = False) 
                             and the method will ignore as many missing fields as it can.
     """
     try:
+        if entity is None:
+            return None
+
         filtered_adapters = [adapter
                              for adapter in entity['adapters']
                              if adapter.get('pending_delete') is not True]

@@ -1309,7 +1309,10 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
     @gui_add_rule_logged_in('devices/<device_id>', methods=['GET'],
                             required_permissions={Permission(PermissionType.Devices, PermissionLevel.ReadOnly)})
     def device_generic(self, device_id, history: datetime):
-        return jsonify(get_entity_data(EntityType.Devices, device_id, history))
+        res = get_entity_data(EntityType.Devices, device_id, history)
+        if isinstance(res, dict):
+            return jsonify(res)
+        return res
 
     @gui_helpers.historical()
     @gui_helpers.sorted_endpoint()
@@ -1509,7 +1512,10 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
     @gui_add_rule_logged_in('users/<user_id>', methods=['GET'],
                             required_permissions={Permission(PermissionType.Users, PermissionLevel.ReadOnly)})
     def user_generic(self, user_id, history: datetime):
-        return jsonify(get_entity_data(EntityType.Users, user_id, history))
+        res = jsonify(get_entity_data(EntityType.Users, user_id, history))
+        if isinstance(res, dict):
+            return jsonify(res)
+        return res
 
     @gui_helpers.historical()
     @gui_helpers.sorted_endpoint()
