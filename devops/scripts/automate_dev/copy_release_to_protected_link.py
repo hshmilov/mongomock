@@ -43,8 +43,8 @@ def main():
 
     parser.add_argument('--aws-key', action='store', help='AWS key', required=True)
     parser.add_argument('--aws-secret', action='store', help='AWS secret', required=True)
-    parser.add_argument('--gen-new-pass', action='store', help='Should I generate and set a new password?',
-                        required=False, default=True)
+    parser.add_argument('--gen-new-pass', action='store_true', help='Should I generate and set a new password?',
+                        required=False, default=False)
     parser.add_argument('--delete-unprotected', action='store', help='Should I delete the public link?',
                         required=False, default=False)
 

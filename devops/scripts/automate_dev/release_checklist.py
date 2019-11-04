@@ -73,6 +73,17 @@ def create_tag(version_name, commit_hash, **_):
     run(shlex.split(push_command), shell=True, check=True, stderr=STDOUT)
 
 
+def copy_to_protected_link(aws_key, aws_secret, gen_new_pass, **_):
+    should_change_password_arg = '--gen-new-pass' if gen_new_pass else ''
+    copy_to_protected_link_command = f'python copy_release_to_protected_link.py --aws-key {aws_key}' \
+                                     f' --aws-secret {aws_secret}' \
+                                     f' {should_change_password_arg}'
+    env = get_env(aws_key, aws_secret)
+
+    log('Copying to protected link')
+    run(shlex.split(copy_to_protected_link_command), env=env, shell=True, check=True, stderr=STDOUT)
+
+
 def print_epilog(version_name, ami_id, commit_hash, **_):
     log(f'commit_hash: {commit_hash}')
     log(f'ami-id: {ami_id}')
@@ -91,6 +102,8 @@ def main():
                         help='AWS secret', required=True)
     parser.add_argument('--version-name', action='store',
                         help='Version name', required=True)
+    parser.add_argument('--gen-new-pass', action='store_true', help='Should we generate and set a new password?',
+                        required=False, default=False)
 
     args = parser.parse_args()
 
@@ -103,13 +116,16 @@ def main():
                      aws_secret=args.aws_secret,
                      version_name=args.version_name,
                      commit_hash=commit_hash,
-                     ami_id=ami_id)
+                     ami_id=ami_id,
+                     gen_new_pass=args.gen_new_pass)
 
     create_tag(**arguments)
 
     upload_to_tests_folder(**arguments)
 
     upload_to_production(**arguments)
+
+    copy_to_protected_link(**arguments)
 
     print_epilog(**arguments)
 
