@@ -209,6 +209,10 @@
         multiline (state) {
           if (!state.configuration || !state.configuration.data || !state.configuration.data.system) return 0
           return state.configuration.data.system.multiLine
+        },
+        defaultNumOfEntitiesPerPage (state) {
+          if (!state.configuration || !state.configuration.data || !state.configuration.data.system) return 0
+          return state.configuration.data.system.defaultNumOfEntitiesPerPage
         }
       }),
       ...mapGetters({
@@ -231,6 +235,9 @@
         return this.moduleState.count
       },
       view () {
+        if(this.module === 'users' || this.module == 'devices') {
+          this.moduleState.view.pageSize = this.moduleState.view.pageSize || this.defaultNumOfEntitiesPerPage
+        }
         return this.moduleState.view
       },
       schemaFieldsByName () {

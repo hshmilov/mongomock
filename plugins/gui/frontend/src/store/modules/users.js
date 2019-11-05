@@ -8,7 +8,7 @@ export const users = {
         count: {data: 0, fetching: false, error: ''},
 
         view: {
-            page: 0, pageSize: 20, fields: defaultFields.users, coloumnSizes: [], query: {
+            page: 0, fields: defaultFields.users, coloumnSizes: [], query: {                
                 filter: '', expressions: [], search: ''
             }, sort: {
                 field: '', desc: true

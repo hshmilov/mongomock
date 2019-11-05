@@ -13,6 +13,8 @@ from axonius.consts.gui_consts import (CONFIG_CONFIG, ROLES_COLLECTION, USERS_CO
 from axonius.consts.plugin_consts import (AGGREGATOR_PLUGIN_NAME,
                                           AXONIUS_SETTINGS_DIR_NAME,
                                           CONFIGURABLE_CONFIGS_COLLECTION,
+                                          DEVICE_VIEWS,
+                                          USER_VIEWS,
                                           GUI_PLUGIN_NAME,
                                           PLUGIN_NAME,
                                           PLUGIN_UNIQUE_NAME,
@@ -80,7 +82,9 @@ class GuiService(PluginService, UpdatablePluginMixin):
             self._update_schema_version_19()
         if self.db_schema_version < 20:
             self._update_schema_version_20()
-        if self.db_schema_version != 20:
+        if self.db_schema_version < 21:
+            self._update_schema_version_21()
+        if self.db_schema_version != 21:
             print(f'Upgrade failed, db_schema_version is {self.db_schema_version}')
 
     def _update_schema_version_1(self):
@@ -752,6 +756,21 @@ class GuiService(PluginService, UpdatablePluginMixin):
         except Exception as e:
             print(f'Exception while upgrading gui db to version 20. Details: {e}')
 
+    def _update_schema_version_21(self):
+        """
+        For version 2.12, remove in every default saved_query of 'device_views' and 'user_views'
+        the pageSize attribute under the view
+        """
+        print('Upgrade to schema 21')
+        try:
+            self.db.get_collection(GUI_PLUGIN_NAME, DEVICE_VIEWS).update_many({'view.pageSize': {'$exists': True}},
+                                                                              {'$unset': {'view.pageSize': 20}})
+            self.db.get_collection(GUI_PLUGIN_NAME, USER_VIEWS).update_many({'view.pageSize': {'$exists': True}},
+                                                                            {'$unset': {'view.pageSize': 20}})
+            self.db_schema_version = 21
+        except Exception as e:
+            print(f'Exception while upgrading gui db to version 21. Details: {e}')
+
     def _update_default_locked_actions(self, new_actions):
         """
         Update the config record that holds the FeatureFlags setting, adding received new_actions to it's list of
@@ -962,8 +981,8 @@ RUN cd /home/axonius && mkdir axonius-libs && mkdir axonius-libs/src && cd axoni
 
     def get_saved_views(self):
 
-        user_view = self.db.get_collection('gui', 'user_views')
-        device_view = self.db.get_collection('gui', 'device_views')
+        user_view = self.db.get_collection('gui', USER_VIEWS)
+        device_view = self.db.get_collection('gui', DEVICE_VIEWS)
 
         entity_query_views_db_map = {
             EntityType.Users: user_view,

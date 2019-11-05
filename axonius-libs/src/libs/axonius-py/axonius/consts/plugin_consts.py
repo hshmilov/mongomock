@@ -78,6 +78,8 @@ VERSION_COLLECTION = 'version'
 GUI_SYSTEM_CONFIG_COLLECTION = 'system_config'
 MAINTENANCE_TYPE = 'maintenance'
 GLOBAL_KEYVAL_COLLECTION = 'global_keyval'
+DEVICE_VIEWS = 'device_views'
+USER_VIEWS = 'user_views'
 
 AXONIUS_USER_NAME = '_axonius'
 

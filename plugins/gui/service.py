@@ -971,7 +971,6 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
                 {
                     'view': {
                         'page': 0,
-                        'pageSize': 20,
                         'fields': list((projection or {}).keys()),
                         'coloumnSizes': [],
                         'query': {
@@ -4864,6 +4863,12 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
                             'type': 'number'
                         },
                         {
+                            'name': 'defaultNumOfEntitiesPerPage',
+                            'title': 'Default number of query results displayed per page',
+                            'type': 'string',
+                            'enum': [20, 50, 100]
+                        },
+                        {
                             'name': 'singleAdapter',
                             'title': 'Use Single Adapter View',
                             'type': 'bool'
@@ -4913,8 +4918,8 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
                             'required': ['error', 'warning', 'success']
                         }
                     ],
-                    'required': ['refreshRate', 'singleAdapter', 'multiLine', 'defaultSort', 'autoQuery',
-                                 'defaultColumnLimit'],
+                    'required': ['refreshRate', 'defaultNumOfEntitiesPerPage', 'singleAdapter', 'multiLine',
+                                 'defaultSort', 'autoQuery', 'defaultColumnLimit'],
                     'name': SYSTEM_SETTINGS,
                     'title': 'System Settings',
                     'type': 'array'
@@ -5057,10 +5062,12 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
             },
             SYSTEM_SETTINGS: {
                 'refreshRate': 60,
+                'defaultNumOfEntitiesPerPage': 20,
                 'singleAdapter': False,
                 'multiLine': False,
                 'defaultSort': True,
                 'autoQuery': True,
+                ''
                 'defaultColumnLimit': 2,
                 'percentageThresholds': {
                     'error': 40,

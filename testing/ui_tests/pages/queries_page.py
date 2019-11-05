@@ -1,5 +1,4 @@
 import logging
-
 from selenium.common.exceptions import NoSuchElementException
 
 from ui_tests.pages.page import Page

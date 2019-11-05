@@ -7,8 +7,8 @@
     <x-search-input
       id="query_list"
       slot="trigger"
-      ref="greatInput"
       v-model="searchValue"
+      ref="greatInput"
       placeholder="Insert your query or start typing to filter recent Queries"
       :tabindex="-1"
       @keyup.enter.native.stop="submitFilter"
@@ -204,6 +204,11 @@
         this.$emit('validate')
         this.focusInput()
         this.closeInput()
+        this.updateView({
+          module: this.module,
+          view: {
+            page: 0
+          }})
       },
       incQueryMenuIndex () {
         this.queryMenuIndex++

@@ -8,7 +8,7 @@ export const devices = {
 		count: { data: 0, fetching: false, error: ''},
 
 		view: {
-			page: 0, pageSize: 20, fields: defaultFields.devices, coloumnSizes: [], query: {
+			page: 0, fields: defaultFields.devices, coloumnSizes: [], query: {
 				filter: '', expressions: [], search: ''
 			}, sort: {
 				field: '', desc: true
@@ -22,7 +22,7 @@ export const devices = {
 		fields: { data: {}, fetching: false, error: '' },
 
 		hyperlinks: {data: [], fetching: false, error: '' },
-
+		
 		views: {
 			saved: {
 				content: { data: [], fetching: false, error: '', rule: ''},

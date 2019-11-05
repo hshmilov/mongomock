@@ -26,6 +26,7 @@ from ui_tests.pages.base_page import BasePage
 from ui_tests.pages.dashboard_page import DashboardPage
 from ui_tests.pages.devices_page import DevicesPage
 from ui_tests.pages.devices_queries_page import DevicesQueriesPage
+from ui_tests.pages.users_queries_page import UsersQueriesPage
 from ui_tests.pages.enforcements_page import EnforcementsPage
 from ui_tests.pages.instances_page import InstancesPage
 from ui_tests.pages.login_page import LoginPage
@@ -291,6 +292,7 @@ class TestBase:
         self.my_account_page = MyAccountPage(**params)
         self.devices_page = DevicesPage(**params)
         self.devices_queries_page = DevicesQueriesPage(**params)
+        self.users_queries_page = UsersQueriesPage(**params)
         self.users_page = UsersPage(**params)
         self.reports_page = ReportsPage(**params)
         self.enforcements_page = EnforcementsPage(**params)

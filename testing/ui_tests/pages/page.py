@@ -132,7 +132,6 @@ class Page:
     TABLE_ROW_TEXT_CELL_CSS = 'tbody .x-table-row.clickable:nth-child({row_index}) td:nth-child({cell_index}) div'
 
     FIELD_WITH_LABEL_XPATH = '//div[child::label[text()=\'{label_text}\']]/div[contains(@class, \'md-field\')]'
-
     DROPDOWN_TAGS_CSS = 'div.x-dropdown.x-select.all-tags'
     DROPDOWN_TAGS_VALUE_CSS = 'div.x-dropdown.x-select.all-tags div.trigger-text'
     DROPDOWN_TEXT_BOX_CSS = 'div.x-search-input.x-select-search > input'
@@ -149,6 +148,8 @@ class Page:
     SEARCH_INPUT_CSS = '.x-search-input .input-value'
 
     CUSTOM_DATA_SEARCH_INPUT = '.body .x-tabs.vertical .body .x-tab.active .x-search-input input'
+    TABLE_PAGE_SIZE_ACTIVE_XPATH = '//div[@class=\'x-pagination\']/div[@class=\'x-sizes\']' \
+                                   '/div[@class=\'x-link active\']'
 
     def __init__(self, driver, base_url, test_base, local_browser: bool):
         self.driver = driver
@@ -785,6 +786,9 @@ class Page:
 
     def find_checkbox_by_parent_id(self, parent_id):
         return self.driver.find_element_by_xpath(self.CHECKBOX_BY_PARENT_ID.format(parent_id=parent_id))
+
+    def find_active_page_size(self):
+        return self.driver.find_element_by_xpath(self.TABLE_PAGE_SIZE_ACTIVE_XPATH).text
 
     def click_row_checkbox(self, index=1):
         self.driver.find_element_by_css_selector(self.TABLE_ROW_CHECKBOX_CSS.format(child_index=index)).click()
