@@ -711,7 +711,7 @@ class Page:
 
     def close_dropdown(self):
         el = self.driver.find_element_by_css_selector(self.DROPDOWN_OVERLAY_CSS)
-        ActionChains(self.driver).move_to_element_with_offset(el, 1, 1).click().perform()
+        ActionChains(self.driver).move_to_element_with_offset(el, 100, 100).click().perform()
 
     def click_tab(self, tab_title):
         self.driver.find_element_by_xpath(self.TAB_HEADER_XPATH.format(tab_title=tab_title)).click()
