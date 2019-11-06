@@ -93,7 +93,7 @@ class Page:
     CHECKBOX_WITH_LABEL_XPATH = '//div[contains(@class, \'x-checkbox\') and child::label[text()=\'{label_text}\']]'
     CHECKBOX_WITH_SIBLING_LABEL_XPATH = '//div[contains(@class, \'x-checkbox\') and ' \
                                         'preceding-sibling::label[text()=\'{label_text}\']]'
-    CHECKBOX_CSS = '.x-checkbox .container'
+    CHECKBOX_CSS = '.x-checkbox .checkbox-container'
     DIV_BY_LABEL_TEMPLATE = '//div[child::label[text()=\'{label_text}\']]'
     DROPDOWN_OVERLAY_CSS = '.x-dropdown-bg'
     MODAL_OVERLAY_CSS = '.modal-overlay'
@@ -215,6 +215,9 @@ class Page:
         element.send_keys(Keys.BACKSPACE)
         element.send_keys(Keys.LEFT_ALT, Keys.BACKSPACE)
         element.clear()
+        while element.text != '' or \
+                (element.get_attribute('value') is not None and element.get_attribute('value') != ''):
+            element.send_keys(Keys.BACKSPACE)
 
     @staticmethod
     def clear_element_text(element):
@@ -346,8 +349,9 @@ class Page:
                                         css,
                                         element=None,
                                         retries=RETRY_WAIT_FOR_ELEMENT,
-                                        interval=SLEEP_INTERVAL):
-        return self.wait_for_element_present(By.CSS_SELECTOR, css, element, retries, interval)
+                                        interval=SLEEP_INTERVAL,
+                                        is_displayed=False):
+        return self.wait_for_element_present(By.CSS_SELECTOR, css, element, retries, interval, is_displayed)
 
     def wait_for_element_present_by_xpath(self,
                                           xpath,
@@ -368,11 +372,12 @@ class Page:
                                  value,
                                  parent=None,
                                  retries=RETRY_WAIT_FOR_ELEMENT,
-                                 interval=SLEEP_INTERVAL):
+                                 interval=SLEEP_INTERVAL,
+                                 is_displayed=False):
         for _ in range(retries):
             try:
                 element = self.find_element(by, value, parent)
-                if element:
+                if element and (not is_displayed or element.is_displayed()):
                     return element
             except NoSuchElementException:
                 pass

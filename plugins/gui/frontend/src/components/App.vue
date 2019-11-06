@@ -3,7 +3,7 @@
         App structure includes fixed navigation containing header and menu bars
         with changing content, according to chosen route
   -->
-  <div id="app" v-if="fetchedLoginStatus">
+  <v-app id="app" v-if="fetchedLoginStatus">
     <!--Link for downloading files-->
     <a id="file-auto-download-link"></a>
     <!-- Nested navigation linking to routes defined in router/index.js -->
@@ -28,7 +28,7 @@
     <template v-else>
       <x-login />
     </template>
-  </div>
+  </v-app>
 </template>
 
 <script>

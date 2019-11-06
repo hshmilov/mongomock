@@ -112,7 +112,7 @@ class ParallelRunner(object):
         self.clean()
 
     def clean(self):
-        for procname in self.running_list.keys():
+        for procname in self.running_list:
             sys.stdout.write(f"Killing timed out process {procname}\n")
             sys.stdout.flush()
             self.try_kill(procname)

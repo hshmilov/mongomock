@@ -31,7 +31,7 @@
         v-if="savedViews && savedViews.length"
         id="query_select"
       >
-        <div class="title">Saved Queries</div>
+        <div class="save-queries-title">Saved Queries</div>
         <div class="menu-content">
           <x-menu-item
             v-for="(item, index) in savedViews"
@@ -43,7 +43,7 @@
         </div>
       </x-menu>
       <x-menu v-if="historyViews && historyViews.length">
-        <div class="title">History</div>
+        <div class="history-title">History</div>
         <div class="menu-content">
           <x-menu-item
             v-for="(item, index) in historyViews"
@@ -301,7 +301,7 @@
           overflow: hidden;
         }
 
-        .title {
+        .save-queries-title, .history-title {
           font-size: 12px;
           font-weight: 400;
           text-transform: uppercase;
@@ -311,7 +311,7 @@
         }
 
         &:first-child {
-          .title {
+          .save-queries-title, .history-title {
             margin-top: 0;
           }
         }

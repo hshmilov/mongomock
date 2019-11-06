@@ -1,4 +1,6 @@
 import Vue from 'vue'
+import Vuetify from 'vuetify'
+import 'vuetify/dist/vuetify.min.css'
 import VueAnalytics from 'vue-analytics'
 import router from './router/index'
 import store from './store/index'
@@ -21,6 +23,8 @@ Vue.use(MdProgress)
 Vue.use(MdDivider)
 Vue.use(MdDrawer)
 
+Vue.use(Vuetify)
+
 import 'vue-svgicon/dist/polyfill'
 import * as svgicon from 'vue-svgicon'
 Vue.use(svgicon, {tagName: 'svg-icon'})
@@ -34,8 +38,18 @@ Vue.use(VueAnalytics, {
 	customResourceURL: '/src/analytics.js'
 })
 
+const vuetifyOptions = {
+	theme: {
+		themes: {
+			light: {
+				primary: '#FF7D46'
+			}
+		}
+	}
+}
 new Vue({
 	el: '#app',
+	vuetify: new Vuetify(vuetifyOptions),
 	components: {App},
 	template: '<App />',
 	router,

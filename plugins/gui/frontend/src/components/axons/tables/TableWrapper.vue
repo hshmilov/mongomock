@@ -12,16 +12,16 @@
     <div class="table-header">
       <div
         v-if="title"
-        class="title"
+        class="table-title"
       >
         <div class="text">{{ title }}</div>
         <div
           v-if="count !== undefined"
-          class="title count"
+          class="table-title count"
         >({{ count }})</div>
         <slot name="state" />
       </div>
-      <div class="error">{{ error }}</div>
+      <div class="table-error">{{ error }}</div>
       <div class="actions">
         <slot name="actions" />
       </div>
@@ -75,7 +75,7 @@
             background: $grey-0;
             align-items: flex-end;
 
-            .title {
+            .table-title {
                 display: flex;
                 line-height: 30px;
 
@@ -88,7 +88,7 @@
                 }
             }
 
-            .error {
+            .table-error {
                 flex: 1 0 auto;
                 color: $indicator-error;
                 display: inline-block;

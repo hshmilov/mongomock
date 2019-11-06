@@ -1,7 +1,7 @@
 <template>
   <div class="x-users-roles">
     <div class="header">
-      <h4 class="title">Users and Roles</h4>
+      <h4 class="users-title">Users and Roles</h4>
       <x-button
         id="config-roles"
         :disabled="readOnly"
@@ -390,7 +390,7 @@
             display: flex;
             align-items: center;
 
-            .title {
+            .users-title {
                 flex: 1 0 auto;
             }
         }

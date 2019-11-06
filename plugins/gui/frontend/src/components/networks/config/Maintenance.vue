@@ -11,30 +11,30 @@
                         <div class="x-section">
                             <x-checkbox v-model="allowAnalytics" label="Anonymized Analytics" ref="analytics"/>
                             <div v-if="allowAnalytics">
-                                <div class="title">Warning:</div>
+                                <div class="message-title">Warning:</div>
                                 <div class="content">{{ disableWarnings['analytics'] }}</div>
                             </div>
-                            <div v-else class="title">Turning on this feature allows Axonius to proactively detect
+                            <div v-else class="message-title">Turning on this feature allows Axonius to proactively detect
                                 issues and notify about errors
                             </div>
                         </div>
                         <div class="x-section">
                             <x-checkbox v-model="allowTroubleshooting" label="Remote Access" ref="troubleshooting"/>
                             <div v-if="allowTroubleshooting">
-                                <div class="title">Warning:</div>
+                                <div class="message-title">Warning:</div>
                                 <div class="content">{{ disableWarnings['troubleshooting'] }}</div>
                             </div>
-                            <div v-else class="title">Turning on this feature allows Axonius to keep the system updated
+                            <div v-else class="message-title">Turning on this feature allows Axonius to keep the system updated
                                 and speed-up issues resolution time
                             </div>
                         </div>
                     </div>
                     <div v-else class="x-content">
-                        <div class="x-section title">Turning on this feature allows Axonius to keep the system updated,
+                        <div class="x-section message-title">Turning on this feature allows Axonius to keep the system updated,
                             speed-up issues resolution time and proactively detect issues and notify about errors
                         </div>
                         <div class="x-section">
-                            <div class="title">OR</div>
+                            <div class="message-title">OR</div>
                             <div class="config">
                                 <template v-if="accessEndTime">
                                     <div class="warning mr-12">Temporary Remote Support will end at: {{ accessEndTime }}</div>
@@ -56,7 +56,7 @@
         <x-modal v-if="disableToConfirm" @confirm="approveDisable" @close="cancelDisable" approve-text="Confirm">
             <div slot="body">
                 <div>
-                    <div class="title">Warning:</div>
+                    <div class="message-title">Warning:</div>
                     <div class="content">{{ disableWarnings[disableToConfirm] }}</div>
                 </div>
                 <div class="mt-12">Turn off this feature?</div>
@@ -189,7 +189,7 @@
             min-height: 240px;
         }
 
-        .title {
+        .message-title {
             font-weight: 400;
             display: inline-block;
         }

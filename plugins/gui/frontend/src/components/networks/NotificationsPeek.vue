@@ -3,7 +3,7 @@
                 @click="clearNotifications">
         <div slot="trigger">
             <svg-icon name="navigation/notifications" :original="true" height="20"/>
-            <div class="badge" v-if="notificationUnseenCount">{{ notificationUnseenCount }}</div>
+            <div class="notification-badge" v-if="notificationUnseenCount">{{ notificationUnseenCount }}</div>
         </div>
         <div slot="content">
             <h5 class="mb-8">Notifications</h5>

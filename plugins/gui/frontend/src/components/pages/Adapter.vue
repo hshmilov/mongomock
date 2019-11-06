@@ -403,7 +403,7 @@
       .x-button#new_connection{
         width: 140px;
       }
-      .title {
+      .table-title {
         font-weight: 300;
       }
       thead th {

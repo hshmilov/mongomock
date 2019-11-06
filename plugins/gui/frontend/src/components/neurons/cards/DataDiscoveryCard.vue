@@ -13,11 +13,11 @@
       />
       <div class="discovery-summary">
         <div class="summary-row">
-          <div class="title">Total {{ name }}s seen</div>
+          <div class="summary-title">Total {{ name }}s seen</div>
           <div class="quantity">{{ dataSeen }}</div>
         </div>
         <div class="summary-row">
-          <div class="title mid">Axonius {{ name }} Correlation</div>
+          <div class="summary-title mid">Axonius {{ name }} Correlation</div>
           <div class="quantity">
             <svg-icon
               name="symbol/funnel"
@@ -28,7 +28,7 @@
           </div>
         </div>
         <div class="summary-row">
-          <div class="title">Total unique {{ name }}s</div>
+          <div class="summary-title">Total unique {{ name }}s</div>
           <div class="quantity">{{ dataUnique }}</div>
         </div>
       </div>
@@ -113,7 +113,9 @@
         &.triple {
             grid-row: 1 / span 3;
         }
-        .title {
+    }
+    .x-discovery-card {
+        .summary-title {
             text-transform: capitalize;
         }
         .data-discovery {
@@ -129,7 +131,7 @@
                     display: flex;
                     font-size: 16px;
 
-                    .title {
+                    .summary-title {
                         flex: auto 1 0;
 
                         &.mid {

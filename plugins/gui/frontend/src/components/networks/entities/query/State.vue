@@ -2,22 +2,22 @@
   <div class="x-query-state">
     <div class="header">
       <template v-if="enforcement">
-        <div class="title">{{ enforcement.name }}</div>
+        <div class="query-title">{{ enforcement.name }}</div>
         <div class="subtitle">{{ enforcement.outcome }} results of "{{ enforcement.action }}" action</div>
       </template>
       <x-button
         v-else-if="selectedView && !readOnly"
         link
-        class="title"
+        class="query-title"
         @click="openRenameView"
       >{{ selectedView.name }}</x-button>
       <div
         v-else-if="selectedView"
-        class="title"
+        class="query-title"
       >{{ selectedView.name }}</div>
       <div
         v-else
-        class="title"
+        class="query-title"
       >New Query</div>
       <div class="status">{{ status }}</div>
     </div>
@@ -252,7 +252,7 @@
             line-height: 28px;
             margin-bottom: 8px;
             margin-right: 16px;
-            .title {
+            .query-title {
                 font-size: 16px;
                 font-weight: 400;
                 color: $theme-black;

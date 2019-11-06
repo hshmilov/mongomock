@@ -10,6 +10,7 @@ import shutil
 import tarfile
 import threading
 import time
+import calendar
 from collections import defaultdict
 from datetime import date, datetime, timedelta
 from multiprocessing.pool import ThreadPool
@@ -4364,29 +4365,78 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
     def _schedule_exec_report(self, exec_report_data):
         logger.info('rescheduling exec_reports')
         time_period = exec_report_data.get('period')
+        time_period_config = exec_report_data.get('period_config')
         current_date = datetime.now()
-        next_run_time = None
+        next_run_time = current_date
+
+        next_run_hour = 8
+        next_run_minute = 0
+        week_day = 0
+        monthly_day = 1
+
+        if time_period_config:
+            send_time = time_period_config.get('send_time')
+            send_time_parts = send_time.split(':')
+            next_run_hour = int(send_time_parts[0])
+            next_run_minute = int(send_time_parts[1])
+            week_day = int(time_period_config.get('week_day'))
+            monthly_day = int(time_period_config.get('monthly_day'))
+
+            utc_time_diff = int((datetime.now() - datetime.utcnow()).total_seconds() / 3600)
+            next_run_hour += utc_time_diff
+            if next_run_hour > 23:
+                next_run_hour -= 24
+            elif next_run_hour < 0:
+                next_run_hour += 24
+
+        next_run_time = next_run_time.utcnow()
 
         if time_period == 'weekly':
-            # Next beginning of the work week (monday for most of the world).
-            next_run_time = next_weekday(current_date, 0)
-            next_run_time = next_run_time.replace(hour=8, minute=0)
-            new_interval_triggger = CronTrigger(year='*', month='*', week='*', day_of_week=0, hour=8, minute=0)
+            if week_day < next_run_time.weekday() or (week_day == next_run_time.weekday() and
+                                                      next_run_time.replace(hour=next_run_hour, minute=next_run_minute,
+                                                                            second=0) < next_run_time):
+                # Get next week's selected week day if it has passed this week
+                next_run_time = next_weekday(current_date, week_day)
+            else:
+                # Get next day of the the current week
+                day_of_month_diff = week_day - current_date.weekday()
+                next_run_time += timedelta(days=day_of_month_diff)
+            next_run_time = next_run_time.replace(hour=next_run_hour, minute=next_run_minute, second=0)
+            new_interval_triggger = CronTrigger(year='*', month='*', week='*',
+                                                day_of_week=week_day, hour=next_run_hour,
+                                                minute=next_run_minute, second=0)
         elif time_period == 'monthly':
-            # Sets the beginning of next month (1st day no matter if it's saturday).
-            next_run_time = current_date + relativedelta(months=+1)
-            next_run_time = next_run_time.replace(day=1, hour=8, minute=0)
-            new_interval_triggger = CronTrigger(month='1-12', week=1, day_of_week=0, hour=8, minute=0)
+            if monthly_day < current_date.day or (monthly_day == current_date.day and
+                                                  next_run_time.replace(hour=next_run_hour,
+                                                                        minute=next_run_minute,
+                                                                        second=0) < next_run_time):
+                # ￿Go to next month if the selected day of the month has passed
+                next_run_time = current_date + relativedelta(months=+1)
+            next_run_time = next_run_time.replace(day=monthly_day, hour=next_run_hour,
+                                                  minute=next_run_minute, second=0)
+            # 29 means the end of the month
+            if monthly_day == 29:
+                last_month_day = calendar.monthrange(current_date.year, current_date.month)[1]
+                next_run_time.replace(day=last_month_day)
+                monthly_day = 'last'
+            new_interval_triggger = CronTrigger(year='*', month='1-12',
+                                                day=monthly_day, hour=next_run_hour,
+                                                minute=next_run_minute, second=0)
         elif time_period == 'daily':
-            # sets it for tomorrow at 8 and reccuring every work day at 8.
-            next_run_time = current_date + relativedelta(days=+1)
-            next_run_time = next_run_time.replace(hour=8, minute=0)
-            new_interval_triggger = CronTrigger(year='*', month='*', week='*', day_of_week='0-4', hour=8, minute=0)
+            if next_run_time.replace(hour=next_run_hour, minute=next_run_minute, second=0) < next_run_time:
+                # sets it for tomorrow if the selected time has passed
+                next_run_time = current_date + relativedelta(days=+1)
+            next_run_time = next_run_time.replace(hour=next_run_hour, minute=next_run_minute, second=0)
+            new_interval_triggger = CronTrigger(year='*', month='*', week='*',
+                                                day_of_week='0-4', hour=next_run_hour,
+                                                minute=next_run_minute, second=0)
         else:
             raise ValueError('period have to be in (\'daily\', \'monthly\', \'weekly\').')
 
         exec_report_thread_id = EXEC_REPORT_THREAD_ID.format(exec_report_data['name'])
         exec_report_job = self._job_scheduler.get_job(exec_report_thread_id)
+
+        logger.info(f'Next report send time: {next_run_time}')
 
         # If job doesn't exist generate it
         if exec_report_job is None:
@@ -4398,7 +4448,9 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
                                         id=exec_report_thread_id,
                                         max_instances=1)
         else:
-            exec_report_job.modify(next_run_time=next_run_time)
+            exec_report_job.modify(func=self._send_report_thread,
+                                   kwargs={'report': exec_report_data},
+                                   next_run_time=next_run_time)
             self._job_scheduler.reschedule_job(exec_report_thread_id, trigger=new_interval_triggger)
 
         logger.info(f'Scheduling an exec_report sending for {next_run_time} and period of {time_period}.')
@@ -4429,7 +4481,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
                         for attachment_data in attachments_data:
                             email.add_attachment(attachment_data['name'], attachment_data['content'].read(),
                                                  'text/csv')
-                        email.send(EXEC_REPORT_EMAIL_CONTENT)
+                        email.send(mail_properties.get('mailMessage', EXEC_REPORT_EMAIL_CONTENT))
                         self.reports_config_collection.update_one({
                             'name': report_name,
                             'archived': {

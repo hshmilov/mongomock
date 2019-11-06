@@ -7,7 +7,7 @@ from ui_tests.tests.ui_consts import AD_ADAPTER_NAME
 from test_credentials.json_file_credentials import USER_NAME_UNICODE
 
 from axonius.utils.parsing import parse_date_with_timezone
-from testing.services.plugins.static_analysis_service import StaticAnalysisService
+from services.plugins.static_analysis_service import StaticAnalysisService
 
 
 class TestUsersTable(TestEntitiesTable):

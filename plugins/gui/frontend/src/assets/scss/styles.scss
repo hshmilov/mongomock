@@ -131,10 +131,28 @@ input, select, textarea {
   color: $grey-5;
 }
 
-ul {
-  padding: 0;
-  margin: 0;
+input, textarea {
+  border-style: inset;
+  border-width: 2px;
+  background: white;
 }
+
+.v-application {
+  h4 {
+    display: block;
+    margin-block-start: 1.33em;
+    margin-block-end: 1.33em;
+    margin-inline-start: 0;
+    margin-inline-end: 0;
+    font-weight: 400;
+  }
+
+  ul {
+    padding: 0;
+    margin: 0;
+  }
+}
+
 
 
 /* Basic Styles */
@@ -330,7 +348,7 @@ table {
   }
 }
 
-.badge {
+.notification-badge {
   background-color: $theme-orange;
   color: $theme-black;
   border-radius: 100%;

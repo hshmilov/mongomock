@@ -1,15 +1,31 @@
 import time
 
 from selenium.common.exceptions import NoSuchElementException
+from dataclasses import dataclass
+from dataclasses_json import DataClassJsonMixin
 
 from ui_tests.pages.entities_page import EntitiesPage
 from axonius.utils.wait import wait_until
 
 
-class ReportFrequency:
+@dataclass(frozen=True)
+class ReportFrequency(DataClassJsonMixin):
     daily = 'period-daily'
     weekly = 'period-weekly'
     monthly = 'period-monthly'
+
+
+@dataclass(frozen=True)
+class ReportConfig(DataClassJsonMixin):
+    report_name: str
+    add_dashboard: bool = True
+    queries: list = None
+    add_scheduling: bool = False
+    email_subject: str = None
+    emails: list = None
+    period: str = ReportFrequency.daily
+    spaces: list = None
+    period_config: object = None
 
 
 class ReportsPage(EntitiesPage):
@@ -48,6 +64,19 @@ class ReportsPage(EntitiesPage):
     REPORT_NAME_DUPLICATE_ERROR = 'Report name already taken by another report'
     SPACES_LABEL = 'Dashboard spaces'
     SEND_EMAIL_BUTTON_TEXT = 'Send Email'
+    SELECT_PERIOD_TIME_CSS = '.send-hour .time-picker-text input'
+    TIME_PERIOD_SELECTOR_CSS = '.v-time-picker-clock'
+    TIME_PERIOD_TITLE_SELECTOR_CSS = '.v-time-picker-title'
+    TIME_PERIOD_AMPM_TITLE_CSS = '.v-time-picker-title__ampm'
+    TIME_PERIOD_TITLE_BUTTON_CSS = '.v-picker__title__btn'
+    TIME_PERIOD_SELECTOR_XPATH = '//span[text()=\'{time}\']'
+    TIME_PERIOD_CLOCK_CONTAINER_CSS = '.v-time-picker-clock__container'
+    SELECT_WEEKDAY_CSS = '.send-day .x-select #weekly-day'
+    SELECT_MONTHLYDAY_CSS = '.send-day .x-select #monthly-day'
+    SELECT_DAY_VALUE_CSS = '.send-day .x-select .trigger-text'
+    SELECT_DAY_CLEAR_CSS = '.send-day .x-select .trigger'
+    BUTTON_CONTAINER_CSS = '.x-btn-container'
+    SELECT_DAY_CSS = '.send-day .x-select'
 
     @property
     def url(self):
@@ -155,7 +184,7 @@ class ReportsPage(EntitiesPage):
         return [element.text for element in elements]
 
     def find_send_email_button(self):
-        return self.find_element_by_text(self.SEND_EMAIL_BUTTON_TEXT)
+        return self.get_button(self.SEND_EMAIL_BUTTON_TEXT, partial_class=True)
 
     def is_send_email_button_exists(self):
         try:
@@ -165,7 +194,7 @@ class ReportsPage(EntitiesPage):
             return False
 
     def click_send_email(self):
-        self.find_send_email_button().click()
+        self.click_button(self.SEND_EMAIL_BUTTON_TEXT, partial_class=True)
 
     def assert_screen_is_restricted(self):
         self.switch_to_page_allowing_failure()
@@ -174,6 +203,53 @@ class ReportsPage(EntitiesPage):
 
     def select_frequency(self, period):
         self.driver.find_element_by_id(period).click()
+
+    def get_selected_day(self):
+        day_elements = self.driver.find_elements_by_css_selector(self.SELECT_DAY_VALUE_CSS)
+        for day_element in day_elements:
+            if day_element.is_displayed():
+                return day_element.text
+        return ''
+
+    def click_on_select_day(self):
+        day_elements = self.driver.find_elements_by_css_selector(self.SELECT_DAY_VALUE_CSS)
+        for day_element in day_elements:
+            if day_element.is_displayed():
+                day_element.click()
+
+    def select_weekly_day(self, day):
+        self.select_option_without_search(self.SELECT_WEEKDAY_CSS, self.DROPDOWN_SELECTED_OPTION_CSS, day)
+
+    def select_monthly_day(self, day):
+        self.select_option_without_search(self.SELECT_MONTHLYDAY_CSS, self.DROPDOWN_SELECTED_OPTION_CSS, day)
+
+    def get_weekly_day(self):
+        return self.driver.find_element_by_css_selector(self.SELECT_WEEKDAY_CSS).text
+
+    def get_monthly_day(self):
+        return self.driver.find_element_by_css_selector(self.SELECT_MONTHLYDAY_CSS).text
+
+    def get_select_days(self):
+        self.driver.find_element_by_css_selector(self.SELECT_DAY_CSS).click()
+        try:
+            for element in self.driver.find_elements_by_css_selector('.x-select-option'):
+                yield element.text
+        finally:
+            self.driver.find_element_by_css_selector(self.SELECT_DAY_CSS).click()
+
+    def select_frequency_time(self, send_time):
+        send_time_parts = send_time.split(':')
+        hours = int(send_time_parts[0])
+        minutes = int(send_time_parts[1])
+        ampm = 'AM'
+        if hours >= 12:
+            ampm = 'PM'
+            hours -= 12
+        if hours == 0:
+            hours = 12
+
+        self.fill_text_by_element(self.driver.find_element_by_css_selector(self.SELECT_PERIOD_TIME_CSS),
+                                  f'{str(hours)}:{"{:0>2d}".format(minutes)}{ampm.lower()}', True)
 
     def is_frequency_set(self, period):
         if self.driver.find_element_by_id(self.REPORT_FREQUENCY):
@@ -222,6 +298,7 @@ class ReportsPage(EntitiesPage):
     def click_report(self, report_name):
         self.driver.find_element_by_xpath(self.EDIT_REPORT_XPATH.format(report_name=report_name)).click()
         self.wait_for_element_present_by_css(self.REPORT_CSS)
+        self.wait_for_spinner_to_end()
 
     def get_report_id(self, report_name):
         return self.driver.find_element_by_xpath(self.REPORT_TR_XPATH.format(report_name=report_name))\
@@ -272,34 +349,46 @@ class ReportsPage(EntitiesPage):
         time.sleep(0.5)
         return [e.text for e in self.driver.find_elements_by_css_selector('.md-list-item-text')]
 
-    def create_report(self, report_name, add_dashboard=True, queries=None, add_scheduling=False, email_subject=None,
-                      emails=None, period=ReportFrequency.daily, wait_for_toaster=True, spaces=None):
+    def create_report(self,
+                      report_config: ReportConfig,
+                      wait_for_toaster=True):
         self.switch_to_page()
         self.wait_for_table_to_load()
         self.click_new_report()
         self.wait_for_spinner_to_end()
-        self.fill_report_name(report_name)
-        if add_dashboard:
+        self.fill_report_name(report_config.report_name)
+        if report_config.add_dashboard:
             self.click_include_dashboard()
-            if spaces:
+            if report_config.spaces:
                 self.click_spaces_select()
-                for space in spaces:
+                for space in report_config.spaces:
                     self.find_element_by_text(space).click()
-        if queries:
+        if report_config.queries:
             self.click_include_queries()
-            for index, query in enumerate(queries):
+            for index, query in enumerate(report_config.queries):
                 self.select_saved_view_from_multiple(index, query['name'], query['entity'])
-                if index < len(queries) - 1:
+                if index < len(report_config.queries) - 1:
                     self.click_add_query()
-        if add_scheduling:
-            self.click_add_scheduling()
-            self.fill_email_subject(email_subject)
-            for email in emails:
-                self.fill_email(email)
-            self.select_frequency(period)
+        if report_config.add_scheduling:
+            self.config_scheduling(report_config)
         self.click_save()
         if wait_for_toaster:
             self.wait_for_report_is_saved_toaster()
+
+    def config_scheduling(self, report_config):
+        self.click_add_scheduling()
+        self.fill_email_subject(report_config.email_subject)
+        for email in report_config.emails:
+            self.fill_email(email)
+        self.select_frequency(report_config.period)
+        if report_config.period_config:
+            if report_config.period == ReportFrequency.weekly and report_config.period_config.get('week_day'):
+                weekday = list(self.get_select_days())[report_config.period_config.get('week_day')]
+                self.select_weekly_day(weekday)
+            if report_config.period == ReportFrequency.monthly and report_config.period_config.get('monthly_day'):
+                self.select_monthly_day(report_config.period_config.get('monthly_day'))
+            if report_config.period_config.get('send_time'):
+                self.select_frequency_time(report_config.period_config.get('send_time'))
 
     def wait_for_report_is_saved_toaster(self):
         self.wait_for_toaster(self.REPORT_IS_SAVED_TOASTER)

@@ -13,7 +13,7 @@
     </div>
     <div class="main">
       <template v-if="actionSchema && actionSchema.type">
-        <h4 class="title">Configuration</h4>
+        <h4 class="config-title">Configuration</h4>
         <x-form
           ref="form"
           v-model="config"
@@ -180,7 +180,7 @@
         .main {
             overflow: auto;
             height: 100%;
-            .title {
+            .config-title {
                 margin-top: 0;
                 margin-bottom: 12px;
             }

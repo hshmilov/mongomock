@@ -1,6 +1,6 @@
 <template>
   <div class="x-filter">
-    <div class="title">Show only data:</div>
+    <div class="filter-title">Show only data:</div>
     <x-expression
       v-for="(expression, i) in expressions"
       :key="expression.i"
@@ -144,7 +144,7 @@
 
 <style lang="scss">
     .x-filter {
-        .title {
+        .filter-title {
             line-height: 24px;
         }
 

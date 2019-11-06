@@ -21,11 +21,11 @@
             <text v-if="currentStageName" x="50%" y="50%" text-anchor="middle"
                   :class="`extra-fill-${stageColourIndex} subtitle`">{{ currentStageName }}...
             </text>
-            <text x="50%" y="50%" text-anchor="middle" dy="2em" class="title">{{ parseInt(status) }}%</text>
+            <text x="50%" y="50%" text-anchor="middle" dy="2em" class="cycle-title">{{ parseInt(status) }}%</text>
         </template>
         <template v-else>
             <!-- Cycle is complete, namely status is stable -->
-            <text x="50%" y="50%" text-anchor="middle" class="title">STABLE</text>
+            <text x="50%" y="50%" text-anchor="middle" class="cycle-title">STABLE</text>
             <path d="M160 100 L140 130 L130 120" stroke-width="4" class="check"></path>
         </template>
     </svg>
@@ -110,7 +110,7 @@
             stroke: none;
             font-size: 10px;
 
-            &.title {
+            &.cycle-title {
                 fill: $grey-5;
                 font-size: 24px;
             }

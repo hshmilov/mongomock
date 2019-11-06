@@ -1,14 +1,14 @@
 <template>
   <div class="x-action-result">
     <template v-if="schema && schema.type">
-      <h4 class="title">Configuration</h4>
+      <h4 class="config-title">Configuration</h4>
       <x-array-view
         v-if="schema"
         :schema="schema"
         :value="data.action.config"
       />
     </template>
-    <h4 class="title">Results</h4>
+    <h4 class="config-title">Results</h4>
     <div
       v-if="isResultAlertAction"
       class="result-container"
@@ -93,7 +93,7 @@
         display: grid;
         grid-template-rows: 48px min-content 48px min-content;
         align-items: flex-end;
-        > .title {
+        > .config-title {
             margin-bottom: 12px;
 
             &:first-child {
@@ -129,7 +129,7 @@
                 color: $indicator-error;
             }
 
-            .title {
+            .summary-title {
                 font-size: 16px;
             }
         }

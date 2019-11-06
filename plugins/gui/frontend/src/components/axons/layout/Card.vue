@@ -13,7 +13,7 @@
       >{{ title }} </x-title>
       <div
         v-else
-        class="title"
+        class="card-title"
         :title="title"
       ><md-icon v-if="draggable"
           md-src="src/assets/icons/action/drag.svg"></md-icon>{{ title }}</div>
@@ -101,7 +101,7 @@
 
         &.card__item > .header {
             border: 1px solid transparent;
-            .title {
+            .card-title {
                 display: flex;
 
                 .md-icon {
@@ -157,7 +157,7 @@
                 }
             }
 
-            > .title {
+            > .card-title {
                 font-size: 16px;
                 flex: 1 0 auto;
                 text-overflow: ellipsis;

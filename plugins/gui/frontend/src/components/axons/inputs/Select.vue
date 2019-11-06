@@ -120,7 +120,7 @@
         return this.options
       },
       selectedOption () {
-        if (!this.stringValue || !this.completeOptions || !this.completeOptions.length) return undefined
+        if (this.stringValue === undefined || this.stringValue === null || !this.completeOptions.length) return undefined
         return this.completeOptions.find(option => (option && option.name === this.stringValue));
       },
       selectContentValue: {

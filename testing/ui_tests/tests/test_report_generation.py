@@ -11,6 +11,7 @@ from services.standalone_services.smtp_server import generate_random_valid_email
 from test_credentials.test_gui_credentials import DEFAULT_USER
 from ui_tests.tests.ui_test_base import TestBase
 from ui_tests.tests import ui_consts
+from ui_tests.pages.reports_page import ReportConfig
 from axonius.utils.wait import wait_until
 
 
@@ -28,7 +29,7 @@ class TestReportGeneration(TestBase):
     CUSTOM_SPACE_PANEL_NAME = 'Segment OS'
 
     def test_empty_report(self):
-        self.reports_page.create_report(report_name=self.EMPTY_REPORT_NAME)
+        self.reports_page.create_report(ReportConfig(report_name=self.EMPTY_REPORT_NAME))
 
         report_name = self.EMPTY_REPORT_NAME
 
@@ -47,7 +48,7 @@ class TestReportGeneration(TestBase):
                 stress.add_client(device_dict)
                 stress_scanner.add_client(device_dict)
                 self.base_page.run_discovery()
-                self.reports_page.create_report(report_name=self.REPORT_NAME, add_dashboard=True)
+                self.reports_page.create_report(ReportConfig(report_name=self.REPORT_NAME, add_dashboard=True))
                 doc = self._extract_report_pdf_doc(self.REPORT_NAME)
                 texts = [page.extractText() for page in doc.pages]
                 text = ' '.join(texts)
@@ -71,8 +72,10 @@ class TestReportGeneration(TestBase):
                 data_query = self.DATA_QUERY
                 self.devices_page.create_saved_query(data_query, self.TEST_REPORT_QUERY_NAME)
                 self.devices_page.wait_for_table_to_load()
-                self.reports_page.create_report(report_name=self.REPORT_NAME, add_dashboard=True,
-                                                queries=[{'entity': 'Devices', 'name': self.TEST_REPORT_QUERY_NAME}])
+                self.reports_page.create_report(ReportConfig(report_name=self.REPORT_NAME, add_dashboard=True,
+                                                             queries=[{
+                                                                 'entity': 'Devices',
+                                                                 'name': self.TEST_REPORT_QUERY_NAME}]))
 
                 doc = self._extract_report_pdf_doc(self.REPORT_NAME)
                 annots = [page.get('/Annots', []) for page in doc.pages]
@@ -104,8 +107,11 @@ class TestReportGeneration(TestBase):
                 self.devices_page.create_saved_query(data_query, self.TEST_REPORT_QUERY_NAME)
                 self.devices_page.wait_for_table_to_load()
 
-                self.reports_page.create_report(report_name=self.REPORT_NAME, add_dashboard=False,
-                                                queries=[{'entity': 'Devices', 'name': self.TEST_REPORT_QUERY_NAME}])
+                self.reports_page.create_report(ReportConfig(report_name=self.REPORT_NAME, add_dashboard=False,
+                                                             queries=[{
+                                                                 'entity': 'Devices',
+                                                                 'name': self.TEST_REPORT_QUERY_NAME
+                                                             }]))
 
                 doc = self._extract_report_pdf_doc(self.REPORT_NAME)
                 texts = [page.extractText() for page in doc.pages]
@@ -131,9 +137,16 @@ class TestReportGeneration(TestBase):
                 self.devices_page.create_saved_query(self.DATA_QUERY, self.TEST_REPORT_QUERY_NAME)
                 self.devices_page.create_saved_query(self.DATA_QUERY1, self.TEST_REPORT_QUERY_NAME1)
                 self.devices_page.create_saved_query(self.DATA_QUERY2, self.TEST_REPORT_QUERY_NAME2)
-                self.reports_page.create_report(report_name=self.REPORT_NAME, add_dashboard=False,
-                                                queries=[{'entity': 'Devices', 'name': self.TEST_REPORT_QUERY_NAME},
-                                                         {'entity': 'Devices', 'name': self.TEST_REPORT_QUERY_NAME2}])
+                self.reports_page.create_report(ReportConfig(report_name=self.REPORT_NAME, add_dashboard=False,
+                                                             queries=[
+                                                                 {
+                                                                     'entity': 'Devices',
+                                                                     'name': self.TEST_REPORT_QUERY_NAME
+                                                                 },
+                                                                 {
+                                                                     'entity': 'Devices',
+                                                                     'name': self.TEST_REPORT_QUERY_NAME2
+                                                                 }]))
 
                 doc = self._extract_report_pdf_doc(self.REPORT_NAME)
                 texts = [page.extractText() for page in doc.pages]
@@ -163,7 +176,7 @@ class TestReportGeneration(TestBase):
                 self.base_page.run_discovery()
 
                 report_name = 'report cover test'
-                self.reports_page.create_report(report_name=report_name, add_dashboard=True)
+                self.reports_page.create_report(ReportConfig(report_name=report_name, add_dashboard=True))
 
                 doc = self._extract_report_pdf_doc(report_name)
 
@@ -202,13 +215,21 @@ class TestReportGeneration(TestBase):
                 self.devices_page.create_saved_query(self.DATA_QUERY1, self.TEST_REPORT_QUERY_NAME1)
                 self.devices_page.create_saved_query(self.DATA_QUERY2, self.TEST_REPORT_QUERY_NAME2)
                 for i in range(0, 10):
-                    self.reports_page.create_report(report_name=f'{self.REPORT_NAME}_{i}', add_dashboard=True,
-                                                    queries=[{'entity': 'Devices',
-                                                              'name': self.TEST_REPORT_QUERY_NAME},
-                                                             {'entity': 'Devices',
-                                                              'name': self.TEST_REPORT_QUERY_NAME1},
-                                                             {'entity': 'Devices',
-                                                              'name': self.TEST_REPORT_QUERY_NAME2}])
+                    self.reports_page.create_report(ReportConfig(report_name=f'{self.REPORT_NAME}_{i}',
+                                                                 add_dashboard=True,
+                                                                 queries=[
+                                                                     {
+                                                                         'entity': 'Devices',
+                                                                         'name': self.TEST_REPORT_QUERY_NAME
+                                                                     },
+                                                                     {
+                                                                         'entity': 'Devices',
+                                                                         'name': self.TEST_REPORT_QUERY_NAME1
+                                                                     },
+                                                                     {
+                                                                         'entity': 'Devices',
+                                                                         'name': self.TEST_REPORT_QUERY_NAME2
+                                                                     }]))
                     self.reports_page.wait_for_table_to_load()
 
                 current_date = datetime.now()
@@ -241,8 +262,8 @@ class TestReportGeneration(TestBase):
                 self.dashboard_page.find_space_header(3).click()
                 self.dashboard_page.add_segmentation_card('Devices', 'OS: Type', self.CUSTOM_SPACE_PANEL_NAME)
 
-                self.reports_page.create_report(report_name=self.TEST_REPORT_SPACES, add_dashboard=True,
-                                                spaces=[self.TEST_DASHBOARD_SPACE])
+                self.reports_page.create_report(ReportConfig(report_name=self.TEST_REPORT_SPACES, add_dashboard=True,
+                                                             spaces=[self.TEST_DASHBOARD_SPACE]))
 
                 self.reports_page.click_report(self.TEST_REPORT_SPACES)
                 self.reports_page.wait_for_spinner_to_end()
@@ -265,7 +286,7 @@ class TestReportGeneration(TestBase):
                 stress.add_client(device_dict)
                 stress_scanner.add_client(device_dict)
                 self.base_page.run_discovery()
-                self.reports_page.create_report(report_name=self.REPORT_NAME + ' ', add_dashboard=True)
+                self.reports_page.create_report(ReportConfig(report_name=self.REPORT_NAME + ' ', add_dashboard=True))
                 doc = self._extract_report_pdf_doc(self.REPORT_NAME)
                 texts = [page.extractText() for page in doc.pages]
                 text = ' '.join(texts)
@@ -302,26 +323,32 @@ class TestReportGeneration(TestBase):
                 self.devices_page.click_row_checkbox()
 
                 query_name = 'בדיקת שאילתא'
-                self.devices_page.customize_view_and_save(query_name=query_name,
-                                                          page_size=50,
-                                                          sort_field=self.devices_page.FIELD_HOSTNAME_TITLE,
-                                                          add_columns=[],
-                                                          remove_columns=[self.devices_page.FIELD_LAST_SEEN,
-                                                                          self.devices_page.FIELD_OS_TYPE,
-                                                                          self.devices_page.FIELD_ASSET_NAME,
-                                                                          self.devices_page.FIELD_HOSTNAME_TITLE],
-                                                          query_filter=self.devices_page.STRESSTEST_ADAPTER_FILTER)
+                self.devices_page.customize_view_and_save(
+                    query_name=query_name,
+                    page_size=50,
+                    sort_field=self.devices_page.FIELD_HOSTNAME_TITLE,
+                    add_columns=[],
+                    remove_columns=[self.devices_page.FIELD_LAST_SEEN,
+                                    self.devices_page.FIELD_OS_TYPE,
+                                    self.devices_page.FIELD_ASSET_NAME,
+                                    self.devices_page.FIELD_HOSTNAME_TITLE],
+                    query_filter=self.devices_page.STRESSTEST_ADAPTER_FILTER
+
+                )
                 self.devices_page.click_row_checkbox()
                 tag_name = 'טאג בעברית'
                 self.devices_page.add_new_tag(tag_name)
                 report_name = 'בדיקה'
                 recipient = generate_random_valid_email()
-                self.reports_page.create_report(report_name=report_name,
-                                                add_dashboard=True,
-                                                queries=[{'entity': 'Devices', 'name': query_name}],
-                                                add_scheduling=True,
-                                                email_subject=report_name,
-                                                emails=[recipient])
+                self.reports_page.create_report(
+                    ReportConfig(report_name=report_name,
+                                 add_dashboard=True,
+                                 queries=[{'entity': 'Devices', 'name': query_name}],
+                                 add_scheduling=True,
+                                 email_subject=report_name,
+                                 emails=[recipient]
+                                 )
+                )
                 doc = self._extract_report_pdf_doc(report_name)
                 texts = [page.extractText() for page in doc.pages]
                 text = ' '.join(texts)
@@ -353,7 +380,7 @@ class TestReportGeneration(TestBase):
                 self.base_page.run_discovery()
 
                 report_name = 'report histogram test'
-                self.reports_page.create_report(report_name=report_name, add_dashboard=True)
+                self.reports_page.create_report(ReportConfig(report_name=report_name, add_dashboard=True))
 
                 doc = self._extract_report_pdf_doc(report_name)
 

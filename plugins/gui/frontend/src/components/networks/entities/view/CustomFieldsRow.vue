@@ -57,7 +57,7 @@
       class="fields-item"
     >
       <div />
-      <div class="error">{{ error }}</div>
+      <div class="field-error">{{ error }}</div>
     </div>
   </div>
 </template>
@@ -185,7 +185,7 @@
                 border: 1px solid $indicator-error;
             }
 
-            .error {
+            .field-error {
                 color: $indicator-error;
             }
         }

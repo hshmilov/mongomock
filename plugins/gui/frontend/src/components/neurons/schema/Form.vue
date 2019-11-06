@@ -1,7 +1,7 @@
 <template>
     <form class="x-form" @keyup.enter.stop="$emit('submit')" @submit.prevent>
         <x-array-edit v-model="data" :schema="schema" :api-upload="apiUpload" :read-only="readOnly" @validate="onValidate"/>
-        <div class="error" v-if="!silent">
+        <div class="form-error" v-if="!silent">
             <template v-if="error">{{error}}</template>
             <template v-else-if="validity.error">{{ validity.error }}</template>
             <template v-else>&nbsp;</template>
@@ -106,7 +106,7 @@
             }
         }
 
-        .error {
+        .form-error {
             color: $indicator-error;
             margin-top: 12px;
         }

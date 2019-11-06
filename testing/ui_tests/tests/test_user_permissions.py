@@ -4,7 +4,7 @@ from selenium.common.exceptions import NoSuchElementException
 
 from services.adapters import stresstest_service, stresstest_scanner_service
 from services.standalone_services.smtp_server import SMTPService, generate_random_valid_email
-from ui_tests.pages.reports_page import ReportFrequency
+from ui_tests.pages.reports_page import ReportFrequency, ReportConfig
 from ui_tests.tests import ui_consts
 from ui_tests.tests.ui_test_base import TestBase
 
@@ -234,9 +234,10 @@ class TestUserPermissions(TestBase):
             self.devices_page.wait_for_table_to_load()
             recipient = generate_random_valid_email()
             queries = [{'entity': 'Devices', 'name': self.TEST_REPORT_READ_ONLY_QUERY}]
-            self.reports_page.create_report(report_name=self.TEST_REPORT_READ_ONLY_NAME, add_dashboard=True,
-                                            queries=queries, add_scheduling=True, email_subject=self.REPORT_SUBJECT,
-                                            emails=[recipient], period=ReportFrequency.weekly)
+            self.reports_page.create_report(ReportConfig(report_name=self.TEST_REPORT_READ_ONLY_NAME,
+                                                         add_dashboard=True, queries=queries, add_scheduling=True,
+                                                         email_subject=self.REPORT_SUBJECT,
+                                                         emails=[recipient], period=ReportFrequency.weekly))
             self.reports_page.wait_for_table_to_load()
 
             # to fill up devices and users

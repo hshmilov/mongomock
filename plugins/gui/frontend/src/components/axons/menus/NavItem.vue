@@ -5,7 +5,7 @@
         <button class="item-link" :title="disabled? undefined : name">
             <svg-icon v-if="icon" :name="`navigation/${icon}`" width="24" :original="true" />
             <div v-else class="empty-icon"></div>
-            <div class="title">{{ title || name }}</div>
+            <div class="menu-title">{{ title || name }}</div>
         </button>
         <slot/>
     </router-link>
@@ -73,7 +73,7 @@
                 width: 35px;
                 display: inline-block;
             }
-            .title {
+            .menu-title {
                 transition: all ease-in 0.2s;
                 display: inline-block;
                 line-height: 20px;
@@ -122,9 +122,10 @@
     }
     .x-side-bar.collapse .x-nav {
         overflow: visible;
+        padding-left: 0px;
         .x-nav-item {
             overflow: hidden;
-            .item-link .title {
+            .item-link .menu-title {
                 opacity: 0;
                 transform: translateX(-200px);
             }
@@ -142,7 +143,7 @@
                     background-color: $grey-5;
                     padding-left: 0;
                     display: block;
-                    .item-link .title {
+                    .item-link .menu-title {
                         opacity: 1;
                     }
                 }

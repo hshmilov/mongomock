@@ -124,7 +124,7 @@
             />
             <h5
               id="report_schedule"
-              class="title"
+              class="schedule-title"
               @click="toggleScheduling"
             >Email Configuration</h5>
             <div class="hint">Optional</div>
@@ -143,34 +143,12 @@
               v-if="report.add_scheduling"
               id="report_frequency"
             >
-              <h4 class="title">Email Recurrence</h4>
-              <div class="x-grid">
-                <input
-                  id="period-daily"
-                  ref="periodDaily"
-                  v-model="report.period"
-                  type="radio"
-                  value="daily"
-                  :disabled="isReadOnly"
-                >
-                <label for="period-daily">Daily</label>
-                <input
-                  id="period-weekly"
-                  v-model="report.period"
-                  type="radio"
-                  value="weekly"
-                  :disabled="isReadOnly"
-                >
-                <label for="period-weekly">Weekly</label>
-                <input
-                  id="period-monthly"
-                  v-model="report.period"
-                  type="radio"
-                  value="monthly"
-                  :disabled="isReadOnly"
-                >
-                <label for="period-monthly">Monthly</label>
-              </div>
+              <h4 class="email-title">Email Recurrence</h4>
+              <x-recurrence
+                v-model="report"
+                :read-only="readOnly"
+                @validate="validateSendTime"
+              />
             </div>
           </div>
         </div>
@@ -216,11 +194,13 @@
   import xCheckbox from '../axons/inputs/Checkbox.vue'
   import xSelectSymbol from '../neurons/inputs/SelectSymbol.vue'
   import xSelect from '../axons/inputs/Select.vue'
+  import xRecurrence from '../axons/inputs/Recurrence.vue'
   import viewsMixin from '../../mixins/views'
   import xArrayEdit from '../neurons/schema/types/array/ArrayEdit.vue'
   import configMixin from '../../mixins/config'
   import PulseLoader from 'vue-spinner/src/PulseLoader.vue'
   import {SHOW_TOASTER_MESSAGE, REMOVE_TOASTER} from '../../store/mutations'
+  import {weekDays, monthDays} from '../../constants/utils'
 
   import { mapState, mapMutations, mapActions } from 'vuex'
   import {
@@ -232,7 +212,7 @@
 
   export default {
     name: 'XReport',
-    components: { xPage, xBox, xButton, xSelect, xCheckbox, xSelectSymbol, xArrayEdit, PulseLoader },
+    components: {xPage, xBox, xButton, xSelect, xCheckbox, xSelectSymbol, xArrayEdit, PulseLoader, xRecurrence },
     mixins: [viewsMixin, configMixin],
     props: {
       readOnly: Boolean
@@ -248,8 +228,14 @@
           recipients: [],
           add_scheduling: null,
           period: 'daily',
+          period_config: {
+            week_day: 0,
+            monthly_day: 1,
+            send_time: '13:00',
+          },
           mail_properties: {
             mailSubject: '',
+            mailMessage: '',
             emailList: [],
             emailListCC: []
           }
@@ -264,7 +250,8 @@
         lastGenerated: null,
         canSendEmail: false,
         isLatestReport: false,
-        loading: false
+        loading: false,
+        timeModal: false
       }
     },
     computed: {
@@ -293,7 +280,7 @@
           return custom_spaces.map((space) => {
               return {name: space.uuid, title: space.name}
           })
-        },
+        }
       }),
       id () {
         return this.$route.params.id
@@ -379,6 +366,14 @@
               'type': 'string',
               'required': true
             },
+              {
+                  'name': 'mailMessage',
+                  'title': 'Custom Message (up to 200 characters)',
+                  'type': 'string',
+                  'format': 'text',
+                  'limit': 200,
+                  'required': false
+              },
             {
               'name': 'emailList',
               'title': 'Recipients',
@@ -396,7 +391,8 @@
               'items': {
                 'type': 'string',
                 'format': 'email'
-              }
+              },
+              'required': false
             }
           ],
           'required': [
@@ -404,6 +400,19 @@
           ],
           'type': 'array'
         }
+      },
+      recurrence: {
+          get() {
+              return {
+                  period: this.report.period,
+                  period_config: this.report.period_config
+              }
+          },
+          set(newValue) {
+              this.report.period = newValue.period
+              this.report.period_config = newValue.period_config
+              this.$forceUpdate()
+          }
       }
     },
     created () {
@@ -450,6 +459,18 @@
           if(!this.report.spaces){
            this.report.spaces = []
           }
+          if(!this.report.period_config){
+              this.report.period_config = {
+                  send_time: '08:00',
+                  week_day: weekDays[0].name,
+                  monthly_day: monthDays[0].name
+              }
+          }
+
+          if(!this.report.mail_properties.mailMessage){
+              this.report.mail_properties.mailMessage = ''
+          }
+
           if(this.report.spaces.length > 0){
             let validDashboardSpaces = this.dashboard_spaces.reduce((map, space) => {
               map[space.name] = space.title;
@@ -644,6 +665,28 @@
       showToaster(message, timeout = 2500){
         this.showToasterMessage({message: message, timeout: timeout})
 
+      },
+      validateSendTime(isSendTimeValid){
+          const getTimePickerError = (i => i.field === 'send_time')
+          if(!isSendTimeValid){
+              // Add error the the validity fields if the time is invalid
+              this.validity.error = 'Send time is invalid'
+              let sendTimePickerError = this.validity.fields.find(getTimePickerError)
+              if(!sendTimePickerError){
+                  this.validity.fields.push({field: 'send_time', error: this.validity.error})
+              }
+          } else {
+              // If the send time is valid and there is an error than removed it
+              let sendTimeError = this.validity.fields.find(getTimePickerError)
+              if(sendTimeError){
+                  this.validity.fields = this.validity.fields.filter(error => {
+                      return error.field !== sendTimeError.field
+                  })
+                  if(this.validity.fields.length === 0){
+                      this.validity.error = ''
+                  }
+              }
+          }
       }
     }
   }
@@ -695,7 +738,7 @@
                 align-items: center;
                 margin-top: 24px;
 
-                .title {
+                .schedule-title {
                     margin: 0 0 0 8px;
                     cursor: pointer;
                 }
@@ -705,6 +748,11 @@
                 align-items: flex-end;
                 width: 100%;
                 display: inline-block;
+
+              .email-title {
+                margin-top: 22px;
+                margin-bottom: 22px;
+              }
 
                 .report-name-label {
                     padding-right: 12px;
@@ -717,7 +765,7 @@
                 .main {
                     margin-left: 24px;
 
-                    .title {
+                    .report-title {
                         margin: 24px 0 8px;
                     }
                 }
@@ -732,15 +780,6 @@
             width: auto;
         }
 
-        .x-grid {
-            grid-template-columns: 20px auto;
-            grid-row-gap: 8px;
-            align-items: center;
-
-            label {
-                margin: 0;
-            }
-        }
         .save-queries-desc {
             padding-left: 24px;
             padding-bottom: 12px;

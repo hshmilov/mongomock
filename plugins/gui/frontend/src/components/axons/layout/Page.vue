@@ -2,10 +2,10 @@
     <div class="x-page" :class="{ collapse: collapseSidebar }">
         <div v-if="title || breadcrumbs" class="header">
             <template v-if="title">
-                <h4 class="title">{{ title }}</h4>
+                <h4 class="page-title">{{ title }}</h4>
                 <md-chip v-if="beta">BETA</md-chip>
             </template>
-            <h4 class="title" v-else>
+            <h4 class="page-title" v-else>
                 <!-- Adding title for each breadcrumb, linked to the page, except last one which is the viewed page -->
                 <div v-for="(breadcrumb, i) in breadcrumbs.slice(0, breadcrumbs.length - 1)" :key="i" class="crumb">
                     <router-link :to="breadcrumb.path" active-class="">{{ breadcrumb.title }}</router-link>
@@ -76,7 +76,7 @@
             border-bottom: 1px solid;
             border-color: rgba($theme-orange, 0.2);
 
-            .title {
+            .page-title {
                 font-weight: 200;
                 letter-spacing: 1px;
                 margin: 0;

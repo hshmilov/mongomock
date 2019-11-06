@@ -87,9 +87,9 @@ class EnforcementsPage(EntitiesPage):
     SELECT_VIEW_ENTITY_CSS = '.base-query .x-select-symbol .x-select-trigger'
     SELECT_VIEW_NAME_CSS = '.base-query .query-name .x-select-trigger'
     SELECT_SAVED_VIEW_TEXT_CSS = 'div.trigger-text'
-    ENFORCEMENTS_CHECKBOX = '.x-checkbox .container'
-    TRIGGER_SECTION_CHECKBOX_XPATH = '//div[@class=\'header\' and child::*[@class=\'title\' and ' \
-                                     'text()=\'{section_name}\']]//div[@class=\'container\']'
+    ENFORCEMENTS_CHECKBOX = '.x-checkbox .checkbox-container'
+    TRIGGER_SECTION_CHECKBOX_XPATH = '//div[@class=\'header\' and child::*[@class=\'scheduling-title\' and ' \
+                                     'text()=\'{section_name}\']]//div[@class=\'checkbox-container\']'
     ABOVE_INPUT_CSS = '.config .config-item .above'
     BELOW_INPUT_CSS = '.config .config-item .below'
     EDIT_ENFORCEMENT_XPATH = '//div[text()=\'{enforcement_name}\']'

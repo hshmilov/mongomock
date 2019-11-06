@@ -612,6 +612,7 @@ class GuiService(PluginService, UpdatablePluginMixin):
         """
         print('Upgrade to schema 19')
         try:
+            self._migrate_report_periodic_config()
             self.db.get_collection(GUI_PLUGIN_NAME, 'getting_started').insert_one(
                 {
                     'settings': {
@@ -1048,3 +1049,16 @@ RUN cd /home/axonius && mkdir axonius-libs && mkdir axonius-libs/src && cd axoni
             self._upsert_report_config(EXEC_REPORT_TITLE, new_report)
             exec_reports_settings_collection.delete_one({'_id': default_report.get('_id')})
             reports_collection.delete_one({'_id': default_report_config.get('_id')})
+
+    def _migrate_report_periodic_config(self):
+        reports_collection = self.db.get_collection('gui', 'reports_config')
+
+        reports_collection.update_many({}, {
+            '$set': {
+                'period_config': {
+                    'week_day': 0,
+                    'monthly_day': 1,
+                    'send_time': '13:00',
+                }
+            }
+        })

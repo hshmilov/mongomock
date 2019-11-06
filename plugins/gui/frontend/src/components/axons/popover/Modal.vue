@@ -3,7 +3,7 @@
         <div class="x-modal">
             <div :class="`modal-container w-${size}`">
                 <div class="modal-header" v-if="title">
-                    <div class="title">{{ title }}</div>
+                    <div class="modal-header-title">{{ title }}</div>
                     <x-button link @click="$emit('close')" v-if="dismissable">x</x-button>
                 </div>
                 <div class="modal-body">
@@ -70,7 +70,7 @@
                 padding: 0 24px 12px;
                 margin: 0 -24px 24px -24px;
 
-                .title {
+                .modal-header-title {
                     flex: 1 0 auto;
                     font-weight: 500;
                     font-size: 16px;

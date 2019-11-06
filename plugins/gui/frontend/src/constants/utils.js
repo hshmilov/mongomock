@@ -1,3 +1,4 @@
+import moment from 'moment'
 import { date } from '@storybook/addon-knobs'
 
 export const formatDate = (dateString, schema) => {
@@ -61,6 +62,7 @@ export const getTypeFromField = (fieldName) => {
     return 'axonius'
 }
 
+
 export const formatStringTemplate = (str, data = {}) => {
     /*
     Format a string template
@@ -72,3 +74,24 @@ export const formatStringTemplate = (str, data = {}) => {
     });
     return str;
 }
+
+const createWeekDayObject = (item) => {
+    return {
+        name: item,
+        title: moment().isoWeekday(item + 1).format('dddd')
+    }
+}
+
+const createMonthDayObject = (item) => {
+    const day = item + 1
+    let title = day.toString()
+    if(day === 29){
+        title = 'Last Day'
+    }
+    return { name: day, title: title}
+
+}
+
+export const weekDays = Array.from(new Array(7).keys()).map(createWeekDayObject)
+
+export const monthDays = Array.from(new Array(29).keys()).map(createMonthDayObject)

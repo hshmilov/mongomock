@@ -265,7 +265,8 @@ class PluginService(WeaveService):
             subprocess.check_call(shlex.split(disconnect_to_network_command))
 
             # Add container with new unique dns entry to network
-            connect_to_network_command = f'docker network connect --alias {self.fqdn} {self.docker_network} {self.container_name}'
+            connect_to_network_command = \
+                f'docker network connect --alias {self.fqdn} {self.docker_network} {self.container_name}'
             subprocess.check_call(shlex.split(connect_to_network_command))
 
     def _is_service_alive(self):

@@ -103,7 +103,7 @@
         border-radius: 4px;
         max-height: calc(100% - 128px);
 
-        .title {
+        .login-title, .signup-title {
           margin-top: 0;
         }
 

@@ -11,13 +11,13 @@
     >
       <div class="content">
         <template v-if="!action.implemented">
-          <div><span class="title">{{ action.title }}</span> Action</div>
+          <div><span class="action-title">{{ action.title }}</span> Action</div>
           <div>coming soon</div>
         </template>
         <template v-if="action.locked">
           <div>Please reach out to your Account Manager</div>
           <div>in order to add the</div>
-          <div><span class="title">{{ action.title }}</span> Action</div>
+          <div><span class="action-title">{{ action.title }}</span> Action</div>
         </template>
       </div>
     </div>
@@ -58,7 +58,7 @@
         font-size: 20px;
         line-height: 30px;
 
-        .title {
+        .action-title {
           font-weight: 300;
           font-style: italic;
         }

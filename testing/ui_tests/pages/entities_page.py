@@ -58,9 +58,9 @@ class EntitiesPage(Page):
     TABLE_CLASS = '.table'
     TABLE_SELECT_ALL_CURRENT_PAGE_CHECKBOX_CSS = 'thead .x-checkbox'
     TABLE_SELECT_ALL_CSS = 'div.selection > .x-button.link'
-    TABLE_COUNT_CSS = '.table-header .title .count'
-    TABLE_SELECTED_COUNT_CSS = '.table-header > .title > .selection > div'
-    TABLE_SELECT_ALL_BUTTON_CSS = '.table-header > .title > .selection > button'
+    TABLE_COUNT_CSS = '.table-header .table-title .count'
+    TABLE_SELECTED_COUNT_CSS = '.table-header > .table-title > .selection > div'
+    TABLE_SELECT_ALL_BUTTON_CSS = '.table-header > .table-title > .selection > button'
     TABLE_FIRST_ROW_CSS = 'tbody .x-table-row.clickable'
     TABLE_SECOND_ROW_CSS = 'tbody .x-table-row.clickable:nth-child(2)'
     TABLE_FIRST_ROW_TAG_CSS = f'{TABLE_FIRST_ROW_CSS} td:last-child'
@@ -1066,7 +1066,7 @@ class EntitiesPage(Page):
         return self.driver.find_element_by_css_selector('.x-query .x-query-state .header')
 
     def find_query_title_text(self):
-        return self.find_query_header().find_element_by_css_selector('.title').text
+        return self.find_query_header().find_element_by_css_selector('.query-title').text
 
     def find_query_status_text(self):
         return self.find_query_header().find_element_by_css_selector('.status').text

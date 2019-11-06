@@ -1,7 +1,7 @@
 <template>
   <div class="x-trigger-config">
     <div class="main">
-      <h4 class="title">
+      <h4 class="trigger-title">
         Input
       </h4>
       <div>Select the Saved Query for the Enforcement Set to act on:</div>
@@ -41,7 +41,7 @@
             :read-only="readOnly"
           />
           <h4
-            class="title"
+            class="scheduling-title"
             @click="toggleScheduling"
           >Add Scheduling</h4>
         </div>
@@ -49,7 +49,7 @@
           v-if="showScheduling"
           class="main"
         >
-          <h5 class="title">
+          <h5 class="trigger-title">
             Recurrence
           </h5>
           <div class="config">
@@ -77,7 +77,7 @@
               :read-only="readOnly"
             />
             <h5
-              class="title"
+              class="scheduling-title"
               @click="toggleConditions"
             >Add Conditions</h5>
           </div>
@@ -309,7 +309,7 @@
         .main {
             overflow: auto;
             height: 100%;
-            .title {
+            .trigger-title {
                 margin: 24px 0 8px;
             }
             .config {
@@ -358,7 +358,7 @@
                     .x-checkbox {
                         margin-bottom: 4px;
                     }
-                    .title {
+                    .scheduling-title {
                         margin: 0 0 0 8px;
                         cursor: pointer;
                     }

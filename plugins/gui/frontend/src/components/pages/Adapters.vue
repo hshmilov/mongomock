@@ -31,7 +31,7 @@
               </div>
               <div class="marker" :class="`indicator-bg-${item['status'] || 'void'}`"></div>
             </td>
-            <td class="row-data title" :id="item.id">
+            <td class="row-data row-title" :id="item.id">
               <x-title class="adapter-title" :id="item.id" :logo="`adapters/${item.id}`">{{ item.title }}</x-title>
             </td>
             <td class="row-data description">
@@ -156,7 +156,7 @@
                 .table-row {
                     .row-data {
 
-                        &.title {
+                        &.row-title {
                             width: 20%;
 
                             .adapter-title {

@@ -69,7 +69,7 @@
     </x-table-wrapper>
     <div class="x-pagination">
       <div class="x-sizes">
-        <div class="title">results per page:</div>
+        <div class="number-of-results-title">results per page:</div>
         <div
           v-for="size in [20, 50, 100]"
           :key="size"
@@ -544,7 +544,7 @@
             display: flex;
             line-height: 28px;
 
-            .title {
+            .number-of-results-title {
                 text-transform: uppercase;
             }
 

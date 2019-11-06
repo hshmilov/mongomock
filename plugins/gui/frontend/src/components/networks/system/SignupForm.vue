@@ -1,6 +1,6 @@
 <template>
   <div class="x-signup-form">
-    <h3 class="title">Signup</h3>
+    <h3 class="signup-title">Signup</h3>
     <div class="subtitle">Initial signup of your Axonius system</div>
     <x-form
       v-model="signupData"
@@ -115,7 +115,7 @@
 <style lang="scss">
   .x-signup-form {
     height: 100%;
-    .title {
+    .signup-title {
       margin-bottom: 4px;
     }
     .subtitle {

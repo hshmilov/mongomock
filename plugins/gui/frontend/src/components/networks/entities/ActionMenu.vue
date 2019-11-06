@@ -14,7 +14,7 @@
     >
       <div
         v-if="selectionCount > 10"
-        class="error"
+        class="table-error"
       >Maximal amount of {{ module }} to link is 10</div>
       <div
         v-else

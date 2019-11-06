@@ -323,6 +323,10 @@
         .x-tabs {
             max-width: 840px;
 
+            ul {
+              padding-left: 0;
+            }
+
             .tab-settings .x-form .x-array-edit {
                 grid-template-columns: 1fr;
             }

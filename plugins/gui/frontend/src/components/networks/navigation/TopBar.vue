@@ -394,6 +394,8 @@
                         cursor: pointer;
                         box-shadow: none;
                         border: 0;
+                        font-weight: 400;
+                        font-family: 'roboto';
 
                         .svg-fill {
                             fill: $grey-1;

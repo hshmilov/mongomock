@@ -1,6 +1,6 @@
 <template>
   <div class="x-login-form">
-    <h3 class="title">Login</h3>
+    <h3 class="login-title">Login</h3>
     <x-form
       v-model="credentials"
       :schema="schema"

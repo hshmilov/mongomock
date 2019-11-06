@@ -1,10 +1,11 @@
 import os
 import re
+from datetime import datetime, timedelta
 
 from services.adapters import stresstest_scanner_service, stresstest_service
 from services.standalone_services.maildiranasaurus_server import MailDiranasaurusService
 from services.standalone_services.smtp_server import SMTPService, generate_random_valid_email
-from ui_tests.pages.reports_page import ReportFrequency
+from ui_tests.pages.reports_page import ReportFrequency, ReportConfig
 from ui_tests.tests import ui_consts
 from ui_tests.tests.ui_test_base import TestBase
 from ui_tests.tests.ui_consts import EmailSettings
@@ -29,8 +30,8 @@ class TestReport(TestBase):
 
     def test_duplicate_report_name(self):
         test_name = 'test1'
-        self.reports_page.create_report(test_name, add_dashboard=True, wait_for_toaster=True)
-        self.reports_page.create_report(test_name, add_dashboard=True, wait_for_toaster=False)
+        self.reports_page.create_report(ReportConfig(test_name, add_dashboard=True), wait_for_toaster=True)
+        self.reports_page.create_report(ReportConfig(test_name, add_dashboard=True), wait_for_toaster=False)
         self.reports_page.wait_for_before_save_finished_toaster()
         assert self.reports_page.is_name_already_exists_error_appear()
         self.reports_page.fill_report_name('test2')
@@ -72,6 +73,7 @@ class TestReport(TestBase):
         self.reports_page.fill_email(recipient)
 
         self.reports_page.select_frequency(ReportFrequency.daily)
+        self.reports_page.select_frequency_time('10:30')
         self.reports_page.click_save()
         self.reports_page.wait_for_table_to_load()
         self.reports_page.wait_for_report_generation(report_name)
@@ -92,9 +94,15 @@ class TestReport(TestBase):
 
         assert not self.reports_page.is_send_email_button_exists()
 
+        self._test_custom_scheduling('test_scheduling1')
+
+        self.settings_page.remove_email_server()
+
+    def _test_custom_scheduling(self, report_name):
+
         # test for bug AX-4696
         self.reports_page.get_to_new_report_page()
-        self.reports_page.fill_report_name('test_scheduling1')
+        self.reports_page.fill_report_name(report_name)
         self.reports_page.click_include_dashboard()
         self.reports_page.click_add_scheduling()
 
@@ -104,7 +112,32 @@ class TestReport(TestBase):
 
         assert not self.reports_page.is_save_button_disabled()
 
-        self.settings_page.remove_email_server()
+        self.reports_page.click_add_scheduling()
+        self.reports_page.fill_email_subject(report_name)
+        self.reports_page.fill_email('test@axonius.com')
+
+        self.reports_page.select_frequency(ReportFrequency.monthly)
+        # test default value
+        assert self.reports_page.get_monthly_day() == '1'
+        select_month_day = '5'
+        self.reports_page.select_monthly_day(select_month_day)
+        self.reports_page.click_save()
+        self.reports_page.wait_for_table_to_load()
+        self.reports_page.wait_for_spinner_to_end()
+        self.reports_page.click_report(report_name)
+        self.reports_page.click_on_select_day()
+        self.reports_page.close_dropdown()
+        assert self.reports_page.get_monthly_day() == select_month_day
+        self.reports_page.select_frequency(ReportFrequency.weekly)
+        # test default value
+        assert self.reports_page.get_weekly_day() == 'Monday'
+        select_week_day = 'Sunday'
+        self.reports_page.select_weekly_day(select_week_day)
+        self.reports_page.click_save()
+        self.reports_page.wait_for_table_to_load()
+        self.reports_page.wait_for_spinner_to_end()
+        self.reports_page.click_report(report_name)
+        assert self.reports_page.get_weekly_day() == select_week_day
 
     def test_save_disabled(self):
         self.reports_page.switch_to_page()
@@ -166,7 +199,6 @@ class TestReport(TestBase):
             self.reports_page.find_email_sent_toaster()
 
             smtp_service.verify_email_send(recipient)
-
         self.settings_page.remove_email_server()
 
     def test_test_now_with_tls_email_server(self):
@@ -182,24 +214,86 @@ class TestReport(TestBase):
             self.settings_page.set_email_ssl_files(ca_data, cert_data, private_data)
             self.settings_page.set_email_ssl_verification('Unverified')
             self.settings_page.click_save_button()
-
-            self.reports_page.switch_to_page()
-            self.reports_page.click_new_report()
             recipient = generate_random_valid_email()
-            self.reports_page.fill_report_name(recipient)
-            self.reports_page.click_include_dashboard()
-            self.reports_page.click_add_scheduling()
-            self.reports_page.fill_email_subject(self.REPORT_SUBJECT)
-            self.reports_page.fill_email(recipient)
-            self.reports_page.click_save()
-            self.reports_page.wait_for_report_generation(recipient)
+
+            current_date = datetime.now()
+            current_date = self.get_next_time_round_by_two_minutes(current_date)
+            send_time = f'{current_date.hour}:{current_date.minute}'
+
+            period_config = {
+                'week_day': current_date.weekday(),
+                'send_time': send_time
+            }
+
+            self.reports_page.create_report(ReportConfig(report_name=recipient, add_dashboard=True,
+                                                         add_scheduling=True, email_subject=self.REPORT_SUBJECT,
+                                                         emails=[recipient], period=ReportFrequency.weekly,
+                                                         period_config=period_config))
+
             self.reports_page.click_report(recipient)
             self.reports_page.wait_for_spinner_to_end()
             self.reports_page.wait_for_send_mail_button()
             self.reports_page.click_send_email()
             self.reports_page.find_email_sent_toaster()
             smtp_service.verify_email_send(recipient)
+
+            self._test_scheduling(current_date, recipient, smtp_service)
+
         self.settings_page.remove_email_server()
+
+    def _test_scheduling(self, current_date, recipient, smtp_service):
+        self.reports_page.switch_to_page()
+        self.reports_page.wait_for_table_to_load()
+        self.reports_page.wait_for_spinner_to_end()
+
+        if current_date.weekday() < 5:
+            self.reports_page.click_report(recipient)
+            current_date = datetime.utcnow()
+            current_date = self.get_next_time_round_by_two_minutes(current_date)
+            send_time = f'{current_date.hour}:{current_date.minute}'
+            self.reports_page.select_frequency(ReportFrequency.daily)
+            self.reports_page.select_frequency_time(send_time)
+            daily_email = recipient + '.daily'
+            self.reports_page.fill_email(daily_email)
+            self.reports_page.click_save()
+            self.reports_page.wait_for_report_is_saved_toaster()
+            smtp_service.verify_email_send(daily_email)
+
+        self.reports_page.click_report(recipient)
+        current_date = datetime.utcnow()
+        current_date = self.get_next_time_round_by_two_minutes(current_date)
+        send_time = f'{current_date.hour}:{current_date.minute}'
+        self.reports_page.select_frequency(ReportFrequency.weekly)
+        self.reports_page.select_weekly_day(list(self.reports_page.get_select_days())[current_date.weekday()])
+        self.reports_page.select_frequency_time(send_time)
+        weekly_email = recipient + '.weekly'
+        self.reports_page.fill_email(weekly_email)
+        self.reports_page.click_save()
+        self.reports_page.wait_for_report_is_saved_toaster()
+        smtp_service.verify_email_send(weekly_email)
+
+        self.reports_page.click_report(recipient)
+        current_date = datetime.utcnow()
+        current_date = self.get_next_time_round_by_two_minutes(current_date)
+        send_time = f'{current_date.hour}:{current_date.minute}'
+        self.reports_page.select_frequency(ReportFrequency.monthly)
+        self.reports_page.select_monthly_day(str(current_date.day))
+        self.reports_page.select_frequency_time(send_time)
+        monthly_email = recipient + '.monthly'
+        self.reports_page.fill_email(monthly_email)
+        self.reports_page.click_save()
+        self.reports_page.wait_for_report_is_saved_toaster()
+        self.reports_page.click_report(recipient)
+        self.reports_page.click_on_select_day()
+        self.reports_page.close_dropdown()
+        smtp_service.verify_email_send(monthly_email)
+
+    @staticmethod
+    def get_next_time_round_by_two_minutes(current_date):
+        current_date += timedelta(minutes=2)
+        while current_date.minute % 2 != 0:
+            current_date += timedelta(minutes=1)
+        return current_date
 
     def test_create_and_edit_report(self):
         smtp_service = MailDiranasaurusService()
@@ -231,10 +325,15 @@ class TestReport(TestBase):
 
                 recipient = generate_random_valid_email()
 
-                self.reports_page.create_report(report_name=self.TEST_REPORT_EDIT, add_dashboard=True,
-                                                queries=[{'entity': 'Devices', 'name': self.TEST_REPORT_EDIT_QUERY}],
-                                                add_scheduling=True, email_subject=self.TEST_REPORT_EDIT,
-                                                emails=[recipient], period=ReportFrequency.weekly)
+                self.reports_page.create_report(ReportConfig(report_name=self.TEST_REPORT_EDIT, add_dashboard=True,
+                                                             queries=[
+                                                                 {
+                                                                     'entity': 'Devices',
+                                                                     'name': self.TEST_REPORT_EDIT_QUERY
+                                                                 }
+                                                             ],
+                                                             add_scheduling=True, email_subject=self.TEST_REPORT_EDIT,
+                                                             emails=[recipient], period=ReportFrequency.weekly))
                 self.reports_page.wait_for_table_to_load()
                 self.reports_page.click_report(self.TEST_REPORT_EDIT)
                 self.reports_page.wait_for_spinner_to_end()
@@ -274,9 +373,10 @@ class TestReport(TestBase):
             self.settings_page.fill_email_port(smtp_service.port)
             self.settings_page.save_and_wait_for_toaster()
             recipient = generate_random_valid_email()
-            self.reports_page.create_report(report_name=self.TEST_REPORT_READ_ONLY_NAME, add_dashboard=True,
-                                            queries=None, add_scheduling=True, email_subject=self.REPORT_SUBJECT,
-                                            emails=[recipient], period=ReportFrequency.weekly)
+            self.reports_page.create_report(ReportConfig(report_name=self.TEST_REPORT_READ_ONLY_NAME,
+                                                         add_dashboard=True, queries=None, add_scheduling=True,
+                                                         email_subject=self.REPORT_SUBJECT,
+                                                         emails=[recipient], period=ReportFrequency.weekly))
             self.reports_page.wait_for_table_to_load()
             # to fill up devices and users
             self.base_page.run_discovery()
@@ -307,11 +407,11 @@ class TestReport(TestBase):
 
     def test_remove_reports(self):
         self.reports_page.switch_to_page()
-        self.reports_page.create_report(report_name='test1', add_dashboard=True)
-        self.reports_page.create_report(report_name='test2', add_dashboard=True)
-        self.reports_page.create_report(report_name='test3', add_dashboard=True)
-        self.reports_page.create_report(report_name='test4', add_dashboard=True)
-        self.reports_page.create_report(report_name='test5', add_dashboard=True)
+        self.reports_page.create_report(ReportConfig(report_name='test1', add_dashboard=True))
+        self.reports_page.create_report(ReportConfig(report_name='test2', add_dashboard=True))
+        self.reports_page.create_report(ReportConfig(report_name='test3', add_dashboard=True))
+        self.reports_page.create_report(ReportConfig(report_name='test4', add_dashboard=True))
+        self.reports_page.create_report(ReportConfig(report_name='test5', add_dashboard=True))
         self.reports_page.wait_for_table_to_load()
         self.reports_page.wait_for_spinner_to_end()
 
@@ -333,11 +433,11 @@ class TestReport(TestBase):
 
     def test_remove_reports_after_select_all(self):
         self.reports_page.switch_to_page()
-        self.reports_page.create_report(report_name='test1', add_dashboard=True)
-        self.reports_page.create_report(report_name='test2', add_dashboard=True)
-        self.reports_page.create_report(report_name='test3', add_dashboard=True)
-        self.reports_page.create_report(report_name='test4', add_dashboard=True)
-        self.reports_page.create_report(report_name='test5', add_dashboard=True)
+        self.reports_page.create_report(ReportConfig(report_name='test1', add_dashboard=True))
+        self.reports_page.create_report(ReportConfig(report_name='test2', add_dashboard=True))
+        self.reports_page.create_report(ReportConfig(report_name='test3', add_dashboard=True))
+        self.reports_page.create_report(ReportConfig(report_name='test4', add_dashboard=True))
+        self.reports_page.create_report(ReportConfig(report_name='test5', add_dashboard=True))
         self.reports_page.wait_for_spinner_to_end()
 
         assert self.reports_page.get_report_count() == 5

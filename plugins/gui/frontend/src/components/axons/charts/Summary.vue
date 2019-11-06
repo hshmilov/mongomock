@@ -4,7 +4,7 @@
             <component v-if="item.schema" :is="processType(item.schema)" :schema="item.schema" :value="item.value"
                        class="summary" @click.native="$emit('click-one', index)"/>
             <div v-else class="summary" @click="$emit('click-one', index)">{{ item.value }}</div>
-            <div class="title">{{ item.name }}</div>
+            <div class="summary-title">{{ item.name }}</div>
         </template>
     </div>
 </template>
@@ -90,7 +90,7 @@
             }
         }
 
-        .title {
+        .summary-title {
             display: inline-block;
             max-width: 160px;
             text-align: left;

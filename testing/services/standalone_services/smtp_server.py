@@ -53,7 +53,7 @@ class SMTPService(WeaveService):
         CMD ["/go/src/github.com/flashmob/go-guerrilla/guerrillad", "serve"]
         '''[1:]
 
-    @retry(stop_max_attempt_number=200, wait_fixed=500)
+    @retry(stop_max_attempt_number=300, wait_fixed=1000)
     def verify_email_send(self, recipient: str):
         '''
         Verifies that an email has been sent to the given address

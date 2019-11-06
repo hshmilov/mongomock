@@ -322,7 +322,7 @@ class DashboardPage(Page):
 
     @staticmethod
     def get_title_from_card(card):
-        return card.find_element_by_css_selector('div.header > div.title').text.title()
+        return card.find_element_by_css_selector('div.header > div.card-title').text.title()
 
     @staticmethod
     def get_pie_chart_from_card(card):
@@ -468,7 +468,7 @@ class DashboardPage(Page):
 
     @staticmethod
     def assert_cycle_is_stable(cycle):
-        assert cycle.find_element_by_css_selector('text.title').text == 'STABLE'
+        assert cycle.find_element_by_css_selector('text.cycle-title').text == 'STABLE'
 
     @staticmethod
     def assert_cycle_start_and_finish_dates(card):

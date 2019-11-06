@@ -1,7 +1,7 @@
 <template>
     <div class="x-empty-system">
         <svg-icon name="illustration/see_all" :original="true" height="420"/>
-        <div class="title">SEE ALL TO SECURE ALL</div>
+        <div class="system-title">SEE ALL TO SECURE ALL</div>
         <div class="content">Congratulations! You are one step closer to<br>having all your assets visible in one place.
         </div>
         <div class="footer">
@@ -37,7 +37,7 @@
     .x-empty-system {
         text-align: center;
 
-        .title {
+        .system-title {
             font-size: 24px;
             color: $theme-orange;
             margin-top: 48px;

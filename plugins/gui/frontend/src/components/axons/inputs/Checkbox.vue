@@ -9,7 +9,7 @@
     @keyup.enter.stop="clickCheckbox"
   >
     <div
-      class="container"
+      class="checkbox-container"
       :class="{ indeterminate }"
     >
       <input
@@ -110,11 +110,11 @@
             cursor: default;
             opacity: 0.6;
 
-            .container:hover {
+            .checkbox-container:hover {
                 border-color: $grey-3;
             }
 
-            &.checked .container:hover {
+            &.checked .checkbox-container:hover {
                 border-color: $grey-5;
             }
 
@@ -127,7 +127,7 @@
           }
         }
 
-        &.checked .container {
+        &.checked .checkbox-container {
           background-color: $grey-5;
           border-color: $grey-5;
 
@@ -139,7 +139,7 @@
           }
         }
 
-        .container {
+        .checkbox-container {
             width: 16px;
             height: 16px;
             position: relative;

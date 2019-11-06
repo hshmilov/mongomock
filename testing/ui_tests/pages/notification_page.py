@@ -15,7 +15,7 @@ logger = logging.getLogger(f'axonius.{__name__}')
 class NotificationPage(Page):
     NOTIFICATION_PEEK_CSS = 'div.x-dropdown.x-notification-peek'
     NOTIFICATION_PEEK_TIMESTAMP_CSS = 'div.c-grey-4'
-    NOTIFICATION_COUNT_CSS = 'div.badge'
+    NOTIFICATION_COUNT_CSS = 'div.notification-badge'
     NOTIFICATION_VIEW_ALL_BUTTON_CLASS = 'x-button link'
     NOTIFICATION_VIEW_ALL_TEXT = 'View All'
 

@@ -52,7 +52,7 @@ class SignupPage(Page):
         self.click_save_button()
 
     def get_error_msg(self):
-        return self.driver.find_element_by_css_selector('.x-signup-form .error').text
+        return self.driver.find_element_by_css_selector('.x-signup-form .form-error').text
 
     def get_save_button(self):
         return self.get_special_button('Get Started')

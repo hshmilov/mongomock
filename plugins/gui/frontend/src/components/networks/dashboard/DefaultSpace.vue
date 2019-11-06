@@ -40,7 +40,7 @@
         <div class="cycle-time">
           <div class="cycle-next">
             <div>Next cycle starts in:</div>
-            <div class="cycle-next-time blue">{{ nextRunTime }}</div>
+            <div class="cycle-next-time">{{ nextRunTime }}</div>
           </div>
         </div>
       </div>
@@ -178,6 +178,7 @@
             display: flex;
             flex-direction: column;
             .cycle-next-time {
+              color: $theme-blue;
               text-align: left;
             }
           }

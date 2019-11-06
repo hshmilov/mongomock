@@ -281,7 +281,7 @@ export default {
           background-color: $grey-1;
         }
 
-        .title {
+        .x-title {
           white-space: pre-line;
         }
       }
