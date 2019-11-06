@@ -39,6 +39,9 @@ class DevicesPage(EntitiesPage):
     FIELD_REMOTE_NAME = 'Remote Device Name'
     FIELD_TAG_ID = 'Tag ID'
     FIELD_OS_TYPE = 'OS: Type'
+    FIELD_OS_MAJOR = 'OS: Major'
+    FIELD_OS_BUILD = 'OS: Build'
+    FIELD_PART_OF_DOMAIN = 'Part Of Domain'
     FIELD_TAGS = 'Tags'
     FIELD_ADAPTERS = 'Adapters'
     FIELD_LAST_SEEN = 'Last Seen'
@@ -61,6 +64,7 @@ class DevicesPage(EntitiesPage):
     MULTI_LINE_CSS = 'div.x-data-table.multiline'
     FILTER_HOSTNAME = 'specific_data.data.hostname == regex("{filter_value}", "i")'
     ENFORCEMENT_DIALOG_DROPDOWN_CSS = 'div.x-select-trigger'
+    QUERY_FIELD_VALUE = '.x-select-typed-field .x-dropdown.x-select.field-select'
 
     DELETE_DIALOG_TEXT_REGEX = 'You are about to delete \\d+ devices\\.'
 

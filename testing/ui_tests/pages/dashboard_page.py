@@ -43,7 +43,6 @@ class DashboardPage(Page):
     CARD_EDIT_BTN_CSS = '.actions > .edit'
     CARD_EXPORT_TO_CSV_BTN_CSS = '.actions > .export'
     BANNER_BY_TEXT_XPATH = '//div[contains(@class, \'x-banner\') and .//text() = \'{banner_text}\']'
-
     SPACES_XPATH = '//div[@class=\'x-spaces\']'
     ACTIVE_SPACE_HEADERS_XPATH = f'{SPACES_XPATH}//li[@class=\'header-tab active\']'
     SPACE_HEADERS_XPATH = f'{SPACES_XPATH}//li[contains(@class, \'header-tab\')]'
@@ -68,14 +67,12 @@ class DashboardPage(Page):
     PAGINATOR_TO_VALUE = f'{PAGINATOR_CLASS} {PAGINATOR_TO}'
     CHART_QUERY_DEFAULT = 'QUERY...'
     CHART_QUERY_ALL_DEFAULT = 'QUERY (OR EMPTY FOR ALL)'
-    CHART_QUERY_FIELD_DEFAULT = 'FIELD...'
     CARD_FILTER_CSS = '.x-select .x-select-trigger .placeholder'
     CARD_FIELD_CSS = '.x-select-typed-field .x-select-trigger .placeholder'
     COMPARISON_CARD_1ST_CHILD_MODLUE_CSS = 'div:nth-child(1) > div.x-dropdown.x-select.x-select-symbol'
     COMPARISON_CARD_2ND_CHILD_MODULE_CSS = 'div:nth-child(2) > div.x-dropdown.x-select.x-select-symbol'
     COMPARISON_CARD_1ST_QUERY_CSS = 'div:nth-child(1) > div.x-dropdown.x-select.view-name'
     COMPARISON_CARD_2ND_QUERY_CSS = 'div:nth-child(2) > div.x-dropdown.x-select.view-name'
-
     CARD_SPINNER_CSS = '.chart-spinner'
 
     @property

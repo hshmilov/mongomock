@@ -45,6 +45,7 @@ class EntitiesPage(Page):
     QUERY_ERROR_CSS = '.x-filter .error-text'
     QUERY_COMP_EXISTS = 'exists'
     QUERY_COMP_CONTAINS = 'contains'
+    QUERY_COMP_TRUE = 'true'
     QUERY_COMP_EQUALS = 'equals'
     QUERY_COMP_SUBNET = 'in subnet'
     QUERY_COMP_SIZE = 'count ='

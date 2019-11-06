@@ -107,16 +107,14 @@ class Page:
     DELETE_BUTTON = 'Delete'
     ACTIONS_BUTTON = 'Actions'
     CONFIRM_BUTTON = 'Confirm'
+    CHART_QUERY_FIELD_DEFAULT = 'FIELD...'
     DISABLED_BUTTON_XPATH = './/button[@class=\'x-button disabled\' and .//text()=\'{button_text}\']'
     VERTICAL_TABS_CSS = '.x-tabs.vertical .header .header-tab'
-
     NAMED_TAB_XPATH = '//div[@class=\'x-tabs\']/ul/li[contains(@class, "header-tab")]//div[text()=\'{tab_title}\']'
     TABLE_ROWS_CSS = 'tbody .x-table-row.clickable'
     TABLE_COUNTER = 'div.count'
     UPLOADING_FILE_CSS = '//div[@class=\'name-placeholder\' and text()=\'Uploading...\']'
-
     CUSTOM_ADAPTER_NAME = 'Custom Data'
-
     DATEPICKER_INPUT_CSS = '.md-datepicker .md-input'
     DATEPICKER_OVERLAY_CSS = '.md-datepicker-overlay'
     CHIPS_WITH_LABEL_XPATH = '//div[label[text()=\'{label_text}\']]' \

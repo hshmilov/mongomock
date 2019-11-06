@@ -18,6 +18,7 @@ class TestDevicesQuery(TestBase):
     SEARCH_TEXT_WINDOWS = 'windows'
     SEARCH_TEXT_TESTDOMAIN = 'testdomain'
     ERROR_TEXT_QUERY_BRACKET = 'Missing {direction} bracket'
+    CUSTOM_QUERY = 'Clear_query_test'
 
     def test_bad_subnet(self):
         self.dashboard_page.switch_to_page()
@@ -119,6 +120,57 @@ class TestDevicesQuery(TestBase):
         self.devices_page.wait_for_spinner_to_end()
         assert len(self.devices_page.get_all_data()) <= results_count
         self.devices_page.clear_query_wizard()
+
+    def check_all_columns_exist(self, columns_list):
+        assert all(column in self.devices_page.get_columns_header_text() for column in columns_list)
+
+    def check_no_columns_exist(self, columns_list):
+        assert not any(column in self.devices_page.get_columns_header_text() for column in columns_list)
+
+    def edit_columns(self, column_list):
+        self.devices_page.edit_columns(add_col_names=column_list,
+                                       adapter_title='General')
+
+    def _create_query(self):
+        self.devices_page.click_query_wizard()
+        self.users_page.add_query_expression()
+        self.users_page.add_query_expression()
+
+        expressions = self.devices_page.find_expressions()
+        self.devices_page.toggle_not(expressions[0])
+        self.devices_page.select_query_field(self.devices_page.FIELD_OS_MAJOR, parent=expressions[0])
+        self.devices_page.select_query_comp_op(self.devices_page.QUERY_COMP_EXISTS)
+
+        self.devices_page.select_query_logic_op(self.devices_page.QUERY_LOGIC_AND, expressions[1])
+        self.devices_page.select_query_field(self.devices_page.FIELD_OS_BUILD, parent=expressions[1])
+        self.devices_page.select_query_comp_op(self.devices_page.QUERY_COMP_EXISTS, parent=expressions[1])
+
+        self.devices_page.select_query_logic_op(self.devices_page.QUERY_LOGIC_AND, expressions[2])
+        self.devices_page.select_query_field(self.devices_page.FIELD_PART_OF_DOMAIN, parent=expressions[2])
+        self.devices_page.select_query_comp_op(self.devices_page.QUERY_COMP_TRUE, parent=expressions[2])
+        self.devices_page.click_search()
+
+    def test_clear_query_wizard(self):
+        columns_list = [self.devices_page.FIELD_OS_MAJOR, self.devices_page.FIELD_OS_BUILD,
+                        self.devices_page.FIELD_PART_OF_DOMAIN]
+        self.devices_page.switch_to_page()
+        self.base_page.run_discovery()
+        self.check_no_columns_exist(columns_list)
+        self.edit_columns(columns_list)
+        self.check_all_columns_exist(columns_list)
+        self._create_query()
+        self.devices_page.wait_for_table_to_load()
+        self.check_all_columns_exist(columns_list)
+        self.devices_page.save_query_as(self.CUSTOM_QUERY)
+        assert self.devices_page.find_query_title_text() == self.CUSTOM_QUERY
+        self.devices_page.click_query_wizard()
+        self.devices_page.clear_query_wizard()
+        select = self.driver.find_element_by_css_selector(self.devices_page.QUERY_FIELD_VALUE)
+        assert select.text == self.devices_page.CHART_QUERY_FIELD_DEFAULT
+        self.devices_page.click_search()
+        self.devices_page.wait_for_table_to_load()
+        self.check_all_columns_exist(columns_list)
+        assert self.devices_page.find_query_title_text() == 'New Query'
 
     def test_host_name_and_adapter_filters_query(self):
         self.settings_page.switch_to_page()
