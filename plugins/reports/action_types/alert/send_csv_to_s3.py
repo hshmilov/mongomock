@@ -98,7 +98,7 @@ class SendCsvToS3(ActionTypeAlert):
             csv_name = 'axonius_csv_' + datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S').replace(' ', '-') + '.csv'
             bucket_name = self._config.get('s3_bucket')
             s3_client.put_object(ACL='bucket-owner-full-control', Bucket=bucket_name, Key=csv_name, Body=csv_data)
-
+            logger.info(f'S3 csv file name: {csv_name}')
             return AlertActionResult(True, 'Wrote to S3')
         except Exception as e:
             logger.exception('Problem sending CSV to S3')

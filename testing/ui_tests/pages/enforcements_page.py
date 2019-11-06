@@ -31,6 +31,7 @@ class Trigger:
 
 class Action(Enum):
     send_emails = 'Send Email'
+    send_csv_to_s3 = 'Send CSV to Amazon S3'
     create_notification = 'Push System Notification'
     carbonblack_isolate = 'Isolate in Carbon Black CB Response'
     cybereason_isolate = 'Isolate in Cybereason Deep Detect & Respond'
@@ -119,6 +120,9 @@ class EnforcementsPage(EntitiesPage):
 
     SPECIAL_TAG_ACTION = 'Special Tag Action'
     DEFAULT_TAG_NAME = 'Special'
+    S3_BUCKET_ID = 's3_bucket'
+    S3_ACCESS_KEY_ID = 'access_key_id'
+    S3_SECRET_ACCESS_KEY_ID = 'secret_access_key'
 
     @property
     def url(self):
@@ -161,6 +165,14 @@ class EnforcementsPage(EntitiesPage):
         # Opening animation time
         time.sleep(0.2)
         self.find_element_by_text(Action.send_emails.value).click()
+
+    def add_send_csv_to_s3(self):
+        self.find_element_by_text(self.MAIN_ACTION_TEXT).click()
+        self.wait_for_action_library()
+        self.find_element_by_text(ActionCategory.Notify).click()
+        # Opening animation time
+        time.sleep(0.2)
+        self.find_element_by_text(Action.send_csv_to_s3.value).click()
 
     def tag_entities(self, name, tag, new_action=False):
         # add new tag ( type name in the input and click on the create new option )
@@ -640,6 +652,24 @@ class EnforcementsPage(EntitiesPage):
             attach_csv_checkbox = self.driver.find_element_by_xpath(
                 self.DIV_BY_LABEL_TEMPLATE.format(label_text='Attach CSV with Query results'))
             attach_csv_checkbox.find_element_by_class_name('x-checkbox').click()
+        self.click_button(self.SAVE_BUTTON)
+        self.wait_for_element_present_by_text(name)
+
+    def fill_send_csv_to_s3_config(self, name, s3_bucket,
+                                   access_key=None,
+                                   secret_access_key=None,
+                                   attach_iam_role=False):
+        self.wait_for_action_config()
+        self.fill_text_field_by_element_id(self.ACTION_NAME_ID, name)
+        self.fill_text_field_by_element_id(self.S3_BUCKET_ID, s3_bucket)
+        if access_key:
+            self.fill_text_field_by_element_id(self.S3_ACCESS_KEY_ID, access_key)
+        if secret_access_key:
+            self.fill_text_field_by_element_id(self.S3_SECRET_ACCESS_KEY_ID, secret_access_key)
+        if attach_iam_role:
+            attach_iam_rols_checkbox = self.driver.find_element_by_xpath(
+                self.DIV_BY_LABEL_TEMPLATE.format(label_text='Use attached IAM role'))
+            attach_iam_rols_checkbox.find_element_by_class_name('x-checkbox').click()
         self.click_button(self.SAVE_BUTTON)
         self.wait_for_element_present_by_text(name)
 

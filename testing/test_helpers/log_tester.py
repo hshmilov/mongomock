@@ -49,3 +49,14 @@ class LogTester:
                     if as_dict['metric_name'] == metric_name and is_value_match(as_dict['value'], value):
                         return True
         return False
+
+    def get_pattern_lines_from_log(self, pattern, lines_lookback=0):
+        """
+        :param pattern: pattern to search for in log (passed to re.search)
+        :param lines_lookback: num of last lines to search for the pattern. 0 for whole file
+        :return: An array on the found lines
+        """
+        with open(self.filepath) as f:
+            data = f.readlines()
+            recent = data[-min(lines_lookback, len(data)):]
+            return [re.search(pattern, line).group(0) for line in recent if re.search(pattern, line)]
