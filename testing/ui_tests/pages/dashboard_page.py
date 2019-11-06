@@ -74,6 +74,8 @@ class DashboardPage(Page):
     COMPARISON_CARD_1ST_QUERY_CSS = 'div:nth-child(1) > div.x-dropdown.x-select.view-name'
     COMPARISON_CARD_2ND_QUERY_CSS = 'div:nth-child(2) > div.x-dropdown.x-select.view-name'
     CARD_SPINNER_CSS = '.chart-spinner'
+    LIFECYCLE_TOOLTIP_CSS = '.cycle-wrapper .x-tooltip'
+    LIFECYCLE_TABLE_CSS = '.cycle-wrapper .table'
 
     @property
     def root_page_css(self):
@@ -96,6 +98,29 @@ class DashboardPage(Page):
     def find_managed_device_coverage_card(self):
         return self.driver.find_element_by_xpath(
             self.PANEL_BY_NAME_XPATH.format(panel_name=self.MANAGED_DEVICE_COVERAGE))
+
+    def get_lifecycle_tooltip(self):
+        return self.driver.find_element_by_css_selector(self.LIFECYCLE_TOOLTIP_CSS)
+
+    def hover_over_lifecycle_chart(self):
+        sl_card = self.find_system_lifecycle_card()
+        sl_cycle = self.get_cycle_from_card(sl_card)
+        ActionChains(self.driver).move_to_element(sl_cycle).perform()
+
+    def get_lifecycle_tooltip_table_data(self):
+        table_data = []
+
+        lifecycle_table = self.driver.find_element_by_css_selector(self.LIFECYCLE_TABLE_CSS)
+
+        # Use from index 1 to avoid selecting the table head
+        rows = lifecycle_table.find_elements_by_tag_name('tr')[1:]
+        for row in rows:
+            # Get the columns in order [name, status]
+            name = row.find_elements_by_tag_name('td')[1].text
+            status = row.find_elements_by_tag_name('td')[2].text
+            table_data.append({'name': name, 'status': status})
+
+        return table_data
 
     def find_system_lifecycle_card(self):
         return self.driver.find_element_by_css_selector('div.x-card.chart-lifecycle.print-exclude')

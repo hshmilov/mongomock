@@ -161,20 +161,6 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
             }
         }
 
-    @add_rule('sub_phase_update', ['POST'])
-    def set_sub_phase_state(self):
-        """
-        Sets the sub_phase state (should be used by aggregator).
-        :return:
-        """
-        received_update = self.get_request_data_as_object()
-        logger.info(
-            f'{self.get_caller_plugin_name()} notified that {received_update["adapter_name"]} finished fetching data.'
-            f' {received_update["portion_of_adapters_left"]} left.')
-        with self.__realtime_lock:
-            self.state.SubPhaseStatus = received_update['portion_of_adapters_left']
-        return ''
-
     def _triggered(self, job_name: str, post_json: dict, *args):
         """
         The function that runs jobs as part of the triggerable mixin,

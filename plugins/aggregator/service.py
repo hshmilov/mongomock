@@ -3,6 +3,7 @@ import logging
 import threading
 import time
 from datetime import datetime
+from enum import Enum, auto
 
 import pymongo
 from pymongo.collection import Collection
@@ -13,7 +14,7 @@ from axonius.consts.plugin_consts import (ADAPTERS_LIST_LENGTH,
                                           PLUGIN_UNIQUE_NAME,
                                           SYSTEM_SCHEDULER_PLUGIN_NAME)
 from axonius.consts.plugin_subtype import PluginSubtype
-from axonius.mixins.triggerable import Triggerable
+from axonius.mixins.triggerable import Triggerable, RunIdentifier
 from axonius.plugin_base import EntityType, PluginBase
 from axonius.utils.files import get_local_config_file
 from axonius.utils.json import from_json
@@ -29,6 +30,12 @@ AggregatorPlugin.py: A Plugin for the devices aggregation process
 """
 
 get_devices_job_name = "Get device job"
+
+
+class AdapterStatuses(Enum):
+    Pending = auto()
+    Fetching = auto()
+    Done = auto()
 
 
 class AggregatorService(Triggerable, PluginBase):
@@ -336,7 +343,7 @@ class AggregatorService(Triggerable, PluginBase):
         ])
         return 'saved history'
 
-    def _triggered(self, job_name, post_json, *args):
+    def _triggered(self, job_name: str, post_json: dict, run_identifier: RunIdentifier, *args):
         if job_name == 'clean_db':
             self._clean_db_devices_from_adapters(self.get_available_plugins_from_core_uncached().values())
             return
@@ -356,7 +363,7 @@ class AggregatorService(Triggerable, PluginBase):
 
         logger.debug("Fetching from registered adapters = {}".format(adapters))
 
-        return self._fetch_data_from_adapters(adapters)
+        return self._fetch_data_from_adapters(adapters, run_identifier)
 
     def _request_clean_db_from_adapter(self, plugin_unique_name):
         """
@@ -407,11 +414,16 @@ class AggregatorService(Triggerable, PluginBase):
         except Exception as e:
             logger.exception(f'Getting devices from all adapters failed, adapters = {current_adapters}. {repr(e)}')
 
-    def _fetch_data_from_adapters(self, current_adapters):
+    def _fetch_data_from_adapters(self, current_adapters, run_identifier: RunIdentifier):
         """ Function for fetching devices from adapters.
 
         This function runs on all the received adapters and in a different thread fetches all of them.
         """
+        known_adapters_status = {}
+        for adapter in current_adapters:
+            known_adapters_status[adapter[PLUGIN_UNIQUE_NAME]] = AdapterStatuses.Pending.name
+        run_identifier.update_status(known_adapters_status)
+
         try:
             futures_for_adapter = {}
 
@@ -425,15 +437,17 @@ class AggregatorService(Triggerable, PluginBase):
                         continue
 
                     futures_for_adapter[executor.submit(
-                        self._save_data_from_adapters, adapter[PLUGIN_UNIQUE_NAME])] = adapter['plugin_name']
+                        self._save_data_from_adapters,
+                        adapter[PLUGIN_UNIQUE_NAME], run_identifier, known_adapters_status)
+                    ] = adapter
 
                 for future in concurrent.futures.as_completed(futures_for_adapter):
                     try:
+                        known_adapters_status[futures_for_adapter[future]
+                                              [PLUGIN_UNIQUE_NAME]] = AdapterStatuses.Done.name
+                        run_identifier.update_status(known_adapters_status)
                         num_of_adapters_to_fetch -= 1
                         future.result()
-                        # notify the portion of adapters left to fetch, out of total required
-                        self._notify_adapter_fetch_devices_finished(
-                            futures_for_adapter[future], num_of_adapters_to_fetch / len(current_adapters))
                     except Exception as err:
                         logger.exception("An exception was raised while trying to get a result.")
 
@@ -442,13 +456,20 @@ class AggregatorService(Triggerable, PluginBase):
         except Exception as e:
             logger.exception(f'Getting devices from all requested adapters failed. {current_adapters}')
 
-    def _save_data_from_adapters(self, adapter_unique_name):
+        return known_adapters_status
+
+    def _save_data_from_adapters(self, adapter_unique_name, run_identifier, known_adapters_status):
         """
         Requests from the given adapter to insert its devices into the DB.
         :param str adapter_unique_name: The unique name of the adapter
+        :param RunIdentifier run_identifier: The run identifier to save date to triggerable_history
+        :param dict known_adapters_status: The statuses dict to change and save
         """
 
         start_time = time.time()
+        known_adapters_status[adapter_unique_name] = AdapterStatuses.Fetching.name
+        run_identifier.update_status(known_adapters_status)
+
         if self._notify_on_adapters is True:
             self.create_notification(f"Starting to fetch device for {adapter_unique_name}")
         self.send_external_info_log(f"Starting to fetch device for {adapter_unique_name}")
@@ -471,7 +492,3 @@ class AggregatorService(Triggerable, PluginBase):
     @property
     def plugin_subtype(self) -> PluginSubtype:
         return PluginSubtype.Core
-
-    def _notify_adapter_fetch_devices_finished(self, adapter_name, portion_of_adapters_left):
-        self.request_remote_plugin('sub_phase_update', SYSTEM_SCHEDULER_PLUGIN_NAME, 'POST', json={
-            'adapter_name': adapter_name, 'portion_of_adapters_left': portion_of_adapters_left})

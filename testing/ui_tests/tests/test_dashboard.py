@@ -8,9 +8,12 @@ from selenium.common.exceptions import NoSuchElementException
 from axonius.consts.gui_consts import (DASHBOARD_SPACE_DEFAULT,
                                        DASHBOARD_SPACE_PERSONAL)
 from axonius.utils.wait import wait_until
+from services.adapters import stresstest_service
 from ui_tests.tests.ui_consts import (READ_WRITE_USERNAME, READ_ONLY_USERNAME, NEW_PASSWORD,
                                       FIRST_NAME, LAST_NAME, JSON_ADAPTER_NAME)
 from ui_tests.tests.ui_test_base import TestBase
+
+STRESS_NAME = 'stresstest_adapter'
 
 
 class TestDashboard(TestBase):
@@ -45,6 +48,8 @@ class TestDashboard(TestBase):
     NON_EMPTY_TABLE_ROWS = '.x-table tbody tr[id]'
 
     TEST_EMPTY_TITLE = 'test empty'
+    FIRST_LIFECYCLE_STAGE_TEXT = 'Fetch Devices...'
+    LIFECYCLE_ADAPTER_FETCHING_STATUS = 'Fetching...'
 
     @pytest.mark.skip('TBD')
     def test_system_empty_state(self):
@@ -718,3 +723,39 @@ class TestDashboard(TestBase):
         # verify card config reset
         self.dashboard_page.verify_card_config_reset_intersection_chart(self.TEST_INTERSECTION_TITLE)
         self.dashboard_page.remove_card(self.TEST_INTERSECTION_TITLE)
+
+    def test_dashboard_lifecycle_tooltip(self):
+        stress = stresstest_service.StresstestService()
+        with stress.contextmanager(take_ownership=True):
+            self.adapters_page.wait_for_adapter(STRESS_NAME)
+            device_dict = {'device_count': 2500, 'name': 'testonius'}
+            stress.add_client(device_dict)
+
+        self.dashboard_page.switch_to_page()
+        # during the first time discovery there is no lifecycle card
+        self.base_page.run_discovery(True)
+        # during the second time discovery there is lifecycle card
+        # no need to wait for discovery to end
+        self.base_page.run_discovery(False)
+        self.dashboard_page.wait_for_element_present_by_text(self.FIRST_LIFECYCLE_STAGE_TEXT)
+        self.dashboard_page.hover_over_lifecycle_chart()
+        # get all data from tooltip table
+        table_data = self.dashboard_page.get_lifecycle_tooltip_table_data()
+        # check for existing tooltip with the stress adapter
+        assert self.dashboard_page.get_lifecycle_tooltip()
+        assert self.dashboard_page.find_element_by_text(STRESS_NAME.replace('_', ' '))
+        # check the status of stress adapter
+        stress_adapters_found = False
+        for row in table_data:
+            # row.name
+            # row.status
+            if row.get('name') == STRESS_NAME.replace('_', ' ') and \
+                    row.get('status') == self.LIFECYCLE_ADAPTER_FETCHING_STATUS:
+                stress_adapters_found = True
+
+        assert stress_adapters_found
+
+        self.adapters_page.clean_adapter_servers(STRESS_NAME, delete_associated_entities=True)
+        # deleting the server takes time, and when this function over the adapter will be down
+        # we cant delete his devices if he is down. so... we sleep a bit
+        time.sleep(10)

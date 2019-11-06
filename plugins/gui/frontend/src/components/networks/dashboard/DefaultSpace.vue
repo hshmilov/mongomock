@@ -161,8 +161,9 @@
           width: 100%;
 
           .cycle-date {
-            color: $theme-blue;
+            color: $theme-orange;
             white-space: pre;
+            font-weight: 300;
           }
         }
 
@@ -178,8 +179,9 @@
             display: flex;
             flex-direction: column;
             .cycle-next-time {
-              color: $theme-blue;
+              color: $theme-orange;
               text-align: left;
+              font-weight: 300;
             }
           }
         }

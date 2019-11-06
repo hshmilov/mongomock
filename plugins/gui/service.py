@@ -3951,6 +3951,23 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
                 # Since there is no data, not adding this chart to the list
                 logger.exception(f'Error fetching data for chart ({dashboard["_id"]})')
 
+    def _get_lifecycle_phase_info(self, plugin_subtype: str) -> dict:
+        """
+        :param  plugin_subtype: the subtype of the plugin as written in triggerable_history collection
+                post_json.plugin_type field
+        :return: the result field in the triggerable_history collection
+        """
+        result = self.aggregator_db_connection['triggerable_history'].find_one(
+            {
+                'job_name': 'fetch_filtered_adapters',
+                'post_json.plugin_subtype': plugin_subtype
+            },
+            sort=[('started_at', pymongo.DESCENDING)]
+        )
+        if not result or not result['result']:
+            return {}
+        return result['result']
+
     @rev_cached(ttl=3, key_func=lambda self: 1)
     def __lifecycle(self):
         res = self.request_remote_plugin('trigger_state/execute', SYSTEM_SCHEDULER_PLUGIN_NAME)
@@ -3986,13 +4003,30 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
         sub_phases = []
         found_current = False
         for sub_phase in ResearchPhases:
+            additional_data = {}
             if is_research and sub_phase.name == state.SubPhase:
                 # Reached current status - set complementary of SubPhaseStatus value
                 found_current = True
-                sub_phases.append({'name': sub_phase.name, 'status': 1 - (state.SubPhaseStatus or 1)})
+                # Fetch_Devices
+                if sub_phase.name == ResearchPhases.Fetch_Devices.name:
+                    additional_data = self._get_lifecycle_phase_info(plugin_subtype=PluginSubtype.AdapterBase.value)
+                # Fetch_Scanners
+                if sub_phase.name == ResearchPhases.Fetch_Scanners.name:
+                    additional_data = self._get_lifecycle_phase_info(plugin_subtype=PluginSubtype.ScannerAdapter.value)
+
+                sub_phases.append({
+                    'name': sub_phase.name,
+                    'status': 0,
+                    'additional_data': additional_data
+                })
             else:
                 # Set 0 or 1, depending if reached current status yet
-                sub_phases.append({'name': sub_phase.name, 'status': 0 if found_current else 1})
+                sub_phases.append({
+                    'name': sub_phase.name,
+                    'status': 0 if found_current else 1,
+                    'additional_data': additional_data
+                })
+
         # pylint: enable=no-member
 
         return {

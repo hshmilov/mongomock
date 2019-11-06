@@ -139,6 +139,7 @@
                             color: $theme-orange;
                             margin: auto 0;
                             text-transform: capitalize;
+                            font-weight: 300;
                         }
                     }
 
