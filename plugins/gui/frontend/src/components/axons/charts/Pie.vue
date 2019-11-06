@@ -216,33 +216,35 @@
         &.disabled g {
             cursor: default;
         }
-    }
 
-    .x-tooltip {
+      .x-tooltip {
         position: fixed;
         .tooltip-content {
           display: flex;
-            .tooltip-legend {
-                margin-right: 12px;
-                flex: 1 0 auto;
-                max-width: 200px;
+          .tooltip-legend {
+            margin-right: 12px;
+            flex: 1 0 auto;
+            max-width: 200px;
 
-                .legend {
-                    display: inline-block;
-                    height: 16px;
-                    width: 16px;
-                    border-radius: 4px;
-                    margin-right: 4px;
-                    vertical-align: middle;
+            .legend {
+              display: inline-block;
+              height: 16px;
+              width: 16px;
+              border-radius: 4px;
+              margin-right: 4px;
+              vertical-align: middle;
 
-                    &.round {
-                        border-radius: 100%;
-                        width: 8px;
-                        height: 8px;
-                    }
-                }
+              &.round {
+                border-radius: 100%;
+                width: 8px;
+                height: 8px;
+              }
             }
+          }
         }
 
+      }
     }
+
+
 </style>
