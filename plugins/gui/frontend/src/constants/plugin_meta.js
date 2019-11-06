@@ -1,6 +1,7 @@
 export const pluginMeta = {
     hashicorp_adapter: {
         title: 'HashiCorp Consul',
+        link: 'https://docs.axonius.com/docs/hashicorp-consul',
         description: 'HashiCorp Consul is a multi-cloud service networking platform to connect and secure services across any runtime platform and public or private cloud.'
     },
     igar_adapter: {

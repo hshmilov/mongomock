@@ -72,7 +72,7 @@ class HashicorpAdapter(AdapterBase):
             'items': [
                 {
                     'name': 'domain',
-                    'title': 'Hashicorp Domain',
+                    'title': 'HashiCorp Domain',
                     'type': 'string'
                 },
                 {
