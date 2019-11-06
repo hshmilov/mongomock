@@ -172,8 +172,10 @@
         completeMilestone: SET_GETTING_STARTED_MILESTONE_COMPLETION
       }),
       updateMetric (metric) {
+        if (this.dashboard.metric === metric) return
         this.dashboard.metric = metric
         this.dashboard.config = null
+        this.configValid = false
         this.$nextTick(() => {
           if (!this.availableViews.includes(this.dashboardView)) {
             this.dashboardView = this.availableViews[0]
