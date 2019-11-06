@@ -350,6 +350,9 @@
             return this.sortedData.filter(item => {
                 return Object.keys(item).find(key => {
                     let val = item[key]
+                    if(!this.schemaFieldsByName[key]){
+                        return false
+                    }
                     let fieldType = this.schemaFieldsByName[key].type
                     if(fieldType === 'number' && typeof val === 'number'){
                         val = val.toFixed(2)

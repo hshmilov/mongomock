@@ -112,6 +112,7 @@ class Page:
     VERTICAL_TABS_CSS = '.x-tabs.vertical .header .header-tab'
     NAMED_TAB_XPATH = '//div[@class=\'x-tabs\']/ul/li[contains(@class, "header-tab")]//div[text()=\'{tab_title}\']'
     TABLE_ROWS_CSS = 'tbody .x-table-row.clickable'
+    TABLE_NON_CLICKABLE_ROWS_CSS = 'tbody .x-table-row'
     TABLE_COUNTER = 'div.count'
     UPLOADING_FILE_CSS = '//div[@class=\'name-placeholder\' and text()=\'Uploading...\']'
     CUSTOM_ADAPTER_NAME = 'Custom Data'
@@ -665,9 +666,10 @@ class Page:
     def get_all_checkboxes(self):
         return self.driver.find_elements_by_css_selector(self.CHECKBOX_CSS)
 
-    def get_all_table_rows(self):
+    def get_all_table_rows(self, clickable_rows=True):
         return [elem.text.split('\n') for elem in
-                self.driver.find_elements_by_css_selector(self.TABLE_ROWS_CSS) if elem.text]
+                self.driver.find_elements_by_css_selector(self.TABLE_ROWS_CSS if clickable_rows
+                                                          else self.TABLE_NON_CLICKABLE_ROWS_CSS) if elem.text]
 
     def get_all_tables_counters(self):
         counters = self.driver.find_elements_by_css_selector(self.TABLE_COUNTER)

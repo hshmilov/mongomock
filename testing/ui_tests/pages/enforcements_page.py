@@ -124,6 +124,8 @@ class EnforcementsPage(EntitiesPage):
     S3_ACCESS_KEY_ID = 'access_key_id'
     S3_SECRET_ACCESS_KEY_ID = 'secret_access_key'
 
+    ENFORCEMENT_SEARCH_INPUT = '.body .x-tabs .body .x-tab.active .x-search-input input'
+
     @property
     def url(self):
         return f'{self.base_url}/enforcements'
@@ -595,6 +597,22 @@ class EnforcementsPage(EntitiesPage):
         self.click_save_button()
         self.wait_for_table_to_load()
 
+    def create_tag_enforcement(self,
+                               enforcement_name,
+                               enforcement_view,
+                               name=SPECIAL_TAG_ACTION,
+                               tag=DEFAULT_TAG_NAME,
+                               action_cond=MAIN_ACTION_TEXT):
+        self.create_basic_enforcement(enforcement_name, enforcement_view, save=False)
+        self.select_trigger()
+        self.check_scheduling()
+        self.select_saved_view(enforcement_view)
+        self.save_trigger()
+        self.add_tag_entities(name, tag, action_cond)
+        self.click_save_button()
+        self.wait_for_spinner_to_end()
+        self.wait_for_table_to_load()
+
     def is_severity_selected(self, severity):
         return self.driver.find_element_by_css_selector(severity).is_selected()
 
@@ -708,3 +726,10 @@ class EnforcementsPage(EntitiesPage):
             yield Task(status=status, stats=stats, name=name,
                        main_action=main_action, trigger_query_name=trigger_query_name,
                        started_at=started_at, completed_at=completed_at)
+
+    def search_enforcement_tasks_search_input(self, text):
+        self.fill_text_field_by_css_selector(self.ENFORCEMENT_SEARCH_INPUT, text)
+        self.key_down_enter(self.driver.find_element_by_css_selector(self.ENFORCEMENT_SEARCH_INPUT))
+
+    def get_enforcement_tasks_count(self):
+        return len([row for row in self.get_all_table_rows(False) if len(row) > 1])

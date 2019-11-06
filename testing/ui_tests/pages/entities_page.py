@@ -14,6 +14,8 @@ from axonius.utils.wait import wait_until
 from ui_tests.pages.page import Page, TableRow
 from ui_tests.tests.ui_consts import AD_ADAPTER_NAME
 
+TABLE_COUNT_CSS = '.table-header .table-title .count'
+
 
 class EntitiesPage(Page):
     EXPORT_CSV_LOADING_CSS = '.loading-button'
@@ -60,7 +62,6 @@ class EntitiesPage(Page):
     TABLE_CLASS = '.table'
     TABLE_SELECT_ALL_CURRENT_PAGE_CHECKBOX_CSS = 'thead .x-checkbox'
     TABLE_SELECT_ALL_CSS = 'div.selection > .x-button.link'
-    TABLE_COUNT_CSS = '.table-header .table-title .count'
     TABLE_SELECTED_COUNT_CSS = '.table-header > .table-title > .selection > div'
     TABLE_SELECT_ALL_BUTTON_CSS = '.table-header > .table-title > .selection > button'
     TABLE_FIRST_ROW_CSS = 'tbody .x-table-row.clickable'
@@ -345,16 +346,16 @@ class EntitiesPage(Page):
     def find_search_value(self):
         return self.find_query_search_input().get_attribute('value')
 
-    def get_raw_count_entities(self) -> str:
-        return self.driver.find_element_by_css_selector(self.TABLE_COUNT_CSS).text
+    def get_raw_count_entities(self, table_count_css=TABLE_COUNT_CSS) -> str:
+        return self.driver.find_element_by_css_selector(table_count_css).text
 
-    def count_entities(self):
+    def count_entities(self, table_count_css=TABLE_COUNT_CSS):
         """
         How many entities are in the current table?
         :return:
         """
-        wait_until(lambda: 'loading' not in self.get_raw_count_entities())
-        match_count = re.search(r'\((\d+)\)', self.get_raw_count_entities())
+        wait_until(lambda: 'loading' not in self.get_raw_count_entities(table_count_css))
+        match_count = re.search(r'\((\d+)\)', self.get_raw_count_entities(table_count_css))
         assert match_count and len(match_count.groups()) == 1
         return int(match_count.group(1))
 
