@@ -221,8 +221,9 @@ class TestEntityCustomData(TestBase):
                         continue
                     tr = rows[0]
                     for column in tr.columns:
+                        column = column.lstrip('/')  # Selenium bug
                         self.devices_page.clear_custom_search_input()
-                        if column.startswith('+') or column == '/bin/false':
+                        if column.startswith('+'):
                             continue
                         time.sleep(0.1)
                         self.devices_page.fill_custom_data_search_input(f'{column.strip()}')
@@ -230,6 +231,4 @@ class TestEntityCustomData(TestBase):
                         assert tr2.columns == tr.columns
         finally:
             self.adapters_page.clean_adapter_servers(LINUX_SSH_ADAPTER_NAME)
-            # Linux ssh adapter is exempt from going down, because it's adapters on demand, so we "Skip" checking
-            # that the docker went down.
-            # self.wait_for_adapter_down(LINUX_SSH_DOCKER_ADAPTER_NAME)
+            self.wait_for_adapter_down(LINUX_SSH_DOCKER_ADAPTER_NAME)
