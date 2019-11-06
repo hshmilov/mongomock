@@ -80,6 +80,7 @@
     import XButton from "../../axons/inputs/Button.vue";
 
     import _some from 'lodash/some'
+    import _head from 'lodash/head'
 
     export default {
         name: 'XSelectContent',
@@ -300,7 +301,20 @@
               this.$emit('close')
             },
             onEnter() {
-              this.selectOption(this.extraOptions[0].name)
+              if(this.searchValue === '') return
+              let nameToSelect = this.extraOptions.length ? _head(this.extraOptions).name : false
+              if(nameToSelect) {
+                // in case we have extra option
+                // (when create new anabel and the search vale wont exist in the filtered options array)
+                this.selectOption(nameToSelect)
+                return
+              }
+              nameToSelect = this.filteredOptions.length ? _head(this.filteredOptions).name : false
+              if(nameToSelect && nameToSelect !== this.searchValue) {
+                // in case we have filtered options
+                // (when create new disabled and the search vale exist in the filtered options array)
+                this.selectOption(nameToSelect)
+              }
             }
         }
     }
