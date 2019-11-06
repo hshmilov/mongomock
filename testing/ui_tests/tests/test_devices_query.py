@@ -28,7 +28,7 @@ class TestDevicesQuery(TestBase):
         self.devices_page.click_query_wizard()
         self.devices_page.select_query_field(self.devices_page.FIELD_NETWORK_INTERFACES_IPS)
         self.devices_page.select_query_comp_op(self.devices_page.QUERY_COMP_SUBNET)
-        self.devices_page.fill_query_value('1.1.1.1')
+        self.devices_page.fill_query_string_value('1.1.1.1')
         self.devices_page.find_element_by_text('Specify <address>/<CIDR> to filter IP by subnet')
         self.devices_page.click_search()
 
@@ -50,11 +50,11 @@ class TestDevicesQuery(TestBase):
         self.devices_page.click_query_wizard()
         self.devices_page.select_query_field(self.devices_page.FIELD_LAST_USED_USERS)
         self.devices_page.select_query_comp_op(self.devices_page.QUERY_COMP_STARTS)
-        self.devices_page.fill_query_value('test')
+        self.devices_page.fill_query_string_value('test')
         self.devices_page.wait_for_spinner_to_end()
         self.devices_page.wait_for_table_to_load()
         assert self.devices_page.count_entities() == 1
-        self.devices_page.fill_query_value('test 3')
+        self.devices_page.fill_query_string_value('test 3')
         self.devices_page.wait_for_spinner_to_end()
         self.devices_page.wait_for_table_to_load()
         assert self.devices_page.count_entities() == 0
@@ -335,7 +335,7 @@ class TestDevicesQuery(TestBase):
         assert len(expressions) == 3
         self.devices_page.select_query_field(self.devices_page.FIELD_NETWORK_INTERFACES_IPS, parent=expressions[0])
         self.devices_page.select_query_comp_op(self.devices_page.QUERY_COMP_SUBNET, parent=expressions[0])
-        self.devices_page.fill_query_value('192.168.0.0/16', parent=expressions[0])
+        self.devices_page.fill_query_string_value('192.168.0.0/16', parent=expressions[0])
         self.devices_page.select_query_logic_op(self.devices_page.QUERY_LOGIC_AND)
         self.devices_page.select_query_adapter(AD_ADAPTER_NAME, parent=expressions[1])
         self.devices_page.select_query_field(self.devices_page.FIELD_LAST_SEEN, parent=expressions[2])
@@ -362,7 +362,7 @@ class TestDevicesQuery(TestBase):
         assert len(expressions) == 3
         self.devices_page.select_query_field(self.devices_page.FIELD_HOSTNAME_TITLE, parent=expressions[0])
         self.devices_page.select_query_comp_op(self.devices_page.QUERY_COMP_CONTAINS, parent=expressions[0])
-        self.devices_page.fill_query_value('test', parent=expressions[0])
+        self.devices_page.fill_query_string_value('test', parent=expressions[0])
         self.devices_page.select_query_logic_op(self.devices_page.QUERY_LOGIC_OR, parent=expressions[1])
         self.devices_page.select_query_field(self.devices_page.FIELD_LAST_SEEN, parent=expressions[1])
         self.devices_page.select_query_comp_op(self.users_page.QUERY_COMP_DAYS, parent=expressions[1])
@@ -371,7 +371,7 @@ class TestDevicesQuery(TestBase):
         self.devices_page.select_query_logic_op(self.devices_page.QUERY_LOGIC_OR, parent=expressions[2])
         self.devices_page.select_query_field(self.devices_page.FIELD_ASSET_NAME, parent=expressions[2])
         self.devices_page.select_query_comp_op(self.devices_page.QUERY_COMP_EQUALS, parent=expressions[2])
-        self.devices_page.fill_query_value('test_device', parent=expressions[2])
+        self.devices_page.fill_query_string_value('test_device', parent=expressions[2])
         self.devices_page.wait_for_spinner_to_end()
         self.devices_page.remove_query_expression(expressions[0])
         self.devices_page.wait_for_spinner_to_end()
@@ -379,7 +379,7 @@ class TestDevicesQuery(TestBase):
         expressions = self.devices_page.find_expressions()
         assert len(expressions) == 2
         assert self.devices_page.get_query_value(parent=expressions[0]) == '1'
-        assert self.devices_page.get_query_value(parent=expressions[1]) == 'test_device'
+        assert self.devices_page.get_query_value(parent=expressions[1], input_type_string=True) == 'test_device'
         self.devices_page.clear_query_wizard()
 
     def _test_not_expression(self):
@@ -387,7 +387,7 @@ class TestDevicesQuery(TestBase):
         assert len(expressions) == 1
         self.devices_page.select_query_field(self.devices_page.FIELD_HOSTNAME_TITLE, parent=expressions[0])
         self.devices_page.select_query_comp_op(self.devices_page.QUERY_COMP_CONTAINS, parent=expressions[0])
-        self.devices_page.fill_query_value('test', parent=expressions[0])
+        self.devices_page.fill_query_string_value('test', parent=expressions[0])
         self.devices_page.toggle_not(expressions[0])
         self.devices_page.wait_for_spinner_to_end()
         assert self.devices_page.is_query_error()
@@ -434,18 +434,18 @@ class TestDevicesQuery(TestBase):
         # DEVICE_MAC and DEVICE_FIRST_IP are on same Network Interface, so Device will return
         self.devices_page.select_query_field(self.devices_page.FIELD_IPS, conditions[1])
         self.devices_page.select_query_comp_op(self.devices_page.QUERY_COMP_EQUALS, conditions[1])
-        self.devices_page.fill_query_value(DEVICE_FIRST_IP, conditions[1])
+        self.devices_page.fill_query_string_value(DEVICE_FIRST_IP, conditions[1])
         conditions = self.devices_page.find_conditions(expressions[0])
         self.devices_page.select_query_field(self.devices_page.FIELD_MAC, conditions[2])
         self.devices_page.select_query_comp_op(self.devices_page.QUERY_COMP_CONTAINS, conditions[2])
-        self.devices_page.fill_query_value(DEVICE_MAC, conditions[2])
+        self.devices_page.fill_query_string_value(DEVICE_MAC, conditions[2])
         self.devices_page.wait_for_table_to_load()
         assert len(self.devices_page.get_all_data()) == 1
 
         # DEVICE_THIRD_IP and SUBNETS are not on same Network Interface, so Device will not return
-        self.devices_page.fill_query_value(DEVICE_THIRD_IP, conditions[1])
+        self.devices_page.fill_query_string_value(DEVICE_THIRD_IP, conditions[1])
         self.devices_page.select_query_field(self.devices_page.FIELD_SUBNETS, conditions[2])
-        self.devices_page.fill_query_value(DEVICE_SUBNET, conditions[2])
+        self.devices_page.fill_query_string_value(DEVICE_SUBNET, conditions[2])
         self.devices_page.wait_for_table_to_load()
         assert len(self.devices_page.get_all_data()) == 0
 
@@ -456,11 +456,11 @@ class TestDevicesQuery(TestBase):
         assert len(expressions) == 2
         self.devices_page.select_query_field(self.devices_page.FIELD_NETWORK_INTERFACES_IPS, expressions[0])
         self.devices_page.select_query_comp_op(self.devices_page.QUERY_COMP_EQUALS, expressions[0])
-        self.devices_page.fill_query_value(DEVICE_THIRD_IP, expressions[0])
+        self.devices_page.fill_query_string_value(DEVICE_THIRD_IP, expressions[0])
         self.devices_page.select_query_logic_op(self.devices_page.QUERY_LOGIC_AND, expressions[1])
         self.devices_page.select_query_field(self.devices_page.FIELD_NETWORK_INTERFACES_SUBNETS, expressions[1])
         self.devices_page.select_query_comp_op(self.devices_page.QUERY_COMP_CONTAINS, expressions[1])
-        self.devices_page.fill_query_value(DEVICE_SUBNET, expressions[1])
+        self.devices_page.fill_query_string_value(DEVICE_SUBNET, expressions[1])
         self.devices_page.wait_for_table_to_load()
         assert len(self.devices_page.get_all_data()) == 1
         self.devices_page.clear_query_wizard()
@@ -496,7 +496,7 @@ class TestDevicesQuery(TestBase):
         assert len(conditions) == 3
         self.devices_page.select_query_field(self.devices_page.FIELD_VLANS_VLAN_NAME, conditions[1])
         self.devices_page.select_query_comp_op(self.devices_page.QUERY_COMP_EQUALS, conditions[1])
-        self.devices_page.fill_query_value(DEVICE_SECOND_VLAN_NAME, conditions[1])
+        self.devices_page.fill_query_string_value(DEVICE_SECOND_VLAN_NAME, conditions[1])
         self.devices_page.select_query_field(self.devices_page.FIELD_VLANS_TAG_ID, conditions[2])
         self.devices_page.select_query_comp_op(self.devices_page.QUERY_COMP_EQUALS, conditions[2])
         self.devices_page.fill_query_value(DEVICE_FIRST_VLAN_TAGID, conditions[2])
@@ -508,7 +508,7 @@ class TestDevicesQuery(TestBase):
         assert len(conditions) == 3
         self.devices_page.select_query_field(self.devices_page.FIELD_VLAN_NAME, conditions[1])
         self.devices_page.select_query_comp_op(self.devices_page.QUERY_COMP_EQUALS, conditions[1])
-        self.devices_page.fill_query_value(DEVICE_SECOND_VLAN_NAME, conditions[1])
+        self.devices_page.fill_query_string_value(DEVICE_SECOND_VLAN_NAME, conditions[1])
         self.devices_page.select_query_field(self.devices_page.FIELD_TAG_ID, conditions[2])
         self.devices_page.select_query_comp_op(self.devices_page.QUERY_COMP_EQUALS, conditions[2])
         self.devices_page.fill_query_value(DEVICE_FIRST_VLAN_TAGID, conditions[2])
@@ -660,11 +660,11 @@ class TestDevicesQuery(TestBase):
         self.devices_page.toggle_left_bracket(expressions[0])
         self.devices_page.select_query_field(self.devices_page.FIELD_NETWORK_INTERFACES_IPS, expressions[0])
         self.devices_page.select_query_comp_op(self.devices_page.QUERY_COMP_EQUALS, expressions[0])
-        self.devices_page.fill_query_value(DEVICE_THIRD_IP, expressions[0])
+        self.devices_page.fill_query_string_value(DEVICE_THIRD_IP, expressions[0])
         self.devices_page.select_query_logic_op(self.devices_page.QUERY_LOGIC_AND, expressions[1])
         self.devices_page.select_query_field(self.devices_page.FIELD_NETWORK_INTERFACES_MAC, expressions[1])
         self.devices_page.select_query_comp_op(self.devices_page.QUERY_COMP_CONTAINS, expressions[1])
-        self.devices_page.fill_query_value(DEVICE_MAC, expressions[1])
+        self.devices_page.fill_query_string_value(DEVICE_MAC, expressions[1])
         self.devices_page.toggle_right_bracket(expressions[1])
         assert not self.devices_page.is_query_save_as_disabled()
 

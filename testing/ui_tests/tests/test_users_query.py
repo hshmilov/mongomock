@@ -50,7 +50,7 @@ class TestUsersQuery(TestBase):
         assert len(expressions) == 1
         self.users_page.select_query_field(self.users_page.FIELD_USERNAME_TITLE, parent=expressions[0])
         self.users_page.select_query_comp_op(self.users_page.QUERY_COMP_CONTAINS, parent=expressions[0])
-        self.users_page.fill_query_value('avi', parent=expressions[0])
+        self.users_page.fill_query_string_value('avi', parent=expressions[0])
         self.users_page.wait_for_spinner_to_end()
         self.users_page.wait_for_table_to_load()
         assert self.users_page.count_entities() == 1
@@ -67,7 +67,7 @@ class TestUsersQuery(TestBase):
         self.users_page.wait_for_table_to_load()
         assert self.users_page.count_entities() == 1
 
-        self.users_page.fill_query_value('ofri', parent=expressions[0])
+        self.users_page.fill_query_string_value('ofri', parent=expressions[0])
         self.users_page.wait_for_spinner_to_end()
         self.users_page.wait_for_table_to_load()
         assert self.users_page.count_entities() == 1

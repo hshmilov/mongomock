@@ -48,6 +48,7 @@ import axonius.entities
 from axonius import adapter_exceptions, plugin_exceptions
 from axonius.adapter_exceptions import TagDeviceError
 from axonius.background_scheduler import LoggedBackgroundScheduler
+from axonius.clients.cyberark_vault.connection import CyberArkVaultConnection
 from axonius.clients.rest.connection import RESTConnection
 from axonius.consts.adapter_consts import IGNORE_DEVICE
 from axonius.consts.core_consts import CORE_CONFIG_NAME
@@ -529,6 +530,7 @@ class PluginBase(Configurable, Feature, ABC):
             EntityType.Users: set(),
             EntityType.Devices: set()
         }
+
         # pylint: enable=invalid-name
 
         # GUI Stuff
@@ -593,6 +595,7 @@ class PluginBase(Configurable, Feature, ABC):
                                                      max_instances=1)
             self.execution_monitor_scheduler.start()
 
+        self._cyberark_vault = None
         self._update_schema()
         self._update_config_inner()
         self.__save_hyperlinks_to_db()
@@ -1427,7 +1430,7 @@ class PluginBase(Configurable, Feature, ABC):
         Fetches the file pointed by `field_data` from the DB.
         The user should not assume anything about the internals of the file.
         :param field_data:
-        :param db_name: Name of the DB that file is stored in
+        :param stored_locally: True to look for the file on the current plugin's db False for core's
         :return: stream like object
         """
         if field_data:
@@ -2556,7 +2559,7 @@ class PluginBase(Configurable, Feature, ABC):
         self._global_config_updated()
         return ''
 
-    def create_jira_ticket(self, porject_key, summary, description, issue_type):
+    def create_jira_ticket(self, project_key, summary, description, issue_type):
         jira_settings = self._jira_settings
         if jira_settings['enabled'] is not True:
             return 'Jira Settings missing'
@@ -2565,7 +2568,7 @@ class PluginBase(Configurable, Feature, ABC):
                                  'verify': jira_settings['verify_ssl']},
                         basic_auth=(jira_settings['username'], jira_settings['password']))
             issue_dict = {
-                'project': {'key': porject_key},
+                'project': {'key': project_key},
                 'summary': summary,
                 'description': description,
                 'issuetype': {'name': issue_type},
@@ -2700,6 +2703,20 @@ class PluginBase(Configurable, Feature, ABC):
                                source=email_settings.get('sender_address'))
         return None
 
+    @property
+    def cyberark_vault(self) -> CyberArkVaultConnection:
+        return self._cyberark_vault
+
+    def check_password_fetch(self, field_name: str, query: str) -> bool:
+        """
+        Checks if the query correctly fetches a password from the requested vault.
+        :param field_name: The field name for gui to recognize.
+        :param query: The query to use to fetch from vault.
+        :return: True if successfully fetched the password.
+        """
+        password = self.cyberark_vault.query_password(field_name, query)
+        return password is not None
+
     # Global settings
     # These are settings which are shared between all plugins. For example, all plugins should use the same
     # mail server when doing reports.
@@ -2724,6 +2741,14 @@ class PluginBase(Configurable, Feature, ABC):
         self._correlate_ad_sccm = config[CORRELATION_SETTINGS].get(CORRELATE_AD_SCCM, True)
         self._jira_settings = config['jira_settings']
         self._proxy_settings = config[PROXY_SETTINGS]
+        self._vault_settings = config['vault_settings']
+
+        if self._vault_settings['enabled'] is True:
+            self._cyberark_vault = CyberArkVaultConnection(self._vault_settings['domain'],
+                                                           self._vault_settings['port'],
+                                                           self._vault_settings['application_id'],
+                                                           self._grab_file(self._vault_settings['certificate_key'],
+                                                                           stored_locally=False).read())
         # enable: disable=invalid-name
 
         self._aggregation_max_workers = None
@@ -2942,6 +2967,41 @@ class PluginBase(Configurable, Feature, ABC):
                     ]
                 },
                 {
+                    'type': 'array',
+                    'title': 'Vault Settings',
+                    'name': 'vault_settings',
+                    'required': ['enabled', 'domain',
+                                 'application_id', 'certificate_key', 'port'],
+                    'items': [
+                        {
+                            'name': 'enabled',
+                            'title': 'Use CyberArk',
+                            'type': 'bool'
+                        },
+                        {
+                            'name': 'domain',
+                            'title': 'CyberArk Domain',
+                            'type': 'string'
+                        },
+                        {
+                            'name': 'port',
+                            'title': 'Port',
+                            'type': 'integer',
+                            'format': 'port'
+                        },
+                        {
+                            'name': 'application_id',
+                            'title': 'Application ID',
+                            'type': 'string',
+                        },
+                        {
+                            'name': 'certificate_key',
+                            'title': 'Certificate Key',
+                            'type': 'file'
+                        }
+                    ]
+                },
+                {
                     'items': [
                         {
                             'name': 'enabled',
@@ -3155,7 +3215,7 @@ class PluginBase(Configurable, Feature, ABC):
                     'title': 'Getting Started with Axonius Settings',
                     'type': 'array',
                     'required': ['enabled']
-                },
+                }
             ],
             'pretty_name': 'Global Configuration',
             'type': 'array'
@@ -3209,6 +3269,13 @@ class PluginBase(Configurable, Feature, ABC):
                 PROXY_USER: '',
                 PROXY_PASSW: '',
                 PROXY_VERIFY: True
+            },
+            'vault_settings': {
+                'enabled': False,
+                'domain': None,
+                'port': None,
+                'application_id': None,
+                'certificate_key': None
             },
             NOTIFICATIONS_SETTINGS: {
                 NOTIFY_ADAPTERS_FETCH: False,

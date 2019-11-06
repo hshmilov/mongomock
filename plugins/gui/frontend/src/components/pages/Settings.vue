@@ -251,7 +251,8 @@
               global: {
                 mail: this.coreSettings.config.email_settings.enabled,
                 syslog: this.coreSettings.config.syslog_settings.enabled,
-                gettingStartedEnabled: this.coreSettings.config.getting_started_checklist.enabled
+                gettingStartedEnabled: this.coreSettings.config.getting_started_checklist.enabled,
+                vault_settings: this.coreSettings.config.vault_settings.enabled,
               }
             }
           })

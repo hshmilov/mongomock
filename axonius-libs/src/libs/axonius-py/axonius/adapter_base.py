@@ -4,6 +4,7 @@ It implements API calls that are expected to be present in all adapters.
 """
 # pylint: disable=C0302
 import concurrent.futures
+import copy
 import json
 import logging
 import sys
@@ -721,7 +722,7 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
             # Got here only if connection succeeded
             status = 'success'
         except (adapter_exceptions.ClientConnectionException, KeyError, Exception) as e:
-            error_msg = str(e.args[0] if e.args else '')
+            error_msg = str(e)
             id_for_log = client_id if client_id else str(object_id or '')
             logger.exception(f'Got error while handling client {id_for_log} - '
                              f'possibly compliance problem with schema.')
@@ -886,10 +887,33 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
         :return: unique key for the client, composed by given field values, according to adapter's definition
         """
 
-    def _route_connect_client(self, *args, **kwargs):
+    def _normalize_password_fields(self, client_config):
+        """
+        Checks if a vault password needs to be fetched replaces.
+        :return:
+        """
+        client_config_copy = copy.deepcopy(client_config)
+        # Get all the password fields from schema
+        password_fields = [item['name'] for item in self._clients_schema()['items'] if item.get('format') == 'password']
+
+        # Get all the cyberark_vault fields from the client_config
+        cyberark_fields = [(field, client_config_copy[field])
+                           for field
+                           in password_fields
+                           if isinstance(client_config_copy.get(field), dict) and
+                           client_config_copy[field].get('type') == 'cyberark_vault']
+
+        for field_name, field in cyberark_fields:
+            client_config_copy[field_name] = self.cyberark_vault.query_password(field_name, field.get('query'))
+
+        return client_config_copy
+
+    def _route_connect_client(self, client_config, *args, **kwargs):
         if self.__is_in_mock_mode:
             return self.__adapter_mock.mock_connect_client()
-        return self._connect_client(*args, **kwargs)
+
+        normalized_client_config = self._normalize_password_fields(client_config)
+        return self._connect_client(normalized_client_config, *args, **kwargs)
 
     @abstractmethod
     def _connect_client(self, client_config):
@@ -1088,7 +1112,6 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
         :return: Raw and parsed data list if fetched successfully, whether immediately or with fresh connection
         :raises Exception: If client connection or client data query errored 3 times
         """
-
         def _get_raw_and_parsed_data():
             mapping = {
                 EntityType.Devices: (self._route_query_devices_by_client(), self._parse_devices_raw_data_hook),

@@ -12,11 +12,12 @@ from ui_tests.tests.ui_test_base import TestBase
 
 LINUX_SSH_ADAPTER_NAME = 'Linux SSH'
 LINUX_SSH_DOCKER_ADAPTER_NAME = 'linux_ssh_adapter'
+CUSTOM_STRING_TYPE_NAME = 'String'
 
 
 class TestEntityCustomData(TestBase):
     CUSTOM_PREDEFINED_VALUE = 'A lovely name'
-    CUSTOM_STRING_TYPE = 'String'
+    CUSTOM_STRING_TYPE = CUSTOM_STRING_TYPE_NAME
     CUSTOM_STRING_NAME = 'Building Name'
     CUSTOM_STRING_VALUE = 'Circular'
     CUSTOM_INT_TYPE = 'Integer'
@@ -58,7 +59,7 @@ class TestEntityCustomData(TestBase):
         assert entities_page.is_input_error(entities_page.find_custom_data_predefined_field())
         entities_page.select_custom_data_field(field_name)
         assert entities_page.is_input_error(entities_page.find_custom_data_value())
-        entities_page.fill_custom_data_value(self.CUSTOM_PREDEFINED_VALUE)
+        entities_page.fill_custom_data_value(self.CUSTOM_PREDEFINED_VALUE, input_type_string=True)
         entities_page.save_custom_data()
         entities_page.wait_for_spinner_to_end()
         assert entities_page.find_element_by_text(field_name) and entities_page.find_element_by_text(
@@ -96,10 +97,13 @@ class TestEntityCustomData(TestBase):
             assert entities_page.is_input_error(entities_page.find_custom_data_new_field_name(parent))
         entities_page.fill_custom_data_field_name(field_name, parent)
         if bad_value:
-            entities_page.fill_custom_data_value(bad_value, parent)
-            assert entities_page.is_input_error(entities_page.find_custom_data_value(parent))
+            entities_page.fill_custom_data_value(bad_value, parent,
+                                                 input_type_string=field_type == CUSTOM_STRING_TYPE_NAME)
+            assert entities_page.is_input_error(
+                entities_page.find_custom_data_value(parent, input_type_string=field_type == CUSTOM_STRING_TYPE_NAME))
         if field_value:
-            entities_page.fill_custom_data_value(field_value, parent)
+            entities_page.fill_custom_data_value(field_value, parent,
+                                                 input_type_string=field_type == CUSTOM_STRING_TYPE_NAME)
 
     def _test_error_fields(self, entities_page, dup_field_name):
         entities_page.click_custom_data_edit()
@@ -144,7 +148,7 @@ class TestEntityCustomData(TestBase):
         entities_page.open_custom_data_bulk()
         entities_page.click_custom_data_add_predefined()
         entities_page.select_custom_data_field(field_name)
-        entities_page.fill_custom_data_value(self.CUSTOM_BULK_FIELD_VALUE)
+        entities_page.fill_custom_data_value(self.CUSTOM_BULK_FIELD_VALUE, input_type_string=True)
         entities_page.save_custom_data_feedback(
             context=self.driver.find_element_by_css_selector(entities_page.CUSTOM_DATA_BULK_CONTAINER_CSS))
         entities_page.click_row_checkbox()

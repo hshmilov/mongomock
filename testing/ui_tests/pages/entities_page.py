@@ -30,6 +30,7 @@ class EntitiesPage(Page):
     QUERY_ADAPTER_DROPDOWN_CSS = '.x-select-typed-field .x-dropdown.x-select.x-select-symbol'
     QUERY_COMP_OP_DROPDOWN_CSS = 'div.x-select.expression-comp'
     QUERY_DATE_PICKER_CSS = '.expression-value .md-datepicker .md-input'
+    QUERY_VALUE_COMPONENT_INPUT_CSS = '.expression-value input'
     QUERY_VALUE_COMPONENT_CSS = '.expression-value'
     QUERY_SEARCH_INPUT_CSS = '#query_list .input-value'
     QUERY_SEARCH_DROPDOWN_XPATH = '//div[@id=\'query_select\']//div[text()=\'{query_name_text}\']'
@@ -145,6 +146,7 @@ class EntitiesPage(Page):
     CUSTOM_DATA_NEW_FIELD_TYPE_CSS = '.custom-fields .fields-item .x-select.item-type'
     CUSTOM_DATA_NEW_FIELD_NAME_CSS = '.custom-fields .fields-item input.item-name'
     CUSTOM_DATA_FIELD_VALUE_CSS = '.custom-fields .fields-item .item-value'
+    CUSTOM_DATA_FIELD_STRING_VALUE_CSS = '.custom-fields .fields-item .item-value input'
     CUSTOM_DATA_FIELD_ITEM = '.custom-fields .fields-item'
     CUSTOM_DATA_ERROR_CSS = '.x-entity-custom-fields .footer .error-text'
     CUSTOM_DATA_BULK_CONTAINER_CSS = '.actions'
@@ -265,6 +267,9 @@ class EntitiesPage(Page):
     def get_query_comp_op(self):
         return self.driver.find_element_by_css_selector(self.QUERY_COMP_OP_DROPDOWN_CSS).text
 
+    def fill_query_string_value(self, text, parent=None):
+        self.fill_text_field_by_css_selector(self.QUERY_VALUE_COMPONENT_INPUT_CSS, text, context=parent)
+
     def fill_query_value(self, text, parent=None):
         self.fill_text_field_by_css_selector(self.QUERY_VALUE_COMPONENT_CSS, text, context=parent)
 
@@ -274,11 +279,12 @@ class EntitiesPage(Page):
                            self.DROPDOWN_SELECTED_OPTION_CSS,
                            text, parent=parent)
 
-    def get_query_value(self, parent=None):
+    def get_query_value(self, parent=None, input_type_string=False):
+        css_to_use = self.QUERY_VALUE_COMPONENT_INPUT_CSS if input_type_string else self.QUERY_VALUE_COMPONENT_CSS
         if parent:
-            el = parent.find_element_by_css_selector(self.QUERY_VALUE_COMPONENT_CSS)
+            el = parent.find_element_by_css_selector(css_to_use)
         else:
-            el = self.wait_for_element_present_by_css(self.QUERY_VALUE_COMPONENT_CSS)
+            el = self.wait_for_element_present_by_css(css_to_use)
         return el.get_attribute('value')
 
     def select_query_logic_op(self, text, parent=None):
@@ -426,7 +432,7 @@ class EntitiesPage(Page):
         self.click_query_wizard()
         self.select_query_field(field_name)
         self.select_query_comp_op(self.QUERY_COMP_CONTAINS)
-        self.fill_query_value(field_value)
+        self.fill_query_string_value(field_value)
         self.wait_for_table_to_load()
         self.close_dropdown()
 
@@ -980,10 +986,11 @@ class EntitiesPage(Page):
             parent = self.driver
         return parent.find_element_by_css_selector(self.CUSTOM_DATA_NEW_FIELD_TYPE_CSS)
 
-    def find_custom_data_value(self, parent=None):
+    def find_custom_data_value(self, parent=None, input_type_string=False):
+        css_to_use = self.CUSTOM_DATA_FIELD_STRING_VALUE_CSS if input_type_string else self.CUSTOM_DATA_FIELD_VALUE_CSS
         if not parent:
             parent = self.driver
-        return parent.find_element_by_css_selector(self.CUSTOM_DATA_FIELD_VALUE_CSS)
+        return parent.find_element_by_css_selector(css_to_use)
 
     def select_custom_data_field(self, field_name, parent=None):
         self.select_option(self.CUSTOM_DATA_PREDEFINED_FIELD_CSS, self.DROPDOWN_TEXT_BOX_CSS,
@@ -996,8 +1003,9 @@ class EntitiesPage(Page):
     def fill_custom_data_field_name(self, field_name, parent=None):
         self.fill_text_field_by_css_selector(self.CUSTOM_DATA_NEW_FIELD_NAME_CSS, field_name, parent)
 
-    def fill_custom_data_value(self, field_value, parent=None):
-        self.fill_text_field_by_css_selector(self.CUSTOM_DATA_FIELD_VALUE_CSS, field_value, parent)
+    def fill_custom_data_value(self, field_value, parent=None, input_type_string=False):
+        css_to_use = self.CUSTOM_DATA_FIELD_STRING_VALUE_CSS if input_type_string else self.CUSTOM_DATA_FIELD_VALUE_CSS
+        self.fill_text_field_by_css_selector(css_to_use, field_value, parent)
 
     def save_custom_data(self):
         self.find_custom_data_save().click()

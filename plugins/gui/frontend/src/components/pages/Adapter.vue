@@ -75,8 +75,8 @@
           <div class="error-text">{{serverModal.error}}</div>
         </div>
         <x-form
-          :schema="adapterSchema"
           v-model="serverModal.serverData"
+          :schema="adapterSchema"
           :api-upload="uploadFileEndpoint"
           @submit="saveServer"
           @validate="validateServer"
@@ -131,8 +131,9 @@
   import xButton from '../axons/inputs/Button.vue'
   import xTitle from '../axons/layout/Title.vue'
   import xToast from '../axons/popover/Toast.vue'
+  import {parseVaultError} from '../../constants/utils'
 
-    import {mapState, mapMutations, mapGetters, mapActions} from 'vuex'
+    import {mapState, mapGetters, mapActions} from 'vuex'
     import {
         FETCH_ADAPTERS, 
         SAVE_ADAPTER_CLIENT, 
@@ -162,6 +163,9 @@
         },
         allClients(state) {
           return state.adapters.clients
+        },
+        isCyberarkVault(state) {
+          return _get(state, 'configuration.data.global.cyberark_vault', false)
         }
       }),
       adapterId() {
@@ -203,7 +207,9 @@
         })
       },
       adapterSchema() {
-        return _get(this.currentAdapter, 'schema', null)
+        const currentSchema = _get(this.currentAdapter, 'schema', null)
+        if (currentSchema) currentSchema['useVault'] =  this.isCyberarkVault
+        return currentSchema
       },
       tableFields() {
         if (!this.adapterSchema || !this.adapterSchema.items) return []
@@ -228,7 +234,7 @@
           error: '',
           serverName: 'New Server',
           uuid: null,
-          valid: false
+          valid: false,
         },
         selectedServers: [],
         message: '',
@@ -274,6 +280,11 @@
             uuid: client.uuid,
             error: client.error,
             valid: true
+          }
+          if (client.error && client.error !== "" && client.error.startsWith("cyberark_vault_error")) {
+            let result = parseVaultError(client);
+            this.serverModal.serverData[result[1]].error = result[2]
+            this.serverModal.error = result[2]
           }
         }
         this.toggleServerModal()
@@ -397,6 +408,10 @@
     width: 45%
   }
 
+  #VaultQueryInput {
+    width: 60%
+  }
+
   .x-adapter {
     .x-table-wrapper {
       height: auto;
@@ -481,6 +496,9 @@
 
         .error-text {
           margin-left: 8px;
+          width: 100%;
+          text-overflow: ellipsis;
+          overflow: hidden;
         }
       }
     }
@@ -488,6 +506,64 @@
     .upload-file {
       .file-name {
         width: 120px;
+      }
+    }
+
+    .x-vault-query-input {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1001;
+      display: grid;
+
+      .modal-container {
+        margin: auto;
+        padding: 24px;
+        background-color: $theme-white;
+        border-radius: 2px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, .33);
+        z-index: 1001;
+
+        .modal-header {
+          display: flex;
+          border-bottom: 1px solid $grey-2;
+          padding: 0 24px 12px;
+          margin: 0 -24px 24px -24px;
+
+          .title {
+            flex: 1 0 auto;
+            font-weight: 500;
+            font-size: 16px;
+          }
+        }
+
+        .modal-body {
+          padding: 0;
+          margin-bottom: 24px;
+
+          .form-group:last-of-type {
+            margin-bottom: 0;
+          }
+        }
+
+        .modal-footer {
+          border: 0;
+          padding: 0;
+          text-align: right;
+        }
+      }
+
+      .modal-overlay {
+        position: fixed;
+        z-index: 1000;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, .5);
+        transition: opacity .3s ease;
       }
     }
 

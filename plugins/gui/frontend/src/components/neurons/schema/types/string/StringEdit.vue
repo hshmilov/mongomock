@@ -1,56 +1,59 @@
 <template>
   <!-- Date Picker -->
-  <x-date-edit
-    v-if="isDate"
-    v-model="data"
-    :read-only="readOnly"
-    :minimal="true"
-    :clearable="clearable"
-    @input="input"
-  />
-  <textarea 
-    v-else-if="isText" 
-    v-model="data" 
-    :maxlength="schema.limit" 
-    rows="3" 
-    @input="input"
-  >
+    <x-date-edit
+            v-if="isDate"
+            v-model="data"
+            :read-only="readOnly"
+            :minimal="true"
+            :clearable="clearable"
+            @input="input"
+    />
+    <textarea
+            v-else-if="isText"
+            v-model="data"
+            :maxlength="schema.limit"
+            rows="3"
+            @input="input"
+    >
   </textarea>
-  <input
-    v-else-if="inputType"
-    :id="schema.name"
-    v-model="processedData"
-    :type="inputType"
-    :class="{'error-border': error}"
-    :disabled="readOnly || schema.readOnly"
-    :placeholder="schema.placeholder"
-    @input="input"
-    @focusout.stop="focusout"
-    @focusin="onFocusIn"
-  />
-  <!-- Select from enum values -->
-  <x-select
-    v-else-if="enumOptions && !schema.source"
-    v-model="processedData"
-    :options="enumOptions"
-    placeholder="value..."
-    :searchable="true"
-    :class="{'error-border': error}"
-    :read-only="readOnly || schema.readOnly"
-    @input="input"
-    @focusout.stop="validate"
-  />
-  <component
-    :is="dynamicType"
-    v-else-if="enumOptions && schema.source"
-    v-model="processedData"
-    :schema="schema"
-    :searchable="true"
-    :class="{'error-border': error, [`${schema.source.key}`]: true}"
-    :read-only="readOnly || schema.readOnly"
-    @input="input"
-    @focusout.stop="validate"
-  />
+    <div v-else-if="inputType" class="string-input-container">
+      <input
+            :id="schema.name"
+            v-model="processedData"
+            :type="inputType"
+            :class="{'error-border': error}"
+            :disabled="readOnly || schema.readOnly"
+            :placeholder="schema.placeholder"
+            @input="input"
+            @focusout.stop="focusout"
+            @focusin="onFocusIn"
+            @keydown="onKeyPress"
+    />
+      <slot name="icon"></slot>
+    </div>
+    <!-- Select from enum values -->
+    <x-select
+            v-else-if="enumOptions && !schema.source"
+            v-model="processedData"
+            :options="enumOptions"
+            placeholder="value..."
+            :searchable="true"
+            :class="{'error-border': error}"
+            :read-only="readOnly || schema.readOnly"
+            @input="input"
+            @focusout.stop="validate"
+    />
+    <component
+            :is="dynamicType"
+            v-else-if="enumOptions && schema.source"
+            v-model="processedData"
+            :schema="schema"
+            :searchable="true"
+            :class="{'error-border': error, [`${schema.source.key}`]: true}"
+            :read-only="readOnly || schema.readOnly"
+            @input="input"
+            @focusout.stop="validate"
+    />
 </template>
 
 <script>

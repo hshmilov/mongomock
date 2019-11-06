@@ -66,6 +66,9 @@ export default {
 			// Validate without publishing the error
 			this.validate(true)
 		},
+		onKeyPress(event) {
+			this.$emit('keydown', event)
+		},
 		formatData() {
 			return this.data
 		},

@@ -24,10 +24,10 @@
             :is="item.type"
             ref="itemChild"
             :value="data[item.name]"
-            @input="(value) => dataChanged(value, item.name)"
             :schema="item"
             :api-upload="apiUpload"
             :read-only="readOnly"
+            @input="(value) => dataChanged(value, item.name)"
             @validate="onValidate"
           />
         </x-type-wrap>
@@ -85,13 +85,14 @@
   import xButton from '../../../../axons/inputs/Button.vue'
   import xListInput from '../../../../axons/inputs/ListInput.vue'
   import { validateEmail } from '../../../../../constants/validations'
+  import XVaultEdit from '../string/VaultEdit.vue'
 
   import arrayMixin from './array'
 
   export default {
     name: 'Array',
     components: {
-      xTypeWrap, string, number, integer, bool, file, range, xButton, xListInput
+      xTypeWrap, string, number, integer, bool, file, range, xButton, xListInput, XVaultEdit
     },
     mixins: [arrayMixin],
     props: {
@@ -102,7 +103,11 @@
       placeholder: {
         type: String,
         default: 'Select...'
-      }
+      },
+      useVault: {
+        type: Boolean,
+        default: false
+      },
     },
     data () {
       return {
@@ -158,7 +163,7 @@
           // An array, no need to handle recursively
           return
         }
-        if (this.data[item.name] !== undefined && this.data[item.name] !== null) {
+        if (this.data[item.name] !== undefined && this.data[item.name] !== null && !this.schema.useVault) {
           // Value exists, no need to process
           return
         }
@@ -166,10 +171,14 @@
           this.data[item.name] = false
           updateData = true
         }
+        if (item.format && item.format === "password" && this.schema.useVault){
+          item.type = 'XVaultEdit'
+        }
         if (!item.default) {
           // Nothing defined to set
           return
         }
+
         this.data[item.name] = item.default
         updateData = true
       })

@@ -32,7 +32,7 @@ class TestDevice(TestBase):
         self.devices_page.click_custom_data_add_predefined()
         parent = self.devices_page.find_custom_fields_items()[-1]
         self.devices_page.select_custom_data_field(self.devices_page.FIELD_ASSET_NAME, parent=parent)
-        self.devices_page.fill_custom_data_value('DeanSysman', parent=parent)
+        self.devices_page.fill_custom_data_value('DeanSysman', parent=parent, input_type_string=True)
         self.devices_page.save_custom_data()
         self.devices_page.wait_for_spinner_to_end()
         assert self.devices_page.find_element_by_text(self.devices_page.FIELD_ASSET_NAME) is not None
@@ -41,7 +41,7 @@ class TestDevice(TestBase):
         self.devices_page.click_custom_data_add_predefined()
         parent = self.devices_page.find_custom_fields_items()[-1]
         self.devices_page.select_custom_data_field(self.devices_page.FIELD_HOSTNAME_TITLE, parent=parent)
-        self.devices_page.fill_custom_data_value('DeanSysman2', parent=parent)
+        self.devices_page.fill_custom_data_value('DeanSysman2', parent=parent, input_type_string=True)
         self.devices_page.save_custom_data()
         self.devices_page.wait_for_spinner_to_end()
         assert self.devices_page.find_element_by_text(self.devices_page.FIELD_ASSET_NAME) is not None

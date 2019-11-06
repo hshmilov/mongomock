@@ -13,12 +13,12 @@
                 </div>
                 <div class="modal-footer">
                     <slot name="footer">
-                        <x-button link @click="$emit('close')">{{dismissText}}</x-button>
-                        <x-button :disabled="disabled" @click="onApprove" :id="approveId">{{approveText}}</x-button>
+                        <x-button link @click.prevent.stop="$emit('close')">{{dismissText}}</x-button>
+                        <x-button :disabled="disabled" @click.prevent.stop="onApprove" :id="approveId">{{approveText}}</x-button>
                     </slot>
                 </div>
             </div>
-            <div class="modal-overlay" @click.stop="$emit('close')" @keyup.esc="$emit('close')"></div>
+            <div class="modal-overlay" @click.prevent.stop="$emit('close')" @keyup.esc="$emit('close')"></div>
         </div>
     </transition>
 </template>
@@ -36,6 +36,7 @@
         methods: {
             onApprove() {
                 this.$emit('confirm')
+                return false
             }
         },
         mounted() {
