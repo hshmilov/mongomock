@@ -19,7 +19,7 @@ def main(filename='/dev/stdin'):
                 log = json.loads(line)
                 log_level = log.get('level', '')
                 log_message = log.get('message', '')
-                log_timestamp = parse(log.get('@timestamp', '00:00')).strftime('%d/%m/%y %S:%M:%H')
+                log_timestamp = parse(log.get('@timestamp', '00:00')).strftime('%d/%m/%y %H:%M:%S:%f')
                 log_exc_info = log.get('exc_info', '')
                 log_exception_message = log.get('exception_message', '')
                 if log_exception_message:

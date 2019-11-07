@@ -1,0 +1,178 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Deploy Axonius
+Parameters:
+  ServerName:
+    Description: Server Name
+    Type: String
+  Environment:
+    Description: Application Environment
+    Default: Prod
+    Type: String
+    AllowedValues:
+    - Sandbox
+    - Dev
+    - Stage
+    - QA
+    - UAT
+    - Prod
+  ProductTower:
+    Description: Product Tower
+    Type: String
+  ApplicationName:
+    Description: Application Name
+    Type: String
+  SecurityPosture:
+    Description: Security Posture
+    Type: String
+  SupportContact:
+    Description: Support Contact
+    Type: String
+  ApplicationOwner:
+    Description: Application Owner
+    Type: String
+  Domain:
+    Description: Domain
+    Type: String
+  RequestID:
+    Description: Request ID
+    Type: String
+  Description:
+    Description: Description
+    Type: String
+  PatchGroup:
+    Description: PatchGroup
+    Type: String
+  CostCenter:
+    Description: CostCenter
+    Type: String
+  ServerUsage:
+    Description: Server Usage
+    Default: APPLICATION
+    Type: String
+    AllowedValues:
+    - WEB
+    - APPLICATION
+    - DB
+    ConstraintDescription: Specify Application or Database Server.
+  OperatingSystem:
+    Description: Operating system to be used
+    Default: Axonius
+    Type: String
+    AllowedValues:
+    - Axonius
+  ServerConfig:
+    Description: Server Configuration
+    Type: String
+    Default: 16vCPU-64GBRAM-m4.4xlarge
+    AllowedValues:
+    - 8vCPU-32GBRAM-m4.2xlarge
+    - 8vCPU-64GBRAM-r5.2xlarge
+    - 16vCPU-64GBRAM-m4.4xlarge
+  VPC:
+    Description: Select VPC
+    Type: AWS::EC2::VPC::Id
+    Default: <vpc-id>
+  Subnet:
+    Description: Select Subnet
+    Type: AWS::EC2::Subnet::Id
+    Default: <subnet-id>
+  AccessSecurityGroup:
+    Description: Security Group That Allows Instance to Instance Access.
+    Type: AWS::EC2::SecurityGroup::Id
+    Default: <securitygroup-id>
+  KeyName:
+    Description: Name of an existing EC2 KeyPair to enable SSH access to the instance
+    Type: AWS::EC2::KeyPair::KeyName
+    ConstraintDescription: must be the name of an existing EC2 KeyPair.
+    Default: <keypairname>
+
+Mappings:
+  RegionMap:
+    us-east-1:
+      AMI: ami-0388a818cd26f5860
+    us-east-2:
+      AMI: ami-0fb489ff345fc6e51
+    us-west-1:
+      AMI: ami-08aa618a51afb2c04
+    us-west-2:
+      AMI: ami-03b2c5059aaae0388
+  InstanceMap:
+    8vCPU-32GBRAM-m4.2xlarge:
+      InstanceType: m4.2xlarge
+    16vCPU-64GBRAM-m4.4xlarge:
+      InstanceType: m4.4xlarge
+    8vCPU-64GBRAM-r5.2xlarge:
+      InstanceType: r5.2xlarge
+
+Resources:
+  EC2Instance:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType:
+        Fn::FindInMap:
+        - InstanceMap
+        - !Ref 'ServerConfig'
+        - InstanceType
+      KeyName: !Ref 'KeyName'
+      Tags:
+      - Key: Name
+        Value:
+          Ref: ServerName
+      - Key: Environment
+        Value:
+          Ref: Environment
+      - Key: Service
+        Value: EC2
+      - Key: ProductTower
+        Value:
+          Ref: ProductTower
+      - Key: ApplicationName
+        Value:
+          Ref: ApplicationName
+      - Key: SecurityPosture
+        Value:
+          Ref: SecurityPosture
+      - Key: SupportContact
+        Value:
+          Ref: SupportContact
+      - Key: ApplicationOwner
+        Value:
+          Ref: ApplicationOwner
+      - Key: Domain
+        Value:
+          Ref: Domain
+      - Key: RequestID
+        Value:
+          Ref: RequestID
+      - Key: Description
+        Value:
+          Ref: Description
+      - Key: PatchGroup
+        Value:
+          Ref: PatchGroup
+      - Key: CostCenter
+        Value:
+          Ref: CostCenter
+      ImageId: 
+        Fn::FindInMap:
+        - RegionMap
+        - Ref: AWS::Region
+        - AMI
+      NetworkInterfaces:
+      - GroupSet:
+        - Ref: AccessSecurityGroup
+        AssociatePublicIpAddress: 'false'
+        DeviceIndex: '0'
+        DeleteOnTermination: 'true'
+        SubnetId:
+          Ref: Subnet
+Outputs:
+  InstanceId:
+    Description: InstanceId of the newly created Axonius instance
+    Value: !Ref 'EC2Instance'
+  AZ:
+    Description: Availability Zone of the newly created Axonius instance
+    Value: !GetAtt [EC2Instance, AvailabilityZone]
+  PrivateIP:
+    Description: Private IP address of the newly created Axonius instance
+    Value: !GetAtt [EC2Instance, PrivateIp]

@@ -14,6 +14,7 @@ from retrying import retry
 
 from axonius.devices.device_adapter import LAST_SEEN_FIELD
 from axonius.entities import EntityType
+from axonius.utils.hash import get_preferred_quick_adapter_id
 from axonius.utils.mongo_administration import get_collection_storage_size, create_capped_collection
 from services.updatable_service import UpdatablePluginMixin
 from services.plugin_service import API_KEY_HEADER, PluginService
@@ -64,9 +65,13 @@ class AggregatorService(PluginService, UpdatablePluginMixin):
         if self.db_schema_version < 16:
             self.db_schema_version = 16  # self._update_schema_version_16() disabled due to a very long migration
         if self.db_schema_version < 17:
-            self._update_schema_version_17()  # self._update_schema_version_16() disabled due to a very long migration
+            self._update_schema_version_17()
+        if self.db_schema_version < 18:
+            self._update_schema_version_18()
+        if self.db_schema_version < 19:
+            self._update_schema_version_19()
 
-        if self.db_schema_version != 17:
+        if self.db_schema_version != 19:
             print(f'Upgrade failed, db_schema_version is {self.db_schema_version}')
 
     def __create_capped_collections(self):
@@ -820,14 +825,96 @@ class AggregatorService(PluginService, UpdatablePluginMixin):
             raise
 
     def _update_schema_version_17(self):
+        try:
+            # Upgrade solarwinds id from {device_id} to {device_id}_{device_name}
+            print(f'Upgrading solarwinds to new id-format..')
+            entities_db = self._entity_db_map[EntityType.Devices]
+            to_fix = []
+            for entity in entities_db.find({f'adapters.{PLUGIN_NAME}': 'solarwinds_orion_adapter'}, projection={
+                '_id': 1,
+                f'adapters.{PLUGIN_NAME}': 1,
+                f'adapters.data.id': 1,
+                f'adapters.data.name': 1,
+            }):
+                all_solarwinds = [x for x in entity['adapters'] if x[PLUGIN_NAME] == 'solarwinds_orion_adapter']
+                for solarwinds_adapter in all_solarwinds:
+                    solarwinds_data = solarwinds_adapter['data']
+                    solarwinds_current_name = solarwinds_data.get('name')
+                    solarwinds_current_id = solarwinds_data.get('id')
+                    if '_' in solarwinds_current_id:
+                        continue
+                    if solarwinds_current_name and solarwinds_current_id.endswith(f'_{solarwinds_current_name}'):
+                        continue
+                    if solarwinds_current_name and not solarwinds_current_id.endswith(f'_{solarwinds_current_name}'):
+                        solarwinds_new_id = f'{solarwinds_current_id}_{solarwinds_current_name}'
+                        to_fix.append(pymongo.operations.UpdateOne({
+                            '_id': entity['_id'],
+                            f'adapters.data.id': solarwinds_current_id
+                        }, {
+                            '$set': {
+                                'adapters.$.data.id': solarwinds_new_id
+                            }
+                        }))
+
+            if to_fix:
+                print(f'Upgrading Solarwinds ID format. Found {len(to_fix)} records..')
+                for i in range(0, len(to_fix), 1000):
+                    entities_db.bulk_write(to_fix[i: i + 1000], ordered=False)
+                    print(f'Fixed Chunk of {i + 1000} records')
+            else:
+                print(f'Solarwinds upgrade: Nothing to fix. Moving on')
+
+            self.db_schema_version = 17
+        except Exception as e:
+            print(f'Could not upgrade aggregator db to version 17. Details: {e}')
+            raise
+
+    def _update_schema_version_18(self):
+        print(f'Fixing quick ids for solarwinds')
+        devices_db = self._entity_db_map[EntityType.Devices]
+        cursor = devices_db.find(
+            {f'adapters.{PLUGIN_NAME}': 'solarwinds_orion_adapter'},
+            projection={
+                f'adapters.{PLUGIN_UNIQUE_NAME}': True,
+                'adapters.data.id': True,
+                '_id': True
+            }
+        )
+
+        for entity_i, entity in enumerate(cursor):
+            for adapter in entity['adapters']:
+                if 'solarwinds' not in adapter[PLUGIN_UNIQUE_NAME]:
+                    continue
+                devices_db.update_one({
+                    '_id': entity['_id'],
+                    'adapters': {
+                        '$elemMatch': {
+                            PLUGIN_UNIQUE_NAME: adapter[PLUGIN_UNIQUE_NAME],
+                            'data.id': adapter['data']['id']
+                        }
+                    }
+                }, {
+                    '$set': {
+                        'adapters.$.quick_id': get_preferred_quick_adapter_id(adapter[PLUGIN_UNIQUE_NAME],
+                                                                              adapter['data']['id'])
+                    }
+                })
+
+            if entity_i % 1000 == 0:
+                print(f'Finished {entity_i} devices')
+
+        print('Done')
+        self.db_schema_version = 18
+
+    def _update_schema_version_19(self):
         # https://axonius.atlassian.net/browse/AX-5401
-        print('Update to schema 17 - add first fetch time')
+        print('Update to schema 19 - add first fetch time')
         try:
             self._fix_db_for_entity(EntityType.Devices)
             self._fix_db_for_entity(EntityType.Users)
-            self.db_schema_version = 17
+            self.db_schema_version = 19
         except Exception as e:
-            print(f'Exception while upgrading core db to version 16. Details: {e}')
+            print(f'Exception while upgrading core db to version 19. Details: {e}')
             traceback.print_exc()
             raise
 

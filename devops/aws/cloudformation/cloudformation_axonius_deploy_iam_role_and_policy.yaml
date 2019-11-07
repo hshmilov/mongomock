@@ -1,0 +1,66 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description : "Create an IAM Role & Policy for Axonius"
+Parameters:
+    TrustedAccountIAMPrincipalARN:
+        Description: The ARN of the principal (user / role) in the trusted account (The principal that assumes this role)
+        Type: String
+        AllowedPattern: ".+"
+    NamePrefix:
+        Description: The name prefix for the role and policy names
+        Type: String
+        AllowedPattern: ".+"
+Resources:
+# IAM Role Create
+    AxoniusRole:
+        Type: AWS::IAM::Role
+        Properties:
+            AssumeRolePolicyDocument:
+                Version: "2012-10-17"
+                Statement:
+                  - Effect: "Allow"
+                    Principal:
+                      AWS: !Ref TrustedAccountIAMPrincipalARN
+                    Action:
+                      - "sts:AssumeRole"
+            Path: "/"
+            RoleName: !Sub "${NamePrefix}-Axonius-Readonly-Role"
+    AxoniusPolicy:
+        Type: AWS::IAM::ManagedPolicy
+        Properties:
+            ManagedPolicyName: !Sub "${NamePrefix}-Axonius-Readonly-Policy"
+            PolicyDocument:
+                Version: "2012-10-17"
+                Statement:
+                  - Effect: "Allow"
+                    Action:
+                      - ec2:Describe*
+                      - iam:Get*
+                      - iam:List*
+                      - ecs:Describe*
+                      - eks:Describe*
+                      - eks:List*
+                      - ecs:List*
+                      - ec2:Get*
+                      - elasticloadbalancing:Describe*
+                      - ssm:Get*
+                      - ssm:List*
+                      - ssm:Describe*
+                      - rds:List*
+                      - rds:Describe*
+                      - s3:List*
+                      - s3:Get*
+                      - Workspaces:Describe*
+                      - Workspaces:List*
+                      - sts:GetCallerIdentity
+                      - lambda:get*
+                      - lambda:list*
+                      - apigateway:get*
+                      - route53:get*
+                      - route53:list*
+                    Resource: "*"
+            Roles:
+                - Ref: AxoniusRole
+Outputs:
+    OutAxoniusRole:
+        Description: The ARN of the newly created Axonius Role
+        Value: !GetAtt AxoniusRole.Arn

@@ -315,11 +315,15 @@ class DeviceAdapterSecurityPatch(SmartJsonClass):
 class DeviceAdapterMsrcAvailablePatch(SmartJsonClass):
     """ A definition for the json-schema for an available msrc patch"""
 
+    # Note! this is not just an 'MSRC' available patch. Its for all OS's.
+    # But i do not want to refactor the name right now.
     title = Field(str, "Title")
     security_bulletin_ids = ListField(str, "Security Bulletin ID's")
     kb_article_ids = ListField(str, "KB Article ID's")
     msrc_severity = Field(str, "MSRC Severity")
     patch_type = Field(str, "Type", enum=["Software", "Driver"])
+    state = Field(str, 'State')
+    severity = Field(str, 'Severity')
     categories = ListField(str, "Categories")
     publish_date = Field(datetime.datetime, "Publish Date")
 
@@ -598,6 +602,7 @@ class DeviceAdapter(SmartJsonClass):
         RegistryInfomation, 'Registry Information', json_format=JsonArrayFormat.table
     )
     firewall_rules = ListField(FirewallRule, 'Firewall Rules', json_format=JsonArrayFormat.table)
+    last_wmi_command_output = Field(str, 'Last WMI Command Output')
     required = ['name', 'hostname', 'os', 'network_interfaces']
 
     def generate_direct_connected_devices(self):
@@ -935,6 +940,8 @@ class DeviceAdapter(SmartJsonClass):
         self.security_patches.append(DeviceAdapterSecurityPatch(**kwargs))
 
     def add_available_security_patch(self, **kwargs):
+        # Note! this is not just an 'MSRC' available patch. Its for all OS's.
+        # But i do not want to refactor the name right now.
         self.available_security_patches.append(DeviceAdapterMsrcAvailablePatch(**kwargs))
 
     def add_connected_hardware(self, **kwargs):

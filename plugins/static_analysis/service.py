@@ -2,13 +2,13 @@ import logging
 import re
 import threading
 from datetime import datetime
-from typing import Iterable, Tuple, Dict
+from typing import Iterable, Tuple, Dict, List
 
 from apscheduler.executors.pool import ThreadPoolExecutor
 from apscheduler.triggers.interval import IntervalTrigger
 
 from axonius.consts import adapter_consts
-from axonius.entities import EntityType
+from axonius.entities import EntityType, AxoniusUser
 
 from axonius.consts.plugin_subtype import PluginSubtype
 
@@ -378,6 +378,44 @@ class StaticAnalysisService(Triggerable, PluginBase):
                     return value
         return None
 
+    def __get_users_by_identifier(self, username) -> List[AxoniusUser]:
+        """
+        Gets a username. tries to find it by id, then by username/domain if possible, then only by username.
+        :param username:
+        :return:
+        """
+        llu_username = username
+        llu_domain = None
+        try:
+            if '\\' in username:
+                llu_domain, llu_username = username.split('\\')
+            elif '@' in username:
+                llu_username, llu_domain = username.split('@')
+        except Exception:
+            pass
+        if llu_username:
+            llu_username = re.escape(llu_username)
+        if llu_domain:
+            llu_domain = re.escape(llu_domain)
+
+        users = list(self.users.get(
+            axonius_query_language=f'specific_data.data.id == regex("^{re.escape(username)}$", "i")'))
+
+        if not users and llu_domain:
+            # If we couldn't find by id, search by username and domain
+            users = list(self.users.get(
+                axonius_query_language=f'specific_data.data.username == regex("^{llu_username}$", "i") '
+                f'and specific_data.data.domain == regex("^{llu_domain}$", "i")'
+            ))
+
+        if not users:
+            # On last resort, search only by username
+            users = list(self.users.get(
+                axonius_query_language=f'specific_data.data.username == regex("^{llu_username}$", "i")'
+            ))
+
+        return users
+
     # pylint: disable=too-many-locals, too-many-branches, too-many-statements
     def __associate_users_with_devices(self):
         """
@@ -465,8 +503,7 @@ class StaticAnalysisService(Triggerable, PluginBase):
 
         # 2. Go over all users. whatever we don't have, and should be created, we must create first.
         for username, username_data in users.copy().items():
-            user = list(self.users.get(
-                axonius_query_language=f'specific_data.data.id == regex("^{re.escape(username)}$", "i")'))
+            user = self.__get_users_by_identifier(username)
             if len(user) == 0 and username_data['should_create_if_not_exists']:
                 # user does not exists, create it.
                 user_dict = self._new_user_adapter()
@@ -495,8 +532,7 @@ class StaticAnalysisService(Triggerable, PluginBase):
             number_of_associated_devices = 0
 
             # Find that user. It should be in the view new.
-            user = list(self.users.get(
-                axonius_query_language=f'specific_data.data.id == regex("^{re.escape(username)}$", "i")'))
+            user = self.__get_users_by_identifier(username)
 
             # Do we have it? or do we need to create it?
             if len(user) > 1:
@@ -599,35 +635,7 @@ class StaticAnalysisService(Triggerable, PluginBase):
                     if users_to_ad_display_name.get(last_used_user):
                         device_last_used_users_ad_display_name.add(users_to_ad_display_name[last_used_user])
                 else:
-                    llu_username = last_used_user
-                    llu_domain = None
-                    try:
-                        if '\\' in last_used_user:
-                            llu_domain, llu_username = last_used_user.split('\\')
-                        elif '@' in last_used_user:
-                            llu_username, llu_domain = last_used_user.split('@')
-                    except Exception:
-                        pass
-                    if llu_username:
-                        llu_username = re.escape(llu_username)
-                    if llu_domain:
-                        llu_domain = re.escape(llu_domain)
-
-                    user = list(self.users.get(
-                        axonius_query_language=f'specific_data.data.id == regex("^{re.escape(last_used_user)}$", "i")'))
-
-                    if not user and llu_domain:
-                        # If we couldn't find by id, search by username and domain
-                        user = list(self.users.get(
-                            axonius_query_language=f'specific_data.data.username == regex("^{llu_username}$", "i") '
-                            f'and specific_data.data.domain == regex("^{llu_domain}$", "i")'
-                        ))
-
-                    if not user:
-                        # On last resort, search only by username
-                        user = list(self.users.get(
-                            axonius_query_language=f'specific_data.data.username == regex("^{llu_username}$", "i")'
-                        ))
+                    user = self.__get_users_by_identifier(last_used_user)
 
                     if len(user) > 0:
                         user_department = None

@@ -56,7 +56,9 @@ class MongoService(WeaveService):
         swapped to disk almost instantly.
         :return:
         """
-        return 0
+        # mongo recommends to not set this to 0
+        # https://docs.mongodb.com/manual/administration/production-notes/
+        return 20
 
     @property
     def image(self):

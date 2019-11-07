@@ -12,12 +12,13 @@ from promise import Promise
 
 from axonius.background_scheduler import LoggedBackgroundScheduler
 from axonius.consts.plugin_consts import DEVICE_CONTROL_PLUGIN_NAME
+from axonius.devices.device_adapter import DeviceAdapter
 from axonius.mixins.triggerable import Triggerable, RunIdentifier
 from axonius.plugin_base import PluginBase, add_rule
 from axonius.utils.datetime import parse_date
 from axonius.utils.files import get_local_config_file, get_random_uploaded_path_name, get_all_uploaded_files
 from axonius.utils.parsing import get_exception_string
-from axonius.entities import AxoniusDevice
+from axonius.entities import AxoniusDevice, EntityType
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -29,6 +30,9 @@ FILE_DELETION_JOB_ID = 'files-deletion-job'
 
 
 class DeviceControlService(Triggerable, PluginBase):
+    class MyDeviceAdapter(DeviceAdapter):
+        pass
+
     def __init__(self, *args, **kargs):
         super().__init__(get_local_config_file(__file__),
                          requested_unique_plugin_name=DEVICE_CONTROL_PLUGIN_NAME, *args, **kargs)
@@ -235,6 +239,18 @@ class DeviceControlService(Triggerable, PluginBase):
 
         return p
 
+    def __save_action_output_to_device(self, device: AxoniusDevice, action_name: str, data: str):
+        adapterdata_device = self._new_device_adapter()
+        adapterdata_device.id = device.internal_axon_id
+        adapterdata_device.last_wmi_command_output = data
+        device.add_adapterdata(
+            adapterdata_device.to_dict(),
+            additional_data={
+                'hidden_for_gui': True,
+            }
+        )
+        self._save_field_names_to_db(EntityType.Devices)
+
     def run_action_success(self, device: AxoniusDevice, action_name, action_type,
                            action_params, credentials, attempt_number, data):
         """
@@ -280,6 +296,7 @@ class DeviceControlService(Triggerable, PluginBase):
             data = output['data']
             data_label += f'\nResult:\n{data}'
             device.add_data(f'Action \'{action_name}\'', data_label)
+            self.__save_action_output_to_device(device, action_name, data)
 
         except Exception:
             logger.exception(f'Exception in run_action_success')
@@ -311,6 +328,7 @@ class DeviceControlService(Triggerable, PluginBase):
                 logger.error(f'Failed ({attempt_number}) with action {action_name}: '
                              f'attempts: {attempt_number}, exc: {exc}')
                 device.add_data(f'Action \'{action_name}\' Last Error', str(exc))
+                self.__save_action_output_to_device(device, action_name, f'Error: {str(exc)}')
             else:
                 # sleep and rerun
                 self.execution_promises.submit(self.__request_action_from_device,

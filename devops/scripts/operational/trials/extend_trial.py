@@ -18,7 +18,7 @@ def main():
     }, {
         '$set': {
             f'config.{FeatureFlagsNames.TrialEnd}':
-                (datetime(year=2019, month=6, day=20)).isoformat()[:10].replace('-', '/')
+                (datetime(year=2019, month=12, day=5)).isoformat()[:10].replace('-', '/')
         }
     })
     print(f'Done')

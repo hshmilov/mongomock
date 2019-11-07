@@ -1,4 +1,5 @@
-import itertools
+import threading
+import time
 import logging
 import os
 import re
@@ -8,9 +9,10 @@ import json
 import functools
 import datetime
 import socket
+import concurrent.futures
 from collections import defaultdict
 from enum import Enum, auto
-from typing import Dict, Tuple, List, Optional
+from typing import Dict, Tuple, List
 
 import boto3
 import kubernetes
@@ -48,9 +50,16 @@ ROLES_TO_ASSUME_LIST = 'roles_to_assume_list'
 USE_ATTACHED_IAM_ROLE = 'use_attached_iam_role'
 PROXY = 'proxy'
 GET_ALL_REGIONS = 'get_all_regions'
-REGIONS_NAMES = ['us-west-2', 'us-west-1', 'us-east-2', 'us-east-1', 'ap-south-1', 'ap-northeast-2', 'ap-southeast-1',
-                 'ap-southeast-2', 'ap-northeast-1', 'ca-central-1', 'cn-north-1', 'eu-central-1', 'eu-west-1',
-                 'eu-west-2', 'eu-west-3', 'sa-east-1', 'us-gov-west-1', 'ap-east-1', 'eu-north-1', 'us-gov-east-1']
+REGIONS_NAMES = [
+    'us-east-1', 'us-east-2', 'us-west-1', 'us-west-2',
+    'ap-east-1', 'ap-south-1', 'ap-northeast-3', 'ap-northeast-2', 'ap-northeast-1', 'ap-southeast-1', 'ap-southeast-2',
+    'ca-central-1',
+    'eu-central-1', 'eu-west-1', 'eu-west-2', 'eu-west-3', 'eu-north-1',
+    'me-south-1',
+    'sa-east-1'
+]
+CHINA_REGION_NAMES = ['cn-north-1', 'cn-northwest-1']
+GOV_REGION_NAMES = ['us-gov-west-1', 'us-gov-east-1']
 PAGE_NUMBER_FLOOD_PROTECTION = 9000
 AWS_ENDPOINT_FOR_REACHABILITY_TEST = f'https://apigateway.us-east-2.amazonaws.com/'   # endpoint for us-east-2
 BOTO3_FILTERS_LIMIT = 100
@@ -452,6 +461,7 @@ class AwsAdapter(AdapterBase, Configurable):
     class AWSAdapter:
         account_tag = Field(str, 'Account Tag')
         aws_account_alias = ListField(str, 'Account Alias')
+        aws_account_id = Field(int, 'Account ID')
         aws_region = Field(str, 'Region')
         aws_source = Field(str, 'Source')  # Specify if it is from a user, a role, or what.
         aws_tags = ListField(AWSTagKeyValue, 'AWS Tags')
@@ -555,7 +565,11 @@ class AwsAdapter(AdapterBase, Configurable):
             client_config.pop(AWS_ACCESS_KEY_ID, None)
             client_config.pop(AWS_SECRET_ACCESS_KEY, None)
 
-        self._connect_client_once(client_config, True)
+        try:
+            self._connect_client_once(client_config)
+        except Exception as e:
+            logger.exception(f'Error in connect_client')
+            raise ClientConnectionException(str(e)[:500])
         return client_config
 
     def get_assumed_session(self, role_arn: str, region, client_config: dict):
@@ -609,12 +623,10 @@ class AwsAdapter(AdapterBase, Configurable):
         }
         return credentials
 
-    def _connect_client_once(self, client_config, should_validate: bool):
+    def _connect_client_once(self, client_config):
         """
         Generates credentials and optionally tries to test them
         :param client_config: the configuration from the adapter scheme
-        :param should_validate: whether or not validate these credentials. If True, the function will fail if we can
-                                not connect to even a single ec2 service.
         :return:
         """
         # We are going to change client_config throughout the function so copy it first
@@ -662,54 +674,115 @@ class AwsAdapter(AdapterBase, Configurable):
             regions_to_pull_from = [input_region_name]
         else:
             regions_to_pull_from = REGIONS_NAMES
+            if self.__include_gov_regions:
+                regions_to_pull_from += GOV_REGION_NAMES
+            if self.__include_china_regions:
+                regions_to_pull_from += CHINA_REGION_NAMES
+
+        logger.info(f'Selected Regions: {regions_to_pull_from}')
 
         # We want to fail only if we failed connecting to everything we can. So what we do is we try to connect
-        # and query the ec2 service which is mendatory for us.
-        aws_access_key_id = client_config.get(AWS_ACCESS_KEY_ID) or 'attached_instance_iam_role'
-        clients_dict[aws_access_key_id] = dict()
+        # and query the ec2 service which is mandatory for us.
+        aws_access_key_id = client_config.get(AWS_ACCESS_KEY_ID) or 'attached iam role'
+        clients_dict = defaultdict(dict)
         failed_connections = []
-        for region in regions_to_pull_from:
-            current_try = f'IAM User {aws_access_key_id} with region {region}'
-            permanent_session = boto3.Session(
-                aws_access_key_id=client_config.get(AWS_ACCESS_KEY_ID),
-                aws_secret_access_key=client_config.get(AWS_SECRET_ACCESS_KEY),
-                region_name=region
-            )
-            clients_dict[aws_access_key_id][region] = permanent_session
+        successful_roles = set()
+        ec2_check_status = dict()
+        ec2_check_status_lock = threading.Lock()
+        failed_connections_per_principal = defaultdict(set)
+
+        def connect_iam(region_name: str):
+            current_try = f'IAM User {aws_access_key_id} with region {region_name}'
+            time_start = time.time()
             try:
-                if should_validate:
+                permanent_session = boto3.Session(
+                    aws_access_key_id=client_config.get(AWS_ACCESS_KEY_ID),
+                    aws_secret_access_key=client_config.get(AWS_SECRET_ACCESS_KEY),
+                    region_name=region_name
+                )
+                with ec2_check_status_lock:
+                    # If ec2_check_status does not exist or is False, then we need to test ec2
+                    should_test = not ec2_check_status.get(aws_access_key_id)
+                if should_test:
                     self._test_ec2_connection(permanent_session, config=client_config.get(AWS_CONFIG))
-                    should_validate = False  # if even one connection succeeds, do not check anything else
+                clients_dict[aws_access_key_id][region_name] = permanent_session
+                with ec2_check_status_lock:
+                    ec2_check_status[aws_access_key_id] = True
             except Exception as e:
-                logger.exception(f'Problem with iam user for region {region}')
                 failed_connections.append(f'{current_try}: {str(e)}')
+                failed_connections_per_principal[aws_access_key_id].add(str(e))
+            logger.debug(f'finished {current_try} after {round(time.time() - time_start, 2)} seconds')
 
+        def connect_role(region_name: str, role_arn_inner: str):
+            current_try = f'role {role_arn_inner} with region {region_name}'
+            time_start = time.time()
+            try:
+                auto_refresh_session = self.get_assumed_session(role_arn_inner, region_name, client_config)
+                with ec2_check_status_lock:
+                    # If ec2_check_status does not exist or is False, then we need to test ec2
+                    should_test = not ec2_check_status.get(role_arn_inner)
+                if should_test:
+                    self._test_ec2_connection(auto_refresh_session, config=client_config.get(AWS_CONFIG))
+                clients_dict[role_arn_inner][region_name] = auto_refresh_session
+                with ec2_check_status_lock:
+                    ec2_check_status[role_arn_inner] = True
+                successful_roles.add(role_arn_inner)
+            except Exception as e:
+                failed_connections.append(f'{current_try}: {str(e)}')
+                failed_connections_per_principal[role_arn_inner].add(str(e))
+            logger.debug(f'finished {current_try} after {round(time.time() - time_start, 2)} seconds')
+
+        start = time.time()
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            # We assume the first region is going to succeed. So we are doing a small optimization here and try it out
+            # first. If it is going to succeed, all the rest will not check for ec2 check (which takes time).
+            # otherwise if it fails, they will all (in parallel) try to ec2-check it until one succeeds.
+
+            # First, check Only IAM. If there is an error there we need to fail fast.
+            logger.info(f'Checking {aws_access_key_id} connection..')
+            connect_iam(regions_to_pull_from[0])
+            futures_to_data = []
+            for region in regions_to_pull_from[1:]:
+                futures_to_data.append(executor.submit(connect_iam, region))
+            for future_i, future in enumerate(concurrent.futures.as_completed(futures_to_data)):
+                _ = future.result()
+
+            if aws_access_key_id not in clients_dict:
+                aws_access_key_id_errors = ','.join(
+                    list(failed_connections_per_principal.get(aws_access_key_id) or set())
+                )
+                raise ClientConnectionException(f'Error connecting to {aws_access_key_id}: {aws_access_key_id_errors}')
+
+            # Next, check Roles
+            logger.info(f'Checking {len(roles_to_assume_list)} roles..')
+            # we do the same thing for roles as with iam users. Check the first region as an optimization
+            futures_to_data = []
             for role_arn in roles_to_assume_list:
-                try:
-                    current_try = f'IAM Role {role_arn} with region {region}'
-                    auto_refresh_session = self.get_assumed_session(role_arn, region, client_config)
-                    if role_arn not in clients_dict:
-                        clients_dict[role_arn] = dict()
-                    clients_dict[role_arn][region] = auto_refresh_session
-                    try:
-                        if should_validate:
-                            self._test_ec2_connection(auto_refresh_session, config=client_config.get(AWS_CONFIG))
-                            should_validate = False  # if even one connection succeeds, do not check anything else
-                    except Exception as e:
-                        logger.exception(f'problem with role {role_arn} for region {region}')
-                        failed_connections.append(f'{current_try}: {str(e)}')
-                except Exception as e:
-                    logger.exception(f'Error assuming role {role_arn}')
-                    if self.__verify_all_roles:
-                        raise ClientConnectionException(f'Error assuming role {role_arn}: {str(e)}')
+                futures_to_data.append(executor.submit(connect_role, regions_to_pull_from[0], role_arn))
+            for future in concurrent.futures.as_completed(futures_to_data):
+                _ = future.result()
 
-        # If should_validate remained True, it means nothing has passed any validation.
-        # It its False, then something passed validation, or we did not require any.
-        if should_validate is True:
-            # If none has succeeded, its usually when the IAM user has an error. In that case we must show
-            # an error message, but we can not show all of them since this will result in a huge string.
-            # we show the first one which usually indicates the problem.
-            raise ClientConnectionException(f'Failed connecting to aws: {failed_connections[0]}')
+            # Then, check all other regions
+            futures_to_data = []
+            for region in regions_to_pull_from[1:]:
+                for role_arn in roles_to_assume_list:
+                    futures_to_data.append(executor.submit(connect_role, region, role_arn))
+            for future_i, future in enumerate(concurrent.futures.as_completed(futures_to_data)):
+                _ = future.result()
+                if future_i and future_i % 10 == 0:
+                    logger.info(f'Finished instantiating {future_i} out of {len(futures_to_data)} aws connections')
+
+        logger.info(f'Instantiation ended after {round(time.time() - start, 2)} seconds')
+
+        failed_roles = set(roles_to_assume_list) ^ set(successful_roles)
+        if failed_roles:
+            logger.info(f'Failed roles ({len(failed_roles)} / {len(roles_to_assume_list)}): '
+                        f'{failed_connections_per_principal}')
+            if self.__verify_all_roles:
+                failed_role_errors = ','.join(
+                    list(failed_connections_per_principal.get(list(failed_roles)[0]) or set())
+                )
+                raise ClientConnectionException(f'Error assuming role: {list(failed_roles)[0]}: {failed_role_errors}')
 
         return clients_dict, client_config
 
@@ -722,7 +795,8 @@ class AwsAdapter(AdapterBase, Configurable):
             if 'Request would have succeeded, but DryRun flag is set.' not in str(e):
                 raise
 
-    def _connect_client_by_source(self, session: boto3.Session, region_name: str, client_config: dict,
+    @staticmethod
+    def _connect_client_by_source(session: boto3.Session, region_name: str, client_config: dict,
                                   asset_type: str = 'device'):
         params = {AWS_CONFIG: client_config.get(AWS_CONFIG), REGION_NAME: region_name}
         clients = dict()
@@ -739,6 +813,9 @@ class AwsAdapter(AdapterBase, Configurable):
                 clients['ec2'] = c
             except Exception as e:
                 errors['ec2'] = str(e)
+                # the only service we truely need is ec2. all the rest are optional.
+                # If this has failed we raise an exception
+                raise ClientConnectionException(f'Could not connect: {errors.get("ec2")}')
 
             try:
                 c = session.client('ecs', **params)
@@ -805,10 +882,12 @@ class AwsAdapter(AdapterBase, Configurable):
             except Exception as e:
                 errors['workspaces'] = str(e)
 
-            # the only service we truely need is ec2. all the rest are optional.
-            # If this has failed we raise an exception
-            if not clients.get('ec2'):
-                raise ClientConnectionException(f'Could not connect: {errors.get("ec2")}')
+            try:
+                c = session.client('sts', **params)
+                c.get_caller_identity()
+                clients['sts'] = c
+            except Exception as e:
+                errors['sts'] = str(e)
 
         clients['account_tag'] = client_config.get(ACCOUNT_TAG)
         clients['credentials'] = client_config
@@ -819,29 +898,97 @@ class AwsAdapter(AdapterBase, Configurable):
     def _query_devices_by_client(self, client_name, client_data_credentials):
         # we must re-create all credentials (const and temporary)
         https_proxy = client_data_credentials.get(PROXY)
-        client_data, client_config = self._connect_client_once(client_data_credentials, False)
+        client_data, client_config = self._connect_client_once(client_data_credentials)
         # First, we must get clients for everything we need
-        client_data_aws_clients = dict()
+
         successful_connections = []
         failed_connections = []
         warnings_messages = []
-        for account, account_regions_clients in client_data.items():
-            if account not in client_data_aws_clients:
-                client_data_aws_clients[account] = dict()
-            for region_name, client_data_by_region in account_regions_clients.items():
-                current_try = f'{account}_{region_name}'
+
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            for account_i, (account, account_regions_clients) in enumerate(client_data.items()):
                 try:
-                    client_data_aws_clients[account][region_name], warnings = \
-                        self._connect_client_by_source(client_data_by_region, region_name, client_config)
-                    successful_connections.append(current_try)
-                    if warnings:
-                        for service_name, service_error in warnings.items():
-                            error_string = f'{current_try}: {service_name} - {service_error}'
-                            logger.warning(error_string)
-                            warnings_messages.append(error_string)
-                except Exception as e:
-                    logger.exception(f'problem with {current_try}')
-                    failed_connections.append(f'{current_try}: {str(e)}')
+                    logger.info(f'query_devices_by_client ({account_i} / {len(client_data.items())}): {account}')
+                    account_start = time.time()
+
+                    futures_dict = {
+                        executor.submit(
+                            self._connect_client_by_source, client_data_by_region, region_name, client_config
+                        ): region_name for region_name, client_data_by_region in account_regions_clients.items()
+                    }
+
+                    connected_clients_by_region = dict()
+                    # Wait for all regions to connect
+                    for future in concurrent.futures.as_completed(futures_dict):
+                        region_name = futures_dict[future]
+                        current_try = f'{account}_{region_name}'
+                        try:
+                            connected_clients, warnings = future.result()
+                            connected_clients_by_region[region_name] = connected_clients
+                            successful_connections.append(current_try)
+                            if warnings:
+                                for service_name, service_error in warnings.items():
+                                    error_string = f'{current_try}: {service_name} - {service_error}'
+                                    logger.warning(error_string)
+                                    warnings_messages.append(error_string)
+                        except Exception as e:
+                            logger.exception(f'problem with {current_try}')
+                            failed_connections.append(f'{current_try}: {str(e)}')
+
+                    # Now we have all clients connected for every region for this account. we start with getting info
+                    logger.info(f'Finished connecting')
+                    # that is interesting for all accounts.
+                    # this has to be non multi threaded because its api quota limited.
+                    if not connected_clients_by_region:
+                        continue
+
+                    first_connected_client_region = 'us-east-1' if 'us-east-1' in connected_clients_by_region.keys() \
+                        else list(connected_clients_by_region.keys())[0]
+                    first_connected_client = connected_clients_by_region[first_connected_client_region]
+                    account_metadata = self._get_account_metadata(first_connected_client)
+                    parsed_data_for_all_regions = self._query_devices_by_client_for_all_sources(first_connected_client)
+                    del first_connected_client
+
+                    logger.info(f'Finished querying account metadata and all-sources info')
+
+                    futures_dict = {
+                        executor.submit(
+                            self._query_devices_by_client_by_source, connected_client, https_proxy=https_proxy
+                        ): region_name for region_name, connected_client in connected_clients_by_region.items()
+                    }
+
+                    for future in concurrent.futures.as_completed(futures_dict):
+                        region_name = futures_dict[future]
+                        source_name = f'{account}_{region_name}'
+                        try:
+                            parse_data_for_source = future.result()
+                            parse_data_for_source.update(parsed_data_for_all_regions)
+
+                            yield source_name, account_metadata, parse_data_for_source, AwsRawDataTypes.Regular
+
+                            del parse_data_for_source
+                        except Exception:
+                            logger.exception(f'Error while querying regular in source {source_name}')
+
+                    del parsed_data_for_all_regions
+                    del futures_dict
+
+                    # Since SSM is much more API hard and more efficient, yield it with no futures
+                    for region_name, connected_clients in connected_clients_by_region.items():
+                        source_name = f'{account}_{region_name}'
+                        try:
+                            for parse_data_for_source in self._query_devices_by_client_by_source_ssm(
+                                    connected_clients):
+                                yield source_name, account_metadata, parse_data_for_source, AwsRawDataTypes.SSM
+                        except Exception:
+                            logger.exception(f'Error while querying SSM in source {source_name}')
+
+                    del connected_clients_by_region
+
+                    logger.info(f'query_devices_by_client ({account_i} / {len(client_data.items())}): {account}'
+                                f' ({round(time.time() - account_start, 2)} seconds)')
+                except Exception:
+                    logger.exception(f'Error while querying {account}')
 
         total_connections = len(successful_connections) + len(failed_connections)
         content = ''
@@ -858,34 +1005,13 @@ class AwsAdapter(AdapterBase, Configurable):
                 f'{len(warnings_messages)} warnings.',
                 content=content)
 
-        for account, account_regions_clients in client_data_aws_clients.items():
-            logger.info(f'query_devices_by_client account: {account}')
-            parsed_data_for_all_regions = None
-            for region_name, client_data_by_region in account_regions_clients.items():
-                source_name = f'{account}_{region_name}'
-                try:
-                    account_metadata = self._get_account_metadata(client_data_by_region)
-                    if parsed_data_for_all_regions is None:
-                        parsed_data_for_all_regions = self._query_devices_by_client_for_all_sources(
-                            client_data_by_region)
-                    parse_data_for_source = self._query_devices_by_client_by_source(client_data_by_region,
-                                                                                    https_proxy=https_proxy)
-                    parse_data_for_source.update(parsed_data_for_all_regions)
-                    yield source_name, account_metadata, parse_data_for_source, AwsRawDataTypes.Regular
-
-                    for parse_data_for_source in self._query_devices_by_client_by_source_ssm(
-                            client_data_by_region):
-                        yield source_name, account_metadata, parse_data_for_source, AwsRawDataTypes.SSM
-                except Exception:
-                    logger.exception(f'Problem querying source {source_name}')
-
     def _query_users_by_client(self, client_name, client_data_credentials):
         # This is relevant just for IAM users, so we bail out if its not enabled.
         if not self.__fetch_iam_users:
             return
 
         # we must re-create all credentials (const and temporary)
-        client_data, client_config = self._connect_client_once(client_data_credentials, False)
+        client_data, client_config = self._connect_client_once(client_data_credentials)
         # First, we must get clients for everything we need
         client_data_aws_clients = dict()
         successful_connections = []
@@ -1066,6 +1192,7 @@ class AwsAdapter(AdapterBase, Configurable):
 
     def _get_account_metadata(self, client_data):
         iam_client = client_data.get('iam')
+        sts_client = client_data.get('sts')
         account_metadata = dict()
         if iam_client:
             try:
@@ -1076,6 +1203,12 @@ class AwsAdapter(AdapterBase, Configurable):
                 account_metadata['aliases'] = all_aliases
             except Exception:
                 logger.exception(f'Exception while querying account aliases')
+
+        if sts_client:
+            try:
+                account_metadata['account_id'] = sts_client.get_caller_identity()['Account']
+            except Exception:
+                logger.exception(f'Exception while querying account id')
 
         return account_metadata
 
@@ -2082,6 +2215,13 @@ class AwsAdapter(AdapterBase, Configurable):
             account_aliases = account_metadata.get('aliases')
             if account_aliases and isinstance(account_aliases, list):
                 entity.aws_account_alias = account_aliases
+        except Exception:
+            pass
+
+        try:
+            account_id = account_metadata.get('account_id')
+            if account_id:
+                entity.aws_account_id = int(account_id)
         except Exception:
             pass
 
@@ -3391,13 +3531,26 @@ class AwsAdapter(AdapterBase, Configurable):
         if isinstance(all_patches, list):
             for pc_raw in all_patches:
                 try:
-                    device.add_security_patch(
-                        security_patch_id=pc_raw.get('Title') + ' ' + pc_raw.get('KBId'),
-                        classification=pc_raw.get('Classification'),
-                        severity=pc_raw.get('Severity'),
-                        state=pc_raw.get('State'),
-                        installed_on=parse_date(pc_raw.get('InstalledTime'))
-                    )
+                    # https://docs.aws.amazon.com/systems-manager/latest/userguide/about-patch-compliance.html
+                    patch_state = pc_raw.get('State')
+                    if not patch_state:
+                        continue
+                    if 'installed' in str(patch_state).lower():
+                        device.add_security_patch(
+                            security_patch_id=pc_raw.get('Title') + ' ' + pc_raw.get('KBId'),
+                            classification=pc_raw.get('Classification'),
+                            severity=pc_raw.get('Severity'),
+                            state=patch_state,
+                            installed_on=parse_date(pc_raw.get('InstalledTime'))
+                        )
+                    else:
+                        # could be 'missing', 'failed', or 'not_applicable', in all cases it is not installed
+                        device.add_available_security_patch(
+                            title=pc_raw.get('Title') + ' ' + pc_raw.get('KBId'),
+                            kb_article_ids=[pc_raw.get('KBId')] if pc_raw.get('KBId') else None,
+                            state=patch_state,
+                            severity=pc_raw.get('Severity')
+                        )
                 except Exception:
                     logger.exception(f'Failed to add patch compliance {pc_raw} for host {hostname}')
 
@@ -3449,7 +3602,9 @@ class AwsAdapter(AdapterBase, Configurable):
         self.__parse_elb_ips = config.get('parse_elb_ips') or False
         self.__verbose_auth_notifications = config.get('verbose_auth_notifications') or False
         self.__shodan_key = config.get('shodan_key')
-        self.__verify_all_roles = config.get('verify_all_roles')
+        self.__verify_all_roles = config.get('verify_all_roles') or False
+        self.__include_gov_regions = config.get('include_gov_regions') or False
+        self.__include_china_regions = config.get('include_china_regions') or False
 
     @classmethod
     def _db_config_schema(cls) -> dict:
@@ -3526,6 +3681,16 @@ class AwsAdapter(AdapterBase, Configurable):
                     'title': 'Verify all IAM roles',
                     'type': 'bool'
                 },
+                {
+                    'name': 'include_gov_regions',
+                    'title': 'Include Gov Regions',
+                    'type': 'bool'
+                },
+                {
+                    'name': 'include_china_regions',
+                    'title': 'Include China Regions',
+                    'type': 'bool'
+                }
             ],
             "required": [
                 'correlate_ecs_ec2',
@@ -3540,7 +3705,9 @@ class AwsAdapter(AdapterBase, Configurable):
                 'fetch_nat',
                 'parse_elb_ips',
                 'verbose_auth_notifications',
-                'verify_all_roles'
+                'verify_all_roles',
+                'include_gov_regions',
+                'include_china_regions'
             ],
             "pretty_name": "AWS Configuration",
             "type": "array"
@@ -3562,7 +3729,9 @@ class AwsAdapter(AdapterBase, Configurable):
             'parse_elb_ips': False,
             'verbose_auth_notifications': False,
             'shodan_key': None,
-            'verify_all_roles': True
+            'verify_all_roles': True,
+            'include_gov_regions': False,
+            'include_china_regions': False
         }
 
     @classmethod
