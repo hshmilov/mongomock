@@ -7,8 +7,9 @@ class ServiceScanner(ABC):
     """
     A skeleton for a service scanner plugin.
     """
+    DEFAULT_SSL_PORT = 443
 
-    def __init__(self, url, logger, domain=None):
+    def __init__(self, url, logger, domain=None, port=DEFAULT_SSL_PORT):
         """
         initialization.
         :param logger: a logger to be used.
@@ -18,6 +19,7 @@ class ServiceScanner(ABC):
         self.url = url
         self.results = None
         self.domain = domain
+        self.port = port
 
     def scan(self):
         """

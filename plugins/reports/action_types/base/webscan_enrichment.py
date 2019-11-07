@@ -9,8 +9,9 @@ from reports.action_types.action_type_base import ActionTypeBase, generic_fail, 
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
-CHUNK_SIZE = 30000
+CHUNK_SIZE = 10000
 # pylint: disable=protected-access
+DEFAULT_SSL_PORT = 443
 
 
 class WebscanEnrichment(ActionTypeBase):
@@ -22,12 +23,25 @@ class WebscanEnrichment(ActionTypeBase):
 
     @staticmethod
     def config_schema() -> dict:
-        action_schema = {}
+        action_schema = {
+            'items': [
+                {
+                    'name': 'port',
+                    'title': 'Web Server Port',
+                    'type': 'integer',
+                    'default': DEFAULT_SSL_PORT
+                },
+            ],
+            'required': [
+                'port',
+            ],
+            'type': 'array'
+        }
         return add_node_selection(action_schema, WEBSCAN_PLUGIN_NAME)
 
     @staticmethod
     def default_config() -> dict:
-        default_schema = {}
+        default_schema = {'port': DEFAULT_SSL_PORT}
         return add_node_default(default_schema, WEBSCAN_PLUGIN_NAME)
 
     def __run(self) -> EntitiesResult:

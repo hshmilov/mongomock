@@ -1,4 +1,5 @@
 import logging
+import datetime
 from urllib.parse import urlparse
 
 from urllib3.contrib import pyopenssl
@@ -34,16 +35,17 @@ class Cert(SmartJsonClass):
     serial_number = Field(str, 'Serial Number')
     subject = Field(X509Name, 'Subject')
     alt_names = ListField(CertAltName, 'Alt Names')
+    begins_on = Field(datetime.datetime, 'Begins On')
+    expires_on = Field(datetime.datetime, 'Expires On')
 
 
 class CertScanner(ServiceScanner):
     """
     Get SSL Certificate data
     """
-    DEFAULT_SSL_PORT = 443
 
     @staticmethod
-    def get_cert_info(url: str = None, domain: str = None, port: int = DEFAULT_SSL_PORT):
+    def get_cert_info(url: str = None, domain: str = None, port: int = ServiceScanner.DEFAULT_SSL_PORT):
         """
         Get cert data from url/domain
         :param url: url to get the cert from
@@ -51,6 +53,8 @@ class CertScanner(ServiceScanner):
         :param port: remote server port
         :return: dict of cert data
         """
+        begins_on = None
+        expires_on = None
         if not domain and not url:
             return {}
         if not domain:
@@ -62,12 +66,19 @@ class CertScanner(ServiceScanner):
         )
         subject = x509.get_subject().get_components()
         issuer = x509.get_issuer().get_components()
+        try:
+            begins_on = datetime.datetime.strptime(x509.get_notBefore().decode('utf-8'), '%Y%m%d%H%M%SZ')
+            expires_on = datetime.datetime.strptime(x509.get_notAfter().decode('utf-8'), '%Y%m%d%H%M%SZ')
+        except Exception:
+            logger.error('Cant parse certificate dates')
         return {
             'issuer': issuer,
             'version': x509.get_version(),
             'subject': subject,
             'serial_number': x509.get_serial_number(),
-            'alt_name': pyopenssl.get_subj_alt_name(x509)
+            'alt_name': pyopenssl.get_subj_alt_name(x509),
+            'begins_on': begins_on,
+            'expires_on': expires_on
         }
 
     @staticmethod
@@ -111,7 +122,7 @@ class CertScanner(ServiceScanner):
         Get cert data form the given url / domain
         :return: cert data results
         """
-        self.results = self.get_cert_info(self.url, self.domain)
+        self.results = self.get_cert_info(self.url, self.domain, self.port)
         return self.results
 
     def parse(self, device: DeviceAdapter):
@@ -131,5 +142,7 @@ class CertScanner(ServiceScanner):
                    version=data.get('version'),
                    serial_number=data.get('serial_number'),
                    alt_names=alt_names,
-                   subject=subject)
+                   subject=subject,
+                   begins_on=data.get('begins_on'),
+                   expires_on=data.get('expires_on'))
         device.cert = crt

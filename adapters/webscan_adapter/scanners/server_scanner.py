@@ -81,16 +81,15 @@ class ServerScanner(ServiceScanner):
         domain, ip = self.resolve_domain(self.url, self.domain)
         server_data = {
             'ip': ip,
-            'domain': domain
+            'domain': self.domain
         }
         try:
             response = requests.get(self.url)
             # get HTTP headers and parse them
             headers = response.headers
             server = headers.get('Server')
-            if not server:
-                return {}
-            server_data.update(self.parse_server_info(server))
+            if server:
+                server_data.update(self.parse_server_info(server))
             if headers.get('X-Powered-By'):
                 server_data['powered_by'] = headers.get('X-Powered-By')
         except Exception:

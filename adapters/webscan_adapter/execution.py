@@ -5,6 +5,7 @@ from typing import List, Tuple
 
 from dataclasses import dataclass
 
+from axonius.adapter_exceptions import NoIpFoundError
 from axonius.entities import EntityType
 from axonius.mixins.triggerable import RunIdentifier, Triggerable
 from axonius.utils.db_querying_helper import iterate_axonius_entities
@@ -41,12 +42,13 @@ class WebscanExecutionMixIn(Triggerable):
         internal_axon_ids = post_json['internal_axon_ids']
         client_config = post_json['client_config']
 
-        if not client_config:
+        if not client_config or not client_config.get('port'):
             logger.exception(f'Bad config')
             return {
                 'status': 'error',
                 'message': f'Argument Error: Bad Config'
             }
+        port = client_config.get('port')
         results = dict()
         # Get devices details
         devices = iterate_axonius_entities(EntityType.Devices, internal_axon_ids)
@@ -54,7 +56,7 @@ class WebscanExecutionMixIn(Triggerable):
             _id = None
             try:
                 _id = device['internal_axon_id']
-                result_value = self._handle_device(device)
+                result_value = self._handle_device(device, port)
                 results[_id] = result_value
             except Exception as e:
                 logger.exception(f'Failed to handle internal axon id {_id}')
@@ -83,7 +85,7 @@ class WebscanExecutionMixIn(Triggerable):
                 adapter_ips = []
                 adapter_data = adapter['data']
                 adapter_hostname = adapter_data.get('hostname')
-                for interface in adapter_data.get('network_interfaces'):
+                for interface in adapter_data.get('network_interfaces', []):
                     if not interface:
                         continue
                     ips = interface.get('ips')
@@ -100,18 +102,21 @@ class WebscanExecutionMixIn(Triggerable):
 
         return result
 
-    def _handle_domain(self, adapter_meta: dict, hostname: str):
+    def _handle_domain(self, adapter_meta: dict, hostname: str, port: int):
         """
         Get a domain and the meta data of the device and fetch its data using webscan adapter
         :param adapter_meta: adapter meta (for tagging the results)
         :param hostname: hostname to scan
+        :param port: web server port to scan
         :return:
         """
-        logger.debug(f'Scanning {hostname}')
+        logger.debug(f'Scanning {hostname}:{port}')
         # create a new connection
-        connection = WebscanConnection(domain=hostname)
+        connection = WebscanConnection(domain=hostname, port=port)
         data = connection.get_device_list()
         new_device = list(self._parse_raw_data(data))[0]
+        if not new_device:
+            return False
         new_data = new_device.to_dict()
         # add the new device data as a tag
         self.devices.add_adapterdata(
@@ -120,7 +125,7 @@ class WebscanExecutionMixIn(Triggerable):
             client_used=adapter_meta['client_used']
         )
         self._save_field_names_to_db(EntityType.Devices)
-        return hostname
+        return True
 
     @staticmethod
     def get_common_name_from_ip(ip, query_timeout=5) -> str:
@@ -140,24 +145,30 @@ class WebscanExecutionMixIn(Triggerable):
         names = [name[1] for name in common_names if len(name) > 1 and '*' not in name]
         for name in names:
             # ip validation
-            dns_response = query_dns(name, timeout=query_timeout)
-            if dns_response == ip:
-                return name
-            logger.debug(f'{name} is not {ip}, query response: {dns_response}')
+            try:
+                dns_response = query_dns(name, timeout=query_timeout)
+                if dns_response == ip:
+                    return name
+                logger.debug(f'{name} is not {ip}, query response: {dns_response}')
+            except NoIpFoundError:
+                continue
+            except Exception:
+                logger.exception(f'Error query {name}')
         return ''
 
     @staticmethod
-    def get_reachable_hostname(adapters_hostnames: List[AdapterScanHostnames]) -> Tuple[dict, str]:
+    def get_reachable_hostname(adapters_hostnames: List[AdapterScanHostnames], port: int) -> Tuple[dict, str]:
         """
         Getting the best reachable hostname from adapters data.
-        :param adapters_hostnames:
+        :param adapters_hostnames: list of adapter hostnames, ips, and metadata
+        :param port: web server port
         :return:
         """
         for data in adapters_hostnames:
             try:
+                domain = None
                 # we prefer hostname first
-                if data.hostname and (WebscanConnection.test_reachability(data.hostname, ssl=True) or
-                                      WebscanConnection.test_reachability(data.hostname, ssl=False)):
+                if data.hostname and WebscanConnection.test_reachability(data.hostname, port=port):
                     return data.meta, data.hostname
                 # loop the adapter's IPs and find a reachable hostname
                 for ip in data.ips:
@@ -165,16 +176,14 @@ class WebscanExecutionMixIn(Triggerable):
                         domain = WebscanExecutionMixIn.get_common_name_from_ip(ip)
                     except Exception:
                         logger.exception('Error getting common name')
-                        continue
                     domain = domain or ip
-                    if WebscanConnection.test_reachability(domain, ssl=True) or \
-                            WebscanConnection.test_reachability(domain, ssl=False):
+                    if WebscanConnection.test_reachability(domain, port=port):
                         return data.meta, domain
             except Exception:
                 logger.exception(f'Error getting reachable hostname from adapter')
         return {}, ''
 
-    def _handle_device(self, device: dict) -> dict:
+    def _handle_device(self, device: dict, port: int) -> dict:
         '''
         Get an axon device, handle the required job and return its output
         :param device:
@@ -196,20 +205,24 @@ class WebscanExecutionMixIn(Triggerable):
                 }
                 return json
 
-            reachable_hostname_adapter, reachable_hostname = self.get_reachable_hostname(adapters_hostnames)
+            reachable_hostname_adapter, reachable_hostname = self.get_reachable_hostname(adapters_hostnames, port)
             if not reachable_hostname:
                 json = {
                     'success': False,
-                    'value': 'Webscan Enrichment Error: No reachable Hostname or IP'
+                    'value': f'Webscan Enrichment Error: No reachable Hostname or IP. port: {port}'
                 }
                 return json
 
-            scanned_domain = self._handle_domain(reachable_hostname_adapter, reachable_hostname)
-
-            json = {
-                'success': True,
-                'value': f'Webscan Enrichment success, scanned domain: {scanned_domain}'
-            }
+            if not self._handle_domain(reachable_hostname_adapter, reachable_hostname, port):
+                json = {
+                    'success': False,
+                    'value': f'Webscan Enrichment Error: not data from {reachable_hostname}:{port}'
+                }
+            else:
+                json = {
+                    'success': True,
+                    'value': f'Webscan Enrichment success, scanned domain: {reachable_hostname}:{port}'
+                }
             return json
 
         except Exception as e:

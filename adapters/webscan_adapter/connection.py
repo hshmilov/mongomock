@@ -29,8 +29,8 @@ class WebscanConnection(RESTConnection):
         Get Scanners services output data
         :return: list of services, services results dict
         """
-        services = [ServerScanner(self._url, logger),
-                    CertScanner(self._url, logger),
+        services = [ServerScanner(self._url, logger, self._domain),
+                    CertScanner(self._url, logger, self._domain, self._port),
                     CMSScanner(self._url, logger)]
         results = {}
         # run scan on each service

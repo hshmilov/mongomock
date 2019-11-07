@@ -10,6 +10,7 @@ from axonius.fields import Field
 from axonius.utils.files import get_local_config_file
 from webscan_adapter.connection import WebscanConnection
 from webscan_adapter.client_id import get_client_id
+from webscan_adapter.consts import DEFAULT_SSL_PORT
 from webscan_adapter.execution import WebscanExecutionMixIn
 from webscan_adapter.scanners.cert_scanner import Cert
 from webscan_adapter.scanners.cmseek.cmseek_scanner import CMS
@@ -36,12 +37,14 @@ class WebscanAdapter(WebscanExecutionMixIn, AdapterBase):
 
     @staticmethod
     def _test_reachability(client_config):
-        return RESTConnection.test_reachability(client_config.get('domain'), ssl=True) or \
-            RESTConnection.test_reachability(client_config.get('domain'), ssl=False)
+        return RESTConnection.test_reachability(
+            client_config.get('domain'), port=client_config.get('port'), ssl=True) or \
+            RESTConnection.test_reachability(client_config.get('domain'),
+                                             port=client_config.get('port'), ssl=False)
 
     @staticmethod
     def get_connection(client_config):
-        connection = WebscanConnection(client_config['domain'])
+        connection = WebscanConnection(client_config['domain'], port=client_config['port'])
         with connection:
             pass
         return connection
@@ -81,10 +84,17 @@ class WebscanAdapter(WebscanExecutionMixIn, AdapterBase):
                     'name': 'domain',
                     'title': 'Web Server Domain',
                     'type': 'string'
+                },
+                {
+                    'name': 'port',
+                    'title': 'Web Server Port',
+                    'type': 'integer',
+                    'default': DEFAULT_SSL_PORT
                 }
             ],
             'required': [
                 'domain',
+                'port'
             ],
             'type': 'array'
         }

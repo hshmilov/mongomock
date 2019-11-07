@@ -18,6 +18,8 @@ from axonius.entities import EntityType
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
+ITERATE_CHUNK_SIZE = 50
+
 
 def _normalize_db_projection_for_aggregation(projection: Dict[str, int]):
     """
@@ -241,7 +243,7 @@ def iterate_axonius_entities(entity: EntityType,
     """
     # pylint: disable=W0212
     collection = plugin_base_instance()._entity_db_map[entity]
-    for chunk in chunks(10000, internal_axon_ids):
+    for chunk in chunks(ITERATE_CHUNK_SIZE, internal_axon_ids):
         yield from collection.find({
             'internal_axon_id': {
                 '$in': chunk
