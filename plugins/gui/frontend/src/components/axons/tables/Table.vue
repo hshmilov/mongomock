@@ -34,9 +34,9 @@
       </thead>
       <tbody>
         <x-table-row
-          v-for="row in data"
+          v-for="(row, index) in data"
           :id="row[idField]"
-          :key="row[idField]"
+          :key="index"
           :data="row"
           :fields="fields"
           :sort="sort"
@@ -56,7 +56,7 @@
         <template v-if="pageSize">
           <tr
             v-for="n in pageSize - data.length"
-            :key="n"
+            :key="data.length + n"
             class="x-table-row"
           >
             <td v-if="value">&nbsp;</td>
