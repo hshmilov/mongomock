@@ -1,5 +1,5 @@
 <template>
-    <div class="x-action" @click="$emit('click')" :class="{[actionClass]: actionClass}">
+    <div class="x-action" @click="$emit('click')" :class="actionClass">
         <x-text-box v-bind="{id, text, selected, removable}" @remove="onRemove">
             <template slot="logo">
                 <img v-if="name" :src="require(`Logos/actions/${name}.png`)" class="md-image logo" />
@@ -42,7 +42,7 @@
                 if(this.status){
                     return 'action-' + this.status
                 }
-                return null
+                return ''
             }
         },
         methods: {
