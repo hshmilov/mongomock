@@ -278,11 +278,11 @@ class SettingsPage(Page):
 
     def set_send_emails_toggle(self):
         toggle = self.find_send_emails_toggle()
-        self.click_toggle_button(toggle, make_yes=True, scroll_to_toggle=True)
+        self.click_toggle_button(toggle, make_yes=True, scroll_to_toggle=False)
 
     def set_dont_send_emails_toggle(self):
         toggle = self.find_send_emails_toggle()
-        self.click_toggle_button(toggle, make_yes=False, scroll_to_toggle=True)
+        self.click_toggle_button(toggle, make_yes=False, scroll_to_toggle=False)
 
     def set_remote_support_toggle(self, make_yes):
         self.set_maintenance_toggle(make_yes, self.find_remote_support_toggle())

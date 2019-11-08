@@ -1,5 +1,5 @@
 <template>
-    <div class="x-action" @click="$emit('click')" :class="{[status]: status}">
+    <div class="x-action" @click="$emit('click')" :class="{[actionClass]: actionClass}">
         <x-text-box v-bind="{id, text, selected, removable}" @remove="onRemove">
             <template slot="logo">
                 <img v-if="name" :src="require(`Logos/actions/${name}.png`)" class="md-image logo" />
@@ -37,6 +37,12 @@
             },
             removable() {
                 return !this.readOnly && Boolean(this.title)
+            },
+            actionClass() {
+                if(this.status){
+                    return 'action-' + this.status
+                }
+                return null
             }
         },
         methods: {
@@ -63,19 +69,19 @@
                 font-size: 36px;
             }
         }
-        &.success .x-text-box {
+        &.action-success .x-text-box {
             background-color: rgba($indicator-success, 0.4);
             &:hover, &.selected {
                 background-color: rgba($indicator-success, 0.6);
             }
         }
-        &.warning .x-text-box {
+        &.action-warning .x-text-box {
             background-color: rgba($indicator-warning, 0.4);
             &:hover, &.selected {
                 background-color: rgba($indicator-warning, 0.6);
             }
         }
-        &.error .x-text-box {
+        &.action-error .x-text-box {
             background-color: rgba($indicator-error, 0.4);
             &:hover, &.selected {
                 background-color: rgba($indicator-error, 0.6);
