@@ -1,8 +1,11 @@
+import datetime
+
 import pytest
 
 from axonius.smart_json_class import SmartJsonClass, Field, ListField
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.users.user_adapter import UserAdapter
+from axonius.utils.dynamic_fields import put_dynamic_field
 
 
 def create_smart_json_class():
@@ -194,3 +197,44 @@ def test_schema_changes_with_widely_used_classes():
                 'dynamic': True
             }
         ] == device.get_fields_info('dynamic')['items']
+
+
+# pylint: disable=protected-access
+def test_configuring_dynamic_complex_fields():
+    class MyDeviceComplexFieldsTest(SmartJsonClass):
+        pass
+
+    class ComplexField(SmartJsonClass):
+        pass
+
+    device1 = MyDeviceComplexFieldsTest()
+    device1.declare_new_field('abc', Field(ComplexField, 'My Complex Field'))
+
+    assert device1.get_field_type('abc')._type == ComplexField
+
+    class MyDeviceComplexFieldsTest2(SmartJsonClass):
+        pass
+
+    obj_example = {
+        'id': 'i-12345',
+        'type': 't2.2xlarge',
+        'is_public': True,
+        'last_seen': datetime.datetime.now(),
+        'some_float': 5.7,
+        'some_dict': {
+            'a': 'b',
+            'c': 5
+        },
+        'network_interfaces': {
+            'ips': ['1.2.3.4', '5.6.7.8'],
+            'type': 'true'
+        },
+        'groups': [
+            {'group_name': 'name1', 'group_id': '1'},
+            {'group_name': 'name2', 'group_id': '2'}
+        ]
+    }
+    device2 = MyDeviceComplexFieldsTest2()
+
+    put_dynamic_field(device2, 'key', obj_example, 'Key1')
+    assert device2.to_dict()['key'] == obj_example

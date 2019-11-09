@@ -58,7 +58,7 @@ class MongoService(WeaveService):
         """
         # mongo recommends to not set this to 0
         # https://docs.mongodb.com/manual/administration/production-notes/
-        return 20
+        return None
 
     @property
     def image(self):

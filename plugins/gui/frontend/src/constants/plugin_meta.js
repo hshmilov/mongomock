@@ -1,4 +1,8 @@
 export const pluginMeta = {
+    google_big_query_adapter: {
+        title: 'Google Big Query',
+        description: 'BigQuery is a serverless, highly-scalable, and cost-effective cloud data warehouse with an in-memory BI Engine and machine learning built in.'
+    },
     nutanix_adapter: {
         title: 'Nutanix AHV',
         description: 'Nutanix AHV is a hypervisor included with the Enterprise Cloud OS. AHV delivers flexible migrations, security hardening, automated data protection and disaster recovery, and analytics.'

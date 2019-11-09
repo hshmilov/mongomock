@@ -1,6 +1,7 @@
 {
   "exclude-list": {
     "add-to-exclude": [
+      "google_big_query",
       "nimbul",
       "igar",
       "careful_execution_correlator",

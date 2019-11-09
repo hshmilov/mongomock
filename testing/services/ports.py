@@ -209,6 +209,7 @@ DOCKER_PORTS = {
     'snow-adapter':                     9996,
     'airwave-adapter':                  9997,
     'webscan-adapter':                  9998,
+    'google-big-query-adapter':         9999,
     'mongo':                            27017,
     'mockingbird-db':                   28017
 }
