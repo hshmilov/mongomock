@@ -18,8 +18,16 @@ SOLARWINDS_PORT = 17778
 # pylint: disable=too-many-instance-attributes,too-many-branches,too-many-statements
 
 
+NODE_DEVICE = 'Node Device'
+WIFI_DEVICE = 'Wifi Device'
+LAN_DEVICE = 'Lan Device'
+DHCP_DEVICE = 'DHCP Device'
+SOLARWINDS_DEVICES_TYPES = [NODE_DEVICE, LAN_DEVICE, DHCP_DEVICE, WIFI_DEVICE]
+
+
 class SolarwindsOrionAdapter(AdapterBase, Configurable):
     class MyDeviceAdapter(DeviceAdapter):
+        device_type = Field(str, 'Device Type', enum=SOLARWINDS_DEVICES_TYPES)
         uri = Field(str, 'URI')
         ip_address_guid = Field(str, 'IP Address GUID')
         software_hardware_makeup = Field(str, 'Node Makeup')
@@ -121,6 +129,7 @@ class SolarwindsOrionAdapter(AdapterBase, Configurable):
 
     def _create_wifi_device(self, device_raw):
         device = self._new_device_adapter()
+        device.device_type = WIFI_DEVICE
         if not device_raw.get('ID') and not device_raw.get('MAC'):
             logger.warning(f'Bad device with no ID {device_raw}')
             return None
@@ -150,6 +159,7 @@ class SolarwindsOrionAdapter(AdapterBase, Configurable):
 
     def _create_dhcp_device(self, device_raw):
         device = self._new_device_adapter()
+        device.device_type = DHCP_DEVICE
         if not device_raw.get('MAC') and not device_raw.get('DisplayName'):
             logger.debug(f'Bad device with no mac {device_raw}')
             return None
@@ -167,6 +177,7 @@ class SolarwindsOrionAdapter(AdapterBase, Configurable):
 
     def _create_lan_device(self, device_raw):
         device = self._new_device_adapter()
+        device.device_type = LAN_DEVICE
         if not device_raw.get('MACAddress'):
             logger.warning(f'Bad device with no ID {device_raw}')
             return None
@@ -195,6 +206,7 @@ class SolarwindsOrionAdapter(AdapterBase, Configurable):
     def _create_node_device(self, raw_device_data):
         try:
             device = self._new_device_adapter()
+            device.device_type = NODE_DEVICE
             # NodeID is the unique identifier over time
             id_check = raw_device_data.get('NodeID')
             if not id_check:

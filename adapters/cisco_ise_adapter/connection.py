@@ -26,6 +26,7 @@ class CiscoIseConnection(RESTConnection):
         super().__init__(
             *args, port=ISE_PORT, url_base_prefix=URL_BASE_PREFIX, headers={'Connection': 'keep_alive'}, **kwargs
         )
+        self.top_endpoint_page = 0
 
     # pylint: disable=arguments-differ
     def _do_request(self, *args, **kwargs):
@@ -71,6 +72,7 @@ class CiscoIseConnection(RESTConnection):
             if key in SECRETS:
                 device_raw[key] = '*******'
 
+    # pylint: disable=too-many-branches
     def get_device_list(self):
         for page in range(1, MAX_NETWORK_DEVICE_PAGE):
             devices = self.get_devices(page=page)
@@ -91,9 +93,10 @@ class CiscoIseConnection(RESTConnection):
                 break
 
         for page in range(1, MAX_NETWORK_DEVICE_PAGE):
-            endpoints = self.get_endpoints(page=page)
+            endpoints = self.get_endpoints(page=(page + self.top_endpoint_page))
             if not endpoints['success']:
                 logger.error(f'Unable to get device list {endpoints.get("error")} {endpoints.get("response")}')
+                self.top_endpoint_page = 0
                 break
             for endpoint_name, endpoint_id in endpoints['response']:
                 try:
@@ -105,7 +108,10 @@ class CiscoIseConnection(RESTConnection):
                 except Exception:
                     logger.exception(f'Unable to get endpoint')
             if len(endpoints['response']) < PAGE_SIZE:
+                self.top_endpoint_page = 0
                 break
+        if page == MAX_NETWORK_DEVICE_PAGE - 1:
+            self.top_endpoint_page += MAX_NETWORK_DEVICE_PAGE
 
     def get_users_list(self):
         raise NotImplementedError()

@@ -23,7 +23,7 @@ class AutomoxConnection(RESTConnection):
                   url_params={'api_key': self._apikey})
 
     def _get_devices_from_org_id(self, org_id):
-        page = 1
+        page = 0
         while page * DEVICE_PER_PAGE < MAX_NUMBER_OF_DEVICES:
             try:
                 response = self._get('servers',
@@ -31,10 +31,11 @@ class AutomoxConnection(RESTConnection):
                                                  'o': org_id,
                                                  'l': DEVICE_PER_PAGE,
                                                  'p': page})
-                if not isinstance(response, list) or not response:
+                if not isinstance(response, dict) or not response:
                     break
-                for device_raw in response:
-                    yield device_raw.get('results')
+                if not response.get('results'):
+                    break
+                yield from response.get('results')
                 page += 1
             except Exception:
                 logger.exception(f'Problem with page {page}')

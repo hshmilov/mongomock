@@ -157,6 +157,8 @@ class ServiceNowConnection(RESTConnection):
         u_symptom = service_now_dict.get('u_symptom')
         cmdb_ci = service_now_dict.get('cmdb_ci')
         caller_id = service_now_dict.get('caller_id')
+        category = service_now_dict.get('category')
+        subcategory = service_now_dict.get('subcategory')
 
         self.__number_of_incidents += 1
         logger.info(f'Creating servicenow incident num {self.__number_of_incidents}: impact={impact}, '
@@ -178,6 +180,10 @@ class ServiceNowConnection(RESTConnection):
                 final_dict['cmdb_ci'] = cmdb_ci
             if caller_id:
                 final_dict['caller_id'] = caller_id
+            if category:
+                final_dict['category'] = category
+            if subcategory:
+                final_dict['subcategory'] = subcategory
             self.__add_dict_to_table('incident', final_dict)
             return True
         except Exception:
@@ -185,10 +191,11 @@ class ServiceNowConnection(RESTConnection):
             return False
 
     def create_service_now_computer(self, connection_dict):
+        cmdb_ci_table = connection_dict.get('cmdb_ci_table') or 'cmdb_ci_computer'
         self.__number_of_new_computers += 1
         logger.info(f'Creating service now computer num {self.__number_of_new_computers}')
         try:
-            device_raw = self.__add_dict_to_table('cmdb_ci_computer', connection_dict)['result']
+            device_raw = self.__add_dict_to_table(cmdb_ci_table, connection_dict)['result']
             return True, device_raw
         except Exception:
             logger.exception(f'Exception while creating incident for '

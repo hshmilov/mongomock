@@ -98,6 +98,7 @@ DOCKER_PORTS = {
     'zabbix-adapter':                   6005,
     'tripwire-enterprise-adapter':      6007,
     'specops-adapter':                  6008,
+    'nutanix-adapter':                  6009,
     'minerva-adapter':                  6010,
     'bigfix-adapter':                   6012,
     'ensilo-adapter':                   6013,
@@ -140,6 +141,7 @@ DOCKER_PORTS = {
     'armis-adapter':                    6052,
     'counter-act-adapter':              6053,
     'rumble-adapter':                   6054,
+    'preempt-adapter':                  6055,
     'diag-w':                           6665,  # reserved
     'diag-l':                           6666,  # reserved
     'code42-adapter':                   6667,

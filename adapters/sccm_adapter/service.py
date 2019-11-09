@@ -407,10 +407,13 @@ class SccmAdapter(AdapterBase, Configurable):
                 device.add_agent_version(version=device_raw.get('Client_Version0'),
                                          agent=AGENT_NAMES.sccm)
                 device.hostname = device_raw.get('Netbios_Name0')
+                if self.__machine_domain_whitelist and domain and domain.lower() not in self.__machine_domain_whitelist:
+                    continue
                 if domain and device_raw.get('Netbios_Name0'):
                     device.hostname += '.' + domain
                     device.part_of_domain = True
                     device.domain = domain
+
                 device.figure_os(device_raw.get('operatingSystem0'))
 
                 mac_total = []
@@ -683,6 +686,11 @@ class SccmAdapter(AdapterBase, Configurable):
                     'name': 'devices_fetched_at_a_time',
                     'type': 'integer',
                     'title': 'SQL pagination'
+                },
+                {
+                    'name': 'machine_domain_whitelist',
+                    'title': 'Machine Domain Whitelist',
+                    'type': 'string'
                 }
             ],
             "required": ['drop_no_last_seen', 'exclude_ipv6'],
@@ -695,10 +703,13 @@ class SccmAdapter(AdapterBase, Configurable):
         return {
             'exclude_ipv6': False,
             'drop_no_last_seen': False,
-            'devices_fetched_at_a_time': 1000
+            'devices_fetched_at_a_time': 1000,
+            'machine_domain_whitelist': None
         }
 
     def _on_config_update(self, config):
         self.__exclude_ipv6 = config['exclude_ipv6']
         self.__devices_fetched_at_a_time = config['devices_fetched_at_a_time']
         self.__drop_no_last_seen = config.get('drop_no_last_seen') or False
+        self.__machine_domain_whitelist = config.get('machine_domain_whitelist').lower().split(',') \
+            if config.get('machine_domain_whitelist') else None

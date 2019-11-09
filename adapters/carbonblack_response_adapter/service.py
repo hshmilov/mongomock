@@ -143,7 +143,9 @@ class CarbonblackResponseAdapter(AdapterBase, Configurable):
                                      version=device_raw.get('build_version_string'),
                                      status=device_raw.get('status'))
             hostname = device_raw.get('computer_dns_name') or device_raw.get('computer_name')
-            if device_raw.get('computer_dns_name') and device_raw.get('computer_name'):
+            if device_raw.get('computer_dns_name') and device_raw.get('computer_name') \
+                    and device_raw.get('computer_name').split('.')[0].lower() !=\
+                    device_raw.get('computer_dns_name').split('.')[0].lower():
                 try:
                     device_name = device_raw.get('computer_name')
                     device.name = device_name

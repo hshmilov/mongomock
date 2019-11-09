@@ -26,7 +26,7 @@ CLIENT_CONFIG_TITLES = ClientConfig(domain='Cisco ISE Domain',
 SECRETS = ['previousSharedSecret', 'roCommunity', 'radiusSharedSecret', 'sharedSecret']
 
 
-MAX_NETWORK_DEVICE_PAGE = 10000
+MAX_NETWORK_DEVICE_PAGE = 1000
 PAGE_SIZE = 100
 
 

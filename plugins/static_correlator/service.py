@@ -66,7 +66,7 @@ class StaticCorrelatorService(CorrelatorBase):
                          'azure_display_name',
                          'last_used_users', 'nessus_no_scan_id', 'private_dns_name', 'macs_no_ip',
                          'node_id', 'azure_ad_id', 'azure_device_id', 'fetch_proto',
-                         'associated_adapter_plugin_name', 'value', 'type', 'name')
+                         'associated_adapter_plugin_name', 'value', 'type', 'name', 'aws_device_type')
         projection = {
             f'adapters.data.{field}': True for field in fields_to_get
         }
@@ -88,7 +88,8 @@ class StaticCorrelatorService(CorrelatorBase):
     # pylint: disable=arguments-differ
     def _correlate(self, entities: list, use_markers=False):
         return self._correlation_engine.correlate(entities, use_markers=use_markers,
-                                                  correlation_config={'correlate_ad_sccm': self._correlate_ad_sccm})
+                                                  correlation_config={'correlate_ad_sccm': self._correlate_ad_sccm,
+                                                                      'csv_full_hostname': self._csv_full_hostname})
 
     # pylint: enable=arguments-differ
 

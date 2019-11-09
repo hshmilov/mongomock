@@ -14,6 +14,8 @@ logger = logging.getLogger(f'axonius.{__name__}')
 
 def fix_subnet(text):
     """ sometimes subnet field is removing '0' for the end, add it if it's missing """
+    if '/' not in text:
+        return text
     ip, subnet = text.split('/')
     bytes_ = ip.split('.')
     bytes_ += ['0' for _ in range(4 - len(bytes_))]

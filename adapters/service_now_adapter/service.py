@@ -93,7 +93,10 @@ class ServiceNowAdapter(AdapterBase, Configurable):
             device.table_type = table_type
             name = device_raw.get('name')
             device.name = name
-            device.class_name = device_raw.get('sys_class_name')
+            class_name = device_raw.get('sys_class_name')
+            if self.__exclude_vm_tables is True and class_name and 'cmdb_ci_vm' in class_name:
+                return None
+            device.class_name = class_name
             try:
                 ip_addresses = device_raw.get('ip_address')
                 if fetch_ips and ip_addresses and not any(elem in ip_addresses for elem in ['DHCP',
@@ -220,6 +223,7 @@ class ServiceNowAdapter(AdapterBase, Configurable):
                 assigned_to = users_table_dict.get((device_raw.get('assigned_to') or {}).get('value'))
                 if assigned_to:
                     device.assigned_to = assigned_to.get('name')
+                    device.email = assigned_to.get('email')
                     try:
                         assigned_to_location_value = (assigned_to.get('location') or {}).get('value')
                         device.assigned_to_location = (snow_location_table_dict.get(
@@ -231,7 +235,8 @@ class ServiceNowAdapter(AdapterBase, Configurable):
             owned_by = users_table_dict.get((device_raw.get('owned_by') or {}).get('value'))
             if owned_by:
                 device.owner = owned_by.get('name')
-                device.email = owned_by.get('email')
+                if owned_by.get('email'):
+                    device.email = owned_by.get('email')
             try:
                 try:
                     manufacturer_link = (device_raw.get('manufacturer') or {}).get('value')
@@ -540,6 +545,11 @@ class ServiceNowAdapter(AdapterBase, Configurable):
                     'name': 'use_ci_table_for_install_status',
                     'title': 'Use CMDB_CI Table Instead Of ALM ASSET Table for Install Status',
                     'type': 'bool'
+                },
+                {
+                    'name': 'exclude_vm_tables',
+                    'type': 'bool',
+                    'title': 'Exclude VMs Tables'
                 }
             ],
             "required": [
@@ -547,7 +557,8 @@ class ServiceNowAdapter(AdapterBase, Configurable):
                 'fetch_ips', 'use_ci_table_for_install_status',
                 'exclude_disposed_devices',
                 'fetch_users_info_for_devices',
-                'exclude_no_strong_identifier'
+                'exclude_no_strong_identifier',
+                'exclude_vm_tables'
             ],
             "pretty_name": "ServiceNow Configuration",
             "type": "array"
@@ -561,7 +572,8 @@ class ServiceNowAdapter(AdapterBase, Configurable):
             'fetch_users_info_for_devices': True,
             'exclude_disposed_devices': False,
             'exclude_no_strong_identifier': False,
-            'use_ci_table_for_install_status': False
+            'use_ci_table_for_install_status': False,
+            'exclude_vm_tables': False
         }
 
     def _on_config_update(self, config):
@@ -571,6 +583,7 @@ class ServiceNowAdapter(AdapterBase, Configurable):
         self.__exclude_disposed_devices = config['exclude_disposed_devices']
         self.__exclude_no_strong_identifier = config['exclude_no_strong_identifier']
         self.__use_ci_table_for_install_status = config['use_ci_table_for_install_status']
+        self.__exclude_vm_tables = config['exclude_vm_tables']
 
     def outside_reason_to_live(self) -> bool:
         """

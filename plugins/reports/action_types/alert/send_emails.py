@@ -229,8 +229,8 @@ class SendEmailsAction(ActionTypeAlert):
         if query:
             results = perform_saved_view_converted(self._entity_type, query, projection, limit=10)
         else:
-            get_entities(10, 0, self._create_query(self._internal_axon_ids), {},
-                         projection, self._entity_type)
+            results = get_entities(10, 0, self._create_query(self._internal_axon_ids), {},
+                                   projection, self._entity_type)
 
         self.__create_table_in_email(email, results, html_sections, images_cid, 'Top 10 results')
         if added_result_count > 0:

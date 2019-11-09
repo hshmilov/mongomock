@@ -1,5 +1,7 @@
 import logging
 import time
+# pylint: disable=import-error
+from tenable.io import TenableIO
 
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.exception import RESTException
@@ -32,6 +34,7 @@ class TenableIoConnection(RESTConnection):
             # We should just use the given api keys
             self._should_use_token = False
             self._set_api_headers()
+            self._tio = TenableIO(self._access_key, self._secret_key)
         else:
             raise RESTException('Missing user/password or api keys')
 
@@ -163,7 +166,8 @@ class TenableIoConnection(RESTConnection):
                 self._epoch_last_run_time + SECONDS_IN_DAY * DAYS_UNTIL_FETCH_AGAIN > int(time.time()):
             return
         if self._assets_list_dict is None:
-            new_assets = self._get_export_data('assets')
+            # new_assets = self._get_export_data('assets')
+            new_assets = self._tio.exports.assets()
             updated_assets = []
             deleted_assets = []
             self._assets_list_dict = dict()

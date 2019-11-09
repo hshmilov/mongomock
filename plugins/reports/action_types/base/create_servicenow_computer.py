@@ -50,6 +50,11 @@ class ServiceNowComputerAction(ActionTypeBase):
                     'name': 'https_proxy',
                     'title': 'HTTPS Proxy',
                     'type': 'string'
+                },
+                {
+                    'name': 'cmdb_ci_table',
+                    'title': 'CMDB CI Table Name',
+                    'type': 'string'
                 }
             ],
             'required': [
@@ -67,16 +72,20 @@ class ServiceNowComputerAction(ActionTypeBase):
             'username': None,
             'password': None,
             'https_proxy': None,
+            'cmdb_ci_table': None,
             'verify_ssl': True
         }, ADAPTER_NAME)
 
     def _create_service_now_computer(self, name, mac_address=None, ip_address=None,
                                      manufacturer=None, os_type=None, serial_number=None,
-                                     to_correlate_plugin_unique_name=None, to_correlate_device_id=None):
+                                     to_correlate_plugin_unique_name=None, to_correlate_device_id=None,
+                                     cmdb_ci_table=None):
         adapter_unique_name = self._plugin_base._get_adapter_unique_name(ADAPTER_NAME, self.action_node_id)
         connection_dict = dict()
         if not name:
             return None
+        if cmdb_ci_table:
+            connection_dict['cmdb_ci_table'] = cmdb_ci_table
         connection_dict['name'] = name
         if mac_address:
             connection_dict['mac_address'] = mac_address
@@ -189,7 +198,8 @@ class ServiceNowComputerAction(ActionTypeBase):
                                                             os_type=os_raw,
                                                             serial_number=serial_number_raw,
                                                             to_correlate_plugin_unique_name=corre_plugin_id,
-                                                            to_correlate_device_id=to_correlate_device_id)
+                                                            to_correlate_device_id=to_correlate_device_id,
+                                                            cmdb_ci_table=self._config.get('cmdb_ci_table'))
 
                 results.append(EntityResult(entry['internal_axon_id'], not message, message or 'Success'))
             except Exception:

@@ -320,6 +320,7 @@ class CorrelatorEngineBase(ABC):
         :param devices: axonius devices to correlate
         :return: iter(CorrelationResult or WarningResult)
         """
+        logger.info(f'Correlation Config is {correlation_config}')
         self._correlation_config = correlation_config
         logic_correlations = self._preprocess_devices(devices)
         devices = list(self._prefilter_device(devices))

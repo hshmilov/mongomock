@@ -316,7 +316,7 @@ class TenableSecurityCenterAdapter(ScannerAdapterBase, Configurable):
                 if device:
                     yield device
             except Exception:
-                logger.exception(f'Got exception for raw_device_data: {raw_device_data}')
+                logger.exception(f'Got exception for raw_device_data')
 
     @classmethod
     def adapter_properties(cls):

@@ -34,7 +34,7 @@ class HashicorpAdapter(AdapterBase):
         connection = HashicorpConnection(domain=client_config['domain'],
                                          verify_ssl=client_config['verify_ssl'],
                                          https_proxy=client_config.get('https_proxy'),
-                                         apikey=client_config['apikey'])
+                                         apikey=client_config.get('apikey'))
         with connection:
             pass
         return connection
@@ -94,7 +94,6 @@ class HashicorpAdapter(AdapterBase):
             ],
             'required': [
                 'domain',
-                'apikey',
                 'verify_ssl'
             ],
             'type': 'array'

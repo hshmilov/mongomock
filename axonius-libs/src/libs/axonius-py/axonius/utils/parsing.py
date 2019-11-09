@@ -57,6 +57,8 @@ DEFAULT_MAC_EXTENSIONS = ['-MACBOOK-PRO', 'MACBOOK-PRO', '-MBP', 'MBP', '-MBA', 
 # Without it, in order to compare IPs and MACs we would have to go through the list of network interfaces and extract
 # them each time.
 NORMALIZED_IPS = 'normalized_ips'
+NORMALIZED_IPS_4 = 'normalized_ips_4'
+NORMALIZED_IPS_6 = 'normalized_ips_6'
 NORMALIZED_MACS = 'normalized_macs'
 ALLOWED_VAR_CHARACTERS = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_'
 
@@ -860,8 +862,9 @@ def is_from_twistlock_or_aws(adapter_device):
 
 
 def is_from_deeps_or_aws(adapter_device):
-    return adapter_device.get('plugin_name') == 'aws_adapter' or \
-        adapter_device.get('plugin_name') == 'deep_security_adapter'
+    return (adapter_device.get('plugin_name') == 'aws_adapter' and
+            adapter_device['data'].get('aws_device_type') == 'EC2') \
+        or adapter_device.get('plugin_name') == 'deep_security_adapter'
 
 
 def get_cloud_id_or_hostname(adapter_device):
@@ -875,7 +878,7 @@ def get_cloud_id_or_hostname(adapter_device):
 
 def compare_cloud_id_or_hostname(adapter_device1, adapter_device2):
     cloud_id_or_hostname_1 = get_cloud_id_or_hostname(adapter_device1)
-    cloud_id_or_hostname_2 = get_cloud_id_or_hostname(adapter_device1)
+    cloud_id_or_hostname_2 = get_cloud_id_or_hostname(adapter_device2)
     if cloud_id_or_hostname_1 and cloud_id_or_hostname_2:
         return cloud_id_or_hostname_1 == cloud_id_or_hostname_2
     return True
@@ -1297,14 +1300,15 @@ def have_mac_intersection(adapter_device1, adapter_device2) -> bool:
 
 
 def ips_do_not_contradict_or_mac_intersection(adapter_device1, adapter_device2):
-    return ips_do_not_contradict(adapter_device1, adapter_device2) or have_mac_intersection(adapter_device1,
-                                                                                            adapter_device2)
+    return (ips_do_not_contradict(adapter_device1, adapter_device2) and get_normalized_ip(adapter_device1) and get_normalized_ip(adapter_device2)) or have_mac_intersection(adapter_device1, adapter_device2)
 
 
 def ips_do_not_contradict(adapter_device1, adapter_device2):
     device1_ips = adapter_device1.get(NORMALIZED_IPS)
     device2_ips = adapter_device2.get(NORMALIZED_IPS)
-    return not device1_ips or not device2_ips or is_one_subset_of_the_other(device1_ips, device2_ips)
+    device1_ips_v4 = adapter_device1.get(NORMALIZED_IPS_4)
+    device2_ips_v4 = adapter_device2.get(NORMALIZED_IPS_4)
+    return not device1_ips or not device2_ips or is_one_subset_of_the_other(device1_ips, device2_ips) or (device1_ips_v4 and device2_ips_v4 and is_one_subset_of_the_other(device1_ips_v4, device2_ips_v4))
 
 
 def macs_do_not_contradict(adapter_device1, adapter_device2):
@@ -1410,6 +1414,12 @@ def compare_macs_or_one_is_jamf(adapter_device1, adapter_device2):
             is_from_jamf(adapter_device2)) and os_not_contradict(adapter_device1, adapter_device2)
 
 
+def compare_full_mac(adapter_device1, adapter_device2):
+    first_set = adapter_device1.get(NORMALIZED_MACS)
+    second_set = adapter_device2.get(NORMALIZED_MACS)
+    return first_set.issubset(second_set) and second_set.issubset(first_set)
+
+
 def compare_macs(adapter_device1, adapter_device2):
     return is_one_subset_of_the_other(adapter_device1.get(NORMALIZED_MACS), adapter_device2.get(NORMALIZED_MACS))
 
@@ -1472,6 +1482,9 @@ def normalize_adapter_device(adapter_device):
         ips = set(extract_all_ips(adapter_data[NETWORK_INTERFACES_FIELD]))
         macs = set(extract_all_macs(adapter_data[NETWORK_INTERFACES_FIELD]))
         adapter_device[NORMALIZED_IPS] = ips if len(ips) > 0 else None
+        if len(ips) > 0:
+            adapter_device[NORMALIZED_IPS_4] = set([ip for ip in ips if is_valid_ipv4(ip)])
+            adapter_device[NORMALIZED_IPS_6] = set([ip for ip in ips if is_valid_ipv6(ip)])
         adapter_device[NORMALIZED_MACS] = macs if len(macs) > 0 else None
     # Save the normalized hostname so we can later easily compare.
     # See further doc near definition of NORMALIZED_HOSTNAME.

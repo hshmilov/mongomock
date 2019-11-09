@@ -54,6 +54,11 @@ class ServiceNowIncidentAction(ActionTypeAlert):
                     'type': 'string'
                 },
                 {
+                    'name': 'add_link_to_title',
+                    'type': 'bool',
+                    'title': 'Add Query Name To Incident Title '
+                },
+                {
                     'name': 'severity',
                     'title': 'Message Severity',
                     'type': 'string',
@@ -95,6 +100,16 @@ class ServiceNowIncidentAction(ActionTypeAlert):
                     'name': 'assignment_group',
                     'title': 'Assignment Group',
                     'type': 'string'
+                },
+                {
+                    'name': 'category',
+                    'type': 'string',
+                    'title': 'Category'
+                },
+                {
+                    'name': 'subcategory',
+                    'type': 'string',
+                    'title': 'Subcategory'
                 }
             ],
             'required': [
@@ -102,7 +117,8 @@ class ServiceNowIncidentAction(ActionTypeAlert):
                 'description_default',
                 'incident_description',
                 'severity',
-                'incident_title'
+                'incident_title',
+                'add_link_to_title'
             ],
             'type': 'array'
         }
@@ -124,10 +140,15 @@ class ServiceNowIncidentAction(ActionTypeAlert):
             'assignment_group': None,
             'u_requested_for': None,
             'caller_id': None,
+            'category': None,
+            'add_link_to_title': False,
+            'subcategory': None
         }
 
+    # pylint: disable=too-many-arguments
     def _create_service_now_incident(self, short_description, description, impact, u_incident_type,
-                                     caller_id, u_symptom, assignment_group, u_requested_for
+                                     caller_id, u_symptom, assignment_group, u_requested_for,
+                                     category=None, subcategory=None
                                      ):
         service_now_dict = {'short_description': short_description,
                             'description': description,
@@ -136,7 +157,9 @@ class ServiceNowIncidentAction(ActionTypeAlert):
                             'caller_id': caller_id,
                             'u_symptom': u_symptom,
                             'assignment_group': assignment_group,
-                            'u_requested_for': u_requested_for
+                            'u_requested_for': u_requested_for,
+                            'category': category,
+                            'subcategory': subcategory
                             }
         try:
             if self._config['use_adapter'] is True:
@@ -161,22 +184,28 @@ class ServiceNowIncidentAction(ActionTypeAlert):
         query_name = self._run_configuration.view.name
         old_results_num_of_devices = len(self._internal_axon_ids) + len(self._removed_axon_ids) - \
             len(self._added_axon_ids)
+        query_link = self._generate_query_link(query_name)
+        short_description = self._config['incident_title']
+        if self._config.get('add_link_to_title'):
+            short_description += f' - {query_link}'
         log_message = report_consts.REPORT_CONTENT.format(name=self._report_data['name'],
                                                           query=query_name,
                                                           num_of_triggers=self._run_configuration.times_triggered,
                                                           trigger_message=self._get_trigger_description(),
                                                           num_of_current_devices=len(self._internal_axon_ids),
                                                           old_results_num_of_devices=old_results_num_of_devices,
-                                                          query_link=self._generate_query_link(query_name))
+                                                          query_link=query_link)
         impact = report_consts.SERVICE_NOW_SEVERITY.get(self._config['severity'],
                                                         report_consts.SERVICE_NOW_SEVERITY['error'])
-        message = self._create_service_now_incident(short_description=self._config['incident_title'],
+        message = self._create_service_now_incident(short_description=short_description,
                                                     description=log_message,
                                                     impact=impact,
                                                     u_incident_type=self._config.get('u_incident_type'),
                                                     caller_id=self._config.get('caller_id'),
                                                     u_symptom=self._config.get('u_symptom'),
                                                     assignment_group=self._config.get('assignment_group'),
-                                                    u_requested_for=self._config.get('u_requested_for')
+                                                    u_requested_for=self._config.get('u_requested_for'),
+                                                    category=self._config.get('category'),
+                                                    subcategory=self._config.get('subcategory')
                                                     )
         return AlertActionResult(not message, message or 'Success')

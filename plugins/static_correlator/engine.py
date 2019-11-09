@@ -21,7 +21,7 @@ from axonius.utils.parsing import (NORMALIZED_MACS,
                                    get_asset_name, get_asset_or_host,
                                    get_asset_snow_or_host, compare_snow_asset_hosts,
                                    get_bios_serial_or_serial, get_cloud_data,
-                                   get_hostname, get_id,
+                                   get_hostname, get_id, compare_full_mac,
                                    get_last_used_users, is_from_ad,
                                    get_normalized_hostname_str, is_snow_adapter,
                                    get_normalized_ip, get_serial,
@@ -53,7 +53,7 @@ logger = logging.getLogger(f'axonius.{__name__}')
 
 
 ALLOW_OLD_MAC_LIST = ['clearpass_adapter', 'tenable_security_center', 'nexpose_adapter', 'nessus_adapter',
-                      'nessus_csv_adapter', 'tenable_io_adapter', 'qualys_scans_adapter']
+                      'nessus_csv_adapter', 'tenable_io_adapter', 'qualys_scans_adapter', 'airwave_adapter']
 DANGEROUS_ADAPTERS = ['lansweeper_adapter', 'carbonblack_protection_adapter', 'infoblox_adapter', 'azure_ad_adapter']
 DOMAIN_TO_DNS_DICT = dict()
 
@@ -76,6 +76,16 @@ def get_prefix_private_dns_or_hostname(adapter_device):
 
 def is_ca_cmdb_adapter(adapter_device):
     return adapter_device.get('plugin_name') == 'ca_cmdb_adapter'
+
+
+def is_csv_adapter(adapter_device):
+    return adapter_device.get('plugin_name') == 'csv_adapter'
+
+
+def if_csv_compare_full_path(adapter_device1, adapter_device2):
+    if not is_csv_adapter(adapter_device1) and not is_csv_adapter(adapter_device2):
+        return True
+    return compare_hostname(adapter_device1, adapter_device2)
 
 
 # pylint: disable=invalid-name
@@ -106,6 +116,12 @@ def not_solarwinds_node(adapter_device):
             and adapter_device['data'].get('node_id') == adapter_device['data'].get('id'):
         return False
     return True
+
+
+def if_soalrwinds_compare_all(adapter_device1, adapter_device2):
+    if not_solarwinds_node(adapter_device1) and not_solarwinds_node(adapter_device2):
+        return True
+    return compare_full_mac(adapter_device1, adapter_device2)
 
 
 def not_saltstack_enterprise_linux(adapter_device):
@@ -226,8 +242,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
         logger.info('Starting to correlate on MAC')
         mac_indexed = {}
 
-        filtered_adapters_list = filter(not_solarwinds_node, adapters_to_correlate)
-        filtered_adapters_list = filter(not_saltstack_enterprise_linux, filtered_adapters_list)
+        filtered_adapters_list = filter(not_saltstack_enterprise_linux, adapters_to_correlate)
         filtered_adapters_list = filter(not_lansweeper_assetname_no_hostname, filtered_adapters_list)
         filtered_adapters_list = filter(lambda adap: not is_snow_adapter(adap), filtered_adapters_list)
 
@@ -277,7 +292,8 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
                                                   [],
                                                   [],
                                                   [],
-                                                  [compare_macs_or_one_is_jamf],
+                                                  [compare_macs_or_one_is_jamf,
+                                                   if_soalrwinds_compare_all],
                                                   {'Reason': 'They have the same MAC'},
                                                   CorrelationReason.StaticAnalysis)
 
@@ -324,7 +340,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
                                       {'Reason': 'They have the same hostname and domain'},
                                       CorrelationReason.StaticAnalysis)
 
-    def _correlate_hostname_only_host_adapter(self, adapters_to_correlate):
+    def _correlate_hostname_only_host_adapter(self, adapters_to_correlate, csv_full_hostname):
         logger.info('Starting to correlate on Hostname-only')
         filtered_adapters_list = filter(get_normalized_hostname_str, adapters_to_correlate)
         # pylint: disable=line-too-long
@@ -334,11 +350,14 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
         filtered_adapters_list = filter(not_wifi_adapter, filtered_adapters_list)
         filtered_adapters_list = filter(lambda x: x.get('plugin_name') != 'cisco_meraki_adapter',
                                         filtered_adapters_list)
+        inner_compare = []
+        if csv_full_hostname:
+            inner_compare = [if_csv_compare_full_path]
         return self._bucket_correlate(list(filtered_adapters_list),
                                       [get_normalized_hostname_str],
                                       [compare_device_normalized_hostname],
                                       [is_only_host_adapter],
-                                      [],
+                                      inner_compare,
                                       {'Reason': 'They have the same hostname and from specifc adapters'},
                                       CorrelationReason.StaticAnalysis)
 
@@ -480,6 +499,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
     def _correlate_deep_aws_id(self, adapters_to_correlate):
         logger.info(f'Starting to correlate on deep aws is')
         filtered_adapters_list = filter(is_from_deeps_or_aws, adapters_to_correlate)
+        filtered_adapters_list = filter(get_cloud_id_or_hostname, filtered_adapters_list)
         return self._bucket_correlate(list(filtered_adapters_list),
                                       [get_cloud_id_or_hostname],
                                       [compare_cloud_id_or_hostname],
@@ -536,8 +556,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
         :return:
         """
         logger.info('Starting to correlate on Asset-Host')
-        filtered_adapters_list = filter(get_asset_or_host, filter(
-            get_normalized_ip_or_is_ca_cmdb, adapters_to_correlate))
+        filtered_adapters_list = filter(get_asset_or_host, adapters_to_correlate)
         return self._bucket_correlate(list(filtered_adapters_list),
                                       [get_asset_or_host],
                                       [compare_asset_hosts],
@@ -614,7 +633,9 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
 
         yield from self._correlate_hostname_user(adapters_to_correlate)
 
-        yield from self._correlate_hostname_only_host_adapter(adapters_to_correlate)
+        csv_full_hostname = bool(self._correlation_config and
+                                 self._correlation_config.get('csv_full_hostname') is True)
+        yield from self._correlate_hostname_only_host_adapter(adapters_to_correlate, csv_full_hostname)
 
         # Correlating mac must happen after all the other correlations are DONE.
         # the actual linking is happend in _process_correlation_result in other thread,

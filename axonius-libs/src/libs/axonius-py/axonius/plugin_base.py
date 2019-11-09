@@ -58,7 +58,7 @@ from axonius.consts.plugin_consts import (ADAPTERS_LIST_LENGTH,
                                           AGGREGATOR_PLUGIN_NAME,
                                           CONFIGURABLE_CONFIGS_COLLECTION,
                                           CORE_UNIQUE_NAME,
-                                          CORRELATE_BY_EMAIL_PREFIX, CORRELATE_AD_SCCM,
+                                          CORRELATE_BY_EMAIL_PREFIX, CORRELATE_AD_SCCM, CSV_FULL_HOSTNAME,
                                           CORRELATION_SETTINGS,
                                           GUI_PLUGIN_NAME,
                                           MAX_WORKERS,
@@ -2739,6 +2739,7 @@ class PluginBase(Configurable, Feature, ABC):
         self._fetch_empty_vendor_software_vulnerabilites = (config.get(STATIC_ANALYSIS_SETTINGS) or {}).get(
             FETCH_EMPTY_VENDOR_SOFTWARE_VULNERABILITES) or False
         self._correlate_ad_sccm = config[CORRELATION_SETTINGS].get(CORRELATE_AD_SCCM, True)
+        self._csv_full_hostname = config[CORRELATION_SETTINGS].get(CSV_FULL_HOSTNAME, True)
         self._jira_settings = config['jira_settings']
         self._proxy_settings = config[PROXY_SETTINGS]
         self._vault_settings = config['vault_settings']
@@ -3165,12 +3166,17 @@ class PluginBase(Configurable, Feature, ABC):
                             'title': 'Correlate Microsoft Active Directory (AD) and '
                                      'Microsoft SCCM data based on Distinguished Names',
                             'type': 'bool'
+                        },
+                        {
+                            'name': CSV_FULL_HOSTNAME,
+                            'type': 'bool',
+                            'title': 'Correlate CSV adapter only if full hostnames are equal'
                         }
                     ],
                     'name': CORRELATION_SETTINGS,
                     'title': 'Correlation Settings',
                     'type': 'array',
-                    'required': [CORRELATE_BY_EMAIL_PREFIX, CORRELATE_AD_SCCM]
+                    'required': [CORRELATE_BY_EMAIL_PREFIX, CORRELATE_AD_SCCM, CSV_FULL_HOSTNAME]
                 },
                 {
                     'items': [
@@ -3283,7 +3289,8 @@ class PluginBase(Configurable, Feature, ABC):
             },
             CORRELATION_SETTINGS: {
                 CORRELATE_BY_EMAIL_PREFIX: False,
-                CORRELATE_AD_SCCM: False
+                CORRELATE_AD_SCCM: False,
+                CSV_FULL_HOSTNAME: False
             },
             STATIC_ANALYSIS_SETTINGS: {
                 FETCH_EMPTY_VENDOR_SOFTWARE_VULNERABILITES: False,

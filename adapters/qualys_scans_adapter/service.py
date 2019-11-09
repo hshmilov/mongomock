@@ -25,6 +25,9 @@ class QualysVulnerability(SmartJsonClass):
 
 class QualysAgentVuln(SmartJsonClass):
     qid = Field(str, 'QID')
+    title = Field(str, 'Title')
+    category = ListField(str, 'Category')
+    sub_category = ListField(str, 'Sub-Category')
     vuln_id = Field(str, 'Vuln ID')
     first_found = Field(datetime.datetime, 'First Found')
     last_found = Field(datetime.datetime, 'Last Found')
@@ -52,7 +55,7 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
-        self._qid_to_cve_mapping = self.parse_cve_from_qid()
+        self._qid_to_cve_mapping, self._qid_to_title = self.parse_cve_from_qid()
 
     @staticmethod
     def _get_client_id(client_config):
@@ -121,6 +124,7 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
     def parse_cve_from_qid():
         logger.info('Parsing QID to CVE from csv file')
         qid_to_cve_mapping = {}
+        qid_to_title = {}
         try:
             with open(consts.QUALYS_QID_TO_CVE_CSV, 'r') as f:
                 entire_csv_file = f.readlines()
@@ -134,7 +138,7 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
                         break
                 if not header_line_number:
                     logger.exception('Could not find CSV headers, stopping parsing')
-                    return qid_to_cve_mapping
+                    return qid_to_cve_mapping, qid_to_title
 
                 cleaned_csv_data = entire_csv_file[header_line_number:]
                 csv_dict = make_dict_from_csv(''.join(cleaned_csv_data))
@@ -152,14 +156,17 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
                             continue
 
                         qid_to_cve_mapping[entry['QID']] = cve_ids
+                        qid_to_title[entry['QID']] = (entry.get('Title'),
+                                                      entry.get('Category'),
+                                                      entry.get('Sub Category'))
 
                     except Exception:
                         logger.exception(f'Problem mapping entry {entry}')
                 logger.info(f'{len(qid_to_cve_mapping)} QIDs mapped')
-                return qid_to_cve_mapping
+                return qid_to_cve_mapping, qid_to_title
         except Exception:
             logger.exception('Problem opening vulnerabilities csv file')
-            return qid_to_cve_mapping
+            return qid_to_cve_mapping, qid_to_title
 
     def _parse_raw_data(self, devices_raw_data):
         for device_raw in devices_raw_data:
@@ -168,6 +175,7 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
                 yield device
 
     # pylint: disable=R0912,R0915,too-many-nested-blocks
+    # pylint: disable=too-many-locals
     def _create_agent_device(self, device_raw, qualys_tags_white_list=None):
         tags_ok = False
         if not qualys_tags_white_list or not isinstance(qualys_tags_white_list, list):
@@ -262,11 +270,33 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
             try:
                 for vuln_raw in (device_raw.get('vuln') or {}).get('list') or []:
                     try:
+                        title = None
+                        category = None
+                        sub_category = None
+                        try:
+                            qid = str((vuln_raw.get('HostAssetVuln') or {}).get('qid')) or ''
+                            if qid:
+                                title, category, sub_category = self._qid_to_title.get(qid)
+                            if not title:
+                                title = None
+                            if not category or not isinstance(category, str):
+                                category = None
+                            else:
+                                category = category.split(',')
+                            if not sub_category or not isinstance(sub_category, str):
+                                sub_category = None
+                            else:
+                                sub_category = sub_category.split(',')
+                        except Exception:
+                            logger.exception(f'Problem getting extra dat for QIO')
                         device.add_qualys_vuln(
                             vuln_id=(vuln_raw.get('HostAssetVuln') or {}).get('hostInstanceVulnId'),
                             last_found=parse_date((vuln_raw.get('HostAssetVuln') or {}).get('lastFound')),
                             qid=(vuln_raw.get('HostAssetVuln') or {}).get('qid'),
                             first_found=parse_date((vuln_raw.get('HostAssetVuln') or {}).get('firstFound')),
+                            title=title,
+                            category=category,
+                            sub_category=sub_category
                         )
                     except Exception:
                         logger.exception(f'Problem with vuln {vuln_raw}')

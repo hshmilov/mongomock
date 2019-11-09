@@ -116,7 +116,7 @@ class SpacewalkAdapter(AdapterBase):
             device.hostname = device_raw.get('name')
             device.last_seen = parse_date(device_raw.get('last_checkin'))
             if device_raw.get('last_boot'):
-                device.set_boot_time(boot_time=device_raw.get('last_boot'))
+                device.set_boot_time(boot_time=parse_date(str(device_raw.get('last_boot'))))
             device.creation_time = parse_date(device_raw.get('created'))
             try:
                 nics = device_raw.get('network')
@@ -148,7 +148,7 @@ class SpacewalkAdapter(AdapterBase):
             except Exception:
                 logger.exception(f'Problem with packages')
             for key in device_raw:
-                device_raw[key] = str(key)
+                device_raw[key] = str(device_raw[key])
             device.set_raw(device_raw)
             return device
         except Exception:

@@ -153,6 +153,7 @@ class NmapAdapter(ScannerAdapterBase):
             'type': 'array'
         }
 
+    # pylint: disable=too-many-nested-blocks,too-many-branches
     @staticmethod
     def _add_port_info(device, port_xml):
         port_info = NmapPortInfo()
@@ -182,6 +183,21 @@ class NmapAdapter(ScannerAdapterBase):
                         if script_id and script_output:
                             port_info.script_information.append(ScriptInformation(script_id=script_id,
                                                                                   script_output=script_output))
+                            if script_id == 'vulners':
+                                try:
+                                    for inner_script_xml in port_xml_property:
+                                        if inner_script_xml.tag == 'table' \
+                                                and inner_script_xml.attrib.get('key')\
+                                                and 'cpe' in inner_script_xml.attrib.get('key'):
+                                            for inner_inner_script_xml in inner_script_xml:
+                                                if inner_inner_script_xml.tag == 'table':
+                                                    for elem_cve in inner_inner_script_xml:
+                                                        if elem_cve.tag == 'elem' \
+                                                                and elem_cve.attrib.get('key') == 'id' \
+                                                                and 'CVE' in elem_cve.text:
+                                                            device.add_vulnerable_software(cve_id=elem_cve.text)
+                                except Exception:
+                                    logger.exception(f'Problem getting CVE data')
                     except Exception:
                         logger.exception(f'Problem with scripts')
             except Exception:
@@ -235,9 +251,12 @@ class NmapAdapter(ScannerAdapterBase):
                         device.start_time = datetime.datetime.fromtimestamp(int(xml_device_raw.attrib.get('starttime')))
                 except Exception:
                     logger.exception(f'Problem getting start time')
+                end_time = ''
                 try:
                     if xml_device_raw.attrib.get('endtime'):
-                        device.end_time = datetime.datetime.fromtimestamp(int(xml_device_raw.attrib.get('endtime')))
+                        end_time = datetime.datetime.fromtimestamp(int(xml_device_raw.attrib.get('endtime')))
+                        device.end_time = end_time
+                        end_time = str(end_time)
                 except Exception:
                     logger.exception(f'Problem getting end time')
                 for xml_property in xml_device_raw:
@@ -274,6 +293,7 @@ class NmapAdapter(ScannerAdapterBase):
                     device.set_raw(Xml2Json(xml_device_raw).result)
                 except Exception:
                     logger.exception(f'Problem setting raw xml device')
+                device.id = file_name + '_' + device.id + '_' + end_time
                 yield device
             except Exception:
                 logger.exception(f'Problem adding device')

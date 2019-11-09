@@ -1,4 +1,12 @@
 export const pluginMeta = {
+    nutanix_adapter: {
+        title: 'Nutanix AHV',
+        description: 'Nutanix AHV is a hypervisor included with the Enterprise Cloud OS. AHV delivers flexible migrations, security hardening, automated data protection and disaster recovery, and analytics.'
+    },
+    preempt_adapter: {
+        title: 'Preempt',
+        description: 'Preempt lets organizations reduce user risk on their attack surface and preempt threats in real-time with Conditional Access. It continuously analyzes, adapts and responds to threats based on identity, behavior, and risk to resolve insider threats and targeted attacks.'
+    },
     hashicorp_adapter: {
         title: 'HashiCorp Consul',
         link: 'https://docs.axonius.com/docs/hashicorp-consul',

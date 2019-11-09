@@ -46,6 +46,8 @@ class SendEmailToEntities(ActionTypeBase):
             logger.info('Email cannot be sent because no email server is configured')
             return generic_fail(self._internal_axon_ids, reason='Email is disabled')
         current_result = self._get_entities_from_view({
+            'adapters.data.username': 1,
+            'adapters.data.first_name': 1,
             'adapters.data.mail': 1,
             'adapters.data.email': 1,
             'internal_axon_id': 1

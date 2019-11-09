@@ -94,6 +94,16 @@ class ServiceNowIncidentPerEntity(ActionTypeBase):
                     'name': 'assignment_group',
                     'title': 'Assignment Group',
                     'type': 'string'
+                },
+                {
+                    'name': 'category',
+                    'type': 'string',
+                    'title': 'Category'
+                },
+                {
+                    'name': 'subcategory',
+                    'type': 'string',
+                    'title': 'Subcategory'
                 }
             ],
             'required': [
@@ -120,11 +130,15 @@ class ServiceNowIncidentPerEntity(ActionTypeBase):
             'incident_title': None,
             'cmdb_ci': None,
             'u_symptom': None,
-            'assignment_group': None
+            'assignment_group': None,
+            'category': None,
+            'subcategory': None
         }, ADAPTER_NAME)
 
+    # pylint: disable=too-many-arguments
     def _create_service_now_incident(self, short_description, description, impact, u_incident_type,
-                                     caller_id, cmdb_ci, u_symptom, assignment_group, u_requested_for):
+                                     caller_id, cmdb_ci, u_symptom, assignment_group, u_requested_for,
+                                     category=None, subcategory=None):
         adapter_unique_name = self._plugin_base._get_adapter_unique_name(ADAPTER_NAME, self.action_node_id)
         service_now_dict = {'short_description': short_description,
                             'description': description,
@@ -134,7 +148,9 @@ class ServiceNowIncidentPerEntity(ActionTypeBase):
                             'cmdb_ci': cmdb_ci,
                             'u_symptom': u_symptom,
                             'assignment_group': assignment_group,
-                            'u_requested_for': u_requested_for}
+                            'u_requested_for': u_requested_for,
+                            'category': category,
+                            'subcategory': subcategory}
         try:
             if self._config['use_adapter'] is True:
                 response = self._plugin_base.request_remote_plugin('create_incident', adapter_unique_name, 'post',
@@ -193,7 +209,9 @@ class ServiceNowIncidentPerEntity(ActionTypeBase):
                                                             cmdb_ci=self._config.get('cmdb_ci'),
                                                             u_symptom=self._config.get('u_symptom'),
                                                             assignment_group=self._config.get('assignment_group'),
-                                                            u_requested_for=self._config.get('u_requested_for'))
+                                                            u_requested_for=self._config.get('u_requested_for'),
+                                                            category=self._config.get('category'),
+                                                            subcategory=self._config.get('subcategory'))
                 results.append(EntityResult(entry['internal_axon_id'], not message, message or 'Success'))
             except Exception:
                 logger.exception(f'Problem with entry {entry}')
