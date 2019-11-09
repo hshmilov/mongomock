@@ -82,6 +82,8 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
                 date_filter=date_filter,
                 request_timeout=self.__request_timeout,
                 chunk_size=self.__async_chunk_size,
+                max_retries=self.__max_retries,
+                retry_sleep_time=self.__retry_sleep_time,
                 devices_per_page=self.__devices_per_page,
                 https_proxy=client_config.get('https_proxy')
             )
@@ -360,6 +362,16 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
                     'type': 'integer',
                 },
                 {
+                    'name': 'retry_sleep_time',
+                    'title': 'Intervals between Retries in Seconds',
+                    'type': 'integer',
+                },
+                {
+                    'name': 'max_retries',
+                    'title': 'Number of Retries',
+                    'type': 'integer',
+                },
+                {
                     'name': 'qualys_tags_white_list',
                     'type': 'string',
                     'title': 'Qualys Tags Whitelist'
@@ -378,6 +390,8 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
         return {
             'request_timeout': 200,
             'async_chunk_size': 50,
+            'retry_sleep_time': consts.RETRY_SLEEP_TIME,
+            'max_retries': consts.MAX_RETRIES,
             'devices_per_page': consts.DEVICES_PER_PAGE,
             'qualys_tags_white_list': None
         }
@@ -385,6 +399,8 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
     def _on_config_update(self, config):
         self.__request_timeout = config['request_timeout']
         self.__async_chunk_size = config['async_chunk_size']
+        self.__max_retries = config.get('max_retries', consts.MAX_RETRIES)
+        self.__retry_sleep_time = config.get('max_retries', consts.RETRY_SLEEP_TIME)
         self.__devices_per_page = config.get('devices_per_page', consts.DEVICES_PER_PAGE)
         self.__qualys_tags_white_list = config.get('qualys_tags_white_list').split(',') \
             if config.get('qualys_tags_white_list') else None

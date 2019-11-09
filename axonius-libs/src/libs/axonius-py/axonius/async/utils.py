@@ -6,12 +6,13 @@ import ssl
 import typing
 import logging
 from inspect import isawaitable
-from aiohttp import ClientSession, ClientTimeout, ClientResponse, BasicAuth, TCPConnector
+from aiohttp import ClientSession, ClientTimeout, ClientResponse, BasicAuth, TCPConnector, ClientConnectorError
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
 MAX_RETRIES = 3
 DEFAULT_SLEEP_TIME = 60
+ERROR_SLEEP_TIME = 2
 
 
 async def sleep_for_429(response: ClientResponse):
@@ -24,10 +25,26 @@ async def sleep_for_429(response: ClientResponse):
     await asyncio.sleep(DEFAULT_SLEEP_TIME)
 
 
-async def async_http_request(session: ClientSession, should_run_event=None, handle_429=sleep_for_429, callback=None,
-                             **kwargs):
+async def handle_callback(callback, text, response, session):
+    if not callback:
+        return
+    # call callback function and handle async callback functions
+    callback_function = callback(text, response, session)
+    if isawaitable(callback_function):
+        await callback(text, response, session)
+
+
+async def async_http_request(session: ClientSession, should_run_event=None, handle_429=sleep_for_429,
+                             max_retries=MAX_RETRIES,
+                             retry_on_error=False,
+                             retry_sleep_time=ERROR_SLEEP_TIME,
+                             callback=None, **kwargs):
     """
     Makes an async request
+    :param max_retries: max retries number
+    :param retry_sleep_time: sleep time on  error (seconds)
+    :param retry_on_error: if true, async request will sleep retry_sleep_time on connection refused error and then
+                            retry 'max_retries' times.
     :param should_run_event: async event - determine if we need to wait before the request.
     :param handle_429: function for handling 429 errors
     :param session: the session object
@@ -58,34 +75,43 @@ async def async_http_request(session: ClientSession, should_run_event=None, hand
     kwargs.pop('get_binary', None)
     retries = 0
     # Send the request
-    while retries < MAX_RETRIES:
-        if should_run_event is not None:
-            await should_run_event.wait()
-        async with session.request(**kwargs) as response:
-            if get_binary is True:
-                binary_response = await response.read()
-                return binary_response, response
+    while retries < max_retries:
+        try:
+            if should_run_event is not None:
+                await should_run_event.wait()
+            async with session.request(**kwargs) as response:
+                if get_binary is True:
+                    binary_response = await response.read()
+                    return binary_response, response
 
-            text = await response.text()
-            if response.status == 429 and should_run_event is not None:
-                logger.debug('Handling 429 response')
-                retries += 1
-                if should_run_event.is_set():
-                    should_run_event.clear()
-                    logger.debug('Calling handling 429 function')
-                    await handle_429(response)
-                    should_run_event.set()
-            else:
-                if callback:
-                    # call callback function and handle async callback functions
-                    callback_function = callback(text, response, session)
-                    if isawaitable(callback_function):
-                        await callback(text, response, session)
-                return text, response
-    logger.error('Max retries exceeded for async request')
+                text = await response.text()
+                if response.status == 429 and should_run_event is not None:
+                    logger.debug('Handling 429 response')
+                    if should_run_event.is_set():
+                        should_run_event.clear()
+                        logger.debug('Calling handling 429 function')
+                        await handle_429(response)
+                        should_run_event.set()
+                else:
+                    await handle_callback(callback, text, response, session)
+                    return text, response
+        except ClientConnectorError as e:
+            if not retry_on_error:
+                raise e
+            logger.warning(f'Got error on http request, retry: {retries}')
+            if retries == MAX_RETRIES:
+                logger.error('Max retries exceeded for async request')
+                raise e
+            if should_run_event is not None and should_run_event.is_set():
+                should_run_event.clear()
+                await asyncio.sleep(retry_sleep_time)
+                should_run_event.set()
+        retries += 1
 
 
-async def run(reqs, handle_429_function,  **kwargs):
+async def run(reqs, handle_429_function, max_retries=MAX_RETRIES,
+              retry_on_error=False,
+              retry_sleep_time=ERROR_SLEEP_TIME,  **kwargs):
     tasks = []
     # Fetch all responses within one Client session,
     # keep connection alive for all requests.A
@@ -99,7 +125,12 @@ async def run(reqs, handle_429_function,  **kwargs):
     should_run_event.set()
     async with ClientSession(connector=connector) as session:
         for req in reqs:
-            task = asyncio.ensure_future(async_http_request(session, should_run_event, handle_429_function, **req))
+            task = asyncio.ensure_future(async_http_request(session, should_run_event,
+                                                            handle_429=handle_429_function,
+                                                            max_retries=max_retries,
+                                                            retry_on_error=retry_on_error,
+                                                            retry_sleep_time=retry_sleep_time,
+                                                            **req))
             tasks.append(task)
 
         # return_exceptions=True means that we don't propogate exceptions up, we just return all exceptions as
@@ -110,9 +141,16 @@ async def run(reqs, handle_429_function,  **kwargs):
     return responses
 
 
-def async_request(req_list: list, handle_429_function=sleep_for_429, **kwargs) -> typing.List[ClientResponse]:
+def async_request(req_list: list, handle_429_function=sleep_for_429,
+                  max_retries=MAX_RETRIES,
+                  retry_on_error=False,
+                  retry_sleep_time=ERROR_SLEEP_TIME, **kwargs) -> typing.List[ClientResponse]:
     """
     Makes requests
+    :param max_retries: max retries number
+    :param retry_sleep_time: sleep time on  error (seconds)
+    :param retry_on_error: if true, async request will sleep retry_sleep_time on connection refused error and then
+                            retry 'max_retries' times.
     :param handle_429_function:
     :param req_list: a list of dict for making a request.
     :return: a list of aio.ClientResponse. If an exception occurs, the output of it will be an Exception object.
@@ -122,7 +160,9 @@ def async_request(req_list: list, handle_429_function=sleep_for_429, **kwargs) -
     except RuntimeError:
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
-    future = asyncio.ensure_future(run(req_list, handle_429_function, **kwargs))
+    future = asyncio.ensure_future(run(req_list, handle_429_function, max_retries=max_retries,
+                                       retry_on_error=retry_on_error,
+                                       retry_sleep_time=retry_sleep_time, **kwargs))
     result = loop.run_until_complete(future)
     # Wait 250 ms for the underlying SSL connections to close
     # https://aiohttp.readthedocs.io/en/stable/client_advanced.html

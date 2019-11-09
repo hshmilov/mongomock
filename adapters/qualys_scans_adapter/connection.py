@@ -39,7 +39,8 @@ class IteratorCounter:
 
 class QualysScansConnection(RESTConnection):
 
-    def __init__(self, request_timeout, chunk_size, devices_per_page, *args, date_filter=None, **kwargs):
+    def __init__(self, request_timeout, chunk_size, devices_per_page, retry_sleep_time, max_retries,
+                 *args, date_filter=None, **kwargs):
         """ Initializes a connection to Illusive using its rest API
 
         :param obj logger: Logger object of the system
@@ -51,6 +52,8 @@ class QualysScansConnection(RESTConnection):
         self._date_filter = date_filter
         self._chunk_size = chunk_size
         self._devices_per_page = devices_per_page
+        self._retry_sleep_time = retry_sleep_time
+        self._max_retries = max_retries
 
     def _connect(self):
         if not self._username or not self._password:
@@ -109,7 +112,10 @@ class QualysScansConnection(RESTConnection):
         return result['ServiceResponse']['count']
 
     def _get_hostassets_by_requests(self, requests):
-        for request_id, response in enumerate(self._async_post(requests, chunks=self._chunk_size)):
+        for request_id, response in enumerate(self._async_post(requests, chunks=self._chunk_size,
+                                                               retry_on_error=True,
+                                                               max_retries=self._max_retries,
+                                                               retry_sleep_time=self._retry_sleep_time)):
             try:
                 if isinstance(response, Exception):
                     logger.error(f'{request_id} - Got Exception: {response}')

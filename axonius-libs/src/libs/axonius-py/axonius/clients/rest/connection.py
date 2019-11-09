@@ -25,11 +25,16 @@ from axonius.utils.ssl import check_associate_cert_with_private_key
 logger = logging.getLogger(f'axonius.{__name__}')
 
 ASYNC_REQUESTS_DEFAULT_CHUNK_SIZE = 50
-MAX_REQUESTS_PER_MINUTE = 1000
 # default sleep time on 429 error
 DEFAULT_429_SLEEP_TIME = 60
 # max sleep time - 2 hours
 MAX_SLEEP_TIME = 60 * 60 * 2
+# max async errors retries
+MAX_ASYNC_RETRIES = 3
+# sleep time on connection refused error on async request
+ASYNC_ERROR_SLEEP_TIME = 3
+
+
 # pylint: disable=R0902
 
 
@@ -220,14 +225,16 @@ class RESTConnection(ABC):
 
     def _async_get(self, list_of_requests,
                    chunks=ASYNC_REQUESTS_DEFAULT_CHUNK_SIZE,
-                   max_requests_per_minute=MAX_REQUESTS_PER_MINUTE):
-        return self._do_async_request('GET', list_of_requests, chunks, max_requests_per_minute)
+                   max_retries=MAX_ASYNC_RETRIES,
+                   retry_on_error=False,
+                   retry_sleep_time=ASYNC_ERROR_SLEEP_TIME):
+        return self._do_async_request('GET', list_of_requests, chunks,
+                                      max_retries, retry_on_error, retry_sleep_time)
 
     def _async_get_only_good_response(self, list_of_requests,
-                                      chunks=ASYNC_REQUESTS_DEFAULT_CHUNK_SIZE,
-                                      max_requests_per_minute=MAX_REQUESTS_PER_MINUTE):
+                                      chunks=ASYNC_REQUESTS_DEFAULT_CHUNK_SIZE):
 
-        for response in self._async_get(list_of_requests, chunks, max_requests_per_minute):
+        for response in self._async_get(list_of_requests, chunks):
             if self._is_async_response_good(response):
                 yield response
             else:
@@ -238,8 +245,11 @@ class RESTConnection(ABC):
 
     def _async_post(self, list_of_requests,
                     chunks=ASYNC_REQUESTS_DEFAULT_CHUNK_SIZE,
-                    max_requests_per_minute=MAX_REQUESTS_PER_MINUTE):
-        return self._do_async_request('POST', list_of_requests, chunks, max_requests_per_minute)
+                    max_retries=MAX_ASYNC_RETRIES,
+                    retry_on_error=False,
+                    retry_sleep_time=ASYNC_ERROR_SLEEP_TIME):
+        return self._do_async_request('POST', list_of_requests, chunks,
+                                      max_retries, retry_on_error, retry_sleep_time)
 
     def _delete(self, *args, **kwargs):
         return self._do_request('DELETE', *args, **kwargs)
@@ -446,15 +456,16 @@ class RESTConnection(ABC):
             await asyncio.sleep(DEFAULT_429_SLEEP_TIME)
 
     # pylint: disable=R0915
-    def _do_async_request(self, method, list_of_requests, chunks, max_requests_per_minute):
+    def _do_async_request(self, method, list_of_requests, chunks,
+                          max_retries=MAX_ASYNC_RETRIES,
+                          retry_on_error=False,
+                          retry_sleep_time=ASYNC_ERROR_SLEEP_TIME):
         """
         makes requests asynchronously. list_of_requests is a dict of parameters you would normally pass to _do_request.
         :param method:
         :param list_of_requests:
         :param chunks: the amount of chunks to send in parallel. If the total amount of requests is over, chunks will be
                        used. e.g., if chunks=100 and we have 150 requests, 100 will be parallel (asyncio) and then 50.
-        :param max_requests_per_minute: the maximum of requests we can do per minute. if we pass it, time.sleep will
-                                        wait a minute. unused
         :return:
         """
         #
@@ -473,7 +484,10 @@ class RESTConnection(ABC):
         for chunk_id in range(int(math.ceil(len(aio_requests) / chunks))):
             logger.debug(f'Async requests: sending {chunk_id * chunks} out of {len(aio_requests)}')
             all_answers = async_request(aio_requests[chunks * chunk_id: chunks * (chunk_id + 1)],
-                                        self.handle_429, cert=self._session.cert)
+                                        self.handle_429, cert=self._session.cert,
+                                        max_retries=max_retries,
+                                        retry_on_error=retry_on_error,
+                                        retry_sleep_time=retry_sleep_time)
 
             # We got the requests, time to check if they are valid and transform them to what the user wanted.
             for i, raw_answer in enumerate(all_answers):
@@ -510,7 +524,7 @@ class RESTConnection(ABC):
                         yield e
                 else:
                     msg = f'Got an async response which is not exception or ClientResponse. ' \
-                        f'This should never happen! response is {raw_answer}'
+                          f'This should never happen! response is {raw_answer}'
                     logger.error(msg)
                     yield ValueError(msg)
 
