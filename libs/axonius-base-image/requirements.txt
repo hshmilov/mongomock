@@ -24,7 +24,7 @@ bcrypt==3.1.4
 netstruct==1.1.2
 construct==2.9.25
 netmiko==2.4.1
-pyodbc==4.0.22
+pyodbc==4.0.27
 dpkt==1.9.1
 ipython==6.2.1
 jwt==0.5.2
