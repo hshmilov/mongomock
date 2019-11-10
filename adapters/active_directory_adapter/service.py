@@ -1028,8 +1028,15 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, ActiveDirectory
                 last_logon = device_raw.get('lastLogon')
                 last_logon_timestamp = device_raw.get('lastLogonTimestamp')
 
+                last_seen = None
                 if last_logon is not None and last_logon_timestamp is not None:
-                    last_seen = max(last_logon, last_logon_timestamp)
+                    try:
+                        last_seen = max(last_logon, last_logon_timestamp)
+                    except Exception:
+                        if isinstance(last_logon, datetime):
+                            last_seen = last_logon
+                        elif isinstance(last_logon_timestamp, datetime):
+                            last_seen = last_logon_timestamp
                 else:
                     last_seen = last_logon or last_logon_timestamp
 

@@ -820,9 +820,6 @@ class GuiService(PluginService, UpdatablePluginMixin):
         volumes.extend([f'{self.service_dir}/gui_logic/{fn}:/home/axonius/app/{self.package_name}/gui_logic/{fn}:ro'
                         for fn in os.listdir(f'{self.service_dir}/gui_logic') if fn.endswith('.py')])
 
-        volumes.extend([f'{self.service_dir}/frontend/src/constants/plugin_meta.js:'
-                        f'/home/axonius/app/{self.package_name}/frontend/src/constants/plugin_meta.js:ro'])
-
         return volumes
 
     # I don't want to change all dockerfiles

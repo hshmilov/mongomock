@@ -12,7 +12,7 @@ import socket
 import concurrent.futures
 from collections import defaultdict
 from enum import Enum, auto
-from typing import Dict, Tuple, List
+from typing import Dict, Tuple, List, Optional
 
 import boto3
 import kubernetes
@@ -21,17 +21,16 @@ from botocore.config import Config
 from botocore.credentials import RefreshableCredentials
 from botocore.session import get_session
 
+from aws_adapter.connection.structures import *
+from aws_adapter.connection.utils import get_paginated_marker_api, get_paginated_next_token_api, \
+    parse_bucket_policy_statements
+from aws_adapter.connection.aws_lambda import query_devices_by_client_by_source_lambda, parse_raw_data_inner_lambda
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import (AdapterException,
                                         ClientConnectionException,
                                         CredentialErrorException)
 from axonius.clients.rest.connection import RESTConnection
 from axonius.devices.device_adapter import DeviceRunningState, ShodanVuln
-from axonius.devices.device_or_container_adapter import DeviceOrContainerAdapter
-from axonius.fields import Field, ListField, JsonStringFormat
-from axonius.users.user_adapter import UserAdapter
-from axonius.utils.parsing import format_ip
-from axonius.smart_json_class import SmartJsonClass
 from axonius.utils.files import get_local_config_file
 from axonius.utils.datetime import parse_date
 from axonius.mixins.configurable import Configurable
@@ -60,7 +59,6 @@ REGIONS_NAMES = [
 ]
 CHINA_REGION_NAMES = ['cn-north-1', 'cn-northwest-1']
 GOV_REGION_NAMES = ['us-gov-west-1', 'us-gov-east-1']
-PAGE_NUMBER_FLOOD_PROTECTION = 9000
 AWS_ENDPOINT_FOR_REACHABILITY_TEST = f'https://apigateway.us-east-2.amazonaws.com/'   # endpoint for us-east-2
 BOTO3_FILTERS_LIMIT = 100
 
@@ -85,6 +83,7 @@ class AwsRawDataTypes(Enum):
     Regular = auto()
     SSM = auto()
     Users = auto()
+    Lambda = auto()
 
 
 class AwsSSMSchemas(Enum):
@@ -100,65 +99,6 @@ class AwsSSMSchemas(Enum):
     WindowsRegistry = 'AWS:WindowsRegistry'
     WindowsRole = 'AWS:WindowsRole'
     WindowsUpdate = 'AWS:WindowsUpdate'
-
-
-def get_paginated_next_token_api(func):
-    next_token = None
-    page_number = 0
-    next_token_name = None
-
-    while page_number < PAGE_NUMBER_FLOOD_PROTECTION:
-        page_number += 1
-        if next_token:
-            result = func(**{next_token_name: next_token})
-        else:
-            result = func()
-
-        yield result
-
-        if result.get('nextToken'):
-            next_token_name = 'nextToken'
-        elif result.get('NextToken'):
-            next_token_name = 'NextToken'
-
-        if next_token_name:
-            next_token = result.get(next_token_name)
-        if not next_token:
-            break
-
-    if page_number == PAGE_NUMBER_FLOOD_PROTECTION:
-        logger.critical('AWS Pagination: reached page flood protection count')
-
-
-def get_paginated_marker_api(func):
-    marker = None
-    marker_name = None
-    page_number = 0
-
-    while page_number < PAGE_NUMBER_FLOOD_PROTECTION:
-        page_number += 1
-        if marker:
-            result = func(**{marker_name: marker})
-        else:
-            result = func()
-
-        yield result
-
-        if result.get('IsTruncated') is True or result.get('isTruncated') is True:
-            if result.get('Marker'):
-                marker_name = 'Marker'
-            elif result.get('marker'):
-                marker_name = 'marker'
-
-            if marker_name:
-                marker = result.get(marker_name)
-            if not marker:
-                break
-        else:
-            break
-
-    if page_number == PAGE_NUMBER_FLOOD_PROTECTION:
-        logger.critical('AWS Pagination: reached page flood protection count')
 
 
 def _describe_images_from_client_by_id(ec2_client, amis):
@@ -211,333 +151,12 @@ def _describe_vpcs_from_client(ec2_client):
     return vpc_dict
 
 
-class AWSTagKeyValue(SmartJsonClass):
-    """ A definition for a key value field"""
-    key = Field(str, 'AWS Tag Key')
-    value = Field(str, 'AWS Tag Value')
-
-
-class AWSIAMPolicy(SmartJsonClass):
-    policy_name = Field(str, 'Policy Name')
-    policy_type = Field(str, 'Policy Type', enum=['Managed', 'Inline', 'Group Managed'])
-
-
-class AWSIAMAccessKey(SmartJsonClass):
-    access_key_id = Field(str, 'ID')
-    status = Field(str, 'Status', enum=['Active', 'Inactive'])
-    create_date = Field(datetime.datetime, 'Creation Date')
-    last_used_time = Field(datetime.datetime, 'Last Used Time')
-    last_used_service = Field(str, 'Last Used Service Name')
-    last_used_region = Field(str, 'Last Used Region')
-
-
-class AWSIPRule(SmartJsonClass):
-    from_port = Field(int, 'From Port')
-    to_port = Field(int, 'To Port')
-    ip_protocol = Field(str, 'IP Protocol')
-    ip_ranges = ListField(str, 'CIDR')
-
-
-class AWSSecurityGroup(SmartJsonClass):
-    name = Field(str, 'Security Group Name')
-    inbound = ListField(AWSIPRule, 'Inbound Rules')
-    outbound = ListField(AWSIPRule, 'Outbound Rules')
-
-
-class AWSRole(SmartJsonClass):
-    role_name = Field(str, 'Name')
-    role_arn = Field(str, 'ARN')
-    role_id = Field(str, 'ID')
-    role_description = Field(str, 'Description')
-    role_permissions_boundary_policy_name = Field(str, 'Permissions Boundary Policy')
-    role_attached_policies_named = ListField(str, 'Attached Policies')
-
-
-class AWSEBSVolumeAttachment(SmartJsonClass):
-    attach_time = Field(datetime.datetime, 'Attach Time')
-    device = Field(str, 'Device')
-    state = Field(str, 'State')
-    delete_on_termination = Field(bool, 'Delete On Termination')
-
-
-class AWSEBSVolume(SmartJsonClass):
-    attachments = ListField(AWSEBSVolumeAttachment, 'Attachments')
-    name = Field(str, 'Name')
-    availability_zone = Field(str, 'Availability Zone')
-    create_time = Field(datetime.datetime, 'Create Time')
-    encrypted = Field(bool, 'Encrypted')
-    kms_key_id = Field(str, 'Kms Key ID')
-    size = Field(str, 'Size (GB)')
-    snapshot_id = Field(str, 'Snapshot ID')
-    state = Field(str, 'State')
-    volume_id = Field(str, 'Volume ID')
-    iops = Field(int, 'Iops')
-    tags = ListField(AWSTagKeyValue, 'Tags')
-    volume_type = Field(str, 'Volume Type')
-
-
-class AWSLoadBalancer(SmartJsonClass):
-    name = Field(str, 'Name')
-    dns = Field(str, 'DNS')
-    scheme = Field(str, 'Scheme', enum=['internet-facing', 'internal'])
-    type = Field(str, 'Type', enum=['classic', 'network', 'application'])
-    subnets = ListField(str, 'Subnets')
-    lb_protocol = Field(str, 'LB Protocol')
-    instance_protocol = Field(str, 'Instance Protocol')
-    lb_port = Field(int, 'LB Port')
-    instance_port = Field(int, 'Instance Port')
-    ips = ListField(str, 'External IPs', converter=format_ip, json_format=JsonStringFormat.ip)
-    last_ip_by_dns_query = Field(str, 'Last IP by DNS Query', converter=format_ip, json_format=JsonStringFormat.ip)
-
-
-class SSMComplianceSummary(SmartJsonClass):
-    status = Field(str, 'Status')
-    overall_severity = Field(str, 'Overall Severity')
-    last_execution = Field(datetime.datetime, 'Last Execution Time')
-
-    compliant_count = Field(int, 'Compliant Count')
-    compliant_critical_count = Field(int, 'Compliant Critical Count')
-    compliant_high_count = Field(int, 'Compliant High Count')
-    compliant_medium_count = Field(int, 'Compliant Medium Count')
-    compliant_low_count = Field(int, 'Compliant Low Count')
-    compliant_informational_count = Field(int, 'Compliant Informational Count')
-    compliant_unspecified_count = Field(int, 'Compliant Unspecified Count')
-
-    non_compliant_count = Field(int, 'Non Compliant Count')
-    non_compliant_critical_count = Field(int, 'Non Compliant Critical Count')
-    non_compliant_high_count = Field(int, 'Non Compliant High Count')
-    non_compliant_medium_count = Field(int, 'Non Compliant Medium Count')
-    non_compliant_low_count = Field(int, 'Non Compliant Low Count')
-    non_compliant_informational_count = Field(int, 'Non Compliant Informational Count')
-    non_compliant_unspecified_count = Field(int, 'Non Compliant Unspecified Count')
-
-
-class SSMInfo(SmartJsonClass):
-    ping_status = Field(str, 'Ping Status')
-    last_ping_date = Field(datetime.datetime, 'Last Ping Date')
-    agent_version = Field(str, 'Agent Version')
-    is_latest_version = Field(bool, 'Is Latest Version')
-    activation_id = Field(str, 'Activation Id')
-    registration_date = Field(datetime.datetime, 'Registration Date')
-    association_status = Field(str, 'Association Status')
-    last_association_execution_date = Field(datetime.datetime, 'Last Association Execution Date')
-    last_successful_association_execution_date = Field(datetime.datetime, 'Last Successful Association Execution Date')
-    patch_group = Field(str, 'Patch Group')
-    baseline_id = Field(str, 'Patch Baseline Id')
-    baseline_name = Field(str, 'Patch Baseline Name')
-    baseline_description = Field(str, 'Patch Baseline Description')
-    patch_compliance_summaries = ListField(SSMComplianceSummary, 'Patch Compliance')
-    association_compliance_summaries = ListField(SSMComplianceSummary, 'Association Compliance')
-    last_seen = Field(datetime.datetime, 'Last Seen')
-
-
-class RDSDBParameterGroup(SmartJsonClass):
-    db_parameter_group_name = Field(str, 'DB Parameter Group Name')
-    db_parameter_apply_status = Field(str, 'DB Parameter Apply Status')
-
-
-class RDSDBSecurityGroup(SmartJsonClass):
-    db_security_group_name = Field(str, 'DB Security Group Name')
-    status = Field(str, 'Status')
-
-
-class RDSVPCSecurityGroup(SmartJsonClass):
-    vpc_security_group_id = Field(str, 'Security Group ID')
-    status = Field(str, 'Status')
-
-
-class RDSSubnet(SmartJsonClass):
-    subnet_az = Field(str, 'Availability Zone')
-    subnet_id = Field(str, 'ID')
-    subnet_status = Field(str, 'Status')
-
-
-class RDSDomainMembership(SmartJsonClass):
-    domain = Field(str, 'Domain')
-    status = Field(str, 'Status')
-    fqdn = Field(str, 'FQDN')
-    iam_role_name = Field(str, 'IAM Role Name')
-
-
-class RDSInfo(SmartJsonClass):
-    allocated_storage = Field(int, 'Allocated Storage')
-    auto_minor_version_upgrade = Field(bool, 'Auto Minor Version Upgrade')
-    backup_retention_period = Field(int, 'Backup Retention Period')
-    ca_certificate_identifier = Field(str, 'CA Certificate Identifier')
-    copy_tags_to_snapshot = Field(bool, 'Copy Tags To Snapshot')
-    db_instance_arn = Field(str, 'DB Instance ARN')
-    db_instance_class = Field(str, 'DB Instance Class')
-    db_instance_status = Field(str, 'DB Instance Status')
-    db_name = Field(str, 'Initial Database Name')
-    db_instance_port = Field(int, 'DB Instance Port')
-    dbi_resource_id = Field(str, 'DBI Resource ID')
-    deletion_protection = Field(bool, 'Deletion Protection')
-    engine = Field(str, 'Engine')
-    engine_version = Field(str, 'Engine Version')
-    iam_database_authentication_enabled = Field(bool, 'IAM Database Authentication Enabled')
-    instance_create_time = Field(datetime.datetime, 'Instance Create Time')
-    latest_restorable_time = Field(datetime.datetime, 'Latest Restorable Time')
-    license_model = Field(str, 'License Model')
-    master_username = Field(str, 'Master Username')
-    monitoring_interval = Field(int, 'Monitoring Interval')
-    mutli_az = Field(bool, 'Multi AZ')
-    performance_insights_enabled = Field(bool, 'Performance Insights Enabled')
-    preferred_backup_window = Field(str, 'Preferred Backup Window')
-    preferred_maintenance_window = Field(str, 'Preferred Maintenance Window')
-    publicly_accessible = Field(bool, 'Publicly Accessible')
-    storage_encrypted = Field(bool, 'Storage Encrypted')
-    storage_type = Field(str, 'Storage Type')
-
-    rds_db_parameter_group = ListField(RDSDBParameterGroup, 'DB Parameter Group')
-    rds_db_security_group = ListField(RDSDBSecurityGroup, 'DB Security Group')
-    vpc_security_groups = ListField(RDSVPCSecurityGroup, 'VPC Security Groups')
-
-    db_subnet_group_name = Field(str, 'Subnet Group Name')
-    db_subnet_group_description = Field(str, 'Subnet Group Description')
-    db_subnet_group_status = Field(str, 'Subnet Group Status')
-    db_subnets = ListField(RDSSubnet, 'Subnets')
-
-    domain_memberships = ListField(RDSDomainMembership, 'Domain Membership')
-
-    endpoint_address = Field(str, 'Endpoint Address')
-    endpoint_hosted_zone_id = Field(str, 'Endpoint Hosted Zone ID')
-    endpoint_port = Field(int, 'Endpoint Port')
-
-
-class AWSS3BucketACL(SmartJsonClass):
-    grantee_display_name = Field(str, 'Grantee Display Name')
-    grantee_email_address = Field(str, 'Grantee Email Address')
-    grantee_id = Field(str, 'Grantee ID')
-    grantee_type = Field(str, 'Grantee Type')
-    grantee_uri = Field(str, 'Grantee URI')
-    grantee_permission = Field(str, 'Grantee Permission')
-
-
-class AWSS3BucketPolicyStatement(SmartJsonClass):
-    action = ListField(str, 'Action')
-    effect = Field(str, 'Effect')
-    principal = Field(str, 'Principal')
-    resource = Field(str, 'Resource')
-    sid = Field(str, 'Sid')
-    condition = Field(str, 'Condition')
-
-
-class AWSS3BucketPolicy(SmartJsonClass):
-    bucket_policy = Field(str, 'Contents (Json)')
-    bucket_policy_id = Field(str, 'ID')
-    statements = ListField(AWSS3BucketPolicyStatement, 'Statements')
-
-
-class AWSMFADevice(SmartJsonClass):
-    serial_number = Field(str, 'Serial Number')
-    enable_date = Field(datetime.datetime, 'Enable Date')
-
-
-class AWSWorkspaceDevice(SmartJsonClass):
-    workspace_id = Field(str, 'ID')
-    directory_id = Field(str, 'Directory ID')
-    directory_alias = Field(str, 'Directory Alias')
-    directory_name = Field(str, 'Directory Name')
-
-    username = Field(str, 'Username')
-    state = Field(str, 'State')
-    bundle_id = Field(str, 'Bundle ID')
-    error_message = Field(str, 'Error Message')
-    error_code = Field(str, 'Error Code')
-    volume_encryption_key = Field(str, 'Volume Encryption Key')
-    running_mode = Field(str, 'Running Mode')
-    running_mode_auto_stop_timeout_in_minutes = Field(int, 'Running Mode Auto Stop Timeout In Minutes')
-    user_volume_size_gib = Field(int, 'User Volume Size (GiB)')
-    root_volume_size_gib = Field(int, 'Root Volume Size (GiB)')
-    user_volume_encryption_enabled = Field(bool, 'User Volume Encryption Enabled')
-    root_volume_encryption_enabled = Field(bool, 'Root Volume Encryption Enabled')
-    compute_type_name = Field(str, 'Compute Type Name')
-    connection_state = Field(str, 'Connection State')
-    connection_state_check_timestamp = Field(datetime.datetime, 'Connection State Check Timestamp')
-    last_known_user_connection_timestamp = Field(datetime.datetime, 'Last Known User Connection Timestamp')
-
-
 class AwsAdapter(AdapterBase, Configurable):
-    class AWSAdapter:
-        account_tag = Field(str, 'Account Tag')
-        aws_account_alias = ListField(str, 'Account Alias')
-        aws_account_id = Field(int, 'Account ID')
-        aws_region = Field(str, 'Region')
-        aws_source = Field(str, 'Source')  # Specify if it is from a user, a role, or what.
-        aws_tags = ListField(AWSTagKeyValue, 'AWS Tags')
+    class MyUserAdapter(AWSUserAdapter):
+        pass
 
-    class MyUserAdapter(UserAdapter, AWSAdapter):
-        user_path = Field(str, 'User Path')
-        user_arn = Field(str, 'User Arn')
-        user_create_date = Field(datetime.datetime, 'User Create Date')
-        user_pass_last_used = Field(datetime.datetime, 'User Password Last Used')
-        user_permission_boundary_arn = Field(str, 'User Permission Boundary Arn')
-
-        user_attached_policies = ListField(AWSIAMPolicy, 'Policies')
-        user_attached_keys = ListField(AWSIAMAccessKey, 'Access Keys')
-
-        user_associated_mfa_devices = ListField(AWSMFADevice, 'Associated MFA Devices')
-        user_is_password_enabled = Field(bool, 'User Is Password Enabled')
-
-    class MyDeviceAdapter(DeviceOrContainerAdapter, AWSAdapter):
-        ssm_data_last_seen = Field(datetime.datetime)
-        aws_availability_zone = Field(str, 'Availability Zone')
-        aws_device_type = Field(
-            str,
-            'Device Type (EC2/ECS/EKS/ELB/Managed/NAT/RDS/S3/Workspace)',
-            enum=['EC2', 'ECS', 'EKS', 'ELB', 'Managed', 'NAT', 'RDS', 'S3', 'Workspace']
-        )
-        security_groups = ListField(AWSSecurityGroup, 'Security Groups')
-
-        # EC2-specific fields
-        instance_type = Field(str, 'Instance Type')
-        key_name = Field(str, 'Key Name')
-        private_dns_name = Field(str, 'Private Dns Name')
-        monitoring_state = Field(str, 'Monitoring State')
-        launch_time = Field(datetime.datetime, 'Launch Time')
-        image_id = Field(str, 'AMI (Image) ID')
-        aws_attached_role = Field(AWSRole, 'Attached Role')
-        aws_load_balancers = ListField(AWSLoadBalancer, 'Load Balancer (ELB)')
-        ebs_volumes = ListField(AWSEBSVolume, 'EBS Volumes')
-
-        # VPC Generic Fields
-        subnet_id = Field(str, 'Subnet Id')
-        subnet_name = Field(str, 'Subnet Name')
-        vpc_id = Field(str, 'VPC Id')
-        vpc_name = Field(str, 'VPC Name')
-
-        # ECS / EKS specific fields
-        container_instance_arn = Field(str, 'Task ContainerInstance ID/ARN')
-        ecs_device_type = Field(str, 'ECS Launch Type', enum=['Fargate', 'EC2'])
-        ecs_ec2_instance_id = Field(str, "ECS EC2 Instance ID")
-
-        # SSM specific fields
-        ssm_data = Field(SSMInfo, 'SSM Information')
-
-        # RDS specific fields
-        rds_data = Field(RDSInfo, 'RDS Information')
-
-        # Workspace specific fields
-        workspace_data = Field(AWSWorkspaceDevice, 'Workspace Information')
-
-        # S3 specific fields
-        s3_bucket_name = Field(str, 'S3 Bucket Name')
-        s3_creation_date = Field(str, 'S3 Bucket Creation Date')
-        s3_owner_name = Field(str, 'S3 Owner Display Name')
-        s3_owner_id = Field(str, 'S3 Owner ID')
-        s3_bucket_is_public = Field(bool, 'S3 Bucket Public')
-        s3_bucket_location = Field(str, 'S3 Bucket Location')
-        s3_bucket_acls = ListField(AWSS3BucketACL, 'S3 ACL')
-        s3_bucket_policy = Field(AWSS3BucketPolicy, 'S3 Bucket Policy')
-
-        def add_aws_ec2_tag(self, **kwargs):
-            self.aws_tags.append(AWSTagKeyValue(**kwargs))
-
-        def add_aws_security_group(self, **kwargs):
-            self.security_groups.append(AWSSecurityGroup(**kwargs))
-
-        def add_aws_load_balancer(self, **kwargs):
-            self.aws_load_balancers.append(AWSLoadBalancer(**kwargs))
+    class MyDeviceAdapter(AWSDeviceAdapter):
+        pass
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -889,6 +508,13 @@ class AwsAdapter(AdapterBase, Configurable):
             except Exception as e:
                 errors['sts'] = str(e)
 
+            try:
+                c = session.client('lambda', **params)
+                c.list_functions()
+                clients['lambda'] = c
+            except Exception as e:
+                errors['lambda'] = str(e)
+
         clients['account_tag'] = client_config.get(ACCOUNT_TAG)
         clients['credentials'] = client_config
         clients['region'] = params[REGION_NAME]
@@ -973,8 +599,20 @@ class AwsAdapter(AdapterBase, Configurable):
                     del parsed_data_for_all_regions
                     del futures_dict
 
+                    if self.__fetch_lambda is True:
+                        logger.info(f'Fetching Lambdas')
+                        for region_name, connected_clients in connected_clients_by_region.items():
+                            source_name = f'{account}_{region_name}'
+                            try:
+                                for parse_data_for_source in query_devices_by_client_by_source_lambda(
+                                        connected_clients):
+                                    yield source_name, account_metadata, parse_data_for_source, AwsRawDataTypes.Lambda
+                            except Exception:
+                                logger.exception(f'Error while querying Lambda in source {source_name}')
+
                     # Since SSM is much more API hard and more efficient, yield it with no futures
                     for region_name, connected_clients in connected_clients_by_region.items():
+                        logger.info('Fetching SSM')
                         source_name = f'{account}_{region_name}'
                         try:
                             for parse_data_for_source in self._query_devices_by_client_by_source_ssm(
@@ -1068,8 +706,6 @@ class AwsAdapter(AdapterBase, Configurable):
     def _query_users_by_client_for_all_sources(client_data):
         iam_client = client_data.get('iam')
         result = dict()
-        result['account_tag'] = client_data.get('account_tag')
-        result['region'] = client_data.get('region')
 
         error_logs_triggered = []
 
@@ -1209,6 +845,10 @@ class AwsAdapter(AdapterBase, Configurable):
                 account_metadata['account_id'] = sts_client.get_caller_identity()['Account']
             except Exception:
                 logger.exception(f'Exception while querying account id')
+
+        for generic_key in ['account_tag', 'region']:
+            if generic_key in client_data:
+                account_metadata[generic_key] = client_data[generic_key]
 
         return account_metadata
 
@@ -2086,18 +1726,26 @@ class AwsAdapter(AdapterBase, Configurable):
         for aws_source, account_metadata, devices_raw_data_by_source, raw_data_type in devices_raw_data:
             try:
                 if raw_data_type == AwsRawDataTypes.Regular:
-                    for device in self._parse_raw_data_inner_regular(devices_raw_data_by_source, aws_source):
+                    for device in self._parse_raw_data_inner_regular(devices_raw_data_by_source):
                         if device:
-                            self.append_metadata_to_entity(device, account_metadata)
+                            self.append_metadata_to_entity(device, account_metadata, aws_source)
                             yield device
                 elif raw_data_type == AwsRawDataTypes.SSM:
                     try:
-                        device = self._parse_raw_data_inner_ssm(devices_raw_data_by_source, aws_source)
+                        device = self._parse_raw_data_inner_ssm(devices_raw_data_by_source)
                         if device:
-                            self.append_metadata_to_entity(device, account_metadata)
+                            self.append_metadata_to_entity(device, account_metadata, aws_source)
                             yield device
                     except Exception:
                         logger.exception(f'Problem parsing device from ssm')
+                elif raw_data_type == AwsRawDataTypes.Lambda:
+                    try:
+                        device = parse_raw_data_inner_lambda(self._new_device_adapter(), devices_raw_data_by_source)
+                        if device:
+                            self.append_metadata_to_entity(device, account_metadata, aws_source)
+                            yield device
+                    except Exception:
+                        logger.exception(f'Problem parsiong device from lambda')
                 else:
                     logger.critical(f'Can not parse data for aws source {aws_source}, '
                                     f'unknown type {raw_data_type.name}')
@@ -2109,8 +1757,8 @@ class AwsAdapter(AdapterBase, Configurable):
             try:
                 if raw_data_type == AwsRawDataTypes.Users:
                     try:
-                        for user in self._parse_raw_data_inner_users(users_raw_data_by_source, aws_source):
-                            self.append_metadata_to_entity(user, account_metadata)
+                        for user in self._parse_raw_data_inner_users(users_raw_data_by_source):
+                            self.append_metadata_to_entity(user, account_metadata, aws_source, {'region': 'Global'})
                             yield user
                     except Exception:
                         logger.exception(f'Problem parsing user')
@@ -2120,17 +1768,12 @@ class AwsAdapter(AdapterBase, Configurable):
             except Exception:
                 logger.exception(f'Problem parsing data from source {aws_source}')
 
-    def _parse_raw_data_inner_users(self, users_raw_data: Dict, aws_source):
+    def _parse_raw_data_inner_users(self, users_raw_data: Dict) -> Optional[MyUserAdapter]:
         for user_raw in users_raw_data.get('users'):
             user = self._new_user_adapter()
             if not user_raw.get('UserId'):
                 logger.warning(f'Bad user {user_raw}')
                 continue
-            user.aws_source = aws_source
-            if users_raw_data.get('region'):
-                user.aws_region = users_raw_data.get('region')
-            if users_raw_data.get('account_tag'):
-                user.account_tag = users_raw_data.get('account_tag')
 
             user.id = user_raw['UserId']
             user.username = user_raw.get('UserName')
@@ -2210,7 +1853,13 @@ class AwsAdapter(AdapterBase, Configurable):
             user.set_raw(user_raw)
             yield user
 
-    def append_metadata_to_entity(self, entity, account_metadata: dict):
+    @staticmethod
+    def append_metadata_to_entity(
+            entity: AWSAdapter,
+            account_metadata: dict,
+            aws_source: str,
+            override_params: Optional[dict] = None
+    ):
         try:
             account_aliases = account_metadata.get('aliases')
             if account_aliases and isinstance(account_aliases, list):
@@ -2224,6 +1873,13 @@ class AwsAdapter(AdapterBase, Configurable):
                 entity.aws_account_id = int(account_id)
         except Exception:
             pass
+
+        if override_params and 'region' in override_params:
+            entity.aws_region = override_params['region']
+        else:
+            entity.aws_region = account_metadata.get('region')
+        entity.account_tag = account_metadata.get('account_tag')
+        entity.aws_source = aws_source
 
     @staticmethod
     def __make_ip_rules_list(ip_pemissions_list):
@@ -2303,9 +1959,7 @@ class AwsAdapter(AdapterBase, Configurable):
                     to_port=to_port
                 )
 
-    def _parse_raw_data_inner_regular(self, devices_raw_data, aws_source):
-        aws_region = devices_raw_data.get('region')
-        account_tag = devices_raw_data.get('account_tag')
+    def _parse_raw_data_inner_regular(self, devices_raw_data) -> Optional[MyDeviceAdapter]:
         subnets_by_id = devices_raw_data.get('subnets') or {}
         vpcs_by_id = devices_raw_data.get('vpcs') or {}
         security_group_dict = devices_raw_data.get('security_groups') or {}
@@ -2329,9 +1983,6 @@ class AwsAdapter(AdapterBase, Configurable):
             for reservation in ec2_devices_raw_data:
                 for device_raw in reservation.get('Instances', []):
                     device = self._new_device_adapter()
-                    device.aws_source = aws_source
-                    device.aws_region = aws_region
-                    device.account_tag = account_tag
                     device.aws_device_type = 'EC2'
                     device.hostname = device_raw.get('PublicDnsName')
                     tags_dict = {i['Key']: i['Value'] for i in device_raw.get('Tags', {})}
@@ -2633,9 +2284,6 @@ class AwsAdapter(AdapterBase, Configurable):
 
                                     device.id = device_id
 
-                                    device.aws_source = aws_source
-                                    device.aws_region = aws_region
-                                    device.account_tag = account_tag
                                     device.aws_device_type = 'EKS'
 
                                     eks_host_ip = pod_status.get('host_ip')
@@ -2726,9 +2374,6 @@ class AwsAdapter(AdapterBase, Configurable):
 
                         device.id = container_id
                         device.aws_device_type = 'ECS'
-                        device.aws_source = aws_source
-                        device.aws_region = aws_region
-                        device.account_tag = account_tag
                         device.name = container_raw.get('name')
                         device.cluster_id = cluster_data.get('clusterArn')
                         device.cluster_name = cluster_data.get('clusterName')
@@ -2940,9 +2585,6 @@ class AwsAdapter(AdapterBase, Configurable):
                     device = self._new_device_adapter()
                     device.id = nat_gateway_raw['NatGatewayId']
 
-                    device.aws_source = aws_source
-                    device.aws_region = aws_region
-                    device.account_tag = account_tag
                     device.aws_device_type = 'NAT'
 
                     tags_dict = {i['Key']: i['Value'] for i in nat_gateway_raw.get('Tags', {})}
@@ -2985,9 +2627,6 @@ class AwsAdapter(AdapterBase, Configurable):
                 device.id = elb_raw['name']
                 device.name = elb_raw['name']
                 device.aws_device_type = 'ELB'
-                device.aws_source = aws_source
-                device.aws_region = aws_region
-                device.account_tag = account_tag
                 ips = elb_raw.get('ips') or []
                 last_ip_by_dns_query = elb_raw.get('last_ip_by_dns_query')
                 lb_scheme = elb_raw.get('scheme')
@@ -3038,7 +2677,8 @@ class AwsAdapter(AdapterBase, Configurable):
                             except Exception:
                                 logger.exception(f'Could not add generic firewall rules')
                         else:
-                            device.add_aws_security_group(name=security_group_raw.get('GroupName'))
+                            if security_group_raw:
+                                device.add_aws_security_group(name=security_group_raw.get('GroupName'))
                 except Exception:
                     logger.exception(f'Problem getting security groups at {device_raw}')
                 device.set_raw(elb_raw)
@@ -3054,9 +2694,6 @@ class AwsAdapter(AdapterBase, Configurable):
                     device.id = rds_instance_raw['DBInstanceIdentifier']
                     device.name = rds_instance_raw['DBInstanceIdentifier']
                     device.aws_device_type = 'RDS'
-                    device.aws_source = aws_source
-                    device.aws_region = aws_region
-                    device.account_tag = account_tag
                     device.cloud_id = rds_instance_raw['DBInstanceIdentifier']
                     device.cloud_provider = 'AWS'
                     device.aws_availability_zone = rds_instance_raw.get('AvailabilityZone')
@@ -3178,9 +2815,6 @@ class AwsAdapter(AdapterBase, Configurable):
                     device.id = s3_bucket_raw.get('Name')
                     device.name = s3_bucket_raw.get('Name')
                     device.aws_device_type = 'S3'
-                    device.aws_source = aws_source
-                    device.aws_region = aws_region
-                    device.account_tag = account_tag
                     device.cloud_provider = 'AWS'
 
                     device.s3_bucket_name = s3_bucket_raw.get('Name')
@@ -3219,22 +2853,7 @@ class AwsAdapter(AdapterBase, Configurable):
                         except Exception:
                             pass
                         s3_bucket_raw['policy_parsed'] = bucket_policy_parsed
-                        statements = []
-                        for statement_raw in (bucket_policy_parsed.get('Statement') or []):
-                            statement_action = statement_raw.get('Action')
-                            if isinstance(statement_action, str):
-                                statement_action = statement_action.split(',')
-                            elif not isinstance(statement_action, list):
-                                statement_action = [str(statement_action)]
-
-                            statements.append(AWSS3BucketPolicyStatement(
-                                sid=statement_raw.get('Sid'),
-                                principal=statement_raw.get('Principal'),
-                                effect=statement_raw.get('Effect'),
-                                resource=statement_raw.get('Resource'),
-                                condition=statement_raw.get('Condition'),
-                                action=statement_action
-                            ))
+                        statements = parse_bucket_policy_statements(bucket_policy_parsed)
 
                         if bucket_policy:
                             device.s3_bucket_policy = AWSS3BucketPolicy(
@@ -3261,9 +2880,6 @@ class AwsAdapter(AdapterBase, Configurable):
                     device = self._new_device_adapter()
                     device.id = workspace_id
                     device.aws_device_type = 'Workspace'
-                    device.aws_source = aws_source
-                    device.aws_region = aws_region
-                    device.account_tag = account_tag
                     device.cloud_provider = 'AWS'
 
                     directory_data = workspace_directories.get(workspace_raw.get('DirectoryId')) or {}
@@ -3358,8 +2974,7 @@ class AwsAdapter(AdapterBase, Configurable):
     def _parse_raw_data_inner_ssm(
             self,
             device_raw_data_all: Tuple[Dict[str, Dict], Dict[str, Dict], Dict[str, str]],
-            aws_source
-    ):
+    ) -> Optional[MyDeviceAdapter]:
         device_raw_data, patch_group_to_patch_baseline_mapping, extra_data = device_raw_data_all
         basic_data = device_raw_data.get('basic_data')
         if not basic_data:
@@ -3368,13 +2983,8 @@ class AwsAdapter(AdapterBase, Configurable):
 
         device = self._new_device_adapter()
         device.id = 'ssm-' + basic_data['InstanceId']
-        device.aws_source = aws_source
         device.cloud_provider = 'AWS'
         device.cloud_id = basic_data['InstanceId']
-        if extra_data.get('region'):
-            device.aws_region = extra_data.get('region')
-        if extra_data.get('account_tag'):
-            device.account_tag = extra_data.get('account_tag')
 
         # Parse ssm data
         ssm_data = SSMInfo()
@@ -3596,6 +3206,7 @@ class AwsAdapter(AdapterBase, Configurable):
         self.__fetch_rds = config.get('fetch_rds') or False
         self.__fetch_s3 = config.get('fetch_s3') or False
         self.__fetch_workspaces = config.get('fetch_workspaces') or False
+        self.__fetch_lambda = config.get('fetch_lambda') or False
         self.__fetch_iam_users = config.get('fetch_iam_users') or False
         self.__fetch_ssm = config.get('fetch_ssm') or False
         self.__fetch_nat = config.get('fetch_nat') or False
@@ -3666,6 +3277,11 @@ class AwsAdapter(AdapterBase, Configurable):
                     'type': 'bool'
                 },
                 {
+                    'name': 'fetch_lambda',
+                    'title': 'Fetch information about Lambdas',
+                    'type': 'bool'
+                },
+                {
                     'name': 'verbose_auth_notifications',
                     'title': 'Show verbose notifications about connection failures',
                     'type': 'bool'
@@ -3701,6 +3317,7 @@ class AwsAdapter(AdapterBase, Configurable):
                 'fetch_s3',
                 'fetch_iam_users',
                 'fetch_workspaces',
+                'fetch_lambda',
                 'fetch_ssm',
                 'fetch_nat',
                 'parse_elb_ips',
@@ -3724,14 +3341,15 @@ class AwsAdapter(AdapterBase, Configurable):
             'fetch_s3': False,
             'fetch_iam_users': False,
             'fetch_workspaces': False,
+            'fetch_lambda': False,
             'fetch_ssm': False,
             'fetch_nat': False,
             'parse_elb_ips': False,
             'verbose_auth_notifications': False,
             'shodan_key': None,
             'verify_all_roles': True,
-            'include_gov_regions': False,
-            'include_china_regions': False
+            'include_gov_regions': True,
+            'include_china_regions': True
         }
 
     @classmethod
