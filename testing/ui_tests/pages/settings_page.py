@@ -17,8 +17,8 @@ class SettingsPage(Page):
     MANAGE_USERS_CSS = 'li#user-settings-tab'
     FEATURE_FLAGS_CSS = 'li#feature-flags-tab'
     ABOUT_CSS = 'li#about-settings-tab'
-    SEND_EMAILS_LABEL = 'Send emails'
-    GLOBAL_SSL_LABEL = 'Override default SSL settings'
+    SEND_EMAILS_LABEL = 'Send Emails'
+    GLOBAL_SSL_LABEL = 'Override Default SSL Settings'
     REMOTE_SUPPORT_LABEL_OLD = 'Remote Support - Warning: turning off this feature prevents Axonius from' \
                                '                             updating the system and can lead' \
                                ' to slower issue resolution time.                             ' \

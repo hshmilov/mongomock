@@ -56,7 +56,7 @@ class ServiceNowIncidentAction(ActionTypeAlert):
                 {
                     'name': 'add_link_to_title',
                     'type': 'bool',
-                    'title': 'Add Query Name To Incident Title '
+                    'title': 'Add Query Name to Incident Short Description'
                 },
                 {
                     'name': 'severity',

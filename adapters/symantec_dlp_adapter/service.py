@@ -63,7 +63,7 @@ class SymantecDlpAdapter(AdapterBase, Configurable):
             'items': [
                 {
                     'name': consts.SYMANTEC_DLP_HOST,
-                    'title': 'MSSQL Server',
+                    'title': 'Oracle Server',
                     'type': 'string'
                 },
                 {

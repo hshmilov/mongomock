@@ -230,7 +230,7 @@ class CaCmdbAdapter(AdapterBase, Configurable):
                 },
                 {
                     'name': 'ca_cmdb_lifecycle_white_list',
-                    'title': 'CA CMDB Asset Lifecycle Whitelist',
+                    'title': 'CA CMDB Asset Lifecycle Status Whitelist',
                     'type': 'string'
                 },
                 {

@@ -2884,12 +2884,12 @@ class PluginBase(Configurable, Feature, ABC):
                     'items': [
                         {
                             'name': 'enabled',
-                            'title': 'Override default SSL settings',
+                            'title': 'Override Default SSL Settings',
                             'type': 'bool'
                         },
                         {
                             'name': 'hostname',
-                            'title': 'This site\'s hostname',
+                            'title': 'Site Hostname',
                             'type': 'string'
                         },
                         *MANDATORY_SSL_CONFIG_SCHEMA,
@@ -2914,7 +2914,7 @@ class PluginBase(Configurable, Feature, ABC):
                     'items': [
                         {
                             'name': 'enabled',
-                            'title': 'Use custom CA certificate',
+                            'title': 'Use Custom CA Certificate',
                             'type': 'bool'
                         },
                         {
@@ -3006,7 +3006,7 @@ class PluginBase(Configurable, Feature, ABC):
                     'items': [
                         {
                             'name': 'enabled',
-                            'title': 'Send emails',
+                            'title': 'Send Emails',
                             'type': 'bool'
                         },
                         {
@@ -3170,7 +3170,7 @@ class PluginBase(Configurable, Feature, ABC):
                         {
                             'name': CSV_FULL_HOSTNAME,
                             'type': 'bool',
-                            'title': 'Correlate CSV adapter only if full hostnames are equal'
+                            'title': 'Correlate CSV Adapter only if Full Hostnames are Equal'
                         }
                     ],
                     'name': CORRELATION_SETTINGS,
@@ -3182,7 +3182,7 @@ class PluginBase(Configurable, Feature, ABC):
                     'items': [
                         {
                             'name': FETCH_EMPTY_VENDOR_SOFTWARE_VULNERABILITES,
-                            'title': 'Fetch software vulnerabilities even when the vendor name is unknown',
+                            'title': 'Fetch Software Vulnerabilities Even when the Vendor Name is Unknown',
                             'type': 'bool'
                         }
                     ],
@@ -3200,7 +3200,7 @@ class PluginBase(Configurable, Feature, ABC):
                         },
                         {
                             'name': SOCKET_READ_TIMEOUT,
-                            'title': 'Socket read-timeout in seconds',
+                            'title': 'Socket Read-Timeout in Seconds',
                             'type': 'integer'
                         }
                     ],

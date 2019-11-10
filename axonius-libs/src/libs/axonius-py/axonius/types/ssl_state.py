@@ -30,7 +30,7 @@ MANDATORY_SSL_CONFIG_SCHEMA_DEFAULTS = {
 COMMON_SSL_CONFIG_SCHEMA_CA_ONLY = [
     {
         'name': 'use_ssl',
-        'title': 'Use SSL for connection',
+        'title': 'Use SSL for Connection',
         'type': 'string',
         'enum': [SSLState.Unencrypted.name, SSLState.Verified.name, SSLState.Unverified.name],
         'default': SSLState.Unencrypted.name,

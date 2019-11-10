@@ -5,6 +5,7 @@ export const pluginMeta = {
     },
     nutanix_adapter: {
         title: 'Nutanix AHV',
+        link:'https://docs.axonius.com/docs/nutanix-ahv',
         description: 'Nutanix AHV is a hypervisor included with the Enterprise Cloud OS. AHV delivers flexible migrations, security hardening, automated data protection and disaster recovery, and analytics.'
     },
     preempt_adapter: {

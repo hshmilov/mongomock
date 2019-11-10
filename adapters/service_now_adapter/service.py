@@ -517,14 +517,14 @@ class ServiceNowAdapter(AdapterBase, Configurable):
         return {
             "items": [
                 {
-                    'name': 'fetch_users',
-                    'type': 'bool',
-                    'title': 'Fetch Users'
-                },
-                {
                     'name': 'fetch_users_info_for_devices',
                     'type': 'bool',
-                    'title': 'Fetch Users Info For Devices'
+                    'title': 'Fetch Users Data'
+                },
+                {
+                    'name': 'fetch_users',
+                    'type': 'bool',
+                    'title': 'Create Users'
                 },
                 {
                     'name': 'fetch_ips',

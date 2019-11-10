@@ -72,7 +72,7 @@ class ServiceNowComputerAction(ActionTypeBase):
             'username': None,
             'password': None,
             'https_proxy': None,
-            'cmdb_ci_table': None,
+            'cmdb_ci_table': 'cmdb_ci_computer',
             'verify_ssl': True
         }, ADAPTER_NAME)
 
