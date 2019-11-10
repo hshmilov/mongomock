@@ -32,6 +32,42 @@ class TestDevicesQuery(TestBase):
         self.devices_page.find_element_by_text('Specify <address>/<CIDR> to filter IP by subnet')
         self.devices_page.click_search()
 
+    def test_in_query(self):
+        self.dashboard_page.switch_to_page()
+        self.base_page.run_discovery()
+        self.devices_page.switch_to_page()
+        self.devices_page.wait_for_table_to_load()
+
+        ips = self.devices_page.get_column_data_inline_with_remainder(self.devices_page.FIELD_NETWORK_INTERFACES_IPS)
+
+        self.devices_page.click_query_wizard()
+        self.devices_page.select_query_field(self.devices_page.FIELD_NETWORK_INTERFACES_IPS)
+        self.devices_page.select_query_comp_op(self.devices_page.QUERY_COMP_IN)
+        self.devices_page.fill_query_string_value(','.join(ips))
+        self.devices_page.wait_for_table_to_load()
+        self.devices_page.wait_for_spinner_to_end()
+
+        self.devices_page.click_search()
+
+        self.devices_page.select_page_size(50)
+
+        new_ips = self.devices_page.get_column_data_inline_with_remainder(
+            self.devices_page.FIELD_NETWORK_INTERFACES_IPS)
+
+        assert len([ip for ip in new_ips if ip.strip() == '']) == 0
+
+        ips_set = set(ips)
+        new_ips_set = set(new_ips)
+
+        assert ips_set.issubset(new_ips_set)
+
+        for ips in self.devices_page.get_column_cells_data_inline_with_remainder(
+                self.devices_page.FIELD_NETWORK_INTERFACES_IPS):
+            if isinstance(ips, list):
+                assert len(ips_set.intersection(set(ips))) > 0
+            else:
+                assert ips in ips_set
+
     def test_devices_query_wizard_default_operators(self):
         self.dashboard_page.switch_to_page()
         self.base_page.run_discovery()

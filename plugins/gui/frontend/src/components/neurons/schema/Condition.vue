@@ -165,7 +165,7 @@
       },
       valueSchema () {
         if (this.fieldSchema && this.fieldSchema.type === 'array'
-          && ['contains', 'equals', 'subnet', 'notInSubnet', 'starts', 'ends'].includes(this.compOp)) {
+          && ['contains', 'equals', 'IN', 'subnet', 'notInSubnet', 'starts', 'ends'].includes(this.compOp)) {
           return this.fieldSchema.items
         }
         if (this.fieldSchema && this.fieldSchema.format && this.fieldSchema.format === 'date-time'
@@ -210,7 +210,7 @@
         return Object.keys(this.opsMap).map((op) => {
           return {
             name: op,
-            title: this.opTitleTranslation[op] ? this.opTitleTranslation[op] : op
+            title: this.opTitleTranslation[op] ? this.opTitleTranslation[op].toLowerCase() : op.toLowerCase()
           }
         })
       },
@@ -348,8 +348,15 @@
         this.processedValue = "'" + rawVersion + "'"
         return ''
       },
+      formatIn(){
+          this.processedValue = '"' + this.value.match(/(\\,|[^,])+/g).join('","') + '"'
+          return ''
+      },
       formatCondition () {
         this.processedValue = ''
+        if(this.compOp === 'IN'){
+          return this.formatIn()
+        }
         if (this.fieldSchema.format && this.fieldSchema.format === 'ip') {
           if (this.compOp === 'subnet') {
             return this.formatInSubnet()
@@ -358,6 +365,7 @@
             return this.formatNotInSubnet()
           }
         }
+
         if (this.fieldSchema.format && this.fieldSchema.format === 'version') {
           if (this.compOp === 'earlier than' || this.compOp === 'later than') {
             return this.formatVersion()

@@ -23,9 +23,11 @@ const exists = '({field} == ({"$exists":true,"$ne":null}))'
 const exists_str = '({field} == ({"$exists":true,"$ne":""}))'
 const exists_array = '({field} == ({"$exists":true,"$ne":[]}))'
 const equals = '{field} == "{val}"'
+const IN = '{field} in [{val}]'
 const contains = '{field} == regex("{val}", "i")'
 const numerical = {
     equals: '{field} == {val}',
+    IN: '{field} in [{val}]',
     '<': '{field} < {val}',
     '>': '{field} > {val}',
     exists
@@ -55,6 +57,7 @@ export const compOps = {
         notInSubnet: '{val}',
         contains,
         equals,
+        IN,
         'isIPv4': '{field} == regex("\\.")',
         'isIPv6': '{field} == regex(":")',
         exists: exists_str
@@ -62,11 +65,13 @@ export const compOps = {
     subnet: {
         contains,
         equals,
+        IN,
         exists: exists_str
     },
     version: {
         contains,
         equals,
+        IN,
         exists: exists_str,
         'earlier than': '{field}_raw < {val}',
         'later than': '{field}_raw > {val}'
@@ -74,6 +79,7 @@ export const compOps = {
     tag: {
         contains,
         equals,
+        IN,
         exists: 'tags == match([label_value != "" and label_value == exists(true)])'
     },
     image: {
@@ -82,6 +88,7 @@ export const compOps = {
     string: {
         contains,
         equals,
+        IN,
         starts: '{field} == regex("^{val}", "i")',
         ends: '{field} == regex("{val}$", "i")',
         exists: exists_str

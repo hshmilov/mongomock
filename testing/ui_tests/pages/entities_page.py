@@ -50,6 +50,7 @@ class EntitiesPage(Page):
     QUERY_COMP_CONTAINS = 'contains'
     QUERY_COMP_TRUE = 'true'
     QUERY_COMP_EQUALS = 'equals'
+    QUERY_COMP_IN = 'in'
     QUERY_COMP_SUBNET = 'in subnet'
     QUERY_COMP_SIZE = 'count ='
     QUERY_COMP_SIZE_ABOVE = 'count >'
@@ -93,6 +94,7 @@ class EntitiesPage(Page):
 
     TABLE_DATA_XPATH = '//tr[@id]/td[position()={data_position}]'
     TABLE_DATA_SLICER_XPATH = f'{TABLE_DATA_XPATH}//div[@class=\'x-slicer\']'
+    TABLE_DATA_SLICER_TYPE_XPATH = f'{TABLE_DATA_XPATH}//div[@class=\'x-slicer\']/div'
     TABLE_DATA_EXPAND_ROW_XPATH = f'{TABLE_DATA_XPATH}//div[@class=\'details-list-container\']'
     TABLE_DATA_EXPAND_CELL_XPATH = f'{TABLE_DATA_XPATH}//div[@class=\'details-table-container\']' \
                                    f'/div[contains(@class, \'popup\')]//*[@class=\'table\']'
@@ -519,8 +521,48 @@ class EntitiesPage(Page):
                 for el in parent.find_elements_by_xpath(data_section_xpath.format(data_position=col_position))
                 if el.text.strip()]
 
+    def get_column_data_with_remainder(self, data_section_xpath, col_name, parent=None, generic_col=True,
+                                       merge_cells=True):
+        if not parent:
+            parent = self.driver
+
+        col_position = self.count_sort_column(col_name, parent) \
+            if generic_col else self.count_specific_column(col_name, parent)
+
+        values = []
+        column_type = parent.find_element_by_xpath(
+            self.TABLE_DATA_SLICER_TYPE_XPATH.format(data_position=col_position)).get_attribute('class')
+        for index, el in \
+                enumerate(parent.find_elements_by_xpath(data_section_xpath.format(data_position=col_position)),
+                          start=1):
+            remainder_values = None
+            if 'array' in column_type:
+                try:
+                    remainder_count = self.hover_remainder(index, col_position)
+                    if remainder_count:
+                        remainder_values = [element.text for element in self.get_tooltip_table_data()]
+                    else:
+                        remainder_values = el.text.strip().split('\n') if el.text.strip() else None
+                except NoSuchElementException:
+                    remainder_values = el.text.strip().split('\n') if el.text.strip() else None
+            if remainder_values:
+                if merge_cells:
+                    for value in remainder_values:
+                        values.append(value)
+                else:
+                    values.append(remainder_values)
+            elif el.text.strip():
+                values.append(el.text.strip())
+        return values
+
     def get_column_data_inline(self, col_name, parent=None):
         return self.get_column_data(self.TABLE_DATA_INLINE_XPATH, col_name, parent)
+
+    def get_column_data_inline_with_remainder(self, col_name, parent=None):
+        return self.get_column_data_with_remainder(self.TABLE_DATA_INLINE_XPATH, col_name, parent)
+
+    def get_column_cells_data_inline_with_remainder(self, col_name, parent=None):
+        return self.get_column_data_with_remainder(self.TABLE_DATA_INLINE_XPATH, col_name, parent, merge_cells=False)
 
     def get_column_data_slicer(self, col_name, parent=None, generic_col=True):
         return self.get_column_data(self.TABLE_DATA_SLICER_XPATH, col_name, parent, generic_col)
@@ -569,7 +611,7 @@ class EntitiesPage(Page):
     def get_all_data_proper(self):
         """
         Returns a list of dict where each dict is a dict between a field name (i.e. adapter, asset_name) and
-        the respective valueTABLE_SELECT_ALL_CURRENT_PAGE_CHECKBOX_CSS
+        the respective value
         """
         result = []
         column_names = [self._get_column_title(x)
@@ -1051,8 +1093,10 @@ class EntitiesPage(Page):
     def hover_remainder(self, row_index=1, cell_index=1):
         remainder = self.driver.find_element_by_css_selector(
             self.TABLE_CELL_HOVER_REMAINDER_CSS.format(row_index=row_index, cell_index=cell_index))
-        ActionChains(self.driver).move_to_element(remainder).perform()
-        return int(remainder.find_element_by_tag_name('span').text)
+        if remainder:
+            ActionChains(self.driver).move_to_element(remainder).perform()
+            return int(remainder.find_element_by_tag_name('span').text)
+        return 0
 
     def get_tooltip_table_head(self):
         return self.driver.find_element_by_css_selector(self.TOOLTIP_TABLE_HEAD_CSS).text
