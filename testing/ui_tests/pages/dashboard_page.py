@@ -1,6 +1,7 @@
 import time
 import datetime
 
+from retrying import retry
 from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.common.action_chains import ActionChains
 
@@ -102,10 +103,12 @@ class DashboardPage(Page):
     def get_lifecycle_tooltip(self):
         return self.driver.find_element_by_css_selector(self.LIFECYCLE_TOOLTIP_CSS)
 
+    @retry(stop_max_delay=10000, wait_fixed=500)
     def hover_over_lifecycle_chart(self):
         sl_card = self.find_system_lifecycle_card()
         sl_cycle = self.get_cycle_from_card(sl_card)
         ActionChains(self.driver).move_to_element(sl_cycle).perform()
+        assert self.get_lifecycle_tooltip()
 
     def get_lifecycle_tooltip_table_data(self):
         table_data = []
