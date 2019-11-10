@@ -246,57 +246,77 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
                 logger.exception(f'Failed waiting for alerts before cycle {e}')
 
             # Fetch Devices Data.
-            self._run_aggregator_phase(PluginSubtype.AdapterBase)
-            self._request_gui_dashboard_cache_clear()
+            try:
+                self._run_aggregator_phase(PluginSubtype.AdapterBase)
+                self._request_gui_dashboard_cache_clear()
+            except Exception:
+                logger.critical('Failed running fetch_devices phase', exc_info=True)
 
             # Fetch Scanners Data.
-            _change_subphase(scheduler_consts.ResearchPhases.Fetch_Scanners)
-            self._run_aggregator_phase(PluginSubtype.ScannerAdapter)
+            try:
+                _change_subphase(scheduler_consts.ResearchPhases.Fetch_Scanners)
+                self._run_aggregator_phase(PluginSubtype.ScannerAdapter)
+            except Exception:
+                logger.critical('Failed running fetch_scanners phase', exc_info=True)
 
             # Clean old devices.
-            _change_subphase(scheduler_consts.ResearchPhases.Clean_Devices)
-            self._request_gui_dashboard_cache_clear()
+            try:
+                _change_subphase(scheduler_consts.ResearchPhases.Clean_Devices)
+                self._request_gui_dashboard_cache_clear()
 
-            for adapter in self.core_configs_collection.find({
-                'plugin_type': adapter_consts.ADAPTER_PLUGIN_TYPE,
-                'status': 'up'
-            }):
-                try:
-                    # this is important and is described at
-                    # https://axonius.atlassian.net/wiki/spaces/AX/pages/799211552/
-                    self.request_remote_plugin('wait/insert_to_db', adapter[PLUGIN_UNIQUE_NAME])
-                except Exception as e:
-                    logger.exception(f'Failed waiting for adapter cycle {e}')
+                for adapter in self.core_configs_collection.find({
+                    'plugin_type': adapter_consts.ADAPTER_PLUGIN_TYPE,
+                    'status': 'up'
+                }):
+                    try:
+                        # this is important and is described at
+                        # https://axonius.atlassian.net/wiki/spaces/AX/pages/799211552/
+                        self.request_remote_plugin('wait/insert_to_db', adapter[PLUGIN_UNIQUE_NAME])
+                    except Exception as e:
+                        logger.exception(f'Failed waiting for adapter cycle {e}')
 
-            self._run_cleaning_phase()
+                self._run_cleaning_phase()
+            except Exception:
+                logger.critical(f'Failed running clean devices phase', exc_info=True)
 
             # Run Pre Correlation plugins.
-            _change_subphase(scheduler_consts.ResearchPhases.Pre_Correlation)
-            self._run_plugins(self._get_plugins(PluginSubtype.PreCorrelation))
+            try:
+                _change_subphase(scheduler_consts.ResearchPhases.Pre_Correlation)
+                self._run_plugins(self._get_plugins(PluginSubtype.PreCorrelation))
+            except Exception:
+                logger.critical(f'Failed running pre-correlation phase', exc_info=True)
 
             # Run Correlations.
-            _change_subphase(scheduler_consts.ResearchPhases.Run_Correlations)
-            self._run_plugins(self._get_plugins(PluginSubtype.Correlator))
+            try:
+                _change_subphase(scheduler_consts.ResearchPhases.Run_Correlations)
+                self._run_plugins(self._get_plugins(PluginSubtype.Correlator))
+                self._request_gui_dashboard_cache_clear()
+            except Exception:
+                logger.critical(f'Failed running correlation phase', exc_info=True)
 
-            self._request_gui_dashboard_cache_clear()
+            try:
+                _change_subphase(scheduler_consts.ResearchPhases.Post_Correlation)
+                post_correlations_plugins = self._get_plugins(PluginSubtype.PostCorrelation)
 
-            _change_subphase(scheduler_consts.ResearchPhases.Post_Correlation)
-            post_correlations_plugins = self._get_plugins(PluginSubtype.PostCorrelation)
+                if not self.__analyse_reimage:
+                    post_correlations_plugins = [x
+                                                 for x
+                                                 in post_correlations_plugins
+                                                 if x[PLUGIN_NAME] != REIMAGE_TAGS_ANALYSIS_PLUGIN_NAME]
 
-            if not self.__analyse_reimage:
-                post_correlations_plugins = [x
-                                             for x
-                                             in post_correlations_plugins
-                                             if x[PLUGIN_NAME] != REIMAGE_TAGS_ANALYSIS_PLUGIN_NAME]
+                self._run_plugins(post_correlations_plugins)
+            except Exception:
+                logger.critical(f'Failed running post-correlation phase', exc_info=True)
 
-            self._run_plugins(post_correlations_plugins)
+            try:
+                if self.__save_history:
+                    # Save history.
+                    _change_subphase(scheduler_consts.ResearchPhases.Save_Historical)
+                    self._run_historical_phase()
 
-            if self.__save_history:
-                # Save history.
-                _change_subphase(scheduler_consts.ResearchPhases.Save_Historical)
-                self._run_historical_phase()
-
-            self._request_gui_dashboard_cache_clear(clear_slow=True)
+                self._request_gui_dashboard_cache_clear(clear_slow=True)
+            except Exception:
+                logger.critical(f'Failed running save historical phase', exc_info=True)
 
             logger.info(f'Finished {scheduler_consts.Phases.Research.name} Phase Successfully.')
             if self._notify_on_adapters is True:
