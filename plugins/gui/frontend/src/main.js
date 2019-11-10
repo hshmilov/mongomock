@@ -42,7 +42,8 @@ const vuetifyOptions = {
 	theme: {
 		themes: {
 			light: {
-				primary: '#FF7D46'
+				primary: '#FF7D46',
+				anchor: '-webkit-link'
 			}
 		}
 	}

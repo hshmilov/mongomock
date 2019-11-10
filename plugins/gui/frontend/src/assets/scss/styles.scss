@@ -102,7 +102,9 @@ h2 {
 
 h3 {
   line-height: 30px;
-  font-size: 20px
+  font-size: 20px;
+  margin-block-start: 1em;
+  margin-block-end: 1em;
 }
 
 h4 {
@@ -135,6 +137,19 @@ input, textarea {
   border-style: inset;
   border-width: 2px;
   background: white;
+}
+
+input:disabled {
+  background-color: $grey-2;
+  border-color: $grey-3;
+  border-width: 1px;
+  border-style: solid;
+  opacity: 0.6;
+}
+
+textarea {
+  border-style: solid;
+  border-width: 1px;
 }
 
 .v-application {
