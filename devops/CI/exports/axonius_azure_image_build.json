@@ -56,8 +56,8 @@
     },
     {
       "type": "file",
-      "source": "weave-2.5.1",
-      "destination": "/home/ubuntu/cortex/devops/scripts/host_installation/weave-2.5.1"
+      "source": "weave-2.6.0",
+      "destination": "/home/ubuntu/cortex/devops/scripts/host_installation/weave-2.6.0"
     },
     {
       "type": "shell",

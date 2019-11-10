@@ -208,6 +208,9 @@ def setup_instances():
     # Setup cron-job
     setup_instances_cronjobs()
 
+    resources_as_path = Path(RESOURCES_PATH)
+    copy_file(resources_as_path / 'weave-2.6.0', '/usr/local/bin/weave',  mode=0o755, user='root', group='root')
+
 
 def setup_host():
     setup_instances()
