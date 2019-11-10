@@ -71,10 +71,10 @@ class HaveibeenpwnedConnection(RESTConnection):
 
     def get_breach_account_info(self, email):
         time.sleep(2)
-        url = f'api/v3/breachedaccount/{email}'
+        url = f'api/v3/breachedaccount/{email}?truncateResponse=false'
         if self._internal_haveibeenpwned:
             self._refresh_token()
-            url = f'hibp/api/v3/breachedaccount/{email}'
+            url = f'hibp/' + url
         return self._hibp_get(url)
 
     def _hibp_get(self, path, url_params=None):
