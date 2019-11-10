@@ -1253,7 +1253,7 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
         if not current_client or not current_client.get('client_config'):
             # No credentials to attempt reconnection
             raise adapter_exceptions.CredentialErrorException(f'No credentials found for client {client_id} in the db.')
-        return current_client['client_config']
+        return self._normalize_password_fields(current_client['client_config'])
 
     def _update_clients_schema_in_db(self, schema):
         """

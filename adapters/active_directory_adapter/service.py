@@ -1327,6 +1327,7 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, ActiveDirectory
         for client_config in clients_config:
             client_config = client_config['client_config']
             if client_config["dc_name"] == wanted_client:
+                client_config = self._normalize_password_fields(client_config)
                 # If wmi/smb user was not supplied, use the default one.
                 client_username = custom_credentials.get("username") if custom_credentials else None
                 if client_username is None or client_username == "":
