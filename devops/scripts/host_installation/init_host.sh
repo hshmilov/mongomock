@@ -128,7 +128,7 @@ usermod -aG docker ubuntu
 gpasswd -a ubuntu docker
 echo "Installing weave"
 cd "$(dirname "$0")"
-cp ./weave-2.5.1 /usr/local/bin/weave
+cp ./weave-2.6.0 /usr/local/bin/weave
 chmod a+x /usr/local/bin/weave
 echo "Setting system-wide settings"
 sudo timedatectl set-timezone UTC
