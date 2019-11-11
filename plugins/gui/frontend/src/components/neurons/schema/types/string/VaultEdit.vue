@@ -165,7 +165,14 @@
             cursor: pointer;
             border-radius: 80%;
             margin-top: 0;
-            top: 1px;
+            top: -2px;
+
+            .md-icon {
+                width: 19px;
+                height: 19px;
+                position: absolute;
+                right: 0;
+            }
 
             .svg-fill {
                 fill: $grey-4
