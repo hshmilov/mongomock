@@ -7,7 +7,7 @@ from test_credentials.json_file_credentials import (DEVICE_FIRST_IP,
                                                     DEVICE_SECOND_IP,
                                                     DEVICE_SUBNET)
 from ui_tests.tests.test_entities_table import TestEntitiesTable
-from ui_tests.tests.ui_consts import TAG_NAME, AD_ADAPTER_NAME
+from ui_tests.tests.ui_consts import TAG_NAME, AD_ADAPTER_NAME, WMI_INFO_ADAPTER
 
 
 class TestDevicesTable(TestEntitiesTable):
@@ -86,7 +86,7 @@ class TestDevicesTable(TestEntitiesTable):
             assert f'devices/{first_id}' in self.driver.current_url
             self.devices_page.wait_for_table_to_load()
             self.devices_page.click_adapters_tab()
-            assert self.devices_page.find_vertical_tabs() == ['WMI Info',
+            assert self.devices_page.find_vertical_tabs() == [WMI_INFO_ADAPTER,
                                                               AD_ADAPTER_NAME,
                                                               'Custom Data']
             assert self.devices_page.find_element_by_text(self.devices_page.FIELD_NETWORK_INTERFACES)

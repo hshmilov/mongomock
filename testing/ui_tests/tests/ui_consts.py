@@ -41,6 +41,7 @@ NOTE_COLUMN = 'Note'
 JSON_ADAPTER_NAME = 'JSON File'
 JSON_ADAPTER_SEARCH = 'json'
 JSON_ADAPTER_PLUGIN_NAME = 'json_file_adapter'
+WMI_INFO_ADAPTER = 'WMI Info'
 
 AD_ADAPTER_NAME = 'Microsoft Active Directory (AD)'
 
