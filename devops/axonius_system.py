@@ -208,6 +208,9 @@ def system_entry_point(args):
                 print(f'Reverting to regular start due to mongo error')
                 failed_quick_register_adapters = set(adapters_to_register)
                 break
+            except ImportError as e:
+                print(f'Can\'t import {e.name} so not quick registering  {adapter}')
+                failed_quick_register_adapters.add(adapter)
             except Exception as e:
                 tb = ''.join(traceback.format_tb(e.__traceback__))
                 print(f'Failed quick registering {adapter} because of {e}, {tb}')
