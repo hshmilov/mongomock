@@ -949,8 +949,13 @@ class AggregatorService(PluginService, UpdatablePluginMixin):
 
         def process_entity(entity):
             for adapter in entity['adapters']:
+                fetch_time = adapter.get('data', {}).get('fetch_time')
+                eid = entity['_id']
+                if not fetch_time:
+                    print(f'No fetch time data for {eid}')
+                    continue
                 col.update_one({
-                    '_id': entity['_id'],
+                    '_id': eid,
                     'adapters': {
                         '$elemMatch': {
                             PLUGIN_UNIQUE_NAME: adapter[PLUGIN_UNIQUE_NAME],
@@ -959,7 +964,7 @@ class AggregatorService(PluginService, UpdatablePluginMixin):
                     }
                 }, {
                     '$set': {
-                        'adapters.$.data.first_fetch_time': adapter['data']['fetch_time']
+                        'adapters.$.data.first_fetch_time': fetch_time
                     }
                 })
                 with lock:
