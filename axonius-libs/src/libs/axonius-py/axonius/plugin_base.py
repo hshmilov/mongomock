@@ -2941,28 +2941,28 @@ class PluginBase(Configurable, Feature, ABC):
                         },
                         {
                             'name': PROXY_ADDR,
-                            'title': 'Proxy address',
+                            'title': 'Proxy Address',
                             'type': 'string'
                         },
                         {
                             'name': PROXY_PORT,
-                            'title': 'Proxy port',
+                            'title': 'Proxy Port',
                             'type': 'number'
                         },
                         {
                             'name': PROXY_USER,
-                            'title': 'Proxy username',
+                            'title': 'Proxy User Name',
                             'type': 'string'
                         },
                         {
                             'name': PROXY_PASSW,
-                            'title': 'Proxy password',
+                            'title': 'Proxy Password',
                             'type': 'string',
                             'format': 'password'
                         },
                         {
                             'name': PROXY_VERIFY,
-                            'title': 'Verify ssl',
+                            'title': 'Verify SSL',
                             'type': 'bool'
                         }
                     ]
@@ -3047,7 +3047,7 @@ class PluginBase(Configurable, Feature, ABC):
                     'items': [
                         {
                             'name': 'enabled',
-                            'title': 'Use syslog',
+                            'title': 'Use Syslog',
                             'type': 'bool'
                         },
                         {
@@ -3076,7 +3076,7 @@ class PluginBase(Configurable, Feature, ABC):
                     'items': [
                         {
                             'name': 'enabled',
-                            'title': 'Use HTTPS logs',
+                            'title': 'Use HTTPS Logs',
                             'type': 'bool'
                         },
                         {

@@ -4969,7 +4969,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
                         },
                         {
                             'name': 'defaultNumOfEntitiesPerPage',
-                            'title': 'Default number of query results displayed per page',
+                            'title': 'Default Number of Query Results Displayed Per Page',
                             'type': 'string',
                             'enum': [20, 50, 100]
                         },
@@ -4990,12 +4990,12 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
                         },
                         {
                             'name': 'autoQuery',
-                            'title': 'Perform a query every keypress',
+                            'title': 'Perform a Query Every Keypress',
                             'type': 'bool'
                         },
                         {
                             'name': 'defaultColumnLimit',
-                            'title': 'Number of values displayed in each column',
+                            'title': 'Number of Values Displayed in each Column',
                             'type': 'string',
                             'enum': [1, 2]
                         },
@@ -5033,28 +5033,28 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
                     'items': [
                         {
                             'name': 'enabled',
-                            'title': 'Allow Okta logins',
+                            'title': 'Allow Okta Logins',
                             'type': 'bool'
                         },
                         {
                             'name': 'client_id',
-                            'title': 'Okta application client id',
+                            'title': 'Okta Application Client Id',
                             'type': 'string'
                         },
                         {
                             'name': 'client_secret',
-                            'title': 'Okta application client secret',
+                            'title': 'Okta Application Client Secret',
                             'type': 'string',
                             'format': 'password'
                         },
                         {
                             'name': 'url',
-                            'title': 'Okta application URL',
+                            'title': 'Okta Application URL',
                             'type': 'string'
                         },
                         {
                             'name': 'gui2_url',
-                            'title': 'The URL of Axonius GUI',
+                            'title': 'Axonius GUI URL',
                             'type': 'string'
                         }
                     ],
@@ -5067,22 +5067,22 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
                     'items': [
                         {
                             'name': 'enabled',
-                            'title': 'Allow LDAP logins',
+                            'title': 'Allow LDAP Logins',
                             'type': 'bool'
                         },
                         {
                             'name': 'dc_address',
-                            'title': 'The host domain controller IP or DNS',
+                            'title': 'The Host Domain Controller IP or DNS',
                             'type': 'string'
                         },
                         {
                             'name': 'group_cn',
-                            'title': 'A group the user must be a part of',
+                            'title': 'A Group the User Must be Part of',
                             'type': 'string'
                         },
                         {
                             'name': 'default_domain',
-                            'title': 'Default domain to present to the user',
+                            'title': 'Default Domain to Present to the User',
                             'type': 'string'
                         },
                         *COMMON_SSL_CONFIG_SCHEMA
@@ -5096,12 +5096,12 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
                     'items': [
                         {
                             'name': 'enabled',
-                            'title': 'Allow SAML-Based logins',
+                            'title': 'Allow SAML-Based Logins',
                             'type': 'bool'
                         },
                         {
                             'name': 'idp_name',
-                            'title': 'The name of the Identity Provider',
+                            'title': 'Name of the Identity Provider',
                             'type': 'string'
                         },
                         {

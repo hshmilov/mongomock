@@ -98,6 +98,11 @@ class TaniumAdapter(AdapterBase):
                     'format': 'password'
                 },
                 {
+                    'name': 'fetch_discovery',
+                    'type': 'bool',
+                    'title': 'Fetch Tanium Discover Devices'
+                },
+                {
                     'name': 'verify_ssl',
                     'title': 'Verify SSL',
                     'type': 'bool'
@@ -106,11 +111,6 @@ class TaniumAdapter(AdapterBase):
                     'name': 'https_proxy',
                     'title': 'HTTPS Proxy',
                     'type': 'string'
-                },
-                {
-                    'name': 'fetch_discovery',
-                    'type': 'bool',
-                    'title': 'Fetch Discovery Devices'
                 }
             ],
             'required': [

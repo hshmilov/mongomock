@@ -10,6 +10,7 @@ export const pluginMeta = {
     },
     preempt_adapter: {
         title: 'Preempt',
+        link: 'https://docs.axonius.com/docs/preempt',
         description: 'Preempt lets organizations reduce user risk on their attack surface and preempt threats in real-time with Conditional Access. It continuously analyzes, adapts and responds to threats based on identity, behavior, and risk to resolve insider threats and targeted attacks.'
     },
     hashicorp_adapter: {
@@ -576,9 +577,9 @@ export const pluginMeta = {
         description: 'RedSeal’s network modeling and risk scoring platform models customers\' entire hybrid data center of public cloud, private cloud and physical network.'
     },
     google_mdm_adapter: {
-        title: 'Google Mobile Management',
-        link: 'https://docs.axonius.com/docs/google-mobile-management',
-        description: 'Google Mobile Management is an MDM solution for G Suite customers for Android, iOS, Windows and other smartphones.'
+        title: 'G Suite by Google',
+        link: 'https://docs.axonius.com/docs/g-suite-by-google',
+        description: 'G Suite is a set of cloud computing, productivity, collaboration, device, user, and data management tools developed by Google.'
     },
     tenable_security_center_adapter: {
         title: 'Tenable.sc (formerly SecurityCenter)',
