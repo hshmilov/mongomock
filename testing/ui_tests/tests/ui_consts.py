@@ -47,6 +47,12 @@ AD_ADAPTER_NAME = 'Microsoft Active Directory (AD)'
 STRESSTEST_ADAPTER = 'stresstest_adapter'
 STRESSTEST_SCANNER_ADAPTER = 'stresstest_scanner_adapter'
 
+ALERTLOGIC_ADAPTER = 'alertlogic_adapter'
+ALERTLOGIC_ADAPTER_NAME = 'Alert Logic'
+
+AWS_ADAPTER = 'aws_adapter'
+AWS_ADAPTER_NAME = 'Amazon Web Services (AWS)'
+
 
 class EmailSettings:
     port = '25'

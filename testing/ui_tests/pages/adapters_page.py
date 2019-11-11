@@ -4,6 +4,7 @@ from copy import copy
 import re
 
 from selenium.common.exceptions import NoSuchElementException
+from selenium.webdriver.remote.webelement import WebElement
 
 from test_helpers.file_mock_credentials import FileForCredentialsMock
 from ui_tests.pages.entities_page import EntitiesPage
@@ -43,6 +44,8 @@ class AdaptersPage(EntitiesPage):
     AD_SERVER_SEARCH_FIELD = ('dc_name', 'DC Address')
     ADAPTER_INSTANCE_CONFIG_CSS_SELECTOR = '.config-server'
     EDIT_INSTANCE_XPATH = '//div[@title=\'{instance_name}\']/parent::td/parent::tr'
+
+    INPUT_TYPE_PWD_VALUE = '********'
 
     @property
     def url(self):
@@ -189,6 +192,22 @@ class AdaptersPage(EntitiesPage):
             else:
                 self.fill_text_by_element(element, value)
 
+    def verify_creds(self, **kwargs):
+        for key, value in kwargs.items():
+            element: WebElement = self.driver.find_element_by_id(key)
+            if isinstance(value, bool):
+                assert self.is_toggle_selected(element) == value
+            elif isinstance(value, str):
+                if element.get_attribute('type') == 'password':
+                    if not value:
+                        assert element.get_attribute('value') == ''
+                    else:
+                        assert element.get_attribute('value') == self.INPUT_TYPE_PWD_VALUE
+                else:
+                    assert element.get_attribute('value') == value
+            else:
+                assert False
+
     def wait_for_data_collection_toaster_absent(self):
         self.wait_for_toaster_to_end(self.DATA_COLLECTION_TOASTER, retries=1200)
 
@@ -257,3 +276,11 @@ class AdaptersPage(EntitiesPage):
 
         match_object = re.match(pattern, element_text, re.I | re.M)
         return match_object.group(1)
+
+    def creat_new_adapter_connection(self, plugin_title: str, adapter_input: dict):
+        self.wait_for_adapter(plugin_title)
+        self.click_adapter(plugin_title)
+        self.wait_for_table_to_load()
+        self.click_new_server()
+        self.fill_creds(**adapter_input)
+        self.click_save()

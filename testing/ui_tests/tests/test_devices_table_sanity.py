@@ -4,13 +4,12 @@ import pytest
 from selenium.common.exceptions import NoSuchElementException
 
 from ui_tests.tests.test_entities_table import TestEntitiesTable
+from ui_tests.tests.ui_consts import (AWS_ADAPTER_NAME,
+                                      STRESSTEST_ADAPTER)
 from services.adapters.aws_service import AwsService
 from services.adapters import stresstest_service
 from services.plugins.general_info_service import GeneralInfoService
 from test_credentials.test_aws_credentials import client_details
-
-AWS_NAME = 'Amazon Web Services (AWS)'
-STRESS_NAME = 'stresstest_adapter'
 
 
 class TestDevicesTable(TestEntitiesTable):
@@ -163,9 +162,9 @@ class TestDevicesTable(TestEntitiesTable):
 
     def test_select_all_devices(self):
         with AwsService().contextmanager(take_ownership=True):
-            self.adapters_page.wait_for_adapter(AWS_NAME)
+            self.adapters_page.wait_for_adapter(AWS_ADAPTER_NAME)
             client_details[1][0].pop('get_all_regions', None)
-            self.adapters_page.add_server(client_details[1][0], AWS_NAME)
+            self.adapters_page.add_server(client_details[1][0], AWS_ADAPTER_NAME)
             self.base_page.run_discovery(wait=True)
             self.devices_page.switch_to_page()
             self.devices_page.wait_for_table_to_load()
@@ -174,7 +173,7 @@ class TestDevicesTable(TestEntitiesTable):
             assert self.devices_page.count_entities() > self.devices_page.count_selected_entities()
             self.devices_page.click_select_all_entities()
             assert self.devices_page.count_entities() == self.devices_page.count_selected_entities()
-            self.adapters_page.clean_adapter_servers(AWS_NAME, delete_associated_entities=True)
+            self.adapters_page.clean_adapter_servers(AWS_ADAPTER_NAME, delete_associated_entities=True)
 
     def change_values_count_per_column_to_be_val(self, val):
         self.settings_page.switch_to_page()
@@ -217,7 +216,7 @@ class TestDevicesTable(TestEntitiesTable):
     def test_select_devices(self):
         stress = stresstest_service.StresstestService()
         with stress.contextmanager(take_ownership=True):
-            self.adapters_page.wait_for_adapter(STRESS_NAME)
+            self.adapters_page.wait_for_adapter(STRESSTEST_ADAPTER)
             device_dict = {'device_count': 2500, 'name': 'testonius'}
             stress.add_client(device_dict)
             self.base_page.run_discovery()
@@ -253,7 +252,7 @@ class TestDevicesTable(TestEntitiesTable):
             # test pagination refresh
             self.devices_page.execute_saved_query('AD Devices Missing Agents')
             assert self.devices_page.find_active_page_number() == '1'
-            self.adapters_page.clean_adapter_servers(STRESS_NAME, delete_associated_entities=True)
+            self.adapters_page.clean_adapter_servers(STRESSTEST_ADAPTER, delete_associated_entities=True)
             # deleting the server takes time, and when this function over the adapter will be down
             # we cant delete his devices if he is down. so... we sleep a bit
             time.sleep(10)
