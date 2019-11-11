@@ -3301,5 +3301,5 @@ class PluginBase(Configurable, Feature, ABC):
             },
             'getting_started_checklist': {
                 'enabled': False,
-            },
+            }
         }

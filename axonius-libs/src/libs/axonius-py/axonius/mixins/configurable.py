@@ -129,13 +129,12 @@ class Configurable(object):
 
         assert schema_type == 'array'
 
-        if not isinstance(old_data, dict):
-            # in the case where a field changed to a property "old_data" will not be a dict
-            old_data = {}
-
         returned_dict = {}
         items = new_schema['items']
         if isinstance(items, list):
+            if not isinstance(old_data, dict):
+                # in the case where a field changed to a property "old_data" will not be a dict
+                old_data = {}
             for item in items:
                 name = item['name']
                 if name not in old_data:

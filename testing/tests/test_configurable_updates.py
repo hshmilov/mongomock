@@ -243,7 +243,7 @@ def test_files():
     """
     Test that files are surviving
     """
-    schema = {
+    file_schema = {
         'items': [
             {
                 'name': 'x',
@@ -258,8 +258,29 @@ def test_files():
         'uuid': 'blabla'
     }
 
-    processed_data = run_configurable_upgrade(schema,
+    processed_data = run_configurable_upgrade(file_schema,
                                               old_data={'x': some_file},
                                               default_data={'x': None})
     check_dict_subset(processed_data,
                       {'x': some_file})
+
+    file_list_schema = {
+        'name': 'x_files',
+        'type': 'array',
+        'items': {
+            'type': 'file'
+        }
+    }
+
+    processed_data = run_configurable_upgrade(file_schema,
+                                              old_data={'x': [some_file]},
+                                              default_data={'x': []})
+    check_dict_subset(processed_data,
+                      {'x': [some_file]})
+
+    # Test empty state - no files added
+    processed_data = run_configurable_upgrade(file_list_schema,
+                                              old_data={'x': []},
+                                              default_data={'x': []})
+    check_dict_subset(processed_data,
+                      {'x': []})
