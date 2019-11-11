@@ -1050,7 +1050,7 @@ def compare_last_used_users(adapter_device1, adapter_device2):
 
 
 def get_uuid(adapter_device):
-    uuid = adapter_device.get('uuid')
+    uuid = adapter_device['data'].get('uuid')
     if uuid and str(uuid).lower() not in ['none', 'n/a', '0', 'unknown', 'undefined']:
         return uuid.lower()
     return None

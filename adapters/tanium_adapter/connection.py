@@ -1,11 +1,11 @@
 import json
-import time
 import logging
 
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.exception import RESTException
 from tanium_adapter.consts import MAX_DEVICES_COUNT,\
-    CACHE_EXPIRATION, PAGE_SIZE_GET, SLEEP_GET, ENDPOINT_TYPE
+    CACHE_EXPIRATION, PAGE_SIZE_GET, ENDPOINT_TYPE, PAGE_SIZE_DISCOVER,\
+    DISCOVERY_TYPE
 
 
 logger = logging.getLogger(f'axonius.{__name__}')
@@ -76,7 +76,6 @@ class TaniumConnection(RESTConnection):
 
                 row_start += PAGE_SIZE_GET
                 page += 1
-                time.sleep(SLEEP_GET)
             except Exception:
                 logger.exception(f'Problem in the fetch, row is {row_start}')
                 break
@@ -88,6 +87,73 @@ class TaniumConnection(RESTConnection):
             raise RESTException(f'Bad response with no data for endpoint {endpoint}')
         return response['data']
 
-    def get_device_list(self):
+    # pylint: disable=arguments-differ
+    def get_device_list(self, fetch_discovery=False):
         for device_raw in self._get_endpoints():
             yield device_raw, ENDPOINT_TYPE
+        if fetch_discovery:
+            try:
+                for device_raw in self._get_discover_assets():
+                    yield device_raw, DISCOVERY_TYPE
+            except Exception:
+                logger.exception(f'Problem fetching discovery')
+
+    def _get_discover_assets(self):
+        page = 1
+        fetched = 0
+        while True:
+            try:
+                body_params = {
+                    'Id': 'all',
+                    'Name': 'All Interfaces',
+                    'Filter': [],
+                    'Page': {'Size': PAGE_SIZE_DISCOVER, 'Number': page},
+                    'Select': [
+                        {'Field': 'Asset.macaddress'},
+                        {'Field': 'Asset.computerid'},
+                        {'Field': 'Asset.macorganization'},
+                        {'Field': 'Asset.hostname'},
+                        {'Field': 'Asset.ipaddress'},
+                        {'Field': 'Asset.natipaddress'},
+                        {'Field': 'Asset.tags'},
+                        {'Field': 'Asset.os'},
+                        {'Field': 'Asset.osgeneration'},
+                        {'Field': 'Asset.ports'},
+                        {'Field': 'Asset.method'},
+                        {'Field': 'Asset.updatedAt'},
+                        {'Field': 'Asset.createdAt'},
+                        {'Field': 'Asset.lastManagedAt'},
+                        {'Field': 'Asset.lastDiscoveredAt'},
+                        {'Field': 'Asset.unmanageable'},
+                        {'Field': 'Asset.ismanaged'},
+                        {'Field': 'Asset.ignored'},
+                    ],
+                    'KeywordFilter': '',
+                    'CountsOnly': False,
+                    'ManagementCounts': False,
+                }
+
+                response = self._post('plugin/products/discover/report', body_params=body_params)
+                total = response.get('Total') or 0
+                items = response.get('Items')
+                columns = response.get('Columns')
+                if not items or not isinstance(items, list):
+                    logger.error(f'Got bad response with no items: {response}')
+                    break
+                for item in items:
+                    asset = dict(zip(columns, item))
+                    yield asset
+                this_fetched = len(items)
+                fetched += this_fetched
+
+                msg = f'PAGE #{page}: fetched {this_fetched} ({fetched} out of {total} so far) with columns: {columns}'
+                logger.debug(msg)
+
+                if fetched >= min(total, MAX_DEVICES_COUNT):
+                    msg = f'PAGE #{page}: DONE hit rows total'
+                    logger.debug(msg)
+                    break
+                page += 1
+            except Exception:
+                logger.exception(f'Problem with page: {page}')
+                break

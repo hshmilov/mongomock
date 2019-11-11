@@ -131,6 +131,12 @@ def not_saltstack_enterprise_linux(adapter_device):
     return True
 
 
+def is_uuid_adapters(adapter_device):
+    if adapter_device.get('plugin_name') in ['sentinelone_adapter', 'tanium_adapter']:
+        return True
+    return False
+
+
 def get_normalized_ip_or_is_ca_cmdb(adapter_device):
     return get_normalized_ip(adapter_device) or is_ca_cmdb_adapter(adapter_device)
 
@@ -591,6 +597,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
     def _correlate_uuid(self, adapters_to_correlate):
         logger.info('Starting to correlate UUID')
         filtered_adapters_list = filter(get_uuid, adapters_to_correlate)
+        filtered_adapters_list = filter(is_uuid_adapters, filtered_adapters_list)
         return self._bucket_correlate(list(filtered_adapters_list),
                                       [get_uuid],
                                       [compare_uuid],
