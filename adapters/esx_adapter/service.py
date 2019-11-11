@@ -10,7 +10,7 @@ from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
 from axonius.devices.device_adapter import DeviceAdapter, DeviceRunningState
-from axonius.fields import Field
+from axonius.fields import Field, ListField
 from axonius.utils.datetime import parse_date
 from axonius.utils.files import get_local_config_file
 from esx_adapter.vcenter_api import rawify_vcenter_data, vCenterApi
@@ -42,6 +42,10 @@ class EsxAdapter(AdapterBase):
         vm_physical_path = Field(str, 'VM physical path')
         device_type = Field(ESXDeviceType, 'VM type')
         esx_host = Field(str, 'VM ESX Host')
+        hds_total = Field(float, 'Total HDs Size (GB)')
+        vm_path_name = Field(str, 'VM Path Name')
+        consolidation_needed = Field(bool, 'Consolidation Needed')
+        cd_summaries = ListField(str, 'CD/DVD Summaries')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -116,6 +120,7 @@ class EsxAdapter(AdapterBase):
                 device.add_key_value_tag(*tag)
 
         device.name = node.get('Name', '')
+        device.vm_path_name = config.get('vmPathName')
         device.figure_os(config.get('guestFullName', ''))
         try:
             device.id = details['config']['instanceUuid']
@@ -133,11 +138,22 @@ class EsxAdapter(AdapterBase):
         if not device.network_interfaces and 'ipAddress' in guest:
             # if nothing is found in raw.networking this will be used
             device.add_nic('', [guest.get('ipAddress')])
-
+        hds_total = 0
         for hwdevice in details.get('hardware', {}).get('devices', []):
-            if 'macAddress' in hwdevice and hwdevice['macAddress'] not in added_macs:
-                device.add_nic(mac=hwdevice['macAddress'])
-
+            try:
+                if 'macAddress' in hwdevice and hwdevice['macAddress'] not in added_macs:
+                    device.add_nic(mac=hwdevice['macAddress'])
+                elif 'capacityInKB' in hwdevice and isinstance(hwdevice['capacityInKB'], int):
+                    device_name = (hwdevice.get('deviceInfo') or {}).get('label')
+                    total_size = hwdevice['capacityInKB'] / (1024.0 ** 2)
+                    hds_total += total_size
+                    device.add_hd(total_size=total_size, device=device_name)
+                elif 'CD/DVD' in (hwdevice.get('deviceInfo') or {}).get('label') or '':
+                    device.cd_summaries.append((hwdevice.get('deviceInfo') or {}).get('summary'))
+            except Exception:
+                logger.exception(f'Problem with hardware device')
+        if hds_total:
+            device.hds_total = hds_total
         for hwdevice in details.get('hardware_networking', {}):
             device.add_nic(**hwdevice)
 
@@ -153,6 +169,8 @@ class EsxAdapter(AdapterBase):
                 device.last_seen = datetime.datetime.now()
         except Exception:
             logger.exception(f'Problem addding last seen for {details}')
+        if isinstance((details.get('runtime') or {}).get('consolidationNeeded'), bool):
+            device.consolidation_needed = (details.get('runtime') or {}).get('consolidationNeeded')
         boot_time = details.get('runtime', {}).get('bootTime')
         if boot_time is not None:
             device.set_boot_time(boot_time=parse_date(boot_time))
