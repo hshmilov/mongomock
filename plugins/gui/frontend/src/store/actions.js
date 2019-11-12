@@ -378,9 +378,9 @@ export const addDataLabels = ({ state, dispatch }, payload) => {
 	if (!payload.data || !payload.data.entities || !payload.data.labels || !payload.data.labels.length) {
 		return
 	}
-
+	payload.data.filter = moduleState.view.query.filter
 	return dispatch(REQUEST_API, {
-		rule: `${payload.module}/labels?filter=${encodeURIComponent(moduleState.view.query.filter)}`,
+		rule: `${payload.module}/labels`,
 		method: 'POST',
 		data: payload.data,
         type: UPDATE_ADDED_DATA_LABELS,
@@ -395,9 +395,9 @@ export const removeDataLabels = ({ state, dispatch }, payload) => {
 	if (!payload.data || !payload.data.entities || !payload.data.labels || !payload.data.labels.length) {
 		return
 	}
-
+	payload.data.filter = moduleState.view.query.filter
 	return dispatch(REQUEST_API, {
-		rule: `${payload.module}/labels?filter=${encodeURIComponent(moduleState.view.query.filter)}`,
+		rule: `${payload.module}/labels`,
 		method: 'DELETE',
 		data: payload.data,
         type: UPDATE_REMOVED_DATA_LABELS,
