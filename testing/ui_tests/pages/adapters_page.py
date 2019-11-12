@@ -39,6 +39,7 @@ class AdaptersPage(EntitiesPage):
     NEW_CONNECTION_BUTTON_ID = 'new_connection'
     DATA_COLLECTION_TOASTER = 'Connection established. Data collection initiated...'
     TEXT_PROBLEM_CONNECTING_TRY_AGAIN = 'Problem connecting. Review error and try again.'
+    SERVER_ERROR_TEXT_CLASS = '.server-error .error-text'
 
     DELETE_ASSOCIATED_ENTITIES_CHECKBOX_ID = 'deleteEntitiesCheckbox'
     AD_SERVER_SEARCH_FIELD = ('dc_name', 'DC Address')
@@ -260,12 +261,20 @@ class AdaptersPage(EntitiesPage):
         element = self.wait_for_element_present_by_css(f'.status_{status_type} .status_clients-count')
         return element.text
 
+    def find_server_error(self):
+        element = self.driver.find_element_by_css_selector(self.SERVER_ERROR_TEXT_CLASS)
+        return element.text
+
     def get_adapters_table_length(self):
         adapters = self.get_adapter_list()
         return len(adapters)
 
     def click_connected_adapters_filter_switch(self):
         element = self.wait_for_element_present_by_css('.adapters-search .md-switch-thumb')
+        element.click()
+
+    def click_cyberark_button(self):
+        element = self.driver.find_element_by_css_selector('.cyberark-icon .md-icon')
         element.click()
 
     def get_connected_adapters_number_form_switch_label(self):

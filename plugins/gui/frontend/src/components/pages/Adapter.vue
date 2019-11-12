@@ -282,7 +282,7 @@
             valid: true
           }
           if (client.error && client.error !== "" && client.error.startsWith("cyberark_vault_error")) {
-            let result = parseVaultError(client);
+            let result = parseVaultError(client.error);
             this.serverModal.serverData[result[1]].error = result[2]
             this.serverModal.error = result[2]
           }

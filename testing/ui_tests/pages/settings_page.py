@@ -65,6 +65,7 @@ class SettingsPage(Page):
     READ_ONLY_ROLE = 'Read Only User'
     RESTRICTED_ROLE = 'Restricted User'
     USE_PROXY = 'Proxy Enabled'
+    USE_CYBERARK_VAULT = 'Use CyberArk'
     VALUES_COUNT_PER_COLUMN_DROPDOWN_CSS = 'label[for="defaultColumnLimit"]~.x-dropdown.x-select'
     VALUES_COUNT_ENTITIES_PER_PAGE_CSS = 'label[for="defaultNumOfEntitiesPerPage"]~.x-dropdown.x-select'
     SAFEGUARD_REMOVE_BUTTON_TEXT = 'Remove Role'
@@ -551,8 +552,24 @@ class SettingsPage(Page):
         toggle = self.find_checkbox_by_label(self.USE_PROXY)
         self.click_toggle_button(toggle, make_yes=make_yes, scroll_to_toggle=False)
 
+    def set_cyberark_vault_settings_enabled(self, make_yes=True):
+        toggle = self.find_checkbox_by_label(self.USE_CYBERARK_VAULT)
+        self.click_toggle_button(toggle, make_yes=make_yes, scroll_to_toggle=False)
+
     def fill_proxy_address(self, proxy_addr):
         self.fill_text_field_by_element_id('proxy_addr', proxy_addr)
+
+    def fill_cyberark_domain_address(self, domain_addr):
+        self.fill_text_field_by_element_id('domain', domain_addr)
+
+    def fill_cyberark_port(self, port):
+        self.fill_text_field_by_element_id('port', port)
+
+    def fill_cyberark_application_id(self, application_id):
+        self.fill_text_field_by_element_id('application_id', application_id)
+
+    def fill_cyberark_cert_key(self, cert_file_content):
+        self.upload_file_by_id('certificate_key', cert_file_content, is_bytes=True)
 
     def fill_proxy_port(self, port):
         self.fill_text_field_by_element_id('proxy_port', port)

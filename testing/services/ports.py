@@ -3,6 +3,7 @@ DOCKER_PORTS = {
     'maildiranasaurus':                 26,
     'gui':                              443,
     'mockingbird':                      1443,
+    'cyberark_vault_simulator':         1337,
     'selenium-hub':                     4444,
     'mongo-slave':                      4455,
     'execution':                        4999,

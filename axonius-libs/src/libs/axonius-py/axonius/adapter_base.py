@@ -1139,7 +1139,7 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
             _raw_data = func_timeout.func_timeout(
                 timeout=timeout,
                 func=call_raw_as_stoppable,
-                args=(client_id, self._clients[client_id]))
+                args=(client_id, self.__connect_client_facade(self._get_client_config_by_client_id(client_id))))
             logger.info('Got raw')
 
             # maxsize=3000 means we won't hold more than 3k devices in memory

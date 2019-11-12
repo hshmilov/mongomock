@@ -2969,7 +2969,7 @@ class PluginBase(Configurable, Feature, ABC):
                 },
                 {
                     'type': 'array',
-                    'title': 'Vault Settings',
+                    'title': 'CyberArk Setting',
                     'name': 'vault_settings',
                     'required': ['enabled', 'domain',
                                  'application_id', 'certificate_key', 'port'],

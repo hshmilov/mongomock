@@ -115,7 +115,7 @@
                 }).catch((recievedError) => {
                     this.success = false
                     let result = parseVaultError(recievedError.response.data.message)
-                    // this.validate(true)
+                    this.validate(true)
                     this.error = result[2]
                 }).finally(() => {
                     this.loading = false
@@ -133,7 +133,7 @@
                 this.input()
             },
             checkData () {
-                return this.success || this.schema.required
+                return this.success || !this.schema.required
             }
         },
         mounted() {
