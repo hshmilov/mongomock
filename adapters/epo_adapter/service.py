@@ -87,6 +87,7 @@ class EpoAdapter(AdapterBase):
         node_name = Field(str, 'Node Name')
         epo_tags = ListField(str, 'EPO Tags')
         epo_host = Field(str, 'EPO Host')
+        node_text_path = Field(str, 'Node Text Path')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -220,6 +221,7 @@ class EpoAdapter(AdapterBase):
                 if isinstance(device_raw.get('EPOLeafNode.Tags'), str):
                     device.epo_tags = [epo_tag.strip() for epo_tag in (
                         device_raw.get('EPOLeafNode.Tags') or '').split(',') if epo_tag.strip()]
+                device.node_text_path = device_raw.get('EPOBranchNode.NodeTextPath')
             except Exception:
                 logger.exception("Couldn't set some epo info")
             if len(str(device_raw)) < 1000000:
