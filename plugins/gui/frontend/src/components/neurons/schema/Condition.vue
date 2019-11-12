@@ -236,7 +236,7 @@
         if (newSchema.type !== oldSchema.type || newSchema.format !== oldSchema.format) {
           this.value = null
         }
-        if (newSchema.enum && !newSchema.enum.find(item => (item.name || item) === this.value)) {
+        if (newSchema.enum && !this.schemaEnumFind(newSchema)) {
           this.value = null
         }
       }
@@ -245,6 +245,16 @@
       updateCondition (update) {
         this.$emit('input', { ...this.condition, ...update })
         this.$nextTick(this.compileCondition)
+      },
+      schemaEnumFind (schema) {
+        return schema.enum.find((item, index) => {
+          if(schema.type === 'integer' && isNaN(item)) {
+            return index+1 === this.value 
+          }
+          else {
+            return (item.name || item) === this.value
+          }
+        })
       },
       checkShowValue (op) {
         return this.fieldSchema && (this.fieldSchema.format === 'predefined' ||
@@ -372,10 +382,9 @@
           }
         }
         if (this.fieldSchema.enum && this.fieldSchema.enum.length && this.value) {
-          let exists = this.fieldSchema.enum.filter((item) => {
-            return (item.name) ? (item.name === this.value) : item === this.value
-          })
-          if (!exists || !exists.length) return 'Specify a valid value for enum field'
+          if (!this.schemaEnumFind(this.fieldSchema)) {
+            return 'Specify a valid value for enum field'
+          }
         }
         return ''
       },

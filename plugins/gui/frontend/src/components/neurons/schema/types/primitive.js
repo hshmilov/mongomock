@@ -27,8 +27,13 @@ export default {
 	computed: {
 		enumOptions() {
 			if (!this.schema.enum) return undefined
-			return this.schema.enum.map((item) => {
-				if (typeof item !== 'string' && item.name) return item
+			return this.schema.enum.map((item, index) => {
+				if (this.schema.type === 'integer' && isNaN(item)) {
+					return {name: index+1, title:item}
+				}
+				if (typeof item !== 'string' && item.name) {
+					return item
+				}
 				return {name: item, title: String(item)}
 			})
 		}
