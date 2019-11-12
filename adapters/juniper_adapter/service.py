@@ -8,6 +8,7 @@ from juniper_adapter.client import JuniperClient
 from axonius.clients.juniper import rpc
 from axonius.clients.juniper.device import create_device, JuniperDeviceAdapter, update_connected
 from axonius.adapter_base import AdapterBase, AdapterProperty
+from axonius.mixins.configurable import Configurable
 from axonius.adapter_exceptions import AdapterException, ClientConnectionException
 from axonius.utils.files import get_local_config_file
 from axonius.utils.xml2json_parser import Xml2Json
@@ -15,7 +16,7 @@ from axonius.utils.xml2json_parser import Xml2Json
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
-class JuniperAdapter(AdapterBase):
+class JuniperAdapter(AdapterBase, Configurable):
     """
     Connects axonius to Juniper devices
     """
@@ -100,7 +101,8 @@ class JuniperAdapter(AdapterBase):
     def _query_devices_by_client(self, client_name, client_data):
         assert isinstance(client_data, JuniperClient)
         try:
-            return client_data.get_all_devices()
+            return client_data.get_all_devices(fetch_space_only=self.__fetch_space_only,
+                                               do_async=self.__do_async)
         except Exception:
             logger.exception(f'Failed to get all the devices from the client: {client_data[consts.JUNIPER_HOST]}')
             raise AdapterException(f'Failed to get all the devices from the client: {client_data[consts.JUNIPER_HOST]}')
@@ -125,3 +127,37 @@ class JuniperAdapter(AdapterBase):
     @classmethod
     def adapter_properties(cls):
         return [AdapterProperty.Network]
+
+    @classmethod
+    def _db_config_schema(cls) -> dict:
+        return {
+            'items': [
+                {
+                    'name': 'do_async',
+                    'title': 'Do Requests Async',
+                    'type': 'bool'
+                },
+                {
+                    'name': 'fetch_space_only',
+                    'title': 'Fetch Junos Space Juniper Devices Only',
+                    'type': 'bool'
+                }
+            ],
+            'required': [
+                'do_async',
+                'fetch_space_only'
+            ],
+            'pretty_name': 'Junos Space Configuration',
+            'type': 'array'
+        }
+
+    @classmethod
+    def _db_config_default(cls):
+        return {
+            'do_async': True,
+            'fetch_space_only': False
+        }
+
+    def _on_config_update(self, config):
+        self.__do_async = config['do_async']
+        self.__fetch_space_only = config['fetch_space_only']
