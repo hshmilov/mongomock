@@ -756,3 +756,26 @@ class TestDevicesQuery(TestBase):
         self.devices_page.enter_search()
         wait_until(lambda: '> 1000' in self.devices_page.get_raw_count_entities())
         assert self.devices_page.count_entities() == devices_count
+
+    def test_adapters_filter_all_vs_clear_selection(self):
+        self.settings_page.switch_to_page()
+        self.base_page.run_discovery()
+        self.devices_page.switch_to_page()
+        self.devices_page.click_query_wizard()
+        expressions = self.devices_page.find_expressions()
+        assert len(expressions) == 1
+        self.devices_page.select_query_field(self.devices_page.FIELD_HOSTNAME_TITLE, parent=expressions[0])
+        self.devices_page.select_query_comp_op(self.devices_page.QUERY_COMP_EXISTS, parent=expressions[0])
+        self.devices_page.wait_for_spinner_to_end()
+        self.devices_page.wait_for_table_to_load()
+        results_count = self.devices_page.count_entities()
+        self.devices_page.click_on_clear_all_filter_adapters(parent=expressions[0])
+        self.devices_page.wait_for_spinner_to_end()
+        self.devices_page.wait_for_table_to_load()
+        query = self.devices_page.find_query_search_input()
+        assert results_count == self.devices_page.count_entities()
+        self.devices_page.click_on_select_all_filter_adapters(parent=expressions[0])
+        self.devices_page.wait_for_spinner_to_end()
+        self.devices_page.wait_for_table_to_load()
+        assert results_count == self.devices_page.count_entities()
+        assert query == self.devices_page.find_query_search_input()
