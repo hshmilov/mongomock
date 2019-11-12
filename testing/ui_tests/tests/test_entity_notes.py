@@ -41,6 +41,8 @@ class TestEntityNotes(TestBase):
         self.login_page.switch_user(self.username, self.password)
 
     def _test_notes_permissions(self, entities_page):
+        entities_page.switch_to_page()
+        entities_page.refresh()
         entities_page.load_notes()
         entities_page.create_note(self.NOTE_1_TEXT)
         self.login_page.switch_user(ui_consts.NOTES_USERNAME, ui_consts.NEW_PASSWORD)
