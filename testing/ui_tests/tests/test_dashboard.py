@@ -4,11 +4,11 @@ from math import ceil
 import pytest
 import requests
 from selenium.common.exceptions import NoSuchElementException
-
+from services.axon_service import TimeoutException
+from services.adapters import stresstest_service
 from axonius.consts.gui_consts import (DASHBOARD_SPACE_DEFAULT,
                                        DASHBOARD_SPACE_PERSONAL)
 from axonius.utils.wait import wait_until
-from services.adapters import stresstest_service
 from ui_tests.tests.ui_consts import (READ_WRITE_USERNAME, READ_ONLY_USERNAME, NEW_PASSWORD,
                                       FIRST_NAME, LAST_NAME, JSON_ADAPTER_NAME)
 from ui_tests.tests.ui_test_base import TestBase
@@ -46,7 +46,7 @@ class TestDashboard(TestBase):
     CUSTOM_SPACE_PANEL_NAME = 'Segment OS'
     PERSONAL_SPACE_PANEL_NAME = 'Private Segment OS'
     NON_EMPTY_TABLE_ROWS = '.x-table tbody tr[id]'
-
+    EMPTY_TABLE_ROWS = '.x-table tbody tr:not([id])'
     TEST_EMPTY_TITLE = 'test empty'
     FIRST_LIFECYCLE_STAGE_TEXT = 'Fetch Devices...'
     LIFECYCLE_ADAPTER_FETCHING_STATUS = 'Fetching...'
@@ -723,6 +723,32 @@ class TestDashboard(TestBase):
         # verify card config reset
         self.dashboard_page.verify_card_config_reset_intersection_chart(self.TEST_INTERSECTION_TITLE)
         self.dashboard_page.remove_card(self.TEST_INTERSECTION_TITLE)
+
+    def _test_query_default_chart(self, default_chart, table_state):
+        self.devices_queries_page.switch_to_page()
+        self.devices_page.wait_for_spinner_to_end()
+        self.devices_queries_page.fill_enter_table_search(default_chart['query_name'])
+        windows_query_row = self.devices_queries_page.find_query_row_by_name(default_chart['query_name'])
+        self.devices_page.wait_for_spinner_to_end()
+        windows_query_row.click()
+        assert 'devices' in self.driver.current_url and 'query' not in self.driver.current_url
+        self.devices_page.wait_for_spinner_to_end()
+        self.driver.find_element_by_css_selector(table_state)
+        self.dashboard_page.switch_to_page()
+
+    def test_default_charts_with_no_results_are_not_shown(self):
+        self.dashboard_page.switch_to_page()
+        self.base_page.run_discovery()
+        default_charts_meta = [{'title': self.dashboard_page.MANAGED_DEVICE_COVERAGE, 'query_name': 'Managed Devices'},
+                               {'title': self.dashboard_page.VA_SCANNER_COVERAGE, 'query_name': 'Scanned By VA'},
+                               {'title': self.dashboard_page.ENDPOINT_PROTECTION_COVERAGE, 'query_name':
+                                'Protected Endpoint'}]
+        for default_chart in default_charts_meta:
+            try:
+                self.dashboard_page.get_card(default_chart['title'])
+                self._test_query_default_chart(default_chart, self.NON_EMPTY_TABLE_ROWS)
+            except (TimeoutException, NoSuchElementException):
+                self._test_query_default_chart(default_chart, self.EMPTY_TABLE_ROWS)
 
     def test_dashboard_lifecycle_tooltip(self):
         stress = stresstest_service.StresstestService()

@@ -14,6 +14,8 @@ class DashboardPage(Page):
     SHOW_ME_HOW = 'SHOW ME HOW'
     CONGRATULATIONS = 'Congratulations! You are one step closer to'
     MANAGED_DEVICE_COVERAGE = 'Managed Device Coverage'
+    VA_SCANNER_COVERAGE = 'VA Scanner Coverage'
+    ENDPOINT_PROTECTION_COVERAGE = 'Endpoint Protection Coverage'
     SYSTEM_LIFECYCLE = 'System Lifecycle'
     NEW_CHART = 'New Chart'
     DEVICE_DISCOVERY = 'Device Discovery'
@@ -99,6 +101,10 @@ class DashboardPage(Page):
     def find_managed_device_coverage_card(self):
         return self.driver.find_element_by_xpath(
             self.PANEL_BY_NAME_XPATH.format(panel_name=self.MANAGED_DEVICE_COVERAGE))
+
+    def find_dashboard_card(self, title):
+        return self.driver.find_element_by_xpath(
+            self.PANEL_BY_NAME_XPATH.format(panel_name=title))
 
     def get_lifecycle_tooltip(self):
         return self.driver.find_element_by_css_selector(self.LIFECYCLE_TOOLTIP_CSS)
