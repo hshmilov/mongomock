@@ -25,6 +25,7 @@
       <md-list class="md-scrollbar">
         <md-list-item v-for="item in milestones" :key="item.id">
           <x-milestone
+            :data-name="item.name"
             :completed="item.completed"
             :title="item.title"
             :description="item.description"

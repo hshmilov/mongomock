@@ -1182,16 +1182,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
             }
         })
 
-        connected_user_id = gui_helpers.get_connected_user_id()
-
-        if auto_open:
-            log_metric(logger, GettingStartedMetric.AUTO_OPEN_SETTING_ENABLED, metric_value={
-                'user_id': connected_user_id
-            })
-        else:
-            log_metric(logger, GettingStartedMetric.AUTO_OPEN_SETTING_DISABLED, metric_value={
-                'user_id': connected_user_id
-            })
+        log_metric(logger, GettingStartedMetric.AUTO_OPEN_SETTING, metric_value=auto_open)
 
         return ''
 
@@ -2704,16 +2695,8 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
             getting_started_conf = config_to_set.get(GETTING_STARTED_CHECKLIST_SETTING)
             getting_started_feature_enabled = getting_started_conf.get('enabled')
 
-            user_id = gui_helpers.get_connected_user_id()
-
-            if getting_started_feature_enabled:
-                log_metric(logger, GettingStartedMetric.FEATURE_ENABLED_SETTING_ENABLED, metric_value={
-                    'user_id': user_id
-                })
-            else:
-                log_metric(logger, GettingStartedMetric.FEATURE_ENABLED_SETTING_DISABLED, metric_value={
-                    'user_id': user_id
-                })
+            log_metric(logger, GettingStartedMetric.FEATURE_ENABLED_SETTING,
+                       metric_value=getting_started_feature_enabled)
 
         self._update_plugin_config(plugin_name, config_name, config_to_set)
         self._adapters.clean_cache()

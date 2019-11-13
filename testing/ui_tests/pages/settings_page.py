@@ -18,6 +18,7 @@ class SettingsPage(Page):
     FEATURE_FLAGS_CSS = 'li#feature-flags-tab'
     ABOUT_CSS = 'li#about-settings-tab'
     SEND_EMAILS_LABEL = 'Send Emails'
+    GETTING_STARTED_LABEL = 'Enable Getting Started with Axonius Checklist'
     GLOBAL_SSL_LABEL = 'Override Default SSL Settings'
     REMOTE_SUPPORT_LABEL_OLD = 'Remote Support - Warning: turning off this feature prevents Axonius from' \
                                '                             updating the system and can lead' \
@@ -231,6 +232,9 @@ class SettingsPage(Page):
 
     def find_send_emails_toggle(self):
         return self.find_checkbox_by_label(self.SEND_EMAILS_LABEL)
+
+    def find_getting_started_toggle(self):
+        return self.find_checkbox_by_label(self.GETTING_STARTED_LABEL)
 
     def open_global_ssl_toggle(self, make_yes=True):
         toggle = self.find_checkbox_by_label(self.GLOBAL_SSL_LABEL)
@@ -620,8 +624,31 @@ class SettingsPage(Page):
         self.click_toggle_button(self.find_send_emails_toggle(), make_yes=False, scroll_to_toggle=False)
         self.save_and_wait_for_toaster()
 
+    def toggle_getting_started(self, status=True):
+        self.switch_to_page()
+        self.click_global_settings()
+        self.click_toggle_button(self.find_getting_started_toggle(),
+                                 make_yes=status,
+                                 scroll_to_toggle=True,
+                                 window=self.TABS_BODY_CSS)
+        self.save_and_wait_for_toaster()
+
     def get_role_select_placeholder(self):
         return self.driver.find_element_by_css_selector(self.ROLE_PLACEHOLDER_CSS).text
+
+    def disable_getting_started_feature(self):
+        """
+        Navigates to settings page, click the 'Global Settings' tab and uncheck
+        the Getting Started checkbox
+        """
+        self.toggle_getting_started(status=False)
+
+    def enable_getting_started_feature(self):
+        """
+        Navigates to settings page, click the 'Global Settings' tab and check
+        the Getting Started checkbox
+        """
+        self.toggle_getting_started(status=True)
 
     def enable_custom_ca(self, make_yes=True):
         label = self.driver.find_element_by_xpath(self.CA_CERTIFICATE_ENABLED).text

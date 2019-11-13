@@ -21,8 +21,8 @@ from services.weave_service import WeaveService
 # If the replicaSet is specified here, then the machine will try to access the
 # endpoints specified in that replicaSet, which are only accessible from within the
 # docker network, and thus, inaccessible to the context this code is running from.
-connection_line = "mongodb://{user}:{password}@{addr}:{port}".format(user="ax_user",
-                                                                     password="ax_pass",
+connection_line = 'mongodb://{user}:{password}@{addr}:{port}'.format(user='ax_user',
+                                                                     password='ax_pass',
                                                                      addr='localhost',
                                                                      port=27017)
 
@@ -66,7 +66,7 @@ class MongoService(WeaveService):
 
     @retry(stop_max_attempt_number=3, wait_fixed=5)
     def configure_replica_set(self):
-        self.run_command_in_container("mongo /docker-entrypoint-initdb.d/configure_replica_set.js")
+        self.run_command_in_container('mongo /docker-entrypoint-initdb.d/configure_replica_set.js')
 
     def deprecate_a_leftover_db(self, plugin_unique_name: str):
         admin_db = self.client['admin']
@@ -282,7 +282,10 @@ class MongoService(WeaveService):
             return False
         return getting_started_doc.get('settings', {}).get('autoOpen', False)
 
+    def core_configurable_config_collection(self):
+        return self.client[CORE_UNIQUE_NAME][CONFIGURABLE_CONFIGS_COLLECTION]
+
     def core_settings_getting_started(self):
-        config = self.client[CORE_UNIQUE_NAME][CONFIGURABLE_CONFIGS_COLLECTION].find_one(
+        config = self.core_configurable_config_collection().find_one(
             {'config_name': CORE_CONFIG_NAME}).get('config', {})
         return config.get(GETTING_STARTED_CHECKLIST_SETTING, {}).get('enabled', False)

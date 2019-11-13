@@ -186,7 +186,7 @@ export default {
         if (this.isUserAdmin) {
           this.fetchGettingStartedData().then(() => {
             if(this.justLoggedIn) {
-              this.open = this.gettingStartedAutoOpen
+              this.open = this.gettingStartedAutoOpen && this.gettingStartedEnabled
             }
           })
         }

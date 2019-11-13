@@ -1,6 +1,7 @@
 import logging
 import os
 import time
+from enum import Enum
 import urllib.parse
 from tempfile import NamedTemporaryFile
 
@@ -14,6 +15,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 
 from axonius.utils.parsing import normalize_timezone_date
+from axonius.utils.wait import wait_until
 from services.axon_service import TimeoutException
 from ui_tests.tests.ui_consts import TEMP_FILE_PREFIX
 
@@ -71,6 +73,21 @@ TOASTER_BY_TEXT_XPATH = '//div[@class=\'x-toast\']//div[@class=\'content\' and t
 TABLE_SPINNER_NOT_DISPLAYED_XPATH = '//div[@class=\'v-spinner\' and @style=\'display: none;\']'
 RETRY_WAIT_FOR_ELEMENT = 150
 SLEEP_INTERVAL = 0.2
+
+
+class Milestones(Enum):
+    connect_adapters = 'Connect adapters'
+    examine_device = 'Examine a device profile'
+    query_saved = 'Save a query'
+    device_tag = 'Tag a device'
+    enforcement_executed = 'Create and execute an enforcement set'
+    dashboard_created = 'Create a dashboard chart'
+    report_generated = 'Generate a report'
+
+
+class MilestoneActionButton(Enum):
+    COMPLETED = 'Completed'
+    NOT_COMPLETED = 'Let\'s Do It'
 
 
 class TableRow:
@@ -149,6 +166,12 @@ class Page:
     CUSTOM_DATA_SEARCH_INPUT = '.body .x-tabs.vertical .body .x-tab.active .x-search-input input'
     TABLE_PAGE_SIZE_ACTIVE_XPATH = '//div[@class=\'x-pagination\']/div[@class=\'x-sizes\']' \
                                    '/div[@class=\'x-link active\']'
+
+    # Getting Started consts:
+    GAUGE_PROGRESS_STATE_CSS = '.gauge-state'
+    COMPLETION_MSG_CSS = '.x-getting-started_completion'
+    GETTING_STARTED_PANEL_OVERLAY_CSS = '.md-overlay'
+    GETTING_STARTED_FAB_CSS = '#getting-started-fab'
 
     def __init__(self, driver, base_url, test_base, local_browser: bool):
         self.driver = driver
@@ -495,6 +518,11 @@ class Page:
             element = self.driver
         return element.find_elements(by=By.XPATH, value=xpath)
 
+    def find_element_by_xpath(self, xpath, element=None):
+        if not element:
+            element = self.driver
+        return element.find_element(by=By.XPATH, value=xpath)
+
     def find_chips_by_label(self, label_text):
         xpath = self.CHIPS_WITH_LABEL_XPATH.format(label_text=label_text)
         return self.driver.find_element_by_xpath(xpath)
@@ -817,3 +845,40 @@ class Page:
 
     def click_getting_started_overlay(self):
         self.wait_for_element_present_by_css('.md-overlay').click()
+        self.wait_for_element_absent_by_css('.md-overlay')
+
+    def open_getting_started_panel(self):
+        """
+        Click the getting-started FAB and open the right panel
+        """
+        fab = self.get_getting_started_fab()
+        fab.click()
+        self.wait_for_element_present_by_css(self.GETTING_STARTED_PANEL_OVERLAY_CSS)
+
+    @staticmethod
+    def get_milestone_status_completed_xpath_by_name(name):
+        """
+        get the xpath for the success icon element of a specific milestone,
+        by passing it's name.
+
+        :param name: the name of the milestone
+        :return: xpath to the success icon element
+        """
+        return f'//div[@data-name=\'{name}\']/span' \
+            f'[contains(@class, \'x-milestone-status\')]/i[contains(@class, \'x-milestone-status--completed\')]'
+
+    def assert_milestone_completed(self, milestone_name):
+        def _check_milestone():
+            xpath = self.get_milestone_status_completed_xpath_by_name(milestone_name)
+            self.open_getting_started_panel()
+            el = self.find_element_by_xpath(xpath)
+            self.click_getting_started_overlay()
+            return el
+
+        wait_until(_check_milestone, tolerated_exceptions_list=[NoSuchElementException])
+
+    def get_getting_started_fab(self):
+        return self.wait_for_element_present_by_css(self.GETTING_STARTED_FAB_CSS)
+
+    def getting_started_completion(self):
+        return self.wait_for_element_present_by_css('.completion_info')

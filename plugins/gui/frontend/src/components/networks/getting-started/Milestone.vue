@@ -1,7 +1,7 @@
 <template>
   <div class="x-milestone">
     <span v-if="interactive" class="x-milestone-status">
-      <md-icon v-if="completed" style="color: #0FBC18;">check_circle</md-icon>
+      <md-icon v-if="completed" class="x-milestone-status--completed" style="color: #0FBC18;">check_circle</md-icon>
       <md-icon v-else style="color: #efefef;">radio_button_unchecked</md-icon>
     </span>
     <div class="x-miestone_container">
