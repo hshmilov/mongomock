@@ -35,7 +35,8 @@ class OktaAdapter(AdapterBase, Configurable):
 
     def _connect_client(self, client_config):
         connection = OktaConnection(url=client_config['url'],
-                                    api_key=client_config['api_key'])
+                                    api_key=client_config['api_key'],
+                                    https_proxy=client_config.get('https_proxy'))
         try:
             connection.is_alive()
         except Exception as e:
@@ -62,6 +63,12 @@ class OktaAdapter(AdapterBase, Configurable):
                     'type': 'string',
                     'format': 'password'
                 },
+                {
+                    'name': 'https_proxy',
+                    'title': 'HTTPS Proxy',
+                    'type': 'string'
+                }
+
             ],
             'required': [
                 'url',

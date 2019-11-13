@@ -20,11 +20,12 @@ DEFAULT_SLEEP_TIME = 60
 
 
 class OktaConnection:
-    def __init__(self, url: str, api_key: str):
+    def __init__(self, url: str, api_key: str, https_proxy: str):
         url = RESTConnection.build_url(url).strip('/')
         self.__base_url = url
         self.__api_key = api_key
         self.__parallel_requests = PARALLEL_REQUESTS_DEFAULT
+        self.__https_proxy = https_proxy
 
     # pylint: disable=W0102
     def __make_request(self, api='', params={}, forced_url=None):
@@ -40,11 +41,12 @@ class OktaConnection:
         headers = {
             'Authorization': f'SSWS {self.__api_key}'
         }
-        response = requests.get(forced_url or uritools.urijoin(self.__base_url, api), params=params, headers=headers)
+        response = requests.get(forced_url or uritools.urijoin(self.__base_url, api), params=params,
+                                headers=headers, proxies={'https': self.__https_proxy})
         if response.status_code == 429:
             time.sleep(DEFAULT_SLEEP_TIME)
             response = requests.get(forced_url or uritools.urijoin(self.__base_url, api), params=params,
-                                    headers=headers)
+                                    headers=headers, proxies={'https': self.__https_proxy})
         response.raise_for_status()
         return response
 
@@ -67,6 +69,7 @@ class OktaConnection:
         logger.info(f'Got 429 response, waiting for {DEFAULT_SLEEP_TIME} seconds.')
         await asyncio.sleep(DEFAULT_SLEEP_TIME)
 
+    # pylint: disable=too-many-branches, too-many-statements, too-many-locals, too-many-nested-blocks
     def _get_extra_data_async(self, items_page, url_suffix, raw_param):
         aio_requests = []
         aio_ids = []
@@ -83,6 +86,15 @@ class OktaConnection:
             aio_req['timeout'] = (5, 30)
 
             aio_req['headers'] = {'Authorization': f'SSWS {self.__api_key}'}
+            if self.__https_proxy:
+                aio_req['proxy'] = self.__https_proxy
+                https_prefix = 'https://'
+                http_prefix = 'http://'
+                if aio_req['proxy'].startswith(https_prefix):
+                    aio_req['proxy'] = aio_req['proxy'][len(https_prefix):]
+
+                if not aio_req['proxy'].startswith(http_prefix):
+                    aio_req['proxy'] = http_prefix + aio_req['proxy']
             aio_requests.append(aio_req)
             aio_ids.append(i)
 
