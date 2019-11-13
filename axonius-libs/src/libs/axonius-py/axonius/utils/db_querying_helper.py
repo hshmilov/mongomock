@@ -1,12 +1,11 @@
 import logging
 from collections import defaultdict
 from datetime import datetime
-from typing import Iterable, Dict
+from typing import Iterable, Dict, Iterator
 
 from funcy import chunks
 import pymongo
 from pymongo.errors import PyMongoError
-from retry.api import retry_call
 
 from axonius.utils.get_plugin_base_instance import plugin_base_instance
 from axonius.consts.plugin_consts import ADAPTERS_LIST_LENGTH
@@ -52,7 +51,7 @@ def _normalize_db_projection_for_aggregation(projection: Dict[str, int]):
 def _perform_aggregation(entity_views_db,
                          limit, skip, view_filter, sort,
                          projection, entity_type,
-                         default_sort):
+                         default_sort) -> Iterator[dict]:
     """
     Performs the required query on the DB using the aggregation method.
     This method is more reliable as it allows for the DB to use the disk by it is much slower in most cases.
@@ -79,17 +78,13 @@ def _perform_aggregation(entity_views_db,
     # This allows bypassing a memory overflow occurring in Mongo
     # https://stackoverflow.com/questions/27023622/overflow-sort-stage-buffered-data-usage-exceeds-internal-limit
     # This should be used as a last resort when all other methods have failed
-    def aggregate_list():
-        return list(entity_views_db.aggregate(pipeline, allowDiskUse=True))
-
-    # The reason for the retry is https://jira.mongodb.org/browse/SERVER-36737
-    return retry_call(aggregate_list, tries=5)
+    return entity_views_db.aggregate(pipeline, allowDiskUse=True)
 
 
 def _perform_find(entity_views_db,
                   limit, skip, view_filter, sort,
                   projection, entity_type,
-                  default_sort):
+                  default_sort) -> Iterator[dict]:
     """
     Tries to perform the given query using the 'find' method on mongo
     For parameter info see get_entities
@@ -101,12 +96,11 @@ def _perform_find(entity_views_db,
         if default_sort:
             # Default sort by adapters list size and then Mongo id (giving order of insertion)
             find_sort.append((ADAPTERS_LIST_LENGTH, pymongo.DESCENDING))
-    return list(
-        entity_views_db.find(filter=view_filter,
-                             sort=find_sort,
-                             projection=projection,
-                             limit=limit,
-                             skip=skip))
+    return entity_views_db.find(filter=view_filter,
+                                sort=find_sort,
+                                projection=projection,
+                                limit=limit,
+                                skip=skip)
 
 
 def _get_entities_raw(entity_type: EntityType,
@@ -116,7 +110,7 @@ def _get_entities_raw(entity_type: EntityType,
                       skip: int = None,
                       sort: dict = None,
                       default_sort: bool = False,
-                      history_date: datetime = None) -> Iterable[dict]:
+                      history_date: datetime = None) -> Iterator[dict]:
     """
     See get_entities for explanation of the parameters
     """
@@ -127,22 +121,21 @@ def _get_entities_raw(entity_type: EntityType,
     entity_views_db = plugin_base_instance().get_appropriate_view(history_date, entity_type)
 
     try:
-        data_list = _perform_find(entity_views_db, limit, skip, view_filter, sort, db_projection, entity_type,
-                                  default_sort)
+        yield from _perform_find(entity_views_db, limit, skip, view_filter, sort, db_projection, entity_type,
+                                 default_sort)
     except PyMongoError:
         try:
             logger.warning('Find couldn\'t handle the weight! Going to slow path')
-            data_list = _perform_aggregation(entity_views_db,
-                                             limit, skip, view_filter, sort,
-                                             db_projection, entity_type,
-                                             default_sort)
+            yield from _perform_aggregation(entity_views_db,
+                                            limit, skip, view_filter, sort,
+                                            db_projection, entity_type,
+                                            default_sort)
         except Exception:
             logger.exception('Exception when using perform aggregation')
             raise
     except Exception:
         logger.exception('Exception when using perform find')
         raise
-    return data_list
 
 
 def convert_entities_to_frontend_entities(data_list: Iterable[dict],
@@ -176,7 +169,7 @@ def get_entities(limit: int, skip: int,
                  history_date: datetime = None,
                  ignore_errors: bool = False,
                  include_details: bool = False,
-                 field_filters: dict = None) -> Iterable[dict]:
+                 field_filters: dict = None) -> Iterator[dict]:
     """
     Get Axonius data of type <entity_type>, from the aggregator which is expected to store them.
     :param limit: the max amount of entities to return
@@ -217,7 +210,7 @@ def perform_axonius_query(entity: EntityType,
                           projection: dict = None,
                           skip: int = 0,
                           limit: int = 0,
-                          sort: dict = None) -> Iterable[dict]:
+                          sort: dict = None) -> Iterator[dict]:
     """
     Performs an axonius query language query on the DB
     :param entity: The entity type
@@ -251,7 +244,7 @@ def iterate_axonius_entities(entity: EntityType,
         }, **kwargs)
 
 
-def perform_saved_view(entity: EntityType, saved_view: dict, **kwargs) -> Iterable[dict]:
+def perform_saved_view(entity: EntityType, saved_view: dict, **kwargs) -> Iterator[dict]:
     """
     Performs a saved view on the DB
     :param entity: The entity type
@@ -270,7 +263,7 @@ def perform_saved_view_converted(entity: EntityType,
                                  saved_view: dict,
                                  projection: dict = None,
                                  run_over_projection: bool = True,
-                                 **kwargs) -> Iterable[dict]:
+                                 **kwargs) -> Iterator[dict]:
     """
     Performs a saved view on the DB and converts the entities to GUI like form
     :param entity: The entity type

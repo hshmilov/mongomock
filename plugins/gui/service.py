@@ -118,6 +118,7 @@ from axonius.utils.gui_helpers import (Permission, PermissionLevel,
                                        deserialize_db_permissions,
                                        get_entity_labels, entity_fields, get_connected_user_id,
                                        find_filter_by_name)
+from axonius.utils.json_encoders import iterator_jsonify
 from axonius.utils.metric import remove_ids
 from axonius.utils.mongo_administration import (get_collection_capped_size,
                                                 get_collection_stats)
@@ -148,7 +149,6 @@ from gui.gui_logic.views_data import get_views, get_views_count
 from gui.gui_logic.users_helper import beautify_user_entry
 from gui.okta_login import OidcData, try_connecting_using_okta
 from gui.report_generator import ReportGenerator
-
 # pylint: disable=line-too-long,superfluous-parens,too-many-statements,too-many-lines,too-many-locals,too-many-branches,keyword-arg-before-vararg,invalid-name,too-many-instance-attributes,inconsistent-return-statements,no-self-use,inconsistent-return-statements,no-else-return,no-self-use,unnecessary-pass,useless-return,cell-var-from-loop,logging-not-lazy,singleton-comparison,redefined-builtin,comparison-with-callable,too-many-return-statements,too-many-boolean-expressions,logging-format-interpolation,fixme,no-member
 
 logger = logging.getLogger(f'axonius.{__name__}')
@@ -1198,7 +1198,6 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
     ##########
     # DEVICE #
     ##########
-
     @gui_helpers.historical()
     @gui_helpers.paginated()
     @gui_helpers.filtered_entities()
@@ -1212,11 +1211,12 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
             return self.__delete_entities_by_internal_axon_id(
                 EntityType.Devices, self.get_request_data_as_object(), mongo_filter)
         self._save_query_to_history(EntityType.Devices, mongo_filter, skip, limit, mongo_sort, mongo_projection)
-        return jsonify(get_entities(limit, skip, mongo_filter, mongo_sort, mongo_projection,
-                                    EntityType.Devices,
-                                    default_sort=self._system_settings.get('defaultSort'),
-                                    history_date=history,
-                                    include_details=True))
+        iterable = get_entities(limit, skip, mongo_filter, mongo_sort, mongo_projection,
+                                EntityType.Devices,
+                                default_sort=self._system_settings.get('defaultSort'),
+                                history_date=history,
+                                include_details=True)
+        return iterator_jsonify(iterable)
 
     @gui_helpers.historical()
     @gui_helpers.filtered_entities()
@@ -1417,11 +1417,12 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
             return self.__delete_entities_by_internal_axon_id(
                 EntityType.Users, self.get_request_data_as_object(), mongo_filter)
         self._save_query_to_history(EntityType.Users, mongo_filter, skip, limit, mongo_sort, mongo_projection)
-        return jsonify(get_entities(limit, skip, mongo_filter, mongo_sort, mongo_projection,
-                                    EntityType.Users,
-                                    default_sort=self._system_settings['defaultSort'],
-                                    history_date=history,
-                                    include_details=True))
+        iterable = get_entities(limit, skip, mongo_filter, mongo_sort, mongo_projection,
+                                EntityType.Users,
+                                default_sort=self._system_settings['defaultSort'],
+                                history_date=history,
+                                include_details=True)
+        return iterator_jsonify(iterable)
 
     @gui_helpers.historical()
     @gui_helpers.filtered_entities()
