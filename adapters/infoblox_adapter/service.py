@@ -164,12 +164,7 @@ class InfobloxAdapter(AdapterBase):
                     device.served_by = device_raw.get('served_by')
                 except Exception:
                     logger.exception(f'Problem getting served by')
-                try:
-                    start_time = device_raw.get('starts')
-                    if start_time:
-                        device.start_time = datetime.datetime.fromtimestamp(start_time)
-                except Exception:
-                    logger.exception(f'Problem getting start time {start_time}')
+                end_time = None
                 try:
                     end_time = device_raw.get('ends')
                     if end_time:
@@ -177,6 +172,15 @@ class InfobloxAdapter(AdapterBase):
                         device.last_seen = datetime.datetime.fromtimestamp(end_time)
                 except Exception:
                     logger.exception(f'Problem getting end time {end_time}')
+
+                try:
+                    start_time = device_raw.get('starts')
+                    if start_time:
+                        device.start_time = datetime.datetime.fromtimestamp(start_time)
+                        if not end_time:
+                            device.last_seen = datetime.datetime.fromtimestamp(start_time)
+                except Exception:
+                    logger.exception(f'Problem getting start time {start_time}')
 
                 try:
                     network_data = device_raw.get('network_data') or {}
