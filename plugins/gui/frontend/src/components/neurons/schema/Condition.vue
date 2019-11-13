@@ -360,6 +360,7 @@
       },
       formatIn(){
           this.processedValue = '"' + this.value.match(/(\\,|[^,])+/g).join('","') + '"'
+          this.processedValue = this.processedValue.replace('\\\\,',',')
           return ''
       },
       formatCondition () {

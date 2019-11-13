@@ -68,6 +68,29 @@ class TestDevicesQuery(TestBase):
             else:
                 assert ips in ips_set
 
+    def test_in_with_delimiter_query(self):
+        self.dashboard_page.switch_to_page()
+        self.base_page.run_discovery()
+        self.devices_page.switch_to_page()
+        self.devices_page.wait_for_table_to_load()
+
+        self.devices_page.click_row_checkbox()
+
+        special_tag = 'a\\,b'
+
+        self.devices_page.add_new_tag(special_tag)
+
+        self.devices_page.click_query_wizard()
+        self.devices_page.select_query_field(self.devices_page.FIELD_TAGS)
+        self.devices_page.select_query_comp_op(self.devices_page.QUERY_COMP_IN)
+        self.devices_page.fill_query_string_value(special_tag)
+        self.devices_page.wait_for_table_to_load()
+        self.devices_page.wait_for_spinner_to_end()
+
+        self.devices_page.click_search()
+
+        assert self.devices_page.count_entities() == 1
+
     def test_devices_query_wizard_default_operators(self):
         self.dashboard_page.switch_to_page()
         self.base_page.run_discovery()
