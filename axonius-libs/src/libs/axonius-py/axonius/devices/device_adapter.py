@@ -420,7 +420,7 @@ class ShodanData(SmartJsonClass):
 
 class DeviceOpenPort(SmartJsonClass):
     protocol = Field(str, 'Protocol', enum=['TCP', 'UDP'])
-    port_id = Field(int, 'Port ID')
+    port_id = Field(int, 'Port Number')
     service_name = Field(str, 'Service Name')
 
 

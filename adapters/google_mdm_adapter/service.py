@@ -1,10 +1,9 @@
 import json
 import logging
 
-import requests
-
 from axonius.clients.g_suite_admin_connection import GSuiteAdminConnection
 from axonius.fields import Field, ListField
+from axonius.smart_json_class import SmartJsonClass
 from axonius.users.user_adapter import UserAdapter
 
 logger = logging.getLogger(f'axonius.{__name__}')
@@ -22,6 +21,16 @@ MOBILE_SCOPES = ['https://www.googleapis.com/auth/admin.directory.device.mobile.
 USER_SCOPES = ['https://www.googleapis.com/auth/admin.directory.user.readonly']
 
 
+class OauthApp(SmartJsonClass):
+    anonymous = Field(bool, 'Anonymous')
+    client_id = Field(str, 'Client ID')
+    display_text = Field(str, 'Display Text')
+    etag = Field(str, 'ETag')
+    kind = Field(str, 'Kind')
+    native_app = Field(bool, 'Native App')
+    scopes = ListField(str, 'Scopes')
+
+
 class GoogleMdmAdapter(AdapterBase):
     """
     Adapter to access Google MDM suite
@@ -36,6 +45,11 @@ class GoogleMdmAdapter(AdapterBase):
 
     class MyUserAdapter(UserAdapter):
         alias_emails = ListField(str, 'Alias Emails')
+        is_mfa_enrolled = Field(bool, 'Is MFA Enrolled')
+        is_mfa_enforced = Field(bool, 'Is MFA Enforced')
+        is_delegated_admin = Field(bool, 'Is Delegated Admin')
+        recovery_phone = Field(str, 'Recovery Phone')
+        oauth_apps = ListField(OauthApp, 'Oauth Apps')
 
     def __init__(self):
         super().__init__(get_local_config_file(__file__))
@@ -50,8 +64,10 @@ class GoogleMdmAdapter(AdapterBase):
     def _connect_client(self, client_config) -> GSuiteAdminConnection:
         try:
             auth_file = json.loads(self._grab_file_contents(client_config['keypair_file']))
+            scopes = MOBILE_SCOPES + USER_SCOPES
             conn = GSuiteAdminConnection(
-                auth_file, client_config['account_to_impersonate'], MOBILE_SCOPES + USER_SCOPES
+                auth_file, client_config['account_to_impersonate'], scopes,
+                client_config.get('get_oauth_apps') or False,
             )
             next(conn.get_users())    # try to connect
             return conn
@@ -63,6 +79,7 @@ class GoogleMdmAdapter(AdapterBase):
     def _query_devices_by_client(self, client_name, client_data: GSuiteAdminConnection):
         return client_data.get_mobile_devices()
 
+    # pylint: disable=arguments-differ
     def _query_users_by_client(self, client_name, client_data: GSuiteAdminConnection):
         return client_data.get_users()
 
@@ -80,9 +97,15 @@ class GoogleMdmAdapter(AdapterBase):
                     "description": "The binary contents of the keypair file",
                     "type": "file",
                 },
+                {
+                    "name": "get_oauth_apps",
+                    "title": "Get OAuth Apps",
+                    "description": "Get OAuth Apps (requires additional scope)",
+                    "type": "bool",
+                },
             ],
             "required": [
-                'account_to_impersonate', 'keypair_file'
+                'account_to_impersonate', 'keypair_file', 'get_oauth_apps'
             ],
             "type": "array"
         }
@@ -161,7 +184,16 @@ class GoogleMdmAdapter(AdapterBase):
             return
         user.set_raw(raw_user_data)
         user.is_admin = raw_user_data.get('isAdmin', None)
+        user.is_delegated_admin = raw_user_data.get('isDelegatedAdmin')
+        user.is_mfa_enrolled = raw_user_data.get('isEnrolledIn2Sv')
+        user.is_mfa_enforced = raw_user_data.get('isEnforcedIn2Sv')
         user.account_disabled = raw_user_data.get('suspended', None)
+        user.user_created = parse_date(raw_user_data.get('creationTime'))
+        if raw_user_data.get('orgUnitPath'):
+            try:
+                user.organizational_unit.append(raw_user_data.get('orgUnitPath'))
+            except Exception:
+                logger.exception(f'Failed adding organizational unit')
         try:
             user.last_logon = parse_date(raw_user_data['lastLoginTime'])
         except Exception:
@@ -178,10 +210,42 @@ class GoogleMdmAdapter(AdapterBase):
                 user.alias_emails = raw_user_data.get('aliases')
         except Exception:
             logger.exception(f'Problem getting aliasse for user {raw_user_data}')
+
+        try:
+            phones = [p.get('value') for p in (raw_user_data.get('phones') or [])]
+            user.user_telephone_number = ','.join(phones)
+        except Exception:
+            logger.exception(f'Failed setting phones')
+
+        user.recovery_phone = raw_user_data.get('recoveryPhone')
+
+        try:
+            for token_raw in ((raw_user_data.get('tokens') or {}).get('items') or []):
+                try:
+                    native_app = token_raw.get('nativeApp')
+                    anonymous = token_raw.get('anonymous')
+                    scopes = [str(scope_i) for scope_i in token_raw.get('scopes')]
+                    user.oauth_apps.append(
+                        OauthApp(
+                            anonymous=anonymous if isinstance(anonymous, bool) else None,
+                            client_id=token_raw.get('clientId'),
+                            display_text=token_raw.get('displayText'),
+                            etag=token_raw.get('etag'),
+                            kind=token_raw.get('kind'),
+                            native_app=native_app if isinstance(native_app, bool) else None,
+                            scopes=scopes,
+                        )
+                    )
+                except Exception:
+                    logger.exception(f'Failed adding oauth app')
+        except Exception:
+            logger.exception(f'Failed settings oauth app')
+
         # getting user photo might be tricky, and might require more permissions
         # https://stackoverflow.com/questions/25467326/retrieving-google-user-photo
         return user
 
+    # pylint: disable=arguments-differ
     def _parse_users_raw_data(self, raw_data):
         for raw_user_data in iter(raw_data):
             try:

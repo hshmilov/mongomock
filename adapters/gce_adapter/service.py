@@ -2,10 +2,9 @@ import ipaddress
 import json
 import logging
 import datetime
-from typing import List
+from collections import defaultdict
+from typing import List, Tuple, Iterable
 
-from google.oauth2 import service_account
-from googleapiclient import discovery
 from libcloud.compute.drivers.gce import GCEFirewall
 from libcloud.compute.providers import get_driver
 from libcloud.compute.types import NodeState, Provider
@@ -17,10 +16,12 @@ from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.devices.device_adapter import DeviceAdapter, DeviceRunningState
 from axonius.fields import Field, ListField, JsonStringFormat
+from axonius.users.user_adapter import UserAdapter
 from axonius.utils.files import get_local_config_file
 from axonius.utils.json_encoders import IgnoreErrorJSONEncoder
 from axonius.utils.datetime import parse_date
 from axonius.utils.parsing import format_subnet
+from gce_adapter.connection import GoogleCloudPlatformConnection
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -81,6 +82,11 @@ class GceAdapter(AdapterBase):
         service_accounts = ListField(str, 'GCE Service Accounts')
         firewalls = ListField(GceFirewall, 'GCE Firewalls')
 
+    class MyUserAdapter(UserAdapter):
+        project_ids = ListField(str, 'Project IDs')
+        roles = ListField(str, 'Roles')
+        gcp_user_type = Field(str, 'User Type')
+
     def __init__(self):
         super().__init__(get_local_config_file(__file__))
 
@@ -94,26 +100,15 @@ class GceAdapter(AdapterBase):
 
     def _connect_client(self, client_config):
         try:
-            auth_file = json.loads(self._grab_file_contents(client_config['keypair_file']))
-
-            # Check access
-            credentials = service_account.Credentials.from_service_account_info(
-                auth_file,
-                scopes=['https://www.googleapis.com/auth/cloudplatformprojects.readonly']
+            client = GoogleCloudPlatformConnection(
+                service_account_file=json.loads(self._grab_file_contents(client_config['keypair_file'])),
+                https_proxy=client_config.get('https_proxy')
             )
-            service = discovery.build('cloudresourcemanager', 'v1', credentials=credentials)
-            request = service.projects().list()
-            try:
-                response = request.execute()
-            except Exception as re:
-                logger.exception(f'Failure listing projects')
-                if 'cloud resource manager api has not been used in project' in str(re).lower():
-                    raise ClientConnectionException(f'Cloud Resource Manager API is not enabled.')
-                raise
-            projects = response.get('projects') or []
-            if not projects:
-                raise ClientConnectionException(f'No projects found. Please check the service account permissions')
-            return auth_file
+            with client:
+                projects = next(client.get_project_list())
+                if not projects:
+                    raise ClientConnectionException(f'No projects found. Please check the service account permissions')
+                return client, client_config
         except Exception as e:
             client_id = self._get_client_id(client_config)
             logger.error(f'Failed to connect to client {client_id}')
@@ -138,38 +133,50 @@ class GceAdapter(AdapterBase):
             logger.exception(f'Can not get firewalls')
             return []
 
-    def _query_devices_by_client(self, client_name, client_data):
-        auth_json = client_data
+    def _query_devices_by_client(self, client_name: str, client_data: Tuple[GoogleCloudPlatformConnection, dict]):
+        client, client_config = client_data
+        auth_json = json.loads(self._grab_file_contents(client_config['keypair_file']))
         try:
-            credentials = service_account.Credentials.\
-                from_service_account_info(auth_json,
-                                          scopes=['https://www.googleapis.com/auth/cloudplatformprojects.readonly'])
-            service = discovery.build('cloudresourcemanager', 'v1', credentials=credentials)
-            request = service.projects().list()
-            while request is not None:
-                response = request.execute()
-                for project in response['projects']:
-                    try:
-                        provider = get_driver(Provider.GCE)(
-                            auth_json['client_email'],
-                            auth_json['private_key'],
-                            project=project.get('projectId')
-                        )
-                        firewalls = self.__get_firewalls(provider)
-                        for device_raw in provider.list_nodes():
-                            yield device_raw, project.get('projectId'), firewalls
-                    except Exception:
-                        logger.exception(f'Problem with project {project}')
-                request = service.projects().list_next(previous_request=request, previous_response=response)
+            with client:
+                all_projects = list(client.get_project_list())
+            for i, project in enumerate(all_projects):
+                logger.info(f'Handling project {i}/{len(all_projects)} - {project.get("projectId")}')
+                try:
+                    provider = get_driver(Provider.GCE)(
+                        auth_json['client_email'],
+                        auth_json['private_key'],
+                        project=project.get('projectId'),
+                        proxy_url=client_config.get('https_proxy')
+                    )
+                    firewalls = self.__get_firewalls(provider)
+                    for device_raw in provider.list_nodes():
+                        yield device_raw, project.get('projectId'), firewalls
+                except Exception:
+                    logger.exception(f'Problem with project {project}')
         except Exception:
+            logger.exception(f'exception in getting all projects. using alternative path')
             provider = get_driver(Provider.GCE)(
                 auth_json['client_email'],
                 auth_json['private_key'],
-                project=auth_json['project_id']
+                project=auth_json['project_id'],
+                proxy_url=client_config.get('https_proxy')
             )
             firewalls = self.__get_firewalls(provider)
             for device_raw in provider.list_nodes():
                 yield device_raw, auth_json['project_id'], firewalls
+
+    # pylint: disable=arguments-differ
+    @staticmethod
+    def _query_users_by_client(client_name: str, client_data: Tuple[GoogleCloudPlatformConnection, dict]):
+        client, client_dict = client_data
+        with client:
+            for project in client.get_project_list():
+                try:
+                    project_id = project.get('projectId')
+                    all_iam_data = list(client.get_user_list(project_id))
+                    yield all_iam_data, project
+                except Exception:
+                    logger.exception(f'Error while fetching users for project {project.get("projectId")}')
 
     @staticmethod
     def _clients_schema():
@@ -181,6 +188,11 @@ class GceAdapter(AdapterBase):
                     'description': 'The binary contents of the JSON keypair file',
                     'type': 'file',
                 },
+                {
+                    'name': 'https_proxy',
+                    'title': 'HTTPS Proxy',
+                    'type': 'string'
+                }
             ],
             'required': [
                 'keypair_file'
@@ -420,6 +432,46 @@ class GceAdapter(AdapterBase):
                 yield device
             except Exception:
                 logger.exception(f'Got exception for raw_device_data: {raw_device_data}')
+
+    # pylint: disable=undefined-variable
+    def create_user_entity(self) -> MyUserAdapter:
+        return self._new_user_adapter()
+
+    # pylint: disable=arguments-differ
+    def _parse_users_raw_data(self, all_data: Iterable[Tuple[list, dict]]) -> Iterable[UserAdapter]:
+        # First parse users for all projects. because the same user can be in different projects
+        users_info = dict()
+        for (all_iam_data, project) in all_data:
+            for role in all_iam_data:
+                if not role.get('role'):
+                    logger.warning(f'Bad role: {role}')
+                    continue
+                for member in (role.get('members') or []):
+                    if member not in users_info:
+                        users_info[member] = defaultdict(list)
+                    users_info[member]['roles'].append(role.get('role'))
+                    users_info[member]['projects'].append(project['projectId'])
+
+        for user_id, user_info in users_info.items():
+            try:
+                user = self.create_user_entity()
+                user.id = user_id
+                try:
+                    user.username = user_id.split(':')[1]
+                except Exception:
+                    user.username = user_id
+                user.project_ids = user_info.get('projects')
+                user.roles = user_info.get('roles')
+                try:
+                    gcp_user_type, mail = user_id.split(':')
+                    user.mail = mail
+                    user.gcp_user_type = gcp_user_type
+                except Exception:
+                    logger.exception(f'Could not parse user_type, email for user {user_id}')
+                user.set_raw({})    # there is no specific raw for a user
+                yield user
+            except Exception:
+                logger.exception(f'Failed parsing user')
 
     @classmethod
     def adapter_properties(cls):
