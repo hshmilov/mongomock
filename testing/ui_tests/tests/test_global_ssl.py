@@ -46,6 +46,7 @@ def _get_peer_ssl(address, verify):
 
 
 class TestGlobalSSL(TestBase):
+
     def test_global_ssl(self):
         self.settings_page.switch_to_page()
         self.settings_page.click_global_settings()
@@ -87,3 +88,78 @@ class TestGlobalSSL(TestBase):
             self.settings_page.open_global_ssl_toggle(make_yes=False)
             self.settings_page.click_save_button()
             self.settings_page.wait_for_saved_successfully_toaster()
+
+    @staticmethod
+    def read_ca_cert_file(ca_filename: str):
+        certs_base_path = os.path.abspath(os.path.join(os.path.dirname(__file__),
+                                                       '../../ssl_keys_for_tests'))
+
+        ca_filename = os.path.join(certs_base_path, ca_filename)
+        cert_data = open(ca_filename, 'rb').read()
+        return cert_data
+
+    def test_add_ca_certificate(self):
+
+        def add_new_ca_file():
+            cert_info = self.settings_page.get_first_ca_cert_fields_info()
+            self.settings_page.assert_ca_file_before_upload(cert_info)
+            self.settings_page.assert_ca_cert_first_file_input_type()
+            # upload and save
+            apple_root_ca_cert = self.read_ca_cert_file('apple_root_ca.cer')
+            self.settings_page.upload_ca_cert_file(apple_root_ca_cert)
+            self.settings_page.save_and_wait_for_toaster()
+
+        def add_addtional_ca_cert():
+            # press + for addtional ca row
+            self.settings_page.click_add_ca_cert()
+            # upload and save
+            versign_root_ca_cert = self.read_ca_cert_file('verigsin_class1.cer')
+            self.settings_page.upload_ca_cert_file(versign_root_ca_cert, ca_file_index=2)
+            # submit
+            self.settings_page.save_and_wait_for_toaster()
+            self.settings_page.wait_for_toaster_to_end(self.settings_page.SAVED_SUCCESSFULLY_TOASTER)
+
+        def verify_ca_certs_list():
+            self.settings_page.switch_to_page()
+            self.settings_page.refresh()
+            self.settings_page.click_global_settings()
+            # cert file list got updated with both new ca files
+            cert_info = self.settings_page.get_first_ca_cert_fields_info()
+            self.settings_page.assert_ca_file_name_after_upload(cert_info)
+            cert_info = self.settings_page.get_second_ca_cert_fields_info()
+            self.settings_page.assert_ca_file_name_after_upload(cert_info)
+
+        def delete_ca_files():
+            self.settings_page.ca_cert_delete_second()
+            self.settings_page.ca_cert_delete_first()
+            self.settings_page.save_and_wait_for_toaster()
+
+        def verify_ca_files_deleted():
+            self.settings_page.refresh()
+            self.settings_page.switch_to_page()
+            self.settings_page.click_global_settings()
+            assert self.settings_page.is_cert_file_item_deleted()
+            assert self.settings_page.is_cert_file_item_deleted(ca_delete_index=2)
+
+        try:
+            self.settings_page.switch_to_page()
+            self.settings_page.click_global_settings()
+            # enable custom ca
+            self.settings_page.enable_custom_ca()
+            self.settings_page.click_add_ca_cert()
+            add_new_ca_file()
+            add_addtional_ca_cert()
+            verify_ca_certs_list()
+            delete_ca_files()
+            verify_ca_files_deleted()
+
+        finally:
+            self.settings_page.refresh()
+            self.settings_page.switch_to_page()
+            self.settings_page.click_global_settings()
+            self.settings_page.disable_custom_ca()
+            if not self.settings_page.is_cert_file_item_deleted():
+                self.settings_page.ca_cert_delete_first()
+            if not self.settings_page.is_cert_file_item_deleted(ca_delete_index=2):
+                self.settings_page.ca_cert_delete_second()
+            self.settings_page.save_and_wait_for_toaster()

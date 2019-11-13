@@ -99,6 +99,16 @@ class SettingsPage(Page):
 
     PERMISSION_LABEL_DEVICES = 'Devices'
 
+    CA_CERTIFICATE_ENABLED = '//*[contains(text(),\'Certificate\')]'
+
+    CA_ADD_CERT_BUTTON = '#ca_files ~ .x-button.light'
+    CA_ADD_CERT_BUTTON_CSS = 'div.x-array-edit > div:nth-child(2) > div > div > div:nth-child(3) > div > div > button'
+
+    CA_CERTS_FILES = 'div.x-array-edit > div:nth-child(2) > div > div >' \
+                     ' div:nth-child(3) > div > div > div:nth-child({file_index})'
+
+    CA_CERT_DELETE_BUTTON = f'{CA_CERTS_FILES} > button'
+
     @property
     def url(self):
         return f'{self.base_url}/settings'
@@ -612,3 +622,76 @@ class SettingsPage(Page):
 
     def get_role_select_placeholder(self):
         return self.driver.find_element_by_css_selector(self.ROLE_PLACEHOLDER_CSS).text
+
+    def enable_custom_ca(self, make_yes=True):
+        label = self.driver.find_element_by_xpath(self.CA_CERTIFICATE_ENABLED).text
+        toggle = self.find_checkbox_by_label(label)
+        self.click_toggle_button(toggle, make_yes=make_yes)
+
+    def disable_custom_ca(self):
+        label = self.driver.find_element_by_xpath(self.CA_CERTIFICATE_ENABLED).text
+        toggle = self.find_checkbox_by_label(label)
+        self.click_toggle_button(toggle, scroll_to_toggle=False, make_yes=False)
+
+    def click_add_ca_cert(self):
+        self.driver.find_element_by_css_selector(self.CA_ADD_CERT_BUTTON).click()
+
+    def get_first_ca_cert_input_type(self):
+        return self._get_ca_cert_element(1).find_element_by_id('0').get_attribute('type')
+
+    def get_first_ca_cert_fields_info(self):
+        return self.get_ca_cert_fields_info(1)
+
+    def get_second_ca_cert_fields_info(self):
+        return self.get_ca_cert_fields_info(2)
+
+    def _get_ca_cert_element(self, ca_file_index: int):
+        # first div is the test label
+        return self.driver.find_element_by_css_selector(self.CA_CERTS_FILES.format(file_index=ca_file_index + 1))
+
+    def get_ca_cert_fields_info(self, ca_file_index: int):
+        cert_info = self._get_ca_cert_element(ca_file_index)
+        if cert_info and cert_info.text:
+            return cert_info.text
+        return None
+
+    def upload_ca_cert_file(self, cert_data, ca_file_index=1):
+        # CERT FILE :  Array start from 2 , file input id start from 0
+        element = self._get_ca_cert_element(ca_file_index).find_element_by_id(str(ca_file_index - 1))
+        self.upload_file_on_element(element, cert_data, is_bytes=True)
+
+    def is_cert_file_item_deleted(self, ca_delete_index=1):
+        selector = self.CA_CERT_DELETE_BUTTON.format(file_index=ca_delete_index)
+        certs = self.driver.find_elements_by_css_selector(selector)
+
+        if len(certs) == 0:
+            return True
+        return False
+
+    def _ca_cert_delete(self, ca_delete_index=1):
+        delete_button = self.driver.find_element_by_css_selector(
+            self.CA_CERT_DELETE_BUTTON.format(file_index=ca_delete_index + 1))
+        delete_button.click()
+
+    @staticmethod
+    def assert_ca_file_name_after_upload(cert_info: str):
+        file_name, choose_file_label, x_label = cert_info.split('\n')
+        assert file_name != 'No file chosen'
+        assert choose_file_label == 'Choose file'
+        assert x_label == 'x'
+
+    @staticmethod
+    def assert_ca_file_before_upload(cert_info: str):
+        file_name, choose_file_label, x_label = cert_info.split('\n')
+        assert file_name == 'No file chosen'
+        assert choose_file_label == 'Choose file'
+        assert x_label == 'x'
+
+    def assert_ca_cert_first_file_input_type(self):
+        assert self.get_first_ca_cert_input_type() == 'file'
+
+    def ca_cert_delete_first(self):
+        self._ca_cert_delete()
+
+    def ca_cert_delete_second(self):
+        self._ca_cert_delete(ca_delete_index=2)
