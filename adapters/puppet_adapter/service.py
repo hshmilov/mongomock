@@ -50,6 +50,7 @@ class PuppetAdapter(AdapterBase):
                 client_config["puppet_server_name"],
                 str(e))
             logger.exception(message)
+            raise ClientConnectionException(message)
         except KeyError as e:
             if "puppet_server_name" in client_config:
                 message = f"Key error for Puppet {0}. details: {1}".format(client_config["puppet_server_name"], str(e))

@@ -3,6 +3,7 @@ logger = logging.getLogger(f'axonius.{__name__}')
 import requests
 import puppet_adapter.consts as consts
 from axonius.utils.files import create_temp_file
+from axonius.clients.rest.connection import RESTConnection
 from puppet_adapter.exceptions import PuppetException
 
 
@@ -32,10 +33,17 @@ class PuppetConnection(object):
         self._session.cert = (self.__cert_file.name, self.__private_key_file.name)
         self._session.verify = self.__ca_file.name
 
-        self._base_puppet_url = f"{consts.PUPPET_CONNECTION_METHOD}{self.puppet_server_address}" + \
-                                consts.PUPPET_PORT_STRING
+        self._base_puppet_url = RESTConnection.build_url(self.puppet_server_address).strip('/')
         # Do a basic request just to test connectivity
-        self._session.get(f'{self._base_puppet_url}{consts.PUPPET_API_PREFIX}/nodes', timeout=(5, 30))
+        try:
+            query_response = self._session.get(
+                f"{self._base_puppet_url}{consts.PUPPET_API_PREFIX}/nodes", timeout=(5, 30))
+        except requests.RequestException as err:
+            logger.exception("Error in querying the nodes from the puppet server." +
+                             " Error information:{0}".format(str(err)))
+            raise
+
+        _parse_json_request(query_response)
 
     def get_device_list(self):
         """ This function returns a json with all the data about all the devices in the server.

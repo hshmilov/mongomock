@@ -1,7 +1,7 @@
 from test_helpers.file_mock_credentials import FileForCredentialsMock
 
 client_details = {
-    "puppet_server_name": "puppet",
+    "puppet_server_name": "puppet:8081",
     "ca_file": FileForCredentialsMock("ca_file", b'''-----BEGIN CERTIFICATE-----
 MIIGIzCCBAugAwIBAgIBATANBgkqhkiG9w0BAQsFADBdMVswWQYDVQQDDFJQdXBw
 ZXQgRW50ZXJwcmlzZSBDQSBnZW5lcmF0ZWQgb24gcHVwcGV0LmF4b25pdXMubGFu
