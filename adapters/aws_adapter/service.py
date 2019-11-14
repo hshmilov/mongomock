@@ -292,11 +292,7 @@ class AwsAdapter(AdapterBase, Configurable):
                 raise ClientConnectionException(f'region name {input_region_name} does not exist!')
             regions_to_pull_from = [input_region_name]
         else:
-            regions_to_pull_from = REGIONS_NAMES
-            if self.__include_gov_regions:
-                regions_to_pull_from += GOV_REGION_NAMES
-            if self.__include_china_regions:
-                regions_to_pull_from += CHINA_REGION_NAMES
+            regions_to_pull_from = REGIONS_NAMES + GOV_REGION_NAMES + CHINA_REGION_NAMES
 
         logger.info(f'Selected Regions: {regions_to_pull_from}')
 
@@ -3214,8 +3210,6 @@ class AwsAdapter(AdapterBase, Configurable):
         self.__verbose_auth_notifications = config.get('verbose_auth_notifications') or False
         self.__shodan_key = config.get('shodan_key')
         self.__verify_all_roles = config.get('verify_all_roles') or False
-        self.__include_gov_regions = config.get('include_gov_regions') or False
-        self.__include_china_regions = config.get('include_china_regions') or False
 
     @classmethod
     def _db_config_schema(cls) -> dict:
@@ -3296,16 +3290,6 @@ class AwsAdapter(AdapterBase, Configurable):
                     'name': 'verify_all_roles',
                     'title': 'Verify all IAM roles',
                     'type': 'bool'
-                },
-                {
-                    'name': 'include_gov_regions',
-                    'title': 'Include Gov Regions',
-                    'type': 'bool'
-                },
-                {
-                    'name': 'include_china_regions',
-                    'title': 'Include China Regions',
-                    'type': 'bool'
                 }
             ],
             "required": [
@@ -3322,9 +3306,7 @@ class AwsAdapter(AdapterBase, Configurable):
                 'fetch_nat',
                 'parse_elb_ips',
                 'verbose_auth_notifications',
-                'verify_all_roles',
-                'include_gov_regions',
-                'include_china_regions'
+                'verify_all_roles'
             ],
             "pretty_name": "AWS Configuration",
             "type": "array"
@@ -3347,9 +3329,7 @@ class AwsAdapter(AdapterBase, Configurable):
             'parse_elb_ips': False,
             'verbose_auth_notifications': False,
             'shodan_key': None,
-            'verify_all_roles': True,
-            'include_gov_regions': True,
-            'include_china_regions': True
+            'verify_all_roles': True
         }
 
     @classmethod
