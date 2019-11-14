@@ -280,8 +280,8 @@ class TestAdAdapter(AdapterTestBase):
             }
         )
 
-        @retry(wait_fixed=7000,
-               stop_max_delay=15000)
+        @retry(wait_fixed=15000,
+               stop_max_delay=120000)
         def has_run_shell_success_tags():
             result = self.axonius_system.get_devices_with_condition(
                 {
