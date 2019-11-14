@@ -22,7 +22,7 @@
   import xTable from '../../../neurons/data/Table.vue'
   import xButton from '../../../axons/inputs/Button.vue'
 
-  import { mapActions } from 'vuex'
+  import { mapActions, mapState } from 'vuex'
   import { FETCH_DATA_CONTENT_CSV } from '../../../../store/actions'
 
   export default {
@@ -66,6 +66,15 @@
       }
     },
     computed: {
+      ...mapState({
+        hyperlinks (state) {
+          const hyperlinks = state[this.module].hyperlinks.data
+          if (!hyperlinks || !hyperlinks['aggregator']) {
+            return {}
+          }
+          return eval(hyperlinks['aggregator'])
+        }
+      }),
       stateLocation () {
         return `${this.module}/current/data/advanced/${this.index}`
       },
@@ -168,12 +177,14 @@
         return result
       },
       fields () {
-        return this.schema.items
-        .filter(item => {
+        return this.schema.items.filter(item => {
           return this.isSimpleList(item) && this.hasAnyValue(item.name)
         }).map(item => {
-            return { ...item, path: [this.module, 'aggregator', 'data', this.schema.name] }
-          })
+          return { ...item,
+            path: [`${this.schema.name}.${item.name}`],
+            hyperlinks: this.hyperlinks
+          }
+        })
       }
     },
     methods: {

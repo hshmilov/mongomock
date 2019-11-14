@@ -24,7 +24,7 @@
             :key="field.name"
             :field="field"
             :sort="sort"
-            :sortable="onClickCol !== undefined"
+            :sortable="sortable(field)"
             :filter="getFilter(field.name)"
             :filterable="filterable"
             @click="clickCol"
@@ -48,10 +48,11 @@
           @input="(selected) => onSelect(row[idField], selected)"
           @click.native="() => clickRow(row[idField])"
         >
-          <slot
-            slot-scope="props"
-            v-bind="props"
-          />
+          <template #default="slotProps">
+            <slot v-bind="slotProps">
+              <x-table-data v-if="!$scopedSlots.default" v-bind="slotProps" />
+            </slot>
+          </template>
         </x-table-row>
         <template v-if="pageSize">
           <tr
@@ -75,12 +76,13 @@
 <script>
   import xTableHead from './TableHead.vue'
   import xTableRow from './TableRow.vue'
+  import xTableData from './TableData.js'
   import xCheckbox from '../inputs/Checkbox.vue'
 
   export default {
     name: 'XTable',
     components: {
-      xTableHead, xTableRow, xCheckbox
+      xTableHead, xTableRow, xTableData, xCheckbox
     },
     props: {
       fields: {
@@ -189,6 +191,9 @@
           return undefined
         }
         return this.colFilters[fieldName] || ''
+      },
+      sortable (field) {
+        return (this.onClickCol !== undefined) && field.name !== 'adapters'
       }
     }
   }

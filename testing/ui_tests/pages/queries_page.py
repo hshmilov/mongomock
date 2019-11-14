@@ -52,7 +52,8 @@ class QueriesPage(Page):
                 self.find_element_by_text(self.SAFEGUARD_REMOVE_BUTTON_SINGLE).click()
             except NoSuchElementException:
                 self.find_element_by_text(self.SAFEGUARD_REMOVE_BUTTON_MULTI).click()
-            self.wait_for_element_absent_by_css('.x-checkbox.checked')
+            self.wait_for_table_to_load()
+            self.wait_for_element_absent_by_css('.table .x-checkbox.checked')
         else:
             self.find_element_by_text('Cancel').click()
 

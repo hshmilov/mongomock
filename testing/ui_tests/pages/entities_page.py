@@ -66,13 +66,13 @@ class EntitiesPage(Page):
     TABLE_SELECTED_COUNT_CSS = '.table-header > .table-title > .selection > div'
     TABLE_SELECT_ALL_BUTTON_CSS = '.table-header > .table-title > .selection > button'
     TABLE_FIRST_ROW_CSS = 'tbody .x-table-row.clickable'
-    TABLE_SECOND_ROW_CSS = 'tbody .x-table-row.clickable:nth-child(2)'
+    TABLE_FIRST_ROW_DATA_CSS = f'{TABLE_FIRST_ROW_CSS} td:not(.top)'
     TABLE_FIRST_ROW_TAG_CSS = f'{TABLE_FIRST_ROW_CSS} td:last-child'
     TABLE_ROW_EXPAND_CSS = 'tbody .x-table-row.clickable:nth-child({child_index}) td:nth-child(2) .md-icon'
     TABLE_CELL_CSS = 'tbody .x-table-row.clickable td:nth-child({cell_index})'
     TABLE_CELL_EXPAND_CSS = 'tbody .x-table-row.clickable:nth-child({row_index}) td:nth-child({cell_index}) .md-icon'
     TABLE_CELL_HOVER_REMAINDER_CSS = 'tbody .x-table-row.clickable:nth-child({row_index}) td:nth-child({cell_index}) ' \
-                                     '.x-data .x-slicer .remainder'
+                                     '.x-data .x-slice .remainder'
     TABLE_DATA_ROWS_XPATH = '//tr[@id]'
     TABLE_SCHEMA_CUSTOM = '//div[contains(@class, \'x-schema-custom\')]'
     TABLE_FIELD_ROWS_XPATH = '//div[contains(@class, \'x-tabs\')]//div[contains(@class, \'x-tab active\')]' \
@@ -93,8 +93,8 @@ class EntitiesPage(Page):
     TABLE_HEADER_SORT_XPATH = '//th[contains(@class, \'sortable\') and contains(text(), \'{col_name_text}\')]'
 
     TABLE_DATA_XPATH = '//tr[@id]/td[position()={data_position}]'
-    TABLE_DATA_SLICER_XPATH = f'{TABLE_DATA_XPATH}//div[@class=\'x-slicer\']'
-    TABLE_DATA_SLICER_TYPE_XPATH = f'{TABLE_DATA_XPATH}//div[@class=\'x-slicer\']/div'
+    TABLE_DATA_SLICER_XPATH = f'{TABLE_DATA_XPATH}//div[@class=\'x-slice\']'
+    TABLE_DATA_SLICER_TYPE_XPATH = f'{TABLE_DATA_XPATH}//div[@class=\'x-slice\']/div'
     TABLE_DATA_EXPAND_ROW_XPATH = f'{TABLE_DATA_XPATH}//div[@class=\'details-list-container\']'
     TABLE_DATA_EXPAND_CELL_XPATH = f'{TABLE_DATA_XPATH}//div[@class=\'details-table-container\']' \
                                    f'/div[contains(@class, \'popup\')]//*[@class=\'table\']'
@@ -308,7 +308,8 @@ class EntitiesPage(Page):
         Click on the first entity in the table
         :return: the internal_axon_id of the axonius entity
         """
-        self.driver.find_element_by_css_selector(self.TABLE_FIRST_ROW_CSS).click()
+        row_data = self.driver.find_element_by_css_selector(self.TABLE_FIRST_ROW_DATA_CSS)
+        ActionChains(self.driver).move_to_element_with_offset(row_data, 4, 4).click().perform()
         self.wait_for_spinner_to_end()
         return self.driver.current_url.split('/')[-1]
 

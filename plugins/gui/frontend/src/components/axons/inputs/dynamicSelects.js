@@ -54,7 +54,7 @@ const withDynamicData = (component, params) => {
             const passedProps = this.$props
             const options = this[params.attributeName] || []
 
-            return createElement(component,{
+            return createElement(component, {
                 props: {
                     ...passedProps,
                     options,
@@ -75,7 +75,7 @@ const withDynamicData = (component, params) => {
 
 export const xTagSelect = withDynamicData(xSelect,{
     id:'tagSelect',
-    action:FETCH_DATA_LABELS,
+    action: FETCH_DATA_LABELS,
     moduleName: ['devices','users'],
     attributeName: 'labels',
     missingItemsLabel: ''

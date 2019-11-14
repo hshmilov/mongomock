@@ -426,10 +426,6 @@ export const deleteData = ({state, dispatch}, payload) => {
 		rule: `${payload.module}?filter=${encodeURIComponent(moduleState.view.query.filter)}`,
 		method: 'DELETE',
 		data: payload.selection
-	}).then(response => {
-		if (response.status === 200 && response.data === '') {
-			dispatch(FETCH_DATA_CONTENT, payload)
-		}
 	})
 }
 

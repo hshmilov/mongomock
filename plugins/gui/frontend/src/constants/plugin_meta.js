@@ -881,6 +881,11 @@ export const pluginMeta = {
         link: '',
         description: 'Stresstest can be configured with any amount of devices and it creates that number of random devices.'
     },
+    stresstest_adapter: {
+        title: 'Test adapters',
+        link: '',
+        description: 'Stresstest can be configured with any amount of devices and it creates that number of random devices.'
+    },
     hyper_v_adapter: {
         title: 'Microsoft Hyper-V',
         link: 'https://docs.axonius.com/docs/microsoft-hyper-v',

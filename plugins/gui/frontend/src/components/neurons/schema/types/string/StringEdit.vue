@@ -57,7 +57,7 @@
 </template>
 
 <script>
-  import primitiveMixin from '../primitive.js'
+  import primitiveMixin from '../../../../../mixins/primitive.js'
   import xSelect from '../../../../axons/inputs/Select.vue'
   import { xTagSelect } from '../../../../axons/inputs/dynamicSelects.js'
   import xDateEdit from './DateEdit.vue'

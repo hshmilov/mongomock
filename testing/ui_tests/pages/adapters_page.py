@@ -29,13 +29,10 @@ class AdaptersPage(EntitiesPage):
     TEST_CONNECTIVITY_NOT_SUPPORTED = 'Test reachability is not supported for this adapter.'
     TEST_CONNECTIVITY_PROBLEM = 'Problem connecting'
 
-    SERVER_ORANGE_COLOR_ID = 'svgicon_symbol_warning_a'
-    SERVER_RED_COLOR_ID = 'svgicon_symbol_error_a'
-    SERVER_GREEN_COLOR_ID = 'svgicon_symbol_success_a'
-    ERROR_SYMBOL_ID = 'svgicon_symbol_error_b'
+    ERROR_ICON_CLASS = '.md-icon.icon-error'
+    SUCCESS_ICON_CLASS = '.md-icon.icon-success'
+    TYPE_ICON_CSS = '.md-icon.icon-{status_type}'
     WARNING_MARKER_CSS = '.marker.indicator-bg-warning'
-    RED_COLOR_ID = 'svgicon_symbol_error_b'
-    GREEN_COLOR_ID = 'svgicon_symbol_success_b'
     NEW_CONNECTION_BUTTON_ID = 'new_connection'
     DATA_COLLECTION_TOASTER = 'Connection established. Data collection initiated...'
     TEXT_PROBLEM_CONNECTING_TRY_AGAIN = 'Problem connecting. Review error and try again.'
@@ -125,19 +122,13 @@ class AdaptersPage(EntitiesPage):
         self.driver.find_element_by_css_selector(self.CHECKBOX_CSS).click()
 
     def wait_for_server_green(self):
-        self.wait_for_element_present_by_id(self.SERVER_GREEN_COLOR_ID)
+        self.wait_for_element_present_by_css(self.SUCCESS_ICON_CLASS)
 
     def wait_for_server_red(self):
-        self.wait_for_element_present_by_id(self.SERVER_RED_COLOR_ID)
-
-    def wait_for_adapter_green(self):
-        self.wait_for_element_present_by_id(self.GREEN_COLOR_ID)
-
-    def wait_for_adapter_red(self):
-        self.wait_for_element_present_by_id(self.RED_COLOR_ID)
+        self.wait_for_element_present_by_css(self.ERROR_ICON_CLASS)
 
     def wait_for_adapter_warning(self):
-        self.wait_for_element_present_by_id(self.ERROR_SYMBOL_ID)
+        self.wait_for_element_present_by_css(self.ERROR_ICON_CLASS)
         self.wait_for_element_present_by_css(self.WARNING_MARKER_CSS)
 
     def wait_for_connect_valid(self):
@@ -255,10 +246,11 @@ class AdaptersPage(EntitiesPage):
         self.find_help_link().click()
 
     def find_status_symbol(self, status_type):
-        return self.wait_for_element_present_by_css(f'#svgicon_symbol_{status_type}_b')
+        return self.wait_for_element_present_by_css(self.TYPE_ICON_CSS.format(status_type=status_type))
 
     def find_status_count(self, status_type):
-        element = self.wait_for_element_present_by_css(f'.status_{status_type} .status_clients-count')
+        element = self.wait_for_element_present_by_css(
+            f'{self.TYPE_ICON_CSS.format(status_type=status_type)} ~ .summary_count')
         return element.text
 
     def find_server_error(self):

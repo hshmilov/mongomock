@@ -5,7 +5,7 @@
 
 <script>
     import xCheckbox from '../../../../axons/inputs/Checkbox.vue'
-    import primitiveMixin from '../primitive.js'
+    import primitiveMixin from '../../../../../mixins/primitive.js'
 
 	export default {
 		name: 'x-bool-edit',

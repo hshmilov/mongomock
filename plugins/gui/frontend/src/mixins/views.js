@@ -9,9 +9,11 @@ export default {
     ...mapState({
       views (state) {
         return this.entityList.reduce((map, module) => {
-          map[module] = state[module].views.saved.content.data.map((view) => {
-            return { name: view.name, title: view.name, predefined: view.predefined }
-          })
+          map[module] = state[module].views.saved.content.data
+            .filter(view => view)
+            .map((view) => {
+              return { name: view.name, title: view.name, predefined: view.predefined }
+            })
           return map
         }, {})
       },

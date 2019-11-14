@@ -39,7 +39,7 @@
             v-bind="item"
             :required="true"
           >
-            <x-slicer
+            <x-slice
               v-if="isMergedValue(data[item.name], item)"
               :schema="item"
               :value="data[item.name]"
@@ -49,13 +49,19 @@
                 :schema="item"
                 :value="sliced"
               />
-            </x-slicer>
-            <component
-              :is="item.type"
+            </x-slice>
+            <array
+              v-else-if="item.type === 'array'"
+              ref="array"
+              :schema="item"
+              :value="data[item.name]"
+            />
+            <x-table-data
               v-else
               :ref="item.type"
               :schema="item"
-              :value="data[item.name]"
+              :data="data[item.name]"
+              :hyperlinks="hyperlinks"
             />
           </x-type-wrap>
         </div>
@@ -72,23 +78,26 @@
 <script>
   import xButton from '../../../../axons/inputs/Button.vue'
   import xTypeWrap from './TypeWrap.vue'
-  import xSlicer from '../Slicer.vue'
-  import string from '../string/StringView.vue'
+  import xSlice from '../../Slice.vue'
   import number from '../numerical/NumberView.vue'
-  import integer from '../numerical/IntegerView.vue'
-  import bool from '../boolean/BooleanView.vue'
-  import file from './FileView.vue'
+  import xTableData from '../../../../axons/tables/TableData'
   import xArrayTableView from './ArrayTableView.vue'
 
-  import arrayMixin from './array'
+  import arrayMixin from '../../../../../mixins/array'
 
   export default {
     name: 'Array',
     components: {
-      xButton, xTypeWrap, xSlicer,
-      string, number, integer, bool, file, xArrayTableView
+      xButton, xTypeWrap, xSlice,
+      xTableData, xArrayTableView
     },
     mixins: [arrayMixin],
+    props: {
+      hyperlinks: {
+        type: Object,
+        default: null
+      }
+    },
     computed: {
       collapsable () {
         return this.schema.title && this.schema.title !== 'SEPARATOR'

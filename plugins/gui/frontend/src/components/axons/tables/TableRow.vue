@@ -2,8 +2,8 @@
   <tr
     class="x-table-row"
     :class="{clickable: clickable && !readOnly, selected}"
-    @mouseenter="enterRow"
-    @mouseleave="leaveRow"
+    @mouseenter="onEnter"
+    @mouseleave="onLeave"
   >
     <td
       v-if="selected !== undefined"
@@ -20,13 +20,13 @@
       class="top"
     >
       <md-icon
-        v-if="expanded"
+        v-if="expandRow"
         class="active"
         @click.native.stop="collapseRow"
       >expand_less</md-icon>
       <md-icon
         v-else
-        @click.native.stop="expandRow"
+        @click.native.stop="onToggleExpand"
       >expand_more</md-icon>
     </td>
     <td
@@ -34,25 +34,18 @@
       :key="schema.name"
       nowrap
     >
-      <slot
-        v-bind="dataProps(schema)"
-        :hover-row="hovered"
-        :expand-row="expanded"
-      >
-        <x-table-data v-bind="dataProps(schema)" />
-      </slot>
+      <slot v-bind="{schema, data, sort, filter: filters[schema.name], hoverRow, expandRow}" />
     </td>
   </tr>
 </template>
 
 <script>
-  import xTableData from './TableData.vue'
   import xCheckbox from '../inputs/Checkbox.vue'
 
   export default {
     name: 'XTableRow',
     components: {
-      xTableData, xCheckbox
+      xCheckbox
     },
     props: {
       data: {
@@ -93,30 +86,19 @@
     },
     data () {
       return {
-        hovered: false,
-        expanded: false
+        hoverRow: false,
+        expandRow: false
       }
     },
     methods: {
-      dataProps (schema) {
-        return {
-          schema,
-          data: this.data,
-          sort: this.sort,
-          filter: this.filters[schema.name]
-        }
+      onEnter () {
+        this.hoverRow = true
       },
-      enterRow () {
-        this.hovered = true
+      onLeave () {
+        this.hoverRow = false
       },
-      leaveRow () {
-        this.hovered = false
-      },
-      expandRow () {
-        this.expanded = true
-      },
-      collapseRow () {
-        this.expanded = false
+      onToggleExpand () {
+        this.expandRow = !this.expandRow
       },
       onSelect(selected) {
         this.$emit('input', selected)
@@ -163,8 +145,6 @@
         }
 
         .md-icon {
-            width: 14px;
-            min-width: 14px;
             &:hover, &.active {
                 color: $theme-orange;
             }

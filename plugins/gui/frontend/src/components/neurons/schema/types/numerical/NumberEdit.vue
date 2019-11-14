@@ -1,5 +1,5 @@
 <script>
-	import primitiveMixin from '../primitive.js'
+	import primitiveMixin from '../../../../../mixins/primitive.js'
     import numericalMixin from './numerical'
 	import xSelect from '../../../../axons/inputs/Select.vue'
     import { validateNumber } from '../../../../../constants/validations'

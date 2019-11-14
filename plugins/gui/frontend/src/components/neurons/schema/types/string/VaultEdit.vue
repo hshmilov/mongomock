@@ -50,7 +50,7 @@
 </template>
 
 <script>
-    import primitiveMixin from '../primitive.js'
+    import primitiveMixin from '../../../../../mixins/primitive.js'
     import XString from './StringEdit.vue'
     import xModal from '../../../../axons/popover/Modal.vue'
     import {parseVaultError} from '../../../../../constants/utils'

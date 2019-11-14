@@ -47,7 +47,7 @@ export default {
 					return {...this.schema, name: index, title: undefined}
 				})
 			}
-			schemaItems.forEach((schema) => {
+			schemaItems.forEach(schema => {
 				if (this.isFile(schema)) {
 					schema.type = 'file'
 				}
@@ -57,16 +57,19 @@ export default {
 						(Array.isArray(this.schema.required) && this.schema.required.includes(schema.name)))
 				}
 				schema.filter = this.schema.filter
+				schema.path = this.schema.path? [...this.schema.path] : []
+				if (typeof schema.name === 'string') {
+					schema.path.push(schema.name)
+				}
+				if (!schema.hyperlinks) {
+					schema.hyperlinks = this.schema.hyperlinks
+				}
 			})
 			return schemaItems
 		},
 		dataSchemaItems() {
-			return this.schemaItems
-				.filter(item => !this.empty(this.data[item.name]))
-				.map(item => {
-					let path = this.schema.path ? this.schema.path : (item.path || [])
-					return {...item, path: path.concat([item.name])}
-				})
+			const data = this.data
+			return this.schemaItems.filter(item => !this.empty(data[item.name]))
 		},
 		isHidden() {
 			return this.data['enabled'] === false

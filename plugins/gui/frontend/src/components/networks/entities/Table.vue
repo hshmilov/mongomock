@@ -15,7 +15,7 @@
       :on-click-row="configEntity"
       @input="updateSelection"
     >
-      <template slot="actions">
+      <template #actions>
         <x-action-menu
           v-show="hasSelection"
           :module="module"
@@ -51,11 +51,12 @@
           >Exporting...</x-button>
         </div>
       </template>
-      <x-table-data
-        slot-scope="props"
-        :module="module"
-        v-bind="props"
-      />
+      <template #default="slotProps">
+        <x-table-data
+          v-bind="slotProps"
+          :module="module"
+        />
+      </template>
     </x-table>
   </div>
 </template>
@@ -71,7 +72,7 @@
   import { mapState, mapMutations, mapActions } from 'vuex'
   import { UPDATE_DATA_VIEW } from '../../../store/mutations'
   import {
-    FETCH_DATA_CONTENT_CSV, FETCH_DATA_FIELDS, FETCH_DATA_CURRENT
+    FETCH_DATA_CONTENT_CSV, FETCH_DATA_FIELDS, FETCH_DATA_CURRENT, FETCH_DATA_HYPERLINKS
   } from '../../../store/actions'
 
   export default {
@@ -93,7 +94,7 @@
         currentSelectionLabels (state) {
           if (!this.selection.include) return {}
           return state[this.module].content.data
-                  .filter(entity => this.selection.ids.includes(entity.internal_axon_id))
+                  .filter(entity => entity && this.selection.ids.includes(entity.internal_axon_id))
                   .reduce((entityToLabels, entity) => {
                     entityToLabels[entity.internal_axon_id] = entity.labels
                     return entityToLabels
@@ -111,10 +112,15 @@
         exporting: false
       }
     },
+    created () {
+      this.fetchDataHyperlinks({ module: this.module })
+    },
     methods: {
       ...mapMutations({ updateView: UPDATE_DATA_VIEW }),
       ...mapActions({
-        fetchContentCSV: FETCH_DATA_CONTENT_CSV, fetchDataFields: FETCH_DATA_FIELDS,
+        fetchContentCSV: FETCH_DATA_CONTENT_CSV,
+        fetchDataFields: FETCH_DATA_FIELDS,
+        fetchDataHyperlinks: FETCH_DATA_HYPERLINKS,
         fetchDataCurrent: FETCH_DATA_CURRENT
       }),
       configEntity (entityId) {

@@ -390,28 +390,28 @@
         return ''
       },
       composeCondition () {
-          let cond = '({val})'
-          return cond.replace(/{val}/g, getExcludedAdaptersFilter(this.condition.fieldType, this.condition.field,
-              this.condition.filteredAdapters, this.getConditionExpression(cond)));
-        },
-        getConditionExpression(cond) {
-          if (this.opsMap[this.compOp]) {
-                let field = this.field
-                cond = this.opsMap[this.compOp].replace(/{field}/g, field)
-            } else if (this.opsList.length) {
-                this.compOp = ''
-                this.value = ''
-                return ''
-            }
+        let cond = '({val})'
+        return cond.replace(/{val}/g, getExcludedAdaptersFilter(this.condition.fieldType, this.condition.field,
+            this.condition.filteredAdapters, this.getConditionExpression(cond)));
+      },
+      getConditionExpression(cond) {
+        if (this.opsMap[this.compOp]) {
+              let field = this.field
+              cond = this.opsMap[this.compOp].replace(/{field}/g, field)
+          } else if (this.opsList.length) {
+              this.compOp = ''
+              this.value = ''
+              return ''
+          }
 
-            let val = this.processedValue ? this.processedValue : this.value
-            let iVal = Array.isArray(val) ? -1 : undefined
-            return cond.replace(/{val}/g, () => {
-              if (iVal === undefined) return val
-                iVal = (iVal + 1) % val.length
-                return val[iVal]
-            })
-        },
+          let val = this.processedValue ? this.processedValue : this.value
+          let iVal = Array.isArray(val) ? -1 : undefined
+          return cond.replace(/{val}/g, () => {
+            if (iVal === undefined) return val
+              iVal = (iVal + 1) % val.length
+              return val[iVal]
+          })
+      },
       compileCondition () {
         if (!this.field) return
         if (this.isParent) {

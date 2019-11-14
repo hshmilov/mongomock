@@ -188,7 +188,8 @@
               field: '', desc: true
             },
             fields: defaultFields[this.module],
-            colFilters: {}
+            colFilters: {},
+            page: 0
           },
           uuid: null
         })

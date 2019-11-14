@@ -6,7 +6,7 @@
     <x-table-wrapper
       :title="tableTitle"
       :count="count.data_to_show"
-      :loading="loading"
+      :loading="loading || fetching"
       :error="content.error"
     >
       <div
@@ -15,7 +15,6 @@
         class="header"
       >
         <x-search-input
-
           :value="searchValue"
           :placeholder="`Search ${tableTitle}...`"
           @input="onInput"
@@ -47,8 +46,8 @@
         slot="table"
         v-model="pageSelection"
         :data="pageData"
-        :fields="viewFieldsPaths"
-        :page-size="view.pageSize"
+        :fields="viewFields"
+        :page-size="pageSize"
         :sort="view.sort"
         :col-filters="view.colFilters"
         :id-field="idField"
@@ -59,12 +58,11 @@
         :on-click-all="onClickAll"
         @filter="updateColFilters"
       >
-        <slot
-          slot-scope="props"
-          v-bind="props"
-        >
-          <x-table-data v-bind="props" />
-        </slot>
+        <template #default="slotProps">
+          <slot v-bind="slotProps">
+            <x-table-data v-if="!$scopedSlots.default" v-bind="slotProps" />
+          </slot>
+        </template>
       </x-table>
     </x-table-wrapper>
     <div class="x-pagination">
@@ -74,37 +72,37 @@
           v-for="size in [20, 50, 100]"
           :key="size"
           class="x-link"
-          :class="{active: size === view.pageSize}"
+          :class="{active: size === pageSize}"
           @click="onClickSize(size)"
           @keyup.enter="onClickSize(size)"
         >{{ size }}</div>
       </div>
       <div class="x-pages">
         <div
-          :class="{'x-link': view.page > 0}"
-          @click="onClickPage(0)"
-          @keyup.enter="onClickPage(0)"
+          :class="{'x-link': page > 0}"
+          @click="() => onClickPage(0)"
+          @keyup.enter="() => onClickPage(0)"
         >&lt;&lt;</div>
         <div
-          :class="{'x-link': view.page - 1 >= 0}"
-          @click="onClickPage(view.page - 1)"
-          @keyup.enter="onClickPage(view.page - 1)"
+          :class="{'x-link': page - 1 >= 0}"
+          @click="onClickPage(page - 1)"
+          @keyup.enter="onClickPage(page - 1)"
         >&lt;</div>
         <div
           v-for="number in pageLinkNumbers"
           :key="number"
           class="x-link"
-          :class="{active: (number === view.page)}"
+          :class="{active: (number === page)}"
           @click="onClickPage(number)"
           @keyup.enter="onClickPage(number)"
         >{{ number + 1 }}</div>
         <div
-          :class="{'x-link': view.page + 1 <= pageCount}"
-          @click="onClickPage(view.page + 1)"
-          @keyup.enter="onClickPage(view.page + 1)"
+          :class="{'x-link': page + 1 <= pageCount}"
+          @click="onClickPage(page + 1)"
+          @keyup.enter="onClickPage(page + 1)"
         >&gt;</div>
         <div
-          :class="{'x-link': view.page < pageCount}"
+          :class="{'x-link': page < pageCount}"
           @click="onClickPage(pageCount)"
           @keyup.enter="onClickPage(pageCount)"
         >&gt;&gt;</div>
@@ -117,7 +115,7 @@
   import xSearchInput from '../../neurons/inputs/SearchInput.vue'
   import xTableWrapper from '../../axons/tables/TableWrapper.vue'
   import xTable from '../../axons/tables/Table.vue'
-  import xTableData from './TableData.vue'
+  import xTableData from './TableData.js'
   import xButton from '../../axons/inputs/Button.vue'
 
   import { GET_DATA_SCHEMA_BY_NAME } from '../../../store/getters'
@@ -171,20 +169,20 @@
         default: undefined
       },
       staticSort: {
-          type: Boolean,
-          default: false
+        type: Boolean,
+        default: false
       },
       searchable: {
         type: Boolean,
         default: false
       },
       sort: {
-          type: Object,
-          default: () => {
-              return {
-                  field: '', desc: true
-              }
+        type: Object,
+        default: () => {
+          return {
+              field: '', desc: true
           }
+        }
       }
     },
     data () {
@@ -211,7 +209,7 @@
           return state.configuration.data.system.multiLine
         },
         defaultNumOfEntitiesPerPage (state) {
-          if (!state.configuration || !state.configuration.data || !state.configuration.data.system) return 0
+          if (!state.configuration || !state.configuration.data || !state.configuration.data.system) return 20
           return state.configuration.data.system.defaultNumOfEntitiesPerPage
         }
       }),
@@ -235,8 +233,10 @@
         return this.moduleState.count
       },
       view () {
-        if(this.module === 'users' || this.module == 'devices') {
-          this.moduleState.view.pageSize = this.moduleState.view.pageSize || this.defaultNumOfEntitiesPerPage
+        if (this.module === 'users' || this.module === 'devices') {
+          return { ...this.moduleState.view,
+            pageSize: (this.moduleState.view.pageSize || this.defaultNumOfEntitiesPerPage)
+          }
         }
         return this.moduleState.view
       },
@@ -259,45 +259,38 @@
         }
         return this.view.fields.map(fieldName => schemaFieldsByName[fieldName]).filter(field => field)
       },
-      viewFieldsPaths () {
-        return this.viewFields.map(field => {
-          return {
-            ...field,
-            path: (field.path ? field.path : []).concat([field.name])
-          }
-        })
-      },
       ids () {
         return this.data.map(item => item[this.idField])
       },
+      page () {
+        return this.view.page
+      },
+      pageSize () {
+        return this.view.pageSize
+      },
       pageData () {
-        let pageId = this.view.page
-        if (!this.staticData) {
-          this.pageLinkNumbers.forEach((number, index) => {
-            if (number === this.view.page) {
-              pageId = index
-            }
-          })
-        }
-        return this.data.slice(pageId * this.view.pageSize, (pageId + 1) * this.view.pageSize)
+        return this.data.slice(this.page * this.pageSize, (this.page + 1) * this.pageSize).filter(item => item)
       },
       pageIds () {
         return this.pageData.map(item => item[this.idField])
       },
+      fetching () {
+        return this.content.fetching && !this.pageIds.length
+      },
       pageCount () {
         let count = this.count.data || this.count.data_to_show
         if (!count) return 0
-        return Math.ceil(count / this.view.pageSize) - 1
+        return Math.ceil(count / this.pageSize) - 1
       },
       pageLinkNumbers () {
         // Page numbers that can be navigated to, should include 3 before current and 3 after
-        let firstPage = this.view.page - 3
-        let lastPage = this.view.page + 3
-        if (this.view.page <= 3) {
+        let firstPage = this.page - 3
+        let lastPage = this.page + 3
+        if (firstPage <= 0) {
           // For the case that current page is up to 3, page numbers should be first 7 available
           firstPage = 0
           lastPage = Math.min(firstPage + 6, this.pageCount)
-        } else if (this.view.page >= (this.pageCount - 3)) {
+        } else if (lastPage > this.pageCount) {
           // For the case that current page is up to 3 from last, page numbers should be last 7 available
           lastPage = this.pageCount
           firstPage = Math.max(lastPage - 6, 0)
@@ -398,7 +391,6 @@
       if (this.refresh) {
         this.startRefreshTimeout()
       }
-
     },
     beforeDestroy () {
       clearTimeout(this.timer)
@@ -416,15 +408,17 @@
           this.loading = false
           return
         }
-        if (!this.pageLinkNumbers || !this.pageLinkNumbers.length) {
-          return this.fetchContentSegment(0, this.view.pageSize)
+        if (!this.pageLinkNumbers || this.pageLinkNumbers.length <= 1) {
+          // Fetch at least 5 pages - in case pageSize is 20, there will enough data to change to 100
+          return this.fetchContentSegment(0, this.pageSize * 5)
         }
         if (loading) {
           this.loading = true
         }
+
         return this.fetchContentSegment(
-          this.pageLinkNumbers[0] * this.view.pageSize,
-          this.pageLinkNumbers.length * this.view.pageSize,
+          this.pageLinkNumbers[0] * this.pageSize,
+          this.pageLinkNumbers.length * this.pageSize,
           isRefresh
         )
       },
@@ -439,29 +433,26 @@
         }).catch(() => this.loading = false)
       },
       onClickSize (size) {
-        if (size === this.view.pageSize) return
-        this.updateModuleView({ pageSize: size })
-        this.fetchContentPages()
+        if (size === this.pageSize) return
+        this.updateModuleView({ pageSize: size, page: 0 })
+        this.$nextTick(this.fetchContentPages)
       },
       onClickPage (page) {
-        if ((page === this.view.page) || (page < 0 || page > this.pageCount)) {
+        if ((page === this.page) || (page < 0 || page > this.pageCount)) {
           return
-        }
-        if (Math.abs(page - this.view.page) > 3) {
-          this.loading = true
         }
         this.updateModuleView({ page: page })
         this.$nextTick(this.fetchContentPages)
       },
       onClickSort (fieldName) {
-        let sort = { ...this.view.sort }
-        if (sort.field !== fieldName) {
-          sort.field = fieldName
-          sort.desc = true
-        } else if (sort.desc) {
-          sort.desc = false
-        } else {
-          sort.field = ''
+        let {field, desc} = this.view.sort
+        let sort = {field: fieldName, desc: true}
+        if (field === fieldName) {
+          if (desc) {
+            sort.desc = false
+          } else {
+            sort.field = ''
+          }
         }
         this.updateModuleView({ sort, page: 0 })
         this.fetchContentPages(true)

@@ -10,7 +10,6 @@
         :data="data"
         :sort="sort"
         :filter="filter"
-        ref="data"
       />
       <div class="data-table-container">
         <x-tooltip v-if="hoverData">
@@ -36,49 +35,47 @@
           :class="{ top: position.top, left: position.left }"
           @click.stop=""
         >
-          <transition name="horizontal-fade">
-            <div
-              v-if="expandData"
-              class="content"
-            >
-              <x-table v-bind="detailsTable">
+          <div
+            v-if="expandData"
+            class="content"
+          >
+            <x-table v-bind="detailsTable">
+              <template #default="slotProps">
                 <x-table-data
-                  slot-scope="props"
+                  v-bind="slotProps"
                   :module="module"
-                  v-bind="props"
                 />
-              </x-table>
-            </div>
-          </transition>
+              </template>
+            </x-table>
+          </div>
         </div>
       </div>
     </div>
-    <div class="details-list-container">
-      <transition name="vertical-fade">
-        <div
-          v-if="expandRow"
-          class="list"
-        >
-          <x-table-data
-            v-for="(detail, index) in details"
-            :key="index"
-            :schema="schema"
-            :data="detail"
-            :sort="sort"
-            :filter="filter"
-            class="item"
-          />
-        </div>
-      </transition>
+    <div
+      v-if="expandRow"
+      class="details-list-container"
+    >
+      <div class="list">
+        <x-table-data
+          v-for="(detail, index) in details"
+          :key="index"
+          :schema="schema"
+          :data="detail"
+          :sort="sort"
+          :filter="filter"
+          class="item"
+        />
+      </div>
     </div>
   </div>
 </template>
 
 <script>
   import xTable from '../../axons/tables/Table.vue'
-  import xTableData from '../../neurons/data/TableData.vue'
+  import xTableData from '../../neurons/data/TableData.js'
   import xTooltip from '../../axons/popover/Tooltip.vue'
   import {pluginMeta} from '../../../constants/plugin_meta'
+  import _isEmpty from 'lodash/isEmpty'
 
   import {mapState} from 'vuex'
 
@@ -153,7 +150,7 @@
       },
       showExpand () {
         return (this.hoverRow || this.expandData) && this.adaptersLength > 1 && this.fieldName.includes('specific_data')
-                && Boolean(this.$refs.data && this.$refs.data.$el.textContent.trim())
+                && !_isEmpty(this.data[this.fieldName])
       },
       adaptersListSorted() {
         return this.data[this.adaptersFieldName].concat().sort().map(adapter => [adapter])
@@ -260,6 +257,8 @@
                 border: 1px solid $theme-black;
                 border-radius: 100%;
                 height: 14px;
+                min-width: 14px;
+                width: 14px;
                 margin-left: 4px;
                 transition: all .4s cubic-bezier(.4,0,.2,1);
                 &:hover, &.active {
@@ -287,23 +286,19 @@
                     padding: 4px;
                     border-radius: 4px;
                     max-height: 30vh;
+                    animation: horizontal-fade .6s ease-in;
+
+                    @keyframes horizontal-fade {
+                      from {
+                        transform: translateX(-100%);
+                        opacity: 0;
+                      }
+                    }
+
                     .x-table {
                       width: min-content;
                       max-height: calc(30vh - 8px);
                     }
-                }
-
-                .horizontal-fade-enter-active {
-                    transition: all .4s cubic-bezier(1.0, 0.4, 0.8, 1.0);
-                }
-
-                .horizontal-fade-leave-active {
-                    transition: all .2s ease;
-                }
-
-                .horizontal-fade-enter, .horizontal-fade-leave-to {
-                    transform: translateX(-100%);
-                    opacity: 0;
                 }
             }
         }
@@ -316,10 +311,20 @@
     .details-list-container {
         overflow: visible;
         margin: 0px -8px;
+        animation: vertical-fade .6s ease-in-out;
+
+        @keyframes vertical-fade {
+          from {
+            opacity: 0;
+            transform: translateY(-50%);
+          }
+        }
 
         .list {
             margin-top: 2px;
+            padding-left: 8px;
             display: grid;
+            grid-gap: 2px 0;
             background-color: rgba($grey-2, 0.6);
 
             > .item {
@@ -333,19 +338,6 @@
                     border: none;
                 }
             }
-        }
-
-        .vertical-fade-enter-active {
-            transition: all .4s cubic-bezier(1.0, 0.4, 0.8, 1.0);
-        }
-
-        .vertical-fade-leave-active {
-            transition: all .2s ease;
-        }
-
-        .vertical-fade-enter, .vertical-fade-leave-to {
-            transform: translateY(-50%);
-            opacity: 0;
         }
     }
 </style>

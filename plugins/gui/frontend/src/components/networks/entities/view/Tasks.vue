@@ -11,8 +11,7 @@
       <x-button
         link
         @click="exportCSV"
-      >Export CSV
-      </x-button>
+      >Export CSV</x-button>
     </template>
   </x-table>
 </template>

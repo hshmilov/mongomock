@@ -88,10 +88,5 @@ export default {
 		if (this.value !== undefined && this.value !== null) {
 			this.data = this.value
 		}
-	},
-	destroyed() {
-		this.valid = true
-		this.error = ''
-		this.emitValidity()
 	}
 }

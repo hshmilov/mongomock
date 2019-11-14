@@ -145,6 +145,7 @@
       },
       removeQuery () {
         this.removeData({ module: this.stateLocation, selection: this.selection })
+                .then(this.onSearchConfirm)
         this.selection = {
           ids: [], include: true
         }

@@ -1,5 +1,5 @@
 <template>
-  <div class="x-slicer">
+  <div class="x-slice">
     <slot :sliced="slicedData" />
     <div
       v-if="remainder"
@@ -19,14 +19,14 @@
 </template>
 
 <script>
-  import xTable from '../../../axons/tables/Table.vue'
-  import xTooltip from '../../../axons/popover/Tooltip.vue'
-  import {isObjectListField } from '../../../../constants/utils'
+  import xTable from '../../axons/tables/Table.vue'
+  import xTooltip from '../../axons/popover/Tooltip.vue'
+  import {isObjectListField } from '../../../constants/utils'
 
   import {mapState} from 'vuex'
 
   export default {
-    name: 'XSlicer',
+    name: 'XSlice',
     components: {
       xTable, xTooltip
     },
@@ -100,7 +100,7 @@
 </script>
 
 <style lang="scss">
-  .x-slicer {
+  .x-slice {
     display: flex;
     align-items: center;
     .remainder {

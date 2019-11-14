@@ -111,7 +111,7 @@
   import { mapState, mapGetters, mapMutations, mapActions } from 'vuex'
   import { SINGLE_ADAPTER } from '../../../../store/getters'
   import {SELECT_DATA_CURRENT} from '../../../../store/mutations'
-  import { FETCH_DATA_CURRENT, FETCH_DATA_HYPERLINKS, FETCH_DATA_CURRENT_TASKS } from '../../../../store/actions'
+  import { FETCH_DATA_CURRENT, FETCH_DATA_CURRENT_TASKS } from '../../../../store/actions'
 
   export default {
     name: 'XEntityLayout',
@@ -185,7 +185,6 @@
       }
     },
     created () {
-      this.fetchDataHyperlinks({ module: this.module })
       if (this.entity.id !== this.entityId) {
         this.fetchDataCurrent({
           module: this.module,
@@ -212,7 +211,6 @@
       }),
       ...mapActions({
          fetchDataCurrent: FETCH_DATA_CURRENT,
-         fetchDataHyperlinks: FETCH_DATA_HYPERLINKS,
          fetchDataCurrentTasks: FETCH_DATA_CURRENT_TASKS
        })
     }
@@ -267,7 +265,7 @@
               }
             }
 
-            .x-slicer {
+            .x-slice {
               align-items: flex-end;
 
               .array {

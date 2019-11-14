@@ -10,10 +10,9 @@ from axonius.consts.gui_consts import (DASHBOARD_SPACE_DEFAULT,
                                        DASHBOARD_SPACE_PERSONAL)
 from axonius.utils.wait import wait_until
 from ui_tests.tests.ui_consts import (READ_WRITE_USERNAME, READ_ONLY_USERNAME, NEW_PASSWORD,
-                                      FIRST_NAME, LAST_NAME, JSON_ADAPTER_NAME)
+                                      FIRST_NAME, LAST_NAME, JSON_ADAPTER_NAME,
+                                      STRESSTEST_ADAPTER_NAME)
 from ui_tests.tests.ui_test_base import TestBase
-
-STRESS_NAME = 'stresstest_adapter'
 
 
 class TestDashboard(TestBase):
@@ -571,6 +570,7 @@ class TestDashboard(TestBase):
         for result in results:
             assert any(string_to_search in s.lower() for s in result)
         self.dashboard_page.open_view_devices()
+        wait_until(lambda: 'devices' in self.driver.current_url)
         self.devices_page.wait_for_table_to_load()
         devices_page_tables_count = self.devices_page.get_all_tables_counters()[0]
         assert devices_page_tables_count == dashboard_devices_table_count
@@ -578,14 +578,15 @@ class TestDashboard(TestBase):
         assert any(host_name in s for s in self.devices_page.get_all_table_rows()[0])
         self.devices_page.page_back()
         self.dashboard_page.open_view_users()
+        wait_until(lambda: 'users' in self.driver.current_url)
         self.users_page.wait_for_table_to_load()
         users_tables_count = self.users_page.get_all_tables_counters()[0]
         assert users_tables_count == dashboard_users_table_count
         assert self.users_page.find_search_value() == string_to_search
         assert any(user_name in s for s in self.users_page.get_all_table_rows()[0])
         self.users_page.page_back()
+        self.dashboard_page.wait_for_table_to_load()
         device_id = self.devices_page.find_first_id()
-        self.devices_page.wait_for_spinner_to_end()
         self.devices_page.click_row()
         self.devices_page.wait_for_spinner_to_end()
         assert device_id in self.driver.current_url
@@ -753,7 +754,7 @@ class TestDashboard(TestBase):
     def test_dashboard_lifecycle_tooltip(self):
         stress = stresstest_service.StresstestService()
         with stress.contextmanager(take_ownership=True):
-            self.adapters_page.wait_for_adapter(STRESS_NAME)
+            self.adapters_page.wait_for_adapter(STRESSTEST_ADAPTER_NAME)
             device_dict = {'device_count': 2500, 'name': 'testonius'}
             stress.add_client(device_dict)
 
@@ -769,19 +770,19 @@ class TestDashboard(TestBase):
         table_data = self.dashboard_page.get_lifecycle_tooltip_table_data()
         # check for existing tooltip with the stress adapter
         assert self.dashboard_page.get_lifecycle_tooltip()
-        assert self.dashboard_page.find_element_by_text(STRESS_NAME.replace('_', ' '))
+        assert self.dashboard_page.find_element_by_text(STRESSTEST_ADAPTER_NAME)
         # check the status of stress adapter
         stress_adapters_found = False
         for row in table_data:
             # row.name
             # row.status
-            if row.get('name') == STRESS_NAME.replace('_', ' ') and \
+            if row.get('name') == STRESSTEST_ADAPTER_NAME and \
                     row.get('status') == self.LIFECYCLE_ADAPTER_FETCHING_STATUS:
                 stress_adapters_found = True
 
         assert stress_adapters_found
 
-        self.adapters_page.clean_adapter_servers(STRESS_NAME, delete_associated_entities=True)
+        self.adapters_page.clean_adapter_servers(STRESSTEST_ADAPTER_NAME, delete_associated_entities=True)
         # deleting the server takes time, and when this function over the adapter will be down
         # we cant delete his devices if he is down. so... we sleep a bit
         time.sleep(10)

@@ -4,8 +4,7 @@ import pytest
 from selenium.common.exceptions import NoSuchElementException
 
 from ui_tests.tests.test_entities_table import TestEntitiesTable
-from ui_tests.tests.ui_consts import (AWS_ADAPTER_NAME,
-                                      STRESSTEST_ADAPTER)
+from ui_tests.tests.ui_consts import (AWS_ADAPTER_NAME, STRESSTEST_ADAPTER_NAME)
 from services.adapters.aws_service import AwsService
 from services.adapters import stresstest_service
 from services.plugins.general_info_service import GeneralInfoService
@@ -216,7 +215,7 @@ class TestDevicesTable(TestEntitiesTable):
     def test_select_devices(self):
         stress = stresstest_service.StresstestService()
         with stress.contextmanager(take_ownership=True):
-            self.adapters_page.wait_for_adapter(STRESSTEST_ADAPTER)
+            self.adapters_page.wait_for_adapter(STRESSTEST_ADAPTER_NAME)
             device_dict = {'device_count': 2500, 'name': 'testonius'}
             stress.add_client(device_dict)
             self.base_page.run_discovery()
@@ -252,7 +251,7 @@ class TestDevicesTable(TestEntitiesTable):
             # test pagination refresh
             self.devices_page.execute_saved_query('AD Devices Missing Agents')
             assert self.devices_page.find_active_page_number() == '1'
-            self.adapters_page.clean_adapter_servers(STRESSTEST_ADAPTER, delete_associated_entities=True)
+            self.adapters_page.clean_adapter_servers(STRESSTEST_ADAPTER_NAME, delete_associated_entities=True)
             # deleting the server takes time, and when this function over the adapter will be down
             # we cant delete his devices if he is down. so... we sleep a bit
             time.sleep(10)

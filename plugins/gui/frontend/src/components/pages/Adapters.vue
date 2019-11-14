@@ -1,11 +1,18 @@
 <template>
-  <x-page title="adapters" class="x-adapters">
+  <x-page
+    title="adapters"
+    class="x-adapters"
+  >
     <div class="adapters-search">
-      <x-search-input class="adapters-search_input" v-model="searchText" placeholder="Search Adapters..." />
+      <x-search-input
+        v-model="searchText"
+        class="adapters-search_input"
+        placeholder="Search Adapters..."
+      />
       <md-switch
         v-model="showOnlyConfigured"
         class="md-primary"
-        >Configured Only ({{configuredAdaptersCount}})</md-switch>
+      >Configured Only ({{ configuredAdaptersCount }})</md-switch>
     </div>
     <div class="adapters-table">
       <table class="table">
@@ -17,22 +24,43 @@
           </tr>
         </thead>
         <tbody>
-          <tr v-for="item in filteredData" @click="configAdapter(item['id'])" class="table-row" :key="item.id">
+          <tr
+            v-for="item in filteredData"
+            :key="item.id"
+            class="table-row"
+            @click="configAdapter(item['id'])"
+          >
             <td class="status">
-              <div class="symbol">
-                  <div v-if="item.successClients" class="status_success">
-                    <svg-icon class="status_icon" :name="`symbol/success`" :original="true" height="13px"></svg-icon>
-                    <p class="status_clients-count">{{item.successClients}}</p>
-                  </div>
-                  <div  v-if="item.errorClients" class="status_error">
-                    <svg-icon class="status_icon" :name="`symbol/error`" :original="true" height="13px"></svg-icon>
-                    <p class="status_clients-count">{{item.errorClients}}</p>
-                  </div>
+              <div class="summary">
+                <div v-if="item.successClients">
+                  <md-icon
+                    md-src="/src/assets/icons/symbol/success.svg"
+                    class="icon-success"
+                  />
+                  <p class="summary_count">{{ item.successClients }}</p>
+                </div>
+                <div  v-if="item.errorClients">
+                  <md-icon
+                    md-src="/src/assets/icons/symbol/error.svg"
+                    class="icon-error"
+                  />
+                  <p class="summary_count">{{ item.errorClients }}</p>
+                </div>
               </div>
-              <div class="marker" :class="`indicator-bg-${item['status'] || 'void'}`"></div>
+              <div
+                class="marker"
+                :class="`indicator-bg-${item['status'] || 'void'}`"
+              />
             </td>
-            <td class="row-data row-title" :id="item.id">
-              <x-title class="adapter-title" :id="item.id" :logo="`adapters/${item.id}`">{{ item.title }}</x-title>
+            <td
+              :id="item.id"
+              class="row-data row-title"
+            >
+              <x-title
+                :id="item.id"
+                class="adapter-title"
+                :logo="`adapters/${item.id}`"
+              >{{ item.title }}</x-title>
             </td>
             <td class="row-data description">
               <div class="content">{{ item.description }}</div>
@@ -65,7 +93,7 @@
     }
 
     export default {
-        name: 'x-adapters',
+        name: 'XAdapters',
         components: {xPage, xTitle, xSearchInput},
         computed: {
             ...mapState({
@@ -110,7 +138,7 @@
             }
         },
         watch: {
-            configuredAdaptersCount: function (value) {
+            configuredAdaptersCount: function () {
                 this.notifyIfMilestoneCompleted()
             }
         },
@@ -125,134 +153,134 @@
 
 
 <style lang="scss">
-    .x-adapters {
-        .adapters-search {
-            margin-bottom: 12px;
-            display: flex;
-            justify-content: center;
+  .x-adapters {
+    .adapters-search {
+      margin-bottom: 12px;
+      display: flex;
+      justify-content: center;
 
-            &_input{
-                width: 50%;
-                margin-right: 10px;
-            }
+      &_input {
+        width: 50%;
+        margin-right: 10px;
+      }
 
-            .md-primary {
-                margin: 0;
-                width: 20%;
-                padding: 5px 0;
-            }
-        }
-
-        .adapters-table {
-            height: calc(100% - 42px);
-            overflow: auto;
-
-            .table {
-                border-collapse: separate;
-                border-spacing: 0 8px;
-                font-size: 14px;
-                overflow: hidden;
-
-                .table-row {
-                    .row-data {
-
-                        &.row-title {
-                            width: 20%;
-
-                            .adapter-title {
-                                .text {
-                                    white-space: unset;
-                                    overflow: unset;
-                                    text-overflow: unset;
-                                    word-wrap: break-word;
-                                }
-                            }
-                        }
-
-                        &.description {
-                            width: 80%
-                        }
-                        background: $theme-white;
-                        vertical-align: middle;
-                        padding: 12px;
-                        position: relative;
-
-                        &:last-child {
-                            border-bottom-right-radius: 4px;
-                            border-top-right-radius: 4px;
-                        }
-
-                        .content {
-                            line-height: 1.2em;
-                            overflow: hidden;
-                            display: -webkit-box;
-                            -webkit-line-clamp: 3;
-                            -webkit-box-orient: vertical;
-                        }
-                    }
-
-                    .status {
-                        display: flex;
-                        box-shadow: none;
-
-                        .symbol {
-                                flex: 1 0 auto;
-                                text-align: center;
-                                line-height: calc(3.6em + 24px);
-                                margin: 0 12px;
-                                display: flex;
-                                flex-direction: column;
-                                justify-content: center;
-                             & > div {
-                                 display: flex;
-                                flex-direction: column;
-                                justify-content: space-around;
-                             }
-                            .status {
-                                &_clients-count {
-                                    margin: 0;
-                                    padding: 2px 0;
-                                    line-height: 12px;
-                                    font-size: 12px;
-                                    font-weight: 600;
-                                }
-
-                                &_icon {
-                                    margin: 2px 0;
-                                }
-
-                            }
-                            
-                        }
-
-                        .marker {
-                            width: 10px;
-                            height: calc(4px + 3.6em + 24px);
-                            margin: -2px -8px;
-                            border-bottom-left-radius: 4px;
-                            border-top-left-radius: 4px;
-
-                        }
-                    }
-                }
-
-                thead {
-                    overflow: auto;
-                    .table-row .row-data:nth-child(2) {
-                        border-bottom-left-radius: 4px;
-                        border-top-left-radius: 4px;
-                    }
-                }
-
-                tbody {
-                    overflow: auto;
-                    .table-row:hover {
-                        cursor: pointer;
-                        transform: scale(1.02);
-                    }
-                }
-            }
-
-        }
+      .md-primary {
+        margin: 0;
+        width: 20%;
+        padding: 5px 0;
+      }
     }
+
+    .adapters-table {
+      height: calc(100% - 42px);
+      overflow: auto;
+
+      .table {
+        border-collapse: separate;
+        border-spacing: 0 8px;
+        font-size: 14px;
+        overflow: hidden;
+
+        .table-row {
+          .row-data {
+
+            &.row-title {
+              width: 20%;
+
+              .adapter-title {
+                .text {
+                  white-space: unset;
+                  overflow: unset;
+                  text-overflow: unset;
+                  word-wrap: break-word;
+                }
+              }
+            }
+
+            &.description {
+              width: 80%
+            }
+
+            background: $theme-white;
+            vertical-align: middle;
+            padding: 12px;
+            position: relative;
+
+            &:last-child {
+              border-bottom-right-radius: 4px;
+              border-top-right-radius: 4px;
+            }
+
+            .content {
+              line-height: 1.2em;
+              overflow: hidden;
+              display: -webkit-box;
+              -webkit-line-clamp: 3;
+              -webkit-box-orient: vertical;
+            }
+          }
+
+          .status {
+            display: flex;
+            box-shadow: none;
+
+            .summary {
+              flex: 1 0 auto;
+              text-align: center;
+              line-height: calc(3.6em + 24px);
+              margin: 0 12px;
+              display: flex;
+              flex-direction: column;
+              justify-content: center;
+
+              & > div {
+                display: flex;
+                flex-direction: column;
+                justify-content: space-around;
+              }
+              .md-icon {
+                min-width: 16px;
+                width: 16px;
+              }
+              &_count {
+                margin: 0;
+                padding: 2px 0;
+                line-height: 12px;
+                font-size: 12px;
+                font-weight: 600;
+              }
+            }
+
+            .marker {
+              width: 10px;
+              height: calc(4px + 3.6em + 24px);
+              margin: -2px -8px;
+              border-bottom-left-radius: 4px;
+              border-top-left-radius: 4px;
+
+            }
+          }
+        }
+
+        thead {
+          overflow: auto;
+
+          .table-row .row-data:nth-child(2) {
+            border-bottom-left-radius: 4px;
+            border-top-left-radius: 4px;
+          }
+        }
+
+        tbody {
+          overflow: auto;
+
+          .table-row:hover {
+            cursor: pointer;
+            transform: scale(1.02);
+          }
+        }
+      }
+
+    }
+  }
 </style>

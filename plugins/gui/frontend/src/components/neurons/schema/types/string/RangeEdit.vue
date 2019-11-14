@@ -10,7 +10,7 @@
 </template>
 
 <script>
-	import primitiveMixin from '../primitive.js'
+	import primitiveMixin from '../../../../../mixins/primitive.js'
 
 	export default {
 		name: 'x-range-edit',

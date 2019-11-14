@@ -1,78 +1,22 @@
-<template>
-  <div :class="severity">
-    <a
-      v-if="hyperlink"
-      :href="hyperlink.href"
-      @click="onClickLink(hyperlink)"
-    >{{ displaying }}</a>
-    <template v-else-if="displaying">{{ displaying }}</template>
-    <template v-else>&nbsp;</template>
-  </div>
+<template functional>
+  <div v-if="typeof props.value === 'number'">{{ parseInt(props.value) }}</div>
+  <div v-else>&nbsp;</div>
 </template>
 
 <script>
-    import hyperlinkMixin from '../hyperlink.js'
-    import {mapState} from 'vuex'
-
-    export default {
-        name: 'XIntegerView',
-        mixins: [hyperlinkMixin],
-        props: {
-          schema: {
-            type: Object,
-            required: true
-          },
-          value: {
-            type: [Number, Array],
-            default: null
-          }
-        },
-        computed: {
-            ...mapState({
-                percentageThresholds(state) {
-                    if (!state.configuration || !state.configuration.data || !state.configuration.data.system) {
-                        return []
-                    }
-                    return state.configuration.data.system.percentageThresholds
-                }
-            }),
-            processedData() {
-                if (Array.isArray(this.value)) {
-                    return this.value.map(item => this.format(item)).join(', ')
-                }
-                return this.format(this.value)
-            },
-            isPercentage() {
-                return this.schema.format && this.schema.format === 'percentage'
-            },
-            severity() {
-                if (this.value === undefined || this.value === null || !this.isPercentage) return ''
-
-                let minDiff = 101
-                let minSeverity = ''
-                Object.keys(this.percentageThresholds).forEach(thresholdName => {
-                    if (this.percentageThresholds[thresholdName] < this.value) return
-                    let diff = this.percentageThresholds[thresholdName] - this.value
-                    if (diff < minDiff) {
-                        minDiff = diff
-                        minSeverity = thresholdName
-                    }
-                })
-                return minSeverity
-            },
-            displaying() {
-                return `${this.processedData}${this.isPercentage && this.processedData ? '%' : ''}`
-            }
-        },
-        methods: {
-            format(value) {
-                if (typeof value === 'number') {
-                    return parseInt(value)
-                }
-                return ''
-            }
-        }
+  export default {
+    name: 'XIntegerView',
+    props: {
+      schema: {
+        type: Object,
+        required: true
+      },
+      value: {
+        type: Number,
+        default: null
+      }
     }
+  }
 </script>
 
 <style lang="scss">

@@ -113,6 +113,7 @@ class DevicesPage(EntitiesPage):
     def add_new_tag(self, tag_text, number=1):
         self.open_tag_dialog()
         self.create_save_tag(tag_text, number)
+        self.wait_for_table_to_load()
 
     def create_save_tag(self, tag_text, number=1):
         self.fill_text_field_by_css_selector(self.TAGS_TEXTBOX_CSS, tag_text)
@@ -126,6 +127,7 @@ class DevicesPage(EntitiesPage):
         self.wait_for_element_present_by_css(self.TAG_CHECKBOX_CSS).click()
         self.click_tag_save_button()
         self.wait_for_success_tagging_message()
+        self.wait_for_table_to_load()
 
     def remove_tag(self, text):
         self.open_tag_dialog()

@@ -2138,7 +2138,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
                 f'{ACTIONS_FIELD}.{ACTIONS_MAIN_FIELD}': actions[ACTIONS_MAIN_FIELD],
                 f'{TRIGGERS_FIELD}.view.name': trigger['view']['name'] if trigger else '',
                 f'{TRIGGERS_FIELD}.{LAST_TRIGGERED_FIELD}': trigger.get(LAST_TRIGGERED_FIELD, '') if trigger else '',
-                f'{TRIGGERS_FIELD}.{TIMES_TRIGGERED_FIELD}': trigger.get(TIMES_TRIGGERED_FIELD, '') if trigger else '',
+                f'{TRIGGERS_FIELD}.{TIMES_TRIGGERED_FIELD}': trigger.get(TIMES_TRIGGERED_FIELD) if trigger else None,
                 LAST_UPDATE_FIELD: enforcement[LAST_UPDATE_FIELD]
             })
 
@@ -3763,7 +3763,6 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
     @gui_helpers.historical_range()
     @gui_add_rule_logged_in('dashboards/<space_id>/panels/<panel_id>', methods=['GET', 'DELETE', 'POST'],
                             required_permissions={Permission(PermissionType.Dashboard, ReadOnlyJustForGet)})
-    # def update_dashboard_panel(self, panel_id, space_id, skip, limit):
     def update_dashboard_panel(self, space_id, panel_id, skip, limit, from_date: datetime, to_date: datetime):
         """
         DELETE an existing Dashboard Panel and DELETE its panelId from the

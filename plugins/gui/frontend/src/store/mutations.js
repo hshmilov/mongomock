@@ -90,8 +90,16 @@ export const updateDataContent = (state, payload) => {
 	content.fetching = payload.fetching
 	content.rule = payload.rule
 	content.error = payload.error
-	if (payload.data) {
+	if (!payload.data) {
+		return
+	}
+	if (!payload.skip) {
 		content.data = payload.data
+		if (module.count.data > content.data.length) {
+			content.data[module.count.data - 1] = null
+		}
+	} else if (payload.data.length) {
+		content.data.splice(payload.skip, payload.data.length, ...payload.data)
 	}
 }
 
@@ -231,7 +239,7 @@ export const updateAddedDataLabels = (state, payload) => {
 		}))
 
 	module.content.data = module.content.data.map(entity => {
-		if (!isEntitySelected(entity.internal_axon_id, data.entities)) return entity
+		if (!entity || !isEntitySelected(entity.internal_axon_id, data.entities)) return entity
 		if (!entity.labels) entity.labels = []
 
 		return {
@@ -259,7 +267,7 @@ export const updateRemovedDataLabels = (state, payload) => {
 	})
 
 	module.content.data = module.content.data.map(entity => {
-		if (!isEntitySelected(entity.internal_axon_id, data.entities) || !entity.labels) return entity
+		if (!entity || !isEntitySelected(entity.internal_axon_id, data.entities) || !entity.labels) return entity
 
 		return {
 			...entity, labels: entity.labels.filter((label) => !data.labels.includes(label))

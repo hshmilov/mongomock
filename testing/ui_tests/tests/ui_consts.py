@@ -46,6 +46,7 @@ WMI_INFO_ADAPTER = 'WMI Info'
 AD_ADAPTER_NAME = 'Microsoft Active Directory (AD)'
 
 STRESSTEST_ADAPTER = 'stresstest_adapter'
+STRESSTEST_ADAPTER_NAME = 'Test adapters'
 STRESSTEST_SCANNER_ADAPTER = 'stresstest_scanner_adapter'
 
 ALERTLOGIC_ADAPTER = 'alertlogic_adapter'

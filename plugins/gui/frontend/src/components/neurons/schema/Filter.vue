@@ -59,7 +59,7 @@
           this.$emit('input', expressions)
         }
       },
-      calculateI () {
+      maxIndex () {
         return calcMaxIndex(this.expressions)
       }
     },
@@ -98,11 +98,7 @@
         this.$emit('change', this.filters.join(' '))
       },
       addExpression () {
-        this.expressions = [ ...this.expressions, {
-          ...expression,
-          i: this.calculateI,
-          nested: [{ ...nestedExpression, i: 0 }]
-        }]
+        this.expressions.push({...expression, i: this.maxIndex, nested: [{ ...nestedExpression, i: 0 }]})
       },
       removeExpression (index) {
         if (index >= this.expressions.length) return

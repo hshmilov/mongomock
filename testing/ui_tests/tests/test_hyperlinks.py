@@ -4,17 +4,16 @@ from devops.scripts.automate_dev import credentials_inputer
 from services.adapters.cisco_service import CiscoService
 from services.adapters.stresstest_service import StresstestService
 from ui_tests.tests.ui_test_base import TestBase
+from ui_tests.tests.ui_consts import (STRESSTEST_ADAPTER_NAME, STRESSTEST_ADAPTER)
 
 
 class TestHyperlinks(TestBase):
     def test_hyperlinks_stresstest(self):
-        stresstest_name = 'stresstest_adapter'
-
         self.settings_page.switch_to_page()
         with StresstestService().contextmanager(take_ownership=True):
             self.adapters_page.switch_to_page()
-            self.adapters_page.wait_for_adapter(stresstest_name)
-            self.adapters_page.click_adapter(stresstest_name)
+            self.adapters_page.wait_for_adapter(STRESSTEST_ADAPTER_NAME)
+            self.adapters_page.click_adapter(STRESSTEST_ADAPTER_NAME)
             self.adapters_page.wait_for_spinner_to_end()
             self.adapters_page.wait_for_table_to_load()
             self.adapters_page.click_new_server()
@@ -28,7 +27,7 @@ class TestHyperlinks(TestBase):
             self.settings_page.switch_to_page()
             self.base_page.run_discovery()
             self.devices_page.switch_to_page()
-            self.devices_page.fill_filter(f'adapters == \'{stresstest_name}\'')
+            self.devices_page.fill_filter(f'adapters == \'{STRESSTEST_ADAPTER}\'')
             self.devices_page.enter_search()
             self.devices_page.wait_for_table_to_load()
             self.devices_page.click_row()
@@ -38,22 +37,22 @@ class TestHyperlinks(TestBase):
             self.devices_page.scroll_into_view(element, '[role=tabpanel].stresstest_adapter_0_asd-0>.x-list')
 
             hyperlinks_str_element = self.devices_page.driver.find_element_by_css_selector(
-                '[for=test_hyperlinks_str]+div>a')
+                '[for=test_hyperlinks_str] + a')
             assert hyperlinks_str_element.text == 'seven'
             assert hyperlinks_str_element.get_property('href') == 'http://test_hyperlinks_str_seven/'
 
             hyperlinks_str_element = self.devices_page.driver.find_element_by_css_selector(
-                '[for=test_hyperlinks_int]+div>a')
+                '[for=test_hyperlinks_int] + a')
             assert hyperlinks_str_element.text == '7'
             assert hyperlinks_str_element.get_property('href') == 'http://test_hyperlinks_int_7/'
 
             # Now testing hyperlinks that jump to filter
             hyperlinks_str_element = self.devices_page.driver.find_element_by_css_selector(
-                '[for=test2_hyperlinks_str]+div>a')
+                '[for=test2_hyperlinks_str] + a')
             assert hyperlinks_str_element.text == 'fourteen'
 
             hyperlinks_str_element = self.devices_page.driver.find_element_by_css_selector(
-                '[for=test2_hyperlinks_int]+div>a')
+                '[for=test2_hyperlinks_int] + a')
             assert hyperlinks_str_element.text == '14'
             hyperlinks_str_element.click()
             self.devices_page.wait_for_table_to_load()
@@ -66,16 +65,14 @@ class TestHyperlinks(TestBase):
             assert self.devices_page.count_entities() == 1
 
     def test_default_values(self):
-        stresstest_name = 'stresstest_adapter'
         clients_db = None
-
         self.settings_page.switch_to_page()
         try:
             with StresstestService().contextmanager(take_ownership=True) as service:
                 clients_db = service.self_database['clients']
                 self.adapters_page.switch_to_page()
-                self.adapters_page.wait_for_adapter(stresstest_name)
-                self.adapters_page.click_adapter(stresstest_name)
+                self.adapters_page.wait_for_adapter(STRESSTEST_ADAPTER_NAME)
+                self.adapters_page.click_adapter(STRESSTEST_ADAPTER_NAME)
                 self.adapters_page.wait_for_spinner_to_end()
                 self.adapters_page.wait_for_table_to_load()
                 self.adapters_page.click_new_server()
@@ -93,8 +90,8 @@ class TestHyperlinks(TestBase):
                 }, limit=1) == 1
 
                 self.adapters_page.switch_to_page()
-                self.adapters_page.wait_for_adapter(stresstest_name)
-                self.adapters_page.click_adapter(stresstest_name)
+                self.adapters_page.wait_for_adapter(STRESSTEST_ADAPTER_NAME)
+                self.adapters_page.click_adapter(STRESSTEST_ADAPTER_NAME)
                 self.adapters_page.wait_for_spinner_to_end()
                 self.adapters_page.wait_for_table_to_load()
                 self.adapters_page.click_new_server()

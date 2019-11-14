@@ -234,7 +234,6 @@
           // Use the search value as a filter
           this.$emit('input', this.searchValue)
           this.inTextSearch = false
-
         }
         this.$emit('validate')
         this.closeInput()

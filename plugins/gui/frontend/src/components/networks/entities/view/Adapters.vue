@@ -113,17 +113,18 @@
     },
     computed: {
       ...mapState({
-        fields(state) {
+        fields (state) {
           return state[this.module].fields.data
+        },
+        hyperlinks (state) {
+          return state[this.module].hyperlinks.data
         }
       }),
       sortedSpecificData() {
         let lastSeen = new Set()
         let res = this.adapters.filter((item) => {
           if (item['hidden_for_gui']) return false
-          if (item['plugin_type'] && item['plugin_type'].toLowerCase().includes('plugin')) return false
-
-          return true
+          return !(item['plugin_type'] && item['plugin_type'].toLowerCase().includes('plugin'))
         }).sort((first, second) => {
           // GUI plugin (miscellaneous) always comes last
           if (first.plugin_name === guiPluginName) return 1
@@ -154,14 +155,30 @@
         }
         return res
       },
+      genericFieldNames () {
+        return this.fields.generic.map(field => field.name)
+      },
+      genericSchema () {
+        return { ...this.fields.schema.generic,
+          name: 'data', title: 'SEPARATOR',
+          hyperlinks: eval(this.hyperlinks['aggregator'])
+        }
+      },
+      genericSchemaNoId () {
+        return { ...this.genericSchema,
+          items: this.genericSchema.items.filter(item => item.name !== 'id')}
+      },
       customFields () {
-        return (this.fields.specific.gui || this.fields.generic)
+        if (!this.fields.specific.gui) {
+          return this.fields.generic
+        }
+        return [...this.fields.generic,
+                ...this.fields.specific.gui.filter(field => !this.genericFieldNames.includes(field.name))]
       },
       customData () {
         return this.sortedSpecificData[this.sortedSpecificData.length - 1].data
       }
     },
-
     methods: {
       ...mapActions({
         saveCustomData: SAVE_CUSTOM_DATA, fetchDataFields: FETCH_DATA_FIELDS,
@@ -171,17 +188,14 @@
       },
       adapterSchema(name) {
         if (!this.fields || !this.fields.schema) return {}
-        let items = [{
-          type: 'array', ...this.fields.schema.generic,
-          name: 'data', title: 'SEPARATOR', path: [this.module, 'aggregator']
-        }, {
-          type: 'array', ...this.fields.schema.specific[name],
-          name: 'data', title: 'SEPARATOR', path: [this.module, name]
-        }]
-        if (name === guiPluginName) {
-          items[0].items = items[0].items.filter(item => item.name !== 'id')
+        return {
+          type: 'array',
+          items: [(name === guiPluginName) ? this.genericSchemaNoId : this.genericSchema, {
+            type: 'array', ...this.fields.schema.specific[name],
+            name: 'data', title: 'SEPARATOR',
+            hyperlinks: eval(this.hyperlinks[name])
+          }]
         }
-        return {type: 'array', items}
       },
       toggleView() {
         this.viewBasic = !this.viewBasic

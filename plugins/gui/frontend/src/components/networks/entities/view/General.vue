@@ -41,7 +41,6 @@
 
   import {mapState} from 'vuex'
 
-
   export default {
     name: 'XEntityGeneral',
     components: {
@@ -69,15 +68,23 @@
     },
     computed: {
       ...mapState({
-        fields(state) {
+        fields (state) {
           return state[this.module].fields.data
+        },
+        hyperlinks (state) {
+          const hyperlinks = state[this.module].hyperlinks.data
+          if (!hyperlinks || !hyperlinks['aggregator']) {
+            return {}
+          }
+          return eval(hyperlinks['aggregator'])
         }
       }),
       basicSchema () {
         if (!this.fields.generic) return null
         return {
           type: 'array',
-          items: this.fields.generic
+          items: this.fields.generic,
+          hyperlinks: this.hyperlinks
         }
       }
     }

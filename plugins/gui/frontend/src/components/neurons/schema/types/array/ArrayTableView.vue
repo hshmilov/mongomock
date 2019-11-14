@@ -10,22 +10,22 @@
         :data="processedData[item.name]"
         :schema="item"
       />
-      <template v-else-if="dataSchemaItems.length > 1 && schema.name !=='adapters' && item.format !== 'tag'">
-        <md-chip>
-          <component
-            :is="item.type"
-            :schema="item"
-            :value="processedData[item.name]"
-          />
-        </md-chip>
-      </template>
-      <template v-else>
+      <md-chip
+        v-else-if="wrapChip(item)"
+        :class="item.format"
+      >
         <component
           :is="item.type"
           :schema="item"
           :value="processedData[item.name]"
         />
-      </template>
+      </md-chip>
+      <component
+        :is="item.type"
+        v-else
+        :schema="item"
+        :value="processedData[item.name]"
+      />
     </div>
   </div>
 </template>
@@ -40,7 +40,7 @@
   import xTooltip from '../../../../axons/popover/Tooltip.vue'
   import xTable from '../../../../axons/tables/Table.vue'
 
-  import arrayMixin from './array'
+  import arrayMixin from '../../../../../mixins/array'
   import { isObjectListField } from '../../../../../constants/utils'
 
   export default {
@@ -74,6 +74,11 @@
           items = Array.from(new Set(items))
         }
         return items
+      }
+    },
+    methods: {
+      wrapChip (item) {
+        return (this.dataSchemaItems.length > 1 && this.schema.name !=='adapters') || item.format === 'tag'
       }
     }
   }

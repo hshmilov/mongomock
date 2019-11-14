@@ -87,7 +87,7 @@
   import { validateEmail } from '../../../../../constants/validations'
   import XVaultEdit from '../string/VaultEdit.vue'
 
-  import arrayMixin from './array'
+  import arrayMixin from '../../../../../mixins/array'
 
   export default {
     name: 'Array',
