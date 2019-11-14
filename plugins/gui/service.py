@@ -3318,7 +3318,11 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
         Clears session, logs out
         :return:
         """
-        logger.info(f'User {session} has logged out')
+        user = session['user']
+        username = user.get('user_name')
+        source = user.get('source')
+        first_name = user.get('first_name')
+        logger.info(f'User {username}, {source}, {first_name} has logged out')
         session['user'] = None
         return redirect('/', code=302)
 
