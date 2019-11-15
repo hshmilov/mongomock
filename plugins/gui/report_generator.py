@@ -697,7 +697,8 @@ class ReportGenerator:
                         log_metric(logger, 'query.report', filter_query)
                         count = self.report_params['saved_view_count_func'](
                             entity, parse_filter(filter_query), None, False)
-                        projection = {field: 1 for field in view.get('fields', [])}
+                        projection = {field: 1 for field in view.get('fields', []) if field_to_title.get(field)
+                                      and field != 'specific_data.data.image'}
                         views_data[entity.name].append({
                             'name': view_doc.get('name'), 'entity': entity.value,
                             'fields': [{field_to_title.get(field, field): field} for field in
@@ -707,6 +708,7 @@ class ReportGenerator:
                                                       skip=0,
                                                       view_filter=parse_filter(filter_query),
                                                       sort=gui_helpers.get_sort(view),
+                                                      run_over_projection=False,
                                                       projection=projection,
                                                       entity_type=entity,
                                                       default_sort=self.report_params['default_sort'],

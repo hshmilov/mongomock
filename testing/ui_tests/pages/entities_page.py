@@ -875,20 +875,20 @@ class EntitiesPage(Page):
         })
 
     def assert_csv_match_ui_data(self, result, ui_data=None, ui_headers=None):
-        had_bom = 0
-        res = result.content
-        while isinstance(res, bytes) and res.startswith(codecs.BOM_UTF8):
-            had_bom += 1
-            res = res[len(codecs.BOM_UTF8):]
-        while isinstance(res, str) and res.startswith(codecs.BOM_UTF8.decode('utf-8')):
-            had_bom += 1
-            res = res[len(codecs.BOM_UTF8.decode('utf-8')):]
-        all_csv_rows: typing.List[str] = res.decode('utf-8').split('\r\n')
-        assert had_bom == 2
+        self.assert_csv_match_ui_data_with_content(result.content, ui_data, ui_headers)
 
+    def assert_csv_match_ui_data_with_content(self, content, ui_data=None, ui_headers=None):
+        had_bom = 0
+        while isinstance(content, bytes) and content.startswith(codecs.BOM_UTF8):
+            had_bom += 1
+            content = content[len(codecs.BOM_UTF8):]
+        while isinstance(content, str) and content.startswith(codecs.BOM_UTF8.decode('utf-8')):
+            had_bom += 1
+            content = content[len(codecs.BOM_UTF8.decode('utf-8')):]
+            assert had_bom == 2
+        all_csv_rows = content.decode('utf-8').split('\r\n')
         csv_headers = all_csv_rows[0].split(',')
         csv_data_rows = all_csv_rows[1:-1]
-
         if not ui_headers:
             ui_headers = self.get_columns_header_text()
         if not ui_data:
@@ -897,7 +897,6 @@ class EntitiesPage(Page):
         # we don't writ image to csv
         if 'Image' in ui_headers:
             ui_headers.remove('Image')
-
         assert sorted(ui_headers) == sorted(csv_headers)
         # for every cell in the ui_data_rows we check if its in the csv_data_row
         # the reason we check it is because the csv have more columns with data

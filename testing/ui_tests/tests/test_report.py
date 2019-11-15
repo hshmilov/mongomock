@@ -356,11 +356,17 @@ class TestReport(TestBase):
 
                 self.reports_page.click_send_email()
                 self.reports_page.find_email_sent_toaster()
-                mail_content = smtp_service.get_email_first_csv_content(recipient)
-                assert len(mail_content.splitlines()) == 11
+                self._test_csv(recipient, smtp_service)
         finally:
             self.wait_for_adapter_down(ui_consts.STRESSTEST_ADAPTER)
             self.wait_for_adapter_down(ui_consts.STRESSTEST_SCANNER_ADAPTER)
+
+    def _test_csv(self, recipient, smtp_service):
+        mail_content = smtp_service.get_email_first_csv_content(recipient)
+        assert len(mail_content.splitlines()) == 11
+        self.devices_page.switch_to_page()
+        self.devices_page.execute_saved_query(self.TEST_REPORT_EDIT_QUERY)
+        self.devices_page.assert_csv_match_ui_data_with_content(mail_content)
 
     def test_read_only_click_add_scheduling(self):
         smtp_service = SMTPService()
