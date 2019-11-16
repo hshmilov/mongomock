@@ -397,17 +397,7 @@ class CsvAdapter(AdapterBase):
                 try:
                     device.os.kernel_version = vals.get('kernel')
                 except Exception:
-                    # os is probably not set
-                    device.figure_os('')
-                    device.os.kernel_version = vals.get('kernel')
-
-                try:
-                    cpu_speed = vals.get('cpu_speed')
-                    architecture = vals.get('architecture')
-                    if cpu_speed or architecture:
-                        device.add_cpu(ghz=cpu_speed / (1024 ** 3), architecture=architecture)
-                except Exception:
-                    logger.debug(f'Problem setting cpu')
+                    pass
 
                 ips = (vals.get('ip') or '').split(',')
                 ips = [ip.strip() for ip in ips if ip.strip()]

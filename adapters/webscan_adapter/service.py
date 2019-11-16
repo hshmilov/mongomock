@@ -44,7 +44,8 @@ class WebscanAdapter(WebscanExecutionMixIn, AdapterBase):
 
     @staticmethod
     def get_connection(client_config):
-        connection = WebscanConnection(client_config['domain'], port=client_config['port'])
+        connection = WebscanConnection(client_config['domain'], port=client_config['port'],
+                                       https_proxy=client_config.get('https_proxy'))
         with connection:
             pass
         return connection
@@ -90,6 +91,11 @@ class WebscanAdapter(WebscanExecutionMixIn, AdapterBase):
                     'title': 'Web Server Port',
                     'type': 'integer',
                     'default': DEFAULT_SSL_PORT
+                },
+                {
+                    'name': 'https_proxy',
+                    'title': 'HTTPS Proxy',
+                    'type': 'string'
                 }
             ],
             'required': [

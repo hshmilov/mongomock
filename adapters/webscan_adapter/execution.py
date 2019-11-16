@@ -49,6 +49,7 @@ class WebscanExecutionMixIn(Triggerable):
                 'message': f'Argument Error: Bad Config'
             }
         port = client_config.get('port')
+        https_proxy = client_config.get('https_proxy')
         results = dict()
         # Get devices details
         devices = iterate_axonius_entities(EntityType.Devices, internal_axon_ids)
@@ -56,7 +57,7 @@ class WebscanExecutionMixIn(Triggerable):
             _id = None
             try:
                 _id = device['internal_axon_id']
-                result_value = self._handle_device(device, port)
+                result_value = self._handle_device(device, port, https_proxy)
                 results[_id] = result_value
             except Exception as e:
                 logger.exception(f'Failed to handle internal axon id {_id}')
@@ -102,7 +103,7 @@ class WebscanExecutionMixIn(Triggerable):
 
         return result
 
-    def _handle_domain(self, adapter_meta: dict, hostname: str, port: int):
+    def _handle_domain(self, adapter_meta: dict, hostname: str, port: int, https_proxy=None):
         """
         Get a domain and the meta data of the device and fetch its data using webscan adapter
         :param adapter_meta: adapter meta (for tagging the results)
@@ -112,7 +113,7 @@ class WebscanExecutionMixIn(Triggerable):
         """
         logger.debug(f'Scanning {hostname}:{port}')
         # create a new connection
-        connection = WebscanConnection(domain=hostname, port=port)
+        connection = WebscanConnection(domain=hostname, port=port, https_proxy=https_proxy)
         data = connection.get_device_list()
         new_device = list(self._parse_raw_data(data))[0]
         if not new_device:
@@ -183,7 +184,7 @@ class WebscanExecutionMixIn(Triggerable):
                 logger.exception(f'Error getting reachable hostname from adapter')
         return {}, ''
 
-    def _handle_device(self, device: dict, port: int) -> dict:
+    def _handle_device(self, device: dict, port: int, https_proxy=None) -> dict:
         '''
         Get an axon device, handle the required job and return its output
         :param device:
@@ -213,7 +214,7 @@ class WebscanExecutionMixIn(Triggerable):
                 }
                 return json
 
-            if not self._handle_domain(reachable_hostname_adapter, reachable_hostname, port):
+            if not self._handle_domain(reachable_hostname_adapter, reachable_hostname, port, https_proxy):
                 json = {
                     'success': False,
                     'value': f'Webscan Enrichment Error: not data from {reachable_hostname}:{port}'

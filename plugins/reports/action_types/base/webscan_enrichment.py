@@ -31,6 +31,11 @@ class WebscanEnrichment(ActionTypeBase):
                     'type': 'integer',
                     'default': DEFAULT_SSL_PORT
                 },
+                {
+                    'name': 'https_proxy',
+                    'title': 'HTTPS Proxy',
+                    'type': 'string'
+                }
             ],
             'required': [
                 'port',
@@ -41,7 +46,7 @@ class WebscanEnrichment(ActionTypeBase):
 
     @staticmethod
     def default_config() -> dict:
-        default_schema = {'port': DEFAULT_SSL_PORT}
+        default_schema = {'port': DEFAULT_SSL_PORT, 'https_proxy': None}
         return add_node_default(default_schema, WEBSCAN_PLUGIN_NAME)
 
     def __run(self) -> EntitiesResult:
