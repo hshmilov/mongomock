@@ -84,7 +84,9 @@ class GuiService(PluginService, UpdatablePluginMixin):
             self._update_schema_version_20()
         if self.db_schema_version < 21:
             self._update_schema_version_21()
-        if self.db_schema_version != 21:
+        if self.db_schema_version < 22:
+            self._update_schema_version_22()
+        if self.db_schema_version != 22:
             print(f'Upgrade failed, db_schema_version is {self.db_schema_version}')
 
     def _update_schema_version_1(self):
@@ -612,7 +614,6 @@ class GuiService(PluginService, UpdatablePluginMixin):
         """
         print('Upgrade to schema 19')
         try:
-            self._migrate_report_periodic_config()
             self.db.get_collection(GUI_PLUGIN_NAME, 'getting_started').insert_one(
                 {
                     'settings': {
@@ -771,6 +772,17 @@ class GuiService(PluginService, UpdatablePluginMixin):
             self.db_schema_version = 21
         except Exception as e:
             print(f'Exception while upgrading gui db to version 21. Details: {e}')
+
+    def _update_schema_version_22(self):
+        """
+        For version 2.12, run the report periodic config migration
+        """
+        print('Upgrade to schema 22')
+        try:
+            self._migrate_report_periodic_config()
+            self.db_schema_version = 22
+        except Exception as e:
+            print(f'Exception while upgrading gui db to version 22. Details: {e}')
 
     def _update_default_locked_actions(self, new_actions):
         """
