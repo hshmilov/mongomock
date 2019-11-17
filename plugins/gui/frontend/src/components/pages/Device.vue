@@ -11,19 +11,11 @@
     import xPage from '../axons/layout/Page.vue'
     import xEntityView from '../networks/entities/view/Layout.vue'
 
-    import { mapState, mapActions } from 'vuex'
-    import { SET_GETTING_STARTED_MILESTONE_COMPLETION } from '../../store/modules/onboarding';
-    import { EXAMINE_DEVICE } from '../../constants/getting-started'
+    import { mapState } from 'vuex'
 
     export default {
         name: 'x-device',
         components: {xPage, xEntityView},
-        mounted() {
-            this.milestoneCompleted({ milestoneName: EXAMINE_DEVICE })
-        },
-        methods: {
-            ...mapActions({milestoneCompleted: SET_GETTING_STARTED_MILESTONE_COMPLETION})
-        },
         computed: {
             ...mapState({
                 deviceName(state) {

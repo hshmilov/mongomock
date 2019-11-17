@@ -1138,7 +1138,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
         """
         Fetch the Getting Started checklist state from db
         """
-        data = self._get_collection('getting_started').find({})
+        data = self._get_collection('getting_started').find_one({})
         return jsonify(data)
 
     @gui_add_rule_logged_in('getting_started/completion', methods=['POST'])
@@ -1160,9 +1160,12 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
         progress = len([item for item in result['milestones'] if item['completed']])
         progress_formatted_str = f'{progress} of {milestones_len}'
 
+        details = [{'name': item.get('name', 'name not found'), 'completed': item.get('completed', False)} for item
+                   in result.get('milestones', []) if item]
+
         log_metric(logger, GettingStartedMetric.COMPLETION_STATE,
                    metric_value=milestone_name,
-                   details=result['milestones'],
+                   details=details,
                    progress=progress_formatted_str)
         return ''
 

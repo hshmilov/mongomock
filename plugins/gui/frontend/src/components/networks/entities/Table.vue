@@ -125,7 +125,9 @@
       }),
       configEntity (entityId) {
         if (this.hasSelection) return
-
+      
+        this.$emit('row-clicked')
+        
         let path = `${this.module}/${entityId}`
         if (this.historicalState) {
           path += `?history=${encodeURIComponent(this.historicalState)}`
@@ -136,6 +138,7 @@
           id: entityId,
           history: this.historicalState
         })
+
       },
       updateEntities (reset = true) {
         this.$refs.table.fetchContentPages(true)

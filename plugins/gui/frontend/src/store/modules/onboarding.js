@@ -19,8 +19,8 @@ const completeMilestoneStatusByName = milestoneName => milestone => {
 	if (milestone.name === milestoneName) {
 		return {
 			...milestone,
-			completed: true,
-			completionDate: Date.now()
+			completionDate: Date.now(),
+			completed: true
 		}
 	}
 	return milestone
@@ -43,7 +43,7 @@ export const onboarding = {
 			}
 		},
 		gettingStarted: {
-			loading: false,
+			loading: true,
 			error: false,
 			data: {
 				milestones: [],
@@ -52,70 +52,77 @@ export const onboarding = {
 		}
 	},
 	mutations: {
-		[ UPDATE_EMPTY_STATE ] (state, payload) {
+		[UPDATE_EMPTY_STATE](state, payload) {
 			state.emptyStates.settings = { ...state.emptyStates.settings, ...payload.settings }
 		},
 
-		[ SET_GETTING_STARTED_DATA ] (state, payload) {
+		[SET_GETTING_STARTED_DATA](state, payload) {
 			const { data, error, fetching } = payload
 			state.gettingStarted.loading = fetching
 			if (data) {
-				state.gettingStarted.data = data[0]
+				state.gettingStarted.data = data
 			}
 			if (error) {
 				state.gettingStarted.error = error
-			} 
+			}
 		},
 
-		[ UPDATE_GETTING_STARTED_SETTINGS ] (state, payload) {
+		[UPDATE_GETTING_STARTED_SETTINGS](state, payload) {
 			const settings = _get(state, 'gettingStarted.data.settings', {})
-			state.gettingStarted.data.settings = {...settings, payload}
+			state.gettingStarted.data.settings = { ...settings, payload }
 		},
 	},
 	actions: {
-		async [ GET_GETTING_STARTED_DATA ] ({ commit, dispatch }) {
+		async [GET_GETTING_STARTED_DATA]({ commit, dispatch }) {
 			try {
 				await dispatch(REQUEST_API, {
 					rule: `getting_started`,
 					type: SET_GETTING_STARTED_DATA
 				})
-			} catch(error) {
+			} catch (error) {
 				console.error(error)
 			}
 		},
-		async [ SET_GETTING_STARTED_MILESTONE_COMPLETION ] ({ state, dispatch, commit, getters }, payload) {
+		async [SET_GETTING_STARTED_MILESTONE_COMPLETION]({ state, dispatch, commit, getters }, payload) {
 			try {
 				// Dont execute the action in case the milestone has already been completed
 				const { completedMilestonesNames } = getters
 				if (completedMilestonesNames.includes(payload.milestoneName)) {
 					return
 				}
-				const history = state.gettingStarted.data.milestones
+				const history = state.gettingStarted.data
 				const updateMilestoneCompletion = completeMilestoneStatusByName(payload.milestoneName)
-				
-				const updatedMilestonesdata = history.map(updateMilestoneCompletion)
-				commit(SET_GETTING_STARTED_DATA, updatedMilestonesdata)
+
+				const updatedMilestonesdata = history.milestones.map(updateMilestoneCompletion)
+
+				commit(SET_GETTING_STARTED_DATA, {
+					data:
+					{
+						...history,
+						milestones: updatedMilestonesdata
+					}
+				})
 
 				await dispatch(REQUEST_API, {
 					rule: `getting_started/completion`,
 					method: 'POST',
-					data: {milestoneName: payload.milestoneName}
+					data: { milestoneName: payload.milestoneName }
 				})
-			}catch(err) {
+			} catch (err) {
 				console.error(err)
 				// revert to previous state incase the operation failed for some reason
-				commit(SET_GETTING_STARTED_DATA, history)
+				commit(SET_GETTING_STARTED_DATA, { data: history })
 			}
 		},
 
-		async [ UPDATE_GETTING_STARTED_SETTINGS ] ({ commit, dispatch, state }, payload) {
+		async [UPDATE_GETTING_STARTED_SETTINGS]({ commit, dispatch, state }, payload) {
 
 			const history = state.gettingStarted.data.settings
 
 			try {
 				await dispatch(REQUEST_API, {
 					rule: 'getting_started/settings',
-					data: {settings: payload},
+					data: { settings: payload },
 					method: 'POST'
 				})
 				commit(UPDATE_GETTING_STARTED_SETTINGS, payload)
@@ -133,6 +140,6 @@ export const onboarding = {
 		},
 		completedMilestonesNames: (state, getters) => {
 			return getters.completedMilestones.map(m => m.name)
-		}
+		},
 	}
 }
