@@ -20,8 +20,10 @@ def read_version():
             path = system_consts.METADATA_PATH
         metadata = Path(path).read_text()
         return json.loads(metadata)['Version']
-    except Exception as e:
-        print(f'Failed to read metadata {e} {traceback.format_exc()}')
+    except Exception:
+        print(f'WARNING: Failed to read metadata to extract version info. \n'
+              f'It is not fatal if happens in non prod env \n'
+              f'{traceback.format_exc()}')
     return ''
 
 
