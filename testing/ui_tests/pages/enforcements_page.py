@@ -6,7 +6,7 @@ from collections import namedtuple
 
 from selenium.common.exceptions import NoSuchElementException
 
-from testing.test_credentials.test_ad_credentials import WMI_QUERIES_DEVICE
+from testing.test_credentials.test_ad_credentials import WMI_QUERIES_DEVICE, ad_client1_details
 from ui_tests.pages.entities_page import EntitiesPage
 
 Task = namedtuple('Task', 'status stats name main_action trigger_query_name started_at completed_at')
@@ -47,7 +47,7 @@ class Action(Enum):
     censys_enrichment = 'Enrich Device Data with Censys'
     webscan_enrichment = 'Enrich Device Data with Web Server Information'
     scan_with_qualys = 'Add to Qualys Cloud Platform'
-    change_ldap_attribute = 'Add or Update LDAP Attributes to Users or Devices'
+    change_ldap_attribute = 'Update LDAP Attributes of Users or Devices'
     ScanTenable = 'Add to Tenable'
     carbonblack_defense_change_policy = 'Change Carbon Black CB Defense Policy'
     tenable_sc_add_ips_to_asset = 'Add IPs to Tenable.sc Asset'
@@ -408,6 +408,25 @@ class EnforcementsPage(EntitiesPage):
             param_line += ' && '
         param_line += f'echo done && echo {self.SECOND_ENFORCEMENT_EXECUTION_DIR_SEPERATOR} && dir'
         self.fill_text_field_by_element_id('params', param_line)
+        self.click_button(self.SAVE_BUTTON)
+        self.wait_for_element_present_by_text(name)
+
+    def add_ldap_attribute(self, name='Update LDAP Attribute'):
+        self.find_element_by_text(self.MAIN_ACTION_TEXT).click()
+        self.wait_for_action_library()
+        self.find_element_by_text(ActionCategory.ManageAD).click()
+        # Opening animation time
+        time.sleep(0.2)
+        self.find_element_by_text(Action.change_ldap_attribute.value).click()
+        self.wait_for_action_config()
+        self.fill_text_field_by_element_id(self.ACTION_NAME_ID, name)
+        self.fill_text_field_by_element_id('username', ad_client1_details['user'])
+        self.fill_text_field_by_element_id('password', ad_client1_details['password'])
+        self.click_button('+', button_class='x-button light',
+                          scroll_into_view_container=self.ACTION_CONF_BODY_CSS)
+        self.fill_text_field_by_element_id('attribute_name', 'info')
+        self.fill_text_field_by_element_id('attribute_value', 'test123')
+        time.sleep(2)
         self.click_button(self.SAVE_BUTTON)
         self.wait_for_element_present_by_text(name)
 

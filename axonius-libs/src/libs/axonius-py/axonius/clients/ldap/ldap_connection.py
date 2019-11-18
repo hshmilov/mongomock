@@ -1005,7 +1005,7 @@ class LdapConnection(object):
         return []
 
     def set_ldap_attribute(self, distinguished_name: str, attribute_name: str, attribute_value,
-                           operation=ldap3.MODIFY_ADD):
+                           operation=ldap3.MODIFY_REPLACE):
         """
         Sets a specific ldap attribute
         :param operation: ldap3 modify operation: MODIFY_ADD, MODIFY_DELETE, MODIFY_REPLACE, MODIFY_INCREMENT
