@@ -211,6 +211,7 @@ DOCKER_PORTS = {
     'airwave-adapter':                  9997,
     'webscan-adapter':                  9998,
     'google-big-query-adapter':         9999,
+    'ansible-tower-adapter':            10000,
     'mongo':                            27017,
     'mockingbird-db':                   28017
 }

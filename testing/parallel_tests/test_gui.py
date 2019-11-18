@@ -369,12 +369,16 @@ def test_api_users():
             for x in [4, 5, 6]:
                 axonius_system.insert_user(get_user_dict('GUI_TEST', str(x), GUI_TEST_PLUGIN, 'GUI_TEST_PLUGIN_2'))
 
-            users_response = gui_service.get_api_users(auth=API_TOKEN)
+            api_filter = f'filter=adapters.{PLUGIN_NAME}==%27{GUI_TEST_PLUGIN}%27'
+
+            users_response = gui_service.get_api_users(params=api_filter, auth=API_TOKEN)
+
             assert users_response.status_code == 200, f'Error in response. got response: {str(users_response)}, ' \
                                                       f'{users_response.content}'
 
             gui_service.login_user(DEFAULT_USER)
-            users_count_response = gui_service.get_users_count()
+            users_count_response = gui_service.get_users_count(params=api_filter)
+
             assert users_count_response.status_code == 200, f'Error in response. Got: {str(users_count_response)}, ' \
                                                             f'{users_count_response.content}'
 

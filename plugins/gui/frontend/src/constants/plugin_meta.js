@@ -1,11 +1,16 @@
 export const pluginMeta = {
+    ansible_tower_adapter: {
+        title: 'Red Hat Ansible Tower',
+        description: 'Red Hat Ansible Tower is a web console and REST API for operationalizing Ansible across teams, organizations, and the entire enterprise.',
+        link: 'https://docs.axonius.com/docs/red-hat-ansible-tower'
+    },
     google_big_query_adapter: {
         title: 'Google Big Query',
         description: 'BigQuery is a serverless, highly-scalable, and cost-effective cloud data warehouse with an in-memory BI Engine and machine learning built in.'
     },
     nutanix_adapter: {
         title: 'Nutanix AHV',
-        link:'https://docs.axonius.com/docs/nutanix-ahv',
+        link: 'https://docs.axonius.com/docs/nutanix-ahv',
         description: 'Nutanix AHV is a hypervisor included with the Enterprise Cloud OS. AHV delivers flexible migrations, security hardening, automated data protection and disaster recovery, and analytics.'
     },
     preempt_adapter: {
@@ -39,7 +44,7 @@ export const pluginMeta = {
     },
     pkware_adapter: {
         title: 'PKWARE',
-        link:'https://docs.axonius.com/docs/pkware',
+        link: 'https://docs.axonius.com/docs/pkware',
         description: 'PKWARE’s data protection platform finds, classifies, and protects sensitive data, allowing security managers to define data protection policies and monitor activity across the organization.'
     },
     symantec_ccs_adapter: {
@@ -139,7 +144,7 @@ export const pluginMeta = {
     },
     signalsciences_adapter: {
         title: 'Signal Sciences',
-        link:'https://docs.axonius.com/docs/signal-sciences',
+        link: 'https://docs.axonius.com/docs/signal-sciences',
         description: 'Signal Sciences is a web protection platform that Protects on-premise, multi-cloud and hybrid-cloud apps, within containers and serverless functions.'
     },
     automox_adapter: {
@@ -209,8 +214,8 @@ export const pluginMeta = {
     },
     paloalto_cortex_adapter: {
         title: 'Palo Alto Networks Cortex',
-        link: 'https://docs.axonius.com/docs/palo-alto-networks-cortex',
-        description : 'Palo Alto Networks Cortex is an open and integrated, AI-based continuous security platform, allowing security operations teams to speed the analysis of massive data sets.'
+        link:  'https://docs.axonius.com/docs/palo-alto-networks-cortex',
+        description: 'Palo Alto Networks Cortex is an open and integrated, AI-based continuous security platform, allowing security operations teams to speed the analysis of massive data sets.'
     },
     censys_adapter: {
         title: 'Censys',
@@ -290,7 +295,7 @@ export const pluginMeta = {
     spacewalk_adapter: {
         title: 'Spacewalk',
         link: '',
-        description: 'Spacewalk is an open-source systems management solution for system provisioning, patching and configuration.'    },
+        description: 'Spacewalk is an open-source systems management solution for system provisioning, patching and configuration.'},
     unifi_adapter: {
         title: 'Ubiquti UniFi Network Controller',
         link: '',
@@ -529,7 +534,7 @@ export const pluginMeta = {
     claroty_adapter: {
         title: 'Claroty',
         link: '',
-        description: 'Claroty discovers assets and monitors communication patterns for ICS networks.'                      
+        description: 'Claroty discovers assets and monitors communication patterns for ICS networks.'
     },
     solarwinds_orion_adapter: {
         title: 'SolarWinds Network Performance Monitor',
