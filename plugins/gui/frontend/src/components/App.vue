@@ -262,11 +262,11 @@ export default {
     }
   }
   .md-drawer.md-temporary.md-active {
-    z-index: 102;
+    z-index: 1001;
     background-color: #fafafa;
   }
   .md-overlay {
-    z-index: 101;
+    z-index: 1000;
     opacity: 1;
   }
 }
