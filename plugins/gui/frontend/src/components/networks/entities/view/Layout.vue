@@ -245,7 +245,7 @@
 
         .x-list {
           height: 100%;
-          overflow: auto;
+          overflow: hidden auto;
 
           > .x-array-view > .array {
             display: grid;
@@ -277,6 +277,11 @@
                 .item {
                   &:not(.md-chip) {
                     line-height: 20px;
+                  }
+
+                  .md-chip:not(.tag) {
+                    white-space: pre-line;
+                    height: auto;
                   }
 
                   &:first-child .md-chip {
