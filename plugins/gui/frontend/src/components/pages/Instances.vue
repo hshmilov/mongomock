@@ -102,6 +102,7 @@
                     this.renaming = false
                 })
                 this.instanceChangeId = null
+                this.newInstanceName = ''
             },
             showNameChangeModal(instanceId) {
                 this.instanceChangeId = instanceId
@@ -124,6 +125,7 @@
             },
             closeNameChange() {
                 this.instanceChangeId = null
+                this.newInstanceName = ''
                 this.renaming = false
             },
             loadData() {
