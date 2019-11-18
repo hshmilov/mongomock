@@ -2,6 +2,7 @@ import os
 import shlex
 import subprocess
 import sys
+import time
 from abc import abstractmethod
 
 from retrying import retry
@@ -12,7 +13,7 @@ from axonius.utils.debug import COLOR
 from services.axon_service import TimeoutException
 from services.docker_service import DockerService, retry_if_timeout
 
-MAX_NUMBER_OF_RUN_TRIES = 2
+MAX_NUMBER_OF_RUN_TRIES = 5
 
 
 def is_weave_up():
@@ -75,6 +76,8 @@ class WeaveService(DockerService):
               docker_internal_env_vars=None,
               run_env=None):
         self._number_of_tries += 1
+        if self._number_of_tries > 2:
+            time.sleep(2)
         if self._number_of_tries > MAX_NUMBER_OF_RUN_TRIES:
             raise Exception(f'Failed to run {self.container_name} after ')
         weave_is_up = is_weave_up()
