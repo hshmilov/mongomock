@@ -10,7 +10,7 @@ def _check_history_of_entity(page: EntitiesPage):
     page.wait_for_table_to_load()
     for day in range(1, History.history_depth + 1):
         page.fill_datepicker_date(datetime.now() - timedelta(day))
-        page.wait_for_table_to_load()
+        page.wait_for_table_to_load(retries=450)
         assert page.count_entities() >= History.entities_per_day
         page.close_datepicker()
         page.clear_existing_date()

@@ -6,6 +6,7 @@ import urllib.parse
 from tempfile import NamedTemporaryFile
 
 from retrying import retry
+import selenium.common.exceptions
 from selenium.common.exceptions import (ElementNotVisibleException,
                                         NoSuchElementException,
                                         StaleElementReferenceException,
@@ -188,6 +189,9 @@ class Page:
         raise NotImplementedError
 
     @property
+    @retry(stop_max_attempt_number=5,
+           wait_fixed=1000,
+           retry_on_exception=lambda exc: isinstance(exc, selenium.common.exceptions.TimeoutException))
     def current_url(self):
         return self.driver.current_url
 
