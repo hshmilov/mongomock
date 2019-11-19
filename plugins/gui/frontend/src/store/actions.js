@@ -345,7 +345,7 @@ export const fetchDataHyperlinks = ({state, dispatch}, payload) => {
 export const START_RESEARCH_PHASE = 'START_RESEARCH_PHASE'
 export const startResearch = ({dispatch}) => {
     return dispatch(REQUEST_API, {
-        rule: `research_phase`,
+        rule: 'research_phase',
         method: 'POST'
     })
 }

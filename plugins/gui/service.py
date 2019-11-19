@@ -4074,7 +4074,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
 
         :return: Map between each adapter and the number of devices it has, unless no devices
         """
-        self._trigger_remote_plugin(SYSTEM_SCHEDULER_PLUGIN_NAME, blocking=False)
+        self._trigger_remote_plugin(SYSTEM_SCHEDULER_PLUGIN_NAME, blocking=False, external_thread=False)
 
         self.__lifecycle.clean_cache()
         return ''

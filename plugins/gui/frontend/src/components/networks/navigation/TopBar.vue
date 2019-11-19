@@ -3,17 +3,11 @@
     class="x-top-bar"
     :class="{ 'minimize': collapseSidebar }"
   >
-    <div class="bar-toggle">
-      <a
-        class="toggle-link"
-        @click="toggleSidebar"
-      >
-        <svg-icon
-          name="navigation/menu"
-          :original="true"
-          height="20"
-        />
-      </a>
+    <div
+      class="bar-toggle"
+      @click="toggleSidebar"
+    >
+      <md-icon md-src="src/assets/icons/navigation/menu.svg" />
     </div>
     <div
       class="bar-logo"
@@ -27,7 +21,6 @@
         name="logo/axonius"
         height="16"
         :original="true"
-        class="logo-text"
       />
     </div>
     <x-trial-banner />
@@ -38,11 +31,9 @@
           class="item-link research-link"
           disabled
         >
-          <svg-icon
-            name="symbol/running"
+          <md-icon
+            md-src="src/assets/icons/symbol/running.svg"
             class="rotating"
-            :original="true"
-            height="20"
           />
           <div>Initiating...</div>
         </button>
@@ -52,11 +43,9 @@
           disabled
           @click="stopResearchNow"
         >
-          <svg-icon
-            name="symbol/running"
+          <md-icon
+            md-src="src/assets/icons/symbol/running.svg"
             class="rotating"
-            :original="true"
-            height="20"
           />
           <div>Stopping...</div>
         </button>
@@ -67,11 +56,7 @@
           :disabled="!isDashboardWrite"
           @click="startResearchNow"
         >
-          <svg-icon
-            name="action/start"
-            :original="true"
-            height="20"
-          />
+          <md-icon md-src="src/assets/icons/action/start.svg" />
           <div>Discover Now</div>
         </button>
         <button
@@ -81,11 +66,7 @@
           :disabled="!isDashboardWrite"
           @click="stopResearchNow"
         >
-          <svg-icon
-            name="action/stop"
-            :original="true"
-            height="20"
-          />
+          <md-icon md-src="src/assets/icons/action/stop.svg" />
           <div>Stop Discovery</div>
         </button>
       </li>
@@ -299,29 +280,27 @@
         .bar-toggle {
             line-height: 60px;
             width: 240px;
-            text-align: left;
             background-color: $theme-black;
             transition: all ease-in 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
 
-            .toggle-link {
-                padding: 0 18px;
+            .svg-stroke {
+                stroke: $grey-4;
+            }
 
+            .svg-fill {
+                fill: $grey-4;
+            }
+
+            &:hover {
                 .svg-stroke {
-                    stroke: $grey-4;
+                    stroke: $theme-orange;
                 }
 
                 .svg-fill {
-                    fill: $grey-4;
-                }
-
-                &:hover {
-                    .svg-stroke {
-                        stroke: $theme-orange;
-                    }
-
-                    .svg-fill {
-                        fill: $theme-orange;
-                    }
+                    fill: $theme-orange;
                 }
             }
         }
@@ -396,6 +375,11 @@
                         border: 0;
                         font-weight: 400;
                         font-family: $font-stack;
+
+                        .md-icon {
+                          height: 20px;
+                          display: flex;
+                        }
 
                         .svg-fill {
                             fill: $grey-1;

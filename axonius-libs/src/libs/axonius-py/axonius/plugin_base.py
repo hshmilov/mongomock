@@ -1115,7 +1115,8 @@ class PluginBase(Configurable, Feature, ABC):
                                data: dict = None,
                                timeout: int = None,
                                stop_on_timeout: bool = False,
-                               reschedulable: bool = True) -> requests.Response:
+                               reschedulable: bool = True,
+                               external_thread: bool = True) -> requests.Response:
         """
         Triggers a triggerable plugin
         :param plugin_name: The plugin name to trigger
@@ -1151,7 +1152,7 @@ class PluginBase(Configurable, Feature, ABC):
                 if blocking:
                     raise
 
-        if not blocking:
+        if not blocking and external_thread:
             run_and_forget(inner)
             return None
         return inner()
