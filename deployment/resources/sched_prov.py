@@ -56,6 +56,10 @@ SCALYR_TEMPLATE = '''
      {{
         path: "/var/log/chef_scheduled_provision.log",
         attributes: {{parser: "rawlog"}}
+     }},
+     {{
+       path: "/var/log/machine_boot.log",
+       attributes: {{parser: "rawlog"}}
      }}
   ]
 }}
