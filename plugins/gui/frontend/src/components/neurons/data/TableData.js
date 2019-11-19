@@ -14,7 +14,7 @@ function hasFilter(data, filter) {
     return false
   }
   const itemsToCheck = Array.isArray(data) ? data : Object.values(data)
-  return Boolean(itemsToCheck.find(item => hasFilter(item)))
+  return Boolean(itemsToCheck.find(item => hasFilter(item, filter)))
 }
 
 function processData(data, schema, filter, sort) {
@@ -32,9 +32,9 @@ function processData(data, schema, filter, sort) {
     return data
   }
   if (Array.isArray(data)) {
-    return data.filter(item => hasFilter(item))
+    return data.filter(item => hasFilter(item, filter))
   }
-  return hasFilter(this.data) ? data : null
+  return hasFilter(data, filter) ? data : null
 }
 
 export default {
