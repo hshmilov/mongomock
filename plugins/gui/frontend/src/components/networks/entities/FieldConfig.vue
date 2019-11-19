@@ -37,7 +37,6 @@
           >&lt;&lt; Remove</x-button>
           <x-button
             link
-            :disabled="!viewFields.length"
             @click="reset"
           >Reset</x-button>
         </div>
