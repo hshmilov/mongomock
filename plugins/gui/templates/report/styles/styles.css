@@ -457,6 +457,11 @@ a {
     text-align: left;
     margin-top: 8px;
 }
+
+.summary .row.two {
+    padding-bottom: 8px;
+}
+
 .summary .row .title {
     display: inline-block;
     width: auto;

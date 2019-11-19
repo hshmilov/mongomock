@@ -343,7 +343,8 @@ class ReportGenerator:
             'histogram': self._create_histogram(adapters, 12),
             'seen': discovery_data['seen'],
             'seen_gross': f'({seen_gross})' if seen_gross != discovery_data['seen'] else '',
-            'unique': discovery_data['unique']
+            'unique': discovery_data['unique'],
+            'number_of_rows': 'two' if discovery_data['seen'] > 9999 else ''
         })
 
     def _create_query_histogram(self, queries_data, data_count):
