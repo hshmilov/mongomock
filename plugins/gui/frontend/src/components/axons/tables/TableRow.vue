@@ -22,7 +22,7 @@
       <md-icon
         v-if="expandRow"
         class="active"
-        @click.native.stop="collapseRow"
+        @click.native.stop="onToggleExpand"
       >expand_less</md-icon>
       <md-icon
         v-else

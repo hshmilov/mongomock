@@ -571,6 +571,9 @@ class EntitiesPage(Page):
     def get_column_data_expand_row(self, col_name, parent=None):
         return self.get_column_data(self.TABLE_DATA_EXPAND_ROW_XPATH, col_name, parent)
 
+    def find_data_expand_row(self):
+        return self.find_element_by_xpath(self.TABLE_DATA_EXPAND_ROW_XPATH)
+
     def get_column_data_expand_cell(self, col_name, parent=None):
         return self.get_column_data(self.TABLE_DATA_EXPAND_CELL_BODY_XPATH, col_name, parent)
 

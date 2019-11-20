@@ -1,6 +1,7 @@
 from datetime import datetime
 import pytz
 import pytest
+from selenium.common.exceptions import NoSuchElementException
 
 from ui_tests.tests.test_entities_table import TestEntitiesTable
 from ui_tests.tests.ui_consts import AD_ADAPTER_NAME
@@ -156,6 +157,9 @@ class TestUsersTable(TestEntitiesTable):
         merged_adapters = set(adapters[:2])
         expanded_adapters = set(adapters[2:])
         assert merged_adapters == expanded_adapters
+        self.users_page.click_expand_row()
+        with pytest.raises(NoSuchElementException):
+            self.users_page.find_data_expand_row()
 
     @staticmethod
     def _days_since_date(date_str):
