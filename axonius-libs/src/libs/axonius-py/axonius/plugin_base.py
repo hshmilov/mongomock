@@ -1599,7 +1599,8 @@ class PluginBase(Configurable, Feature, ABC):
                     if update_result.modified_count == 0:
                         # if it's not in the db
                         # save first fetch time for adapter data
-                        parsed_to_insert['data'][FIRST_FETCH_TIME] = parsed_to_insert['data'][FETCH_TIME]
+                        if parsed_to_insert['data'].get(FETCH_TIME):
+                            parsed_to_insert['data'][FIRST_FETCH_TIME] = parsed_to_insert['data'].get(FETCH_TIME)
                         if correlates:
                             # for scanner adapters this is case B - see 'scanner_adapter_base.py'
                             # we need to add this device to the list of adapters in another device
@@ -1670,7 +1671,8 @@ class PluginBase(Configurable, Feature, ABC):
                 ) for data in devices]
 
                 for parsed in all_parsed:
-                    parsed['data'][FIRST_FETCH_TIME] = parsed['data'][FETCH_TIME]
+                    if parsed['data'].get(FETCH_TIME):
+                        parsed['data'][FIRST_FETCH_TIME] = parsed['data'].get(FETCH_TIME)
 
                 for adapter_entity in all_parsed:
                     for key in adapter_entity['data']:
