@@ -264,10 +264,10 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
                 _change_subphase(scheduler_consts.ResearchPhases.Clean_Devices)
                 self._request_gui_dashboard_cache_clear()
 
-                for adapter in self.core_configs_collection.find({
+                for adapter in list(self.core_configs_collection.find({
                     'plugin_type': adapter_consts.ADAPTER_PLUGIN_TYPE,
                     'status': 'up'
-                }):
+                })):
                     try:
                         # this is important and is described at
                         # https://axonius.atlassian.net/wiki/spaces/AX/pages/799211552/
