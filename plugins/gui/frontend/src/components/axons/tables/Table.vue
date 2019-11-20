@@ -74,9 +74,9 @@
 </template>
 
 <script>
+  import xTableData from './TableData.js'
   import xTableHead from './TableHead.vue'
   import xTableRow from './TableRow.vue'
-  import xTableData from './TableData.js'
   import xCheckbox from '../inputs/Checkbox.vue'
 
   export default {

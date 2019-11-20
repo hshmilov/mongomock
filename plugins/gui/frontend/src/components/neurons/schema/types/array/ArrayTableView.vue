@@ -37,7 +37,6 @@
   import bool from '../boolean/BooleanView.vue'
   import file from './FileView.vue'
   import xArrayRawView from './ArrayRawView.vue'
-  import xTooltip from '../../../../axons/popover/Tooltip.vue'
   import xTable from '../../../../axons/tables/Table.vue'
 
   import arrayMixin from '../../../../../mixins/array'
@@ -46,7 +45,7 @@
   export default {
     name: 'XArrayTableView',
     components: {
-      string, number, integer, bool, file, xArrayRawView, xTooltip, xTable
+      string, number, integer, bool, file, xArrayRawView, xTable
     },
     mixins: [arrayMixin],
     data () {
@@ -89,10 +88,6 @@
     display: flex;
     align-items: center;
     position: relative;
-
-    &:hover .x-tooltip {
-      display: block
-    }
 
     .item {
       margin-right: 8px;
