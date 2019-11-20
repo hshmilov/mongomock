@@ -177,7 +177,7 @@ class InstanceControlService(Triggerable, PluginBase):
         return self.__exec_command(f'cd {self.__cortex_path}; ./pyrun.sh devops/axonius_system.py {cmd}')
 
     @retry(wait_fixed=10000,
-           stop_max_delay=60000,
+           stop_max_delay=120000,
            retry_on_exception=retry_if_parallelism_maxed)
     def __exec_command(self, cmd: str) -> paramiko.ChannelFile:
         """
