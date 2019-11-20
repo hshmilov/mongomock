@@ -197,7 +197,7 @@ export const fetchDataContent = ({state, dispatch}, payload) => {
 	if (!module) return
 	const view = module.view
 
-	if (!payload.skip && module.count !== undefined) {
+	if (!payload.skip && module.count !== undefined && !payload.isCounted) {
 		dispatch(FETCH_DATA_COUNT, { module: payload.module, endpoint: payload.endpoint})
 	}
 

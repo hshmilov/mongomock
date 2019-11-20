@@ -403,7 +403,7 @@
       ...mapActions({
         fetchContent: FETCH_DATA_CONTENT
       }),
-      fetchContentPages (loading, isRefresh) {
+      fetchContentPages (loading, isCounted, isRefresh) {
         if (this.staticData) {
           this.loading = false
           return
@@ -419,13 +419,15 @@
         return this.fetchContentSegment(
           this.pageLinkNumbers[0] * this.pageSize,
           this.pageLinkNumbers.length * this.pageSize,
+          isCounted,
           isRefresh
         )
       },
-      fetchContentSegment (skip, limit, isRefresh) {
+      fetchContentSegment (skip, limit, isCounted, isRefresh) {
         return this.fetchContent({
           module: this.module, endpoint: this.endpoint,
-          skip, limit, isRefresh
+          skip, limit,
+          isCounted, isRefresh
         }).then(() => {
           if (!this.content.fetching) {
             this.loading = false
@@ -435,14 +437,14 @@
       onClickSize (size) {
         if (size === this.pageSize) return
         this.updateModuleView({ pageSize: size, page: 0 })
-        this.$nextTick(this.fetchContentPages)
+        this.fetchContentPages(false, true)
       },
       onClickPage (page) {
         if ((page === this.page) || (page < 0 || page > this.pageCount)) {
           return
         }
         this.updateModuleView({ page: page })
-        this.$nextTick(this.fetchContentPages)
+        this.fetchContentPages(false, true)
       },
       onClickSort (fieldName) {
         let {field, desc} = this.view.sort
@@ -455,7 +457,7 @@
           }
         }
         this.updateModuleView({ sort, page: 0 })
-        this.fetchContentPages(true)
+        this.fetchContentPages(true, true)
       },
       updateModuleView (view) {
         this.updateView({ module: this.module, view })
@@ -465,7 +467,7 @@
           return
         }
         const fetchAuto = () => {
-          this.fetchContentPages(false, true).then(() => {
+          this.fetchContentPages(false, false, true).then(() => {
             if (this._isDestroyed) return
             this.timer = setTimeout(fetchAuto, this.refresh * 1000)
           })

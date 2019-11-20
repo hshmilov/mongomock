@@ -25,9 +25,6 @@
                 this.fetchNotification(notificationId)
                 this.$router.push({path: `/notifications/${notificationId}`})
             }
-        },
-        mounted() {
-            this.$refs.table.fetchContentPages()
         }
     }
 </script>
