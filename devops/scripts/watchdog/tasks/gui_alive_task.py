@@ -1,6 +1,7 @@
 import time
 import requests
 import urllib3
+from pathlib import Path
 
 from axonius.consts.system_consts import NODE_MARKER_PATH
 from scripts.watchdog.watchdog_task import WatchdogTask
@@ -8,6 +9,7 @@ from scripts.watchdog.watchdog_task import WatchdogTask
 SLEEP_SECONDS = 60 * 1
 ERROR_MSG = 'UI is not responding'  # do not modify this string. used for alerts
 NODE_MSG = 'this watchdog will not run on node'
+LOCKFILE = Path('/tmp/upgrade.lock')
 
 
 class GuiAliveTask(WatchdogTask):
@@ -21,6 +23,11 @@ class GuiAliveTask(WatchdogTask):
 
         while True:
             time.sleep(SLEEP_SECONDS)
+
+            if LOCKFILE.is_file():
+                self.report_info('upgrade is in progress...')
+                continue
+
             self.report_info(f'{self.name} is running')
             try:
                 response = requests.get(f'https://localhost/api/signup', verify=False, timeout=(10, 20))
