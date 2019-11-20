@@ -13,13 +13,14 @@ from msrestazure import azure_cloud as azure
 class AzureClient(object):
     DEFAULT_CLOUD = 'Azure Public Cloud'
 
-    def __init__(self, subscription_id, client_id, client_secret, tenant_id, cloud_name=None, https_proxy=None):
+    def __init__(self, subscription_id,
+                 client_id, client_secret, tenant_id, cloud_name=None, https_proxy=None, verify_ssl=None):
         if cloud_name is None:
             cloud_name = self.DEFAULT_CLOUD
         cloud = self.get_clouds()[cloud_name]
         proxies = {'https': RESTConnection.build_url(https_proxy).strip('/')} if https_proxy else None
         credentials = ServicePrincipalCredentials(client_id=client_id, secret=client_secret, tenant=tenant_id,
-                                                  cloud_environment=cloud, proxies=proxies)
+                                                  cloud_environment=cloud, proxies=proxies, verify=verify_ssl)
         self.compute = ComputeManagementClient(credentials, subscription_id, base_url=cloud.endpoints.resource_manager)
         self.network = NetworkManagementClient(credentials, subscription_id, base_url=cloud.endpoints.resource_manager)
         if proxies:
@@ -27,6 +28,10 @@ class AzureClient(object):
             self.network.config.proxies.proxies = proxies
             self.compute.config.proxies.use_env_settings = False
             self.compute.config.proxies.proxies = proxies
+
+        if verify_ssl is False:
+            self.network.config.connection.verify = False
+            self.compute.config.connection.verify = False
 
     @classmethod
     def get_clouds(cls):

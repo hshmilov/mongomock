@@ -70,8 +70,10 @@ class AggregatorService(PluginService, UpdatablePluginMixin):
             self._update_schema_version_18()
         if self.db_schema_version < 19:
             self._update_schema_version_19()
+        if self.db_schema_version < 20:
+            self._update_schema_version_20()
 
-        if self.db_schema_version != 19:
+        if self.db_schema_version != 20:
             print(f'Upgrade failed, db_schema_version is {self.db_schema_version}')
 
     def __create_capped_collections(self):
@@ -915,6 +917,29 @@ class AggregatorService(PluginService, UpdatablePluginMixin):
             self.db_schema_version = 19
         except Exception as e:
             print(f'Exception while upgrading core db to version 19. Details: {e}')
+            traceback.print_exc()
+            raise
+
+    def _update_schema_version_20(self):
+        # https://axonius.atlassian.net/browse/AX-5401
+        print('Update to schema 20 - azure and azure ad verify ssl')
+        try:
+            all_azure_pun = list(self.db.client['core']['configs'].find({PLUGIN_NAME: 'azure_adapter'}))
+            all_azure_ad_pun = list(self.db.client['core']['configs'].find({PLUGIN_NAME: 'azure_ad_adapter'}))
+            all_plugin_unique_names = [doc[PLUGIN_UNIQUE_NAME] for doc in (all_azure_pun + all_azure_ad_pun)]
+            for plugin_unique_name in all_plugin_unique_names:
+                self.db.client[plugin_unique_name]['clients'].update(
+                    {},
+                    {
+                        '$set':
+                            {
+                                'verify_ssl': True
+                            }
+                    }
+                )
+            self.db_schema_version = 20
+        except Exception as e:
+            print(f'Exception while upgrading core db to version 20. Details: {e}')
             traceback.print_exc()
             raise
 

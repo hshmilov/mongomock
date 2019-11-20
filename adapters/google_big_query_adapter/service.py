@@ -155,6 +155,8 @@ class GoogleBigQueryAdapter(AdapterBase):
                 except Exception:
                     logger.exception(f'Failed putting key {key} with value {value}')
 
+            for dr_key, dr_value in device_raw.items():
+                device_raw[dr_key] = str(dr_value)
             device.set_raw(device_raw)
             return device
         except Exception:

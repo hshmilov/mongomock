@@ -70,7 +70,8 @@ class AzureAdClient(RESTConnection):
         self._refresh_token = refresh_token
 
     def get_refresh_token_from_authorization_code(self, authorization_code):
-        context = adal.AuthenticationContext(f'{AUTHORITY_HOST_URL}/{self._tenant_id}', proxies=self._proxies)
+        context = adal.AuthenticationContext(f'{AUTHORITY_HOST_URL}/{self._tenant_id}',
+                                             proxies=self._proxies, verify_ssl=self._verify_ssl)
         answer = context.acquire_token_with_authorization_code(
             authorization_code,
             'https://localhost',
@@ -86,7 +87,8 @@ class AzureAdClient(RESTConnection):
 
     def _connect(self):
         try:
-            context = adal.AuthenticationContext(f'{AUTHORITY_HOST_URL}/{self._tenant_id}', proxies=self._proxies)
+            context = adal.AuthenticationContext(f'{AUTHORITY_HOST_URL}/{self._tenant_id}',
+                                                 proxies=self._proxies, verify_ssl=self._verify_ssl)
             if self._refresh_token:
                 token_answer = context.acquire_token_with_refresh_token(
                     self._refresh_token,

@@ -15,6 +15,7 @@ AZURE_SUBSCRIPTION_ID = 'subscription_id'
 AZURE_CLIENT_ID = 'client_id'
 AZURE_CLIENT_SECRET = 'client_secret'
 AZURE_TENANT_ID = 'tenant_id'
+AZURE_VERIFY_SSL = 'verify_ssl'
 AZURE_CLOUD_ENVIRONMENT = 'cloud_environment'
 
 
@@ -67,7 +68,8 @@ class AzureAdapter(AdapterBase):
                                      client_secret=client_config[AZURE_CLIENT_SECRET],
                                      tenant_id=client_config[AZURE_TENANT_ID],
                                      cloud_name=client_config.get(AZURE_CLOUD_ENVIRONMENT),
-                                     https_proxy=client_config.get('https_proxy'))
+                                     https_proxy=client_config.get('https_proxy'),
+                                     verify_ssl=client_config.get(AZURE_VERIFY_SSL))
             connection.test_connection()
             metadata_dict = dict()
             if client_config.get('account_tag'):
@@ -120,13 +122,20 @@ class AzureAdapter(AdapterBase):
                     'name': 'https_proxy',
                     'title': 'HTTPS Proxy',
                     'type': 'string'
+                },
+                {
+                    'name': AZURE_VERIFY_SSL,
+                    'title': 'Verify SSL',
+                    'type': 'bool',
+                    'default': True
                 }
             ],
             "required": [
                 AZURE_SUBSCRIPTION_ID,
                 AZURE_CLIENT_ID,
                 AZURE_CLIENT_SECRET,
-                AZURE_TENANT_ID
+                AZURE_TENANT_ID,
+                AZURE_VERIFY_SSL
             ],
             "type": "array"
         }

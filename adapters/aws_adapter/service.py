@@ -288,7 +288,7 @@ class AwsAdapter(AdapterBase, Configurable):
                 raise ClientConnectionException('No region was chosen')
 
             input_region_name = str(client_config.get(REGION_NAME)).lower()
-            if input_region_name not in REGIONS_NAMES:
+            if input_region_name not in (REGIONS_NAMES + GOV_REGION_NAMES + CHINA_REGION_NAMES):
                 raise ClientConnectionException(f'region name {input_region_name} does not exist!')
             regions_to_pull_from = [input_region_name]
         else:

@@ -6,6 +6,7 @@ from axonius.smart_json_class import SmartJsonClass
 from axonius.utils.parsing import normalize_var_name
 
 
+# pylint: disable=consider-merging-isinstance
 def get_entity_new_field(title: str, value):
     if not value:
         return None
@@ -18,7 +19,7 @@ def get_entity_new_field(title: str, value):
         class SmartJsonClassInstance(SmartJsonClass):
             pass
         field_type = SmartJsonClassInstance
-    elif isinstance(value, datetime.datetime):
+    elif isinstance(value, datetime.datetime) or isinstance(value, datetime.date):
         field_type = datetime.datetime
     elif isinstance(value, float):
         field_type = float
@@ -60,5 +61,7 @@ def put_dynamic_field(entity: SmartJsonClass, key: str, value, title: str):
 
     elif isinstance(value, (int, float, bool, datetime.datetime)):
         entity[key] = value
+    elif isinstance(value, datetime.date):
+        entity[key] = datetime.datetime.combine(value, datetime.datetime.min.time())
     else:
         entity[key] = str(value)

@@ -18,6 +18,7 @@ logger = logging.getLogger(f'axonius.{__name__}')
 AZURE_CLIENT_ID = 'client_id'
 AZURE_CLIENT_SECRET = 'client_secret'
 AZURE_TENANT_ID = 'tenant_id'
+AZURE_VERIFY_SSL = 'verify_ssl'
 AZURE_AUTHORIZATION_CODE = 'authorization_code'
 
 
@@ -63,15 +64,28 @@ class AzureAdAdapter(AdapterBase):
             connection = AzureAdClient(client_id=client_config[AZURE_CLIENT_ID],
                                        client_secret=client_config[AZURE_CLIENT_SECRET],
                                        tenant_id=client_config[AZURE_TENANT_ID],
-                                       https_proxy=client_config.get('https_proxy'))
+                                       https_proxy=client_config.get('https_proxy'),
+                                       verify_ssl=client_config.get(AZURE_VERIFY_SSL)
+                                       )
             auth_code = client_config.get(AZURE_AUTHORIZATION_CODE)
+            refresh_tokens_db = self._get_collection('refresh_tokens')
+            rt_doc = refresh_tokens_db.find_one({'auth_code': auth_code})
             try:
                 if auth_code:
                     if auth_code.startswith('refresh-'):
                         refresh_token = auth_code[len('refresh-'):]
+                    elif rt_doc:
+                        refresh_token = rt_doc['refresh_token']
                     else:
                         refresh_token = connection.get_refresh_token_from_authorization_code(auth_code)
-                        client_config[AZURE_AUTHORIZATION_CODE] = 'refresh-' + refresh_token  # override refresh token
+                        # client_config[AZURE_AUTHORIZATION_CODE] = 'refresh-' + refresh_token  # override refresh token
+                        refresh_tokens_db.update_one(
+                            {'auth_code': auth_code},
+                            {
+                                '$set': {'refresh_token': refresh_token}
+                            },
+                            upsert=True
+                        )
 
                     connection.set_refresh_token(refresh_token)
 
@@ -137,12 +151,19 @@ class AzureAdAdapter(AdapterBase):
                     'name': 'https_proxy',
                     'title': 'HTTPS Proxy',
                     'type': 'string'
+                },
+                {
+                    'name': AZURE_VERIFY_SSL,
+                    'title': 'Verify SSL',
+                    'type': 'bool',
+                    'default': True
                 }
             ],
             'required': [
                 AZURE_CLIENT_ID,
                 AZURE_CLIENT_SECRET,
-                AZURE_TENANT_ID
+                AZURE_TENANT_ID,
+                AZURE_VERIFY_SSL
             ],
             'type': 'array'
         }
