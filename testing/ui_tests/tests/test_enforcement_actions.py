@@ -447,3 +447,90 @@ class TestEnforcementActions(TestBase):
         finally:
             if s3_client and file_name:
                 s3_client.delete_object(Bucket=AXONIUS_CI_TESTS_BUCKET, Key=file_name)
+
+    def assert_completed_tasks(self, expected_completed_count):
+        self.enforcements_page.switch_to_page()
+        self.enforcements_page.click_tasks_button()
+        self.enforcements_page.wait_for_table_to_load()
+
+        count = len(self.enforcements_page.find_elements_by_xpath(self.enforcements_page.COMPLETED_CELL_XPATH))
+        return count == expected_completed_count
+
+    def test_custom_data_action(self):
+
+        enforcement_db_like = {
+            'enforcement_name': 'Custom Data - db identifier name',
+            'action_name': 'custom data action 1',
+            'field_name': 'hostname',
+            'field_value': 'axonius.hostname.db'
+        }
+
+        enforcement_label_like = {
+            'enforcement_name': 'Custom Data - field name similar to the generic field label',
+            'action_name': 'custom data action 2',
+            'field_name': 'Host Name',
+            'field_value': 'axonius.hostname.label'
+        }
+
+        enforcement_unique_field = {
+            'enforcement_name': 'Custom Data - unique field',
+            'action_name': 'custom data action 3',
+            'field_name': 'axonius',
+            'field_value': 'axonius.hostname.unique'
+        }
+
+        # field name is similar to how generic 'Host Name' saved on db
+        self.enforcements_page.create_new_enforcement_with_custom_data(**enforcement_db_like)
+
+        # field name is similar to generic 'Host Name' label
+        self.enforcements_page.create_new_enforcement_with_custom_data(**enforcement_label_like)
+
+        # unique field
+        self.enforcements_page.create_new_enforcement_with_custom_data(**enforcement_unique_field)
+
+        self.adapters_page.switch_to_page()
+        self.base_page.run_discovery()
+
+        # go to devices page, run discovery and run all 3 enforcements on a device
+        self.devices_page.switch_to_page()
+        self.devices_page.wait_for_table_to_load()
+        self.devices_page.click_row_checkbox()
+
+        self.devices_page.run_enforcement_on_selected_device(
+            enforcement_name=enforcement_label_like['enforcement_name'])
+        self.devices_page.run_enforcement_on_selected_device(
+            enforcement_name=enforcement_unique_field['enforcement_name'])
+        self.devices_page.run_enforcement_on_selected_device(enforcement_name=enforcement_db_like['enforcement_name'])
+
+        # check in enforcements tasks that all running enforcements were completed
+        wait_until(lambda: self.assert_completed_tasks(expected_completed_count=3))
+
+        # go back to devices page and inspect the first device in table
+        self.devices_page.switch_to_page()
+        self.devices_page.refresh()
+        self.devices_page.wait_for_table_to_load()
+
+        self.devices_page.click_row()
+
+        self.devices_page.click_custom_data_tab()
+
+        self.base_page.wait_for_element_present_by_xpath(
+            self.enforcements_page.CUSTOM_DATA_XPATH.format(
+                db_identifier='custom_hostname',
+                label=enforcement_db_like['field_name'],
+                value=enforcement_db_like['field_value'])
+        )
+
+        self.base_page.wait_for_element_present_by_xpath(
+            self.enforcements_page.CUSTOM_DATA_XPATH.format(
+                db_identifier='hostname',
+                label=enforcement_label_like['field_name'],
+                value=enforcement_label_like['field_value'])
+        )
+
+        self.base_page.wait_for_element_present_by_xpath(
+            self.enforcements_page.CUSTOM_DATA_XPATH.format(
+                db_identifier='custom_axonius',
+                label=enforcement_unique_field['field_name'],
+                value=enforcement_unique_field['field_value'])
+        )

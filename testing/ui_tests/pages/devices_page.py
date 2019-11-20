@@ -200,3 +200,11 @@ class DevicesPage(EntitiesPage):
         self.fill_query_value(5, parent=expressions[1])
         self.wait_for_table_to_load()
         self.close_dropdown()
+
+    def run_enforcement_on_selected_device(self, enforcement_name):
+        self.open_enforce_dialog()
+        self.select_option_without_search(dropdown_css_selector=self.ENFORCEMENT_DIALOG_DROPDOWN_CSS,
+                                          selected_options_css_selector=self.DROPDOWN_SELECTED_OPTION_CSS,
+                                          text=enforcement_name)
+        self.click_button('Run')
+        time.sleep(1.5)  # wait for run to fade away

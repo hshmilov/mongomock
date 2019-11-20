@@ -53,6 +53,7 @@ class Action(Enum):
     tenable_sc_add_ips_to_asset = 'Add IPs to Tenable.sc Asset'
     tenable_io_add_ips_to_target_group = 'Add IPs to Tenable.io Target Group'
     create_jira_incident = 'Create Jira Issue'
+    add_custom_data = 'Add Custom Data'
 
 
 class ActionCategory:
@@ -125,6 +126,11 @@ class EnforcementsPage(EntitiesPage):
     S3_SECRET_ACCESS_KEY_ID = 'secret_access_key'
 
     ENFORCEMENT_SEARCH_INPUT = '.body .x-tabs .body .x-tab.active .x-search-input input'
+
+    CUSTOM_DATA_XPATH = '//label[@for=\'{db_identifier}\'][contains(text(),\'{label}\')]/' \
+                        'following-sibling::div[contains(text(),\'{value}\')]'
+
+    COMPLETED_CELL_XPATH = '//tr/td[1]//div[text() = \'Completed\']'
 
     @property
     def url(self):
@@ -325,6 +331,33 @@ class EnforcementsPage(EntitiesPage):
         self.fill_action_name(name)
         self.click_button(self.SAVE_BUTTON)
         self.wait_for_element_present_by_text(name)
+
+    def add_custom_data(self, action_name, field_name, field_value):
+        self.find_element_by_text(self.MAIN_ACTION_TEXT).click()
+        self.wait_for_action_library()
+        self.find_element_by_text(ActionCategory.Utils).click()
+        # wait for animation ends
+        time.sleep(0.2)
+        self.find_element_by_text(Action.add_custom_data.value).click()
+        self.wait_for_action_config()
+
+        # fill configuration form data
+        self.fill_action_name(action_name)
+        self.fill_text_field_by_css_selector(css_selector='input#field_name', value=field_name)
+        self.fill_text_field_by_css_selector(css_selector='input#field_value', value=field_value)
+        self.click_button(self.SAVE_BUTTON)
+
+        # the action name appears in the Main Action slot
+        self.wait_for_element_present_by_text(action_name)
+
+    def create_new_enforcement_with_custom_data(self, enforcement_name, action_name, field_name, field_value):
+        self.switch_to_page()
+
+        # field name is similar to how generic 'Host Name' saved on db
+        self.click_new_enforcement()
+        self.fill_enforcement_name(enforcement_name)
+        self.add_custom_data(action_name, field_name, field_value)
+        self.click_save_button()
 
     def add_run_wmi_scan(self, name='Run WMI Scan'):
         self.find_element_by_text(self.MAIN_ACTION_TEXT).click()

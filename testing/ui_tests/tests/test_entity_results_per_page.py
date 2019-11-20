@@ -32,9 +32,9 @@ class TestEntityResultsPerPage(TestBase):
     @staticmethod
     def _switch_to_entity_page(entities_page):
         entities_page.switch_to_page()
-        entities_page.wait_for_table_to_load()
         # refreshing the page to make sure the value is retrieved from default settings and not from state management
         entities_page.refresh()
+        entities_page.wait_for_table_to_load()
 
     def _test_default_count_entities_per_page(self, entities_page, results_per_page):
         self._switch_to_entity_page(entities_page)
