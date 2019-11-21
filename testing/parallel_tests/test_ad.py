@@ -239,7 +239,7 @@ class TestAdAdapter(AdapterTestBase):
             assert product_1_status == "ok"
             assert "cmd.exe" in product_1_data
 
-        try_until_not_thrown(15, 10, check_execute_shell_results)
+        try_until_not_thrown(60, 10, check_execute_shell_results)
 
     def test_ad_execute_binary(self):
         device = self.axonius_system.get_device_by_id(self.adapter_service.unique_name, self.some_device_id)[0]
