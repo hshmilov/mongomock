@@ -771,7 +771,6 @@ class TestDashboard(TestBase):
                 table_data = self.dashboard_page.get_lifecycle_tooltip_table_data()
                 # check for existing tooltip with the stress adapter
                 assert self.dashboard_page.get_lifecycle_tooltip()
-                assert self.dashboard_page.find_element_by_text(STRESSTEST_ADAPTER_NAME)
                 # check the status of stress adapter
                 stress_adapters_found = False
                 for row in table_data:
