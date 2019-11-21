@@ -83,12 +83,12 @@ export const pluginMeta = {
         description: 'Guardicore is a data center and cloud security company that protects the organization’s core assets.'
     },
     omnivista_adapter: {
-        title: 'OmniVista 2500 NMS - BETA',
+        title: 'OmniVista 2500 NMS',
         link: 'https://docs.axonius.com/docs/omnivista-2500-nms',
         description: 'The Alcatel-Lucent OmniVista 2500 Network Management System (NMS) provides management tools and network-wide visibility, enabling operators to provision, manage and maintain a mobile infrastructure.'
     },
     symantec_dlp_adapter: {
-        title: 'Symantec DLP - BETA',
+        title: 'Symantec DLP',
         link: 'https://docs.axonius.com/docs/symantec-dlp',
         description: 'Symantec DLP is a data loss protection and prevention solution. Its management console, the DLP Enforce Platform, and its reporting tool, IT Analytics for DLP, allows writing and enforce policies to reduce information risks.'
     },

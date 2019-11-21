@@ -65,9 +65,9 @@ class SendEmailToEntities(ActionTypeBase):
                 mail_content = self._config['mail_content']
                 first_name = None
                 username = None
-                project_ids = None
-                account_tag = None
-                aws_account_alias = None
+                project_ids = []
+                account_tag = []
+                aws_account_alias = []
                 mail_list = set()
                 for adapter_data in entry['adapters']:
                     adapter_data = adapter_data.get('data') or {}
@@ -79,22 +79,24 @@ class SendEmailToEntities(ActionTypeBase):
                         first_name = adapter_data.get('first_name')
                     if adapter_data.get('username') and not username:
                         username = adapter_data.get('username')
-                    if adapter_data.get('project_ids'):
-                        project_ids = str(adapter_data.get('project_ids'))
-                    if adapter_data.get('account_tag'):
-                        account_tag = str(adapter_data.get('account_tag'))
-                    if adapter_data.get('aws_account_alias'):
-                        aws_account_alias = str(adapter_data.get('aws_account_alias'))
+                    if isinstance(adapter_data.get('project_ids'), list):
+                        project_ids.extend(adapter_data.get('project_ids'))
+                    if isinstance(adapter_data.get('account_tag'), str):
+                        account_tag.append(adapter_data.get('account_tag'))
+                    if isinstance(adapter_data.get('account_tag'), list):
+                        account_tag.extend(adapter_data.get('account_tag'))
+                    if isinstance(adapter_data.get('aws_account_alias'), list):
+                        aws_account_alias.extend(adapter_data.get('aws_account_alias'))
                 if username:
                     mail_content = mail_content.replace(USERNAME_MAGIC_WORD, username)
                 if first_name:
                     mail_content = mail_content.replace(FIRST_NAME_MAGIC_WORD, first_name)
                 if project_ids:
-                    mail_content = mail_content.replace(PROJECT_IDS_MAGIC_WORD, project_ids)
+                    mail_content = mail_content.replace(PROJECT_IDS_MAGIC_WORD, str(project_ids))
                 if account_tag:
-                    mail_content = mail_content.replace(ACCOUNT_TAG_MAGIC_WORD, account_tag)
+                    mail_content = mail_content.replace(ACCOUNT_TAG_MAGIC_WORD, str(account_tag))
                 if aws_account_alias:
-                    mail_content = mail_content.replace(AWS_ACCOUNT_ALIAS, aws_account_alias)
+                    mail_content = mail_content.replace(AWS_ACCOUNT_ALIAS, str(aws_account_alias))
                 mail_list = list(mail_list)
                 email = mail_sender.new_email(self._config['mail_subject'], mail_list)
                 email.send(mail_content)

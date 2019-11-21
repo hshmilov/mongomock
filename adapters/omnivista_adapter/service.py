@@ -141,7 +141,7 @@ class OmnivistaAdapter(AdapterBase):
             device.device_status = device_raw.get('status')
             device.running_from = device_raw.get('runningFrom')
             device.hostname = device_raw.get('deviceDNS')
-            device_raw.last_upgrade_status = device_raw.get('deviceLastUpgradeStatus')
+            device.last_upgrade_status = device_raw.get('deviceLastUpgradeStatus')
             device.set_raw(device_raw)
             return device
         except Exception:

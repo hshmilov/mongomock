@@ -73,5 +73,5 @@ def parse_date(datetime_to_parse):
 
         # Sometimes, this would be a fake date (see is_date_real). in this case return None
         return d if is_date_real(d) else None
-    except (TypeError, ValueError):
+    except Exception:
         return None

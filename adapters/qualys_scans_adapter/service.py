@@ -191,11 +191,13 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
                 return None
             device = self._new_device_adapter()
             device.id = str(device_id) + '_' + (device_raw.get('name') or '')
-            device.hostname = (device_raw.get('netbiosName') or device_raw.get('dnsHostName')) or device_raw.get('name')
+            hostname = (device_raw.get('netbiosName') or device_raw.get('dnsHostName')) or device_raw.get('name')
             if device_raw.get('netbiosName') and device_raw.get('dnsHostName') and \
                     device_raw.get('dnsHostName').split('.')[0].lower() ==\
                     device_raw.get('netbiosName').split('.')[0].lower():
-                device.hostname = device_raw.get('dnsHostName')
+                hostname = device_raw.get('dnsHostName')
+            if hostname != device_raw.get('address'):
+                device.hostname = hostname
             if device_raw.get('dnsHostName') and device_raw.get('name'):
                 device.name = device_raw.get('name')
             try:

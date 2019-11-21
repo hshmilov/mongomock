@@ -27,6 +27,7 @@ SEARCH_TYPE = 'search_type'
 class ShodanAdapter(ShodanExecutionMixIn, ScannerAdapterBase):
     class MyDeviceAdapter(DeviceAdapter):
         query_search = Field(str, 'Search Query')
+        file_name = Field(str, 'File Name')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -46,10 +47,11 @@ class ShodanAdapter(ShodanExecutionMixIn, ScannerAdapterBase):
                                   https_proxy=client_config.get('https_proxy')) as connection:
                 if client_config.get('cidr'):
                     connection.get_cidr_info(client_config['cidr'].split(',')[0])
-                    return connection, client_config['cidr'].split(','), CIDR_TYPE
+                    return connection, client_config['cidr'].split(','), CIDR_TYPE, client_config.get('user_id')
                 if client_config.get('query_search'):
                     connection.get_search_info(client_config['query_search'].split(',')[0])
-                    return connection, client_config['query_search'].split(','), SEARCH_TYPE
+                    return connection, client_config['query_search'].split(','),\
+                        SEARCH_TYPE, client_config.get('user_id')
                 if not client_config.get('csv') or not client_config.get('user_id'):
                     raise ClientConnectionException('Please Enter CIDR CSV File or CIDR list or Query Search String')
                 csv_data_bytes = self._grab_file_contents(client_config['csv'])
@@ -70,7 +72,7 @@ class ShodanAdapter(ShodanExecutionMixIn, ScannerAdapterBase):
                         if dns_field_name:
                             cidr_dns_name = cidr_raw.get(dns_field_name)
                         cidr_list.append([cidr_raw.get('CIDR'), cidr_dns_name])
-                return connection, cidr_list, CIDR_TYPE
+                return connection, cidr_list, CIDR_TYPE, client_config.get('user_id')
         except RESTException as e:
             message = 'Error connecting to client with domain {0}, reason: {1}'.format(
                 client_config.get('domain'), str(e))
@@ -87,7 +89,7 @@ class ShodanAdapter(ShodanExecutionMixIn, ScannerAdapterBase):
 
         :return: A json with all the attributes returned from the Server
         """
-        connection, cidr_list, shodan_type = client_data
+        connection, cidr_list, shodan_type, file_name = client_data
         with connection:
             for cidr in cidr_list:
                 try:
@@ -113,7 +115,7 @@ class ShodanAdapter(ShodanExecutionMixIn, ScannerAdapterBase):
                     query_search = None
                     if shodan_type == SEARCH_TYPE:
                         query_search = cidr_list
-                    yield ip_dict, shodan_dns_name, query_search
+                    yield ip_dict, shodan_dns_name, query_search, file_name
                 except Exception:
                     logger.debug(f'Problem getting cidr {cidr}')
 
@@ -175,12 +177,13 @@ class ShodanAdapter(ShodanExecutionMixIn, ScannerAdapterBase):
 
     def _parse_raw_data(self, devices_raw_data):
         # pylint: disable=R1702,R0912,R0915,R0914
-        for ip_dict, shodan_dns_name, query_search in devices_raw_data:
+        for ip_dict, shodan_dns_name, query_search, file_name in devices_raw_data:
             for ip_str, device_raw_list in ip_dict.items():
                 try:
                     device = self._new_device_adapter()
                     device.id = ip_str
                     device.query_search = query_search
+                    device.file_name = file_name
                     device.add_public_ip(ip_str)
                     device.add_nic(None, [ip_str])
                     device.software_cves = []

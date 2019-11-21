@@ -195,9 +195,11 @@ class EpoAdapter(AdapterBase):
                     device.os.build = str(os_build_num)
 
                 # Set up memory
-                device.free_physical_memory = int(device_raw.get("EPOComputerProperties.FreeMemory")) / (1024**3)
-                device.total_physical_memory = int(device_raw.get(
-                    "EPOComputerProperties.TotalPhysicalMemory")) / (1024**3)
+                if device_raw.get("EPOComputerProperties.FreeMemory"):
+                    device.free_physical_memory = int(device_raw.get("EPOComputerProperties.FreeMemory")) / (1024**3)
+                if device_raw.get("EPOComputerProperties.TotalPhysicalMemory"):
+                    device.total_physical_memory = int(device_raw.get(
+                        "EPOComputerProperties.TotalPhysicalMemory")) / (1024**3)
 
                 # Set up hard disks
                 if device_raw.get("EPOComputerProperties.TotalDiskSpace") and \
@@ -208,11 +210,13 @@ class EpoAdapter(AdapterBase):
                     )
 
                 # Set up cpu's
-                device.total_number_of_cores = int(device_raw.get("EPOComputerProperties.NumOfCPU"))
-                device.add_cpu(
-                    ghz=round(int(device_raw.get("EPOComputerProperties.CPUSpeed")) / 1024, 2),
-                    name=device_raw.get("EPOComputerProperties.CPUType")
-                )
+                if device_raw.get("EPOComputerProperties.NumOfCPU"):
+                    device.total_number_of_cores = int(device_raw.get("EPOComputerProperties.NumOfCPU"))
+                if device_raw.get("EPOComputerProperties.CPUSpeed"):
+                    device.add_cpu(
+                        ghz=round(int(device_raw.get("EPOComputerProperties.CPUSpeed")) / 1024, 2),
+                        name=device_raw.get("EPOComputerProperties.CPUType")
+                    )
                 device.description = device_raw.get("EPOComputerProperties.Description")
                 if isinstance(device_raw.get('EPOComputerProperties.UserName'), str) and \
                         'N/A' not in device_raw.get('EPOComputerProperties.UserName'):
