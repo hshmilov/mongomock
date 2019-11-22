@@ -11,7 +11,7 @@ class CherwellConnection(RESTConnection):
     """ rest client for Cherwell adapter """
 
     def __init__(self, *args, client_id, **kwargs):
-        super().__init__(*args, url_base_prefix='',
+        super().__init__(*args, url_base_prefix='CherwellAPI',
                          headers={'Content-Type': 'application/json',
                                   'Accept': 'application/json'},
                          **kwargs)
@@ -19,12 +19,16 @@ class CherwellConnection(RESTConnection):
 
     def _connect(self):
         if not self._username or not self._password or not self._client_id:
-            raise RESTException('No username or password')
+            raise RESTException('No username or password or not Client ID')
         response = self._post('token',
                               body_params={'grant_type': 'password',
                                            'client_id': self._client_id,
                                            'username': self._username,
                                            'password': self._password})
+        if not isinstance(response, dict) or not response.get('access_token'):
+            raise RESTException(f'Bad Login Response: {response}')
+        self._token = response['access_token']
+        self._session_headers['Authorization'] = f'Bearer {self._token}'
 
     def get_device_list(self):
         response = self._post('api/V1/getquicksearchresults',
