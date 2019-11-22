@@ -148,7 +148,9 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
                     try:
                         if not entry.get('QID'):
                             continue
-
+                        qid_to_title[entry['QID']] = (entry.get('Title'),
+                                                      entry.get('Category'),
+                                                      entry.get('Sub Category'))
                         if not entry.get('CVE ID'):
                             continue
 
@@ -158,9 +160,6 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
                             continue
 
                         qid_to_cve_mapping[entry['QID']] = cve_ids
-                        qid_to_title[entry['QID']] = (entry.get('Title'),
-                                                      entry.get('Category'),
-                                                      entry.get('Sub Category'))
 
                     except Exception:
                         logger.exception(f'Problem mapping entry {entry}')
@@ -279,7 +278,7 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
                         sub_category = None
                         try:
                             qid = str((vuln_raw.get('HostAssetVuln') or {}).get('qid')) or ''
-                            if qid:
+                            if qid and self._qid_to_title.get(qid):
                                 title, category, sub_category = self._qid_to_title.get(qid)
                             if not title:
                                 title = None
