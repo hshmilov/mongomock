@@ -82,6 +82,10 @@ export const pluginMeta = {
         link: 'https://docs.axonius.com/docs/guardicore',
         description: 'Guardicore is a data center and cloud security company that protects the organization’s core assets.'
     },
+    cherwell_adapter: {
+        title: 'Cherwell IT Service Management',
+        description: 'Cherwell IT Service Management is a service desk platform enabling automation for process workflows, supporting tasks, and related approvals.'
+    },
     omnivista_adapter: {
         title: 'OmniVista 2500 NMS',
         link: 'https://docs.axonius.com/docs/omnivista-2500-nms',

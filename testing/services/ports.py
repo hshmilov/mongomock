@@ -143,6 +143,7 @@ DOCKER_PORTS = {
     'counter-act-adapter':              6053,
     'rumble-adapter':                   6054,
     'preempt-adapter':                  6055,
+    'cherwell-adapter':                 6056,
     'diag-w':                           6665,  # reserved
     'diag-l':                           6666,  # reserved
     'code42-adapter':                   6667,
