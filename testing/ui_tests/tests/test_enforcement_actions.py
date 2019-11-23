@@ -18,6 +18,8 @@ from services.standalone_services.syslog_server import SyslogService
 from test_helpers.log_tester import LogTester
 from ui_tests.tests.ui_consts import Enforcements, REPORTS_LOG_PATH
 from ui_tests.tests.ui_test_base import TestBase
+from ui_tests.pages.enforcements_page import ENFORCEMENT_WMI_SAVED_QUERY_NAME, \
+    ENFORCEMENT_WMI_SAVED_QUERY
 from test_credentials.json_file_credentials import client_details as json_file_creds
 from test_credentials.test_aws_credentials import EC2_ECS_EKS_READONLY_ACCESS_KEY_ID, \
     EC2_ECS_EKS_READONLY_SECRET_ACCESS_KEY
@@ -39,6 +41,9 @@ TAG_NEW_COMMENT = 'tag new'
 
 JSON_ADAPTER_NAME = 'JSON File'
 AXONIUS_CI_TESTS_BUCKET = 'axonius-ci-tests'
+
+ACTION_WMI_REGISTRY_KEY_OS_VERSION = 'SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion'
+ACTION_WMI_REGISTRY_KEY_CPU_TYPE = 'HKEY_LOCAL_MACHINE\\Hardware\\Description\\System\\FloatingPointProcessor\\0'
 
 
 def create_enforcement_name(number, enforcement_name=ENFORCEMENT_NAME):
@@ -318,6 +323,17 @@ class TestEnforcementActions(TestBase):
             # Good - means the button is disabled, as wanted
             assert self.enforcements_page.find_disabled_save_action()
         self.settings_page.remove_email_server()
+
+    def test_enforcement_wmi_register_key(self):
+        self.devices_page.switch_to_page()
+        self.base_page.run_discovery()
+        self.devices_page.run_filter_and_save(ENFORCEMENT_WMI_SAVED_QUERY_NAME, ENFORCEMENT_WMI_SAVED_QUERY)
+        self.enforcements_page.create_run_wmi_enforcement(ACTION_WMI_REGISTRY_KEY_OS_VERSION,
+                                                          ACTION_WMI_REGISTRY_KEY_CPU_TYPE)
+
+        self.enforcements_page.verify_wmi_action_register_keys(ACTION_WMI_REGISTRY_KEY_OS_VERSION,
+                                                               ACTION_WMI_REGISTRY_KEY_CPU_TYPE,
+                                                               delete_after_verification=True)
 
     def test_tag_entities_dropdown(self):
         self.enforcements_page.switch_to_page()

@@ -14,6 +14,12 @@ Task = namedtuple('Task', 'status stats name main_action trigger_query_name star
 ENFORCEMENT_WMI_EVERY_CYCLE = 'Run WMI on every cycle'
 ENFORCEMENT_WMI_SAVED_QUERY = f'adapters_data.active_directory_adapter.hostname == "{WMI_QUERIES_DEVICE}"'
 ENFORCEMENT_WMI_SAVED_QUERY_NAME = 'Execution devices'  # A strong device
+ENFORCEMENT_WMI_REGISTER_KEY_XPATH = '//*[@class="md-input"]'
+
+ACTION_WMI_REGISTRY_KEY__SELECTOR = '#reg_check_exists > div:nth-child({idx})'
+ACTION_WMI_REGISTRY_KEY_OS_VERSION_SELECTOR = ACTION_WMI_REGISTRY_KEY__SELECTOR.format(idx='1')
+ACTION_WMI_REGISTRY_KEY_CPU_TYPE_SELECTOR = ACTION_WMI_REGISTRY_KEY__SELECTOR.format(idx='2')
+ACTION_WMI_REGISTRY_KEY_REMOVE_BUTTON = ACTION_WMI_REGISTRY_KEY__SELECTOR.format(idx='1') + ' > button'
 
 
 class Period:
@@ -126,6 +132,9 @@ class EnforcementsPage(EntitiesPage):
     S3_SECRET_ACCESS_KEY_ID = 'secret_access_key'
 
     ENFORCEMENT_SEARCH_INPUT = '.body .x-tabs .body .x-tab.active .x-search-input input'
+
+    ACTION_WMI_REGISTRY_ADD_XPATH_ID = '.md-input'
+    ACTION_WMI_REGISTRY_KEY_TEMPLATE = '//*[text()=\'{REG_KEY}\']'
 
     CUSTOM_DATA_XPATH = '//label[@for=\'{db_identifier}\'][contains(text(),\'{label}\')]/' \
                         'following-sibling::div[contains(text(),\'{value}\')]'
@@ -332,6 +341,29 @@ class EnforcementsPage(EntitiesPage):
         self.click_button(self.SAVE_BUTTON)
         self.wait_for_element_present_by_text(name)
 
+    def add_run_wmi_scan(self, *regkey, name='Run WMI Scan'):
+
+        def add_register_key(*args):
+            register_keys = self.driver.find_element_by_xpath(ENFORCEMENT_WMI_REGISTER_KEY_XPATH)
+            assert register_keys.get_attribute('placeholder') == 'Add...'
+            for regkey in args:
+                register_keys.send_keys(regkey + ',')
+                time.sleep(0.6)
+
+        self.find_element_by_text(self.MAIN_ACTION_TEXT).click()
+        self.wait_for_action_library()
+        self.find_element_by_text(ActionCategory.Run).click()
+        # Opening animation time
+        time.sleep(0.6)
+        self.find_element_by_text(Action.run_wmi_scan.value).click()
+        self.wait_for_action_config()
+        self.find_checkbox_with_label_before(self.USE_ACTIVE_DIRECTORY_CREDENTIALS_CHECKBOX_LABEL).click()
+        self.fill_action_name(name)
+        if regkey:
+            add_register_key(*regkey)
+        self.click_button(self.SAVE_BUTTON)
+        self.wait_for_element_present_by_text(name)
+
     def add_custom_data(self, action_name, field_name, field_value):
         self.find_element_by_text(self.MAIN_ACTION_TEXT).click()
         self.wait_for_action_library()
@@ -359,26 +391,12 @@ class EnforcementsPage(EntitiesPage):
         self.add_custom_data(action_name, field_name, field_value)
         self.click_save_button()
 
-    def add_run_wmi_scan(self, name='Run WMI Scan'):
-        self.find_element_by_text(self.MAIN_ACTION_TEXT).click()
-        self.wait_for_action_library()
-        self.find_element_by_text(ActionCategory.Run).click()
-        # Opening animation time
-        time.sleep(0.2)
-        self.find_element_by_text(Action.run_wmi_scan.value).click()
-        self.wait_for_action_config()
-        self.find_checkbox_with_label_before(self.USE_ACTIVE_DIRECTORY_CREDENTIALS_CHECKBOX_LABEL).click()
-        self.fill_action_name(name)
-        self.click_button(self.SAVE_BUTTON)
-        self.wait_for_element_present_by_text(name)
-
     def fill_action_name(self, name):
         self.fill_text_field_by_element_id(self.ACTION_NAME_ID, name)
 
     def add_notify_syslog(self, name='Special Syslog Notification', action_cond=MAIN_ACTION_TEXT, severity='warning'):
         # 'warning' by default, because our syslog doesn't like logs sent using "INFO"
         # It is an issue with our syslog's configuration, and it's not worth the time fixing
-
         self.find_element_by_text(action_cond).click()
         self.wait_for_action_library()
         self.find_element_by_text(ActionCategory.Notify).click()
@@ -613,10 +631,10 @@ class EnforcementsPage(EntitiesPage):
         self.click_save_button()
         self.wait_for_table_to_load()
 
-    def create_run_wmi_enforcement(self):
+    def create_run_wmi_enforcement(self, *regkeys):
         self.switch_to_page()
         self.create_basic_enforcement(ENFORCEMENT_WMI_EVERY_CYCLE, ENFORCEMENT_WMI_SAVED_QUERY_NAME)
-        self.add_run_wmi_scan(ENFORCEMENT_WMI_EVERY_CYCLE)
+        self.add_run_wmi_scan(*regkeys, name=ENFORCEMENT_WMI_EVERY_CYCLE)
         self.add_tag_entities(name='Great Success', tag='Great Success', action_cond=self.SUCCESS_ACTIONS_TEXT)
         self.click_save_button()
         self.wait_for_table_to_load()
@@ -778,6 +796,35 @@ class EnforcementsPage(EntitiesPage):
             yield Task(status=status, stats=stats, name=name,
                        main_action=main_action, trigger_query_name=trigger_query_name,
                        started_at=started_at, completed_at=completed_at)
+
+    def click_remove_first_reg_key_in_wmi_action(self):
+        # delete reg key # 1
+        self.driver.find_element_by_css_selector(ACTION_WMI_REGISTRY_KEY_REMOVE_BUTTON).click()
+        time.sleep(0.6)  # flaky with 0.2
+
+    def get_wmi_action_registry_keys_input_text(self):
+        return self.driver.find_element_by_id('reg_check_exists').text
+
+    def get_wmi_action_register_key_text(self, key_index=0):
+        key = self.driver.find_element_by_css_selector(ACTION_WMI_REGISTRY_KEY__SELECTOR.format(idx=key_index))
+        time.sleep(0.6)  # flaky with 0.2
+        return key.text
+
+    def verify_wmi_action_register_keys(self, *regkeys, delete_after_verification=False):
+        # verify reg key
+        self.find_element_by_text(ENFORCEMENT_WMI_EVERY_CYCLE).click()
+        time.sleep(0.2)
+        idx = 0
+        if regkeys:
+            for reg_key in regkeys:
+                idx += 1
+                assert self.get_wmi_action_register_key_text(idx) == reg_key
+                time.sleep(0.2)
+        if delete_after_verification:
+            for _ in regkeys:
+                self.click_remove_first_reg_key_in_wmi_action()
+
+        assert self.get_wmi_action_registry_keys_input_text() == ''
 
     def search_enforcement_tasks_search_input(self, text):
         self.fill_text_field_by_css_selector(self.ENFORCEMENT_SEARCH_INPUT, text)
