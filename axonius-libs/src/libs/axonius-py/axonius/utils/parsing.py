@@ -833,6 +833,7 @@ def hostname_not_problematic(adapter_device):
 def is_only_host_adapter(adapter_device):
     if (adapter_device.get('plugin_name') in ['deep_security_adapter',
                                               'cisco_umbrella_adapter',
+                                              'bitlocker_adapter',
                                               'carbonblack_defense_adapter',
                                               'carbonblack_protection_adapter',
                                               'csv_adapter',

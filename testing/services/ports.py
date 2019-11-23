@@ -170,6 +170,7 @@ DOCKER_PORTS = {
     'heavy-lifting':                    6688,
     'instance-control':                 6689,
     'master-proxy':                     8888,  # reserved
+    'bitlocker-adapter':                9957,
     'ssh-socat':                        9958,
     'office-scan-adapter':              9959,
     'librenms-adapter':                 9960,

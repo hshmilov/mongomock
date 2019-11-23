@@ -171,6 +171,10 @@ export const pluginMeta = {
         link: 'https://docs.axonius.com/docs/f5-big-ip-icontrol',
         description: 'F5 iControl is a Web services-enabled open API providing granular control over the configuration and management of F5\'s application delivery platform, BIG-IP.'
     },
+    bitlocker_adapter: {
+        title: 'Bitlocker',
+        description: 'Microsoft BitLocker Administration and Monitoring (MBAM) 2.5 provides a simplified administrative interface that you can use to manage BitLocker Drive Encryption.'
+    },
     druva_adapter: {
         title: 'Druva Cloud Platform',
         link: 'https://docs.axonius.com/docs/druva-cloud-platform',
