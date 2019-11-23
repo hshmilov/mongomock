@@ -42,6 +42,7 @@ class AdaptersPage(EntitiesPage):
     AD_SERVER_SEARCH_FIELD = ('dc_name', 'DC Address')
     ADAPTER_INSTANCE_CONFIG_CSS_SELECTOR = '.config-server'
     EDIT_INSTANCE_XPATH = '//div[@title=\'{instance_name}\']/parent::td/parent::tr'
+    INSTANCE_DROPDOWN_CSS = '#serverInstance div.trigger-text'
 
     INPUT_TYPE_PWD_VALUE = '********'
 
@@ -285,3 +286,6 @@ class AdaptersPage(EntitiesPage):
         self.click_new_server()
         self.fill_creds(**adapter_input)
         self.click_save()
+
+    def get_instances_dropdown_selected_value(self):
+        return self.driver.find_element_by_css_selector(self.INSTANCE_DROPDOWN_CSS).text

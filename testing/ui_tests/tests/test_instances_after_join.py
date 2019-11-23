@@ -9,7 +9,8 @@ from axonius.utils.wait import wait_until, expect_specific_exception_to_be_raise
 from services.adapters.ad_service import AdService
 from services.adapters.json_file_service import JsonFileService
 from test_credentials.test_ad_credentials import ad_client1_details
-from ui_tests.tests.instances_test_base import TestInstancesBase, NODE_NAME, NODE_HOSTNAME
+from ui_tests.tests.instances_test_base import TestInstancesBase, NODE_NAME, NODE_HOSTNAME, NEW_NODE_NAME, \
+    NEXPOSE_ADAPTER_NAME
 
 
 class TestInstancesAfterNodeJoin(TestInstancesBase):
@@ -29,6 +30,7 @@ class TestInstancesAfterNodeJoin(TestInstancesBase):
         self.check_add_adapter_to_node()
         self.check_correct_ip_is_shown_in_table()
         self.check_correct_hostname_is_shown_in_table()
+        self.check_change_node_name()
         self.check_ssh_tunnel()
         self.check_node_restart()
         self.check_master_disconnect()
@@ -111,3 +113,20 @@ class TestInstancesAfterNodeJoin(TestInstancesBase):
         node_hostname_from_table = self.instances_page.get_node_hostname(NODE_NAME)
         self.logger.info(f'{NODE_NAME} hostname recognised as:{node_hostname_from_table}')
         assert node_hostname_from_table == NODE_HOSTNAME, 'System did not recognize node hostname correctly.'
+
+    def check_change_node_name(self):
+        def _test_dropdown_change():
+            self.adapters_page.switch_to_page()
+            self.adapters_page.refresh()
+            self.adapters_page.click_adapter(NEXPOSE_ADAPTER_NAME)
+            self.adapters_page.wait_for_table_to_load()
+            self.adapters_page.wait_for_spinner_to_end()
+            self.adapters_page.click_new_server()
+            select_value = self.adapters_page.get_instances_dropdown_selected_value()
+            self.adapters_page.click_cancel()
+            assert select_value == NEW_NODE_NAME, \
+                'Node name was not changed in the adapters instances select dropdown.'
+        self.instances_page.change_instance_name(NODE_NAME, NEW_NODE_NAME)
+        node_hostname_from_table = self.instances_page.get_node_hostname(NEW_NODE_NAME)
+        assert node_hostname_from_table == NODE_HOSTNAME, 'System did not recognize node hostname correctly.'
+        wait_until(_test_dropdown_change, check_return_value=False, tolerated_exceptions_list=[AssertionError])

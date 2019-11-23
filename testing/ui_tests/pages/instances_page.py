@@ -80,5 +80,13 @@ class InstancesPage(EntitiesPage):
         instances_row = self.find_query_row_by_name(node_name)
         return instances_row.find_element_by_xpath(self.INSTANCES_HOSTNAME_XPATH).text
 
+    def change_instance_name(self, current_node_name, new_node_name):
+        self.switch_to_page()
+        self.refresh()
+        instances_row = self.find_query_row_by_name(current_node_name)
+        instances_row.click()
+        self.fill_text_field_by_element_id('instanceName', new_node_name)
+        self.click_button('Change Name')
+
     def find_query_row_by_name(self, instance_name):
         return self.driver.find_element_by_xpath(self.INSTANCES_ROW_BY_NAME_XPATH.format(instance_name=instance_name))
