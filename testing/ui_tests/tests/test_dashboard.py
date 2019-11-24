@@ -1,18 +1,23 @@
 import time
+from contextlib import contextmanager
 from math import ceil
 
 import pytest
 import requests
 from selenium.common.exceptions import NoSuchElementException
+
 from services.axon_service import TimeoutException
 from services.adapters import stresstest_service
 from axonius.consts.gui_consts import (DASHBOARD_SPACE_DEFAULT,
                                        DASHBOARD_SPACE_PERSONAL)
 from axonius.utils.wait import wait_until
+from axonius.entities import EntityType
+from axonius.utils import datetime
 from ui_tests.tests.ui_consts import (READ_WRITE_USERNAME, READ_ONLY_USERNAME, NEW_PASSWORD,
                                       FIRST_NAME, LAST_NAME, JSON_ADAPTER_NAME,
                                       STRESSTEST_ADAPTER_NAME, STRESSTEST_ADAPTER)
 from ui_tests.tests.ui_test_base import TestBase
+from ui_tests.tests.ui_consts import AD_ADAPTER_NAME
 
 
 class TestDashboard(TestBase):
@@ -37,6 +42,7 @@ class TestDashboard(TestBase):
     TEST_PAGINATOR_ON_SEGMENTATION_HISTOGRAM = 'test paginator on segmentation histogram - devices'
     TEST_PAGINATOR_ON_SEGMENTATION_USERS = 'test paginator on segmentation - users'
     TEST_PAGINATOR_LINKED_TO_CORRECT_FILTER = 'test paginator linked to correct filter'
+    TEST_EDIT_CARD_TITLE = 'Testonius'
     SEGMENTATION_QUERY_USER_AD = 'Segmentation_User_name_AD'
     TEST_SEGMENTATION_PIE_TITLE = 'test segmentation pie'
     TEST_EDIT_CHART_TITLE = 'test edit'
@@ -49,6 +55,33 @@ class TestDashboard(TestBase):
     TEST_EMPTY_TITLE = 'test empty'
     FIRST_LIFECYCLE_STAGE_TEXT = 'Fetch Devices...'
     LIFECYCLE_ADAPTER_FETCHING_STATUS = 'Fetching...'
+    DEVICES_MODULE = 'Devices'
+    USERS_MODULE = 'Users'
+    WINDOWS_MACHINES_OPTION_NAME = 'Windows Operating System'
+    AD_PRINTERS_OPTION_NAME = 'AD Printers'
+    AD_DOMAIN_CONTROLLERS_OPTION_NAME = 'AD Domain Controllers'
+    OS_SERVICE_PACK_OPTION_NAME = 'OS: Service Pack'
+    OS_TYPE_OPTION_NAME = 'OS: Type'
+    MANAGED_DEVICES_OPTION_NAME = 'Managed Devices'
+    NOT_LOCAL_USERS_OPTION_NAME = 'Not Local Users'
+    NOT_FROM_US_USERS_OPTION_NAME = 'Users Not From US'
+    BAD_LOGON_7_USERS_OPTION_NAME = 'Users With Bad Logons In Past 7 Days'
+    AD_CRITICAL_USERS_OPTION_NAME = 'AD Enabled Critical Users'
+    IS_ADMIN_OPTION_NAME = 'Is Admin'
+    IS_LOCAL_OPTION_NAME = 'Is Local'
+    USER_NAME_OPTION_NAME = 'User Name'
+    AD_PRIMARY_GROUP_ID_OPTION_NAME = 'AD Primary group ID'
+    COUNT_OPTION_NAME = 'Count'
+    AVERAGE_OPTION_NAME = 'Average'
+    PIE_CHART_TYPE = 'pie'
+    HISTOGRAM_CHART_TYPE = 'histogram'
+    SUMMARY_CHART_TYPE = 'summary'
+    TIMELINE_CHART_TYPE = 'timeline'
+    TEST_TIMELINE_SVG_CSS = {
+        1: 'svg[aria-label="A chart."] g:nth-child(4) g:nth-child(2) g:nth-child(2) path',
+        2: 'svg[aria-label="A chart."] g:nth-child(4) g:nth-child(2) g:nth-child(3) path',
+        3: 'svg[aria-label="A chart."] g:nth-child(4) g:nth-child(2) g:nth-child(3) path:nth-child(1)'
+    }
 
     @pytest.mark.skip('TBD')
     def test_system_empty_state(self):
@@ -514,7 +547,8 @@ class TestDashboard(TestBase):
     def test_dashboard_segmentation_chart(self):
         self.dashboard_page.switch_to_page()
         self.base_page.run_discovery()
-        self.dashboard_page.add_segmentation_card('Devices', 'OS: Type', self.TEST_SEGMENTATION_HISTOGRAM_TITLE)
+        self.dashboard_page.add_segmentation_card(
+            'Devices', self.OS_TYPE_OPTION_NAME, self.TEST_SEGMENTATION_HISTOGRAM_TITLE)
         # verify config reset
         self.dashboard_page.verify_card_config_reset_segmentation_chart(self.TEST_SEGMENTATION_HISTOGRAM_TITLE)
         shc_card = self.dashboard_page.get_card(self.TEST_SEGMENTATION_HISTOGRAM_TITLE)
@@ -621,7 +655,7 @@ class TestDashboard(TestBase):
 
         # Add a panel to a custom space
         self.dashboard_page.find_space_header(3).click()
-        self.dashboard_page.add_segmentation_card('Devices', 'OS: Type', self.CUSTOM_SPACE_PANEL_NAME)
+        self.dashboard_page.add_segmentation_card('Devices', self.OS_TYPE_OPTION_NAME, self.CUSTOM_SPACE_PANEL_NAME)
         self.dashboard_page.wait_for_spinner_to_end()
         segment_card = self.dashboard_page.get_card(self.CUSTOM_SPACE_PANEL_NAME)
         assert segment_card and self.dashboard_page.get_histogram_chart_from_card(segment_card)
@@ -631,7 +665,7 @@ class TestDashboard(TestBase):
         assert self.dashboard_page.is_missing_panel(self.CUSTOM_SPACE_PANEL_NAME)
 
         # Add a panel to the Personal space and check hidden from other user
-        self.dashboard_page.add_segmentation_card('Devices', 'OS: Type', self.PERSONAL_SPACE_PANEL_NAME)
+        self.dashboard_page.add_segmentation_card('Devices', self.OS_TYPE_OPTION_NAME, self.PERSONAL_SPACE_PANEL_NAME)
         self.settings_page.switch_to_page()
         self.settings_page.click_manage_users_settings()
         self.settings_page.create_new_user(READ_WRITE_USERNAME, NEW_PASSWORD,
@@ -683,7 +717,7 @@ class TestDashboard(TestBase):
         self.dashboard_page.switch_to_page()
         self.base_page.run_discovery()
         self.dashboard_page.add_segmentation_card(module='Devices',
-                                                  field='OS: Type',
+                                                  field=self.OS_TYPE_OPTION_NAME,
                                                   title=self.TEST_EMPTY_TITLE,
                                                   view_name='OS X Operating System')
 
@@ -784,3 +818,166 @@ class TestDashboard(TestBase):
         finally:
             self.adapters_page.clean_adapter_servers(STRESSTEST_ADAPTER_NAME)
             self.wait_for_adapter_down(STRESSTEST_ADAPTER)
+
+    @contextmanager
+    def _edit_and_assert_chart(self, card, assert_data, chart_type=PIE_CHART_TYPE):
+        self.dashboard_page.edit_card(self.TEST_EDIT_CARD_TITLE)
+        yield
+        self.dashboard_page.click_card_save()
+        if chart_type == self.PIE_CHART_TYPE:
+            self.dashboard_page.assert_pie_slices_data(card, assert_data)
+        if chart_type == self.HISTOGRAM_CHART_TYPE:
+            self.dashboard_page.assert_histogram_lines_data(card, assert_data)
+        if chart_type == self.SUMMARY_CHART_TYPE:
+            self.dashboard_page.assert_summary_text_data(card, assert_data)
+        if chart_type == self.TIMELINE_CHART_TYPE:
+            self.dashboard_page.assert_timeline_svg_exist(card, assert_data)
+
+    def test_dashboard_chart_edit(self):
+        self.dashboard_page.switch_to_page()
+        self.base_page.run_discovery()
+        self.dashboard_page.add_intersection_card(module=self.DEVICES_MODULE,
+                                                  first_query=self.WINDOWS_MACHINES_OPTION_NAME,
+                                                  second_query=self.AD_PRINTERS_OPTION_NAME,
+                                                  title=self.TEST_EDIT_CARD_TITLE)
+        card = self.dashboard_page.find_dashboard_card(self.TEST_EDIT_CARD_TITLE)
+        self.dashboard_page.assert_pie_slices_data(card, ['9', '86', '5'])
+        self._test_intersection_chart_edit(card)
+        self._change_card_to_comparison(self.TEST_EDIT_CARD_TITLE)
+        self.dashboard_page.assert_pie_slices_data(card, ['83', '17'])
+        self._test_comparison_chart_edit(card)
+        self._change_card_to_segmentation(self.TEST_EDIT_CARD_TITLE)
+        self.dashboard_page.assert_histogram_lines_data(card, ['2', '1'])
+        self._test_segmentation_chart_edit(card)
+        self._change_card_to_summary(self.TEST_EDIT_CARD_TITLE)
+        self.dashboard_page.assert_summary_text_data(card, ['20'])
+        self._test_summary_chart_edit(card)
+        self._change_card_to_timeline(self.TEST_EDIT_CARD_TITLE)
+        self.dashboard_page.assert_timeline_svg_exist(card, self.TEST_TIMELINE_SVG_CSS[1])
+        self._test_timeline_chart_edit(card)
+
+    def _change_card_to_comparison(self, title):
+        self.dashboard_page.edit_card(title)
+        self.dashboard_page.select_chart_metric('Query Comparison')
+        assert self.dashboard_page.is_chart_save_disabled()
+        self.dashboard_page.change_chart_type(self.PIE_CHART_TYPE)
+        views_list = self.dashboard_page.get_views_list()
+        self.dashboard_page.select_chart_wizard_module(self.DEVICES_MODULE, views_list[0])
+        self.dashboard_page.select_chart_view_name(self.WINDOWS_MACHINES_OPTION_NAME, views_list[0])
+        self.dashboard_page.select_chart_wizard_module(self.DEVICES_MODULE, views_list[1])
+        self.dashboard_page.select_chart_view_name(self.AD_DOMAIN_CONTROLLERS_OPTION_NAME, views_list[1])
+        self.dashboard_page.click_card_save()
+
+    def _change_card_to_segmentation(self, title):
+        self.dashboard_page.edit_card(title)
+        self.dashboard_page.select_chart_metric('Field Segmentation')
+        assert self.dashboard_page.is_chart_save_disabled()
+        self.dashboard_page.change_chart_type(self.HISTOGRAM_CHART_TYPE)
+        self.dashboard_page.select_chart_wizard_module(self.DEVICES_MODULE)
+        self.dashboard_page.select_chart_view_name(self.WINDOWS_MACHINES_OPTION_NAME)
+        self.dashboard_page.select_chart_wizard_field(self.OS_SERVICE_PACK_OPTION_NAME)
+        self.dashboard_page.click_card_save()
+
+    def _change_card_to_summary(self, title):
+        self.dashboard_page.edit_card(title)
+        self.dashboard_page.select_chart_metric('Field Summary')
+        assert self.dashboard_page.is_chart_save_disabled()
+        self.dashboard_page.select_chart_wizard_module(self.DEVICES_MODULE)
+        self.dashboard_page.select_chart_wizard_field(self.OS_TYPE_OPTION_NAME)
+        self.dashboard_page.select_chart_summary_function(self.COUNT_OPTION_NAME)
+        self.dashboard_page.click_card_save()
+
+    def _change_card_to_timeline(self, title):
+        self._create_history(EntityType.Devices)
+        self.dashboard_page.switch_to_page()
+        self.dashboard_page.edit_card(title)
+        self.dashboard_page.select_chart_metric('Query Timeline')
+        assert self.dashboard_page.is_chart_save_disabled()
+        self.dashboard_page.select_chart_wizard_module(self.DEVICES_MODULE)
+        self.dashboard_page.select_chart_view_name(self.WINDOWS_MACHINES_OPTION_NAME)
+        self.dashboard_page.select_chart_result_range_last()
+        self.dashboard_page.click_card_save()
+
+    def _test_intersection_chart_edit(self, card):
+        with self._edit_and_assert_chart(card, ['77', '18', '5'], self.PIE_CHART_TYPE):
+            self.dashboard_page.select_intersection_chart_first_query(self.AD_DOMAIN_CONTROLLERS_OPTION_NAME)
+
+        with self._edit_and_assert_chart(card, ['5', '18', '77'], self.PIE_CHART_TYPE):
+            self.dashboard_page.select_intersection_chart_second_query(self.MANAGED_DEVICES_OPTION_NAME)
+
+        with self._edit_and_assert_chart(card, ['87', '13'], self.PIE_CHART_TYPE):
+            self.dashboard_page.select_chart_wizard_module(self.USERS_MODULE)
+            self.dashboard_page.select_intersection_chart_first_query(self.NOT_LOCAL_USERS_OPTION_NAME)
+            self.dashboard_page.select_intersection_chart_second_query(self.NOT_FROM_US_USERS_OPTION_NAME)
+
+        with self._edit_and_assert_chart(card, ['93', '7'], self.PIE_CHART_TYPE):
+            self.dashboard_page.select_intersection_chart_second_query(self.BAD_LOGON_7_USERS_OPTION_NAME)
+
+        with self._edit_and_assert_chart(card, ['53', '40', '7'], self.PIE_CHART_TYPE):
+            self.dashboard_page.select_intersection_chart_first_query(self.AD_CRITICAL_USERS_OPTION_NAME)
+
+    def _test_comparison_chart_edit(self, card):
+        with self._edit_and_assert_chart(card, ['95', '5'], self.PIE_CHART_TYPE):
+            views_list = self.dashboard_page.get_views_list()
+            self.dashboard_page.select_chart_view_name(self.AD_PRINTERS_OPTION_NAME, views_list[1])
+
+        with self._edit_and_assert_chart(card, ['20', '1'], self.HISTOGRAM_CHART_TYPE):
+            self.dashboard_page.change_chart_type(self.HISTOGRAM_CHART_TYPE)
+
+        with self._edit_and_assert_chart(card, ['20', '15'], self.HISTOGRAM_CHART_TYPE):
+            views_list = self.dashboard_page.get_views_list()
+            self.dashboard_page.select_chart_wizard_module(self.USERS_MODULE, views_list[1])
+            self.dashboard_page.select_chart_view_name(self.NOT_LOCAL_USERS_OPTION_NAME, views_list[1])
+
+    def _test_segmentation_chart_edit(self, card):
+        with self._edit_and_assert_chart(card, ['2'], self.HISTOGRAM_CHART_TYPE):
+            self.dashboard_page.fill_chart_segment_filter('1')
+
+        with self._edit_and_assert_chart(card, ['7', '1'], self.HISTOGRAM_CHART_TYPE):
+            self.dashboard_page.select_chart_wizard_module(self.USERS_MODULE)
+            self.dashboard_page.select_chart_view_name(self.NOT_LOCAL_USERS_OPTION_NAME)
+            self.dashboard_page.select_chart_wizard_field(self.IS_ADMIN_OPTION_NAME)
+
+        with self._edit_and_assert_chart(card, ['2', '1'], self.HISTOGRAM_CHART_TYPE):
+            self.dashboard_page.select_chart_view_name(self.NOT_FROM_US_USERS_OPTION_NAME)
+
+        with self._edit_and_assert_chart(card, ['2'], self.HISTOGRAM_CHART_TYPE):
+            self.dashboard_page.select_chart_wizard_field(self.IS_LOCAL_OPTION_NAME)
+
+        with self._edit_and_assert_chart(card, ['88', '13'], self.PIE_CHART_TYPE):
+            self.dashboard_page.select_chart_view_name(self.NOT_LOCAL_USERS_OPTION_NAME)
+            self.dashboard_page.select_chart_wizard_field(self.IS_ADMIN_OPTION_NAME)
+            self.dashboard_page.change_chart_type(self.PIE_CHART_TYPE)
+
+    def _test_summary_chart_edit(self, card):
+        with self._edit_and_assert_chart(card, ['15'], self.SUMMARY_CHART_TYPE):
+            self.dashboard_page.select_chart_wizard_module(self.USERS_MODULE)
+            self.dashboard_page.select_chart_wizard_field(self.USER_NAME_OPTION_NAME)
+            self.dashboard_page.select_chart_summary_function(self.COUNT_OPTION_NAME)
+
+        with self._edit_and_assert_chart(card, ['515'], self.SUMMARY_CHART_TYPE):
+            self.dashboard_page.select_chart_summary_function(self.AVERAGE_OPTION_NAME)
+            self.dashboard_page.select_chart_wizard_module(self.DEVICES_MODULE)
+            self.dashboard_page.select_chart_wizard_adapter(AD_ADAPTER_NAME)
+            self.dashboard_page.select_chart_wizard_field(self.AD_PRIMARY_GROUP_ID_OPTION_NAME)
+
+    def _test_timeline_chart_edit(self, card):
+        with self._edit_and_assert_chart(card, self.TEST_TIMELINE_SVG_CSS[2], self.TIMELINE_CHART_TYPE):
+            self.dashboard_page.select_chart_view_name(self.AD_PRINTERS_OPTION_NAME)
+
+        with self._edit_and_assert_chart(card, self.TEST_TIMELINE_SVG_CSS[3], self.TIMELINE_CHART_TYPE):
+            self.dashboard_page.toggle_comparison_intersection_switch()
+            self.dashboard_page.select_chart_result_range_date()
+            self.dashboard_page.select_chart_wizard_datepicker(1, datetime.datetime.now() + datetime.timedelta(-30))
+            self.dashboard_page.close_datepicker()
+            self.dashboard_page.select_chart_wizard_datepicker(2, datetime.datetime.now())
+            self.dashboard_page.close_datepicker()
+            views_list = self.dashboard_page.get_views_list()
+            self.dashboard_page.select_chart_wizard_module(self.DEVICES_MODULE, views_list[1])
+            self.dashboard_page.select_chart_view_name(self.AD_DOMAIN_CONTROLLERS_OPTION_NAME, views_list[1])
+
+        with self._edit_and_assert_chart(card, self.TEST_TIMELINE_SVG_CSS[1], self.TIMELINE_CHART_TYPE):
+            views_list = self.dashboard_page.get_views_list()
+            self.dashboard_page.select_chart_view_name(self.WINDOWS_MACHINES_OPTION_NAME, views_list[0])
+            self.dashboard_page.select_chart_wizard_module(self.USERS_MODULE, views_list[1])
+            self.dashboard_page.select_chart_view_name(self.NOT_LOCAL_USERS_OPTION_NAME, views_list[1])

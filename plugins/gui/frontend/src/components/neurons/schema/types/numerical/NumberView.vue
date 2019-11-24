@@ -1,6 +1,16 @@
 <template functional>
-  <div v-if="typeof props.value === 'number'">{{ props.value.toFixed(2) }}</div>
-  <div v-else>&nbsp;</div>
+  <div
+    v-if="typeof props.value === 'number'"
+    :class="[data.class, data.staticClass]"
+    :style="data.staticStyle"
+    v-bind="data.attrs"
+  >{{ props.value.toFixed(2) }}</div>
+  <div
+    v-else
+    :class="[data.class, data.staticClass]"
+    :style="data.staticStyle"
+    v-bind="data.attrs"
+  >&nbsp;</div>
 </template>
 
 <script>

@@ -21,6 +21,10 @@ class DashboardPage(Page):
     DEVICE_DISCOVERY = 'Device Discovery'
     USER_DISCOVERY = 'User Discovery'
     QUERY_SEARCH_INPUT_CSS = 'div:nth-child(1) > div > div > input'
+    CHART_WIZARD_DATEPICKER_CSS = '.x-chart-wizard .x-date-edit.labeled:nth-of-type({child_index}) input'
+    CHART_WIZARD_TYPE_SWITCH_CSS = '.x-chart-wizard .md-switch-container + label'
+    PIE_SLICE_CSS = 'g[class^="slice-"]'
+    PIE_SLICE_TEXT_BY_POSITION = 'svg > g.slice-{index} > text'
     UNCOVERED_PIE_SLICE_CSS = 'svg > g.slice-0 > text.scaling'
     COVERED_PIE_SLICE_CSS = 'svg > g.slice-1 > text.scaling'
     INTERSECTION_PIE_INTERSECTION_SLICE_CSS = 'svg > g.slice-2 > text'
@@ -37,7 +41,10 @@ class DashboardPage(Page):
     SELECT_VIEWS_CSS = '.x-select-views'
     SELECT_VIEWS_VIEW_CSS = '.view'
     SELECT_VIEW_NAME_CSS = '.view-name'
+    CHART_TIMELINE_LAST_RANGE_RADIO_CSS = '#range_relative'
+    CHART_TIMELINE_DATE_RANGE_RADIO_CSS = '#range_absolute'
     CHART_FIELD_DROP_DOWN_CSS = '.x-dropdown.x-select.field-select'
+    CHART_ADAPTER_DROP_DOWN_CSS = '.x-dropdown.x-select.x-select-symbol.minimal'
     CHART_FIELD_TEXT_BOX_CSS = 'div.x-search-input.x-select-search > input'
     CHART_FUNCTION_CSS = 'div.x-chart-metric.grid-span2 > div:nth-child(8)'
     CHART_TITLE_ID = 'chart_name'
@@ -190,6 +197,28 @@ class DashboardPage(Page):
                            parent=None,
                            partial_text=partial_text)
 
+    def select_chart_wizard_datepicker(self, child_index=1, date_value=datetime.datetime.now(), parent=None):
+        self.fill_text_field_by_css_selector(self.CHART_WIZARD_DATEPICKER_CSS.format(child_index=child_index),
+                                             date_value.isoformat(), context=parent)
+        # Sleep through the time it takes the date picker to react to the filled date
+        time.sleep(0.5)
+
+    def select_chart_wizard_adapter(self, prop, partial_text=True):
+        self.select_option(self.CHART_ADAPTER_DROP_DOWN_CSS,
+                           self.CHART_FIELD_TEXT_BOX_CSS,
+                           self.WIZARD_OPTIONS_CSS, prop,
+                           parent=None,
+                           partial_text=partial_text)
+
+    def select_chart_result_range_last(self):
+        self.driver.find_element_by_css_selector(self.CHART_TIMELINE_LAST_RANGE_RADIO_CSS).click()
+
+    def select_chart_result_range_date(self):
+        self.driver.find_element_by_css_selector(self.CHART_TIMELINE_DATE_RANGE_RADIO_CSS).click()
+
+    def toggle_comparison_intersection_switch(self):
+        self.driver.find_element_by_css_selector(self.CHART_WIZARD_TYPE_SWITCH_CSS).click()
+
     def select_chart_summary_function(self, func_name):
         self.select_option_without_search(self.CHART_FUNCTION_CSS, self.WIZARD_OPTIONS_CSS, func_name, parent=None)
 
@@ -323,6 +352,43 @@ class DashboardPage(Page):
     def find_query_search_input(self):
         return self.driver.find_element_by_css_selector(self.QUERY_SEARCH_INPUT_CSS)
 
+    def change_chart_type(self, chart_type):
+        self.driver.find_element_by_css_selector(f'#{chart_type}').click()
+
+    def get_pie_slices_data(self, pie):
+        """
+        get the numbers from pie chart slices
+        :param pie: the pie chart
+        :return: list of all slices data as text
+        """
+        pie_data = []
+        pie_slices = pie.find_elements_by_css_selector(self.PIE_SLICE_CSS)
+        for pie_slice in pie_slices:
+            value = pie_slice.text.rstrip('%')
+            if value:
+                pie_data.append(value)
+
+        return pie_data
+
+    def assert_pie_slices_data(self, card, data_list):
+        pie = self.get_pie_chart_from_card(card)
+        pie_data = self.get_pie_slices_data(pie)
+        assert pie_data == data_list
+
+    def assert_histogram_lines_data(self, card, data_list):
+        histogram = self.get_histogram_chart_from_card(card)
+        histogram_data = self.get_histogram_lines_data(histogram)
+        assert histogram_data == data_list
+
+    def assert_summary_text_data(self, card, data_list):
+        title = self.get_title_from_card(card)
+        summary_data = [self.get_summary_card_text(title).text]
+        assert summary_data == data_list
+
+    @staticmethod
+    def assert_timeline_svg_exist(card, svg_css_selector):
+        assert card.find_element_by_css_selector(svg_css_selector)
+
     def get_uncovered_from_pie(self, pie):
         return int(pie.find_element_by_css_selector(self.UNCOVERED_PIE_SLICE_CSS).text.rstrip('%'))
 
@@ -387,6 +453,13 @@ class DashboardPage(Page):
         histogram_items = self.get_histogram_items_on_pagination(histogram)
         for line_item in histogram_items:
             yield line_item.find_element_by_css_selector('.item-bar div.quantity').text
+
+    def get_histogram_lines_data(self, histogram):
+        count = self.get_count_histogram_lines_from_histogram(histogram)
+        histogram_data = []
+        for i in range(count):
+            histogram_data.append(self.get_histogram_line_from_histogram(histogram, i + 1).text)
+        return histogram_data
 
     def get_paginator_num_of_items(self, histogram):
         return histogram.find_element_by_css_selector(self.PAGINATOR_NUM_OF_ITEMS).text
