@@ -30,6 +30,7 @@ class Query:
 class Adapters:
     CREDENTIALS_CHANGE_OK = 'credentials_change.ok'
     CREDENTIALS_CHANGE_ERROR = 'credentials_change.error'
+    CONNECTION_ESTABLISH_ERROR = 'adapter_connection_error'
 
 
 class GettingStartedMetric:

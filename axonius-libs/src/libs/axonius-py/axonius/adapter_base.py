@@ -529,7 +529,10 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
                         email.send(f'Adapter {self.plugin_name} had connection error'
                                    f' to server with the ID {client_name}. Error is {str(e2)}')
 
-                    logger.exception('Problem establishing connection for client {client_name}. Reason: {str(e2)}')
+                    logger.exception(f'Problem establishing connection for client {client_name}. Reason: {str(e2)}')
+                    log_metric(logger, metric_name=Adapters.CONNECTION_ESTABLISH_ERROR,
+                               metric_value={client_name},
+                               details=str(e2))
                     _update_client_status('error', str(e2))
                     raise
             _update_client_status('success', '')
