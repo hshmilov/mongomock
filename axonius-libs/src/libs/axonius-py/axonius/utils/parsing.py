@@ -839,6 +839,7 @@ def is_only_host_adapter(adapter_device):
                                               'csv_adapter',
                                               'mssql_adapter',
                                               'code42_adapter',
+                                              'cherwell_adapter',
                                               'signalsciences_adapter',
                                               'sysaid_adapter',
                                               'logrhythm_adapter',

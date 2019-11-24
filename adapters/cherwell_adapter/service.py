@@ -1,3 +1,4 @@
+import datetime
 import logging
 
 from axonius.adapter_base import AdapterBase, AdapterProperty
@@ -7,6 +8,7 @@ from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.connection import RESTException
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.utils.files import get_local_config_file
+from axonius.utils.datetime import parse_date
 from cherwell_adapter.connection import CherwellConnection
 from cherwell_adapter.client_id import get_client_id
 
@@ -16,7 +18,14 @@ logger = logging.getLogger(f'axonius.{__name__}')
 class CherwellAdapter(AdapterBase):
     # pylint: disable=too-many-instance-attributes
     class MyDeviceAdapter(DeviceAdapter):
+        bus_ob_id = Field(str, 'Bus Ob ID')
         bus_ob_rec_id = Field(str, 'BusObRecId')
+        ci_type_name = Field(str, 'CI Type Name')
+        created_by = Field(str, 'Created By')
+        asset_tag = Field(str, 'Asset Tag')
+        last_modified = Field(datetime.datetime, 'Last Modification')
+        asset_status = Field(str, 'Asset Status')
+        asset_owner = Field(str, 'Asset Owner')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -115,15 +124,18 @@ class CherwellAdapter(AdapterBase):
         }
 
     # pylint: disable=too-many-branches
-    def _create_device(self, device_raw, bus_ob_id, bus_ob_rec_id):
+    # pylint: disable=too-many-statements
+    def _create_device(self, device_raw):
         try:
+            device_response = device_raw.get('responses')[0]
             device = self._new_device_adapter()
-            device.id = bus_ob_id
-            device.bus_ob_rec_id = bus_ob_rec_id
-            for field_raw in device_raw:
+            device.id = (device_response.get('busObId') or '') + '_' + (device_response.get('busObRecId') or '')
+            device.bus_ob_id = device_response.get('busObId')
+            device.bus_ob_rec_id = device_response.get('busObRecId')
+            mac = None
+            ips = None
+            for field_raw in device_response.get('fields'):
                 try:
-                    mac = None
-                    ips = None
                     field_name = field_raw.get('name')
                     field_value = field_raw.get('value')
                     if not field_name or not field_value:
@@ -145,19 +157,39 @@ class CherwellAdapter(AdapterBase):
                     elif field_name == 'NumberCPUs':
                         # pylint: disable=invalid-name
                         device.total_number_of_physical_processors = field_value
-                    if ips or mac:
-                        device.add_nic(ips=ips, mac=mac)
+                    elif field_name == 'ConfigurationItemTypeName':
+                        device.ci_type_name = field_value
+                    elif field_name == 'CreatedDateTime':
+                        device.first_seen = parse_date(field_value)
+                    elif field_name == 'CreatedBy':
+                        device.created_by = field_value
+                    elif field_name == 'LastModifiedDateTime':
+                        device.last_modified = parse_date(field_value)
+                    elif field_name == 'Manufacturer':
+                        device.device_manufacturer = field_value
+                    elif field_name == 'Description':
+                        device.description = field_value
+                    elif field_name == 'AssetTag':
+                        device.asset_tag = field_value
+                    elif field_name == 'HostName':
+                        device.hostname = field_value
+                    elif field_name == 'AssetStatus':
+                        device.asset_status = field_value
+                    elif field_value == 'AssetOwner':
+                        device.asset_owner = field_value
                 except Exception:
                     logger.exception(f'Problem with field {field_raw}')
-            device.set_raw({'data': device_raw})
+            if ips or mac:
+                device.add_nic(ips=ips, mac=mac)
+            device.set_raw(device_raw)
             return device
         except Exception:
             logger.exception(f'Problem with fetching Cherwell Device for {device_raw}')
             return None
 
     def _parse_raw_data(self, devices_raw_data):
-        for device_raw, bus_ob_id, bus_ob_rec_id in devices_raw_data:
-            device = self._create_device(device_raw, bus_ob_id, bus_ob_rec_id)
+        for device_raw in devices_raw_data:
+            device = self._create_device(device_raw)
             if device:
                 yield device
 
