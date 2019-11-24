@@ -4837,7 +4837,6 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
         return self.get_plugin_by_name(plugin_name)[PLUGIN_UNIQUE_NAME]
 
     def _on_config_update(self, config):
-        logger.info(f'Loading GuiService config: {config}')
         self._okta = config['okta_login_settings']
         self.__saml_login = config['saml_login_settings']
         self.__ldap_login = config['ldap_login_settings']

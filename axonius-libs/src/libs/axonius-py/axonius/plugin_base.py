@@ -2731,7 +2731,6 @@ class PluginBase(Configurable, Feature, ABC):
     def __renew_global_settings_from_db(self):
         config = self._get_db_connection()[CORE_UNIQUE_NAME][CONFIGURABLE_CONFIGS_COLLECTION].find_one(
             {'config_name': CORE_CONFIG_NAME})['config']
-        logger.info(f'Loading global config: {config}')
         # pylint: disable=invalid-name
         self._email_settings = config['email_settings']
         self._getting_started_settings = config[GETTING_STARTED_CHECKLIST_SETTING]

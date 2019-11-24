@@ -661,7 +661,6 @@ class CoreService(Triggerable, PluginBase, Configurable):
         return plugin_unique_name
 
     def _on_config_update(self, config):
-        logger.info(f"Loading core config: {config}")
 
         def update_plugin(plugin_name):
             try:

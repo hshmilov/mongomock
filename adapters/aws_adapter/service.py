@@ -366,6 +366,9 @@ class AwsAdapter(AdapterBase, Configurable):
                 aws_access_key_id_errors = ','.join(
                     list(failed_connections_per_principal.get(aws_access_key_id) or set())
                 )
+
+                if 'aws was not able to validate the provided access credentials' in aws_access_key_id_errors.lower():
+                    aws_access_key_id_errors = 'AWS was not able to validate the provided access credentials'
                 raise ClientConnectionException(f'Error connecting to {aws_access_key_id}: {aws_access_key_id_errors}')
 
             # Next, check Roles

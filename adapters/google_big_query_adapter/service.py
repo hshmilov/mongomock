@@ -99,7 +99,7 @@ class GoogleBigQueryAdapter(AdapterBase):
             'type': 'array'
         }
 
-    # pylint: disable=too-many-branches
+    # pylint: disable=too-many-branches, too-many-statements
     def _create_device(self, device_raw):
         try:
             device_raw = dict(device_raw)
@@ -140,14 +140,18 @@ class GoogleBigQueryAdapter(AdapterBase):
             except Exception:
                 logger.exception(f'Failed adding network interface')
 
+            name = None
             try:
                 tags = device_raw.get('tags')
                 if tags and isinstance(tags, list):
                     for tag_item in tags:
                         if tag_item.get('key') and str(tag_item.get('key')).lower() == 'name':
-                            device.name = tag_item.get('value')
+                            name = tag_item.get('value')
             except Exception:
                 logger.exception(f'Failed getting tags')
+            if not name:
+                name = device_raw.get('private_dns_name')
+            device.name = name
 
             for key, value in device_raw.items():
                 try:

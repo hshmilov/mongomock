@@ -1,0 +1,5 @@
+boto3==1.10.25
+requests==2.22.0
+terminaltables==3.1.0
+colorama==0.4.1
+axonius-api-client==2.1.3

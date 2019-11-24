@@ -359,3 +359,6 @@ testing/services/plugins/master_proxy/tinyproxy.conf
 ax
 plugins/instance_control/rsa_keys.pub
 plugins/instance_control/rsa_keys
+
+# other
+**/secrets/*.json

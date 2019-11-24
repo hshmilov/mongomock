@@ -364,6 +364,7 @@ class StaticAnalysisService(Triggerable, PluginBase):
             dns_name = prefix_to_dns.get(prefix.lower())
             if dns_name:
                 return f'{name}@{dns_name}'
+            return f'{name}@{prefix}'
         except Exception:
             pass
         return username
