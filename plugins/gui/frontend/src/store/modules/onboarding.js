@@ -87,7 +87,9 @@ export const onboarding = {
 			try {
 				// Dont execute the action in case the milestone has already been completed
 				const { completedMilestonesNames } = getters
-				if (completedMilestonesNames.includes(payload.milestoneName)) {
+				const { interactive } = state.gettingStarted.data.settings
+
+				if (completedMilestonesNames.includes(payload.milestoneName) || !interactive) {
 					return
 				}
 				const history = state.gettingStarted.data
