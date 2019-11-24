@@ -223,6 +223,7 @@ else
     sudo apt-get install scalyr-repo -y
     sudo apt-get install scalyr-agent-2 -y
     rm scalyr-repo-bootstrap_1.2.1_all.deb
+    _wait_for_apt install -yq scalyr-agent-2 # upgrade to latest
 fi
 
 if [[ $(/bin/systemctl is-enabled tmp.mount) == "enabled" ]]; then
