@@ -115,6 +115,9 @@
             configuredAdaptersCount() {
                 return this.filteredData.filter(getConfiguredAdapters).length
             },
+            successfullyconfiguredAdapters() {
+              return this.adaptersData.filter(getConnectedAdapters).length
+            }
         },
         data() {
             return {
@@ -138,7 +141,7 @@
             }
         },
         watch: {
-            configuredAdaptersCount: function () {
+            successfullyconfiguredAdapters: function (value) {
                 this.notifyIfMilestoneCompleted()
             }
         },

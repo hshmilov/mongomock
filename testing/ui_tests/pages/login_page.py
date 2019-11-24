@@ -103,4 +103,3 @@ class LoginPage(Page):
             # if overlay does not exist, most probably logged in user is not admin
             return
         self.click_getting_started_overlay()
-        self.wait_for_element_absent_by_css('.md-overlay')

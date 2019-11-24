@@ -86,11 +86,6 @@ class Milestones(Enum):
     report_generated = 'Generate a report'
 
 
-class MilestoneActionButton(Enum):
-    COMPLETED = 'Completed'
-    NOT_COMPLETED = 'Let\'s Do It'
-
-
 class TableRow:
     """
     TableRow - container for a single row in entity custom data table
@@ -848,8 +843,9 @@ class Page:
         return self.driver.execute_script(f'document.querySelector("#{elem_id}").blur()')
 
     def click_getting_started_overlay(self):
-        self.wait_for_element_present_by_css('.md-overlay').click()
-        self.wait_for_element_absent_by_css('.md-overlay')
+        el = self.driver.find_element_by_css_selector(self.GETTING_STARTED_PANEL_OVERLAY_CSS)
+        ActionChains(self.driver).move_to_element_with_offset(el, 4, 4).click().perform()
+        self.wait_for_element_absent_by_css(self.GETTING_STARTED_PANEL_OVERLAY_CSS)
 
     def open_getting_started_panel(self):
         """
@@ -872,14 +868,16 @@ class Page:
             f'[contains(@class, \'x-milestone-status\')]/i[contains(@class, \'x-milestone-status--completed\')]'
 
     def assert_milestone_completed(self, milestone_name):
-        def _check_milestone():
-            xpath = self.get_milestone_status_completed_xpath_by_name(milestone_name)
-            self.open_getting_started_panel()
-            el = self.find_element_by_xpath(xpath)
-            self.click_getting_started_overlay()
-            return el
+        def _check_milestone(xpath_milestone_status):
+            try:
+                self.open_getting_started_panel()
+                el = self.find_element_by_xpath(xpath_milestone_status)
+                return el
+            finally:
+                self.click_getting_started_overlay()
 
-        wait_until(_check_milestone, tolerated_exceptions_list=[NoSuchElementException])
+        xpath = self.get_milestone_status_completed_xpath_by_name(milestone_name)
+        wait_until(lambda: _check_milestone(xpath), tolerated_exceptions_list=[NoSuchElementException])
 
     def get_getting_started_fab(self):
         return self.wait_for_element_present_by_css(self.GETTING_STARTED_FAB_CSS)

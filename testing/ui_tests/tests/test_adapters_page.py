@@ -10,6 +10,7 @@ from ui_tests.tests.ui_consts import AD_ADAPTER_NAME, JSON_ADAPTER_NAME
 
 GOTOASSIST_NAME = 'RescueAssist'
 GOTOASSIST_PLUGIN_NAME = 'gotoassist_adapter'
+GOTOASSIST_NAME = 'RescueAssist'
 ESET_NAME = 'ESET Endpoint Security'
 ESET_PLUGIN_NAME = 'eset_adapter'
 
@@ -23,15 +24,9 @@ class TestAdaptersPage(TestBase):
     def test_adapters_page_sanity(self):
         try:
             with GotoassistService().contextmanager(take_ownership=True):
-                self.adapters_page.wait_for_adapter(GOTOASSIST_NAME)
-                self.adapters_page.click_adapter(GOTOASSIST_NAME)
-                self.adapters_page.wait_for_spinner_to_end()
-                self.adapters_page.wait_for_table_to_load()
-                self.adapters_page.click_new_server()
-                self.adapters_page.fill_creds(**client_details)
-                self.adapters_page.click_save()
-                self.adapters_page.wait_for_spinner_to_end()
-                self.adapters_page.switch_to_page()
+                self.adapters_page.connect_adapter(
+                    adapter_name=GOTOASSIST_NAME,
+                    server_details=client_details)
                 with EsetService().contextmanager(take_ownership=True):
                     self.adapters_page.wait_for_adapter(ESET_NAME)
                     self.adapters_page.click_adapter(ESET_NAME)

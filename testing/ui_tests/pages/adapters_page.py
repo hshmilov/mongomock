@@ -7,6 +7,7 @@ from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.remote.webelement import WebElement
 
 from test_helpers.file_mock_credentials import FileForCredentialsMock
+
 from ui_tests.pages.entities_page import EntitiesPage
 from ui_tests.pages.page import PAGE_BODY, SLEEP_INTERVAL, RETRY_WAIT_FOR_ELEMENT
 from ui_tests.tests.ui_consts import AD_ADAPTER_NAME
@@ -289,3 +290,9 @@ class AdaptersPage(EntitiesPage):
 
     def get_instances_dropdown_selected_value(self):
         return self.driver.find_element_by_css_selector(self.INSTANCE_DROPDOWN_CSS).text
+
+    def connect_adapter(self, adapter_name, server_details):
+        self.wait_for_adapter(adapter_name)
+        self.add_server(ad_client=server_details, adapter_name=adapter_name)
+        self.wait_for_server_green()
+        self.switch_to_page()
