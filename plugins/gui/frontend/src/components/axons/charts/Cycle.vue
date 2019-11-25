@@ -215,6 +215,10 @@
       right:0;
       z-index: 1000;
       bottom: auto;
+
+      .tooltip-body {
+        overflow-x: hidden;
+      }
     }
 
     .x-table {
