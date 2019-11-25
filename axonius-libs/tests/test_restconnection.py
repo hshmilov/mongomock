@@ -117,13 +117,13 @@ def test_connection_can_be_restored(con: MockConnection):
             t2_event.set()
             # we should time.sleep(1), if we time.sleep(10) in the first place the exception will run only after
             # the command.
-            for i in range(10):
+            for i in range(30):
                 time.sleep(1)
             assert False, 'should have never gotten here'
 
     t2 = threading.Thread(target=acquire_mock_session_and_exit, args=(t1_event, ), daemon=False)
     t2.start()
-    assert t1_event.wait(timeout=10) is True, 'should have never gotten here'
+    assert t1_event.wait(timeout=30) is True, 'should have never gotten here'
 
     ThreadStopper.async_raise([t2.ident])
 
