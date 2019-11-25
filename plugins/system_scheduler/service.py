@@ -170,6 +170,11 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
         :param args:
         :return:
         """
+
+        log_metric(logger,
+                   metric_name=SystemMetric.TRIAL_EXPIRED_STATE,
+                   metric_value=self.trial_expired())
+
         if job_name != 'execute':
             logger.error(f'Got bad trigger request for non-existent job: {job_name}')
             return return_error('Got bad trigger request for non-existent job', 400)
