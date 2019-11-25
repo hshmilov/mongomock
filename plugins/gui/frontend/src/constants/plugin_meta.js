@@ -18,6 +18,10 @@ export const pluginMeta = {
         link: 'https://docs.axonius.com/docs/preempt',
         description: 'Preempt lets organizations reduce user risk on their attack surface and preempt threats in real-time with Conditional Access. It continuously analyzes, adapts and responds to threats based on identity, behavior, and risk to resolve insider threats and targeted attacks.'
     },
+    orca_adapter: {
+        title: 'Orca Cloud Visibility Platform',
+        description: 'Orca Cloud Visibility Platform delivers fullstack visibility including prioritized alerts to vulnerabilities, compromises, misconfigurations, and more across all the cloud accounts of the organization.'
+    },
     hashicorp_adapter: {
         title: 'HashiCorp Consul',
         link: 'https://docs.axonius.com/docs/hashicorp-consul',

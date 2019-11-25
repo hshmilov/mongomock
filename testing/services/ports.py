@@ -13,6 +13,7 @@ DOCKER_PORTS = {
     'epo-adapter':                      5003,
     'jamf-adapter':                     5004,
     'system-scheduler':                 5005,
+    'orca-adapter':                     5008,
     'correlator':                       5009,
     'static-correlator':                5010,
     'dns-conflicts':                    5011,
