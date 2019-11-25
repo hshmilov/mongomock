@@ -4,9 +4,9 @@ import sys
 import argparse
 import shlex
 from subprocess import STDOUT, run
+from pathlib import Path
 
 from builds import Builds
-
 
 AWS_KEY_VAR = 'AWS_ACCESS_KEY_ID'
 AWS_SECRET_VAR = 'AWS_SECRET_ACCESS_KEY'
@@ -42,7 +42,7 @@ def upload_to_tests_folder(aws_key, aws_secret, version_name, **_):
     run(shlex.split(command), env=env, shell=True, check=True, stderr=STDOUT)
 
 
-def upload_to_production(aws_key, aws_secret, version_name, **_):
+def upload_to_production(aws_key, aws_secret, version_name, ami_id, **_):
     upgrader_command = f'aws s3 cp s3://axonius-releases/{version_name}/axonius_{version_name}.py' \
                        ' s3://axonius-releases/latest_release/axonius_upgrader.py' \
                        ' --acl public-read' \
@@ -60,6 +60,13 @@ def upload_to_production(aws_key, aws_secret, version_name, **_):
 
     log('Copying OVA to production')
     run(shlex.split(ova_command), env=env, shell=True, check=True, stderr=STDOUT)
+
+    log('Set latest ami')
+    ami_id_file = Path('ami_id.txt')
+    ami_id_file.write_text(ami_id)
+    set_ami_id_command = f'aws s3 cp ami_id.txt s3://axonius-releases/latest_release/ami_id.txt --acl public-read'
+    run(shlex.split(set_ami_id_command), env=env, shell=True, check=True, stderr=STDOUT)
+    ami_id_file.unlink()
 
     log('Files copied to production')
 
