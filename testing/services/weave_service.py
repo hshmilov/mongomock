@@ -13,7 +13,8 @@ from axonius.utils.debug import COLOR
 from services.axon_service import TimeoutException
 from services.docker_service import DockerService, retry_if_timeout
 
-MAX_NUMBER_OF_RUN_TRIES = 5
+MAX_NUMBER_OF_RUN_TRIES = 10
+RETRY_SLEEP_TIME = 30
 
 
 def is_weave_up():
@@ -77,7 +78,7 @@ class WeaveService(DockerService):
               run_env=None):
         self._number_of_tries += 1
         if self._number_of_tries > 2:
-            time.sleep(2)
+            time.sleep(RETRY_SLEEP_TIME)
         if self._number_of_tries > MAX_NUMBER_OF_RUN_TRIES:
             raise Exception(f'Failed to run {self.container_name} after ')
         weave_is_up = is_weave_up()
@@ -151,7 +152,7 @@ class WeaveService(DockerService):
                 all_output = ' '.join([current_output_stream.decode('utf-8') for current_output_stream in all_output])
             except subprocess.TimeoutExpired:
                 print('Container restart timedout.')
-                self.start(mode=mode, allow_restart=True, rebuild=rebuild, hard=hard, show_print=show_print,
+                self.start(mode=mode, allow_restart=True, rebuild=True, hard=hard, show_print=show_print,
                            expose_port=expose_port, extra_flags=extra_flags,
                            docker_internal_env_vars=docker_internal_env_vars, run_env=run_env)
                 return
