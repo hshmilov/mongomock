@@ -42,6 +42,10 @@ class GoogleMdmAdapter(AdapterBase):
         device_password_status = Field(str, 'Device Password Status')
         first_sync = Field(datetime, 'First Sync')
         developer_options_status = Field(bool, 'Developer Options Status')
+        managed_account_is_on_owner_profile = Field(bool, 'Managed Account Is On Owner Profile')
+        encryption_status = Field(str, 'Encryption Status')
+        security_patch_level_str = Field(str, 'Security Patch Level String')
+        privilege = Field(str, 'Privilege')
 
     class MyUserAdapter(UserAdapter):
         alias_emails = ListField(str, 'Alias Emails')
@@ -129,6 +133,8 @@ class GoogleMdmAdapter(AdapterBase):
         model = raw_device_data.get('model')
         device_model = model
         device.device_model = device_model
+        if isinstance(raw_device_data.get('managedAccountIsOnOwnerProfile'), bool):
+            device.managed_account_is_on_owner_profile = raw_device_data.get('managedAccountIsOnOwnerProfile')
         device_type = raw_device_data.get('type')
         device.device_model_family = device_type
         mac = raw_device_data.get('wifiMacAddress')
@@ -140,7 +146,11 @@ class GoogleMdmAdapter(AdapterBase):
         if primary_email:
             name += f'{primary_email} '
         device.name = name
+        device.device_serial = raw_device_data.get('serialNumber')
         device.device_password_status = raw_device_data.get('devicePasswordStatus')
+        device.encryption_status = raw_device_data.get('encryptionStatus')
+        device.security_patch_level_str = raw_device_data.get('securityPatchLevel')
+        device.privilege = raw_device_data.get('privilege')
         first_sync = raw_device_data.get('firstSync')
         try:
             if first_sync:
