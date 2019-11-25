@@ -6,4 +6,4 @@ client_details = {
     "verify_ssl": False,
 }
 
-SOME_DEVICE_ID = '9528346'
+SOME_DEVICE_ID = '9528346_EC2AMAZ-32I0AR4'

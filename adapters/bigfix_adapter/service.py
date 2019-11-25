@@ -149,7 +149,11 @@ class BigfixAdapter(AdapterBase):
                 except Exception:
                     logger.exception(f'Failed to parse hostname: '
                                      f'dns name is {str(dns_name)} and computer name is {str(computer_name)}')
-
+                try:
+                    hostname_for_id = device.hostname
+                    device.id = device.id + '_' + hostname_for_id
+                except Exception:
+                    pass
                 device.figure_os(device_raw.get('OS'))
                 try:
                     try:

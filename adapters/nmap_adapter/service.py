@@ -11,6 +11,7 @@ from axonius.adapter_base import AdapterProperty
 from axonius.scanner_adapter_base import ScannerAdapterBase
 from axonius.utils.parsing import is_domain_valid
 from axonius.devices.device_adapter import DeviceAdapter
+from axonius.clients.aws.utils import get_s3_object
 from axonius.clients.rest.consts import get_default_timeout
 from axonius.smart_json_class import SmartJsonClass
 from axonius.fields import Field, ListField
@@ -65,6 +66,7 @@ class NmapAdapter(ScannerAdapterBase):
         self.create_nmap_info_from_client_config(client_config)
         return client_config
 
+    # pylint: disable=too-many-branches, too-many-statements
     def create_nmap_info_from_client_config(self, client_config):
         nmap_data_bytes = None
         if client_config.get('nmap_http'):
@@ -97,6 +99,31 @@ class NmapAdapter(ScannerAdapterBase):
                 logger.exception(f'Couldn\'t get nmap info from share')
         elif 'nmap_file' in client_config:
             nmap_data_bytes = self._grab_file_contents(client_config['nmap_file'])
+        elif client_config.get('s3_bucket') or client_config.get('s3_object_location'):
+            s3_bucket = client_config.get('s3_bucket')
+            s3_object_location = client_config.get('s3_object_location')
+            s3_access_key_id = client_config.get('s3_access_key_id')
+            s3_secret_access_key = client_config.get('s3_secret_access_key')
+
+            if not (s3_bucket and s3_object_location):
+                raise ClientConnectionException(
+                    f'Error - Please specify both Amazon S3 Bucket and Amazon S3 Object Location')
+
+            if (s3_access_key_id or s3_secret_access_key) and not (s3_access_key_id and s3_secret_access_key):
+                raise ClientConnectionException(f'Error - Please specify both access key id and secret access key, '
+                                                f'or leave blank to use the attached IAM role')
+
+            try:
+                nmap_data_bytes = get_s3_object(
+                    bucket_name=s3_bucket,
+                    object_location=s3_object_location,
+                    access_key_id=s3_access_key_id,
+                    secret_access_key=s3_secret_access_key
+                )
+            except Exception as e:
+                if 'SignatureDoesNotMatch' in str(e):
+                    raise ClientConnectionException(f'Amazon S3 Bucket - Invalid Credentials. Response is: {str(e)}')
+                raise
         if nmap_data_bytes is None:
             raise Exception('Bad Nmap, could not parse the data')
         encoding = chardet.detect(nmap_data_bytes)['encoding']  # detect decoding automatically
@@ -146,6 +173,29 @@ class NmapAdapter(ScannerAdapterBase):
                     'type': 'string',
                     'format': 'password'
                 },
+                {
+                    'name': 's3_bucket',
+                    'title': 'Amazon S3 Bucket Name',
+                    'type': 'string',
+                },
+                {
+                    'name': 's3_object_location',
+                    'title': 'Amazon S3 Object Location (Key)',
+                    'type': 'string',
+                },
+                {
+                    'name': 's3_access_key_id',
+                    'title': 'Amazon S3 Access Key Id',
+                    'description': 'Leave blank to use the attached IAM role',
+                    'type': 'string',
+                },
+                {
+                    'name': 's3_secret_access_key',
+                    'title': 'Amazon S3 Secret Access Key',
+                    'description': 'Leave blank to use the attached IAM role',
+                    'type': 'string',
+                    'format': 'password'
+                }
             ],
             'required': [
                 'user_id',
