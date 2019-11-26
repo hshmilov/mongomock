@@ -10,10 +10,10 @@ Requirements:
 
 How to backup:
 1. shut down system, but db
-2. sudo ./devops/scripts/backup/axonius_backup_restore.sh backup backup.zip pass
+2. sudo ./devops/scripts/backup/axonius_full_backup_restore.sh backup backup.zip pass
 How to restore:
 1. shut down system, but db
-2. sudo ./devops/scripts/backup/axonius_backup_restore.sh restore backup.zip pass
+2. sudo ./devops/scripts/backup/axonius_full_backup_restore.sh restore backup.zip pass
 
 after each:
 3. ./axonius.sh system up --all --prod --skip

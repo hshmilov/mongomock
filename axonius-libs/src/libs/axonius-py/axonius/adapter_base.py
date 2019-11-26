@@ -28,7 +28,7 @@ from axonius.background_scheduler import LoggedBackgroundScheduler
 
 from axonius import adapter_exceptions
 from axonius.consts import adapter_consts
-from axonius.consts.plugin_consts import PLUGIN_NAME, PLUGIN_UNIQUE_NAME, CORE_UNIQUE_NAME
+from axonius.consts.plugin_consts import PLUGIN_NAME, PLUGIN_UNIQUE_NAME, CORE_UNIQUE_NAME, SYSTEM_SCHEDULER_PLUGIN_NAME
 from axonius.consts.plugin_subtype import PluginSubtype
 from axonius.devices.device_adapter import LAST_SEEN_FIELD, DeviceAdapter, AdapterProperty, LAST_SEEN_FIELDS
 from axonius.mixins.configurable import Configurable
@@ -37,6 +37,7 @@ from axonius.mixins.triggerable import Triggerable, RunIdentifier
 from axonius.plugin_base import EntityType, PluginBase, add_rule, return_error
 from axonius.thread_stopper import StopThreadException
 from axonius.users.user_adapter import UserAdapter
+from axonius.utils.datetime import parse_date
 from axonius.utils.json import to_json
 from axonius.utils.mm import delayed_trigger_gc
 from axonius.utils.parsing import get_exception_string
@@ -315,6 +316,17 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
         """
         device_age_cutoff = self.__device_time_cutoff()
         user_age_cutoff = self.__user_time_cutoff()
+        try:
+            last_cycle_start = self.__get_last_cycle_start_time()
+            if last_cycle_start:
+                # We want to delete all entities that are old. an old entity is an entity that has not been fetched in
+                # a defined time, AND was not fetched in the last cycle.
+                if device_age_cutoff[1]:
+                    device_age_cutoff = (device_age_cutoff[0], min(last_cycle_start, device_age_cutoff[1]))
+                if user_age_cutoff[1]:
+                    user_age_cutoff = (user_age_cutoff[0], min(last_cycle_start, user_age_cutoff[1]))
+        except Exception:
+            logger.exception(f'Failed setting entities age cutoff with regards to last cycle start, continuing')
         self.send_external_info_log(f'Cleaning devices and users that are before '
                                     f'{device_age_cutoff}, {user_age_cutoff}')
         logger.info(f'Cleaning devices and users that are before {device_age_cutoff}, {user_age_cutoff}')
@@ -1295,7 +1307,19 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
     def plugin_subtype(self) -> PluginSubtype:
         return PluginSubtype.AdapterBase
 
-    def __device_time_cutoff(self) -> Tuple[date, date]:
+    def __get_last_cycle_start_time(self) -> datetime:
+        try:
+            state_response = self.request_remote_plugin('state', SYSTEM_SCHEDULER_PLUGIN_NAME)
+            if state_response.status_code != 200:
+                raise RuntimeError(f'Error fetching status of system scheduler. Reason: {state_response.text}')
+
+            state_response = state_response.json()
+            return parse_date(state_response['last_start_time'])
+        except Exception:
+            logger.exception(f'Failed getting cycle last_start_time')
+            raise
+
+    def __device_time_cutoff(self) -> Tuple[datetime, datetime]:
         """
         Gets a cutoff date (last_seen, last_fetched) that represents the oldest a device can be
         until it is considered 'old'
@@ -1304,7 +1328,7 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
         return (now - self._last_seen_timedelta if self._last_seen_timedelta else None,
                 now - self._last_fetched_timedelta if self._last_fetched_timedelta else None)
 
-    def __user_time_cutoff(self) -> Tuple[date, date]:
+    def __user_time_cutoff(self) -> Tuple[datetime, datetime]:
         """
         Gets a cutoff date (last_seen, last_fetched) that represents the oldest a device can be
         until it is considered 'old'
