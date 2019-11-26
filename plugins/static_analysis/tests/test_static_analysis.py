@@ -15,6 +15,8 @@ from static_analysis.service import StaticAnalysisService
 from static_analysis.tests import consts
 
 # pylint: disable=protected-access, redefined-outer-name, no-member
+
+
 @pytest.fixture(scope='module')
 def nvd_searcher():
     print('\nSetting up NVD searcher')
@@ -363,7 +365,10 @@ def test_device_with_installed_software_only(nvd_searcher):
 
     # Check that the installed software we know are in the NVD from the entry are in the created device
     # Not all of the software is found in the NVD which is why the names are hardcoded here
-    expected_software_names = sorted(set(['Wireshark 2.4.0 64-bit', 'Safari', 'Adobe Flash Player 30 PPAPI']))
+    expected_software_names = sorted({'Wireshark 2.4.0 64-bit',
+                                      'Google Chrome',
+                                      'Safari',
+                                      'Adobe Flash Player 30 PPAPI'})
     returned_software_names = sorted({cve.get('software_name') for cve in created_device.get('software_cves')})
     assert expected_software_names == returned_software_names
 
