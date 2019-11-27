@@ -1,6 +1,7 @@
 import logging
 
-from axonius.adapter_base import AdapterProperty, AdapterBase
+from axonius.adapter_base import AdapterProperty
+from axonius.scanner_adapter_base import ScannerAdapterBase
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.exception import RESTException
@@ -13,7 +14,7 @@ from claroty_adapter.connection import ClarotyConnection
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
-class ClarotyAdapter(AdapterBase):
+class ClarotyAdapter(ScannerAdapterBase):
     # pylint: disable=too-many-instance-attributes
     class MyDeviceAdapter(DeviceAdapter):
         asset_type = Field(str, 'Asset Type')
@@ -117,7 +118,14 @@ class ClarotyAdapter(AdapterBase):
                     continue
                 name = device_raw.get('name')
                 device.id = str(device_id) + (name or '')
-                device.name = name
+                if name:
+                    if name.endswith(' (external)'):
+                        name = name[:-len(' (external)')]
+                    elif name.endswith(' (external) (ghost)'):
+                        name = name[:-len(' (external) (ghost)')]
+                    if name == device_raw.get('ipv4') or name == device_raw.get('ipv6'):
+                        name = None
+                    device.name = name
                 try:
                     ips = (device_raw.get('ipv4') or [])
                 except Exception:

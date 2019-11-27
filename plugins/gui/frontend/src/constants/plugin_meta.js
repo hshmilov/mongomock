@@ -101,7 +101,7 @@ export const pluginMeta = {
         description: 'Symantec DLP is a data loss protection and prevention solution. Its management console, the DLP Enforce Platform, and its reporting tool, IT Analytics for DLP, allows writing and enforce policies to reduce information risks.'
     },
     cisco_ucm_adapter: {
-        title: 'Cisco Unified Communications Manager - BETA',
+        title: 'Cisco Unified Communications Manager 12.5',
         link: 'https://docs.axonius.com/docs/cisco-unified-communications-manager-ucm',
         description: 'Cisco Unified Communications Manager provides secure and manageable call control and session management.'
     },

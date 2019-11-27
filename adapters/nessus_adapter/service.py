@@ -8,6 +8,7 @@ from axonius.utils.files import get_local_config_file
 from nessus_adapter.connection import NessusConnection
 from nessus_adapter.exceptions import NessusException
 from axonius.utils.datetime import parse_date
+from axonius.mixins.configurable import Configurable
 from axonius.fields import Field, JsonStringFormat, ListField
 from axonius.smart_json_class import SmartJsonClass
 import requests
@@ -39,7 +40,7 @@ class NessusVulnerability(SmartJsonClass):
     family_name = Field(str, 'Plugin Family Name')
 
 
-class NessusAdapter(ScannerAdapterBase):
+class NessusAdapter(ScannerAdapterBase, Configurable):
     """ An adapter for Tenable's Nessus Vulnerability scanning platform. """
 
     class MyDeviceAdapter(DeviceAdapter):
@@ -286,7 +287,8 @@ class NessusAdapter(ScannerAdapterBase):
                     logger.warning(f'Bad device with no id {device_raw}')
                     continue
                 device.nessus_no_scan_id = device_id
-                device.id = (str(scan_id) + '_' + str(device_id))[:100]
+                if not self.__fetch_only_correlate:
+                    device.id = (str(scan_id) + '_' + str(device_id))[:100]
                 device.set_raw(device_raw)
                 yield device
             except Exception:
@@ -295,3 +297,29 @@ class NessusAdapter(ScannerAdapterBase):
     @classmethod
     def adapter_properties(cls):
         return [AdapterProperty.Network, AdapterProperty.Vulnerability_Assessment]
+
+    @classmethod
+    def _db_config_schema(cls) -> dict:
+        return {
+            'items': [
+                {
+                    'name': 'fetch_only_correlate',
+                    'title': 'Only get devices with MAC, Hostname or correlatable IP address',
+                    'type': 'bool'
+                }
+            ],
+            'required': [
+                'fetch_only_correlate',
+            ],
+            'pretty_name': 'Nessus Configuration',
+            'type': 'array'
+        }
+
+    @classmethod
+    def _db_config_default(cls):
+        return {
+            'fetch_only_correlate': False
+        }
+
+    def _on_config_update(self, config):
+        self.__fetch_only_correlate = config['fetch_only_correlate']

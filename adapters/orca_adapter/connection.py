@@ -28,11 +28,27 @@ class OrcaConnection(RESTConnection):
             raise RESTException(f'Bad response: {response}')
 
     def get_device_list(self):
-        response = self._get(f'query/assets')
+        devices_alerst_dict = dict()
+        try:
+            for alert_raw in self._get_api_endpoint('query/alerts'):
+                asset_id = alert_raw.get('asset_unique_id')
+                if not asset_id:
+                    continue
+                if asset_id not in devices_alerst_dict:
+                    devices_alerst_dict[asset_id] = []
+                devices_alerst_dict[asset_id].append(alert_raw)
+        except Exception:
+            logger.exception(f'Problem with alerts')
+        for device_raw in self._get_api_endpoint('query/assets'):
+            yield device_raw, devices_alerst_dict
+
+    def _get_api_endpoint(self, endpoint):
+        response = self._get(endpoint)
         yield from response['data']
         while response.get('next_page_token'):
             try:
-                response = self._get(f'query/assets', url_params={'next_page_token': response.get('next_page_token')})
+                response = self._get(endpoint, url_params={'next_page_token': response.get('next_page_token')})
                 yield from response['data']
             except Exception:
                 logger.exception(f'Exception in orca fetch')
+                break

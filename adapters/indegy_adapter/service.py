@@ -1,8 +1,9 @@
 import logging
 
-from axonius.adapter_base import AdapterBase, AdapterProperty
+from axonius.adapter_base import AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
+from axonius.scanner_adapter_base import ScannerAdapterBase
 from axonius.clients.rest.connection import RESTException
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.types.ssl_state import MANDATORY_SSL_CONFIG_SCHEMA
@@ -17,7 +18,7 @@ from indegy_adapter import consts
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
-class IndegyAdapter(AdapterBase):
+class IndegyAdapter(ScannerAdapterBase):
     class MyDeviceAdapter(DeviceAdapter):
         vendor = Field(str, 'Vendor')
         state = Field(str, 'State')

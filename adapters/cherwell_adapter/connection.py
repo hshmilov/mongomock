@@ -3,7 +3,7 @@ import logging
 
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.exception import RESTException
-from cherwell_adapter.consts import SERVERS_BUS_OB_ID
+from cherwell_adapter.consts import IT_ASSET_BUS_OB_ID, PAGE_SIZE, MAX_PAGE
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -44,36 +44,42 @@ class CherwellConnection(RESTConnection):
         self._last_refresh = None
         self._expires_in = None
 
-    def get_device_list(self):
-        self._refresh_token()
-        response = self._post('api/V1/getquicksearchresults',
-                              body_params={'busObIds': [SERVERS_BUS_OB_ID],
-                                           'searchText': ''})
-        if not response or not isinstance(response, dict) or not isinstance(response.get('groups'), list):
-            raise RESTException(f'Bad Response: {response}')
-        num_groups = len(response['groups'])
-        logger.info(f'Number of groups is {num_groups}')
-        for group_raw in response['groups']:
+    def _get_assets_raw(self):
+        page = 0
+        while page < MAX_PAGE:
             try:
-                if not group_raw.get('simpleResultsListItems')\
-                        or not isinstance(group_raw.get('simpleResultsListItems'), list):
-                    continue
-                num_assets = len(group_raw.get('simpleResultsListItems'))
-                logger.info(f'Number of asset in this group is {num_assets}')
-                for asset_raw in group_raw.get('simpleResultsListItems'):
-                    try:
-                        bus_ob_id = asset_raw.get('busObId')
-                        bus_ob_rec_id = asset_raw.get('busObRecId')
-                        if not bus_ob_id or not bus_ob_rec_id:
-                            continue
-                        self._refresh_token()
-                        asset_response = self._post('api/V1/getbusinessobjectbatch',
-                                                    body_params={'readRequests': [{'busObId': bus_ob_id,
-                                                                                   'busObPublicId': '',
-                                                                                   'busObRecId': bus_ob_rec_id}],
-                                                                 'stopOnError': True})
-                        yield asset_response
-                    except Exception:
-                        logger.exception(f'Problem with asset: {asset_raw}')
+                self._refresh_token()
+                response = self._post('api/V1/getsearchresults',
+                                      body_params={'busObId': IT_ASSET_BUS_OB_ID,
+                                                   'searchText': '',
+                                                   'pageSize': PAGE_SIZE,
+                                                   'pageNumber': page})
+                if not response or not isinstance(response, dict) \
+                        or not isinstance(response.get('businessObjects'), list):
+                    raise RESTException(f'Bad Response: {response}')
+                num_busobs = len(response['businessObjects'])
+                logger.info(f'Number of bus objs is {num_busobs}')
+                yield from response.get('businessObjects')
+                if num_busobs < PAGE_SIZE:
+                    break
+                page += 1
             except Exception:
-                logger.exception(f'Problem with group raw {group_raw}')
+                logger.exception(f'Problem with page {page}')
+                break
+
+    def get_device_list(self):
+        for asset_raw in self._get_assets_raw():
+            try:
+                bus_ob_id = asset_raw.get('busObId')
+                bus_ob_rec_id = asset_raw.get('busObRecId')
+                if not bus_ob_id or not bus_ob_rec_id:
+                    continue
+                self._refresh_token()
+                asset_response = self._post('api/V1/getbusinessobjectbatch',
+                                            body_params={'readRequests': [{'busObId': bus_ob_id,
+                                                                           'busObPublicId': '',
+                                                                           'busObRecId': bus_ob_rec_id}],
+                                                         'stopOnError': True})
+                yield asset_response
+            except Exception:
+                logger.exception(f'Problem with asset: {asset_raw}')

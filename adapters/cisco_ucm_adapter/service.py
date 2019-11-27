@@ -15,7 +15,6 @@ logger = logging.getLogger(f'axonius.{__name__}')
 class CiscoUcmAdapter(AdapterBase):
     # pylint: disable=too-many-instance-attributes
     class MyDeviceAdapter(DeviceAdapter):
-        # AUTOADAPTER - add here device fields if needed
         pass
 
     def __init__(self, *args, **kwargs):
@@ -109,14 +108,14 @@ class CiscoUcmAdapter(AdapterBase):
 
     def _create_device(self, device_raw):
         try:
-            device = self._new_device_adapter()
-            device_id = device_raw.get('')
-            if device_id is None:
-                logger.warning(f'Bad device with no ID {device_raw}')
+            if device_raw.tag != 'phone' or device_raw[0].tag != 'name':
                 return None
-            device.id = device_id + '_' + (device_raw.get('') or '')
-            # AUTOADAPTER - create device
-            device.set_raw(device_raw)
+
+            device = self._new_device_adapter()
+            device.id = device_raw.attrib.get('uuid')
+            device.hostname = device_raw[0].text
+
+            device.set_raw({})
             return device
         except Exception:
             logger.exception(f'Problem with fetching CiscoUcm Device for {device_raw}')

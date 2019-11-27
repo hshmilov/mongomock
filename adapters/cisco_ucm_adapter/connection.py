@@ -15,7 +15,7 @@ class CiscoUcmConnection(RESTConnection):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, url_base_prefix='',
                          headers={'Content-type': 'text/xml',
-                                  'SOAPAction': 'CUCM:DB ver=8.5 listPhone'
+                                  'SOAPAction': 'CUCM:DB ver=12.5 listPhone'
                                   },
                          **kwargs)
 
@@ -31,7 +31,4 @@ class CiscoUcmConnection(RESTConnection):
                               use_json_in_response=False,
                               body_params=AXL_POST_BODY)
         root = ET.fromstring(response)
-        for phone in root.iter('phone'):
-            test_name = phone.find('name').text
-            logger.info(f'Got Phone {test_name}')
-            break
+        yield from root[0][0][0]

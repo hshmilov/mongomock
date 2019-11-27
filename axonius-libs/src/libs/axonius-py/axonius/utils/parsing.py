@@ -844,6 +844,7 @@ def is_only_host_adapter(adapter_device):
                                               'sysaid_adapter',
                                               'logrhythm_adapter',
                                               'symantec_ee_adapter',
+                                              'cisco_ucm_adapter',
                                               'symantec_dlp_adapter',
                                               'druva_adapter']):
         return True
