@@ -215,6 +215,7 @@ DOCKER_PORTS = {
     'webscan-adapter':                  9998,
     'google-big-query-adapter':         9999,
     'ansible-tower-adapter':            10000,
+    'cisco-stealthwatch-adapter':       10001,
     'mongo':                            27017,
     'mockingbird-db':                   28017
 }

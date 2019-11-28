@@ -1,4 +1,8 @@
 export const pluginMeta = {
+    cisco_stealthwatch_adapter: {
+        title: 'Cisco StealthWatch',
+        description: 'Cisco Stealthwatch is an agentless malware detection solution that provides visibility and network traffic security analytics across the extended network, including endpoints, branch, data center, and cloud.'
+    },
     ansible_tower_adapter: {
         title: 'Red Hat Ansible Tower',
         description: 'Red Hat Ansible Tower is a web console and REST API for operationalizing Ansible across teams, organizations, and the entire enterprise.',
