@@ -11,6 +11,7 @@ logger = logging.getLogger(f'axonius.{__name__}')
 
 AUTHORITY_HOST_URL = 'https://login.microsoftonline.com'
 GRAPH_API_URL = 'https://graph.microsoft.com'
+AZURE_AD_GRAPH_API_URL = 'https://graph.windows.net'    # legacy api required for azure ad b2c
 TEMPLATE_AUTHZ_URL = 'https://login.windows.net/{tenant_id}/oauth2/authorize?response_type=code&client_id={client_id}' \
                      '&redirect_uri=https://localhost&state=after-auth&resource=https://graph.microsoft.com' \
                      '&prompt=admin_consent'
@@ -59,12 +60,20 @@ DEVICE_ATTRIBUTES = [
 
 # pylint: disable=logging-format-interpolation
 class AzureAdClient(RESTConnection):
-    def __init__(self, client_id, client_secret, tenant_id, *args, **kwargs):
+    def __init__(self, client_id, client_secret, tenant_id, *args, is_azure_ad_b2c=None, **kwargs):
         self._client_id = client_id
         self._client_secret = client_secret
         self._tenant_id = tenant_id
         self._refresh_token = None
-        super().__init__(domain=GRAPH_API_URL, url_base_prefix='/v1.0', *args, **kwargs)
+        self._is_azure_ad_b2c = is_azure_ad_b2c
+        logger.info(f'Creating Azure AD with tenant {tenant_id} and client id {client_id}. '
+                    f'B2C: {bool(is_azure_ad_b2c)}')
+        if is_azure_ad_b2c:
+            self._api_endpoint = AZURE_AD_GRAPH_API_URL
+            super().__init__(domain=AZURE_AD_GRAPH_API_URL, url_base_prefix=f'/{self._tenant_id}', *args, **kwargs)
+        else:
+            self._api_endpoint = GRAPH_API_URL
+            super().__init__(domain=GRAPH_API_URL, url_base_prefix='/v1.0', *args, **kwargs)
 
     def set_refresh_token(self, refresh_token):
         self._refresh_token = refresh_token
@@ -75,7 +84,7 @@ class AzureAdClient(RESTConnection):
         answer = context.acquire_token_with_authorization_code(
             authorization_code,
             'https://localhost',
-            GRAPH_API_URL,
+            self._api_endpoint,
             self._client_id,
             self._client_secret
         )
@@ -93,12 +102,12 @@ class AzureAdClient(RESTConnection):
                 token_answer = context.acquire_token_with_refresh_token(
                     self._refresh_token,
                     self._client_id,
-                    GRAPH_API_URL,
+                    self._api_endpoint,
                     self._client_secret
                 )
             else:
                 token_answer = context.acquire_token_with_client_credentials(
-                    GRAPH_API_URL,
+                    self._api_endpoint,
                     self._client_id,
                     self._client_secret)
                 logger.info('Authorization URL for oauth: {0}'.format(
@@ -175,6 +184,9 @@ class AzureAdClient(RESTConnection):
         return devices_apps
 
     def get_device_list(self):
+        if self._is_azure_ad_b2c:
+            logger.info(f'Azure AD B2C: Not yielding deviecs')
+            return
         for device_raw in self._paged_get(f'devices?$select={",".join(DEVICE_ATTRIBUTES)}'):
             yield device_raw, 'Azure AD'
         try:
@@ -188,14 +200,21 @@ class AzureAdClient(RESTConnection):
             logger.exception(f'Cant get Intune')
 
     def get_user_list(self):
-        # We have to specify the attibutes, "*" is not supported.
-        yield from self._paged_get(f'users?$select={",".join(USERS_ATTRIBUTES)}')
+        if self._is_azure_ad_b2c:
+            yield from self._paged_get(f'users?api-version=1.6')
+        else:
+            # We have to specify the attributes, "*" is not supported.
+            yield from self._paged_get(f'users?$select={",".join(USERS_ATTRIBUTES)}')
 
     def test_connection(self):
         self.connect()
         try:
-            for _ in self._paged_get(f'devices?$top=1'):
-                break
+            if self._is_azure_ad_b2c:
+                for _ in self._paged_get(f'users?api-version=1.6'):
+                    break
+            else:
+                for _ in self._paged_get(f'devices?$top=1'):
+                    break
         except Exception as e:
             if 'insufficient privileges to complete the operation' in str(e).lower():
                 raise RESTException(f'Insufficient permissions. Did you grant this application '

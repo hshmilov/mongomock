@@ -65,7 +65,8 @@ class AzureAdAdapter(AdapterBase):
                                        client_secret=client_config[AZURE_CLIENT_SECRET],
                                        tenant_id=client_config[AZURE_TENANT_ID],
                                        https_proxy=client_config.get('https_proxy'),
-                                       verify_ssl=client_config.get(AZURE_VERIFY_SSL)
+                                       verify_ssl=client_config.get(AZURE_VERIFY_SSL),
+                                       is_azure_ad_b2c=client_config.get('is_azure_ad_b2c')
                                        )
             auth_code = client_config.get(AZURE_AUTHORIZATION_CODE)
             refresh_tokens_db = self._get_collection('refresh_tokens')
@@ -148,6 +149,11 @@ class AzureAdAdapter(AdapterBase):
 
                 },
                 {
+                    'name': 'is_azure_ad_b2c',
+                    'title': 'Is Azure AD B2C',
+                    'type': 'bool'
+                },
+                {
                     'name': 'https_proxy',
                     'title': 'HTTPS Proxy',
                     'type': 'string'
@@ -163,7 +169,8 @@ class AzureAdAdapter(AdapterBase):
                 AZURE_CLIENT_ID,
                 AZURE_CLIENT_SECRET,
                 AZURE_TENANT_ID,
-                AZURE_VERIFY_SSL
+                AZURE_VERIFY_SSL,
+                'is_azure_ad_b2c'
             ],
             'type': 'array'
         }
@@ -293,12 +300,31 @@ class AzureAdAdapter(AdapterBase):
             try:
                 # Schema: https://developer.microsoft.com/en-us/graph/docs/api-reference/v1.0/resources/user
                 user = self._new_user_adapter()
-                user.id = raw_user_data['id']
+                user_id = raw_user_data.get('id') or raw_user_data.get('objectId')
+                if not user_id:
+                    logger.warning(f'Warning - no user id for {raw_user_data}, bypassing')
+                    continue
+                user.id = str(user_id)
                 user.account_tag = metadata.get('account_tag')
 
                 account_enabled = raw_user_data.get('accountEnabled')
                 if isinstance(account_enabled, bool):
                     user.account_disabled = not account_enabled
+
+                mail = raw_user_data.get('mail')
+                try:
+                    if not mail:
+                        for sign_in_name_raw in (raw_user_data.get('signInNames') or []):
+                            if sign_in_name_raw.get('type') == 'emailAddress':
+                                mail = sign_in_name_raw.get('value')
+                                break
+
+                    if not mail:
+                        other_mails = raw_user_data.get('otherMails')
+                        if other_mails and isinstance(other_mails, list) and len(other_mails) > 0:
+                            mail = other_mails[0]
+                except Exception:
+                    logger.exception(f'Failed parsing mail for user {raw_user_data}')
 
                 user.user_city = raw_user_data.get('city')
                 user.user_country = raw_user_data.get('country')
@@ -307,7 +333,7 @@ class AzureAdAdapter(AdapterBase):
                 user.first_name = raw_user_data.get('givenName')
                 user.last_name = raw_user_data.get('surname')
                 user.user_title = raw_user_data.get('jobTitle')
-                user.mail = raw_user_data.get('mail')
+                user.mail = mail
                 user.user_telephone_number = raw_user_data.get('mobilePhone')
 
                 # On premise settings
