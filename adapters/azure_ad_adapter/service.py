@@ -21,10 +21,14 @@ AZURE_TENANT_ID = 'tenant_id'
 AZURE_VERIFY_SSL = 'verify_ssl'
 AZURE_AUTHORIZATION_CODE = 'authorization_code'
 
+AZURE_AD_DEVICE_TYPE = 'Azure AD'
+INUTE_DEVICE_TYPE = 'Intune'
+
 
 # pylint: disable=invalid-name,too-many-instance-attributes,arguments-differ
 class AzureAdAdapter(AdapterBase):
     class MyDeviceAdapter(DeviceAdapter):
+        azure_ad_device_type = Field(str, 'Azure AD Device Type', enum=[AZURE_AD_DEVICE_TYPE, INUTE_DEVICE_TYPE])
         account_tag = Field(str, 'Account Tag')
         azure_device_id = Field(str, 'Azure Device ID')
         azure_display_name = Field(str, 'Azure Display Name')
@@ -179,7 +183,7 @@ class AzureAdAdapter(AdapterBase):
         try:
             # Schema: https://developer.microsoft.com/en-us/graph/docs/api-reference/v1.0/resources/user
             device = self._new_device_adapter()
-
+            device.azure_ad_device_type = AZURE_AD_DEVICE_TYPE
             device.id = raw_device_data['id']
 
             account_enabled = raw_device_data.get('accountEnabled')
@@ -227,6 +231,7 @@ class AzureAdAdapter(AdapterBase):
     def _create_intune_device(self, device_raw):
         try:
             device = self._new_device_adapter()
+            device.azure_ad_device_type = INUTE_DEVICE_TYPE
             device_id = device_raw.get('id')
             if device_id is None:
                 logger.warning(f'Bad device with no ID {device_raw}')
