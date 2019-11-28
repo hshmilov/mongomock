@@ -30,7 +30,8 @@ SchedulerState = namedlist('SchedulerState',
                            [
                                ('SubPhase', None),
                                ('SubPhaseStatus', None),
-                               ('Phase', Phases.Stable)],
+                               ('Phase', Phases.Stable),
+                               ('AssociatePluginId', None)],
                            )
 
 RESEARCH_THREAD_ID = 'phase_thread'

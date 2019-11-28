@@ -452,10 +452,23 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
         """
         Trigger 'fetch_filtered_adapters' job in aggregator with plugin_subtype filter.
         :param plugin_subtype: A plugin_subtype to filter as a white list.
-        :return:
+        :return: none
         """
-        self._run_blocking_request(plugin_consts.AGGREGATOR_PLUGIN_NAME, 'fetch_filtered_adapters',
-                                   data={'plugin_subtype': plugin_subtype.value}, timeout=48 * 3600)
+        aggregator_job_id = self._run_non_blocking_request(plugin_consts.AGGREGATOR_PLUGIN_NAME,
+                                                           'fetch_filtered_adapters',
+                                                           data={'plugin_subtype': plugin_subtype.value})
+        self.state.AssociatePluginId = aggregator_job_id
+        self._wait_for_aggregator_phase(plugin_subtype)
+        self.state.AssociatePluginId = None
+
+    def _wait_for_aggregator_phase(self, plugin_subtype: PluginSubtype):
+        """
+        Wait for 'fetch_filtered_adapters' job in aggregator with plugin_subtype filter.
+        :param plugin_subtype: A plugin_subtype to filter as a white list.
+        :return: None
+        """
+        self._wait_for_request(plugin_consts.AGGREGATOR_PLUGIN_NAME, 'fetch_filtered_adapters',
+                               data={'plugin_subtype': plugin_subtype.value}, timeout=48 * 3600)
 
     def _run_blocking_request(self, plugin_name: str, job_name: str, data: dict = None, timeout: int = None):
         """
@@ -475,6 +488,55 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
             raise PhaseExecutionException(
                 f'Executing {plugin_name} failed as part of '
                 f'{self.state.SubPhase} subphase failed.')
+
+    def _run_non_blocking_request(self, plugin_name: str, job_name: str,
+                                  data: dict = None) -> str:
+        """
+        Runs a non blocking trigger, and get the id of the jod that started
+        :param plugin_name: the plugin name to reach
+        :param job_name: the job name to trigger
+        :param data: the payload data for the plugin job
+        :return: the id of the requested job
+        """
+        response = self._trigger_remote_plugin_no_blocking(plugin_name, job_name, data=data)
+
+        # 403 is a disabled plugin.
+        if response.status_code not in (200, 403):
+            logger.exception(
+                f'Executing {plugin_name} failed as part of '
+                f'{self.state.SubPhase} subphase failed.')
+            raise PhaseExecutionException(
+                f'Executing {plugin_name} failed as part of '
+                f'{self.state.SubPhase} subphase failed.')
+
+        return response.text
+
+    def _wait_for_request(self, plugin_name: str, job_name: str,
+                          data: dict = None,
+                          timeout: int = None) -> str:
+        """
+        Runs a non blocking trigger, and get the id of the jod that started
+        :param plugin_name: the plugin name to reach
+        :param job_name: the job name to trigger
+        :param data: the payload data for the plugin job
+        :return: the id of the requested job
+        """
+        response = self._wait_for_remote_plugin(plugin_name, job_name, data=data, timeout=timeout, stop_on_timeout=True)
+
+        if response.status_code == 408:
+            logger.exception(f'Timeout out on {plugin_name}')
+            raise PhaseExecutionException(f'Timeout out on {plugin_name}')
+
+        # 403 is a disabled plugin.
+        if response.status_code not in (200, 403):
+            logger.exception(
+                f'Executing {plugin_name} failed as part of '
+                f'{self.state.SubPhase} subphase failed.')
+            raise PhaseExecutionException(
+                f'Executing {plugin_name} failed as part of '
+                f'{self.state.SubPhase} subphase failed.')
+
+        return response.text
 
     @property
     def plugin_subtype(self) -> PluginSubtype:

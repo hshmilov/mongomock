@@ -1157,6 +1157,64 @@ class PluginBase(Configurable, Feature, ABC):
             return None
         return inner()
 
+    def _trigger_remote_plugin_no_blocking(self, plugin_name: str, job_name: str = 'execute',
+                                           priority: bool = False,
+                                           data: dict = None,
+                                           reschedulable: bool = True) -> requests.Response:
+        """
+        Triggers a triggerable plugin and get the id of the job
+        :param plugin_name: The plugin name to trigger
+        :param job_name: The job name to invoke
+        :param priority: Whether to force the operation to take place irrespective of job queue
+        :param data: POST data to the job
+        :param reschedulable: If true, then the job will reschedule if it's already running
+        :return: the response from the plugin
+        """
+
+        try:
+            logger.debug(f'Triggering {job_name} on {plugin_name} with no blocking, {priority}, {reschedulable}')
+            logger.debug(data)
+            res = self.request_remote_plugin(f'trigger/{job_name}?blocking={False}&priority={priority}'
+                                             f'&reschedulable={reschedulable}',
+                                             plugin_name, method='post',
+                                             json=data,
+                                             raise_on_network_error=True)
+
+            return res
+        except Exception as e:
+            logger.exception(f'Trigger failed on {plugin_name}, {job_name}, {data} error: {e}')
+            return None
+
+    def _wait_for_remote_plugin(self, plugin_name: str, job_name: str = 'execute', timeout: int = None,
+                                data: dict = None,
+                                stop_on_timeout: bool = False) -> requests.Response:
+        """
+        Wait for a triggerable plugin job to finish
+        :param plugin_name: The plugin name with the job
+        :param job_name: The job name to wait for
+        :param data: POST data to the job
+        :param timeout: How long to wait for a response
+        :param stop_on_timeout: If true, and timed out, then a 'stop' operation will be triggered
+        :return: The response from the job
+        """
+        timeout = timeout or ''
+        try:
+            logger.debug(f'Wait for {job_name} on {plugin_name} and {timeout}')
+            res = self.request_remote_plugin(f'wait/{job_name}?timeout={timeout}',
+                                             plugin_name, method='get',
+                                             json=data,
+                                             raise_on_network_error=True)
+
+            if res.status_code == 408:  # timeout:
+                logger.info(f'Timeout on {plugin_name}, {job_name}')
+                if stop_on_timeout:
+                    logger.info(f'Stopping task...')
+                    self._stop_triggerable_plugin(plugin_name, job_name)
+            return res
+        except Exception as e:
+            logger.exception(f'Wait failed on {plugin_name}, {job_name}, {data} error: {e}')
+            return None
+
     def _async_trigger_remote_plugin(self, plugin_name: str, job_name: str = 'execute',
                                      priority: bool = False, data: dict = None,
                                      timeout: int = None, stop_on_timeout: bool = False) -> Promise:

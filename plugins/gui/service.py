@@ -3942,16 +3942,16 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
                 # Since there is no data, not adding this chart to the list
                 logger.exception(f'Error fetching data for chart ({dashboard["_id"]})')
 
-    def _get_lifecycle_phase_info(self, plugin_subtype: str) -> dict:
+    def _get_lifecycle_phase_info(self, doc_id: ObjectId) -> dict:
         """
-        :param  plugin_subtype: the subtype of the plugin as written in triggerable_history collection
-                post_json.plugin_type field
+        :param  doc_id: the id of the triggerable_history job to get the result from
         :return: the result field in the triggerable_history collection
         """
+        if not doc_id:
+            return {}
         result = self.aggregator_db_connection['triggerable_history'].find_one(
             {
-                'job_name': 'fetch_filtered_adapters',
-                'post_json.plugin_subtype': plugin_subtype
+                '_id': doc_id
             },
             sort=[('started_at', pymongo.DESCENDING)]
         )
@@ -3998,12 +3998,9 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
             if is_research and sub_phase.name == state.SubPhase:
                 # Reached current status - set complementary of SubPhaseStatus value
                 found_current = True
-                # Fetch_Devices
-                if sub_phase.name == ResearchPhases.Fetch_Devices.name:
-                    additional_data = self._get_lifecycle_phase_info(plugin_subtype=PluginSubtype.AdapterBase.value)
-                # Fetch_Scanners
-                if sub_phase.name == ResearchPhases.Fetch_Scanners.name:
-                    additional_data = self._get_lifecycle_phase_info(plugin_subtype=PluginSubtype.ScannerAdapter.value)
+                if sub_phase.name in (ResearchPhases.Fetch_Devices.name, ResearchPhases.Fetch_Scanners.name):
+                    doc_id = state_response.get('state').get('AssociatePluginId')
+                    additional_data = self._get_lifecycle_phase_info(doc_id=ObjectId(doc_id))
 
                 sub_phases.append({
                     'name': sub_phase.name,

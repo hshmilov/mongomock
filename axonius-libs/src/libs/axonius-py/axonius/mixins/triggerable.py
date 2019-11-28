@@ -6,7 +6,7 @@ from collections import defaultdict
 from datetime import datetime
 from enum import Enum, auto
 from threading import RLock
-from typing import DefaultDict, Set
+from typing import DefaultDict, Set, Tuple
 
 import func_timeout
 import pymongo
@@ -35,6 +35,8 @@ def normalize_triggerable_request_result(res):
     """
     if isinstance(res, dict):
         return jsonify(res)
+    if isinstance(res, ObjectId):
+        return str(res)
     return res
 
 
@@ -65,12 +67,16 @@ JobState = namedlist('JobState',
                          ('thread', FACTORY(ReusableThread)),
                          ('last_started_time', None),
                          # This is the _id of the associated jobstate in the DB
-                         ('associated_stored_job_state_id', None)
+                         ('associated_stored_job_state_id', None),
+                         # This is the _id of the associated jobstate in the DB for the scheduled task
+                         ('associated_scheduled_stored_job_state_id', None)
                      ]
                      )
 
 
 class StoredJobStateCompletion(Enum):
+    # Job has been scheduled but not started
+    Scheduled = auto()
     # Job has started
     Running = auto()
     # Job finished successfully
@@ -400,7 +406,18 @@ class Triggerable(Feature, ABC):
         return result
 
     def _trigger(self, job_name='execute', blocking=True, priority=False, post_json=None, timeout=None,
-                 reschedulable: bool = True):
+                 reschedulable: bool = True) -> ObjectId:
+        """
+        Trigger a job
+        :param job_name: the requested job name
+        :param blocking: synchronous or asynchronous mode
+        :param priority: whether to force the operation to take place irrespective of job queue
+        :param post_json: data for the job
+        :param timeout: how long to wait for a response
+        :param reschedulable: reschedule if it's already running
+        :return: the job id from the DB if not blocking, if blocking set to True wait for job to complete and
+                 return the job value
+        """
         # pylint: disable=no-member
         state = StoredJobState(job_name=job_name,
                                blocking=blocking,
@@ -422,8 +439,8 @@ class Triggerable(Feature, ABC):
 
         # having a lock per job allows more efficient parallelization
         with job_state.lock:
-            promise = self.__perform_trigger(job_name, job_state, post_json, state, reschedulable)
-
+            promise, job_id = self.__perform_trigger(job_name=job_name, job_state=job_state,
+                                                     post_json=post_json, db_state=state, reschedulable=reschedulable)
         if blocking:
             try:
                 Promise.wait(promise, timeout)
@@ -436,16 +453,22 @@ class Triggerable(Feature, ABC):
                 logger.error(f'Exception on wait: {promise.value}', exc_info=promise.value)
                 return 'Error has occurred', 500
             return promise.value or ''
-        return ''
+        return job_id
 
-    def __perform_trigger(self, job_name, job_state, post_json, db_state: StoredJobState, reschedulable: bool):
+    def __perform_trigger(self, job_name, job_state, post_json,
+                          db_state: StoredJobState, reschedulable: bool) -> Tuple[Promise, ObjectId]:
         """
         Actually perform the job, assumes locks
-        :return:
+        :param job_name: the requested job name
+        :param job_state: the current job state
+        :param post_json: the data for the job
+        :param db_state: the current job state from DB (should be default values)
+        :param reschedulable: reschedule if it's already running
+        :return: a promise for the ending of the trigger and the ObjectId for the job in the DB
         """
         if job_state.scheduled:
             logger.debug(f'job is already scheduled, {job_state}')
-            return job_state.promise
+            return job_state.promise, job_state.associated_scheduled_stored_job_state_id
 
         # If a plugin was triggered and then triggered again.
         # This is good for cases when a single trigger is enough but an event may happen while
@@ -475,7 +498,15 @@ class Triggerable(Feature, ABC):
                     return None
                 job_state.last_started_time = datetime.utcnow()
                 db_state.started_at = job_state.last_started_time
-                job_state.associated_stored_job_state_id = self.__safe_insert(db_state).inserted_id
+                self.__triggerable_db.update_one({
+                    '_id': job_state.associated_stored_job_state_id
+                }, update={
+                    '$set': {
+                        'started_at': datetime.utcnow(),
+                        'job_completed_state': StoredJobStateCompletion.Running.name
+                    }
+                })
+                # update here
             run_id = RunIdentifier(self.__triggerable_db, job_state.associated_stored_job_state_id)
             return self._triggered(job_name, post_json, run_id, *args, **kwargs)
 
@@ -485,18 +516,26 @@ class Triggerable(Feature, ABC):
                 job_state.promise = job_state.promise.then(lambda x: Promise(functools.partial(run_in_thread_helper,
                                                                                                job_state.thread,
                                                                                                to_run)))
+                db_state.job_completed_state = StoredJobStateCompletion.Scheduled
+                job_state.associated_scheduled_stored_job_state_id = self.__safe_insert(db_state).inserted_id
+                job_id_to_return = job_state.associated_scheduled_stored_job_state_id
             else:
                 # not reschedulable, return same promise
-                return job_state.promise
+                return job_state.promise, job_state.associated_stored_job_state_id
 
         else:
             job_state.triggered = True
             job_state.promise = Promise(functools.partial(run_in_thread_helper,
                                                           job_state.thread,
                                                           to_run))
+            job_state.associated_stored_job_state_id = self.__safe_insert(db_state).inserted_id
+            job_state.associated_scheduled_stored_job_state_id = None
+
+            job_id_to_return = job_state.associated_stored_job_state_id
+
         job_state.promise = job_state.promise.then(did_fulfill=on_success,
                                                    did_reject=on_failed)
-        return job_state.promise
+        return job_state.promise, job_id_to_return
 
     def __on_job_continue(self, job_state: JobState, last_error: str, job_completed_state: StoredJobStateCompletion):
         if not job_state.scheduled:
@@ -537,6 +576,8 @@ class Triggerable(Feature, ABC):
                     'job_completed_state': job_completed_state.name
                 }
             })
+
+        job_state.associated_stored_job_state_id = job_state.associated_scheduled_stored_job_state_id
 
     def __safe_insert(self, state: StoredJobState) -> pymongo.results.InsertOneResult:
         """
