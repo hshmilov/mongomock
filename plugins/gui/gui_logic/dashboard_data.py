@@ -721,7 +721,7 @@ def generate_dashboard_uncached(dashboard_id: ObjectId):
 
 
 # there's no trivial way to remove the TTL functionality entirely, so let's just make it long enough
-@rev_cached(ttl=3600 * 24 * 31)
+@rev_cached(ttl=3600 * 6)
 def generate_dashboard(dashboard_id: ObjectId):
     """
     See _get_dashboard
