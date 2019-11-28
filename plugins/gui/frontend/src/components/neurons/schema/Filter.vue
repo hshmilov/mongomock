@@ -111,9 +111,9 @@
         this.bracketWeights.splice(index, 1)
         if (!this.validateBrackets()) return
         if (this.expressions[0].logicOp) {
-          this.expressions[0].logicOp = ""
-          // Not ready for publishing yet, since first expression should not have a logical operation
-          return
+          // Remove the logicOp from filter as well as expression
+          this.filters[0] = this.filters[0].replace(this.expressions[0].logicOp + ' ', '')
+          this.expressions[0].logicOp = ''
         }
         this.$emit('change', this.filters.join(' '))
       },
