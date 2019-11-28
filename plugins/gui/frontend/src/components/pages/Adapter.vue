@@ -132,6 +132,7 @@
   import xTitle from '../axons/layout/Title.vue'
   import xToast from '../axons/popover/Toast.vue'
   import {parseVaultError} from '../../constants/utils'
+  import {FETCH_SYSTEM_CONFIG} from '../../store/actions'
 
     import {mapState, mapGetters, mapActions} from 'vuex'
     import {
@@ -253,7 +254,8 @@
         testAdapter: TEST_ADAPTER_SERVER,
         archiveServer: ARCHIVE_CLIENT,
         updatePluginConfig: SAVE_PLUGIN_CONFIG,
-        hintAdapterUp: HINT_ADAPTER_UP
+        hintAdapterUp: HINT_ADAPTER_UP,
+        fetchConfig: FETCH_SYSTEM_CONFIG
       }),
       openHelpLink() {
         window.open(this.adapterLink, '_blank')
@@ -388,6 +390,7 @@
       }
     },
     created() {
+      this.fetchConfig()
       this.hintAdapterUp(this.adapterId)
       if (_isEmpty(this.currentAdapter)) {
         this.fetchAdapters().then(this.setDefaultInstance)
