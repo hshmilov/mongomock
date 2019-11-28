@@ -27,20 +27,25 @@ class OrcaConnection(RESTConnection):
         if not isinstance(response, dict) or not isinstance(response.get('data'), list):
             raise RESTException(f'Bad response: {response}')
 
-    def get_device_list(self):
-        devices_alerst_dict = dict()
+    def _get_extra_api_dict(self, endpoint):
+        devices_extra_api_dict = dict()
         try:
-            for alert_raw in self._get_api_endpoint('query/alerts'):
-                asset_id = alert_raw.get('asset_unique_id')
+            for data_raw in self._get_api_endpoint(endpoint):
+                asset_id = data_raw.get('asset_unique_id')
                 if not asset_id:
                     continue
-                if asset_id not in devices_alerst_dict:
-                    devices_alerst_dict[asset_id] = []
-                devices_alerst_dict[asset_id].append(alert_raw)
+                if asset_id not in devices_extra_api_dict:
+                    devices_extra_api_dict[asset_id] = []
+                devices_extra_api_dict[asset_id].append(data_raw)
         except Exception:
-            logger.exception(f'Problem with alerts')
+            logger.exception(f'Problem with extra endpoint data {endpoint}')
+        return devices_extra_api_dict
+
+    def get_device_list(self):
+        devices_alerts_dict = self._get_extra_api_dict('query/alerts')
+        device_inventory_dict = self._get_extra_api_dict('query/inventory')
         for device_raw in self._get_api_endpoint('query/assets'):
-            yield device_raw, devices_alerst_dict
+            yield device_raw, devices_alerts_dict, device_inventory_dict
 
     def _get_api_endpoint(self, endpoint):
         response = self._get(endpoint)

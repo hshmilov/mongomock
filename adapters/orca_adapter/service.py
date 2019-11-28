@@ -139,7 +139,7 @@ class OrcaAdapter(AdapterBase):
         }
 
     # pylint: disable=too-many-branches, too-many-statements, too-many-locals, too-many-nested-blocks
-    def _create_device(self, device_raw, devices_alerst_dict):
+    def _create_device(self, device_raw, devices_alerst_dict, device_inventory_dict):
         try:
             device = self._new_device_adapter()
             device_id = device_raw.get('asset_unique_id')
@@ -150,6 +150,19 @@ class OrcaAdapter(AdapterBase):
             device.name = device_raw.get('asset_name')
             device.cloud_provider = figure_out_cloud(device_raw.get('cloud_provider'))
             device.cloud_id = device_raw.get('vm_id')
+            try:
+                inventory_data = device_inventory_dict.get(device_id)
+                if not isinstance(inventory_data, list):
+                    inventory_data = []
+                device_raw['inventory_data'] = inventory_data
+                for inventory_raw in inventory_data:
+                    try:
+                        device.add_installed_software(name=(inventory_raw.get('package') or {}).get('name'),
+                                                      version=(inventory_raw.get('package') or {}).get('version'))
+                    except Exception:
+                        logger.exception(f'Problem with inventory {inventory_raw}')
+            except Exception:
+                logger.exception(f'Problem getting inventory')
             try:
                 alerts_data = devices_alerst_dict.get(device_id)
                 if not isinstance(alerts_data, list):
@@ -244,8 +257,8 @@ class OrcaAdapter(AdapterBase):
             return None
 
     def _parse_raw_data(self, devices_raw_data):
-        for device_raw, devices_alerst_dict in devices_raw_data:
-            device = self._create_device(device_raw, devices_alerst_dict)
+        for device_raw, devices_alerst_dict, device_inventory_dict in devices_raw_data:
+            device = self._create_device(device_raw, devices_alerst_dict, device_inventory_dict)
             if device:
                 yield device
 
