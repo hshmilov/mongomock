@@ -92,6 +92,8 @@ class GotoassistAdapter(AdapterBase):
         }
 
     def _parse_raw_data(self, devices_raw_data):
+        if devices_raw_data is None:
+            return
         for device_raw in devices_raw_data:
             try:
                 device = self._new_device_adapter()

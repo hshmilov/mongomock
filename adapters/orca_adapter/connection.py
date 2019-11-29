@@ -54,6 +54,8 @@ class OrcaConnection(RESTConnection):
             try:
                 response = self._get(endpoint, url_params={'next_page_token': response.get('next_page_token')})
                 yield from response['data']
+                if not response['data']:
+                    break
             except Exception:
                 logger.exception(f'Exception in orca fetch')
                 break

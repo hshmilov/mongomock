@@ -41,7 +41,7 @@ class BlackberryUemAdapter(AdapterBase):
                                                  https_proxy=client_config.get('https_proxy'),
                                                  username=client_config['username'], password=client_config['password'],
                                                  username_domain=client_config.get('username_domain'),
-                                                 port=consts.DEFAULT_PORT,
+                                                 port=client_config.get('port') or consts.DEFAULT_PORT,
                                                  url_base_prefix=f'{tenant_guid}/api/v1/')
             with connection:
                 pass  # check that the connection credentials are valid
@@ -87,6 +87,13 @@ class BlackberryUemAdapter(AdapterBase):
                     'type': 'string'
                 },
                 {
+                    'name': 'port',
+                    'title': 'Port',
+                    'default': consts.DEFAULT_PORT,
+                    'type': 'integer',
+                    'format': 'port'
+                },
+                {
                     'name': 'username',
                     'title': 'User Name',
                     'type': 'string'
@@ -116,6 +123,7 @@ class BlackberryUemAdapter(AdapterBase):
             'required': [
                 'domain',
                 'username',
+                'port',
                 'password',
                 'tenant_guid',
                 'verify_ssl'
@@ -131,6 +139,7 @@ class BlackberryUemAdapter(AdapterBase):
                 if not device_id:
                     logger.warning(f'Bad device ID for {device_raw}')
                     continue
+                device.id = device_id + '_' + (device_raw.get('wifiMacAddress') or '')
                 device.udid = device_raw.get('udid')
                 device.figure_os(device_raw.get('os') or '')
                 device.os.distribution = device_raw.get('osVersion')
