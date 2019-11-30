@@ -1,3 +1,4 @@
+# pylint: disable=E0401
 # pylint: disable=invalid-triple-quote, pointless-string-statement
 import json
 import logging
@@ -314,7 +315,7 @@ class TaniumConnection(RESTConnection):
 
         yield from self._get_result_rows(question=question)
 
-    def _poll_answers(self, question_id, no_results_wait=False):
+    def _poll_answers(self, question_id, no_results_wait=True):
         """Poll a question ID until question expiry or all answers in.
 
         Question expiry is normally 10 minutes after the question is asked. Expiry means that no more answers
@@ -555,7 +556,7 @@ class TaniumConnection(RESTConnection):
                 columns_map = self._map_sensors_to_columns(columns=columns)
 
             for row in rows:
-                yield self._get_row_map(row=row, columns_map=columns_map), question.get('query_text')
+                yield self._get_row_map(row=row, columns_map=columns_map), question
                 '''yield:
                 {
                   "Computer Name": {  # Sensor name

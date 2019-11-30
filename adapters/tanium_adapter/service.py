@@ -1,18 +1,129 @@
+# pylint: disable=E0401
 import datetime
 import logging
 
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
-from axonius.clients.rest.connection import RESTConnection
 from axonius.devices.device_adapter import DeviceAdapter, AGENT_NAMES
 from axonius.utils.files import get_local_config_file
-from axonius.clients.rest.connection import RESTException
+from axonius.utils.parsing import normalize_var_name, format_ip
+from axonius.smart_json_class import SmartJsonClass
 from axonius.utils.datetime import parse_date
-from axonius.fields import Field, ListField
+from axonius.clients.rest.connection import RESTConnection
+from axonius.clients.rest.connection import RESTException
+from axonius.fields import Field, ListField, JsonStringFormat
 from tanium_adapter.connection import TaniumConnection
 from tanium_adapter.consts import ENDPOINT_TYPE, DISCOVERY_TYPE, DISCOVER_METHODS, SQ_TYPE
 
 logger = logging.getLogger(f'axonius.{__name__}')
+
+
+def map_tanium_value_type(value, value_type: str):
+    """Value type mappings from tanium.
+
+    Value type maps:
+
+    Version            str -> version (JsonStringFormat.version)
+    BESDate            str -> datetime
+    IPAddress          str -> ip address
+    WMIDate            str -> datetime
+    NumericInteger     str -> int
+    Hash               str
+    String             str
+    Numeric            str (number-LIKE, not necessarily an integer)
+    TimeDiff           str (numeric + "Y|MO|W|D|H|M|S" i.e. 2 years, 3 months, 18 days, 4 hours, 22 minutes)
+    DataSize           str (numeric + B|K|M|G|T i.e. 125MB, 23K, 34.2Gig)
+    VariousDate        str (?)
+    RegexMatch         str (?)
+    LastOperatorType   str (?)
+    """
+    if not isinstance(value, (tuple, list, str)) or value in [[], None, '']:
+        return None
+
+    field_args = {
+        'field_type': str,
+        'converter': None,
+        'json_format': None,
+    }
+
+    if value_type == 'NumericInteger':
+        field_args['field_type'] = int
+        if isinstance(value, (list, tuple)):
+            if any(['.' in x for x in value]):
+                field_args['field_type'] = float
+                value = [float(x) for x in value]
+            else:
+                value = [int(x) for x in value]
+        else:
+            if '.' in value:
+                field_args['field_type'] = float
+                value = float(value)
+            else:
+                value = int(value)
+    elif value_type == 'Version':
+        field_args['json_format'] = JsonStringFormat.version
+    elif value_type in ['BESDate', 'WMIDate']:
+        if isinstance(value, (list, tuple)):
+            value = [parse_date(x) for x in value]
+        else:
+            value = parse_date(value)
+        field_args['field_type'] = datetime.datetime
+    elif value_type == 'IPAddress':
+        field_args['converter'] = format_ip
+        field_args['json_format'] = JsonStringFormat.ip
+    return value, field_args
+
+
+# pylint: disable=R0912
+def put_tanium_dynamic_field(entity: SmartJsonClass, name: str, value_map: dict, is_sub_field: bool = False):
+    value = value_map.get('value', None)
+    value_type = value_map.get('type', None)
+
+    # type is a string populated by connection.py, so it should never be empty
+    # value should always be either a non-empty list of strings or a non-empty string
+    if not value_type or not isinstance(value_type, (list, tuple, str)) or value in [[], None, '']:
+        return
+
+    if is_sub_field:
+        key = normalize_var_name(name).lower()
+        title = name
+        field_type = Field
+    else:
+        key = normalize_var_name(f'sensor_{name}').lower()
+        title = f'Sensor: {name}'
+        field_type = ListField
+
+    if value_type == 'object':
+        if not entity.does_field_exist(field_name=key):
+            class SmartJsonClassInstance(SmartJsonClass):
+                pass
+
+            field_value = field_type(field_type=SmartJsonClassInstance, title=title)
+            entity.declare_new_field(field_name=key, field_value=field_value)
+
+        for item in value:
+            # pylint: disable=W0212
+            smartjsonclass_instance = entity.get_field_type(key)._type()
+
+            for d_key, d_map in item.items():
+                put_tanium_dynamic_field(entity=smartjsonclass_instance, name=d_key, value_map=d_map, is_sub_field=True)
+
+            entity[key].append(smartjsonclass_instance)
+    else:
+        if not entity.does_field_exist(field_name=key):
+            try:
+                value, field_args = map_tanium_value_type(value=value, value_type=value_type)
+            except Exception:
+                logger.exception(f'Failed to map value {value} with type {value_type}')
+                return
+            field_value = field_type(title=title, **field_args)
+            entity.declare_new_field(field_name=key, field_value=field_value)
+
+        if isinstance(value, (list, tuple)):
+            for item in value:
+                entity[key].append(item)
+        else:
+            entity[key] = value
 
 
 class TaniumAdapter(AdapterBase):
@@ -31,6 +142,8 @@ class TaniumAdapter(AdapterBase):
         chassis_type = Field(str, 'Chassis Type')
         sq_name = Field(str, 'Saved Question Name')
         sq_query_text = Field(str, 'Saved Question Query Text')
+        sq_expiration = Field(datetime.datetime, 'Saved Question Expiration')
+        sq_selects = ListField(str, 'Saved Question Selects')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -64,6 +177,7 @@ class TaniumAdapter(AdapterBase):
             logger.exception(message)
             raise ClientConnectionException(message)
 
+    # pylint: disable=R0201
     def _query_devices_by_client(self, client_name, client_data):
         """
         Get all devices from a specific Tanium domain
@@ -243,11 +357,18 @@ class TaniumAdapter(AdapterBase):
             return sensor_data.get('value')
 
         try:
-            device_raw, sq_name, sq_query_text = device_raw
+            device_raw, sq_name, question = device_raw
             device = self._new_device_adapter()
             device.tanium_type = SQ_TYPE
             device.sq_name = sq_name
-            device.sq_query_text = sq_query_text
+            device.sq_query_text = question.get('query_text')
+            device.sq_expiration = parse_date(question.get('expiration'))
+
+            try:
+                device.sq_selects = [x.get('sensor', {}).get('name') for x in question.get('selects', [])]
+            except Exception:
+                logger.exception(f'Problem with parsing sensors from selects in question {question}')
+
             if 'Computer ID' not in device_raw:
                 logger.warning(f'Bad device with no id {device_raw}')
                 return None
@@ -322,6 +443,12 @@ class TaniumAdapter(AdapterBase):
                                                status=service_name)
                 except Exception:
                     logger.exception(f'Problem with sensor name {sensor_name}')
+
+                try:
+                    put_tanium_dynamic_field(entity=device, name=sensor_name, value_map=sensor_data, is_sub_field=False)
+                except Exception:
+                    logger.exception(f'Failed putting key {sensor_name!r} with value {sensor_data!r}')
+
             device.set_raw(device_raw)
             return device
         except Exception:
