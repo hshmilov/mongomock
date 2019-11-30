@@ -154,6 +154,10 @@ export const pluginMeta = {
         link: 'https://docs.axonius.com/docs/indegy-industrial-cybersecurity-suite',
         description: 'Indegy Industrial Cybersecurity Suite protects industrial networks from cyber threats, malicious insiders, and human error, including threat detection and mitigation, asset tracking, vulnerability management, configuration control, and device integrity checks.'
     },
+    wazuh_adapter: {
+        title: 'Wazuh',
+        description: 'Wazuh is a free, open source and enterprise-ready security monitoring solution for threat detection, integrity monitoring, incident response and compliance.'
+    },
     signalsciences_adapter: {
         title: 'Signal Sciences',
         link: 'https://docs.axonius.com/docs/signal-sciences',

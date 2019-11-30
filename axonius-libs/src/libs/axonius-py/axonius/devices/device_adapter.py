@@ -36,7 +36,7 @@ AGENTS = namedtuple('Agents', (
     'secdo', 'sentinelone', 'signalsciences',
     'sophos', 'symantec', 'symantec_cloud_workload', 'symantec_ee', 'symantec_12', 'tanium', 'tenable_io', 'tripwire',
     'truefort', 'guardicore', 'deep_security',
-    'twistlock', 'webroot', 'aqua', 'symantec_dlp', 'bitlocker'
+    'twistlock', 'webroot', 'aqua', 'symantec_dlp', 'bitlocker', 'wazuh'
 ))
 
 AGENT_NAMES = AGENTS(
@@ -58,7 +58,7 @@ AGENT_NAMES = AGENTS(
     symantec_cloud_workload='Symantec Cloud Agent', symantec_ee='Symantec Endpoint Encryption Agent',
     tanium='Tanium Agent', tenable_io='Tenable io Agent',
     tripwire='Tripwire Agent', truefort='TrueFort Agent', twistlock='Twistlock Agent',
-    webroot='Webroot Agent', symantec_12='Symantec SEP 12 Agent',
+    webroot='Webroot Agent', symantec_12='Symantec SEP 12 Agent', wazuh='Wazuh Agent',
     aqua='Aqua Enforcer', symantec_dlp='Symantec DLP Agent', guardicore='Guardicore Agent',
     deep_security='DeepSecurity Agent'
 )

@@ -537,7 +537,7 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
                                                 f' to server with the ID {client_name}. Error is {str(e2)}')
                     if self.mail_sender and self._adapter_errors_mail_address:
                         email = self.mail_sender.new_email('Axonius - Adapter Stopped Working',
-                                                           [self._adapter_errors_mail_address])
+                                                           self._adapter_errors_mail_address.split(','))
                         email.send(f'Adapter {self.plugin_name} had connection error'
                                    f' to server with the ID {client_name}. Error is {str(e2)}')
 
