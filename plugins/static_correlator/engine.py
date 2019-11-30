@@ -82,10 +82,19 @@ def is_csv_adapter(adapter_device):
     return adapter_device.get('plugin_name') == 'csv_adapter'
 
 
+def is_chef_adapter(adapter_device):
+    return adapter_device.get('plugin_name') == 'chef_adapter'
+
+
 def if_csv_compare_full_path(adapter_device1, adapter_device2):
     if not is_csv_adapter(adapter_device1) and not is_csv_adapter(adapter_device2):
         return True
     return compare_hostname(adapter_device1, adapter_device2)
+
+
+def asset_hostnames_do_not_contradict_and_no_chef(adapter_device1, adapter_device2):
+    return asset_hostnames_do_not_contradict(adapter_device1, adapter_device2) \
+        or is_chef_adapter(adapter_device1) or is_chef_adapter(adapter_device2)
 
 
 # pylint: disable=invalid-name
@@ -569,7 +578,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
                                       [get_asset_name],
                                       [ips_do_not_contradict_or_mac_intersection_or_ca_cmdb,
                                        not_wifi_adapters,
-                                       asset_hostnames_do_not_contradict,
+                                       asset_hostnames_do_not_contradict_and_no_chef,
                                        serials_do_not_contradict],
                                       {'Reason': 'They have the same Asset name'},
                                       CorrelationReason.StaticAnalysis)

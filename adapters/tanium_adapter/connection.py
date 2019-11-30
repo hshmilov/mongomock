@@ -248,7 +248,7 @@ class TaniumConnection(RESTConnection):
                 logger.exception(f'Problem with page: {page}')
                 break
 
-    def _get_sq_results(self, name, no_results_wait=False, refresh=False, max_hours=0):
+    def _get_sq_results(self, name, no_results_wait=True, refresh=False, max_hours=0):
         """Get the results from a saved question.
 
         Args:
