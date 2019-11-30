@@ -4,7 +4,7 @@ import requests
 
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.exception import RESTException
-from zscaler_adapter.consts import MAX_PAGES, MAX_RATE_LIMIT_TRY, DEVICE_PER_PAGE, DEFAULT_SLEEP
+from zscaler_adapter.consts import MAX_PAGES, MAX_RATE_LIMIT_TRY, DEVICE_PER_PAGE, DEFAULT_SLEEP, USER_PER_PAGE
 
 
 logger = logging.getLogger(f'axonius.{__name__}')
@@ -13,10 +13,11 @@ logger = logging.getLogger(f'axonius.{__name__}')
 class ZscalerConnection(RESTConnection):
     """ rest client for Zscaler adapter """
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, rest_apikey=None, **kwargs):
         super().__init__(*args, url_base_prefix='',
                          headers={'Accept': '*/*'},
                          **kwargs)
+        self._rest_apikey = rest_apikey
 
     def _saml_authenticate(self):
         headers = {
@@ -57,6 +58,26 @@ class ZscalerConnection(RESTConnection):
         self._session_headers.update({'auth-token': self._session.cookies['mobile-token'][1:-1]})
 
     def _connect(self):
+        pass
+
+    def connect_api(self):
+        if not self._username or not self._password or not self._rest_apikey:
+            raise RESTException('No username or password or no API Key')
+        self._url = self._url.replace('mobile', 'admin')
+        try:
+            key, time_ = self.obfuscate_api_key(self._rest_apikey)
+        except Exception as e:
+            raise RESTException('Invalid api key')
+
+        json = {
+            'apiKey': key,
+            'password': self._password,
+            'timestamp': time_,
+            'username': self._username,
+        }
+        self._post('api/v1/authenticatedSession', body_params=json)
+
+    def connect_zapi(self):
         if not self._username or not self._password:
             raise RESTException('No username or password')
 
@@ -115,6 +136,35 @@ class ZscalerConnection(RESTConnection):
         else:
             raise RESTException(f'Failed to fetch page numer {page} because rate limit')
         return self._handle_response(response)
+
+    def _do_get_user_list_request(self, page):
+        for try_ in range(MAX_RATE_LIMIT_TRY):
+            response = self._get('api/v1/users',
+                                 url_params={'page': page, 'pageSize': USER_PER_PAGE},
+                                 raise_for_status=False,
+                                 return_response_raw=True,
+                                 use_json_in_response=False)
+
+            if response.status_code == 429:
+                self._sleep_rate_limit(response)
+                continue
+            break
+        else:
+            raise RESTException(f'Failed to fetch page numer {page} because rate limit')
+        return self._handle_response(response)
+
+    def get_user_list(self):
+        response = self._do_get_user_list_request(1)
+        yield from response
+        page = 2
+        while len(response) > 0:
+            try:
+                response = self._do_get_user_list_request(page)
+                yield from response
+                page += 1
+            except Exception:
+                logger.exception(f'Problem with page {page}')
+                break
 
     def get_device_list(self):
         self._url = self._url.replace('admin', 'mobile')

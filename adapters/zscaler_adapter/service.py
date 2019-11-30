@@ -5,6 +5,7 @@ from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.connection import RESTException
+from axonius.users.user_adapter import UserAdapter
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.utils.files import get_local_config_file
 from axonius.fields import Field
@@ -23,6 +24,9 @@ class ZscalerAdapter(AdapterBase, Configurable):
         registration_state = Field(str, 'Registration State')
         policy_name = Field(str, 'Policy Name')
         owner = Field(str, 'Owner')
+
+    class MyUserAdapter(UserAdapter):
+        comments = Field(str, 'Comments')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -46,9 +50,10 @@ class ZscalerAdapter(AdapterBase, Configurable):
                                        verify_ssl=client_config['verify_ssl'],
                                        https_proxy=client_config.get('https_proxy'),
                                        username=client_config['username'],
-                                       password=client_config['password'])
+                                       password=client_config['password'],
+                                       rest_apikey=client_config.get('apikey'))
         with connection:
-            pass
+            connection.connect_zapi()
         return connection
 
     def _connect_client(self, client_config):
@@ -71,6 +76,7 @@ class ZscalerAdapter(AdapterBase, Configurable):
         """
         duplicated_macs_list = []
         with client_data:
+            client_data.connect_zapi()
             if self.__ignore_macs_dups:
                 macs_list = []
                 for device_raw in client_data.get_device_list():
@@ -106,6 +112,12 @@ class ZscalerAdapter(AdapterBase, Configurable):
                 {
                     'name': 'password',
                     'title': 'Password',
+                    'type': 'string',
+                    'format': 'password'
+                },
+                {
+                    'name': 'apikey',
+                    'title': 'API Key',
                     'type': 'string',
                     'format': 'password'
                 },
@@ -208,3 +220,46 @@ class ZscalerAdapter(AdapterBase, Configurable):
 
     def _on_config_update(self, config):
         self.__ignore_macs_dups = config['ignore_macs_dups']
+
+    # pylint: disable=arguments-differ
+    @staticmethod
+    def _query_users_by_client(key, data):
+        with data:
+            data.connect_api()
+            yield from data.get_user_list()
+
+    def _create_user(self, user_raw):
+        try:
+            user = self._new_user_adapter()
+            user_id = user_raw.get('id')
+            if user_id is None:
+                logger.warning(f'Bad user with no ID {user_raw}')
+                return None
+            user.id = str(user_id) + '_' + (user_raw.get('name') or '')
+            user.username = user_raw.get('name')
+            user.mail = user_raw.get('email')
+            try:
+                groups_raw = user_raw.get('groups') if isinstance(user_raw.get('groups'), list) else []
+                for group_raw in groups_raw:
+                    if isinstance(group_raw, dict) and group_raw.get('name'):
+                        user.groups.append(group_raw.get('name'))
+            except Exception:
+                logger.exception(f'Problem with group for {user_raw}')
+            department_raw = user_raw.get('department')
+            if not isinstance(department_raw, dict):
+                department_raw = {}
+            user.user_department = department_raw.get('name')
+            user.comments = user_raw.get('comments')
+            if isinstance(user_raw.get('adminUser'), bool):
+                user.is_admin = user_raw.get('adminUser')
+            user.set_raw(user_raw)
+            return user
+        except Exception:
+            logger.exception(f'Problem with fetching BambooHR user for {user_raw}')
+            return None
+
+    def _parse_users_raw_data(self, users_raw_data):
+        for user_raw in users_raw_data:
+            user = self._create_user(user_raw)
+            if user:
+                yield user
