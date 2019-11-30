@@ -433,9 +433,12 @@ class EntitiesPage(Page):
         self.close_dropdown()
 
     def build_query_field_contains(self, field_name, field_value):
+        self.build_query(field_name, field_value, self.QUERY_COMP_CONTAINS)
+
+    def build_query(self, field_name, field_value, comp_op):
         self.click_query_wizard()
         self.select_query_field(field_name)
-        self.select_query_comp_op(self.QUERY_COMP_CONTAINS)
+        self.select_query_comp_op(comp_op)
         self.fill_query_string_value(field_value)
         self.wait_for_table_to_load()
         self.close_dropdown()

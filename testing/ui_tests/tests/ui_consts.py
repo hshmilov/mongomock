@@ -79,7 +79,7 @@ class Saml:
 
 class Notes:
     note1_text = 'note1_text'
-    note1_device_filter = 'Big-Export'
+    note1_device_filter = 'Big_Export'
 
 
 class History:
