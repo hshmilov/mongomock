@@ -582,6 +582,11 @@ class DashboardPage(Page):
         assert date_finish > date_start
 
     @staticmethod
+    def assert_next_cycle_start(card, text):
+        next_time = card.find_element_by_css_selector('.cycle-next-time')
+        assert next_time == text
+
+    @staticmethod
     def assert_plus_button_in_card(card):
         assert card.find_element_by_css_selector('.x-button.link').text == '+'
 

@@ -3,7 +3,8 @@ import threading
 import time
 from concurrent.futures import ALL_COMPLETED, wait, as_completed, ThreadPoolExecutor
 from contextlib import contextmanager
-from datetime import datetime
+from datetime import datetime, timezone
+from dateutil import tz
 from typing import Set
 
 from apscheduler.executors.pool import \
@@ -87,7 +88,7 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
         return jsonify({
             'state': self.state._asdict(),
             'stopping': self.__stopping_initiated,
-            'next_run_time': time.mktime(next_run_time.timetuple()),
+            'next_run_time': (next_run_time - datetime.now(tz.tzlocal())).total_seconds(),
             'last_start_time': last_start_time,
             'last_finished_time': last_finished_at
         })

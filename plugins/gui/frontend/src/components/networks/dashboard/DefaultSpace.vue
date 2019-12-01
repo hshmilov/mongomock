@@ -86,11 +86,14 @@
         isEntityRestricted: IS_ENTITY_RESTRICTED
       }),
       nextRunTime () {
-        let leftToRun = new Date(parseInt(this.lifecycle.nextRunTime) * 1000) - Date.now()
-        let thresholds = [1000, 60 * 1000, 60 * 60 * 1000, 24 * 60 * 60 * 1000]
+        let leftToRun = this.lifecycle.nextRunTime;
+        let thresholds = [0, 60, 60 * 60, 24 * 60 * 60]
         let units = ['seconds', 'minutes', 'hours', 'days']
         for (let i = 1; i < thresholds.length; i++) {
           if (leftToRun < thresholds[i]) {
+              if(i === 1){
+                  return 'Less than 1 minute'
+              }
             return `${Math.round(leftToRun / thresholds[i - 1])} ${units[i - 1]}`
           }
         }

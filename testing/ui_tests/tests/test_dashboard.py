@@ -819,6 +819,26 @@ class TestDashboard(TestBase):
             self.adapters_page.clean_adapter_servers(STRESSTEST_ADAPTER_NAME)
             self.wait_for_adapter_down(STRESSTEST_ADAPTER)
 
+    def test_dashboard_lifecycle_next_cycle(self):
+        self.dashboard_page.switch_to_page()
+        self.base_page.run_discovery()
+
+        # This triggers a dashboard reload
+        self.settings_page.switch_to_page()
+        self.settings_page.fill_schedule_rate('0.1')
+        self.settings_page.save_and_wait_for_toaster()
+
+        self.dashboard_page.switch_to_page()
+
+        sl_card = self.dashboard_page.find_system_lifecycle_card()
+        assert self.dashboard_page.get_title_from_card(sl_card) == self.dashboard_page.SYSTEM_LIFECYCLE
+
+        self.dashboard_page.wait_for_element_present_by_text('6 minutes', sl_card)
+
+        self.dashboard_page.wait_for_element_present_by_text('Less than 1 minute', sl_card, interval=12)
+
+        self.dashboard_page.wait_for_element_present_by_text('6 minutes', sl_card, interval=6)
+
     @contextmanager
     def _edit_and_assert_chart(self, card, assert_data, chart_type=PIE_CHART_TYPE):
         self.dashboard_page.edit_card(self.TEST_EDIT_CARD_TITLE)
