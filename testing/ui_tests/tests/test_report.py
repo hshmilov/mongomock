@@ -277,7 +277,9 @@ class TestReport(TestBase):
         current_date = self.get_next_time_round_by_two_minutes(current_date)
         send_time = f'{current_date.hour}:{current_date.minute}'
         self.reports_page.select_frequency(ReportFrequency.monthly)
-        self.reports_page.select_monthly_day(str(current_date.day))
+        # Monthly day dropdown offers selection until the 28th or the last day of the month
+        monthly_day = str(current_date.day) if current_date.day <= 28 else 'Last Day'
+        self.reports_page.select_monthly_day(monthly_day)
         self.reports_page.select_frequency_time(send_time)
         monthly_email = recipient + '.monthly'
         self.reports_page.fill_email(monthly_email)
