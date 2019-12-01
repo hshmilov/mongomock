@@ -29,15 +29,24 @@ class GuardicoreConnection(RESTConnection):
         self._get('assets', url_params={'limit': DEVICE_PER_PAGE, 'offset': 0}).get('objects')
 
     def get_device_list(self):
+        yield from self._get_api_endpoint('assets')
+
+    def get_user_list(self):
+        try:
+            yield from self._get_api_endpoint('system/users')
+        except Exception:
+            logger.exception(f'Problem fetching users data')
+
+    def _get_api_endpoint(self, endpoint):
         offset = 0
-        response = self._get('assets', url_params={'limit': DEVICE_PER_PAGE, 'offset': offset})
+        response = self._get(endpoint, url_params={'limit': DEVICE_PER_PAGE, 'offset': offset})
         yield from response.get('objects')
         total_count = response.get('total_count')
         offset = DEVICE_PER_PAGE
         number_exception = 0
         while offset < min(MAX_NUMBER_OF_DEVICES, total_count):
             try:
-                response = self._get('assets', url_params={'limit': DEVICE_PER_PAGE, 'offset': offset})
+                response = self._get(endpoint, url_params={'limit': DEVICE_PER_PAGE, 'offset': offset})
                 if not response.get('objects'):
                     break
                 yield from response.get('objects')

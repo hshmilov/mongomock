@@ -1,3 +1,4 @@
+import datetime
 import logging
 
 from axonius.adapter_base import AdapterBase, AdapterProperty
@@ -6,6 +7,7 @@ from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.connection import RESTException
 from axonius.devices.device_adapter import DeviceAdapter, AGENT_NAMES, DeviceRunningState
 from axonius.fields import Field, ListField
+from axonius.users.user_adapter import UserAdapter
 from axonius.utils.datetime import parse_date
 from axonius.utils.files import get_local_config_file
 from guardicore_adapter.connection import GuardicoreConnection
@@ -22,6 +24,15 @@ class GuardicoreAdapter(AdapterBase):
         comments = Field(str, 'Comments')
         is_active = Field(bool, 'Is Active')
         supported_features = ListField(str, 'Supported Features')
+
+    class MyUserAdapter(UserAdapter):
+        created_at = Field(datetime.datetime, 'Created At')
+        accepted_evaluation = Field(bool, 'Accepted Evaluation')
+        can_access_passwords = Field(bool, 'Can Access Passwords')
+        is_external = Field(bool, 'Is External')
+        permission_scheme = Field(str, 'Permission Scheme')
+        sessions_count = Field(int, 'Sessions Count')
+        count_permission_schemes = Field(int, 'Count Permission Schemes')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -169,11 +180,53 @@ class GuardicoreAdapter(AdapterBase):
             logger.exception(f'Problem with fetching Guardicore Device for {device_raw}')
             return None
 
+    @staticmethod
+    def _query_users_by_client(key, data):
+        with data:
+            yield from data.get_user_list()
+
     def _parse_raw_data(self, devices_raw_data):
         for device_raw in devices_raw_data:
             device = self._create_device(device_raw)
             if device:
                 yield device
+
+    # pylint: disable=arguments-differ
+    def _parse_users_raw_data(self, raw_data):
+        for user_raw in raw_data:
+            user = self._create_user(user_raw)
+            if user:
+                yield user
+
+    def _create_user(self, user_raw):
+        try:
+            user = self._new_user_adapter()
+            user_id = user_raw.get('id')
+            if user_id is None:
+                logger.warning(f'Bad user with no ID {user_raw}')
+                return None
+            user.id = str(user_id) + '_' + (user_raw.get('username') or '')
+            user.username = user_raw.get('username')
+            user.mail = user_raw.get('email')
+            user.description = user_raw.get('description')
+            if isinstance(user_raw.get('is_external'), bool):
+                user.is_external = user_raw.get('is_external')
+            if isinstance(user_raw.get('can_access_passwords'), bool):
+                user.can_access_passwords = user_raw.get('can_access_passwords')
+            user.created_at = parse_date(user_raw.get('created_at'))
+            if isinstance(user_raw.get('accepted_evaluation'), bool):
+                user.accepted_evaluation = user_raw.get('accepted_evaluation')
+            user.last_logon = parse_date(user_raw.get('last_login'))
+            user.permission_scheme = user_raw.get('permission_scheme')
+            user.sessions_count = user_raw.get('sessions_count') \
+                if isinstance(user_raw.get('sessions_count'), int) else None
+            user.count_permission_schemes = user_raw.get('count_permission_schemes') \
+                if isinstance(user_raw.get('count_permission_schemes'), int) else None
+            user.set_raw(user_raw)
+            return user
+        except Exception:
+            logger.exception(f'Problem with fetching Guardicore user for {user_raw}')
+            return None
 
     @classmethod
     def adapter_properties(cls):
