@@ -1,8 +1,10 @@
 import logging
 import ipaddress
+from multiprocessing.dummy import Pool
 
 from typing import List, Tuple
 
+import requests
 from dataclasses import dataclass
 
 from axonius.adapter_exceptions import NoIpFoundError
@@ -12,6 +14,7 @@ from axonius.utils.db_querying_helper import iterate_axonius_entities
 from axonius.utils.dns import query_dns
 from axonius.blacklists import DANGEROUS_IPS
 from webscan_adapter.connection import WebscanConnection
+from webscan_adapter.consts import DEFAULT_POOL_SIZE
 from webscan_adapter.scanners.cert_scanner import CertScanner
 
 logger = logging.getLogger(f'axonius.{__name__}')
@@ -50,21 +53,13 @@ class WebscanExecutionMixIn(Triggerable):
             }
         port = client_config.get('port')
         https_proxy = client_config.get('https_proxy')
-        results = dict()
+        pool_size = client_config.get('pool_size', DEFAULT_POOL_SIZE) or DEFAULT_POOL_SIZE
+        fetch_ssllabs = client_config.get('fetch_ssllabs', False)
         # Get devices details
         devices = iterate_axonius_entities(EntityType.Devices, internal_axon_ids)
-        for device in devices:
-            _id = None
-            try:
-                _id = device['internal_axon_id']
-                result_value = self._handle_device(device, port, https_proxy)
-                results[_id] = result_value
-            except Exception as e:
-                logger.exception(f'Failed to handle internal axon id {_id}')
-                results[_id] = {
-                    'success': False,
-                    'value': str(e)
-                }
+        with Pool(pool_size) as pool:
+            args = ((device, port, https_proxy, fetch_ssllabs) for device in devices)
+            results = dict(pool.starmap(self._handle_device, args))
         logger.info('Webscan Trigger end.')
         return results
 
@@ -103,7 +98,7 @@ class WebscanExecutionMixIn(Triggerable):
 
         return result
 
-    def _handle_domain(self, adapter_meta: dict, hostname: str, port: int, https_proxy=None):
+    def _handle_domain(self, adapter_meta: dict, hostname: str, port: int, https_proxy=None, fetch_ssllabs=False):
         """
         Get a domain and the meta data of the device and fetch its data using webscan adapter
         :param adapter_meta: adapter meta (for tagging the results)
@@ -113,7 +108,8 @@ class WebscanExecutionMixIn(Triggerable):
         """
         logger.debug(f'Scanning {hostname}:{port}')
         # create a new connection
-        connection = WebscanConnection(domain=hostname, port=port, https_proxy=https_proxy)
+        connection = WebscanConnection(domain=hostname, port=port, https_proxy=https_proxy,
+                                       fetch_ssllabs=fetch_ssllabs)
         data = connection.get_device_list()
         new_device = list(self._parse_raw_data(data))[0]
         if not new_device:
@@ -129,21 +125,22 @@ class WebscanExecutionMixIn(Triggerable):
         return True
 
     @staticmethod
-    def get_common_name_from_ip(ip, query_timeout=5) -> str:
+    def get_common_name_from_ip(ip, port=443, query_timeout=5) -> str:
         """
         Getting ssl common names from the given ip
-        :param ip: if to get its cert common names
+        :param ip: ip to get its cert common names
+        :param port: host port for.
         :param query_timeout: validate dns query timeout
         :return: domain
         Notes:
             Sometimes the common names are related to other servers,
             So the best think to do is to validate the ip via dns query
         """
-        common_names = CertScanner.get_cert_info(domain=ip).get('alt_name')
+        common_names = CertScanner.get_cert_info(domain=ip, port=port).get('alt_name')
         if not common_names:
             return ''
         # common name should look like [['dns','*.google.com'],..] so we filter some values
-        names = [name[1] for name in common_names if len(name) > 1 and '*' not in name]
+        names = [name[1] for name in common_names if len(name) > 1 and '*' not in name[1]]
         for name in names:
             # ip validation
             try:
@@ -158,45 +155,67 @@ class WebscanExecutionMixIn(Triggerable):
         return ''
 
     @staticmethod
-    def get_reachable_hostname(adapters_hostnames: List[AdapterScanHostnames], port: int) -> Tuple[dict, str]:
+    def get_reachable_hostname(adapters_hostnames: List[AdapterScanHostnames], port: int,
+                               https_proxy=None) -> Tuple[dict, str]:
         """
         Getting the best reachable hostname from adapters data.
+        if the adapter doesnt have a reachable hostname. we try to get a reachable hostname through
+        its SSL certificate alt name (get_common_name_from_ip).
         :param adapters_hostnames: list of adapter hostnames, ips, and metadata
+        :param https_proxy: use https proxy for checking reachability
         :param port: web server port
         :return:
         """
+        reachable_ips: List[Tuple[dict, str]] = []
         for data in adapters_hostnames:
             try:
-                domain = None
                 # we prefer hostname first
-                if data.hostname and WebscanConnection.test_reachability(data.hostname, port=port):
-                    return data.meta, data.hostname
+                try:
+                    if data.hostname and WebscanConnection.test_reachability(data.hostname, port=port,
+                                                                             https_proxy=https_proxy):
+                        return data.meta, data.hostname
+                except requests.exceptions.ReadTimeout:
+                    logger.debug(f'{data.hostname}: ReadTimeout')
+
                 # loop the adapter's IPs and find a reachable hostname
                 for ip in data.ips:
                     try:
-                        domain = WebscanExecutionMixIn.get_common_name_from_ip(ip)
+                        if not WebscanConnection.test_reachability(ip, port=port, https_proxy=https_proxy):
+                            logger.debug(f'{ip} is not reachable')
+                            continue
+                    except requests.exceptions.ReadTimeout:
+                        logger.debug(f'{ip}: ReadTimeout')
+                        continue
+                    # on this point we know that the ip is reachable
+                    reachable_ips.append((data.meta, ip))
+                    try:
+                        domain = WebscanExecutionMixIn.get_common_name_from_ip(ip, port)
+                        # we have found a reachable domain.
+                        if domain:
+                            return data.meta, domain
                     except Exception:
                         logger.exception('Error getting common name')
-                    domain = domain or ip
-                    if WebscanConnection.test_reachability(domain, port=port):
-                        return data.meta, domain
             except Exception:
                 logger.exception(f'Error getting reachable hostname from adapter')
+        if reachable_ips:
+            # we arrive here only if we have found some reachable ips with no domains.
+            return reachable_ips[0]
         return {}, ''
 
-    def _handle_device(self, device: dict, port: int, https_proxy=None) -> dict:
+    def _handle_device(self, device: dict, port: int, https_proxy=None, fetch_ssllabs=False) -> Tuple[str, dict]:
         '''
         Get an axon device, handle the required job and return its output
         :param device:
         :return:
         '''
+        _id = device['internal_axon_id']
         try:
             if not device.get('adapters'):
                 json = {
                     'success': False,
                     'value': 'Webscan Error: Adapters not found'
                 }
-                return json
+                return _id, json
             adapters_hostnames = self._get_scan_hostnames(device)
             if not adapters_hostnames or not \
                     any(adapter_hostname.hostname or adapter_hostname.ips for adapter_hostname in adapters_hostnames):
@@ -204,17 +223,19 @@ class WebscanExecutionMixIn(Triggerable):
                     'success': False,
                     'value': f'Webscan Error: Missing Hostname and IPs'
                 }
-                return json
+                return _id, json
 
-            reachable_hostname_adapter, reachable_hostname = self.get_reachable_hostname(adapters_hostnames, port)
+            reachable_hostname_adapter, reachable_hostname = self.get_reachable_hostname(adapters_hostnames, port,
+                                                                                         https_proxy=https_proxy)
             if not reachable_hostname:
                 json = {
                     'success': False,
                     'value': f'Webscan Enrichment Error: No reachable Hostname or IP. port: {port}'
                 }
-                return json
+                return _id, json
 
-            if not self._handle_domain(reachable_hostname_adapter, reachable_hostname, port, https_proxy):
+            if not self._handle_domain(reachable_hostname_adapter, reachable_hostname, port, https_proxy,
+                                       fetch_ssllabs):
                 json = {
                     'success': False,
                     'value': f'Webscan Enrichment Error: not data from {reachable_hostname}:{port}'
@@ -224,11 +245,11 @@ class WebscanExecutionMixIn(Triggerable):
                     'success': True,
                     'value': f'Webscan Enrichment success, scanned domain: {reachable_hostname}:{port}'
                 }
-            return json
+            return _id, json
 
         except Exception as e:
             logger.exception('Exception while handling devices')
-            return {
+            return _id, {
                 'success': False,
                 'value': f'Webscan Enrichment Error: {str(e)}'
             }

@@ -1,5 +1,6 @@
 import logging
 import datetime
+import ssl
 from urllib.parse import urlparse
 
 from urllib3.contrib import pyopenssl
@@ -58,12 +59,19 @@ class CertScanner(ServiceScanner):
         if not domain and not url:
             return {}
         if not domain:
-            domain = urlparse(url).netloc
+            domain = urlparse(url).netloc.split(':')[0]
         logger.debug(f'Getting {domain}:{port} cert info')
-        x509 = pyopenssl.OpenSSL.crypto.load_certificate(
-            pyopenssl.OpenSSL.crypto.FILETYPE_PEM,
-            pyopenssl.ssl.get_server_certificate((domain, port))
-        )
+        try:
+            x509 = pyopenssl.OpenSSL.crypto.load_certificate(
+                pyopenssl.OpenSSL.crypto.FILETYPE_PEM,
+                pyopenssl.ssl.get_server_certificate((domain, port))
+            )
+        except (TimeoutError, ConnectionRefusedError):
+            logger.debug(f'{domain}:{port} is not reachable')
+            return {}
+        except ssl.SSLError as e:
+            logger.warning(f'{domain}:{port} SSL Error: {e}')
+            return {}
         subject = x509.get_subject().get_components()
         issuer = x509.get_issuer().get_components()
         try:

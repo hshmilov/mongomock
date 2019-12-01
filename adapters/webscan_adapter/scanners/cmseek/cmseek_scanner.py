@@ -88,6 +88,7 @@ class CMSScanner(ServiceScanner):
             the best option is to get the scan output from 'log' global variable'
             Of course its not thread safe. but for now I'm not gonna refactor and maintain their whole code.
         """
+        logger.debug(f'Getting {self.url} cmsseek info')
         with cmseek.lock:
             cmseek.batch_mode = True
             cmseek.redirect_conf = '1'

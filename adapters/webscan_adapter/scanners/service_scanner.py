@@ -9,7 +9,7 @@ class ServiceScanner(ABC):
     """
     DEFAULT_SSL_PORT = 443
 
-    def __init__(self, url, logger, domain=None, port=DEFAULT_SSL_PORT):
+    def __init__(self, url, logger, domain=None, port=DEFAULT_SSL_PORT, https_proxy=None):
         """
         initialization.
         :param logger: a logger to be used.
@@ -19,6 +19,7 @@ class ServiceScanner(ABC):
         self.url = url
         self.results = None
         self.domain = domain
+        self.https_proxy = https_proxy
         self.port = port
 
     def scan(self):

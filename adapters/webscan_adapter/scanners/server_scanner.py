@@ -43,7 +43,7 @@ class ServerScanner(ServiceScanner):
         ip = None
         try:
             if not domain:
-                domain = urlparse(url).netloc
+                domain = urlparse(url).netloc.split(':')[0]
             # if is its already an ip
             try:
                 ip = str(ipaddress.ip_address(domain))
@@ -79,12 +79,17 @@ class ServerScanner(ServiceScanner):
         """
         # get domain ip
         domain, ip = self.resolve_domain(self.url, self.domain)
+        proxies = {}
         server_data = {
             'ip': ip,
             'domain': self.domain
         }
+        logger.debug(f'Getting {self.url} server info')
+        if self.https_proxy:
+            logger.debug(f'Using https proxy: {self.https_proxy}')
+            proxies['https'] = self.https_proxy
         try:
-            response = requests.get(self.url)
+            response = requests.get(self.url, proxies=proxies, verify=False)
             # get HTTP headers and parse them
             headers = response.headers
             server = headers.get('Server')

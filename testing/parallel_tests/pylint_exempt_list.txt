@@ -212,6 +212,7 @@ adapters/tenable_io_adapter/service.py
 adapters/tenable_security_center_adapter/service.py
 adapters/tenable_security_center_adapter/utils/mock_server.py
 adapters/traiana_lab_machines_adapter/service.py
+adapters/webscan_adapter/scanners/ssllabs/ssllabs.py
 adapters/webscan_adapter/scanners/cmseek/cmsbrute/dru.py
 adapters/webscan_adapter/scanners/cmseek/cmsbrute/joom.py
 adapters/webscan_adapter/scanners/cmseek/cmsbrute/oc.py

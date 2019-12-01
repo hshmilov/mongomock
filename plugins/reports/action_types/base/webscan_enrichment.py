@@ -12,6 +12,7 @@ logger = logging.getLogger(f'axonius.{__name__}')
 CHUNK_SIZE = 10000
 # pylint: disable=protected-access
 DEFAULT_SSL_PORT = 443
+DEFAULT_POOL_SIZE = 10
 
 
 class WebscanEnrichment(ActionTypeBase):
@@ -35,10 +36,24 @@ class WebscanEnrichment(ActionTypeBase):
                     'name': 'https_proxy',
                     'title': 'HTTPS Proxy',
                     'type': 'string'
+                },
+                {
+                    'name': 'pool_size',
+                    'title': 'Scan Pool Size',
+                    'type': 'integer',
+                    'required': True,
+                    'default': DEFAULT_POOL_SIZE
+                },
+                {
+                    'name': 'fetch_ssllabs',
+                    'title': 'Fetch Data from SSL Labs',
+                    'type': 'bool',
+                    'required': True,
+                    'default': False
                 }
             ],
             'required': [
-                'port',
+                'port', 'pool_size', 'fetch_ssllabs'
             ],
             'type': 'array'
         }

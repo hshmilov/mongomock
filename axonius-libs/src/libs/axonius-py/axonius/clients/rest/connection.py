@@ -161,20 +161,28 @@ class RESTConnection(ABC):
         return self._connect()
 
     @staticmethod
-    def test_reachability(host, port=None, path='/', ssl=True, use_domain_path=False):
+    def test_reachability(host, port=None, path='/', ssl=True, use_domain_path=False,
+                          http_proxy=None, https_proxy=None):
         """
         Runs a basic http check to see if the host is reachable.
         :param host: The hostname of the api, e.g. 'https://facebook.com'
         :param port: port to be used with the API.
+        :param http_proxy: use http proxy
+        :param https_proxy: use https proxy
         :param path:
         :param ssl: Should be used with ssl.
         :param use_domain_path:
         :return:
         """
         try:
+            proxies = {}
+            if https_proxy:
+                proxies['https'] = https_proxy
+            if http_proxy:
+                proxies['http'] = http_proxy
             parsed_url = RESTConnection.build_url(host, port if port else 443 if ssl else 80, url_base_prefix=path,
                                                   use_domain_path=use_domain_path)
-            requests.get(parsed_url, verify=False, timeout=consts.DEFAULT_TIMEOUT)
+            requests.get(parsed_url, verify=False, timeout=consts.DEFAULT_TIMEOUT, proxies=proxies)
             return True
         except requests.exceptions.ConnectionError as conn_err:
             # if 'Remote end closed connection without response' in conn_err:
