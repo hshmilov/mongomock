@@ -1,8 +1,9 @@
 import logging
 import socket
-
+from pysnmp.proto.rfc1902 import Gauge32
 from axonius.devices.device_adapter import DeviceAdapterNetworkInterface
 from axonius.clients.cisco import port_security
+
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -16,8 +17,8 @@ def unpack_mac(value):
 def extract_ip_from_mib(mib):
     return '.'.join(str(mib).split('.')[-4:])
 
-
 # parsers for the SnmpTable
+
 
 def parse_unhandled(oid, value):
     # this function is a callback so it must have the same api as the above functions
@@ -32,15 +33,23 @@ def parse_int(oid, value):
     return int(value)
 
 
+def parse_gauge32(oid, value):
+    return int(Gauge32(value))
+
+
 def parse_secure_mac_type(oid, value):
     admin_enum = [x for x in port_security.SecureMacAddressEntry.fields_info if x == 'type'][0].enum
-
     value = int(value) - 1
-
     if value not in range(len(admin_enum)):
         raise ValueError(f'Invalid value {value}')
-
     return admin_enum[value]
+
+
+def parse_vlan_secure_mac_vlan_id(oid, value):
+    vlan = oid[-1:]
+    if value:
+        return vlan
+    return None
 
 
 def parse_security_status(oid, value):

@@ -1563,8 +1563,8 @@ def test_basic_info_devices(mocks):
                 'violation_action': 'dropNotify',
                 'violation_count': 0,
                 'entries': [
-                    {'mac_address': '00:E0:4C:68:03:EC', 'type': 'Static'},
-                    {'mac_address': '10:65:30:08:54:A4', 'type': 'Static'},
+                    {'mac_address': '00:E0:4C:68:03:EC', 'remaining_age_time': 0, 'type': 'Static'},
+                    {'mac_address': '10:65:30:08:54:A4', 'remaining_age_time': 0, 'type': 'Static'},
                 ],
             }
         ],

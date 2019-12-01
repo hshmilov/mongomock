@@ -24,11 +24,15 @@ class SecureMacAddressEntry(SmartJsonClass):
     mac_address = Field(str, 'Mac', converter=format_mac)
     type = Field(str,
                  'Type',
-                 description='Indicates if the secure MAC address is a configured (static) or learned (dynamic) address on this interface',
-                 enum=['Dynamic', 'Static'])
-    remaining_age_time = Field(str,
+                 description='indicates if the secure MAC address is a configured (static) or learned (dynamic) or learned and retained across reboots (sticky).',
+                 enum=['Dynamic', 'Static', 'Sticky'])
+    remaining_age_time = Field(int,
                                'Remaining Age Time (Minutes)',
                                description='Indicates the remaining age of the secure MAC address if aging is enabled on that port. A value of 0 indicates that aging is disabled for this MAC address entry')
+
+    vlan_id = Field(str,
+                    'Vlan',
+                    description='indicates the vlan configured on an interface')
 
 
 class PortSecurityInterface(SmartJsonClass):

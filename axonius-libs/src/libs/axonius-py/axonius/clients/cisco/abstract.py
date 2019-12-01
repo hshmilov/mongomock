@@ -211,9 +211,14 @@ class AbstractCiscoData:
                 port_security = iface[port_security_field]
                 entries = []
                 for mac, attributes in iface[port_security_field].get('entries', {}).items():
+
                     entry = SecureMacAddressEntry(
-                        mac_address=mac, type=attributes.get('type'), remaining_age_time=attributes.get('remaining_age')
+                        mac_address=mac,
+                        type=attributes.get('type'),
+                        remaining_age_time=attributes.get('remaining_age'),
+                        vlan_id=attributes.get('vlan_id') if 'vlan_id' in attributes else None
                     )
+
                     entries.append(entry)
 
                 port_security_class = PortSecurityInterface(

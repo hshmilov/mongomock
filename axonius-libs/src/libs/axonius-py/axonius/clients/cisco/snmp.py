@@ -200,6 +200,7 @@ class AbstractSnmpClient(AbstractCiscoClient):
             self._async_next_cmd(OIDS.ip),
             self._async_next_cmd(OIDS.port_security),
             self._async_next_cmd(OIDS.port_security_entries),
+            self._async_next_cmd(OIDS.port_security_vlan_entries),
             self._async_next_cmd(OIDS.port_access),
             self._async_get_cmd(OIDS.device_model),
             self._async_get_cmd(OIDS.device_model2),
@@ -325,6 +326,36 @@ class SnmpBasicInfoCiscoData(BasicInfoData):
                 self.result[interface_field][index] = {}
             self.result[interface_field][index][port_security_field] = port_security
 
+    def _parse_port_security_vlan_entries(self, entries):
+        interface = get_oid_name(OIDS.interface)
+        port_security = get_oid_name(OIDS.port_security)
+        port_security_entries = {}
+        for entry in entries:
+            try:
+                oid, value = entry[0][0], entry[0][1]
+                print(oid, value)
+                index = str(oid[-8])
+                mac = snmp_parser.unpack_mac(tuple(oid[-7:-1]))
+                vlan = snmp_parser.parse_vlan_secure_mac_vlan_id(oid, value)
+                key, value = CpsIfVlanSecureMacAddrTable.parse_value(oid, value)
+                if value is not None:
+                    if index not in port_security_entries:
+                        port_security_entries[index] = {}
+                    if mac not in port_security_entries[index]:
+                        port_security_entries[index][mac] = {}
+                    port_security_entries[index][mac][key] = value
+                if vlan:
+                    port_security_entries[index][mac]['vlan_id'] = str(vlan)
+
+            except Exception:
+                logger.exception('Exception while parsing basic info port security')
+                continue
+        for index, entry in port_security_entries.items():
+            if index in self.result[interface].keys():
+                if port_security not in self.result[interface][index]:
+                    self.result[interface][index][port_security] = {}
+                self.result[interface][index][port_security]['entries'] = entry
+
     def _parse_port_security_entries(self, entries):
         interface = get_oid_name(OIDS.interface)
         port_security = get_oid_name(OIDS.port_security)
@@ -407,6 +438,7 @@ class SnmpBasicInfoCiscoData(BasicInfoData):
             ip=self._parse_ip,
             port_security=self._parse_port_security,
             port_security_entries=self._parse_port_security_entries,
+            port_security_vlan_entries=self._parse_port_security_vlan_entries,
             port_access=self._parse_port_access,
             device_model=self._parse_device_model,
             device_model2=self._parse_device_model,
@@ -515,7 +547,19 @@ class CpsIfConfigTable(snmp_parser.SnmpTable):
 
 
 class CpsSecureMacAddressTable(snmp_parser.SnmpTable):
-    table = {2: (snmp_parser.parse_secure_mac_type, 'type'), 3: (snmp_parser.parse_int, 'remaining_age')}
+    table = {
+        2: (snmp_parser.parse_secure_mac_type, 'type'),
+        3: (snmp_parser.parse_int, 'remaining_age')
+    }
+    index = 13
+
+
+class CpsIfVlanSecureMacAddrTable(snmp_parser.SnmpTable):
+    table = {
+        2: (snmp_parser.parse_vlan_secure_mac_vlan_id, 'vlan'),
+        3: (snmp_parser.parse_secure_mac_type, 'type'),
+        4: (snmp_parser.parse_gauge32, 'remaining_age')
+    }
     index = 13
 
 
