@@ -83,11 +83,20 @@ class TestHyperlinks(TestBase):
                 self.adapters_page.click_save()
                 self.adapters_page.wait_for_spinner_to_end()
                 time.sleep(3)
-                assert clients_db.count_documents({
-                    'client_config.default': 5,
-                    'client_config.device_count': 1,
-                    'client_config.name': 'testing default value'
-                }, limit=1) == 1
+                clients = clients_db.find({}, limit=3)
+                found = False
+                for client in clients:
+                    client_config = client['client_config']
+                    # decrypt client config and check it.
+                    service.decrypt_dict(client_config)
+                    if client_config['name'] == 'testing default value':
+                        assert {
+                            'default': 5,
+                            'device_count': 1,
+                            'name': 'testing default value'
+                        }.items() == client_config.items()
+                        found = True
+                assert found
 
                 self.adapters_page.switch_to_page()
                 self.adapters_page.wait_for_adapter(STRESSTEST_ADAPTER_NAME)
@@ -104,12 +113,20 @@ class TestHyperlinks(TestBase):
                 self.adapters_page.click_save()
                 self.adapters_page.wait_for_spinner_to_end()
                 time.sleep(3)
-
-                assert clients_db.count_documents({
-                    'client_config.default': 10,
-                    'client_config.device_count': 2,
-                    'client_config.name': 'lol lol lol'
-                }, limit=1) == 1
+                clients = clients_db.find({}, limit=3)
+                found = False
+                for client in clients:
+                    # decrypt client config and check it.
+                    client_config = client['client_config']
+                    service.decrypt_dict(client_config)
+                    if client_config['name'] == 'lol lol lol':
+                        assert {
+                            'device_count': 2,
+                            'name': 'lol lol lol',
+                            'default': 10
+                        }.items() == client_config.items()
+                        found = True
+                assert found
         finally:
             if clients_db:
                 clients_db.delete_many({})

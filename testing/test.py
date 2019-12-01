@@ -33,7 +33,7 @@ ARTIFACTS_DIR_RELATIVE = 'artifacts'
 ARTIFACTS_DIR_ABSOLUTE = os.path.join(ROOT_DIR, ARTIFACTS_DIR_RELATIVE)
 ARTIFACTS_DIRS_INSIDE_CONTAINER = {
     'logs': '/home/ubuntu/cortex/logs',
-    'screenshots': '/home/ubuntu/cortex/screenshots'
+    'screenshots': '/home/ubuntu/cortex/screenshots',
 }
 DIR_MAP = {
     'integ': os.path.join('testing', 'tests'),

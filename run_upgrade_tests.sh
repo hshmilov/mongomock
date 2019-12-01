@@ -31,6 +31,7 @@ source testing/test_credentials/docker_login.sh
 echo "#### Creating venv done"
 
 echo "#### Creating installer"
+pip -V
 ./pyrun.sh ./deployment/make.py --version ${version} --rebuild --pull &> logs/create_installer.log
 mv ${installer_name} ${install_dir}/
 echo "#### Installer created"
@@ -72,6 +73,7 @@ sudo python3 testing/ui_tests/tests/hosts_file_modifier.py 1.2.3.4 pypi.python.o
 sudo python3 testing/ui_tests/tests/hosts_file_modifier.py 1.2.3.4 files.pythonhosted.org &> logs/upgrade_to_${version}.log
 
 echo "#### Upgrading to ${version}"
+pip -V
 cd ${install_dir}
 chmod +x ${installer_name}
 sudo ./${installer_name} &> ../logs/upgrade_to_${version}.log

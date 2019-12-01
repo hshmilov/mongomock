@@ -1,14 +1,17 @@
+import base64
 import importlib
 import json
 import os
 import shlex
 import subprocess
 import sys
+import threading
 import time
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Dict, Type
+from typing import Dict, Type, Any
 
+import cachetools
 import gridfs
 import requests
 from axonius.adapter_base import AdapterBase
@@ -20,12 +23,14 @@ from retrying import retry
 from axonius.config_reader import (AdapterConfig, PluginConfig,
                                    PluginVolatileConfig)
 from axonius.consts.plugin_consts import CONFIGURABLE_CONFIGS_COLLECTION, PLUGIN_UNIQUE_NAME, CORE_UNIQUE_NAME, \
-    PLUGIN_NAME, NODE_ID, LIBS_PATH
-from axonius.consts.system_consts import AXONIUS_DNS_SUFFIX, WEAVE_NETWORK, WEAVE_PATH
+    PLUGIN_NAME, NODE_ID, LIBS_PATH, KEYS_COLLECTION
+from axonius.consts.system_consts import AXONIUS_DNS_SUFFIX, WEAVE_NETWORK, WEAVE_PATH, DB_KEY_PATH
 from axonius.entities import EntityType
 from axonius.plugin_base import VOLATILE_CONFIG_PATH
+from axonius.utils.encryption import mongo_encrypt
 from axonius.utils.files import CONFIG_FILE_NAME
 from axonius.utils.json import from_json
+from axonius.utils.threading import singlethreaded
 from services.debug_template import (py_charm_debug_port_template,
                                      py_charm_debug_template)
 from services.plugins.mongo_service import MongoService
@@ -370,6 +375,50 @@ class PluginService(WeaveService):
     @property
     def self_database(self):
         return self.db.client[self.unique_name]
+
+    @singlethreaded()
+    @cachetools.cached(cachetools.LRUCache(maxsize=1), lock=threading.Lock())
+    def get_db_encryption_key(self) -> bytes:
+        """
+        Get db encryption key from DB_KEY_PATH file
+        :return: encryption key data
+        """
+        if DB_KEY_PATH.is_file():
+            b64_key = DB_KEY_PATH.read_text().strip()
+            return base64.b64decode(b64_key)
+
+    def db_encrypt(self, plugin_unique_name: str, data_to_encrypt: Any) -> Any:
+        """
+        Encrypt data using mongoclient encryption
+        :param plugin_unique_name: plugin unique name for encrypting its data
+        :param data_to_encrypt: data to encrypt
+        :return: encrypted data
+        """
+        enc = mongo_encrypt.get_db_encryption(
+            self.db.client, KEYS_COLLECTION, self.get_db_encryption_key())
+        encrypted = mongo_encrypt.db_encrypt(enc, plugin_unique_name, data_to_encrypt)
+        return encrypted
+
+    def db_decrypt(self, data_to_decrypt: Any) -> Any:
+        """
+        Decrypt data using mongo client encryption
+        :param data_to_decrypt: data to decrypt
+        :return: Decrypted data
+        """
+        enc_key = self.get_db_encryption_key()
+        enc = mongo_encrypt.get_db_encryption(self.db.client, KEYS_COLLECTION, enc_key)
+        decrypted = mongo_encrypt.db_decrypt(enc, data_to_decrypt)
+        return decrypted
+
+    def decrypt_dict(self, data: dict):
+        """
+        Decrypt dict values
+        :param data: data to decrypt
+        :return: None
+        """
+        for key, val in data.items():
+            if val:
+                data[key] = self.db_decrypt(val)
 
     def get_file_content_from_db(self, uuid):
         oid = ObjectId(uuid)

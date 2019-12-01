@@ -1,3 +1,4 @@
+import base64
 import configparser
 import json
 import logging
@@ -278,6 +279,19 @@ class CoreService(Triggerable, PluginBase, Configurable):
                 password = node_metadata.get(NODE_USER_PASSWORD)
 
             return password
+
+    @add_rule('dbpass', methods=['GET'], should_authenticate=False)
+    def db_pass(self):
+        """
+        Get db encryption key
+        :return: encryption key base64 encoded.
+        """
+        password = self.get_db_encryption_key()
+        try:
+            b64_pass = base64.b64encode(password)
+            return b64_pass
+        except Exception:
+            logger.exception('Error getting db encryption key')
 
     def _set_node_metadata(self, node_id, key, value):
         self._get_collection('nodes_metadata').update_one({NODE_ID: node_id}, {

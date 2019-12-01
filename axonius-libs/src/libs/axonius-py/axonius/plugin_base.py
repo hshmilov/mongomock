@@ -1,5 +1,5 @@
 """PluginBase.py: Implementation of the base class to be inherited by other plugins."""
-
+import base64
 import concurrent
 import concurrent.futures
 import configparser
@@ -17,7 +17,7 @@ import time
 import sys
 import threading
 import traceback
-from typing import List, Set, Dict, Tuple, Iterable, Optional, Callable
+from typing import List, Set, Dict, Tuple, Iterable, Optional, Callable, Any
 from abc import ABC
 from collections import defaultdict
 from datetime import datetime, timedelta
@@ -83,7 +83,8 @@ from axonius.consts.plugin_consts import (ADAPTERS_LIST_LENGTH,
                                           HEAVY_LIFTING_PLUGIN_NAME, SOCKET_READ_TIMEOUT,
                                           DEFAULT_SOCKET_READ_TIMEOUT, DEFAULT_SOCKET_RECV_TIMEOUT,
                                           STATIC_ANALYSIS_SETTINGS, FETCH_EMPTY_VENDOR_SOFTWARE_VULNERABILITES,
-                                          FIRST_FETCH_TIME, FETCH_TIME)
+                                          FIRST_FETCH_TIME, FETCH_TIME,
+                                          KEYS_COLLECTION, DB_KEY_ENV_VAR_NAME)
 from axonius.consts.plugin_subtype import PluginSubtype
 from axonius.devices import deep_merge_only_dict
 from axonius.devices.device_adapter import LAST_SEEN_FIELD, DeviceAdapter
@@ -101,6 +102,7 @@ from axonius.types.ssl_state import (COMMON_SSL_CONFIG_SCHEMA,
 from axonius.users.user_adapter import UserAdapter
 from axonius.utils.datetime import parse_date
 from axonius.utils.debug import is_debug_attached
+from axonius.utils.encryption import mongo_encrypt
 from axonius.utils.hash import get_preferred_internal_axon_id_from_dict, get_preferred_quick_adapter_id
 from axonius.utils.json_encoders import IteratorJSONEncoder
 from axonius.utils.mongo_retries import CustomRetryOperation, mongo_retry
@@ -311,7 +313,6 @@ class PluginBase(Configurable, Feature, ABC):
 
         PluginBase.Instance = self
         super().__init__(*args, **kwargs)
-
         # Basic configurations concerning axonius-libs. This will be changed by the CI.
         # No need to put such a small thing in a version.ini file, the CI changes this string everywhere.
 
@@ -3363,3 +3364,63 @@ class PluginBase(Configurable, Feature, ABC):
                 'enabled': False,
             }
         }
+
+    @staticmethod
+    @singlethreaded()
+    @cachetools.cached(cachetools.LRUCache(maxsize=1), lock=threading.Lock())
+    def get_db_encryption_key() -> bytes:
+        """
+        Get DB encryption key from env var
+        :return: encryption key data
+        """
+        logger.debug('Getting DB encryption key')
+        b64_key = os.environ.get(DB_KEY_ENV_VAR_NAME)
+        if not b64_key:
+            logger.critical(f'Error: DB encryption key was not found')
+        return base64.b64decode(b64_key)
+
+    def db_encrypt(self, data_to_encrypt):
+        """
+       Encrypt data using mongoclient encryption
+       :param data_to_encrypt: data to encrypt
+       :return: encrypted data
+       """
+        enc = mongo_encrypt.get_db_encryption(self._get_db_connection(), KEYS_COLLECTION, self.get_db_encryption_key())
+        # encrypt data by creating a unique key for the plugin_unique_name (if not exists)
+        encrypted = mongo_encrypt.db_encrypt(enc, self.plugin_unique_name, data_to_encrypt)
+        return encrypted
+
+    def db_decrypt(self, data_to_decrypt: Any) -> Any:
+        """
+        Decrypt data using mongo client encryption
+        :param data_to_decrypt: data to decrypt
+        :return: Decrypted data
+        """
+        enc_key = self.get_db_encryption_key()
+        enc = mongo_encrypt.get_db_encryption(self._get_db_connection(), KEYS_COLLECTION, enc_key)
+        decrypted = mongo_encrypt.db_decrypt(enc, data_to_decrypt)
+        return decrypted
+
+    def _encrypt_client_config(self, client_config: dict):
+        """
+        Encrypt plugins client_config dict values
+        :param client_config: client_config to encrypt
+        :return: None
+        """
+        if not client_config:
+            return
+        for key, val in client_config.items():
+            if val:
+                client_config[key] = self.db_encrypt(val)
+
+    def _decrypt_client_config(self, client_config: dict):
+        """
+        Decrypt plugins client_config dict values
+        :param client_config: client_config to decrypt
+        :return: None
+        """
+        if not client_config:
+            return
+        for key, val in client_config.items():
+            if val:
+                client_config[key] = self.db_decrypt(val)

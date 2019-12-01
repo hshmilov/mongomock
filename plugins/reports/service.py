@@ -25,7 +25,7 @@ from axonius.utils.mongo_escaping import unescape_dict
 from axonius.consts.report_consts import (ACTIONS_FIELD, ACTIONS_MAIN_FIELD, ACTIONS_SUCCESS_FIELD,
                                           ACTIONS_FAILURE_FIELD, ACTIONS_POST_FIELD, LAST_UPDATE_FIELD, TRIGGERS_FIELD,
                                           LAST_TRIGGERED_FIELD, TIMES_TRIGGERED_FIELD, NOT_RAN_STATE,
-                                          CUSTOM_SELECTION_TRIGGER)
+                                          CUSTOM_SELECTION_TRIGGER, ACTION_CONFIG_FIELD, ACTION_FIELD)
 from axonius.types.enforcement_classes import (ActionInRecipe, Recipe, TriggerPeriod, Trigger, TriggerView,
                                                TriggerConditions, RunOnEntities, TriggeredReason, RecipeRunMetadata,
                                                ActionRunResults, DBActionRunResults, EntityResult, SavedActionType)
@@ -133,11 +133,13 @@ class ReportsService(Triggerable, PluginBase):
         def get_action(name) -> ActionInRecipe:
             if not name:
                 return name
-            return ActionInRecipe.schema().make_actioninrecipe(self.__saved_actions_collection.find_one({
+            action = self.__saved_actions_collection.find_one({
                 'name': name
             }, projection={
                 '_id': 0
-            }))
+            })
+            self._decrypt_client_config(action.get(ACTION_FIELD, {}).get(ACTION_CONFIG_FIELD, {}))
+            return ActionInRecipe.schema().make_actioninrecipe(action)
 
         return Recipe(main=get_action(db_data[ACTIONS_MAIN_FIELD]),
                       success=[get_action(action) for action in db_data.get(ACTIONS_SUCCESS_FIELD) or []],

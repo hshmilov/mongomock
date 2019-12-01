@@ -11,9 +11,10 @@ from retrying import retry
 
 from axonius.consts.plugin_consts import (AXONIUS_SETTINGS_DIR_NAME,
                                           NODE_ID_ENV_VAR_NAME,
-                                          NODE_ID_FILENAME)
+                                          NODE_ID_FILENAME,
+                                          DB_KEY_ENV_VAR_NAME)
 from axonius.consts.system_consts import (AXONIUS_DNS_SUFFIX, AXONIUS_NETWORK,
-                                          WEAVE_NETWORK, LOGS_PATH_HOST)
+                                          WEAVE_NETWORK, LOGS_PATH_HOST, DB_KEY_PATH)
 from axonius.utils.debug import COLOR
 from services.axon_service import AxonService, TimeoutException
 from services.ports import DOCKER_PORTS
@@ -281,7 +282,8 @@ else:
         node_id = self.node_id
         if node_id:
             env_variables.extend(['--env', f'{NODE_ID_ENV_VAR_NAME}={node_id}'])
-
+        if DB_KEY_PATH.is_file():
+            env_variables.extend(['--env', f'{DB_KEY_ENV_VAR_NAME}={DB_KEY_PATH.read_text().strip()}'])
         return env_variables
 
     @property

@@ -523,6 +523,7 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
                         # No credentials to attempt reconnection
                         raise adapter_exceptions.CredentialErrorException(
                             'No credentials found for client {0}. Reason: {1}'.format(client_name, str(e)))
+                    self._decrypt_client_config(current_client.get('client_config'))
                     if current_client.get('status') != 'success':
                         raise
                 try:
@@ -653,7 +654,6 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
                                metric_value=f'{err_msg} - {e}')
                     logger.warning(f'{err_msg}', exc_info=True)
                     return return_error(err_msg)
-
                 add_client_result = self._add_client(client_config)
                 if not add_client_result:
                     log_metric(logger, metric_name=Adapters.CREDENTIALS_CHANGE_ERROR,
@@ -685,6 +685,7 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
         with self._clients_lock:
             logger.info(f'Deleting client {client_unique_id}')
             client = self._clients_collection.find_one_and_delete({'_id': ObjectId(client_unique_id)})
+            self._decrypt_client_config(client['client_config'])
             if client is None:
                 return '', 204
             client_id = ''
@@ -724,11 +725,12 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
         client_id = None
         status = 'warning'
         error_msg = None
-
+        encrypted_client_config = copy.deepcopy(client_config)
+        self._encrypt_client_config(encrypted_client_config)
         try:
             client_id = self._get_client_id(client_config)
             # Writing initial client to db
-            res = self._write_client_to_db(client_id, client_config, status, error_msg, upsert=new_client)
+            res = self._write_client_to_db(client_id, encrypted_client_config, status, error_msg, upsert=new_client)
             if res.matched_count == 0 and not new_client:
                 logger.warning(f'Client {client_id} : {client_config} was deleted under our feet!')
                 return None
@@ -744,7 +746,7 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
             if client_id in self._clients:
                 del self._clients[client_id]
 
-        result = self._write_client_to_db(client_id, client_config, status, error_msg, upsert=False)
+        result = self._write_client_to_db(client_id, encrypted_client_config, status, error_msg, upsert=False)
         if result is None and object_id is not None:
             # Client id was not found due to some problem in given config data
             # If id of an existing document is given, update its status accordingly
@@ -1259,7 +1261,12 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
     def _get_clients_config(self):
         """Returning the data inside 'clients' Collection on <plugin_unique_name> db.
         """
-        return self._clients_collection.find()
+        clients = self._clients_collection.find()
+        for client in clients:
+            client_config = client.get('client_config')
+            if client_config:
+                self._decrypt_client_config(client_config)
+            yield client
 
     def _get_client_config_by_client_id(self, client_id: str):
         """Returning the data inside 'clients' Collection on <plugin_unique_name> db.
@@ -1268,7 +1275,9 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
         if not current_client or not current_client.get('client_config'):
             # No credentials to attempt reconnection
             raise adapter_exceptions.CredentialErrorException(f'No credentials found for client {client_id} in the db.')
-        return self._normalize_password_fields(current_client['client_config'])
+        client_config = current_client['client_config']
+        self._decrypt_client_config(client_config)
+        return self._normalize_password_fields(client_config)
 
     def _update_clients_schema_in_db(self, schema):
         """

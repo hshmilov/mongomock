@@ -11,6 +11,8 @@ NODE_ID_FILENAME = '.node_id'
 NODE_ID_PATH = AXONIUS_SETTINGS_PATH / NODE_ID_FILENAME
 METADATA_PATH = SHARED_READONLY_FULL_PATH / '__build_metadata'
 LIBS_PATH = Path('/home/axonius/libs')
+DB_KEY_FILENAME = '.db_key'
+DB_KEY_PATH = AXONIUS_SETTINGS_PATH / DB_KEY_FILENAME
 
 # SERVICES #
 CORE_UNIQUE_NAME = 'core'
@@ -49,6 +51,7 @@ NODE_INIT_NAME = 'node_init_name'
 NODE_NAME = 'node_name'
 NOTES_DATA_TAG = 'Notes'
 NODE_ID_ENV_VAR_NAME = 'NODE_ID'
+DB_KEY_ENV_VAR_NAME = 'DB_KEY'
 
 # SETTINGS #
 SYSTEM_SETTINGS = 'system_settings'
@@ -79,6 +82,7 @@ VERSION_COLLECTION = 'version'
 GUI_SYSTEM_CONFIG_COLLECTION = 'system_config'
 MAINTENANCE_TYPE = 'maintenance'
 GLOBAL_KEYVAL_COLLECTION = 'global_keyval'
+KEYS_COLLECTION = 'keys.client_config'
 DEVICE_VIEWS = 'device_views'
 USER_VIEWS = 'user_views'
 

@@ -57,7 +57,9 @@ LOGOS_PATH = '/home/axonius/libs/axonius-py/axonius/assets'
 # FIELDS #
 ##########
 
+ACTION_FIELD = 'action'
 ACTIONS_FIELD = 'actions'
+ACTION_CONFIG_FIELD = 'config'
 ACTIONS_MAIN_FIELD = 'main'
 ACTIONS_SUCCESS_FIELD = 'success'
 ACTIONS_FAILURE_FIELD = 'failure'

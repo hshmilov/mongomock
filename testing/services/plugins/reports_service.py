@@ -3,13 +3,14 @@ from datetime import datetime
 import dateutil
 from bson import ObjectId
 from pymongo.database import Database
-
+from axonius.consts import plugin_consts
+from axonius.consts.plugin_consts import GUI_PLUGIN_NAME
+from axonius.consts.report_consts import (
+    ACTIONS_FAILURE_FIELD, ACTIONS_FIELD, ACTIONS_MAIN_FIELD,
+    ACTIONS_POST_FIELD, ACTIONS_SUCCESS_FIELD, LAST_TRIGGERED_FIELD,
+    LAST_UPDATE_FIELD, TIMES_TRIGGERED_FIELD, TRIGGERS_FIELD)
 from services.plugin_service import PluginService
 from services.updatable_service import UpdatablePluginMixin
-from axonius.consts import plugin_consts
-from axonius.consts.report_consts import ACTIONS_FIELD, ACTIONS_MAIN_FIELD, ACTIONS_SUCCESS_FIELD, \
-    ACTIONS_FAILURE_FIELD, ACTIONS_POST_FIELD, LAST_UPDATE_FIELD, \
-    LAST_TRIGGERED_FIELD, TIMES_TRIGGERED_FIELD, TRIGGERS_FIELD
 
 
 class ReportsService(PluginService, UpdatablePluginMixin):
@@ -33,7 +34,10 @@ class ReportsService(PluginService, UpdatablePluginMixin):
         if self.db_schema_version < 5:
             self._update_nonsingleton_to_schema(5, self.__update_schema_version_5)
 
-        if self.db_schema_version != 5:
+        if self.db_schema_version < 6:
+            self.__update_schema_version_6()
+
+        if self.db_schema_version != 6:
             print(f'Upgrade failed, db_schema_version is {self.db_schema_version}')
 
     @staticmethod
@@ -233,6 +237,35 @@ class ReportsService(PluginService, UpdatablePluginMixin):
                 'renameCollection': f'{specific_reports_db.name}.{collection_name}',
                 'to': f'{plugin_consts.REPORTS_PLUGIN_NAME}.{collection_name}'
             })
+
+    def __update_schema_version_6(self):
+        # Encrypt client details
+        try:
+            client = self.db.client['reports']
+            saved_actions = client['saved_actions'].find({})
+            for saved_action in saved_actions:
+                config = saved_action.get('action', {}).get('config')
+                if not config:
+                    continue
+                for key, val in config.items():
+                    if val:
+                        # GUI_PLUGIN_NAME is encrypting the reports data
+                        config[key] = self.db_encrypt(GUI_PLUGIN_NAME, val)
+                client['saved_actions'].update(
+                    {
+                        '_id': saved_action['_id']
+                    },
+                    {
+                        '$set':
+                            {
+                                'action.config': config
+                            }
+                    })
+            self.db_schema_version = 6
+        except OSError:
+            print('Cannot upgrade db to version 6, libmongocrypt error')
+        except Exception as e:
+            print(e)
 
     def _request_watches(self, method, *vargs, **kwargs):
         return getattr(self, method)('reports', api_key=self.api_key, *vargs, **kwargs)

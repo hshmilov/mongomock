@@ -118,6 +118,7 @@ class TestInstancesAfterNodeJoin(TestInstancesBase):
         def _test_dropdown_change():
             self.adapters_page.switch_to_page()
             self.adapters_page.refresh()
+            self.adapters_page.wait_for_adapter(NEXPOSE_ADAPTER_NAME)
             self.adapters_page.click_adapter(NEXPOSE_ADAPTER_NAME)
             self.adapters_page.wait_for_table_to_load()
             self.adapters_page.wait_for_spinner_to_end()

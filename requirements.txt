@@ -108,3 +108,5 @@ frozendict==1.2
 python-redis-lock==3.3.1
 redis==3.3.8
 distro==1.4.0
+pip==19.3.1
+pymongocrypt==0.1b1

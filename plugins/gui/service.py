@@ -86,7 +86,7 @@ from axonius.consts.report_consts import (ACTIONS_FAILURE_FIELD, ACTIONS_FIELD,
                                           LAST_TRIGGERED_FIELD,
                                           LAST_UPDATE_FIELD, NOT_RAN_STATE,
                                           TIMES_TRIGGERED_FIELD,
-                                          TRIGGERS_FIELD)
+                                          TRIGGERS_FIELD, ACTION_CONFIG_FIELD, ACTION_FIELD)
 from axonius.consts.scheduler_consts import (Phases, ResearchPhases,
                                              SchedulerState)
 from axonius.devices.device_adapter import DeviceAdapter
@@ -1685,6 +1685,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
                        in db_connection[adapter_name]['clients'].find()
                        .sort([('_id', pymongo.DESCENDING)])]
             for client in clients:
+                self._decrypt_client_config(client['client_config'])
                 client['client_config'] = clear_passwords_fields(client['client_config'], schema)
                 client[NODE_ID] = adapter[NODE_ID]
             status = ''
@@ -1880,13 +1881,13 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
         if not client_from_db:
             return return_error('Server is already gone, please try again after refreshing the page')
         self.request_remote_plugin('clients/' + client_id, adapter_unique_name, method='delete')
-
         if request.method == 'PUT':
             if old_node_id != node_id:
                 url = f'find_plugin_unique_name/nodes/{node_id}/plugins/{adapter_name}'
                 adapter_unique_name = self.request_remote_plugin(url).json().get('plugin_unique_name')
 
             self._adapters.clean_cache()
+            self._decrypt_client_config(client_from_db['client_config'])
             return self._query_client_for_devices(adapter_unique_name, data,
                                                   data_from_db_for_unchanged=client_from_db)
 
@@ -2157,6 +2158,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
             """
             if not action or not action.get('name'):
                 return ''
+            self._encrypt_client_config(action.get(ACTION_FIELD, {}).get(ACTION_CONFIG_FIELD, {}))
             with self.enforcements_saved_actions_collection.start_session() as transaction:
                 if 'uuid' in action:
                     del action['uuid']
@@ -2250,7 +2252,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
                 })
                 if not saved_action:
                     return {}
-
+                self._decrypt_client_config(saved_action.get(ACTION_FIELD, {}).get(ACTION_CONFIG_FIELD, {}))
                 # fixing password to be 'unchanged'
                 action_type = saved_action['action']['action_name']
                 schema = self._get_actions_from_reports_plugin()[action_type]['schema']
@@ -2303,6 +2305,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
                                                                                   '_id': 0
                                                                               }):
             corresponding_user_action = enforcement_actions_from_user.get(action_from_db['name'])
+            self._decrypt_client_config(action_from_db.get(ACTION_FIELD, {}).get(ACTION_CONFIG_FIELD, {}))
             logger.debug(action_from_db)
             logger.debug(corresponding_user_action)
             if not corresponding_user_action:

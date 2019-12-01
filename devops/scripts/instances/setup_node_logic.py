@@ -4,9 +4,10 @@ import sys
 
 import docker
 
-from scripts.instances.network_utils import connect_to_master, update_weave_connection_params
+from scripts.instances.network_utils import connect_to_master, update_weave_connection_params, update_db_enc_key
 from scripts.instances.instances_consts import (ADAPTER_RESTART_COMMAND,
                                                 PASSWORD_GET_URL,
+                                                DB_PASSWORD_GET_URL,
                                                 BOOTED_FOR_PRODUCTION_MARKER_PATH,
                                                 CORTEX_PATH)
 from services.axonius_service import get_service
@@ -50,6 +51,18 @@ def change_instance_setup_user_pass():
     print('done!')
 
 
+def get_db_pass_from_core():
+    try:
+        client = docker.from_env(environment={'DOCKER_HOST': 'unix:///var/run/weave/weave.sock'})
+        password = client.containers.run('appropriate/curl', auto_remove=True,
+                                         command=f'-kfsSL {DB_PASSWORD_GET_URL}').decode('ascii')
+        if not password:
+            print("Error getting db pass")
+        return password
+    except Exception as e:
+        print(e)
+
+
 def setup_node(connection_string):
     master_ip, weave_pass, init_name = connection_string
     master_ip = master_ip.strip()
@@ -59,6 +72,8 @@ def setup_node(connection_string):
     update_weave_connection_params(weave_pass, master_ip)
     connect_to_master(master_ip, weave_pass)
     NODE_MARKER_PATH.touch()
+    db_pass = get_db_pass_from_core()
+    update_db_enc_key(db_pass)
     restart_all_adapters(init_name)
     change_instance_setup_user_pass()
 

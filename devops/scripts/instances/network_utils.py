@@ -4,7 +4,7 @@ import string
 import subprocess
 import shlex
 
-from axonius.consts.system_consts import NODE_MARKER_PATH
+from axonius.consts.system_consts import NODE_MARKER_PATH, DB_KEY_PATH
 from conf_tools import get_customer_conf_json
 from scripts.instances.instances_consts import (MASTER_ADDR_HOST_PATH,
                                                 ENCRYPTION_KEY_HOST_PATH,
@@ -31,6 +31,11 @@ def update_weave_connection_params(weave_encryption_key, master_ip):
     ENCRYPTION_KEY_HOST_PATH.write_text(weave_encryption_key)
     MASTER_ADDR_HOST_PATH.write_text(master_ip)
     print('Done update weave connection params')
+
+
+def update_db_enc_key(db_encryption_key):
+    DB_KEY_PATH.write_text(db_encryption_key)
+    print('Done update DB encryption key')
 
 
 def run_tunnler():

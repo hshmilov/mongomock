@@ -112,6 +112,12 @@ def install_requirements():
             pip3_path = pip3_win_path
     requirements = os.path.join(AXONIUS_DEPLOYMENT_PATH, 'requirements.txt')
     packages = os.path.join(AXONIUS_DEPLOYMENT_PATH, 'deployment', 'packages')
+    subprocess.check_call([pip3_path, '-V'])
+    args = [pip3_path, 'install', '--upgrade', 'pip', '--find-links', packages,
+            '--no-index',  # Don't use internet access
+            '--no-cache']  # Don't use local cache
+    subprocess.check_call(args)
+    subprocess.check_call([pip3_path, '-V'])
     args = [pip3_path, 'install', '-r', requirements, '--find-links', packages,
             '--no-index',  # Don't use internet access
             '--no-cache']  # Don't use local cache

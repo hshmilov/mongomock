@@ -1,3 +1,4 @@
+import base64
 import os
 import datetime
 from collections import defaultdict
@@ -8,7 +9,7 @@ from threading import Lock
 import requests
 from pymongo.collection import Collection
 
-from axonius.consts.system_consts import WEAVE_NETWORK
+from axonius.consts.system_consts import WEAVE_NETWORK, DB_KEY_PATH
 from axonius.consts.plugin_consts import CONFIGURABLE_CONFIGS_COLLECTION, GUI_PLUGIN_NAME, \
     AXONIUS_SETTINGS_DIR_NAME, GUI_SYSTEM_CONFIG_COLLECTION, NODE_ID, PLUGIN_NAME,\
     PLUGIN_UNIQUE_NAME, CORE_UNIQUE_NAME
@@ -16,6 +17,8 @@ from axonius.consts.adapter_consts import ADAPTER_PLUGIN_TYPE
 from axonius.consts.core_consts import CORE_CONFIG_NAME
 from axonius.entities import EntityType
 from axonius.utils.hash import get_preferred_quick_adapter_id
+from axonius.utils import datetime
+from axonius.utils.encryption.mongo_encrypt import MONGO_MASTER_KEY_SIZE
 from services.plugin_service import PluginService, API_KEY_HEADER, UNIQUE_KEY_PARAM
 from services.updatable_service import UpdatablePluginMixin
 
@@ -47,7 +50,10 @@ class CoreService(PluginService, UpdatablePluginMixin):
         if self.db_schema_version < 7:
             self._update_schema_version_7()
 
-        if self.db_schema_version != 7:
+        if self.db_schema_version < 8:
+            self._update_schema_version_8()
+
+        if self.db_schema_version != 8:
             print(f'Upgrade failed, db_schema_version is {self.db_schema_version}')
 
     def _update_schema_version_1(self):
@@ -326,6 +332,43 @@ class CoreService(PluginService, UpdatablePluginMixin):
             traceback.print_exc()
             raise
 
+    def _update_schema_version_8(self):
+        # https://axonius.atlassian.net/browse/AX-5109
+        print('Upgrade to schema 8')
+        try:
+            print('Creating DB encryption key')
+            self.create_db_encryption_key()
+            # Encrypt plugins creds
+            plugins = self.db.client['core']['configs'].find(
+                {
+                    'plugin_type': 'Adapter'
+                })
+            for plugin in plugins:
+                plugin_unique_name = plugin.get('plugin_unique_name')
+                clients = self.db.client[plugin_unique_name]['clients'].find({})
+                for client in clients:
+                    client_config = client['client_config']
+                    for key, val in client_config.items():
+                        if client_config[key]:
+                            client_config[key] = self.db_encrypt(plugin_unique_name, client_config[key])
+                    self.db.client[plugin_unique_name]['clients'].update(
+                        {
+                            '_id': client['_id']
+                        },
+                        {
+                            '$set':
+                                {
+                                    'client_config': client_config
+                                }
+                        })
+            self.db_schema_version = 8
+        except OSError as e:
+            print('Cannot upgrade db to version 8, libmongocrypt error')
+        except Exception as e:
+            print(f'Exception while upgrading core db to version 8. Details: {e}')
+            traceback.print_exc()
+            raise
+
     def register(self, api_key=None, plugin_name=''):
         headers = {}
         params = {}
@@ -373,3 +416,20 @@ class CoreService(PluginService, UpdatablePluginMixin):
     @property
     def get_max_uwsgi_threads(self) -> int:
         return 500
+
+    @staticmethod
+    def create_db_encryption_key():
+        """
+        Create mongo encryption master key file if it not exists
+        :return: None
+        """
+        if not DB_KEY_PATH.is_file():
+            try:
+                with open(DB_KEY_PATH, 'wb') as f:
+                    key = os.urandom(MONGO_MASTER_KEY_SIZE)
+                    f.write(base64.b64encode(key))
+                DB_KEY_PATH.chmod(0o646)
+            except Exception as e:
+                print(f'Error writing db encryption key: {e}')
+                if DB_KEY_PATH.is_file():
+                    DB_KEY_PATH.unlink()
