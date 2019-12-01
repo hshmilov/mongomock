@@ -25,7 +25,7 @@ def test_parallel_get():
         {'method': 'get', 'url': f'{SERVER}/echo/something3?sleep=3', 'ssl': False}
     ])
     end = time.time()
-    assert (end - start) < 3.5
+    assert (end - start) < 4
 
     response = list(response)
     for i, r in enumerate(response):
