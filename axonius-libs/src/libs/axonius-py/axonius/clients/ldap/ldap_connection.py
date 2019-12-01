@@ -1044,7 +1044,7 @@ class LdapConnection(object):
 
         return self.set_ldap_attribute(distinguished_name, 'userAccountControl', new_user_account_control)
 
-    def get_user(self, username: str) -> Tuple[dict, List[str]]:
+    def get_user(self, username: str) -> Tuple[dict, List[str], List[str]]:
         """
         Get a user from AD and all nested groups it is part of
         Note! This has to be a fast function since it uses for gui logins
@@ -1063,10 +1063,10 @@ class LdapConnection(object):
         try:
             if result:
                 groups = list(self.get_nested_groups_for_object({'memberOf': result[0].get('memberOf') or []}))
-                return result[0], get_member_of_list_from_memberof(groups) or []
+                return result[0], get_member_of_list_from_memberof(groups) or [], groups
             if result_2:
                 groups = list(self.get_nested_groups_for_object({'memberOf': result_2[0].get('memberOf') or []}))
-                return result_2[0], get_member_of_list_from_memberof(groups) or []
+                return result_2[0], get_member_of_list_from_memberof(groups) or [], groups
             logger.error(f'Got no response for user {username}')
         except Exception:
             logger.exception(f"Can't fetch user of user {username}")

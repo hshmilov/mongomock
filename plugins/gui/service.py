@@ -3140,12 +3140,18 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
             result = conn.get_user(user_name)
             if not result:
                 return return_error('Failed login')
-            user, groups = result
+            user, groups, groups_dn = result
+
             needed_group = ldap_login['group_cn']
+            use_group_dn = ldap_login.get('use_group_dn') or False
             groups_prefix = [group.split('.')[0] for group in groups]
             if needed_group:
-                if needed_group.split('.')[0] not in groups_prefix:
-                    return return_error(f'The provided user is not in the group {needed_group}')
+                if not use_group_dn:
+                    if needed_group.split('.')[0] not in groups_prefix:
+                        return return_error(f'The provided user is not in the group {needed_group}')
+                else:
+                    if needed_group not in groups_dn:
+                        return return_error(f'The provided user is not in the group {needed_group}')
             image = None
             try:
                 thumbnail_photo = user.get('thumbnailPhoto') or \
@@ -5070,6 +5076,11 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
                             'type': 'string'
                         },
                         {
+                            'name': 'use_group_dn',
+                            'title': 'Match group name by DN',
+                            'type': 'bool'
+                        },
+                        {
                             'name': 'default_domain',
                             'title': 'Default Domain to Present to the User',
                             'type': 'string'
@@ -5143,6 +5154,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
                 'dc_address': '',
                 'default_domain': '',
                 'group_cn': '',
+                'use_group_dn': False,
                 **COMMON_SSL_CONFIG_SCHEMA_DEFAULTS
             },
             'saml_login_settings': {
