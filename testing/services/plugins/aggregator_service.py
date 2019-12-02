@@ -72,8 +72,10 @@ class AggregatorService(PluginService, UpdatablePluginMixin):
             self._update_schema_version_19()
         if self.db_schema_version < 20:
             self._update_schema_version_20()
+        if self.db_schema_version < 21:
+            self._update_schema_version_21()
 
-        if self.db_schema_version != 20:
+        if self.db_schema_version != 21:
             print(f'Upgrade failed, db_schema_version is {self.db_schema_version}')
 
     def __create_capped_collections(self):
@@ -940,6 +942,56 @@ class AggregatorService(PluginService, UpdatablePluginMixin):
             self.db_schema_version = 20
         except Exception as e:
             print(f'Exception while upgrading core db to version 20. Details: {e}')
+            traceback.print_exc()
+            raise
+
+    def _update_schema_version_21(self):
+        print('Update to schema 21 - fix bigfix id')
+        try:
+            # Upgrade bigfix id from {device_id} to {device_id}_{device_hostname}
+            entities_db = self._entity_db_map[EntityType.Devices]
+            to_fix = []
+            for entity in entities_db.find({f'adapters.{PLUGIN_NAME}': 'bigfix_adapter'}, projection={
+                '_id': 1,
+                f'adapters.{PLUGIN_NAME}': 1,
+                f'adapters.{PLUGIN_UNIQUE_NAME}': 1,
+                f'adapters.data.id': 1,
+                f'adapters.data.hostname': 1,
+            }):
+                all_bigfix = [x for x in entity['adapters'] if x[PLUGIN_NAME] == 'bigfix_adapter']
+                for bigfix_adapter in all_bigfix:
+                    bigfix_data = bigfix_adapter['data']
+                    bigfix_current_hostname = bigfix_data.get('hostname')
+                    bigfix_current_id = bigfix_data.get('id')
+                    if not bigfix_current_id:
+                        continue
+                    if not bigfix_current_hostname:
+                        continue
+                    if bigfix_current_id.endswith(f'_{bigfix_current_hostname}'):
+                        continue
+                    bigfix_new_id = f'{bigfix_current_id}_{bigfix_current_hostname}'
+                    to_fix.append(pymongo.operations.UpdateOne({
+                        '_id': entity['_id'],
+                        f'adapters.data.id': bigfix_current_id
+                    }, {
+                        '$set': {
+                            'adapters.$.data.id': bigfix_new_id,
+                            'adapters.$.quick_id': get_preferred_quick_adapter_id(bigfix_adapter[PLUGIN_UNIQUE_NAME],
+                                                                                  bigfix_new_id)
+                        }
+                    }))
+
+            if to_fix:
+                print(f'Upgrading Bigfix ID format. Found {len(to_fix)} records..')
+                for i in range(0, len(to_fix), 1000):
+                    entities_db.bulk_write(to_fix[i: i + 1000], ordered=False)
+                    print(f'Fixed Chunk of {i + 1000} records')
+            else:
+                print(f'Bigfix upgrade: Nothing to fix. Moving on')
+
+            self.db_schema_version = 21
+        except Exception as e:
+            print(f'Exception while upgrading core db to version 21. Details: {e}')
             traceback.print_exc()
             raise
 

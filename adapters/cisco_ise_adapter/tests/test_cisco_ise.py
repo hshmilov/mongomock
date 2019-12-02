@@ -104,6 +104,17 @@ class CiscoIseMockAdapter(CiscoIseAdapter):
 class CiscoIseMockConnection(CiscoIseConnection):
     def __init__(self, *args, **kwargs):
         super().__init__(domain='https://tests', username='test', password='test')
+        self.__top_endpoint_page = 0
+
+    @property
+    def top_endpoint_page(self):
+        # top_endpoint_page is a variable that is saved between connections. It saves the last page that was fetched
+        # to support fetching from the next page in the next cycle.
+        return self.__top_endpoint_page
+
+    @top_endpoint_page.setter
+    def top_endpoint_page(self, value):
+        self.__top_endpoint_page = value
 
     def _connect(self):
         pass

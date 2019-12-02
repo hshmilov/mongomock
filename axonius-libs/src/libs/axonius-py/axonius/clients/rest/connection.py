@@ -44,7 +44,7 @@ class RESTConnection(ABC):
                  verify_ssl: bool = False,
                  http_proxy: str = None, https_proxy: str = None, url_base_prefix: str = '/',
                  session_timeout: Tuple[int, int] = None,
-                 port: int = None, headers: dict = None, use_domain_path: bool = False):
+                 port: int = None, headers: dict = None, use_domain_path: bool = False, client_id: str = None):
         """
         An abstract class that implements backbone logic for accessing RESTful APIs in the manner
         needed by adapters to facilitate device acquiring logic
@@ -60,6 +60,7 @@ class RESTConnection(ABC):
         :param port: port to be used with the API
         :param headers: passed to `requests1 as is
         :param use_domain_path: If this is true we take the path from the url and not from url_base_prefix
+        :param client_id: optional client id for this connection
         """
         self._domain = domain.strip()
         self._username = username
@@ -83,6 +84,7 @@ class RESTConnection(ABC):
         if https_proxy is not None:
             self._proxies['https'] = https_proxy
         logger.debug(f'Proxies: {self._proxies}')
+        self.__client_id = client_id
 
         # We assumes that path starts with / and ends with /
         # Later in the code we will concat url to, and we will check that they don't start with /
@@ -91,6 +93,12 @@ class RESTConnection(ABC):
         self._session_headers = {}
         self._session = None
         self._session_lock = threading.Lock()
+
+    @property
+    def client_id(self) -> str:
+        if not self.__client_id:
+            raise ValueError(f'No client id')
+        return self.__client_id
 
     def revalidate_session_timeout(self):
         """

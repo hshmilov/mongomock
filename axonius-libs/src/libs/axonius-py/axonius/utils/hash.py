@@ -26,4 +26,6 @@ def get_preferred_quick_adapter_id(plugin_unique_name: str, _id: str) -> str:
     Improved lookup performance
     https://axonius.atlassian.net/browse/AX-5214
     """
+    # Warning! do not change. If you change, you affect aggregator_service.py which uses this function for migrations.
+    # Change appropriately to include a v2 version.
     return f'{plugin_unique_name}!{_id}'

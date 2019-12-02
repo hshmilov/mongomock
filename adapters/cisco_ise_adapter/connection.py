@@ -4,6 +4,7 @@ import re
 
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.exception import RESTException
+from axonius.plugin_base import PluginBase
 from cisco_ise_adapter import xmltodict
 from cisco_ise_adapter.consts import (
     ISE_PORT,
@@ -26,7 +27,16 @@ class CiscoIseConnection(RESTConnection):
         super().__init__(
             *args, port=ISE_PORT, url_base_prefix=URL_BASE_PREFIX, headers={'Connection': 'keep_alive'}, **kwargs
         )
-        self.top_endpoint_page = 0
+
+    @property
+    def top_endpoint_page(self):
+        # top_endpoint_page is a variable that is saved between connections. It saves the last page that was fetched
+        # to support fetching from the next page in the next cycle.
+        return PluginBase.Instance.keyval.get(f'{self.client_id}_top_endpoint_page') or 0
+
+    @top_endpoint_page.setter
+    def top_endpoint_page(self, value):
+        PluginBase.Instance.keyval[f'{self.client_id}_top_endpoint_page'] = value
 
     # pylint: disable=arguments-differ
     def _do_request(self, *args, **kwargs):

@@ -19,6 +19,7 @@ import zipfile
 from pathlib import Path
 
 import pip
+import requests
 from pip._vendor.packaging import markers as pip_markers
 
 import lists
@@ -26,6 +27,10 @@ from devops.axonius_system import get_metadata
 from services.axonius_service import get_service
 from utils import (CORTEX_PATH, SOURCES_FOLDER_NAME, AutoOutputFlush,
                    print_state)
+
+NVD_ARTIFACTS_URL = 'https://davinci.axonius.lan:1001/'
+NVD_ARTIFACTS_PATH = os.path.join(CORTEX_PATH, 'plugins', 'static_analysis', 'nvd_nist', 'artifacts')
+
 
 if pip.__version__.startswith('9.'):
     import pip.pep425tags as pip_pep425tags
@@ -253,6 +258,18 @@ def download_artifacts():
     Simply calls the download artifacts script to download things from the internet before we create the installer.
     :return:
     """
+    # Download nvd artifacts
+    print(f'Downloading NVD artifacts from {NVD_ARTIFACTS_URL}...')
+    response = requests.get(NVD_ARTIFACTS_URL, verify=False, timeout=60)
+    response.raise_for_status()
+    for file_name in response.json():
+        print(f'Downloading {NVD_ARTIFACTS_URL + file_name}...')
+        response = requests.get(NVD_ARTIFACTS_URL + file_name, verify=False, timeout=60)
+        response.raise_for_status()
+        with open(os.path.join(NVD_ARTIFACTS_PATH, file_name.split('/')[-1]), 'wb') as f:
+            f.write(response.content)
+
+    print(f'Done downloading NVD Artifacts')
     subprocess.check_output(os.path.join(CORTEX_PATH, "download_artifacts.sh"))
 
 

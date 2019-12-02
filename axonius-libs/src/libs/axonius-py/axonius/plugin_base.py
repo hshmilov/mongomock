@@ -596,6 +596,7 @@ class PluginBase(Configurable, Feature, ABC):
                                                      max_instances=1)
             self.execution_monitor_scheduler.start()
 
+        self.__inmem_keyval = dict()
         self._cyberark_vault = None
         self._update_schema()
         self._update_config_inner()
@@ -2699,6 +2700,13 @@ class PluginBase(Configurable, Feature, ABC):
         except Exception:
             logger.exception(f'Warning - could not get keyval {key}')
             return None
+
+    @property
+    def keyval(self) -> dict:
+        """
+        Returns in memory dict
+        """
+        return self.__inmem_keyval
 
     def get_selected_entities(self, entity_type: EntityType, entities_selection: dict, mongo_filter: dict = None):
         """

@@ -379,10 +379,12 @@ class StaticAnalysisService(Triggerable, PluginBase):
                     return value
         return None
 
-    def __get_users_by_identifier(self, username) -> List[AxoniusUser]:
+    def __get_users_by_identifier(self, username, is_domain_required=True) -> List[AxoniusUser]:
         """
         Gets a username. tries to find it by id, then by username/domain if possible, then only by username.
         :param username:
+        :param is_domain_required: if True, domain has to be part of the search query. otherwise, username only is ok.
+                                   This is important when dealing with local users. guest@PC-1 != guest@PC-2
         :return:
         """
         llu_username = username
@@ -409,7 +411,7 @@ class StaticAnalysisService(Triggerable, PluginBase):
                 f'and specific_data.data.domain == regex("^{llu_domain}$", "i")'
             ))
 
-        if not users:
+        if not users and not is_domain_required:
             # On last resort, search only by username
             users = list(self.users.get(
                 axonius_query_language=f'specific_data.data.username == regex("^{llu_username}$", "i")'
@@ -504,7 +506,7 @@ class StaticAnalysisService(Triggerable, PluginBase):
 
         # 2. Go over all users. whatever we don't have, and should be created, we must create first.
         for username, username_data in users.copy().items():
-            user = self.__get_users_by_identifier(username)
+            user = self.__get_users_by_identifier(username, is_domain_required=True)
             if len(user) == 0 and username_data['should_create_if_not_exists']:
                 # user does not exists, create it.
                 user_dict = self._new_user_adapter()
@@ -533,7 +535,7 @@ class StaticAnalysisService(Triggerable, PluginBase):
             number_of_associated_devices = 0
 
             # Find that user. It should be in the view new.
-            user = self.__get_users_by_identifier(username)
+            user = self.__get_users_by_identifier(username, is_domain_required=True)
 
             # Do we have it? or do we need to create it?
             if len(user) > 1:

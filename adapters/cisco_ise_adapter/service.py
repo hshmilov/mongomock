@@ -34,14 +34,14 @@ class CiscoIseAdapter(AdapterBase):
         fields = CLIENT_CONFIG_FIELDS
         return CiscoIseConnection.test_reachability(domain=client_config.get(fields.domain))
 
-    @staticmethod
-    def get_connection(client_config):
+    def get_connection(self, client_config):
         fields = CLIENT_CONFIG_FIELDS
         connection = CiscoIseConnection(domain=client_config[fields.domain],
                                         verify_ssl=client_config[fields.verify_ssl],
                                         https_proxy=client_config.get(fields.https_proxy),
                                         username=client_config[fields.username],
-                                        password=client_config[fields.password])
+                                        password=client_config[fields.password],
+                                        client_id=self._get_client_id(client_config))
         with connection:
             pass
         return connection
