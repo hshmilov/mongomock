@@ -140,7 +140,7 @@ class RumbleAdapter(AdapterBase):
                 device.figure_os((device_raw.get('os') or '') + ' ' + (device_raw.get('os_version') or ''))
             except Exception:
                 logger.exception(f'Problem getting os for {device_raw}')
-            device.set_raw(device_raw)
+            device.set_raw({})
             return device
         except Exception:
             logger.exception(f'Problem with fetching Rumble Device for {device_raw}')
