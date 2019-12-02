@@ -37,7 +37,8 @@ class MasscanAdapter(ScannerAdapterBase):
 
     def _connect_client(self, client_config):
         if not client_config.get('masscan_http') and 'masscan_file' not in client_config \
-                and not client_config.get('masscan_share'):
+                and not client_config.get('masscan_share') \
+                and not client_config.get('s3_bucket') and not client_config.get('s3_object_location'):
             raise ClientConnectionException('Bad params. No File or URL or Share for masscan')
         self.create_masscan_info_from_client_config(client_config)
         return client_config
