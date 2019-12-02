@@ -1,11 +1,12 @@
 export const pluginMeta = {
     cisco_stealthwatch_adapter: {
         title: 'Cisco StealthWatch',
+        link: 'https://docs.axonius.com/docs/cisco-stealthwatch',
         description: 'Cisco Stealthwatch is an agentless malware detection solution that provides visibility and network traffic security analytics across the extended network, including endpoints, branch, data center, and cloud.'
     },
     ansible_tower_adapter: {
         title: 'Red Hat Ansible Tower',
-        description: 'Red Hat Ansible Tower is a web console and REST API for operationalizing Ansible across teams, organizations, and the entire enterprise.',
+        description: 'Red Hat Ansible Tower is a web console and REST API for operationalizing Ansible across teams, organizations, and the enterprise.',
         link: 'https://docs.axonius.com/docs/red-hat-ansible-tower'
     },
     google_big_query_adapter: {
@@ -20,11 +21,12 @@ export const pluginMeta = {
     preempt_adapter: {
         title: 'Preempt',
         link: 'https://docs.axonius.com/docs/preempt',
-        description: 'Preempt lets organizations reduce user risk on their attack surface and preempt threats in real-time with Conditional Access. It continuously analyzes, adapts and responds to threats based on identity, behavior, and risk to resolve insider threats and targeted attacks.'
+        description: 'Preempt lets organizations reduce user risk on their attack surface and preempt threats in real-time with conditional access. It continuously analyzes, adapts and responds to threats based on identity, behavior, and risk to resolve insider threats and targeted attacks.'
     },
     orca_adapter: {
         title: 'Orca Cloud Visibility Platform',
-        description: 'Orca Cloud Visibility Platform delivers fullstack visibility including prioritized alerts to vulnerabilities, compromises, misconfigurations, and more across all the cloud accounts of the organization.'
+        link: 'https://docs.axonius.com/docs/orca-cloud-visibility-platform',
+        description: 'Orca Cloud Visibility Platform delivers full-stack visibility including prioritized alerts on vulnerabilities, compromises, misconfigurations, and more across all cloud accounts.'
     },
     hashicorp_adapter: {
         title: 'HashiCorp Consul',
@@ -92,6 +94,7 @@ export const pluginMeta = {
     },
     cherwell_adapter: {
         title: 'Cherwell IT Service Management',
+        link: 'https://docs.axonius.com/docs/cherwell-it-service-management',
         description: 'Cherwell IT Service Management is a service desk platform enabling automation for process workflows, supporting tasks, and related approvals.'
     },
     omnivista_adapter: {
@@ -105,7 +108,7 @@ export const pluginMeta = {
         description: 'Symantec DLP is a data loss protection and prevention solution. Its management console, the DLP Enforce Platform, and its reporting tool, IT Analytics for DLP, allows writing and enforce policies to reduce information risks.'
     },
     cisco_ucm_adapter: {
-        title: 'Cisco Unified Communications Manager 12.5',
+        title: 'Cisco Unified Communications Manager',
         link: 'https://docs.axonius.com/docs/cisco-unified-communications-manager-ucm',
         description: 'Cisco Unified Communications Manager provides secure and manageable call control and session management.'
     },
@@ -156,6 +159,7 @@ export const pluginMeta = {
     },
     wazuh_adapter: {
         title: 'Wazuh',
+        link: 'https://docs.axonius.com/docs/wazuh',
         description: 'Wazuh is a free, open source and enterprise-ready security monitoring solution for threat detection, integrity monitoring, incident response and compliance.'
     },
     signalsciences_adapter: {
@@ -184,8 +188,9 @@ export const pluginMeta = {
         description: 'F5 iControl is a Web services-enabled open API providing granular control over the configuration and management of F5\'s application delivery platform, BIG-IP.'
     },
     bitlocker_adapter: {
-        title: 'Bitlocker',
-        description: 'Microsoft BitLocker Administration and Monitoring (MBAM) 2.5 provides a simplified administrative interface that you can use to manage BitLocker Drive Encryption.'
+        title: 'Microsoft BitLocker Administration and Monitoring (MBAM)',
+        link: 'https://docs.axonius.com/docs/mbam',
+        description: 'Microsoft BitLocker Administration and Monitoring (MBAM) provides a simplified administrative interface for BitLocker Drive Encryption. BitLocker offers protection against data theft or data exposure for computers that are lost or stolen,  encrypting all data that is stored on the Windows operating system volumes and drives and configured data drives.'
     },
     druva_adapter: {
         title: 'Druva Cloud Platform',
