@@ -57,12 +57,12 @@ export default {
 						(Array.isArray(this.schema.required) && this.schema.required.includes(schema.name)))
 				}
 				schema.filter = this.schema.filter
-				schema.path = this.schema.path? [...this.schema.path] : []
-				if (typeof schema.name === 'string') {
-					schema.path.push(schema.name)
-				}
-				if (!schema.hyperlinks) {
+				if (this.schema.hyperlinks) {
 					schema.hyperlinks = this.schema.hyperlinks
+					if (schema.name && typeof schema.name === 'string') {
+						const cleanName = schema.name.replace('specific_data.', '').replace('data.', '')
+						schema.hyperlinks = cleanName? schema.hyperlinks[cleanName] : schema.hyperlinks
+					}
 				}
 			})
 			return schemaItems

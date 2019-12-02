@@ -3,7 +3,7 @@
     :title="actionFields.title"
     :module="module"
     :static-fields="actionFields.items"
-    :static-data="processTaskActions(tasks)"
+    :static-data="processedTasks"
     :searchable="true"
     id-field="action_id"
   >
@@ -81,20 +81,23 @@
               }
             ]
         }
+      },
+      processedTasks () {
+        return this.tasks.map(task => {
+          if (!actionsMeta[task.action_type]) {
+            return task
+          }
+          return {
+            ...task,
+            action_type: actionsMeta[task.action_type].title
+          }
+        })
       }
     },
     methods: {
       ...mapActions({
           fetchDataCSV: FETCH_DATA_CONTENT_CSV
       }),
-      processTaskActions(actions) {
-        return actions.map(action => {
-          if (!actionsMeta[action.action_type]) return action
-          return {...action,
-            action_type: actionsMeta[action.action_type].title
-          }
-        })
-      },
       exportCSV () {
           this.fetchDataCSV({
               module: this.module,

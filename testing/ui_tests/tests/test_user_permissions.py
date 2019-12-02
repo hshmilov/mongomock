@@ -91,19 +91,11 @@ class TestUserPermissions(TestBase):
         # to fill up devices and users
         self.base_page.run_discovery()
 
-        self.settings_page.click_manage_users_settings()
-        self.settings_page.create_new_user(ui_consts.RESTRICTED_ENTITY_USERNAME,
-                                           ui_consts.NEW_PASSWORD,
-                                           ui_consts.FIRST_NAME,
-                                           ui_consts.LAST_NAME)
+        self.settings_page.add_user_with_permission(ui_consts.RESTRICTED_ENTITY_USERNAME, ui_consts.NEW_PASSWORD,
+                                                    ui_consts.FIRST_NAME, ui_consts.LAST_NAME,
+                                                    'Devices', self.settings_page.READ_ONLY_PERMISSION)
 
-        self.settings_page.wait_for_user_created_toaster()
-        self.settings_page.select_permissions('Devices', self.settings_page.READ_ONLY_PERMISSION)
-        self.settings_page.click_save_manage_users_settings()
-
-        self.login_page.logout()
-        self.login_page.wait_for_login_page_to_load()
-        self.login_page.login(username=ui_consts.RESTRICTED_ENTITY_USERNAME, password=ui_consts.NEW_PASSWORD)
+        self.login_page.switch_user(ui_consts.RESTRICTED_ENTITY_USERNAME, ui_consts.NEW_PASSWORD)
 
         self.users_page.assert_screen_is_restricted()
         self.devices_page.switch_to_page()

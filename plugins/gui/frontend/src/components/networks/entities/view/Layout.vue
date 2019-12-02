@@ -111,7 +111,7 @@
   import { mapState, mapGetters, mapMutations, mapActions } from 'vuex'
   import { SINGLE_ADAPTER } from '../../../../store/getters'
   import {SELECT_DATA_CURRENT} from '../../../../store/mutations'
-  import { FETCH_DATA_CURRENT, FETCH_DATA_CURRENT_TASKS } from '../../../../store/actions'
+  import { FETCH_DATA_CURRENT, FETCH_DATA_CURRENT_TASKS, FETCH_DATA_HYPERLINKS } from '../../../../store/actions'
 
   export default {
     name: 'XEntityLayout',
@@ -139,6 +139,9 @@
         },
         fetchingData (state) {
           return state[this.module].current.fetching
+        },
+        hyperlinks (state) {
+          return state[this.module].hyperlinks.data
         }
       }),
       ...mapGetters({
@@ -192,6 +195,9 @@
           history: this.history
         })
       }
+      if (!this.hyperlinks.length) {
+        this.fetchDataHyperlinks({ module: this.module })
+      }
     },
     mounted() {
       this.fetchDataCurrentTasks({
@@ -210,8 +216,9 @@
         selectCurrentEntity: SELECT_DATA_CURRENT,
       }),
       ...mapActions({
-         fetchDataCurrent: FETCH_DATA_CURRENT,
-         fetchDataCurrentTasks: FETCH_DATA_CURRENT_TASKS
+        fetchDataCurrent: FETCH_DATA_CURRENT,
+        fetchDataCurrentTasks: FETCH_DATA_CURRENT_TASKS,
+        fetchDataHyperlinks: FETCH_DATA_HYPERLINKS
        })
     }
   }
@@ -288,8 +295,6 @@
                     margin-left: 0;
                   }
                 }
-
-
               }
             }
 

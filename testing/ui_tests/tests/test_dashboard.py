@@ -15,7 +15,7 @@ from axonius.entities import EntityType
 from axonius.utils import datetime
 from ui_tests.tests.ui_consts import (READ_WRITE_USERNAME, READ_ONLY_USERNAME, NEW_PASSWORD,
                                       FIRST_NAME, LAST_NAME, JSON_ADAPTER_NAME,
-                                      STRESSTEST_ADAPTER_NAME, STRESSTEST_ADAPTER)
+                                      STRESSTEST_ADAPTER_NAME, STRESSTEST_ADAPTER, WINDOWS_QUERY_NAME)
 from ui_tests.tests.ui_test_base import TestBase
 from ui_tests.tests.ui_consts import AD_ADAPTER_NAME
 
@@ -57,7 +57,6 @@ class TestDashboard(TestBase):
     LIFECYCLE_ADAPTER_FETCHING_STATUS = 'Fetching...'
     DEVICES_MODULE = 'Devices'
     USERS_MODULE = 'Users'
-    WINDOWS_MACHINES_OPTION_NAME = 'Windows Operating System'
     AD_PRINTERS_OPTION_NAME = 'AD Printers'
     AD_DOMAIN_CONTROLLERS_OPTION_NAME = 'AD Domain Controllers'
     OS_SERVICE_PACK_OPTION_NAME = 'OS: Service Pack'
@@ -98,7 +97,7 @@ class TestDashboard(TestBase):
         self.dashboard_page.switch_to_page()
         self.base_page.run_discovery()
         with pytest.raises(NoSuchElementException):
-            self.dashboard_page.add_comparison_card('Devices', 'Windows Operating System',
+            self.dashboard_page.add_comparison_card('Devices', WINDOWS_QUERY_NAME,
                                                     'Devices', 'Linux Operating System', '')
 
         assert self.dashboard_page.is_chart_save_disabled()
@@ -176,7 +175,7 @@ class TestDashboard(TestBase):
     def test_dashboard_intersection_chart(self):
         self.dashboard_page.switch_to_page()
         self.base_page.run_discovery()
-        self.dashboard_page.add_intersection_card('Devices', 'Windows Operating System',
+        self.dashboard_page.add_intersection_card('Devices', WINDOWS_QUERY_NAME,
                                                   'Devices Not Seen In Last 7 Days', self.TEST_INTERSECTION_TITLE)
         self.dashboard_page.wait_for_spinner_to_end()
         # verify card config reset
@@ -704,7 +703,7 @@ class TestDashboard(TestBase):
     def test_dashboard_edit(self):
         self.dashboard_page.switch_to_page()
         self.base_page.run_discovery()
-        self.dashboard_page.add_comparison_card('Devices', 'Windows Operating System',
+        self.dashboard_page.add_comparison_card('Devices', WINDOWS_QUERY_NAME,
                                                 'Users', 'Local Users',
                                                 self.TEST_EDIT_CHART_TITLE)
         # verify reset config
@@ -857,7 +856,7 @@ class TestDashboard(TestBase):
         self.dashboard_page.switch_to_page()
         self.base_page.run_discovery()
         self.dashboard_page.add_intersection_card(module=self.DEVICES_MODULE,
-                                                  first_query=self.WINDOWS_MACHINES_OPTION_NAME,
+                                                  first_query=WINDOWS_QUERY_NAME,
                                                   second_query=self.AD_PRINTERS_OPTION_NAME,
                                                   title=self.TEST_EDIT_CARD_TITLE)
         card = self.dashboard_page.find_dashboard_card(self.TEST_EDIT_CARD_TITLE)
@@ -883,7 +882,7 @@ class TestDashboard(TestBase):
         self.dashboard_page.change_chart_type(self.PIE_CHART_TYPE)
         views_list = self.dashboard_page.get_views_list()
         self.dashboard_page.select_chart_wizard_module(self.DEVICES_MODULE, views_list[0])
-        self.dashboard_page.select_chart_view_name(self.WINDOWS_MACHINES_OPTION_NAME, views_list[0])
+        self.dashboard_page.select_chart_view_name(WINDOWS_QUERY_NAME, views_list[0])
         self.dashboard_page.select_chart_wizard_module(self.DEVICES_MODULE, views_list[1])
         self.dashboard_page.select_chart_view_name(self.AD_DOMAIN_CONTROLLERS_OPTION_NAME, views_list[1])
         self.dashboard_page.click_card_save()
@@ -894,7 +893,7 @@ class TestDashboard(TestBase):
         assert self.dashboard_page.is_chart_save_disabled()
         self.dashboard_page.change_chart_type(self.HISTOGRAM_CHART_TYPE)
         self.dashboard_page.select_chart_wizard_module(self.DEVICES_MODULE)
-        self.dashboard_page.select_chart_view_name(self.WINDOWS_MACHINES_OPTION_NAME)
+        self.dashboard_page.select_chart_view_name(WINDOWS_QUERY_NAME)
         self.dashboard_page.select_chart_wizard_field(self.OS_SERVICE_PACK_OPTION_NAME)
         self.dashboard_page.click_card_save()
 
@@ -914,7 +913,7 @@ class TestDashboard(TestBase):
         self.dashboard_page.select_chart_metric('Query Timeline')
         assert self.dashboard_page.is_chart_save_disabled()
         self.dashboard_page.select_chart_wizard_module(self.DEVICES_MODULE)
-        self.dashboard_page.select_chart_view_name(self.WINDOWS_MACHINES_OPTION_NAME)
+        self.dashboard_page.select_chart_view_name(WINDOWS_QUERY_NAME)
         self.dashboard_page.select_chart_result_range_last()
         self.dashboard_page.click_card_save()
 
@@ -998,6 +997,6 @@ class TestDashboard(TestBase):
 
         with self._edit_and_assert_chart(card, self.TEST_TIMELINE_SVG_CSS[1], self.TIMELINE_CHART_TYPE):
             views_list = self.dashboard_page.get_views_list()
-            self.dashboard_page.select_chart_view_name(self.WINDOWS_MACHINES_OPTION_NAME, views_list[0])
+            self.dashboard_page.select_chart_view_name(WINDOWS_QUERY_NAME, views_list[0])
             self.dashboard_page.select_chart_wizard_module(self.USERS_MODULE, views_list[1])
             self.dashboard_page.select_chart_view_name(self.NOT_LOCAL_USERS_OPTION_NAME, views_list[1])

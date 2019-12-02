@@ -2,7 +2,7 @@ import pytest
 from selenium.common.exceptions import NoSuchElementException
 
 from ui_tests.tests.test_entities_table import TestEntitiesTable
-from ui_tests.tests.ui_consts import (AWS_ADAPTER_NAME, STRESSTEST_ADAPTER_NAME, STRESSTEST_ADAPTER)
+from ui_tests.tests.ui_consts import (AWS_ADAPTER_NAME, STRESSTEST_ADAPTER_NAME, STRESSTEST_ADAPTER, WINDOWS_QUERY_NAME)
 from services.adapters.aws_service import AwsService
 from services.adapters import stresstest_service
 from services.plugins.general_info_service import GeneralInfoService
@@ -28,7 +28,7 @@ class TestDevicesTable(TestEntitiesTable):
         view_data = self.devices_page.get_all_data()
 
         # Load some default view, to change it and test the saved view's influence
-        self.devices_page.execute_saved_query('Windows Operating System')
+        self.devices_page.execute_saved_query(WINDOWS_QUERY_NAME)
         assert self.devices_page.get_all_data() != view_data
 
         self.devices_page.clear_filter()

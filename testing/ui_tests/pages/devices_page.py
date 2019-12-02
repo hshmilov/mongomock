@@ -54,7 +54,6 @@ class DevicesPage(EntitiesPage):
     FIELD_INSTALLED_SOFTWARE = 'Installed Software'
     FIELD_INSTALLED_SOFTWARE_NAME = 'Name'
     FIELD_INSTALLED_SOFTWARE_VERSION = 'Version'
-    VALUE_SAVED_QUERY_WINDOWS = 'Windows Operating System'
     VALUE_SAVED_QUERY_LINUX = 'Linux Operating System'
     VALUE_OS_WINDOWS = 'Windows'
     TAG_MODAL_CSS = '.x-tag-modal'
@@ -67,6 +66,9 @@ class DevicesPage(EntitiesPage):
     QUERY_FIELD_VALUE = '.x-select-typed-field .x-dropdown.x-select.field-select'
 
     DELETE_DIALOG_TEXT_REGEX = 'You are about to delete \\d+ devices\\.'
+
+    BASIC_INFO_FIELD_XPATH = '//div[contains(@class, \'x-tab active\')]//div[contains(@class, \'x-tab active\')]' \
+                             '//div[preceding-sibling::label[text()=\'{field_title}\']]'
 
     @property
     def url(self):
@@ -208,3 +210,19 @@ class DevicesPage(EntitiesPage):
                                           text=enforcement_name)
         self.click_button('Run')
         time.sleep(1.5)  # wait for run to fade away
+
+    def find_general_data_table_link(self, table_title):
+        self.click_row()
+        self.wait_for_spinner_to_end()
+        self.click_general_tab()
+        self.click_tab(table_title)
+        return self.driver.find_element_by_css_selector('.x-entity-general .x-tab.active .x-table .x-table-row td a')
+
+    def find_general_data_basic_link(self, field_title):
+        self.click_row()
+        self.wait_for_spinner_to_end()
+        self.click_general_tab()
+        # Wait while animation of list expansion
+        time.sleep(1)
+        field_el = self.find_element_by_xpath(self.BASIC_INFO_FIELD_XPATH.format(field_title=field_title))
+        return field_el.find_element_by_css_selector('.item .object')

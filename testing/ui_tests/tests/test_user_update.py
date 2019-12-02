@@ -1,5 +1,9 @@
+import pytest
+
 from ui_tests.tests import ui_consts
 from ui_tests.tests.ui_test_base import TestBase
+
+from services.axon_service import TimeoutException
 
 
 class TestUserUpdate(TestBase):
@@ -66,6 +70,6 @@ class TestUserUpdate(TestBase):
         self.settings_page.wait_for_user_created_toaster()
         self.settings_page.click_edit_user(ui_consts.UPDATE_USERNAME)
         self.settings_page.fill_password_field('')
-        self.settings_page.click_update_user()
-
+        with pytest.raises(TimeoutException):
+            self.settings_page.click_update_user()
         assert not self.settings_page.is_update_button_enabled()

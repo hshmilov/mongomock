@@ -63,10 +63,25 @@ export default {
   },
   render(createElement, {props}) {
     let {data, schema, filter, sort} = props
+    schema = {...schema}
     if (schema.link) {
-      schema.link = formatStringTemplate(schema.link, data)
+      schema.hyperlinks = () => {
+        return {
+          href: formatStringTemplate(schema.link, data),
+          type: 'link'
+        }
+      }
     }
     const value = processData(data, schema, filter, sort)
+    if (!Array.isArray(value)) {
+      return createElement(xTableData, {
+        props: {
+          schema,
+          data: value
+        }
+      })
+    }
+    // Wrapping list data with a component limiting the items displayed, with a tooltip presenting entire list
     return createElement(xSlice, {
       props: {
         schema,

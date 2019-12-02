@@ -35,11 +35,11 @@ class TestTasks(TestBase):
 
     def _check_enforcement_data(self):
         # Check Enforcement's Task details in table
-        assert f'{ENFORCEMENT_NAME} - Task 1' in self.enforcements_page.get_column_data_slicer(self.FIELD_NAME)
-        assert ENFORCEMENT_NAME in self.enforcements_page.get_column_data_slicer(self.FIELD_MAIN_ACTION)
-        assert ENFORCEMENT_QUERY in self.enforcements_page.get_column_data_slicer(self.FIELD_QUERY_NAME)
+        assert f'{ENFORCEMENT_NAME} - Task 1' in self.enforcements_page.get_column_data_inline(self.FIELD_NAME)
+        assert ENFORCEMENT_NAME in self.enforcements_page.get_column_data_inline(self.FIELD_MAIN_ACTION)
+        assert ENFORCEMENT_QUERY in self.enforcements_page.get_column_data_inline(self.FIELD_QUERY_NAME)
         assert datetime.now().strftime('%Y-%m-%d') in normalize_timezone_date(
-            self.enforcements_page.get_column_data_slicer(self.FIELD_COMPLETED)[0])
+            self.enforcements_page.get_column_data_inline(self.FIELD_COMPLETED)[0])
 
     def test_tasks_table_content(self):
         with CarbonblackResponseService().contextmanager(take_ownership=True):
@@ -96,27 +96,27 @@ class TestTasks(TestBase):
 
         self.enforcements_page.click_sort_column(self.FIELD_STATUS)
         self.enforcements_page.wait_for_table_to_load()
-        original_order = self.enforcements_page.get_column_data_slicer(self.FIELD_NAME)
+        original_order = self.enforcements_page.get_column_data_inline(self.FIELD_NAME)
         self.enforcements_page.click_sort_column(self.FIELD_NAME)
         self.enforcements_page.wait_for_table_to_load()
-        assert self.enforcements_page.get_column_data_slicer(self.FIELD_NAME) == sorted(original_order, reverse=True)
+        assert self.enforcements_page.get_column_data_inline(self.FIELD_NAME) == sorted(original_order, reverse=True)
         self.enforcements_page.click_sort_column(self.FIELD_NAME)
         self.enforcements_page.wait_for_table_to_load()
-        assert self.enforcements_page.get_column_data_slicer(self.FIELD_NAME) == sorted(original_order)
+        assert self.enforcements_page.get_column_data_inline(self.FIELD_NAME) == sorted(original_order)
         self.enforcements_page.click_sort_column(self.FIELD_STATUS)
         self.enforcements_page.wait_for_table_to_load()
-        assert self.enforcements_page.get_column_data_slicer(self.FIELD_NAME) == original_order
+        assert self.enforcements_page.get_column_data_inline(self.FIELD_NAME) == original_order
 
-        original_order = self.enforcements_page.get_column_data_slicer(self.FIELD_QUERY_NAME)
+        original_order = self.enforcements_page.get_column_data_inline(self.FIELD_QUERY_NAME)
         self.enforcements_page.click_sort_column(self.FIELD_QUERY_NAME)
         self.enforcements_page.wait_for_table_to_load()
-        assert self.enforcements_page.get_column_data_slicer(self.FIELD_QUERY_NAME) == sorted(query_names, reverse=True)
+        assert self.enforcements_page.get_column_data_inline(self.FIELD_QUERY_NAME) == sorted(query_names, reverse=True)
         self.enforcements_page.click_sort_column(self.FIELD_QUERY_NAME)
         self.enforcements_page.wait_for_table_to_load()
-        assert self.enforcements_page.get_column_data_slicer(self.FIELD_QUERY_NAME) == sorted(query_names)
+        assert self.enforcements_page.get_column_data_inline(self.FIELD_QUERY_NAME) == sorted(query_names)
         self.enforcements_page.click_sort_column(self.FIELD_STATUS)
         self.enforcements_page.wait_for_table_to_load()
-        assert self.enforcements_page.get_column_data_slicer(self.FIELD_QUERY_NAME) == original_order
+        assert self.enforcements_page.get_column_data_inline(self.FIELD_QUERY_NAME) == original_order
 
     def test_tasks_table_search(self):
         self.devices_page.switch_to_page()
@@ -138,19 +138,19 @@ class TestTasks(TestBase):
 
         self.enforcements_page.fill_enter_table_search('Test')
         self.enforcements_page.wait_for_table_to_load()
-        assert len(self.enforcements_page.get_column_data_slicer(self.FIELD_NAME)) == 5
+        assert len(self.enforcements_page.get_column_data_inline(self.FIELD_NAME)) == 5
 
         self.enforcements_page.fill_enter_table_search(TEST_ENFORCEMENT_NAME)
         self.enforcements_page.wait_for_table_to_load()
-        assert TEST_ENFORCEMENT_NAME in self.enforcements_page.get_column_data_slicer(self.FIELD_NAME)[0]
+        assert TEST_ENFORCEMENT_NAME in self.enforcements_page.get_column_data_inline(self.FIELD_NAME)[0]
 
         self.enforcements_page.fill_enter_table_search(ENFORCEMENT_CHANGE_NAME)
         self.enforcements_page.wait_for_table_to_load()
-        assert self.enforcements_page.get_column_data_slicer(self.FIELD_QUERY_NAME) == 3 * [ENFORCEMENT_CHANGE_NAME]
+        assert self.enforcements_page.get_column_data_inline(self.FIELD_QUERY_NAME) == 3 * [ENFORCEMENT_CHANGE_NAME]
 
         self.enforcements_page.fill_enter_table_search('In Progress')
         self.enforcements_page.wait_for_table_to_load()
-        assert len(self.enforcements_page.get_column_data_slicer(self.FIELD_NAME)) == 0
+        assert len(self.enforcements_page.get_column_data_inline(self.FIELD_NAME)) == 0
 
     def _test_specific_task(self, success_count, failure_count, action_name=ENFORCEMENT_NAME):
         self.enforcements_page.switch_to_page()
@@ -204,10 +204,10 @@ class TestTasks(TestBase):
         self.enforcements_page.wait_for_spinner_to_end()
         self.enforcements_page.wait_for_table_to_load()
         assert len(self.enforcements_page.get_all_data()) == 1
-        assert self.enforcements_page.get_column_data_slicer(self.FIELD_QUERY_NAME) == [ENFORCEMENT_CHANGE_NAME]
+        assert self.enforcements_page.get_column_data_inline(self.FIELD_QUERY_NAME) == [ENFORCEMENT_CHANGE_NAME]
 
         self.enforcements_page.refresh()
         self.enforcements_page.wait_for_spinner_to_end()
         self.enforcements_page.wait_for_table_to_load()
         assert len(self.enforcements_page.get_all_data()) == 2
-        assert ENFORCEMENT_QUERY in self.enforcements_page.get_column_data_slicer(self.FIELD_QUERY_NAME)[0]
+        assert ENFORCEMENT_QUERY in self.enforcements_page.get_column_data_inline(self.FIELD_QUERY_NAME)[0]

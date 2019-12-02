@@ -19,7 +19,7 @@ client_details = {
             "id": "cb_id1",
             "name": "CB 1",
             "hostname": "CB First",
-            "last_used_users": ["test 1", "test 2"],
+            "last_used_users": ["ofri", "dean", "test 1", "test 2"],
             "network_interfaces": [{
                 "mac": "''' + DEVICE_MAC + '''",
                 "ips": ["''' + DEVICE_FIRST_IP + '''", "''' + DEVICE_SECOND_IP + '''"],

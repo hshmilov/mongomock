@@ -9,7 +9,8 @@ from axonius.consts.gui_consts import (CONFIG_CONFIG, ROLES_COLLECTION, USERS_CO
                                        DASHBOARD_SPACE_DEFAULT, DASHBOARD_SPACE_PERSONAL,
                                        DASHBOARD_SPACE_TYPE_DEFAULT, DASHBOARD_SPACE_TYPE_PERSONAL,
                                        PREDEFINED_ROLE_ADMIN, PREDEFINED_ROLE_RESTRICTED, PREDEFINED_ROLE_READONLY,
-                                       FEATURE_FLAGS_CONFIG, Signup, EXEC_REPORT_TITLE)
+                                       FEATURE_FLAGS_CONFIG, Signup, EXEC_REPORT_TITLE,
+                                       LAST_UPDATED_FIELD, UPDATED_BY_FIELD)
 from axonius.consts.plugin_consts import (AGGREGATOR_PLUGIN_NAME,
                                           AXONIUS_SETTINGS_DIR_NAME,
                                           CONFIGURABLE_CONFIGS_COLLECTION,
@@ -86,7 +87,9 @@ class GuiService(PluginService, UpdatablePluginMixin):
             self._update_schema_version_21()
         if self.db_schema_version < 22:
             self._update_schema_version_22()
-        if self.db_schema_version != 22:
+        if self.db_schema_version < 23:
+            self._update_schema_version_23()
+        if self.db_schema_version != 23:
             print(f'Upgrade failed, db_schema_version is {self.db_schema_version}')
 
     def _update_schema_version_1(self):
@@ -784,6 +787,37 @@ class GuiService(PluginService, UpdatablePluginMixin):
         except Exception as e:
             print(f'Exception while upgrading gui db to version 22. Details: {e}')
 
+    def _update_schema_version_23(self):
+        """
+        For version 2.13, sync updated_by and last_updated fields in Enforcements, Reports and Saved Views
+        """
+        print('Upgrade to schema 23')
+        try:
+            update_fields = [{
+                '$set': {
+                    UPDATED_BY_FIELD: '$user_id'
+                }
+            }]
+
+            # Update reports_config:
+            #     'updated_by' from 'user_id'
+            self.db.gui_reports_config_collection().update_many({}, update_fields)
+
+            # Update reports:
+            #     'updated_by' from 'user_id'
+            self.db.enforcements_collection().update_many({}, update_fields)
+
+            update_fields[0]['$set'][LAST_UPDATED_FIELD] = '$timestamp'
+            # Update saved views, per entity:
+            #     'last_updated' from 'timestamp'
+            #     'updated_by' from 'user_id'
+            for entity_type in EntityType:
+                views_collection = self._entity_views_map[entity_type]
+                views_collection.update_many({}, update_fields)
+            self.db_schema_version = 23
+        except Exception as e:
+            print(f'Exception while upgrading gui db to version 23. Details: {e}')
+
     def _update_default_locked_actions(self, new_actions):
         """
         Update the config record that holds the FeatureFlags setting, adding received new_actions to it's list of
@@ -1026,20 +1060,18 @@ RUN cd /home/axonius && mkdir axonius-libs && mkdir axonius-libs/src && cd axoni
         return views_data
 
     def _upsert_report_config(self, name, report):
-        reports_collection = self.db.get_collection('gui', 'reports_config')
-
         new_report = {**report}
 
-        result = reports_collection.replace_one({'name': name},
-                                                new_report, upsert=True)
+        result = self.db.gui_reports_config_collection().replace_one({
+            'name': name
+        }, new_report, upsert=True)
         return result
 
     def _migrate_default_report(self):
         exec_reports_settings_collection = self.db.get_collection('gui', 'exec_reports_settings')
-        reports_collection = self.db.get_collection('gui', 'reports_config')
 
         default_report = exec_reports_settings_collection.find_one()
-        default_report_config = reports_collection.find_one()
+        default_report_config = self.db.gui_reports_config_collection().find_one()
         views = self.get_saved_views()
         if default_report:
             mail_properties = dict(mailSubject='', emailList=[], emailListCC=[])
@@ -1057,12 +1089,10 @@ RUN cd /home/axonius && mkdir axonius-libs && mkdir axonius-libs/src && cd axoni
             }
             self._upsert_report_config(EXEC_REPORT_TITLE, new_report)
             exec_reports_settings_collection.delete_one({'_id': default_report.get('_id')})
-            reports_collection.delete_one({'_id': default_report_config.get('_id')})
+            self.db.gui_reports_config_collection().delete_one({'_id': default_report_config.get('_id')})
 
     def _migrate_report_periodic_config(self):
-        reports_collection = self.db.get_collection('gui', 'reports_config')
-
-        reports_collection.update_many({}, {
+        self.db.gui_reports_config_collection().update_many({}, {
             '$set': {
                 'period_config': {
                     'week_day': 0,

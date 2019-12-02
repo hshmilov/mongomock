@@ -1,6 +1,7 @@
 import time
 
 from axonius.utils.wait import wait_until
+from ui_tests.tests.ui_consts import WINDOWS_QUERY_NAME
 from ui_tests.tests.ui_test_base import TestBase
 
 AZURE_AD_ADAPTER_NAME = 'Microsoft Active Directory (AD)'
@@ -54,13 +55,11 @@ class TestDevice(TestBase):
     def test_device_enforcement_tasks_search(self):
         self.enforcements_page.switch_to_page()
         self.base_page.run_discovery()
-        self.enforcements_page.create_tag_enforcement(self.RUN_TAG_ENFORCEMENT_NAME,
-                                                      self.devices_page.VALUE_SAVED_QUERY_WINDOWS,
-                                                      'tag search test',
-                                                      'tag search test')
+        self.enforcements_page.create_tag_enforcement(self.RUN_TAG_ENFORCEMENT_NAME, WINDOWS_QUERY_NAME,
+                                                      'tag search test', 'tag search test')
         self.base_page.run_discovery()
         self.devices_page.switch_to_page()
-        self.devices_page.execute_saved_query(self.devices_page.VALUE_SAVED_QUERY_WINDOWS)
+        self.devices_page.execute_saved_query(WINDOWS_QUERY_NAME)
         self.devices_page.wait_for_table_to_load()
         entity_count = self.devices_page.get_table_count()
 
@@ -91,7 +90,12 @@ class TestDevice(TestBase):
         assert len(table_data) == 1
         enforcement_set_id, enforcement_set_name, action_name, is_success, output = table_data[0]
         assert enforcement_set_id == f'{self.RUN_TAG_ENFORCEMENT_NAME} - Task 1'
-        self.enforcements_page.search_enforcement_tasks_search_input(enforcement_set_id)
-        assert self.enforcements_page.get_enforcement_tasks_count() == 1
-        self.enforcements_page.search_enforcement_tasks_search_input(enforcement_set_id + '1')
-        assert self.enforcements_page.get_enforcement_tasks_count() == 0
+        self.devices_page.search_enforcement_tasks_search_input(enforcement_set_id)
+        assert self.devices_page.get_enforcement_tasks_count() == 1
+        self.devices_page.search_enforcement_tasks_search_input(enforcement_set_id + '1')
+        assert self.devices_page.get_enforcement_tasks_count() == 0
+        self.devices_page.search_enforcement_tasks_search_input('')
+        self.devices_page.wait_for_table_to_load()
+        self.devices_page.click_task_name(enforcement_set_id)
+        self.enforcements_page.wait_for_action_result()
+        assert self.enforcements_page.get_task_name() == enforcement_set_id

@@ -31,7 +31,7 @@ export const devices = {
 					page: 0, pageSize: 20, query: {
 						filter: '', expressions: [], search: ''
 					}, sort: {
-						field: '', desc: true
+						field: 'last_updated', desc: true
 					}
 				}
 			},

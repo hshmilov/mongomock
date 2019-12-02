@@ -6,8 +6,8 @@ from typing import Iterable
 import pymongo
 
 from axonius.plugin_base import PluginBase
-
 from axonius.entities import EntityType
+from axonius.consts.gui_consts import LAST_UPDATED_FIELD
 from gui.gui_logic.fielded_plugins import get_fielded_plugins
 from gui.gui_logic.filter_utils import filter_archived
 
@@ -46,7 +46,7 @@ def get_views(entity_type: EntityType, limit, skip, mongo_filter, mongo_sort) ->
     if mongo_sort:
         sort = list(mongo_sort.items())
     else:
-        sort = [('timestamp', pymongo.DESCENDING)]
+        sort = [(LAST_UPDATED_FIELD, pymongo.DESCENDING)]
 
     return entity_views_collection.find(_process_filter_views(entity_type, mongo_filter)). \
         sort(sort). \

@@ -96,7 +96,9 @@
         return [{
           name: 'name', title: 'Name', type: 'string'
         }, {
-          name: 'timestamp', title: 'Last Updated', type: 'string', format: 'date-time'
+          name: 'last_updated', title: 'Last Updated', type: 'string', format: 'date-time'
+        }, {
+          name: 'updated_by', title: 'Updated By', type: 'string'
         }]
       },
       searchFilter() {

@@ -55,6 +55,8 @@ ALERTLOGIC_ADAPTER_NAME = 'Alert Logic'
 AWS_ADAPTER = 'aws_adapter'
 AWS_ADAPTER_NAME = 'Amazon Web Services (AWS)'
 
+WINDOWS_QUERY_NAME = 'Windows Operating System'
+
 
 class EmailSettings:
     port = '25'
@@ -68,7 +70,7 @@ class QueriesScreen:
 
 class Enforcements:
     enforcement_name_1 = 'test_enforcement_1'
-    enforcement_query_1 = 'Windows Operating System'
+    enforcement_query_1 = WINDOWS_QUERY_NAME
 
 
 class Saml:

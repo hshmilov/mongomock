@@ -40,11 +40,9 @@ export default {
         value
       }
     })
-    const path = (schema.path || []).join('.')
-      .replace('specific_data.', '').replace('data.', '')
-    if (schema.hyperlinks && schema.hyperlinks[path]) {
+    if (schema.hyperlinks) {
       return createElement(xHyperlink, {
-        props: schema.hyperlinks[path](value)
+        props: schema.hyperlinks(value)
       }, [dataElement])
     }
     return dataElement

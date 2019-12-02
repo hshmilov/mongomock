@@ -22,8 +22,9 @@ from axonius.plugin_base import PluginBase, add_rule, return_error
 from axonius.utils.db_querying_helper import perform_saved_view_by_name
 from axonius.utils.files import get_local_config_file
 from axonius.utils.mongo_escaping import unescape_dict
+from axonius.consts.gui_consts import (LAST_UPDATED_FIELD, UPDATED_BY_FIELD)
 from axonius.consts.report_consts import (ACTIONS_FIELD, ACTIONS_MAIN_FIELD, ACTIONS_SUCCESS_FIELD,
-                                          ACTIONS_FAILURE_FIELD, ACTIONS_POST_FIELD, LAST_UPDATE_FIELD, TRIGGERS_FIELD,
+                                          ACTIONS_FAILURE_FIELD, ACTIONS_POST_FIELD, TRIGGERS_FIELD,
                                           LAST_TRIGGERED_FIELD, TIMES_TRIGGERED_FIELD, NOT_RAN_STATE,
                                           CUSTOM_SELECTION_TRIGGER, ACTION_CONFIG_FIELD, ACTION_FIELD)
 from axonius.types.enforcement_classes import (ActionInRecipe, Recipe, TriggerPeriod, Trigger, TriggerView,
@@ -267,7 +268,8 @@ class ReportsService(Triggerable, PluginBase):
         }, {
             '$set': {
                 ACTIONS_FIELD: report_data[ACTIONS_FIELD],
-                LAST_UPDATE_FIELD: datetime.datetime.utcnow()
+                LAST_UPDATED_FIELD: report_data[LAST_UPDATED_FIELD],
+                UPDATED_BY_FIELD: report_data[UPDATED_BY_FIELD]
             }
         })
         return jsonify({'modified': result.modified_count})
@@ -320,14 +322,14 @@ class ReportsService(Triggerable, PluginBase):
         :param dict report_data: The query to reports (as a valid mongo query) and criteria.
         :return: Correct HTTP response.
         """
-        # Checks if requested query isn't already watched.
         try:
             report_resource = {
-                LAST_UPDATE_FIELD: datetime.datetime.utcnow(),
+                LAST_UPDATED_FIELD: report_data[LAST_UPDATED_FIELD],
                 ACTIONS_FIELD: report_data['actions'],
                 'name': report_data['name'],
                 TRIGGERS_FIELD: list(self.__processed_triggers(report_data[TRIGGERS_FIELD])),
-                'user_id': ObjectId(report_data['user_id'])
+                'user_id': ObjectId(report_data['user_id']),
+                UPDATED_BY_FIELD: report_data[UPDATED_BY_FIELD]
             }
 
             # Pushes the resource to the db.

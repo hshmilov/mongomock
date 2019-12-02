@@ -113,12 +113,12 @@
         savedViews (state) {
           if (!this.isSearchSimple) return state[this.module].views.saved.content.data
           return state[this.module].views.saved.content.data
-                  .filter(item => item.name.toLowerCase().includes(this.searchValue.toLowerCase()))
+                  .filter(item => item && item.name.toLowerCase().includes(this.searchValue.toLowerCase()))
         },
         historyViews (state) {
           if (!this.isSearchSimple) return state[this.module].views.saved.content.data
           return state[this.module].views.history.content.data
-                  .filter(item => item.view.query && item.view.query.filter &&
+                  .filter(item => item && item.view.query && item.view.query.filter &&
                                   item.view.query.filter.toLowerCase().includes(this.searchValue.toLowerCase()))
         },
         fields (state) {

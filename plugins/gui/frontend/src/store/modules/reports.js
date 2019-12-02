@@ -14,23 +14,12 @@ export const reports = {
         content: { data: [], fetching: false, error: ''},
         count: { data: 0, fetching: false, error: ''},
         view: {
-            page: 0, pageSize: 20, fields: [
-                'name', 'last_updated', 'last_generated', 'mailSubject', 'period'
-            ], coloumnSizes: [], query: {filter: '', expressions: []}, sort: {field: '', desc: true}
-        },
-        fields: {
-            data: {
-                generic: [{
-                    name: 'name', title: 'Name', type: 'string'
-                },  {
-                    name: 'last_updated', title: 'Last Updated', type: 'string', format: 'date-time'
-                },  {
-                    name: 'last_generated', title: 'Last Generated', type: 'string', format: 'date-time'
-                }, {
-                    name: 'period', title: 'Scheduled Email', type: 'string'
-                }, {
-                    name: 'mailSubject', title: 'Email Subject', type: 'string'
-                }]
+            page: 0, pageSize: 20, fields: [], coloumnSizes: [],
+            query: {
+                filter: '', expressions: []
+            },
+            sort: {
+                field: '', desc: true
             }
         },
         /* Data of Report currently being configured */

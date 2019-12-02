@@ -46,7 +46,7 @@ class ReportsPage(EntitiesPage):
     EMAIL_BOX_CSS = 'input.md-input__inner.md-chips-input__inner'
     EMAIL_BOX_RECIPIENTS = 'Recipients'
     EDIT_REPORT_XPATH = '//td[.//text()=\'{report_name}\']'
-    REPORT_GENERATED_XPATH = '//td[.//text()=\'{report_name}\']/following::td/following::td//div'
+    REPORT_GENERATED_XPATH = '//td[.//text()=\'{report_name}\']/following::td/div'
     REPORT_TR_XPATH = '//td[.//text()=\'{report_name}\']/parent::tr'
     EMAIL_SUBJECT_ID = 'mailSubject'
     SELECT_VIEW_ENTITY_ELEMENT_CSS = '.saved-query .x-select-symbol'

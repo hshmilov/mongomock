@@ -64,7 +64,8 @@ from axonius.consts.gui_consts import (ENCRYPTION_KEY_PATH,
                                        DASHBOARD_COLLECTION, DASHBOARD_SPACES_COLLECTION,
                                        DASHBOARD_SPACE_PERSONAL, DASHBOARD_SPACE_TYPE_CUSTOM,
                                        Signup, PROXY_DATA_PATH, DASHBOARD_LIFECYCLE_ENDPOINT,
-                                       UNCHANGED_MAGIC_FOR_GUI, GETTING_STARTED_CHECKLIST_SETTING)
+                                       UNCHANGED_MAGIC_FOR_GUI, GETTING_STARTED_CHECKLIST_SETTING,
+                                       LAST_UPDATED_FIELD, UPDATED_BY_FIELD)
 from axonius.consts.metric_consts import ApiMetric, Query, SystemMetric, GettingStartedMetric
 from axonius.consts.plugin_consts import (AGGREGATOR_PLUGIN_NAME,
                                           AXONIUS_USER_NAME,
@@ -84,7 +85,7 @@ from axonius.consts.report_consts import (ACTIONS_FAILURE_FIELD, ACTIONS_FIELD,
                                           ACTIONS_POST_FIELD,
                                           ACTIONS_SUCCESS_FIELD,
                                           LAST_TRIGGERED_FIELD,
-                                          LAST_UPDATE_FIELD, NOT_RAN_STATE,
+                                          NOT_RAN_STATE,
                                           TIMES_TRIGGERED_FIELD,
                                           TRIGGERS_FIELD, ACTION_CONFIG_FIELD, ACTION_FIELD)
 from axonius.consts.scheduler_consts import (Phases, ResearchPhases,
@@ -139,7 +140,7 @@ from gui.gui_logic.entity_data import (get_entity_data, entity_data_field_csv,
 from gui.gui_logic.dashboard_data import (adapter_data, fetch_chart_segment, fetch_chart_segment_historical,
                                           generate_dashboard, generate_dashboard_uncached,
                                           generate_dashboard_historical)
-from gui.gui_logic.db_helpers import beautify_db_entry
+from gui.gui_logic.db_helpers import beautify_db_entry, translate_user_id_to_details
 from gui.gui_logic.ec_helpers import extract_actions_from_ec
 from gui.gui_logic.fielded_plugins import get_fielded_plugins
 from gui.gui_logic.filter_utils import filter_archived
@@ -621,12 +622,15 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
                 })
             return existed_view['_id']
 
+        current_time = datetime.now()
         result = views_collection.replace_one({'name': name}, {
             'name': name,
             'view': mongo_view,
             'query_type': 'saved',
-            'timestamp': datetime.now(),
+            'timestamp': current_time,
             'user_id': '*',
+            UPDATED_BY_FIELD: '*',
+            LAST_UPDATED_FIELD: current_time,
             'predefined': True
         }, upsert=True)
         logger.info(f'Added view {name} id: {result.upserted_id}')
@@ -837,8 +841,9 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
                 return return_error(f'Name is required in order to save a view', 400)
             if not view_data.get('view'):
                 return return_error(f'View data is required in order to save one', 400)
-            view_data['timestamp'] = datetime.now()
             view_data['user_id'] = get_connected_user_id()
+            view_data[LAST_UPDATED_FIELD] = datetime.now()
+            view_data[UPDATED_BY_FIELD] = get_connected_user_id()
             view_data['query_type'] = query_type
             update_result = entity_views_collection.find_one_and_replace({
                 'name': view_data['name']
@@ -870,7 +875,9 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
         }, {
             '$set': {
                 'name': view_data['name'],
-                'view': view_data['view']
+                'view': view_data['view'],
+                LAST_UPDATED_FIELD: datetime.now(),
+                UPDATED_BY_FIELD: get_connected_user_id()
             }
         })
 
@@ -2032,13 +2039,14 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
                 field = f'actions.{field}'
             sort.append((field, direction))
         if not sort:
-            sort.append((LAST_UPDATE_FIELD, pymongo.DESCENDING))
+            sort.append((LAST_UPDATED_FIELD, pymongo.DESCENDING))
 
         def beautify_report(report):
             beautify_object = {
                 '_id': report['_id'],
                 'name': report['name'],
-                'last_updated': report.get('last_updated'),
+                LAST_UPDATED_FIELD: report.get(LAST_UPDATED_FIELD),
+                UPDATED_BY_FIELD: report.get(UPDATED_BY_FIELD),
                 report_consts.LAST_GENERATED_FIELD: report.get(report_consts.LAST_GENERATED_FIELD)
             }
             if report.get('add_scheduling'):
@@ -2084,7 +2092,8 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
             if report:
                 return 'Report name already taken by another report', 400
 
-            report_to_add['last_updated'] = datetime.now()
+            report_to_add[LAST_UPDATED_FIELD] = datetime.now()
+            report_to_add[UPDATED_BY_FIELD] = get_connected_user_id()
             upsert_result = self._upsert_report_config(report_to_add['name'], report_to_add, False)
             report_to_add['uuid'] = str(upsert_result)
             self._generate_and_schedule_report(report_to_add)
@@ -2120,7 +2129,8 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
 
         # Handle remaining request - POST
         report_to_update = request.get_json(silent=True)
-        report_to_update['last_updated'] = datetime.now()
+        report_to_update[LAST_UPDATED_FIELD] = datetime.now()
+        report_to_update[UPDATED_BY_FIELD] = get_connected_user_id()
 
         self._upsert_report_config(report_to_update['name'], report_to_update, True)
         self._generate_and_schedule_report(report_to_update)
@@ -2132,7 +2142,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
     ################
 
     def get_enforcements(self, limit, mongo_filter, mongo_sort, skip):
-        sort = [(LAST_UPDATE_FIELD, pymongo.DESCENDING)] if not mongo_sort else list(mongo_sort.items())
+        sort = [(LAST_UPDATED_FIELD, pymongo.DESCENDING)] if not mongo_sort else list(mongo_sort.items())
 
         def beautify_enforcement(enforcement):
             actions = enforcement[ACTIONS_FIELD]
@@ -2143,7 +2153,8 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
                 f'{TRIGGERS_FIELD}.view.name': trigger['view']['name'] if trigger else '',
                 f'{TRIGGERS_FIELD}.{LAST_TRIGGERED_FIELD}': trigger.get(LAST_TRIGGERED_FIELD, '') if trigger else '',
                 f'{TRIGGERS_FIELD}.{TIMES_TRIGGERED_FIELD}': trigger.get(TIMES_TRIGGERED_FIELD) if trigger else None,
-                LAST_UPDATE_FIELD: enforcement[LAST_UPDATE_FIELD]
+                LAST_UPDATED_FIELD: enforcement[LAST_UPDATED_FIELD],
+                UPDATED_BY_FIELD: enforcement[UPDATED_BY_FIELD]
             })
 
         return [beautify_enforcement(enforcement) for enforcement in self.enforcements_collection.find(
@@ -2174,6 +2185,8 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
     def put_enforcement(self, enforcement_to_add):
         self.__process_enforcement_actions(enforcement_to_add[ACTIONS_FIELD])
         enforcement_to_add['user_id'] = str(get_connected_user_id())
+        enforcement_to_add[LAST_UPDATED_FIELD] = datetime.now()
+        enforcement_to_add[UPDATED_BY_FIELD] = get_connected_user_id()
 
         if enforcement_to_add[TRIGGERS_FIELD] and not enforcement_to_add[TRIGGERS_FIELD][0].get('name'):
             enforcement_to_add[TRIGGERS_FIELD][0]['name'] = enforcement_to_add['name']
@@ -2277,6 +2290,9 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
 
         # Handle remaining request - POST
         enforcement_to_update = request.get_json(silent=True)
+        enforcement_to_update[LAST_UPDATED_FIELD] = datetime.now()
+        enforcement_to_update[UPDATED_BY_FIELD] = get_connected_user_id()
+
         enforcement_actions_from_user = {
             x['name']: x
             for x
@@ -3405,6 +3421,8 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
             self._users_collection.update_one({'_id': ObjectId(user_id)},
                                               {'$set': {'archived': True}})
             self.__invalidate_sessions(user_id)
+
+        translate_user_id_to_details.clean_cache()
         return '', 200
 
     @gui_add_rule_logged_in('system/users/self/additional_userinfo', methods=['POST'])
@@ -3710,7 +3728,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
             return return_error('At least one query required in order to save Dashboard Chart', 400)
         dashboard_data['space'] = ObjectId(space_id)
         dashboard_data['user_id'] = get_connected_user_id()
-        dashboard_data['last_updated'] = datetime.now()
+        dashboard_data[LAST_UPDATED_FIELD] = datetime.now()
         insert_result = self.__dashboard_collection.insert_one(dashboard_data)
         if not insert_result or not insert_result.inserted_id:
             return return_error('Error saving dashboard chart', 400)

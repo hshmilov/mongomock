@@ -93,7 +93,7 @@ class EntitiesPage(Page):
     TABLE_HEADER_SORT_XPATH = '//th[contains(@class, \'sortable\') and contains(text(), \'{col_name_text}\')]'
 
     TABLE_DATA_XPATH = '//tr[@id]/td[position()={data_position}]'
-    TABLE_DATA_SLICER_XPATH = f'{TABLE_DATA_XPATH}//div[@class=\'x-slice\']'
+    TABLE_DATA_SLICER_XPATH = f'{TABLE_DATA_XPATH}//div[@class=\'x-data\']/div'
     TABLE_DATA_SLICER_TYPE_XPATH = f'{TABLE_DATA_XPATH}//div[@class=\'x-slice\']/div'
     TABLE_DATA_EXPAND_ROW_XPATH = f'{TABLE_DATA_XPATH}//div[@class=\'details-list-container\']'
     TABLE_DATA_EXPAND_CELL_XPATH = f'{TABLE_DATA_XPATH}//div[@class=\'details-table-container\']' \
@@ -157,6 +157,8 @@ class EntitiesPage(Page):
     ENFORCEMENT_RESULTS_TITLE_END = '- Task 1'
     ENFORCEMENT_RESULTS_SUBTITLE = 'results of "{action_name}" action'
     MISSING_EMAIL_SETTINGS_TEXT = 'In order to send alerts through mail, configure it under settings'
+    ENFORCEMENT_SEARCH_INPUT = '.body .x-tabs .body .x-tab.active .x-search-input input'
+    TASKS_TAB_TASK_NAME_XPATH = '//div[contains(@class, \'x-tab active\')]//table//a[.//text()=\'{task_name}\']'
 
     FILTER_ADAPTERS_CSS = '.filter-adapters'
     FILTER_ADAPTERS_BOX_CSS = '.x-secondary-select-content'
@@ -169,6 +171,9 @@ class EntitiesPage(Page):
 
     ACTIVE_TAB_TABLE_ROWS = '.body .x-tabs.vertical .body .x-tab.active .x-table-row'
     ACTIVE_TAB_TABLE_ROWS_HEADERS = '.body .x-tabs.vertical .body .x-tab.active .x-table thead th'
+
+    FIELD_UPDATED_BY = 'Updated By'
+    FIELD_LAST_UPDATED = 'Last Updated'
 
     @property
     def url(self):
@@ -1147,3 +1152,13 @@ class EntitiesPage(Page):
             self.ACTIVE_TAB_TABLE_ROWS_HEADERS) if header.text]
         return [TableRow(elem, headers=headers) for elem in
                 self.driver.find_elements_by_css_selector(self.ACTIVE_TAB_TABLE_ROWS) if elem.text]
+
+    def search_enforcement_tasks_search_input(self, text):
+        self.fill_text_field_by_css_selector(self.ENFORCEMENT_SEARCH_INPUT, text)
+        self.key_down_enter(self.driver.find_element_by_css_selector(self.ENFORCEMENT_SEARCH_INPUT))
+
+    def get_enforcement_tasks_count(self):
+        return len([row for row in self.get_all_table_rows(False) if len(row) > 1])
+
+    def click_task_name(self, task_name):
+        self.find_element_by_xpath(self.TASKS_TAB_TASK_NAME_XPATH.format(task_name=task_name)).click()

@@ -162,3 +162,16 @@ DASHBOARD_SPACE_TYPE_DEFAULT = 'default'
 DASHBOARD_SPACE_TYPE_PERSONAL = 'personal'
 DASHBOARD_SPACE_TYPE_CUSTOM = 'custom'
 DASHBOARD_LIFECYCLE_ENDPOINT = 'dashboard/lifecycle'
+
+#########################
+# Field names #
+#########################
+
+LAST_UPDATED_FIELD = 'last_updated'
+UPDATED_BY_FIELD = 'updated_by'
+
+#########################
+# Common Values #
+#########################
+
+PREDEFINED_PLACEHOLDER = 'Predefined'

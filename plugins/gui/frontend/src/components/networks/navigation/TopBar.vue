@@ -7,7 +7,7 @@
       class="bar-toggle"
       @click="toggleSidebar"
     >
-      <md-icon md-src="src/assets/icons/navigation/menu.svg" />
+      <md-icon md-src="/src/assets/icons/navigation/menu.svg" />
     </div>
     <div
       class="bar-logo"
@@ -32,7 +32,7 @@
           disabled
         >
           <md-icon
-            md-src="src/assets/icons/symbol/running.svg"
+            md-src="/src/assets/icons/symbol/running.svg"
             class="rotating"
           />
           <div>Initiating...</div>
@@ -44,7 +44,7 @@
           @click="stopResearchNow"
         >
           <md-icon
-            md-src="src/assets/icons/symbol/running.svg"
+            md-src="/src/assets/icons/symbol/running.svg"
             class="rotating"
           />
           <div>Stopping...</div>
@@ -56,7 +56,7 @@
           :disabled="!isDashboardWrite"
           @click="startResearchNow"
         >
-          <md-icon md-src="src/assets/icons/action/start.svg" />
+          <md-icon md-src="/src/assets/icons/action/start.svg" />
           <div>Discover Now</div>
         </button>
         <button
@@ -66,7 +66,7 @@
           :disabled="!isDashboardWrite"
           @click="stopResearchNow"
         >
-          <md-icon md-src="src/assets/icons/action/stop.svg" />
+          <md-icon md-src="/src/assets/icons/action/stop.svg" />
           <div>Stop Discovery</div>
         </button>
       </li>

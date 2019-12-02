@@ -202,11 +202,11 @@ export const updateDataFields = (state, payload) => {
 export const UPDATE_DATA_HYPERLINKS = 'UPDATE_DATA_HYPERLINKS'
 export const updateDataHyperlinks = (state, payload) => {
 	if (!getModule(state, payload)) return
-	const fields = state[payload.module].hyperlinks
-	fields.fetching = payload.fetching
-	fields.error = payload.error
+	const hyperlinks = state[payload.module].hyperlinks
+	hyperlinks.fetching = payload.fetching
+	hyperlinks.error = payload.error
 	if (payload.data) {
-		fields.data = payload.data
+		hyperlinks.data = payload.data
 	}
 }
 

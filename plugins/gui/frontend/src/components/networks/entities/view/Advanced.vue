@@ -181,8 +181,7 @@
           return this.isSimpleList(item) && this.hasAnyValue(item.name)
         }).map(item => {
           return { ...item,
-            path: [`${this.schema.name}.${item.name}`],
-            hyperlinks: this.hyperlinks
+            hyperlinks: this.hyperlinks[`${this.schema.name}.${item.name}`]
           }
         })
       }

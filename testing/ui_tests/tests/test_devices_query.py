@@ -4,7 +4,7 @@ from uuid import uuid4
 from axonius.utils.hash import get_preferred_quick_adapter_id
 from axonius.utils.wait import wait_until
 from ui_tests.tests.ui_test_base import TestBase
-from ui_tests.tests.ui_consts import AD_ADAPTER_NAME, JSON_ADAPTER_NAME
+from ui_tests.tests.ui_consts import AD_ADAPTER_NAME, JSON_ADAPTER_NAME, WINDOWS_QUERY_NAME
 from services.plugins.general_info_service import GeneralInfoService
 from test_credentials.json_file_credentials import (DEVICE_FIRST_IP,
                                                     DEVICE_THIRD_IP,
@@ -460,7 +460,7 @@ class TestDevicesQuery(TestBase):
         assert len(expressions) == 2
         self.devices_page.select_query_logic_op(self.devices_page.QUERY_LOGIC_AND)
         self.devices_page.select_query_field(self.devices_page.FIELD_SAVED_QUERY, parent=expressions[1])
-        self.devices_page.select_query_value(self.devices_page.VALUE_SAVED_QUERY_WINDOWS, parent=expressions[1])
+        self.devices_page.select_query_value(WINDOWS_QUERY_NAME, parent=expressions[1])
         self.devices_page.wait_for_spinner_to_end()
         assert self.devices_page.is_query_error()
         assert not len(self.devices_page.get_all_data())
@@ -677,7 +677,7 @@ class TestDevicesQuery(TestBase):
         expressions = self.devices_page.find_expressions()
         assert len(expressions) == 1
         self.devices_page.select_query_field(self.devices_page.FIELD_SAVED_QUERY, parent=expressions[0])
-        self.devices_page.select_query_value(self.devices_page.VALUE_SAVED_QUERY_WINDOWS, parent=expressions[0])
+        self.devices_page.select_query_value(WINDOWS_QUERY_NAME, parent=expressions[0])
         self.devices_page.wait_for_spinner_to_end()
         assert self.devices_page.is_query_error()
         for os_type in self.devices_page.get_column_data_slicer(self.devices_page.FIELD_OS_TYPE):

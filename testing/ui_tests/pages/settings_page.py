@@ -161,6 +161,7 @@ class SettingsPage(Page):
 
     def click_update_user(self):
         self.get_special_button(self.UPDATE_USER_BUTTON).click()
+        self.wait_for_element_absent_by_css(self.MODAL_OVERLAY_CSS)
 
     def find_disabled_create_user(self):
         return self.is_element_disabled(self.get_special_button(self.CREATE_USER_BUTTON))
@@ -179,6 +180,16 @@ class SettingsPage(Page):
         self.fill_edit_user_details(password=password, first_name=first_name, last_name=last_name)
         self.click_update_user()
         self.wait_for_element_absent_by_css(self.MODAL_OVERLAY_CSS)
+
+    def add_user_with_permission(self, username, password, first_name=None, last_name=None,
+                                 permission_type: str = None, permission_level: str = None):
+        self.switch_to_page()
+        self.click_manage_users_settings()
+        self.create_new_user(username, password, first_name, last_name)
+        if permission_type and permission_level:
+            self.select_permissions(permission_type, permission_level)
+            self.click_save_manage_users_settings()
+            self.wait_for_user_permissions_saved_toaster()
 
     def get_all_users_from_users_and_roles(self):
         return (x.text for x in self.driver.find_elements_by_css_selector(self.USER_DETAILS_SELECTOR))

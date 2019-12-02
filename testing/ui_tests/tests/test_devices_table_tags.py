@@ -1,6 +1,7 @@
 from axonius.utils.wait import wait_until
 from services.plugins.general_info_service import GeneralInfoService
 from ui_tests.tests.test_entities_table import TestEntitiesTable
+from ui_tests.tests.ui_consts import WINDOWS_QUERY_NAME
 
 
 class TestDevicesTable(TestEntitiesTable):
@@ -41,7 +42,7 @@ class TestDevicesTable(TestEntitiesTable):
         self.base_page.run_discovery()
         self.devices_page.switch_to_page()
         self.devices_page.wait_for_table_to_load()
-        self.devices_page.execute_saved_query(self.devices_page.VALUE_SAVED_QUERY_WINDOWS)
+        self.devices_page.execute_saved_query(WINDOWS_QUERY_NAME)
         self.devices_page.select_all_current_page_rows_checkbox()
         self.devices_page.click_select_all_entities()
         self.devices_page.add_new_tag(self.ALL_TAG_TEST, self.devices_page.get_table_count())

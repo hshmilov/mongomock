@@ -187,24 +187,24 @@ class TestEnforcementSanity(TestBase):
 
         self.enforcements_page.click_sort_column(FIELD_NAME)
         self.enforcements_page.wait_for_table_to_load()
-        assert self.enforcements_page.get_column_data_slicer(FIELD_NAME) == sorted(enforcement_names, reverse=True)
+        assert self.enforcements_page.get_column_data_inline(FIELD_NAME) == sorted(enforcement_names, reverse=True)
         self.enforcements_page.click_sort_column(FIELD_NAME)
         self.enforcements_page.wait_for_table_to_load()
-        assert self.enforcements_page.get_column_data_slicer(FIELD_NAME) == sorted(enforcement_names)
+        assert self.enforcements_page.get_column_data_inline(FIELD_NAME) == sorted(enforcement_names)
         self.enforcements_page.click_sort_column(FIELD_NAME)
         self.enforcements_page.wait_for_table_to_load()
-        assert self.enforcements_page.get_column_data_slicer(FIELD_NAME) == list(reversed(enforcement_names))
+        assert self.enforcements_page.get_column_data_inline(FIELD_NAME) == list(reversed(enforcement_names))
 
         self.enforcements_page.click_sort_column(FIELD_QUERY_NAME)
         self.enforcements_page.wait_for_table_to_load()
-        assert self.enforcements_page.get_column_data_slicer(
+        assert self.enforcements_page.get_column_data_inline(
             FIELD_QUERY_NAME) == sorted(enforcement_queries, reverse=True)
         self.enforcements_page.click_sort_column(FIELD_QUERY_NAME)
         self.enforcements_page.wait_for_table_to_load()
-        assert self.enforcements_page.get_column_data_slicer(FIELD_QUERY_NAME) == sorted(enforcement_queries)
+        assert self.enforcements_page.get_column_data_inline(FIELD_QUERY_NAME) == sorted(enforcement_queries)
         self.enforcements_page.click_sort_column(FIELD_QUERY_NAME)
         self.enforcements_page.wait_for_table_to_load()
-        assert self.enforcements_page.get_column_data_slicer(FIELD_QUERY_NAME) == list(reversed(enforcement_queries))
+        assert self.enforcements_page.get_column_data_inline(FIELD_QUERY_NAME) == list(reversed(enforcement_queries))
 
         # Default sort is according to update time
         for name in sorted(enforcement_names):
@@ -213,7 +213,7 @@ class TestEnforcementSanity(TestBase):
             self.enforcements_page.wait_for_table_to_load()
             # Make a distinct difference between each save
             time.sleep(1)
-        assert self.enforcements_page.get_column_data_slicer(FIELD_NAME) == sorted(enforcement_names, reverse=True)
+        assert self.enforcements_page.get_column_data_inline(FIELD_NAME) == sorted(enforcement_names, reverse=True)
 
     def test_enforcement_table_search(self):
         self._create_enforcement_change_query()
@@ -226,13 +226,13 @@ class TestEnforcementSanity(TestBase):
 
         self.enforcements_page.fill_enter_table_search('Test')
         self.enforcements_page.wait_for_table_to_load()
-        assert len(self.enforcements_page.get_column_data_slicer(FIELD_NAME)) == 5
+        assert len(self.enforcements_page.get_column_data_inline(FIELD_NAME)) == 5
         self.enforcements_page.fill_enter_table_search('1')
         self.enforcements_page.wait_for_table_to_load()
-        assert self.enforcements_page.get_column_data_slicer(FIELD_NAME) == ['Test 1']
+        assert self.enforcements_page.get_column_data_inline(FIELD_NAME) == ['Test 1']
         self.enforcements_page.fill_enter_table_search(ENFORCEMENT_CHANGE_NAME)
         self.enforcements_page.wait_for_table_to_load()
-        assert self.enforcements_page.get_column_data_slicer(FIELD_QUERY_NAME) == 3 * [ENFORCEMENT_CHANGE_NAME]
+        assert self.enforcements_page.get_column_data_inline(FIELD_QUERY_NAME) == 3 * [ENFORCEMENT_CHANGE_NAME]
 
     def test_enforcement_triggers_order(self):
         self._create_enforcement_change_query()

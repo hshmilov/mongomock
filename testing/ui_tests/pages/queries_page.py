@@ -1,11 +1,11 @@
 import logging
 from selenium.common.exceptions import NoSuchElementException
 
-from ui_tests.pages.page import Page
+from ui_tests.pages.entities_page import EntitiesPage
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
-class QueriesPage(Page):
+class QueriesPage(EntitiesPage):
     QUERY_ROW_BY_NAME_XPATH = '//tr[child::td[.//text()=\'{query_name}\']]'
     QUERY_NAME_BY_PART_XPATH = '//div[contains(text(), \'{query_name_part}\')]'
     SAFEGUARD_REMOVE_BUTTON_SINGLE = 'Remove Saved Query'

@@ -6,6 +6,7 @@
   >
     <x-table
       v-model="isReadOnly? undefined: selection"
+      :static-fields="fields"
       :on-click-row="navigateReport"
       module="reports"
       title="Saved Reports"
@@ -56,6 +57,21 @@
             }),
             name() {
                 return 'reports'
+            },
+            fields () {
+                return [{
+                    name: 'name', title: 'Name', type: 'string'
+                  },  {
+                    name: 'last_generated', title: 'Last Generated', type: 'string', format: 'date-time'
+                  }, {
+                    name: 'mailSubject', title: 'Email Subject', type: 'string'
+                  },  {
+                    name: 'period', title: 'Scheduled Email', type: 'string'
+                  }, {
+                    name: 'last_updated', title: 'Last Updated', type: 'string', format: 'date-time'
+                  }, {
+                    name: 'updated_by', title: 'Updated By', type: 'string'
+                }]
             },
             hasSelection() {
                 return (this.selection.ids && this.selection.ids.length) || this.selection.include === false

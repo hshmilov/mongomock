@@ -86,8 +86,6 @@
         return [{
           name: 'name', title: 'Name', type: 'string'
         }, {
-          name: 'last_updated', title: 'Last Updated', type: 'string', format: 'date-time'
-        }, {
           name: 'actions.main', title: 'Main Action', type: 'string'
         }, {
           name: 'triggers.view.name', title: 'Trigger Query Name', type: 'string'
@@ -95,6 +93,10 @@
           name: 'triggers.last_triggered', title: 'Last Triggered', type: 'string', format: 'date-time'
         }, {
           name: 'triggers.times_triggered', title: 'Times Triggered', type: 'integer'
+        }, {
+          name: 'last_updated', title: 'Last Updated', type: 'string', format: 'date-time'
+        }, {
+          name: 'updated_by', title: 'Updated By', type: 'string'
         }]
       },
       hasSelection () {

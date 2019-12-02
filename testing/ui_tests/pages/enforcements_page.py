@@ -131,8 +131,6 @@ class EnforcementsPage(EntitiesPage):
     S3_ACCESS_KEY_ID = 'access_key_id'
     S3_SECRET_ACCESS_KEY_ID = 'secret_access_key'
 
-    ENFORCEMENT_SEARCH_INPUT = '.body .x-tabs .body .x-tab.active .x-search-input input'
-
     ACTION_WMI_REGISTRY_ADD_XPATH_ID = '.md-input'
     ACTION_WMI_REGISTRY_KEY_TEMPLATE = '//*[text()=\'{REG_KEY}\']'
 
@@ -140,6 +138,10 @@ class EnforcementsPage(EntitiesPage):
                         'following-sibling::div[contains(text(),\'{value}\')]'
 
     COMPLETED_CELL_XPATH = '//tr/td[1]//div[text() = \'Completed\']'
+
+    BREADCRUMB_TASK_NAME_XPATH = '//div[@class=\'header\']/*[@class=\'page-title\']/span[' \
+                                 'preceding-sibling::div[@class=\'crumb\' and .//text()=\'enforcements\'] ' \
+                                 'and preceding-sibling::div[@class=\'crumb\' and .//text()=\'tasks\']]'
 
     @property
     def url(self):
@@ -826,9 +828,5 @@ class EnforcementsPage(EntitiesPage):
 
         assert self.get_wmi_action_registry_keys_input_text() == ''
 
-    def search_enforcement_tasks_search_input(self, text):
-        self.fill_text_field_by_css_selector(self.ENFORCEMENT_SEARCH_INPUT, text)
-        self.key_down_enter(self.driver.find_element_by_css_selector(self.ENFORCEMENT_SEARCH_INPUT))
-
-    def get_enforcement_tasks_count(self):
-        return len([row for row in self.get_all_table_rows(False) if len(row) > 1])
+    def get_task_name(self):
+        return self.find_element_by_xpath(self.BREADCRUMB_TASK_NAME_XPATH).text

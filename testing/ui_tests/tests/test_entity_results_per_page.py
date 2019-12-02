@@ -1,5 +1,6 @@
 import time
 
+from ui_tests.tests.ui_consts import WINDOWS_QUERY_NAME
 from ui_tests.tests.ui_test_base import TestBase
 
 
@@ -9,10 +10,6 @@ class TestEntityResultsPerPage(TestBase):
     HUNDRED_RESULTS_PER_PAGE = '100'
 
     def change_values_count_entities_per_page_to_be_val(self, val):
-        # self.devices_page.queries = ['AD Devices Missing Agents', 'DEMO - esx adapter', 'IPv4 Public Subnets',
-        #                              'Windows Operating System']
-        # self.users_page.queries = ['Not Locked Users', 'AD Disabled Users', 'Users Created in Last Day',
-        #                            'Local Users']
         self.settings_page.switch_to_page()
         self.settings_page.click_gui_settings()
         self.settings_page.wait_for_spinner_to_end()
@@ -42,9 +39,13 @@ class TestEntityResultsPerPage(TestBase):
         assert entities_page.find_active_page_size() == results_per_page
 
     def _test_count_entities_per_page(self, entities_page):
-        self.devices_page.queries = ['AD Devices Missing Agents', 'Users Information', 'IPv4 Public Subnets',
-                                     'Windows Operating System']
-        self.users_page.queries = ['Not Locked Users', 'AD Disabled Users', 'Users Created in Last Day',
+        self.devices_page.queries = ['AD Devices Missing Agents',
+                                     'Users Information',
+                                     'IPv4 Public Subnets',
+                                     WINDOWS_QUERY_NAME]
+        self.users_page.queries = ['Not Locked Users',
+                                   'AD Disabled Users',
+                                   'Users Created in Last Day',
                                    'Local Users']
         self._switch_to_entity_page(entities_page)
         # ensure that after refresh of the RESULTS PER PAGE (page size) active link
@@ -52,7 +53,6 @@ class TestEntityResultsPerPage(TestBase):
         assert entities_page.find_active_page_size() == '100'
         entities_page.execute_saved_query(entities_page.queries[0])
         assert entities_page.find_active_page_size() == '100'
-        # saved_queries = self.driver.find_elements_by_css_selector('.x-query .filter button.x-button.link')[0]
         if entities_page == self.devices_page:
             entity_queries_page = self.devices_queries_page
         else:
@@ -60,7 +60,6 @@ class TestEntityResultsPerPage(TestBase):
         # devices_queries_page || users_queries_page
         self.load_saved_queries_entities(entity_queries_page, self.TWENTY_RESULTS_PER_PAGE)
         # Click on the first Saved Query to load it in the entity 'users' or 'device' page
-        # self.devices_queries_page.click_row()
         windows_query_row = self.devices_queries_page.find_query_row_by_name(entities_page.queries[1])
         entity_queries_page.wait_for_spinner_to_end()
         windows_query_row.click()
