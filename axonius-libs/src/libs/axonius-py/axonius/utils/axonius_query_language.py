@@ -367,20 +367,13 @@ def parse_filter(filter_str: str, history_date=None) -> dict:
 
 def process_filter(filter_str, history_date):
     # Handle predefined sequence representing a range of some time units from now back
-    matches = re.search(r'NOW\s*-\s*(\d+)([hdw])', filter_str)
-    while matches:
-        computed_date = datetime.datetime.now() if not history_date else parse_date(history_date)
-        # Create the start date intended
-        if matches.group(2) == 'h':
-            computed_date -= datetime.timedelta(hours=int(matches.group(1)))
-        elif matches.group(2) == 'd':
-            computed_date -= datetime.timedelta(days=int(matches.group(1)))
-        elif matches.group(2) == 'w':
-            computed_date -= datetime.timedelta(days=int(matches.group(1)) * 7)
-        # Remove the predefined sequence
-        filter_str = filter_str.replace(matches.group(0), computed_date.strftime('%m/%d/%Y %I:%M %p'))
-        # Find next sequence
-        matches = re.search(r'NOW\s*-\s*(\d+)([hdw])', filter_str)
+    now = datetime.datetime.now() if not history_date else parse_date(history_date)
+
+    def replace_now(match):
+        return match.group().replace('NOW', f'AXON{int(now.timestamp())}')
+
+    # Replace "NOW - ##" to "number - ##" so AQL can further process it
+    filter_str = re.sub(r'(NOW)\s*-\s*(\d+)([hdw])', replace_now, filter_str)
 
     matches = re.search(r'NOT\s*\[(.*)\]', filter_str)
     while matches:

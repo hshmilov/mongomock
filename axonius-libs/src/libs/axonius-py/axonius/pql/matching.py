@@ -29,11 +29,38 @@ from calendar import timegm
 from astor.source_repr import split_lines
 
 
+def parse_date_custom(str_date: str) -> datetime:
+    """
+    Parses the "(number) - 7[d]" format used internally for supporting "NOW" in AQL
+    :param str_date: the string to parse
+    :return: the parsed time
+    """
+    str_date = str_date.replace(' ', '')
+    first, second = str_date.split('-')
+
+    first_date = datetime.datetime.fromtimestamp(int(first))
+
+    timedelta_indicator = second[-1]
+    number_for_timedelta = int(second[:-1])
+
+    if timedelta_indicator == 'h':
+        first_date -= datetime.timedelta(hours=number_for_timedelta)
+    elif timedelta_indicator == 'd':
+        first_date -= datetime.timedelta(days=number_for_timedelta)
+    elif timedelta_indicator == 'w':
+        first_date -= datetime.timedelta(days=number_for_timedelta)
+
+    return first_date
+
+
 def parse_date(node):
     if hasattr(node, 'n'):  # it's a number!
         return datetime.datetime.fromtimestamp(node.n)
     try:
-        return dateutil.parser.parse(node.s)
+        s = node.s
+        if 'AXON' in s:
+            return parse_date_custom(s[len('AXON'):])
+        return dateutil.parser.parse(s)
     except Exception as e:
         raise ParseError('Error parsing date: ' + str(e), col_offset=node.col_offset)
 
