@@ -229,7 +229,9 @@
         return this.content.data
       },
       count () {
-        if (this.staticData) return {data_to_show: this.staticData.length}
+        if (this.staticData) return {
+          data_to_show: this.filteredData.length
+        }
         return this.moduleState.count
       },
       view () {
