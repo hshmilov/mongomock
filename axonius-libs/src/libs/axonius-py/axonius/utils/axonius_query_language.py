@@ -298,14 +298,18 @@ def figure_out_axon_internal_id_from_query(recipe_run_pretty_id: str, condition:
                             })]
 
 
-@cachetools.cached(cachetools.LRUCache(maxsize=100), lock=Lock())
-def parse_filter_cached(filter_str: str, history_date=None) -> frozendict:
+def parse_filter_uncached(filter_str: str, history_date=None) -> frozendict:
     """
     Translates a string representing of a filter to a valid MongoDB query for entities.
     This does a log of magic to support querying the regular DB
+
+    :param filter_str:      The PQL filter to translate into Mongo query
+    :param history_date:    The historical date requested, in order to calculate last X days
+    :return:
     """
+
     if filter_str is None:
-        return {}
+        return frozendict({})
 
     include_outdated = False
     filter_str = filter_str.strip()
@@ -343,10 +347,21 @@ def parse_filter_cached(filter_str: str, history_date=None) -> frozendict:
     return frozendict(res)
 
 
+@cachetools.cached(cachetools.LRUCache(maxsize=100), lock=Lock())
+def parse_filter_cached(filter_str: str, history_date=None) -> frozendict:
+    """
+    See parse_filter_uncached
+    """
+    return parse_filter_uncached(filter_str, history_date)
+
+
 def parse_filter(filter_str: str, history_date=None) -> dict:
     """
-    See parse_filter_cached
+    If given filter contains the keyword NOW, meaning it needs a calculation relative to current date,
+    it must be recalculated, instead of using the cached result
     """
+    if filter_str and 'NOW' in filter_str:
+        return dict(parse_filter_uncached(filter_str, history_date))
     return dict(parse_filter_cached(filter_str, history_date))
 
 
