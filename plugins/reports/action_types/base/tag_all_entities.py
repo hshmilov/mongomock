@@ -33,7 +33,7 @@ class TagAllEntitiesAction(ActionTypeBase):
                 },
                 {
                     'name': 'should_remove_tag_from_no_queried',
-                    'title': 'Remove tag from entities not found in the Saved Query results',
+                    'title': 'Remove this tag from entities not found in the Saved Query results',
                     'type': 'bool',
                 }
             ],
