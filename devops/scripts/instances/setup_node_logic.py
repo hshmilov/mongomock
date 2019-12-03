@@ -1,8 +1,7 @@
+import os
 import shlex
 import subprocess
 import sys
-
-import docker
 
 from scripts.instances.network_utils import connect_to_master, update_weave_connection_params, update_db_enc_key
 from scripts.instances.instances_consts import (ADAPTER_RESTART_COMMAND,
@@ -51,11 +50,17 @@ def change_instance_setup_user_pass():
     print('done!')
 
 
-def get_db_pass_from_core():
+def get_db_pass_from_core() -> str:
+    """
+    Get db password from core using curl docker container inside weave network
+    Notes: using 'docker' library is best practice, but it sometimes returns empty values on container run.
+    :return: base64 encoded password
+    """
     try:
-        client = docker.from_env(environment={'DOCKER_HOST': 'unix:///var/run/weave/weave.sock'})
-        password = client.containers.run('appropriate/curl', auto_remove=True,
-                                         command=f'-kfsSL {DB_PASSWORD_GET_URL}').decode('ascii')
+        my_env = os.environ.copy()
+        my_env['DOCKER_HOST'] = 'unix:///var/run/weave/weave.sock'
+        command = f'docker run --rm appropriate/curl -kfsSL {DB_PASSWORD_GET_URL}'
+        password = subprocess.check_output(shlex.split(command), env=my_env).decode('ascii')
         if not password:
             print("Error getting db pass")
         return password

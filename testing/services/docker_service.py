@@ -1,5 +1,6 @@
 import json
 import os
+import re
 import shlex
 import subprocess
 from abc import abstractmethod
@@ -20,7 +21,6 @@ from services.axon_service import AxonService, TimeoutException
 from services.ports import DOCKER_PORTS
 from test_helpers.exceptions import DockerException
 from test_helpers.parallel_runner import ParallelRunner
-
 
 # 2 minutes until we bail out from stopping an adapter gracefully. after that period, we will send a SIGKILL
 STOP_GRACE_PERIOD = '120'
@@ -359,7 +359,9 @@ else:
             self.remove_volume()
 
         cmd = ' '.join(docker_up)
-        print(f'{cmd}')
+        # do not print database key
+        normalized_command = re.sub(rf'(--env {DB_KEY_ENV_VAR_NAME}=\S*)', '', cmd)
+        print(f'{normalized_command}')
 
         docker_run_process = subprocess.Popen(docker_up, cwd=self.service_dir, env=run_env, stdout=subprocess.PIPE,
                                               stderr=subprocess.PIPE)
