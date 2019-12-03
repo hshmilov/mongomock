@@ -146,6 +146,7 @@ DOCKER_PORTS = {
     'rumble-adapter':                   6054,
     'preempt-adapter':                  6055,
     'cherwell-adapter':                 6056,
+    'hp-nnmi-adapter':                  6057,
     'diag-w':                           6665,  # reserved
     'diag-l':                           6666,  # reserved
     'code42-adapter':                   6667,

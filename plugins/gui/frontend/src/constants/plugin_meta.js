@@ -172,6 +172,10 @@ export const pluginMeta = {
         link: 'https://docs.axonius.com/docs/automox',
         description: 'Automox is a cloud-based patch and configuration management solution for Windows, Linux, Mac, and third-party software.'
     },
+    hp_nnmi_adapter: {
+        title: 'HP Network Node Manager i (NNMi)',
+        description: 'HP Network Node Manager i (NNMi) is a network health and performance monitoring software with scalability and device support.\n'
+    },
     kaspersky_sc_adapter: {
         title: 'Kaspersky Security Center',
         link: 'https://docs.axonius.com/docs/kaspersky-security-center',
