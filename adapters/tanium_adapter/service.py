@@ -296,6 +296,7 @@ class TaniumAdapter(AdapterBase):
         try:
             device = self._new_device_adapter()
             device.tanium_type = DISCOVERY_TYPE
+            device.adapter_properties = [AdapterProperty.Network]
             device_id = device_raw.get('macaddress')
             if not device_id:
                 logger.warning(f'Bad device with no ID {device_raw}')

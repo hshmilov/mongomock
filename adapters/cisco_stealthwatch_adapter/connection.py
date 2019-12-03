@@ -22,9 +22,11 @@ class CiscoStealthwatchConnection(RESTConnection):
         if not self._username or not self._password:
             raise RESTException('No username or password')
         try:
+            auth_data = {'username': self._username, 'password': self._password}
             logger.debug(f'Getting auth cookie from {self._domain} using POST to {REST_PATH_AUTH}')
             self._post(REST_PATH_AUTH,
-                       do_basic_auth=True,
+                       body_params=auth_data,
+                       use_json_in_body=False,
                        extra_headers={'Content-Type': 'application/x-www-form-urlencoded'})
         except RESTException as e:
             message = f'Error connecting to Cisco Stealthwatch Management: {str(e)}'
@@ -51,7 +53,8 @@ class CiscoStealthwatchConnection(RESTConnection):
         """
         try:
             logger.debug(f'Trying to kill session with {self._domain} using DELETE to {REST_PATH_LOGOUT}')
-            self._delete(REST_PATH_LOGOUT, extra_headers={'Content-Type': 'application/x-www-form-urlencoded'})
+            self._delete(REST_PATH_LOGOUT, extra_headers={'Content-Type': 'application/x-www-form-urlencoded'},
+                         use_json_in_respone=False)
         except RESTException as e:
             message = f'Error DISconnecting from Cisco Stealthwatch Management: {str(e)}'
             logger.exception(message)

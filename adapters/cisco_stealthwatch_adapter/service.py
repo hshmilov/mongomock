@@ -114,7 +114,7 @@ class CiscoStealthwatchAdapter(ScannerAdapterBase):
             ],
             'required': [
                 'smc_host',
-                'tenant_id'
+                'tenant_id',
                 'username',
                 'password',
                 'verify_ssl'
@@ -134,8 +134,6 @@ class CiscoStealthwatchAdapter(ScannerAdapterBase):
             name = device_raw.get('name')
             if name != device_raw.get('ipAddress'):
                 device.hostname = name
-            else:
-                logger.error(f'Did not get hostname for exporter device: {name}.')
             device.reported_name = device_raw.get('name')
             device.exp_type = device_raw.get('type')
             device.fcName = device_raw.get('flowCollectorName')
