@@ -64,7 +64,7 @@ class TestDashboard(TestBase):
     MANAGED_DEVICES_OPTION_NAME = 'Managed Devices'
     NOT_LOCAL_USERS_OPTION_NAME = 'Not Local Users'
     NOT_FROM_US_USERS_OPTION_NAME = 'Users Not From US'
-    BAD_LOGON_7_USERS_OPTION_NAME = 'Users With Bad Logons In Past 7 Days'
+    AD_NO_PASSWORD_EXPIRATION_OPTION = 'AD Enabled Users Whose Password Does Not Expire'
     AD_CRITICAL_USERS_OPTION_NAME = 'AD Enabled Critical Users'
     IS_ADMIN_OPTION_NAME = 'Is Admin'
     IS_LOCAL_OPTION_NAME = 'Is Local'
@@ -929,10 +929,10 @@ class TestDashboard(TestBase):
             self.dashboard_page.select_intersection_chart_first_query(self.NOT_LOCAL_USERS_OPTION_NAME)
             self.dashboard_page.select_intersection_chart_second_query(self.NOT_FROM_US_USERS_OPTION_NAME)
 
-        with self._edit_and_assert_chart(card, ['93', '7'], self.PIE_CHART_TYPE):
-            self.dashboard_page.select_intersection_chart_second_query(self.BAD_LOGON_7_USERS_OPTION_NAME)
+        with self._edit_and_assert_chart(card, ['73', '27'], self.PIE_CHART_TYPE):
+            self.dashboard_page.select_intersection_chart_second_query(self.AD_NO_PASSWORD_EXPIRATION_OPTION)
 
-        with self._edit_and_assert_chart(card, ['53', '40', '7'], self.PIE_CHART_TYPE):
+        with self._edit_and_assert_chart(card, ['47', '27', '20', '7'], self.PIE_CHART_TYPE):
             self.dashboard_page.select_intersection_chart_first_query(self.AD_CRITICAL_USERS_OPTION_NAME)
 
     def _test_comparison_chart_edit(self, card):
