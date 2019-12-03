@@ -28,7 +28,7 @@ class TestDashboard(TestBase):
     SUMMARY_CARD_QUERY_DEVICES = 'specific_data.data.hostname == exists(true)'
     SUMMARY_CARD_QUERY_USERS = 'specific_data.data.logon_count == exists(true) and specific_data.data.logon_count > 0'
     OS_WINDOWS_QUERY = 'specific_data.data.os.type == "Windows"'
-    LAST_SEEN_7_DAY_QUERY = 'specific_data.data.last_seen < date("NOW - 7d")'
+    LAST_SEEN_7_DAY_QUERY = 'specific_data.data.last_seen < date("NOW - 30d")'
     INTERSECTION_QUERY = f'({OS_WINDOWS_QUERY}) and ({LAST_SEEN_7_DAY_QUERY})'
     SYMMETRIC_DIFFERENCE_FROM_FIRST_QUERY = f'({OS_WINDOWS_QUERY}) and not ({LAST_SEEN_7_DAY_QUERY})'
     SYMMETRIC_DIFFERENCE_FROM_BASE_QUERY = f'not (({OS_WINDOWS_QUERY}) or ({LAST_SEEN_7_DAY_QUERY}))'
@@ -176,7 +176,7 @@ class TestDashboard(TestBase):
         self.dashboard_page.switch_to_page()
         self.base_page.run_discovery()
         self.dashboard_page.add_intersection_card('Devices', WINDOWS_QUERY_NAME,
-                                                  'Devices Not Seen In Last 7 Days', self.TEST_INTERSECTION_TITLE)
+                                                  'Devices Not Seen In Last 30 Days', self.TEST_INTERSECTION_TITLE)
         self.dashboard_page.wait_for_spinner_to_end()
         # verify card config reset
         self.dashboard_page.verify_card_config_reset_intersection_chart(self.TEST_INTERSECTION_TITLE)
