@@ -71,13 +71,13 @@ class EsxAdapter(AdapterBase):
             )
         except vim.fault.InvalidLogin as e:
             message = 'Credentials invalid for ESX client for account {0}'.format(client_id)
-            logger.exception(message)
+            logger.warning(message, exc_info=True)
         except vim.fault.HostConnectFault as e:
             message = 'Unable to access vCenter, text={}, host = {}'.format(e.msg, client_config['host'])
-            logger.exception(message)
+            logger.warning(message, exc_info=True)
         except Exception as e:
             message = 'Unknown error on account {}, text={}'.format(client_id, str(e))
-            logger.exception(message)
+            logger.warning(message, exc_info=True)
         raise ClientConnectionException(message)
 
     def _clients_schema(self):
@@ -151,7 +151,7 @@ class EsxAdapter(AdapterBase):
                 elif 'CD/DVD' in (hwdevice.get('deviceInfo') or {}).get('label') or '':
                     device.cd_summaries.append((hwdevice.get('deviceInfo') or {}).get('summary'))
             except Exception:
-                logger.exception(f'Problem with hardware device')
+                logger.warning(f'Problem with hardware device', exc_info=True)
         if hds_total:
             device.hds_total = hds_total
         for hwdevice in details.get('hardware_networking', {}):
@@ -168,7 +168,7 @@ class EsxAdapter(AdapterBase):
             if details.get('runtime', {}).get('powerState') == 'poweredOn':
                 device.last_seen = datetime.datetime.now()
         except Exception:
-            logger.exception(f'Problem addding last seen for {details}')
+            logger.warning(f'Problem addding last seen for {details}', exc_info=True)
         if isinstance((details.get('runtime') or {}).get('consolidationNeeded'), bool):
             device.consolidation_needed = (details.get('runtime') or {}).get('consolidationNeeded')
         boot_time = details.get('runtime', {}).get('bootTime')
@@ -206,13 +206,13 @@ class EsxAdapter(AdapterBase):
                 device.device_type = ESXDeviceType.VMMachine
                 yield device
             except Exception:
-                logger.exception('Problem getting machine')
+                logger.warning('Problem getting machine', exc_info=True)
                 return
         elif node_type == 'ESXHost':
             try:
                 device = self._parse_vm_machine(node, _curr_path)
             except Exception:
-                logger.exception('Problem getting esx host')
+                logger.warning('Problem getting esx host', exc_info=True)
                 return
             if device is None:
                 return
@@ -221,7 +221,7 @@ class EsxAdapter(AdapterBase):
                 if details and details.get('config'):
                     device.hostname = details.get('config').get('name')
             except Exception:
-                logger.exception(f'Problem getting ESX Host name ')
+                logger.warning(f'Problem getting ESX Host name ', exc_info=True)
             device.device_type = ESXDeviceType.ESXHost
             node_hardware = node.get('Hardware')
             if node_hardware:
@@ -236,7 +236,7 @@ class EsxAdapter(AdapterBase):
                 try:
                     yield from self._parse_raw_data(child, _curr_path + '/' + node['Name'])
                 except Exception:
-                    logger.exception(f'Problem getting special thing')
+                    logger.warning(f'Problem getting special thing', exc_info=True)
                     continue
         else:
             raise RuntimeError('Found weird type of node: {}'.format(node['Type']))
