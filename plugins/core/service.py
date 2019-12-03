@@ -204,7 +204,7 @@ class CoreService(Triggerable, PluginBase, Configurable):
                     delete_candidate = self.online_plugins.get(delete_key)
                     if delete_candidate is delete_value:
                         logger.info("Plugin {0} didn't answer, deleting "
-                                    "from online plugins list".format(delete_candidate))
+                                    "from online plugins list".format(delete_candidate.get('plugin_unique_name')))
                         del self.online_plugins[delete_key]
                         self.core_configs_collection.update_one({
                             PLUGIN_UNIQUE_NAME: delete_key
