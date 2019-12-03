@@ -25,6 +25,8 @@ connection_line = 'mongodb://{user}:{password}@{addr}:{port}'.format(user='ax_us
                                                                      password='ax_pass',
                                                                      addr='localhost',
                                                                      port=27017)
+# mongo need some time to shut down properly
+MONGO_STOP_GRACE_PERIOD = 600
 
 
 class MongoService(WeaveService):
@@ -189,6 +191,14 @@ class MongoService(WeaveService):
 
     def is_up(self, *args, **kwargs):
         return self.is_mongo_alive()
+
+    def stop_async(self, should_delete=False, remove_image=False, remove_volume=False,
+                   grace_period=MONGO_STOP_GRACE_PERIOD):
+        print(f'Shutting down mongo, this can take up to {grace_period} seconds.')
+        yield from super().stop_async(should_delete=should_delete,
+                                      remove_image=remove_image,
+                                      remove_volume=remove_volume,
+                                      grace_period=grace_period)
 
     def get_configs(self):
         return list(iter(self.client['core']['configs'].find()))

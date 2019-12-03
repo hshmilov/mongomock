@@ -442,12 +442,12 @@ else:
         for _ in self.stop_async(**kwargs):
             pass
 
-    def stop_async(self, should_delete=False, remove_image=False, remove_volume=False):
+    def stop_async(self, should_delete=False, remove_image=False, remove_volume=False, grace_period=STOP_GRACE_PERIOD):
         assert self._process_owner, 'Only process owner should be able to stop or start the fixture!'
 
         # killing the container is faster than down. but killing it will make some apps not flush their data
         # to the disk, so we give it a second.
-        process = subprocess.Popen(['docker', 'stop', '--time', STOP_GRACE_PERIOD, self.container_name],
+        process = subprocess.Popen(['docker', 'stop', '--time', str(grace_period), self.container_name],
                                    cwd=self.service_dir, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         yield process
         process.wait()
