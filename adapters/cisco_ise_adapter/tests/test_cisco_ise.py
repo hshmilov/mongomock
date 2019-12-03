@@ -1,4 +1,4 @@
-from cisco_ise_adapter.connection import CiscoIseConnection
+from cisco_ise_adapter.ers_connection import CiscoIseERSConnection
 from cisco_ise_adapter.service import CiscoIseAdapter
 
 # pylint: disable=super-init-not-called,abstract-method,line-too-long,arguments-differ,protected-access
@@ -101,9 +101,9 @@ class CiscoIseMockAdapter(CiscoIseAdapter):
         return CiscoIseMockConnection()
 
 
-class CiscoIseMockConnection(CiscoIseConnection):
+class CiscoIseMockConnection(CiscoIseERSConnection):
     def __init__(self, *args, **kwargs):
-        super().__init__(domain='https://tests', username='test', password='test')
+        super().__init__(domain='https://tests', username='test', password='test', fetch_endpoints=True)
         self.__top_endpoint_page = 0
 
     @property
@@ -134,7 +134,7 @@ class CiscoIseMockConnection(CiscoIseConnection):
 
 def test_get_network_devices():
     adapter = CiscoIseMockAdapter()
-    data = adapter._query_devices_by_client('test', adapter.get_connection(''))
+    data = adapter._query_devices_by_client('test', (adapter.get_connection(''), None))
     devices = list(adapter._parse_raw_data(data))
     assert len(devices) == 2
     dict_ = devices[0].to_dict()

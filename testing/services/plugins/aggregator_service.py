@@ -74,8 +74,10 @@ class AggregatorService(PluginService, UpdatablePluginMixin):
             self._update_schema_version_20()
         if self.db_schema_version < 21:
             self._update_schema_version_21()
+        if self.db_schema_version < 22:
+            self._update_schema_version_22()
 
-        if self.db_schema_version != 21:
+        if self.db_schema_version != 22:
             print(f'Upgrade failed, db_schema_version is {self.db_schema_version}')
 
     def __create_capped_collections(self):
@@ -992,6 +994,25 @@ class AggregatorService(PluginService, UpdatablePluginMixin):
             self.db_schema_version = 21
         except Exception as e:
             print(f'Exception while upgrading core db to version 21. Details: {e}')
+            traceback.print_exc()
+            raise
+
+    def _update_schema_version_22(self):
+        print('Update to schema 22 - enable cisco ise fetch endpoint')
+        try:
+            # Activate cisco ise "fetch endpoints" only if clients already connected
+            cisco_ise_adapters = list(self.db.client['core']['configs'].find({PLUGIN_NAME: 'cisco_ise_adapter'}))
+            cisco_ise_names = [doc[PLUGIN_UNIQUE_NAME] for doc in cisco_ise_adapters]
+            for plugin_unique_name in cisco_ise_names:
+                if self.db.client[plugin_unique_name]['clients'].find_one():
+                    self.db.client[plugin_unique_name]['configurable_configs'].update_one(
+                        {"config_name": "CiscoIseAdapter"},
+                        {'$set': {'config': {'fetch_endpoints': True}}}
+                    )
+
+            self.db_schema_version = 22
+        except Exception as e:
+            print(f'Exception while upgrading core db to version 22. Details: {e}')
             traceback.print_exc()
             raise
 

@@ -7,26 +7,31 @@ from axonius.clients.rest.exception import RESTException
 from axonius.plugin_base import PluginBase
 from cisco_ise_adapter import xmltodict
 from cisco_ise_adapter.consts import (
-    ISE_PORT,
+    ISE_ERS_PORT,
     MAX_NETWORK_DEVICE_PAGE,
     PAGE_SIZE,
     SECRETS,
-    URL_BASE_PREFIX,
+    ERS_URL_BASE_PREFIX,
     CiscoIseDeviceType,
 )
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
-class CiscoIseConnection(RESTConnection):
+class CiscoIseERSConnection(RESTConnection):
     """
     Class to configure Cisco ISE via the ERS API
     """
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, fetch_endpoints=False, **kwargs):
         super().__init__(
-            *args, port=ISE_PORT, url_base_prefix=URL_BASE_PREFIX, headers={'Connection': 'keep_alive'}, **kwargs
+            *args,
+            port=ISE_ERS_PORT,
+            url_base_prefix=ERS_URL_BASE_PREFIX,
+            headers={'Connection': 'keep_alive'},
+            **kwargs
         )
+        self._fetch_endpoints = fetch_endpoints
 
     @property
     def top_endpoint_page(self):
@@ -102,6 +107,9 @@ class CiscoIseConnection(RESTConnection):
             if len(devices['response']) < PAGE_SIZE:
                 break
 
+        if not self._fetch_endpoints:
+            return
+
         for page in range(1, MAX_NETWORK_DEVICE_PAGE):
             endpoints = self.get_endpoints(page=(page + self.top_endpoint_page))
             if not endpoints['success']:
@@ -120,6 +128,7 @@ class CiscoIseConnection(RESTConnection):
             if len(endpoints['response']) < PAGE_SIZE:
                 self.top_endpoint_page = 0
                 break
+
         if page == MAX_NETWORK_DEVICE_PAGE - 1:
             self.top_endpoint_page += MAX_NETWORK_DEVICE_PAGE
 
@@ -129,8 +138,7 @@ class CiscoIseConnection(RESTConnection):
     # pylint: disable=arguments-differ
     @staticmethod
     def test_reachability(domain):
-        return super().test_reachbility(domain, port=ISE_PORT, path=URL_BASE_PREFIX, ssl=True)
-
+        return RESTConnection.test_reachability(domain, port=ISE_ERS_PORT, path=ERS_URL_BASE_PREFIX, ssl=True)
     # pylint: enable=arguments-differ
 
     @staticmethod
