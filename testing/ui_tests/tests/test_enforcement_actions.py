@@ -1,28 +1,34 @@
 import datetime
 import time
 from typing import List
-import pytest
-from selenium.common.exceptions import NoSuchElementException
 
 import boto3
+import pytest
 from flaky import flaky
 from retrying import retry
+from selenium.common.exceptions import NoSuchElementException
 
 from axonius.consts.system_consts import AXONIUS_DNS_SUFFIX
-from axonius.utils.wait import wait_until
 from axonius.utils.parsing import make_dict_from_csv
+from axonius.utils.wait import wait_until
 from services.adapters import stresstest_scanner_service, stresstest_service
-from services.standalone_services.smtp_server import generate_random_valid_email
-from services.standalone_services.maildiranasaurus_server import MailDiranasaurusService as SMTPService
+from services.adapters.esx_service import EsxService
+from services.standalone_services.maildiranasaurus_server import \
+    MailDiranasaurusService as SMTPService
+from services.standalone_services.smtp_server import \
+    generate_random_valid_email
 from services.standalone_services.syslog_server import SyslogService
+from test_credentials.json_file_credentials import \
+    client_details as json_file_creds
+from test_credentials.test_aws_credentials import (EC2_ECS_EKS_READONLY_ACCESS_KEY_ID,
+                                                   EC2_ECS_EKS_READONLY_SECRET_ACCESS_KEY)
+from test_credentials.test_esx_credentials import \
+    client_details as esx_client_details
 from test_helpers.log_tester import LogTester
-from ui_tests.tests.ui_consts import Enforcements, REPORTS_LOG_PATH
+from ui_tests.pages.enforcements_page import (ENFORCEMENT_WMI_SAVED_QUERY,
+                                              ENFORCEMENT_WMI_SAVED_QUERY_NAME)
+from ui_tests.tests.ui_consts import REPORTS_LOG_PATH, Enforcements
 from ui_tests.tests.ui_test_base import TestBase
-from ui_tests.pages.enforcements_page import ENFORCEMENT_WMI_SAVED_QUERY_NAME, \
-    ENFORCEMENT_WMI_SAVED_QUERY
-from test_credentials.json_file_credentials import client_details as json_file_creds
-from test_credentials.test_aws_credentials import EC2_ECS_EKS_READONLY_ACCESS_KEY_ID, \
-    EC2_ECS_EKS_READONLY_SECRET_ACCESS_KEY
 
 ENFORCEMENT_NAME = 'Special enforcement name'
 COMMON_ENFORCEMENT_QUERY = 'Enabled AD Devices'
@@ -34,9 +40,17 @@ ENFORCEMENT_TEST_NAME_3 = 'Test_enforcement_3'
 SAVED_QUERY_JUST_CBR_NAME = 'just_cbr'
 SAVED_QUERY_JUST_CBR = 'adapters == \'carbonblack_response_adapter\''
 AD_LAST_OR_ADDED_QUERY = '({added_filter}) or adapters_data.active_directory_adapter.ad_last_logon> date("NOW-8d")'
+AD_ESX_AND_JSON_QUERY = '(adapters == "active_directory_adapter") and (adapters == "esx_adapter") ' \
+                        'or (adapters == "json_file_adapter")'
+AD_ESX_AND_JSON_QUERY_NAME = 'ESX, AD AND JSON'
+AD_QUERY = 'adapters == "active_directory_adapter"'
+AD_QUERY_NAME = 'AD Only'
+AD_ONLY_QUERY = '(adapters == "active_directory_adapter") and not (adapters == "esx_adapter")'
+JSON_ONLY_QUERY = 'adapters == "json_file_adapter"'
 
 CUSTOM_TAG = 'superTag'
 TAG_ALL_COMMENT = 'tag all'
+UNTAG_UNQUERIED = 'tag untag'
 TAG_NEW_COMMENT = 'tag new'
 
 JSON_ADAPTER_NAME = 'JSON File'
@@ -44,6 +58,9 @@ AXONIUS_CI_TESTS_BUCKET = 'axonius-ci-tests'
 
 ACTION_WMI_REGISTRY_KEY_OS_VERSION = 'SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion'
 ACTION_WMI_REGISTRY_KEY_CPU_TYPE = 'HKEY_LOCAL_MACHINE\\Hardware\\Description\\System\\FloatingPointProcessor\\0'
+
+ESX_NAME = 'VMware ESXi'
+ESX_PLUGIN_NAME = 'esx_adapter'
 
 
 def create_enforcement_name(number, enforcement_name=ENFORCEMENT_NAME):
@@ -196,6 +213,59 @@ class TestEnforcementActions(TestBase):
             syslog_expected = f'Alert - "{new_enforcement_name}"' + \
                               f' for the following query has been triggered: {COMMON_ENFORCEMENT_QUERY}'
             _verify_in_syslog_data(syslog_server, syslog_expected)
+
+    def test_remove_tag_from_unqueried(self):
+        def _check_query_result_is_tagged(query, tagged=True):
+            self.devices_page.switch_to_page()
+            self.devices_page.fill_filter(query)
+            self.devices_page.enter_search()
+            self.enforcements_page.wait_for_table_to_load()
+            tagged_check_result = self.devices_page.get_first_row_tags() == UNTAG_UNQUERIED
+            assert tagged_check_result == tagged
+        try:
+            with EsxService().contextmanager(take_ownership=True):
+                self.adapters_page.switch_to_page()
+                self.adapters_page.wait_for_adapter(ESX_NAME)
+                self.adapters_page.click_adapter(ESX_NAME)
+                self.adapters_page.wait_for_spinner_to_end()
+                self.adapters_page.wait_for_table_to_load()
+                self.adapters_page.click_new_server()
+                self.adapters_page.fill_creds(**esx_client_details[0][0])
+                self.adapters_page.click_save()
+                self.adapters_page.wait_for_spinner_to_end()
+                self.devices_page.switch_to_page()
+                self.devices_page.run_filter_and_save(AD_QUERY_NAME, AD_QUERY)
+                self.enforcements_page.switch_to_page()
+                self.enforcements_page.wait_for_table_to_load()
+                self.enforcements_page.click_new_enforcement()
+                self.enforcements_page.fill_enforcement_name(ENFORCEMENT_CHANGE_NAME)
+                self.enforcements_page.select_trigger()
+                self.enforcements_page.check_scheduling()
+                self.enforcements_page.select_saved_view(AD_QUERY_NAME)
+                self.enforcements_page.save_trigger()
+                self.enforcements_page.add_tag_entities(ENFORCEMENT_CHANGE_NAME, UNTAG_UNQUERIED,
+                                                        should_delete_unqueried=True)
+                self.enforcements_page.click_save_button()
+                self.base_page.run_discovery()
+
+                _check_query_result_is_tagged(AD_QUERY, True)
+                _check_query_result_is_tagged(JSON_ONLY_QUERY, False)
+
+                self.devices_page.run_filter_and_save(AD_ESX_AND_JSON_QUERY_NAME, AD_ESX_AND_JSON_QUERY)
+
+                self.enforcements_page.switch_to_page()
+                self.enforcements_page.wait_for_spinner_to_end()
+                self.enforcements_page.edit_enforcement(ENFORCEMENT_CHANGE_NAME)
+                self.enforcements_page.select_trigger()
+                self.enforcements_page.select_saved_view(AD_ESX_AND_JSON_QUERY_NAME)
+                self.enforcements_page.save_trigger()
+                self.enforcements_page.click_run_button()
+                _check_query_result_is_tagged(AD_ONLY_QUERY, False)
+                _check_query_result_is_tagged(JSON_ONLY_QUERY, True)
+
+        finally:
+            self.adapters_page.clean_adapter_servers(ESX_NAME, delete_associated_entities=True)
+            self.wait_for_adapter_down(ESX_PLUGIN_NAME)
 
     @flaky(max_runs=3)
     def test_tag_entities(self):
