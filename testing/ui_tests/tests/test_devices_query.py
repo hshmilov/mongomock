@@ -1,17 +1,22 @@
 from datetime import datetime
 from uuid import uuid4
 
+from selenium.common.exceptions import NoSuchElementException
 from axonius.utils.hash import get_preferred_quick_adapter_id
 from axonius.utils.wait import wait_until
 from ui_tests.tests.ui_test_base import TestBase
 from ui_tests.tests.ui_consts import AD_ADAPTER_NAME, JSON_ADAPTER_NAME, WINDOWS_QUERY_NAME
 from services.plugins.general_info_service import GeneralInfoService
+from services.adapters.cisco_service import CiscoService
+from services.adapters.esx_service import EsxService
+from services.adapters.cylance_service import CylanceService
 from test_credentials.json_file_credentials import (DEVICE_FIRST_IP,
                                                     DEVICE_THIRD_IP,
                                                     DEVICE_MAC,
                                                     DEVICE_SUBNET,
                                                     DEVICE_FIRST_VLAN_TAGID,
                                                     DEVICE_SECOND_VLAN_NAME)
+from devops.scripts.automate_dev import credentials_inputer
 
 
 class TestDevicesQuery(TestBase):
@@ -19,6 +24,12 @@ class TestDevicesQuery(TestBase):
     SEARCH_TEXT_TESTDOMAIN = 'testdomain'
     ERROR_TEXT_QUERY_BRACKET = 'Missing {direction} bracket'
     CUSTOM_QUERY = 'Clear_query_test'
+    CISCO_PLUGIN_NAME = 'cisco_adapter'
+    CISCO_PRETTY_NAME = 'Cisco'
+    ESX_PLUGIN_NAME = 'esx_adapter'
+    ESX_PRETTY_NAME = 'VMware ESXi'
+    CYCLANCE_PLUGIN_NAME = 'cylance_adapter'
+    CYCLANCE_PRETTY_NAME = 'CylancePROTECT'
 
     def test_bad_subnet(self):
         self.dashboard_page.switch_to_page()
@@ -667,6 +678,105 @@ class TestDevicesQuery(TestBase):
         self._test_remove_query_expression_does_not_reset_values()
         self._test_not_expression()
         self._test_adapters_size()
+        self._test_enum_expressions()
+
+    def _assert_query(self, expected_query):
+        current_query = self.devices_page.find_query_search_input().get_attribute('value')
+        assert current_query == expected_query
+
+    def _perform_query_scenario(self, field, value, comp_op, field_type, expected_query, subfield=None, obj=False):
+        expressions = self.devices_page.find_expressions()
+        assert len(expressions) == 1
+        if obj:
+            self.devices_page.toggle_obj(expressions[0])
+        self.devices_page.select_query_field(field, expressions[0])
+        conditions = self.devices_page.find_conditions()
+        if len(conditions) == 2 and subfield:
+            self.devices_page.select_query_field(subfield, conditions[1])
+        self.devices_page.select_query_comp_op(comp_op, expressions[0])
+        if field_type == 'string':
+            self.devices_page.select_query_value(value, expressions[0])
+        elif field_type == 'integer':
+            self.devices_page.select_query_value_without_search(value, expressions[0])
+        assert self.devices_page.is_query_error()
+        self.devices_page.wait_for_table_to_load()
+        self._assert_query(expected_query)
+
+    def _test_enum_expressions(self):
+        combo_configs = [
+            # enum of type string
+            {'field': self.devices_page.FIELD_ADAPTERS,
+             'comp_op': self.devices_page.QUERY_COMP_EQUALS,
+             'value': 'Cisco',
+             'field_type': 'string',
+             'expected_query': '(adapters == "cisco_adapter")'},
+            # enum of type string
+            {'field': 'Port Access: Port Mode',
+             'comp_op': self.devices_page.QUERY_COMP_EQUALS,
+             'value': 'singleHost',
+             'field_type': 'string',
+             'expected_query': '(specific_data.data.port_access.port_mode == "singleHost")'},
+            # enum of type string - displayed as Object (field and subfield)
+            {'field': 'Port Access',
+             'subfield': 'Port Mode',
+             'comp_op': self.devices_page.QUERY_COMP_EQUALS,
+             'value': 'singleHost',
+             'field_type': 'string',
+             'obj': True,
+             'expected_query': '(specific_data.data.port_access == match([(port_mode == "singleHost")]))'},
+            # enum of type string - displayed flat
+            {'field': 'Agent Versions: Name',
+             'comp_op': self.devices_page.QUERY_COMP_EQUALS,
+             'value': 'Cylance Agent',
+             'field_type': 'string',
+             'expected_query': '(specific_data.data.agent_versions.adapter_name == "Cylance Agent")'},
+            # enum of type string - displayed as Object (field and subfield)
+            {'field': 'Agent Versions',
+             'subfield': 'Name',
+             'comp_op': self.devices_page.QUERY_COMP_EQUALS,
+             'value': 'Cylance Agent',
+             'field_type': 'string',
+             'obj': True,
+             'expected_query':
+                 '(specific_data.data.agent_versions == match([(adapter_name == "Cylance Agent")]))'},
+            # enum of type integer
+            {'field': self.devices_page.FIELD_OS_BITNESS,
+             'comp_op': self.devices_page.QUERY_COMP_EQUALS,
+             'value': '64',
+             'field_type': 'integer',
+             'expected_query': '(specific_data.data.os.bitness == 64)'}
+        ]
+        try:
+            with CiscoService().contextmanager(take_ownership=True), \
+                    EsxService().contextmanager(take_ownership=True),\
+                    CylanceService().contextmanager(take_ownership=True):
+                credentials_inputer.main()
+                self.settings_page.switch_to_page()
+                self.base_page.run_discovery()
+                self.devices_page.switch_to_page()
+                for conf in combo_configs:
+                    self.devices_page.click_query_wizard()
+                    self.devices_page.clear_query_wizard()
+                    self._perform_query_scenario(**conf)
+                    self.devices_page.click_search()
+                self.devices_page.click_query_wizard()
+                self.devices_page.clear_query_wizard()
+                for conf in combo_configs:
+                    try:
+                        self.driver.find_element_by_css_selector('.expression-obj.light.active')
+                        self.devices_page.toggle_obj(self.devices_page.find_expressions()[0])
+                    except NoSuchElementException:
+                        # Nothing to do
+                        pass
+                    self._perform_query_scenario(**conf)
+                self.devices_page.click_search()
+        finally:
+            self.adapters_page.clean_adapter_servers(self.CISCO_PRETTY_NAME)
+            self.wait_for_adapter_down(self.CISCO_PLUGIN_NAME)
+            self.adapters_page.clean_adapter_servers(self.ESX_PRETTY_NAME)
+            self.wait_for_adapter_down(self.ESX_PLUGIN_NAME)
+            self.adapters_page.clean_adapter_servers(self.CYCLANCE_PRETTY_NAME)
+            self.wait_for_adapter_down(self.CYCLANCE_PLUGIN_NAME)
 
     def test_saved_query_field(self):
         self.settings_page.switch_to_page()

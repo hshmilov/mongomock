@@ -34,7 +34,12 @@ class EntitiesPage(Page):
     QUERY_DATE_PICKER_CSS = '.expression-value .md-datepicker .md-input'
     QUERY_VALUE_COMPONENT_INPUT_CSS = '.expression-value input'
     QUERY_VALUE_COMPONENT_CSS = '.expression-value'
+    QUERY_FIELD_DROPDOWN_SELECT_CSS = '#query_value .x-select-trigger > div'
     QUERY_SEARCH_INPUT_CSS = '#query_list .input-value'
+    EXPRESSION_INPUT_INT_TRIGGER_CSS = '.expression-value .x-select-trigger'
+    EXP1_TRIGGER_CSS = '.expression-value > .trigger.arrow'
+    EXP2_INPUT_CSS = '.expression-value .content.expand .x-search-input.x-select-search .input-value'
+
     QUERY_SEARCH_DROPDOWN_XPATH = '//div[@id=\'query_select\']//div[text()=\'{query_name_text}\']'
     QUERY_SEARCH_EVERYWHERE_CSS = 'div.x-menu>div>.item-content'
     QUERY_ADD_EXPRESSION_CSS = '.x-filter .footer .x-button'
@@ -171,6 +176,7 @@ class EntitiesPage(Page):
 
     ACTIVE_TAB_TABLE_ROWS = '.body .x-tabs.vertical .body .x-tab.active .x-table-row'
     ACTIVE_TAB_TABLE_ROWS_HEADERS = '.body .x-tabs.vertical .body .x-tab.active .x-table thead th'
+    MSG_ERROR_QUERY_WIZARD = 'A value to compare is needed to add expression to the filter'
 
     FIELD_UPDATED_BY = 'Updated By'
     FIELD_LAST_UPDATED = 'Last Updated'
@@ -286,6 +292,11 @@ class EntitiesPage(Page):
                            self.DROPDOWN_TEXT_BOX_CSS,
                            self.DROPDOWN_SELECTED_OPTION_CSS,
                            text, parent=parent)
+
+    def select_query_value_without_search(self, value, parent=None):
+        self.select_option_without_search(self.QUERY_FIELD_DROPDOWN_SELECT_CSS,
+                                          self.DROPDOWN_SELECTED_OPTION_CSS,
+                                          value, parent=parent)
 
     def get_query_value(self, parent=None, input_type_string=False):
         css_to_use = self.QUERY_VALUE_COMPONENT_INPUT_CSS if input_type_string else self.QUERY_VALUE_COMPONENT_CSS

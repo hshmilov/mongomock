@@ -44,6 +44,7 @@ JSON_ADAPTER_PLUGIN_NAME = 'json_file_adapter'
 WMI_INFO_ADAPTER = 'WMI Info'
 
 AD_ADAPTER_NAME = 'Microsoft Active Directory (AD)'
+CISCO_PRIME_ADAPTER_NAME = 'Cisco Prime'
 
 STRESSTEST_ADAPTER = 'stresstest_adapter'
 STRESSTEST_ADAPTER_NAME = 'Test adapters'
