@@ -39,7 +39,7 @@ class WebscanEnrichment(ActionTypeBase):
                 },
                 {
                     'name': 'pool_size',
-                    'title': 'Scan Pool Size',
+                    'title': 'Scan Thread Pool Size',
                     'type': 'integer',
                     'required': True,
                     'default': DEFAULT_POOL_SIZE
