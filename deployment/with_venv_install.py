@@ -117,9 +117,10 @@ def setup_instances_user():
     except KeyError:
         if not os.path.exists(INSTANCE_IS_MASTER_MARKER_PATH):
             print_state(f'Generating {INSTANCE_CONNECT_USER_NAME} user')
-            # sudo group doesn't exist in centos the equivalent is named wheel.
-            sudoers_group_name = 'wheel' if 'centos' in distro.linux_distribution(
-                full_distribution_name=False) else 'sudo'
+            # sudo group doesn't exist in centos and rhel the equivalent is named wheel.
+            sudoers_group_name = 'wheel' if any([word in distro.linux_distribution(
+                full_distribution_name=False) for word in ['centos', 'rhel']]) else 'sudo'
+
             subprocess.check_call(['/usr/sbin/useradd', '-s',
                                    INSTANCES_SETUP_SCRIPT_PATH, '-G', f'docker,{sudoers_group_name}',
                                    INSTANCE_CONNECT_USER_NAME])
