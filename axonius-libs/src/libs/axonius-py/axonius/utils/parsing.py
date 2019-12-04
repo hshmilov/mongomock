@@ -884,6 +884,13 @@ def get_cloud_id_or_hostname(adapter_device):
     return None
 
 
+def get_dns_names(adapter_device):
+    dns_names = adapter_device['data'].get('dns_names')
+    if dns_names:
+        return dns_names
+    return None
+
+
 def compare_cloud_id_or_hostname(adapter_device1, adapter_device2):
     cloud_id_or_hostname_1 = get_cloud_id_or_hostname(adapter_device1)
     cloud_id_or_hostname_2 = get_cloud_id_or_hostname(adapter_device2)
@@ -1430,6 +1437,16 @@ def compare_full_mac(adapter_device1, adapter_device2):
 
 def compare_macs(adapter_device1, adapter_device2):
     return is_one_subset_of_the_other(adapter_device1.get(NORMALIZED_MACS), adapter_device2.get(NORMALIZED_MACS))
+
+
+def compare_dns_names(adapter_device1, adapter_device2):
+    ad1_dns_names = adapter_device1['data'].get('dns_names')
+    ad2_dns_names = adapter_device2['data'].get('dns_names')
+    if not isinstance(ad1_dns_names, list) or not isinstance(ad2_dns_names, list):
+        return False
+    ad1_dns_names = set(dns_name.upper() for dns_name in ad1_dns_names)
+    ad2_dns_names = set(dns_name.upper() for dns_name in ad2_dns_names)
+    return is_one_subset_of_the_other(ad1_dns_names, ad2_dns_names)
 
 
 def compare_device_normalized_hostname(adapter_device1, adapter_device2) -> bool:

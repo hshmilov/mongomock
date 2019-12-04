@@ -432,6 +432,7 @@ class StaticAnalysisService(Triggerable, PluginBase):
         devices_with_users_association = self.devices_db.find(
             parse_filter(
                 'specific_data.data.users == exists(true) or specific_data.data.last_used_users == exists(true)'),
+            batch_size=10
         )
 
         users = {}
@@ -606,13 +607,21 @@ class StaticAnalysisService(Triggerable, PluginBase):
     def __parse_devices_last_used_users_departments(self):
         users_to_department = dict()
         users_to_ad_display_name = dict()
+        # Notice that we have a non-default batch_size of 10 here (instead of 100). We do this
+        # because we want to interact with the server every 10 devices, and not 100. From our experience,
+        # if the default is saved, then every batch will be fetched in more than every 10 minutes. But the default
+        # of mongo is to lose a cursor that hasn't been fetched in 10 minutes, so this will cause a 'cursor not found'.
         devices_with_last_used_users = self.devices_db.find(
             parse_filter(
                 'specific_data.data.last_used_users == exists(true)'
-            )
+            ),
+            batch_size=10
         )
 
-        for device_view in devices_with_last_used_users:
+        logger.info(f'Associating {devices_with_last_used_users.count()} users')
+        for device_i, device_view in enumerate(devices_with_last_used_users):
+            if device_i and device_i % 1000 == 0:
+                logger.info(f'Parsed {device_i} users in last_used_users_departments')
             # Get a list of all users associated for this device.
             device_raw = convert_db_entity_to_view_entity(device_view, ignore_errors=True)
             device_specific_data = device_raw.get('specific_data', [])

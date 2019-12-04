@@ -282,6 +282,25 @@ class AWSLambda(SmartJsonClass):
     policy = Field(AWSLambdaPolicy, 'Policy')
 
 
+class AWSRoute53Record(SmartJsonClass):
+    resource_type = Field(str, 'Resource Type')
+    ttl = Field(int, 'TTL')
+    set_identifier = Field(str, 'Set Identifier')
+    weight = Field(int, 'Weight')
+    region = Field(str, 'Region')
+    geo_location_continent_code = Field(str, 'GeoLocation Continent Code')
+    geo_location_country_code = Field(str, 'GeoLocation Country Code')
+    geo_location_subdivision_code = Field(str, 'GeoLocation Subdivision Code')
+    failover = Field(str, 'Failover')
+    multi_value_answer = Field(bool, 'Multi Value Answer')
+    health_check_id = Field(str, 'Health Check Id')
+    traffic_policy_instance_id = Field(str, 'Traffic Policy Instance Id')
+    resource_records = ListField(str, 'Resource Records')
+    alias_target_hosted_zone_id = Field(str, 'Alias Target Hosted Zone Id')
+    alias_target_dns_name = Field(str, 'Alias Target DNS Name')
+    alias_target_evaluate_target_health = Field(bool, 'Alias Target Evaluate Target Health')
+
+
 class AWSAdapter:
     account_tag = Field(str, 'Account Tag')
     aws_account_alias = ListField(str, 'Account Alias')
@@ -310,8 +329,8 @@ class AWSDeviceAdapter(DeviceOrContainerAdapter, AWSAdapter):
     aws_availability_zone = Field(str, 'Availability Zone')
     aws_device_type = Field(
         str,
-        'Device Type (EC2/ECS/EKS/ELB/Managed/NAT/RDS/S3/Workspace/Lambda)',
-        enum=['EC2', 'ECS', 'EKS', 'ELB', 'Managed', 'NAT', 'RDS', 'S3', 'Workspace', 'Lambda']
+        'Device Type (EC2 / ECS / EKS / ELB / Managed / NAT / RDS / S3 / Workspace / Lambda / Route53)',
+        enum=['EC2', 'ECS', 'EKS', 'ELB', 'Managed', 'NAT', 'RDS', 'S3', 'Workspace', 'Lambda', 'Route53']
     )
     security_groups = ListField(AWSSecurityGroup, 'Security Groups')
 
@@ -348,6 +367,13 @@ class AWSDeviceAdapter(DeviceOrContainerAdapter, AWSAdapter):
 
     # Lambda specific fields
     lambda_data = Field(AWSLambda, 'Lambda Information')
+
+    # Route53 specific fields
+    route53_zone_id = Field(str, 'Route53 Zone ID')
+    route53_zone_name = Field(str, 'Route53 Zone Name')
+    route53_zone_is_private = Field(bool, 'Route53 Zone is Private')
+    route53_data = ListField(AWSRoute53Record, 'Route53 Record')
+    dns_names = ListField(str, 'Associated DNS')
 
     # S3 specific fields
     s3_bucket_name = Field(str, 'S3 Bucket Name')

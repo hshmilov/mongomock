@@ -1,4 +1,5 @@
 import logging
+from collections import defaultdict
 from itertools import combinations
 
 from axonius.blacklists import ALL_BLACKLIST, FROM_FIELDS_BLACK_LIST_REG, compare_reg_mac
@@ -46,7 +47,7 @@ from axonius.utils.parsing import (NORMALIZED_MACS,
                                    is_from_twistlock_or_aws, is_from_deeps_or_aws, get_nessus_no_scan_id,
                                    compare_nessus_no_scan_id,
                                    is_domain_valid, compare_uuid, get_uuid,
-                                   get_azure_ad_id, compare_azure_ad_id, get_hostname_no_localhost)
+                                   get_azure_ad_id, compare_azure_ad_id, get_hostname_no_localhost, get_dns_names)
 
 
 logger = logging.getLogger(f'axonius.{__name__}')
@@ -523,6 +524,25 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
                                       {'Reason': 'Cloud ID and Hostname are the same'},
                                       CorrelationReason.StaticAnalysis)
 
+    def _correlate_aws_route53_dns_names(self, adapters_to_correlate):
+        logger.info(f'Starting to correlate on dns_names')
+        filtered_adapters_list = filter(lambda x: x.get('plugin_name') == 'aws_adapter', adapters_to_correlate)
+        filtered_adapters_list = filter(get_dns_names, filtered_adapters_list)
+
+        adapters_to_correlate_by_dns_name = defaultdict(list)
+        for adapter_to_correlate in list(filtered_adapters_list):
+            for dns_name_candidate in (adapter_to_correlate['data'].get('dns_names') or []):
+                adapters_to_correlate_by_dns_name[dns_name_candidate].append(adapter_to_correlate)
+
+        for adapters_to_correlate_buckets in adapters_to_correlate_by_dns_name.values():
+            yield from self._bucket_correlate(adapters_to_correlate_buckets,
+                                              [],
+                                              [],
+                                              [lambda x: x['data'].get('aws_device_type') == 'Route53'],
+                                              [],
+                                              {'Reason': 'AWS DNS Names are the same'},
+                                              CorrelationReason.StaticAnalysis)
+
     def _correlate_ad_sccm_id(self, adapters_to_correlate):
         """
         We want to get all the devices with hostname (to reduce amount),
@@ -692,6 +712,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
         yield from self._correlate_uuid(adapters_to_correlate)
 
         yield from self._correlate_deep_aws_id(adapters_to_correlate)
+        yield from self._correlate_aws_route53_dns_names(adapters_to_correlate)
 
         # Find adapters with the same serial
         # Now let's find devices by MAC, and IPs don't contradict (we allow empty)

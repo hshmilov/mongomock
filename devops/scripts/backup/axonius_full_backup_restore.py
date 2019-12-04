@@ -12,8 +12,9 @@ How to backup:
 1. shut down system, but db
 2. sudo ./devops/scripts/backup/axonius_full_backup_restore.sh backup backup.zip pass
 How to restore:
-1. shut down system, but db
-2. sudo ./devops/scripts/backup/axonius_full_backup_restore.sh restore backup.zip pass
+1. make sure all adapters were up at some point, because we need their volumes to exist (disable quick register!)
+2. shut down system, but db
+3. sudo ./devops/scripts/backup/axonius_full_backup_restore.sh restore backup.zip pass
 
 after each:
 3. ./axonius.sh system up --all --prod --skip

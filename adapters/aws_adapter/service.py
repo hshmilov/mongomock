@@ -21,6 +21,7 @@ from botocore.config import Config
 from botocore.credentials import RefreshableCredentials
 from botocore.session import get_session
 
+from aws_adapter.connection.aws_route53 import query_devices_by_client_by_source_route53, parse_raw_data_inner_route53
 from aws_adapter.connection.structures import *
 from aws_adapter.connection.utils import get_paginated_marker_api, get_paginated_next_token_api, \
     parse_bucket_policy_statements
@@ -84,6 +85,7 @@ class AwsRawDataTypes(Enum):
     SSM = auto()
     Users = auto()
     Lambda = auto()
+    Route53 = auto()
 
 
 class AwsSSMSchemas(Enum):
@@ -366,10 +368,14 @@ class AwsAdapter(AdapterBase, Configurable):
                 aws_access_key_id_errors = ','.join(
                     list(failed_connections_per_principal.get(aws_access_key_id) or set())
                 )
-
                 if 'aws was not able to validate the provided access credentials' in aws_access_key_id_errors.lower():
                     aws_access_key_id_errors = 'AWS was not able to validate the provided access credentials'
-                raise ClientConnectionException(f'Error connecting to {aws_access_key_id}: {aws_access_key_id_errors}')
+
+                logger.info(f'Error validating primary account: {aws_access_key_id_errors}')
+
+                if self.__verify_primary_account:
+                    raise ClientConnectionException(f'Error connecting to {aws_access_key_id}: '
+                                                    f'{aws_access_key_id_errors}')
 
             # Next, check Roles
             logger.info(f'Checking {len(roles_to_assume_list)} roles..')
@@ -514,6 +520,13 @@ class AwsAdapter(AdapterBase, Configurable):
             except Exception as e:
                 errors['lambda'] = str(e)
 
+            try:
+                c = session.client('route53', **params)
+                c.list_hosted_zones()
+                clients['route53'] = c
+            except Exception as e:
+                errors['route53'] = str(e)
+
         clients['account_tag'] = client_config.get(ACCOUNT_TAG)
         clients['credentials'] = client_config
         clients['region'] = params[REGION_NAME]
@@ -572,6 +585,18 @@ class AwsAdapter(AdapterBase, Configurable):
                     first_connected_client = connected_clients_by_region[first_connected_client_region]
                     account_metadata = self._get_account_metadata(first_connected_client)
                     parsed_data_for_all_regions = self._query_devices_by_client_for_all_sources(first_connected_client)
+
+                    # move to later on.
+                    if self.__fetch_route53 is True:
+                        logger.info(f'Fetching Route53')
+                        source_name = f'{account}_Global'
+                        try:
+                            for parse_data_for_source in query_devices_by_client_by_source_route53(
+                                    first_connected_client):
+                                yield source_name, account_metadata, parse_data_for_source, AwsRawDataTypes.Route53
+                        except Exception:
+                            logger.exception(f'Error while querying Route53')
+
                     del first_connected_client
 
                     logger.info(f'Finished querying account metadata and all-sources info')
@@ -1745,6 +1770,14 @@ class AwsAdapter(AdapterBase, Configurable):
                             yield device
                     except Exception:
                         logger.exception(f'Problem parsiong device from lambda')
+                elif raw_data_type == AwsRawDataTypes.Route53:
+                    try:
+                        device = parse_raw_data_inner_route53(self._new_device_adapter(), devices_raw_data_by_source)
+                        if device:
+                            self.append_metadata_to_entity(device, account_metadata, aws_source, {'region': 'Global'})
+                            yield device
+                    except Exception:
+                        logger.exception(f'Problem parsiong device from route53')
                 else:
                     logger.critical(f'Can not parse data for aws source {aws_source}, '
                                     f'unknown type {raw_data_type.name}')
@@ -2204,6 +2237,8 @@ class AwsAdapter(AdapterBase, Configurable):
                                     ips=ips,
                                     last_ip_by_dns_query=lb_raw.get('last_ip_by_dns_query')
                                 )
+                                if elb_dns:
+                                    device.dns_names.append(elb_dns)
                             except Exception:
                                 logger.exception(f'Error parsing lb: {lb_raw}')
                     except Exception:
@@ -2546,6 +2581,8 @@ class AwsAdapter(AdapterBase, Configurable):
                                                     ips=ips,
                                                     last_ip_by_dns_query=lb_raw.get('last_ip_by_dns_query')
                                                 )
+                                                if elb_dns:
+                                                    device.dns_names.append(elb_dns)
                                     except Exception:
                                         logger.exception(f'Error parsing lb for Fargate: {lb_raw}')
                             except Exception:
@@ -2646,6 +2683,8 @@ class AwsAdapter(AdapterBase, Configurable):
                     last_ip_by_dns_query=last_ip_by_dns_query,
                     subnets=subnets
                 )
+                if elb_dns:
+                    device.dns_names.append(elb_dns)
                 device.vpc_id = elb_raw.get('vpcid')
                 device.vpc_name = vpcs_by_id.get(elb_raw.get('vpcid'))
                 if last_ip_by_dns_query:
@@ -3209,10 +3248,12 @@ class AwsAdapter(AdapterBase, Configurable):
         self.__fetch_iam_users = config.get('fetch_iam_users') or False
         self.__fetch_ssm = config.get('fetch_ssm') or False
         self.__fetch_nat = config.get('fetch_nat') or False
+        self.__fetch_route53 = config.get('fetch_route53') or False
         self.__parse_elb_ips = config.get('parse_elb_ips') or False
         self.__verbose_auth_notifications = config.get('verbose_auth_notifications') or False
         self.__shodan_key = config.get('shodan_key')
         self.__verify_all_roles = config.get('verify_all_roles') or False
+        self.__verify_primary_account = config.get('verify_primary_account') or False
 
     @classmethod
     def _db_config_schema(cls) -> dict:
@@ -3279,6 +3320,11 @@ class AwsAdapter(AdapterBase, Configurable):
                     'type': 'bool'
                 },
                 {
+                    'name': 'fetch_route53',
+                    'title': 'Fetch information about Route 53',
+                    'type': 'bool'
+                },
+                {
                     'name': 'verbose_auth_notifications',
                     'title': 'Show verbose notifications about connection failures',
                     'type': 'bool'
@@ -3292,6 +3338,11 @@ class AwsAdapter(AdapterBase, Configurable):
                 {
                     'name': 'verify_all_roles',
                     'title': 'Verify all IAM roles',
+                    'type': 'bool'
+                },
+                {
+                    'name': 'verify_primary_account',
+                    'title': 'Verify primary account permissions',
                     'type': 'bool'
                 }
             ],
@@ -3307,9 +3358,11 @@ class AwsAdapter(AdapterBase, Configurable):
                 'fetch_lambda',
                 'fetch_ssm',
                 'fetch_nat',
+                'fetch_route53',
                 'parse_elb_ips',
                 'verbose_auth_notifications',
-                'verify_all_roles'
+                'verify_all_roles',
+                'verify_primary_account'
             ],
             "pretty_name": "AWS Configuration",
             "type": "array"
@@ -3329,10 +3382,12 @@ class AwsAdapter(AdapterBase, Configurable):
             'fetch_lambda': False,
             'fetch_ssm': False,
             'fetch_nat': False,
+            'fetch_route53': False,
             'parse_elb_ips': False,
             'verbose_auth_notifications': False,
             'shodan_key': None,
-            'verify_all_roles': True
+            'verify_all_roles': True,
+            'verify_primary_account': True
         }
 
     @classmethod

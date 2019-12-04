@@ -648,7 +648,7 @@ export const pluginMeta = {
     aws_adapter: {
         title: 'Amazon Web Services (AWS)',
         link: 'https://docs.axonius.com/docs/amazon-web-services-aws',
-        description: 'The Amazon Web Services (AWS) adapter includes a broad set of global cloud based products. It supports EC2, ECS, EKS, IAM, EBS, ELB, RDS, S3, VPC and Workspaces.'
+        description: 'The Amazon Web Services (AWS) adapter includes a broad set of global cloud based products. It supports EC2, ECS, EKS, IAM, EBS, ELB, RDS, S3, VPC, Workspaces, Lambda and Route 53'
     },
     jamf_adapter: {
         title: 'Jamf Pro',
