@@ -20,7 +20,8 @@ from axonius.clients.cisco.constants import (AUTH_PROTOCOLS,
                                              PRIV_PROTOCOLS,
                                              SNMP_ARGUMENTS_KEYS,
                                              SNMPV3_ARGUMENTS_KEYS,
-                                             get_oid_name)
+                                             get_oid_name, VLAN_ID, VLAN_NAME)
+
 from axonius.utils.singleton import Singleton
 
 logger = logging.getLogger(f'axonius.{__name__}')
@@ -207,6 +208,10 @@ class AbstractSnmpClient(AbstractCiscoClient):
             self._async_get_cmd(OIDS.device_serial),
             self._async_get_cmd(OIDS.device_serial2),
             self._async_get_cmd(OIDS.base_mac),
+            self._async_next_cmd(OIDS.vtp_vlans),
+            self._async_next_cmd(OIDS.vlans),
+            self._async_next_cmd(OIDS.voice_vlan),
+
         ]
         results = list(filter(None, [await routine for routine in basic_info_routines]))
         return SnmpBasicInfoCiscoData(results)
@@ -344,8 +349,8 @@ class SnmpBasicInfoCiscoData(BasicInfoData):
                     if mac not in port_security_entries[index]:
                         port_security_entries[index][mac] = {}
                     port_security_entries[index][mac][key] = value
-                if vlan:
-                    port_security_entries[index][mac]['vlan_id'] = str(vlan)
+                    if vlan:
+                        port_security_entries[index][mac]['vlan_id'] = str(vlan)
 
             except Exception:
                 logger.exception('Exception while parsing basic info port security')
@@ -445,6 +450,11 @@ class SnmpBasicInfoCiscoData(BasicInfoData):
             device_serial=self._parse_serial,
             device_serial2=self._parse_serial,
             base_mac=self._parse_base_mac,
+            # VTP VLANS MUST RUN BEFORE VLANS IN ORDER TO PROVIDE VLAN ID->NAME MAPPING
+            vtp_vlans=self._parse_vtp_vlans,
+            vlans=self._parse_vlan_entries,
+            voice_vlan=self._parse_voice_vlan
+
         )
 
         self.result = defaultdict(dict, {'os': 'cisco'})
@@ -454,6 +464,83 @@ class SnmpBasicInfoCiscoData(BasicInfoData):
             except Exception:
                 logger.exception(f'Failed to parse {type_} {entries}')
         yield dict(self.result)
+
+    def _parse_voice_vlan(self, entries):
+        interface = get_oid_name(OIDS.interface)
+        vlans = get_oid_name(OIDS.vlans)
+        voice_vlan = get_oid_name(OIDS.voice_vlan)
+        vtp = self.result[get_oid_name(OIDS.vtp_vlans)]
+
+        for entry in entries:
+            try:
+                oid, value = entry[0][0], entry[0][1]
+                int_index = str(oid[-1])
+                key, value = VmVoiceVlanEntry.parse_value(oid, value)
+
+                if value and value != 4096:
+                    if vtp and str(value) in vtp.keys():
+                        voice_vlan_name = vtp.get(str(value))
+
+                    if int_index in self.result[interface].keys():
+                        if vlans not in self.result[interface][int_index]:
+                            self.result[interface][int_index][vlans] = {}
+                        if voice_vlan not in self.result[interface][int_index][vlans]:
+                            self.result[interface][int_index][vlans][voice_vlan] = {}
+                        self.result[interface][int_index][vlans][voice_vlan] = {
+                            VLAN_ID: value, VLAN_NAME: voice_vlan_name}
+            except Exception:
+                logger.exception('Exception while parsing basic info vlans')
+                continue
+
+    def _parse_vlan_entries(self, entries):
+        interface = get_oid_name(OIDS.interface)
+        vlans = get_oid_name(OIDS.vlans)
+        vtp = self.result[get_oid_name(OIDS.vtp_vlans)]
+
+        vlans_entries = {}
+        for entry in entries:
+            try:
+                oid, value = entry[0][0], entry[0][1]
+                int_index = str(oid[-1])
+                key, value = VmMembershipEntry.parse_value(oid, value)
+
+                if value is not None:
+                    if int_index not in vlans_entries:
+                        vlans_entries[int_index] = {key: {VLAN_ID: [],  VLAN_NAME: []}}
+                    vlans_entries[int_index][key][VLAN_ID].append(value)
+                    vlan_names = []
+                    # notice : VTP OID expected to by exec before in order to alcoate vlan ID->NAME mapping
+                    for vlan_id in [value]:
+                        if vtp and str(vlan_id) in vtp.keys():
+                            vlan_names.append(vtp.get(str(vlan_id)))
+                    if vlan_names:
+                        vlans_entries[int_index][key][VLAN_NAME] = vlan_names
+
+            except Exception:
+                logger.exception('Exception while parsing basic info vlans')
+                continue
+
+        for int_index, entry in vlans_entries.items():
+            if int_index in self.result[interface].keys():
+                if vlans not in self.result[interface][int_index]:
+                    self.result[interface][int_index][vlans] = {}
+                self.result[interface][int_index][vlans] = entry
+
+    def _parse_vtp_vlans(self, entries):
+        vlans_entries = {}
+        for entry in entries:
+            try:
+                oid, value = entry[0][0], entry[0][1]
+                vlan_id = str(oid[-1:])
+                key, vlan_name = VtpVlanEntry.parse_value(oid, value)
+                if vlan_id is not None and vlan_id != '0' and vlan_name is not None:
+                    vlans_entries[vlan_id] = vlan_name
+
+            except Exception:
+                logger.exception('Exception while parsing vtp vlans')
+                continue
+
+        self.result[get_oid_name(OIDS.vtp_vlans)] = vlans_entries
 
 
 class SnmpArpCiscoData(ArpCiscoData):
@@ -576,3 +663,26 @@ class CpaePortTable(snmp_parser.SnmpTable):
         9: (snmp_parser.parse_int, 'auth_fail_max_attempts'),
     }
     index = -2
+
+
+class VmMembershipEntry(snmp_parser.SnmpTable):
+    table = {
+        # 1: vmVlanType
+        2: (snmp_parser.parse_int, 'vlan'),  # VLAN-ID
+        44: (snmp_parser.parse_int, 'dynamic_vlans'),  # DYAMIC VLAN(S)
+    }
+    index = 13
+
+
+class VmVoiceVlanEntry(snmp_parser.SnmpTable):
+    table = {
+        1: (snmp_parser.parse_int, 'voice_vlan_id'),
+    }
+    index = 13
+
+
+class VtpVlanEntry(snmp_parser.SnmpTable):
+    table = {
+        1: (snmp_parser.parse_str, 'vlan_name'),
+    }
+    index = 14

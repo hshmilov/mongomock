@@ -9,8 +9,12 @@ from pysnmp.hlapi import (usm3DESEDEPrivProtocol, usmAesCfb128Protocol,
                           usmHMACSHAAuthProtocol, usmNoAuthProtocol,
                           usmNoPrivProtocol)
 
-# snmp related
+VLAN_ID = 'vlan_id'
+VLAN_NAME = 'vlan_name'
+VOICE_VLAN = 'voice_vlan'
 
+
+# snmp related
 BASIC_INFO_OID_KEYS = (
     'system_description',
     'interface',
@@ -24,6 +28,10 @@ BASIC_INFO_OID_KEYS = (
     'device_serial',
     'device_serial2',
     'base_mac',
+    'vlans',
+    'voice_vlan',
+    'vtp_vlans'
+
 )
 
 OID_KEYS = ('arp', 'cdp') + BASIC_INFO_OID_KEYS
@@ -43,6 +51,10 @@ OIDS = namedtuple('oids', OID_KEYS)(
     device_serial='1.3.6.1.4.1.9.5.1.2.19.0',
     device_serial2='1.3.6.1.2.1.47.1.1.1.1.11.1',
     base_mac='1.3.6.1.2.1.17.1.1.0',
+    vtp_vlans='1.3.6.1.4.1.9.9.46.1.3.1.1.4',
+    vlans='1.3.6.1.4.1.9.9.68.1.2.2.1',  # vmMembershipTable
+    voice_vlan='1.3.6.1.4.1.9.9.68.1.5.1.1'  # vmVoiceVlanTable
+
 )
 
 

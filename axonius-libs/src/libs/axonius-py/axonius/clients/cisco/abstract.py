@@ -5,7 +5,7 @@ from collections import defaultdict
 from enum import Enum, auto
 from functools import reduce
 
-from axonius.clients.cisco.constants import OIDS, get_oid_name
+from axonius.clients.cisco.constants import OIDS, get_oid_name, VLAN_NAME, VLAN_ID, VOICE_VLAN
 from axonius.clients.cisco.port_security import PortSecurityInterface, SecureMacAddressEntry
 from axonius.clients.cisco.port_access import PortAccessEntity
 
@@ -16,6 +16,7 @@ from axonius.devices.device_adapter import (
     DeviceAdapterNeighbor,
     DeviceAdapterNetworkInterface,
     Field,
+    DeviceAdapterVlan
 )
 
 logger = logging.getLogger(f'axonius.{__name__}')
@@ -178,6 +179,7 @@ class AbstractCiscoData:
         interface_field = get_oid_name(OIDS.interface)
         port_security_field = get_oid_name(OIDS.port_security)
         port_access_field = get_oid_name(OIDS.port_access)
+        vlans_field = get_oid_name(OIDS.vlans)
 
         ip_field = get_oid_name(OIDS.ip)
         for iface in instance[interface_field].values():
@@ -196,6 +198,30 @@ class AbstractCiscoData:
             speed = iface.get('speed')
             mtu = iface.get('mtu')
 
+            vlans_data = []
+
+            try:
+                if vlans_field in iface and 'vlan' in iface[vlans_field]:
+                    for vlan_id, vlan_name in itertools.zip_longest(iface[vlans_field]['vlan'][VLAN_ID],
+                                                                    iface[vlans_field]['vlan'][VLAN_NAME]):
+
+                        vlans_data.append(DeviceAdapterVlan(
+                            tagid=vlan_id,
+                            name=vlan_name,
+                            tagness=''
+                        ))
+
+                if vlans_field in iface and 'voice_vlan' in iface[vlans_field]:
+
+                    vlans_data.append(DeviceAdapterVlan(
+                        tagid=iface[vlans_field][VOICE_VLAN][VLAN_ID],
+                        name=iface[vlans_field][VOICE_VLAN][VLAN_NAME],
+                        tagness=''
+                    ))
+
+            except Exception:
+                logger.exception('Exception while getting vlan list ')
+
             new_device.add_nic(
                 mac=iface.get('mac'),
                 name=iface.get('description'),
@@ -205,6 +231,8 @@ class AbstractCiscoData:
                 mtu=mtu,
                 ips=ip_list,
                 subnets=netmask_list,
+                vlans=vlans_data
+
             )
 
             if port_security_field in iface and iface[port_security_field].get('enabled'):
