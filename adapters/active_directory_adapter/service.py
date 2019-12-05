@@ -221,6 +221,7 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, ActiveDirectory
         self.__ldap_connection_timeout = config.get('ldap_connection_timeout', DEFAULT_LDAP_CONNECTION_TIMEOUT)
         self.__ldap_recieve_timeout = config.get('ldap_recieve_timeout', DEFAULT_LDAP_RECIEVE_TIMEOUT)
         self.__ldap_field_to_exclude = config.get('ldap_field_to_exclude') or []
+        self.__ldap_sensitive_fields_to_exclude = config.get('ldap_sensitive_fields_to_exclude') or ''
         self.__verbose_auth_notifications = config.get('verbose_auth_notifications') or False
 
         # Change interval of report generation thread
@@ -605,6 +606,12 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, ActiveDirectory
         """
         parsed_users_ids = []
         for user_raw in raw_data:
+            try:
+                if self.__ldap_sensitive_fields_to_exclude:
+                    for sensitive_field_to_exclude in self.__ldap_sensitive_fields_to_exclude.split(','):
+                        user_raw.pop(sensitive_field_to_exclude.strip(), None)
+            except Exception:
+                logger.exception(f'Could not exclude sensitive fields')
             try:
                 user = self._new_user_adapter()
 
@@ -1024,6 +1031,12 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, ActiveDirectory
 
         parsed_devices_ids = []
         for device_raw in devices_raw_data:
+            try:
+                if self.__ldap_sensitive_fields_to_exclude:
+                    for sensitive_field_to_exclude in self.__ldap_sensitive_fields_to_exclude.split(','):
+                        device_raw.pop(sensitive_field_to_exclude.strip(), None)
+            except Exception:
+                logger.exception(f'Could not exclude sensitive fields')
             try:
                 last_logon = device_raw.get('lastLogon')
                 last_logon_timestamp = device_raw.get('lastLogonTimestamp')
@@ -1794,7 +1807,12 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, ActiveDirectory
                     'items': {
                         'type': 'string'
                     }
-                }
+                },
+                {
+                    'name': 'ldap_sensitive_fields_to_exclude',
+                    'title': 'LDAP fields to exclude',
+                    'type': 'string'
+                },
             ],
             "required": [
                 'resolving_enabled',
@@ -1826,7 +1844,8 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, ActiveDirectory
             'ldap_page_size': DEFAULT_LDAP_PAGE_SIZE,
             'ldap_connection_timeout': DEFAULT_LDAP_CONNECTION_TIMEOUT,
             'ldap_recieve_timeout': DEFAULT_LDAP_RECIEVE_TIMEOUT,
-            'ldap_field_to_exclude': []
+            'ldap_field_to_exclude': [],
+            'ldap_sensitive_fields_to_exclude': ''
         }
 
     @classmethod
