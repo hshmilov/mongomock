@@ -15,9 +15,10 @@ def main():
             entities_limit = randint(entity_count - 8, entity_count)
             entities_skip = randint(0, entity_count - entities_limit)
             entities = list(history_db.find().skip(entities_skip).limit(entities_limit))
+            new_date = datetime.now() - timedelta(day)
             for entity in entities:
                 del entity['_id']
-                entity['accurate_for_datetime'] = datetime.now() - timedelta(day)
+                entity['accurate_for_datetime'] = new_date
             history_db.insert_many(entities)
 
         except Exception as e:
