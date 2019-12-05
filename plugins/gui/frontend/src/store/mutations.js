@@ -136,17 +136,6 @@ export const updateDataViewFilter = (state, payload) => {UPDATE_DATA_VIEW_FILTER
 	}
 }
 
-export const UPDATE_DATA_VIEWS = 'UPDATE_DATA_VIEWS'
-export const updateDataViews = (state, payload) => {
-	if (!getModule(state, payload)) return
-	const views = state[payload.module].views[payload.type]
-	views.fetching = payload.fetching
-	views.error = payload.error
-	if (payload.data) {
-		views.data = views.data.slice(0, payload.skip).concat(payload.data)
-	}
-}
-
 export const ADD_DATA_VIEW = 'ADD_DATA_VIEW'
 export const addDataView = (state, payload) => {
 	if (!getModule(state, payload)) return

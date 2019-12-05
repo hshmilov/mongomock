@@ -65,7 +65,8 @@ from axonius.consts.gui_consts import (ENCRYPTION_KEY_PATH,
                                        DASHBOARD_SPACE_PERSONAL, DASHBOARD_SPACE_TYPE_CUSTOM,
                                        Signup, PROXY_DATA_PATH, DASHBOARD_LIFECYCLE_ENDPOINT,
                                        UNCHANGED_MAGIC_FOR_GUI, GETTING_STARTED_CHECKLIST_SETTING,
-                                       LAST_UPDATED_FIELD, UPDATED_BY_FIELD)
+                                       LAST_UPDATED_FIELD, UPDATED_BY_FIELD,
+                                       PREDEFINED_FIELD)
 from axonius.consts.metric_consts import ApiMetric, Query, SystemMetric, GettingStartedMetric
 from axonius.consts.plugin_consts import (AGGREGATOR_PLUGIN_NAME,
                                           AXONIUS_USER_NAME,
@@ -472,6 +473,10 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
             user_db['permissions'] = deserialize_db_permissions(user_db['permissions'])
             session = {'user': user_db}
 
+    @staticmethod
+    def _is_hidden_user():
+        return (session.get('user') or {}).get('user_name') == AXONIUS_USER_NAME
+
     def _delayed_initialization(self):
         self.__init_all_dashboards()
 
@@ -513,7 +518,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
                 }
             }, {
                 '$set': {
-                    'predefined': True
+                    PREDEFINED_FIELD: True
                 }
             })
 
@@ -614,10 +619,10 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
         })
         if existed_view is not None and not existed_view.get('archived'):
             logger.info(f'view {name} already exists id: {existed_view["_id"]}')
-            if not existed_view.get('predefined'):
+            if not existed_view.get(PREDEFINED_FIELD):
                 views_collection.update_one({'name': name}, {
                     '$set': {
-                        'predefined': True
+                        PREDEFINED_FIELD: True
                     }
                 })
             return existed_view['_id']
@@ -631,23 +636,23 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
             'user_id': '*',
             UPDATED_BY_FIELD: '*',
             LAST_UPDATED_FIELD: current_time,
-            'predefined': True
+            PREDEFINED_FIELD: True
         }, upsert=True)
         logger.info(f'Added view {name} id: {result.upserted_id}')
         return result.upserted_id
 
-    def _upsert_report_config(self, name, report, clear_generated_report) -> ObjectId:
-        new_report = {**report}
-
+    def _upsert_report_config(self, name, report_data, clear_generated_report) -> ObjectId:
         if clear_generated_report:
-            new_report[report_consts.LAST_GENERATED_FIELD] = None
+            report_data[report_consts.LAST_GENERATED_FIELD] = None
 
-        result = self.reports_config_collection.find_one_and_replace({
+        result = self.reports_config_collection.find_one_and_update({
             'name': name,
             'archived': {
                 '$ne': True
             }
-        }, replacement=new_report, projection={
+        }, {
+            '$set': report_data
+        }, projection={
             '_id': True
         }, upsert=True, return_document=pymongo.ReturnDocument.AFTER)
         return result['_id']
@@ -724,14 +729,14 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
         if self.__roles_collection.find_one({'name': PREDEFINED_ROLE_ADMIN}) is None:
             # Admin role doesn't exists - let's create it
             self.__roles_collection.insert_one({
-                'name': PREDEFINED_ROLE_ADMIN, 'predefined': True, 'permissions': {
+                'name': PREDEFINED_ROLE_ADMIN, PREDEFINED_FIELD: True, 'permissions': {
                     p.name: PermissionLevel.ReadWrite.name for p in PermissionType
                 }
             })
         if self.__roles_collection.find_one({'name': PREDEFINED_ROLE_READONLY}) is None:
             # Read-only role doesn't exists - let's create it
             self.__roles_collection.insert_one({
-                'name': PREDEFINED_ROLE_READONLY, 'predefined': True, 'permissions': {
+                'name': PREDEFINED_ROLE_READONLY, PREDEFINED_FIELD: True, 'permissions': {
                     p.name: PermissionLevel.ReadOnly.name for p in PermissionType
                 }
             })
@@ -742,7 +747,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
             }
             permissions[PermissionType.Dashboard.name] = PermissionLevel.ReadOnly.name
             self.__roles_collection.insert_one({
-                'name': PREDEFINED_ROLE_RESTRICTED, 'predefined': True, 'permissions': permissions
+                'name': PREDEFINED_ROLE_RESTRICTED, PREDEFINED_FIELD: True, 'permissions': permissions
             })
 
     def _disable_entity(self, entity_type: EntityType, mongo_filter):
@@ -841,13 +846,22 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
                 return return_error(f'Name is required in order to save a view', 400)
             if not view_data.get('view'):
                 return return_error(f'View data is required in order to save one', 400)
-            view_data['user_id'] = get_connected_user_id()
-            view_data[LAST_UPDATED_FIELD] = datetime.now()
-            view_data[UPDATED_BY_FIELD] = get_connected_user_id()
-            view_data['query_type'] = query_type
-            update_result = entity_views_collection.find_one_and_replace({
+            view_to_update = {
+                'name': view_data['name'],
+                'view': view_data['view'],
+                'query_type': query_type,
+            }
+            if view_data.get(PREDEFINED_FIELD):
+                view_to_update[PREDEFINED_FIELD] = view_data[PREDEFINED_FIELD]
+            if not self._is_hidden_user():
+                view_to_update[LAST_UPDATED_FIELD] = datetime.now()
+                view_to_update[UPDATED_BY_FIELD] = get_connected_user_id()
+                view_to_update['user_id'] = get_connected_user_id()
+            update_result = entity_views_collection.find_one_and_update({
                 'name': view_data['name']
-            }, view_data, upsert=True, return_document=pymongo.ReturnDocument.AFTER)
+            }, {
+                '$set': view_to_update
+            }, upsert=True, return_document=pymongo.ReturnDocument.AFTER)
 
             return str(update_result['_id'])
 
@@ -870,15 +884,17 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
         view_data = self.get_request_data_as_object()
         if not view_data.get('name'):
             return return_error(f'Name is required in order to save a view', 400)
+        view_set_data = {
+            'name': view_data['name'],
+            'view': view_data['view'],
+        }
+        if not self._is_hidden_user():
+            view_set_data[LAST_UPDATED_FIELD] = datetime.now()
+            view_set_data[UPDATED_BY_FIELD] = get_connected_user_id()
         self.gui_dbs.entity_query_views_db_map[entity_type].update_one({
             '_id': ObjectId(query_id)
         }, {
-            '$set': {
-                'name': view_data['name'],
-                'view': view_data['view'],
-                LAST_UPDATED_FIELD: datetime.now(),
-                UPDATED_BY_FIELD: get_connected_user_id()
-            }
+            '$set': view_set_data
         })
 
     def _entity_labels(self, db, namespace, mongo_filter):
@@ -958,7 +974,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
         :param projection: the "mongo_projection" from @gui_helpers.projected()
         :return: None
         """
-        if (session.get('user') or {}).get('user_name') == AXONIUS_USER_NAME:
+        if self._is_hidden_user():
             return
 
         view_filter = request.args.get('filter')
@@ -2085,15 +2101,16 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
             report_to_add = request.get_json()
             reports_collection = self.reports_config_collection
             report_name = report_to_add['name'] = report_to_add['name'].strip()
-            report_to_add['user_id'] = get_connected_user_id()
             report = reports_collection.find_one({
                 'name': report_name
             })
             if report:
                 return 'Report name already taken by another report', 400
 
-            report_to_add[LAST_UPDATED_FIELD] = datetime.now()
-            report_to_add[UPDATED_BY_FIELD] = get_connected_user_id()
+            if not self._is_hidden_user():
+                report_to_add['user_id'] = get_connected_user_id()
+                report_to_add[LAST_UPDATED_FIELD] = datetime.now()
+                report_to_add[UPDATED_BY_FIELD] = get_connected_user_id()
             upsert_result = self._upsert_report_config(report_to_add['name'], report_to_add, False)
             report_to_add['uuid'] = str(upsert_result)
             self._generate_and_schedule_report(report_to_add)
@@ -2121,6 +2138,10 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
         if request.method == 'GET':
             report = reports_collection.find_one({
                 '_id': ObjectId(report_id)
+            }, {
+                LAST_UPDATED_FIELD: 0,
+                UPDATED_BY_FIELD: 0,
+                'user_id': 0
             })
             if not report:
                 return return_error(f'Report with id {report_id} was not found', 400)
@@ -2129,8 +2150,9 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
 
         # Handle remaining request - POST
         report_to_update = request.get_json(silent=True)
-        report_to_update[LAST_UPDATED_FIELD] = datetime.now()
-        report_to_update[UPDATED_BY_FIELD] = get_connected_user_id()
+        if not self._is_hidden_user():
+            report_to_update[LAST_UPDATED_FIELD] = datetime.now()
+            report_to_update[UPDATED_BY_FIELD] = get_connected_user_id()
 
         self._upsert_report_config(report_to_update['name'], report_to_update, True)
         self._generate_and_schedule_report(report_to_update)
@@ -2184,9 +2206,10 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
 
     def put_enforcement(self, enforcement_to_add):
         self.__process_enforcement_actions(enforcement_to_add[ACTIONS_FIELD])
-        enforcement_to_add['user_id'] = str(get_connected_user_id())
-        enforcement_to_add[LAST_UPDATED_FIELD] = datetime.now()
-        enforcement_to_add[UPDATED_BY_FIELD] = get_connected_user_id()
+        if not self._is_hidden_user():
+            enforcement_to_add['user_id'] = str(get_connected_user_id())
+            enforcement_to_add[LAST_UPDATED_FIELD] = datetime.now()
+            enforcement_to_add[UPDATED_BY_FIELD] = get_connected_user_id()
 
         if enforcement_to_add[TRIGGERS_FIELD] and not enforcement_to_add[TRIGGERS_FIELD][0].get('name'):
             enforcement_to_add[TRIGGERS_FIELD][0]['name'] = enforcement_to_add['name']
@@ -2231,7 +2254,11 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
 
         if request.method == 'PUT':
             enforcement_to_add = request.get_json(silent=True)
-            return self.put_enforcement(enforcement_to_add)
+            return self.put_enforcement({
+                'name': enforcement_to_add['name'],
+                ACTIONS_FIELD: enforcement_to_add[ACTIONS_FIELD],
+                TRIGGERS_FIELD: enforcement_to_add[TRIGGERS_FIELD]
+            })
 
         # Handle remaining method - DELETE
         return self.delete_enforcement(self.get_request_data_as_object())
@@ -2274,6 +2301,10 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
 
             enforcement = self.enforcements_collection.find_one({
                 '_id': ObjectId(enforcement_id)
+            }, {
+                'name': 1,
+                ACTIONS_FIELD: 1,
+                TRIGGERS_FIELD: 1
             })
             if not enforcement:
                 return return_error(f'Enforcement with id {enforcement_id} was not found', 400)
@@ -2289,9 +2320,15 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
             return jsonify(beautify_db_entry(enforcement))
 
         # Handle remaining request - POST
-        enforcement_to_update = request.get_json(silent=True)
-        enforcement_to_update[LAST_UPDATED_FIELD] = datetime.now()
-        enforcement_to_update[UPDATED_BY_FIELD] = get_connected_user_id()
+        enforcement_data = request.get_json(silent=True)
+        enforcement_to_update = {
+            'name': enforcement_data['name'],
+            ACTIONS_FIELD: enforcement_data[ACTIONS_FIELD],
+            TRIGGERS_FIELD: enforcement_data[TRIGGERS_FIELD]
+        }
+        if not self._is_hidden_user():
+            enforcement_to_update[LAST_UPDATED_FIELD] = datetime.now()
+            enforcement_to_update[UPDATED_BY_FIELD] = get_connected_user_id()
 
         enforcement_actions_from_user = {
             x['name']: x
@@ -2758,7 +2795,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
             })
 
         # Otherwise, handle POST
-        if (session.get('user') or {}).get('user_name') != AXONIUS_USER_NAME:
+        if not self._is_hidden_user():
             logger.error(f'Request to modify {FeatureFlags.__name__} from a regular user!')
             return return_error('Illegal Operation', 400)  # keep gui happy, but don't show/change the flags
 

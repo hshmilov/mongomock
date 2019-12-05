@@ -174,4 +174,5 @@ UPDATED_BY_FIELD = 'updated_by'
 # Common Values #
 #########################
 
+PREDEFINED_FIELD = 'predefined'
 PREDEFINED_PLACEHOLDER = 'Predefined'

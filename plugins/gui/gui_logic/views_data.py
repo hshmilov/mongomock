@@ -7,7 +7,7 @@ import pymongo
 
 from axonius.plugin_base import PluginBase
 from axonius.entities import EntityType
-from axonius.consts.gui_consts import LAST_UPDATED_FIELD
+from axonius.consts.gui_consts import (LAST_UPDATED_FIELD, PREDEFINED_FIELD)
 from gui.gui_logic.fielded_plugins import get_fielded_plugins
 from gui.gui_logic.filter_utils import filter_archived
 
@@ -24,7 +24,7 @@ def _process_filter_views(entity_type: EntityType, mongo_filter):
     # If a query is not predefined, than we're fine
     mongo_filter['$or'] = [
         {
-            'predefined': {
+            PREDEFINED_FIELD: {
                 '$ne': True
             }
         },

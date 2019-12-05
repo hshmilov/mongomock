@@ -263,14 +263,16 @@ class ReportsService(Triggerable, PluginBase):
         Update a specific report's recipe
         """
         report_data = self.get_request_data_as_object()
+        report_set_data = {
+            ACTIONS_FIELD: report_data[ACTIONS_FIELD]
+        }
+        if report_data.get(UPDATED_BY_FIELD):
+            report_set_data[LAST_UPDATED_FIELD] = report_data[LAST_UPDATED_FIELD]
+            report_set_data[UPDATED_BY_FIELD] = report_data[UPDATED_BY_FIELD]
         result = self.__reports_collection.update_one({
             '_id': ObjectId(report_id),
         }, {
-            '$set': {
-                ACTIONS_FIELD: report_data[ACTIONS_FIELD],
-                LAST_UPDATED_FIELD: report_data[LAST_UPDATED_FIELD],
-                UPDATED_BY_FIELD: report_data[UPDATED_BY_FIELD]
-            }
+            '$set': report_set_data
         })
         return jsonify({'modified': result.modified_count})
 
@@ -324,13 +326,14 @@ class ReportsService(Triggerable, PluginBase):
         """
         try:
             report_resource = {
-                LAST_UPDATED_FIELD: report_data[LAST_UPDATED_FIELD],
                 ACTIONS_FIELD: report_data['actions'],
                 'name': report_data['name'],
                 TRIGGERS_FIELD: list(self.__processed_triggers(report_data[TRIGGERS_FIELD])),
-                'user_id': ObjectId(report_data['user_id']),
-                UPDATED_BY_FIELD: report_data[UPDATED_BY_FIELD]
             }
+            if report_data.get(UPDATED_BY_FIELD):
+                report_resource['user_id'] = ObjectId(report_data['user_id'])
+                report_resource[UPDATED_BY_FIELD] = report_data[UPDATED_BY_FIELD]
+                report_resource[LAST_UPDATED_FIELD] = report_data[LAST_UPDATED_FIELD]
 
             # Pushes the resource to the db.
             insert_result = self.__reports_collection.insert_one(report_resource)

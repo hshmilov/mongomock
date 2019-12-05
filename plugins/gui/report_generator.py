@@ -8,7 +8,7 @@ from jinja2 import Environment, FileSystemLoader
 from weasyprint import HTML, CSS
 from weasyprint.fonts import FontConfiguration
 
-from axonius.consts.gui_consts import ChartViews
+from axonius.consts.gui_consts import (ChartViews, PREDEFINED_FIELD)
 from axonius.entities import EntityType
 from axonius.logging.metric_helper import log_metric
 from axonius.plugin_base import PluginBase
@@ -668,10 +668,10 @@ class ReportGenerator:
                 'query_type': 'saved',
                 '$or': [
                     {
-                        'predefined': False
+                        PREDEFINED_FIELD: False
                     },
                     {
-                        'predefined': {
+                        PREDEFINED_FIELD: {
                             '$exists': False
                         }
                     }

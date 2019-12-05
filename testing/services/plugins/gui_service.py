@@ -10,7 +10,8 @@ from axonius.consts.gui_consts import (CONFIG_CONFIG, ROLES_COLLECTION, USERS_CO
                                        DASHBOARD_SPACE_TYPE_DEFAULT, DASHBOARD_SPACE_TYPE_PERSONAL,
                                        PREDEFINED_ROLE_ADMIN, PREDEFINED_ROLE_RESTRICTED, PREDEFINED_ROLE_READONLY,
                                        FEATURE_FLAGS_CONFIG, Signup, EXEC_REPORT_TITLE,
-                                       LAST_UPDATED_FIELD, UPDATED_BY_FIELD)
+                                       LAST_UPDATED_FIELD, UPDATED_BY_FIELD,
+                                       PREDEFINED_FIELD)
 from axonius.consts.plugin_consts import (AGGREGATOR_PLUGIN_NAME,
                                           AXONIUS_SETTINGS_DIR_NAME,
                                           CONFIGURABLE_CONFIGS_COLLECTION,
@@ -1037,10 +1038,10 @@ RUN cd /home/axonius && mkdir axonius-libs && mkdir axonius-libs/src && cd axoni
             'query_type': 'saved',
             '$or': [
                 {
-                    'predefined': False
+                    PREDEFINED_FIELD: False
                 },
                 {
-                    'predefined': {
+                    PREDEFINED_FIELD: {
                         '$exists': False
                     }
                 }
