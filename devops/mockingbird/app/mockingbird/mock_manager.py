@@ -25,7 +25,7 @@ class MockManager:
         return data
 
     def __get_entities(self, entity, plugin_name, client_id, offset, limit, remove_raw):
-        query = {'plugin_name': plugin_name, 'client_id': client_id}
+        query = {'plugin_name': plugin_name}
         response = dict()
         response['total_count'] = self.db[entity].count_documents(query)
         response['data'] = []

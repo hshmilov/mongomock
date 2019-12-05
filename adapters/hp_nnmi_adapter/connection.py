@@ -3,9 +3,9 @@ import logging
 
 from requests import Session
 from requests.auth import HTTPBasicAuth
-from zeep import Client
-from zeep.transports import Transport
-from zeep.helpers import serialize_object
+from zeep import Client  # pylint: disable=import-error
+from zeep.transports import Transport  # pylint: disable=import-error
+from zeep.helpers import serialize_object  # pylint: disable=import-error
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.exception import RESTException
 
@@ -45,7 +45,38 @@ class HpNnmiConnection(RESTConnection):
         # Do not try to fetch assets, as there is no pagination, and this can take time.
         self.client = client
 
+        # Try fetching one device
+        try:
+            self.client.service.getNodes(self.get_constraint('maxObjects', 1))
+        except Exception as e:
+            if 'This request requires HTTP authentication' in str(e):
+                raise ValueError(f'Invalid credentials: {str(e)}')
+            raise
+
+    def get_constraint(self, name: str, value):
+        # Try two methods of creating a constraint, for some reason this varies on different versions
+        try:
+            factory = self.client.type_factory('ns0')
+        except Exception:
+            factory = self.client.type_factory('ns3')
+
+        return factory.constraint(name=name, value=value)
+
     def get_device_list(self):
         # The documentation does not specify any sign of pagination
-        assets = serialize_object(self.client.service.getNodes('*'))
-        yield from assets
+        count = self.client.service.getNodeCount('*')
+        logger.info(f'Nodes count: {count}')
+
+        offset = 0
+        while offset < count:
+            try:
+                assets = serialize_object(self.client.service.getNodes(self.get_constraint('offset', offset)))
+                if not isinstance(assets, list):
+                    break
+                if len(assets) == 0:
+                    break
+                offset += len(assets)
+                yield from assets
+            except Exception:
+                logger.exception(f'Exception while getting device list at offset {offset}')
+                raise
