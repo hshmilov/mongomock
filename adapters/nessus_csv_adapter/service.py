@@ -1,3 +1,4 @@
+from axonius.utils.parsing import format_ip
 import logging
 logger = logging.getLogger(f'axonius.{__name__}')
 import csv
@@ -79,12 +80,17 @@ class NessusCsvAdapter(ScannerAdapterBase):
             ip_addresses_data_dict[ip_address] = []
         for scan_raw in raw_data:
             try:
-                ip_addresses_data_dict[scan_raw["Host"]].append(scan_raw)
+                if scan_raw.get('Host'):
+                    ip_addresses_data_dict[scan_raw["Host"]].append(scan_raw)
             except Exception:
                 logger.exception(f"Problems with scan_raw {scan_raw}")
         for ip_address in ip_addresses_data_dict:
             try:
                 device = self._new_device_adapter()
+                try:
+                    format_ip(ip_address)
+                except Exception:
+                    continue
                 device.add_nic(None, [ip_address])
                 device.scans = []
                 device.software_cves = []
@@ -99,7 +105,7 @@ class NessusCsvAdapter(ScannerAdapterBase):
                         new_scan.cvss = scan_raw.get("CVSS")
                         new_scan.plugin_id = scan_raw.get("Plugin ID")
                         new_scan.cve = scan_raw.get("CVE")
-                        device.add_vulnerable_software(scan_raw.get('CVE'))
+                        device.add_vulnerable_software(cve_id=scan_raw.get('CVE'))
                         device.scans.append(new_scan)
                     except Exception:
                         logger.exception(f"IP {ip_address} got problem adding scan_raw {scan_raw}")

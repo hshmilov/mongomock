@@ -129,6 +129,8 @@ class DatadogAdapter(AdapterBase):
 
                 try:
                     gohai = json.loads((device_raw.get('meta') or {}).get('gohai') or '{}')
+                    if not isinstance(gohai, dict):
+                        gohai = {}
                     try:
                         network = gohai.get('network') or {}
                         ips = []
