@@ -5095,7 +5095,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
                         },
                         {
                             'name': 'use_group_dn',
-                            'title': 'Match group name by DN',
+                            'title': 'Match Group Name by DN',
                             'type': 'bool'
                         },
                         {
@@ -5105,7 +5105,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
                         },
                         *COMMON_SSL_CONFIG_SCHEMA
                     ],
-                    'required': ['enabled', 'dc_address'],
+                    'required': ['enabled', 'dc_address', 'use_group_dn'],
                     'name': 'ldap_login_settings',
                     'title': 'Ldap Login Settings',
                     'type': 'array'

@@ -24,6 +24,7 @@ class AquaAdapter(AdapterBase):
         total_warn = Field(int, 'Total Warnings')
         gateways = ListField(str, 'Gateways')
         is_scan = Field(bool, 'Is Scan')
+        public_address = Field(str, 'Public Address')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -138,9 +139,7 @@ class AquaAdapter(AdapterBase):
             device.is_scan = device_raw.get('scan')
             if device_raw.get('address') and isinstance(device_raw.get('address'), str):
                 device.add_nic(ips=device_raw.get('address').split(','))
-            if device_raw.get('public_address') and isinstance(device_raw.get('public_address'), str):
-                device.add_nic(ips=device_raw.get('public_address').split(','))
-                device.add_public_ip(ip=device_raw.get('public_address'))
+            device.public_address = device_raw.get('public_address')
             device.add_agent_version(agent=AGENT_NAMES.aqua, version=device_raw.get('version'),
                                      status=device_raw.get('status'))
             device.set_raw(device_raw)

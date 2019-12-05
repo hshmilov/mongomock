@@ -26,7 +26,10 @@ class JuniperClient:
             devices = self.space_rest_client.device_management.devices.get(
                 filter_={'connectionStatus': 'up'})
         finally:
-            self.space_rest_client.logout()
+            try:
+                self.space_rest_client.logout()
+            except Exception:
+                pass
 
     @staticmethod
     def data_to_xml_async(rpc_data):

@@ -2,6 +2,7 @@ import logging
 
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.exception import RESTException
+from aqua_adapter.consts import MAX_NUMBER_OF_DEVICES, DEVICE_PER_PAGE
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -28,4 +29,17 @@ class AquaConnection(RESTConnection):
         self._get('v1/hosts')
 
     def get_device_list(self):
-        yield from self._get('v1/hosts')
+        page = 1
+        response = self._get('v1/hosts', url_params={'page': page, 'pagesize': DEVICE_PER_PAGE})
+        yield from response.get('result')
+        count = response['count']
+        while (page * DEVICE_PER_PAGE) < min(count, MAX_NUMBER_OF_DEVICES):
+            try:
+                page += 1
+                response = self._get('v1/hosts', url_params={'page': page, 'pagesize': DEVICE_PER_PAGE})
+                if not response.get('result'):
+                    break
+                yield from response.get('result')
+            except Exception:
+                logger.exception(f'Problem with page {page}')
+                break

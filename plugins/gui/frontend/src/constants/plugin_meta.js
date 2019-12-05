@@ -852,7 +852,7 @@ export const pluginMeta = {
     },
     illusive_adapter: {
         title: 'Illusive Networks',
-        link: '',
+        link: 'https://docs.axonius.com/docs/illusive-networks',
         description: 'Illusive Networks deceives cyber attackers by planting false information about a given network\'s resources.'
     },
     chef_adapter: {

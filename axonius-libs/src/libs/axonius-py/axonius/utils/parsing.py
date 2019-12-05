@@ -809,11 +809,15 @@ def is_sql_adapter(adapter_device):
     return adapter_device.get('plugin_name') == 'mssql_adapter'
 
 
+def is_aqua_adapter(adapter_device):
+    return adapter_device.get('plugin_name') == 'aqua_adapter'
+
+
 def is_dangerous_asset_names_adapter(adapter_device):
     return is_snow_adapter(adapter_device) or is_lansweerp_dapter(adapter_device) \
         or is_alertlogic_adapter(adapter_device) \
         or is_bluecat_adapter(adapter_device) or is_qualys_adapter(adapter_device) \
-        or is_counter_act_adapter(adapter_device) or is_sql_adapter(adapter_device)
+        or is_counter_act_adapter(adapter_device) or is_sql_adapter(adapter_device) or is_aqua_adapter(adapter_device)
 
 
 def hostname_not_problematic(adapter_device):

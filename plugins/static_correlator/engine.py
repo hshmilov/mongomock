@@ -25,7 +25,7 @@ from axonius.utils.parsing import (NORMALIZED_MACS,
                                    get_hostname, get_id, compare_full_mac,
                                    get_last_used_users, is_from_ad,
                                    get_normalized_hostname_str, is_snow_adapter,
-                                   get_normalized_ip, get_serial,
+                                   get_normalized_ip, get_serial, get_os_type,
                                    hostnames_do_not_contradict,
                                    ips_do_not_contradict_or_mac_intersection,
                                    is_azuread_or_ad_and_have_name,
@@ -142,7 +142,9 @@ def not_saltstack_enterprise_linux(adapter_device):
 
 
 def is_uuid_adapters(adapter_device):
-    if adapter_device.get('plugin_name') in ['sentinelone_adapter', 'tanium_adapter']:
+    if adapter_device.get('plugin_name') == 'tanium_adapter':
+        return True
+    if adapter_device.get('plugin_name') == 'sentinelone_adapter' and get_os_type(adapter_device) == 'OS X':
         return True
     return False
 
