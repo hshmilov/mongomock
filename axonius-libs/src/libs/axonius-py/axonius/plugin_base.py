@@ -1511,26 +1511,6 @@ class PluginBase(Configurable, Feature, ABC):
             return self._grab_file(field_data, stored_locally).read()
         return None
 
-    @add_rule('schema/<schema_type>', methods=['GET'])
-    def schema(self, schema_type):
-        """ /schema - Get the schema the plugin expects from configs.
-                      Will try to get the wanted schema according to <schema_type>
-
-        Accepts:
-            GET - Get schema. name of the schema is given in the url.
-                  For example: 'https://<address>/schema/general_schema
-
-        :return: list(str)
-        """
-        schema_type = '_' + schema_type + '_schema'
-        if schema_type not in dir(self):
-            logger.warning(f'Someone tried to get wrong schema \'{schema_type}\'')
-            return return_error(f'No such schema. should implement {schema_type}', 400)
-
-        # We have a schema like this
-        schema_func = getattr(self, schema_type)
-        return jsonify(schema_func())
-
     @property
     def plugin_type(self):
         return 'Plugin'
