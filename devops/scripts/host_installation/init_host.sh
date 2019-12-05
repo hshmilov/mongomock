@@ -121,7 +121,7 @@ pip3 install --upgrade setuptools
 pip3 install ipython
 pip3 install netifaces==0.10.9
 echo "Installing docker-ce..."
-_wait_for_apt install -yq docker-ce=5:19.03.2~3-0~ubuntu-xenial
+_wait_for_apt install -yq docker-ce=5:19.03.5~3-0~ubuntu-xenial
 systemctl enable docker
 echo "Adding ubuntu to the docker group, please note that you must logout and login!"
 usermod -aG docker ubuntu
