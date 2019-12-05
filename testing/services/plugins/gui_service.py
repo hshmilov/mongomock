@@ -88,9 +88,9 @@ class GuiService(PluginService, UpdatablePluginMixin):
             self._update_schema_version_21()
         if self.db_schema_version < 22:
             self._update_schema_version_22()
-        if self.db_schema_version < 23:
-            self._update_schema_version_23()
-        if self.db_schema_version != 23:
+        if self.db_schema_version < 24:
+            self._update_schema_version_24()
+        if self.db_schema_version != 24:
             print(f'Upgrade failed, db_schema_version is {self.db_schema_version}')
 
     def _update_schema_version_1(self):
@@ -788,7 +788,7 @@ class GuiService(PluginService, UpdatablePluginMixin):
         except Exception as e:
             print(f'Exception while upgrading gui db to version 22. Details: {e}')
 
-    def _update_schema_version_23(self):
+    def _update_schema_version_24(self):
         """
         For version 2.13, sync updated_by and last_updated fields in Enforcements, Reports and Saved Views
         """
@@ -802,7 +802,11 @@ class GuiService(PluginService, UpdatablePluginMixin):
 
             # Update reports_config:
             #     'updated_by' from 'user_id'
-            self.db.gui_reports_config_collection().update_many({}, update_fields)
+            self.db.gui_reports_config_collection().update_many({
+                'user_id': {
+                    '$type': 'objectId'
+                }
+            }, update_fields)
 
             # Update reports:
             #     'updated_by' from 'user_id'
@@ -815,9 +819,9 @@ class GuiService(PluginService, UpdatablePluginMixin):
             for entity_type in EntityType:
                 views_collection = self._entity_views_map[entity_type]
                 views_collection.update_many({}, update_fields)
-            self.db_schema_version = 23
+            self.db_schema_version = 24
         except Exception as e:
-            print(f'Exception while upgrading gui db to version 23. Details: {e}')
+            print(f'Exception while upgrading gui db to version 24. Details: {e}')
 
     def _update_default_locked_actions(self, new_actions):
         """
