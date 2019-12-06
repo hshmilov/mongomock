@@ -1,3 +1,6 @@
+import random
+import math
+
 from ui_tests.tests.ui_test_base import TestBase
 from ui_tests.tests.ui_consts import JSON_ADAPTER_NAME, AD_ADAPTER_NAME
 
@@ -77,3 +80,33 @@ class TestUsersQuery(TestBase):
         self.users_page.wait_for_spinner_to_end()
         self.users_page.wait_for_table_to_load()
         assert self.users_page.count_entities() == 1
+
+    def test_in_integer_query(self):
+        self.dashboard_page.switch_to_page()
+        self.base_page.run_discovery()
+        self.users_page.switch_to_page()
+        self.users_page.wait_for_table_to_load()
+
+        self.users_page.edit_columns([self.users_page.FIELD_LOGON_COUNT],
+                                     [self.users_page.FIELD_TAGS, self.users_page.FIELD_LAST_SEEN_IN_DOMAIN])
+        self.users_page.wait_for_table_to_load()
+
+        all_logon_counts = set(self.users_page.get_column_data_inline_with_remainder(self.users_page.FIELD_LOGON_COUNT))
+
+        logon_counts = random.sample(all_logon_counts, math.ceil(len(all_logon_counts) / 2))
+
+        self.users_page.click_query_wizard()
+        self.users_page.select_query_field(self.users_page.FIELD_LOGON_COUNT)
+        self.users_page.select_query_comp_op(self.users_page.QUERY_COMP_IN)
+        self.users_page.fill_query_string_value(','.join(logon_counts))
+        self.users_page.wait_for_table_to_load()
+        self.users_page.wait_for_spinner_to_end()
+
+        self.users_page.click_search()
+
+        new_logon_counts = set(self.users_page.get_column_data_inline_with_remainder(
+            self.users_page.FIELD_LOGON_COUNT))
+
+        assert len([logon_count for logon_count in new_logon_counts if logon_count.strip() == '']) == 0
+
+        assert set(logon_counts) == new_logon_counts

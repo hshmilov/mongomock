@@ -164,15 +164,22 @@
         return this.schemaByName[this.field]
       },
       valueSchema () {
+        if (this.fieldSchema && ['integer', 'number', 'array'].includes(this.fieldSchema.type) && this.compOp === 'IN') {
+            return { type: 'string' }
+        }
         if (this.fieldSchema && this.fieldSchema.type === 'array'
-          && ['contains', 'equals', 'IN', 'subnet', 'notInSubnet', 'starts', 'ends'].includes(this.compOp)) {
+          && ['contains', 'equals', 'subnet', 'notInSubnet', 'starts', 'ends'].includes(this.compOp)) {
           return this.fieldSchema.items
         }
         if (this.fieldSchema && this.fieldSchema.format && this.fieldSchema.format === 'date-time'
           && ['days'].includes(this.compOp)) {
           return { type: 'integer' }
         }
-        return this.fieldSchema
+        let newSchema = this.fieldSchema
+        if(this.compOp === 'IN' && this.fieldSchema.enum){
+            newSchema = { ...newSchema, enum: undefined }
+        }
+        return newSchema
       },
       opsMap () {
         if (!this.fieldSchema || !this.fieldSchema.type) return {}
@@ -183,7 +190,12 @@
           schema = schema.items
         }
         if (schema.enum && schema.format !== 'predefined') {
-          ops = { ...ops, equals: compOps[schema.type].equals, exists: compOps[schema.type].exists }
+          ops = {
+              ...ops,
+              equals: compOps[schema.type].equals,
+              exists: compOps[schema.type].exists,
+              IN: compOps[schema.type].IN
+          }
         } else if (schema.format) {
           ops = { ...ops, ...compOps[schema.format] }
         } else {
@@ -216,6 +228,12 @@
       },
       showValue () {
         return this.checkShowValue(this.compOp)
+      },
+      pluginsMeta () {
+          return this.fieldSchema.items.enum.reduce((map, obj) => {
+              map[obj.title] = obj.name
+              return map
+          }, {})
       }
     },
     watch: {
@@ -359,7 +377,17 @@
         return ''
       },
       formatIn(){
-          this.processedValue = '"' + this.value.match(/(\\,|[^,])+/g).join('","') + '"'
+          let values = this.value.match(/(\\,|[^,])+/g)
+          if(this.fieldSchema.name === 'adapters'){
+              values = values.map(value => {
+                  return this.pluginsMeta[value]
+              }).filter(value => value != null)
+          }
+          if(['integer', 'number'].includes(this.fieldSchema.type)){
+              this.processedValue = values.map(value => parseFloat(value)).filter(value => !isNaN(value)).join(',')
+          } else {
+              this.processedValue = '"' + values.join('","') + '"'
+          }
           this.processedValue = this.processedValue.replace('\\\\,',',')
           return ''
       },

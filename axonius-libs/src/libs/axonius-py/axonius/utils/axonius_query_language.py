@@ -241,7 +241,28 @@ def convert_to_main_db(find):
             del find[k]
         elif k == 'adapters' and isinstance(v, dict):
             operator = next(iter(v))
-            if isinstance(v[operator], dict) and next(iter(v[operator])) == '$size':
+            if operator == '$in':
+                find['$or'] = [
+                    {
+                        'adapters.plugin_name': v
+                    },
+                    {
+                        'tags': {
+                            '$elemMatch': {
+                                '$and': [
+                                    {
+                                        'plugin_name': v
+                                    },
+                                    {
+                                        'type': 'adapterdata'
+                                    }
+                                ]
+                            }
+                        }
+                    }
+                ]
+                del find[k]
+            elif isinstance(v[operator], dict) and next(iter(v[operator])) == '$size':
                 find['$expr'] = {
                     operator: [
                         {

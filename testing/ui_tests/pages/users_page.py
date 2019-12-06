@@ -4,7 +4,10 @@ from ui_tests.pages.entities_page import EntitiesPage
 class UsersPage(EntitiesPage):
     FIELD_USERNAME_NAME = 'username'
     FIELD_USERNAME_TITLE = 'User Name'
+    FIELD_LOGON_COUNT = 'Logon Count'
     FILTER_USERNAME = 'specific_data.data.username == regex("{filter_value}")'
+    FIELD_TAGS = 'Tags'
+    FIELD_LAST_SEEN_IN_DOMAIN = 'Last Seen In Domain'
 
     @property
     def url(self):

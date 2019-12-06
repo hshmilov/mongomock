@@ -557,14 +557,7 @@ class EntitiesPage(Page):
                           start=1):
             remainder_values = None
             if 'array' in column_type:
-                try:
-                    remainder_count = self.hover_remainder(index, col_position)
-                    if remainder_count:
-                        remainder_values = [element.text for element in self.get_tooltip_table_data()]
-                    else:
-                        remainder_values = el.text.strip().split('\n') if el.text.strip() else None
-                except NoSuchElementException:
-                    remainder_values = el.text.strip().split('\n') if el.text.strip() else None
+                remainder_values = self.get_field_values_with_remainder(col_position, el, index)
             if remainder_values:
                 if merge_cells:
                     for value in remainder_values:
@@ -574,6 +567,27 @@ class EntitiesPage(Page):
             elif el.text.strip():
                 values.append(el.text.strip())
         return values
+
+    def get_field_values_with_remainder(self, col_position: int, element: object, index: int):
+        try:
+            # try to get all values from hovering on the value (works only if there is a tooltip)
+            remainder_count = self.hover_remainder(index, col_position)
+            if remainder_count:
+                field_values = [element.text for element in self.get_tooltip_table_data()]
+            else:
+                field_values = self.get_field_values(element)
+        except NoSuchElementException:
+            field_values = self.get_field_values(element)
+        return field_values
+
+    def get_field_values(self, element: object):
+        # if the cell contains images then get the title of the images - else get the text values of the cell
+        images = element.find_elements_by_css_selector('img')
+        if images:
+            field_values = self.get_hover_images_texts(element)
+        else:
+            field_values = element.text.strip().split('\n') if element.text.strip() else None
+        return field_values
 
     def get_column_data_inline(self, col_name, parent=None):
         return self.get_column_data(self.TABLE_DATA_INLINE_XPATH, col_name, parent)
@@ -1119,6 +1133,17 @@ class EntitiesPage(Page):
             ActionChains(self.driver).move_to_element(remainder).perform()
             return int(remainder.find_element_by_tag_name('span').text)
         return 0
+
+    def get_hover_images_texts(self, cell):
+        images = cell.find_elements_by_css_selector('img')
+        values = []
+        if images:
+            for index, image in enumerate(images):
+                ActionChains(self.driver).move_to_element(image).perform()
+                tooltip_data = self.get_tooltip_table_data()
+                if tooltip_data and len(tooltip_data) == 2:
+                    values.append(tooltip_data[1].text)
+        return values
 
     def get_tooltip_table_head(self):
         return self.driver.find_element_by_css_selector(self.TOOLTIP_TABLE_HEAD_CSS).text

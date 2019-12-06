@@ -1,3 +1,5 @@
+import random
+import math
 from datetime import datetime
 from uuid import uuid4
 
@@ -5,11 +7,16 @@ from selenium.common.exceptions import NoSuchElementException
 from axonius.utils.hash import get_preferred_quick_adapter_id
 from axonius.utils.wait import wait_until
 from ui_tests.tests.ui_test_base import TestBase
-from ui_tests.tests.ui_consts import AD_ADAPTER_NAME, JSON_ADAPTER_NAME, WINDOWS_QUERY_NAME
+from ui_tests.tests.ui_consts import (AD_ADAPTER_NAME,
+                                      JSON_ADAPTER_NAME,
+                                      WINDOWS_QUERY_NAME,
+                                      STRESSTEST_SCANNER_ADAPTER,
+                                      STRESSTEST_ADAPTER)
 from services.plugins.general_info_service import GeneralInfoService
 from services.adapters.cisco_service import CiscoService
 from services.adapters.esx_service import EsxService
 from services.adapters.cylance_service import CylanceService
+from services.adapters import stresstest_scanner_service, stresstest_service
 from test_credentials.json_file_credentials import (DEVICE_FIRST_IP,
                                                     DEVICE_THIRD_IP,
                                                     DEVICE_MAC,
@@ -78,6 +85,42 @@ class TestDevicesQuery(TestBase):
                 assert len(ips_set.intersection(set(ips))) > 0
             else:
                 assert ips in ips_set
+
+    def test_in_adapters_query(self):
+        self.dashboard_page.switch_to_page()
+        self.base_page.run_discovery()
+        self.devices_page.switch_to_page()
+        self.devices_page.wait_for_table_to_load()
+
+        self.devices_page.select_page_size(50)
+
+        all_adapters = set(self.devices_page.get_column_data_inline_with_remainder(self.devices_page.FIELD_ADAPTERS))
+        adapters = random.sample(all_adapters, math.ceil(len(all_adapters) / 2))
+
+        self.devices_page.click_query_wizard()
+        self.devices_page.select_query_field(self.devices_page.FIELD_ADAPTERS)
+        self.devices_page.select_query_comp_op(self.devices_page.QUERY_COMP_IN)
+        self.devices_page.fill_query_string_value(','.join(adapters))
+        self.devices_page.wait_for_table_to_load()
+        self.devices_page.wait_for_spinner_to_end()
+
+        self.devices_page.click_search()
+
+        self.devices_page.select_page_size(50)
+
+        new_adapters = set(self.devices_page.get_column_data_inline_with_remainder(
+            self.devices_page.FIELD_ADAPTERS))
+
+        assert len([adapter for adapter in new_adapters if adapter.strip() == '']) == 0
+
+        assert set(adapters).issubset(new_adapters)
+
+        for adapters_values in self.devices_page.get_column_cells_data_inline_with_remainder(
+                self.devices_page.FIELD_ADAPTERS):
+            if isinstance(adapters_values, list):
+                assert len(set(adapters_values).intersection(set(adapters))) > 0
+            else:
+                assert adapters_values in adapters
 
     def test_in_with_delimiter_query(self):
         self.dashboard_page.switch_to_page()
@@ -916,3 +959,52 @@ class TestDevicesQuery(TestBase):
         self.devices_page.wait_for_table_to_load()
         assert results_count == self.devices_page.count_entities()
         assert query == self.devices_page.find_query_search_input()
+
+    def test_in_enum_query(self):
+        stress = stresstest_service.StresstestService()
+        stress_scanner = stresstest_scanner_service.StresstestScannerService()
+        try:
+            with stress.contextmanager(take_ownership=True), \
+                    stress_scanner.contextmanager(take_ownership=True):
+                device_dict = {'device_count': 10, 'name': 'blah'}
+                stress.add_client(device_dict)
+                stress_scanner.add_client(device_dict)
+
+                self.base_page.run_discovery()
+                self.base_page.run_discovery()
+                self.devices_page.switch_to_page()
+                self.devices_page.wait_for_table_to_load()
+
+                self.devices_page.select_page_size(50)
+
+                all_os_types = set(self.devices_page.
+                                   get_column_data_inline_with_remainder(self.devices_page.FIELD_OS_TYPE))
+
+                os_types = random.sample(all_os_types, math.ceil(len(all_os_types) / 2))
+
+                self.devices_page.click_query_wizard()
+                self.devices_page.select_query_field(self.devices_page.FIELD_OS_TYPE)
+                self.devices_page.select_query_comp_op(self.devices_page.QUERY_COMP_IN)
+                self.devices_page.fill_query_string_value(','.join(set(os_types)))
+                self.devices_page.wait_for_table_to_load()
+                self.devices_page.wait_for_spinner_to_end()
+
+                self.devices_page.click_search()
+
+                new_os_types = set(self.devices_page.get_column_data_inline_with_remainder(
+                    self.devices_page.FIELD_OS_TYPE))
+
+                assert len([os_type for os_type in new_os_types if os_type.strip() == '']) == 0
+
+                assert set(os_types).issubset(new_os_types)
+
+                for os_types_values in self.devices_page.get_column_cells_data_inline_with_remainder(
+                        self.devices_page.FIELD_OS_TYPE):
+                    if isinstance(os_types_values, list):
+                        assert len(set(os_types_values).intersection(set(os_types))) > 0
+                    else:
+                        assert os_types_values in os_types
+
+        finally:
+            self.wait_for_adapter_down(STRESSTEST_ADAPTER)
+            self.wait_for_adapter_down(STRESSTEST_SCANNER_ADAPTER)
