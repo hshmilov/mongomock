@@ -2176,7 +2176,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
                 f'{TRIGGERS_FIELD}.{LAST_TRIGGERED_FIELD}': trigger.get(LAST_TRIGGERED_FIELD, '') if trigger else '',
                 f'{TRIGGERS_FIELD}.{TIMES_TRIGGERED_FIELD}': trigger.get(TIMES_TRIGGERED_FIELD) if trigger else None,
                 LAST_UPDATED_FIELD: enforcement[LAST_UPDATED_FIELD],
-                UPDATED_BY_FIELD: enforcement[UPDATED_BY_FIELD]
+                UPDATED_BY_FIELD: enforcement.get(UPDATED_BY_FIELD)
             })
 
         return [beautify_enforcement(enforcement) for enforcement in self.enforcements_collection.find(
