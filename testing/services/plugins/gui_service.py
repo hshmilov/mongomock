@@ -22,7 +22,8 @@ from axonius.consts.plugin_consts import (AGGREGATOR_PLUGIN_NAME,
                                           PLUGIN_UNIQUE_NAME,
                                           MAINTENANCE_TYPE,
                                           GUI_SYSTEM_CONFIG_COLLECTION,
-                                          LIBS_PATH)
+                                          LIBS_PATH,
+                                          AXONIUS_USER_NAME)
 from axonius.entities import EntityType
 from axonius.utils.gui_helpers import PermissionLevel, PermissionType
 from gui.gui_logic.filter_utils import filter_archived
@@ -792,9 +793,18 @@ class GuiService(PluginService, UpdatablePluginMixin):
         """
         For version 2.13, sync updated_by and last_updated fields in Enforcements, Reports and Saved Views
         """
-        print('Upgrade to schema 23')
+        print('Upgrade to schema 24')
         try:
-            update_fields = [{
+            find_query = {
+                'user_id': {
+                    '$type': 'objectId'
+                }
+            }
+            hidden_user_id = self._get_hidden_user_id()
+            if hidden_user_id:
+                find_query['user_id']['$ne'] = hidden_user_id
+
+            update_query = [{
                 '$set': {
                     UPDATED_BY_FIELD: '$user_id'
                 }
@@ -802,23 +812,19 @@ class GuiService(PluginService, UpdatablePluginMixin):
 
             # Update reports_config:
             #     'updated_by' from 'user_id'
-            self.db.gui_reports_config_collection().update_many({
-                'user_id': {
-                    '$type': 'objectId'
-                }
-            }, update_fields)
+            self.db.gui_reports_config_collection().update_many(find_query, update_query)
 
             # Update reports:
             #     'updated_by' from 'user_id'
-            self.db.enforcements_collection().update_many({}, update_fields)
+            self.db.enforcements_collection().update_many(find_query, update_query)
 
-            update_fields[0]['$set'][LAST_UPDATED_FIELD] = '$timestamp'
+            update_query[0]['$set'][LAST_UPDATED_FIELD] = '$timestamp'
             # Update saved views, per entity:
             #     'last_updated' from 'timestamp'
             #     'updated_by' from 'user_id'
             for entity_type in EntityType:
                 views_collection = self._entity_views_map[entity_type]
-                views_collection.update_many({}, update_fields)
+                views_collection.update_many(find_query, update_query)
             self.db_schema_version = 24
         except Exception as e:
             print(f'Exception while upgrading gui db to version 24. Details: {e}')
@@ -1106,3 +1112,13 @@ RUN cd /home/axonius && mkdir axonius-libs && mkdir axonius-libs/src && cd axoni
                 }
             }
         })
+
+    def _get_hidden_user_id(self):
+        hidden_user = self.db.gui_users_collection().find_one({
+            'user_name': AXONIUS_USER_NAME
+        }, {
+            '_id': 1
+        })
+        if not hidden_user:
+            return None
+        return hidden_user['_id']
