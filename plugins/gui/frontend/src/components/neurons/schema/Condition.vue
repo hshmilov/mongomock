@@ -39,6 +39,7 @@
   import array from './types/numerical/IntegerEdit.vue'
 
   import { compOps } from '../../../constants/filter'
+  import { pluginMeta } from '../../../constants/plugin_meta'
   import IP from 'ip'
   import { mapState, mapGetters } from 'vuex'
   import { GET_DATA_FIELDS_BY_PLUGIN, GET_DATA_SCHEMA_BY_NAME } from '../../../store/getters'
@@ -230,8 +231,8 @@
         return this.checkShowValue(this.compOp)
       },
       pluginsMeta () {
-          return this.fieldSchema.items.enum.reduce((map, obj) => {
-              map[obj.title] = obj.name
+          return Object.keys(pluginMeta).reduce((map, obj) => {
+              map[pluginMeta[obj].title] = obj
               return map
           }, {})
       }
@@ -380,7 +381,7 @@
           let values = this.value.match(/(\\,|[^,])+/g)
           if(this.fieldSchema.name === 'adapters'){
               values = values.map(value => {
-                  return this.pluginsMeta[value]
+                  return this.pluginsMeta[value.trim()]
               }).filter(value => value != null)
           }
           if(['integer', 'number'].includes(this.fieldSchema.type)){
