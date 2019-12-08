@@ -92,14 +92,17 @@ def _test_pm_online(method):
     assert "Update for Windows Server 2012 (KB2769165)" in titles
 
 
+@pytest.mark.skip('AX-5707')
 def test_pm_online_rpc():
     _test_pm_online("rpc")
 
 
+@pytest.mark.skip('AX-5707')
 def test_pm_online_smb():
     _test_pm_online("smb")
 
 
+@pytest.mark.skip('AX-5707')
 def test_pm_online_rpc_and_fallback_smb():
     _test_pm_online("rpc_and_fallback_smb")
 

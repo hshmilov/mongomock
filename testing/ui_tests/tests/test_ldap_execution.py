@@ -1,6 +1,8 @@
 # pylint: disable=too-many-statements
 import time
 
+import pytest
+
 from axonius.utils.wait import wait_until
 from test_credentials.test_ad_credentials import WMI_QUERIES_DEVICE
 from ui_tests.tests.ui_test_base import TestBase
@@ -10,6 +12,7 @@ CHANGE_LDAP_ACTION_NAME = 'Change LDAP Enforcement'
 
 
 class TestLDAPEnforcement(TestBase):
+    @pytest.mark.skip('AX-5707')
     def test_change_ldap_attribute(self):
         self.settings_page.switch_to_page()
         self.base_page.run_discovery()
