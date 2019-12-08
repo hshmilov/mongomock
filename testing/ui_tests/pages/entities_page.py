@@ -513,7 +513,6 @@ class EntitiesPage(Page):
         # Return the position of given col_name in list of column headers, 1-based
         if not parent:
             parent = self.driver
-
         elements = parent.find_elements_by_css_selector(self.TABLE_HEADER_CELLS_CSS)
         for index, element in enumerate(elements, start=1):
             try:
@@ -534,7 +533,6 @@ class EntitiesPage(Page):
     def get_column_data(self, data_section_xpath, col_name, parent=None, generic_col=True):
         if not parent:
             parent = self.driver
-
         col_position = self.count_sort_column(col_name, parent)\
             if generic_col else self.count_specific_column(col_name, parent)
         return [el.text.strip()
@@ -545,16 +543,16 @@ class EntitiesPage(Page):
                                        merge_cells=True):
         if not parent:
             parent = self.driver
-
         col_position = self.count_sort_column(col_name, parent) \
             if generic_col else self.count_specific_column(col_name, parent)
-
         values = []
-        column_type = parent.find_element_by_xpath(
-            self.TABLE_DATA_SLICER_TYPE_XPATH.format(data_position=col_position)).get_attribute('class')
         for index, el in \
                 enumerate(parent.find_elements_by_xpath(data_section_xpath.format(data_position=col_position)),
                           start=1):
+            column_type = ''
+            slice_elements = el.find_elements_by_css_selector('.x-slice')
+            if len(slice_elements) == 1:
+                column_type = slice_elements[0].find_element_by_tag_name('div').get_attribute('class')
             remainder_values = None
             if 'array' in column_type:
                 remainder_values = self.get_field_values_with_remainder(col_position, el, index)
