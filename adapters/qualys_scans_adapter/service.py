@@ -1,5 +1,8 @@
 import datetime
 import logging
+import csv
+import io
+import re
 
 from axonius.adapter_base import AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
@@ -11,7 +14,6 @@ from axonius.scanner_adapter_base import ScannerAdapterBase
 from axonius.smart_json_class import SmartJsonClass
 from axonius.utils.datetime import parse_date
 from axonius.utils.files import get_local_config_file
-from axonius.utils.parsing import make_dict_from_csv
 from qualys_scans_adapter import consts
 from qualys_scans_adapter.connection import QualysScansConnection
 
@@ -23,14 +25,97 @@ class QualysVulnerability(SmartJsonClass):
     results = Field(str, 'Results')
 
 
+QUALYS_SUB_CATEGORIES = ['Authenticated Discovery',
+                         'Malware Associated',
+                         'Unix Authenticated Discovery',
+                         'Remote Discovery',
+                         'Patch Available',
+                         'PANOS Authenticated Discovery',
+                         'MongoDB Authenticated Discovery',
+                         'MARIADB Authenticated Discovery',
+                         'Not exploitable due to configuration',
+                         'Exploit Available',
+                         'SNMP Authenticated Discovery',
+                         'Non-running services',
+                         'Windows Authenticated Discovery',
+                         'VMware Authenticated Discovery',
+                         'MySQL Authenticated Discovery',
+                         'Oracle Authenticated Discovery',
+                         'Remote DiscoveryAuthenticated Discovery',
+                         'DB2 Authenticated Discovery']
+
+QUALYS_CATEGORIES = ['Debian',
+                     'HP-UX',
+                     'Amazon Linux',
+                     'Hardware',
+                     'Fedora',
+                     'RPC',
+                     'Finger',
+                     'SUSE',
+                     'Database',
+                     'Web server',
+                     'VMware',
+                     'Firewall',
+                     'File Transfer Protocol',
+                     'News Server',
+                     'NFS',
+                     'CGI',
+                     'Solaris',
+                     'Oracle VM Server',
+                     'RedHat',
+                     'Windows',
+                     'Proxy',
+                     'Web Application Firewall',
+                     'Brute Force Attack',
+                     'General remote services',
+                     'Security Policy',
+                     'DNS and BIND',
+                     'Mail services',
+                     'Ubuntu',
+                     'Forensics',
+                     'Web Application',
+                     'SMB / NETBIOS',
+                     'X-Window',
+                     'OEL',
+                     'Cisco',
+                     'AIX',
+                     'CentOS',
+                     'Local',
+                     'Office Application',
+                     'Backdoors and trojan horses',
+                     'Internet Explorer',
+                     'E-Commerce',
+                     'SNMP',
+                     'Information gathering',
+                     'TCP/IP']
+
+QUALYS_VULN_TYPES = [
+    'Potential Vulnerability',
+    'Vulnerability',
+    'Information Gathered'
+]
+
+
 class QualysAgentVuln(SmartJsonClass):
-    qid = Field(str, 'QID')
-    title = Field(str, 'Title')
-    category = ListField(str, 'Category')
-    sub_category = ListField(str, 'Sub-Category')
     vuln_id = Field(str, 'Vuln ID')
     first_found = Field(datetime.datetime, 'First Found')
     last_found = Field(datetime.datetime, 'Last Found')
+    qid = Field(str, 'QID')
+    title = Field(str, 'Title')
+    category = Field(str, 'Category', enum=QUALYS_CATEGORIES)
+    sub_category = ListField(str, 'Sub Category', enum=QUALYS_SUB_CATEGORIES)
+    severity = Field(int, 'Severity')
+    vendor_reference = ListField(str, 'Vendor Reference')
+    qualys_cve_id = ListField(str, 'CVE ID')
+    cvss_base = Field(float, 'CVSS Base')
+    cvss3_base = Field(float, 'CVSS3 Base')
+    cvss_temporal_score = Field(float, 'CVSS Temporal Score')
+    cvss3_temporal_score = Field(float, 'CVSS3 Temporal Score')
+    cvss_access_vector = Field(float, 'CVSS Access Vector')
+    bugtraq_id = ListField(str, 'Bugtraq ID')
+    modified = Field(datetime.datetime, 'Modified')
+    published = Field(datetime.datetime, 'Published')
+    vuln_type = Field(str, 'Vulnerability Type', enum=QUALYS_VULN_TYPES)
 
 
 class QualysAgentPort(SmartJsonClass):
@@ -55,7 +140,31 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
-        self._qid_to_cve_mapping, self._qid_to_title = self.parse_cve_from_qid()
+        self._qid_info = self.parse_qid_info()
+
+    @staticmethod
+    def _parse_qid_info_field(field, value):
+        list_fields = ['Sub Category', 'Vendor Reference', 'CVE ID', 'Bugtraq ID']
+        time_fields = ['Modified', 'Published']
+
+        result = None
+        if not isinstance(value, str):
+            raise TypeError(f'Unexpected value {value}')
+
+        result = value.strip()
+
+        if not result:
+            result = None
+
+        if result in ['-', '\'-']:
+            result = None
+
+        if isinstance(result, str) and field in list_fields:
+            result = list(set(r.strip() for r in result.split(',')))
+
+        if isinstance(result, str) and field in time_fields:
+            result = datetime.datetime.strptime(result, '%m/%d/%Y at %H:%M:%S (GMT%z)')
+        return result
 
     @staticmethod
     def _get_client_id(client_config):
@@ -122,13 +231,12 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
             'type': 'array',
         }
 
-    @staticmethod
-    def parse_cve_from_qid():
+    @classmethod
+    def parse_qid_info(cls, csv_path=consts.QUALYS_QID_TO_CVE_CSV):
         logger.info('Parsing QID to CVE from csv file')
-        qid_to_cve_mapping = {}
-        qid_to_title = {}
+        qid_info = {}
         try:
-            with open(consts.QUALYS_QID_TO_CVE_CSV, 'r') as f:
+            with open(csv_path, 'r') as f:
                 entire_csv_file = f.readlines()
                 # The first few lines of the file may be data about the download (i.e. street address
                 # of the account holder) which will mess up what is interpreted as the csv headers
@@ -140,34 +248,27 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
                         break
                 if not header_line_number:
                     logger.exception('Could not find CSV headers, stopping parsing')
-                    return qid_to_cve_mapping, qid_to_title
+                    return qid_info
 
                 cleaned_csv_data = entire_csv_file[header_line_number:]
-                csv_dict = make_dict_from_csv(''.join(cleaned_csv_data))
+                csv_dict = csv.DictReader(io.StringIO(''.join(cleaned_csv_data)))
                 for entry in csv_dict:
                     try:
-                        if not entry.get('QID'):
-                            continue
-                        qid_to_title[entry['QID']] = (entry.get('Title'),
-                                                      entry.get('Category'),
-                                                      entry.get('Sub Category'))
-                        if not entry.get('CVE ID'):
+                        qid = entry.get('QID')
+                        if not qid:
                             continue
 
-                        cve_ids = entry['CVE ID'].split(',')
+                        for key, value in entry.items():
+                            entry[key] = cls._parse_qid_info_field(key, value)
 
-                        if not cve_ids:
-                            continue
-
-                        qid_to_cve_mapping[entry['QID']] = cve_ids
-
+                        qid_info[qid] = entry
                     except Exception:
                         logger.exception(f'Problem mapping entry {entry}')
-                logger.info(f'{len(qid_to_cve_mapping)} QIDs mapped')
-                return qid_to_cve_mapping, qid_to_title
+                logger.info(f'{len(qid_info)} QIDs mapped')
+                return qid_info
         except Exception:
             logger.exception('Problem opening vulnerabilities csv file')
-            return qid_to_cve_mapping, qid_to_title
+            return qid_info
 
     def _parse_raw_data(self, devices_raw_data):
         for device_raw in devices_raw_data:
@@ -273,40 +374,45 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
             try:
                 for vuln_raw in (device_raw.get('vuln') or {}).get('list') or []:
                     try:
-                        title = None
-                        category = None
-                        sub_category = None
-                        try:
-                            qid = str((vuln_raw.get('HostAssetVuln') or {}).get('qid')) or ''
-                            if qid and self._qid_to_title.get(qid):
-                                title, category, sub_category = self._qid_to_title.get(qid)
-                            if not title:
-                                title = None
-                            if not category or not isinstance(category, str):
-                                category = None
-                            else:
-                                category = category.split(',')
-                            if not sub_category or not isinstance(sub_category, str):
-                                sub_category = None
-                            else:
-                                sub_category = sub_category.split(',')
-                        except Exception:
-                            logger.exception(f'Problem getting extra dat for QIO')
+
+                        qid = str((vuln_raw.get('HostAssetVuln') or {}).get('qid'))
+                        qid_info_entry = self._qid_info.get(qid) or {}
+                        vuln_type = None
+                        severity = None
+                        if qid_info_entry:
+                            vuln_raw['QidInfo'] = qid_info_entry
+                            match = re.match(r'(.*) - level (\d*)', qid_info_entry.get('Severity') or '')
+                            if match:
+                                vuln_type, severity = match.groups()
+                                vuln_type = vuln_type.strip()
+                                severity = severity.strip()
+
                         device.add_qualys_vuln(
                             vuln_id=(vuln_raw.get('HostAssetVuln') or {}).get('hostInstanceVulnId'),
                             last_found=parse_date((vuln_raw.get('HostAssetVuln') or {}).get('lastFound')),
-                            qid=(vuln_raw.get('HostAssetVuln') or {}).get('qid'),
                             first_found=parse_date((vuln_raw.get('HostAssetVuln') or {}).get('firstFound')),
-                            title=title,
-                            category=category,
-                            sub_category=sub_category
+                            severity=severity,
+                            vuln_type=vuln_type,
+                            title=qid_info_entry.get('Title'),
+                            category=qid_info_entry.get('Category'),
+                            sub_category=qid_info_entry.get('Sub Category'),
+                            vendor_reference=qid_info_entry.get('Vendor Reference'),
+                            qualys_cve_id=qid_info_entry.get('CVE ID'),
+                            cvss_base=qid_info_entry.get('CVSS Base'),
+                            cvss3_base=qid_info_entry.get('CVSS3 Base'),
+                            cvss_temporal_score=qid_info_entry.get('CVSS Temporal Score'),
+                            cvss3_temporal_score=qid_info_entry.get('CVSS3 Temporal Score'),
+                            cvss_access_vector=qid_info_entry.get('CVSS Access Vector'),
+                            bugtraq_id=qid_info_entry.get('Bugtraq ID'),
+                            modified=qid_info_entry.get('Modified'),
+                            published=qid_info_entry.get('Published'),
                         )
                     except Exception:
                         logger.exception(f'Problem with vuln {vuln_raw}')
                     try:
                         qid = str((vuln_raw.get('HostAssetVuln') or {}).get('qid')) or ''
                         if qid:
-                            for cve in self._qid_to_cve_mapping.get(qid) or []:
+                            for cve in qid_info_entry.get('CVE ID') or []:
                                 device.add_vulnerable_software(cve_id=cve)
                     except Exception:
                         logger.exception(f'Problem with adding vuln software for {vuln_raw}')
