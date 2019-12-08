@@ -10,7 +10,7 @@ import pytest
 from passlib.hash import bcrypt
 from retrying import retry
 from selenium import webdriver
-
+from devops.scripts.backup.axonius_full_backup_restore import backup
 import conftest
 
 from axonius.consts.gui_consts import FEATURE_FLAGS_CONFIG, FeatureFlagsNames, DASHBOARD_SPACE_TYPE_CUSTOM
@@ -41,6 +41,7 @@ from ui_tests.tests.ui_consts import ROOT_DIR
 
 SCREENSHOTS_FOLDER = os.path.join(ROOT_DIR, 'screenshots')
 LOGS_FOLDER = os.path.join(LOGS_PATH_HOST, 'ui_logger')
+BACKUPS_FOLDER = os.path.join(ROOT_DIR, 'backups')
 DOCKER_NETWORK_DEFAULT_GATEWAY = '172.17.0.1'
 
 
@@ -166,6 +167,26 @@ class TestBase:
             self.driver.save_screenshot(file_path)
         except Exception:
             logger.exception('Error while saving screenshot')
+
+    @staticmethod
+    def save_backup(test_id, text=''):
+        """
+        Save database backup and some other axonius settings files using axonius_full_backup_restore
+        :param test_id: test id from teamcity
+        :param text: concat a text to the output filename
+        :return:
+        """
+        try:
+            folder = os.path.join(BACKUPS_FOLDER, test_id)
+            if not os.path.exists(folder):
+                os.makedirs(folder)
+            current_time = datetime.utcnow().strftime('%Y-%m-%d_%H%M%S')
+            file_path = os.path.join(
+                folder,
+                f'_database_{current_time}_{text}.zip')
+            backup(file_path)
+        except Exception:
+            logger.exception('Error while saving backup')
 
     def _save_js_logs(self):
         if not self.driver:

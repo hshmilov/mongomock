@@ -34,7 +34,9 @@ ARTIFACTS_DIR_ABSOLUTE = os.path.join(ROOT_DIR, ARTIFACTS_DIR_RELATIVE)
 ARTIFACTS_DIRS_INSIDE_CONTAINER = {
     'logs': '/home/ubuntu/cortex/logs',
     'screenshots': '/home/ubuntu/cortex/screenshots',
+    'backups': '/home/ubuntu/cortex/backups',
 }
+
 DIR_MAP = {
     'integ': os.path.join('testing', 'tests'),
     'parallel': os.path.join('testing', 'parallel_tests'),
@@ -319,6 +321,18 @@ class InstanceManager:
                     tar_file.extractall(os.path.join(ARTIFACTS_DIR_ABSOLUTE, command_job_name))
             except AssertionError:
                 # This is legitimate, we do not always have screenshots.
+                pass
+
+            try:
+                backups_tar_file = instance_to_run_on.get_folder_as_tar(
+                    ARTIFACTS_DIRS_INSIDE_CONTAINER['backups']
+                )
+
+                # Also all the backups
+                with tarfile.open(fileobj=io.BytesIO(backups_tar_file)) as tar_file:
+                    tar_file.extractall(os.path.join(ARTIFACTS_DIR_ABSOLUTE, command_job_name))
+            except AssertionError:
+                # This is legitimate, we do not always have backups.
                 pass
 
             with free_instances_lock:
