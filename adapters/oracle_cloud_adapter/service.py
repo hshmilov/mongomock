@@ -55,6 +55,9 @@ class OracleCloudAdapter(AdapterBase):
                 client_config_copy, retry_strategy=oci.retry.DEFAULT_RETRY_STRATEGY)
             # We will later need the tenancy ocid, so we must save it to the client here
             oci_client['tenancy'] = client_config_copy['tenancy']
+
+            # Verify creds. we only try to list the compartments
+            oci_client['identity_client'].list_compartments(compartment_id=client_config_copy['tenancy'], limit=1)
             return oci_client
         except Exception as e:
             logger.error('Failed to connect to client %s', self._get_client_id(client_config))

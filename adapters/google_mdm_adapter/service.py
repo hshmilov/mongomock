@@ -51,6 +51,7 @@ class GoogleMdmAdapter(AdapterBase):
         alias_emails = ListField(str, 'Alias Emails')
         is_mfa_enrolled = Field(bool, 'Is MFA Enrolled')
         is_mfa_enforced = Field(bool, 'Is MFA Enforced')
+        suspended = Field(bool, 'Suspended')
         is_delegated_admin = Field(bool, 'Is Delegated Admin')
         recovery_phone = Field(str, 'Recovery Phone')
         oauth_apps = ListField(OauthApp, 'Oauth Apps')
@@ -197,7 +198,11 @@ class GoogleMdmAdapter(AdapterBase):
         user.is_delegated_admin = raw_user_data.get('isDelegatedAdmin')
         user.is_mfa_enrolled = raw_user_data.get('isEnrolledIn2Sv')
         user.is_mfa_enforced = raw_user_data.get('isEnforcedIn2Sv')
-        user.account_disabled = raw_user_data.get('suspended', None)
+        try:
+            user.account_disabled = raw_user_data.get('suspended', None)
+            user.suspended = raw_user_data.get('suspended', None)
+        except Exception:
+            logger.exception(f'Could not set suspended data')
         user.user_created = parse_date(raw_user_data.get('creationTime'))
         if raw_user_data.get('orgUnitPath'):
             try:
