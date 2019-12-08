@@ -348,7 +348,11 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
             if post_json and post_json.get('check_fetch_time'):
                 check_fetch_time = post_json.get('check_fetch_time')
             try:
-                res = self.insert_data_to_db(client_name, check_fetch_time=check_fetch_time)
+                try:
+                    res = self.insert_data_to_db(client_name, check_fetch_time=check_fetch_time)
+                except adapter_exceptions.AdapterException:
+                    logger.warning(f'Failed inserting data for client {client_name}', exc_info=True)
+                    return ''
                 for entity_type in EntityType:
                     self._save_field_names_to_db(entity_type)
                 return res
@@ -570,7 +574,7 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
         with self._clients_lock:
             if client_name not in self._clients:
                 logger.error(f'client {client_name} does not exist')
-                raise Exception('Client does not exist')
+                raise adapter_exceptions.ClientDoesntExist('Client does not exist')
         try:
             time_before_query = datetime.now()
             raw_data, parsed_data = self._try_query_data_by_client(client_name, data_type)

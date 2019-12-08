@@ -7,6 +7,10 @@ class AdapterException(Exception):
     pass
 
 
+class ClientDoesntExist(Exception):
+    pass
+
+
 class CredentialErrorException(AdapterException):
     pass
 

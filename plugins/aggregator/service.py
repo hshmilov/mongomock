@@ -275,7 +275,7 @@ class AggregatorService(Triggerable, PluginBase):
                 # request failed
                 logger.exception(f"{repr(e)}")
                 raise AdapterOffline()
-            if data.status_code != 200:
+            if data.status_code != 200 or not data.content:
                 logger.warn(f"{client_name} client for adapter {adapter} is returned HTTP {data.status_code}. "
                             f"Reason: {str(data.content)}")
                 continue
