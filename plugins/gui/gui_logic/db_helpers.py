@@ -18,13 +18,13 @@ class UserInfo(DataClassJsonMixin):
 
 
 @rev_cached(ttl=3600 * 24)
-def translate_user_id_to_details(user_id: ObjectId) -> UserInfo:
+def translate_user_id_to_details(user_id: ObjectId) -> str:
     """
     :param user_id: ObjectId to query from 'users' collection
     :return:        Simple class with the saved details of the requested user
     """
     if user_id == '*':
-        return UserInfo(PREDEFINED_PLACEHOLDER)
+        return UserInfo(PREDEFINED_PLACEHOLDER).to_json()
     # pylint: disable=no-member
     # pylint: disable=protected-access
     user = plugin_base_instance()._users_collection.find_one({
@@ -37,7 +37,7 @@ def translate_user_id_to_details(user_id: ObjectId) -> UserInfo:
                     user.get('source', ''),
                     user.get('first_name', ''),
                     user.get('last_name', ''),
-                    user.get('archived', False))
+                    user.get('archived', False)).to_json()
 
 
 def beautify_db_entry(entry):
@@ -55,5 +55,5 @@ def beautify_db_entry(entry):
     del tmp['_id']
     updated_by_id = tmp.get(UPDATED_BY_FIELD)
     if updated_by_id is not None:
-        tmp[UPDATED_BY_FIELD] = translate_user_id_to_details(updated_by_id).to_json()
+        tmp[UPDATED_BY_FIELD] = translate_user_id_to_details(updated_by_id)
     return tmp
