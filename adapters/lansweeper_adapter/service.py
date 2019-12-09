@@ -166,14 +166,14 @@ class LansweeperAdapter(AdapterBase, Configurable):
                 for autoruns_data in client_data.query(consts.QUERY_AUTORUNS_3):
                     autoruns_id_to_autoruns_data_dict[autoruns_data.get('AutorunUNI')] = autoruns_data
             except Exception:
-                logger.exception(f'Problem getting query autoruns 3')
+                logger.warning(f'Problem getting query autoruns 3', exc_info=True)
 
             autoruns_id_to_autoruns_loc_dict = dict()
             try:
                 for autoruns_loc in client_data.query(consts.QUERY_AUTORUNS_2):
                     autoruns_id_to_autoruns_loc_dict[autoruns_loc.get('LocationID')] = autoruns_loc
             except Exception:
-                logger.exception(f'Problem getting query autoruns 2')
+                logger.warning(f'Problem getting query autoruns 2', exc_info=True)
 
             asset_autoruns_dict = dict()
             try:

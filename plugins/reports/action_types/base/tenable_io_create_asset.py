@@ -99,9 +99,9 @@ class TenableIoCreateAsset(ActionTypeBase):
                 if data_from_adapter.get('hostname'):
                     fqdn.append(data_from_adapter.get('hostname'))
                 if operating_system is None:
-                    operating_system = data_from_adapter.get('os', {}).get('type')
+                    operating_system = (data_from_adapter.get('os') or {}).get('type')
                 nics = data_from_adapter.get('network_interfaces')
-                if nics and isinstance(nics, list):
+                if isinstance(nics, list):
                     for nic in nics:
                         ips = nic.get('ips')
                         if isinstance(ips, list):
@@ -136,6 +136,6 @@ class TenableIoCreateAsset(ActionTypeBase):
             with connection:
                 connection.create_asset(tenable_io_dict)
             return EntityResult(entry['internal_axon_id'], True, 'success')
-        except Exception as e:
+        except Exception:
             logger.exception(f'Got exception creating Tenable asset')
             return EntityResult(entry['internal_axon_id'], False, 'Unexpected Error')

@@ -92,8 +92,8 @@ def create_lldp_device(create_device_func, raw_device):
             device.set_raw(dict(lldp_raw_device))
             yield device
         except Exception:
-            logger.exception(
-                f'Problem with parsing lldp device {lldp_raw_device}')
+            logger.warning(
+                f'Problem with parsing lldp device {lldp_raw_device}', exc_info=True)
 
 
 def create_arp_device(create_device_func, raw_device):

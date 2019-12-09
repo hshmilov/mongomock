@@ -133,7 +133,7 @@ class SccmAdapter(AdapterBase, Configurable):
                         nics_dict[asset_id] = []
                     nics_dict[asset_id].append(nic_data)
             except Exception:
-                logger.exception(f'Problem getting nics dict')
+                logger.warning(f'Problem getting nics dict', exc_info=True)
 
             clients_dict = dict()
             try:
@@ -143,7 +143,7 @@ class SccmAdapter(AdapterBase, Configurable):
                         continue
                     clients_dict[asset_id] = clients_data
             except Exception:
-                logger.exception(f'Problem getting clietns data')
+                logger.warning(f'Problem getting clietns data', exc_info=True)
 
             os_dict = dict()
             try:
@@ -153,7 +153,7 @@ class SccmAdapter(AdapterBase, Configurable):
                         continue
                     os_dict[asset_id] = os_data
             except Exception:
-                logger.exception(f'Problem getting os data')
+                logger.warning(f'Problem getting os data', exc_info=True)
 
             computer_dict = dict()
             try:
@@ -163,7 +163,7 @@ class SccmAdapter(AdapterBase, Configurable):
                         continue
                     computer_dict[asset_id] = computer_data
             except Exception:
-                logger.exception(f'Problem getting computer data')
+                logger.warning(f'Problem getting computer data', exc_info=True)
 
             tpm_dict = dict()
             try:
@@ -173,7 +173,7 @@ class SccmAdapter(AdapterBase, Configurable):
                         continue
                     tpm_dict[asset_id] = tpm_data
             except Exception:
-                logger.exception(f'Problem getting tpm')
+                logger.warning(f'Problem getting tpm', exc_info=True)
 
             owner_dict = dict()
             try:
@@ -183,7 +183,7 @@ class SccmAdapter(AdapterBase, Configurable):
                         continue
                     owner_dict[asset_id] = owner_data
             except Exception:
-                logger.exception(f'Problem getting owner')
+                logger.warning(f'Problem getting owner', exc_info=True)
 
             asset_encryption_dict = dict()
             try:
@@ -195,7 +195,7 @@ class SccmAdapter(AdapterBase, Configurable):
                         asset_encryption_dict[asset_id] = []
                     asset_encryption_dict[asset_id].append(asset_encryption_data)
             except Exception:
-                logger.exception(f'Problem getting query asset_encryption_dict')
+                logger.warning(f'Problem getting query asset_encryption_dict', exc_info=True)
 
             asset_vm_dict = dict()
             try:
@@ -207,7 +207,7 @@ class SccmAdapter(AdapterBase, Configurable):
                         asset_vm_dict[asset_id] = []
                     asset_vm_dict[asset_id].append(asset_vm_data)
             except Exception:
-                logger.exception(f'Problem getting vm')
+                logger.warning(f'Problem getting vm', exc_info=True)
 
             asset_chasis_dict = dict()
             try:
@@ -217,7 +217,7 @@ class SccmAdapter(AdapterBase, Configurable):
                         continue
                     asset_chasis_dict[asset_id] = asset_chasis_data
             except Exception:
-                logger.exception(f'Problem getting chasis')
+                logger.warning(f'Problem getting chasis', exc_info=True)
 
             asset_lenovo_dict = dict()
             try:
@@ -227,7 +227,7 @@ class SccmAdapter(AdapterBase, Configurable):
                         continue
                     asset_lenovo_dict[asset_id] = asset_lenovo_data
             except Exception:
-                logger.exception(f'Problem getting lenovo')
+                logger.warning(f'Problem getting lenovo', exc_info=True)
 
             asset_top_dict = dict()
             try:
@@ -237,7 +237,7 @@ class SccmAdapter(AdapterBase, Configurable):
                         continue
                     asset_top_dict[asset_id] = asset_top_data
             except Exception:
-                logger.exception(f'Problem getting top users')
+                logger.warning(f'Problem getting top users', exc_info=True)
 
             asset_malware_dict = dict()
             try:
@@ -247,7 +247,7 @@ class SccmAdapter(AdapterBase, Configurable):
                         continue
                     asset_malware_dict[asset_id] = asset_malware_data
             except Exception:
-                logger.exception(f'Problem getting malware data')
+                logger.warning(f'Problem getting malware data', exc_info=True)
 
             asset_users_dict = dict()
             try:
@@ -259,7 +259,7 @@ class SccmAdapter(AdapterBase, Configurable):
                         asset_users_dict[asset_id] = []
                     asset_users_dict[asset_id].append(asset_users_data)
             except Exception:
-                logger.exception(f'Problem getting query users')
+                logger.warning(f'Problem getting query users', exc_info=True)
 
             asset_software_dict = dict()
             try:
@@ -271,7 +271,7 @@ class SccmAdapter(AdapterBase, Configurable):
                         asset_software_dict[asset_id] = []
                     asset_software_dict[asset_id].append(asset_soft_data)
             except Exception:
-                logger.exception(f'Problem getting query software')
+                logger.warning(f'Problem getting query software', exc_info=True)
 
             asset_program_dict = dict()
             try:
@@ -283,7 +283,7 @@ class SccmAdapter(AdapterBase, Configurable):
                         asset_program_dict[asset_id] = []
                     asset_program_dict[asset_id].append(asset_program_data)
             except Exception:
-                logger.exception(f'Problem getting query program')
+                logger.warning(f'Problem getting query program', exc_info=True)
 
             try:
                 for asset_program_data in client_data.query(consts.QUERY_PROGRAM_2):
@@ -294,7 +294,7 @@ class SccmAdapter(AdapterBase, Configurable):
                         asset_program_dict[asset_id] = []
                     asset_program_dict[asset_id].append(asset_program_data)
             except Exception:
-                logger.exception(f'Problem getting query program')
+                logger.warning(f'Problem getting query program', exc_info=True)
 
             asset_patch_dict = dict()
             try:
@@ -306,7 +306,7 @@ class SccmAdapter(AdapterBase, Configurable):
                         asset_patch_dict[asset_id] = []
                     asset_patch_dict[asset_id].append(asset_patch_data)
             except Exception:
-                logger.exception(f'Problem getting query patch')
+                logger.warning(f'Problem getting query patch', exc_info=True)
 
             asset_bios_dict = dict()
             try:
@@ -316,7 +316,7 @@ class SccmAdapter(AdapterBase, Configurable):
                         continue
                     asset_bios_dict[asset_id] = asset_bios_data
             except Exception:
-                logger.exception(f'Problem getting query bios')
+                logger.warning(f'Problem getting query bios', exc_info=True)
 
             for device_raw in client_data.query(consts.SCCM_MAIN_QUERY):
                 yield device_raw, client_data.server, asset_software_dict, asset_patch_dict, asset_program_dict, \

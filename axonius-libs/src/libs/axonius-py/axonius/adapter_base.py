@@ -573,7 +573,7 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
         logger.info(f'Trying to query {data_type} from client {client_name}')
         with self._clients_lock:
             if client_name not in self._clients:
-                logger.error(f'client {client_name} does not exist')
+                logger.warning(f'client {client_name} does not exist')
                 raise adapter_exceptions.ClientDoesntExist('Client does not exist')
         try:
             time_before_query = datetime.now()

@@ -107,25 +107,25 @@ class CiscoConsoleClient(AbstractCiscoClient):
                                 map(lambda x: x.lower().expandtabs(tabsize=8).strip(), lines)))
             return ConsoleArpCiscoData(lines, received_from=self.host)
         except Exception:
-            logger.exception('Running shell arp command failed')
+            logger.warning('Running shell arp command failed', exc_info=True)
 
     def _query_dhcp_leases(self):
         try:
             lines = self._sess.send_command_timing('show ip dhcp binding')
             return ConsoleDhcpCiscoData(lines, received_from=self.host)
         except Exception:
-            logger.exception('Exception in query dhcp Leases')
+            logger.warning('Exception in query dhcp Leases', exc_info=True)
 
     def _query_cdp_table(self):
         try:
             lines = self._sess.send_command_timing('show cdp neighbors detail')
             return ConsoleCdpCiscoData(lines, received_from=self.host)
         except Exception:
-            logger.exception('Exception in query dhcp Leases')
+            logger.warning('Exception in query dhcp Leases', exc_info=True)
 
     @staticmethod
     def _query_basic_info():
-        logger.warning('basic info isn\'t implemented yet - skipping')
+        logger.warning('basic info isn\'t implemented yet - skipping', exc_info=True)
 
 
 class CiscoSshClient(CiscoConsoleClient):
@@ -302,7 +302,7 @@ class ConsoleDhcpCiscoData(DhcpCiscoData):
         try:
             table = self._parse_dhcp_table(self._raw_data)
         except Exception:
-            logger.exception('Exception while parsing dhcp raw data')
+            logger.warning('Exception while parsing dhcp raw data', exc_info=True)
             return
 
         # Skip the headers line
@@ -310,7 +310,7 @@ class ConsoleDhcpCiscoData(DhcpCiscoData):
             try:
                 yield self._parse_dhcp_line(line)
             except Exception:
-                logger.exception('Exception while paring dchp line')
+                logger.warning('Exception while paring dchp line', )
 
 
 class ConsoleArpCiscoData(ArpCiscoData):
@@ -327,4 +327,4 @@ class ConsoleArpCiscoData(ArpCiscoData):
                 iface = entry[5] if len(entry) > 5 else ''
                 yield {'mac': mac, 'ip': ip, 'remote_iface': iface}
             except Exception:
-                logger.exception('Exception while paring arp line')
+                logger.warning('Exception while paring arp line', exc_info=True)

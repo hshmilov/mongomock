@@ -56,7 +56,7 @@ class CiscoMerakiConnection(RESTConnection):
                         device_raw['network_name'] = network_raw.get('name')
                         yield device_raw
             except Exception:
-                logger.exception(f'Problem getting devices in network {network_raw}')
+                logger.warning(f'Problem getting devices in network {network_raw}', exc_info=True)
 
     def _get_clients_data_from_networks(self, networks_raw):
         clients_data_dict = dict()
@@ -69,7 +69,7 @@ class CiscoMerakiConnection(RESTConnection):
                         clients_data_dict[client_raw.get('id')] = client_raw
                         clients_data_dict[client_raw.get('id')]['network_id'] = network_raw.get('id')
             except Exception:
-                logger.exception(f'Problem getting devices in network {network_raw}')
+                logger.warning(f'Problem getting devices in network {network_raw}', exc_info=True)
         return clients_data_dict
 
     # pylint: disable=too-many-nested-blocks
@@ -139,7 +139,7 @@ class CiscoMerakiConnection(RESTConnection):
                             device_raw['network_name'] = network_raw.get('name')
                             yield device_raw, MDM_TYPE
             except Exception:
-                logger.exception(f'Problem getting devices in network {network_raw}')
+                logger.warning(f'Problem getting devices in network {network_raw}', exc_info=True)
 
     def _get_device_statuses(self, organizations):
         serial_statuses_dict = dict()

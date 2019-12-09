@@ -242,7 +242,7 @@ class CsvAdapter(AdapterBase):
                 csv_data = list(csv_data)  # csv_data is a generator, we must get all values
                 column_types = get_column_types(csv_data)
         except Exception:
-            logger.exception(f'Could not parse column types')
+            logger.warning(f'Could not parse column types', exc_info=True)
         for user_raw in csv_data:
             try:
                 user_obj = self._new_user_adapter()
@@ -287,7 +287,8 @@ class CsvAdapter(AdapterBase):
                                 value = str(column_value)
                             user_obj[normalized_column_name] = value
                         except Exception:
-                            logger.exception(f'Could not parse column {column_name} with value {column_value}')
+                            logger.warning(f'Could not parse column {column_name} with value {column_value}',
+                                           exc_info=True)
                 yield user_obj
             except Exception:
                 logger.exception(f'Problem adding user: {str(user_raw)}')
@@ -343,7 +344,7 @@ class CsvAdapter(AdapterBase):
                 csv_data = list(csv_data)   # csv_data is a generator, we must get all values
                 column_types = get_column_types(csv_data)
         except Exception:
-            logger.exception(f'Could not parse column types')
+            logger.warning(f'Could not parse column types', exc_info=True)
         for device_raw in csv_data:
             try:
                 device = self._new_device_adapter()
@@ -356,7 +357,7 @@ class CsvAdapter(AdapterBase):
 
                 device_id = str(vals.get('id', '')) or vals.get('serial') or mac_as_id or vals.get('hostname')
                 if not device_id:
-                    logger.warning(f'can not get device id for {device_raw}, continuing')
+                    logger.debug(f'can not get device id for {device_raw}, continuing')
                     continue
 
                 device.id = file_name + '_' + device_id
@@ -401,6 +402,8 @@ class CsvAdapter(AdapterBase):
 
                 ips = (vals.get('ip') or '').split(',')
                 ips = [ip.strip() for ip in ips if ip.strip()]
+                if vals.get('ip') == 'unknown':
+                    ips = []
 
                 if vals.get('username'):
                     device.last_used_users = [vals.get('username')]

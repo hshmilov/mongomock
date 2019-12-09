@@ -4,8 +4,9 @@
 #     'verify_ssl': True
 # }
 CLIENT_DETAILS = {
-    'domain': 'notworking',
-    'apikey': 'notworking'
+    'domain': '10.0.0.2',
+    'apikey': 'aaaaa',
+    'verify_ssl': False
 }
 
 SOME_DEVICE_ID = '45.116.217.112'

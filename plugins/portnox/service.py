@@ -144,7 +144,7 @@ class PortnoxService(Triggerable, PluginBase):
             # self._correlate_enrichment_if_needed(device, new_device)
             return True
         except Exception as e:
-            logger.exception(f'Failed to fetch portnox id info for {portnox_id}')
+            logger.warning(f'Failed to fetch portnox id info for {portnox_id}', exc_info=True)
             return False
 
     def _handle_device(self, device, connection):

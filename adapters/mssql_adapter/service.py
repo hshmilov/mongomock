@@ -246,7 +246,7 @@ class MssqlAdapter(AdapterBase, Configurable):
 
                         device[normalized_column_name] = column_value
                     except Exception:
-                        logger.exception(f'Could not parse column {column_name} with value {column_value}')
+                        logger.warning(f'Could not parse column {column_name} with value {column_value}', exc_info=True)
 
                 device.set_raw(device_raw)
                 yield device

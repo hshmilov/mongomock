@@ -97,7 +97,7 @@ class HaveibeenpwnedExecutionMixIn(Triggerable):
             self._correlate_enrichment_if_needed(user, new_user)
             return True
         except Exception as e:
-            logger.warning(f'Failed to fetch email info for {email}, {e}', exc_info=True)
+            logger.debug(f'Failed to fetch email info for {email}, {e}', exc_info=True)
             return False
 
     def _handle_user(self, user, connection, alternative_suffix=None):

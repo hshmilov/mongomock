@@ -164,7 +164,7 @@ class AbstractSnmpClient(AbstractCiscoClient):
             result = oid_name, data
             return result
         except Exception:
-            logger.exception(f'Failed to query {oid_name}')
+            logger.warning(f'Failed to query {oid_name}', exc_info=True)
             return None
 
     async def _async_next_cmd(self, oid, oid_name=None):
@@ -176,9 +176,9 @@ class AbstractSnmpClient(AbstractCiscoClient):
             result = oid_name, list(map(lambda x: x[3], data))
             if not errors:
                 return result
-            logger.error(f'{oid_name} returned errors: {errors}')
+            logger.warning(f'{oid_name} returned errors: {errors}')
         except Exception:
-            logger.exception(f'Failed to query {oid_name}')
+            logger.warning(f'Failed to query {oid_name}', exc_info=True)
         return None
 
     async def _query_dhcp_leases(self):
@@ -284,7 +284,7 @@ class SnmpBasicInfoCiscoData(BasicInfoData):
                 if value is not None:
                     self.result[key] = value
             except Exception:
-                logger.exception('Exception while parsing basic info')
+                logger.warning('Exception while parsing basic info', exc_info=True)
 
     @staticmethod
     def _group_iface(entries):
@@ -306,7 +306,7 @@ class SnmpBasicInfoCiscoData(BasicInfoData):
                     if value is not None:
                         iface[key] = value
                 except Exception:
-                    logger.exception('Exception while parsing basic info iface')
+                    logger.warning('Exception while parsing basic info iface', exc_info=True)
                     continue
             if iface.get('index'):
                 self.result[interface][iface.get('index')] = iface
@@ -325,7 +325,7 @@ class SnmpBasicInfoCiscoData(BasicInfoData):
                     if value is not None:
                         port_security[key] = value
                 except Exception:
-                    logger.exception('Exception while parsing basic info port security')
+                    logger.warning('Exception while parsing basic info port security', exc_info=True)
                     continue
             if index not in self.result[interface_field]:
                 self.result[interface_field][index] = {}
@@ -353,7 +353,7 @@ class SnmpBasicInfoCiscoData(BasicInfoData):
                         port_security_entries[index][mac]['vlan_id'] = str(vlan)
 
             except Exception:
-                logger.exception('Exception while parsing basic info port security')
+                logger.warning('Exception while parsing basic info port security', exc_info=True)
                 continue
         for index, entry in port_security_entries.items():
             if index in self.result[interface].keys():
@@ -378,7 +378,7 @@ class SnmpBasicInfoCiscoData(BasicInfoData):
                         port_security_entries[index][mac] = {}
                     port_security_entries[index][mac][key] = value
             except Exception:
-                logger.exception('Exception while parsing basic info port security')
+                logger.warning('Exception while parsing basic info port security', exc_info=True)
                 continue
 
         for index, entry in port_security_entries.items():
@@ -403,7 +403,7 @@ class SnmpBasicInfoCiscoData(BasicInfoData):
                         self.result[interface][index][port_access] = {}
                     self.result[interface][index][port_access][key] = value
             except Exception:
-                logger.exception('Exception while parsing basic info port access')
+                logger.warning('Exception while parsing basic info port access', exc_info=True)
                 continue
 
     def _parse_ip(self, entires):
@@ -418,7 +418,7 @@ class SnmpBasicInfoCiscoData(BasicInfoData):
                 if value:
                     ips[ip][key] = value
             except Exception:
-                logger.exception('Exception while parsing basic info ip')
+                logger.warning('Exception while parsing basic info ip', exc_info=True)
                 continue
         for value in ips.values():
             index = value.get('index')
@@ -462,7 +462,7 @@ class SnmpBasicInfoCiscoData(BasicInfoData):
             try:
                 parse_table._asdict()[type_](entries)
             except Exception:
-                logger.exception(f'Failed to parse {type_} {entries}')
+                logger.warning(f'Failed to parse {type_} {entries}', exc_info=True)
         yield dict(self.result)
 
     def _parse_voice_vlan(self, entries):
@@ -489,7 +489,7 @@ class SnmpBasicInfoCiscoData(BasicInfoData):
                         self.result[interface][int_index][vlans][voice_vlan] = {
                             VLAN_ID: value, VLAN_NAME: voice_vlan_name}
             except Exception:
-                logger.exception('Exception while parsing basic info vlans')
+                logger.warning('Exception while parsing basic info vlans', exc_info=True)
                 continue
 
     def _parse_vlan_entries(self, entries):
@@ -517,7 +517,7 @@ class SnmpBasicInfoCiscoData(BasicInfoData):
                         vlans_entries[int_index][key][VLAN_NAME] = vlan_names
 
             except Exception:
-                logger.exception('Exception while parsing basic info vlans')
+                logger.warning('Exception while parsing basic info vlans', exc_info=True)
                 continue
 
         for int_index, entry in vlans_entries.items():
@@ -537,7 +537,7 @@ class SnmpBasicInfoCiscoData(BasicInfoData):
                     vlans_entries[vlan_id] = vlan_name
 
             except Exception:
-                logger.exception('Exception while parsing vtp vlans')
+                logger.warning('Exception while parsing vtp vlans', exc_info=True)
                 continue
 
         self.result[get_oid_name(OIDS.vtp_vlans)] = vlans_entries
@@ -551,7 +551,7 @@ class SnmpArpCiscoData(ArpCiscoData):
                 mac = snmp_parser.unpack_mac(entry[0][1])
                 yield {'mac': mac, 'ip': ip}
             except Exception:
-                logger.exception('Exception while parsing arp data')
+                logger.warning('Exception while parsing arp data', exc_info=True)
 
 
 class SnmpCdpCiscoData(CdpCiscoData):
@@ -565,7 +565,7 @@ class SnmpCdpCiscoData(CdpCiscoData):
                     if value is not None:
                         result[key] = value
                 except Exception:
-                    logger.exception('Exception while parsing cdp data')
+                    logger.warning('Exception while parsing cdp data', exc_info=True)
             yield result
 
 

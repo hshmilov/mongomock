@@ -85,7 +85,7 @@ class MSSQLConnection(AbstractSQLConnection):
                 for row in batch:
                     yield dict(zip(columns, row))
         except Exception:
-            logger.exception('Unable to perform query: ')
+            logger.warning('Unable to perform query: ', exc_info=True)
             raise
 
     def __enter__(self):

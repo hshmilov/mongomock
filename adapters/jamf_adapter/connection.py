@@ -301,7 +301,7 @@ class JamfConnection(object):
                             device_policy.last_completed_date = policy_date
                         device_policies[policy_key] = device_policy
                     except Exception:
-                        logger.exception(f"failed to parse policy: {policy}")
+                        logger.warning(f"failed to parse policy: {policy}", exc_info=True)
 
                 device['policies'] = list(device_policies.values())
             except Exception as err:

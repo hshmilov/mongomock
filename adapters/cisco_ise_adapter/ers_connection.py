@@ -210,7 +210,7 @@ class CiscoIseERSConnection(RESTConnection):
                 result['response'] = resp['messages']['message']['title']
                 result['error'] = resp.status_code
         except Exception:
-            logger.exception(f'Failed to parse json_res {json_res}')
+            logger.warning(f'Failed to parse json_res {json_res}', exc_info=True)
         return result
 
     def get_endpoint(self, device_id):

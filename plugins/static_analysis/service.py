@@ -198,14 +198,16 @@ class StaticAnalysisService(Triggerable, PluginBase):
         if device_cves:
             for device_cve in device_cves:
                 try:
-                    self.add_cve_data_to_device(created_device=created_device, cve_data=device_cve)
+                    if device_cve:
+                        self.add_cve_data_to_device(created_device=created_device, cve_data=device_cve)
                 except Exception:
                     logger.exception(f'Problem adding CVE data for {device_cve}')
 
         if software_cves:
             for software_cve in software_cves:
                 try:
-                    self.add_cve_data_to_device(created_device=created_device, cve_data=software_cve)
+                    if software_cve:
+                        self.add_cve_data_to_device(created_device=created_device, cve_data=software_cve)
                 except Exception:
                     logger.exception(f'Problem adding CVE data for {software_cve}')
 

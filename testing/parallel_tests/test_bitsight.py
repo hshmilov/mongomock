@@ -31,10 +31,18 @@ class TestBitsightAdapter(AdapterTestBase):
     def some_user_id(self):
         raise NotImplementedError()
 
-    @pytest.mark.skip('Not working')
+    @pytest.mark.skip('no server')
     def test_fetch_devices(self):
         pass
 
-    @pytest.mark.skip('Not working')
+    @pytest.mark.skip('no server')
+    def test_removing_adapter_creds_with_devices(self):
+        pass
+
+    @pytest.mark.skip('no server')
+    def test_removing_adapter_creds_with_users(self):
+        pass
+
+    @pytest.mark.skip('no server')
     def test_check_reachability(self):
         pass

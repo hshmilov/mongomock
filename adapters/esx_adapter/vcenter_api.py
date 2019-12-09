@@ -105,7 +105,7 @@ class vCenterApi(object):
             try:
                 self.__get_tag_svc()
             except Exception:
-                logger.exception('Failed setting up vshpere automation sdk for taggins')
+                logger.warning('Failed setting up vshpere automation sdk for taggins', exc_info=True)
                 self.__tag_association = None
                 self.__tag_svc = None
 
@@ -181,12 +181,12 @@ class vCenterApi(object):
         try:
             details = {k: getattr(host.summary, k, None) for k in values_to_take}
         except Exception:
-            logger.exception(f'Problem getting details')
+            logger.warning(f'Problem getting details', exc_info=True)
             details = None
         try:
             parsed_hosts = [self._parse_vm_host(x) for x in host.host]
         except Exception:
-            logger.exception(f'Problem getting hosts')
+            logger.warning(f'Problem getting hosts', exc_info=True)
             parsed_hosts = []
 
         if len(parsed_hosts) > 1:
@@ -241,7 +241,7 @@ class vCenterApi(object):
             all_tags = self.__tag_association.list_attached_tags(dynamic_id)
             return [self.__get_tagdata_from_tagid(tag) for tag in all_tags]
         except Exception:
-            logger.exception(f'Error on tags fetching {vm} {vm._wsdlName} {vm._GetMoId()}')
+            logger.warning(f'Error on tags fetching {vm} {vm._wsdlName} {vm._GetMoId()}', exc_info=True)
             return None
 
     def _parse_vm_host(self, vm_root):
@@ -306,7 +306,7 @@ class vCenterApi(object):
                 hosts = [self._parse_host(c) for c in vm_root.hostFolder.childEntity]
                 return vCenterNode(Name=vm_root.name, Type="Datacenter", Children=children + hosts)
         except Exception:
-            logger.exception('Problem with VmFolder')
+            logger.warning('Problem with VmFolder', exc_info=True)
             return None
 
         try:
@@ -317,33 +317,33 @@ class vCenterApi(object):
                 children = [self._parse_vm(c, depth + 1) for c in vm_list]
                 return vCenterNode(Name=vm_root.name, Type="Folder", Children=children)
         except Exception:
-            logger.exception('Problem getting child')
+            logger.warning('Problem getting child', exc_info=True)
             return None
         try:
             # otherwise, we're perhaps dealing with a machine
             parsed_data = self._parse_vm_host(vm_root)
             config = parsed_data.get('config')
             if not config:
-                logger.error("Got a machine without a config")
+                logger.warning("Got a machine without a config", exc_info=True)
                 return None
         except Exception:
-            logger.exception('Problem parting machine')
+            logger.warning('Problem parting machine', exc_info=True)
             return None
 
         name = config.get('name')
         if not name:
-            logger.error("Got a machine without a name")
+            logger.warning("Got a machine without a name", exc_info=True)
             return None
 
         template = config.get('template')
         if template is None:
-            logger.error("Got a machine without a template")
+            logger.warning("Got a machine without a template", exc_info=True)
             return None
         try:
             vcenter_node = vCenterNode(Name=name, Type="Template" if template else "Machine", Details=parsed_data)
             return vcenter_node
         except Exception:
-            logger.exception('Problem getting node')
+            logger.warning('Problem getting node', exc_info=True)
             return None
 
     @retry(stop_max_attempt_number=3, retry_on_exception=_should_retry_fetching)
@@ -360,7 +360,7 @@ class vCenterApi(object):
                 try:
                     children.append(self._parse_vm(vm_to_parse))
                 except Exception:
-                    logger.exception(f'Problem parsing vm to parse: {str(vm_to_parse)}')
+                    logger.warning(f'Problem parsing vm to parse: {str(vm_to_parse)}', exc_info=True)
             return vCenterNode(Name="Root", Type="Root", Children=children)
         except vim.fault.NoPermission:
             # we're catching and raising so it'll be sent up to _should_retry_fetchin

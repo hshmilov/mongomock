@@ -118,6 +118,8 @@ class ClearpassAdapter(AdapterBase, Configurable):
                 logger.warning(f'Bad device with no id {device_raw}')
                 return None
             if mac:
+                if mac.startswith('x'):
+                    mac = '0' + mac[1:]
                 device.add_nic(mac, None)
             device.description = device_raw.get('description')
             device.endpoint_status = device_raw.get('status')
@@ -136,7 +138,8 @@ class ClearpassAdapter(AdapterBase, Configurable):
                                                          Field(str, f'Clearpass {cn_capitalized}'))
                             device[normalized_column_name] = column_value
                         except Exception:
-                            logger.exception(f'Could not parse column {column_name} with value {column_value}')
+                            logger.warning(f'Could not parse column {column_name} with value {column_value}',
+                                           exc_info=True)
                         device.device_serial = endpoint_attributes.get('Serial Number')
                         hostname = endpoint_attributes.get('Display Name')
                         device.hostname = hostname

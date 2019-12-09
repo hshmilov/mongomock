@@ -38,8 +38,8 @@ def parse_basic_info(xmls: Tuple[str, List[Tuple[str, str]]]):
             xml = prepare(xml)
             parse_callback = BASIC_INFO_TYPES[type_]
             raw_data[type_] = parse_callback(xml)
-        except Exception as e:
-            logger.exception(f'Exception while handling type {type_}')
+        except Exception:
+            logger.warning(f'Exception while handling type {type_}', exc_info=True)
 
     # Monkey patch device_name if we didn't get it yet
     if 'version' not in raw_data:

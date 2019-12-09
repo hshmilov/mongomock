@@ -127,6 +127,8 @@ class EpoAdapter(AdapterBase):
         }
 
     def _parse_raw_data(self, devices_raw_data):
+        if devices_raw_data is None:
+            return
         devices_raw_data_json, epo_host = devices_raw_data
         for device_raw in json.loads(devices_raw_data_json):
             epo_id = device_raw.get('EPOLeafNode.AgentGUID')
