@@ -2832,7 +2832,7 @@ class PluginBase(Configurable, Feature, ABC):
             try:
                 for ca_file_index, ca_file in enumerate((ssl_trust_settings.get('ca_files') or [])):
                     ca_key = self._grab_file_contents(ca_file, stored_locally=False)
-                    if b'-BEGIN CERTIFICATE-' not in ca_key or b'-END CERTIFICATE-' not in ca_key:
+                    if not ca_key or b'-BEGIN CERTIFICATE-' not in ca_key or b'-END CERTIFICATE-' not in ca_key:
                         logger.error(f'Invalid SSL CA certificate at position {ca_file_index}, not updating')
                     else:
                         specific_ca_path = os.path.join(CA_CERT_PATH, f'customer_ca_{ca_file_index}.crt')
