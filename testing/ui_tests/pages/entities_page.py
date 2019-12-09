@@ -7,6 +7,7 @@ import requests
 from retrying import retry
 from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.common.action_chains import ActionChains
+from selenium.webdriver.remote.webelement import WebElement
 
 from axonius.utils.datetime import parse_date
 from axonius.utils.parsing import normalize_timezone_date
@@ -578,13 +579,14 @@ class EntitiesPage(Page):
             field_values = self.get_field_values(element)
         return field_values
 
-    def get_field_values(self, element: object):
+    def get_field_values(self, element: WebElement):
         # if the cell contains images then get the title of the images - else get the text values of the cell
         images = element.find_elements_by_css_selector('img')
         if images:
             field_values = self.get_hover_images_texts(element)
         else:
-            field_values = element.text.strip().split('\n') if element.text.strip() else None
+            field_values = [el.text.strip() if el.text else None for index, el
+                            in enumerate(element.find_elements_by_css_selector('.item'))]
         return field_values
 
     def get_column_data_inline(self, col_name, parent=None):
