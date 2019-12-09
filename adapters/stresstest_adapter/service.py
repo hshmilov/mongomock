@@ -152,11 +152,13 @@ class StresstestAdapter(AdapterBase):
         return list_of_devices
 
     def _query_devices_by_client(self, client_name, client_data):
-
         if client_name not in self.initial_devices_db:
-            self.initial_devices_db[client_name] = self._generate_initial_devices_db(client_name, client_data)
+            self.initial_devices_db[client_name] = self._generate_initial_devices_db(
+                client_name,
+                client_data['device_count'])
+        fetch_device_interval = client_data.get('fetch_device_interval', 0)
 
-        return self.initial_devices_db[client_name]
+        return {'devices_raw_data': self.initial_devices_db[client_name], 'fetch_device_interval': fetch_device_interval}
 
     def _clients_schema(self):
         return {
@@ -176,6 +178,12 @@ class StresstestAdapter(AdapterBase):
                     "title": "Testing default value",
                     "type": "number",
                     "default": 5
+                },
+                {
+                    "name": "fetch_device_interval",
+                    "title": "Fetch Device Interval",
+                    "type": "number",
+                    "default": 0
                 }
             ],
             "required": [
@@ -185,8 +193,11 @@ class StresstestAdapter(AdapterBase):
             "type": "array"
         }
 
-    def _parse_raw_data(self, devices_raw_data):
+    def _parse_raw_data(self, raw_data):
+        fetch_device_interval = raw_data['fetch_device_interval']
+        devices_raw_data = raw_data['devices_raw_data']
         for device_raw in devices_raw_data:
+            start_time = time.time()
             device = self._new_device_adapter()
             device.random_text_for_love_and_prosperity = str(random.randint(10, 100))
             device.id = f"{device_raw['sa_name']}-{device_raw['index']}"
@@ -210,6 +221,9 @@ class StresstestAdapter(AdapterBase):
             device.test2_hyperlinks_int = 14
 
             device.set_raw(device_raw)
+            time_to_wait = fetch_device_interval - (time.time() - start_time)
+            if time_to_wait > 0 and fetch_device_interval:
+                time.sleep(time_to_wait)
             yield device
 
     def _test_reachability(self, client_config):
@@ -219,7 +233,7 @@ class StresstestAdapter(AdapterBase):
         return client_config['name']
 
     def _connect_client(self, client_config):
-        return client_config['device_count']
+        return client_config
 
     @classmethod
     def adapter_properties(cls):

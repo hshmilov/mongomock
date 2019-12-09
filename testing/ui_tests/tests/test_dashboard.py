@@ -55,6 +55,7 @@ class TestDashboard(TestBase):
     TEST_EMPTY_TITLE = 'test empty'
     FIRST_LIFECYCLE_STAGE_TEXT = 'Fetch Devices...'
     LIFECYCLE_ADAPTER_FETCHING_STATUS = 'Fetching...'
+    LIFECYCLE_ADAPTER_NOT_START_STATUS = 'Not Started'
     DEVICES_MODULE = 'Devices'
     USERS_MODULE = 'Users'
     AD_PRINTERS_OPTION_NAME = 'AD Printers'
@@ -785,36 +786,37 @@ class TestDashboard(TestBase):
                 self._test_query_default_chart(default_chart, self.EMPTY_TABLE_ROWS)
 
     def test_dashboard_lifecycle_tooltip(self):
+        self.dashboard_page.switch_to_page()
+        # during the first time discovery there is no lifecycle card
+        self.base_page.run_discovery(True)
         stress = stresstest_service.StresstestService()
-        try:
-            with stress.contextmanager(take_ownership=True):
-                self.adapters_page.wait_for_adapter(STRESSTEST_ADAPTER_NAME)
-                device_dict = {'device_count': 2500, 'name': 'testonius'}
-                stress.add_client(device_dict)
+        with stress.contextmanager(take_ownership=True):
+            self.adapters_page.wait_for_adapter(STRESSTEST_ADAPTER_NAME)
+            # using fetch_device_interval will enforce fetching time for each device
+            # in this configuration expected time to run is 60 x 1 seconds
+            device_dict = {'device_count': 60, 'name': 'testonius', 'fetch_device_interval': 1}
+            self.adapters_page.add_server(device_dict, STRESSTEST_ADAPTER_NAME)
+            self.adapters_page.wait_for_server_green()
+            self.dashboard_page.switch_to_page()
+            # during the second time discovery there is lifecycle card
+            # no need to wait for discovery to end
+            self.base_page.run_discovery(False)
+            self.dashboard_page.wait_for_element_present_by_text(self.FIRST_LIFECYCLE_STAGE_TEXT)
+            self.dashboard_page.hover_over_lifecycle_chart()
+            # get all data from tooltip table
+            table_data = self.dashboard_page.get_lifecycle_tooltip_table_data()
+            # check the status of stress adapter
+            stress_adapters_found = False
+            for row in table_data:
+                # check for name and available statuses, if status isn't in the list something is wrong
+                if row.get('name') == STRESSTEST_ADAPTER_NAME and \
+                        row.get('status') in [self.LIFECYCLE_ADAPTER_FETCHING_STATUS,
+                                              self.LIFECYCLE_ADAPTER_NOT_START_STATUS]:
+                    stress_adapters_found = True
 
-                self.dashboard_page.switch_to_page()
-                # during the first time discovery there is no lifecycle card
-                self.base_page.run_discovery(True)
-                # during the second time discovery there is lifecycle card
-                # no need to wait for discovery to end
-                self.base_page.run_discovery(False)
-                self.dashboard_page.wait_for_element_present_by_text(self.FIRST_LIFECYCLE_STAGE_TEXT)
-                self.dashboard_page.hover_over_lifecycle_chart()
-                # get all data from tooltip table
-                table_data = self.dashboard_page.get_lifecycle_tooltip_table_data()
-                # check for existing tooltip with the stress adapter
-                assert self.dashboard_page.get_lifecycle_tooltip()
-                # check the status of stress adapter
-                stress_adapters_found = False
-                for row in table_data:
-                    # row.name
-                    # row.status
-                    if row.get('name') == STRESSTEST_ADAPTER_NAME and \
-                            row.get('status') == self.LIFECYCLE_ADAPTER_FETCHING_STATUS:
-                        stress_adapters_found = True
-
-                assert stress_adapters_found
-        finally:
+            assert stress_adapters_found
+            # wait for discovery to end, can`t clean servers or remove adapter while discovery cycle running
+            self.base_page.wait_for_run_research()
             self.adapters_page.clean_adapter_servers(STRESSTEST_ADAPTER_NAME)
             self.wait_for_adapter_down(STRESSTEST_ADAPTER)
 
