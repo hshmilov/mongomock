@@ -12,8 +12,7 @@ SAMPLE_DOC = '''
 {
     "internal_axon_id" : "e3c7b4d6a159450484ade4560ba044c0",
     "adapter_list_length" : 1,
-    "generic_data" : [],
-    "specific_data" : [ 
+    "adapters" : [ 
         {
             "client_used" : "1",
             "plugin_type" : "Adapter",
@@ -43,10 +42,7 @@ SAMPLE_DOC = '''
             }
         }
     ],
-    "adapters" : [ 
-        "json_file_adapter"
-    ],
-    "labels" : [],
+    "tags" : [],
     "short_axon_id" : "e"
 }'''
 
