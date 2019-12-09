@@ -1,6 +1,7 @@
 from ui_tests.pages.page import Page
 
-DISCOVERY_TIMEOUT = 60 * 20
+# will be 60*20*5*0.2 seconds
+DISCOVERY_TIMEOUT = 60 * 20 * 5
 
 
 class BasePage(Page):
