@@ -134,7 +134,9 @@ class OpswatAdapter(AdapterBase):
             device.id = device_id + '_' + (device_raw.get('device_name') or '')
             device.hostname = device_raw.get('device_name')
             device.last_seen = parse_date(device_raw.get('last_seen'))
-            device.set_boot_time(boot_time=parse_date(device_raw.get('last_reboot')))
+            boot_time = parse_date(device_raw.get('last_reboot'))
+            if boot_time:
+                device.set_boot_time(boot_time=boot_time)
             device.add_agent_version(agent=AGENT_NAMES.opswat, version=device_raw.get('agent_version'))
             device.nickname = device_raw.get('nickname')
             device.device_type = device_raw.get('device_type')
