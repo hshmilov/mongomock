@@ -5,7 +5,7 @@ from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.exception import RESTException
 from axonius.devices.device_adapter import DeviceAdapter, AGENT_NAMES
-from axonius.fields import Field
+from axonius.fields import Field, ListField
 from axonius.plugin_base import add_rule, return_error
 from axonius.utils.files import get_local_config_file
 from axonius.utils.datetime import parse_date
@@ -23,6 +23,7 @@ class SentineloneAdapter(AdapterBase):
         active_state = Field(str, 'Active State')
         is_active = Field(bool, 'Is Active')
         basic_device_id = Field(str, 'Basic ID')
+        user_actions_needed = ListField(str, 'User Actions Needed')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -291,6 +292,9 @@ class SentineloneAdapter(AdapterBase):
                                                   vendor=app_raw.get('publisher'))
                 except Exception:
                     logger.exception(f'Problem with app raw {app_raw}')
+
+            if isinstance(device_raw.get('userActionsNeeded'), list) and device_raw.get('userActionsNeeded'):
+                device.user_actions_needed = device_raw.get('userActionsNeeded')
             device.set_raw(device_raw)
             return device
         except Exception:

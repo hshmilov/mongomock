@@ -28,6 +28,7 @@ class AirwaveAdapter(AdapterBase):
         monitoring_status = Field(str, 'Monitoring Status')
         controller_id = Field(str, 'Controller ID')
         icmp_address = Field(str, 'ICMP Address')
+        ssid = Field(str, 'SSID')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -120,13 +121,27 @@ class AirwaveAdapter(AdapterBase):
 
     def _create_client_device(self, device_raw):
         try:
+            device_raw, mac_extra_data_dict = device_raw
             device = self._new_device_adapter()
             mac = (device_raw.get('mac') or {}).get('value')
+            mac_short = mac[:-13]
+            mac_extra_data_list = mac_extra_data_dict.get(mac_short)
+            if not isinstance(mac_extra_data_list, list):
+                mac_extra_data_list = []
+            mac_extra_data_specific = None
+            for mac_extra_data in mac_extra_data_list:
+                if mac != mac_extra_data.get('mac'):
+                    continue
+                mac_extra_data_specific = mac_extra_data
+                break
+            if not isinstance(mac_extra_data_specific, dict):
+                mac_extra_data_specific = {}
             if mac is None:
                 logger.warning(f'Bad device with no MAC {device_raw}')
                 return None
             device.id = mac
             device.add_nic(mac=mac)
+            device.ssid = mac_extra_data_specific.get('ssid')
             device.last_seen = parse_date((device_raw.get('connect_time') or {}).get('value'))
             device.role = (device_raw.get('role') or {}).get('value')
             if (device_raw.get('username') or {}).get('value'):
