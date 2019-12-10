@@ -54,7 +54,10 @@ class AirwaveAdapter(AdapterBase):
 
     def _connect_client(self, client_config):
         try:
-            return self.get_connection(client_config)
+            return self.get_connection(client_config),\
+                (client_config.get('wireless_ssid_exclude_list') or '').split(','),\
+                (client_config.get('wireless_ssid_white_list') or '').split(','),\
+                client_config.get('exclude_no_ssid') or False
         except RESTException as e:
             message = 'Error connecting to client with domain {0}, reason: {1}'.format(
                 client_config['domain'], str(e))
@@ -71,8 +74,10 @@ class AirwaveAdapter(AdapterBase):
 
         :return: A json with all the attributes returned from the Server
         """
-        with client_data:
-            yield from client_data.get_device_list()
+        connection, wireless_ssid_exclude_list, wireless_ssid_white_list, exclude_no_ssid = client_data
+        with connection:
+            for device_raw in connection.get_device_list():
+                yield device_raw, wireless_ssid_exclude_list, wireless_ssid_white_list, exclude_no_ssid
 
     @staticmethod
     def _clients_schema():
@@ -108,6 +113,21 @@ class AirwaveAdapter(AdapterBase):
                     'name': 'https_proxy',
                     'title': 'HTTPS Proxy',
                     'type': 'string'
+                },
+                {
+                    'name': 'wireless_ssid_exclude_list',
+                    'title': 'Wireless SSID Exclude List',
+                    'type': 'string'
+                },
+                {
+                    'name': 'wireless_ssid_white_list',
+                    'title': 'Wireless SSID Whitelist',
+                    'type': 'string'
+                },
+                {
+                    'name': 'exclude_no_ssid',
+                    'title': 'Exclude Devices With No SSID',
+                    'type': 'bool'
                 }
             ],
             'required': [
@@ -119,7 +139,7 @@ class AirwaveAdapter(AdapterBase):
             'type': 'array'
         }
 
-    def _create_client_device(self, device_raw):
+    def _create_client_device(self, device_raw, wireless_ssid_exclude_list, wireless_ssid_white_list, exclude_no_ssid):
         try:
             device_raw, mac_extra_data_dict = device_raw
             device = self._new_device_adapter()
@@ -141,7 +161,15 @@ class AirwaveAdapter(AdapterBase):
                 return None
             device.id = mac
             device.add_nic(mac=mac)
-            device.ssid = mac_extra_data_specific.get('ssid')
+            ssid = mac_extra_data_specific.get('ssid')
+            if exclude_no_ssid and not ssid:
+                return None
+            if ssid and isinstance(wireless_ssid_exclude_list, list) and ssid in wireless_ssid_exclude_list:
+                return None
+            if wireless_ssid_white_list and isinstance(wireless_ssid_white_list, list) \
+                    and not ssid or ssid not in wireless_ssid_white_list:
+                return None
+            device.ssid = ssid
             device.last_seen = parse_date((device_raw.get('connect_time') or {}).get('value'))
             device.role = (device_raw.get('role') or {}).get('value')
             if (device_raw.get('username') or {}).get('value'):
@@ -185,12 +213,16 @@ class AirwaveAdapter(AdapterBase):
             return None
 
     def _parse_raw_data(self, devices_raw_data):
-        for device_raw, device_type in devices_raw_data:
+        for device_data, wireless_ssid_exclude_list, wireless_ssid_white_list, exclude_no_ssid in devices_raw_data:
+            device_raw, device_type = device_data
             device = None
             if AP_TYPE == device_type:
                 device = self._create_ap_device(device_raw)
             if CLIENT_TYPE == device_type:
-                device = self._create_client_device(device_raw)
+                device = self._create_client_device(device_raw,
+                                                    wireless_ssid_exclude_list,
+                                                    wireless_ssid_white_list,
+                                                    exclude_no_ssid)
             if device:
                 device.airwave_type = device_type
                 yield device
