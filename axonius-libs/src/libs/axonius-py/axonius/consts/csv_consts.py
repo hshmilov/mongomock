@@ -28,7 +28,8 @@ IDENTIFIERS = {
     'installed_sw_vendor': ['softwarevendor', 'swvendor'],
     'packages': ['packages'],
     'networkinterfaces': ['networkinterfaces'],
-    'etcissue': ['etcissue']
+    'etcissue': ['etcissue'],
+    'cve_id': ['cve', 'cveid', 'cvelist']
 
 }
 

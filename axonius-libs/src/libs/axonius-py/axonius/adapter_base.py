@@ -13,6 +13,7 @@ from abc import ABC, abstractmethod
 from datetime import date, datetime, timedelta, timezone
 from threading import Event, RLock, Thread
 from typing import Any, Dict, Iterable, List, Tuple
+import requests
 
 import func_timeout
 from bson import ObjectId
@@ -463,6 +464,7 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
 
     # End of users
 
+    # pylint: disable=too-many-branches, too-many-statements, too-many-locals, too-many-nested-blocks
     def insert_data_to_db(self, client_name: str = None, check_fetch_time: bool = False):
         """
         Will insert entities from the given client name (or all clients if None) into DB
@@ -535,16 +537,23 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
                         self._clients[client_name] = self.__connect_client_facade(current_client['client_config'])
                 except Exception as e2:
                     # No connection to attempt querying
-                    self.create_notification(f'Adapter {self.plugin_name} had connection error to '
-                                             f'server with the ID {client_name}.',
-                                             str(e2))
-                    self.send_external_info_log(f'Adapter {self.plugin_name} had connection error'
-                                                f' to server with the ID {client_name}. Error is {str(e2)}')
+                    error_msg = f'Adapter {self.plugin_name} had connection error' \
+                        f' to server with the ID {client_name}. Error is {str(e2)}'
+                    self.create_notification(error_msg)
+                    self.send_external_info_log(error_msg)
                     if self.mail_sender and self._adapter_errors_mail_address:
                         email = self.mail_sender.new_email('Axonius - Adapter Stopped Working',
                                                            self._adapter_errors_mail_address.split(','))
-                        email.send(f'Adapter {self.plugin_name} had connection error'
-                                   f' to server with the ID {client_name}. Error is {str(e2)}')
+                        email.send(error_msg)
+                    if self._adapter_errors_webhook:
+                        try:
+                            resposne = requests.post(url=self._adapter_errors_webhook,
+                                                     json={'error_message': error_msg},
+                                                     headers={'Content-Type': 'application/json',
+                                                              'Accept': 'application/json'},
+                                                     verify=False)
+                        except Exception:
+                            pass
 
                     logger.exception(f'Problem establishing connection for client {client_name}. Reason: {str(e2)}')
                     log_metric(logger, metric_name=Adapters.CONNECTION_ESTABLISH_ERROR,

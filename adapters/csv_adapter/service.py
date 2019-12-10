@@ -440,6 +440,14 @@ class CsvAdapter(AdapterBase):
                 except Exception:
                     logger.exception(f'Problem with etcissue')
 
+                try:
+                    cve_ids = vals.get('cve_id')
+                    if isinstance(cve_ids, str) and cve_ids:
+                        cve_ids = cve_ids.split(',')
+                        for cve_id in cve_ids:
+                            device.add_vulnerable_software(cve_id=cve_id)
+                except Exception:
+                    logger.warning(f'Problem with cve id', exc_info=True)
                 device.set_raw(device_raw)
 
                 if should_parse_all_columns:

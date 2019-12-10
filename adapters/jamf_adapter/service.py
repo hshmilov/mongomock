@@ -41,6 +41,9 @@ class JamfProfile(SmartJsonClass):
     display_name = Field(str, "Profile Display Name")
     identifier = Field(str, "Profile Identifier")
     uuid = Field(str, "Profile UUID")
+    name = Field(str, 'Profile Name')
+    id = Field(str, 'Profile ID')
+    is_removable = Field(str, 'Is Removable')
 
 
 class JamfCertificate(SmartJsonClass):
@@ -400,6 +403,13 @@ class JamfAdapter(AdapterBase, Configurable):
                         device.domain = active_directory_status
 
                     applications = ((device_raw.get('software') or {}).get('applications') or {}).get('application', [])
+                    profiles = (device_raw.get('configuration_profiles') or {}).get('configuration_profile', [])
+                    profiles = [profiles] if type(profiles) != list else profiles
+                    for profile in profiles:
+                        try:
+                            device.profiles.append(JamfProfile(**profile))
+                        except Exception:
+                            logger.exception(f"Unexpected profile {profile}")
                 else:
                     try:
                         last_inventory_update_utc = parse_date(general_info.get('last_inventory_update_utc'))

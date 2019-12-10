@@ -66,6 +66,7 @@ from axonius.consts.plugin_consts import (ADAPTERS_LIST_LENGTH,
                                           NOTIFICATIONS_SETTINGS,
                                           NOTIFY_ADAPTERS_FETCH,
                                           ADAPTERS_ERRORS_MAIL_ADDRESS,
+                                          ADAPTERS_ERRORS_WEBHOOK_ADDRESS,
                                           PLUGIN_NAME,
                                           PLUGIN_UNIQUE_NAME,
                                           PROXY_ADDR,
@@ -2784,6 +2785,7 @@ class PluginBase(Configurable, Feature, ABC):
         self._https_logs_settings = config['https_log_settings']
         self._notify_on_adapters = config[NOTIFICATIONS_SETTINGS].get(NOTIFY_ADAPTERS_FETCH)
         self._adapter_errors_mail_address = config[NOTIFICATIONS_SETTINGS].get(ADAPTERS_ERRORS_MAIL_ADDRESS)
+        self._adapter_errors_webhook = config[NOTIFICATIONS_SETTINGS].get(ADAPTERS_ERRORS_WEBHOOK_ADDRESS)
         self._email_prefix_correlation = config[CORRELATION_SETTINGS].get(CORRELATE_BY_EMAIL_PREFIX)
         self._fetch_empty_vendor_software_vulnerabilites = (config.get(STATIC_ANALYSIS_SETTINGS) or {}).get(
             FETCH_EMPTY_VENDOR_SOFTWARE_VULNERABILITES) or False
@@ -3195,6 +3197,11 @@ class PluginBase(Configurable, Feature, ABC):
                         {
                             'name': ADAPTERS_ERRORS_MAIL_ADDRESS,
                             'title': 'Adapters Errors Email Address',
+                            'type': 'string'
+                        },
+                        {
+                            'name': ADAPTERS_ERRORS_WEBHOOK_ADDRESS,
+                            'title': 'Adapters Errors Webhook Address',
                             'type': 'string'
                         }
                     ],
