@@ -33,14 +33,18 @@ class InfobloxAdapter(AdapterBase):
     def _test_reachability(client_config):
         return RESTConnection.test_reachability(client_config.get('domain'))
 
-    @staticmethod
-    def _connect_client(client_config):
+    def _connect_client(self, client_config):
         try:
+            date_filter = None
+            if self._last_seen_timedelta:
+                date_filter = datetime.datetime.now(datetime.timezone.utc) - self._last_seen_timedelta
+                date_filter = int(date_filter.timestamp())
             api_vesrion = 2.5 if client_config.get('use_api_version_25') else 2.2
             connection = InfobloxConnection(
                 api_vesrion,
                 domain=client_config['domain'], verify_ssl=client_config['verify_ssl'],
-                username=client_config['username'], password=client_config['password']
+                username=client_config['username'], password=client_config['password'],
+                date_filter=date_filter,
             )
             with connection:
                 pass  # check that the connection credentials are valid

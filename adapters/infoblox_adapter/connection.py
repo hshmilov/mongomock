@@ -7,11 +7,14 @@ from infoblox_adapter.consts import MAX_NUMBER_OF_PAGES, RESULTS_PER_PAGE
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
+DATE_FILTER_FIELD = 'discovered_data.last_discovered>'
+
 
 class InfobloxConnection(RESTConnection):
 
-    def __init__(self, api_version: float, *args, **kwargs):
+    def __init__(self, api_version: float, *args, date_filter=None, **kwargs):
         self.__api_version = api_version
+        self.__date_filter = date_filter
         super().__init__(
             *args,
             url_base_prefix=f'/wapi/v{api_version}/',
@@ -28,6 +31,7 @@ class InfobloxConnection(RESTConnection):
             url_params['_return_as_object'] = 1
             url_params['_max_results'] = RESULTS_PER_PAGE
             url_params['_paging'] = 1
+
             response = self._get(path, url_params=url_params, do_basic_auth=True)
             yield from response['result']
             next_page_id = response.get('next_page_id')
@@ -75,7 +79,10 @@ class InfobloxConnection(RESTConnection):
         fields_to_return = 'served_by,starts,ends,address,binding_state,hardware,client_hostname,network_view'
         if self.__api_version >= 2.5:
             fields_to_return += ',fingerprint'
-        for lease_raw in self.__get_items_from_url('lease', url_params={'_return_fields': fields_to_return}):
+        params = {'_return_fields': fields_to_return}
+        if self.__date_filter:
+            params[DATE_FILTER_FIELD] = self.__date_filter
+        for lease_raw in self.__get_items_from_url('lease', url_params=params):
             try:
                 lease_address = lease_raw.get('address')
                 if lease_address:
