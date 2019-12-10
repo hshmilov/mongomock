@@ -114,7 +114,7 @@ class InfobloxAdapter(AdapterBase):
             'type': 'array'
         }
 
-    # pylint: disable=R0912,R0915
+    # pylint: disable=R0912,R0915, too-many-nested-blocks, too-many-locals
     def _parse_raw_data(self, devices_raw_data):
         ids_set = set()
         for device_raw in devices_raw_data:
@@ -196,10 +196,19 @@ class InfobloxAdapter(AdapterBase):
                         if not device.does_field_exist(normalized_column_name):
                             # Currently we treat all columns as str
                             cn_capitalized = ' '.join([word.capitalize() for word in attr_name.split(' ')])
-                            device.declare_new_field(
-                                normalized_column_name, Field(str, f'Infoblox {cn_capitalized}'))
 
-                        device[normalized_column_name] = str(attr_value)
+                            if normalized_column_name.lower() == 'infoblox_vlan':
+                                field_type = int
+                            else:
+                                field_type = str
+
+                            device.declare_new_field(
+                                normalized_column_name, Field(field_type, f'Infoblox {cn_capitalized}'))
+
+                        try:
+                            device[normalized_column_name] = attr_value
+                        except Exception:
+                            logger.exception(f'Could not set attr {attr_name} with value {attr_value}')
                 except Exception:
                     logger.exception(f'Problem setting external attributes')
 

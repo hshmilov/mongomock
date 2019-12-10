@@ -185,7 +185,8 @@ class LdapConnection(object):
             ldap_recieve_timeout=DEFAULT_LDAP_RECIEVE_TIMEOUT,
             connect_with_gc_mode=False,
             ldap_ou_whitelist: Optional[list] = None,
-            alternative_dns_suffix: Optional[str] = None
+            alternative_dns_suffix: Optional[str] = None,
+            do_not_fetch_users: Optional[bool] = None,
     ):
         """Class initialization.
 
@@ -211,6 +212,7 @@ class LdapConnection(object):
         self.__connect_with_gc_mode = connect_with_gc_mode
         self.should_fetch_disabled_devices = should_fetch_disabled_devices
         self.should_fetch_disabled_users = should_fetch_disabled_users
+        self.__do_not_fetch_users = do_not_fetch_users
         self.ca_file_data_param = ca_file_data
         self.cert_file_param = cert_file
         self.private_key_param = private_key
@@ -253,7 +255,14 @@ class LdapConnection(object):
                 self.server_addr, self.user_name, self.user_password,
                 self.dns_server, self.__ldap_page_size, self.__use_ssl, self.ca_file_data_param, self.cert_file_param,
                 self.private_key_param, self.should_fetch_disabled_devices,
-                self.should_fetch_disabled_users)
+                self.should_fetch_disabled_users,
+                ldap_connection_timeout=self.__ldap_connection_timeout,
+                ldap_recieve_timeout=self.__ldap_recieve_timeout,
+                connect_with_gc_mode=self.__connect_with_gc_mode,
+                ldap_ou_whitelist=self.__ldap_ou_whitelist,
+                alternative_dns_suffix=self.__alternative_dns_suffix,
+                do_not_fetch_users=self.__do_not_fetch_users
+            )
 
         return self.extra_sessions[name]
 
@@ -794,6 +803,9 @@ class LdapConnection(object):
         :returns: a list of objects representing the users in this DC.
         :raises exceptions.LdapException: In case of error in the LDAP protocol
         """
+
+        if self.__do_not_fetch_users is True:
+            return
 
         # Note that we also bring inetOrgPerson which are person users (same schema, so same attributes etc)
         # some organizations use this (might happen on migrations of domains)

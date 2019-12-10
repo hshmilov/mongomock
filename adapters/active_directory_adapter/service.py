@@ -283,7 +283,8 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, ActiveDirectory
                               dc_details.get('fetch_disabled_users', False),
                               connect_with_gc_mode=dc_details.get('is_ad_gc', False),
                               ldap_ou_whitelist=dc_details.get('ldap_ou_whitelist'),
-                              alternative_dns_suffix=dc_details.get('alternative_dns_suffix')
+                              alternative_dns_suffix=dc_details.get('alternative_dns_suffix'),
+                              do_not_fetch_users=dc_details.get('do_not_fetch_users')
                               )
 
     def _connect_client(self, dc_details):
@@ -370,6 +371,11 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, ActiveDirectory
                 },
                 *COMMON_SSL_CONFIG_SCHEMA_CA_ONLY,
                 {
+                    'name': 'do_not_fetch_users',
+                    'title': 'Do Not Fetch Users',
+                    'type': 'bool'
+                },
+                {
                     "name": "fetch_disabled_devices",
                     "title": "Fetch Disabled Devices",
                     "type": "bool"
@@ -398,7 +404,10 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, ActiveDirectory
                 "dc_name",
                 "user",
                 "domain_name",
-                "password"
+                "password",
+                'do_not_fetch_users',
+                'fetch_disabled_devices',
+                'fetch_disabled_users'
             ],
             "type": "array"
         }
@@ -1694,24 +1703,26 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, ActiveDirectory
 
     def _enable_user(self, user_data, client_data_dict):
         client_data = self._resolve_client_from_client_dict_and_entity(client_data_dict, user_data)
-        dn = user_data['raw'].get('distinguishedName')
-        assert dn, f"distinguishedName isn't in 'raw' for {user_data}"
+        dn = user_data.get('ad_distinguished_name')
+        assert dn, f"distinguishedName isn't in {user_data}"
         assert client_data.get_session("user_enabler").change_entity_enabled_state(dn, True), "Failed enabling user"
 
     def _disable_user(self, user_data, client_data_dict):
         client_data = self._resolve_client_from_client_dict_and_entity(client_data_dict, user_data)
-        dn = user_data['raw'].get('distinguishedName')
-        assert dn, f"distinguishedName isn't in 'raw' for {user_data}"
+        dn = user_data.get('ad_distinguished_name')
+        assert dn, f"distinguishedName isn't in  {user_data}"
         assert client_data.get_session("user_disabler").change_entity_enabled_state(dn, False), "Failed disabling user"
 
     def _enable_device(self, device_data, client_data_dict):
         client_data = self._resolve_client_from_client_dict_and_entity(client_data_dict, device_data)
-        dn = device_data['raw'].get('distinguishedName')
+        dn = device_data.get('ad_distinguished_name')
+        assert dn, f"distinguishedName isn't in  {device_data}"
         assert client_data.get_session("device_enabler").change_entity_enabled_state(dn, True), "Failed enabling device"
 
     def _disable_device(self, device_data, client_data_dict):
         client_data = self._resolve_client_from_client_dict_and_entity(client_data_dict, device_data)
-        dn = device_data['raw'].get('distinguishedName')
+        dn = device_data.get('ad_distinguished_name')
+        assert dn, f"distinguishedName isn't in  {device_data}"
         assert client_data.get_session("device_disabler").change_entity_enabled_state(
             dn, False), "Failed disabling device"
 

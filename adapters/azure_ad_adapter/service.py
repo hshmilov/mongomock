@@ -7,6 +7,7 @@ from axonius.clients.rest.connection import RESTConnection
 from axonius.devices.ad_entity import ADEntity
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.fields import Field
+from axonius.mixins.configurable import Configurable
 from axonius.users.user_adapter import UserAdapter
 from axonius.utils.files import get_local_config_file
 from axonius.utils.datetime import parse_date
@@ -26,7 +27,7 @@ INUTE_DEVICE_TYPE = 'Intune'
 
 
 # pylint: disable=invalid-name,too-many-instance-attributes,arguments-differ
-class AzureAdAdapter(AdapterBase):
+class AzureAdAdapter(AdapterBase, Configurable):
     class MyDeviceAdapter(DeviceAdapter):
         azure_ad_device_type = Field(str, 'Azure AD Device Type', enum=[AZURE_AD_DEVICE_TYPE, INUTE_DEVICE_TYPE])
         account_tag = Field(str, 'Account Tag')
@@ -290,6 +291,12 @@ class AzureAdAdapter(AdapterBase):
     def _parse_raw_data(self, raw_data_all):
         raw_data, metadata = raw_data_all
         for raw_device_data, devie_type in iter(raw_data):
+            try:
+                if self.__fields_to_exclude:
+                    for field_to_exclude in self.__fields_to_exclude.split(','):
+                        raw_device_data.pop(field_to_exclude.strip(), None)
+            except Exception:
+                logger.exception(f'Could not exclude fields {str(self.__fields_to_exclude)}')
             device = None
             if devie_type == 'Azure AD':
                 device = self._create_azure_ad_device(raw_device_data)
@@ -303,6 +310,12 @@ class AzureAdAdapter(AdapterBase):
         raw_data, metadata = raw_data_all
         for raw_user_data in iter(raw_data):
             try:
+                try:
+                    if self.__fields_to_exclude:
+                        for field_to_exclude in self.__fields_to_exclude.split(','):
+                            raw_user_data.pop(field_to_exclude.strip(), None)
+                except Exception:
+                    logger.exception(f'Could not exclude fields {str(self.__fields_to_exclude)}')
                 # Schema: https://developer.microsoft.com/en-us/graph/docs/api-reference/v1.0/resources/user
                 user = self._new_user_adapter()
                 user_id = raw_user_data.get('id') or raw_user_data.get('objectId')
@@ -383,3 +396,29 @@ class AzureAdAdapter(AdapterBase):
     @classmethod
     def adapter_properties(cls):
         return [AdapterProperty.UserManagement]
+
+    @classmethod
+    def _db_config_schema(cls) -> dict:
+        return {
+            'items': [
+                {
+                    'name': 'fields_to_exclude',
+                    'title': 'Fields to exclude',
+                    'type': 'string'
+                },
+            ],
+            'required': [
+                'fields_to_exclude'
+            ],
+            'pretty_name': 'Azure AD Configuration',
+            'type': 'array'
+        }
+
+    @classmethod
+    def _db_config_default(cls):
+        return {
+            'fields_to_exclude': None
+        }
+
+    def _on_config_update(self, config):
+        self.__fields_to_exclude = config['fields_to_exclude']
