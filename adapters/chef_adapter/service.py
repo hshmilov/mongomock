@@ -40,6 +40,7 @@ class ChefAdapter(AdapterBase):
         instance_id = Field(str, "AWS instance ID")
         chef_tags = ListField(str, 'Chef tags')
         runlist = ListField(str, 'Run list')
+        fqdn = Field(str, 'FQDN')
 
     def __init__(self):
         super().__init__(get_local_config_file(__file__))
@@ -134,6 +135,7 @@ class ChefAdapter(AdapterBase):
                 device.hostname = (device_raw_automatic.get('cloud') or {}).get(
                     'local_hostname'
                 ) or device_raw_automatic.get('fqdn')
+                device.fqdn = device_raw_automatic.get('fqdn')
                 instance_id = (device_raw_automatic.get('ec2') or {}).get('instance_id')
                 if instance_id:
                     device.cloud_id = instance_id
@@ -152,7 +154,7 @@ class ChefAdapter(AdapterBase):
                             pytz.timezone(device.time_zone).localize(device.last_seen).astimezone(pytz.UTC)
                         )
                 except Exception as e:
-                    logger.warning(f'Error adjusting timezone for {device.name} {e}')
+                    logger.debug(f'Error adjusting timezone for {device.name} {e}')
                 # domain assign won't work for cloud clients (but hostname will contain the domain)
                 device.domain = device_raw_automatic.get('domain')
                 try:
@@ -246,7 +248,7 @@ class ChefAdapter(AdapterBase):
                     if device_raw_automatic['public_ip']['data']['ip']:
                         device.add_public_ip(device_raw_automatic['public_ip']['data']['ip'])
                 except Exception:
-                    logger.info(f"No axonius specific info found")
+                    logger.debug(f"No axonius specific info found")
 
                 customer = device_raw_normal.get('customer', '')
                 if customer:

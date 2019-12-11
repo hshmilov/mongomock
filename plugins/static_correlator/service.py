@@ -65,7 +65,7 @@ class StaticCorrelatorService(CorrelatorBase):
                          'last_seen', 'bios_serial', 'domain', 'cloud_provider', 'cloud_id', 'ad_name',
                          'azure_display_name', 'uuid',
                          'last_used_users', 'nessus_no_scan_id', 'private_dns_name', 'macs_no_ip',
-                         'node_id', 'azure_ad_id', 'azure_device_id', 'fetch_proto',
+                         'node_id', 'azure_ad_id', 'azure_device_id', 'fetch_proto', 'fqdn',
                          'associated_adapter_plugin_name', 'value', 'type', 'name', 'aws_device_type', 'dns_names')
         projection = {
             f'adapters.data.{field}': True for field in fields_to_get

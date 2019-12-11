@@ -63,6 +63,26 @@ def get_private_dns_name(adapter_device):
     return adapter_device['data'].get('private_dns_name')
 
 
+def get_fqdn(adapter_device):
+    # For now we support only Chef to avoid confusion of future adapters writers
+    if not is_chef_adapter(adapter_device):
+        return None
+    return adapter_device['data'].get('fqdn')
+
+
+def get_fqdn_or_hostname(adapter_device):
+    fqdn_hostname = get_fqdn(adapter_device) or get_normalized_hostname_str(adapter_device)
+    if fqdn_hostname:
+        return fqdn_hostname.split('.')[0].lower()
+    return None
+
+
+def compare_fqdn_or_hostname(adapter_device1, adapter_device2):
+    if not get_fqdn_or_hostname(adapter_device1) or not get_fqdn_or_hostname(adapter_device2):
+        return False
+    return get_fqdn_or_hostname(adapter_device1) == get_fqdn_or_hostname(adapter_device2)
+
+
 def get_prefix_private_dns_or_hostname(adapter_device):
     private_dns = get_private_dns_name(adapter_device)
     if private_dns:
@@ -322,6 +342,20 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
                                                    if_soalrwinds_compare_all],
                                                   {'Reason': 'They have the same MAC'},
                                                   CorrelationReason.StaticAnalysis)
+
+    def _correlate_hostname_fqdn_ip(self, adapters_to_correlate):
+        logger.info('Starting to correlate on Hostname_FQDN-IP')
+        filtered_adapters_list = filter(get_fqdn_or_hostname,
+                                        filter(get_normalized_ip, adapters_to_correlate))
+        return self._bucket_correlate(list(filtered_adapters_list),
+                                      [get_fqdn_or_hostname],
+                                      [compare_fqdn_or_hostname],
+                                      [],
+                                      [ips_do_not_contradict_or_mac_intersection,
+                                       not_wifi_adapters,
+                                       cloud_id_do_not_contradict],
+                                      {'Reason': 'They have the same hostname_fqdn and IPs'},
+                                      CorrelationReason.StaticAnalysis)
 
     def _correlate_hostname_ip(self, adapters_to_correlate):
         logger.info('Starting to correlate on Hostname-IP')
@@ -671,7 +705,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
 
         # let's find devices by, hostname, and ip:
         yield from self._correlate_hostname_ip(adapters_to_correlate)
-
+        yield from self._correlate_hostname_fqdn_ip(adapters_to_correlate)
         # for ad specifically we added the option to correlate on hostname basis alone (dns name with the domain)
         yield from self._correlate_with_ad(adapters_to_correlate)
 
