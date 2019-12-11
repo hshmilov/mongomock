@@ -19,6 +19,8 @@ from datetime import datetime
 MOBILE_SCOPES = ['https://www.googleapis.com/auth/admin.directory.device.mobile.readonly']
 # Required scopes by the json key credentials for users
 USER_SCOPES = ['https://www.googleapis.com/auth/admin.directory.user.readonly']
+MOBILE_DEVICE = 'Mobile Device'
+CHROMEOS_DEVICE = 'ChromeOS Device'
 
 
 class OauthApp(SmartJsonClass):
@@ -37,6 +39,7 @@ class GoogleMdmAdapter(AdapterBase):
     """
 
     class MyDeviceAdapter(DeviceAdapter):
+        chrome_device_type = Field(str, 'Chrome Device Type', enum=[CHROMEOS_DEVICE, MOBILE_DEVICE])
         adb_status = Field(bool, "Is ADB enabled")
         emails = ListField(str, "Emails for this device")
         device_password_status = Field(str, 'Device Password Status')
@@ -46,6 +49,11 @@ class GoogleMdmAdapter(AdapterBase):
         encryption_status = Field(str, 'Encryption Status')
         security_patch_level_str = Field(str, 'Security Patch Level String')
         privilege = Field(str, 'Privilege')
+        device_status = Field(str, 'Device Status')
+        notes = Field(str, 'Notes')
+        org_unit_path = Field(str, 'Org Unit Path')
+        meid = Field(str, 'MEID')
+        order_number = Field(str, 'Order Number')
 
     class MyUserAdapter(UserAdapter):
         alias_emails = ListField(str, 'Alias Emails')
@@ -82,7 +90,7 @@ class GoogleMdmAdapter(AdapterBase):
             raise ClientConnectionException(str(e))
 
     def _query_devices_by_client(self, client_name, client_data: GSuiteAdminConnection):
-        return client_data.get_mobile_devices()
+        return client_data.get_mobile_devices(), client_data.get_chromeosdevices_devices()
 
     # pylint: disable=arguments-differ
     def _query_users_by_client(self, client_name, client_data: GSuiteAdminConnection):
@@ -115,8 +123,42 @@ class GoogleMdmAdapter(AdapterBase):
             "type": "array"
         }
 
-    def create_device(self, raw_device_data):
+    def create_chromeosdevices_device(self, raw_device_data):
         device = self._new_device_adapter()
+        device.chrome_device_type = CHROMEOS_DEVICE
+        device.id = raw_device_data.get('deviceId')
+        if not device.id:
+            logger.warning(f"Device {str(raw_device_data)} has no id")
+            return
+        device.set_raw(raw_device_data)
+        device.order_number = raw_device_data.get('orderNumber')
+        os = raw_device_data.get('osVersion')
+        device.figure_os(os)
+        device.device_model = raw_device_data.get('model')
+        device.meid = raw_device_data.get('meid')
+        if raw_device_data.get('macAddress'):
+            device.add_nic(mac=raw_device_data.get('macAddress'))
+        if raw_device_data.get('ethernetMacAddress'):
+            device.add_nic(mac=raw_device_data.get('ethernetMacAddress'))
+        device.device_serial = raw_device_data.get('serialNumber')
+        device.device_status = raw_device_data.get('status')
+        device.last_seen = parse_date(raw_device_data.get('lastSync'))
+        device.notes = raw_device_data.get('notes')
+        users_raw = raw_device_data.get('recentUsers')
+        if not isinstance(users_raw, list):
+            users_raw = []
+        for user_raw in users_raw:
+            if not isinstance(user_raw, dict):
+                continue
+            if user_raw.get('email'):
+                device.last_used_users.append(user_raw.get('email'))
+        device.org_unit_path = raw_device_data.get('orgUnitPath')
+        device.adapter_properties = [AdapterProperty.Agent.name, AdapterProperty.MDM.name]
+        return device
+
+    def create_mobile_device(self, raw_device_data):
+        device = self._new_device_adapter()
+        device.chrome_device_type = MOBILE_DEVICE
         device.id = raw_device_data.get('deviceId')
         if not device.id:
             logger.warning(f"Device {str(raw_device_data)} has no id")
@@ -179,9 +221,18 @@ class GoogleMdmAdapter(AdapterBase):
         return device
 
     def _parse_raw_data(self, raw_data):
-        for raw_device_data in iter(raw_data):
+        raw_data_mobile, raw_data_chromeosdevices = raw_data
+        for raw_device_data in iter(raw_data_mobile):
             try:
-                device = self.create_device(raw_device_data)
+                device = self.create_mobile_device(raw_device_data)
+                if device:
+                    yield device
+            except Exception:
+                logger.exception(f'Got exception for raw_device_data: {raw_device_data}')
+
+        for raw_device_data in iter(raw_data_chromeosdevices):
+            try:
+                device = self.create_chromeosdevices_device(raw_device_data)
                 if device:
                     yield device
             except Exception:
