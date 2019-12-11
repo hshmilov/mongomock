@@ -2836,6 +2836,8 @@ class PluginBase(Configurable, Feature, ABC):
                     ca_key = self._grab_file_contents(ca_file, stored_locally=False)
                     if not ca_key or b'-BEGIN CERTIFICATE-' not in ca_key or b'-END CERTIFICATE-' not in ca_key:
                         logger.error(f'Invalid SSL CA certificate at position {ca_file_index}, not updating')
+                    elif 'ENCRYPTED' in ca_key:
+                        logger.error(f'Encrypted SSL CA certificate at position {ca_file_index}, not updating')
                     else:
                         specific_ca_path = os.path.join(CA_CERT_PATH, f'customer_ca_{ca_file_index}.crt')
                         open(specific_ca_path, 'wb').write(ca_key)
