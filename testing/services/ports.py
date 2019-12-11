@@ -147,6 +147,7 @@ DOCKER_PORTS = {
     'preempt-adapter':                  6055,
     'cherwell-adapter':                 6056,
     'hp-nnmi-adapter':                  6057,
+    'guardium-adapter':                 6070,
     'diag-w':                           6665,  # reserved
     'diag-l':                           6666,  # reserved
     'code42-adapter':                   6667,
