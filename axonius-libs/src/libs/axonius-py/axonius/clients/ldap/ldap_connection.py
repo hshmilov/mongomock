@@ -690,7 +690,8 @@ class LdapConnection(object):
                     # dn should look like "CN={content_name},CN=Content,CN={replication_group_name},..."
                     replication_group_cn = ldap_must_get_str(content_set, 'distinguishedName').split(",")[
                         2][3:].replace("\\\\", "\\")
-                    dfsr_shares[replication_group_cn]['content'].append(content_set['cn'])
+                    if replication_group_cn in dfsr_shares and 'cn' in content_set:
+                        dfsr_shares[replication_group_cn]['content'].append(content_set['cn'])
                 except Exception:
                     logger.exception(f"Problem getting replication group for {content_set}")
 
@@ -699,7 +700,7 @@ class LdapConnection(object):
                     # dn should look like "CN={member_name},CN=Topology,CN={replication_group_name},..."
                     replication_group_cn = ldap_must_get_str(server, 'distinguishedName').split(",")[
                         2][3:].replace("\\\\", "\\")
-                    if "msDFSR-ComputerReference" in server:
+                    if replication_group_cn in dfsr_shares and "msDFSR-ComputerReference" in server:
                         dfsr_shares[replication_group_cn]['servers'].append(server['msDFSR-ComputerReference'])
                 except Exception:
                     logger.exception(f"Problem getting server for {server}")

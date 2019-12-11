@@ -685,7 +685,7 @@ class StaticAnalysisService(Triggerable, PluginBase):
             device_object = list(self.devices.get(internal_axon_id=device_raw['internal_axon_id']))
             if len(device_object) != 1:
                 logger.critical(
-                    'Warning, could not get a device object for internal axon id {device_raw["internal_axon_id"]}'
+                    f'Warning, could not get a device object for internal axon id {device_raw["internal_axon_id"]}'
                 )
                 continue
             device_object = device_object[0]

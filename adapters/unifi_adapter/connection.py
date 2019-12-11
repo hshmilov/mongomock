@@ -34,7 +34,9 @@ class UnifiConnection(RESTConnection):
     def _connect(self):
         if not self._username or not self._password:
             raise RESTException('No username or password')
-        self._post(LOGIN_URL, {'username': self._username, 'password': self._password})
+        self._post(LOGIN_URL, body_params={'username': self._username, 'password': self._password})
+        self._get('s/{}/stat/sta'.format(self._site))
+        self._get('s/{}/stat/device'.format(self._site))
 
     def get_device_list(self):
         for client in self.list_clients():

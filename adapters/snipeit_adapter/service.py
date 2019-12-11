@@ -5,9 +5,11 @@ from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.connection import RESTException
+from axonius.utils.parsing import format_mac
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.utils.files import get_local_config_file
 from axonius.fields import Field
+from axonius.mixins.configurable import Configurable
 from axonius.utils.datetime import parse_date
 from axonius.utils.parsing import normalize_var_name
 from snipeit_adapter.connection import SnipeitConnection
@@ -16,7 +18,7 @@ from snipeit_adapter.client_id import get_client_id
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
-class SnipeitAdapter(AdapterBase):
+class SnipeitAdapter(AdapterBase, Configurable):
     # pylint: disable=R0902
     class MyDeviceAdapter(DeviceAdapter):
         asset_tag = Field(str, 'Asset Tag')
@@ -122,7 +124,13 @@ class SnipeitAdapter(AdapterBase):
                 device_serial = device_raw.get('serial')
                 if device_serial:
                     device.device_serial = device_serial
-                device.asset_tag = device_raw.get('asset_tag')
+                asset_tag = device_raw.get('asset_tag')
+                device.asset_tag = asset_tag
+                try:
+                    format_mac(asset_tag)
+                    device.add_nic(mac=asset_tag)
+                except Exception:
+                    pass
                 try:
                     device.device_model = (device_raw.get('model') or {}).get('name')
                 except Exception:
@@ -132,7 +140,10 @@ class SnipeitAdapter(AdapterBase):
                 except Exception:
                     logger.exception(f'Problem getting status label for {device_raw}')
                 try:
-                    device.category = (device_raw.get('category') or {}).get('name')
+                    category = (device_raw.get('category') or {}).get('name')
+                    device.category = category
+                    if self.__snipeit_category_white_list and category not in self.__snipeit_category_white_list:
+                        continue
                 except Exception:
                     logger.exception(f'Problem getting category for {device_raw}')
                 try:
@@ -198,3 +209,28 @@ class SnipeitAdapter(AdapterBase):
     @classmethod
     def adapter_properties(cls):
         return [AdapterProperty.Assets]
+
+    @classmethod
+    def _db_config_schema(cls) -> dict:
+        return {
+            'items': [
+                {
+                    'name': 'snipeit_category_white_list',
+                    'title': 'SnipeIT Category Whitelist',
+                    'type': 'string'
+                }
+            ],
+            'required': [],
+            'pretty_name': 'SnipeIT Configuration',
+            'type': 'array'
+        }
+
+    @classmethod
+    def _db_config_default(cls):
+        return {
+            'snipeit_category_white_list': None,
+        }
+
+    def _on_config_update(self, config):
+        self.__snipeit_category_white_list = config.get('snipeit_category_white_list').split(',') \
+            if config.get('snipeit_category_white_list') else None

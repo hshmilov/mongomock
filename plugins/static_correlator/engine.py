@@ -75,8 +75,16 @@ def get_prefix_private_dns_or_hostname(adapter_device):
     return None
 
 
+def is_netbox_adapter(adapter_device):
+    return adapter_device.get('plugin_name') == 'netbox_adapter'
+
+
 def is_ca_cmdb_adapter(adapter_device):
     return adapter_device.get('plugin_name') == 'ca_cmdb_adapter'
+
+
+def is_only_asset_nams_adapter(adapter_device):
+    return is_ca_cmdb_adapter(adapter_device) or is_netbox_adapter(adapter_device)
 
 
 def is_csv_adapter(adapter_device):
@@ -99,9 +107,9 @@ def asset_hostnames_do_not_contradict_and_no_chef(adapter_device1, adapter_devic
 
 
 # pylint: disable=invalid-name
-def ips_do_not_contradict_or_mac_intersection_or_ca_cmdb(adapter_device1, adapter_device2):
+def ips_do_not_contradict_or_mac_intersection_or_asset_only_adapter(adapter_device1, adapter_device2):
     return ips_do_not_contradict_or_mac_intersection(adapter_device1, adapter_device2) \
-        or is_ca_cmdb_adapter(adapter_device1) or is_ca_cmdb_adapter(adapter_device2)
+        or is_only_asset_nams_adapter(adapter_device1) or is_only_asset_nams_adapter(adapter_device2)
 # pylint: enable=invalid-name
 
 
@@ -149,8 +157,8 @@ def is_uuid_adapters(adapter_device):
     return False
 
 
-def get_normalized_ip_or_is_ca_cmdb(adapter_device):
-    return get_normalized_ip(adapter_device) or is_ca_cmdb_adapter(adapter_device)
+def get_normalized_ip_or_is_asset_only(adapter_device):
+    return get_normalized_ip(adapter_device) or is_only_asset_nams_adapter(adapter_device)
 
 
 def not_lansweeper_assetname_no_hostname(adapter_device):
@@ -598,7 +606,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
                                       [get_asset_or_host],
                                       [compare_asset_hosts],
                                       [get_asset_name],
-                                      [ips_do_not_contradict_or_mac_intersection_or_ca_cmdb,
+                                      [ips_do_not_contradict_or_mac_intersection_or_asset_only_adapter,
                                        not_wifi_adapters,
                                        asset_hostnames_do_not_contradict_and_no_chef,
                                        serials_do_not_contradict],

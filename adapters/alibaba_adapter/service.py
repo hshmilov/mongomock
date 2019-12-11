@@ -47,7 +47,7 @@ class AlibabaAdapter(AdapterBase):
 
             return alibaba_client
         except Exception as e:
-            logger.error(f'Failed to connect to client {format(self._get_client_id(client_config))}')
+            logger.exception(f'Failed to connect to client {format(self._get_client_id(client_config))}')
             raise ClientConnectionException(str(e))
 
     def _query_devices_by_client(self, client_name, client_data):

@@ -840,7 +840,7 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
             # Running the function, it should block until action is finished
             result = func(device_data, **kwargs)
         except Exception:
-            logger.exception(f'Failed running actionid {action_id}')
+            logger.warning(f'Failed running actionid {action_id}', exc_info=True)
             self._update_action_data(action_id, status='failed', output={
                 'result': 'Failure', 'product': get_exception_string()})
             return

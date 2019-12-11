@@ -152,7 +152,7 @@ class GceAdapter(AdapterBase):
                     for device_raw in provider.list_nodes():
                         yield device_raw, project.get('projectId'), firewalls
                 except Exception:
-                    logger.exception(f'Problem with project {project}')
+                    logger.warning(f'Problem with project {project}', exc_info=True)
         except Exception:
             logger.exception(f'exception in getting all projects. using alternative path')
             provider = get_driver(Provider.GCE)(

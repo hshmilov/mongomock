@@ -1475,12 +1475,12 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, ActiveDirectory
                                                            str(command_stdout),
                                                            str(command_stderr),
                                                            get_exception_string())
-            logger.error(err_log)
+            logger.warning(err_log)
             raise ValueError(err_log)
         except subprocess.SubprocessError:
             # This is a base class for all the rest of subprocess excpetions.
             err_log = f"General Execution error! command, exception: {get_exception_string()}"
-            logger.error(err_log)
+            logger.warning(err_log, exc_info=True)
             raise ValueError(err_log)
 
         if subprocess_handle.returncode != 0:
@@ -1488,12 +1488,17 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, ActiveDirectory
             if "Could not connect: [Errno 111] Connection refused" in command_stdout.decode("utf-8") \
                     or "Could not connect: [Errno 111] Connection refused" in command_stderr.decode("utf-8"):
                 err_log = f"Error - Connection Refused!"
-                logger.error(err_log)
+                logger.warning(err_log)
+                raise ValueError(err_log)
+            elif "Could not connect: [Errno 113] No route to host" in command_stdout.decode("utf-8") \
+                    or "Could not connect: [Errno 113] No route to host" in command_stderr.decode("utf-8"):
+                err_log = f"Error - No route to host!"
+                logger.warning(err_log)
                 raise ValueError(err_log)
             else:
                 err_log = f"Execution Error! command returned returncode " \
                     f"{subprocess_handle.returncode}, stdout {command_stdout} stderr {command_stderr}"
-                logger.error(err_log)
+                logger.warning(err_log)
                 raise ValueError(err_log)
 
         return command_stdout.strip()

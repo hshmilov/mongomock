@@ -154,7 +154,10 @@ class BigfixAdapter(AdapterBase):
                     device.id = device.id + '_' + hostname_for_id
                 except Exception:
                     pass
-                device.figure_os(device_raw.get('OS'))
+                try:
+                    device.figure_os((device_raw.get('OS') or '') + ' ' + (device_raw.get('Device Type') or ''))
+                except Exception:
+                    logger.warning(f'Problem with figure os {device_raw}', exc_info=True)
                 try:
                     try:
                         mac_key = None

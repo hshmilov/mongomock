@@ -222,7 +222,7 @@ class ExecutionService(PluginBase):
 
             logger.warning(f'Adapter {current_adapter} failed to run action {action_id}')
             if not adapters_tuple:
-                logger.error(f'Couldn\'t run code on action {action_id}, no more adapters to try')
+                logger.info(f'Couldn\'t run code on action {action_id}, no more adapters to try')
             else:
                 # Trying to run on a different adapter, don't need to inform the issuer
                 self._actions_thread_pool.submit(self._create_request_thread,
