@@ -7,6 +7,7 @@ from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.exception import RESTException
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.fields import Field
+from axonius.mixins.configurable import Configurable
 from axonius.utils.files import get_local_config_file
 from axonius.utils.parsing import normalize_var_name
 from infoblox_adapter.connection import InfobloxConnection
@@ -14,7 +15,7 @@ from infoblox_adapter.connection import InfobloxConnection
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
-class InfobloxAdapter(AdapterBase):
+class InfobloxAdapter(AdapterBase, Configurable):
     class MyDeviceAdapter(DeviceAdapter):
         infoblox_network_view = Field(str, 'Network View')
         served_by = Field(str, 'Served By')
@@ -35,16 +36,11 @@ class InfobloxAdapter(AdapterBase):
 
     def _connect_client(self, client_config):
         try:
-            date_filter = None
-            if self._last_seen_timedelta:
-                date_filter = datetime.datetime.now(datetime.timezone.utc) - self._last_seen_timedelta
-                date_filter = int(date_filter.timestamp())
             api_vesrion = 2.5 if client_config.get('use_api_version_25') else 2.2
             connection = InfobloxConnection(
                 api_vesrion,
                 domain=client_config['domain'], verify_ssl=client_config['verify_ssl'],
-                username=client_config['username'], password=client_config['password'],
-                date_filter=date_filter,
+                username=client_config['username'], password=client_config['password']
             )
             with connection:
                 pass  # check that the connection credentials are valid
@@ -55,8 +51,7 @@ class InfobloxAdapter(AdapterBase):
             logger.exception(message)
             raise ClientConnectionException(message)
 
-    @staticmethod
-    def _query_devices_by_client(client_name, client_data):
+    def _query_devices_by_client(self, client_name, client_data):
         """
         Get all devices from a specific Infoblox domain
 
@@ -65,8 +60,18 @@ class InfobloxAdapter(AdapterBase):
 
         :return: A json with all the attributes returned from the Infoblox Server
         """
+        date_filter = None
+        try:
+            if self.__use_discovered_data and self._last_seen_timedelta:
+                date_filter = datetime.datetime.now(datetime.timezone.utc) - self._last_seen_timedelta
+                date_filter = int(date_filter.timestamp())
+        except Exception:
+            logger.exception(f'Problem setting date_filter')
         with client_data:
-            yield from client_data.get_device_list()
+            yield from client_data.get_device_list(
+                date_filter=date_filter,
+                cidr_blacklist=self.__cidr_blacklist
+            )
 
     @staticmethod
     def _clients_schema():
@@ -220,3 +225,34 @@ class InfobloxAdapter(AdapterBase):
     @classmethod
     def adapter_properties(cls):
         return [AdapterProperty.Network]
+
+    @classmethod
+    def _db_config_schema(cls) -> dict:
+        return {
+            'items': [
+                {
+                    'name': 'cidr_blacklist',
+                    'title': 'List of CIDR to blacklist',
+                    'type': 'string'
+                },
+                {
+                    'name': 'use_discovered_data',
+                    'title': 'Filter results by the Discovered Data field',
+                    'type': 'bool'
+                }
+            ],
+            'required': [],
+            'pretty_name': 'Infoblox Configuration',
+            'type': 'array'
+        }
+
+    @classmethod
+    def _db_config_default(cls):
+        return {
+            'cidr_blacklist': None,
+            'use_discovered_data': False
+        }
+
+    def _on_config_update(self, config):
+        self.__cidr_blacklist = config.get('cidr_blacklist')
+        self.__use_discovered_data = config.get('use_discovered_data') or False

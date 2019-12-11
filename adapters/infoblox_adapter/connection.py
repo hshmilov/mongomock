@@ -1,5 +1,6 @@
 import ipaddress
 import logging
+from typing import Optional
 
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.exception import RESTException
@@ -12,9 +13,8 @@ DATE_FILTER_FIELD = 'discovered_data.last_discovered>'
 
 class InfobloxConnection(RESTConnection):
 
-    def __init__(self, api_version: float, *args, date_filter=None, **kwargs):
+    def __init__(self, api_version: float, *args, **kwargs):
         self.__api_version = api_version
-        self.__date_filter = date_filter
         super().__init__(
             *args,
             url_base_prefix=f'/wapi/v{api_version}/',
@@ -60,7 +60,8 @@ class InfobloxConnection(RESTConnection):
                 raise RESTException(f'401 Unauthorized - Please check your login credentials')
             raise
 
-    def get_device_list(self):
+    # pylint: disable=too-many-branches, arguments-differ
+    def get_device_list(self, date_filter: Optional[int] = None, cidr_blacklist: Optional[str] = None):
         # First, get all networks to get additional data about the leases
         networks = dict()
         logger.info(f'Getting networks')
@@ -80,13 +81,24 @@ class InfobloxConnection(RESTConnection):
         if self.__api_version >= 2.5:
             fields_to_return += ',fingerprint'
         params = {'_return_fields': fields_to_return}
-        if self.__date_filter:
-            params[DATE_FILTER_FIELD] = self.__date_filter
+        if date_filter:
+            params[DATE_FILTER_FIELD] = date_filter
+        cidr_blacklist_networks = []
+        if cidr_blacklist and isinstance(cidr_blacklist, str):
+            for cidr_blacklist_network in cidr_blacklist.split(','):
+                try:
+                    cidr_blacklist_networks.append(ipaddress.IPv4Network(cidr_blacklist_network.strip()))
+                except Exception:
+                    logger.exception(f'Could not add cidr {cidr_blacklist_network} to blacklist')
         for lease_raw in self.__get_items_from_url('lease', url_params=params):
             try:
                 lease_address = lease_raw.get('address')
                 if lease_address:
                     lease_address = ipaddress.IPv4Address(lease_address)
+                    if cidr_blacklist_networks:
+                        if any(lease_address in bnc for bnc in cidr_blacklist_networks):
+                            # this address is in the cidr blacklist
+                            continue
                     for network, network_data in networks.items():
                         if lease_address in network:
                             lease_raw['network_data'] = network_data
