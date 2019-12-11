@@ -14,7 +14,7 @@ class IllusiveConnection(RESTConnection):
         :param obj logger: Logger object of the system
         :param str domain: domain address for Illusive
         """
-        super().__init__(url_base_prefix='api/v1', *args, **kwargs)
+        super().__init__(url_base_prefix='api/v2', *args, **kwargs)
         self._permanent_headers = {'Authorization': self._apikey}
 
     def _connect(self):

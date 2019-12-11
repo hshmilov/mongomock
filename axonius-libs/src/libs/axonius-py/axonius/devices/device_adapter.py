@@ -35,7 +35,7 @@ AGENTS = namedtuple('Agents', (
     'observeit', 'opswat', 'paloalto_cortex', 'qualys_scans', 'quest_kace', 'redcloak', 'sccm',
     'secdo', 'sentinelone', 'signalsciences',
     'sophos', 'symantec', 'symantec_cloud_workload', 'symantec_ee', 'symantec_12', 'tanium', 'tenable_io', 'tripwire',
-    'truefort', 'guardicore', 'deep_security',
+    'truefort', 'guardicore', 'deep_security', 'illusive',
     'twistlock', 'webroot', 'aqua', 'symantec_dlp', 'bitlocker', 'wazuh'
 ))
 
@@ -54,7 +54,7 @@ AGENT_NAMES = AGENTS(
     sccm='Microsoft SCCM Client',
     qualys_scans='Qualys Agent', quest_kace='Quest Client', redcloak='Redcloak Agent', secdo='Secdo Agent',
     sentinelone='SentinelOne Agent', signalsciences='Signalsciences Agent',
-    sophos='Sophos Agent', symantec='Symantec SEP 14 Agent',
+    sophos='Sophos Agent', symantec='Symantec SEP 14 Agent', illusive='Illusive Agent',
     symantec_cloud_workload='Symantec Cloud Agent', symantec_ee='Symantec Endpoint Encryption Agent',
     tanium='Tanium Agent', tenable_io='Tenable io Agent',
     tripwire='Tripwire Agent', truefort='TrueFort Agent', twistlock='Twistlock Agent',
