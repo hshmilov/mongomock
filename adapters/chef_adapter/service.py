@@ -241,7 +241,7 @@ class ChefAdapter(AdapterBase):
                 try:
                     device_raw_automatic.get('sysconf', {}).pop('ULONG_MAX')
                 except Exception as e:
-                    logger.warning(f"Problem with pop of sys conf : {e}")
+                    logger.debug(f"Problem with pop of sys conf : {e}")
 
                 try:
                     device.chef_tags = device_raw_normal['tags']
