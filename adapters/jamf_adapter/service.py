@@ -208,6 +208,7 @@ class JamfAdapter(AdapterBase, Configurable):
                                 'real_name') if jamf_location_raw.get('real_name') else None,
                             room=jamf_location_raw.get('room') if jamf_location_raw.get('room') else None,
                             username=jamf_location_raw.get('username') if jamf_location_raw.get('username') else None)
+                        device.email = jamf_location_raw.get('email_address')
                 except Exception:
                     logger.exception(f'Problem getting Jamf Location for {device_raw}')
                 hostname = None

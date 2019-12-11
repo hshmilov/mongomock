@@ -8,13 +8,14 @@ from axonius.devices.device_adapter import DeviceAdapter, AGENT_NAMES
 from axonius.fields import ListField, Field
 from axonius.utils.datetime import parse_date
 from axonius.utils.files import get_local_config_file
+from axonius.mixins.configurable import Configurable
 from aqua_adapter.connection import AquaConnection
 from aqua_adapter.client_id import get_client_id
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
-class AquaAdapter(AdapterBase):
+class AquaAdapter(AdapterBase, Configurable):
     # pylint: disable=too-many-instance-attributes
     class MyDeviceAdapter(DeviceAdapter):
         server_name = Field(str, 'Server Name')
@@ -140,6 +141,9 @@ class AquaAdapter(AdapterBase):
             if device_raw.get('address') and isinstance(device_raw.get('address'), str):
                 device.add_nic(ips=device_raw.get('address').split(','))
             device.public_address = device_raw.get('public_address')
+            if self.__aqua_status_exclude_list and device_raw.get('status') \
+                    and device_raw.get('status') in self.__aqua_status_exclude_list:
+                return None
             device.add_agent_version(agent=AGENT_NAMES.aqua, version=device_raw.get('version'),
                                      status=device_raw.get('status'))
             device.set_raw(device_raw)
@@ -157,3 +161,28 @@ class AquaAdapter(AdapterBase):
     @classmethod
     def adapter_properties(cls):
         return [AdapterProperty.Agent]
+
+    @classmethod
+    def _db_config_schema(cls) -> dict:
+        return {
+            'items': [
+                {
+                    'name': 'aqua_status_exclude_list',
+                    'title': 'Aqua Status Exclude List',
+                    'type': 'string'
+                }
+            ],
+            'required': [
+            ],
+            'pretty_name': 'Aqua Configuration',
+            'type': 'array'
+        }
+
+    @classmethod
+    def _db_config_default(cls):
+        return {
+            'aqua_status_exclude_list': None
+        }
+
+    def _on_config_update(self, config):
+        self.__aqua_status_exclude_list = config['aqua_status_exclude_list']
