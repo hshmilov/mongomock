@@ -29,6 +29,9 @@ class TenableIoAdapter(ScannerAdapterBase, Configurable):
         status = Field(str, 'Status')
         risk_and_name_list = ListField(str, 'CSV - Vulnerability Details')
         tenable_sources = ListField(TenableSource, 'Tenable Source')
+        last_connect = Field(datetime.datetime, 'Last Connect')
+        last_scanned = Field(datetime.datetime, 'Last Scanned')
+        linked_on = Field(datetime.datetime, 'Linked On')
 
         def add_tenable_vuln(self, **kwargs):
             self.plugin_and_severities.append(TenableVulnerability(**kwargs))
@@ -318,6 +321,10 @@ class TenableIoAdapter(ScannerAdapterBase, Configurable):
             if ip:
                 device.add_nic(None, [ip])
             device.last_seen = parse_date(agent_raw.get('last_connect'))
+            device.last_connect = parse_date(agent_raw.get('last_connect'))
+            device.last_scanned = parse_date(agent_raw.get('last_scanned'))
+            device.linked_on = parse_date(agent_raw.get('linked_on'))
+
             device.has_agent = True
             device.status = agent_raw.get('status')
             device.add_agent_version(agent=AGENT_NAMES.tenable_io, version=agent_raw.get('core_version'))

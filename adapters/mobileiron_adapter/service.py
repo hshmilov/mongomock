@@ -118,7 +118,8 @@ class MobileironAdapter(AdapterBase, Configurable):
                 {
                     'name': 'url_base_path',
                     'title': 'URL Base Path (For MobileIron Core)',
-                    'type': 'string'
+                    'type': 'string',
+                    'default': 'mifs'
                 },
                 {
                     'name': 'username',

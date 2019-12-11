@@ -36,6 +36,9 @@ class MobileironConnection(RESTConnection):
         if not self._username or not self._password:
             raise RESTException('No user name or password')
         self._get('ping', do_basic_auth=True)
+        response = self._get('device_spaces/mine')
+        if not isinstance(response, dict) or not response.get('results') or not isinstance(response['results'], list):
+            raise RESTException('Could not get device_spaces/mine request')
 
     def _update_users_dict(self):
         try:
