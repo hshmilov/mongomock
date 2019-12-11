@@ -214,7 +214,6 @@ class TestEnforcementActions(TestBase):
                               f' for the following query has been triggered: {COMMON_ENFORCEMENT_QUERY}'
             _verify_in_syslog_data(syslog_server, syslog_expected)
 
-    @pytest.mark.skip('Failing on develop')
     def test_remove_tag_from_unqueried(self):
         def _check_query_result_is_tagged(query, tagged=True):
             self.devices_page.switch_to_page()
@@ -223,7 +222,6 @@ class TestEnforcementActions(TestBase):
             self.enforcements_page.wait_for_table_to_load()
             tagged_check_result = self.devices_page.get_first_row_tags() == UNTAG_UNQUERIED
             assert tagged_check_result == tagged
-        try:
             with EsxService().contextmanager(take_ownership=True):
                 self.adapters_page.switch_to_page()
                 self.adapters_page.wait_for_adapter(ESX_NAME)
@@ -263,10 +261,8 @@ class TestEnforcementActions(TestBase):
                 self.enforcements_page.click_run_button()
                 _check_query_result_is_tagged(AD_ONLY_QUERY, False)
                 _check_query_result_is_tagged(JSON_ONLY_QUERY, True)
-
-        finally:
-            self.adapters_page.clean_adapter_servers(ESX_NAME, delete_associated_entities=True)
-            self.wait_for_adapter_down(ESX_PLUGIN_NAME)
+                self.adapters_page.clean_adapter_servers(ESX_NAME, delete_associated_entities=True)
+                self.wait_for_adapter_down(ESX_PLUGIN_NAME)
 
     @flaky(max_runs=3)
     def test_tag_entities(self):
