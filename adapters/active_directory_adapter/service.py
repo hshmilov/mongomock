@@ -802,7 +802,7 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, ActiveDirectory
                         # If we have more than one key in available_ips that means
                         # that this device got two different IP's
                         # i.e duplicate! we need to tag this device
-                        logger.info(f"Found ip conflict. details: {str(available_ips)} on {host['id']}")
+                        logger.debug(f"Found ip conflict. details: {str(available_ips)} on {host['id']}")
                         self.devices.add_label([(self.plugin_unique_name, host['id'])], "IP Conflicts")
 
                         serialized_available_ips = AvailableIps(
