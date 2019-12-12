@@ -91,7 +91,7 @@ QUALYS_CATEGORIES = ['Debian',
 
 QUALYS_VULN_TYPES = [
     'Potential Vulnerability',
-    'Vulnerability',
+    'Confirmed Vulnerability',
     'Information Gathered'
 ]
 
@@ -387,10 +387,14 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
                                 vuln_type = vuln_type.strip()
                                 severity = severity.strip()
 
+                        if vuln_type == 'Vulnerability':
+                            vuln_type = 'Confirmed Vulnerability'
+
                         device.add_qualys_vuln(
                             vuln_id=(vuln_raw.get('HostAssetVuln') or {}).get('hostInstanceVulnId'),
                             last_found=parse_date((vuln_raw.get('HostAssetVuln') or {}).get('lastFound')),
                             first_found=parse_date((vuln_raw.get('HostAssetVuln') or {}).get('firstFound')),
+                            qid=qid_info_entry.get('QID'),
                             severity=severity,
                             vuln_type=vuln_type,
                             title=qid_info_entry.get('Title'),
