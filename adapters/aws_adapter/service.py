@@ -570,7 +570,7 @@ class AwsAdapter(AdapterBase, Configurable):
                                     logger.warning(error_string)
                                     warnings_messages.append(error_string)
                         except Exception as e:
-                            logger.exception(f'problem with {current_try}')
+                            logger.warning(f'problem with {current_try}', exc_info=True)
                             failed_connections.append(f'{current_try}: {str(e)}')
 
                     # Now we have all clients connected for every region for this account. we start with getting info
@@ -694,7 +694,7 @@ class AwsAdapter(AdapterBase, Configurable):
                             logger.warning(error_string)
                             warnings_messages.append(error_string)
                 except Exception as e:
-                    logger.exception(f'problem with {current_try}')
+                    logger.warning(f'problem with {current_try}', exc_info=True)
                     failed_connections.append(f'{current_try}: {str(e)}')
 
         total_connections = len(successful_connections) + len(failed_connections)
