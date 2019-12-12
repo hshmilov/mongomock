@@ -90,6 +90,73 @@ class TestDashboard(TestBase):
         assert self.dashboard_page.find_see_all_message()
         self.dashboard_page.assert_congratulations_message_found()
 
+    def test_dashboard_read_only_user_pagination(self):
+        """
+        Tests pagination in dashboard with read only user
+        Tests Issue: https://axonius.atlassian.net/browse/AX-5155
+        """
+        self.dashboard_page.switch_to_page()
+        self.base_page.run_discovery()
+        self._create_get_paginator_segmentation_card(run_discovery=False,
+                                                     module='Devices',
+                                                     field='Host Name',
+                                                     title=self.TEST_PAGINATOR_ON_SEGMENTATION_HISTOGRAM,
+                                                     view_name='')
+        self.settings_page.switch_to_page()
+        self.settings_page.click_manage_users_settings()
+        self.settings_page.create_new_user(READ_WRITE_USERNAME, NEW_PASSWORD,
+                                           FIRST_NAME, LAST_NAME,
+                                           role_name=self.settings_page.ADMIN_ROLE)
+        self.settings_page.create_new_user(READ_ONLY_USERNAME, NEW_PASSWORD,
+                                           FIRST_NAME, LAST_NAME,
+                                           role_name=self.settings_page.READ_ONLY_ROLE)
+        self.login_page.logout()
+        self.login_page.wait_for_login_page_to_load()
+        self.login_page.login(username=READ_WRITE_USERNAME, password=NEW_PASSWORD)
+        self.dashboard_page.switch_to_page()
+        self.dashboard_page.wait_for_card_spinner_to_end()
+        # Give it some extra time to load since the wait isn't usually enough
+        self.settings_page.switch_to_page()
+        self.dashboard_page.switch_to_page()
+        # fetch chart again since all elements will be stale from relog
+        segmentation_card = self.dashboard_page.get_card(self.TEST_PAGINATOR_ON_SEGMENTATION_HISTOGRAM)
+        # create reference to the histogram within the card
+        histograms_chart = self.dashboard_page.get_histogram_chart_from_card(segmentation_card)
+        limit = int(self.dashboard_page.get_paginator_num_of_items(histograms_chart))
+        total_num_of_items = int(self.dashboard_page.get_paginator_total_num_of_items(histograms_chart))
+        # calculate the total number of pages in Paginator
+        # by this way we ensure to have the exact num of pages and cover all the cases even if the
+        # total_num_of_items % limit has a remainder (round up the result)
+        num_of_pages = ceil(total_num_of_items / limit)
+        # iterate incrementally on all the pages (next)
+        for page_number in range(1, num_of_pages + 1):
+            if page_number == 1:
+                self.dashboard_page.click_to_next_page(histograms_chart)
+            elif page_number == num_of_pages:
+                break
+            else:
+                self.dashboard_page.click_to_next_page(histograms_chart)
+
+    def test_dashboard_segmentation_clickable(self):
+        """
+        Tests Link from pages filter data correctly
+        Tests Issue: https://axonius.atlassian.net/browse/AX-5150
+        """
+        self.dashboard_page.switch_to_page()
+        self.base_page.run_discovery()
+        histograms_chart = self._create_get_paginator_segmentation_card(
+            run_discovery=False,
+            module='Devices',
+            field='Host Name',
+            title=self.TEST_PAGINATOR_ON_SEGMENTATION_HISTOGRAM,
+            view_name='')
+        # create reference to the histogram within the card
+        value = self.dashboard_page.get_histogram_items_title_on_pagination(histograms_chart)[0]
+        self.dashboard_page.get_histogram_line_from_histogram(histograms_chart, 1).click()
+        self.devices_page.wait_for_table_to_load()
+        assert self.devices_page.get_table_count() == 1
+        assert value in self.devices_page.find_search_value()
+
     def test_dashboard_empty_title(self):
         """
         Test empty dashboard card with no title, save won't be clickable (disabled) and will "fail" then we actually

@@ -30,10 +30,9 @@ class TestUserPermissions(TestBase):
 
     def test_new_read_only_user(self):
         self.settings_page.switch_to_page()
-
         # to fill up devices and users
         self.base_page.run_discovery()
-
+        self.settings_page.switch_to_page()
         self.settings_page.click_manage_users_settings()
         self.settings_page.create_new_user(ui_consts.RESTRICTED_USERNAME,
                                            ui_consts.NEW_PASSWORD,
