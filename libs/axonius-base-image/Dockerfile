@@ -15,7 +15,7 @@ ENV HOME /home/axonius
 RUN apt-get update && \
     apt-get install -y ssh git libxmlsec1-dev \
     supervisor software-properties-common python-software-properties freetds-dev freetds-bin unixodbc-dev tdsodbc && \
-    add-apt-repository ppa:jonathonf/python-3.6 && \
+    add-apt-repository ppa:deadsnakes/ppa && \
     apt-get update && \
     apt-get install -y python3.6 python3.6-dev python3.6-venv ipython python-pip && \
     curl https://bootstrap.pypa.io/get-pip.py | python3.6 && \
