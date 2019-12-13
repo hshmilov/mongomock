@@ -68,18 +68,20 @@ def decrypt_action_data(mongo_client: MongoClient, mongo_enc: ClientEncryption, 
     :param action_name: action name for decryption
     :return: None
     """
-    saved_actions = mongo_client.client['saved_actions'].find({
+    action_data = mongo_client['reports']['saved_actions'].find_one({
         'name': action_name
     })
-    for saved_action in saved_actions:
-        action_name = saved_action.get('name')
-        config = saved_action.get('action', {}).get('config')
-        if config:
-            for key, val in config.items():
-                if val:
-                    config[key] = db_decrypt(mongo_enc, val)
-            print(f'{action_name}:')
-            pprint(config)
+    if not action_data:
+        print(f'action "{action_name}" was not found')
+        return
+
+    config = action_data.get('action', {}).get('config')
+    if config:
+        for key, val in config.items():
+            if val:
+                config[key] = db_decrypt(mongo_enc, val)
+        print(f'{action_name}:')
+        pprint(config)
 
 
 def decrypt_adapter_data(mongo_client: MongoClient, mongo_enc: ClientEncryption, plugin_unique_name: str) -> None:
