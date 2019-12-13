@@ -57,7 +57,7 @@ class ScannerCorrelatorBase(object):
             ips = adapter.get(NORMALIZED_IPS)
             if ips:
                 for ip in ips:
-                    if ip:
+                    if ip and ip != '127.0.0.1':
                         self._all_adapters_by_ips.setdefault(ip, []).append(adapter)
 
         self._all_adapters_by_mac_from_same_plugin = {}
