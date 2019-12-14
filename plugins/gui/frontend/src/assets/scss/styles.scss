@@ -138,6 +138,10 @@ input, textarea {
   border-style: inset;
   border-width: 2px;
   background: white;
+  
+  &[type='text'] {
+    width: 100%;
+  }
 }
 
 input:disabled {
@@ -446,7 +450,11 @@ table {
     }
   }
 }
+.md-datepicker-overlay {
+  z-index: 2000;
+}
 .md-datepicker-dialog {
+  z-index: 2001;
   background-color: $theme-white;
   .md-datepicker-header, .md-datepicker-selected {
     background: $theme-orange;

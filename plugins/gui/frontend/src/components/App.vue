@@ -234,7 +234,7 @@ export default {
 #app {
   height: 100vh;
   width: 100vw;
-  position: fixed;
+  position: relative;
 
   #getting-started-fab {
     opacity: 0;

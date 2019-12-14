@@ -58,6 +58,7 @@
         display: grid;
 
         .modal-container {
+            position: relative;
             margin: auto;
             padding: 24px;
             background-color: $theme-white;

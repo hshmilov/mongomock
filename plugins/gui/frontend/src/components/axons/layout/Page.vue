@@ -53,8 +53,8 @@
         flex-direction: column;
         background: $grey-0;
         padding: 12px 24px 24px 264px;
-        position: relative;
-        margin-top: 60px;
+        position: absolute;
+        top: 60px;
         width: 100vw;
         height: calc(100vh - 60px);
 
