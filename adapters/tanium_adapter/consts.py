@@ -48,6 +48,7 @@ GET_DISCOVER_ASSETS = True
 ENDPOINT_TYPE = 'System Status Device'
 DISCOVERY_TYPE = 'Discover Device'
 SQ_TYPE = 'Saved Question Device'
+ASSET_TYPE = 'Asset Device'
 DISCOVER_METHODS = ['arp', 'connected', 'script', 'nmap', 'managed']
 STRONG_SENSORS = [
     'MAC Address',

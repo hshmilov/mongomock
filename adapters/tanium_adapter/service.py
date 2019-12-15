@@ -2,9 +2,11 @@
 import datetime
 import logging
 
+import ipaddress
+
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
-from axonius.devices.device_adapter import DeviceAdapter, AGENT_NAMES
+from axonius.devices.device_adapter import DeviceAdapter, DeviceAdapterOS, AGENT_NAMES
 from axonius.utils.files import get_local_config_file
 from axonius.utils.parsing import normalize_var_name, format_ip
 from axonius.smart_json_class import SmartJsonClass
@@ -13,12 +15,50 @@ from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.connection import RESTException
 from axonius.fields import Field, ListField, JsonStringFormat
 from tanium_adapter.connection import TaniumConnection
-from tanium_adapter.consts import ENDPOINT_TYPE, DISCOVERY_TYPE, DISCOVER_METHODS, SQ_TYPE
+from tanium_adapter.consts import ENDPOINT_TYPE, DISCOVERY_TYPE, DISCOVER_METHODS, SQ_TYPE, ASSET_TYPE
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
-def map_tanium_value_type(value, value_type: str):
+def check_user_name(user_name):
+    check = format(user_name).lower()
+    skips = ['uninitialized', 'waiting for login']
+    if user_name and not any([x in check for x in skips]):
+        return True
+    return False
+
+
+def calc_bytes_gb(num):
+    if num is None:
+        return None
+    try:
+        return num / (1024 ** 3)
+    except Exception:
+        logger.error(f'unable to convert bytes {num} to gb')
+        return None
+
+
+def calc_ms_days(num):
+    if num is None:
+        return None
+    try:
+        return num / 1000 / 60 / 60 / 24
+    except Exception:
+        logger.error(f'unable to convert ms {num} to days')
+        return None
+
+
+def calc_ghz(num):
+    if num is None:
+        return None
+    try:
+        return num / 1000 / 1000 / 1000
+    except Exception:
+        logger.error(f'unable to convert {num} to ghz')
+        return None
+
+
+def map_tanium_sq_value_type(value, value_type: str):
     """Value type mappings from tanium.
 
     Value type maps:
@@ -75,7 +115,7 @@ def map_tanium_value_type(value, value_type: str):
 
 
 # pylint: disable=R0912
-def put_tanium_dynamic_field(entity: SmartJsonClass, name: str, value_map: dict, is_sub_field: bool = False):
+def put_tanium_sq_dynamic_field(entity: SmartJsonClass, name: str, value_map: dict, is_sub_field: bool = False):
     value = value_map.get('value', None)
     value_type = value_map.get('type', None)
 
@@ -106,13 +146,18 @@ def put_tanium_dynamic_field(entity: SmartJsonClass, name: str, value_map: dict,
             smartjsonclass_instance = entity.get_field_type(key)._type()
 
             for d_key, d_map in item.items():
-                put_tanium_dynamic_field(entity=smartjsonclass_instance, name=d_key, value_map=d_map, is_sub_field=True)
+                put_tanium_sq_dynamic_field(
+                    entity=smartjsonclass_instance,
+                    name=d_key,
+                    value_map=d_map,
+                    is_sub_field=True,
+                )
 
             entity[key].append(smartjsonclass_instance)
     else:
         if not entity.does_field_exist(field_name=key):
             try:
-                value, field_args = map_tanium_value_type(value=value, value_type=value_type)
+                value, field_args = map_tanium_sq_value_type(value=value, value_type=value_type)
             except Exception:
                 logger.exception(f'Failed to map value {value} with type {value_type}')
                 return
@@ -129,9 +174,9 @@ def put_tanium_dynamic_field(entity: SmartJsonClass, name: str, value_map: dict,
 class TaniumAdapter(AdapterBase):
     # pylint: disable=too-many-instance-attributes
     class MyDeviceAdapter(DeviceAdapter):
-        tanium_type = Field(str, 'Tanium Device Type', enum=[ENDPOINT_TYPE, DISCOVERY_TYPE, SQ_TYPE])
-        created_at = Field(datetime.datetime, 'Discover Created At')
-        updated_at = Field(datetime.datetime, 'Discover Updated At')
+        tanium_type = Field(str, 'Tanium Device Type', enum=[ENDPOINT_TYPE, DISCOVERY_TYPE, SQ_TYPE, ASSET_TYPE])
+        created_at = Field(datetime.datetime, 'Created At')
+        updated_at = Field(datetime.datetime, 'Updated At')
         is_managed = Field(bool, 'Discover Is Managed')
         unmanageable = Field(bool, 'Discover Unmanageable')
         ignored = Field(bool, 'Discover Ignored')
@@ -144,6 +189,13 @@ class TaniumAdapter(AdapterBase):
         sq_query_text = Field(str, 'Saved Question Query Text')
         sq_expiration = Field(datetime.datetime, 'Saved Question Expiration')
         sq_selects = ListField(str, 'Saved Question Selects')
+        server_name = Field(str, 'Tanium Server')
+        server_version = Field(str, 'Tanium Server Version', json_format=JsonStringFormat.version)
+        asset_report = Field(str, 'Asset Report Name')
+        asset_report_description = Field(str, 'Asset Report Description')
+        asset_report_category = Field(str, 'Asset Report Category')
+        asset_report_created_at = Field(datetime.datetime, 'Asset Report Created At')
+        asset_report_updated_at = Field(datetime.datetime, 'Asset Report Updated At')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -158,14 +210,19 @@ class TaniumAdapter(AdapterBase):
 
     @staticmethod
     def get_connection(client_config):
-        connection = TaniumConnection(domain=client_config['domain'],
-                                      verify_ssl=client_config['verify_ssl'],
-                                      username=client_config['username'],
-                                      password=client_config['password'],
-                                      https_proxy=client_config.get('https_proxy'))
+        connection = TaniumConnection(
+            domain=client_config['domain'],
+            verify_ssl=client_config['verify_ssl'],
+            username=client_config['username'],
+            password=client_config['password'],
+            https_proxy=client_config.get('https_proxy'),
+        )
         with connection:
-            fetch_discovery = (client_config.get('fetch_discovery') or False)
-            connection.advanced_connect(sq_name=client_config.get('sq_name'), fetch_discovery=fetch_discovery)
+            connection.advanced_connect(
+                sq_name=client_config.get('sq_name'),
+                fetch_discovery=(client_config.get('fetch_discovery') or False),
+                asset_dvc=client_config.get('asset_dvc'),
+            )
         return connection
 
     def _connect_client(self, client_config):
@@ -189,14 +246,19 @@ class TaniumAdapter(AdapterBase):
         """
         connection, client_config = client_data
         fetch_discovery = (client_config.get('fetch_discovery') or False)
+        asset_dvc = client_config.get('asset_dvc')
         sq_name = client_config.get('sq_name')
         sq_max_hours = (client_config.get('sq_max_hours') or 0)
         sq_refresh = (client_config.get('sq_refresh') or False)
         with connection:
-            yield from connection.get_device_list(fetch_discovery=fetch_discovery,
-                                                  sq_name=sq_name,
-                                                  sq_max_hours=sq_max_hours,
-                                                  sq_refresh=sq_refresh)
+            yield from connection.get_device_list(
+                fetch_discovery=fetch_discovery,
+                asset_dvc=asset_dvc,
+                sq_name=sq_name,
+                sq_max_hours=sq_max_hours,
+                sq_refresh=sq_refresh,
+                client_name=client_name,
+            )
 
     @staticmethod
     def _clients_schema():
@@ -227,6 +289,11 @@ class TaniumAdapter(AdapterBase):
                     'name': 'fetch_discovery',
                     'type': 'bool',
                     'title': 'Fetch devices from Tanium Discover Module'
+                },
+                {
+                    'name': 'asset_dvc',
+                    'type': 'string',
+                    'title': 'Tanium Asset Module Report Name'
                 },
                 {
                     'name': 'sq_name',
@@ -260,19 +327,21 @@ class TaniumAdapter(AdapterBase):
                 'password',
                 'sq_refresh',
                 'verify_ssl',
-                'fetch_discovery'
+                'fetch_discovery',
             ],
             'type': 'array'
         }
 
     # pylint: disable=too-many-branches, too-many-statements, too-many-nested-blocks
-    def _create_endpoint_device(self, device_raw):
+    def _create_endpoint_device(self, device_raw, metadata):
         try:
             device = self._new_device_adapter()
+            device.server_name = metadata['server_name']
+            device.server_version = metadata['server_version']
             device.tanium_type = ENDPOINT_TYPE
             device_id = device_raw.get('computer_id')
             if not device_id:
-                logger.warning(f'Bad device with no ID {device_raw}')
+                logger.warning(f'Bad system status device with no ID {device_raw}')
                 return None
             device.id = str(device_id) + '_' + device_raw.get('host_name')
             device.uuid = str(device_raw.get('computer_id')) if device_raw.get('computer_id') else None
@@ -288,18 +357,22 @@ class TaniumAdapter(AdapterBase):
             device.set_raw(device_raw)
             return device
         except Exception:
-            logger.exception(f'Problem with fetching Tanium Device {device_raw}')
+            logger.exception(f'Problem with fetching System Status Device {device_raw}')
             return None
 
     # pylint: disable=too-many-branches, too-many-statements, too-many-nested-blocks
-    def _create_discovery_device(self, device_raw):
+    def _create_discovery_device(self, device_raw, metadata):
         try:
             device = self._new_device_adapter()
+            device.server_name = metadata['server_name']
+            device.server_version = metadata['server_version']
             device.tanium_type = DISCOVERY_TYPE
-            device.adapter_properties = [AdapterProperty.Network]
+            is_managed = device_raw.get('ismanaged') == 1
+            if not is_managed:
+                device.adapter_properties = [AdapterProperty.Network]
             device_id = device_raw.get('macaddress')
             if not device_id:
-                logger.warning(f'Bad device with no ID {device_raw}')
+                logger.warning(f'Bad discover module device with no ID {device_raw}')
                 return None
             device.id = str(device_id) + '_' + str(device_raw.get('computerid'))
             ips = [device_raw.get('ipaddress')] if device_raw.get('ipaddress') else None
@@ -328,42 +401,193 @@ class TaniumAdapter(AdapterBase):
                             device.methods_used.append(key)
             except Exception:
                 logger.exception(f'Problem getting methods for {device_raw}')
-            device.updated_at = parse_date(device_raw.get('updatedAt'))
-            device.last_seen = parse_date(device_raw.get('lastDiscoveredAt'))
-            device.created_at = parse_date(device_raw.get('createdAt'))
-            device.first_seen = parse_date(device_raw.get('createdAt'))
+
+            updated_at = parse_date(device_raw.get('updatedAt'))
+            created_at = parse_date(device_raw.get('createdAt'))
+            discovered_at = parse_date(device_raw.get('lastDiscoveredAt'))
+
+            device.updated_at = updated_at
+            device.last_seen = discovered_at
+            device.created_at = created_at
+            device.first_seen = created_at
+
             if isinstance(device_raw.get('unmanageable'), int):
                 device.unmanageable = device_raw.get('unmanageable') == 1
             if isinstance(device_raw.get('ismanaged'), int):
-                device.is_managed = device_raw.get('ismanaged') == 1
+                device.is_managed = is_managed
             if isinstance(device_raw.get('ignored'), int):
                 device.ignored = device_raw.get('ignored') == 1
             device.set_raw(device_raw)
             return device
         except Exception:
-            logger.exception(f'Problem with fetching Tanium Device {device_raw}')
+            logger.exception(f'Problem with fetching Discover Device {device_raw}')
             return None
 
     # pylint: disable=too-many-branches,too-many-locals
-    def _create_sq_device(self, device_raw):
+    def _create_asset_device(self, device_raw, metadata):
+        try:
+            device_raw, report_meta = device_raw
+            report_info = report_meta.get('data', {}).get('report', {})
+            device = self._new_device_adapter()
+
+            computer_id = device_raw.get('computer_id')
+            system_uuid = device_raw.get('system_uuid')
+
+            if not computer_id and not system_uuid:
+                logger.warning(f'Bad asset module device with no computer_id or system_uuid {device_raw}')
+                return None
+
+            if not computer_id:
+                device.adapter_properties = [AdapterProperty.Network]
+
+            use_id = computer_id or system_uuid
+            device.id = f'ASSET_DEVICE_{use_id}'
+            device.uuid = format(use_id)
+
+            updated_at = parse_date(device_raw.get('updated_at'))
+            created_at = parse_date(device_raw.get('created_at'))
+
+            device.created_at = created_at
+            device.first_seen = created_at
+            device.updated_at = updated_at
+            device.last_seen = updated_at
+
+            device.server_name = metadata.get('server_name')
+            device.server_version = metadata.get('server_version')
+            device.tanium_type = ASSET_TYPE
+            device.asset_report = report_info.get('reportName')
+            device.asset_report_description = report_info.get('description')
+            device.asset_report_category = report_info.get('categoryName')
+            device.asset_report_created_at = parse_date(report_info.get('createdAt'))
+            device.asset_report_updated_at = parse_date(report_info.get('updatedAt'))
+            user_name = device_raw.get('user_name')
+            if check_user_name(user_name):
+                device.last_used_users.append(user_name)
+            device.hostname = device_raw.get('computer_name')
+            device.device_serial = device_raw.get('serial_number')
+            device.figure_os(device_raw.get('operating_system') or device_raw.get('os_platform'))
+            service_pack = device_raw.get('service_pack')
+            if service_pack and 'no service pack found' not in format(service_pack).lower():
+                device.os.sp = service_pack
+            device.os.build = device_raw.get('os_version')
+            device.device_manufacturer = device_raw.get('manufacturer')
+            device.device_model = device_raw.get('model')
+            device.domain = device_raw.get('domain_name')
+            device.total_physical_memory = calc_bytes_gb(device_raw.get('ram'))
+            device.uptime = calc_ms_days(device_raw.get('uptime'))
+            device.add_cpu(
+                name=device_raw.get('cpu_name'),
+                cores=device_raw.get('cpu_core'),
+                ghz=calc_ghz(device_raw.get('cpu_speed')),
+                manufacturer=device_raw.get('cpu_manufacturer'),
+            )
+            adapters = device_raw.get('ci_network_adapter', []) or []
+            for adapter in adapters:
+                try:
+                    subnet_mask = adapter.get('subnet_mask')
+                    ipv4_address = adapter.get('ipv4_address')
+                    try:
+                        subnet_mask = [format(ipaddress.ip_network(subnet_mask))]
+                    except Exception:
+                        logger.exception(f'Problem parsing subnet {subnet_mask} for network adapter {adapter}')
+                        subnet_mask = None
+
+                    device.add_nic(
+                        ips=[ipv4_address] if ipv4_address else None,
+                        mac=adapter.get('mac_address'),
+                        subnets=subnet_mask,
+                        gateway=adapter.get('gateway'),
+                        name=adapter.get('name'),
+
+                    )
+                except Exception:
+                    logger.exception(f'Problem parsing network adapter {adapter}')
+
+            ip_address = device_raw.get('ip_address')
+            if not adapters and ip_address:
+                device.add_nic(ips=[ip_address])
+
+            apps_raw = device_raw.get('ci_installed_application', []) or []
+            for app_raw in apps_raw:
+                try:
+                    device.add_installed_software(
+                        name=app_raw.get('normalized_name') or app_raw.get('name'),
+                        version=app_raw.get('version'),
+                        vendor=app_raw.get('normalized_vendor') or app_raw.get('vendor'),
+
+                    )
+                except Exception:
+                    logger.exception(f'Problem parsing app {app_raw}')
+
+            ms_apps_raw = device_raw.get('ci_windows_installer_application', []) or []
+            for app_raw in ms_apps_raw:
+                try:
+                    device.add_installed_software(
+                        name=app_raw.get('name'),
+                        version=app_raw.get('version'),
+                        vendor=app_raw.get('vendor'),
+                    )
+                except Exception:
+                    logger.exception(f'Problem parsing ms app {app_raw}')
+
+            disks = device_raw.get('ci_logical_disk', []) or []
+            for disk in disks:
+                try:
+                    disk_device = disk.get('name')
+                    disk_path = disk.get('mount_point')
+
+                    skips = ['loop', 'tmp', 'overlay']
+                    check = format(disk_device).lower()
+                    if any([(x in check or x in disk_device) for x in skips]) or not disk_path:
+                        continue
+
+                    device.add_hd(
+                        path=disk_path,
+                        device=disk_device,
+                        file_system=disk.get('file_system'),
+                        total_size=calc_bytes_gb(disk.get('size')),
+                        free_size=calc_bytes_gb(disk.get('free_space')),
+                        description=disk.get('media_type'),
+                    )
+                except Exception:
+                    logger.exception(f'Problem parsing disk {disk}')
+
+            device.set_raw(device_raw)
+            return device
+        except Exception:
+            logger.exception(f'Problem with fetching Asset Device {device_raw}')
+            return None
+
+    # pylint: disable=too-many-branches,too-many-locals
+    def _create_sq_device(self, device_raw, metadata):
         def _check_sensor_data_one_item(sensor_data):
             if not sensor_data.get('value') or not isinstance(sensor_data.get('value'), list):
                 return None
-            return sensor_data.get('value')[0]
+            value = sensor_data.get('value')[0]
+            if 'n/a' in format(value).lower():
+                return None
+            return value
 
         def _check_sensor_data_full_list(sensor_data):
             if not sensor_data.get('value') or not isinstance(sensor_data.get('value'), list) \
                     or sensor_data.get('value')[0] == '[no results]':
                 return None
-            return sensor_data.get('value')
+
+            value = sensor_data.get('value')
+            if any(['n/a' in format(x) for x in value]):
+                return None
+            return value
 
         try:
             device_raw, sq_name, question = device_raw
             device = self._new_device_adapter()
+            device.server_name = metadata['server_name']
+            device.server_version = metadata['server_version']
             device.tanium_type = SQ_TYPE
             device.sq_name = sq_name
             device.sq_query_text = question.get('query_text')
             device.sq_expiration = parse_date(question.get('expiration'))
+            device.os = DeviceAdapterOS()
 
             try:
                 device.sq_selects = [x.get('sensor', {}).get('name') for x in question.get('selects', [])]
@@ -371,7 +595,7 @@ class TaniumAdapter(AdapterBase):
                 logger.exception(f'Problem with parsing sensors from selects in question {question}')
 
             if 'Computer ID' not in device_raw:
-                logger.warning(f'Bad device with no id {device_raw}')
+                logger.warning(f'Bad saved question device with no id {device_raw}')
                 return None
             for sensor_name, sensor_data in device_raw.items():
                 try:
@@ -395,6 +619,7 @@ class TaniumAdapter(AdapterBase):
                             try:
                                 app_name = (app_raw.get('Name') or {}).get('value')
                                 app_version = (app_raw.get('Version') or {}).get('value')
+                                app_version = None if 'n/a' in format(app_version).lower() else app_version
                                 device.add_installed_software(name=app_name,
                                                               version=app_version)
                             except Exception:
@@ -402,7 +627,8 @@ class TaniumAdapter(AdapterBase):
                     elif sensor_name == 'Chassis Type':
                         device.chassis_type = _check_sensor_data_one_item(sensor_data)
                     elif sensor_name == 'Last Logged In User':
-                        device.last_used_users = _check_sensor_data_full_list(sensor_data)
+                        users = [x for x in _check_sensor_data_full_list(sensor_data) if check_user_name(x)]
+                        device.last_used_users.extend(users)
                     elif sensor_name == 'Last Reboot':
                         device.set_boot_time(boot_time=parse_date(_check_sensor_data_one_item(sensor_data)))
                     elif sensor_name == 'Model':
@@ -413,6 +639,9 @@ class TaniumAdapter(AdapterBase):
                         if _check_sensor_data_one_item(sensor_data) \
                                 and _check_sensor_data_one_item(sensor_data) != '[No Tags]':
                             device.sensor_tags = _check_sensor_data_full_list(sensor_data)
+                    elif sensor_name == 'Open Ports':
+                        for port_raw in _check_sensor_data_full_list(sensor_data):
+                            device.add_open_port(port_id=port_raw)
                     elif sensor_name == 'CPU Details':
                         cpu_data = _check_sensor_data_one_item(sensor_data)
                         if not isinstance(cpu_data, dict):
@@ -442,29 +671,51 @@ class TaniumAdapter(AdapterBase):
                             device.add_service(display_name=display_name,
                                                name=service_status,
                                                status=service_name)
+                    elif sensor_name == 'Service Pack':
+                        service_pack = _check_sensor_data_one_item(sensor_data)
+                        if service_pack and 'no service pack found' not in format(service_pack).lower():
+                            device.os.sp = service_pack
+                    elif sensor_name in ['RAM', 'Total Memory']:
+                        try:
+                            total_memory = format(_check_sensor_data_one_item(sensor_data)).lower.replace(' mb', '')
+                            device.total_physical_memory = int(total_memory) / 1024
+                        except Exception:
+                            logger.exception(f'Problem parsing total memory from {sensor_name}: {sensor_data}')
+                    elif sensor_name == 'Uptime':
+                        try:
+                            device.uptime = int(_check_sensor_data_one_item(sensor_data).lower.replace(' days', ''))
+                        except Exception:
+                            logger.exception(f'Problem parsing uptime from {sensor_name}: {sensor_data}')
                 except Exception:
                     logger.exception(f'Problem with sensor name {sensor_name}')
 
                 try:
-                    put_tanium_dynamic_field(entity=device, name=sensor_name, value_map=sensor_data, is_sub_field=False)
+                    put_tanium_sq_dynamic_field(
+                        entity=device,
+                        name=sensor_name,
+                        value_map=sensor_data,
+                        is_sub_field=False,
+                    )
                 except Exception:
                     logger.exception(f'Failed putting key {sensor_name!r} with value {sensor_data!r}')
 
             device.set_raw(device_raw)
             return device
         except Exception:
-            logger.exception(f'Problem with fetching Tanium Device {device_raw}')
+            logger.exception(f'Problem with fetching Saved Question Device {device_raw}')
             return None
 
     def _parse_raw_data(self, devices_raw_data):
-        for device_raw, device_type in devices_raw_data:
+        for device_raw, metadata, device_type in devices_raw_data:
             device = None
             if device_type == ENDPOINT_TYPE:
-                device = self._create_endpoint_device(device_raw)
+                device = self._create_endpoint_device(device_raw=device_raw, metadata=metadata)
             elif device_type == DISCOVERY_TYPE:
-                device = self._create_discovery_device(device_raw)
+                device = self._create_discovery_device(device_raw=device_raw, metadata=metadata)
             elif device_type == SQ_TYPE:
-                device = self._create_sq_device(device_raw)
+                device = self._create_sq_device(device_raw=device_raw, metadata=metadata)
+            elif device_type == ASSET_TYPE:
+                device = self._create_asset_device(device_raw=device_raw, metadata=metadata)
             if device:
                 yield device
 

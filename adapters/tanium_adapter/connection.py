@@ -12,7 +12,7 @@ from axonius.clients.rest.exception import RESTException
 from tanium_adapter.consts import MAX_DEVICES_COUNT,\
     CACHE_EXPIRATION, PAGE_SIZE_GET, ENDPOINT_TYPE, PAGE_SIZE_DISCOVER,\
     DISCOVERY_TYPE, SLEEP_GET_RESULT, PAGE_SIZE_GET_RESULT, RETRIES_REFRESH,\
-    SLEEP_REFRESH, SLEEP_POLL, SQ_TYPE, STRONG_SENSORS
+    SLEEP_REFRESH, SLEEP_POLL, SQ_TYPE, STRONG_SENSORS, ASSET_TYPE
 
 
 logger = logging.getLogger(f'axonius.{__name__}')
@@ -45,60 +45,69 @@ class TaniumConnection(RESTConnection):
                                   'User-Agent': 'axonius/tanium_adapter'},
                          **kwargs)
 
-    def advanced_connect(self, fetch_discovery, sq_name):
-        # NEW: TEST USER HAS PERMISSIONS TO GET system_status
+    def advanced_connect(self, asset_dvc, fetch_discovery, sq_name):
+        # TEST USER HAS PERMISSIONS TO GET system_status
         options = {'row_count': 1, 'row_start': 0}
         self._tanium_get('system_status', options=options)
 
-        # NEW: TEST SQ EXISTS AND USER HAS PERMISSIONS
+        # TEST SAVED QUESTION EXISTS AND USER HAS PERMISSIONS
         if sq_name:
-            sq = self._get_by_name(objtype='saved_questions', value=sq_name)
-            question = sq.get('question', {})
-            selects = question.get('selects', [])
-            sensor_names = [x.get('sensor', {}).get('name') for x in selects]
-            if 'Computer ID' not in sensor_names:
-                raise RESTException('No sensor named “Computer ID” found in Saved Question')
-            if not any([x in STRONG_SENSORS for x in sensor_names]):
-                found_sensors = ', '.join(sensor_names)
-                strong_sensors = ', '.join(STRONG_SENSORS)
-                msg = (
-                    f'No strong identifier sensor found. Found sensors: {found_sensors}, '
-                    f'strong identifier sensors: {strong_sensors}'
-                )
-                raise RESTException(msg)
+            self._get_saved_question(name=sq_name)
 
-        # NEW: TEST DISCOVER EXISTS AND USER HAS PERMISSIONS
+        # TEST DISCOVER MODULE EXISTS AND USER HAS PERMISSIONS
         if fetch_discovery:
-            body_params = {
-                'Id': 'all',
-                'Name': 'All Interfaces',
-                'Filter': [],
-                'Page': {'Size': 1, 'Number': 1},
-                'Select': [
-                    {'Field': 'Asset.macaddress'},
-                    {'Field': 'Asset.computerid'},
-                    {'Field': 'Asset.macorganization'},
-                    {'Field': 'Asset.hostname'},
-                    {'Field': 'Asset.ipaddress'},
-                    {'Field': 'Asset.natipaddress'},
-                    {'Field': 'Asset.tags'},
-                    {'Field': 'Asset.os'},
-                    {'Field': 'Asset.osgeneration'},
-                    {'Field': 'Asset.ports'},
-                    {'Field': 'Asset.method'},
-                    {'Field': 'Asset.updatedAt'},
-                    {'Field': 'Asset.createdAt'},
-                    {'Field': 'Asset.lastManagedAt'},
-                    {'Field': 'Asset.lastDiscoveredAt'},
-                    {'Field': 'Asset.unmanageable'},
-                    {'Field': 'Asset.ismanaged'},
-                    {'Field': 'Asset.ignored'},
-                ],
-                'KeywordFilter': '',
-                'CountsOnly': False,
-                'ManagementCounts': False,
-            }
-            self._post('plugin/products/discover/report', body_params=body_params)
+            self._get_discover_page(page_size=1, page_count=1)
+
+        # TEST ASSET MODULE EXISTS, ASSET REPORT EXISTS, AND USER HAS PERMISSIONS
+        if asset_dvc:
+            self._get_asset_report_meta(report_name=asset_dvc)
+
+    def _get_saved_question(self, name):
+        sq = self._get_by_name(objtype='saved_questions', value=name)
+        question = sq.get('question', {})
+        selects = question.get('selects', [])
+        sensor_names = [x.get('sensor', {}).get('name') for x in selects]
+        if 'Computer ID' not in sensor_names:
+            raise RESTException('No sensor named “Computer ID” found in Saved Question')
+        if not any([x in STRONG_SENSORS for x in sensor_names]):
+            found_sensors = ', '.join(sensor_names)
+            strong_sensors = ', '.join(STRONG_SENSORS)
+            msg = (
+                f'No strong identifier sensor found. Found sensors: {found_sensors}, '
+                f'strong identifier sensors: {strong_sensors}'
+            )
+            raise RESTException(msg)
+        return sq
+
+    def _get_asset_report_meta(self, report_name):
+        response = self._get('plugin/products/asset/private/reports')
+        reports = response.get('data', []) or []
+        report_names = ', '.join([x.get('reportName') for x in reports])
+
+        if not reports:
+            raise RESTException(f'No reports found in Tanium Asset')
+
+        try:
+            report = [x for x in reports if x.get('reportName') == report_name][0]
+        except Exception:
+            raise RESTException(f'Tanium Asset report {report_name!r} not found, found reports: {report_names}')
+
+        try:
+            report_id = report['id']
+            report_meta = self._get(f'plugin/products/asset/private/reports/{report_id}')
+        except Exception:
+            msg = f'Tanium Asset report {report_name!r} unable to be fetched'
+            logger.exception(msg)
+            raise RESTException(msg)
+
+        attributes = report_meta.get('meta', {}).get('attributes', [])
+        entity_names = [x.get('entityName') for x in attributes]
+
+        if 'Computer ID' not in entity_names:
+            msg = f'Tanium asset report {report_name!r} does not have "Computer ID" attribute'
+            raise RESTException(msg)
+
+        return report_meta
 
     def _connect(self):
         self._test_reachability()
@@ -111,14 +120,18 @@ class TaniumConnection(RESTConnection):
             raise RESTException(f'Bad login response: {response}')
         self._session_headers['session'] = response['data']['session']
 
-    def _test_reachability(self):
-        # get the tanium version, could be used as connectivity test as it's not an auth/api call
+    def _get_version(self):
         response = self._get('config/console.json')
         version = response.get('serverVersion')
         if not version:
             raise RESTException(f'Bad server with no version')
         self._platform_version = version
         logger.info(f'Running version: {self._platform_version!r}')
+        return version
+
+    def _test_reachability(self):
+        # get the tanium version, could be used as connectivity test as it's not an auth/api call
+        self._get_version()
 
     def _get_endpoints(self):
         """Get all endpoints that have ever registered with Tanium using paging."""
@@ -126,6 +139,9 @@ class TaniumConnection(RESTConnection):
         page = 1
         row_start = 0
         fetched = 0
+
+        msg = f'System Status started fetch'
+        logger.info(msg)
 
         while row_start < MAX_DEVICES_COUNT:
             try:
@@ -142,16 +158,21 @@ class TaniumConnection(RESTConnection):
 
                 cache_id = cache['cache_id']
                 total = cache['cache_row_count']
-                fetched += len(data)
+                page_count = len(data)
+                fetched += page_count
+
+                msg = f'System Status fetched PAGE #{page}: page count {page_count}, total count {total}'
+                logger.info(msg)
+
                 yield from data
 
                 if not data:
-                    msg = f'PAGE #{page}: DONE no rows returned'
+                    msg = f'System Status PAGE #{page}: DONE no rows returned'
                     logger.info(msg)
                     break
 
                 if fetched >= total:
-                    msg = f'PAGE #{page}: DONE hit rows total'
+                    msg = f'System Status PAGE #{page}: DONE hit rows total'
                     logger.info(msg)
                     break
 
@@ -161,6 +182,9 @@ class TaniumConnection(RESTConnection):
                 logger.exception(f'Problem in the fetch, row is {row_start}')
                 break
 
+        msg = f'System Status finished fetch'
+        logger.info(msg)
+
     def _tanium_get(self, endpoint, options=None):
         url = 'api/v2/' + endpoint
         response = self._get(url, extra_headers={'tanium-options': json.dumps(options or {})})
@@ -169,15 +193,24 @@ class TaniumConnection(RESTConnection):
         return response['data']
 
     # pylint: disable=arguments-differ
-    def get_device_list(self, fetch_discovery=False, sq_name=None, sq_refresh=False, sq_max_hours=0):
+    def get_device_list(
+            self,
+            asset_dvc=None,
+            fetch_discovery=False,
+            sq_name=None,
+            sq_refresh=False,
+            sq_max_hours=0,
+            client_name=None):
+        metadata = {'server_name': client_name, 'server_version': self._get_version()}
+
         for device_raw in self._get_endpoints():
-            yield device_raw, ENDPOINT_TYPE
+            yield device_raw, metadata, ENDPOINT_TYPE
         if fetch_discovery:
             try:
                 for device_raw in self._get_discover_assets():
-                    yield device_raw, DISCOVERY_TYPE
+                    yield device_raw, metadata, DISCOVERY_TYPE
             except Exception:
-                logger.exception(f'Problem fetching discovery')
+                logger.exception(f'Problem fetching Discover Module assets')
         if sq_name:
             try:
                 for device_raw in self._get_sq_results(name=sq_name,
@@ -185,46 +218,87 @@ class TaniumConnection(RESTConnection):
                                                        max_hours=sq_max_hours):
                     device_raw, sq_query_text = device_raw
                     data_to_yield = device_raw, sq_name, sq_query_text
-                    yield data_to_yield, SQ_TYPE
+                    yield data_to_yield, metadata, SQ_TYPE
             except Exception:
-                logger.exception(f'Problem getting SQ TYPE')
+                logger.exception(f'Problem fetching Saved Question assets')
+        if asset_dvc:
+            try:
+                for device_raw in self._get_asset_report_assets(report_name=asset_dvc):
+                    yield device_raw, metadata, ASSET_TYPE
+            except Exception:
+                logger.exception(f'Problem fetching Asset Module assets')
+
+    def _get_asset_report_count(self, report_meta):
+        report_info = report_meta.get('data', {}).get('report', {})
+        report_id = report_info['id']
+        report_name = report_info['reportName']
+        try:
+            body_params = {'id': report_id, 'columnFilter': '{"$and":[]}'}
+            response = self._post(
+                f'plugin/products/asset/private/reports/{report_id}/rowCount',
+                body_params=body_params,
+            )
+            report_count = response['data']
+            logger.info(f'Asset Module got report count of {report_count} assets for report {report_name}')
+            return report_count
+        except Exception:
+            raise RESTException(f'Failed to fetch row count of {report_name}')
+
+    def _get_asset_report_assets(self, report_name):
+        report_meta = self._get_asset_report_meta(report_name=report_name)
+        report_count = self._get_asset_report_count(report_meta=report_meta)
+        logger.info(f'Asset Module started fetch of {report_count} assets for report {report_name}')
+        for asset_id in range(1, report_count):
+            try:
+                asset = self._get(f'plugin/products/asset/v1/assets/{asset_id}')
+                yield asset['data'], report_meta
+            except Exception:
+                logger.exception(f'Failure fetching asset id {asset_id} for report {report_name} from Tanium Asset')
+        logger.info(f'Asset Module finished fetch of {report_count} assets for report {report_name}')
+
+    def _get_discover_page(self, page_size, page_count):
+        body_params = {
+            'Id': 'all',
+            'Name': 'All Interfaces',
+            'Filter': [],
+            'Page': {'Size': page_size, 'Number': page_count},
+            'Select': [
+                {'Field': 'Asset.macaddress'},
+                {'Field': 'Asset.computerid'},
+                {'Field': 'Asset.macorganization'},
+                {'Field': 'Asset.hostname'},
+                {'Field': 'Asset.ipaddress'},
+                {'Field': 'Asset.natipaddress'},
+                {'Field': 'Asset.tags'},
+                {'Field': 'Asset.os'},
+                {'Field': 'Asset.osgeneration'},
+                {'Field': 'Asset.ports'},
+                {'Field': 'Asset.method'},
+                {'Field': 'Asset.updatedAt'},
+                {'Field': 'Asset.createdAt'},
+                {'Field': 'Asset.lastManagedAt'},
+                {'Field': 'Asset.lastDiscoveredAt'},
+                {'Field': 'Asset.unmanageable'},
+                {'Field': 'Asset.ismanaged'},
+                {'Field': 'Asset.ignored'},
+            ],
+            'KeywordFilter': '',
+            'CountsOnly': False,
+            'ManagementCounts': False,
+        }
+
+        return self._post('plugin/products/discover/report', body_params=body_params)
 
     def _get_discover_assets(self):
         page = 1
         fetched = 0
+
+        msg = f'Discover Module started fetch'
+        logger.info(msg)
+
         while True:
             try:
-                body_params = {
-                    'Id': 'all',
-                    'Name': 'All Interfaces',
-                    'Filter': [],
-                    'Page': {'Size': PAGE_SIZE_DISCOVER, 'Number': page},
-                    'Select': [
-                        {'Field': 'Asset.macaddress'},
-                        {'Field': 'Asset.computerid'},
-                        {'Field': 'Asset.macorganization'},
-                        {'Field': 'Asset.hostname'},
-                        {'Field': 'Asset.ipaddress'},
-                        {'Field': 'Asset.natipaddress'},
-                        {'Field': 'Asset.tags'},
-                        {'Field': 'Asset.os'},
-                        {'Field': 'Asset.osgeneration'},
-                        {'Field': 'Asset.ports'},
-                        {'Field': 'Asset.method'},
-                        {'Field': 'Asset.updatedAt'},
-                        {'Field': 'Asset.createdAt'},
-                        {'Field': 'Asset.lastManagedAt'},
-                        {'Field': 'Asset.lastDiscoveredAt'},
-                        {'Field': 'Asset.unmanageable'},
-                        {'Field': 'Asset.ismanaged'},
-                        {'Field': 'Asset.ignored'},
-                    ],
-                    'KeywordFilter': '',
-                    'CountsOnly': False,
-                    'ManagementCounts': False,
-                }
-
-                response = self._post('plugin/products/discover/report', body_params=body_params)
+                response = self._get_discover_page(page_size=PAGE_SIZE_DISCOVER, page_count=page)
                 total = response.get('Total') or 0
                 items = response.get('Items')
                 columns = response.get('Columns')
@@ -249,6 +323,9 @@ class TaniumConnection(RESTConnection):
                 logger.exception(f'Problem with page: {page}')
                 break
 
+        msg = f'Discover Module finished fetch'
+        logger.info(msg)
+
     def _get_sq_results(self, name, no_results_wait=True, refresh=False, max_hours=0):
         """Get the results from a saved question.
 
@@ -261,7 +338,7 @@ class TaniumConnection(RESTConnection):
                        than this many hours ago.
         """
         # get the SQ object as dict
-        saved_question = self._get_by_name(objtype='saved_questions', value=name)
+        saved_question = self._get_saved_question(name=name)
 
         start = dt_now()
         sq_name = saved_question['name']
@@ -327,6 +404,7 @@ class TaniumConnection(RESTConnection):
         start = dt_now()
 
         poll_count = 1
+        failures = 0
 
         while True:
             question = self._get_by_id(objtype='questions', value=question_id)
@@ -336,7 +414,20 @@ class TaniumConnection(RESTConnection):
             is_expired = dt_is_past(expire_dt)
 
             endpoint = f'result_info/question/{question_id}'
-            datas = self._tanium_get(endpoint=endpoint)
+            try:
+                datas = self._tanium_get(endpoint=endpoint)
+            except Exception:
+                # added due to RBAC failure to fetch result info for a question
+                # unsure why this happens, but it seems like a bug in tanium
+                # since a limited permissions user can ask this question fine in the console
+                logger.exception(f'Failed on poll count {poll_count} for {question_id}')
+                if is_expired:
+                    msg = f'POLL #{poll_count}: DONE question is expired'
+                    logger.info(msg)
+                    break
+                poll_count += 1
+                time.sleep(SLEEP_POLL)
+                continue
             '''Datas:
             {
                 'max_available_age': '0',
@@ -458,6 +549,9 @@ class TaniumConnection(RESTConnection):
         fetched = 0
         columns_map = {}
         cache_id = 0
+
+        msg = f'Saved Question started fetch for question id {question["id"]}'
+        logger.info(msg)
 
         while True:
             options = options or {}
