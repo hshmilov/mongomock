@@ -4,6 +4,7 @@
         with changing content, according to chosen route
   -->
   <v-app id="app" v-if="fetchedLoginStatus">
+    <x-safeguard />
     <!--Link for downloading files-->
     <a id="file-auto-download-link"></a>
     <!-- Nested navigation linking to routes defined in router/index.js -->

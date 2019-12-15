@@ -540,16 +540,16 @@ class EnforcementsPage(EntitiesPage):
         @param confirm: determine click on cancel or confirm
         @return: none
         """
-        self.find_element_by_text('Remove').click()
+        self.click_button('Remove', partial_class=True)
         if confirm:
             # the button can have text of multiple items or single item ( set or sets )
             # try to click on the single button, if no element exist click on multiple button
             try:
-                self.find_element_by_text(self.CONFIRM_REMOVE_SINGLE).click()
+                self.click_button(self.CONFIRM_REMOVE_SINGLE)
             except NoSuchElementException:
-                self.find_element_by_text(self.CONFIRM_REMOVE_MULTI).click()
+                self.click_button(self.CONFIRM_REMOVE_MULTI)
         else:
-            self.find_element_by_text('Cancel').click()
+            self.wait_for_element_present_by_id('safeguard-cancel-btn').click()
 
     def choose_period(self, period):
         self.wait_for_element_present_by_id(period).click()

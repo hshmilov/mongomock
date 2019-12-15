@@ -190,6 +190,7 @@ class TestSavedQuery(TestBase):
         def _remove_queries_wait_count(data_count):
             self.devices_queries_page.remove_selected_queries(confirm=True)
             wait_until(lambda: self.devices_queries_page.get_table_count() == data_count)
+            self.devices_page.wait_for_table_to_load()
             return data_count
 
         # Test remove a few (select each one)

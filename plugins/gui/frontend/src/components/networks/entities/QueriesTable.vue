@@ -20,21 +20,7 @@
           link
           @click="createEnforcement"
         >+ New Enforcement</x-button>
-        <x-safeguard-button
-          v-if="hasSelection"
-          :disabled="readOnly"
-          link
-          :approve-text="numberOfSelections > 1 ? 'Remove Saved Queries' : 'Remove Saved Query' "
-          @click="removeQuery"
-        >
-          <div slot="button-text">Remove</div>
-          <div slot="message">
-            The selected Saved {{ numberOfSelections > 1 ? 'Queries' : 'Query' }} will be completely removed from the
-            system and no other user will be able to use it.<br>
-            Removing the Saved {{ numberOfSelections > 1 ? 'Queries' : 'Query' }} is an irreversible action.<br>
-            Do you wish to continue?
-          </div>
-        </x-safeguard-button>
+        <x-button id="remove-queries-btn" v-if="hasSelection"  :disabled="readOnly" link @click="remove">Remove</x-button>
       </template>
     </x-table>
   </div>
@@ -44,7 +30,6 @@
   import xSearch from '../../neurons/inputs/SearchInput.vue'
   import xTable from '../../neurons/data/Table.vue'
   import xButton from '../../axons/inputs/Button.vue'
-  import xSafeguardButton from '../../axons/inputs/SafeguardButton.vue'
 
   import { mapState, mapMutations, mapActions } from 'vuex'
   import { UPDATE_DATA_VIEW } from '../../../store/mutations'
@@ -54,7 +39,7 @@
   export default {
     name: 'XQueriesTable',
     components: {
-      xSearch, xTable, xButton, xSafeguardButton
+      xSearch, xTable, xButton
     },
     props: {
       module: {
@@ -145,12 +130,22 @@
         /* Navigating to new enforcement - requested queries will be selected as triggers there */
         this.$router.push({ path: '/enforcements/new' })
       },
-      removeQuery () {
-        this.removeData({ module: this.stateLocation, selection: this.selection })
+      remove () {
+        this.$safeguard.show({
+          text: `
+            The selected Saved ${ this.numberOfSelections > 1 ? 'Queries' : 'Query' } will be completely removed from the
+            system and no other user will be able to use it.
+            <br />
+            Removing the Saved ${ this.numberOfSelections > 1 ? 'Queries' : 'Query' } is an irreversible action.
+            <br />Do you wish to continue?
+          `,
+          confirmText: this.numberOfSelections > 1 ? 'Remove Saved Queries' : 'Remove Saved Query',
+          onConfirm: () => {
+            this.removeData({ module: this.stateLocation, selection: this.selection })
                 .then(this.onSearchConfirm)
-        this.selection = {
-          ids: [], include: true
-        }
+            this.selection = { ids: [], include: true }
+          }
+        })
       },
       onSearchConfirm () {
         this.updateView({

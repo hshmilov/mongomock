@@ -2,12 +2,14 @@ import Vue from 'vue'
 import Vuetify from 'vuetify'
 import 'vuetify/dist/vuetify.min.css'
 import VueAnalytics from 'vue-analytics'
+import SafeguardPlugin from './plugins/safeguard-modal'
 import router from './router/index'
 import store from './store/index'
 import App from './components/App.vue'
 import {
 	MdSwitch, MdDatepicker, MdField, MdIcon, MdButton, MdDialog, MdCard, MdList, MdChips, MdCheckbox, MdMenu, MdProgress, MdDivider, MdDrawer,
 } from 'vue-material/dist/components'
+
 Vue.use(MdSwitch)
 Vue.use(MdDatepicker)
 Vue.use(MdField)
@@ -24,6 +26,7 @@ Vue.use(MdDivider)
 Vue.use(MdDrawer)
 
 Vue.use(Vuetify)
+Vue.use(SafeguardPlugin)
 
 import 'vue-svgicon/dist/polyfill'
 import * as svgicon from 'vue-svgicon'

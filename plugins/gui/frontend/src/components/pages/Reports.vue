@@ -1,9 +1,5 @@
 <template>
-  <x-page
-    :class="{disabled: isReadOnly}"
-    class="x-reports"
-    title="Reports"
-  >
+  <x-page :class="{disabled: isReadOnly}" class="x-reports" title="Reports">
     <x-table
       v-model="isReadOnly? undefined: selection"
       :static-fields="fields"
@@ -12,25 +8,8 @@
       title="Saved Reports"
     >
       <template slot="actions">
-        <x-safeguard-button
-          v-if="hasSelection"
-          :approve-text="numberOfSelections > 1 ? 'Remove Reports' : 'Remove Report'"
-          link
-          @click="remove"
-        >
-          <div slot="button-text">Remove</div>
-          <div slot="message">
-            The selected {{ numberOfSelections > 1 ? 'reports' : 'report' }} will be completely removed
-            from the system.<br>
-            Removing the {{ numberOfSelections > 1 ? 'reports' : 'report' }} is an irreversible action.<br>
-            Do you wish to continue?
-          </div>
-        </x-safeguard-button>
-        <x-button
-          id="report_new"
-          :disabled="isReadOnly"
-          @click="navigateReport('new')"
-        >+ New Report</x-button>
+        <x-button v-if="hasSelection" link @click="remove">Remove</x-button>
+        <x-button id="report_new" :disabled="isReadOnly" @click="navigateReport('new')">+ New Report</x-button>
       </template>
     </x-table>
   </x-page>
@@ -39,14 +18,13 @@
     import xPage from '../axons/layout/Page.vue'
     import xTable from '../neurons/data/Table.vue'
     import xButton from '../axons/inputs/Button.vue'
-    import xSafeguardButton from '../axons/inputs/SafeguardButton.vue'
 
     import {mapState, mapMutations, mapActions} from 'vuex'
     import {REMOVE_REPORTS, FETCH_REPORT} from '../../store/modules/reports'
 
     export default {
         name: 'XReports',
-        components: {xPage, xTable, xButton, xSafeguardButton},
+        components: {xPage, xTable, xButton},
         computed: {
             ...mapState({
                 isReadOnly(state) {
@@ -96,8 +74,19 @@
                 this.$router.push({path: `/${this.name}/${reportId}`})
             },
             remove() {
-                this.removeReports(this.selection)
-                this.selection = {ids: [], include: true }
+                this.$safeguard.show({
+                  text: `
+                  The selected ${ this.numberOfSelections > 1 ? 'reports' : 'report' } will be completely removed
+                  from the system.<br/>
+                  Removing the ${ this.numberOfSelections > 1 ? 'reports' : 'report' } is an irreversible action.<br/>
+                  Do you wish to continue?
+                  `,
+                  confirmText: 'Remove Reports',
+                  onConfirm: () => {
+                    this.removeReports(this.selection)
+                    this.selection = {ids: [], include: true }
+                  }
+                })
             }
         }
     }

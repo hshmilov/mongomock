@@ -552,9 +552,9 @@ class SettingsPage(Page):
         """
         self.click_button_by_id('remove-role-button')
         if confirm:
-            self.find_element_by_text(self.SAFEGUARD_REMOVE_BUTTON_TEXT).click()
+            self.click_button(self.SAFEGUARD_REMOVE_BUTTON_TEXT)
         else:
-            self.find_element_by_text('Cancel').click()
+            self.wait_for_element_present_by_id('safeguard-cancel-btn').click()
 
     def click_done(self):
         self.click_button('Done')

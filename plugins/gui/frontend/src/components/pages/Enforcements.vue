@@ -1,9 +1,5 @@
 <template>
-  <x-page
-    title="Enforcement Center"
-    class="x-enforcements"
-    :class="{disabled: isReadOnly}"
-  >
+  <x-page title="Enforcement Center" class="x-enforcements" :class="{disabled: isReadOnly}">
     <x-search
       v-model="searchValue"
       placeholder="Search Enforcement Sets..."
@@ -18,28 +14,13 @@
       :on-click-row="navigateEnforcement"
     >
       <template slot="actions">
-        <x-safeguard-button
-          v-if="hasSelection"
-          link
-          :approve-text="numberOfSelections > 1 ? 'Remove Enforcement Sets' : 'Remove Enforcement Set' "
-          @click="remove"
-        >
-          <div slot="button-text">Remove</div>
-          <div slot="message">
-            The selected Enforcement {{ numberOfSelections > 1 ? 'Sets' : 'Set' }} will be completely removed from the system.<br>
-            Removing the Enforcement {{ numberOfSelections > 1 ? 'Sets' : 'Set' }} is an irreversible action.<br>
-            Do you wish to continue?
-          </div>
-        </x-safeguard-button>
+        <x-button v-if="hasSelection" link @click="remove">Remove</x-button>
         <x-button
           id="enforcement_new"
           :disabled="isReadOnly"
           @click="navigateEnforcement('new')"
         >+ New Enforcement</x-button>
-        <x-button
-          emphasize
-          @click="navigateTasks"
-        >View Tasks</x-button>
+        <x-button emphasize @click="navigateTasks">View Tasks</x-button>
       </template>
     </x-table>
   </x-page>
@@ -51,7 +32,6 @@
   import xSearch from '../neurons/inputs/SearchInput.vue'
   import xTable from '../neurons/data/Table.vue'
   import xButton from '../axons/inputs/Button.vue'
-  import xSafeguardButton from '../axons/inputs/SafeguardButton.vue'
 
   import { mapState, mapMutations, mapActions } from 'vuex'
   import { UPDATE_DATA_VIEW } from '../../store/mutations'
@@ -60,7 +40,7 @@
   export default {
     name: 'XEnforcements',
     components: {
-      xPage, xSearch, xTable, xButton, xSafeguardButton
+      xPage, xSearch, xTable, xButton
     },
     data () {
       return {
@@ -130,8 +110,19 @@
         this.$router.push({ path: `/${this.name}/${enforcementId}` })
       },
       remove () {
-        this.removeEnforcements(this.selection)
-        this.selection = { ids: [], include: true }
+        this.$safeguard.show({
+          text: `
+            The selected Enforcement ${ this.numberOfSelections > 1 ? 'Sets' : 'Set' } will be completely removed from the system.
+            <br />
+            Removing the Enforcement ${ this.numberOfSelections > 1 ? 'Sets' : 'Set' } is an irreversible action.
+            <br />Do you wish to continue?
+          `,
+          confirmText: this.numberOfSelections > 1 ? 'Remove Enforcement Sets' : 'Remove Enforcement Set',
+          onConfirm: () => {
+            this.removeEnforcements(this.selection)
+            this.selection = { ids: [], include: true }
+          }
+        })
       },
       navigateTasks () {
         this.updateView({

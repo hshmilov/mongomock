@@ -135,21 +135,7 @@
           link
           @click="saveRole"
         >Save</x-button>
-        <x-safeguard-button
-          v-if="rolesConfig.selected"
-          id="remove-role-button"
-          link
-          approve-text="Remove Role"
-          @click="performRemoveRole"
-        >
-          <div slot="button-text">Remove</div>
-          <div slot="message">
-            The selected user role will be completely removed from the system and it will not be possible to assign
-            that role to any user.<br>
-            Removing the user role is an irreversible action.<br>
-            Do you wish to continue?
-          </div>
-        </x-safeguard-button>
+        <x-button id="remove-role-button" v-if="rolesConfig.selected" link @click="remove">Remove</x-button>
       </div>
       <div slot="footer">
         <x-button @click="closeRoles">Done</x-button>
@@ -163,7 +149,6 @@
   import xModal from '../../axons/popover/Modal.vue'
   import xSelect from '../../axons/inputs/Select.vue'
   import xButton from '../../axons/inputs/Button.vue'
-  import xSafeguardButton from '../../axons/inputs/SafeguardButton.vue'
   import xUserConfig from './UserConfig.vue'
 
   import { mapState, mapActions } from 'vuex'
@@ -175,7 +160,7 @@
 
   export default {
     name: 'XUsersRoles',
-    components: { xForm, xModal, xSelect, xButton, xUserConfig, xSafeguardButton },
+    components: { xForm, xModal, xSelect, xButton, xUserConfig },
     props: {
       readOnly: {
         type: Boolean,
@@ -349,6 +334,20 @@
           this.getAllRoles()
           this.getAllUsers()
         }).catch(error => this.$emit('toast', error.response.data.message))
+      },
+      remove () {
+        this.$safeguard.show({
+          text: `
+            The selected user role will be completely removed from the system and it will not be possible to assign
+            that role to any user.<br>
+            Removing the user role is an irreversible action.<br>
+            Do you wish to continue?
+          `,
+          confirmText: 'Remove Role',
+          onConfirm: () => {
+            this.performRemoveRole()
+          }
+        })
       },
       performRemoveRole () {
         this.removeRole({
