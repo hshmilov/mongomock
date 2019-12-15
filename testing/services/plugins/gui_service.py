@@ -45,6 +45,16 @@ class GuiService(PluginService, UpdatablePluginMixin):
     # pylint: disable=too-many-branches
     def _migrate_db(self):
         super()._migrate_db()
+        if self.db_schema_version < 10:
+            self._update_under_10()
+        if self.db_schema_version < 20:
+            self._update_under_20()
+        if self.db_schema_version < 30:
+            self._update_under_30()
+        if self.db_schema_version != 25:
+            print(f'Upgrade failed, db_schema_version is {self.db_schema_version}')
+
+    def _update_under_10(self):
         if self.db_schema_version < 1:
             self._update_schema_version_1()
         if self.db_schema_version < 2:
@@ -65,6 +75,8 @@ class GuiService(PluginService, UpdatablePluginMixin):
             self._update_schema_version_9()
         if self.db_schema_version < 10:
             self._update_schema_version_10()
+
+    def _update_under_20(self):
         if self.db_schema_version < 11:
             self._update_schema_version_11()
         if self.db_schema_version < 12:
@@ -85,14 +97,16 @@ class GuiService(PluginService, UpdatablePluginMixin):
             self._update_schema_version_19()
         if self.db_schema_version < 20:
             self._update_schema_version_20()
+
+    def _update_under_30(self):
         if self.db_schema_version < 21:
             self._update_schema_version_21()
         if self.db_schema_version < 22:
             self._update_schema_version_22()
         if self.db_schema_version < 24:
             self._update_schema_version_24()
-        if self.db_schema_version != 24:
-            print(f'Upgrade failed, db_schema_version is {self.db_schema_version}')
+        if self.db_schema_version < 25:
+            self._update_schema_version_25()
 
     def _update_schema_version_1(self):
         print('upgrade to schema 1')
@@ -828,6 +842,29 @@ class GuiService(PluginService, UpdatablePluginMixin):
             self.db_schema_version = 24
         except Exception as e:
             print(f'Exception while upgrading gui db to version 24. Details: {e}')
+
+    def _update_schema_version_25(self):
+        """
+        For 2.14 - to fix Predefined queries that do not have the 'last_updated' and 'updated_by'
+        :return:
+        """
+        print('Upgrade to schema 25')
+        try:
+            for entity_type in EntityType:
+                self._entity_views_map[entity_type].update_many({
+                    UPDATED_BY_FIELD: {
+                        '$exists': False
+                    },
+                    'user_id': '*'
+                }, [{
+                    '$set': {
+                        UPDATED_BY_FIELD: '$user_id',
+                        LAST_UPDATED_FIELD: '$timestamp'
+                    }
+                }])
+            self.db_schema_version = 25
+        except Exception as e:
+            print(f'Exception while upgrading gui db to version 25. Details: {e}')
 
     def _update_default_locked_actions(self, new_actions):
         """
