@@ -14,7 +14,7 @@ from axonius.consts.plugin_consts import (CONFIGURABLE_CONFIGS_COLLECTION,
                                           PLUGIN_UNIQUE_NAME, SYSTEM_SETTINGS)
 from axonius.consts.system_consts import (AXONIUS_DNS_SUFFIX, AXONIUS_NETWORK,
                                           NODE_MARKER_PATH, WEAVE_NETWORK,
-                                          WEAVE_PATH)
+                                          WEAVE_PATH, DOCKERHUB_USER, WEAVE_VERSION)
 from axonius.devices.device_adapter import NETWORK_INTERFACES_FIELD
 from axonius.plugin_base import EntityType
 from scripts.instances.network_utils import (get_encryption_key,
@@ -106,8 +106,10 @@ class AxoniusService:
                                         f'--dns-domain="{AXONIUS_DNS_SUFFIX}"', '--ipalloc-range', subnet_ip_range,
                                         '--password',
                                         encryption_key.strip()]
-
-                subprocess.check_call(weave_launch_command)
+                my_env = os.environ.copy()
+                my_env['DOCKERHUB_USER'] = DOCKERHUB_USER
+                my_env['WEAVE_VERSION'] = WEAVE_VERSION
+                subprocess.check_call(weave_launch_command, env=my_env)
         else:
             print(f'Creating regular axonius network')
             subprocess.check_call(['docker', 'network', 'create', f'--subnet={subnet_ip_range}', cls._NETWORK_NAME],
@@ -524,7 +526,8 @@ class AxoniusService:
         return image_name
 
     def pull_weave_images(self, repull=False, show_print=True):
-        weave_images = ['weaveworks/weavedb', 'weaveworks/weaveexec:2.6.0', 'weaveworks/weave:2.6.0']
+        weave_images = [f'{DOCKERHUB_USER}/weavedb', f'{DOCKERHUB_USER}/weaveexec:{WEAVE_VERSION}',
+                        f'{DOCKERHUB_USER}/weave:{WEAVE_VERSION}']
         for current_weave_image in weave_images:
             self._pull_image(current_weave_image, repull, show_print)
         return weave_images

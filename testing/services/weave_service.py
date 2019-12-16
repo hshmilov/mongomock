@@ -106,7 +106,7 @@ class WeaveService(DockerService):
         except Exception as exc:
             if len(exc.args) >= 2 and \
                     ('could not create veth pair' in exc.args[1] or 'error setting up interface' in exc.args[1]):
-                print('Restarting container due to weave network exception.')
+                print(f'Restarting container due to weave network exception: {exc}')
                 self.restart(mode=mode, allow_restart=allow_restart, rebuild=rebuild, hard=hard, show_print=show_print,
                              expose_port=expose_port, extra_flags=extra_flags,
                              docker_internal_env_vars=docker_internal_env_vars, run_env=my_env)
