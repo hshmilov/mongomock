@@ -17,6 +17,8 @@ from ui_tests.tests.ui_consts import AD_ADAPTER_NAME
 
 TABLE_COUNT_CSS = '.table-header .table-title .count'
 
+# pylint: disable=C0302
+
 
 class EntitiesPage(Page):
     EXPORT_CSV_LOADING_CSS = '.loading-button'
@@ -62,6 +64,8 @@ class EntitiesPage(Page):
     QUERY_COMP_SIZE_ABOVE = 'count >'
     QUERY_COMP_SIZE_BELOW = 'count <'
     QUERY_COMP_DAYS = 'days'
+    QUERY_COMP_GREATER_THAN = '>'
+    QUERY_COMP_LESS_THAN = '<'
     QUERY_COMP_STARTS = 'starts'
     QUERY_LOGIC_AND = 'and'
     QUERY_LOGIC_OR = 'or'

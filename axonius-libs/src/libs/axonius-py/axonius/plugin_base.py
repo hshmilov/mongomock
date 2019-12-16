@@ -1780,6 +1780,7 @@ class PluginBase(Configurable, Feature, ABC):
                         if not field == 'raw':
                             field_of_data = data.get(field, [])
                             data_to_update[f'adapters.$.data.{field}'] = field_of_data
+                    data_to_update['accurate_for_datetime'] = datetime.now()
 
                     inserted_data_count += 1
                     promises.append(Promise(functools.partial(run_in_executor_helper,
@@ -2367,6 +2368,8 @@ class PluginBase(Configurable, Feature, ABC):
 
         if update_internal_axon_id:
             update_dict['$set']['internal_axon_id'] = update_internal_axon_id
+
+        update_dict['$set']['accurate_for_datetime'] = datetime.now()
 
         db_session.update_one({
             'internal_axon_id': entity_to_split['internal_axon_id']

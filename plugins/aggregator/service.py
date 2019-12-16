@@ -2,27 +2,24 @@ import concurrent.futures
 import logging
 import threading
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
 from enum import Enum, auto
 
 import pymongo
 from pymongo.collection import Collection
+from pymongo.errors import CollectionInvalid
 
+from aggregator.exceptions import AdapterOffline, ClientsUnavailable
 from axonius.adapter_base import is_plugin_adapter
 from axonius.consts.plugin_consts import (ADAPTERS_LIST_LENGTH,
                                           AGGREGATOR_PLUGIN_NAME, PLUGIN_NAME,
-                                          PLUGIN_UNIQUE_NAME,
-                                          SYSTEM_SCHEDULER_PLUGIN_NAME)
+                                          PLUGIN_UNIQUE_NAME)
 from axonius.consts.plugin_subtype import PluginSubtype
 from axonius.mixins.triggerable import Triggerable, RunIdentifier
 from axonius.plugin_base import EntityType, PluginBase
 from axonius.utils.files import get_local_config_file
 from axonius.utils.json import from_json
-from axonius.utils.threading import LazyMultiLocker
-from funcy import chunks
-from pymongo.errors import CollectionInvalid
-
-from aggregator.exceptions import AdapterOffline, ClientsUnavailable
+from axonius.utils.threading import LazyMultiLocker, run_and_forget
 
 logger = logging.getLogger(f'axonius.{__name__}')
 """
@@ -30,6 +27,81 @@ AggregatorPlugin.py: A Plugin for the devices aggregation process
 """
 
 get_devices_job_name = "Get device job"
+
+
+# Watch Sleep - how long to wait between checking next stream
+STREAM_WATCH_SLEEP = 5
+
+# How back to go based on accurate date time, 60 seconds is the max time for a transaction before it fails
+# + Stream watch sleep
+STREAM_DELAY = 60 + STREAM_WATCH_SLEEP
+
+
+def _generate_reduce(arrays):
+    """
+    Reduces arrays of fields and returns all the fields that aren't old or empty
+    Zip given two array together into a single of array of tuples (value, old (True/False))
+    After that it filters any empty (null) values and old values i.e true
+    In the reduce function we remove all the old values leaving us with an array of only the values
+    that we want to continue working on.
+    """
+    return {
+        '$reduce': {
+            'input': {
+                # filter based on 2nd index is True
+                '$filter': {
+                    'input': {
+                        # Zip the array into tuples
+                        '$zip': {
+                            'inputs': arrays,
+                            'defaults': ['', False],
+                            'useLongestLength': True
+                        }
+                    },
+                    'as': 'item',
+                    'cond': {
+                        '$and': [
+                            {'$eq': [{"$arrayElemAt": ["$$item", 1]}, False]},
+                            {'$ne': [{"$arrayElemAt": ["$$item", 0]}, None]}
+                        ]
+                    }
+                }
+            },
+            'initialValue': [],
+            'in': {'$concatArrays': [[{'$arrayElemAt': ["$$this", 0]}], "$$value"]}
+        }
+    }
+
+
+# Creates hostnames field in every device
+HOSTNAME_PIPELINE = {
+    '$reduce': {
+        'input': {
+            # removes duplicates
+            '$setUnion': [
+                _generate_reduce(['$adapters.data.hostname', '$adapters.data._old']),
+                _generate_reduce(['$tags.data.hostname', '$tags.data._old']),
+            ]
+        },
+        'initialValue': '',
+        # concat all items in input array with ' ' delimiter
+        'in': {'$concat': [
+            '$$value',
+            {'$cond': [{'$eq': ['$$value', '']}, '', ' ']},
+            '$$this']
+        }
+    }
+}
+
+LAST_SEEN_PIPELINE = {
+    '$max': {
+        # removes duplicates
+        '$setUnion': [
+            _generate_reduce(['$adapters.data.last_seen', '$adapters.data._old']),
+            _generate_reduce(['$tags.data.last_seen', '$tags.data._old']),
+        ]
+    }
+}
 
 
 class AdapterStatuses(Enum):
@@ -47,7 +119,7 @@ class AggregatorService(Triggerable, PluginBase):
             entity: LazyMultiLocker()
             for entity in EntityType
         }
-
+        self.__last_date = datetime.min
         super().__init__(get_local_config_file(__file__),
                          requested_unique_plugin_name=AGGREGATOR_PLUGIN_NAME, *args, **kwargs)
 
@@ -64,6 +136,7 @@ class AggregatorService(Triggerable, PluginBase):
         except CollectionInvalid:
             # if the collection already exists - that's OK
             pass
+        self._watch_thread = threading.Thread(target=self.__watch_database, args=(EntityType.Devices,)).start()
 
     def _delayed_initialization(self):
         """
@@ -139,6 +212,9 @@ class AggregatorService(Triggerable, PluginBase):
             db.create_index([(f'adapters.quick_id', pymongo.ASCENDING)], background=True)
             db.create_index([('short_axon_id', pymongo.ASCENDING)], background=True)
             db.create_index([('accurate_for_datetime', pymongo.ASCENDING)], background=True)
+            # Aggregated fields index
+            db.create_index([('hostnames', pymongo.ASCENDING)], background=True)
+            db.create_index([('last_seen', pymongo.ASCENDING)], background=True)
 
         def common_db_indexes(db: Collection):
             db.create_index([(f'adapters.{PLUGIN_NAME}', pymongo.ASCENDING)], background=True)
@@ -195,6 +271,10 @@ class AggregatorService(Triggerable, PluginBase):
             # this is commonly sorted by
             db.create_index([('adapter_list_length', pymongo.DESCENDING)], background=True)
 
+            # Aggregated fields index
+            db.create_index([('hostnames', pymongo.ASCENDING)], background=True)
+            db.create_index([('last_seen', pymongo.ASCENDING)], background=True)
+
         def adapter_entity_raw_index(db: Collection):
             """
             Adds indices to the raw collection.
@@ -239,6 +319,94 @@ class AggregatorService(Triggerable, PluginBase):
 
             common_db_indexes(self._historical_entity_views_db_map[entity_type])
             historic_indexes(self._historical_entity_views_db_map[entity_type])
+
+    def __watch_database(self, entity_type: EntityType):
+        """
+        Watches devices db for changes and executes post processing, on startup executes update on
+        all devices collections
+        """
+        run_and_forget(lambda: self.__aggregate_update_collections(entity_type))
+        try:
+            self.__post_process_db(entity_type)
+        except Exception:
+            logger.exception('post process database crashed!')
+
+    def __post_process_db(self, entity_type: EntityType):
+        """
+        Execute post processing on devices collection on every change that occurs, rebuilding all aggregated
+        fields in the process
+        """
+        collection = self._entity_db_map[entity_type]
+        # Start a watch on the entity db
+        stream = collection.watch()
+        while True:
+            try:
+                # Wait for the first change
+                value = stream.next()
+                logger.info(f'Got Change @ {datetime.now()}')
+                logger.debug(value)
+            except pymongo.errors.PyMongoError:
+                # The ChangeStream encountered an unrecoverable error or the
+                # resume attempt failed to recreate the cursor.
+                logging.error('Error occurred in stream')
+            else:
+                # close current stream and open a new one
+                stream.close()
+                # reopen the stream so we won't miss any new events
+                stream = collection.watch()
+                time.sleep(STREAM_WATCH_SLEEP)
+            logger.info('Running post process db')
+            new_date = datetime.now() - timedelta(seconds=STREAM_DELAY)
+            # execute aggregation pipeline from given date with STREAM_DELAY (see docs on it)
+            aggregation_pipeline = [
+                {
+                    '$set': {
+                        'accurate_for_datetime': new_date,
+                        'hostnames': HOSTNAME_PIPELINE,
+                        'last_seen': LAST_SEEN_PIPELINE,
+                    }
+                }]
+            args = ({
+                'accurate_for_datetime': {
+                    '$gt': self.__last_date
+                }
+            }, aggregation_pipeline)
+            # Execute update and log last update date
+            run1 = collection.update_many(*args)
+
+            end_date = datetime.now()
+            logger.info(f'Took {(end_date - new_date).total_seconds() - STREAM_DELAY} seconds, matched '
+                        f'{run1.matched_count}, modified {run1.modified_count}')
+
+            self.__last_date = new_date
+
+    def __aggregate_update_collections(self, entity_type: EntityType):
+        """
+        Execute aggregation on all history devices and devices updating thier hostname field if they don't have one
+        or in the case aggregator crashed
+        """
+        execute_on = [
+            # Only update on historical devices that we haven't updated already, since what was was, was was
+            (self._historical_entity_views_db_map[entity_type], {'hostnames': {'$exists': False}}),
+            (self._entity_db_map[entity_type], {})
+        ]
+
+        for collection, filter_args in execute_on:
+            # update historic + devices on init
+            aggregation_pipeline = [
+                {
+                    '$set': {
+                        'accurate_for_datetime': datetime.now(),
+                        'hostnames': HOSTNAME_PIPELINE
+                    }
+                }]
+            args = (filter_args, aggregation_pipeline)
+
+            start_date = datetime.now()
+            collection.update_many(*args)
+            end_date = datetime.now()
+            logger.info(f'Updated collection({collection.name}) with aggregated fields '
+                        f'took {(end_date - start_date).total_seconds()} seconds')
 
     def _request_insertion_from_adapters(self, adapter):
         """Get mapped data from all devices.

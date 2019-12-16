@@ -19,6 +19,22 @@ export const expression = {
     nested: []
 }
 
+export const INCLUDE_OUDATED_MAGIC = 'INCLUDE OUTDATED: '
+
+export const AGGREGATED_FIELDS_CONVERTER = [
+    {
+        path: 'specific_data.data.hostname',
+        validOps: ['contains', 'exists'],
+        aggregatedName: 'hostnames'
+    },
+    {
+        path: 'specific_data.data.last_seen',
+        validOps: ['days', '>'],
+        aggregatedName: 'last_seen'
+    }
+]
+
+
 const exists = '({field} == ({"$exists":true,"$ne":null}))'
 const exists_str = '({field} == ({"$exists":true,"$ne":""}))'
 const exists_array = '({field} == ({"$exists":true,"$ne":[]}))'

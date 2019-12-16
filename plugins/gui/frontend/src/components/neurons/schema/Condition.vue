@@ -44,6 +44,7 @@
   import { mapState, mapGetters } from 'vuex'
   import { GET_DATA_FIELDS_BY_PLUGIN, GET_DATA_SCHEMA_BY_NAME } from '../../../store/getters'
   import { getExcludedAdaptersFilter } from '../../../constants/utils'
+  import { INCLUDE_OUDATED_MAGIC, AGGREGATED_FIELDS_CONVERTER } from '../../../constants/filter'
 
   export default {
     name: 'XCondition',
@@ -85,6 +86,9 @@
       ...mapState({
         savedViews (state) {
           return state[this.module].views.saved.content.data
+        },
+        isUniqueAdapters(state) {
+          return state[this.module].view.query.filter.includes(INCLUDE_OUDATED_MAGIC)
         }
       }),
       ...mapGetters({
@@ -235,9 +239,36 @@
               map[pluginMeta[obj].title] = obj
               return map
           }, {})
+      },
+      isFieldTypeFiltered () {
+        return this.condition.filteredAdapters
+                && !this.condition.filteredAdapters.selectAll
+                && !this.condition.filteredAdapters.clearAll
+      },
+      // Substitutes fields to aggregated fields if they exist.
+      aggregatedField() {
+        const field = this.field
+        const compOp = this.compOp
+        // Check whether outdated adapter was toggled in the Wizard
+        if (this.isUniqueAdapters || this.isFieldTypeFiltered) {
+          return field
+        }
+        // only compare operators of fields that are found in aggregated fields map and include the comperator operator
+        const aggDef = AGGREGATED_FIELDS_CONVERTER.find(item => item.path == field)
+        if (aggDef === undefined) {
+          return field
+        }
+        const aggOps = aggDef.validOps
+        if (!aggOps.includes(compOp)) {
+          return field
+        }
+        return aggDef.aggregatedName
       }
     },
     watch: {
+      isUniqueAdapters() {
+        this.updateCondition()
+      },
       field () {
         if (!Object.keys(this.opsMap).includes(this.compOp)) {
           this.compOp = ''
@@ -419,27 +450,26 @@
         return ''
       },
       composeCondition () {
-        let cond = '({val})'
-        return cond.replace(/{val}/g, getExcludedAdaptersFilter(this.condition.fieldType, this.condition.field,
-            this.condition.filteredAdapters, this.getConditionExpression(cond)));
+        return `(${getExcludedAdaptersFilter(this.condition.fieldType, this.condition.field,
+                this.condition.filteredAdapters, this.getConditionExpression())})`
       },
-      getConditionExpression(cond) {
+      getConditionExpression () {
+        let cond = '({val})'
         if (this.opsMap[this.compOp]) {
-              let field = this.field
-              cond = this.opsMap[this.compOp].replace(/{field}/g, field)
-          } else if (this.opsList.length) {
-              this.compOp = ''
-              this.value = ''
-              return ''
-          }
+          cond = this.opsMap[this.compOp].replace(/{field}/g, this.aggregatedField)
+        } else if (this.opsList.length) {
+          this.compOp = ''
+          this.value = ''
+          return ''
+        }
 
-          let val = this.processedValue ? this.processedValue : this.value
-          let iVal = Array.isArray(val) ? -1 : undefined
-          return cond.replace(/{val}/g, () => {
-            if (iVal === undefined) return val
-              iVal = (iVal + 1) % val.length
-              return val[iVal]
-          })
+        let val = this.processedValue ? this.processedValue : this.value
+        let iVal = Array.isArray(val) ? -1 : undefined
+        return cond.replace(/{val}/g, () => {
+          if (iVal === undefined) return val
+          iVal = (iVal + 1) % val.length
+          return val[iVal]
+        })
       },
       compileCondition () {
         if (!this.field) return
