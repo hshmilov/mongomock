@@ -55,3 +55,5 @@ VM_QUERY = 'select ResourceID, ' \
            'DNSName0, IPAddress0, State0, VMName0, Path0, Type0, TimeStamp from V_GS_VIRTUAL_MACHINES'
 OWNER_QUERY = 'select * from OWNERINFO_DATA'
 TPM_QUERY = 'select ResourceID, IsActivated_InitialValue0, IsEnabled_InitialValue0, IsOwned_InitialValue0 from v_GS_TPM'
+COLLECTIONS_QUERY = 'select ResourceID, CollectionID from v_FullCollectionMembership'
+COLLECTIONS_DATA_QUERY = 'select CollectionID, Name from v_Collection'

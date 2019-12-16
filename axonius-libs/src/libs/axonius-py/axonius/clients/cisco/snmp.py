@@ -478,6 +478,7 @@ class SnmpBasicInfoCiscoData(BasicInfoData):
                 key, value = VmVoiceVlanEntry.parse_value(oid, value)
 
                 if value and value != 4096:
+                    voice_vlan_name = None
                     if vtp and str(value) in vtp.keys():
                         voice_vlan_name = vtp.get(str(value))
 

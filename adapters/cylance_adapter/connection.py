@@ -129,7 +129,7 @@ class CylanceConnection(RESTConnection):
         try:
             policies_raw = self._get_results_of_entity('policies', 'policy:list', 'policy:read')
             for policy_raw in policies_raw:
-                if not self._is_async_response_good(policies_raw):
+                if not self._is_async_response_good(policy_raw):
                     continue
                 if policy_raw.get('policy_id'):
                     policies_dict[policy_raw.get('policy_id')] = policy_raw

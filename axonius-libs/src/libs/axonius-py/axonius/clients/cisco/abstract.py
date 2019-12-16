@@ -220,7 +220,7 @@ class AbstractCiscoData:
                     ))
 
             except Exception:
-                logger.exception('Exception while getting vlan list ')
+                logger.warning('Exception while getting vlan list ', exc_info=True)
 
             new_device.add_nic(
                 mac=iface.get('mac'),

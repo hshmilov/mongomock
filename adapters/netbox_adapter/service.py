@@ -6,6 +6,7 @@ from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.connection import RESTException
 from axonius.devices.device_adapter import DeviceAdapter
+from axonius.mixins.configurable import Configurable
 from axonius.utils.files import get_local_config_file
 from axonius.fields import Field, ListField
 from axonius.utils.parsing import normalize_var_name
@@ -15,7 +16,7 @@ from netbox_adapter.client_id import get_client_id
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
-class NetboxAdapter(AdapterBase):
+class NetboxAdapter(AdapterBase, Configurable):
     # pylint: disable=too-many-instance-attributes
     class MyDeviceAdapter(DeviceAdapter):
         device_site = Field(str, 'Site')
@@ -132,7 +133,10 @@ class NetboxAdapter(AdapterBase):
                 logger.exception(f'Could not get type')
 
             try:
-                device.device_role = (device_raw.get('device_role') or {}).get('name')
+                device_role = (device_raw.get('device_role') or {}).get('name')
+                if self.__netbox_role_white_list and device_role not in self.__netbox_role_white_list:
+                    return None
+                device.device_role = device_role
             except Exception:
                 logger.exception(f'Could not get role')
 
@@ -210,3 +214,28 @@ class NetboxAdapter(AdapterBase):
     @classmethod
     def adapter_properties(cls):
         return [AdapterProperty.Network]
+
+    @classmethod
+    def _db_config_schema(cls) -> dict:
+        return {
+            'items': [
+                {
+                    'name': 'netbox_role_white_list',
+                    'title': 'Netbox Role Whitelist',
+                    'type': 'string'
+                }
+            ],
+            'required': [],
+            'pretty_name': 'Netbox Configuration',
+            'type': 'array'
+        }
+
+    @classmethod
+    def _db_config_default(cls):
+        return {
+            'netbox_role_white_list': None,
+        }
+
+    def _on_config_update(self, config):
+        self.__netbox_role_white_list = config.get('netbox_role_white_list').split(',') \
+            if config.get('netbox_role_white_list') else None

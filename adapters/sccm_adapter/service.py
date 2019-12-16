@@ -79,6 +79,7 @@ class SccmAdapter(AdapterBase, Configurable):
         tpm_is_activated = Field(bool, 'TPM Is Activated')
         tpm_is_enabled = Field(bool, 'TPM Is Enabled')
         tpm_is_owned = Field(bool, 'TPM Is Owned')
+        collections = ListField(str, 'Collections')
 
         def add_sccm_vm(self, **kwargs):
             try:
@@ -122,6 +123,28 @@ class SccmAdapter(AdapterBase, Configurable):
     def _query_devices_by_client(self, client_name, client_data):
         client_data.set_devices_paging(self.__devices_fetched_at_a_time)
         with client_data:
+
+            collections_data_dict = dict()
+            try:
+                for collection_data_data in client_data.query(consts.COLLECTIONS_DATA_QUERY):
+                    collection_id = collection_data_data.get('CollectionID')
+                    if not collection_id:
+                        continue
+                    collections_data_dict[collection_id] = collection_data_data
+            except Exception:
+                logger.warning(f'Problem getting collections data', exc_info=True)
+
+            collections_dict = dict()
+            try:
+                for collection_data in client_data.query(consts.COLLECTIONS_QUERY):
+                    asset_id = collection_data.get('ResourceID')
+                    if not asset_id:
+                        continue
+                    if asset_id not in collections_dict:
+                        collections_dict[asset_id] = []
+                    collections_dict[asset_id].append(collection_data)
+            except Exception:
+                logger.warning(f'Problem getting collections', exc_info=True)
 
             nics_dict = dict()
             try:
@@ -322,7 +345,8 @@ class SccmAdapter(AdapterBase, Configurable):
                 yield device_raw, client_data.server, asset_software_dict, asset_patch_dict, asset_program_dict, \
                     asset_bios_dict, asset_users_dict, asset_top_dict, asset_malware_dict, \
                     asset_lenovo_dict, asset_chasis_dict, asset_encryption_dict,\
-                    asset_vm_dict, owner_dict, tpm_dict, computer_dict, clients_dict, os_dict, nics_dict
+                    asset_vm_dict, owner_dict, tpm_dict, computer_dict,\
+                    clients_dict, os_dict, nics_dict, collections_dict, collections_data_dict
 
     def _clients_schema(self):
         return {
@@ -356,7 +380,7 @@ class SccmAdapter(AdapterBase, Configurable):
             tpm_dict,
             computer_dict,
             clients_dict,
-            os_dict, nics_dict
+            os_dict, nics_dict, collections_dict, collections_data_dict
         ) in devices_raw_data:
             try:
                 device_id = device_raw.get('Distinguished_Name0')
@@ -384,6 +408,22 @@ class SccmAdapter(AdapterBase, Configurable):
                         ]
                 except Exception:
                     logger.exception(f'Problem adding users to {device_raw}')
+                try:
+                    collections_data = collections_dict.get(device_raw.get('ResourceID'))
+                    if collections_data and isinstance(collections_data, list):
+                        for collection_raw in collections_data:
+                            try:
+                                if not isinstance(collection_raw, dict) or not collection_raw.get('CollectionID'):
+                                    continue
+                                collection_id = collection_raw.get('CollectionID')
+                                if collections_data_dict.get(collection_id) and \
+                                        isinstance(collections_data_dict.get(collection_id), dict) and \
+                                        collections_data_dict.get(collection_id).get('Name'):
+                                    device.collections.append(collections_data_dict.get(collection_id).get('Name'))
+                            except Exception:
+                                logger.exception(f'Problem with collection_raw {collection_raw}')
+                except Exception:
+                    logger.exception(f'Problem getting collections for {device_raw}')
 
                 try:
                     encryptions_raw = asset_encryption_dict.get(device_raw.get('ResourceID'))

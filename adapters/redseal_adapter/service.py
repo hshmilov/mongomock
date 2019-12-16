@@ -175,6 +175,8 @@ class RedsealAdapter(AdapterBase):
         return device
 
     def _parse_raw_data(self, raw_data):
+        if raw_data is None:
+            return
         for raw_device_data in iter(raw_data):
             try:
                 device = self.create_device(raw_device_data)

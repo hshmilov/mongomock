@@ -204,7 +204,7 @@ class PaloaltoPanoramaAdapter(AdapterBase):
             except Exception:
                 logger.exception(f'Problem adding lifetime to {device_raw_dict}')
             try:
-                device.last_seen = parse_date(device_raw_dict.get('login-time'))
+                device.last_seen = parse_date(device_raw_dict.get('login-time-utc'))
             except Exception:
                 logger.exception(f'Problem adding adding login time to {device_raw_dict}')
             device.set_raw(device_raw_dict)
