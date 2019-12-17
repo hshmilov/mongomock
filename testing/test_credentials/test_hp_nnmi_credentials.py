@@ -5,4 +5,4 @@ CLIENT_DETAILS = {
     'verify_ssl': False
 }
 
-SOME_DEVICE_ID = '56717_192.168.20.4'
+SOME_DEVICE_ID = '56717_ip-192-168-20-4'
