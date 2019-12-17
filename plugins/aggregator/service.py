@@ -387,21 +387,19 @@ class AggregatorService(Triggerable, PluginBase):
         """
         execute_on = [
             # Only update on historical devices that we haven't updated already, since what was was, was was
-            (self._historical_entity_views_db_map[entity_type], {'hostnames': {'$exists': False}}),
-            (self._entity_db_map[entity_type], {})
+            (self._historical_entity_views_db_map[entity_type], {'hostnames': {'$exists': False}}, False),
+            (self._entity_db_map[entity_type], {}, True)
         ]
 
-        for collection, filter_args in execute_on:
+        for collection, filter_args, update_datetime in execute_on:
             # update historic + devices on init
-            aggregation_pipeline = [
-                {
-                    '$set': {
-                        'accurate_for_datetime': datetime.now(),
-                        'hostnames': HOSTNAME_PIPELINE
-                    }
-                }]
+            set_update = {'hostnames': HOSTNAME_PIPELINE, 'last_seen': LAST_SEEN_PIPELINE}
+            if update_datetime:
+                set_update['accurate_for_datetime'] = datetime.now()
+            aggregation_pipeline = [{
+                '$set': set_update
+            }]
             args = (filter_args, aggregation_pipeline)
-
             start_date = datetime.now()
             collection.update_many(*args)
             end_date = datetime.now()
