@@ -545,11 +545,11 @@ class EnforcementsPage(EntitiesPage):
             # the button can have text of multiple items or single item ( set or sets )
             # try to click on the single button, if no element exist click on multiple button
             try:
-                self.click_button(self.CONFIRM_REMOVE_SINGLE)
+                self.safeguard_click_confirm(self.CONFIRM_REMOVE_SINGLE)
             except NoSuchElementException:
-                self.click_button(self.CONFIRM_REMOVE_MULTI)
+                self.safeguard_click_confirm(self.CONFIRM_REMOVE_MULTI)
         else:
-            self.wait_for_element_present_by_id('safeguard-cancel-btn').click()
+            self.safeguard_click_cancel()
 
     def choose_period(self, period):
         self.wait_for_element_present_by_id(period).click()

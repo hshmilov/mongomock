@@ -169,6 +169,10 @@ class Page:
     GETTING_STARTED_PANEL_OVERLAY_CSS = '.md-overlay'
     GETTING_STARTED_FAB_CSS = '#getting-started-fab'
 
+    # safeguard consts:
+    SAFEGUARD_OVERLAY_CSS = '.v-overlay'
+    SAFEGUARD_CANCEL_BUTTON_ID = 'safeguard-cancel-btn'
+
     def __init__(self, driver, base_url, test_base, local_browser: bool):
         self.driver = driver
         self.base_url = base_url
@@ -884,3 +888,11 @@ class Page:
 
     def getting_started_completion(self):
         return self.wait_for_element_present_by_css('.completion_info')
+
+    def safeguard_click_confirm(self, button_text):
+        self.click_button(button_text)
+        self.wait_for_element_absent_by_css(self.SAFEGUARD_OVERLAY_CSS)
+
+    def safeguard_click_cancel(self):
+        self.wait_for_element_present_by_id(self.SAFEGUARD_CANCEL_BUTTON_ID).click()
+        self.wait_for_element_absent_by_css(self.SAFEGUARD_OVERLAY_CSS)

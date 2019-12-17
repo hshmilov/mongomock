@@ -105,11 +105,11 @@ class ReportsPage(EntitiesPage):
             # the button can have text of multiple items or single item ( report or reports )
             # try to click on the single button, if no element exist click on multiple button
             try:
-                self.click_button(self.SAFEGUARD_REMOVE_REPORTS_BUTTON_SINGLE)
+                self.safeguard_click_confirm(self.SAFEGUARD_REMOVE_REPORTS_BUTTON_SINGLE)
             except NoSuchElementException:
-                self.click_button(self.SAFEGUARD_REMOVE_REPORTS_BUTTON_MULTI)
+                self.safeguard_click_confirm(self.SAFEGUARD_REMOVE_REPORTS_BUTTON_MULTI)
         else:
-            self.wait_for_element_present_by_id('safeguard-cancel-btn').click()
+            self.safeguard_click_cancel()
 
     def click_select_all_reports(self):
         self.select_all_current_page_rows_checkbox()

@@ -49,13 +49,13 @@ class QueriesPage(EntitiesPage):
             # the button can have text of multiple items or single item ( query or queries )
             # try to click on the single button, if no element exist click on multiple button
             try:
-                self.click_button(self.SAFEGUARD_REMOVE_BUTTON_SINGLE)
+                self.safeguard_click_confirm(self.SAFEGUARD_REMOVE_BUTTON_SINGLE)
             except NoSuchElementException:
-                self.click_button(self.SAFEGUARD_REMOVE_BUTTON_MULTI)
+                self.safeguard_click_confirm(self.SAFEGUARD_REMOVE_BUTTON_MULTI)
             self.wait_for_table_to_load()
             self.wait_for_element_absent_by_css('.table .x-checkbox.checked')
         else:
-            self.wait_for_element_present_by_id('safeguard-cancel-btn').click()
+            self.safeguard_click_cancel()
 
     def enforce_selected_query(self):
         self.find_element_by_text(self.test_base.enforcements_page.NEW_ENFORCEMENT_BUTTON).click()
