@@ -17,11 +17,11 @@ class GuiAliveTask(WatchdogTask):
 
         urllib3.disable_warnings()
 
-        if NODE_MARKER_PATH.is_file():
-            self.report_info(NODE_MSG)
-            return
-
         while True:
+            if NODE_MARKER_PATH.is_file():
+                self.report_info(NODE_MSG)
+                return
+
             time.sleep(SLEEP_SECONDS)
 
             if LOCKFILE.is_file():
