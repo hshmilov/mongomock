@@ -132,6 +132,7 @@ from axonius.utils.proxy_utils import to_proxy_string
 from axonius.utils.revving_cache import rev_cached, WILDCARD_ARG
 from axonius.utils.ssl import check_associate_cert_with_private_key
 from axonius.utils.threading import run_and_forget
+from axonius.clients.ldap.ldap_group_cache import set_ldap_groups_cache, get_ldap_groups_cache_ttl
 from gui.api import APIMixin
 from gui.cached_session import CachedSessionInterface
 from gui.feature_flags import FeatureFlags
@@ -4917,6 +4918,16 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
                     severity_type='error'
                 )
 
+        try:
+            new_ttl = self.__ldap_login.get('cache_time_in_hours')
+            new_ttl = new_ttl if new_ttl is not None else 1
+
+            if (get_ldap_groups_cache_ttl() / 3600) != new_ttl:
+                logger.info(f'Setting a new cache with ttl of {new_ttl} hours')
+                set_ldap_groups_cache(new_ttl * 3600)
+        except Exception:
+            logger.exception(f'Failed - could not add LDAP groups cached')
+
     def _global_config_updated(self):
         self.store_proxy_data(self._proxy_settings)
 
@@ -5140,9 +5151,14 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
                             'title': 'Default Domain to Present to the User',
                             'type': 'string'
                         },
+                        {
+                            'name': 'cache_time_in_hours',
+                            'title': 'Cache Time (hours)',
+                            'type': 'integer'
+                        },
                         *COMMON_SSL_CONFIG_SCHEMA
                     ],
-                    'required': ['enabled', 'dc_address', 'use_group_dn'],
+                    'required': ['enabled', 'dc_address', 'use_group_dn', 'cache_time_in_hours'],
                     'name': 'ldap_login_settings',
                     'title': 'Ldap Login Settings',
                     'type': 'array'
@@ -5210,6 +5226,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
                 'default_domain': '',
                 'group_cn': '',
                 'use_group_dn': False,
+                'cache_time_in_hours': 1,
                 **COMMON_SSL_CONFIG_SCHEMA_DEFAULTS
             },
             'saml_login_settings': {

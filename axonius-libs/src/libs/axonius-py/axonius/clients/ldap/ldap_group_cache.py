@@ -2,6 +2,8 @@ import logging
 from threading import Lock
 
 import cachetools
+import wrapt
+
 from axonius.utils.threading import singlethreaded
 
 logger = logging.getLogger(f'axonius.{__name__}')
@@ -13,8 +15,21 @@ def ldap_connection_identity(con: 'LdapConnection'):
     return con.domain_name
 
 
+LDAP_GROUPS_CACHE = wrapt.ObjectProxy(cachetools.TTLCache(maxsize=20, ttl=3600))
+
+
+def set_ldap_groups_cache(new_ttl: int):
+    global LDAP_GROUPS_CACHE    # pylint: disable=global-statement
+    LDAP_GROUPS_CACHE.__init__(cachetools.TTLCache(maxsize=20, ttl=new_ttl))
+
+
+def get_ldap_groups_cache_ttl():
+    global LDAP_GROUPS_CACHE  # pylint: disable=global-statement
+    return LDAP_GROUPS_CACHE.ttl
+
+
 @singlethreaded(key_func=ldap_connection_identity)
-@cachetools.cached(cachetools.TTLCache(maxsize=20, ttl=3600), key=ldap_connection_identity, lock=Lock())
+@cachetools.cached(LDAP_GROUPS_CACHE, key=ldap_connection_identity, lock=Lock())
 def get_ldap_groups(con: 'LdapConnection'):
     logger.info(f'Initializing LDAP groups for the first time for {con.domain_name}')
     ldap_groups = {}

@@ -2038,9 +2038,13 @@ class AwsAdapter(AdapterBase, Configurable):
                         device.subnet_id = subnet_id
                         device.subnet_name = (subnets_by_id.get(subnet_id) or {}).get('name')
                     device.name = tags_dict.get('Name', '')
-                    device.figure_os(device_raw['DescribedImage'].get('Description', '')
-                                     if device_raw['DescribedImage'] is not None
-                                     else device_raw.get('Platform'))
+                    try:
+                        device.figure_os(
+                            (device_raw['DescribedImage'] or {}).get(
+                                'Description', '') + ' ' + device_raw.get('Platform', '')
+                        )
+                    except Exception:
+                        logger.exception(f'Problem parsing OS type')
                     device_id = device_raw['InstanceId']
                     device.id = device_id
                     device.private_dns_name = device_raw.get('PrivateDnsName')

@@ -57,6 +57,7 @@ ALLOW_OLD_MAC_LIST = ['clearpass_adapter', 'tenable_security_center', 'nexpose_a
                       'nessus_csv_adapter', 'tenable_io_adapter', 'qualys_scans_adapter', 'airwave_adapter']
 DANGEROUS_ADAPTERS = ['lansweeper_adapter', 'carbonblack_protection_adapter', 'infoblox_adapter', 'azure_ad_adapter']
 DOMAIN_TO_DNS_DICT = dict()
+DOES_AD_HAVE_ONE_CLIENT = False
 
 
 def get_private_dns_name(adapter_device):
@@ -195,6 +196,24 @@ def _refresh_domain_to_dns_dict():
         DOMAIN_TO_DNS_DICT = PluginBase.Instance.get_global_keyval('ldap_nbns_to_dns') or {}
     except Exception:
         logger.exception(f'Warning - could not refresh domain dns dict')
+
+
+# pylint: disable=protected-access
+def _refresh_ad_client_count():
+    global DOES_AD_HAVE_ONE_CLIENT
+    try:
+        clients_count = 0
+        for doc in PluginBase.Instance.core_configs_collection.find({'plugin_name': 'active_directory_adapter'}):
+            if not doc.get('plugin_unique_name'):
+                continue
+            clients_count += PluginBase.Instance._get_collection(
+                'clients', db_name=doc['plugin_unique_name']).find({}).count()
+
+        logger.info(f'Active directory clients count: {clients_count}')
+        DOES_AD_HAVE_ONE_CLIENT = clients_count == 1
+    except Exception:
+        logger.exception(f'Warning - could not refresh AD client count. setting to false')
+        DOES_AD_HAVE_ONE_CLIENT = False
 
 
 def get_domain_for_correlation(adapter_device):
@@ -701,6 +720,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
         # 2. uppering every field we might sort by - currently hostname and os type
         # 3. splitting the hostname into a list in order to be able to compare hostnames without depending on the domain
         _refresh_domain_to_dns_dict()
+        _refresh_ad_client_count()
         adapters_to_correlate = list(normalize_adapter_devices(entities))
 
         # let's find devices by, hostname, and ip:
