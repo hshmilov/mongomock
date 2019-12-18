@@ -38,7 +38,7 @@ def destroy(keep_diag=True, keep_tunnel=True):
 
         try:
             print(f'Stopping {container.name}')
-            container.stop(timeout=3)
+            container.stop(timeout=600 if container.name == 'mongo' else 3)
             container.remove(force=True)
         except Exception as e:
             print(f'Error while removing container {container.name}: {e}')
