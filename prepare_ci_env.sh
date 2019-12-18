@@ -6,11 +6,11 @@ devops/super_clean.sh $@
 
 echo "Logging to docker hub and pulling axonius-base-image"
 source testing/test_credentials/docker_login.sh
-time docker pull axonius/axonius-base-image
+time docker pull nexus-public.axonius.com/axonius/axonius-base-image
 echo "Pulling Weave images"
-time docker pull axonius/weave:2.6.0
-time docker pull axonius/weaveexec:2.6.0
-time docker pull axonius/weavedb
+time docker pull nexus-public.axonius.com/axonius/weave:2.6.0
+time docker pull nexus-public.axonius.com/axonius/weaveexec:2.6.0
+time docker pull nexus-public.axonius.com/axonius/weavedb
 
 # Note! prepare_setup.py should be the last thing in the script, since the return value
 # of the whole script will be its return value. The CI uses this return value to know if
