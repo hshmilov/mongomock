@@ -130,7 +130,8 @@ class SnipeitAdapter(AdapterBase, Configurable):
                     format_mac(asset_tag)
                     device.add_nic(mac=asset_tag)
                 except Exception:
-                    pass
+                    if self.__use_asset_tag_as_hostname:
+                        device.hostname = asset_tag
                 try:
                     device.device_model = (device_raw.get('model') or {}).get('name')
                 except Exception:
@@ -218,6 +219,11 @@ class SnipeitAdapter(AdapterBase, Configurable):
                     'name': 'snipeit_category_white_list',
                     'title': 'SnipeIT Category Whitelist',
                     'type': 'string'
+                },
+                {
+                    'name': 'use_asset_tag_as_hostname',
+                    'title': 'Use Asset Tag As Hostname',
+                    'type': 'bool'
                 }
             ],
             'required': [],
@@ -229,8 +235,10 @@ class SnipeitAdapter(AdapterBase, Configurable):
     def _db_config_default(cls):
         return {
             'snipeit_category_white_list': None,
+            'use_asset_tag_as_hostname': False
         }
 
     def _on_config_update(self, config):
         self.__snipeit_category_white_list = config.get('snipeit_category_white_list').split(',') \
             if config.get('snipeit_category_white_list') else None
+        self.__use_asset_tag_as_hostname = config.get('use_asset_tag_as_hostname') or False

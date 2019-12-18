@@ -35,7 +35,16 @@ class AutomoxConnection(RESTConnection):
                     break
                 if not response.get('results'):
                     break
-                yield from response.get('results')
+                for device_raw in response.get('results'):
+                    device_raw['apps_raw'] = []
+                    try:
+                        device_id = device_raw.get('id')
+                        if device_id:
+                            device_raw['apps_raw'] = self._get(f'servers/{device_id}/packages',
+                                                               url_params={'api_key': self._apikey, 'o': org_id})
+                    except Exception:
+                        logger.exception(f'Problem getting sw for device {device_raw}')
+                    yield device_raw
                 page += 1
             except Exception:
                 logger.exception(f'Problem with page {page}')

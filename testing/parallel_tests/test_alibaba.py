@@ -16,7 +16,7 @@ class TestAlibabaAdapter(AdapterTestBase):
 
     @property
     def some_client_id(self):
-        return CLIENT_DETAILS['access_key_id']
+        return CLIENT_DETAILS['access_key_id'] + '_' + CLIENT_DETAILS['region_id']
 
     @property
     def some_client_details(self):

@@ -24,6 +24,7 @@ class GuardicoreAdapter(AdapterBase):
         comments = Field(str, 'Comments')
         is_active = Field(bool, 'Is Active')
         supported_features = ListField(str, 'Supported Features')
+        incidents_descriptions = ListField(str, 'Incidents Descriptions')
 
     class MyUserAdapter(UserAdapter):
         created_at = Field(datetime.datetime, 'Created At')
@@ -123,7 +124,8 @@ class GuardicoreAdapter(AdapterBase):
             'type': 'array'
         }
 
-    def _create_device(self, device_raw):
+    # pylint: disable=too-many-branches, too-many-statements, too-many-nested-blocks
+    def _create_device(self, device_raw, incidents_dict):
         try:
             device = self._new_device_adapter()
             device_id = device_raw.get('id')
@@ -132,6 +134,18 @@ class GuardicoreAdapter(AdapterBase):
                 return None
             device.id = device_id + '_' + (device_raw.get('name') or '')
             device.name = device_raw.get('name')
+            try:
+                if device_raw.get('vm_id') in incidents_dict:
+                    incidents_data = incidents_dict[device_raw.get('vm_id')]
+                    for incident_description_raw in incidents_data:
+                        try:
+                            for description_inner_raw in incident_description_raw:
+                                if isinstance(description_inner_raw, dict) and description_inner_raw.get('value'):
+                                    device.incidents_descriptions.append(description_inner_raw.get('value'))
+                        except Exception:
+                            logger.exception(f'Problem with incident raw {incident_description_raw}')
+            except Exception:
+                logger.exception(f'Problem with incidents')
             device.uuid = device_raw.get('hw_uuid')
             is_on = device_raw.get('is_on')
             device.power_state = {
@@ -186,8 +200,8 @@ class GuardicoreAdapter(AdapterBase):
             yield from data.get_user_list()
 
     def _parse_raw_data(self, devices_raw_data):
-        for device_raw in devices_raw_data:
-            device = self._create_device(device_raw)
+        for device_raw, incidents_dict in devices_raw_data:
+            device = self._create_device(device_raw, incidents_dict)
             if device:
                 yield device
 

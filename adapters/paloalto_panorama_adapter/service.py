@@ -35,7 +35,7 @@ class PaloaltoPanoramaAdapter(AdapterBase):
         arp_interface = Field(str, 'Interface')
         arp_port = Field(str, 'Port')
         arp_status = Field(str, 'Status')
-        arp_ttl = Field(str, 'TTL')
+        arp_ttl = Field(int, 'TTL')
         vpn_is_local = Field(str, 'VPN Is Local')
         vpn_domain = Field(str, 'VPN Domain')
         vpn_type = Field(str, 'VPN Type')
@@ -242,7 +242,10 @@ class PaloaltoPanoramaAdapter(AdapterBase):
             device.arp_interface = device_raw_dict.get('interface')
             device.arp_port = device_raw_dict.get('port')
             device.arp_status = device_raw_dict.get('status')
-            device.arp_ttl = device_raw_dict.get('ttl')
+            try:
+                device.arp_ttl = int(device_raw_dict.get('ttl'))
+            except Exception:
+                pass
             device.set_raw(device_raw_dict)
             return device
         except Exception:

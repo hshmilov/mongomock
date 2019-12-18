@@ -34,7 +34,7 @@ class AlibabaAdapter(AdapterBase):
         super().__init__(get_local_config_file(__file__))
 
     def _get_client_id(self, client_config):
-        return client_config[ALIBABA_ACCESS_KEY_ID]
+        return client_config[ALIBABA_ACCESS_KEY_ID] + '_' + client_config[REGION_ID]
 
     def _connect_client(self, client_config):
         try:

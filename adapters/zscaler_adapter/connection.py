@@ -81,6 +81,7 @@ class ZscalerConnection(RESTConnection):
         if not self._username or not self._password:
             raise RESTException('No username or password')
 
+        self._session_headers = {}
         self._apikey = 'jj7tg80fEGao'
         try:
             key, time_ = self.obfuscate_api_key(self._apikey)
@@ -132,6 +133,14 @@ class ZscalerConnection(RESTConnection):
             if response.status_code == 429:
                 self._sleep_rate_limit(response)
                 continue
+            if response.status_code == 401:
+                self.connect_zapi()
+                self._url = self._url.replace('admin', 'mobile')
+                self._session_headers.update({'X-Requested-With': 'XMLHttpRequest',
+                                              'Accept': 'application/json, text/javascript, */*; q=0.01',
+                                              'referer': ''.join([self._url, 'index.html']),
+                                              'Content-Type': 'application/json'})
+                continue
             break
         else:
             raise RESTException(f'Failed to fetch page numer {page} because rate limit')
@@ -147,6 +156,9 @@ class ZscalerConnection(RESTConnection):
 
             if response.status_code == 429:
                 self._sleep_rate_limit(response)
+                continue
+            if response.status_code == 401:
+                self.connect_api()
                 continue
             break
         else:

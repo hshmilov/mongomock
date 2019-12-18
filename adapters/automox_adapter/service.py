@@ -106,6 +106,7 @@ class AutomoxAdapter(AdapterBase):
             'type': 'array'
         }
 
+    # pylint: disable=too-many-branches, too-many-statements, too-many-nested-blocks
     def _create_device(self, device_raw):
         try:
             device = self._new_device_adapter()
@@ -134,6 +135,8 @@ class AutomoxAdapter(AdapterBase):
             for nic in nics:
                 try:
                     mac = nic.get('MAC') if nic.get('MAC') else None
+                    if mac == '(null)':
+                        mac = None
                     ips = nic.get('IPS') if isinstance(nic.get('IPS'), list) else None
                     if mac or ips:
                         device.add_nic(mac=mac, ips=ips)
@@ -141,6 +144,21 @@ class AutomoxAdapter(AdapterBase):
                     logger.exception(f'Problem with nic {nic}')
             device.device_serial = device_details.get('SERIAL')
             device.device_model = device_details.get('MODEL')
+            apps_raw = device_raw.get('apps_raw')
+            if not isinstance(apps_raw, list):
+                apps_raw = []
+            for app_raw in apps_raw:
+                try:
+                    app_name = app_raw.get('display_name')
+                    app_version = app_raw.get('version')
+                    if 'Security Update (KB' in app_name or 'Update for Microsoft' in app_name or\
+                            'Security Update for Microsoft' in app_name or \
+                            'Servicing Stack Update for Windows' in app_name or 'Update for Skype' in app_name:
+                        device.add_security_patch(security_patch_id=app_name)
+                    else:
+                        device.add_installed_software(name=app_name, version=app_version)
+                except Exception:
+                    logger.exception(f'Probelm getting app {app_raw}')
             device.set_raw(device_raw)
             return device
         except Exception:

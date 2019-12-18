@@ -67,7 +67,8 @@ ALLOWED_VAR_CHARACTERS = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ01
 N_CHAR_EXTENSION = 8
 DEFAULT_VERSION_EXTENSION = '00000000'
 DEFAULT_LINUX_VERSION_EPOCH = '0'
-BAD_SERIALS = ['INVALID', 'NON-UNIQUES/N', '0', 'SYSTEMSERIALNUMBER', 'DEFAULTSTRING', 'NA', 'N/A', '123456789']
+BAD_SERIALS = ['INVALID', 'NON-UNIQUES/N', '0', 'SYSTEMSERIALNUMBER',
+               'DEFAULTSTRING', 'NA', 'N/A', '123456789', 'UNKNOWN']
 
 
 # This number stands for the default number of days needed for us to say a device is old,
@@ -848,6 +849,7 @@ def is_only_host_adapter(adapter_device):
                                               'sysaid_adapter',
                                               'logrhythm_adapter',
                                               'symantec_ee_adapter',
+                                              'ansible_tower_adapter',
                                               'cisco_ucm_adapter',
                                               'symantec_dlp_adapter',
                                               'druva_adapter']):

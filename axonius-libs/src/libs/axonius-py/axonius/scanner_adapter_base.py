@@ -44,7 +44,11 @@ class ScannerCorrelatorBase(object):
         """
         super().__init__(*args, **kwargs)
         self._plugin_name = plugin_name
-        self._all_devices = list(all_devices)
+        try:
+            self._all_devices = list(all_devices)
+        except Exception:
+            logger.critical(f'Problem in correlation engine scanner', exc_info=True)
+            self._all_devices = []
         # not using `normalize_adapter_devices` to not correlate with adapterdata
         self._all_adapter_devices = [normalize_adapter_device(adapter) for adapters in self._all_devices for adapter in
                                      adapters['adapters']]
@@ -240,9 +244,7 @@ class ScannerAdapterBase(AdapterBase, Feature, ABC):
             f'adapters.{PLUGIN_NAME}': 1,
             f'adapters.{PLUGIN_UNIQUE_NAME}': 1,
             'adapters.data.id': 1,
-            'adapters.data.os': 1,
-            'adapters.data.hostname': 1,
-            'adapters.data.network_interfaces': 1,
+            'adapters.data.network_interfaces.ips': 1,
         })
         scanner = self._get_scanner_correlator(devices, self.plugin_name)
         device_count = 0

@@ -3,6 +3,7 @@ import logging
 
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
+from axonius.mixins.configurable import Configurable
 from axonius.clients.rest.connection import RESTConnection, RESTException
 from axonius.devices.device_adapter import (ConnectionType, DeviceAdapter,
                                             DeviceAdapterNeighbor,
@@ -21,7 +22,7 @@ logger = logging.getLogger(f'axonius.{__name__}')
 # pylint: disable=too-many-instance-attributes
 
 
-class UnifiAdapter(AdapterBase):
+class UnifiAdapter(AdapterBase, Configurable):
     class MyDeviceAdapter(DeviceAdapter):
         device_type = Field(str, 'Device Type', enum=UnifiAdapterDeviceType)
         adopted = Field(bool, 'AP Adopted')
@@ -30,6 +31,7 @@ class UnifiAdapter(AdapterBase):
         ap_type = Field(str, 'Unifi Device Type')
         is_wired = Field(bool, 'Is Wired')
         is_guest = Field(bool, 'is guest')
+        ssid = Field(str, 'SSID')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -219,7 +221,6 @@ class UnifiAdapter(AdapterBase):
             self._add_nic(device, device_raw)
 
             device.adapter_properties = [AdapterProperty.Network, AdapterProperty.Manager]
-
             device.set_raw(device_raw)
             return device
         except Exception:
@@ -243,6 +244,11 @@ class UnifiAdapter(AdapterBase):
             self._add_nic(device, device_raw)
             self._add_connected_device(device, device_raw)
 
+            ssid = device_raw.get('essid')
+            if self.__unifi_ssid_white_list and ssid not in self.__unifi_ssid_white_list:
+                return None
+            device.ssid = ssid
+
             device.set_raw(device_raw)
             return device
 
@@ -263,3 +269,28 @@ class UnifiAdapter(AdapterBase):
     @classmethod
     def adapter_properties(cls):
         return [AdapterProperty.Network]
+
+    @classmethod
+    def _db_config_schema(cls) -> dict:
+        return {
+            'items': [
+                {
+                    'name': 'unifi_ssid_white_list',
+                    'title': 'Unifi SSID Whitelist',
+                    'type': 'string'
+                }
+            ],
+            'required': [],
+            'pretty_name': 'Unifi Configuration',
+            'type': 'array'
+        }
+
+    @classmethod
+    def _db_config_default(cls):
+        return {
+            'unifi_ssid_white_list': None
+        }
+
+    def _on_config_update(self, config):
+        self.__unifi_ssid_white_list = config.get('unifi_ssid_white_list').split(',') \
+            if config.get('unifi_ssid_white_list') else None
