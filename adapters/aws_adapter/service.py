@@ -590,6 +590,7 @@ class AwsAdapter(AdapterBase, Configurable):
                     if self.__fetch_route53 is True:
                         logger.info(f'Fetching Route53')
                         source_name = f'{account}_Global'
+                        account_metadata['region'] = 'Global'
                         try:
                             for parse_data_for_source in query_devices_by_client_by_source_route53(
                                     first_connected_client):
@@ -613,6 +614,7 @@ class AwsAdapter(AdapterBase, Configurable):
                         try:
                             parse_data_for_source = future.result()
                             parse_data_for_source.update(parsed_data_for_all_regions)
+                            account_metadata['region'] = region_name
 
                             yield source_name, account_metadata, parse_data_for_source, AwsRawDataTypes.Regular
 
@@ -627,6 +629,7 @@ class AwsAdapter(AdapterBase, Configurable):
                         logger.info(f'Fetching Lambdas')
                         for region_name, connected_clients in connected_clients_by_region.items():
                             source_name = f'{account}_{region_name}'
+                            account_metadata['region'] = region_name
                             try:
                                 for parse_data_for_source in query_devices_by_client_by_source_lambda(
                                         connected_clients):
@@ -638,6 +641,7 @@ class AwsAdapter(AdapterBase, Configurable):
                     for region_name, connected_clients in connected_clients_by_region.items():
                         logger.info('Fetching SSM')
                         source_name = f'{account}_{region_name}'
+                        account_metadata['region'] = region_name
                         try:
                             for parse_data_for_source in self._query_devices_by_client_by_source_ssm(
                                     connected_clients):
@@ -719,6 +723,7 @@ class AwsAdapter(AdapterBase, Configurable):
                 source_name = f'{account}_{region_name}'
                 try:
                     account_metadata = self._get_account_metadata(client_data_by_region)
+                    account_metadata['region'] = region_name
                     if parsed_data_for_all_regions is None:
                         parsed_data_for_all_regions = self._query_users_by_client_for_all_sources(client_data_by_region)
                         yield source_name, account_metadata, parsed_data_for_all_regions, AwsRawDataTypes.Users
@@ -870,7 +875,7 @@ class AwsAdapter(AdapterBase, Configurable):
             except Exception:
                 logger.exception(f'Exception while querying account id')
 
-        for generic_key in ['account_tag', 'region']:
+        for generic_key in ['account_tag']:
             if generic_key in client_data:
                 account_metadata[generic_key] = client_data[generic_key]
 

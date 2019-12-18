@@ -90,7 +90,9 @@ def connect_to_server(
             ldap_server, user=user_name, password=user_password,
             raise_exceptions=True, receive_timeout=ldap_recieve_timeout)
         ldap_connection.bind()
-    except Exception:
+    except Exception as e:
+        if 'socket ssl wrapping error' in str(e):
+            raise
         # Try NTLM authentication as well. Username must be in the format of domain\username
         ldap_connection = ldap3.Connection(
             ldap_server, user=user_name, password=user_password,
@@ -791,7 +793,7 @@ class LdapConnection(object):
                 logger.debug(f"Got {devices_count} devices so far")  # this is also printer in pluginbase
             yield device_dict
 
-        logger.info(f"{self.server_addr}: Finished with {devices_count} users.")
+        logger.info(f"{self.server_addr}: Finished with {devices_count} devices.")
         if one_device is None:
             return
 

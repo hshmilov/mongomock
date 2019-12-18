@@ -323,10 +323,12 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, ActiveDirectory
         except LdapException as e:
             if "socket connection error while opening: timed out" in str(e).lower():
                 additional_msg = "connection timed out"
-            elif 'invalid server address' in str(e).lower():
-                additional_msg = 'Invalid server address'
             elif 'ldapinvalidcredentialsresult' in str(e).lower():
                 additional_msg = 'Invalid credentials'
+            elif 'socket ssl wrapping error' in str(e).lower():
+                additional_msg = 'Socket SSL wrapping error. Please check the SSL settings'
+            elif 'invalid server address' in str(e).lower():
+                additional_msg = 'Invalid server address'
             else:
                 additional_msg = 'connection error, please check the settings'
             message = f'Error: {additional_msg}.'

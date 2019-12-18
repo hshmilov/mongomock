@@ -756,11 +756,13 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
         yield from self._correlate_uuid(adapters_to_correlate)
 
         yield from self._correlate_deep_aws_id(adapters_to_correlate)
-        yield from self._correlate_aws_route53_dns_names(adapters_to_correlate)
+        # Disable route53 correlation, because this usually correlates many instances of the same ELB
+        # and we don't want these kind of correlations - they are not the same host.
+        #
+        # yield from self._correlate_aws_route53_dns_names(adapters_to_correlate)
 
         # Find adapters with the same serial
         # Now let's find devices by MAC, and IPs don't contradict (we allow empty)
-
         yield from self._correlate_mac(adapters_to_correlate)
 
     @staticmethod
