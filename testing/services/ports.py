@@ -70,6 +70,7 @@ DOCKER_PORTS = {
     'observeit-adapter':                5773,
     'qualys-scans-adapter':             5777,
     'oracle-cloud-adapter':             5779,
+    'edgescan-adapter':                 5780,
     'splunk-adapter':                   5781,
     'mobi-control-adapter':             5784,
     'infoblox-adapter':                 5794,

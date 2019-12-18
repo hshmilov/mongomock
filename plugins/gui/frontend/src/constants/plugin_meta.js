@@ -81,6 +81,10 @@ export const pluginMeta = {
         link: 'https://docs.axonius.com/docs/freshservice',
         description: 'Freshservice is a cloud-based IT help desk and service management solution that enables organizations to simplify their IT operations.'
     },
+    edgescan_adapter: {
+        title: 'edgescan Fullstack Vulnerability Management',
+        description: 'edgescan Fullstack Vulnerability Management is a cloud-based continuous vulnerability management and penetration testing solution that discovers, validates and rates vulnerabilities by running continuous asset profiling to detect rogue/exposed ports, hosts or even hidden API’s.'
+    },
     bamboohr_adapter: {
         title: 'BambooHR',
         link: 'https://docs.axonius.com/docs/bamboohr',
