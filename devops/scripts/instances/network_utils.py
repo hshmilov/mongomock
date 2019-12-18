@@ -4,7 +4,7 @@ import string
 import subprocess
 import shlex
 
-from axonius.consts.system_consts import NODE_MARKER_PATH, DB_KEY_PATH
+from axonius.consts.system_consts import NODE_MARKER_PATH, DB_KEY_PATH, DOCKERHUB_USER, WEAVE_VERSION
 from conf_tools import get_customer_conf_json
 from scripts.instances.instances_consts import (MASTER_ADDR_HOST_PATH,
                                                 ENCRYPTION_KEY_HOST_PATH,
@@ -78,8 +78,12 @@ def connect_to_master(master_ip, weave_pass):
     print('Connecting to master')
     subnet_ip_range = get_weave_subnet_ip_range()
     subprocess.check_call(shlex.split(f'weave reset --force'))
+    my_env = os.environ.copy()
+    my_env['DOCKERHUB_USER'] = DOCKERHUB_USER
+    my_env['WEAVE_VERSION'] = WEAVE_VERSION
     subprocess.check_call(shlex.split(
-        f'weave launch --dns-domain=axonius.local --ipalloc-range {subnet_ip_range} --password {weave_pass}'))
+        f'weave launch --dns-domain=axonius.local --ipalloc-range {subnet_ip_range} --password {weave_pass}'),
+        env=my_env)
     subprocess.check_call(shlex.split(f'weave connect {master_ip}'))
     print('Done weave connect')
     run_tunnler()
