@@ -15,7 +15,8 @@ ENV HOME /home/axonius
 RUN apt-get update && \
     apt-get install -y ssh git libxmlsec1-dev \
     supervisor software-properties-common python-software-properties freetds-dev freetds-bin unixodbc-dev tdsodbc && \
-    add-apt-repository ppa:deadsnakes/ppa && \
+    add-apt-repository "deb https://axoniusreadonly:7wr7E6kfttdVgn5e@nexus-public.axonius.com/repository/proxy-python3.6 xenial main" && \
+    curl -sS https://nexus-public.axonius.com/ppa_certs/deadcert.key | apt-key add - && \
     apt-get update && \
     apt-get install -y python3.6 python3.6-dev python3.6-venv ipython python-pip && \
     curl https://bootstrap.pypa.io/get-pip.py | python3.6 && \

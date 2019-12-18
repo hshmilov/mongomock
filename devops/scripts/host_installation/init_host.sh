@@ -94,9 +94,10 @@ retry timeout 20 add-apt-repository \
    "deb [arch=amd64] https://download.docker.com/linux/ubuntu \
    $(lsb_release -cs) \
    stable"
-# echo "deb http://nexus.axonius.lan:8081/repository/ppa.launchpad.net.jonathonf.python3-6.ubuntu/ xenial main" >> /etc/apt/sources.list
-# sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys F06FC659
-sudo add-apt-repository ppa:deadsnakes/ppa # CHANGED FROM JONATHONF until nexus will be fully operational
+
+curl -sS https://nexus-public.axonius.com/ppa_certs/deadcert.key | sudo apt-key add -
+source /etc/lsb-release
+sudo add-apt-repository "deb https://axoniusreadonly:7wr7E6kfttdVgn5e@nexus-public.axonius.com/repository/proxy-python3.6 ${DISTRIB_CODENAME} main"
 
 _wait_for_apt update
 echo "Installing various dependencies..."
