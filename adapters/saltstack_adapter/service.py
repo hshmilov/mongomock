@@ -66,7 +66,7 @@ class SaltstackAdapter(AdapterBase):
             'items': [
                 {
                     'name': 'domain',
-                    'title': 'Saltstack Domain',
+                    'title': 'SaltStack Open Source Domain',
                     'type': 'string'
                 },
                 {

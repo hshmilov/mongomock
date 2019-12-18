@@ -465,13 +465,13 @@ export const pluginMeta = {
         description: 'Foreman is a free open source project that automates repetitive tasks, quickly deploys applications, and proactively manages server lifecyle, on-premises or in the cloud.'
     },
     saltstack_adapter: {
-        title: 'SaltStack',
+        title: 'SaltStack Open Source',
         link: '',
-        description: 'SaltStack intelligent automation delivers, event-driven security, cloud and configuration management,'
+        description: 'SaltStack Open Source is open-source software for event-driven security, cloud and configuration management.'
     },
     snipeit_adapter: {
         title: 'Snipe-IT',
-        link: '',
+        link: 'https://docs.axonius.com/docs/snipe-it',
         description: 'Snipe-IT is a free, open source IT asset management system written in PHP.'
     },
     mobi_control_adapter: {
