@@ -52,6 +52,10 @@ export const pluginMeta = {
         link: 'https://docs.axonius.com/docs/snow-software-asset-management',
         description: 'Snow Software provides Software Asset Management (SAM) products and services to reduce the risk, cost, and complexity associated with software assets and licensing.'
     },
+    netbrain_adapter: {
+        title: 'NetBrain',
+        description: 'NetBrain helps organizations automate network documentation, troubleshooting and security.'
+    },
     pkware_adapter: {
         title: 'PKWARE',
         link: 'https://docs.axonius.com/docs/pkware',
