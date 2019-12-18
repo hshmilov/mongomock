@@ -13,7 +13,7 @@ ENV HOME /home/axonius
 
 # Install dependencies and configure the rest of the things we need.
 RUN apt-get update && \
-    apt-get install -y ssh git libxmlsec1-dev \
+    apt-get install -y ssh git libxmlsec1-dev apt-transport-https ca-certificates \
     supervisor software-properties-common python-software-properties freetds-dev freetds-bin unixodbc-dev tdsodbc && \
     add-apt-repository "deb https://axoniusreadonly:7wr7E6kfttdVgn5e@nexus-public.axonius.com/repository/proxy-python3.6 xenial main" && \
     curl -sS https://nexus-public.axonius.com/ppa_certs/deadcert.key | apt-key add - && \
