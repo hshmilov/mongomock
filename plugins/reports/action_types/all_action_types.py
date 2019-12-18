@@ -42,6 +42,7 @@ from reports.action_types.alert.create_remedy_ticket import RemedyTicketAction
 from reports.action_types.base.portnox_enrichment import PortnoxEnrichment
 from reports.action_types.alert.create_fresh_service_incident import FreshServiceIncidentAction
 from reports.action_types.base.webscan_enrichment import WebscanEnrichment
+from reports.action_types.base.create_jira_ticket_per_entity import JiraIncidentPerEntityAction
 
 
 AllActionTypes: Dict[str, type(ActionTypeBase)] = {
@@ -85,5 +86,6 @@ AllActionTypes: Dict[str, type(ActionTypeBase)] = {
     'create_remedy_ticket': RemedyTicketAction,
     'portnox_enrichment': PortnoxEnrichment,
     'create_fresh_service_incident': FreshServiceIncidentAction,
-    'webscan_enrichment': WebscanEnrichment
+    'webscan_enrichment': WebscanEnrichment,
+    'jira_incident_per_entity_action': JiraIncidentPerEntityAction
 }

@@ -42,6 +42,16 @@ class JiraIncidentAction(ActionTypeAlert):
                     'title': 'Add Incident Description Default',
                     'type': 'bool'
                 },
+                {
+                    'name': 'assignee',
+                    'title': 'Assignee',
+                    'type': 'string'
+                },
+                {
+                    'name': 'labels',
+                    'title': 'Labels',
+                    'type': 'string'
+                }
             ],
             'required': [
                 'description_default',
@@ -60,7 +70,9 @@ class JiraIncidentAction(ActionTypeAlert):
             'description_default': False,
             'incident_description': None,
             'project_key': None,
-            'incident_title': None
+            'incident_title': None,
+            'assignee': None,
+            'labels': None
         }
 
     def _run(self) -> AlertActionResult:
@@ -79,5 +91,7 @@ class JiraIncidentAction(ActionTypeAlert):
             log_message_full += '\n' + log_message
         message = self._plugin_base.create_jira_ticket(self._config['project_key'],
                                                        self._config['incident_title'],
-                                                       log_message_full, self._config['issue_type'])
+                                                       log_message_full, self._config['issue_type'],
+                                                       assignee=self._config.get('assignee'),
+                                                       labels=self._config.get('labels'))
         return AlertActionResult(not message, message or 'Success')

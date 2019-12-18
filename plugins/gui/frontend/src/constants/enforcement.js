@@ -98,6 +98,9 @@ export const actionsMeta = {
     create_jira_incident: {
         title: 'Create Jira Issue'
     },
+    jira_incident_per_entity_action: {
+        title: 'Create Jira Issue Per Entity'
+    },
     create_sysaid_incident: {
         title: 'Create SysAid Incident'
     },
@@ -171,7 +174,7 @@ export const actionsMeta = {
     },
     create_incident: {
         title: 'Create Incident',
-        items: ['create_service_now_incident', 'create_service_now_incident_per_entity', 'create_jira_incident', 'create_sysaid_incident', 'create_zendesk_ticket', 'create_remedy_ticket', 'create_fresh_service_incident']
+        items: ['create_service_now_incident', 'create_service_now_incident_per_entity', 'create_jira_incident', 'jira_incident_per_entity_action', 'create_sysaid_incident', 'create_zendesk_ticket', 'create_remedy_ticket', 'create_fresh_service_incident']
     },
     enrich_device_or_user_data: {
         title: 'Enrich Device or User Data',

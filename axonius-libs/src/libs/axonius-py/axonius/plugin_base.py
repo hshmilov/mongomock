@@ -2606,7 +2606,33 @@ class PluginBase(Configurable, Feature, ABC):
         self._global_config_updated()
         return ''
 
-    def create_jira_ticket(self, project_key, summary, description, issue_type):
+    def get_issue_types_names(self):
+        jira_settings = self._jira_settings
+        if jira_settings['enabled'] is not True:
+            return []
+        try:
+            jira = JIRA(options={'server': jira_settings['domain'],
+                                 'verify': jira_settings['verify_ssl']},
+                        basic_auth=(jira_settings['username'], jira_settings['password']))
+            return [issue_type.name for issue_type in jira.issue_types()]
+        except Exception as e:
+            logger.exception('Error in getting issue type')
+            return []
+
+    def get_jira_keys(self):
+        jira_settings = self._jira_settings
+        if jira_settings['enabled'] is not True:
+            return []
+        try:
+            jira = JIRA(options={'server': jira_settings['domain'],
+                                 'verify': jira_settings['verify_ssl']},
+                        basic_auth=(jira_settings['username'], jira_settings['password']))
+            return [project.key for project in jira.projects()]
+        except Exception as e:
+            logger.exception('Error in in getting projects keys')
+            return []
+
+    def create_jira_ticket(self, project_key, summary, description, issue_type, assignee=None, labels=None):
         jira_settings = self._jira_settings
         if jira_settings['enabled'] is not True:
             return 'Jira Settings missing'
@@ -2620,7 +2646,11 @@ class PluginBase(Configurable, Feature, ABC):
                 'description': description,
                 'issuetype': {'name': issue_type},
             }
-            jira.create_issue(fields=issue_dict)
+            if labels and isinstance(labels, str):
+                issue_dict['labels'] = labels.split(',')
+            issue = jira.create_issue(fields=issue_dict)
+            if assignee:
+                issue.update(assignee=assignee)
             return ''
         except Exception as e:
             logger.exception('Error in Jira ticket')
