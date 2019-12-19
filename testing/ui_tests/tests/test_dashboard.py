@@ -157,6 +157,35 @@ class TestDashboard(TestBase):
         assert self.devices_page.get_table_count() == 1
         assert value in self.devices_page.find_search_value()
 
+    def test_dashboard_field_segmentation(self):
+        """
+        Tests changing "segment by" in field segmentation chart cleans value instead of [Deleted] (that was the bug)
+        Tests Issue: https://axonius.atlassian.net/browse/AX-4962
+        """
+        self.dashboard_page.switch_to_page()
+        self.dashboard_page.open_new_card_wizard()
+        self.dashboard_page.select_chart_metric('Field Segmentation')
+        self.dashboard_page.select_chart_wizard_module(self.DEVICES_MODULE)
+        self.dashboard_page.select_chart_wizard_adapter(AD_ADAPTER_NAME)
+        self.dashboard_page.select_chart_wizard_field(self.AD_PRIMARY_GROUP_ID_OPTION_NAME)
+        value = self.dashboard_page.get_chart_wizard_field_value().lower()
+        assert value == self.AD_PRIMARY_GROUP_ID_OPTION_NAME.lower()
+        # Json adapter doesn't have AD PRIMARY GROUP so it switches to ID in future fix it needs to be also empty
+        # i.e act like changing to general
+        self.dashboard_page.select_chart_wizard_adapter(JSON_ADAPTER_NAME)
+        assert self.dashboard_page.get_chart_wizard_field_value() == 'ID'
+        self.dashboard_page.select_chart_wizard_adapter('General')
+        try:
+            self.dashboard_page.get_chart_wizard_field_value()
+        except NoSuchElementException:
+            pass
+        # Switch when both adapters have the field type won't delete or change
+        self.dashboard_page.select_chart_wizard_adapter(AD_ADAPTER_NAME)
+        self.dashboard_page.select_chart_wizard_field('Host Name')
+        assert self.dashboard_page.get_chart_wizard_field_value() == 'Host Name'
+        self.dashboard_page.select_chart_wizard_adapter(JSON_ADAPTER_NAME)
+        assert self.dashboard_page.get_chart_wizard_field_value() == 'Host Name'
+
     def test_dashboard_empty_title(self):
         """
         Test empty dashboard card with no title, save won't be clickable (disabled) and will "fail" then we actually
@@ -841,10 +870,10 @@ class TestDashboard(TestBase):
     def test_default_charts_with_no_results_are_not_shown(self):
         self.dashboard_page.switch_to_page()
         self.base_page.run_discovery()
-        default_charts_meta = [{'title': self.dashboard_page.MANAGED_DEVICE_COVERAGE, 'query_name': 'Managed Devices'},
-                               {'title': self.dashboard_page.VA_SCANNER_COVERAGE, 'query_name': 'Scanned By VA'},
-                               {'title': self.dashboard_page.ENDPOINT_PROTECTION_COVERAGE, 'query_name':
-                                'Protected Endpoint'}]
+        default_charts_meta = [
+            {'title': self.dashboard_page.MANAGED_DEVICE_COVERAGE, 'query_name': 'Managed Devices'},
+            {'title': self.dashboard_page.VA_SCANNER_COVERAGE, 'query_name': 'Scanned By VA'},
+            {'title': self.dashboard_page.ENDPOINT_PROTECTION_COVERAGE, 'query_name': 'Protected Endpoint'}]
         for default_chart in default_charts_meta:
             try:
                 self.dashboard_page.get_card(default_chart['title'])

@@ -44,6 +44,7 @@ class DashboardPage(Page):
     CHART_TIMELINE_LAST_RANGE_RADIO_CSS = '#range_relative'
     CHART_TIMELINE_DATE_RANGE_RADIO_CSS = '#range_absolute'
     CHART_FIELD_DROP_DOWN_CSS = '.x-dropdown.x-select.field-select'
+    CHART_DROPDOWN_FIELD_VALUE_CSS = '.x-select .x-select-trigger .trigger-text'
     CHART_ADAPTER_DROP_DOWN_CSS = '.x-dropdown.x-select.x-select-symbol.minimal'
     CHART_FIELD_TEXT_BOX_CSS = 'div.x-search-input.x-select-search > input'
     CHART_FUNCTION_CSS = 'div.x-chart-metric.grid-span2 > div:nth-child(8)'
@@ -196,6 +197,10 @@ class DashboardPage(Page):
                            self.WIZARD_OPTIONS_CSS, prop,
                            parent=None,
                            partial_text=partial_text)
+
+    def get_chart_wizard_field_value(self) -> str:
+        wizard_field_picker = self.driver.find_element_by_css_selector(self.CHART_FIELD_DROP_DOWN_CSS)
+        return wizard_field_picker.find_element_by_css_selector(self.CHART_DROPDOWN_FIELD_VALUE_CSS).text
 
     def select_chart_wizard_datepicker(self, child_index=1, date_value=datetime.datetime.now(), parent=None):
         self.fill_text_field_by_css_selector(self.CHART_WIZARD_DATEPICKER_CSS.format(child_index=child_index),
