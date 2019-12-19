@@ -119,7 +119,8 @@ from axonius.utils.gui_helpers import (Permission, PermissionLevel,
                                        check_permissions,
                                        deserialize_db_permissions,
                                        get_entity_labels, entity_fields, get_connected_user_id,
-                                       find_filter_by_name)
+                                       find_filter_by_name,
+                                       is_admin_user, get_user_permissions)
 from axonius.utils.json_encoders import iterator_jsonify
 from axonius.utils.metric import remove_ids
 from axonius.utils.mongo_administration import (get_collection_capped_size,
@@ -4768,9 +4769,16 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
             db_connection = self._get_db_connection()
             nodes = self._get_nodes_table()
             system_config = db_connection['gui']['system_collection'].find_one({'type': 'server'}) or {}
-            return jsonify({'instances': nodes, 'connection_data': {'key': self.encryption_key,
-                                                                    'host': system_config.get('server_name',
-                                                                                              '<axonius-hostname>')}})
+            connection_key = None
+            if get_user_permissions().get(PermissionType.Instances) == PermissionLevel.ReadWrite or is_admin_user():
+                connection_key = self.encryption_key
+            return jsonify({
+                'instances': nodes,
+                'connection_data': {
+                    'key': connection_key,
+                    'host': system_config.get('server_name', '<axonius-hostname>')
+                }
+            })
         elif request.method == 'POST':
             data = self.get_request_data_as_object()
             self.request_remote_plugin(f'node/{data["node_id"]}', method='POST',

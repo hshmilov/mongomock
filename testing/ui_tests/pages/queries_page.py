@@ -1,5 +1,4 @@
 import logging
-from selenium.common.exceptions import NoSuchElementException
 
 from ui_tests.pages.entities_page import EntitiesPage
 logger = logging.getLogger(f'axonius.{__name__}')
@@ -39,23 +38,10 @@ class QueriesPage(EntitiesPage):
         row.find_element_by_css_selector(self.CHECKBOX_CSS).click()
 
     def remove_selected_queries(self, confirm=False):
-        """
-        the remove button is a safeguard button ( need to confirm )
-        @param confirm: determine click on cancel or confirm
-        @return: none
-        """
-        self.wait_for_element_present_by_id('remove-queries-btn').click()
         if confirm:
-            # the button can have text of multiple items or single item ( query or queries )
-            # try to click on the single button, if no element exist click on multiple button
-            try:
-                self.safeguard_click_confirm(self.SAFEGUARD_REMOVE_BUTTON_SINGLE)
-            except NoSuchElementException:
-                self.safeguard_click_confirm(self.SAFEGUARD_REMOVE_BUTTON_MULTI)
-            self.wait_for_table_to_load()
-            self.wait_for_element_absent_by_css('.table .x-checkbox.checked')
+            self.remove_selected_with_safeguard(self.SAFEGUARD_REMOVE_BUTTON_SINGLE, self.SAFEGUARD_REMOVE_BUTTON_MULTI)
         else:
-            self.safeguard_click_cancel()
+            self.remove_selected_with_safeguard()
 
     def enforce_selected_query(self):
         self.find_element_by_text(self.test_base.enforcements_page.NEW_ENFORCEMENT_BUTTON).click()

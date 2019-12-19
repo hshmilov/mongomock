@@ -83,6 +83,14 @@ def deserialize_db_permissions(permissions):
     }
 
 
+def is_admin_user():
+    return session.get('user', {}).get('admin', False)
+
+
+def get_user_permissions():
+    return session.get('user', {}).get('permissions', {})
+
+
 # This is sort of an extension for the enum below, this can be used instead of PermissionLevel.* for
 # marking required permissions for endpoints and it means that ReadOnly is required for GET requests
 # while any other type (DELETE, PUT, POST) require ReadWrite permissions

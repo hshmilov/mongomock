@@ -39,7 +39,7 @@ ENFORCEMENT_TEST_NAME_3 = 'Test_enforcement_3'
 
 SAVED_QUERY_JUST_CBR_NAME = 'just_cbr'
 SAVED_QUERY_JUST_CBR = 'adapters == \'carbonblack_response_adapter\''
-AD_LAST_OR_ADDED_QUERY = '({added_filter}) or adapters_data.active_directory_adapter.ad_last_logon> date("NOW-8d")'
+AD_LAST_OR_ADDED_QUERY = '({added_filter}) or (adapters ==\'active_directory_adapter\')'
 AD_ESX_AND_JSON_QUERY = '(adapters == "active_directory_adapter") and (adapters == "esx_adapter") ' \
                         'or (adapters == "json_file_adapter")'
 AD_ESX_AND_JSON_QUERY_NAME = 'ESX, AD AND JSON'

@@ -4,8 +4,6 @@ from enum import Enum
 from typing import List, Tuple, Iterable
 from collections import namedtuple
 
-from selenium.common.exceptions import NoSuchElementException
-
 from testing.test_credentials.test_ad_credentials import WMI_QUERIES_DEVICE, ad_client1_details
 from ui_tests.pages.entities_page import EntitiesPage
 
@@ -535,21 +533,10 @@ class EnforcementsPage(EntitiesPage):
         self.driver.find_element_by_css_selector(self.ENFORCEMENTS_CHECKBOX).click()
 
     def remove_selected_enforcements(self, confirm=False):
-        """
-        the remove button is a safeguard button ( need to confirm )
-        @param confirm: determine click on cancel or confirm
-        @return: none
-        """
-        self.click_button('Remove', partial_class=True)
         if confirm:
-            # the button can have text of multiple items or single item ( set or sets )
-            # try to click on the single button, if no element exist click on multiple button
-            try:
-                self.safeguard_click_confirm(self.CONFIRM_REMOVE_SINGLE)
-            except NoSuchElementException:
-                self.safeguard_click_confirm(self.CONFIRM_REMOVE_MULTI)
+            self.remove_selected_with_safeguard(self.CONFIRM_REMOVE_SINGLE, self.CONFIRM_REMOVE_MULTI)
         else:
-            self.safeguard_click_cancel()
+            self.remove_selected_with_safeguard()
 
     def choose_period(self, period):
         self.wait_for_element_present_by_id(period).click()

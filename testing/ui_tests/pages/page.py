@@ -897,6 +897,21 @@ class Page:
         self.wait_for_element_present_by_id(self.SAFEGUARD_CANCEL_BUTTON_ID).click()
         self.wait_for_element_absent_by_css(self.SAFEGUARD_OVERLAY_CSS)
 
+    def remove_selected_with_safeguard(self, confirmation_label=None, confirmation_label_multi=None):
+        self.click_button(self.REMOVE_BUTTON, partial_class=True)
+        # Opening animation
+        time.sleep(0.5)
+        if confirmation_label:
+            # the button can have text of multiple items or single item ( report or reports )
+            # try to click on the single button, if no element exist click on multiple button
+            try:
+                self.safeguard_click_confirm(confirmation_label)
+            except NoSuchElementException:
+                if confirmation_label_multi:
+                    self.safeguard_click_confirm(confirmation_label_multi)
+        else:
+            self.safeguard_click_cancel()
+            
     def get_current_window(self):
         return self.driver.current_window_handle
 

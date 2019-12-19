@@ -95,21 +95,11 @@ class ReportsPage(EntitiesPage):
         self.wait_for_spinner_to_end()
 
     def click_remove_reports(self, confirm=False):
-        """
-        the remove button is a safeguard button ( need to confirm )
-        @param confirm: determine click on cancel or confirm
-        @return: none
-        """
-        self.find_remove_reports_button().click()
         if confirm:
-            # the button can have text of multiple items or single item ( report or reports )
-            # try to click on the single button, if no element exist click on multiple button
-            try:
-                self.safeguard_click_confirm(self.SAFEGUARD_REMOVE_REPORTS_BUTTON_SINGLE)
-            except NoSuchElementException:
-                self.safeguard_click_confirm(self.SAFEGUARD_REMOVE_REPORTS_BUTTON_MULTI)
+            self.remove_selected_with_safeguard(self.SAFEGUARD_REMOVE_REPORTS_BUTTON_SINGLE,
+                                                self.SAFEGUARD_REMOVE_REPORTS_BUTTON_MULTI)
         else:
-            self.safeguard_click_cancel()
+            self.remove_selected_with_safeguard()
 
     def click_select_all_reports(self):
         self.select_all_current_page_rows_checkbox()
