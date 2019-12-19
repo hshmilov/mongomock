@@ -33,7 +33,7 @@ AGENTS = namedtuple('Agents', (
     'cylance', 'datadog', 'desktop_central', 'dropbox', 'druva', 'endgame', 'ensilo', 'epo', 'fireeye_hx',
     'forcepoint_csv', 'imperva_dam', 'jumpcloud', 'kaseya', 'lansweeper', 'minerva', 'mobi_control', 'mobileiron',
     'observeit', 'opswat', 'paloalto_cortex', 'qualys_scans', 'quest_kace', 'redcloak', 'sccm',
-    'secdo', 'sentinelone', 'signalsciences',
+    'secdo', 'sentinelone', 'signalsciences', 'traps',
     'sophos', 'symantec', 'symantec_cloud_workload', 'symantec_ee', 'symantec_12', 'tanium', 'tenable_io', 'tripwire',
     'truefort', 'guardicore', 'deep_security', 'illusive',
     'twistlock', 'webroot', 'aqua', 'symantec_dlp', 'bitlocker', 'wazuh'
@@ -43,7 +43,7 @@ AGENT_NAMES = AGENTS(
     alertlogic='Alert Logic Agent', bigfix='IBM BigFix Agent', carbonblack_defense='CarbonBlack Defense Sensor',
     carbonblack_protection='CarbonBlack Protection Sensor', carbonblack_response='CarbonBlack Response Sensor',
     cisco_amp='Cisco AMP Connector', cisco_firepower_management_center='Cisco FMC Agent',
-    bitlocker='Bitlocker Agent',
+    bitlocker='Bitlocker Agent', traps='Traps Agent',
     cisco_umbrella='Cisco Umbrella Agent', cloudpassage='CloudPassage Daemon', code42='Code42 Agent',
     counter_act='CounterACT Agent', crowd_strike='CrowdStrike Agent', cylance='Cylance Agent', datadog='Datadog Agent',
     desktop_central='Desktop Central Agent', dropbox='Dropbox Client', druva='Druva Client', endgame='Endgame Sensor',

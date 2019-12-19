@@ -81,6 +81,10 @@ export const pluginMeta = {
         link: 'https://docs.axonius.com/docs/freshservice',
         description: 'Freshservice is a cloud-based IT help desk and service management solution that enables organizations to simplify their IT operations.'
     },
+    paloalto_xdr_adapter: {
+        title: 'Palo Alto Networks Cortex XDR',
+        description: 'Palo Alto Networks Cortex XDR is a detection and response app that natively integrates network, endpoint and cloud data to stop sophisticated attacks. Cortex XDR detects threats with behavioral analytics and reveals the root cause to speed up investigations.'
+    },
     edgescan_adapter: {
         title: 'edgescan Fullstack Vulnerability Management',
         description: 'edgescan Fullstack Vulnerability Management is a cloud-based continuous vulnerability management and penetration testing solution that discovers, validates and rates vulnerabilities by running continuous asset profiling to detect rogue/exposed ports, hosts or even hidden API’s.'
