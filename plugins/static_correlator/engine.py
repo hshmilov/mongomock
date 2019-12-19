@@ -29,9 +29,7 @@ from axonius.utils.parsing import (NORMALIZED_MACS,
                                    hostnames_do_not_contradict,
                                    ips_do_not_contradict_or_mac_intersection,
                                    is_azuread_or_ad_and_have_name,
-                                   is_only_host_adapter_not_localhost,
                                    hostname_not_problematic,
-                                   is_only_host_adapter,
                                    is_different_plugin,
                                    is_from_juniper_and_asset_name,
                                    is_windows, is_linux, get_cloud_id_or_hostname, compare_cloud_id_or_hostname,
@@ -62,6 +60,34 @@ DOES_AD_HAVE_ONE_CLIENT = False
 
 def get_private_dns_name(adapter_device):
     return adapter_device['data'].get('private_dns_name')
+
+
+def is_only_host_adapter(adapter_device):
+    if (adapter_device.get('plugin_name') in ['deep_security_adapter',
+                                              'cisco_umbrella_adapter',
+                                              'bitlocker_adapter',
+                                              'carbonblack_defense_adapter',
+                                              'carbonblack_protection_adapter',
+                                              'csv_adapter',
+                                              'mssql_adapter',
+                                              'code42_adapter',
+                                              'cherwell_adapter',
+                                              'signalsciences_adapter',
+                                              'sysaid_adapter',
+                                              'logrhythm_adapter',
+                                              'symantec_ee_adapter',
+                                              'ansible_tower_adapter',
+                                              'cisco_ucm_adapter',
+                                              'symantec_dlp_adapter',
+                                              'druva_adapter']):
+        return True
+    if adapter_device.get('plugin_name') == 'active_directory_adapter' and DOES_AD_HAVE_ONE_CLIENT:
+        return True
+    return False
+
+
+def is_only_host_adapter_not_localhost(adapter_device):
+    return is_only_host_adapter(adapter_device) and hostname_not_problematic(adapter_device)
 
 
 def get_fqdn(adapter_device):
