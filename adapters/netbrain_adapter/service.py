@@ -157,6 +157,7 @@ class NetbrainAdapter(AdapterBase):
             try:
                 device.add_ips_and_macs(ips=device_raw.get('mgmtIP'))
                 device.mgmt_ip = device_raw.get('mgmtIP')
+                device.mgmt_ip_raw = device_raw.get('mgmtIP')
             except Exception as e:
                 message = f'No IP for {device_raw}'
                 logger.exception(message)

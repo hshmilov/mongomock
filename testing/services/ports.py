@@ -220,6 +220,7 @@ DOCKER_PORTS = {
     'webscan-adapter':                  9998,
     'google-big-query-adapter':         9999,
     'ansible-tower-adapter':            10000,
+    'cisco-ucsm-adapter':               10010,
     'cisco-stealthwatch-adapter':       10001,
     'netbrain-adapter':                 13371,
     'mongo':                            27017,

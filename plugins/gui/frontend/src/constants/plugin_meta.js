@@ -28,6 +28,10 @@ export const pluginMeta = {
         link: 'https://docs.axonius.com/docs/orca-cloud-visibility-platform',
         description: 'Orca Cloud Visibility Platform delivers full-stack visibility including prioritized alerts on vulnerabilities, compromises, misconfigurations, and more across all cloud accounts.'
     },
+    cisco_ucsm_adapter: {
+        title: 'Cisco UCS Manager',
+        description: 'Cisco UCS Manager supports the entire Cisco UCS server and Cisco HyperFlex Series hyperconverged infrastructure portfolios. It enables server, fabric, and storage provisioning as well as, device discovery, inventory, configuration, diagnostics, monitoring, fault detection, auditing, and statistics collection.'
+    },
     hashicorp_adapter: {
         title: 'HashiCorp Consul',
         link: 'https://docs.axonius.com/docs/hashicorp-consul',
