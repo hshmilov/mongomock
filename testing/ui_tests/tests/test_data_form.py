@@ -51,8 +51,8 @@ class TestDataForm(TestBase):
 
         try:
             with AlertlogicService().contextmanager(take_ownership=True):
-                self.adapters_page.creat_new_adapter_connection(plugin_title=ALERTLOGIC_ADAPTER_NAME,
-                                                                adapter_input=adapter_input)
+                self.adapters_page.create_new_adapter_connection(plugin_title=ALERTLOGIC_ADAPTER_NAME,
+                                                                 adapter_input=adapter_input)
                 self.sync_on_server_connection_failure(ALERTLOGIC_ADAPTER_NAME, adapter_input.get('domain'))
                 self.verify_adapter_connection_and_save(adapter_input)
                 self.sync_on_server_connection_failure(ALERTLOGIC_ADAPTER_NAME, adapter_input.get('domain'))
@@ -74,8 +74,8 @@ class TestDataForm(TestBase):
 
         try:
             with AwsService().contextmanager(take_ownership=True):
-                self.adapters_page.creat_new_adapter_connection(plugin_title=AWS_ADAPTER_NAME,
-                                                                adapter_input=adapter_input)
+                self.adapters_page.create_new_adapter_connection(plugin_title=AWS_ADAPTER_NAME,
+                                                                 adapter_input=adapter_input)
                 self.sync_on_server_connection_failure(AWS_ADAPTER_NAME, adapter_input.get('region_name'))
                 self.verify_adapter_connection_and_save(adapter_input)
                 self.sync_on_server_connection_failure(AWS_ADAPTER_NAME, adapter_input.get('region_name'))
@@ -99,8 +99,8 @@ class TestDataForm(TestBase):
 
         try:
             with AwsService().contextmanager(take_ownership=True):
-                self.adapters_page.creat_new_adapter_connection(plugin_title=AWS_ADAPTER_NAME,
-                                                                adapter_input=adapter_input)
+                self.adapters_page.create_new_adapter_connection(plugin_title=AWS_ADAPTER_NAME,
+                                                                 adapter_input=adapter_input)
                 self.sync_on_server_connection_failure(AWS_ADAPTER_NAME, adapter_input.get('region_name'))
                 self.verify_adapter_connection_and_cancel(adapter_input)
                 adapter_input['aws_secret_access_key'] = ''

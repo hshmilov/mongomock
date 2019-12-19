@@ -5,6 +5,7 @@ from typing import List, Tuple, Iterable
 from collections import namedtuple
 
 from testing.test_credentials.test_ad_credentials import WMI_QUERIES_DEVICE, ad_client1_details
+from testing.test_credentials.test_shodan_credentials import CLIENT_DETAILS as shodan_client_details
 from ui_tests.pages.entities_page import EntitiesPage
 
 Task = namedtuple('Task', 'status stats name main_action trigger_query_name started_at completed_at')
@@ -89,6 +90,7 @@ class EnforcementsPage(EntitiesPage):
     ACTION_CONF_BODY_CSS = f'{ACTION_CONF_CONTAINER_CSS} .main'
     ACTION_RESULT_CONTAINER_CSS = '.x-action-result'
     ACTION_NAME_ID = 'action-name'
+    API_KEY_ID = 'apikey'
     ACTION_BY_NAME_XPATH = '//div[@class=\'x-text-box\' and child::div[text()=\'{action_name}\']]'
     SELECT_VIEW_ENTITY_CSS = '.base-query .x-select-symbol .x-select-trigger'
     SELECT_VIEW_NAME_CSS = '.base-query .query-name .x-select-trigger'
@@ -182,6 +184,21 @@ class EnforcementsPage(EntitiesPage):
         # Opening animation time
         time.sleep(0.2)
         self.find_element_by_text(Action.send_emails.value).click()
+
+    def add_main_action(self, category, action_type_name):
+        self.find_element_by_text(self.MAIN_ACTION_TEXT).click()
+        self.wait_for_action_library()
+        self.find_element_by_text(category).click()
+        # Opening animation time
+        time.sleep(5)
+        self.find_element_by_text(action_type_name).click()
+
+    def add_main_action_shodan(self, action_name):
+        self.add_main_action(ActionCategory.Enrichment, Action.shodan_enrichment.value)
+        self.fill_action_name(action_name)
+        self.fill_api_key(shodan_client_details['apikey'])
+        self.save_action()
+        self.click_save_button()
 
     def add_send_csv_to_s3(self):
         self.find_element_by_text(self.MAIN_ACTION_TEXT).click()
@@ -407,6 +424,9 @@ class EnforcementsPage(EntitiesPage):
     def fill_action_name(self, name):
         self.fill_text_field_by_element_id(self.ACTION_NAME_ID, name)
 
+    def fill_api_key(self, api_key):
+        self.fill_text_field_by_element_id(self.API_KEY_ID, api_key)
+
     def add_notify_syslog(self, name='Special Syslog Notification', action_cond=MAIN_ACTION_TEXT, severity='warning'):
         # 'warning' by default, because our syslog doesn't like logs sent using "INFO"
         # It is an issue with our syslog's configuration, and it's not worth the time fixing
@@ -572,17 +592,23 @@ class EnforcementsPage(EntitiesPage):
         self.click_new_enforcement()
         self.fill_enforcement_name(enforcement_name)
 
-    def create_basic_enforcement(self, enforcement_name, enforcement_view, schedule=True, enforce_added=False,
+    def create_basic_enforcement(self,
+                                 enforcement_name,
+                                 enforcement_view=None,
+                                 trigger=True,
+                                 schedule=True,
+                                 enforce_added=False,
                                  save=True):
         self.create_basic_empty_enforcement(enforcement_name)
-        self.select_trigger()
-        if enforce_added:
-            self.check_new_entities()
-        if schedule:
-            self.check_scheduling()
-        self.select_saved_view(enforcement_view)
-        if save:
-            self.save_trigger()
+        if trigger:
+            self.select_trigger()
+            if enforce_added:
+                self.check_new_entities()
+            if schedule:
+                self.check_scheduling()
+            self.select_saved_view(enforcement_view)
+            if save:
+                self.save_trigger()
 
     def create_notifying_enforcement(self,
                                      enforcement_name,

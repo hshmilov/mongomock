@@ -280,7 +280,7 @@ class AdaptersPage(EntitiesPage):
         match_object = re.match(pattern, element_text, re.I | re.M)
         return match_object.group(1)
 
-    def creat_new_adapter_connection(self, plugin_title: str, adapter_input: dict):
+    def create_new_adapter_connection(self, plugin_title: str, adapter_input: dict):
         self.wait_for_adapter(plugin_title)
         self.click_adapter(plugin_title)
         self.wait_for_table_to_load()

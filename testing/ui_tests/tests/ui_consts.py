@@ -56,6 +56,8 @@ ALERTLOGIC_ADAPTER_NAME = 'Alert Logic'
 AWS_ADAPTER = 'aws_adapter'
 AWS_ADAPTER_NAME = 'Amazon Web Services (AWS)'
 
+SHODAN_ADAPTER = 'shodan_adapter'
+
 WINDOWS_QUERY_NAME = 'Windows Operating System'
 
 

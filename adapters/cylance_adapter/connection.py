@@ -44,6 +44,7 @@ class CylanceConnection(RESTConnection):
             epoch_timeout = epoch_time + 60 * consts.NUMBER_OF_MINUTES_UNTIL_TOKEN_TIMEOUT
             claims = {'exp': epoch_timeout, 'iat': epoch_time, 'iss': 'http://cylance.com', 'sub': self._app_id,
                       'tid': self._tid, 'jti': str(uuid.uuid4()), 'scp': scope}
+            # pylint: disable=no-member
             auth_token_encoded = jwt.encode(claims, self._app_secret, algorithm='HS256').decode('utf-8')
             response = self._post('auth/v2/token', body_params={'auth_token': auth_token_encoded})
             if 'access_token' not in response:
