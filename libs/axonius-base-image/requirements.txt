@@ -106,3 +106,5 @@ urllib3==1.25.6
 pytenable==0.3.28
 google-cloud-bigquery==1.21.0
 wrapt==1.11.2
+pyparsing==2.4.5
+ucsmsdk==0.9.8
