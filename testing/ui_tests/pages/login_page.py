@@ -1,3 +1,7 @@
+import pytest
+
+from selenium.common.exceptions import NoSuchElementException
+
 from ui_tests.pages.page import Page
 from axonius.consts.system_consts import AXONIUS_DNS_SUFFIX
 
@@ -6,6 +10,7 @@ class LoginPage(Page):
     LOGIN_USERNAME_ID = 'user_name'
     LOGIN_PASSWORD_ID = 'password'
     LOGIN_DOMAIN_ID = 'domain'
+    LOGIN_BUTTON_TEXT = 'Login'
     REMEMBER_ME_INPUT_CSS = '[for=remember_me]+div'
     LOGOUT_CSS = 'a[title="Logout"]'
     WRONG_USERNAME_OR_PASSWORD_MESSAGE = 'Wrong user name or password'
@@ -15,6 +20,7 @@ class LoginPage(Page):
     OKTA_LOGIN_USERNAME_ID = 'okta-signin-username'
     OKTA_URL = f'okta.{AXONIUS_DNS_SUFFIX}'
     OKTA_SUBMIT_BUTTON_ID = 'okta-signin-submit'
+    LOGIN_COMPONENT_CSS = '.x-login'
 
     @property
     def root_page_css(self):
@@ -46,7 +52,7 @@ class LoginPage(Page):
                                  scroll_to_toggle=False)
 
     def click_login_button(self):
-        self.click_button('Login')
+        self.click_button(self.LOGIN_BUTTON_TEXT)
 
     def logout(self):
         self.wait_for_element_present_by_css(self.LOGOUT_CSS)
@@ -103,3 +109,13 @@ class LoginPage(Page):
             # if overlay does not exist, most probably logged in user is not admin
             return
         self.click_getting_started_overlay()
+
+    def assert_logged_in(self):
+        with pytest.raises(NoSuchElementException):
+            self.driver.find_element_by_css_selector(self.LOGIN_COMPONENT_CSS)
+
+    def assert_not_logged_in(self):
+        assert self.driver.find_element_by_css_selector(self.LOGIN_COMPONENT_CSS)
+
+    def get_error_msg(self):
+        return self.driver.find_element_by_css_selector('.x-login .form-error').text

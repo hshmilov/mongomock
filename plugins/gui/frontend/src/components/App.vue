@@ -39,6 +39,8 @@ import xSideBar from './networks/navigation/SideBar.vue'
 import xLogin from './networks/system/Login.vue'
 import xAccessModal from './neurons/popover/AccessModal.vue'
 import xToast from './axons/popover/Toast.vue'
+import sessionTimeoutMixin from '../mixins/session_timeout.js'
+
 import { GET_USER } from '../store/modules/auth'
 import { IS_EXPIRED } from '../store/getters'
 import {
@@ -91,6 +93,7 @@ const XFabTransition = {
 
 export default {
   name: 'app',
+  mixins: [sessionTimeoutMixin],
   components: {
     xLogin,
     xTopBar,

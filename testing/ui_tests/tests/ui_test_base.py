@@ -342,11 +342,11 @@ class TestBase:
 
     # wait for the element and
 
-    def login(self):
+    def login(self, remember_me=True):
         self.driver.get(self.base_url)
         self.fill_signup_screen()
         self.login_page.wait_for_login_page_to_load()
-        self.login_page.login(username=self.username, password=self.password, remember_me=True)
+        self.login_page.login(username=self.username, password=self.password, remember_me=remember_me)
 
     def fill_signup_screen(self):
         if self.axonius_system.gui.get_signup_status() is False:

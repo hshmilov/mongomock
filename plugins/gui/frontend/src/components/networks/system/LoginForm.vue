@@ -56,10 +56,10 @@
         this.complete = valid
       },
       onLogin () {
-        this.login(this.credentials).then(res => {
-          // Set getting started panel state to open=true
-          if (res.status == 200) {
-            GettingStartedPubSub.$emit('getting-started-login')
+        this.login(this.credentials).then((res) => {
+          if (res.status === 200) {
+              // Set getting started panel state to open=true
+              GettingStartedPubSub.$emit('getting-started-login')
           }
         })
       }

@@ -8,6 +8,10 @@ export default {
       if (state.auth.currentUser.error === 'Not logged in') {
         return ''
       }
+
+      if(this.$route.query.timeout){
+        return 'Session timed out'
+      }
       return state.auth.currentUser.error
     }
   }),

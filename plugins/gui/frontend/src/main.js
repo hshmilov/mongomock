@@ -25,6 +25,9 @@ Vue.use(MdProgress)
 Vue.use(MdDivider)
 Vue.use(MdDrawer)
 
+import VueCookies from 'vue-cookies'
+Vue.use(VueCookies)
+
 Vue.use(Vuetify)
 Vue.use(SafeguardPlugin)
 

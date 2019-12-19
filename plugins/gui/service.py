@@ -3020,6 +3020,10 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
             source = user.get('source')
             if user_name != AXONIUS_USER_NAME:
                 self.send_external_info_log(f'UI Login with user: {user_name} of source {source}')
+            if self._system_settings.get('timeout_settings') and self._system_settings.get('timeout_settings').get(
+                    'enabled'):
+                user['timeout'] = self._system_settings.get('timeout_settings').get('timeout') \
+                    if not session.permanent else 0
             return jsonify(beautify_user_entry(user)), 200
 
         log_in_data = self.get_request_data_as_object()
@@ -5061,6 +5065,25 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
                             'enum': [1, 2]
                         },
                         {
+                            'name': 'timeout_settings',
+                            'title': 'Timeout Settings',
+                            'items': [
+                                {
+                                    'name': 'enabled',
+                                    'title': 'Enable Session Timeout',
+                                    'type': 'bool'
+                                },
+                                {
+                                    'name': 'timeout',
+                                    'title': 'Session Idle Timeout (Minutes)',
+                                    'type': 'number',
+                                    'default': 120
+                                }
+                            ],
+                            'required': ['enabled', 'timeout'],
+                            'type': 'array'
+                        },
+                        {
                             'name': 'percentageThresholds',
                             'title': 'Percentage Fields Severity Scopes',
                             'type': 'array',
@@ -5241,6 +5264,10 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
             SYSTEM_SETTINGS: {
                 'refreshRate': 60,
                 'defaultNumOfEntitiesPerPage': 20,
+                'timeout_settings': {
+                    'enabled': True,
+                    'timeout': 120
+                },
                 'singleAdapter': False,
                 'multiLine': False,
                 'defaultSort': True,

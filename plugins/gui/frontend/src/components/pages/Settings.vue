@@ -139,6 +139,7 @@
   import { SAVE_PLUGIN_CONFIG, LOAD_PLUGIN_CONFIG, CHANGE_PLUGIN_CONFIG } from '../../store/modules/settings'
   import { UPDATE_SYSTEM_CONFIG } from '../../store/mutations'
   import { REQUEST_API, START_RESEARCH_PHASE, STOP_RESEARCH_PHASE } from '../../store/actions'
+  import { GET_USER } from '../../store/modules/auth'
 
   export default {
     name: 'XSettings',
@@ -233,7 +234,8 @@
       ...mapActions({
         fetchData: REQUEST_API,
         startResearch: START_RESEARCH_PHASE, stopResearch: STOP_RESEARCH_PHASE,
-        updatePluginConfig: SAVE_PLUGIN_CONFIG, loadPluginConfig: LOAD_PLUGIN_CONFIG
+        updatePluginConfig: SAVE_PLUGIN_CONFIG, loadPluginConfig: LOAD_PLUGIN_CONFIG,
+        getUser: GET_USER
       }),
       validNumber (value) {
         return !(value === undefined || isNaN(value) || value <= 0)
@@ -296,6 +298,8 @@
               system: this.guiSettings.config.system_settings
             }
           })
+        }).then(() => {
+            this.getUser()
         })
       },
       saveFeatureFlags () {

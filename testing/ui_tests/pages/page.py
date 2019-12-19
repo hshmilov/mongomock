@@ -896,3 +896,17 @@ class Page:
     def safeguard_click_cancel(self):
         self.wait_for_element_present_by_id(self.SAFEGUARD_CANCEL_BUTTON_ID).click()
         self.wait_for_element_absent_by_css(self.SAFEGUARD_OVERLAY_CSS)
+
+    def get_current_window(self):
+        return self.driver.current_window_handle
+
+    def open_new_tab(self):
+        self.driver.execute_script(f'window.open("{self.base_url}");')
+        return self.driver.window_handles[len(self.driver.window_handles) - 1]
+
+    def close_current_tab(self):
+        element = self.driver.find_element_by_css_selector('body')
+        element.send_keys(Keys.LEFT_CONTROL, 'w')
+
+    def switch_tab(self, tab):
+        self.driver.switch_to_window(tab)

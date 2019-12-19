@@ -87,7 +87,9 @@ export const dashboard = {
 					if(!currentPanels[panel.uuid]){
 						state.panels.data.push(panel)
 					}
+					delete currentPanels[panel.uuid]
 				})
+				state.panels.data = state.panels.data.filter(panel => !currentPanels[panel.uuid])
 			} else {
 				state.panels.data = payload.data.panels
 			}

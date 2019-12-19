@@ -19,6 +19,7 @@ def beautify_user_entry(user):
                                                    'role_name',
                                                    'admin',
                                                    'source',
-                                                   'additional_userinfo']}
+                                                   'additional_userinfo',
+                                                   'timeout']}
     user['password'] = UNCHANGED_MAGIC_FOR_GUI
     return user

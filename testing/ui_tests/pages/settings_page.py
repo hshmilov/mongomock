@@ -18,6 +18,7 @@ class SettingsPage(Page):
     FEATURE_FLAGS_CSS = 'li#feature-flags-tab'
     ABOUT_CSS = 'li#about-settings-tab'
     SEND_EMAILS_LABEL = 'Send Emails'
+    SESSION_TIMEOUT_LABEL = 'Enable Session Timeout'
     GETTING_STARTED_LABEL = 'Enable Getting Started with Axonius Checklist'
     GLOBAL_SSL_LABEL = 'Override Default SSL Settings'
     REMOTE_SUPPORT_LABEL_OLD = 'Remote Support - Warning: turning off this feature prevents Axonius from' \
@@ -38,6 +39,7 @@ class SettingsPage(Page):
     EMAIL_HOST_ID = 'smtpHost'
     SYSLOG_HOST = 'syslogHost'
     SYSLOG_PORT = 'syslogPort'
+    TIMEOUT_ID = 'timeout'
     SYSLOG_SSL_CSS_DROPBOX = '[for=use_ssl]+div'
     SYSLOG_SSL_CSS_DROPBOX_OPTIONS = '[for=use_ssl]+div>.expand>div>.x-select-options>div'
     FRESH_SERVICE_DOMAIN = 'domain'
@@ -117,6 +119,18 @@ class SettingsPage(Page):
     @property
     def root_page_css(self):
         return 'a#settings.item-link'
+
+    def click_toggle_button(self,
+                            toggle,
+                            make_yes=True,
+                            ignore_exc=False,
+                            scroll_to_toggle=True,
+                            window=TAB_BODY):
+        return super().click_toggle_button(toggle=toggle,
+                                           make_yes=make_yes,
+                                           ignore_exc=ignore_exc,
+                                           scroll_to_toggle=scroll_to_toggle,
+                                           window=window)
 
     def click_global_settings(self):
         self.driver.find_element_by_css_selector(self.GLOBAL_SETTINGS_CSS).click()
@@ -356,6 +370,9 @@ class SettingsPage(Page):
 
     def fill_saml_idp(self, idp):
         self.fill_text_field_by_element_id(self.SAML_IDP, idp)
+
+    def fill_session_timeout(self, timeout):
+        self.fill_text_field_by_element_id(self.TIMEOUT_ID, timeout)
 
     def find_email_port_error(self):
         return self.find_element_by_text('\'Port\' has an illegal value')
@@ -733,3 +750,14 @@ class SettingsPage(Page):
 
     def ca_cert_delete_second(self):
         self._ca_cert_delete(ca_delete_index=2)
+
+    def find_session_timeout_toggle(self):
+        return self.find_checkbox_by_label(self.SESSION_TIMEOUT_LABEL)
+
+    def set_session_timeout(self, enabled, timeout):
+        self.switch_to_page()
+        self.click_gui_settings()
+        self.click_toggle_button(self.find_session_timeout_toggle(), make_yes=enabled, window=TAB_BODY)
+        if enabled:
+            self.fill_session_timeout(timeout)
+            self.save_and_wait_for_toaster()

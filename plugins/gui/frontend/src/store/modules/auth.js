@@ -7,6 +7,7 @@ export const IS_ENTITY_EDITABLE = 'IS_ENTITY_EDITABLE'
 
 export const GET_USER = 'GET_USER'
 export const LOGIN = 'LOGIN'
+export const LOGOUT = 'LOGOUT'
 export const LDAP_LOGIN = 'LDAP_LOGIN'
 export const SET_USER = 'SET_USER'
 export const SET_LOGIN_OPTIONS = 'SET_LOGIN_OPTIONS'
@@ -156,13 +157,12 @@ export const auth = {
           data: payload
         }).then((response) => {
           if (!response || !response.status) {
-            commit(SET_USER, { error: 'Login failed.' })
+            reject(commit(SET_USER, { error: 'Login failed.' }))
           } else if (response.status === 200) {
-            dispatch(GET_USER)
+            resolve(dispatch(GET_USER))
           } else {
-            commit(SET_USER, { error: response.data.message, fetching: false })
+            reject(commit(SET_USER, { error: response.data.message, fetching: false }))
           }
-            resolve(response)
         }).catch((error) => {
           commit(SET_USER, { error: error.response.data.message })
           reject(error)
@@ -193,6 +193,18 @@ export const auth = {
         }
       }).catch((error) => {
         commit(SET_USER, { error: error.response.data.message })
+      })
+    },
+    [LOGOUT] ({ dispatch}){
+      try {
+        const auth2 = window.gapi.auth2.getAuthInstance()
+        auth2.signOut()
+      } catch (err) {
+      }
+      return dispatch(REQUEST_API, {
+        rule: 'logout'
+      }).then(() => {
+        dispatch(GET_USER)
       })
     },
     [GET_ALL_USERS] ({ dispatch }) {
