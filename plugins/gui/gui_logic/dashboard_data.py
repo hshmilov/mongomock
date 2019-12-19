@@ -695,7 +695,6 @@ def generate_dashboard_uncached(dashboard_id: ObjectId):
     })
     # pylint: enable=protected-access
 
-    dashboard_metric = ChartMetrics[dashboard['metric']]
     handler_by_metric = {
         ChartMetrics.compare: fetch_chart_compare,
         ChartMetrics.intersect: fetch_chart_intersect,
@@ -704,11 +703,12 @@ def generate_dashboard_uncached(dashboard_id: ObjectId):
         ChartMetrics.timeline: fetch_chart_timeline
     }
     config = {**dashboard['config']}
-    if config.get('entity') and ChartMetrics.compare != dashboard_metric:
-        # _fetch_chart_compare crashed in the wild because it got entity as a param.
-        # We don't understand how such a dashboard chart was created. But at lease we won't crash now
-        config['entity'] = EntityType(dashboard['config']['entity'])
     try:
+        dashboard_metric = ChartMetrics[dashboard['metric']]
+        if config.get('entity') and ChartMetrics.compare != dashboard_metric:
+            # _fetch_chart_compare crashed in the wild because it got entity as a param.
+            # We don't understand how such a dashboard chart was created. But at least we won't crash now
+            config['entity'] = EntityType(dashboard['config']['entity'])
         dashboard['data'] = handler_by_metric[dashboard_metric](ChartViews[dashboard['view']], **config)
         if dashboard['data'] is None:
             dashboard['data'] = []
