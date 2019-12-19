@@ -1,6 +1,7 @@
 import logging
 
 from axonius.types.enforcement_classes import EntitiesResult, EntityResult
+from axonius.plugin_base import PluginBase
 from reports.action_types.action_type_base import ActionTypeBase
 
 
@@ -21,7 +22,7 @@ class JiraIncidentPerEntityAction(ActionTypeBase):
 
     @staticmethod
     def config_schema() -> dict:
-        return {
+        schema = {
             'items': [
                 {
                     'name': 'project_key',
@@ -58,6 +59,11 @@ class JiraIncidentPerEntityAction(ActionTypeBase):
                     'name': 'labels',
                     'title': 'Labels',
                     'type': 'string'
+                },
+                {
+                    'name': 'components',
+                    'title': 'Components',
+                    'type': 'string'
                 }
             ],
             'required': [
@@ -69,6 +75,13 @@ class JiraIncidentPerEntityAction(ActionTypeBase):
             ],
             'type': 'array'
         }
+        jira_keys = PluginBase.Instance.get_jira_keys()
+        issue_types = PluginBase.Instance.get_issue_types_names()
+        if jira_keys:
+            schema['items'][0]['enum'] = jira_keys
+        if issue_types:
+            schema['items'][2]['enum'] = issue_types
+        return schema
 
     @staticmethod
     def default_config() -> dict:
@@ -79,7 +92,8 @@ class JiraIncidentPerEntityAction(ActionTypeBase):
             'incident_title': None,
             'assignee': None,
             'add_full_device_content': False,
-            'labels': None
+            'labels': None,
+            'components': None
         }
 
     # pylint: disable=R0912,R0914,R0915,R1702
@@ -135,7 +149,8 @@ class JiraIncidentPerEntityAction(ActionTypeBase):
                                                                self._config['incident_title'],
                                                                log_message_full, self._config['issue_type'],
                                                                assignee=self._config.get('assignee'),
-                                                               labels=self._config.get('labels'))
+                                                               labels=self._config.get('labels'),
+                                                               components=self._config.get('components'))
                 results.append(EntityResult(entry['internal_axon_id'], not message, message or 'Success'))
             except Exception:
                 logger.exception(f'Problem with entry {entry}')

@@ -2632,7 +2632,8 @@ class PluginBase(Configurable, Feature, ABC):
             logger.exception('Error in in getting projects keys')
             return []
 
-    def create_jira_ticket(self, project_key, summary, description, issue_type, assignee=None, labels=None):
+    def create_jira_ticket(self, project_key, summary, description, issue_type,
+                           assignee=None, labels=None, components=None):
         jira_settings = self._jira_settings
         if jira_settings['enabled'] is not True:
             return 'Jira Settings missing'
@@ -2646,6 +2647,9 @@ class PluginBase(Configurable, Feature, ABC):
                 'description': description,
                 'issuetype': {'name': issue_type},
             }
+            if components and isinstance(components, str):
+                components = components.split(',')
+                issue_dict['components'] = [{'name': component} for component in components]
             if labels and isinstance(labels, str):
                 issue_dict['labels'] = labels.split(',')
             issue = jira.create_issue(fields=issue_dict)
