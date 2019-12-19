@@ -9,8 +9,7 @@ EXPECTED_RESULT = {
     'id': 'zscaler_232511',
     'last_used_users': ['test@test_company.org'],
     'network_interfaces': [{'mac': '10:65:30:49:DD:20',
-                            'manufacturer': 'Dell Inc. (One Dell Way Round Rock '
-                                            'TX US 78682 )'}],
+                            'manufacturer': 'Dell Inc (One Dell Way Round Rock TX 78682 US)'}],
     'os': {'distribution': '10', 'type': 'Windows'},
     'owner': 'test owner',
     'policy_name': 'asdf',

@@ -12,7 +12,7 @@ import re
 import string
 import sys
 from types import FunctionType
-from typing import Callable, NewType, List, Iterable
+from typing import Callable, NewType, List, Iterable, Optional
 
 import pytz
 
@@ -84,7 +84,7 @@ parameter_function = NewType('parameter_function', Callable)
 oui_data = open(os.path.join(axonius.__path__[0], 'oui.csv'), encoding='utf8').read()
 
 # dict: MAC 3 first bytes to manufacturer data
-mac_manufacturer_details = {x[1]: x for x in
+mac_manufacturer_details = {x[0].replace(':', ''): x for x in
                             csv.DictReader(oui_data.splitlines(), csv.Sniffer().sniff(oui_data[:1024])).reader}
 del oui_data
 
@@ -112,13 +112,14 @@ def parse_bool_from_raw(bool_raw_value, raise_on_exception=False):
         return None
 
 
-def get_manufacturer_from_mac(mac: str) -> str:
+def get_manufacturer_from_mac(mac: str) -> Optional[str]:
     if mac:
-        mac = format_mac(mac).replace(':', '')[:6]
-        manufacturer = mac_manufacturer_details.get(mac)
-        if manufacturer is None:
-            return None
-        return f'{manufacturer[2]} ({manufacturer[3]})'
+        formatted_mac = format_mac(mac).replace(':', '')
+        for index in [6, 7, 8, 9]:
+            manufacturer = mac_manufacturer_details.get(formatted_mac[:index])
+            if manufacturer:
+                return f'{manufacturer[2]} ({manufacturer[3]})'
+        return None
 
 
 def normalize_var_name(name):
