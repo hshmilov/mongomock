@@ -6,15 +6,21 @@ import os
 import threading
 import time
 import uuid
-from datetime import datetime
+from datetime import datetime, timedelta
 from multiprocessing.pool import ThreadPool
+from dateutil.parser import parser
 
 import docker.models
 import pymongo
 import requests
+import pytz
+
 from apscheduler.executors.pool import ThreadPoolExecutor
 from apscheduler.triggers.interval import IntervalTrigger
+
+from axonius.consts.metric_consts import InstancesMetrics
 from axonius.consts.plugin_subtype import PluginSubtype
+from axonius.logging.metric_helper import log_metric
 
 from axonius.utils.threading import LazyMultiLocker
 from docker.models.containers import Container
@@ -141,6 +147,15 @@ class CoreService(Triggerable, PluginBase, Configurable):
                                     id='clean_offline_plugins',
                                     max_instances=1,
                                     coalesce=True)
+
+        self.cleaner_thread.add_job(func=self.check_instances_status,
+                                    trigger=IntervalTrigger(seconds=60 * 5),
+                                    next_run_time=datetime.now() + timedelta(seconds=120),
+                                    name='check_instances_status',
+                                    id='check_instances_status',
+                                    max_instances=1,
+                                    coalesce=True)
+
         self.cleaner_thread.start()
 
         # pool for global config updates
@@ -168,6 +183,21 @@ class CoreService(Triggerable, PluginBase, Configurable):
         self._set_node_name(self.node_id, MASTER_NODE_NAME)
 
         self.__lazy_locker = LazyMultiLocker()
+
+    def check_instances_status(self):
+        try:
+            nodes = self._get_nodes_table()
+            now_obj = pytz.utc.localize(datetime.utcnow())
+
+            for node in nodes:
+                node.pop(NODE_USER_PASSWORD, None)
+                parse = parser()
+                last_seen_obj = parse.parse(node['last_seen'])
+                diff = (now_obj - last_seen_obj).total_seconds()
+                log_metric(logger, metric_name=InstancesMetrics.INSTANCE_LAST_SEEN,
+                           metric_value=round(diff, 2), details=str(node))
+        except Exception:
+            logger.exception(f'failed to compute nodes last seen metrics')
 
     def clean_offline_plugins(self):
         """Thread for cleaning offline plugin.
@@ -221,21 +251,21 @@ class CoreService(Triggerable, PluginBase, Configurable):
     def node_tags(self, node_id):
         if request.method == 'GET':
             return jsonify(
-                self._get_collection('nodes_metadata').find_one({'node_id': node_id}, projection={'_id': 0, 'tags': 1}))
+                self._get_collection('nodes_metadata').find_one({NODE_ID: node_id}, projection={'_id': 0, 'tags': 1}))
         elif request.method == 'POST':
             data = self.get_request_data_as_object()
-            self._get_collection('nodes_metadata').find_one_and_update({'node_id': node_id}, {
+            self._get_collection('nodes_metadata').find_one_and_update({NODE_ID: node_id}, {
                 '$set': {f'tags.{data["tags"]}': data["tags"]}}, upsert=True)
             return ''
         elif request.method == 'DELETE':
             data = self.get_request_data_as_object()
-            self._get_collection('nodes_metadata').find_one_and_update({'node_id': node_id}, {
+            self._get_collection('nodes_metadata').find_one_and_update({NODE_ID: node_id}, {
                 '$unset': {f'tags.{data["tags"]}': data["tags"]}})
             return ''
 
     @add_rule('nodes/last_seen/<node_id>', methods=['GET'], should_authenticate=False)
     def get_node_status(self, node_id):
-        x = self.core_configs_collection.find_one(filter={'node_id': node_id},
+        x = self.core_configs_collection.find_one(filter={NODE_ID: node_id},
                                                   sort=[('last_seen', pymongo.DESCENDING)])
         return jsonify({
             'last_seen': x['last_seen']
@@ -271,7 +301,7 @@ class CoreService(Triggerable, PluginBase, Configurable):
             if self._get_collection("configs").find_one({NODE_ID: node_id}) is None:
                 return return_error('Node is not connected.', 404)
 
-            node_metadata = self._get_collection('nodes_metadata').find_one({'node_id': node_id})
+            node_metadata = self._get_collection('nodes_metadata').find_one({NODE_ID: node_id})
             if node_metadata is None or not node_metadata.get(NODE_USER_PASSWORD):
                 password = generate_password(32)
                 self._set_node_metadata(node_id, NODE_USER_PASSWORD, password)

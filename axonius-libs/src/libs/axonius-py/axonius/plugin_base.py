@@ -1310,7 +1310,7 @@ class PluginBase(Configurable, Feature, ABC):
         version_object = {'plugin_name': self.plugin_name,
                           'plugin_unique_name': self.plugin_unique_name,
                           'plugin': self.version,
-                          'node_id': self.node_id,
+                          NODE_ID: self.node_id,
                           'axonius-libs': self.lib_version}
 
         return jsonify(version_object)
@@ -1843,9 +1843,9 @@ class PluginBase(Configurable, Feature, ABC):
     def _get_nodes_table(self):
         db_connection = self._get_db_connection()
         nodes = []
-        for current_node in self.core_configs_collection.distinct('node_id'):
-            node_data = db_connection['core']['nodes_metadata'].find_one({'node_id': current_node})
-            node = {'node_id': current_node,
+        for current_node in self.core_configs_collection.distinct(NODE_ID):
+            node_data = db_connection['core']['nodes_metadata'].find_one({NODE_ID: current_node})
+            node = {NODE_ID: current_node,
                     'last_seen': self.request_remote_plugin(f'nodes/last_seen/{current_node}').json()[
                         'last_seen']}
 

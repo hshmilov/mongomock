@@ -1,7 +1,7 @@
 import re
 
 from axonius.utils.wait import wait_until
-from axonius.consts.metric_consts import SystemMetric, Query
+from axonius.consts.metric_consts import SystemMetric, Query, InstancesMetrics
 from services.adapters.stresstest_service import StresstestService
 from services.adapters.stresstest_scanner_service import StresstestScannerService
 from test_helpers.log_tester import LogTester
@@ -56,6 +56,10 @@ class TestMetrics(TestBase):
             system_scheduler_log_tester = self.axonius_system.scheduler.log_tester
             wait_until(lambda: system_scheduler_log_tester.is_metric_in_log(SystemMetric.TRIAL_EXPIRED_STATE, False))
             wait_until(lambda: system_scheduler_log_tester.is_metric_in_log(SystemMetric.CYCLE_FINISHED, r'\d+'))
+
+            core_log_tester = self.axonius_system.core.log_tester
+            wait_until(lambda: core_log_tester.is_metric_in_log(InstancesMetrics.INSTANCE_LAST_SEEN, r'\d+'),
+                       total_timeout=60 * 15)
 
             report = re.escape(metric_query)
 

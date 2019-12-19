@@ -38,3 +38,7 @@ class GettingStartedMetric:
     AUTO_OPEN_SETTING = 'getting_started.settings.auto_open'
     FEATURE_ENABLED_SETTING = 'getting_started.settings.feature_enabled'
     COMPLETION_STATE = 'getting_started.state.completion'
+
+
+class InstancesMetrics:
+    INSTANCE_LAST_SEEN = 'instance_last_seen'
