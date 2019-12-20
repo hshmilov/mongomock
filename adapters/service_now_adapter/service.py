@@ -343,14 +343,13 @@ class ServiceNowAdapter(AdapterBase, Configurable):
 
         :return: A json with all the attributes returned from the ServiceNow Server
         """
-        with client_data:
-            yield from client_data.get_device_list(fetch_users_info_for_devices=self.__fetch_users_info_for_devices)
+        if self.__fetch_users:
+            with client_data:
+                yield from client_data.get_device_list(fetch_users_info_for_devices=self.__fetch_users_info_for_devices)
 
     def _query_users_by_client(self, key, data):
-        if self.__fetch_users:
+        with data:
             yield from data.get_user_list()
-        else:
-            yield from []
 
     def _clients_schema(self):
         """

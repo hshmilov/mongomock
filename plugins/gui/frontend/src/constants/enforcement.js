@@ -119,6 +119,9 @@ export const actionsMeta = {
     send_csv_to_s3: {
         title: 'Send CSV to Amazon S3'
     },
+    automox_install_update: {
+        title: 'Automox Install Update'
+    },
     send_email_to_entities: {
         title: 'Send Email to Entities'
     },
@@ -150,7 +153,7 @@ export const actionsMeta = {
     },
     isolate_edr: {
         title: 'Execute Endpoint Security Agent Action',
-        items: ['carbonblack_isolate', 'carbonblack_unisolate', 'cybereason_isolate', 'cybereason_unisolate', 'carbonblack_defense_change_policy', 'sentinelone_initiate_scan_action']
+        items: ['carbonblack_isolate', 'carbonblack_unisolate', 'cybereason_isolate', 'cybereason_unisolate', 'carbonblack_defense_change_policy', 'sentinelone_initiate_scan_action', 'automox_install_update']
     },
     scan_va: {
         title: 'Add Device to VA Scan',

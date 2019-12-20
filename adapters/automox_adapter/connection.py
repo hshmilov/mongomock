@@ -15,6 +15,13 @@ class AutomoxConnection(RESTConnection):
                          headers={'Content-Type': 'application/json',
                                   'Accept': 'application/json'},
                          **kwargs)
+        self._permanent_headers['Authorization'] = f'Bearer {self._apikey}'
+
+    def install_update(self, device_id, org_id, update_name):
+        self._post(f'servers/{device_id}/queues', url_params={'o': org_id},
+                   body_params={'command_type_name': 'InstallUpdate',
+                                'args': update_name})
+        return self._get(f'servers/{device_id}', url_params={'o': org_id})
 
     def _connect(self):
         if not self._apikey:
@@ -27,8 +34,7 @@ class AutomoxConnection(RESTConnection):
         while page * DEVICE_PER_PAGE < MAX_NUMBER_OF_DEVICES:
             try:
                 response = self._get('servers',
-                                     url_params={'api_key': self._apikey,
-                                                 'o': org_id,
+                                     url_params={'o': org_id,
                                                  'l': DEVICE_PER_PAGE,
                                                  'p': page})
                 if not isinstance(response, dict) or not response:
@@ -41,7 +47,7 @@ class AutomoxConnection(RESTConnection):
                         device_id = device_raw.get('id')
                         if device_id:
                             device_raw['apps_raw'] = self._get(f'servers/{device_id}/packages',
-                                                               url_params={'api_key': self._apikey, 'o': org_id})
+                                                               url_params={'o': org_id})
                     except Exception:
                         logger.exception(f'Problem getting sw for device {device_raw}')
                     yield device_raw
@@ -51,8 +57,7 @@ class AutomoxConnection(RESTConnection):
                 break
 
     def get_device_list(self):
-        response = self._get('orgs',
-                             url_params={'api_key': self._apikey})
+        response = self._get('orgs')
         org_ids = []
         for org_raw in response:
             if isinstance(org_raw, dict) and org_raw.get('id'):

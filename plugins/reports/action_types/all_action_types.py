@@ -43,6 +43,7 @@ from reports.action_types.base.portnox_enrichment import PortnoxEnrichment
 from reports.action_types.alert.create_fresh_service_incident import FreshServiceIncidentAction
 from reports.action_types.base.webscan_enrichment import WebscanEnrichment
 from reports.action_types.base.create_jira_ticket_per_entity import JiraIncidentPerEntityAction
+from reports.action_types.base.automox_install_update import AutomoxInstallUpdateAction
 
 
 AllActionTypes: Dict[str, type(ActionTypeBase)] = {
@@ -87,5 +88,6 @@ AllActionTypes: Dict[str, type(ActionTypeBase)] = {
     'portnox_enrichment': PortnoxEnrichment,
     'create_fresh_service_incident': FreshServiceIncidentAction,
     'webscan_enrichment': WebscanEnrichment,
-    'jira_incident_per_entity_action': JiraIncidentPerEntityAction
+    'jira_incident_per_entity_action': JiraIncidentPerEntityAction,
+    'automox_install_update': AutomoxInstallUpdateAction
 }

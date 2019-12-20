@@ -28,11 +28,20 @@ class ServiceNowConnection(RESTConnection):
             raise RESTException('No user name or password')
 
     def get_user_list(self):
-        for user in self.__users_table.values():
+        users_table = []
+        try:
+            users_table = list(self.__get_devices_from_table(consts.USERS_TABLE))
+        except Exception:
+            logger.exception(f'Problem getting users')
+        users_table_dict = dict()
+        for user in users_table:
+            if user.get('sys_id'):
+                users_table_dict[user.get('sys_id')] = user
+        for user in users_table_dict.values():
             user_to_yield = user.copy()
             try:
                 if (user.get('manager') or {}).get('value'):
-                    user_to_yield['manager_full'] = self.__users_table.get(user.get('manager').get('value'))
+                    user_to_yield['manager_full'] = users_table_dict.get(user.get('manager').get('value'))
             except Exception:
                 logger.exception(f'Problem getting manager for user {user}')
             yield user_to_yield

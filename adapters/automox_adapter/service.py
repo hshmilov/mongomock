@@ -6,6 +6,7 @@ from axonius.fields import Field, ListField
 from axonius.utils.datetime import parse_date
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
+from axonius.plugin_base import EntityType, add_rule, return_error
 from axonius.clients.rest.connection import RESTException
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.utils.files import get_local_config_file
@@ -18,14 +19,43 @@ logger = logging.getLogger(f'axonius.{__name__}')
 class AutomoxAdapter(AdapterBase):
     # pylint: disable=too-many-instance-attributes
     class MyDeviceAdapter(DeviceAdapter):
+        basic_device_id = Field(str)
         org_id = Field(str, 'Organization Id')
         instance_id = Field(str, 'Instancef Id')
         last_refresh_time = Field(datetime.datetime, 'Last Refresh Time')
         last_update_time = Field(datetime.datetime, 'Last Update Time')
         automox_tags = ListField(str, 'Automox Tags')
+        next_patch_time = Field(datetime.datetime, 'Next Patch Time')
+        patches = Field(int, 'Patches')
+        pending_patches = Field(int, 'Pending Patches')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
+
+    @add_rule('install_update', methods=['POST'])
+    def install_update(self):
+        try:
+            if self.get_method() != 'POST':
+                return return_error('Method not supported', 405)
+            automox_dict = self.get_request_data_as_object()
+            device_id = automox_dict.get('device_id')
+            client_id = automox_dict.get('client_id')
+            org_id = automox_dict.get('org_id')
+            update_name = automox_dict.get('update_name')
+            automox_obj = self.get_connection(self._get_client_config_by_client_id(client_id))
+            with automox_obj:
+                device_raw = automox_obj.install_update(device_id, org_id, update_name)
+            device = self._create_device(device_raw)
+            if device:
+                self._save_data_from_plugin(
+                    client_id,
+                    {'raw': [], 'parsed': [device.to_dict()]},
+                    EntityType.Devices, False)
+                self._save_field_names_to_db(EntityType.Devices)
+        except Exception as e:
+            logger.exception(f'Problem during isolating changes')
+            return return_error(str(e), 500)
+        return '', 200
 
     @staticmethod
     def _get_client_id(client_config):
@@ -115,14 +145,22 @@ class AutomoxAdapter(AdapterBase):
                 logger.warning(f'Bad device with no ID {device_raw}')
                 return None
             device.id = str(device_id) + '_' + (device_raw.get('name') or '')
+            device.basic_device_id = device_id
+            device.first_seen = parse_date(device_raw.get('create_time'))
             device.hostname = device_raw.get('name')
             if isinstance(device_raw.get('organization_id'), int):
                 device.org_id = device_raw.get('organization_id')
             if isinstance(device_raw.get('ip_addrs'), list):
                 device.add_nic(ips=device_raw.get('ip_addrs'))
             device.instance_id = device_raw.get('instance_id')
-            device.last_refresh_time = parse_date(device_raw.get('last_refresh_time'))
-            device.last_update_time = parse_date(device_raw.get('last_update_time'))
+            last_refresh_time = parse_date(device_raw.get('last_refresh_time'))
+            device.last_refresh_time = last_refresh_time
+            last_seen = last_refresh_time
+            last_update_time = parse_date(device_raw.get('last_update_time'))
+            device.last_update_time = last_update_time
+            if not last_seen or (last_update_time and last_update_time > last_seen):
+                last_seen = last_update_time
+            device.last_seen = last_seen
             device.figure_os((device_raw.get('os_family') or '') + ' ' + (device_raw.get('os_name') or ''))
             if isinstance(device_raw.get('tags'), list):
                 device.automox_tags = device_raw.get('tags')
@@ -143,7 +181,22 @@ class AutomoxAdapter(AdapterBase):
                 except Exception:
                     logger.exception(f'Problem with nic {nic}')
             device.device_serial = device_details.get('SERIAL')
+            device.device_manufacturer = device_details.get('VENDOR')
+            device.pending_patches = device_raw.get('pending_patches')\
+                if isinstance(device_raw.get('pending_patches'), int) else None
+            device.patches = device_raw.get('patches') if isinstance(device_raw.get('patches'), int) else None
             device.device_model = device_details.get('MODEL')
+            try:
+                device.last_used_users = [device_details.get('LAST_USER_LOGON').get('USER')]
+            except Exception:
+                pass
+            try:
+                if device_raw.get('uptime'):
+                    device.set_boot_time(uptime=datetime.timedelta(seconds=int(device_raw.get('uptime'))))
+            except Exception:
+                pass
+            device.uuid = device_raw.get('uuid')
+            device.next_patch_time = parse_date(device_raw.get('next_patch_time'))
             apps_raw = device_raw.get('apps_raw')
             if not isinstance(apps_raw, list):
                 apps_raw = []

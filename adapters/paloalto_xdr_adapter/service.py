@@ -43,6 +43,7 @@ class PaloaltoXdrAdapter(AdapterBase):
                                            verify_ssl=client_config['verify_ssl'],
                                            https_proxy=client_config.get('https_proxy'),
                                            api_key_id=client_config['api_key_id'],
+                                           url_base_path=client_config['url_base_path'],
                                            apikey=client_config['apikey'])
         with connection:
             pass
@@ -85,6 +86,11 @@ class PaloaltoXdrAdapter(AdapterBase):
                     'type': 'string'
                 },
                 {
+                    'name': 'url_base_path',
+                    'title': 'URL Base Path',
+                    'type': 'string'
+                },
+                {
                     'name': 'api_key_id',
                     'title': 'API Key ID',
                     'type': 'string'
@@ -110,6 +116,7 @@ class PaloaltoXdrAdapter(AdapterBase):
                 'domain',
                 'api_key_id',
                 'apikey',
+                'url_base_path',
                 'verify_ssl'
             ],
             'type': 'array'
