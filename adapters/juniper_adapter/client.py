@@ -10,6 +10,17 @@ from jnpr.space import rest, async
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
+def blockify(iter_, blksize, get_division=True):
+    result = []
+    for item in iter_:
+        result.append(item)
+        if len(result) == blksize:
+            yield result
+            result = []
+    if result and get_division:
+        yield result
+
+
 class JuniperClient:
 
     def __init__(self, url, username, password):
@@ -57,13 +68,10 @@ class JuniperClient:
         if not do_async:
             yield from self._do_junus_space_command_not_async(devices, queue_name, actions)
         else:
-            while True:
-                devices_part = devices[:100]
-                yield from self._do_junus_space_command_async(devices_part, queue_name, actions)
-                if len(devices) <= 100:
-                    break
-                devices = devices[100:]
+            for device_block in blockify(devices, 100):
+                yield from self._do_junus_space_command_async(device_block, queue_name, actions)
 
+    # pylint: disable=too-many-locals
     def _do_junus_space_command_async(self, devices, queue_name, actions):
         tm = async.TaskMonitor(self.space_rest_client,
                                queue_name, wait_time='10')
@@ -93,28 +101,30 @@ class JuniperClient:
                             f'Got exception with device {current_device.name}')
 
             # Wait for all tasks to complete
-            pu_list = tm.wait_for_tasks(task_ids)
+            pu_dict = tm.wait_for_tasks(task_ids)
 
             juniper_device_actions = [
                 'interface list', 'hardware', 'version', 'vlans', 'base-mac']
             juniper_devices = defaultdict(list)
-            for pu in pu_list:
+            for id_, pu in pu_dict.items():
                 try:
-                    device_name, action_name = id_to_name_dict.get(
-                        str(pu.taskId), ('', ''))
-
-                    if (pu.state != 'DONE' or pu.status != 'SUCCESS' or
-                            str(pu.percentage) != '100.0'):
-                        logger.error(
-                            'Async RPC execution Failed. Failed to get %s from %s. The process state was %s',
-                            action_name, device_name, pu.state)
+                    rpc_result = getattr(pu, 'exec-rpc-job-result')
+                    device_id = str(getattr(rpc_result, 'device-id'))
+                    status = str(rpc_result.status).lower()
+                    result = rpc_result.result
+                    result = lxml.etree.tostring(lxml.objectify.fromstring(str(result)))
+                    device_name, action_name = id_to_name_dict.get(id_, ('', ''))
+                    if status != 'success':
+                        msg = 'Async RPC execution Failed. Failed to get %s from %s. The process state was %s'
+                        logger.error(msg, action_name, device_name, status)
                         continue
                     if not device_name or not action_name:
+                        logger.warning(f'no such id {id_} {device_id}, ids = {id_to_name_dict.keys()}')
                         continue
                     if action_name in juniper_device_actions:
-                        juniper_devices[device_name].append((action_name, self.data_to_xml_async(pu.data)))
+                        juniper_devices[device_name].append((action_name, result))
                         continue
-                    yield (action_name, (device_name, self.data_to_xml_async(pu.data)))
+                    yield (action_name, (device_name, result))
                 except Exception:
                     logger.exception(f'Something is wrong with pu {str(pu)}')
             yield from map(lambda x: ('Juniper Device', x), juniper_devices.items())

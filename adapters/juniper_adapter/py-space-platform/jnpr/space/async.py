@@ -194,11 +194,11 @@ class TaskMonitor(object):
                 continue
 
             if self._task_is_done(message):
-                return self.get_final_progress_update(message)
+                return self.get_message_results(message)
 
         raise Exception("Task %s does not seem to be progressing" % task_id)
 
-    def get_final_progress_update(self, pu_message):
+    def get_message_results(self, pu_message):
         """
         Gets the final progress-update message for a job, based on the href
         inside the ``pu_message`` argument supplied. The ``pu_message`` arg
@@ -207,8 +207,7 @@ class TaskMonitor(object):
         message fetched and returned by this method will contain the full
         result inside the ``data`` field.
         """
-        job_pu_href = '/'.join([pu_message.job.get('href'),
-                                'progress-update'])
+        job_pu_href = getattr(pu_message, 'detail-link').get('href')
         response = self._rest_end_point.get(job_pu_href)
         if response.status_code != 200:
             raise Exception("Failed in GET on %s" % job_pu_href)
@@ -237,7 +236,7 @@ class TaskMonitor(object):
         """
 
         num_consecutive_attempts = 0
-        task_results = []
+        task_results = {}
 
         while len(task_results) < len(task_id_list):
             message = self.pull_message()
@@ -253,7 +252,7 @@ class TaskMonitor(object):
 
             if message.taskId in task_id_list:
                 if self._task_is_done(message):
-                    task_results.append(self.get_final_progress_update(message))
+                    task_results[str(message.taskId)] = self.get_message_results(message)
 
         return task_results
 

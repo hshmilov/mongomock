@@ -81,6 +81,7 @@ class JuniperAdapter(AdapterBase, Configurable):
                     logger.exception(f'Got problems with {juno_device.name}')
 
             elif device_type == 'Juniper Device':
+                logger.info(f'parsing juniper juno_device {juno_device}')
                 raw_data = rpc.parse_device(device_type, juno_device)
                 yield from create_device(self._new_device_adapter, device_type, raw_data)
             else:
