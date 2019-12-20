@@ -911,7 +911,7 @@ class Page:
                     self.safeguard_click_confirm(confirmation_label_multi)
         else:
             self.safeguard_click_cancel()
-            
+
     def get_current_window(self):
         return self.driver.current_window_handle
 
