@@ -94,6 +94,7 @@ from axonius.entities import EntityType
 from axonius.logging.logger import create_logger
 from axonius.mixins.configurable import Configurable
 from axonius.mixins.feature import Feature
+from axonius.profiling.memory_tracing import run_memory_tracing
 from axonius.types.correlation import MAX_LINK_AMOUNT, CorrelateException, CorrelationResult
 from axonius.types.ssl_state import (COMMON_SSL_CONFIG_SCHEMA,
                                      COMMON_SSL_CONFIG_SCHEMA_DEFAULTS,
@@ -307,6 +308,7 @@ class PluginBase(Configurable, Feature, ABC):
         :raise KeyError: In case of environment variables missing
         """
         print(f'{datetime.now()} Hello docker from {type(self)}')
+        run_memory_tracing()
 
         self.mongo_client = MongoClient(self.db_host, replicaSet='axon-cluster', retryWrites=True,
                                         username=self.db_user, password=self.db_password,
