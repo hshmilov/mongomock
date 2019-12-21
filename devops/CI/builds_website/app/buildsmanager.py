@@ -264,7 +264,7 @@ class BuildsManager(object):
         tc_user = self.__teamcity_credentials['username']
         tc_pass = self.__teamcity_credentials['password']
 
-        response = requests.post(url='https://teamcity.in.axonius.com/httpAuth/app/rest/buildQueue',
+        response = requests.post(url='https://teamcity-local.axonius.lan/httpAuth/app/rest/buildQueue',
                                  auth=(tc_user, tc_pass),
                                  json={"buildType": {"id": "Devops_Exports_Installer"},
                                        "properties": {
@@ -277,7 +277,7 @@ class BuildsManager(object):
                                                         ]}},
                                  headers={'Content-Type': 'application/json',
                                           'Accept': 'application/json'},
-                                 verify=True)
+                                 verify=False)
         response.raise_for_status()
 
     def export_ova(self, version, owner, fork, branch, client_name, comments):
