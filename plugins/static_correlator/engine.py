@@ -76,6 +76,7 @@ def is_only_host_adapter(adapter_device):
                                               'sysaid_adapter',
                                               'logrhythm_adapter',
                                               'symantec_ee_adapter',
+                                              'datadog_adapter',
                                               'ansible_tower_adapter',
                                               'cisco_ucm_adapter',
                                               'symantec_dlp_adapter',
@@ -305,7 +306,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
                 has_nessus_scan_no_id]
 
     # pylint: disable=R0912,too-many-boolean-expressions
-    def _correlate_mac(self, adapters_to_correlate):
+    def _correlate_mac(self, adapters_to_correlate, correlate_by_snow_mac):
         """
         To write a correlator rule we do a few things:
         1.  list(filtered_adapters_list) -
@@ -335,11 +336,17 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
 
         filtered_adapters_list = filter(not_saltstack_enterprise_linux, adapters_to_correlate)
         filtered_adapters_list = filter(not_lansweeper_assetname_no_hostname, filtered_adapters_list)
-        filtered_adapters_list = filter(lambda adap: not is_snow_adapter(adap), filtered_adapters_list)
+        if not correlate_by_snow_mac:
+            filtered_adapters_list = filter(lambda adap: not is_snow_adapter(adap), filtered_adapters_list)
+
+        allow_old_mac_list = ALLOW_OLD_MAC_LIST
+
+        if correlate_by_snow_mac:
+            allow_old_mac_list.append('service_now_adapter')
 
         for adapter in filtered_adapters_list:
             # Don't add to the MAC comparisons devices that haven't seen for more than 30 days
-            if is_old_device(adapter, number_of_days=5) and adapter.get('plugin_name') not in ALLOW_OLD_MAC_LIST:
+            if is_old_device(adapter, number_of_days=5) and adapter.get('plugin_name') not in allow_old_mac_list:
                 continue
             macs = adapter.get(NORMALIZED_MACS)
             if macs:
@@ -749,6 +756,8 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
         _refresh_ad_client_count()
         adapters_to_correlate = list(normalize_adapter_devices(entities))
 
+        correlate_by_snow_mac = bool(self._correlation_config and
+                                     self._correlation_config.get('correlate_by_snow_mac') is True)
         # let's find devices by, hostname, and ip:
         yield from self._correlate_hostname_ip(adapters_to_correlate)
         yield from self._correlate_hostname_fqdn_ip(adapters_to_correlate)
@@ -809,7 +818,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
 
         # Find adapters with the same serial
         # Now let's find devices by MAC, and IPs don't contradict (we allow empty)
-        yield from self._correlate_mac(adapters_to_correlate)
+        yield from self._correlate_mac(adapters_to_correlate, correlate_by_snow_mac)
 
     @staticmethod
     def _post_process(first_name, first_id, second_name, second_id, data, reason) -> bool:

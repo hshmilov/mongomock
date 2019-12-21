@@ -91,12 +91,18 @@ class ZabbixAdapter(AdapterBase):
             'type': 'array'
         }
 
-    def create_device(self, device_raw):
+    def create_device(self, device_raw, apps_host_dict):
         device = self._new_device_adapter()
         device_id = device_raw.get('hostid')
         if not device_id:
             logger.exception(f'Device with no ID {device_raw}')
             return None
+        try:
+            if apps_host_dict.get(device_id):
+                for app_name in apps_host_dict[device_id]:
+                    device.add_installed_software(name=app_name)
+        except Exception:
+            logger.exception(f'Problem getting apps for {device_raw}')
         device.name = device_raw.get('name')
         device.description = device_raw.get('description')
         device.hostname = device_raw.get('host')
@@ -130,9 +136,9 @@ class ZabbixAdapter(AdapterBase):
         return device
 
     def _parse_raw_data(self, devices_raw_data):
-        for raw_device_data in iter(devices_raw_data):
+        for raw_device_data, apps_host_dict in devices_raw_data:
             try:
-                device = self.create_device(raw_device_data)
+                device = self.create_device(raw_device_data, apps_host_dict)
                 yield device
             except Exception:
                 logger.exception(f'Got exception for raw_device_data: {raw_device_data}')

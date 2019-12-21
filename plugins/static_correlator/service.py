@@ -89,7 +89,9 @@ class StaticCorrelatorService(CorrelatorBase):
     def _correlate(self, entities: list, use_markers=False):
         return self._correlation_engine.correlate(entities, use_markers=use_markers,
                                                   correlation_config={'correlate_ad_sccm': self._correlate_ad_sccm,
-                                                                      'csv_full_hostname': self._csv_full_hostname})
+                                                                      'csv_full_hostname': self._csv_full_hostname,
+                                                                      'correlate_by_snow_mac':
+                                                                          self._correlate_by_snow_mac})
 
     # pylint: enable=arguments-differ
 

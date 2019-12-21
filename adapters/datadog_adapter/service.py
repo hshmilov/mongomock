@@ -5,6 +5,7 @@ from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.exception import RESTException
+from axonius.utils.datetime import parse_date
 from axonius.devices.device_adapter import DeviceAdapter, AGENT_NAMES
 from axonius.fields import Field, ListField
 from axonius.smart_json_class import SmartJsonClass
@@ -170,7 +171,7 @@ class DatadogAdapter(AdapterBase):
                                              version=(device_raw.get('meta') or {}).get('agent_version'))
                 except Exception:
                     logger.exception(f'Problem getting ohai at {device_raw}')
-
+                device.last_seen = parse_date(device_raw.get('last_reported_time'))
                 aws_id = device_raw.get('aws_id')
                 if aws_id:
                     device.cloud_provider = 'AWS'

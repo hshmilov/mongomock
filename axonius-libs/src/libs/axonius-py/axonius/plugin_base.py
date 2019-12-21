@@ -58,7 +58,8 @@ from axonius.consts.plugin_consts import (ADAPTERS_LIST_LENGTH,
                                           AGGREGATOR_PLUGIN_NAME,
                                           CONFIGURABLE_CONFIGS_COLLECTION,
                                           CORE_UNIQUE_NAME,
-                                          CORRELATE_BY_EMAIL_PREFIX, CORRELATE_AD_SCCM, CSV_FULL_HOSTNAME,
+                                          CORRELATE_BY_EMAIL_PREFIX, CORRELATE_AD_SCCM,
+                                          CSV_FULL_HOSTNAME, CORRELATE_BY_SNOW_MAC,
                                           CORRELATION_SETTINGS,
                                           GUI_PLUGIN_NAME,
                                           MAX_WORKERS,
@@ -2830,6 +2831,7 @@ class PluginBase(Configurable, Feature, ABC):
             FETCH_EMPTY_VENDOR_SOFTWARE_VULNERABILITES) or False
         self._correlate_ad_sccm = config[CORRELATION_SETTINGS].get(CORRELATE_AD_SCCM, True)
         self._csv_full_hostname = config[CORRELATION_SETTINGS].get(CSV_FULL_HOSTNAME, True)
+        self._correlate_by_snow_mac = config[CORRELATION_SETTINGS].get(CORRELATE_BY_SNOW_MAC, False)
         self._jira_settings = config['jira_settings']
         self._proxy_settings = config[PROXY_SETTINGS]
         self._vault_settings = config['vault_settings']
@@ -3268,12 +3270,17 @@ class PluginBase(Configurable, Feature, ABC):
                             'name': CSV_FULL_HOSTNAME,
                             'type': 'bool',
                             'title': 'Correlate CSV Adapter only if Full Hostnames are Equal'
+                        },
+                        {
+                            'name': CORRELATE_BY_SNOW_MAC,
+                            'type': 'bool',
+                            'title': 'Correlate ServiceNow Adapter based on MAC Address Only'
                         }
                     ],
                     'name': CORRELATION_SETTINGS,
                     'title': 'Correlation Settings',
                     'type': 'array',
-                    'required': [CORRELATE_BY_EMAIL_PREFIX, CORRELATE_AD_SCCM, CSV_FULL_HOSTNAME]
+                    'required': [CORRELATE_BY_EMAIL_PREFIX, CORRELATE_AD_SCCM, CSV_FULL_HOSTNAME, CORRELATE_BY_SNOW_MAC]
                 },
                 {
                     'items': [
@@ -3387,7 +3394,8 @@ class PluginBase(Configurable, Feature, ABC):
             CORRELATION_SETTINGS: {
                 CORRELATE_BY_EMAIL_PREFIX: False,
                 CORRELATE_AD_SCCM: False,
-                CSV_FULL_HOSTNAME: False
+                CSV_FULL_HOSTNAME: False,
+                CORRELATE_BY_SNOW_MAC: False,
             },
             STATIC_ANALYSIS_SETTINGS: {
                 FETCH_EMPTY_VENDOR_SOFTWARE_VULNERABILITES: False,
