@@ -31,6 +31,7 @@ class TestDevice(TestBase):
         self.base_page.run_discovery()
         # === Step 2 === #
         self.devices_page.switch_to_page()
+        self.devices_page.wait_for_table_to_load()
         self.devices_page.click_row()
         self.devices_page.click_custom_data_tab()
         self.devices_page.click_custom_data_edit()
