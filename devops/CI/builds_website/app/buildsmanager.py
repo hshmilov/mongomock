@@ -3,33 +3,27 @@
 This project assumes the aws settings & credentials are already configured in the machine, either by using aws cli
 (aws configure) or by putting it in "~/.aws.config"
 """
-import re
 import datetime
 import time
 import json
 from typing import List
 
-import paramiko
 import requests
 
 from pymongo import MongoClient, DESCENDING
-from bson.objectid import ObjectId
 
 from buildscloud.builds_cloud_consts import NO_INTERNET_NETWORK_SECURITY_OPTION
 from buildscloud.builds_cloud_manager import BuildsCloudManager
 from config import TOKENS_PATH, CREDENTIALS_PATH, LOCAL_BUILDS_HOST
 from slacknotifier import SlackNotifier
 
-AXONIUS_EXPORTS_SERVER = 'exports.axonius.lan'
 
 KEY_NAME = "Builds-VM-Key"  # The key we use for identification.
 
 HD_SIZE_FOR_INSTANCE_IN_GIB = 100
 HD_SIZE_FOR_INSTANCE_IN_GIB_FOR_EXPORT_BASED_INSTANCES = 196
-OVA_IMAGE_NAME = "Axonius-operational-export-106"
 
 S3_BUCKET_NAME_FOR_OVA = "axonius-releases"
-S3_BUCKET_NAME_FOR_EXPORT_LOGS = "axonius-export-logs"
 DB_ADDR = 'mongo'
 
 
@@ -45,7 +39,6 @@ class BuildsManager(object):
             connect=False
         ).builds
         self.bcm = BuildsCloudManager(CREDENTIALS_PATH)
-        self.__exports_credentials = dict()
         self.__parse_credentials_file(CREDENTIALS_PATH)
         self.st = SlackNotifier()
 
@@ -62,7 +55,6 @@ class BuildsManager(object):
         with open(credentials_file_path, 'rt') as f:
             credentials_file_contents = json.loads(f.read())
 
-        self.__exports_credentials = credentials_file_contents['exports']['data']
         self.__teamcity_credentials = credentials_file_contents['teamcity']['data']
 
     def get_instances(self, cloud=None, instance_id=None, vm_type=None):
@@ -229,11 +221,6 @@ class BuildsManager(object):
 
             return to_delete
 
-        def delete_from_storage():
-            # subprocess.call(['sudo', 'rm', '-rf', '/mnt/smb_share/Releases/{0}'.format(version)],
-            #                stdout=subprocess.PIPE)
-            pass
-
         def delete_from_db():
             self.db.exports.update_one(
                 {'version': version},
@@ -244,12 +231,16 @@ class BuildsManager(object):
             )
 
         export = self.db.exports.find_one({'version': version}, projection={'ami_id': True})
-        ami_id = export['ami_id']
+        ami_id = export.get('ami_id')
+        gce_name = export.get('gce_name')
         deleted = _delete_s3_export()
 
-        delete_from_storage()
         delete_from_db()
-        self.bcm.aws_compute.deregister_ami(ami_id)
+        if ami_id:
+            self.bcm.aws_compute.deregister_ami(ami_id, delete_snapshot=True)
+
+        if gce_name:
+            self.bcm.gcp_compute.delete_image(gce_name)
 
         return len(deleted) > 0
 
@@ -259,7 +250,7 @@ class BuildsManager(object):
     def get_exports(self, status=None, limit=0):
         """Return all vm exports we have on our s3 bucket."""
         if status is None:
-            exports = self.db.exports.find({'status': {"$nin": ["InProgress", "deleted"]}}, {"_id": 0}) \
+            exports = self.db.exports.find({'status': {"$nin": ["deleted"]}}, {"_id": 0}) \
                 .sort('_id', DESCENDING). \
                 limit(limit)
         else:
@@ -269,55 +260,32 @@ class BuildsManager(object):
 
         return list(exports)
 
+    def _teamcity_export_ova(self, name, owner, fork, branch, client_name, comments):
+        tc_user = self.__teamcity_credentials['username']
+        tc_pass = self.__teamcity_credentials['password']
+
+        response = requests.post(url='https://teamcity.in.axonius.com/httpAuth/app/rest/buildQueue',
+                                 auth=(tc_user, tc_pass),
+                                 json={"buildType": {"id": "Devops_Exports_Installer"},
+                                       "properties": {
+                                           "property": [{"name": "branch", "value": branch},
+                                                        {"name": "client_name", "value": client_name},
+                                                        {"name": "teamcity.build.triggeredBy.username", "value": owner},
+                                                        {"name": "fork", "value": fork},
+                                                        {"name": "comments", "value": comments},
+                                                        {"name": "name", "value": name}
+                                                        ]}},
+                                 headers={'Content-Type': 'application/json',
+                                          'Accept': 'application/json'},
+                                 verify=True)
+        response.raise_for_status()
+
     def export_ova(self, version, owner, fork, branch, client_name, comments):
-        """Exports an instance by its id."""
-        ssh = paramiko.SSHClient()
-        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        ssh.connect(AXONIUS_EXPORTS_SERVER, username=self.__exports_credentials['username'],
-                    password=self.__exports_credentials['password'])
-        transport = ssh.get_transport()
-        channel = transport.open_session()
-        channel.set_environment_variable(name='AWS_POLL_DELAY_SECONDS', value='10')
-        channel.set_environment_variable(name='AWS_MAX_ATTEMPTS', value='400')
-
-        # Check if there are any currently running exports
-        running_exports = self.get_exports(status=['InProgress'])
-
-        # If none are running delete all the previous exports.
-        commands = []
-        if len(running_exports) == 0:
-            commands.append(
-                "rm -f /home/ubuntu/exports/axonius_*.py; "
-                "rm -rf /home/ubuntu/exports/output-axonius-*; "
-                "rm -f /home/ubuntu/exports/build_*.log; "
-                "rm -f /home/ubuntu/exports/axonius_*_git_hash.txt"
-            )
-
-        export_id = ObjectId()
-        commands.extend([
-            "cd /home/ubuntu/exports/",
-            "/usr/local/bin/packer build -force -var 'build_name={0}' -var 'fork={1}' -var 'branch={2}' -var 'image={3}' axonius_generate_installer.json >> build_{0}.log 2>&1".format(
-                version, fork, branch, OVA_IMAGE_NAME),
-            "git_hash=$(cat ./axonius_{0}_git_hash.txt)".format(version),
-            "/usr/local/bin/packer build -force -var 'build_name={0}' -var 'fork={1}' -var 'branch={2}' -var 'image={3}' -var 'host_password={4}' axonius_install_system_and_provision.json >> build_{0}.log 2>&1".format(
-                version, fork, branch, OVA_IMAGE_NAME, self.__exports_credentials['password']),
-            "return_code=$?",
-            "/home/ubuntu/.local/bin/aws s3 cp ./build_{0}.log s3://{1}/".format(
-                version, S3_BUCKET_NAME_FOR_EXPORT_LOGS),
-            "curl -k -v -H \"x-auth-token: {2}\" -F \"status=$return_code\" -F \"git_hash=$git_hash\" https://{1}/api/exports/{0}/status".format(
-                version, LOCAL_BUILDS_HOST, self.bypass_token)
-        ])
-
-        commands = ' ; '.join(commands)
-
-        # Deletes the build log after upload to s3 but only if the upload was successful (&&).
-        commands += " && rm -f ./build_{0}.log".format(version)
-        channel.exec_command(commands)
-
         owner_full_name, owner_slack_id = owner
 
+        self._teamcity_export_ova(version, owner_full_name, fork, branch, client_name, comments)
+
         db_json = dict()
-        db_json['_id'] = export_id
         db_json['version'] = version
         db_json['owner'] = owner_full_name
         db_json['owner_slack_id'] = owner_slack_id
@@ -325,84 +293,60 @@ class BuildsManager(object):
         db_json['branch'] = branch
         db_json['client_name'] = client_name
         db_json['comments'] = comments
-        db_json['status'] = 'InProgress'
-        # db_json['export_result'] = result['ExportTask']
         db_json['date'] = datetime.datetime.utcnow()
 
-        self.db.exports.insert_one(db_json)
+        self.db.exports.update_one(
+            {'version': version},
+            {
+                '$setOnInsert': {'status': 'InProgress'},
+                '$set': db_json
+            },
+            upsert=True
+        )
         return True
 
-    def get_export_running_log(self, export_version):
-        ssh = paramiko.SSHClient()
-        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        ssh.connect(AXONIUS_EXPORTS_SERVER, username=self.__exports_credentials['username'],
-                    password=self.__exports_credentials['password'])
-        with ssh.open_sftp().open('/home/ubuntu/exports/build_{0}.log'.format(export_version), 'r') as remote_file:
-            return {'value': remote_file.read().decode('utf-8')}
+    def update_export_from_teamcity_hook(self, request_params):
+        translation = {'name': 'version', 'owner': 'owner', 'fork': 'fork', 'branch': 'branch', 'comments': 'comments',
+                       'installer_git_hash': 'git_hash', 'artifact.amazon-ebs': 'ami_id', 'artifact.googlecompute': 'gce_name',
+                       'ami_log': 'ami_log', 'ova_log': 'ova_log', 'ova_test_log': 'ova_test_log', 'installer_log': 'installer_log',
+                       's3_installer': 'installer_download_link', 'ami_test_log': 'ami_test_log', 'ami_test_return_code': 'ami_test_return_code',
+                       'ova_test_return_code': 'ova_test_return_code', 'cloud_log': 'cloud_log',
+                       's3_ova': 'download_link', 'client_name': 'client_name', 'log': 'log'}
 
-    def notify_teamcity_on_export(self, export, ami_id):
-        tc_user = self.__teamcity_credentials['username']
-        tc_pass = self.__teamcity_credentials['password']
+        db_set_entry = {}
+        for (k, translated_key) in translation.items():
+            value = request_params.get(k)
+            if value is not None:
+                db_set_entry[translated_key] = value
 
-        version = export['version']
-        owner = export['owner']
-        fork = export['fork']
-        branch = export['branch']
-        test_params = ''  # no params by default
+        db_set_entry['date'] = datetime.datetime.now()
+        # TODO: This isn't the full log, as there is no full log, it will always be the latest build log.
 
-        response = requests.post(url='https://10.0.3.55/httpAuth/app/rest/buildQueue',
-                                 auth=(tc_user, tc_pass),
-                                 json={"branchName": version,
-                                       "buildType": {"id": "SeCi_SeCiConf", "projectId": "SeCi"},
-                                       "properties": {
-                                           "property": [{"name": "ami_id", "value": ami_id},
-                                                        {"name": "test_params", "value": test_params},
-                                                        {"name": "owner", "value": owner},
-                                                        {"name": "fork", "value": fork},
-                                                        {"name": "branch", "value": branch},
-                                                        {"name": "version", "value": version}
-                                                        ]}},
-                                 headers={'Content-Type': 'application/json',
-                                          'Accept': 'application/json'},
-                                 verify=False)
-        if response.status_code != 200:
-            print(f'failed to trigger teamcity - {response.content}')
+        # TODO: There might be a race condition here.
+        db_old_export = self.db.exports.find_one({'version': db_set_entry['version']}) or {}
 
-    def update_export_status(self, export_id, status, git_hash):
-        try:
-            log = self.bcm.aws_s3.s3_client.get_object(
-                Bucket=S3_BUCKET_NAME_FOR_EXPORT_LOGS,
-                Key='build_{0}.log'.format(export_id)
-            )['Body'].read().decode('utf-8')
-        except Exception as exc:
-            log = 'Failed to get log for build_{0}.log from s3. Check s3 for more details.\n'.format(export_id)
-            log += str(exc)
-        export = self.db.exports.find_one({'version': export_id})
-        ami_id_match = re.search('^us-east-2: (.*)$', log, re.MULTILINE)
-        ami_id = ami_id_match.group(1) if ami_id_match else ''
-        gce_name_match = re.search('Creating GCE image (.*)\.\.\.$', log, re.MULTILINE)
-        gce_name = gce_name_match.group(1) if gce_name_match else ''
-        download_link = '<a href="http://{0}.s3-accelerate.amazonaws.com/{1}/{1}/{1}_export.ova">Click here</a>'.format(
-            S3_BUCKET_NAME_FOR_OVA,
-            export['version']
-        )
+        db_old_export_updated = dict(db_old_export)
+        db_old_export_updated.update(db_set_entry)
+
+        return_codes_to_check = {'ami_test_return_code', 'ova_test_return_code'}
+        if all(db_old_export_updated.get(return_code, None) == 0 for return_code in return_codes_to_check):
+            new_status = 'completed'
+        elif request_params.get('status') == 'failure':
+            new_status = 'failed'
+        elif db_old_export.get('status') == 'failure':
+            new_status = 'failed'
+        else:
+            new_status = 'InProgress'
+
+        db_set_entry['status'] = new_status
+
         self.db.exports.update_one(
-            {'version': export_id},
+            {'version': db_set_entry['version']},
             {
-                '$set':
-                    {
-                        'status': status,
-                        'log': log,
-                        'download_link': download_link,
-                        'ami_id': ami_id,
-                        'gce_name': gce_name,
-                        'git_hash': git_hash
-                    }
-            }
+                '$set': db_set_entry
+            },
+            upsert=True
         )
-        self.notify_teamcity_on_export(export=export, ami_id=ami_id)
-
-        return export is not None
 
     # Instances metadata
     def update_last_user_interaction_time(self, cloud, instance_id):

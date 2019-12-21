@@ -5,7 +5,7 @@ from slackclient import SlackClient
 from config import EXTERNAL_BUILDS_HOST, CREDENTIALS_PATH
 
 IS_DEBUG = os.environ.get('BUILDS_DEBUG') == 'true'
-DEBUG_CHANNEL = '@U6CU068S0'    # This developer's slack
+DEBUG_CHANNEL = '@UNZ00FDHT'    # This developer's slack (Dorani)
 DEFAULT_CHANNEL = 'builds'
 
 

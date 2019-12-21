@@ -1,0 +1,31 @@
+{
+  "variables": {
+    "image_name": "teamcity-exports-agent"
+  },
+  "builders": [
+    {
+      "type": "googlecompute",
+      "source_image_project_id": "ubuntu-os-cloud",
+      "source_image_family": "ubuntu-1804-lts",
+      "image_description": "Teamcity exports agent",
+      "zone": "us-east1-b",
+      "image_name": "{{user `image_name`}}",
+      "omit_external_ip": true,
+      "disk_size": "50",
+      "use_internal_ip": true,
+      "project_id": "axonius-office",
+      "machine_type": "n1-standard-1",
+      "ssh_username": "ubuntu",
+      "network": "axonius-office-vpc",
+      "subnetwork": "private-subnet",
+      "ssh_timeout": "4h"
+    }
+  ],
+"provisioners": [
+    {
+      "type": "shell",
+      "script": "export_agent_packer_install.sh"
+    }
+  ]
+}
+

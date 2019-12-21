@@ -194,3 +194,6 @@ class GCPComputeManager:
         results = self.client.ex_destroy_multiple_nodes(nodes)
         assert all(results), f'Not all nodes are terminated: {results}'
         assert not failed_nodes, f'There are some nodes we could not get: {str(failed_nodes)}'
+
+    def delete_image(self, image_name):
+        self.client.ex_delete_image(image_name)

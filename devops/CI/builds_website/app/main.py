@@ -196,27 +196,10 @@ def exports():
         return jsonify({'result': json_result})
 
 
-@app.route('/api/exports/<key>/status', methods=['POST', 'GET'])
-@authorize
-def set_export_status(key):
-    """Returns a link for an exported ova. Expects to get the key name in the post request."""
-
-    json_result = dict()
-
-    if request.method == 'GET':
-        json_result = context.bm.get_export_running_log(key)
-    elif request.method == 'POST':
-        status = request.form['status']
-        git_hash = request.form['git_hash']
-
-        json_result = (
-            context.bm.update_export_status(
-                key,
-                'completed' if int(status) == 0 else 'failed', git_hash
-            )
-        )
-
-    return jsonify({'result': json_result, 'current': {}})
+@app.route('/api/exports/teamcity', methods=['POST'])
+def update_export_from_teamcity_hook():
+    context.bm.update_export_from_teamcity_hook(dict(request.json))
+    return jsonify({'result': True})
 
 
 @app.route('/api/exports/<key>', methods=['GET', 'DELETE'])

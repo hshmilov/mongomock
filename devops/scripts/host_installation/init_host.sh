@@ -63,6 +63,17 @@ echo "Initializing the host image.."
 echo "hostname: $(hostname)"
 echo ""
 
+echo "127.0.0.1 $(hostname)" >> /etc/hosts
+sed -i '/PasswordAuthentication/ d' /etc/ssh/sshd_config
+sed -i -e '$a\' /etc/ssh/sshd_config
+echo "PasswordAuthentication yes" >> /etc/ssh/sshd_config
+systemctl restart sshd
+
+# Make sure ssh runs at boot
+update-rc.d ssh defaults
+systemctl enable ssh.socket
+systemctl enable ssh.service
+
 if [ $(cat /etc/environment | grep LC_ALL | wc -l) -ne 0 ]; then
     echo "Locale settings exist"
 else
@@ -85,9 +96,9 @@ sudo dpkg --add-architecture i386
 _wait_for_apt update
 echo "Upgrading..."
 _wait_for_apt upgrade -yq -f
-echo "Upgrading Kernel..."
-_wait_for_apt upgrade -yq -f linux-generic
 echo "Done upgrading"
+
+echo -e "nameserver 10.0.2.68\n$(cat /etc/resolv.conf)" > /etc/resolv.conf
 _wait_for_apt install -yq apt-transport-https ca-certificates curl software-properties-common # required for https-repos
 curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
 retry timeout 20 add-apt-repository \
@@ -122,6 +133,7 @@ pip3 install virtualenv
 pip2 install --upgrade setuptools
 pip3 install --upgrade setuptools
 pip3 install ipython
+pip3 install PyYaml
 pip3 install netifaces==0.10.9
 echo "Installing docker-ce..."
 _wait_for_apt install -yq docker-ce=5:19.03.5~3-0~ubuntu-xenial
@@ -229,13 +241,6 @@ else
     _wait_for_apt install -yq scalyr-agent-2 # upgrade to latest
 fi
 
-if [[ $(/bin/systemctl is-enabled tmp.mount) == "enabled" ]]; then
-    echo "/tmp already configured"
-else
-    echo "making sure /tmp gets deleted on boot"
-    cp /usr/share/systemd/tmp.mount /etc/systemd/system/tmp.mount
-    /bin/systemctl enable tmp.mount
-fi
 
 touch $INIT_FILE
 echo "Done successfully"

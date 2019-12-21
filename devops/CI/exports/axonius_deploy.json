@@ -1,0 +1,200 @@
+{
+  "variables": {
+    "host_installation": "../../scripts/host_installation/",
+    "image_name": "packer-export-{{user `name`}}",
+    "manifest_file": "manifest.json",
+    "ami_regions": ""
+  },
+  "builders": [
+    {
+      "type": "googlecompute",
+      "source_image_project_id": "ubuntu-os-cloud",
+      "source_image_family": "ubuntu-1604-lts",
+      "zone": "us-east1-b",
+      "image_name": "{{user `image_name`}}",
+      "omit_external_ip": true,
+      "disk_size": "500",
+      "use_internal_ip": true,
+      "project_id": "axonius-office",
+      "machine_type": "n1-standard-8",
+      "ssh_username": "ubuntu",
+      "network": "axonius-office-vpc",
+      "subnetwork": "private-subnet",
+      "ssh_timeout": "4h"
+    },
+    {
+      "type": "amazon-ebs",
+      "source_ami_filter": {
+        "filters": {
+          "virtualization-type": "hvm",
+          "name": "ubuntu/images/hvm-ssd/ubuntu-xenial-16.04-amd64-server-*",
+          "root-device-type": "ebs"
+        },
+        "owners": [
+          "099720109477"
+        ],
+        "most_recent": true
+      },
+      "region": "us-east-2",
+      "tags": {
+        "Description": "Axonius Export {{user `name`}}."
+      },
+      "instance_type": "t2.xlarge",
+      "launch_block_device_mappings": [{
+        "device_name": "/dev/sda1",
+	"volume_size": 500,
+        "encrypted": false
+      }],
+      "ami_name": "{{user `image_name`}}",
+      "vpc_id": "vpc-12290d7b",
+      "subnet_id": "subnet-843a4cff",
+      "ssh_username": "ubuntu",
+      "ami_regions": "{{user `ami_regions`}}"
+    }
+  ],
+"provisioners": [
+    {
+      "type": "shell",
+      "inline": [
+        "export HISTFILE=/dev/null"
+      ]
+    },
+    {
+	"type": "shell",
+	"inline": ["echo ubuntu:bringorder | sudo /usr/sbin/chpasswd"]
+    },
+    {
+      "type": "shell",
+      "script": "clean_aws_machine.sh",
+      "execute_command": "sudo -S sh -c '{{ .Vars }} {{ .Path }}'",
+      "only": ["amazon-ebs"]
+    },
+    {
+      "type": "shell",
+      "script": "clean_gce_machine.sh",
+      "execute_command": "sudo -S sh -c '{{ .Vars }} {{ .Path }}'",
+      "only": ["googlecompute"]
+    },
+    {
+      "type": "shell",
+      "inline": [
+        "sudo hostnamectl set-hostname --static axonius"
+      ]
+    },
+    {
+      "type": "shell",
+      "inline": [
+        "mkdir -p /home/ubuntu/cortex/devops/scripts/host_installation"
+      ]
+    },
+    {
+      "type": "file",
+      "source": "{{user `host_installation`}}ip_wizard",
+      "destination": "/home/ubuntu/cortex/devops/scripts/host_installation/ip_wizard"
+    },
+    {
+      "type": "file",
+      "source": "{{user `host_installation`}}weave-2.6.0",
+      "destination": "/home/ubuntu/cortex/devops/scripts/host_installation/weave-2.6.0"
+    },
+    {
+      "type": "shell",
+      "script": "{{user `host_installation`}}init_host.sh",
+      "remote_folder": "/home/ubuntu/cortex/devops/scripts/host_installation",
+      "execute_command": "sudo -S sh -c '{{ .Vars }} {{ .Path }}'"
+    },
+    {
+      "type": "shell",
+      "inline": [
+        "echo 'sentinel file on temp that should be deleted' > /tmp/axonius_sentinel_file_init_host_should_be_deleted.tmp"
+      ]
+    },
+    {
+      "type": "shell",
+      "expect_disconnect": true,
+      "inline": [
+        "reboot"
+      ],
+      "execute_command": "sudo -S sh -c '{{ .Vars }} {{ .Path }}'"
+    },
+    {
+      "type": "shell",
+      "pause_before": "10s",
+      "inline": [
+        "[ ! -f /tmp/axonius_sentinel_file_init_host_should_be_deleted.tmp ]"
+      ]
+    },
+    {
+      "type": "shell",
+      "script": "./set_axonius_dns_until_boot.sh",
+      "execute_command": "sudo -S sh -c '{{ .Vars }} {{ .Path }}'"
+    },
+    {
+      "type": "file",
+      "source": "{{user `installer`}}",
+      "destination": "/home/ubuntu/axonius_installer.py"
+    },
+    {
+      "type": "shell",
+      "inline": [
+        "python3 ./axonius_installer.py --first-time",
+        "chown -R ubuntu:ubuntu ./cortex"
+      ],
+      "execute_command": "sudo -S sh -c '{{ .Vars }} {{ .Path }}'"
+    },
+    {
+      "type": "shell",
+      "script": "./install_chef_client.sh",
+      "execute_command": "sudo -S sh -c '{{ .Vars }} {{ .Path }}'"
+    },
+    {
+      "type": "shell",
+      "script": "./fetch_chef_secret_and_mark.sh"
+    },
+    {
+      "type": "shell",
+      "inline": [
+        "rm -f /home/ubuntu/axonius_installer.py"
+      ]
+    },
+    {
+      "type": "file",
+      "source": "setup_crons.py",
+      "destination": "/home/ubuntu/cortex/setup_crons.py"
+    },
+    {
+      "type": "file",
+      "source": "setup_network.sh",
+      "destination": "/home/ubuntu/cortex/setup_network.sh"
+    },
+    {
+      "type": "file",
+      "source": "create_swap.py",
+      "destination": "/home/ubuntu/cortex/create_swap.py"
+    },
+    {
+      "type": "shell",
+      "remote_folder": "/home/ubuntu/cortex",
+      "inline": [
+        "/home/ubuntu/cortex/venv/bin/python /home/ubuntu/cortex/setup_crons.py",
+        "rm -f setup_network.sh setup_crons.py create_swap.py",
+        "cat /dev/null > /home/ubuntu/.bash_history"
+      ],
+      "execute_command": "sudo -S sh -c '{{ .Vars }} {{ .Path }}'"
+    },
+    {
+      "type": "shell",
+      "inline": [
+        "rm -rf /home/ubuntu/.ssh/authorized_keys"
+      ]
+    }
+  ],
+  "post-processors": [
+    "teamcity",
+    {
+      "type": "manifest",
+      "output": "{{user `manifest_file`}}"
+    }
+  ]
+}
+

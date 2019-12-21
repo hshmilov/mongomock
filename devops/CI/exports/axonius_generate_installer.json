@@ -1,68 +1,29 @@
 {
   "variables": {
-    "build_id": "none",
+    "host_installation": "../../scripts/host_installation/",
     "build_name": "test",
+    "output_file": "axonius_{{user `build_name`}}_installer.py",
+    "git_hash_file": "axonius_{{user `build_name`}}_git_hash.txt",
     "password": "bringorder",
     "branch": "develop",
-    "fork": "axonius",
-    "image": "Axonius-operational-export-103"
+    "fork": "axonius"
   },
   "builders": [
     {
-      "vm_name": "axonius",
-      "type": "vmware-iso",
-      "boot_wait": "20s",
-      "disk_size": 500000,
-      "headless": true,
-      "iso_url": "/home/ubuntu/ubuntu-16.04.5-server-amd64.iso",
-      "iso_checksum": "ee32c555567dd5407c58a1cfc7e668ab37a99d99",
-      "iso_checksum_type": "sha1",
+      "type": "googlecompute",
+      "source_image_project_id": "ubuntu-os-cloud",
+      "source_image_family": "ubuntu-1604-lts",
+      "image_name": "installer-generator-{{timestamp}}",
+      "zone": "us-east1-b",
+      "omit_external_ip": true,
+      "disk_size": "500",
+      "use_internal_ip": true,
+      "project_id": "axonius-office",
+      "machine_type": "n1-standard-8",
       "ssh_username": "ubuntu",
-      "ssh_password": "{{user `password`}}",
-      "ssh_timeout": "4h",
-      "output_directory": "output-axonius-{{user `build_name` }}-build",
-      "guest_os_type": "ubuntu-64",
-      "http_directory": "http",
-      "memory": "32768",
-      "cpus": 8,
-      "shutdown_command": "echo {{user `password`}} | sudo -S -E shutdown -P now",
-      "boot_command": [
-        "<enter><f6><esc>",
-        "<bs><bs><bs><bs><bs>",
-        "<bs><bs><bs><bs><bs>",
-        "<bs><bs><bs><bs><bs>",
-        "<bs><bs><bs><bs><bs>",
-        "<bs><bs><bs><bs><bs>",
-        "<bs><bs><bs><bs><bs>",
-        "<bs><bs><bs><bs><bs>",
-        "<bs><bs><bs><bs><bs>",
-        "<bs><bs><bs><bs><bs>",
-        "<bs><bs><bs><bs><bs>",
-        "<bs><bs><bs><bs><bs>",
-        "<bs><bs><bs><bs><bs>",
-        "<bs><bs><bs><bs><bs>",
-        "<bs><bs><bs><bs><bs>",
-        "<bs><bs><bs><bs><bs>",
-        "<bs><bs><bs><bs><bs>",
-        "<bs><bs><bs>",
-        "auto ",
-        "preseed/url=http://{{ .HTTPIP }}:{{ .HTTPPort }}/preseed.cfg ",
-        "debian-installer=en_CA ",
-        "locale=en_CA ",
-        "hostname=axonius ",
-        "fb=false ",
-        "debconf/frontend=noninteractive ",
-        "keyboard-configuration/modelcode=SKIP ",
-        "keyboard-configuration/layout=USA ",
-        "keyboard-configuration/variant=USA ",
-        "vga=788 ",
-        "initrd=/install/initrd.gz ",
-        "quiet --- ",
-        "<enter>"
-      ],
-      "vmx_data_post": {
-        "ethernet0.connectiontype": "bridged"
-      }
+      "network": "axonius-office-vpc",
+      "subnetwork": "private-subnet",
+      "ssh_timeout": "4h"
     }
   ],
   "provisioners": [
@@ -80,19 +41,19 @@
     },
     {
       "type": "file",
-      "source": "ip_wizard",
+      "source": "{{user `host_installation`}}ip_wizard",
       "destination": "/home/ubuntu/cortex/devops/scripts/host_installation/ip_wizard"
     },
     {
       "type": "file",
-      "source": "weave-2.6.0",
+      "source": "{{user `host_installation`}}weave-2.6.0",
       "destination": "/home/ubuntu/cortex/devops/scripts/host_installation/weave-2.6.0"
     },
     {
       "type": "shell",
-      "script": "init_host.sh",
+      "script": "{{user `host_installation`}}init_host.sh",
       "remote_folder": "/home/ubuntu/cortex/devops/scripts/host_installation",
-      "execute_command": "echo {{user `password`}} | sudo -S sh -c '{{ .Vars }} {{ .Path }}'"
+      "execute_command": "sudo -S sh -c '{{ .Vars }} {{ .Path }}'"
     },
     {
       "type": "shell",
@@ -100,11 +61,16 @@
       "inline": [
         "reboot"
       ],
-      "execute_command": "echo {{user `password`}} | sudo -S sh -c '{{ .Vars }} {{ .Path }}'"
+      "execute_command": "sudo -S sh -c '{{ .Vars }} {{ .Path }}'"
     },
     {
       "type": "shell",
       "pause_before": "10s",
+      "script": "./set_axonius_dns_until_boot.sh",
+      "execute_command": "sudo -S sh -c '{{ .Vars }} {{ .Path }}'"
+    },
+    {
+      "type": "shell",
       "script": "./axonius_deploy.sh",
       "execute_command": "chmod +x {{ .Path }}; {{ .Vars }} {{ .Path }} {{user `branch`}} {{user `fork`}} {{user `password`}} {{user `build_name`}}"
     },
@@ -119,21 +85,22 @@
       "type": "file",
       "source": "/home/ubuntu/git_hash.txt",
       "direction": "download",
-      "destination": "./axonius_{{user `build_name`}}_git_hash.txt"
+      "destination": "{{user `git_hash_file`}}"
     },
     {
       "type": "file",
       "source": "/home/ubuntu/cortex/axonius_{{user `build_name`}}.py",
       "direction": "download",
-      "destination": "./axonius_{{user `build_name`}}.py"
+      "destination": "{{user `output_file`}}"
     }
   ],
   "post-processors": [
     {
-      "type": "shell-local",
-      "inline": [
-        "rm -rf ./output-axonius-{{user `build_name` }}-installer-generator"
-      ]
+      "type": "artifice",
+      "files": [
+        "{{user `output_file`}}"
+      ],
+      "keep_input_artifact": false
     }
   ]
 }

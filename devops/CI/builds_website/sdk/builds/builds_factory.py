@@ -197,10 +197,14 @@ class Builds(BuildsAPI):
         self.instances: List[BuildsInstance] = []
         self.groups: List[str] = []
 
+    @staticmethod
+    def _is_daily_export(export):
+        return 'daily_export' in export['version'].replace('-', '_')
+
     def get_latest_daily_export(self):
         response = self.get_last_exports()
         daily_exports = [export for export in response['result'] if
-                         DAILY_EXPORT_SUFFIX in export['version'] and EXPORT_STATUS == export['status']]
+                         self._is_daily_export(export) and EXPORT_STATUS == export['status']]
         return daily_exports[0]
 
     def get_export_by_name(self, name):

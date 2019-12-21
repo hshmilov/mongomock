@@ -280,22 +280,23 @@
     function rewrite_exports_table() {
         dataSet = []
         for (i in current_exports) {
+            export_data_or_empty = function (name) { return export_i[name] || '' }
             var export_i = current_exports[i];
             var data = [];
 
             // Capitalize owner name
-            export_i["owner"] = capitalize_str(export_i["owner"])
+            export_i["owner"] = capitalize_str(export_data_or_empty("owner"))
 
             // Push all of the data
             data.push(parseInt(i) + 1);
-            data.push(export_i["version"]);
-            data.push(export_i["owner"]);
-            data.push(export_i["fork"]);
-            data.push(export_i["branch"]);
-            data.push(export_i["client_name"]);
-            data.push(export_i["comments"]);
-            data.push(export_i["status"]);
-            data.push(export_i["date"]);
+            data.push(export_data_or_empty("version"));
+            data.push(export_data_or_empty("owner"));
+            data.push(export_data_or_empty("fork"));
+            data.push(export_data_or_empty("branch"));
+            data.push(export_data_or_empty("client_name"));
+            data.push(export_data_or_empty("comments"));
+            data.push(export_data_or_empty("status"));
+            data.push(export_data_or_empty("date"));
             dataSet.push(data);
         }
 
@@ -307,22 +308,23 @@
         for (var i in current_exports_in_progress) {
             var export_i = current_exports_in_progress[i];
             if (show_completed_exports === true || export_i['status'] !== 'completed') {
+                export_data_or_empty = function (name) { return export_i[name] || '' }
                 var data = [];
 
                 // Capitalize owner name
-                export_i["owner"] = capitalize_str(export_i["owner"])
+                export_i["owner"] = capitalize_str(export_data_or_empty("owner"))
 
                 // Push all of the data
                 data.push(parseInt(i) + 1);
-                data.push(export_i["version"]);
-                data.push(export_i["owner"]);
-                data.push(export_i["fork"]);
-                data.push(export_i["branch"]);
-                data.push(export_i["client_name"]);
-                data.push(export_i["comments"]);
-                data.push("<a herf=\"javascript:void(0);\" onclick=\"open_running_export_log('" + export_i["version"]  + "')\">Click Here</a>");
-                data.push(export_i["status"]);
-                data.push(export_i["date"]);
+                data.push(export_data_or_empty("version"));
+                data.push(export_data_or_empty("owner"));
+                data.push(export_data_or_empty("fork"));
+                data.push(export_data_or_empty("branch"));
+                data.push(export_data_or_empty("client_name"));
+                data.push(export_data_or_empty("comments"));
+                data.push('<a href="/api/exports/' + export_i['version'] + '/log" target="_blank">Click here</a>');
+                data.push(export_data_or_empty("status"));
+                data.push(export_data_or_empty("date"));
                 dataSet.push(data);
             }
         }
@@ -536,19 +538,30 @@
             return false;
         }
 
+	export_data_or_empty = function (name) { return exp[name] || '' }
+
         let export_info_data = [
             ["Version", exp['version']],
-            ["Owner", exp['owner']],
-            ["Fork", exp['fork']],
-            ["Branch", exp['branch']],
-            ["Client Name", exp['client_name']],
-            ["Comments", exp['comments']],
-            ["Status", exp['status']],
-            ["Git Hash", exp['git_hash']],
-            ["Last Modified", exp['date']],
-            ["Download Link", exp['download_link']],
-            ["ami ID", exp['ami_id']],
-            ["Log", '<a href="/api/exports/' + exp['version'] + '/log" target="_blank">Click here</a>'],
+            ["Owner", export_data_or_empty('owner')],
+            ["Fork", export_data_or_empty('fork')],
+            ["Branch", export_data_or_empty('branch')],
+            ["Client Name", export_data_or_empty('client_name')],
+            ["Comments", export_data_or_empty('comments')],
+            ["Status", export_data_or_empty('status')],
+            ["Git Hash", export_data_or_empty('git_hash')],
+            ["Last Modified", export_data_or_empty('date')],
+            ["Download Link", export_data_or_empty('download_link')],
+            ["Installer Download Link", export_data_or_empty('installer_download_link')],
+            ["AMI ID", export_data_or_empty('ami_id')],
+            ["GCE Name", export_data_or_empty('gce_name')],
+            ["Log (deprecated)", '<a href="/api/exports/' + exp['version'] + '/log" target="_blank">Click here</a>'],
+            ["Installer Log", export_data_or_empty('installer_log')],
+            ["Cloud Log", export_data_or_empty('cloud_log')],
+            ["OVA Log", export_data_or_empty('ova_log')],
+            ["AMI Test Log", export_data_or_empty('ami_test_log')],
+            ["OVA Test Log", export_data_or_empty('ova_test_log')],
+            ["AMI Test Return Code", export_data_or_empty('ami_test_return_code')],
+            ["OVA Test Return Code", export_data_or_empty('ova_test_return_code')],
             ["Delete", wrap_modal_with_td("Are you sure you want to delete this export?", delete_export, [], undefined, exp['version'])]
         ];
 
@@ -907,13 +920,6 @@
         rewrite_exports_in_progress_table();
     }
 
-    function open_running_export_log(export_id) {
-        $.ajax({
-            url: "/api/exports/" + export_id + "/status",
-            type: "GET"}).done(function (data) {
-                new_modal("Log", function() {}, [], true, "<textarea style='width: 100%; height: 60vh;'>" + data['result']['value'] + "</textarea>");
-        })
-    }
     function delete_export(always_function) {
         var id = current_exports[current_export_details_i]['version'];
         var data = {}
