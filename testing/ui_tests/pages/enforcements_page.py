@@ -199,6 +199,8 @@ class EnforcementsPage(EntitiesPage):
         self.fill_api_key(shodan_client_details['apikey'])
         self.save_action()
         self.click_save_button()
+        # Due to a UI bug, the screen will change again to EC table
+        time.sleep(10)
 
     def add_send_csv_to_s3(self):
         self.find_element_by_text(self.MAIN_ACTION_TEXT).click()
