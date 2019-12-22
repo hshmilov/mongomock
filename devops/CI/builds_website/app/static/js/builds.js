@@ -538,7 +538,7 @@
             return false;
         }
 
-	export_data_or_empty = function (name) { return exp[name] || '' }
+	export_data_or_empty = function (name) { return '' + exp[name] }
 
         let export_info_data = [
             ["Version", exp['version']],

@@ -197,6 +197,7 @@ def exports():
 
 
 @app.route('/api/exports/teamcity', methods=['POST'])
+@authorize
 def update_export_from_teamcity_hook():
     context.bm.update_export_from_teamcity_hook(dict(request.json))
     return jsonify({'result': True})

@@ -329,7 +329,7 @@ class BuildsManager(object):
         db_old_export_updated.update(db_set_entry)
 
         return_codes_to_check = {'ami_test_return_code', 'ova_test_return_code'}
-        if all(db_old_export_updated.get(return_code, None) == 0 for return_code in return_codes_to_check):
+        if all(str(db_old_export_updated.get(return_code, None)) == '0' for return_code in return_codes_to_check):
             new_status = 'completed'
         elif request_params.get('status') == 'failure':
             new_status = 'failed'
