@@ -756,8 +756,6 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
             id_for_log = client_id if client_id else str(object_id or '')
             logger.exception(f'Got error while handling client {id_for_log} - '
                              f'possibly compliance problem with schema.')
-            if client_id in self._clients:
-                del self._clients[client_id]
 
         result = self._write_client_to_db(client_id, encrypted_client_config, status, error_msg, upsert=False)
         if result is None and object_id is not None:
