@@ -23,7 +23,12 @@ class CiscoUcsmConnection(RESTConnection):
         self._ucshandle = UcsHandle(self._domain, self._username, self._password, self._port, self._secure, self._proxy)
 
     def _connect(self):
-        success = self._ucshandle.login(auto_refresh=True)
+        try:
+            success = self._ucshandle.login(auto_refresh=True)
+        except Exception as ex:
+            message = f'Could not authenticate {self._domain} with {self._username}: {str(ex)}'
+            logger.exception(message)
+            raise RESTException(message)
         if not success:
             message = f'Could not authenticate {self._domain} with {self._username}!'
             raise RESTException(message)
@@ -38,12 +43,13 @@ class CiscoUcsmConnection(RESTConnection):
         self.revalidate_session_timeout()
         self.check_for_collision_safe()
         self._validate_no_connection()
-        return self._connect
+        return self._connect()
 
     def close(self):
         """ Close the connection """
-        self._session.logout()
-        self._session = None
+        if self._session is not None:
+            self._session.logout()
+            self._session = None
         self._session_headers = {}
 
     def __del__(self):

@@ -42,7 +42,7 @@ class CiscoUcsmAdapter(AdapterBase):
                                          proxy=client_config.get('proxy'),
                                          username=client_config['username'],
                                          password=client_config['password'],
-                                         port=client_config.get('port'))
+                                         port=client_config.get('port') or None)
         with connection:
             pass
         return connection
@@ -84,6 +84,11 @@ class CiscoUcsmAdapter(AdapterBase):
                     'type': 'string'
                 },
                 {
+                    'name': 'port',
+                    'title': 'Cisco UCSM Port',
+                    'type': 'integer'
+                },
+                {
                     'name': 'username',
                     'title': 'User Name',
                     'type': 'string'
@@ -96,13 +101,8 @@ class CiscoUcsmAdapter(AdapterBase):
                 },
                 {
                     'name': 'secure',
-                    'title': 'Secure connection supported',
+                    'title': 'Secure Connection Supported',
                     'type': 'bool'
-                },
-                {
-                    'name': 'port',
-                    'title': 'Cisco UCSM Port',
-                    'type': 'int'
                 },
                 {
                     'name': 'proxy',
@@ -113,7 +113,8 @@ class CiscoUcsmAdapter(AdapterBase):
             'required': [
                 'domain',
                 'username',
-                'password'
+                'password',
+                'secure'
             ],
             'type': 'array'
         }
