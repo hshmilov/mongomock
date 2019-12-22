@@ -60,6 +60,8 @@ class KasperskyScConnection(RESTConnection):
             url = 'HostGroup.GetHostProducts'
             body_params = {'strHostName': device_id}
             response = self._post(url, body_params=body_params)
+            if not isinstance(response, dict) or not response.get('PxgRetVal'):
+                return {}
             product_data = response['PxgRetVal']
             for product in product_data:
                 major_ver = list(product_data[product]['value'].keys())[0]
@@ -86,6 +88,8 @@ class KasperskyScConnection(RESTConnection):
                                               ]}
 
             response = self._post(url, body_params=body_params)
+            if not isinstance(response, dict) or not response.get('PxgRetVal'):
+                return {}
             return response['PxgRetVal']
         except Exception:
             logger.exception(f'Problem getting details for {device_id}')
