@@ -135,7 +135,7 @@ class WebscanAdapter(WebscanExecutionMixIn, AdapterBase, Configurable):
                     logger.exception(f'Error parsing {service.__class__.__name__}')
 
             device.last_seen = datetime.datetime.now()
-            device.set_raw(raw_data)
+            device.set_raw({})
             return device
         except Exception:
             logger.exception(f'Problem with fetching Webscan Device for {device_raw}')
