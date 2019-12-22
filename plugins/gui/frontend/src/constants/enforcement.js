@@ -131,6 +131,9 @@ export const actionsMeta = {
     send_https_log: {
         title: 'Send to HTTPS Log System'
     },
+    send_to_webhook: {
+        title: 'Send Devices to Webhook'
+    },
     create_notification: {
         title: 'Push System Notification'
     },
@@ -185,7 +188,7 @@ export const actionsMeta = {
     },
     notify: {
         title: 'Notify',
-        items: ['send_emails', 'send_email_to_entities', 'notify_syslog', 'send_https_log', 'create_notification', 'slack_send_message', 'send_csv_to_share', 'send_csv_to_s3']
+        items: ['send_emails', 'send_email_to_entities', 'notify_syslog', 'send_https_log', 'send_to_webhook', 'create_notification', 'slack_send_message', 'send_csv_to_share', 'send_csv_to_s3']
     },
     axonius: {
         title: 'Axonius Utilities',

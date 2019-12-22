@@ -9,6 +9,7 @@ from reports.action_types.alert.send_csv_to_share import SendCsvToShare
 from reports.action_types.alert.send_csv_to_s3 import SendCsvToS3
 from reports.action_types.alert.send_emails import SendEmailsAction
 from reports.action_types.alert.send_https_log import SendHttpsLogAction
+from reports.action_types.alert.send_to_webhook import SendWebhookAction
 from reports.action_types.alert.send_slack_message import SlackSendMessageAction
 from reports.action_types.alert.send_syslog import NotifySyslogAction
 from reports.action_types.base.carbonblack_defense_change_policy import CarbonblackDefenseChangePolicyAction
@@ -59,6 +60,7 @@ AllActionTypes: Dict[str, type(ActionTypeBase)] = {
     'send_emails': SendEmailsAction,
     'notify_syslog': NotifySyslogAction,
     'send_https_log': SendHttpsLogAction,
+    'send_to_webhook': SendWebhookAction,
     'create_service_now_incident': ServiceNowIncidentAction,
     'create_jira_incident': JiraIncidentAction,
     'enable_entities': EnableEntities,

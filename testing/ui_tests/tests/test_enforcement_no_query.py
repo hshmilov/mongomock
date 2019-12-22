@@ -225,6 +225,7 @@ class TestEnforcementNoQuery(TestBase):
         assert self.enforcements_page.get_action_categories() == [ActionCategory.Deploy, ActionCategory.Isolate,
                                                                   ActionCategory.Enrichment,
                                                                   ActionCategory.Block, ActionCategory.ManageAD,
+                                                                  ActionCategory.Notify,
                                                                   ActionCategory.Incident]
         assert self.enforcements_page.get_action_category_items(ActionCategory.Isolate) == [
             Action.cybereason_isolate.value,
