@@ -76,3 +76,6 @@ class ChefConnection(object):
 
     def __exit__(self, type, value, tb):
         self.close()
+
+    def get_users(self):
+        return self._chef_connection.api_request('Get', self._get_url_request('/users?verbose=true'))

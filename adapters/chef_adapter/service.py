@@ -10,6 +10,7 @@ from axonius.clients.rest.connection import RESTConnection
 from axonius.consts.gui_consts import FeatureFlagsNames
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.fields import Field, ListField
+from axonius.users.user_adapter import UserAdapter
 from axonius.utils.files import get_local_config_file
 from axonius.utils.datetime import parse_date
 from axonius.utils.parsing import format_mac, is_valid_ip
@@ -41,6 +42,9 @@ class ChefAdapter(AdapterBase):
         chef_tags = ListField(str, 'Chef tags')
         runlist = ListField(str, 'Run list')
         fqdn = Field(str, 'FQDN')
+
+    class MyUserAdapter(UserAdapter):
+        pass
 
     def __init__(self):
         super().__init__(get_local_config_file(__file__))
@@ -80,6 +84,27 @@ class ChefAdapter(AdapterBase):
         :return: A json with all the attributes returned from the Chef Server
         """
         return client_data.get_devices()
+
+    # pylint: disable=arguments-differ
+    @staticmethod
+    def _query_users_by_client(key, data):
+        return data.get_users()
+
+    # pylint: disable=arguments-differ
+    def _parse_users_raw_data(self, users_raw_data):
+        for user_raw in users_raw_data:
+            try:
+                username = (user_raw.get('user') or {}).get('username')
+                if not username:
+                    logger.warning(f'Bad user with no username {username}')
+                    continue
+                user = self._new_user_adapter()
+                user.id = username
+                user.username = username
+                user.set_raw(user_raw)
+                yield user
+            except Exception:
+                logging.exception(f'Problem with user raw {user_raw}')
 
     def _clients_schema(self):
         """
@@ -144,7 +169,7 @@ class ChefAdapter(AdapterBase):
                 try:
                     device.last_seen = datetime.datetime.fromtimestamp(device_raw_automatic['ohai_time'])
                 except Exception as e:
-                    logger.warning(
+                    logger.debug(
                         f"something is really wrong with the device" f" - chef doesn't have a last check-in for it {e}"
                     )
                 device.time_zone = (device_raw_automatic.get('time') or {}).get('timezone')
