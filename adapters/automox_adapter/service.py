@@ -8,12 +8,21 @@ from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
 from axonius.plugin_base import EntityType, add_rule, return_error
 from axonius.clients.rest.connection import RESTException
+from axonius.smart_json_class import SmartJsonClass
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.utils.files import get_local_config_file
 from automox_adapter.connection import AutomoxConnection
 from automox_adapter.client_id import get_client_id
 
 logger = logging.getLogger(f'axonius.{__name__}')
+
+
+class AutmoxPackage(SmartJsonClass):
+    display_name = Field(str, 'Display Name')
+    name = Field(str, 'Name')
+    installed = Field(bool, 'Installed')
+    severity = Field(str, 'Severity')
+    version = Field(str, 'Version')
 
 
 class AutomoxAdapter(AdapterBase):
@@ -28,6 +37,7 @@ class AutomoxAdapter(AdapterBase):
         next_patch_time = Field(datetime.datetime, 'Next Patch Time')
         patches = Field(int, 'Patches')
         pending_patches = Field(int, 'Pending Patches')
+        automox_packages = ListField(AutmoxPackage, 'Automox Packages')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -204,12 +214,20 @@ class AutomoxAdapter(AdapterBase):
                 try:
                     app_name = app_raw.get('display_name')
                     app_version = app_raw.get('version')
+
+                    if not app_raw.get('installed'):
+                        continue
                     if 'Security Update (KB' in app_name or 'Update for Microsoft' in app_name or\
                             'Security Update for Microsoft' in app_name or \
                             'Servicing Stack Update for Windows' in app_name or 'Update for Skype' in app_name:
                         device.add_security_patch(security_patch_id=app_name)
                     else:
                         device.add_installed_software(name=app_name, version=app_version)
+                    device.automox_packages.append(AutmoxPackage(name=app_raw.get('name'),
+                                                                 display_name=app_raw.get('display_name'),
+                                                                 version=app_raw.get('version'),
+                                                                 installed=app_raw.get('installed'),
+                                                                 severity=app_raw.get('severity')))
                 except Exception:
                     logger.exception(f'Probelm getting app {app_raw}')
             device.set_raw(device_raw)

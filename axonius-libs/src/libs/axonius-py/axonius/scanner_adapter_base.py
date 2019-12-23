@@ -36,6 +36,9 @@ def newest(devices):
     return max(devices, key=lambda device: device['accurate_for_datetime'])
 
 
+SCANNERS_TO_KEEP_ORINGAL_ID = ['nmap_adapter']
+
+
 class ScannerCorrelatorBase(object):
     def __init__(self, all_devices, plugin_name, *args, **kwargs):
         """
@@ -215,15 +218,13 @@ class ScannerCorrelatorBase(object):
                                                         adapter_device in axon_device['adapters'])), None)
             newest_device = newest(filter(lambda dev: parsed_device[PLUGIN_NAME] == dev[PLUGIN_NAME],
                                           correlation_base_axonius_device['adapters']))
-            if newest_device is not None:
+            if newest_device is not None and parsed_device[PLUGIN_NAME] not in SCANNERS_TO_KEEP_ORINGAL_ID:
                 logger.debug(f"Found remote correlation but not self correlation - {newest_device['data']['id']}")
                 # updating a current adapter correlation so no new one will be created - basically a different kind
                 # of self correlation
                 parsed_device['data']['id'] = newest_device['data']['id']
                 return None
-            if not my_macs and not hostname:
-                # If we have no mac or hostname we should not use the original id, due to complex scenarios
-                # that have been seen by ofri, in which wrong correlations can occur. Thus we generate a new id.
+            if parsed_device[PLUGIN_NAME] not in SCANNERS_TO_KEEP_ORINGAL_ID:
                 parsed_device['data']['id'] = uuid.uuid4().hex
             return remote_correlation
 
