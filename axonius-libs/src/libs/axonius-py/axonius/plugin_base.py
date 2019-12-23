@@ -3219,7 +3219,7 @@ class PluginBase(Configurable, Feature, ABC):
                         },
                         {
                             'name': 'password',
-                            'title': 'Password',
+                            'title': 'API Key',
                             'type': 'string',
                             'format': 'password'
                         },
