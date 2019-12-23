@@ -55,6 +55,8 @@ class Action(Enum):
     change_ldap_attribute = 'Update LDAP Attributes of Users or Devices'
     ScanTenable = 'Add to Tenable'
     carbonblack_defense_change_policy = 'Change Carbon Black CB Defense Policy'
+    carbonblack_defense_quarantine = 'Isolate Carbon Black CB Defense Device'
+    carbonblack_defense_unquarantine = 'Unisolate Carbon Black CB Defense Device'
     tenable_sc_add_ips_to_asset = 'Add IPs to Tenable.sc Asset'
     tenable_io_add_ips_to_target_group = 'Add IPs to Tenable.io Target Group'
     create_jira_incident = 'Create Jira Issue'

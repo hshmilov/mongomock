@@ -45,6 +45,8 @@ from reports.action_types.alert.create_fresh_service_incident import FreshServic
 from reports.action_types.base.webscan_enrichment import WebscanEnrichment
 from reports.action_types.base.create_jira_ticket_per_entity import JiraIncidentPerEntityAction
 from reports.action_types.base.automox_install_update import AutomoxInstallUpdateAction
+from reports.action_types.base.carbonblack_defense_quarantine import CarbonblackDefenseQuarantineAction
+from reports.action_types.base.carbonblack_defense_unquarantine import CarbonblackDefenseUnquarantineAction
 
 
 AllActionTypes: Dict[str, type(ActionTypeBase)] = {
@@ -91,5 +93,7 @@ AllActionTypes: Dict[str, type(ActionTypeBase)] = {
     'create_fresh_service_incident': FreshServiceIncidentAction,
     'webscan_enrichment': WebscanEnrichment,
     'jira_incident_per_entity_action': JiraIncidentPerEntityAction,
-    'automox_install_update': AutomoxInstallUpdateAction
+    'automox_install_update': AutomoxInstallUpdateAction,
+    'carbonblack_defense_quarantine': CarbonblackDefenseQuarantineAction,
+    'carbonblack_defense_unquarantine': CarbonblackDefenseUnquarantineAction
 }

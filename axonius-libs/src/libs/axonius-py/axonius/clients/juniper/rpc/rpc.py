@@ -94,7 +94,7 @@ def parse_fdbs(xmls):
             elif gettag(xml.tag) == 'ethernet-switching-table-information':
                 ret = parse_ethernet_switching(xml)
             else:
-                logger.error('got invalid tag %s', gettag(xml.tag))
+                logger.warning('got invalid tag %s', gettag(xml.tag))
                 continue
 
             # now reorder the data

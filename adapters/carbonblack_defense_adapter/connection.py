@@ -7,7 +7,7 @@ from carbonblack_defense_adapter import consts
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
-class CarbonblackDefenseConnection(RESTConnection):
+class CarbonblackDefenseV3Connection(RESTConnection):
 
     def __init__(self, *args, connector_id: str = None, **kwargs):
         self._connector_id = connector_id
@@ -21,6 +21,10 @@ class CarbonblackDefenseConnection(RESTConnection):
         self._get('device')
 
     def get_device_list(self):
+        for device_raw in self.get_device_list_v3():
+            yield device_raw, consts.V3_DEVICE
+
+    def get_device_list_v3(self):
         row_number = 1
         raw_results = self._get('device', url_params={'rows': str(consts.DEVICES_PER_PAGE), 'start': str(row_number)})
         total_count = raw_results['totalResults']
@@ -39,4 +43,8 @@ class CarbonblackDefenseConnection(RESTConnection):
                                body_params={'policyName': policy_name})
         if not response.get('success') is True:
             raise RESTException(f'Bad response for policy change: {response[:300]}')
-        return response.get('deviceInfo')
+        return response.get('deviceInfo'), consts.V3_DEVICE
+
+    @staticmethod
+    def quarantine(toggle):
+        raise RESTException(f'Not implemented for V3 API')

@@ -11,23 +11,17 @@ ADAPTER_NAME = 'carbonblack_defense_adapter'
 # pylint: disable=W0212
 
 
-class CarbonblackDefenseChangePolicyAction(ActionTypeBase):
+class CarbonblackDefenseUnquarantineAction(ActionTypeBase):
     """
-    CB Defense Change Policy
+    CB Defense Unquarantine
     """
 
     @staticmethod
     def config_schema() -> dict:
         schema = {
             'items': [
-                {
-                    'name': 'policy_name',
-                    'title': 'Policy Name',
-                    'type': 'string'
-                },
             ],
             'required': [
-                'policy_name'
             ],
             'type': 'array'
         }
@@ -36,7 +30,6 @@ class CarbonblackDefenseChangePolicyAction(ActionTypeBase):
     @staticmethod
     def default_config() -> dict:
         return add_node_default({
-            'policy_name': None
         }, ADAPTER_NAME)
 
     def _run(self) -> EntitiesResult:
@@ -50,5 +43,5 @@ class CarbonblackDefenseChangePolicyAction(ActionTypeBase):
         })
         return do_cb_defense_action(current_result=current_result,
                                     adapter_unique_name=adapter_unique_name,
-                                    extra_data={'policy_name': self._config['policy_name']},
-                                    action_name='change_policy')
+                                    extra_data={'toggle': 'OFF'},
+                                    action_name='quarantine')

@@ -230,4 +230,6 @@ class TestEnforcementNoQuery(TestBase):
         assert self.enforcements_page.get_action_category_items(ActionCategory.Isolate) == [
             Action.cybereason_isolate.value,
             Action.cybereason_unisolate.value,
-            Action.carbonblack_defense_change_policy.value]
+            Action.carbonblack_defense_change_policy.value,
+            Action.carbonblack_defense_quarantine.value,
+            Action.carbonblack_defense_unquarantine.value]

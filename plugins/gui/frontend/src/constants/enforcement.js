@@ -77,6 +77,12 @@ export const actionsMeta = {
     carbonblack_defense_change_policy: {
         title: 'Change Carbon Black CB Defense Policy'
     },
+    carbonblack_defense_quarantine: {
+        title: 'Isolate Carbon Black CB Defense Device'
+    },
+    carbonblack_defense_unquarantine: {
+        title: 'Unisolate Carbon Black CB Defense Device'
+    },
     enable_entities: {
         title: 'Enable Users or Devices'
     },
@@ -156,7 +162,7 @@ export const actionsMeta = {
     },
     isolate_edr: {
         title: 'Execute Endpoint Security Agent Action',
-        items: ['carbonblack_isolate', 'carbonblack_unisolate', 'cybereason_isolate', 'cybereason_unisolate', 'carbonblack_defense_change_policy', 'sentinelone_initiate_scan_action', 'automox_install_update']
+        items: ['carbonblack_isolate', 'carbonblack_unisolate', 'cybereason_isolate', 'cybereason_unisolate', 'carbonblack_defense_change_policy', 'carbonblack_defense_quarantine', 'carbonblack_defense_unquarantine', 'sentinelone_initiate_scan_action', 'automox_install_update']
     },
     scan_va: {
         title: 'Add Device to VA Scan',
