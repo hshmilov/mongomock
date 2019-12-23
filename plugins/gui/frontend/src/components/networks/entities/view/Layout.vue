@@ -240,15 +240,6 @@
       }
 
       .body {
-        .content-header {
-          padding-bottom: 4px;
-          margin-bottom: 12px;
-          border-bottom: 2px solid rgba($theme-orange, 0.4);
-
-          .server-info {
-            text-transform: uppercase;
-          }
-        }
 
         .x-list {
           height: 100%;

@@ -167,8 +167,8 @@ class TestSavedQuery(TestBase):
 
         self.devices_page.wait_for_spinner_to_end()
         self.devices_queries_page.fill_enter_table_search('system')
+        self.devices_queries_page.wait_for_spinner_to_end()
         windows_query_row = self.devices_queries_page.find_query_row_by_name(WINDOWS_QUERY_NAME)
-        self.devices_page.wait_for_spinner_to_end()
         windows_query_row.click()
         assert 'devices' in self.driver.current_url and 'query' not in self.driver.current_url
         self.devices_page.wait_for_spinner_to_end()

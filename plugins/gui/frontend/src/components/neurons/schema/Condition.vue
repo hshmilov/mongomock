@@ -1,15 +1,24 @@
 <template>
   <div class="x-condition">
     <x-select-typed-field
-      :id="first? 'query_field': undefined"
+      v-if="!parentField"
+      :id="fieldId"
       :value="field"
       :filtered-adapters="condition.filteredAdapters"
       :options="schema"
       @input="onChangeFieldType"
     />
     <x-select
+      v-else
+      :value="field"
+      :options="schema"
+      :searchable="true"
+      class="field-select field-select__indented"
+      @input="onChangeFieldType"
+    />
+    <x-select
       v-if="!isParent && opsList.length"
-      :id="first? 'query_op': undefined"
+      :id="opId"
       v-model="compOp"
       :options="opsList"
       placeholder="func..."
@@ -18,7 +27,7 @@
     <component
       :is="valueSchema.type"
       v-if="showValue"
-      :id="first? 'query_value': undefined"
+      :id="valueId"
       v-model="value"
       :schema="valueSchema"
       class="expression-value"
@@ -263,6 +272,15 @@
           return field
         }
         return aggDef.aggregatedName
+      },
+      fieldId () {
+        return this.first ? 'query_field' : undefined
+      },
+      opId () {
+        return this.first ? 'query_op' : undefined
+      },
+      valueId () {
+        return this.first ? 'query_value' : undefined
       }
     },
     watch: {
@@ -512,6 +530,10 @@
         .expression-value {
             width: auto;
             min-width: 0;
+        }
+
+        .field-select__indented {
+          margin-left: 60px;
         }
     }
 </style>

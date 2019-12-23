@@ -147,7 +147,7 @@ class EntitiesPage(Page):
     NOTES_SEARCH_INUPUT_CSS = '#search-notes .input-value'
     NOTES_SEARCH_BY_TEXT_XPATH = '//div[text()=\'{note_text}\']'
 
-    CONFIG_ADVANCED_TEXT_CSS = '.x-entity-adapters>div.x-tabs>div.body>div.active>div.content-header>button.link'
+    CONFIG_ADVANCED_TEXT_CSS = '.x-entity-adapters>div.x-tabs>div.body>div.active>div.header>button.link'
     ADVANCED_VIEW_RAW_FIELD = 'raw:'
     CONFIG_BASIC_TEXT = 'View basic'
 

@@ -1,7 +1,6 @@
 <template>
   <div class="x-select-typed-field">
     <x-select-symbol
-      v-if="isTyped"
       v-model="filterTypeWithFilters"
       :options="options"
       :minimal="minimal"
@@ -14,7 +13,6 @@
       placeholder="field..."
       :searchable="true"
       class="field-select"
-      :class="{linked: isTyped}"
       @input="onChangedField"
     />
   </div>
@@ -56,11 +54,7 @@
       }
     },
     computed: {
-      isTyped () {
-        return Boolean(this.options && this.options.length && this.options[0].fields)
-      },
       currentFields () {
-        if (!this.isTyped) return this.options
         if (!this.fieldType) return this.options[0].fields
         return this.options.find(item => item.name === this.fieldType).fields
       },
@@ -115,8 +109,8 @@
             secondaryValues = value['secondaryValues']
         }
 
-        if (!this.isTyped || this.fieldType === '' || this.fieldType === 'axonius') {
-          if(secondaryValues){
+        if (this.fieldType === '' || this.fieldType === 'axonius') {
+          if (secondaryValues) {
               this.$emit('input', this.value, this.fieldType, secondaryValues)
           }
           return
@@ -157,15 +151,10 @@
 
         .field-select {
             flex: 1 0 auto;
-            width: 120px;
-            margin-left: 60px;
-
-            &.linked {
-                width: 180px;
-                margin-left: -2px;
-                border-bottom-left-radius: 0;
-                border-top-left-radius: 0;
-            }
+            width: 180px;
+            margin-left: -2px;
+            border-bottom-left-radius: 0;
+            border-top-left-radius: 0;
         }
     }
 </style>

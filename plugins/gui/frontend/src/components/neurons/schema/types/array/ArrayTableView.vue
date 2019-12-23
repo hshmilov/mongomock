@@ -1,32 +1,41 @@
 <template>
   <div class="array inline">
-    <div
-      v-for="item in dataSchemaItems"
-      :key="item.name"
-      class="item"
-    >
+    <template v-if="showRaw">
       <x-array-raw-view
-        v-if="showRaw"
-        :data="processedData[item.name]"
-        :schema="item"
+        v-for="{schema, data} in dataSchemaItems"
+        :key="schema.name"
+        :data="data"
+        :schema="schema"
+        class="item"
       />
+    </template>
+    <template v-else-if="wrapChip">
       <md-chip
-        v-else-if="wrapChip(item)"
-        :class="item.format"
+        v-for="{schema, data} in dataSchemaItems"
+        :key="schema.name"
+        class="item"
+        :class="schema.format"
       >
         <component
-          :is="item.type"
-          :schema="item"
-          :value="processedData[item.name]"
+          :is="schema.type"
+          :schema="schema"
+          :value="data"
         />
       </md-chip>
-      <component
-        :is="item.type"
-        v-else
-        :schema="item"
-        :value="processedData[item.name]"
-      />
-    </div>
+    </template>
+    <template v-else>
+      <div
+        v-for="{schema, data} in dataSchemaItems"
+        :key="schema.name"
+        class="item"
+      >
+        <component
+          :is="schema.type"
+          :schema="schema"
+          :value="data"
+        />
+      </div>
+    </template>
   </div>
 </template>
 
@@ -41,6 +50,7 @@
 
   import arrayMixin from '../../../../../mixins/array'
   import { isObjectListField } from '../../../../../constants/utils'
+  import _get from 'lodash/get'
 
   export default {
     name: 'XArrayTableView',
@@ -61,8 +71,15 @@
       showRaw () {
         return isObjectListField(this.schema)
       },
+      isTag () {
+        return _get(this.schema, 'items.format') === 'tag'
+      },
+      wrapChip () {
+        const isSeparatedList = this.dataSchemaItems.length > 1 && this.schema.name !=='adapters'
+        return isSeparatedList || this.isTag
+      },
       processedData () {
-        if (this.isOrderedObject){
+        if (this.isOrderedObject) {
           return this.data
         }
         let items = Object.values(this.data)
@@ -73,11 +90,6 @@
           items = Array.from(new Set(items))
         }
         return items
-      }
-    },
-    methods: {
-      wrapChip (item) {
-        return (this.dataSchemaItems.length > 1 && this.schema.name !=='adapters') || item.format === 'tag'
       }
     }
   }
@@ -94,7 +106,7 @@
       line-height: 24px;
       display: flex;
 
-      .md-chip {
+      &.md-chip {
           transition: none;
 
           &:not(.tag):not(.x-array-raw-view) {
@@ -106,7 +118,7 @@
           }
       }
 
-      &:first-child .md-chip {
+      &:first-child.md-chip {
         margin-left: -12px;
       }
     }

@@ -20,7 +20,7 @@
       :class="{ordered: isOrderedObject}"
     >
       <div
-        v-for="(item, index) in visibleDataSchemaItems"
+        v-for="({schema, data}, index) in visibleDataSchemaItems"
         :key="index"
         class="item-container"
         :class="{ collapsable }"
@@ -29,38 +29,38 @@
         <div
           ref="item"
           class="item"
-          :class="{ 'growing-y': collapsable, numbered: isNumbered(item)}"
+          :class="{ 'growing-y': collapsable, numbered: isNumbered(schema)}"
         >
           <div
-            v-if="isNumbered(item)"
+            v-if="isNumbered(schema)"
             class="index"
-          >{{ item.name + 1 }}.</div>
+          >{{ schema.name + 1 }}.</div>
           <x-type-wrap
-            v-bind="item"
+            v-bind="schema"
             :required="true"
           >
             <x-slice
-              v-if="isMergedValue(data[item.name], item)"
-              :schema="item"
-              :value="data[item.name]"
+              v-if="isMergedValue(data, schema)"
+              :schema="schema"
+              :value="data"
             >
               <x-array-table-view
                 slot-scope="{ sliced }"
-                :schema="item"
+                :schema="schema"
                 :value="sliced"
               />
             </x-slice>
             <array
-              v-else-if="item.type === 'array'"
+              v-else-if="schema.type === 'array'"
               ref="array"
-              :schema="item"
-              :value="data[item.name]"
+              :schema="schema"
+              :value="data"
             />
             <x-table-data
               v-else
-              :ref="item.type"
-              :schema="item"
-              :data="data[item.name]"
+              :ref="schema.type"
+              :schema="schema"
+              :data="data"
               :hyperlinks="hyperlinks"
             />
           </x-type-wrap>

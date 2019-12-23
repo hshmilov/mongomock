@@ -10,8 +10,8 @@
         :title="item.pretty_name || item.plugin_name"
         :logo="`adapters/${item.plugin_name}`"
       >
-        <div class="d-flex content-header">
-          <div class="flex-expand server-info">
+        <div class="header">
+          <div class="header__source">
             <template v-if="item.client_used">Data From: {{ item.client_used }}</template>
           </div>
           <x-button
@@ -242,6 +242,23 @@
 <style lang="scss">
   .x-entity-adapters {
     height: 100%;
+
+    .header {
+      padding-bottom: 4px;
+      margin-bottom: 12px;
+      border-bottom: 2px solid rgba($theme-orange, 0.4);
+      display: flex;
+      align-items: center;
+
+      &__source {
+        flex: 1 0 auto;
+        width: calc(100% - 120px);
+        text-overflow: ellipsis;
+        overflow: hidden;
+        white-space: pre;
+        text-transform: uppercase;
+      }
+    }
     .json-view-item {
       .data-key {
         padding: 2px;

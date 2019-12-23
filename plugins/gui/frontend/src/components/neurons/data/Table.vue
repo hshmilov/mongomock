@@ -410,14 +410,13 @@
           this.loading = false
           return
         }
+        if (loading) {
+          this.loading = true
+        }
         if (!this.pageLinkNumbers || this.pageLinkNumbers.length <= 1) {
           // Fetch at least 5 pages - in case pageSize is 20, there will enough data to change to 100
           return this.fetchContentSegment(0, this.pageSize * 5)
         }
-        if (loading) {
-          this.loading = true
-        }
-
         return this.fetchContentSegment(
           this.pageLinkNumbers[0] * this.pageSize,
           this.pageLinkNumbers.length * this.pageSize,

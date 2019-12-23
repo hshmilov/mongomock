@@ -108,11 +108,6 @@ export const updateDataView = (state, payload) => {
 	let module = getModule(state, payload)
 	if (!module) return
 	if (payload.view) {
-		if (module.view.query && payload.view.query && module.view.query.filter !== payload.view.query.filter
-			|| (payload.view.historical !== undefined && module.view.historical !== payload.view.historical)) {
-			module.content.data = []
-			module.count.data_to_show = 0
-		}
 		module.view = { ...module.view, ...payload.view }
 	}
 	if (payload.uuid !== undefined) {

@@ -8,6 +8,7 @@
   >
   <img
     v-else-if="props.schema.format && props.schema.format === 'logo'"
+    :key="props.value"
     :src="require(`Logos/adapters/${props.value}.png`)"
     :alt="props.value"
     height="24"

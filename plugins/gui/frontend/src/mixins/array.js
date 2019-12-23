@@ -68,8 +68,14 @@ export default {
 			return schemaItems
 		},
 		dataSchemaItems() {
-			const data = this.data
-			return this.schemaItems.filter(item => !this.empty(data[item.name]))
+			const data = this.processedData
+			return this.schemaItems
+				.filter(schema => !this.empty(data[schema.name]))
+				.map(schema => {
+					return {
+						schema, data: data[schema.name]
+					}
+				})
 		},
 		isHidden() {
 			return this.data['enabled'] === false
