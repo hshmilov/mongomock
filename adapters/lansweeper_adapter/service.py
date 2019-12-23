@@ -486,6 +486,8 @@ class LansweeperAdapter(AdapterBase, Configurable):
                 device.name = device_raw.get('AssetName')
                 try:
                     mac = device_raw.get('Mac') if device_raw.get('Mac') else None
+                    if self.__drop_no_mac_addresses_device and not mac:
+                        continue
                     ips = [device_raw.get('IPAddress')] if device_raw.get('IPAddress') else None
                     if mac or ips:
                         device.add_nic(mac, ips)
@@ -583,9 +585,14 @@ class LansweeperAdapter(AdapterBase, Configurable):
                     'name': 'devices_fetched_at_a_time',
                     'type': 'integer',
                     'title': 'SQL pagination'
+                },
+                {
+                    'name': 'drop_no_mac_addresses_device',
+                    'type': 'bool',
+                    'title': 'Drop Devices With No MAC Address'
                 }
             ],
-            'required': [],
+            'required': ['drop_no_mac_addresses_device'],
             'pretty_name': 'Lansweeper Configuration',
             'type': 'array'
         }
@@ -593,8 +600,10 @@ class LansweeperAdapter(AdapterBase, Configurable):
     @classmethod
     def _db_config_default(cls):
         return {
-            'devices_fetched_at_a_time': 1000
+            'devices_fetched_at_a_time': 1000,
+            'drop_no_mac_addresses_device': False
         }
 
     def _on_config_update(self, config):
         self.__devices_fetched_at_a_time = config['devices_fetched_at_a_time']
+        self.__drop_no_mac_addresses_device = config['drop_no_mac_addresses_device']
