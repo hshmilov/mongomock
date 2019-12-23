@@ -93,9 +93,6 @@ class SendWebhookAction(ActionTypeAlert):
             {
                 'name': query_name
             })
-        if not query:
-            logger.error(f'Could not fetch query: {str(query_name)}')
-            return AlertActionResult(False, 'Failed to fetch query')
         # check for extra headers
         extra_headers_raw = self._config.get('extra_headers')
         if extra_headers_raw:
@@ -111,9 +108,15 @@ class SendWebhookAction(ActionTypeAlert):
         password = self._config.get('auth_password', '')
         auth_tuple = (username, password) if (username and password) else None
 
-        parsed_query_filter = parse_filter(query['view']['query']['filter'])
-        field_list = query['view'].get('fields', [])
-        sort = gui_helpers.get_sort(query['view'])
+        if query:
+            parsed_query_filter = parse_filter(query['view']['query']['filter'])
+            field_list = query['view'].get('fields', [])
+            sort = gui_helpers.get_sort(query['view'])
+        else:
+            parsed_query_filter = self._create_query(self._internal_axon_ids)
+            field_list = ['specific_data.data.name', 'specific_data.data.hostname',
+                          'specific_data.data.os.type', 'specific_data.data.last_used_users', 'labels']
+            sort = {}
         proxies = dict()
         if self._config.get('http_proxy'):
             proxies['http'] = self._config.get('http_proxy')
