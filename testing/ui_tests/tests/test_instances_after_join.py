@@ -10,7 +10,7 @@ from services.adapters.ad_service import AdService
 from services.adapters.json_file_service import JsonFileService
 from test_credentials.test_ad_credentials import ad_client1_details
 from ui_tests.tests.instances_test_base import TestInstancesBase, NODE_NAME, NODE_HOSTNAME, NEW_NODE_NAME, \
-    NEXPOSE_ADAPTER_NAME
+    NEXPOSE_ADAPTER_NAME, wait_for_booted_for_production
 
 
 class TestInstancesAfterNodeJoin(TestInstancesBase):
@@ -40,8 +40,10 @@ class TestInstancesAfterNodeJoin(TestInstancesBase):
 
     def check_node_restart(self):
         self._delete_nexpose_adapter_and_data()
-        time.sleep(10)
+        self._instances[0].ssh('sudo reboot')
+        time.sleep(60)
         self._instances[0].wait_for_ssh()
+        wait_for_booted_for_production(self._instances[0])
         self._add_nexpose_adadpter_and_discover_devices()
 
     def _try_discovery_until_check_devices_count_goes_up(self):

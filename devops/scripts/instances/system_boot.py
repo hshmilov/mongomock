@@ -31,6 +31,12 @@ def set_unique_dns():
 
 
 def main():
+    try:
+        BOOTED_FOR_PRODUCTION_MARKER_PATH.unlink()
+    except FileNotFoundError:
+        # A bit more defensive than checking for existence beforehand, let's not
+        # be so fragile.
+        pass
     # Waiting for weave network to be stable.
     wait_until_machine_is_ready()
 
