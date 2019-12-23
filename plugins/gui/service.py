@@ -3024,7 +3024,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
             if self._system_settings.get('timeout_settings') and self._system_settings.get('timeout_settings').get(
                     'enabled'):
                 user['timeout'] = self._system_settings.get('timeout_settings').get('timeout') \
-                    if not session.permanent else 0
+                    if not (os.environ.get('HOT') == 'true' or session.permanent) else 0
             return jsonify(beautify_user_entry(user)), 200
 
         log_in_data = self.get_request_data_as_object()
