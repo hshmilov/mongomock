@@ -40,8 +40,7 @@ class TestInstancesAfterNodeJoin(TestInstancesBase):
 
     def check_node_restart(self):
         self._delete_nexpose_adapter_and_data()
-        self._instances[0].ssh('echo \'{self._instances[0].ssh_pass}\' | sudo -S reboot')
-        time.sleep(5)
+        time.sleep(10)
         self._instances[0].wait_for_ssh()
         self._add_nexpose_adadpter_and_discover_devices()
 
