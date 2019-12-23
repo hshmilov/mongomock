@@ -1,4 +1,9 @@
 export const pluginMeta = {
+    arista_eos_adapter: {
+        title: 'Arista Extensible Operating System (EOS)',
+        link:'https://docs.axonius.com/docs/arista-eos',
+        description: 'Arista Extensible Operating System (EOS) is the core of Arista cloud networking solutions for next-generation data centers and cloud networks.'
+    },
     cisco_stealthwatch_adapter: {
         title: 'Cisco StealthWatch',
         link: 'https://docs.axonius.com/docs/cisco-stealthwatch',

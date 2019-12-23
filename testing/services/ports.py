@@ -222,6 +222,7 @@ DOCKER_PORTS = {
     'ansible-tower-adapter':            10000,
     'cisco-ucsm-adapter':               10010,
     'cisco-stealthwatch-adapter':       10001,
+    'arista-eos-adapter':               10002,
     'netbrain-adapter':                 13371,
     'mongo':                            27017,
     'mockingbird-db':                   28017
