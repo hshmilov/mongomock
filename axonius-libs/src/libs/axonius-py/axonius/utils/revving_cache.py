@@ -304,6 +304,22 @@ class RevCached:
         """
         return self.__func(*args, **kwargs)
 
+    def remove_from_cache(self, args: List = None) -> int:
+        """
+        Triggers a cache remove sync
+        :param args: If not none, only remove that specific parameter set. Otherwise, removes all values
+        :return: The amount of cache entries affected
+        """
+        counter = 0
+        for cached_entry in self.get_all_values(args):
+            if not cached_entry:
+                continue
+            counter += 1
+            plugin_base_instance().cached_operation_scheduler.remove_job(cached_entry.job.id)
+            with self.__initial_values_lock_dict[cached_entry.key]:
+                self.__initial_values.pop(cached_entry.key)
+        return counter
+
 
 def rev_cached(ttl: int, initial_values: Iterable[Tuple] = None, remove_from_cache_ttl: int = 3600 * 48,
                key_func: Callable = None):
@@ -326,6 +342,7 @@ def rev_cached(ttl: int, initial_values: Iterable[Tuple] = None, remove_from_cac
         actual_wrapper.update_cache = cache.trigger_cache_update_now
         actual_wrapper.clean_cache = cache.sync_clean_cache
         actual_wrapper.call_uncached = cache.call_uncached
+        actual_wrapper.remove_from_cache = cache.remove_from_cache
 
         return actual_wrapper
 

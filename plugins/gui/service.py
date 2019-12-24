@@ -3883,8 +3883,12 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
             {'_id': panel_id}, {'$set': update_data})
         if not update_result.modified_count:
             return return_error(f'No dashboard by the id {str(panel_id)} found or updated', 400)
-        generate_dashboard.clean_cache([panel_id])
-        generate_dashboard_historical.clean_cache([panel_id, WILDCARD_ARG, WILDCARD_ARG])
+        if request.method == 'DELETE':
+            generate_dashboard.remove_from_cache([panel_id])
+            generate_dashboard_historical.remove_from_cache([panel_id, WILDCARD_ARG, WILDCARD_ARG])
+        else:
+            generate_dashboard.clean_cache([panel_id])
+            generate_dashboard_historical.clean_cache([panel_id, WILDCARD_ARG, WILDCARD_ARG])
         return ''
 
     @gui_helpers.historical_range()
