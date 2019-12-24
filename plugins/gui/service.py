@@ -5329,7 +5329,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
                         },
                         {
                             'name': 'mandatory',
-                            'title': 'Set as mandatory',
+                            'title': 'Set as Mandatory',
                             'type': 'bool'
                         },
                         {
@@ -5339,7 +5339,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
                             'type': 'file'
                         }
                     ],
-                    'required': ['enabled', 'ca_certificate'],
+                    'required': ['enabled', 'ca_certificate', 'mandatory'],
                     'name': 'mutual_tls_settings',
                     'title': 'Mutual TLS Settings',
                     'type': 'array'
