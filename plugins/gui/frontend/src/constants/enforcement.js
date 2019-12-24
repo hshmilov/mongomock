@@ -138,7 +138,7 @@ export const actionsMeta = {
         title: 'Send to HTTPS Log System'
     },
     send_to_webhook: {
-        title: 'Send Devices to Webhook'
+        title: 'Send to Webhook'
     },
     create_notification: {
         title: 'Push System Notification'

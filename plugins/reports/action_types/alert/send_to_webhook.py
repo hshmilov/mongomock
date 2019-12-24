@@ -28,7 +28,7 @@ class SendWebhookAction(ActionTypeAlert):
                 },
                 {
                     'name': 'auth_username',
-                    'title': 'Authorization Header Username',
+                    'title': 'Authorization Header User Name',
                     'type': 'string'
                 },
                 {
