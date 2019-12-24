@@ -9,6 +9,14 @@ export const pluginMeta = {
         link: 'https://docs.axonius.com/docs/cisco-stealthwatch',
         description: 'Cisco Stealthwatch is an agentless malware detection solution that provides visibility and network traffic security analytics across the extended network, including endpoints, branch, data center, and cloud.'
     },
+    cscglobal_adapter: {
+        title: 'CSC DomainManager',
+        description: 'CSC DomainManager is a web-based portfolio management platform which consolidates your domains alongside your social media usernames, SSL digital certificates and DNS.'
+    },
+    riskiq_adapter: {
+        title: 'RiskIQ Digital Footprint',
+        description: 'RiskIQ Digital Footprint software provides an active, comprehensive inventory of all of the organization’s IPs, domains, and hosts.'
+    },
     ansible_tower_adapter: {
         title: 'Red Hat Ansible Tower',
         description: 'Red Hat Ansible Tower is a web console and REST API for operationalizing Ansible across teams, organizations, and the enterprise.',
