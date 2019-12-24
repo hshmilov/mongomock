@@ -18,12 +18,13 @@ logger = logging.getLogger(f'axonius.{__name__}')
 
 
 class SentineloneAdapter(AdapterBase):
-
+    # pylint: disable=too-many-instance-attributes
     class MyDeviceAdapter(DeviceAdapter):
         active_state = Field(str, 'Active State')
         is_active = Field(bool, 'Is Active')
         basic_device_id = Field(str, 'Basic ID')
         user_actions_needed = ListField(str, 'User Actions Needed')
+        external_ip = Field(str, 'External IP')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -157,8 +158,7 @@ class SentineloneAdapter(AdapterBase):
                 device.last_seen = parse_date(device_raw.get('last_active_date'))
             except Exception:
                 logger.exception(f'Problem getting last seen at {device_raw}')
-            if device_raw.get('external_ip'):
-                device.add_public_ip(device_raw.get('external_ip'))
+            device.external_ip = device_raw.get('external_ip')
             network_information = device_raw.get('network_information') or {}
             if not isinstance(network_information, dict):
                 network_information = dict()
@@ -235,13 +235,12 @@ class SentineloneAdapter(AdapterBase):
             device.id = device_id + computer_name
             device.uuid = device_raw.get('uuid')
             device.basic_device_id = device_id
+            device.external_ip = device_raw.get('externalIp')
             device.add_agent_version(agent=AGENT_NAMES.sentinelone, version=device_raw.get('agentVersion'))
             try:
                 device.last_seen = parse_date(device_raw.get('lastActiveDate'))
             except Exception:
                 logger.exception(f'Problem getting last seen at {device_raw}')
-            if device_raw.get('externalIp'):
-                device.add_public_ip(device_raw.get('externalIp'))
             device.domain = device_raw.get('domain')
             ad_domain = ''
             ad_user_domain = None
