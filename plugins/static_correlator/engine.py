@@ -53,7 +53,8 @@ logger = logging.getLogger(f'axonius.{__name__}')
 
 ALLOW_OLD_MAC_LIST = ['clearpass_adapter', 'tenable_security_center', 'nexpose_adapter', 'nessus_adapter',
                       'nessus_csv_adapter', 'tenable_io_adapter', 'qualys_scans_adapter', 'airwave_adapter']
-DANGEROUS_ADAPTERS = ['lansweeper_adapter', 'carbonblack_protection_adapter', 'infoblox_adapter', 'azure_ad_adapter']
+DANGEROUS_ADAPTERS = ['lansweeper_adapter', 'carbonblack_protection_adapter',
+                      'infoblox_adapter', 'azure_ad_adapter', 'carbonblack_defense_adapter']
 DOMAIN_TO_DNS_DICT = dict()
 DOES_AD_HAVE_ONE_CLIENT = False
 
