@@ -51,7 +51,7 @@ from axonius.background_scheduler import LoggedBackgroundScheduler
 from axonius.clients.cyberark_vault.connection import CyberArkVaultConnection
 from axonius.clients.rest.connection import RESTConnection
 from axonius.consts.adapter_consts import IGNORE_DEVICE
-from axonius.consts.core_consts import CORE_CONFIG_NAME
+from axonius.consts.core_consts import CORE_CONFIG_NAME, ACTIVATED_NODE_STATUS
 from axonius.consts.gui_consts import FEATURE_FLAGS_CONFIG, FeatureFlagsNames, GETTING_STARTED_CHECKLIST_SETTING
 from axonius.consts.plugin_consts import (ADAPTERS_LIST_LENGTH,
                                           AGGREGATION_SETTINGS,
@@ -1844,21 +1844,35 @@ class PluginBase(Configurable, Feature, ABC):
     # pylint: enable=too-many-statements
 
     def _get_nodes_table(self):
-        db_connection = self._get_db_connection()
-        nodes = []
-        for current_node in self.core_configs_collection.distinct(NODE_ID):
-            node_data = db_connection['core']['nodes_metadata'].find_one({NODE_ID: current_node})
-            node = {NODE_ID: current_node,
-                    'last_seen': self.request_remote_plugin(f'nodes/last_seen/{current_node}').json()[
+        def get_single_node_data(node_id):
+            node_metadata = db_connection['core']['nodes_metadata'].find_one({NODE_ID: node_id})
+            node = {NODE_ID: node_id,
+                    'last_seen': self.request_remote_plugin(f'nodes/last_seen/{node_id}').json()[
                         'last_seen']}
 
-            if node_data:
-                node['node_name'] = node_data.get('node_name', '')
-                node['tags'] = node_data.get('tags', {})
-                node[NODE_USER_PASSWORD] = node_data.get(NODE_USER_PASSWORD, '')
-                node['hostname'] = node_data.get('hostname', '')
-                node['ips'] = node_data.get('ips', '')
-            nodes.append(node)
+            if node_metadata:
+                node['node_name'] = node_metadata.get('node_name', '')
+                node['tags'] = node_metadata.get('tags', {})
+                node[NODE_USER_PASSWORD] = node_metadata.get(NODE_USER_PASSWORD, '')
+                node['hostname'] = node_metadata.get('hostname', '')
+                node['ips'] = node_metadata.get('ips', '')
+                node['status'] = node_metadata.get('status', ACTIVATED_NODE_STATUS)
+            return node
+
+        db_connection = self._get_db_connection()
+        nodes = []
+
+        master_id = self.node_id
+        # Get all the node ids connected to this master.
+        node_ids = self.core_configs_collection.distinct(NODE_ID)
+
+        # Remove master node_id and deal with it separately to have it on the top.
+        node_ids.remove(master_id)
+        nodes.append(get_single_node_data(master_id))
+
+        # Gather all the rest.
+        for current_node in node_ids:
+            nodes.append(get_single_node_data(current_node))
 
         return nodes
 

@@ -44,7 +44,7 @@ from axonius.clients.ldap.exceptions import LdapException
 from axonius.clients.ldap.ldap_connection import LdapConnection
 from axonius.clients.rest.connection import RESTConnection
 from axonius.consts import adapter_consts, report_consts
-from axonius.consts.core_consts import CORE_CONFIG_NAME
+from axonius.consts.core_consts import CORE_CONFIG_NAME, ACTIVATED_NODE_STATUS, DEACTIVATED_NODE_STATUS
 from axonius.consts.gui_consts import (ENCRYPTION_KEY_PATH,
                                        EXEC_REPORT_EMAIL_CONTENT,
                                        EXEC_REPORT_FILE_NAME,
@@ -1703,6 +1703,15 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
 
             schema = self._get_plugin_schemas(db_connection, adapter_name).get('clients')
             nodes_metadata_collection = db_connection['core']['nodes_metadata']
+
+            node_name = nodes_metadata_collection.find_one({
+                NODE_ID: adapter[NODE_ID]
+            })
+
+            # Skip Deactivated nodes.
+            if node_name.get('status', ACTIVATED_NODE_STATUS) == DEACTIVATED_NODE_STATUS:
+                continue
+
             if not schema:
                 # there might be a race - in the split second that the adapter is up
                 # but it still hasn't written it's schema
@@ -1720,10 +1729,6 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
             if len(clients):
                 status = 'success' if all(client.get('status') == 'success' for client in clients) \
                     else 'warning'
-
-            node_name = nodes_metadata_collection.find_one({
-                NODE_ID: adapter[NODE_ID]
-            })
 
             node_name = '' if node_name is None else node_name.get(NODE_NAME)
 
@@ -4819,16 +4824,15 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
             })
         elif request.method == 'POST':
             data = self.get_request_data_as_object()
+
             self.request_remote_plugin(f'node/{data["node_id"]}', method='POST',
-                                       json={'key': NODE_NAME, 'value': data[NODE_NAME]})
+                                       json={'key': data['key'], 'value': data['value']})
             return ''
         elif request.method == 'DELETE':
             data = self.get_request_data_as_object()
             node_ids = data['nodeIds']
             if self.node_id in node_ids:
-                raise RuntimeError('Can\'t Delete Master.')
-
-            delete_entities = data['deleteEntities']
+                return return_error('Can\'t Deactivate Master.', 400)
 
             for current_node in node_ids:
                 # List because it might take a while for the process to finish
@@ -4847,11 +4851,12 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
                     cursor = self._get_collection('clients', plugin_unique_name).find({},
                                                                                       projection={'_id': 1})
                     for current_client in cursor:
-                        if delete_entities:
-                            self.delete_client_data(plugin_name, plugin_unique_name,
-                                                    current_client['_id'])
                         self.request_remote_plugin(
                             'clients/' + str(current_client['_id']), plugin_unique_name, method='delete')
+
+                # Deactivate node
+                self.request_remote_plugin(f'node/{current_node}', method='POST',
+                                           json={'key': 'status', 'value': DEACTIVATED_NODE_STATUS})
             return ''
 
     @gui_add_rule_logged_in('instances/tags', methods=['DELETE', 'POST'],

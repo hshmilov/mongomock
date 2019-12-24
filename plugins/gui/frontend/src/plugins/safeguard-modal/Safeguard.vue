@@ -3,7 +3,7 @@
     <v-card>
 
       <v-card-text v-html="params.text"></v-card-text>
-
+      <x-chexkbox v-if="params.showCheckbox" v-model="customComponentValue" :label="params.checkboxLabel"/>
       <v-card-actions>
         <v-spacer></v-spacer>
 
@@ -18,20 +18,22 @@
 <script>
 import Plugin from './index'
 import XButton from '../../components/axons/inputs/Button.vue'
+import XChexkbox from '../../components/axons/inputs/Checkbox.vue'
 
 export default {
     name: 'xSafeguard',
-    components: { XButton },
+    components: { XButton, XChexkbox},
     data() {
         return {
             visible: false,
-            params: {}
+            params: {},
+            customComponentValue: undefined
         }
     },
     methods: {
         onConfirm() {
             if (this.params.onConfirm) {
-                this.params.onConfirm()
+                this.params.onConfirm(this.customComponentValue)
             }
             this.visible = false
         },
@@ -41,9 +43,14 @@ export default {
             }
             this.visible = false
         },
-        show({ text="Are you sure?", onConfirm, onCancel, confirmText="Confirm", cancelText="Cancel"}) {
+        show({ text="Are you sure?", onConfirm, onCancel, confirmText="Confirm", cancelText="Cancel", checkbox }) {
             this.visible = true
             this.params = { text, onConfirm, onCancel, confirmText, cancelText }
+            if (checkbox) {
+                this.params['showCheckbox'] = !!checkbox
+                this.params['checkboxLabel'] = checkbox.label
+                this.customComponentValue = checkbox.initialValue
+            }
         }
     },
     beforeMount() {
@@ -57,9 +64,16 @@ export default {
 <style lang="scss">
     .v-dialog__content--active {
         z-index: 1002 !important;
+        
+        .x-checkbox {
+            padding: 0 24px;
+        }
     }
     .v-card__text {
         padding-top: 24px !important;
+    }
+    .theme--light.v-card > .v-card__text {
+      color: unset !important;
     }
     .v-overlay--active {
         z-index: 1001 !important;

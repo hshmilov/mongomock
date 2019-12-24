@@ -293,7 +293,7 @@ class CoreService(Triggerable, PluginBase, Configurable):
         data = self.get_request_data_as_object()
         if request.method == 'POST':
             key = data.get('key', NODE_NAME)
-            assert key in ['hostname', NODE_NAME, 'ips']
+            assert key in ['hostname', NODE_NAME, 'ips', 'status']
             self._set_node_metadata(node_id, key, data['value'])
             return ''
         else:

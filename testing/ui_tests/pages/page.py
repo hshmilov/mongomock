@@ -118,6 +118,8 @@ class Page:
     OK_BUTTON = 'OK'
     REMOVE_BUTTON = 'Remove'
     DELETE_BUTTON = 'Delete'
+    DEACTIVATE_BUTTON = 'Deactivate'
+    REACTIVATE_BUTTON = 'Reactivate'
     ACTIONS_BUTTON = 'Actions'
     CONFIRM_BUTTON = 'Confirm'
     CHART_QUERY_FIELD_DEFAULT = 'FIELD...'

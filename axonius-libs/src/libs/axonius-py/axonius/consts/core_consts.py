@@ -1,1 +1,3 @@
 CORE_CONFIG_NAME = 'CoreService'
+ACTIVATED_NODE_STATUS = 'Activated'
+DEACTIVATED_NODE_STATUS = 'Deactivated'

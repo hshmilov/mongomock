@@ -200,9 +200,10 @@
         updateView: UPDATE_DATA_VIEW
       }),
       initData () {
-        if (this.enforcement && this.enforcement.condition && this.enforcement.condition !== mainCondition) {
-          this.selectAction(this.enforcement.condition, this.enforcement.i)
+        if (this.actionInView && this.actionInView.position) {
+          this.selectAction(this.actionInView.position.condition, this.actionInView.position.i)
         } else {
+          // always will run this
           this.selectActionMain()
         }
       },
@@ -269,7 +270,6 @@
       } else {
         this.initData()
       }
-
     }
   }
 </script>

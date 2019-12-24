@@ -31,6 +31,7 @@ class TestInstancesAfterNodeJoin(TestInstancesBase):
         self.check_correct_ip_is_shown_in_table()
         self.check_correct_hostname_is_shown_in_table()
         self.check_change_node_name()
+        self.check_deactivate_node()
         self.check_ssh_tunnel()
         self.check_node_restart()
         self.check_master_disconnect()
@@ -132,3 +133,38 @@ class TestInstancesAfterNodeJoin(TestInstancesBase):
         node_hostname_from_table = self.instances_page.get_node_hostname(NEW_NODE_NAME)
         assert node_hostname_from_table == NODE_HOSTNAME, 'System did not recognize node hostname correctly.'
         wait_until(_test_dropdown_change, check_return_value=False, tolerated_exceptions_list=[AssertionError])
+
+    def _check_nexpose_in_list(self, should_be_in_list=True):
+        # Check that adapters from that node don't appear in adapters table.
+        self.adapters_page.switch_to_page()
+        self.adapters_page.refresh()
+        self.adapters_page.wait_for_spinner_to_end()
+        adapters_list = self.adapters_page.get_adapter_list()
+        assert should_be_in_list == any(['nexpose' in adapter[0].lower() for adapter in adapters_list])
+
+    def check_deactivate_node(self):
+        # Deactivate node.
+        self.instances_page.switch_to_page()
+        self.instances_page.find_query_row_by_name(NEW_NODE_NAME).find_elements_by_class_name('x-checkbox')[0].click()
+        self.instances_page.deactivate_instances()
+
+        # Check that it's status changed.
+        assert self.instances_page.get_node_status_by_name(NEW_NODE_NAME) == 'Deactivated'
+
+        wait_until(lambda: self._check_nexpose_in_list(False), interval=2.0, check_return_value=False,
+                   tolerated_exceptions_list=[AssertionError])
+
+        # Reactivate node
+        self.instances_page.switch_to_page()
+        self.instances_page.find_query_row_by_name(NEW_NODE_NAME).find_elements_by_class_name('x-checkbox')[0].click()
+        self.instances_page.reactivate_instances()
+
+        # Check that it's status changed.
+        assert self.instances_page.get_node_status_by_name(NEW_NODE_NAME) == 'Activated'
+
+        # Check that adapters from that node reappear in adapters table.
+        wait_until(self._check_nexpose_in_list, interval=1.0, check_return_value=False,
+                   tolerated_exceptions_list=[AssertionError])
+
+        # Re-adding client after deactivation deleted it (without it's devices).
+        self._add_nexpose_adadpter_and_discover_devices()

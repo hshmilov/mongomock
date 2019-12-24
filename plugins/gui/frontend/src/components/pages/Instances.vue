@@ -1,9 +1,10 @@
 <template>
     <x-page title="instances" class="x-instances">
-        <x-table-wrapper title="Edit, Tag or Remove Instances" :loading="loading">
+        <x-table-wrapper title="Edit, Deactivate or Reactivate Instances" :loading="loading">
             <template slot="actions">
                 <x-button id="get-connection-string" @click="connecting= !connecting" :disabled="isReadOnly">Connect Node</x-button>
-                <x-button link v-if="selectedInstance && selectedInstance.length" @click="removeServers">Remove</x-button>
+                <x-button link v-if="showActivationOption === 'Activated'" @click="deactivateServers">Deactivate</x-button>
+                <x-button link v-if="showActivationOption === 'Deactivated'" @click="reactivateServers">Reactivate</x-button>
             </template>
             <x-table v-if="instances" slot="table" id-field="node_id" :data="instances" :fields="fields"
                      v-model="isReadOnly ? undefined : selectedInstance"
@@ -26,13 +27,6 @@
             </div>
             <button>Copy To Clipboard</button>
         </x-modal>
-        <x-modal id="delete-entities" v-if="deleting" @close="closeConfirmDelete" @confirm="doRemoveInstance"
-                 approve-text="Delete">
-            <div slot="body">Are you sure you want to delete this server? <br/><br/>
-                <input type="checkbox" id="deleteEntitiesCheckbox" v-model="deleteEntities">
-                <label for="deleteEntitiesCheckbox">Also delete all associated entities (devices, users)</label>
-            </div>
-        </x-modal>
     </x-page>
 </template>
 
@@ -42,9 +36,11 @@
     import xTable from '../axons/tables/Table.vue'
     import xButton from '../axons/inputs/Button.vue'
     import xModal from '../axons/popover/Modal.vue'
+    import axios from 'axios'
 
     import {mapState, mapMutations, mapActions} from 'vuex'
     import {REQUEST_API} from '../../store/actions'
+    import {SHOW_TOASTER_MESSAGE} from "../../store/mutations";
 
     export default {
         name: 'x-instances',
@@ -63,6 +59,7 @@
                     {name: 'hostname', title: 'Hostname', type: 'string'},
                     {name: 'ips', title: 'IP', type: 'array', items: {type: 'string'}},
                     {name: 'last_seen', title: 'Last Seen', type: 'string', format: 'date-time'},
+                    {name: 'status', title: 'Status', type: 'string'},
                     {name: 'node_user_password', title: 'Instance Connect User Password', type: 'string'}
                 ]
             },
@@ -71,6 +68,11 @@
             },
             connectionEncriptionKey() {
                 return this.connectionKey
+            },
+            showActivationOption() {
+                if (!this.selectedInstance || this.selectedInstance.length !== 1) return ''
+                let selected_instance = this.instances.find(instance => instance.node_id === this.selectedInstance[0])
+                return selected_instance.status
             }
         },
         data() {
@@ -83,19 +85,17 @@
                 newInstanceName: '',
                 machineIP: '',
                 connectionKey: '',
-                instanceChangeId: null,
-                deleting: false,
-                deleteEntities: false
+                instanceChangeId: null
             }
         },
         methods: {
-            ...mapMutations({}),
+            ...mapMutations({showToasterMessage: SHOW_TOASTER_MESSAGE}),
             ...mapActions({fetchData: REQUEST_API}),
             instanceNameChange() {
-                this.fetchData({
-                    rule: 'instances',
-                    method: 'POST',
-                    data: {node_id: this.instanceChangeId, node_name: this.newInstanceName}
+                axios.post('/api/instances', {
+                    node_id: this.instanceChangeId,
+                    key: 'node_name',
+                    value: this.newInstanceName
                 }).then(() => {
                     this.loading = true
                     this.loadData()
@@ -108,20 +108,48 @@
                 this.instanceChangeId = instanceId
                 this.renaming = true
             },
-            removeServers() {
+            deactivateServers() {
                 if (this.isReadOnly) return
-                this.deleting = true
+                this.$safeguard.show({
+                    text: `
+                  Are you sure you want to deactivate this instance?<br/><br/>
+                  This will remove all the adapter connections utilizing this instance.
+                  `,
+                    confirmText: 'Deactivate',
+                    onConfirm: () => {
+                        this.doDeactivateServers()
+                    }
+                })
             },
-            doRemoveInstance() {
+            reactivateServers(){
+                if (this.isReadOnly) return
+                this.$safeguard.show({
+                    text: `
+                  Are you sure you want to reactivate this instance?<br/>
+                  `,
+                    confirmText: 'Reactivate',
+                    onConfirm: () => {
+                        this.doReactivateServers()
+                    }
+                })
+            },
+            doReactivateServers(){
+                axios.post('/api/instances', {
+                    'node_id': this.selectedInstance[0],
+                    'key': 'status',
+                    'value': 'Activated'
+                }).then(() => this.loadData())
+            },
+            doDeactivateServers() {
                 this.fetchData({
                     rule: 'instances',
                     method: 'DELETE',
-                    data: {nodeIds: this.selectedInstance, deleteEntities: this.deleteEntities}
-                }).then(() => this.closeConfirmDelete())
-            },
-            closeConfirmDelete() {
-                this.deleting = false
-                this.deleteEntities = false
+                    data: {nodeIds: this.selectedInstance}
+                }).then(() => {
+                    this.loadData()
+                }).catch((errorResponse) => {
+                    this.showToasterMessage({ message: errorResponse.response.data.message})
+                })
             },
             closeNameChange() {
                 this.instanceChangeId = null

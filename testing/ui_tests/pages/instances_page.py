@@ -13,9 +13,11 @@ class InstancesPage(EntitiesPage):
     CONNECT_NODE_ID = 'get-connection-string'
     NODE_JOIN_TOKEN_REGEX = '<axonius-hostname> (.*) '
     INSTANCES_ROW_BY_NAME_XPATH = '//tr[child::td[child::div[text()=\'{instance_name}\']]]'
-    INSTANCES_USER_PASSWORD_XPATH = './/td[position()=6]/div'
+    INSTANCES_USER_PASSWORD_XPATH = './/td[position()=7]/div'
     INSTANCES_HOSTNAME_XPATH = './/td[position()=3]/div'
+    INSTANCES_STATUS_XPATH = './/td[position()=6]/div'
     INSTANCES_IP_XPATH = './/td[position()=4]/div'
+    BUTTON_LINK_CLASS = 'x-button link'
 
     @property
     def url(self):
@@ -77,12 +79,21 @@ class InstancesPage(EntitiesPage):
     def get_node_hostname(self, node_name):
         self.switch_to_page()
         self.refresh()
+        self.wait_for_table_to_load()
         instances_row = self.find_query_row_by_name(node_name)
         return instances_row.find_element_by_xpath(self.INSTANCES_HOSTNAME_XPATH).text
+
+    def get_node_status_by_name(self, node_name):
+        self.switch_to_page()
+        self.refresh()
+        self.wait_for_table_to_load()
+        instances_row = self.find_query_row_by_name(node_name)
+        return instances_row.find_element_by_xpath(self.INSTANCES_STATUS_XPATH).text
 
     def change_instance_name(self, current_node_name, new_node_name):
         self.switch_to_page()
         self.refresh()
+        self.wait_for_table_to_load()
         instances_row = self.find_query_row_by_name(current_node_name)
         instances_row.click()
         self.fill_text_field_by_element_id('instanceName', new_node_name)
@@ -90,3 +101,16 @@ class InstancesPage(EntitiesPage):
 
     def find_query_row_by_name(self, instance_name):
         return self.driver.find_element_by_xpath(self.INSTANCES_ROW_BY_NAME_XPATH.format(instance_name=instance_name))
+
+    def click_row_checkbox_by_name(self, instance_name):
+        return self.find_query_row_by_name(instance_name)
+
+    def deactivate_instances(self):
+        self.click_button(self.DEACTIVATE_BUTTON, button_class=self.BUTTON_LINK_CLASS)
+        self.click_button(self.DEACTIVATE_BUTTON)
+        self.wait_for_element_absent_by_css(self.SAFEGUARD_OVERLAY_CSS)
+
+    def reactivate_instances(self):
+        self.click_button(self.REACTIVATE_BUTTON, button_class=self.BUTTON_LINK_CLASS)
+        self.click_button(self.REACTIVATE_BUTTON)
+        self.wait_for_element_absent_by_css(self.SAFEGUARD_OVERLAY_CSS)

@@ -5,6 +5,7 @@ import urllib.parse
 from abc import ABC, abstractmethod
 from typing import Set, List, Iterable
 
+from axonius.consts.core_consts import ACTIVATED_NODE_STATUS
 from axonius.consts.plugin_consts import GUI_SYSTEM_CONFIG_COLLECTION, GUI_PLUGIN_NAME, PLUGIN_NAME, NODE_ID, NODE_NAME
 from axonius.entities import EntityType
 from axonius.plugin_base import PluginBase
@@ -44,7 +45,9 @@ def _get_list_of_nodes_with_online_adapter(adapter_name: str) -> list:
                            PluginBase.Instance.get_available_plugins_from_core_uncached().values())
 
     # Filtering just the node_id
-    nodes_with_adapter = [adapter[NODE_ID] for adapter in adapters_list]
+    active_nodes = [node['node_id'] for node in PluginBase.Instance._get_nodes_table() if node['status']
+                    == ACTIVATED_NODE_STATUS]
+    nodes_with_adapter = [adapter[NODE_ID] for adapter in adapters_list if adapter[NODE_ID] in active_nodes]
     return nodes_with_adapter
 
 

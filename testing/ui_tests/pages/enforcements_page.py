@@ -734,7 +734,7 @@ class EnforcementsPage(EntitiesPage):
     def wait_for_action_result(self):
         self.wait_for_element_present_by_css(self.ACTION_RESULT_CONTAINER_CSS)
         # Appearance animation time
-        time.sleep(0.6)
+        time.sleep(3)
 
     def select_task_action(self, name):
         self.find_element_by_text(name).click()
