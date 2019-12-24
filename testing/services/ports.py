@@ -1,8 +1,8 @@
 DOCKER_PORTS = {
     'smtp':                             25,
     'maildiranasaurus':                 26,
-    'gui':                              443,
-    'mockingbird':                      1443,
+    'gui':                              4433,
+    'mockingbird':                      1444,
     'cyberark_vault_simulator':         1337,
     'selenium-hub':                     4444,
     'mongo-slave':                      4455,

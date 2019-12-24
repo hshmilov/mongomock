@@ -1,0 +1,1 @@
+This folder contains nginx configurations that apply to all nginx web servers

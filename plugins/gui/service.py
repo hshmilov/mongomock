@@ -7,10 +7,12 @@ import logging
 import os
 import secrets
 import shutil
+import subprocess
 import tarfile
 import threading
 import time
 import calendar
+import urllib.parse
 from collections import defaultdict
 from datetime import date, datetime, timedelta
 from multiprocessing.pool import ThreadPool
@@ -66,7 +68,7 @@ from axonius.consts.gui_consts import (ENCRYPTION_KEY_PATH,
                                        Signup, PROXY_DATA_PATH, DASHBOARD_LIFECYCLE_ENDPOINT,
                                        UNCHANGED_MAGIC_FOR_GUI, GETTING_STARTED_CHECKLIST_SETTING,
                                        LAST_UPDATED_FIELD, UPDATED_BY_FIELD,
-                                       PREDEFINED_FIELD)
+                                       PREDEFINED_FIELD, CONFIG_CONFIG)
 from axonius.consts.metric_consts import ApiMetric, Query, SystemMetric, GettingStartedMetric
 from axonius.consts.plugin_consts import (AGGREGATOR_PLUGIN_NAME,
                                           AXONIUS_USER_NAME,
@@ -131,7 +133,8 @@ from axonius.utils.mongo_retries import mongo_retry
 from axonius.utils.parsing import bytes_image_to_base64
 from axonius.utils.proxy_utils import to_proxy_string
 from axonius.utils.revving_cache import rev_cached, WILDCARD_ARG
-from axonius.utils.ssl import check_associate_cert_with_private_key
+from axonius.utils.ssl import check_associate_cert_with_private_key, validate_cert_with_ca, MUTUAL_TLS_CA_PATH, \
+    MUTUAL_TLS_CONFIG_FILE
 from axonius.utils.threading import run_and_forget
 from axonius.clients.ldap.ldap_group_cache import set_ldap_groups_cache, get_ldap_groups_cache_ttl
 from gui.api import APIMixin
@@ -2759,6 +2762,37 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
             log_metric(logger, GettingStartedMetric.FEATURE_ENABLED_SETTING,
                        metric_value=getting_started_feature_enabled)
 
+        elif plugin_name == 'gui' and config_name == CONFIG_CONFIG:
+            mutual_tls_settings = config_to_set.get('mutual_tls_settings')
+            if mutual_tls_settings.get('enabled'):
+                is_mandatory = mutual_tls_settings.get('mandatory')
+                client_ssl_cert = request.environ.get('HTTP_X_CLIENT_ESCAPED_CERT')
+
+                if is_mandatory and not client_ssl_cert:
+                    logger.error(f'Client certificate not found in request.')
+                    return return_error(f'Client certificate not found in request. Please make sure your client '
+                                        f'uses a certificate to access Axonius', 400)
+
+                try:
+                    ca_certificate = self._grab_file_contents(mutual_tls_settings.get('ca_certificate'))
+                except Exception:
+                    logger.exception(f'Error getting ca certificate from db')
+                    return return_error(f'can not find uploaded certificate', 400)
+
+                try:
+                    OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, ca_certificate)
+                except Exception:
+                    logger.error(f'Can not load ca certificate', exc_info=True)
+                    return return_error(f'The uploaded file is not a pem-format certificate', 400)
+                try:
+                    if is_mandatory and \
+                            not validate_cert_with_ca(urllib.parse.unquote(client_ssl_cert), ca_certificate):
+                        logger.error(f'Current client certificate is not trusted by the uploaded CA')
+                        return return_error(f'Current client certificate is not trusted by the uploaded CA', 400)
+                except Exception:
+                    logger.error(f'Can not validate current client certificate with the uploaded CA', exc_info=True)
+                    return return_error(f'Current client certificate can not be validated by the uploaded CA', 400)
+
         self._update_plugin_config(plugin_name, config_name, config_to_set)
         self._adapters.clean_cache()
         return ''
@@ -4919,6 +4953,51 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
         self.__saml_login = config['saml_login_settings']
         self.__ldap_login = config['ldap_login_settings']
         self._system_settings = config[SYSTEM_SETTINGS]
+        self._mutual_tls_settings = config['mutual_tls_settings']
+        mutual_tls_is_mandatory = self._mutual_tls_settings.get('mandatory')
+
+        if self._mutual_tls_settings.get('enabled') and mutual_tls_is_mandatory:
+            # Enable Mutual TLS.
+            # Note that we have checked before (plugins_configs_set) that the issuer is indeed part of this cert
+            # as input validation. So input validation is not needed here.
+            try:
+                ca_certificate = self._grab_file_contents(self._mutual_tls_settings.get('ca_certificate'))
+
+                current_ca_cert = None
+                if os.path.exists(MUTUAL_TLS_CA_PATH):
+                    with open(MUTUAL_TLS_CA_PATH, 'rb') as mtls_file:
+                        current_ca_cert = mtls_file.read()
+
+                if not current_ca_cert or current_ca_cert != ca_certificate:
+                    logger.info(f'Writing mutual tls settings')
+                    with open(MUTUAL_TLS_CA_PATH, 'wb') as mtls_file:
+                        mtls_file.write(ca_certificate)
+
+                    with open(MUTUAL_TLS_CONFIG_FILE, 'wt') as mtls_config_file:
+                        mtls_config_file.write(
+                            f'ssl_verify_client on;\r\n'
+                            f'ssl_verify_depth 10;\r\n'
+                            f'ssl_client_certificate {MUTUAL_TLS_CA_PATH};\r\n'
+                        )
+                    # Restart Openresty (NGINX)
+                    subprocess.check_call(['openresty', '-s', 'reload'])
+                    logger.info(f'Successfuly loaded new mutual TLS settings')
+            except Exception:
+                logger.critical(f'Can not get mutual tls ca certificate, system is not protected', exc_info=True)
+        else:
+            # Disable mandatory Mutual TLS
+            mutual_tls_state = f'optional_no_ca' if self._mutual_tls_settings.get('enabled') else 'off'
+            try:
+                logger.info(f'Deleting mutual tls settings')
+                with open(MUTUAL_TLS_CONFIG_FILE, 'wt') as mtls_config_file:
+                    mtls_config_file.write(f'ssl_verify_client {mutual_tls_state};')
+                if os.path.exists(MUTUAL_TLS_CA_PATH):
+                    os.unlink(MUTUAL_TLS_CA_PATH)
+                # Restart Openresty (NGINX)
+                subprocess.check_call(['openresty', '-s', 'reload'])
+                logger.info(f'Successfuly loaded new mutual TLS settings: {mutual_tls_state}')
+            except Exception:
+                logger.exception(f'Can not delete mutual tls settings')
 
         metadata_url = self.__saml_login.get('metadata_url')
         if metadata_url:
@@ -5240,7 +5319,31 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
                     'name': 'saml_login_settings',
                     'title': 'SAML-Based Login Settings',
                     'type': 'array'
-                }
+                },
+                {
+                    'items': [
+                        {
+                            'name': 'enabled',
+                            'title': 'Enable Mutual TLS',
+                            'type': 'bool'
+                        },
+                        {
+                            'name': 'mandatory',
+                            'title': 'Set as mandatory',
+                            'type': 'bool'
+                        },
+                        {
+                            'name': 'ca_certificate',
+                            'title': 'CA Certificate',
+                            'description': 'A pem encoded certificate to authenticate users',
+                            'type': 'file'
+                        }
+                    ],
+                    'required': ['enabled', 'ca_certificate'],
+                    'name': 'mutual_tls_settings',
+                    'title': 'Mutual TLS Settings',
+                    'type': 'array'
+                },
             ],
             'type': 'array'
         }
@@ -5291,6 +5394,11 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
                     'warning': 60,
                     'success': 100,
                 }
+            },
+            'mutual_tls_settings': {
+                'enabled': False,
+                'mandatory': False,
+                'ca_certificate': None
             }
         }
 

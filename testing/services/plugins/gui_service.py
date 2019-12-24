@@ -892,6 +892,29 @@ class GuiService(PluginService, UpdatablePluginMixin):
             ports += [(80, 80)]
         return ports
 
+    def _get_exposed_ports(self, mode, expose_port):
+        # This is kind of confusing.
+        # - The internal port 443 is an https server that has no protections (like optional mutual tls) and needs
+        # to be used only internally by the system. We want this to be mounted to 127.0.0.1:4433
+        # - The internal port 1443 is an https server that is meant to be used operationally by the customer.
+        # we mount this to 443 always.
+        # - the internal port 80 is mounted to the host 80 only in case the customer do not specifically asked
+        # for it to not be mounted.
+
+        published_ports = [
+            '--publish', '443:1443',            # external customer-facing web server. host:443 -> gui:1443
+        ]
+        if not self._system_config.get('https-only'):
+            published_ports.extend(['--publish', '80:80'])
+        # host:4433 -> gui:443
+        if mode != 'prod':
+            internal_web_server = ['--publish', '4433:443']
+        else:
+            internal_web_server = ['--publish', '127.0.0.1:4433:443']
+        published_ports.extend(internal_web_server)     # do not expose to 0.0.0.0 in prod!
+
+        return published_ports
+
     @property
     def volumes_override(self):
         # Creating a settings dir outside of cortex (on production machines
@@ -943,7 +966,7 @@ WORKDIR /home/axonius/app
 ''' + install_command + '''
 # Copy the current directory contents into the container at /app
 COPY ./ ./gui/
-COPY /config/nginx_conf.d/ /home/axonius/config/nginx_conf.d/
+COPY /config/ /home/axonius/config/
 RUN cd /home/axonius && mkdir axonius-libs && mkdir axonius-libs/src && cd axonius-libs/src/ && ln -s ../../libs/ .
 ''' + build_command)[1:]
 

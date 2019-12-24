@@ -1,0 +1,1 @@
+This folder contains nginx configurations that apply only to the external-facing gui

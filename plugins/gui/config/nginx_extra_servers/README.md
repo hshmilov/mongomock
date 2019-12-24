@@ -1,0 +1,1 @@
+This folder contains nginx configurations for additional servers

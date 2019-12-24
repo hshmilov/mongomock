@@ -10,6 +10,7 @@ SLEEP_SECONDS = 60 * 1
 ERROR_MSG = 'UI is not responding'  # do not modify this string. used for alerts
 NODE_MSG = 'this watchdog will not run on node'
 LOCKFILE = Path('/tmp/upgrade.lock')
+INTERNAL_PORT = 4433    # 0.0.0.0:443 could be mutual-tls protected. The host exposes 127.0.0.1:4433 without it.
 
 
 class GuiAliveTask(WatchdogTask):
@@ -30,7 +31,7 @@ class GuiAliveTask(WatchdogTask):
 
             self.report_info(f'{self.name} is running')
             try:
-                response = requests.get(f'https://localhost/api/signup', verify=False, timeout=(10, 20))
+                response = requests.get(f'https://localhost:{INTERNAL_PORT}/api/signup', verify=False, timeout=(10, 20))
                 if response.status_code != 200:
                     self.report_error(f'{ERROR_MSG} {response.status_code} {response.text}')
             except Exception as e:

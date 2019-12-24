@@ -6,6 +6,8 @@ from OpenSSL import crypto
 
 SSL_CERT_PATH = '/etc/ssl/certs/nginx-selfsigned.crt'
 SSL_KEY_PATH = '/etc/ssl/private/nginx-selfsigned.key'
+MUTUAL_TLS_CA_PATH = '/home/axonius/mutual_tls_ca.crt'
+MUTUAL_TLS_CONFIG_FILE = '/home/axonius/config/gui_external_configs/mtls.conf'
 CA_CERT_PATH = '/usr/local/share/ca-certificates/'
 CA_BUNDLE_ENV_NAME = 'REQUESTS_CA_BUNDLE'
 
@@ -37,6 +39,32 @@ def get_private_key_without_passphrase(private_key, passphrase=b''):
 
     key = OpenSSL.crypto.load_privatekey(OpenSSL.crypto.FILETYPE_PEM, private_key, passphrase)
     return crypto.dump_privatekey(crypto.FILETYPE_PEM, key)
+
+
+def validate_cert_with_ca(cert_binary: bytes, ca_binary: bytes) -> bool:
+    """
+    :param cert_binary: Binary data of client certificate
+    :param ca_binary: Binary data of CA
+    :return:
+    """
+
+    try:
+        certificate = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, cert_binary)
+    except OpenSSL.crypto.Error as e:
+        logger.exception(f'Error parsing certificate')
+        raise Exception(f'Certificate is invalid: {str(e)}')
+
+    try:
+        ca_obj = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, ca_binary)
+        store = OpenSSL.crypto.X509Store()
+        store.add_cert(ca_obj)
+    except OpenSSL.crypto.Error as e:
+        logger.exception(f'Error parsing CA')
+        raise Exception(f'CA is invalid: {str(e)}')
+
+    store_ctx = OpenSSL.crypto.X509StoreContext(store, certificate)
+    # Verify the certificate, returns None if it can validate the certificate
+    return store_ctx.verify_certificate() is None
 
 
 def check_associate_cert_with_private_key(cert: str, private_key: str, passphrase: bytes = '') -> bool:

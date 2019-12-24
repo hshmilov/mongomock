@@ -300,6 +300,10 @@
           })
         }).then(() => {
             this.getUser()
+        }).catch(error => {
+          if (error.response.status === 400) {
+            this.message = error.response.data.message
+          }
         })
       },
       saveFeatureFlags () {
@@ -309,6 +313,10 @@
           config: this.featureFlags.config
         }).then(response => {
           this.createToast(response)
+        }).catch(error => {
+          if (error.response.status === 400) {
+            this.message = error.response.data.message
+          }
         })
       },
       createToast (response) {
