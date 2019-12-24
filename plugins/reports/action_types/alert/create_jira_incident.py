@@ -23,25 +23,20 @@ class JiraIncidentAction(ActionTypeAlert):
                     'type': 'string'
                 },
                 {
-                    'name': 'incident_title',
-                    'title': 'Incident Title',
-                    'type': 'string'
-                },
-                {
                     'name': 'issue_type',
                     'title': 'Issue Type',
                     'type': 'string',
                 },
                 {
-                    'name': 'incident_description',
-                    'title': 'Incident Description',
-                    'type': 'string',
-                    'format': 'text'
+                    'name': 'incident_title',
+                    'title': 'Summary',
+                    'type': 'string'
                 },
                 {
-                    'name': 'description_default',
-                    'title': 'Add Incident Description Default',
-                    'type': 'bool'
+                    'name': 'incident_description',
+                    'title': 'Description',
+                    'type': 'string',
+                    'format': 'text'
                 },
                 {
                     'name': 'assignee',
@@ -57,6 +52,11 @@ class JiraIncidentAction(ActionTypeAlert):
                     'name': 'components',
                     'title': 'Components',
                     'type': 'string'
+                },
+                {
+                    'name': 'description_default',
+                    'title': 'Add Incident Description Default',
+                    'type': 'bool'
                 }
             ],
             'required': [
@@ -73,7 +73,7 @@ class JiraIncidentAction(ActionTypeAlert):
         if jira_keys:
             schema['items'][0]['enum'] = jira_keys
         if issue_types:
-            schema['items'][2]['enum'] = issue_types
+            schema['items'][1]['enum'] = issue_types
         return schema
 
     @staticmethod

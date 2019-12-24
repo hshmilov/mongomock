@@ -30,18 +30,18 @@ class JiraIncidentPerEntityAction(ActionTypeBase):
                     'type': 'string'
                 },
                 {
-                    'name': 'incident_title',
-                    'title': 'Incident Title',
-                    'type': 'string'
-                },
-                {
                     'name': 'issue_type',
                     'title': 'Issue Type',
                     'type': 'string',
                 },
                 {
+                    'name': 'incident_title',
+                    'title': 'Summary',
+                    'type': 'string'
+                },
+                {
                     'name': 'incident_description',
-                    'title': 'Incident Description',
+                    'title': 'Description',
                     'type': 'string',
                     'format': 'text'
                 },
@@ -49,11 +49,6 @@ class JiraIncidentPerEntityAction(ActionTypeBase):
                     'name': 'assignee',
                     'title': 'Assignee',
                     'type': 'string'
-                },
-                {
-                    'name': 'add_full_device_content',
-                    'title': 'Add Full Device Content',
-                    'type': 'bool'
                 },
                 {
                     'name': 'labels',
@@ -64,6 +59,11 @@ class JiraIncidentPerEntityAction(ActionTypeBase):
                     'name': 'components',
                     'title': 'Components',
                     'type': 'string'
+                },
+                {
+                    'name': 'add_full_device_content',
+                    'title': 'Add Full Device Content',
+                    'type': 'bool'
                 }
             ],
             'required': [
@@ -80,7 +80,7 @@ class JiraIncidentPerEntityAction(ActionTypeBase):
         if jira_keys:
             schema['items'][0]['enum'] = jira_keys
         if issue_types:
-            schema['items'][2]['enum'] = issue_types
+            schema['items'][1]['enum'] = issue_types
         return schema
 
     @staticmethod
