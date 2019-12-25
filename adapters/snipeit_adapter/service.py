@@ -82,7 +82,7 @@ class SnipeitAdapter(AdapterBase, Configurable):
             'items': [
                 {
                     'name': 'domain',
-                    'title': 'Snipeit Domain',
+                    'title': 'Snipe-IT Domain',
                     'type': 'string'
                 },
                 {

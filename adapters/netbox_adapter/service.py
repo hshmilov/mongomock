@@ -221,12 +221,12 @@ class NetboxAdapter(AdapterBase, Configurable):
             'items': [
                 {
                     'name': 'netbox_role_white_list',
-                    'title': 'Netbox Role Whitelist',
+                    'title': 'NetBox Role Whitelist',
                     'type': 'string'
                 }
             ],
             'required': [],
-            'pretty_name': 'Netbox Configuration',
+            'pretty_name': 'NetBox Configuration',
             'type': 'array'
         }
 

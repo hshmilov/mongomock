@@ -58,7 +58,8 @@ class ServiceNowComputerAction(ActionTypeBase):
                 }
             ],
             'required': [
-                'use_adapter'
+                'use_adapter',
+                'verify_ssl'
             ],
             'type': 'array'
         }

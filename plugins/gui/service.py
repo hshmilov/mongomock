@@ -5272,7 +5272,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
                         },
                         {
                             'name': 'cache_time_in_hours',
-                            'title': 'Cache Time (hours)',
+                            'title': 'Cache Time (Hours)',
                             'type': 'integer'
                         },
                         *COMMON_SSL_CONFIG_SCHEMA

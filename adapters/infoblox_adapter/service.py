@@ -232,7 +232,7 @@ class InfobloxAdapter(AdapterBase, Configurable):
             'items': [
                 {
                     'name': 'cidr_blacklist',
-                    'title': 'List of CIDR to blacklist',
+                    'title': 'CIDR exclude list',
                     'type': 'string'
                 },
                 {
@@ -241,7 +241,9 @@ class InfobloxAdapter(AdapterBase, Configurable):
                     'type': 'bool'
                 }
             ],
-            'required': [],
+            'required': [
+                'use_discovered_data'
+            ],
             'pretty_name': 'Infoblox Configuration',
             'type': 'array'
         }

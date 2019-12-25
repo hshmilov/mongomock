@@ -109,7 +109,8 @@ class ServiceNowIncidentPerEntity(ActionTypeBase):
             'required': [
                 'use_adapter'
                 'severity',
-                'incident_title'
+                'incident_title',
+                'verify_ssl'
             ],
             'type': 'array'
         }

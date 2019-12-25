@@ -82,7 +82,7 @@ class PaloaltoXdrAdapter(AdapterBase):
             'items': [
                 {
                     'name': 'domain',
-                    'title': 'PaloaltoXdr Domain',
+                    'title': 'Cortex XDR Domain',
                     'type': 'string'
                 },
                 {

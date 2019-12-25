@@ -43,6 +43,7 @@ export const pluginMeta = {
     },
     cisco_ucsm_adapter: {
         title: 'Cisco UCS Manager',
+        link: 'https://docs.axonius.com/docs/cisco-ucs-manager',
         description: 'Cisco UCS Manager supports the entire Cisco UCS server and Cisco HyperFlex Series hyperconverged infrastructure portfolios. It enables server, fabric, and storage provisioning as well as, device discovery, inventory, configuration, diagnostics, monitoring, fault detection, auditing, and statistics collection.'
     },
     hashicorp_adapter: {
@@ -71,7 +72,8 @@ export const pluginMeta = {
     },
     netbrain_adapter: {
         title: 'NetBrain',
-        description: 'NetBrain helps organizations automate network documentation, troubleshooting and security.'
+        link: 'https://docs.axonius.com/docs/netbrain-integrated-edition',
+        description: 'NetBrain Integrated Edition is an adaptive automation integrated with existing NMS tools and IT workflows to automate documentation, troubleshooting, network change, and defense.'
     },
     pkware_adapter: {
         title: 'PKWARE',
@@ -100,10 +102,12 @@ export const pluginMeta = {
     },
     paloalto_xdr_adapter: {
         title: 'Palo Alto Networks Cortex XDR',
-        description: 'Palo Alto Networks Cortex XDR is a detection and response app that natively integrates network, endpoint and cloud data to stop sophisticated attacks. Cortex XDR detects threats with behavioral analytics and reveals the root cause to speed up investigations.'
+        link: 'https://docs.axonius.com/docs/palo-alto-networks-cortex-xdr',
+        description: 'Palo Alto Networks Cortex XDR is a detection and response app that natively integrates network, endpoint, and cloud data to detect threats and stop sophisticated attacks. '
     },
     edgescan_adapter: {
         title: 'edgescan Fullstack Vulnerability Management',
+        link: 'https://docs.axonius.com/docs/edgescan-fullstack-vulnerability-management',
         description: 'edgescan Fullstack Vulnerability Management is a cloud-based continuous vulnerability management and penetration testing solution that discovers, validates and rates vulnerabilities by running continuous asset profiling to detect rogue/exposed ports, hosts or even hidden API’s.'
     },
     bamboohr_adapter: {
@@ -173,6 +177,7 @@ export const pluginMeta = {
     },
     guardium_adapter: {
         title: 'IBM Guardium Vulnerability Assessment',
+        link: 'https://docs.axonius.com/docs/ibm-guardium-vulnerability-assessment',
         description: 'IBM Guardium Vulnerability Assessment scans data infrastructures (databases, data warehouses and big data environments) to detect vulnerabilities and exposures such as missing patches, weak passwords, unauthorized changes, and misconfigured privileges and suggests remedial actions.'
     },
     specops_adapter: {
