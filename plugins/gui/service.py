@@ -442,6 +442,12 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
 
         self.reports_config_collection.create_index([('name', pymongo.HASHED)])
 
+        try:
+            self._users_collection.create_index([('user_name', pymongo.ASCENDING),
+                                                 ('source', pymongo.ASCENDING)], unique=True)
+        except pymongo.errors.DuplicateKeyError as e:
+            logger.critical(f'Error creating user_name and source unique index: {e}')
+
         self.__add_defaults()
 
         # Start exec reports scheduler
@@ -3181,8 +3187,10 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
                     p.name: PermissionLevel.Restricted.name for p in PermissionType
                 }
                 user['permissions'][PermissionType.Dashboard.name] = PermissionLevel.ReadOnly.name
-
-            self._users_collection.replace_one(match_user, user, upsert=True)
+            try:
+                self._users_collection.replace_one(match_user, user, upsert=True)
+            except pymongo.errors.DuplicateKeyError:
+                logger.warning(f'Duplicate key error on {username}:{source}', exc_info=True)
             user = self._users_collection.find_one(filter_archived(match_user))
         return user
 

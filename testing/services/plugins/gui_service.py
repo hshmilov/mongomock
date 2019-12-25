@@ -4,6 +4,8 @@ from collections import defaultdict
 import secrets
 import logging
 import requests
+from funcy import chunks
+
 from axonius.consts.gui_consts import (CONFIG_CONFIG, ROLES_COLLECTION, USERS_COLLECTION,
                                        DASHBOARD_COLLECTION, DASHBOARD_SPACES_COLLECTION,
                                        DASHBOARD_SPACE_DEFAULT, DASHBOARD_SPACE_PERSONAL,
@@ -26,6 +28,7 @@ from axonius.consts.plugin_consts import (AGGREGATOR_PLUGIN_NAME,
                                           AXONIUS_USER_NAME)
 from axonius.entities import EntityType
 from axonius.utils.gui_helpers import PermissionLevel, PermissionType
+from axonius.utils.mongo_retries import mongo_retry
 from gui.gui_logic.filter_utils import filter_archived
 from services.plugin_service import PluginService
 from services.updatable_service import UpdatablePluginMixin
@@ -42,7 +45,7 @@ class GuiService(PluginService, UpdatablePluginMixin):
         local_dist = os.path.join(self.service_dir, 'frontend', 'dist')
         self.is_dev = os.path.isdir(local_npm) and os.path.isdir(local_dist)
 
-    # pylint: disable=too-many-branches
+    # pylint: disable=too-many-branches,too-many-lines
     def _migrate_db(self):
         super()._migrate_db()
         if self.db_schema_version < 10:
@@ -107,6 +110,8 @@ class GuiService(PluginService, UpdatablePluginMixin):
             self._update_schema_version_24()
         if self.db_schema_version < 25:
             self._update_schema_version_25()
+        if self.db_schema_version < 26:
+            self._update_schema_version_26()
 
     def _update_schema_version_1(self):
         print('upgrade to schema 1')
@@ -865,6 +870,66 @@ class GuiService(PluginService, UpdatablePluginMixin):
             self.db_schema_version = 25
         except Exception as e:
             print(f'Exception while upgrading gui db to version 25. Details: {e}')
+
+    @mongo_retry()
+    def delete_dup_users(self):
+        """
+        Delete duplicated users from users collection, identify duplicates by user_name and source.
+        :return: None
+        """
+        with self.db.gui_users_collection().start_session() as transaction:
+            results = transaction.aggregate([
+                {
+                    '$group': {
+                        '_id': {
+                            'user_name': '$user_name',
+                            'source': '$source'
+                        },
+                        'dups': {
+                            '$push': '$_id'
+                        },
+                        'count': {
+                            '$sum': 1
+                        }
+                    },
+                },
+                {
+                    '$match': {
+                        'count': {
+                            '$gt': 1
+                        }
+                    }
+                }
+            ])
+            for dup_entry in results:
+                _id = dup_entry.get('_id')
+                username = _id.get('user_name')
+                source = _id.get('source')
+                dup_ids = dup_entry.get('dups', [])
+                if not dup_ids:
+                    # should not happen
+                    continue
+
+                print(f'Found duplicated user: {username}:{source}')
+                # delete all dup ids except from the first one
+                for chunk in chunks(5000, dup_ids[1:]):
+                    transaction.delete_many({
+                        '_id': {
+                            '$in': chunk
+                        }
+                    })
+
+    def _update_schema_version_26(self):
+        """
+        Check for duplicated users in users collections: AX-5836
+        :return:
+        """
+        print('Upgrade to schema 26')
+        try:
+            self.delete_dup_users()
+            self.db_schema_version = 26
+        except Exception as e:
+            print(f'Exception while upgrading gui db to version 26. Details: {e}')
 
     def _update_default_locked_actions(self, new_actions):
         """
