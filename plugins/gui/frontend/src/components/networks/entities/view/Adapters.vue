@@ -243,7 +243,7 @@
   .x-entity-adapters {
     height: 100%;
 
-    .header {
+    .x-tabs .body .header {
       padding-bottom: 4px;
       margin-bottom: 12px;
       border-bottom: 2px solid rgba($theme-orange, 0.4);
