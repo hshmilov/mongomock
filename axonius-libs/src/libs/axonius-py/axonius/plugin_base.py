@@ -992,6 +992,9 @@ class PluginBase(Configurable, Feature, ABC):
 
         return headers
 
+    def _ask_core_to_raise_adapter(self, *args, **kwargs):
+        return self.__ask_core_to_raise_adapter(*args, **kwargs)
+
     def __ask_core_to_raise_adapter(self, plugin_unique_name: str):
         try:
             logger.info(f'Raising plugin {plugin_unique_name}')

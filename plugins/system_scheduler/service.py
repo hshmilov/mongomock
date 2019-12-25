@@ -16,7 +16,7 @@ from axonius.consts.metric_consts import SystemMetric
 
 from axonius.consts.plugin_consts import PLUGIN_NAME, PLUGIN_UNIQUE_NAME, CONFIGURABLE_CONFIGS_COLLECTION, \
     STATIC_CORRELATOR_PLUGIN_NAME, CORE_UNIQUE_NAME, REIMAGE_TAGS_ANALYSIS_PLUGIN_NAME, STATIC_ANALYSIS_PLUGIN_NAME, \
-    GENERAL_INFO_PLUGIN_NAME, REPORTS_PLUGIN_NAME
+    GENERAL_INFO_PLUGIN_NAME, REPORTS_PLUGIN_NAME, HEAVY_LIFTING_PLUGIN_NAME
 from axonius.consts.scheduler_consts import SchedulerState
 from axonius.logging.metric_helper import log_metric
 
@@ -323,6 +323,14 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
                 self._request_gui_dashboard_cache_clear(clear_slow=True)
             except Exception:
                 logger.critical(f'Failed running save historical phase', exc_info=True)
+
+            try:
+                # logger.info(f'Restarting Heavy Lifting...')
+                # self._ask_core_to_raise_adapter(HEAVY_LIFTING_PLUGIN_NAME)    # disabled for now
+                # logger.info(f'Restart complete')
+                pass
+            except Exception:
+                logger.exception(f'Could not restart heavy-lifting')
 
             logger.info(f'Finished {scheduler_consts.Phases.Research.name} Phase Successfully.')
             if self._notify_on_adapters is True:

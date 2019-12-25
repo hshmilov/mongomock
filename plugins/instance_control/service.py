@@ -131,6 +131,12 @@ class InstanceControlService(Triggerable, PluginBase):
         del parsed_path
 
         with self.__lazy_locker.get_lock([plugin_name]):
+            if 'heavy_lifting' in plugin_name:
+                # quick hack
+                if operation_type == 'start':
+                    return self.start_service('heavy_lifting')
+                # else - stop
+                return self.stop_service('heavy_lifting')
             sh_plugin_name = self.__adapters[plugin_name]
             if operation_type == 'start':
                 return self.start_adapter(sh_plugin_name)
@@ -203,6 +209,22 @@ class InstanceControlService(Triggerable, PluginBase):
         :return: the output of the command
         """
         return log_file_and_return(self.__exec_system_command(f'adapter {adapter_name} down'))
+
+    def start_service(self, service_name: str):
+        """
+        (Re) Starts a service
+        :param service_name: the service name to start
+        :return: the output of the command
+        """
+        return log_file_and_return(self.__exec_system_command(f'service {service_name} up --restart --prod'))
+
+    def stop_service(self, service_name: str):
+        """
+        Stops a service
+        :param service_name: the adapter name to stop
+        :return: the output of the command
+        """
+        return log_file_and_return(self.__exec_system_command(f'service {service_name} down'))
 
     @property
     def plugin_subtype(self) -> PluginSubtype:

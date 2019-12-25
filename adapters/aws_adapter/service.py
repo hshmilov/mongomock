@@ -2799,16 +2799,53 @@ class AwsAdapter(AdapterBase, Configurable):
                         except Exception:
                             logger.exception(f'Failed adding db security group')
 
+                    all_vpc_security_groups = set()
                     for vpc_security_group in (rds_instance_raw.get('VpcSecurityGroups') or []):
                         try:
+                            vpc_security_group_id = vpc_security_group.get('VpcSecurityGroupId')
+                            vpc_security_group_status = vpc_security_group.get('Status')
+                            if not vpc_security_group_id:
+                                continue
+
+                            if vpc_security_group_status and str(vpc_security_group_status).lower() == 'active':
+                                all_vpc_security_groups.add(vpc_security_group_id)
                             rds_data.vpc_security_groups.append(
                                 RDSVPCSecurityGroup(
-                                    vpc_security_group_id=vpc_security_group.get('VpcSecurityGroupId'),
-                                    status=vpc_security_group.get('Status')
+                                    vpc_security_group_id=vpc_security_group_id,
+                                    status=vpc_security_group_status
                                 )
                             )
                         except Exception:
                             logger.exception(f'Failed adding vpc security group')
+
+                    try:
+                        for security_group in all_vpc_security_groups:
+                            security_group_raw = security_group_dict.get(security_group)
+                            if security_group_raw and isinstance(security_group_raw, dict):
+                                outbound_rules = self.__make_ip_rules_list(
+                                    security_group_raw.get('IpPermissionsEgress'))
+                                inbound_rules = self.__make_ip_rules_list(security_group_raw.get('IpPermissions'))
+                                device.add_aws_security_group(name=security_group_raw.get('GroupName'),
+                                                              outbound=outbound_rules,
+                                                              inbound=inbound_rules)
+
+                                try:
+                                    all_rules_lists = [(outbound_rules, 'EGRESS'), (inbound_rules, 'INGRESS')]
+                                    for rule_list, direction in all_rules_lists:
+                                        self.__add_generic_firewall_rules(
+                                            device,
+                                            security_group_raw.get('GroupName'),
+                                            'AWS RDS Security Group',
+                                            direction,
+                                            rule_list
+                                        )
+                                except Exception:
+                                    logger.exception(f'Could not add generic firewall rules')
+                            else:
+                                if security_group_raw:
+                                    device.add_aws_security_group(name=security_group_raw.get('GroupName'))
+                    except Exception:
+                        logger.exception(f'Problem parsing RDS security group')
 
                     subnet_group = rds_instance_raw.get('DBSubnetGroup') or {}
                     rds_data.db_subnet_group_name = subnet_group.get('DBSubnetGroupName')
