@@ -55,7 +55,12 @@
     },
     computed: {
       currentFields () {
-        if (!this.fieldType) return this.options[0].fields
+        if (!this.options || !this.options.length) {
+          return []
+        }
+        if (!this.fieldType) {
+          return this.options[0].fields
+        }
         return this.options.find(item => item.name === this.fieldType).fields
       },
       firstType () {
