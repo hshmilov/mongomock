@@ -193,7 +193,7 @@
   import xButton from '../axons/inputs/Button.vue'
   import xCheckbox from '../axons/inputs/Checkbox.vue'
   import xSelectSymbol from '../neurons/inputs/SelectSymbol.vue'
-  import xSelect from '../axons/inputs/Select.vue'
+  import xSelect from '../axons/inputs/select/Select.vue'
   import xRecurrence from '../axons/inputs/Recurrence.vue'
   import viewsMixin from '../../mixins/views'
   import xArrayEdit from '../neurons/schema/types/array/ArrayEdit.vue'

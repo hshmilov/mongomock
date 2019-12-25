@@ -127,7 +127,7 @@
   import xTab from '../axons/tabs/Tab.vue'
   import xForm from '../neurons/schema/Form.vue'
   import xModal from '../axons/popover/Modal.vue'
-  import xSelect from '../axons/inputs/Select.vue'
+  import xSelect from '../axons/inputs/select/Select.vue'
   import xButton from '../axons/inputs/Button.vue'
   import xTitle from '../axons/layout/Title.vue'
   import xToast from '../axons/popover/Toast.vue'

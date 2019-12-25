@@ -95,7 +95,7 @@ class TestGettingStarted(TestBase):
         self.devices_page.wait_for_table_to_load()
         self.devices_page.click_row_checkbox()
         self.devices_page.open_tag_dialog()
-        self.devices_page.create_save_tag(tag_text='getting started milestone')
+        self.devices_page.create_save_tags(['getting started milestone'])
         self.base_page.assert_milestone_completed(page.Milestones.device_tag.name)
 
         # 5) create & exec ES and check if milestone has been completed

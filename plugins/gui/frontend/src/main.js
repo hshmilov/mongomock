@@ -1,11 +1,9 @@
 import Vue from 'vue'
-import Vuetify from 'vuetify'
-import 'vuetify/dist/vuetify.min.css'
-import VueAnalytics from 'vue-analytics'
-import SafeguardPlugin from './plugins/safeguard-modal'
+
 import router from './router/index'
 import store from './store/index'
 import App from './components/App.vue'
+
 import {
 	MdSwitch, MdDatepicker, MdField, MdIcon, MdButton, MdDialog, MdCard, MdList, MdChips, MdCheckbox, MdMenu, MdProgress, MdDivider, MdDrawer,
 } from 'vue-material/dist/components'
@@ -28,7 +26,7 @@ Vue.use(MdDrawer)
 import VueCookies from 'vue-cookies'
 Vue.use(VueCookies)
 
-Vue.use(Vuetify)
+import SafeguardPlugin from './plugins/safeguard-modal'
 Vue.use(SafeguardPlugin)
 
 import 'vue-svgicon/dist/polyfill'
@@ -38,12 +36,17 @@ Vue.use(svgicon, {tagName: 'svg-icon'})
 import VmSelect from 'vue-multiple-select'
 Vue.use(VmSelect)
 
+import VueAnalytics from 'vue-analytics'
 Vue.use(VueAnalytics, {
 	id: 'UA-123123123-0', // set in backend
 	router,
 	customResourceURL: '/src/analytics.js'
 })
 
+import Vuetify from 'vuetify'
+import 'vuetify/dist/vuetify.min.css'
+import '@mdi/font/css/materialdesignicons.css'
+Vue.use(Vuetify)
 const vuetifyOptions = {
 	theme: {
 		themes: {
@@ -52,8 +55,12 @@ const vuetifyOptions = {
 				anchor: '-webkit-link'
 			}
 		}
+	},
+	icons: {
+		iconfont: 'mdi'
 	}
 }
+
 new Vue({
 	el: '#app',
 	vuetify: new Vuetify(vuetifyOptions),

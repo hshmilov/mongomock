@@ -63,7 +63,7 @@
 </template>
 
 <script>
-  import xSelect from '../../../axons/inputs/Select.vue'
+  import xSelect from '../../../axons/inputs/select/Select.vue'
   import string from '../../../neurons/schema/types/string/StringEdit.vue'
   import number from '../../../neurons/schema/types/numerical/NumberEdit.vue'
   import integer from '../../../neurons/schema/types/numerical/IntegerEdit.vue'

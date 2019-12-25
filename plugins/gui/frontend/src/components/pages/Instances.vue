@@ -179,6 +179,7 @@
 <style lang="scss">
     .x-instances {
         .x-modal .modal-container {
+            position: relative;
             width: auto;
         }
     }

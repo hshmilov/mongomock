@@ -1,7 +1,7 @@
 <script>
 	import primitiveMixin from '../../../../../mixins/primitive.js'
 	import numericalMixin from './numerical'
-	import xSelect from '../../../../axons/inputs/Select.vue'
+	import xSelect from '../../../../axons/inputs/select/Select.vue'
     import { validateInteger } from '../../../../../constants/validations'
 
     export default {

@@ -70,7 +70,7 @@ class TestDevicesTable(TestEntitiesTable):
             assert not self.devices_page.find_element_by_text(self.devices_page.FIELD_AVSTATUS).is_displayed()
             self.devices_page.click_tab(self.devices_page.FIELD_TAGS)
             self.devices_page.open_edit_tags()
-            self.devices_page.create_save_tag(TAG_NAME)
+            self.devices_page.create_save_tags([TAG_NAME])
             self.devices_page.wait_for_spinner_to_end()
             assert self.devices_page.find_element_by_text(TAG_NAME).is_displayed()
             self.devices_page.switch_to_page()

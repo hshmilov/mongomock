@@ -1,6 +1,5 @@
 import re
 import time
-
 import pytest
 from selenium.common.exceptions import NoSuchElementException
 
@@ -61,18 +60,36 @@ class DevicesPage(EntitiesPage):
     VALUE_SAVED_QUERY_LINUX = 'Linux Operating System'
     VALUE_OS_WINDOWS = 'Windows'
     TAG_MODAL_CSS = '.x-tag-modal'
-    TAG_CHECKBOX_CSS = f'{TAG_MODAL_CSS} .x-checkbox-list .x-checkbox'
+    TAG_CHECKBOX_CSS = f'{TAG_MODAL_CSS} .v-select-list .v-list-item'
     TAGS_TEXTBOX_CSS = f'{TAG_MODAL_CSS} .x-search-input .input-value'
+    TAG_CREATE_NEW_CSS = f'{TAG_MODAL_CSS} .v-select-list .new-item'
+    TAG_CHECKBOX_XPATH = '//div[contains(@class, \'x-tag-modal\')]//div[contains(@class, \'v-select-list\')]' \
+                         '//div[contains(@class, \'v-list-item\')]//span[text()=\'{tag_text}\']'
+    TAG_PARTIAL_INPUT_CSS = TAG_CHECKBOX_XPATH + '/preceding-sibling::div' \
+        '//div[contains(@class, \'v-input__control\')]//input'
+    TAG_PARTIAL_INPUT_ICON = TAG_CHECKBOX_XPATH + '/preceding-sibling::div' \
+        '//div[contains(@class, \'v-input__control\')]//i'
+    TAG_INDETERMINATE = f'{TAG_MODAL_CSS} .v-select-list .'
+    TAG_NEW_ITEM_XPATH = '//div[contains(@class, \'x-tag-modal\')]' \
+                         '//div[contains(@class, \'v-list-item\') and .//text()=\'{tag}\']'
     TAGGING_X_DEVICE_MESSAGE = 'Tagged {number} devices!'
     MULTI_LINE_CSS = 'div.x-data-table.multiline'
     FILTER_HOSTNAME = 'specific_data.data.hostname == regex("{filter_value}", "i")'
     ENFORCEMENT_DIALOG_DROPDOWN_CSS = 'div.x-select-trigger'
     QUERY_FIELD_VALUE = '.x-select-typed-field .x-dropdown.x-select.field-select'
-
     DELETE_DIALOG_TEXT_REGEX = 'You are about to delete \\d+ devices\\.'
-
     BASIC_INFO_FIELD_XPATH = '//div[contains(@class, \'x-tab active\')]//div[contains(@class, \'x-tab active\')]' \
                              '//div[preceding-sibling::label[text()=\'{field_title}\']]'
+    PartialState = {
+        'PARTIAL': 'mixed',
+        'CHECKED': 'true',
+        'UNCHECKED': 'false'
+    }
+    PartialIcon = {
+        'PARTIAL': 'mdi-minus-box',
+        'CHECKED': 'mdi-checkbox-marked',
+        'UNCHECKED': 'mdi-checkbox-blank-outline'
+    }
 
     @property
     def url(self):
@@ -116,14 +133,58 @@ class DevicesPage(EntitiesPage):
         self.click_button('Actions', partial_class=True, should_scroll_into_view=False)
         self.click_actions_tag_button()
 
-    def add_new_tag(self, tag_text, number=1):
+    def add_new_tags(self, tags, number=1):
         self.open_tag_dialog()
-        self.create_save_tag(tag_text, number)
+        self.create_save_tags(tags, number)
         self.wait_for_table_to_load()
 
-    def create_save_tag(self, tag_text, number=1):
-        self.fill_text_field_by_css_selector(self.TAGS_TEXTBOX_CSS, tag_text)
-        self.wait_for_element_present_by_css(self.TAG_CHECKBOX_CSS).click()
+    def toggle_partial_tag(self, tag_text):
+        partial_tag_elem = self.driver.find_element_by_xpath(self.TAG_CHECKBOX_XPATH.format(tag_text=tag_text))
+        partial_tag_icon_ele = self.driver.find_element_by_xpath(self.TAG_PARTIAL_INPUT_ICON.format(tag_text=tag_text))
+        partial_tag_input_elem = self.driver.find_element_by_xpath(self.TAG_PARTIAL_INPUT_CSS.format(tag_text=tag_text))
+        partial_tag_elem.click()
+        return {
+            'tag_icon_ele': partial_tag_icon_ele,
+            'tag_input_ele': partial_tag_input_elem
+        }
+
+    def set_partial_tag_to_state(self, tag):
+        partial_tag_elem = self.driver.find_element_by_xpath(self.TAG_CHECKBOX_XPATH.format(tag_text=tag['name']))
+        partial_tag_icon_ele = self.driver.find_element_by_xpath(self.TAG_PARTIAL_INPUT_ICON.
+                                                                 format(tag_text=tag['name']))
+        if tag['state'] == self.PartialState['CHECKED']:
+            # set the partial tag to be checked
+            partial_tag_elem.click()
+        elif tag['state'] == self.PartialState['UNCHECKED']:
+            # set the partial tag to be checked
+            partial_tag_elem.click()
+            # set the partial tag to be unchecked
+            partial_tag_elem.click()
+        return partial_tag_icon_ele
+
+    def remove_all_tags(self, tags):
+        self.select_all_current_page_rows_checkbox()
+        self.click_select_all_entities()
+        self.open_tag_dialog()
+        for tag in tags:
+            partial_tag_elem = self.driver.find_element_by_xpath(self.TAG_CHECKBOX_XPATH.format(tag_text=tag))
+            partial_tag_icon_ele = self.driver.find_element_by_xpath(self.TAG_PARTIAL_INPUT_ICON.
+                                                                     format(tag_text=tag))
+            if self.has_class(partial_tag_icon_ele, self.PartialIcon['CHECKED']):
+                partial_tag_elem.click()
+            elif self.has_class(partial_tag_icon_ele, self.PartialIcon['PARTIAL']):
+                # set to chekced
+                partial_tag_elem.click()
+                # set to unchecked
+                partial_tag_elem.click()
+        self.click_tag_save_button()
+
+    def create_save_tags(self, tags, number=1):
+        for tag_text in tags:
+            self.fill_text_field_by_css_selector(self.TAGS_TEXTBOX_CSS, tag_text)
+            time.sleep(0.1)
+            self.driver.find_element_by_css_selector(self.TAG_CREATE_NEW_CSS).click()
+            self.wait_for_element_present_by_xpath(self.TAG_NEW_ITEM_XPATH.format(tag=tag_text))
         self.click_tag_save_button()
         self.wait_for_success_tagging_message(number)
         self.wait_for_spinner_to_end()

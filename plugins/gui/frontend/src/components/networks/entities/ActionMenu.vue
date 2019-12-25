@@ -45,7 +45,7 @@
 <script>
   import xActionMenu from '../../neurons/data/ActionMenu.vue'
   import xActionMenuItem from '../../neurons/data/ActionMenuItem.vue'
-  import xSelect from '../../axons/inputs/Select.vue'
+  import xSelect from '../../axons/inputs/select/Select.vue'
 
   import { mapState, mapActions } from 'vuex'
   import { ADD_DATA_LABELS, LINK_DATA, UNLINK_DATA, ENFORCE_DATA } from '../../../store/actions'

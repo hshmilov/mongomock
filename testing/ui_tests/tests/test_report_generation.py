@@ -337,7 +337,7 @@ class TestReportGeneration(TestBase):
                 )
                 self.devices_page.click_row_checkbox()
                 tag_name = 'טאג בעברית'
-                self.devices_page.add_new_tag(tag_name)
+                self.devices_page.add_new_tags([tag_name])
                 report_name = 'בדיקה'
                 recipient = generate_random_valid_email()
                 self.reports_page.create_report(

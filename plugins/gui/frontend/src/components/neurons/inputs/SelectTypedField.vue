@@ -20,7 +20,7 @@
 
 <script>
   import xSelectSymbol from './SelectSymbol.vue'
-  import xSelect from '../../axons/inputs/Select.vue'
+  import xSelect from '../../axons/inputs/select/Select.vue'
   import { getTypeFromField } from '../../../constants/utils'
 
   export default {
@@ -153,7 +153,6 @@
                 max-width: 178px;
             }
         }
-
         .field-select {
             flex: 1 0 auto;
             width: 180px;

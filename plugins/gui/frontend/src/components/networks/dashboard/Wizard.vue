@@ -73,7 +73,7 @@
 
 <script>
   import xFeedbackModal from '../../neurons/popover/FeedbackModal.vue'
-  import xSelect from '../../axons/inputs/Select.vue'
+  import xSelect from '../../axons/inputs/select/Select.vue'
 
   import intersect from './charts/Intersect.vue'
   import compare from './charts/Compare.vue'

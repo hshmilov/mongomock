@@ -763,7 +763,14 @@ def entity_fields(entity_type: EntityType):
         'type': 'array',
         'items': {
             'type': 'string',
-            'format': 'tag'
+            'format': 'tag',
+            'enum': [],
+            'source': {
+                'key': 'all-tags',
+                'options': {
+                    'allow-custom-option': False
+                }
+            }
         }
     }
 

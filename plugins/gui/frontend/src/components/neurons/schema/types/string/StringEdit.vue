@@ -58,7 +58,7 @@
 
 <script>
   import primitiveMixin from '../../../../../mixins/primitive.js'
-  import xSelect from '../../../../axons/inputs/Select.vue'
+  import xSelect from '../../../../axons/inputs/select/Select.vue'
   import { xTagSelect } from '../../../../axons/inputs/dynamicSelects.js'
   import xDateEdit from './DateEdit.vue'
   import { validateEmail } from '../../../../../constants/validations'

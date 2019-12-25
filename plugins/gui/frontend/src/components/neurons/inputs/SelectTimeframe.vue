@@ -54,7 +54,7 @@
 </template>
 
 <script>
-  import xSelect from '../../axons/inputs/Select.vue'
+  import xSelect from '../../axons/inputs/select/Select.vue'
   import xDateEdit from '../schema/types/string/DateEdit.vue'
   import {validateNumber} from '../../../constants/validations'
 

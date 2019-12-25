@@ -41,7 +41,7 @@
       value: {
         type: Array,
         default: () => []
-      }
+      },
     },
     data () {
       return {
@@ -133,7 +133,7 @@
         this.filters = []
         this.addExpression()
         this.error = ''
-      }
+      },
     }
   }
 </script>

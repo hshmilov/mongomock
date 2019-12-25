@@ -1,5 +1,5 @@
 import Vue from 'vue'
-import xSelect from './Select.vue';
+import xSelect from './select/Select.vue';
 import { FETCH_DATA_LABELS } from '../../../store/actions'
 import {mapActions, mapGetters, mapState} from 'vuex';
 import {IS_ENTITY_RESTRICTED} from '../../../store/modules/auth';

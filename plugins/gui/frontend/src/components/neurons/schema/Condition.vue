@@ -39,7 +39,7 @@
 </template>
 
 <script>
-  import xSelect from '../../axons/inputs/Select.vue'
+  import xSelect from '../../axons/inputs/select/Select.vue'
   import xSelectTypedField from '../inputs/SelectTypedField.vue'
   import string from './types/string/StringEdit.vue'
   import number from './types/numerical/NumberEdit.vue'
@@ -178,7 +178,7 @@
         return this.schemaByName[this.field]
       },
       valueSchema () {
-        if (this.fieldSchema && ['integer', 'number', 'array'].includes(this.fieldSchema.type) && this.compOp === 'IN') {
+        if (this.fieldSchema && ['integer', 'number', 'array'].includes(this.fieldSchema.type) && (this.compOp === 'IN' || this.compOp ==='contains')) {
             return { type: 'string' }
         }
         if (this.fieldSchema && this.fieldSchema.type === 'array'
@@ -203,15 +203,16 @@
           ops = compOps[`array_${schema.format}`] || compOps['array']
           schema = schema.items
         }
-        if (schema.enum && schema.format !== 'predefined') {
+        if (schema.enum && schema.format !== 'predefined' && schema.format !== 'tag') {
           ops = {
               ...ops,
               equals: compOps[schema.type].equals,
               exists: compOps[schema.type].exists,
               IN: compOps[schema.type].IN
           }
-        } else if (schema.format) {
-          ops = { ...ops, ...compOps[schema.format] }
+        }
+        else if (schema.format) {
+              ops = { ...ops, ...compOps[schema.format] }
         } else {
           ops = { ...ops, ...compOps[schema.type] }
         }
@@ -304,7 +305,7 @@
         if (newSchema.type !== oldSchema.type || newSchema.format !== oldSchema.format) {
           this.value = null
         }
-        if (newSchema.enum && !this.schemaEnumFind(newSchema)) {
+        if (newSchema.enum && !this.schemaEnumFind(newSchema) && newSchema.enum.length > 0) {
           this.value = null
         }
       }

@@ -40,7 +40,7 @@
 
 <script>
   import xSelectSymbol from './SelectSymbol.vue'
-  import xSelect from '../../axons/inputs/Select.vue'
+  import xSelect from '../../axons/inputs/select/Select.vue'
   import xButton from '../../axons/inputs/Button.vue'
 
   const dashboardView = { name: '', entity: '' }

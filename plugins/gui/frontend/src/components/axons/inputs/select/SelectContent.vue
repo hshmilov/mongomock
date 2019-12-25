@@ -72,12 +72,12 @@
       >Clear all</x-button>
     </div>
   </div>
-</template>
+</template>  
 
 <script>
-    import xSearchInput from '../../neurons/inputs/SearchInput.vue'
-    import XCheckbox from "../../axons/inputs/Checkbox.vue";
-    import XButton from "../../axons/inputs/Button.vue";
+    import xSearchInput from '../../../neurons/inputs/SearchInput.vue'
+    import XCheckbox from "../../inputs/Checkbox.vue";
+    import XButton from "../../inputs/Button.vue";    
 
     import _some from 'lodash/some'
     import _head from 'lodash/head'

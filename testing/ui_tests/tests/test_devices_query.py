@@ -132,7 +132,7 @@ class TestDevicesQuery(TestBase):
 
         special_tag = 'a\\,b'
 
-        self.devices_page.add_new_tag(special_tag)
+        self.devices_page.add_new_tags([special_tag])
 
         self.devices_page.click_query_wizard()
         self.devices_page.select_query_field(self.devices_page.FIELD_TAGS)

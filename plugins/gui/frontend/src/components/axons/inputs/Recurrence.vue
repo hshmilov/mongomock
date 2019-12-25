@@ -73,8 +73,7 @@
 </template>
 
 <script>
-
-    import xSelect from './Select.vue'
+    import xSelect from './select/Select.vue'
     import xTimePicker from './TimePicker.vue'
     import {weekDays, monthDays} from '../../../constants/utils'
 

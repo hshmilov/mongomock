@@ -48,7 +48,7 @@
 </template>
 
 <script>
-  import xDropdown from '../popover/Dropdown.vue'
+  import xDropdown from '../../popover/Dropdown.vue'
   import xSelectContent from './SelectContent.vue'
 
   export default {

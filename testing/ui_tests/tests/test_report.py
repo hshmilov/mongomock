@@ -323,7 +323,7 @@ class TestReport(TestBase):
                 self.devices_page.create_saved_query(self.DATA_QUERY_1, self.TEST_REPORT_EDIT_QUERY)
                 self.devices_page.create_saved_query(self.DATA_QUERY_2, self.TEST_REPORT_EDIT_QUERY1)
                 self.devices_page.click_row_checkbox()
-                self.devices_page.add_new_tag(self.HEBREW_TAG)
+                self.devices_page.add_new_tags([self.HEBREW_TAG])
 
                 recipient = generate_random_valid_email()
 

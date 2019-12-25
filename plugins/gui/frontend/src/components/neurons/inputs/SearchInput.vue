@@ -23,6 +23,7 @@
       @click.stop="focused = true"
       @keyup.enter="$emit('keyup-enter')"
     >
+    <slot></slot>
   </div>
 </template>
 

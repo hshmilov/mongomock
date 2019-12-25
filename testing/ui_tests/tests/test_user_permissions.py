@@ -72,13 +72,13 @@ class TestUserPermissions(TestBase):
         self.devices_page.wait_for_table_to_load()
         self.users_page.click_row()
         with pytest.raises(NoSuchElementException):
-            self.devices_page.add_new_tag(ui_consts.TAG_NAME)
+            self.devices_page.add_new_tags([ui_consts.TAG_NAME])
 
         self.users_page.switch_to_page()
         self.users_page.wait_for_table_to_load()
         self.users_page.click_row()
         with pytest.raises(NoSuchElementException):
-            self.devices_page.add_new_tag(ui_consts.TAG_NAME)
+            self.devices_page.add_new_tags([ui_consts.TAG_NAME])
 
         self.instances_page.switch_to_page()
         self.instances_page.wait_for_table_to_load()

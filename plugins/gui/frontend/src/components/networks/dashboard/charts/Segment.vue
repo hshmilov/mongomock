@@ -37,7 +37,7 @@
 </template>
 
 <script>
-  import xSelect from '../../../axons/inputs/Select.vue'
+  import xSelect from '../../../axons/inputs/select/Select.vue'
   import xSelectSymbol from '../../../neurons/inputs/SelectSymbol.vue'
   import xSelectTypedField from '../../../neurons/inputs/SelectTypedField.vue'
   import xSearchInput from '../../../neurons/inputs/SearchInput.vue'

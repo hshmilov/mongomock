@@ -31,7 +31,7 @@
 </template>
 
 <script>
-  import xSelect from '../../axons/inputs/Select.vue'
+  import xSelect from '../../axons/inputs/select/Select.vue'
 
   export default {
     name: 'XSelectSymbol',

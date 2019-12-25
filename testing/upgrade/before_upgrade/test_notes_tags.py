@@ -14,7 +14,7 @@ class TestNotes(TestBase):
         self.select_device(Notes.note1_device_filter)
 
         self.devices_page.select_all_current_page_rows_checkbox()
-        self.devices_page.add_new_tag(Tags.tag_1)
+        self.devices_page.add_new_tags([Tags.tag_1])
 
     def select_device(self, device_name):
         self.devices_page.switch_to_page()

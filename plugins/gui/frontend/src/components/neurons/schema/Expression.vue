@@ -80,7 +80,7 @@
 </template>
 
 <script>
-  import xSelect from '../../axons/inputs/Select.vue'
+  import xSelect from '../../axons/inputs/select/Select.vue'
   import xCondition from './Condition.vue'
   import xButton from '../../axons/inputs/Button.vue'
   import { nestedExpression } from '../../../constants/filter'
