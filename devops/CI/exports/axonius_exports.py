@@ -236,7 +236,7 @@ def remote_vmdk_path(args):
         yield args.remote_vmdk_name
 
     else:
-        gce_image_name = args.gce_image_name or 'packer-export-' + args.name
+        gce_image_name = args.gce_image_name or 'axonius-' + args.name
         remote_vmdk_name = f'temp_vmdk_export_{hex(int(time.time() * 10))}' + gce_image_name + '.vmdk'
         vmdk_export_arguments = ['gcloud', 'compute', 'images', 'export', f'--destination-uri=gs://axonius-releases/{remote_vmdk_name}',
                                  '--export-format=vmdk', f'--image={gce_image_name}', '--network=axonius-office-vpc', '--subnet=private-subnet',

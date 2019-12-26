@@ -1,7 +1,7 @@
 {
   "variables": {
     "host_installation": "../../scripts/host_installation/",
-    "image_name": "packer-export-{{user `name`}}",
+    "image_name": "axonius-{{user `name`}}",
     "manifest_file": "manifest.json",
     "ami_regions": ""
   },
