@@ -78,6 +78,7 @@ class TestFeatureFlags(TestBase):
             assert len(ui_locked_actions) == len(db_locked_actions)
             for action_name in db_locked_actions:
                 assert Action[action_name].value in ui_locked_actions
+            time.sleep(20)
             self.settings_page.set_locked_actions(self.ACTION_TO_LOCK)
             self.settings_page.set_locked_actions(self.ACTION_TO_UNLOCK)
             self.settings_page.save_and_wait_for_toaster()
@@ -101,6 +102,7 @@ class TestFeatureFlags(TestBase):
             self.login_page.login(username=AXONIUS_USER['user_name'], password=AXONIUS_USER['password'])
             self.settings_page.switch_to_page()
             self.settings_page.click_feature_flags()
+            time.sleep(20)
             self.settings_page.set_locked_actions(self.ACTION_TO_LOCK)
             self.settings_page.set_locked_actions(self.ACTION_TO_UNLOCK)
             self.settings_page.save_and_wait_for_toaster()
