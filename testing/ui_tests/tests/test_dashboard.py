@@ -626,16 +626,16 @@ class TestDashboard(TestBase):
         # Change to host and add filter 'domain' - expected to filter out the JSON device
         self.dashboard_page.edit_card(self.TEST_SEGMENTATION_HISTOGRAM_TITLE)
         self.dashboard_page.check_chart_segment_include_empty()
-        self.dashboard_page.fill_chart_segment_filter('domain')
         assert not self.dashboard_page.is_toggle_selected(self.dashboard_page.find_chart_segment_include_empty())
         self.dashboard_page.select_chart_wizard_field('Host Name')
+        self.dashboard_page.fill_chart_segment_filter('Host Name', 'domain')
         self.dashboard_page.click_card_save()
         filtered_chart = self.dashboard_page.get_histogram_chart_by_title(self.TEST_SEGMENTATION_HISTOGRAM_TITLE)
         assert self.dashboard_page.get_paginator_total_num_of_items(filtered_chart) == '21'
 
         # Remove the filter - expected to generate as many bars as devices
         self.dashboard_page.edit_card(self.TEST_SEGMENTATION_HISTOGRAM_TITLE)
-        self.dashboard_page.fill_chart_segment_filter('')
+        self.dashboard_page.remove_chart_segment_filter()
         self.dashboard_page.click_card_save()
         filtered_chart = self.dashboard_page.get_histogram_chart_by_title(self.TEST_SEGMENTATION_HISTOGRAM_TITLE)
         assert self.dashboard_page.get_paginator_total_num_of_items(filtered_chart) == '22'
@@ -1048,7 +1048,7 @@ class TestDashboard(TestBase):
 
     def _test_segmentation_chart_edit(self, card):
         with self._edit_and_assert_chart(card, ['2'], self.HISTOGRAM_CHART_TYPE):
-            self.dashboard_page.fill_chart_segment_filter('1')
+            self.dashboard_page.fill_chart_segment_filter(self.OS_SERVICE_PACK_OPTION_NAME, '1')
 
         with self._edit_and_assert_chart(card, ['7', '1'], self.HISTOGRAM_CHART_TYPE):
             self.dashboard_page.select_chart_wizard_module(self.USERS_MODULE)

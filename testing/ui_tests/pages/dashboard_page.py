@@ -49,6 +49,10 @@ class DashboardPage(Page):
     CHART_FIELD_TEXT_BOX_CSS = 'div.x-search-input.x-select-search > input'
     CHART_FUNCTION_CSS = 'div.x-chart-metric.grid-span2 > div:nth-child(8)'
     CHART_TITLE_ID = 'chart_name'
+    SEGMENTATION_FILTER_INPUT_CSS = '.x-filter-contains .x-filter-expression-contains:nth-child({index}) input'
+    SEGMENTATION_FILTER_DELETE_CSS = '.x-filter-contains .x-filter-expression-contains:nth-child({index}) button'
+    SEGMENTATION_FILTER_DROP_DOWN_CSS = '.x-filter-contains .x-filter-expression-contains:nth-child({index})' \
+                                        ' .x-dropdown'
     SUMMARY_CARD_TEXT_CSS = 'div.x-summary > div.summary'
     CARD_CLOSE_BTN_CSS = '.actions > .remove'
     CARD_EDIT_BTN_CSS = '.actions > .edit'
@@ -233,8 +237,18 @@ class DashboardPage(Page):
     def check_chart_segment_include_empty(self):
         self.find_chart_segment_include_empty().click()
 
-    def fill_chart_segment_filter(self, value_filter):
-        self.fill_text_field_by_css_selector(f'{self.CHART_WIZARD_CSS} {self.SEARCH_INPUT_CSS}', value_filter)
+    def fill_chart_segment_filter(self, value_name, value_filter, list_position=1):
+        self.select_option_without_search(
+            self.SEGMENTATION_FILTER_DROP_DOWN_CSS.format(index=list_position),
+            self.WIZARD_OPTIONS_CSS,
+            value_name,
+            parent=None)
+        self.fill_text_field_by_css_selector(
+            f'{self.CHART_WIZARD_CSS} {self.SEGMENTATION_FILTER_INPUT_CSS.format(index=list_position)}', value_filter)
+
+    def remove_chart_segment_filter(self, list_position=1):
+        self.driver.find_element_by_css_selector(
+            self.SEGMENTATION_FILTER_DELETE_CSS.format(index=list_position)).click()
 
     def get_views_list(self):
         return self.wait_for_element_present_by_css(self.SELECT_VIEWS_CSS).find_elements_by_css_selector(
@@ -305,7 +319,7 @@ class DashboardPage(Page):
             if include_empty:
                 self.check_chart_segment_include_empty()
             if value_filter:
-                self.fill_chart_segment_filter(value_filter)
+                self.fill_chart_segment_filter(field, value_filter)
             self.fill_text_field_by_element_id(self.CHART_TITLE_ID, title)
             self.click_card_save()
             self.wait_for_element_absent_by_css(self.MODAL_OVERLAY_CSS, interval=1)

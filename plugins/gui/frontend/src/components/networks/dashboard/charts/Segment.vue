@@ -20,16 +20,18 @@
       :options="fieldOptions"
       class="grid-span2"
     />
-    <template v-if="isFieldFilterable">
-      <label>Filter by</label>
-      <x-search-input
-        v-model="valueFilter"
+    <template>
+      <label class="filter-by-label">Filter by</label>
+      <x-filter-contains
+        v-model="filters"
         class="grid-span2"
+        :options="filterFields"
+        :min="1"
       />
     </template>
     <x-checkbox
       v-model="includeEmpty"
-      :read-only="Boolean(valueFilter) && isFieldFilterable"
+      :read-only="isAllowIncludeEmpty"
       label="Include entities with no value"
       class="grid-span2"
     />
@@ -40,10 +42,10 @@
   import xSelect from '../../../axons/inputs/select/Select.vue'
   import xSelectSymbol from '../../../neurons/inputs/SelectSymbol.vue'
   import xSelectTypedField from '../../../neurons/inputs/SelectTypedField.vue'
-  import xSearchInput from '../../../neurons/inputs/SearchInput.vue'
+  import XFilterContains from '../../../neurons/schema/FilterContains.vue'
   import xCheckbox from '../../../axons/inputs/Checkbox.vue'
   import chartMixin from './chart'
-  import {isObjectListField} from '../../../../constants/utils'
+  import {getParentFromField, isObjectListField} from '../../../../constants/utils'
 
   import { mapGetters } from 'vuex'
   import { GET_DATA_FIELDS_BY_PLUGIN, GET_DATA_SCHEMA_BY_NAME } from '../../../../store/getters'
@@ -51,7 +53,7 @@
   export default {
     name: 'XChartSegment',
     components: {
-      xSelect, xSelectSymbol, xSelectTypedField, xSearchInput, xCheckbox
+      xSelect, xSelectSymbol, xSelectTypedField, xCheckbox, XFilterContains
     },
     mixins: [chartMixin],
     computed: {
@@ -60,9 +62,7 @@
       }),
       initConfig () {
         return  {
-          entity: '', view: '', field: {
-            name: ''
-          }
+          entity: '', view: '', field: {name: ''}, filters: [{name : '', value: ''}]
         }
       },
       entity: {
@@ -86,18 +86,26 @@
           return this.config.field.name
         },
         set (fieldName) {
+          if (fieldName === this.config.field.name) {
+            return
+          }
+          const field = this.schemaByName[fieldName] || { name: '' }
           this.config = { ...this.config,
-            field: this.schemaByName[fieldName] || { name: '' }
+            field,
+            'value_filter':[{name: '', value: ''}]
           }
         }
       },
-      valueFilter: {
+      filters: {
         get () {
-          return this.config['value_filter']
+          if (Array.isArray(this.config['value_filter'])) {
+            return this.config['value_filter']
+          }
+          return [{'name': this.config.field.name, 'value': this.config['value_filter']}]
         },
-        set (filter) {
+        set (filters) {
           this.config = { ...this.config,
-            'value_filter': filter,
+            'value_filter': filters,
             'include_empty': false
           }
         }
@@ -124,17 +132,41 @@
           }
         })
       },
+      filterFields () {
+        if (this.fieldName === '') {
+          return []
+        }
+        const parentName = getParentFromField(this.fieldName)
+        const parentSchema = this.schemaByName[parentName]
+        const isComplexObject = parentSchema && isObjectListField(parentSchema)
+        if (!isComplexObject) {
+          return [this.config.field]
+        }
+
+        const availableFields =  Array.isArray(parentSchema.items)? parentSchema.items : parentSchema.items.items
+        return availableFields.filter(
+                (option) => this.isFieldFilterable(option) && !isObjectListField(option)
+        ).map((option) => {
+          return {
+            ...option,
+            name: parentName + '.' + option.name
+          }
+        })
+      },
       schemaByName () {
         if (!this.entity) return {}
         return this.getDataSchemaByName(this.entity)
       },
-      isFieldFilterable () {
-        return this.config.field.type === 'string' && !this.config.field.format
+      isAllowIncludeEmpty () {
+        return !!this.filters.filter((item) => item.name && item.value ).length
+      },
+      isFiltersValid() {
+        return !this.filters.find(item => !!item.name !== !!item.value)
       }
     },
     methods: {
       validate () {
-        this.$emit('validate', this.fieldName)
+        this.$emit('validate', this.fieldName && this.isFiltersValid)
       },
       updateEntity(entity) {
         if (entity === this.entity) return
@@ -143,13 +175,22 @@
           view: '',
           field: {
             name: ''
-          }
+          },
+          'value_filter': [{name : '', value: ''}]
         }
+      },
+      isFieldFilterable (field) {
+        return field.format !== 'date-time' && ( !field.items || field.items.format !== 'date-time' )
       }
     }
   }
 </script>
 
 <style lang="scss">
-
+  .x-chart-metric {
+    .filter-by-label {
+      align-self: flex-start;
+      margin-top: 14px;
+    }
+  }
 </style>

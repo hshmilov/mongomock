@@ -1,6 +1,6 @@
 import logging
 from typing import List, Iterable, Tuple
-from collections import defaultdict
+from collections import defaultdict, Counter
 from datetime import date, datetime, timedelta
 from multiprocessing import cpu_count
 from bson import ObjectId
@@ -14,7 +14,7 @@ from axonius.consts.gui_consts import (ChartMetrics, ChartViews, ChartFuncs, Cha
 from axonius.entities import EntityType
 from axonius.plugin_base import PluginBase, return_error
 from axonius.utils.axonius_query_language import (convert_db_entity_to_view_entity, parse_filter)
-from axonius.utils.gui_helpers import (find_filter_by_name, flatten_list, find_entity_field)
+from axonius.utils.gui_helpers import (find_filter_by_name, find_entity_field)
 from axonius.utils.revving_cache import rev_cached, rev_cached_entity_type
 from axonius.utils.threading import GLOBAL_RUN_AND_FORGET
 from gui.gui_logic.db_helpers import beautify_db_entry
@@ -88,7 +88,7 @@ def fetch_chart_compare(chart_view: ChartViews, views: List) -> List:
             'module': entity_name,
             'value': 0
         }
-        #pylint: disable=protected-access
+        # pylint: disable=protected-access
         if view.get('for_date'):
             data_item['value'] = PluginBase.Instance._historical_entity_views_db_map[entity].count_documents(
                 {
@@ -225,7 +225,18 @@ def fetch_chart_intersect(_: ChartViews, entity: EntityType, base, intersecting,
     }, 'module': entity.value}, *data]
 
 
-def _query_chart_segment_results(field: dict, view, entity: EntityType, for_date: datetime):
+# pylint: disable-msg=too-many-locals
+def _query_chart_segment_results(field_parent: str, view, entity: EntityType, for_date: datetime,
+                                 filters_keys: list):
+    """
+    create aggregation object and return his results
+    :param field_parent: field parent name
+    :param view:
+    :param entity: entity to query
+    :param for_date: date restrictions
+    :param filters_keys: a list of all filter by keys ( field names to filter by )
+    :return: aggregation results
+    """
     base_view = {'query': {'filter': '', 'expressions': []}}
     base_queries = []
     if view:
@@ -246,21 +257,18 @@ def _query_chart_segment_results(field: dict, view, entity: EntityType, for_date
         '$and': base_queries
     } if base_queries else {}
 
-    field_name = field['name']
     adapter_conditions = [
         {
             '$ne': ['$$i.data._old', True]
         }
     ]
+    # prepare field parent name
+    if field_parent.startswith(SPECIFIC_DATA):
+        empty_field_name = field_parent[len(SPECIFIC_DATA) + 1:]
 
-    if field_name.startswith(SPECIFIC_DATA):
-        empty_field_name = field_name[len(SPECIFIC_DATA) + 1:]
-        adapter_field_name = 'adapters.' + empty_field_name
-        tags_field_name = 'tags.' + empty_field_name
-
-    elif field_name.startswith(ADAPTERS_DATA):
+    elif field_parent.startswith(ADAPTERS_DATA):
         # e.g. adapters_data.aws_adapter.some_field
-        splitted = field_name.split('.')
+        splitted = field_parent.split('.')
         adapter_data_adapter_name = splitted[1]
 
         # this condition is specific for fields that are in a specific adapter, so we
@@ -269,13 +277,32 @@ def _query_chart_segment_results(field: dict, view, entity: EntityType, for_date
             '$eq': [f'$$i.{PLUGIN_NAME}', adapter_data_adapter_name]
         })
         empty_field_name = 'data.' + '.'.join(splitted[2:])
-        adapter_field_name = 'adapters.' + empty_field_name
-        tags_field_name = 'tags.' + empty_field_name
 
-    return base_view, data_collection.aggregate([
+    adapter_parent_field_name = '$adapters.' + empty_field_name
+    tags_parent_field_name = '$tags.' + empty_field_name
+
+    # prepare list of inputs for filtering requested data ( single or multiple fields )
+    filter_inputs = []
+    # prepare list of reduce function one for each field name
+    unique_values_inputs = []
+    # prepare name pattern
+    name_pattern = {}
+    # iterate and fill variables
+    for index, filter_key in enumerate(filters_keys):
+        name_pattern[filter_key] = {'$arrayElemAt': ['$unique_values', index]}
+        unique_values_inputs.append(_generate_aggregate_unique_values_reduce(filter_key))
+        filter_inputs.append(
+            _generate_aggregate_combine_inputs_reduce(adapter_parent_field_name,
+                                                      tags_parent_field_name,
+                                                      filter_key))
+    name_pattern['doc_id'] = {'$toString': '$_id'}
+
+    query = [
+        # match base queries
         {
             '$match': base_query
         },
+        # filter old data from adapters
         {
             '$project': {
                 'tags': '$tags',
@@ -290,15 +317,15 @@ def _query_chart_segment_results(field: dict, view, entity: EntityType, for_date
                 }
             }
         },
+        # collect all data available by filters
         {
             '$project': {
-                'field': {
+                'collected_data': {
                     '$filter': {
                         'input': {
-                            '$setUnion': [
-                                '$' + adapter_field_name,
-                                '$' + tags_field_name
-                            ]
+                            '$zip': {
+                                'inputs': filter_inputs
+                            }
                         },
                         'as': 'i',
                         'cond': {
@@ -308,42 +335,78 @@ def _query_chart_segment_results(field: dict, view, entity: EntityType, for_date
                 }
             }
         },
+        # create unique array of objects representing the document data
+        # each object contain a kev value pair/'s of field_name:actual_value
         {
-            '$group': {
-                '_id': '$field',
-                'value': {
-                    '$sum': 1
+            '$project': {
+                'unique_values': {
+                    '$setUnion': [
+                        {
+                            '$zip': {
+                                'inputs': unique_values_inputs,
+                                'useLongestLength': True
+                            }
+                        }
+                    ]
                 }
             }
         },
+        # filter all objects containing null,
+        # this can happen when no field is found in the previous stage
+        # this behavior keeps the pairs synced and need to be removed in this stage and not before
         {
             '$project': {
-                'value': 1,
-                'name': {
-                    '$cond': {
-                        'if': {
-                            '$eq': [
-                                '$_id', []
-                            ]
-                        },
-                        'then': ['No Value'],
-                        'else': '$_id'
+                'unique_values': {
+                    '$filter': {
+                        'input': '$unique_values',
+                        'as': 'i',
+                        'cond': {'$allElementsTrue': ['$$i']}
                     }
                 }
             }
         },
+        # unwind to create a document for each object in the unique values array
+        # we keeps the null for counting 'No Value' results
         {
-            '$sort': {
-                'value': -1
+            '$unwind': {
+                'path': '$unique_values',
+                'preserveNullAndEmptyArrays': True
+            }
+        },
+        # group all documents by the unique values object to get the count
+        # add extra_data array field for filtering the data
+        # for each count, an object with the data will be in the array note: when the filter will be applied
+        # each object that wont pass the filter should be deduct from the total count
+        {
+            '$group': {
+                '_id': {
+                    'name': {'$ifNull': [{'$arrayElemAt': ['$unique_values', 0]}, None]},
+                    'doc_id': {'$toString': '$_id'}
+                },
+                'count': {'$sum': 1},
+                'extra_data': {
+                    '$push': {
+                        '$cond': {
+                            'if': {'$eq': [{'$arrayElemAt': ['$unique_values', 0]}, None]},
+                            'then': 'No Value',
+                            'else': name_pattern
+                        }
+                    }
+                }
             }
         }
-    ], allowDiskUse=True)
+    ]
+    # create the query
+    logger.info(f'segmentation aggregation query:{query}')
+    # execute!
+    return base_view, data_collection.aggregate(query, allowDiskUse=True)
 
 
-def fetch_chart_segment(chart_view: ChartViews, entity: EntityType, view, field, value_filter: str = '',
+# pylint: disable-msg=too-many-branches
+def fetch_chart_segment(chart_view: ChartViews, entity: EntityType, view, field, value_filter: list = None,
                         include_empty: bool = False, for_date=None) -> List:
     """
-    Perform aggregation which matching given view's filter and grouping by give field, in order to get the
+    Perform aggregation which matching given view's filter and grouping by given fields, in order to get the
     number of results containing each available value of the field.
     For each such value, add filter combining the original filter with restriction of the field to this value.
     If the requested view is a pie, divide all found quantities by the total amount, to get proportions.
@@ -351,38 +414,61 @@ def fetch_chart_segment(chart_view: ChartViews, entity: EntityType, view, field,
     :return: Data counting the amount / portion of occurrences for each value of given field, among the results
             of the given view's filter
     """
+    # parse field name
+    # rpartition docs : https://docs.python.org/3.6/library/stdtypes.html#str.rpartition
+    field_name_partition = field['name'].rpartition('.')
+    field_parent = field_name_partition[0] or ''
+    field_name = field_name_partition[2]
+    if not value_filter:
+        value_filter = []
+    # backward compatibility: old filters used to be strings
+    if isinstance(value_filter, str):
+        value_filter = [
+            {'name': field_name, 'value': value_filter}
+        ]
+    # remove unnamed filters
+    value_filter = [x for x in value_filter if x['name']]
+    # add default filter ( field name with '' as value to search)
+    value_filter = [{'name': field_name, 'value': ''}] + value_filter
+    # create merged filter object by uniq filter key ( field name )
+    # rpartition docs : https://docs.python.org/3.6/library/stdtypes.html#str.rpartition
+    reduced_filters = defaultdict(list)
+    for item in value_filter:
+        reduced_filters[item['name'].rpartition('.')[2]].append(item['value'])
+    # remove empty search value,
+    # this value if exist with another value at the same array can make the string query not valid
+    for key, value in reduced_filters.items():
+        if len(value) > 1:
+            reduced_filters[key] = [x for x in value if x]
     # Query and data collections according to given module
-    base_view, aggregate_results = _query_chart_segment_results(field, view, entity, for_date)
+    base_view, aggregate_results = _query_chart_segment_results(field_parent, view, entity, for_date,
+                                                                filters_keys=[*reduced_filters])
     if not base_view or not aggregate_results:
         return None
     base_filter = f'({base_view["query"]["filter"]}) and ' if base_view['query']['filter'] else ''
-    data = []
-    all_values = defaultdict(int)
-    field_name = field['name']
+    counted_results = Counter()
     for item in aggregate_results:
-        for value in set(flatten_list(item['name'])):
-            all_values[value] += item['value']
-    for field_value, field_count in all_values.items():
-        query_filter = ''
-        # Build the filter, according to the supported types
-        if field_value == 'No Value':
-            if not include_empty or value_filter:
-                continue
-            query_filter = f'not ({field_name} == exists(true))'
-        elif isinstance(field_value, str):
-            if value_filter.lower() not in field_value.lower():
-                continue
-            query_filter = f'{field_name} == "{field_value}"'
-        elif isinstance(field_value, bool):
-            query_filter = f'{field_name} == {str(field_value).lower()}'
-        elif isinstance(field_value, int):
-            query_filter = f'{field_name} == {field_value}'
-        elif isinstance(field_value, datetime):
-            query_filter = f'{field_name} == date("{field_value}")'
+        result_name = item.get('_id', {}).get('name', 'No Value')
+        extra_data = item.get('extra_data', [])
+        if extra_data == ['No Value']:
+            counted_results['No Value'] += 1
+        elif _match_result_item_to_filters(extra_data, reduced_filters):
+            counted_results[result_name] += 1
 
+    data = []
+    for result_name, result_count in counted_results.items():
+        if result_name == 'No Value':
+            if not include_empty or ''.join(reduced_filters[field_name]):
+                continue
+            query_filter = f'not ({field_parent}.{field_name} == exists(true))'
+        else:
+            query_filter = _generate_segmented_query_filter(result_name,
+                                                            reduced_filters,
+                                                            field_parent,
+                                                            field_name)
         data.append({
-            'name': field_value,
-            'value': field_count,
+            'name': result_name,
+            'value': result_count,
             'module': entity.value,
             'view': {
                 **base_view,
@@ -396,6 +482,169 @@ def fetch_chart_segment(chart_view: ChartViews, entity: EntityType, view, field,
         total = sum([x['value'] for x in data])
         return [{'name': view or 'ALL', 'value': 0}, *[{**x, 'value': x['value'] / total} for x in data]]
     return data
+
+
+def _match_result_item_to_filters(extra_data: list, filters: dict) -> bool:
+    """
+    check if the row returned from the aggregation stage is legit by requested filters
+    :param extra_data: list of dicts for each count the result got in the aggregation
+    :param filters: key value pair of: key -> filter (field) name, value -> list of requirements to match
+    :return: boolean representing if item pass the check
+    """
+    is_item_legit = False
+    for data in extra_data:
+        is_valid = True
+        for filter_name in filters:
+            for match in filters[filter_name]:
+                if match.lower() not in str(data[filter_name]).lower():
+                    is_valid = False
+        if is_valid:
+            is_item_legit = True
+    return is_item_legit
+
+
+def _generate_segmented_query_filter(result_name, filters, field_parent, segmented_field_name):
+    """
+    generate query string for the use in devices/users page, per result given
+    :param result_name: the result name of the requested segmentation
+    :param filters: the filter to apply in the query string
+    :param field_parent: the name of the segmented field
+    :param segmented_field_name: the name of the segmented field, used to discard filters
+    :return: query string composed from the segmented field query and a match query list of filters
+    """
+    query_filters = []
+    segment_filter = _generate_segmented_field_query_filter('.'.join([field_parent, segmented_field_name]),
+                                                            result_name)
+    for field_name, field_value in filters.items():
+        # Build the filter, according to the supported types
+        if field_name == segmented_field_name:
+            continue
+        for value in field_value:
+            if value:
+                query_filters.append(_generate_segmented_field_query_filter(field_name, value, True))
+
+    if len(query_filters) > 0:
+        wrapped_query_filters = [f'({x})' for x in query_filters]
+        return f'{segment_filter} and ({field_parent} == match([{" and ".join(wrapped_query_filters)}]))'
+    return segment_filter
+# pylint: enable-msg=too-many-branches
+
+
+def _generate_segmented_field_query_filter(field_name, value, with_regex=False):
+    """
+    generate query string for one field name and value pair, can produce string for compare and contain methods
+    :param field_name: field name to use in the string
+    :param value: the value of compare or contain
+    :param with_regex: use contain in true and compare in false
+    :return: one name value pair query string
+    """
+    query_filter = ''
+    if isinstance(value, str):
+        if value in ['false', 'true']:
+            query_filter = f'{field_name} == {value}'
+        else:
+            if with_regex:
+                query_filter = f'{field_name} == regex("{value}","i")'
+            else:
+                query_filter = f'{field_name} == "{value}"'
+    elif isinstance(value, int):
+        query_filter = f'{field_name} == {value}'
+    elif isinstance(value, datetime):
+        query_filter = f'{field_name} == date("{value}")'
+    return query_filter
+
+
+def _generate_aggregate_combine_inputs_reduce(field_adapter_parent, field_tags_parent, key):
+    """
+    generate reduce object for the aggregation stage per filter
+    the reduce take the parent as array and return key value object with the filter name as key
+    and the original value of the document in that key, as value
+    :param field_adapter_parent: the adapter parent field name of the requested filter (field name)
+    :param field_tags_parent: the tags parent field name of the requested filter (field name)
+    :param key: the key to use in the reduce ( equivalent to field name )
+    :return: object representing one filter reduce to be in array of reduces
+    """
+    return {
+        '$reduce': {
+            'input': {
+                '$setUnion': [
+                    f'{field_adapter_parent}',
+                    f'{field_tags_parent}'
+                ]
+            },
+            'initialValue': [],
+            'in': {
+                '$concatArrays': [
+                    '$$value', {
+                        '$map': {
+                            'input': {
+                                '$cond': {
+                                    'if': {'$isArray': ['$$this']},
+                                    'then': '$$this',
+                                    'else': ['$$this']
+                                }
+                            },
+                            'as': 'i',
+                            'in': {
+                                f'{key}': {'$ifNull': [f'$$i.{key}', None]}
+                            }
+                        }
+                    }
+                ]
+            }
+        }
+    }
+
+
+def _generate_aggregate_unique_values_reduce(key):
+    """
+    generate reduce object for the aggregation stage per filter
+    the reduce take the collected data array and create array of object representing filter name results
+    this reduce is part of zip function that will create zip version of all this reduces
+    :param key: the filter name ( field name ) to
+    :return: object representing one array of objects to zip
+    """
+    return {
+        '$reduce': {
+            'input': {
+                '$reduce': {
+                    'input': '$collected_data',
+                    'initialValue': [],
+                    'in': {
+                        '$concatArrays': [
+                            '$$value', {
+                                '$cond': [
+                                    {'$isArray': f'$$this.{key}'},
+                                    f'$$this.{key}',
+                                    [f'$$this.{key}']
+                                ]
+                            }
+                        ]
+                    }
+                }
+            },
+            'initialValue': [],
+            'in': {
+                '$concatArrays': [
+                    '$$value', {
+                        '$cond': {
+                            'if': {'$isArray': ['$$this']},
+                            'then': '$$this',
+                            'else': [
+                                {
+                                    '$cond': [
+                                        {'$eq': [{'$type': '$$this'}, 'bool']},
+                                        {'$toString': '$$this'},
+                                        '$$this'
+                                    ]
+                                }
+                            ]
+                        }
+                    }
+                ]
+            }
+        }
+    }
 
 
 def _query_chart_abstract_results(field: dict, entity: EntityType, view, for_date: datetime):

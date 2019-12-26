@@ -104,3 +104,7 @@ export const parseVaultError = (errorString) => {
     let result = errorString.match(regexp)
     return result;
 }
+
+export const getParentFromField = (fieldName) => {
+    return fieldName.split('.').slice(0, -1).join('.')
+}
