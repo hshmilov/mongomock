@@ -283,7 +283,7 @@ export default {
       padding: 0;
     }
 
-    .theme--light.v-list-item--active:before {
+    .theme--light.v-list-item--active:not(.v-list-item--highlighted):before {
       opacity: 0;
     }
 
