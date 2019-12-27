@@ -54,7 +54,7 @@ class GuiService(PluginService, UpdatablePluginMixin):
             self._update_under_20()
         if self.db_schema_version < 30:
             self._update_under_30()
-        if self.db_schema_version != 25:
+        if self.db_schema_version != 26:
             print(f'Upgrade failed, db_schema_version is {self.db_schema_version}')
 
     def _update_under_10(self):

@@ -276,7 +276,7 @@ def _query_chart_segment_results(field_parent: str, view, entity: EntityType, fo
         adapter_conditions.append({
             '$eq': [f'$$i.{PLUGIN_NAME}', adapter_data_adapter_name]
         })
-        empty_field_name = 'data.' + '.'.join(splitted[2:])
+        empty_field_name = 'data.' + '.'.join(splitted[2:]) if len(splitted) > 2 else 'data'
 
     adapter_parent_field_name = '$adapters.' + empty_field_name
     tags_parent_field_name = '$tags.' + empty_field_name
