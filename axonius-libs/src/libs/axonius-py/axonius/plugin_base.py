@@ -3406,7 +3406,8 @@ class PluginBase(Configurable, Feature, ABC):
             },
             NOTIFICATIONS_SETTINGS: {
                 NOTIFY_ADAPTERS_FETCH: False,
-                ADAPTERS_ERRORS_MAIL_ADDRESS: None
+                ADAPTERS_ERRORS_MAIL_ADDRESS: None,
+                ADAPTERS_ERRORS_WEBHOOK_ADDRESS: None
             },
             CORRELATION_SETTINGS: {
                 CORRELATE_BY_EMAIL_PREFIX: False,
