@@ -188,7 +188,6 @@ class Configurable(object):
                     'config_name': config_class.__name__
                 }) or {}
                 previous_config = previous_config.get('config')
-                logger.info(f"Got previous - {previous_config}, default = {config_default}")
                 if previous_config:
                     previous_config = self.__try_automigrate_config_schema(config_schema,
                                                                            previous_config,

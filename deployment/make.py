@@ -68,7 +68,7 @@ def main():
         if not args.override:
             raise Exception('Output path already exists, pass --override to override the file')
 
-    create_package(output_path, args.version, args.pull, args.rebuild, args.exclude, args.winpip)
+    create_package(output_path, args.version, args.pull, args.rebuild, args.exclude, True, args.winpip)
 
 
 def create_package(output_path, version='', pull=False, rebuild=False, exclude=None, prod=True, winpip=False):
@@ -160,13 +160,15 @@ def build_images(pull=False, rebuild=False, exclude=None, prod=True):
     images.append(axonius_system.build_libs(rebuild, show_print=False))
     services = [name for name, variable in axonius_system.get_all_plugins()]
     adapters = [name for name, variable in axonius_system.get_all_adapters()]
+    standalone_services = ['mockingbird']
     if exclude:
         for name in exclude:
             if name not in services and name not in adapters:
                 raise ValueError(f'Excluded name {name} not found')
         services = [name for name in services if name not in exclude]
         adapters = [name for name in adapters if name not in exclude]
-    images.extend(axonius_system.build(True, adapters, services, 'prod' if prod else '', rebuild))
+        standalone_services = [name for name in standalone_services if name not in exclude]
+    images.extend(axonius_system.build(True, adapters, services, standalone_services, 'prod' if prod else '', rebuild))
     images.sort()
     return images
 
