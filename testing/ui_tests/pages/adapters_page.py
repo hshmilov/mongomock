@@ -124,7 +124,7 @@ class AdaptersPage(EntitiesPage):
         self.driver.find_element_by_css_selector(self.CHECKBOX_CSS).click()
 
     def wait_for_server_green(self):
-        self.wait_for_element_present_by_css(self.SUCCESS_ICON_CLASS)
+        self.wait_for_element_present_by_css(self.SUCCESS_ICON_CLASS, retries=300, interval=1)
 
     def wait_for_server_red(self):
         self.wait_for_element_present_by_css(self.ERROR_ICON_CLASS)
