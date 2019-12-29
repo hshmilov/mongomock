@@ -2653,7 +2653,7 @@ class PluginBase(Configurable, Feature, ABC):
             return []
 
     def create_jira_ticket(self, project_key, summary, description, issue_type,
-                           assignee=None, labels=None, components=None):
+                           assignee=None, labels=None, components=None, csv_file_name=None, csv_bytes=None):
         jira_settings = self._jira_settings
         if jira_settings['enabled'] is not True:
             return 'Jira Settings missing'
@@ -2675,6 +2675,8 @@ class PluginBase(Configurable, Feature, ABC):
             issue = jira.create_issue(fields=issue_dict)
             if assignee:
                 issue.update(assignee=assignee)
+            if csv_file_name and csv_bytes:
+                jira.add_attachment(issue=issue, attachment=csv_bytes, filename=csv_file_name)
             return ''
         except Exception as e:
             logger.exception('Error in Jira ticket')
