@@ -2022,6 +2022,11 @@ class AwsAdapter(AdapterBase, Configurable):
                     device = self._new_device_adapter()
                     device.aws_device_type = 'EC2'
                     device.hostname = device_raw.get('PublicDnsName')
+                    power_state = POWER_STATE_MAP.get(device_raw.get('State', {}).get('Name'),
+                                                      DeviceRunningState.Unknown)
+                    if self.__drop_turned_off_machines and power_state != DeviceRunningState.TurnedOn:
+                        continue
+                    device.power_state = power_state
                     tags_dict = {i['Key']: i['Value'] for i in device_raw.get('Tags', {})}
                     for key, value in tags_dict.items():
                         device.add_aws_ec2_tag(key=key, value=value)
@@ -2186,8 +2191,6 @@ class AwsAdapter(AdapterBase, Configurable):
 
                     if more_ips:
                         device.add_ips_and_macs(ips=more_ips)
-                    device.power_state = POWER_STATE_MAP.get(device_raw.get('State', {}).get('Name'),
-                                                             DeviceRunningState.Unknown)
                     try:
                         if POWER_STATE_MAP.get(device_raw.get('State', {}).get('Name'),
                                                DeviceRunningState.Unknown) == DeviceRunningState.TurnedOn:
@@ -3300,6 +3303,7 @@ class AwsAdapter(AdapterBase, Configurable):
         self.__shodan_key = config.get('shodan_key')
         self.__verify_all_roles = config.get('verify_all_roles') or False
         self.__verify_primary_account = config.get('verify_primary_account') or False
+        self.__drop_turned_off_machines = config.get('drop_turned_off_machines') or False
 
     @classmethod
     def _db_config_schema(cls) -> dict:
@@ -3390,6 +3394,11 @@ class AwsAdapter(AdapterBase, Configurable):
                     'name': 'verify_primary_account',
                     'title': 'Verify primary account permissions',
                     'type': 'bool'
+                },
+                {
+                    'name': 'drop_turned_off_machines',
+                    'title': 'Do not fetch machines that are turned off',
+                    'type': 'bool'
                 }
             ],
             "required": [
@@ -3408,7 +3417,8 @@ class AwsAdapter(AdapterBase, Configurable):
                 'parse_elb_ips',
                 'verbose_auth_notifications',
                 'verify_all_roles',
-                'verify_primary_account'
+                'verify_primary_account',
+                'drop_turned_off_machines'
             ],
             "pretty_name": "AWS Configuration",
             "type": "array"
@@ -3433,7 +3443,8 @@ class AwsAdapter(AdapterBase, Configurable):
             'verbose_auth_notifications': False,
             'shodan_key': None,
             'verify_all_roles': True,
-            'verify_primary_account': True
+            'verify_primary_account': True,
+            'drop_turned_off_machines': False
         }
 
     @classmethod
