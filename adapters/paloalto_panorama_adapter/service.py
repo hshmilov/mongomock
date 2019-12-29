@@ -72,6 +72,8 @@ class PaloaltoPanoramaAdapter(AdapterBase):
             all_str = re.findall('<msg>(.*)</msg>', message)
             if all_str:
                 message = all_str[0]
+            elif 'Max retries exceeded with' in str(e):
+                message = 'Paloalto Host Is Not Reachable'
             raise ClientConnectionException(message)
 
     @staticmethod
