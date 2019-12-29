@@ -5342,7 +5342,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
                         },
                         {
                             'name': 'mandatory',
-                            'title': 'Set as Mandatory',
+                            'title': 'Enforce Client Certificate Validation',
                             'type': 'bool'
                         },
                         {
