@@ -3044,7 +3044,7 @@ class PluginBase(Configurable, Feature, ABC):
                     'name': PROXY_SETTINGS,
                     'title': 'Proxy Settings',
                     'type': 'array',
-                    'required': ['proxy_addr', 'proxy_port'],
+                    'required': ['enabled', 'proxy_addr', 'proxy_port', PROXY_VERIFY],
                     'items': [
                         {
                             'name': 'enabled',
@@ -3154,7 +3154,7 @@ class PluginBase(Configurable, Feature, ABC):
                     'name': 'email_settings',
                     'title': 'Email Settings',
                     'type': 'array',
-                    'required': ['smtpHost', 'smtpPort']
+                    'required': ['enabled', 'smtpHost', 'smtpPort']
                 },
                 {
                     'items': [
@@ -3179,7 +3179,7 @@ class PluginBase(Configurable, Feature, ABC):
                     'name': 'syslog_settings',
                     'title': 'Syslog Settings',
                     'type': 'array',
-                    'required': ['syslogHost']
+                    'required': ['enabled', 'syslogHost']
                 },
                 {
                     'https_log_settings': {
@@ -3212,7 +3212,7 @@ class PluginBase(Configurable, Feature, ABC):
                     'name': 'https_log_settings',
                     'title': 'HTTPS Logs Settings',
                     'type': 'array',
-                    'required': ['https_log_server']
+                    'required': ['enabled', 'https_log_server']
                 },
                 {
                     'type': 'array',
@@ -3330,7 +3330,7 @@ class PluginBase(Configurable, Feature, ABC):
                     'name': AGGREGATION_SETTINGS,
                     'title': 'Aggregation Settings',
                     'type': 'array',
-                    'required': []
+                    'required': [MAX_WORKERS, SOCKET_READ_TIMEOUT]
                 },
                 {
                     'items': [

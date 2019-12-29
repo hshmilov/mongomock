@@ -148,6 +148,12 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
                     'type': 'array'
                 }
             ],
+            'required': [
+                'system_research_rate',
+                'save_history',
+                'constant_alerts',
+                'analyse_reimage'
+            ],
             'type': 'array'
         }
 
