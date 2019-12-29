@@ -41,8 +41,14 @@ class TestInstancesAfterNodeJoin(TestInstancesBase):
 
     def check_node_restart(self):
         self._delete_nexpose_adapter_and_data()
-        self._instances[0].ssh('sudo reboot')
-        time.sleep(60)
+
+        # Using bare sshc.exec_command because we want to fire and forget.
+        # Sync files
+        self._instances[0].sshc.exec_command('sudo sh -c "echo s > /proc/sysrq-trigger"')
+        # Do a hard reboot
+        self._instances[0].sshc.exec_command('sudo sh -c "echo b > /proc/sysrq-trigger"')
+
+        time.sleep(5)
         self._instances[0].wait_for_ssh()
         wait_for_booted_for_production(self._instances[0])
         self._add_nexpose_adadpter_and_discover_devices()
