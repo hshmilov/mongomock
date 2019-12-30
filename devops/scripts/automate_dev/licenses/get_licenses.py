@@ -21,7 +21,8 @@ def get_pypi_reqs():
         for set_lower in splitter:
             set_lower[0] = set_lower[0].lower()
             response = requests.get('https://pypi.org/pypi/' + str(set_lower[0]) + '/json')
-            outputfille.write(set_lower[0] + "," + re.sub(',',' ',response.json()['info']['license']) + "," + re.sub(',', ' ',response.json()['info']['summary'] + "\n"))
+            outputfille.write(set_lower[0] + "," + re.sub(',', ' ', response.json()['info']
+                                                          ['license']) + "," + re.sub(',', ' ', response.json()['info']['summary'] + "\n"))
     outputfille.close()
 
 
@@ -34,7 +35,8 @@ def get_npm_reps():
                 new_pack_2 = re.sub('/', '-', new_pack_1)
                 response = requests.get('https://api.npms.io/v2/package/' + new_pack_2)
                 try:
-                    lic = pack + "," + data['dependencies'][pack]['version'] + "," + response.json()['collected']['metadata']['license'] + "," + response.json()['collected']['metadata']['links']['npm'] + "\n"
+                    lic = pack + "," + data['dependencies'][pack]['version'] + "," + response.json(
+                    )['collected']['metadata']['license'] + "," + response.json()['collected']['metadata']['links']['npm'] + "\n"
                     outputfille.write(lic)
                 except Exception:
                     continue
