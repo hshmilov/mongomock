@@ -3,7 +3,7 @@ from retrying import retry
 from axonius.utils.wait import wait_until
 from scripts.instances.instances_consts import PROXY_DATA_HOST_PATH
 from services.plugins.gui_service import GuiService
-from services.standalone_services.smtp_server import SMTPService
+from services.standalone_services.smtp_service import SmtpService
 from test_helpers.log_tester import LogTester
 from test_helpers.machines import PROXY_IP, PROXY_PORT
 from ui_tests.tests.ui_consts import GUI_LOG_PATH
@@ -31,7 +31,7 @@ class TestGlobalSettings(TestBase):
         # self.settings_page.find_email_port_error()
 
     def test_email_host_validation(self):
-        smtp_service = SMTPService()
+        smtp_service = SmtpService()
         smtp_service.take_process_ownership()
 
         self.settings_page.switch_to_page()

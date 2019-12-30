@@ -11,13 +11,13 @@ from selenium.common.exceptions import NoSuchElementException
 from axonius.consts.system_consts import AXONIUS_DNS_SUFFIX
 from axonius.utils.parsing import make_dict_from_csv
 from axonius.utils.wait import wait_until
-from services.adapters import stresstest_scanner_service, stresstest_service
 from services.adapters.esx_service import EsxService
-from services.standalone_services.maildiranasaurus_server import \
-    MailDiranasaurusService as SMTPService
-from services.standalone_services.smtp_server import \
+from services.adapters.stresstest_scanner_service import StresstestScannerService
+from services.adapters.stresstest_service import StresstestService
+from services.standalone_services.maildiranasaurus_service import MaildiranasaurusService
+from services.standalone_services.smtp_service import \
     generate_random_valid_email
-from services.standalone_services.syslog_server import SyslogService
+from services.standalone_services.syslog_service import SyslogService
 from test_credentials.json_file_credentials import \
     client_details as json_file_creds
 from test_credentials.test_aws_credentials import (EC2_ECS_EKS_READONLY_ACCESS_KEY_ID,
@@ -162,10 +162,7 @@ class TestEnforcementActions(TestBase):
 
     @flaky(max_runs=3)
     def test_syslog_operation_multiple_actions(self):
-        syslog_server = SyslogService()
-        syslog_server.take_process_ownership()
-
-        with syslog_server.contextmanager():
+        with SyslogService().contextmanager(take_ownership=True) as syslog_server:
             # set up syslog in settings
             self.settings_page.switch_to_page()
             self.settings_page.click_global_settings()
@@ -322,10 +319,7 @@ class TestEnforcementActions(TestBase):
         assert self.devices_page.get_first_row_tags() == TAG_NEW_COMMENT
 
     def test_enforcement_customized_email(self):
-        smtp_service = SMTPService()
-        smtp_service.take_process_ownership()
-
-        with smtp_service.contextmanager():
+        with MaildiranasaurusService().contextmanager(take_ownership=True) as smtp_service:
             self.settings_page.add_email_server(smtp_service.fqdn, smtp_service.port)
 
             self.devices_page.switch_to_page()
@@ -365,10 +359,7 @@ class TestEnforcementActions(TestBase):
         self.settings_page.remove_email_server()
 
     def test_enforcement_email_validation(self):
-        smtp_service = SMTPService()
-        smtp_service.take_process_ownership()
-
-        with smtp_service.contextmanager():
+        with MaildiranasaurusService().contextmanager(take_ownership=True) as smtp_service:
             self.settings_page.add_email_server(smtp_service.fqdn, smtp_service.port)
 
             self.devices_page.switch_to_page()
@@ -473,11 +464,9 @@ class TestEnforcementActions(TestBase):
         assert self.devices_page.count_entities() == count
 
     def test_enforcement_s3_csv(self):
-        stress = stresstest_service.StresstestService()
-        stress_scanner = stresstest_scanner_service.StresstestScannerService()
         try:
-            with stress.contextmanager(take_ownership=True), \
-                    stress_scanner.contextmanager(take_ownership=True):
+            with StresstestService().contextmanager(take_ownership=True) as stress, \
+                    StresstestScannerService().contextmanager(take_ownership=True) as stress_scanner:
                 device_dict = {'device_count': 10, 'name': 'blah'}
                 stress.add_client(device_dict)
                 stress_scanner.add_client(device_dict)

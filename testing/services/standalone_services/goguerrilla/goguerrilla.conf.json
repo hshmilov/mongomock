@@ -2,7 +2,7 @@
     "log_file" : "/var/log/guerilla.log",
     "log_level" : "debug",
     "allowed_hosts": [
-      "."
+      "*.me"
     ],
     "pid_file" : "/var/run/go-guerrilla.pid",
     "backend_config": {

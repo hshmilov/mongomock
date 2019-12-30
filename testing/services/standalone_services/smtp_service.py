@@ -12,10 +12,10 @@ def generate_random_valid_email() -> str:
     """
     Generates a valid, random and unique email address
     """
-    return f'test@avigdor_{uuid.uuid4().hex}.ru'
+    return f'test@avigdor{uuid.uuid4().hex}.me'
 
 
-class SMTPService(WeaveService):
+class SmtpService(WeaveService):
     def __init__(self):
         super().__init__(self.name, 'services/standalone_services')
         self.__conf_dir = os.path.abspath(

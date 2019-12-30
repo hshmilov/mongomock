@@ -1,4 +1,4 @@
-from services.standalone_services.syslog_server import SyslogService
+from services.standalone_services.syslog_service import SyslogService
 from test_credentials.test_ad_credentials import ad_client1_details
 from test_credentials.test_okta_credentials import OKTA_LOGIN_DETAILS
 from ui_tests.tests.ui_test_base import TestBase

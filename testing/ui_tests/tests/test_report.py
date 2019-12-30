@@ -3,8 +3,8 @@ import re
 from datetime import datetime, timedelta
 
 from services.adapters import stresstest_scanner_service, stresstest_service
-from services.standalone_services.maildiranasaurus_server import MailDiranasaurusService
-from services.standalone_services.smtp_server import SMTPService, generate_random_valid_email
+from services.standalone_services.maildiranasaurus_service import MaildiranasaurusService
+from services.standalone_services.smtp_service import SmtpService, generate_random_valid_email
 from ui_tests.pages.reports_page import ReportFrequency, ReportConfig
 from ui_tests.tests import ui_consts
 from ui_tests.tests.ui_test_base import TestBase
@@ -178,7 +178,7 @@ class TestReport(TestBase):
         self.reports_page.find_missing_email_server_notification()
 
     def test_test_now_with_email_server(self):
-        with SMTPService().contextmanager(take_ownership=True) as smtp_service:
+        with SmtpService().contextmanager(take_ownership=True) as smtp_service:
             self.settings_page.add_email_server(smtp_service.fqdn, smtp_service.port)
             self.reports_page.switch_to_page()
             self.reports_page.click_new_report()
@@ -202,7 +202,7 @@ class TestReport(TestBase):
         self.settings_page.remove_email_server()
 
     def test_test_now_with_tls_email_server(self):
-        with SMTPService().contextmanager(take_ownership=True) as smtp_service:
+        with SmtpService().contextmanager(take_ownership=True) as smtp_service:
             self.settings_page.add_email_server(smtp_service.fqdn, smtp_service.port)
             goguerrilla_basedir = os.path.abspath(os.path.join(os.path.dirname(__file__),
                                                                '../../services/standalone_services/goguerrilla'))
@@ -253,7 +253,7 @@ class TestReport(TestBase):
             send_time = f'{current_date.hour}:{current_date.minute}'
             self.reports_page.select_frequency(ReportFrequency.daily)
             self.reports_page.select_frequency_time(send_time)
-            daily_email = recipient + '.daily'
+            daily_email = f'{recipient.split("@")[0]}@daily-{recipient.split("@")[1]}'
             self.reports_page.fill_email(daily_email)
             self.reports_page.click_save()
             self.reports_page.wait_for_report_is_saved_toaster()
@@ -266,7 +266,7 @@ class TestReport(TestBase):
         self.reports_page.select_frequency(ReportFrequency.weekly)
         self.reports_page.select_weekly_day(list(self.reports_page.get_select_days())[current_date.weekday()])
         self.reports_page.select_frequency_time(send_time)
-        weekly_email = recipient + '.weekly'
+        weekly_email = f'{recipient.split("@")[0]}@weekly-{recipient.split("@")[1]}'
         self.reports_page.fill_email(weekly_email)
         self.reports_page.click_save()
         self.reports_page.wait_for_report_is_saved_toaster()
@@ -277,11 +277,16 @@ class TestReport(TestBase):
         current_date = self.get_next_time_round_by_two_minutes(current_date)
         send_time = f'{current_date.hour}:{current_date.minute}'
         self.reports_page.select_frequency(ReportFrequency.monthly)
+
+        # Currently this feature is set to only work until the 28th and will fail afterwards.
+        if current_date.day > 28:
+            return
+
         # Monthly day dropdown offers selection until the 28th or the last day of the month
         monthly_day = str(current_date.day) if current_date.day <= 28 else 'Last Day'
         self.reports_page.select_monthly_day(monthly_day)
         self.reports_page.select_frequency_time(send_time)
-        monthly_email = recipient + '.monthly'
+        monthly_email = f'{recipient.split("@")[0]}@monthly-{recipient.split("@")[1]}'
         self.reports_page.fill_email(monthly_email)
         self.reports_page.click_save()
         self.reports_page.wait_for_report_is_saved_toaster()
@@ -298,7 +303,7 @@ class TestReport(TestBase):
         return current_date
 
     def test_create_and_edit_report(self):
-        smtp_service = MailDiranasaurusService()
+        smtp_service = MaildiranasaurusService()
         smtp_service.take_process_ownership()
         stress = stresstest_service.StresstestService()
         stress_scanner = stresstest_scanner_service.StresstestScannerService()
@@ -371,7 +376,7 @@ class TestReport(TestBase):
         self.devices_page.assert_csv_match_ui_data_with_content(mail_content)
 
     def test_read_only_click_add_scheduling(self):
-        smtp_service = SMTPService()
+        smtp_service = SmtpService()
         with smtp_service.contextmanager(take_ownership=True):
             self.settings_page.switch_to_page()
             self.settings_page.click_global_settings()

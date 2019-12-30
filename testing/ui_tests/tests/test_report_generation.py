@@ -6,8 +6,8 @@ from datetime import datetime
 from PyPDF2 import PdfFileReader
 
 from services.adapters import stresstest_scanner_service, stresstest_service
-from services.standalone_services.maildiranasaurus_server import MailDiranasaurusService
-from services.standalone_services.smtp_server import generate_random_valid_email
+from services.standalone_services.maildiranasaurus_service import MaildiranasaurusService
+from services.standalone_services.smtp_service import generate_random_valid_email
 from test_credentials.test_gui_credentials import DEFAULT_USER
 from ui_tests.tests.ui_test_base import TestBase
 from ui_tests.tests import ui_consts
@@ -297,7 +297,7 @@ class TestReportGeneration(TestBase):
             self.wait_for_adapter_down(ui_consts.STRESSTEST_SCANNER_ADAPTER)
 
     def test_report_with_hebrew_name_and_text(self):
-        smtp_service = MailDiranasaurusService()
+        smtp_service = MaildiranasaurusService()
         smtp_service.take_process_ownership()
         stress = stresstest_service.StresstestService()
         stress_scanner = stresstest_scanner_service.StresstestScannerService()

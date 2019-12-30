@@ -3,7 +3,7 @@ import pytest
 from selenium.common.exceptions import NoSuchElementException
 
 from services.adapters import stresstest_service, stresstest_scanner_service
-from services.standalone_services.smtp_server import SMTPService, generate_random_valid_email
+from services.standalone_services.smtp_service import SmtpService, generate_random_valid_email
 from ui_tests.pages.reports_page import ReportFrequency, ReportConfig
 from ui_tests.tests import ui_consts
 from ui_tests.tests.ui_test_base import TestBase
@@ -198,7 +198,7 @@ class TestUserPermissions(TestBase):
         self.settings_page.wait_for_role_removed_toaster()
 
     def test_new_read_only_user_for_reports(self):
-        smtp_service = SMTPService()
+        smtp_service = SmtpService()
         stress = stresstest_service.StresstestService()
         stress_scanner = stresstest_scanner_service.StresstestScannerService()
         with smtp_service.contextmanager(take_ownership=True), stress.contextmanager(take_ownership=True), \

@@ -2,7 +2,7 @@ import os
 import mailbox
 import errno
 
-from services.standalone_services.smtp_server import SMTPService
+from services.standalone_services.smtp_service import SmtpService
 
 
 def create_maildir_folders():
@@ -23,7 +23,7 @@ def create_maildir_folders():
             raise
 
 
-class MailDiranasaurusService(SMTPService):
+class MaildiranasaurusService(SmtpService):
 
     @property
     def name(self):
