@@ -38,6 +38,8 @@ from services.weave_service import is_weave_up
 from test_helpers.parallel_runner import ParallelRunner
 from test_helpers.utils import try_until_not_thrown
 
+DNS_REGISTER_POOL_SIZE = 5
+
 
 def get_service():
     return AxoniusService()
@@ -100,16 +102,7 @@ class AxoniusService:
                 restore_master_connection()
             else:
                 print(f'Running on master')
-                encryption_key = get_encryption_key()
-                print(f'Creating weave network')
-                weave_launch_command = [WEAVE_PATH, 'launch',
-                                        f'--dns-domain="{AXONIUS_DNS_SUFFIX}"', '--ipalloc-range', subnet_ip_range,
-                                        '--password',
-                                        encryption_key.strip()]
-                my_env = os.environ.copy()
-                my_env['DOCKERHUB_USER'] = DOCKERHUB_USER
-                my_env['WEAVE_VERSION'] = WEAVE_VERSION
-                subprocess.check_call(weave_launch_command, env=my_env)
+                AxoniusService.create_weave_network(subnet_ip_range)
         else:
             print(f'Creating regular axonius network')
             subprocess.check_call(['docker', 'network', 'create', f'--subnet={subnet_ip_range}', cls._NETWORK_NAME],
@@ -125,6 +118,73 @@ class AxoniusService:
             subprocess.check_call([WEAVE_PATH, 'reset'], stdout=subprocess.PIPE)
         else:
             subprocess.check_call(['docker', 'network', 'rm', cls._NETWORK_NAME], stdout=subprocess.PIPE)
+
+    @staticmethod
+    def create_weave_network(subnet_ip_range: str):
+        """
+        Creating a new weave network using weave script
+        :param subnet_ip_range: weave network subnet
+        :return: None
+        """
+        encryption_key = get_encryption_key()
+        print(f'Creating weave network')
+        # this command should launch weave network
+        # with our dns suffix, ip allocation range and encryption password using weave shell script.
+        weave_launch_command = [WEAVE_PATH, 'launch',
+                                f'--dns-domain="{AXONIUS_DNS_SUFFIX}"', '--ipalloc-range', subnet_ip_range,
+                                '--password',
+                                encryption_key.strip()]
+        # this env should make weave shell script download our customized weave docker image
+        # instead of the default one from weavenetworks
+        my_env = os.environ.copy()
+        my_env['DOCKERHUB_USER'] = DOCKERHUB_USER
+        my_env['WEAVE_VERSION'] = WEAVE_VERSION
+        subprocess.check_call(weave_launch_command, env=my_env)
+
+    @staticmethod
+    def register_service(service: PluginService):
+        """
+        Register service dns records into an existing weave network
+        :param service: service to register
+        :return:
+        """
+        if service.get_is_container_up() and service.should_register_unique_dns:
+            print(f'Register {service.service_name}')
+            service.register_unique_dns()
+
+    def recover_weave_network(self, adapter_names: list, plugin_names: list, standalone_services_names: list):
+        """
+        This function should handle the weave 'zombie' state.
+        On this state usually we cant run new docker containers - they got stuck on creation.
+        This happens because of an unknown bug on weave proxy
+        which cause some containers running without weave network interface ('ethwe')
+        And thats why weavewait gets stuck and crash sometimes
+        (weavewait should wait for 'ethwe' interface and then run the docker entry point)
+        Ive found out that the best solution is to 'reload' weave network -
+        without shutting down or removing our containers.
+        for doing this we should:
+        1. Stop weave proxy (weaver) by running 'weave stop'
+        2. Relaunching weave
+            on this step weave will attach each running container and add its interface on weave network
+        3. If we are running on a node - reconnect to the master.
+        4. Re register containers dns records
+        :param adapter_names: running adapter names
+        :param plugin_names: running plugin names
+        :param standalone_services_names: running standalone services
+        :return: None
+        """
+        print('Stopping weave network')
+        subprocess.check_call(f'{WEAVE_PATH} stop'.split())
+
+        # this should relaunch weave and connect to master if its a node
+        self.create_network()
+
+        print('Registering dns records')
+        all_services_to_start = [self.get_adapter(name) for name in sorted(adapter_names)] + \
+                                [self.get_plugin(name) for name in sorted(plugin_names)] + \
+                                [self.get_standalone_service(name) for name in sorted(standalone_services_names)]
+        with ThreadPool(DNS_REGISTER_POOL_SIZE) as pool:
+            pool.map(self.register_service, all_services_to_start)
 
     def stop(self, **kwargs):
         # Not critical but lets stop in reverse order

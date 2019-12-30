@@ -79,6 +79,8 @@ def connect_to_master(master_ip, weave_pass):
     subnet_ip_range = get_weave_subnet_ip_range()
     subprocess.check_call(shlex.split(f'weave reset --force'))
     my_env = os.environ.copy()
+    # this env should make weave shell script download our customized weave docker image
+    # instead of the default one from weavenetworks
     my_env['DOCKERHUB_USER'] = DOCKERHUB_USER
     my_env['WEAVE_VERSION'] = WEAVE_VERSION
     subprocess.check_call(shlex.split(

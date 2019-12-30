@@ -84,7 +84,7 @@ def system_entry_point(args):
 {name} system [-h] {up,down,build} [--all] [--prod] [--restart] [--rebuild] [--hard] [--skip]
                                 [--services [N [N ...]]] [--adapters [N [N ...]]] [--exclude [N [N ...]]]"""[1:].
                                      replace('{name}', os.path.basename(__file__)))
-    parser.add_argument('mode', choices=['up', 'down', 'build', 'register'])
+    parser.add_argument('mode', choices=['up', 'down', 'build', 'register', 'weave_recover'])
     parser.add_argument('--all', action='store_true', default=False, help='All adapters and services')
     parser.add_argument('--prod', action='store_true', default=False, help='Prod Mode')
     parser.add_argument('--restart', action='store_true', default=False, help='Restart container')
@@ -242,6 +242,12 @@ def system_entry_point(args):
                                            adapter_names=args.adapters,
                                            plugin_names=args.services,
                                            standalone_services_names=standalone_services, system_config=system_config)
+    elif args.mode == 'weave_recover':
+        print(f'Starting weave recover')
+        services = [name for name, variable in axonius_system.get_all_plugins() if name != 'diagnostics']
+        adapters = [name for name, variable in axonius_system.get_all_adapters()]
+        axonius_system.recover_weave_network(adapters, services, standalone_services)
+
     else:
         assert not args.restart and not args.skip
         print(f'Building system and {args.adapters + args.services}')
