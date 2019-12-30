@@ -55,8 +55,17 @@ class SymantecDlpAdapter(AdapterBase, Configurable):
     def _query_devices_by_client(self, client_name, client_data):
         client_data.set_devices_paging(self.__devices_fetched_at_a_time)
         with client_data:
+            groups_dict = dict()
+            try:
+                for groups_data in client_data.query(consts.SYMANTEC_DLP_GROUPS_QUERY):
+                    group_id = groups_data.get('ID')
+                    if not group_id:
+                        continue
+                    groups_dict[group_id] = groups_data
+            except Exception:
+                logger.exception(f'Problem with group data')
             for device_raw in client_data.query(consts.SYMANTEC_DLP_QUERY):
-                yield device_raw
+                yield device_raw, groups_dict
 
     def _clients_schema(self):
         return {
@@ -101,7 +110,7 @@ class SymantecDlpAdapter(AdapterBase, Configurable):
 
     # pylint: disable=too-many-branches
     def _parse_raw_data(self, devices_raw_data):
-        for device_raw in devices_raw_data:
+        for device_raw, groups_dict in devices_raw_data:
             try:
                 device = self._new_device_adapter()
                 device_id = device_raw.get('AGENTID')
@@ -115,8 +124,15 @@ class SymantecDlpAdapter(AdapterBase, Configurable):
                                          version=device_raw.get('VERSION'),
                                          status=device_raw.get('STATUS'))
                 device.last_seen = parse_date(device_raw.get('LASTCONNECTIONTIME'))
-                device.group_name = device_raw.get('NAME')
-                device.group_description = device_raw.get('DESCRIPTION')
+                try:
+                    groups_data = groups_dict.get(device_raw.get('LASTAGENTGROUPID'))
+                    if not isinstance(groups_data, dict):
+                        groups_data = {}
+                    device.group_name = groups_data.get('NAME')
+                    device.group_description = groups_data.get('DESCRIPTION')
+                except Exception:
+                    logger.exception(f'Problem with groups')
+                device.description = device_raw.get('DESCRIPTION')
                 device.set_raw(device_raw)
                 yield device
             except Exception:

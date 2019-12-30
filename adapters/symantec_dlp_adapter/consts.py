@@ -6,4 +6,5 @@ SYMANTEC_DLP_DATABASE = 'database'
 DRIVER = 'driver'
 DEFAULT_SYMANTEC_DLP_PORT = 1521
 DEVICES_FETECHED_AT_A_TIME = 'devices_fetched_at_a_time'
-SYMANTEC_DLP_QUERY = 'Select * from agent inner join agentgroup on agent.LASTAGENTGROUPID=agentgroup.id'
+SYMANTEC_DLP_QUERY = 'Select * from agent'
+SYMANTEC_DLP_GROUPS_QUERY = 'Select * from agentgroup'
