@@ -36,7 +36,7 @@ def get_npm_reps():
                 try:
                     lic = pack + "," + data['dependencies'][pack]['version'] + "," + response.json()['collected']['metadata']['license'] + "," + response.json()['collected']['metadata']['links']['npm'] + "\n"
                     outputfille.write(lic)
-                except:
+                except Exception:
                     continue
     outputfille.close()
 
