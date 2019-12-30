@@ -54,9 +54,13 @@ class AirwaveAdapter(AdapterBase):
 
     def _connect_client(self, client_config):
         try:
+            wireless_ssid_exclude_list = client_config.get('wireless_ssid_exclude_list').split(',') \
+                if client_config.get('wireless_ssid_exclude_list') else None
+            wireless_ssid_white_list = client_config.get('wireless_ssid_white_list').split(',') \
+                if client_config.get('wireless_ssid_white_list') else None
             return self.get_connection(client_config),\
-                (client_config.get('wireless_ssid_exclude_list') or '').split(','),\
-                (client_config.get('wireless_ssid_white_list') or '').split(','),\
+                wireless_ssid_exclude_list,\
+                wireless_ssid_white_list,\
                 client_config.get('exclude_no_ssid') or False
         except RESTException as e:
             message = 'Error connecting to client with domain {0}, reason: {1}'.format(
@@ -167,7 +171,7 @@ class AirwaveAdapter(AdapterBase):
             if ssid and isinstance(wireless_ssid_exclude_list, list) and ssid in wireless_ssid_exclude_list:
                 return None
             if wireless_ssid_white_list and isinstance(wireless_ssid_white_list, list) \
-                    and not ssid or ssid not in wireless_ssid_white_list:
+                    and (not ssid or ssid not in wireless_ssid_white_list):
                 return None
             device.ssid = ssid
             device.last_seen = parse_date((device_raw.get('connect_time') or {}).get('value'))
