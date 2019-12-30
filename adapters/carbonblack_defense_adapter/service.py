@@ -23,6 +23,8 @@ class CarbonblackDefenseAdapter(AdapterBase, Configurable):
     # pylint: disable=R0902
     class MyDeviceAdapter(DeviceAdapter):
         av_status = ListField(str, 'AV Status')
+        last_contact_time = Field(datetime.datetime, 'Last Contact Time')
+        last_reported_time = Field(datetime.datetime, 'Last Reported Time')
         sensor_states = ListField(str, 'Sensor States')
         policy_name = Field(str, 'Policy Name')
         basic_device_id = Field(str, 'Basic ID')
@@ -225,7 +227,7 @@ class CarbonblackDefenseAdapter(AdapterBase, Configurable):
     def _create_device_v6(self, device_raw):
         try:
             device = self._new_device_adapter()
-            device_id = device_raw.get('deviceId')
+            device_id = device_raw.get('id')
             if device_id is not None and device_id != '':
                 device.id = str(device_id) + (device_raw.get('name') or '')
             else:
@@ -243,7 +245,7 @@ class CarbonblackDefenseAdapter(AdapterBase, Configurable):
                     device.part_of_domain = True
             else:
                 device.hostname = hostname
-            device.figure_os((device_raw.get('device_type') or '') + ' ' + (device_raw.get('os_version') or ''))
+            device.figure_os((device_raw.get('os') or '') + ' ' + (device_raw.get('os_version') or ''))
             device.add_ips_and_macs(macs=device_raw.get('mac_address'), ips=device_raw.get('last_internal_ip_address'))
             last_contact_time = parse_date(device_raw.get('last_contact_time'))
             device.last_contact_time = last_contact_time
