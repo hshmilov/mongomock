@@ -13,8 +13,8 @@ trap finish EXIT
 
 echo "download weave version"
 weave_path="/usr/local/bin/weave"
-curl -L https://s3.us-east-2.amazonaws.com/axonius-releases/weave -o ${weave_path}
-chmod a+x ${weave_path}
+sudo curl -L https://s3.us-east-2.amazonaws.com/axonius-releases/weave -o ${weave_path}
+sudo chmod a+x ${weave_path}
 
 set -e
 version="head"
