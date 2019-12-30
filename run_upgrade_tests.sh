@@ -24,6 +24,10 @@ install_dir="install_dir"
 mkdir -p logs
 mkdir -p ${install_dir}
 
+echo "Setting Up Docker Service"
+cp daemon.json /etc/docker/daemon.json
+systemctl restart docker
+
 echo "#### Creating venv"
 ./create_venv.sh &> logs/create_venv.log
 echo "Logging to docker hub and pulling axonius-base-image"
