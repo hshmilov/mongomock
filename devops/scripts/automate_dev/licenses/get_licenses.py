@@ -11,7 +11,7 @@ from io import BytesIO
 
 def get_pypi_reqs():
     with open("./pip.csv", "w") as outputfille:
-        lists = glob.glob('./../../../**/requirements*.txt', recursive=True)
+        lists = glob.glob('./**/requirements*.txt', recursive=True)
         b = []
         for files in lists:
             reqs = parse_requirements(files, session=False)
@@ -27,7 +27,7 @@ def get_pypi_reqs():
 
 def get_npm_reps():
     with open("./npm.csv", "w") as outputfille:
-        with open("../../../../plugins/gui/frontend/package-lock.json") as pack_file:
+        with open("./plugins/gui/frontend/package-lock.json") as pack_file:
             data = json.load(pack_file)
             for pack in data['dependencies']:
                 new_pack_1 = re.sub('@', '', pack)
@@ -46,7 +46,8 @@ def get_dock():
         client = docker.from_env()
         dockerfile = '''
             FROM nexus.axonius.lan/axonius/axonius-base-image
-            ADD dpkg-licenses ./dpkg-licenses
+            ADD ./devops/scripts/automate_dev/licenses/dpkg-licenses ./dpkg-licenses
+            RUN chmod +x ./dpkg-licenses/dpkg-licenses
             CMD ./dpkg-licenses/dpkg-licenses
         '''
         f = BytesIO(dockerfile.encode('utf-8'))
