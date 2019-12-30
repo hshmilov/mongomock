@@ -106,10 +106,11 @@ retry timeout 20 add-apt-repository \
    $(lsb_release -cs) \
    stable"
 
-curl -sS https://nexus-public.axonius.com/ppa_certs/deadcert.key | sudo apt-key add -
+curl -sSk https://nexus.axonius.lan/ppa_certs/deadcert.key | sudo apt-key add -
 source /etc/lsb-release
-sudo add-apt-repository "deb https://axoniusreadonly:7wr7E6kfttdVgn5e@nexus-public.axonius.com/repository/proxy-python3.6 ${DISTRIB_CODENAME} main"
-
+sudo add-apt-repository "deb https://axoniusreadonly:7wr7E6kfttdVgn5e@nexus.axonius.lan/repository/proxy-python3.6 ${DISTRIB_CODENAME} main"
+cd "$(dirname "$0")"
+cp ./nexus-apt /etc/apt/apt.conf.d/nexus
 _wait_for_apt update
 echo "Installing various dependencies..."
 _wait_for_apt install -yq sshpass open-vm-tools stunnel4 htop moreutils gparted sysstat python-apt python3-apt net-tools iputils-ping libpq-dev tmux screen nano vim curl python3-dev python-dev libffi-dev libxml2-dev libxslt-dev musl-dev make gcc tcl-dev tk-dev openssl git python libpango1.0-0 libcairo2 software-properties-common python-software-properties ssh libxmlsec1 ncdu traceroute libc6:i386 libstdc++6:i386 cntlm
@@ -125,6 +126,7 @@ curl https://bootstrap.pypa.io/get-pip.py | python3.6
 echo "Setting python3.6 as the default python and upgrading pip..."
 ln -sf /usr/bin/python2 /usr/local/bin/python
 ln -sf /usr/bin/python3.6 /usr/local/bin/python3
+cp ./pip.conf /etc/pip.conf
 python2 -m pip install --upgrade pip
 python3 -m pip install --upgrade pip
 echo "Installing virtualenv and setuptools..."
@@ -142,8 +144,10 @@ echo "Adding ubuntu to the docker group, please note that you must logout and lo
 usermod -aG docker ubuntu
 gpasswd -a ubuntu docker
 echo "Installing weave"
-cd "$(dirname "$0")"
+cp ./daemon.json /etc/docker/daemon.json
 cp ./weave-2.6.0 /usr/local/bin/weave
+echo "Restarting Docker Service for Registry setup"
+systemctl restart docker
 chmod a+x /usr/local/bin/weave
 echo "Setting system-wide settings"
 sudo timedatectl set-timezone UTC

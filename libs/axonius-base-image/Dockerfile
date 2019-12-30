@@ -11,12 +11,14 @@ FROM axonius/openresty:xenial
 WORKDIR /home/axonius
 ENV HOME /home/axonius
 
+# Disable SSL Verify and Hostname Verify
+COPY nexus-apt /etc/apt/apt.conf.d/nexus
 # Install dependencies and configure the rest of the things we need.
 RUN apt-get update && \
     apt-get install -y ssh git libxmlsec1-dev apt-transport-https ca-certificates \
     supervisor software-properties-common python-software-properties freetds-dev freetds-bin unixodbc-dev tdsodbc && \
-    add-apt-repository "deb https://axoniusreadonly:7wr7E6kfttdVgn5e@nexus-public.axonius.com/repository/proxy-python3.6 xenial main" && \
-    curl -sS https://nexus-public.axonius.com/ppa_certs/deadcert.key | apt-key add - && \
+    add-apt-repository "deb https://axoniusreadonly:7wr7E6kfttdVgn5e@nexus.axonius.lan/repository/proxy-python3.6 xenial main" && \
+    curl -sSk https://nexus.axonius.lan/ppa_certs/deadcert.key | apt-key add - && \
     apt-get update && \
     apt-get install -y python3.6 python3.6-dev python3.6-venv ipython python-pip && \
     curl https://bootstrap.pypa.io/get-pip.py | python3.6 && \
@@ -41,6 +43,7 @@ RUN curl -o /usr/bin/aws-iam-authenticator https://amazon-eks.s3-us-west-2.amazo
 RUN curl -sL https://deb.nodesource.com/setup_8.x | bash - && \
     apt-get install -y nodejs && nodejs -v && node -v && npm -v
 
+COPY pip.conf /etc/pip.conf
 # Install python requirements
 
 COPY requirements2.txt .

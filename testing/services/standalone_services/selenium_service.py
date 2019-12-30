@@ -81,7 +81,7 @@ class SeleniumService(WeaveService):
 
     @property
     def image(self):
-        return 'nexus-public.axonius.com/elgalu/selenium:3.141.59-p32'
+        return 'nexus.axonius.lan/elgalu/selenium:3.141.59-p32'
 
     # pylint: disable=arguments-differ
     def wait_for_service(self, *args, **kwargs):

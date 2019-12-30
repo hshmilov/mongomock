@@ -1,0 +1,2 @@
+Acquire::https::nexus.axonius.lan::Verify-Peer "false";
+Acquire::https::nexus.axonius.lan::Verify-Host "false";
