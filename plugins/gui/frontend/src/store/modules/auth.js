@@ -79,7 +79,10 @@ export const auth = {
       state.currentUser.fetching = payload.fetching
       state.currentUser.error = payload.error
       if (payload.data) {
+        delete state.currentUser.userTimedOut
         state.currentUser.data = { ...payload.data }
+      } else if(payload.userTimedOut){
+        state.currentUser.userTimedOut = true
       }
     },
     [SET_LOGIN_OPTIONS] (state, payload) {
@@ -195,7 +198,7 @@ export const auth = {
         commit(SET_USER, { error: error.response.data.message })
       })
     },
-    [LOGOUT] ({ dispatch}){
+    [LOGOUT] ({ dispatch, commit}, payload){
       try {
         const auth2 = window.gapi.auth2.getAuthInstance()
         auth2.signOut()
@@ -204,7 +207,9 @@ export const auth = {
       return dispatch(REQUEST_API, {
         rule: 'logout'
       }).then(() => {
-        dispatch(GET_USER)
+        if(payload) {
+          return commit(SET_USER, payload)
+        }
       })
     },
     [GET_ALL_USERS] ({ dispatch }) {

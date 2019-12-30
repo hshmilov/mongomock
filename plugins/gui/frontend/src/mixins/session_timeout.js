@@ -34,6 +34,7 @@ export default {
 			logout: LOGOUT
 		}),
 		initSessionTimeout() {
+
 			this.clearTimeouts()
 			if(!this.timeout){
 				return
@@ -91,9 +92,7 @@ export default {
 		},
 		onLogout(){
 			this.clearTimeouts()
-			this.logout().then(() => {
-				this.$router.push('/?timeout=true')
-			})
+			this.logout({userTimedOut: true})
 		},
 		clearTimeouts(){
 			if (this.hiddenTimeout) {
