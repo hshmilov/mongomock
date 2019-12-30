@@ -224,6 +224,9 @@ def setup_host():
     set_sysctl_value('net.ipv4.conf.all.secure_redirects', '0')
     set_sysctl_value('net.ipv4.conf.default.secure_redirects', '0')
     os.system('sysctl --load')
+    # restart docker service
+    print_state(f'Restarting docker service')
+    subprocess.check_call('service docker restart'.split())
 
 
 def set_booted_for_production():
