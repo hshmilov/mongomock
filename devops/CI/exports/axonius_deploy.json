@@ -94,6 +94,21 @@
     },
     {
       "type": "file",
+      "source": "{{user `host_installation`}}daemon.json",
+      "destination": "/home/ubuntu/cortex/devops/scripts/host_installation/daemon.json"
+    },
+    {
+      "type": "file",
+      "source": "{{user `host_installation`}}nexus-apt",
+      "destination": "/home/ubuntu/cortex/devops/scripts/host_installation/nexus-apt"
+    },
+    {
+      "type": "file",
+      "source": "{{user `host_installation`}}pip.conf",
+      "destination": "/home/ubuntu/cortex/devops/scripts/host_installation/pip.conf"
+    },
+    {
+      "type": "file",
       "source": "{{user `host_installation`}}weave-2.6.0",
       "destination": "/home/ubuntu/cortex/devops/scripts/host_installation/weave-2.6.0"
     },
