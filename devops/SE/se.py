@@ -52,6 +52,7 @@ def usage():
     {name} sa - run static analysis [job_name]
     {name} rta - run reimage tags analysis
     {name} re [service/adapter] - restart some service/adapter
+    {name} rel [service/adapter] - uwsgi-reload the flask server of some service/adapter (reload only the python)
     {name} migrate [service/adapter] - run db migrations on some service/adapter. e.g. `migrate aggregator`
     {name} db rf [device/user] [plugin_name] [field] - removes a field from an adapter. 
                                                        e.g. `db rf device aws_adapter _old`
@@ -161,6 +162,19 @@ def main():
         subprocess.check_call(
             f'{AXONIUS_SH} {service_type} {action} up --restart --prod', shell=True, cwd=ROOT_DIR
         )
+
+    elif component == 'rel':
+        if not action:
+            print('Please specify an adapter/service')
+            return -1
+        try:
+            service = _get_docker_service(action)
+        except Exception:
+            print(f'No such adapter/service "{action}"!')
+            return -1
+
+        print(f'Reloading {action}...')
+        service.reload_uwsgi()
 
     elif component == 'migrate':
         service = _get_docker_service(action)

@@ -11,6 +11,7 @@ from pymongo.errors import CollectionInvalid
 
 from aggregator.exceptions import AdapterOffline, ClientsUnavailable
 from axonius.adapter_base import is_plugin_adapter
+from axonius.consts.adapter_consts import ADAPTER_SETTINGS, SHOULD_NOT_REFRESH_CLIENTS
 from axonius.consts.plugin_consts import (ADAPTERS_LIST_LENGTH,
                                           AGGREGATOR_PLUGIN_NAME, PLUGIN_NAME,
                                           PLUGIN_UNIQUE_NAME)
@@ -27,6 +28,7 @@ AggregatorPlugin.py: A Plugin for the devices aggregation process
 """
 
 get_devices_job_name = "Get device job"
+RESET_BEFORE_CLIENT_FETCH_ADAPTERS = ['cisco_adapter']
 
 
 # Watch Sleep - how long to wait between checking next stream
@@ -432,10 +434,29 @@ class AggregatorService(Triggerable, PluginBase):
         check_fetch_time = True
         for client_name in clients:
             try:
+                if any(x in adapter for x in RESET_BEFORE_CLIENT_FETCH_ADAPTERS):
+                    logger.info(f'Requesting adapter reload before fetch: {adapter}')
+                    # Make this adapter not re-evaluate the clients on the next run.
+                    self._get_collection(ADAPTER_SETTINGS, adapter).update_one(
+                        {
+                            SHOULD_NOT_REFRESH_CLIENTS: {'$exists': True}
+                        },
+                        {
+                            '$set': {
+                                SHOULD_NOT_REFRESH_CLIENTS: True
+                            }
+                        },
+                        upsert=True
+                    )
+                    self._request_reload_uwsgi(adapter)
                 data = self._trigger_remote_plugin(adapter, 'insert_to_db', data={
                     'client_name': client_name,
                     'check_fetch_time': check_fetch_time
                 })
+                if data.content and from_json(data.content).get('min_time_check') is True:
+                    logger.info(f'got min_time_check in adapter {adapter}: '
+                                f'The minimum time between fetches hasn\'t been reached yet.')
+                    break
                 check_fetch_time = False
             except Exception as e:
                 # request failed

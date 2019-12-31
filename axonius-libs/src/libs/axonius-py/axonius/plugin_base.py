@@ -624,6 +624,19 @@ class PluginBase(Configurable, Feature, ABC):
     # pylint: enable=too-many-branches
     # pylint: enable=too-many-statements
 
+    # pylint: disable=no-self-use
+    @add_rule('reload_uwsgi')
+    def _reload_uwsgi(self):
+        # We import here because this can not be imported from within the host, and the host uses plugin_base.py
+        import uwsgi    # pylint: disable=import-error
+        logger.info(f'Reloading uwsgi...')
+        uwsgi.reload()
+
+    # pylint: enable=no-self-use
+    def _request_reload_uwsgi(self, plugin_unique_name: str):
+        self.request_remote_plugin('reload_uwsgi', plugin_unique_name)
+        time.sleep(5)   # time sleep as a best practice until the application is reloaded and registered
+
     @retry(stop_max_attempt_number=3,
            wait_fixed=5000)
     def __call_delayed_initialization(self):

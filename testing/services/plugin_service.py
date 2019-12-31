@@ -424,6 +424,10 @@ class PluginService(WeaveService):
         oid = ObjectId(uuid)
         return gridfs.GridFS(self.db.client[self.unique_name]).get(oid).read()
 
+    def reload_uwsgi(self):
+        response = self.get('/reload_uwsgi', headers={API_KEY_HEADER: self.api_key})
+        assert response.status_code == 500, str(response)  # this is the legitimate response here
+
     @contextmanager
     def contextmanager(self, *, should_delete=True, take_ownership=False, allow_restart=True):
         with super().contextmanager(should_delete=should_delete,

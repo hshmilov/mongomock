@@ -12,7 +12,7 @@ import os
 from abc import ABC, abstractmethod
 from datetime import date, datetime, timedelta, timezone
 from threading import Event, RLock, Thread
-from typing import Any, Dict, Iterable, List, Tuple
+from typing import Any, Dict, Iterable, List, Tuple, Optional
 import requests
 
 import func_timeout
@@ -22,6 +22,7 @@ from apscheduler.executors.pool import ThreadPoolExecutor
 from apscheduler.triggers.interval import IntervalTrigger
 from pymongo import ReturnDocument
 
+from axonius.consts.adapter_consts import ADAPTER_SETTINGS, SHOULD_NOT_REFRESH_CLIENTS
 from axonius.consts.metric_consts import Adapters
 from axonius.logging.metric_helper import log_metric
 from axonius.thread_pool_executor import LoggedThreadPoolExecutor
@@ -81,18 +82,28 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
         self._clients_lock = RLock()
         self._clients = {}
         self._clients_collection = self._get_collection('clients')
+        self.__adapter_settings_collection = self._get_collection(ADAPTER_SETTINGS)
         self.__is_in_mock_mode = os.environ.get('AXONIUS_MOCK_MODE') == 'TRUE'
         self.__adapter_mock = AdapterMock(self)
 
         self._send_reset_to_ec()
 
         self._update_clients_schema_in_db(self._clients_schema())
-
-        self._prepare_parsed_clients_config(False)
+        self._set_clients_ids()
+        # If set, we do not re-evaluate the clients connections
+        should_not_refresh_clients = self.__adapter_settings_collection.find_one(
+            {SHOULD_NOT_REFRESH_CLIENTS: True}) or dict()
+        if should_not_refresh_clients.get(SHOULD_NOT_REFRESH_CLIENTS) is True:
+            logger.info(f'Clients reevaluation: not evaluating')
+            self.__adapter_settings_collection.delete_one(
+                {
+                    SHOULD_NOT_REFRESH_CLIENTS: {'$exists': True}
+                }
+            )
+        else:
+            self._prepare_parsed_clients_config(False)
 
         self._thread_pool = LoggedThreadPoolExecutor(max_workers=50)
-
-        self.__last_fetch_time = None
 
         # This will trigger an 'adapter page' cache clear for better CI stability
         self._request_gui_dashboard_cache_clear()
@@ -106,6 +117,19 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
                                            max_instances=1)
         self.existential_wondering.start()
         self.__has_a_reason_to_live = False
+
+    @property
+    def __last_fetch_time(self) -> Optional[datetime]:
+        last_fetch_time = self.__adapter_settings_collection.find_one({'last_fetch_time': {'$exists': True}}) or {}
+        return last_fetch_time.get('last_fetch_time')
+
+    @__last_fetch_time.setter
+    def __last_fetch_time(self, val: datetime):
+        self.__adapter_settings_collection.update_one(
+            {'last_fetch_time': {'$exists': True}},
+            {'$set': {'last_fetch_time': val}},
+            upsert=True
+        )
 
     def _on_config_update(self, config):
         logger.info(f'Loading AdapterBase config: {config}')
@@ -195,6 +219,18 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
                 method='POST')
         except Exception:
             logger.warning('Failed sending reset to EC')
+
+    def _set_clients_ids(self):
+        """
+        Just set the self._clients dict with all of our current client ids.
+        :return:
+        """
+        for client in self._get_clients_config():
+            if 'client_config' not in client:
+                logger.warning(f'Warning, weird client with no client config')
+                continue
+            client_id = self._get_client_id(client['client_config'])
+            self._clients[client_id] = None
 
     def _prepare_parsed_clients_config(self, blocking=True):
         configured_clients = self._get_clients_config()
@@ -510,7 +546,7 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
                                          f'Please note that \'Old device last fetched threshold hours\' is smaller than'
                                          f' \'Minimum time until next fetch entities\' for {self.plugin_name} adapter.',
                                          'warning')
-            return to_json({'devices_count': 0, 'users_count': 0})
+            return to_json({'devices_count': 0, 'users_count': 0, 'min_time_check': True})
 
         if check_fetch_time:
             self.__last_fetch_time = current_time
