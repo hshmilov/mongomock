@@ -144,9 +144,7 @@
         }
 
         const availableFields =  Array.isArray(parentSchema.items)? parentSchema.items : parentSchema.items.items
-        return availableFields.filter(
-                (option) => this.isFieldFilterable(option) && !isObjectListField(option)
-        ).map((option) => {
+        return availableFields.filter(this.isFieldFilterable).map((option) => {
           return {
             ...option,
             name: parentName + '.' + option.name
@@ -180,7 +178,10 @@
         }
       },
       isFieldFilterable (field) {
-        return field.format !== 'date-time' && ( !field.items || field.items.format !== 'date-time' )
+        const isFieldChildOfComplexObject = field.branched
+        const isFieldNotDateOrArrayOfDates = field.format !== 'date-time'
+                                          && ( !field.items || field.items.format !== 'date-time' )
+        return !isFieldChildOfComplexObject && isFieldNotDateOrArrayOfDates && !isObjectListField(field)
       }
     }
   }
