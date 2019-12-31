@@ -2578,10 +2578,10 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
                 }
 
             def clear_saved_action_passwords(action):
-                response = self.request_remote_plugin('reports/actions', REPORTS_PLUGIN_NAME, method='get')
-                if not response:
+                action_configs = self._get_actions_from_reports_plugin()
+                if not action_configs:
                     return
-                clear_passwords_fields(action['config'], response.json()[action['action_name']]['schema'])
+                clear_passwords_fields(action['config'], action_configs[action['action_name']]['schema'])
 
             normalize_saved_action_results(task['result']['main']['action']['results'])
             clear_saved_action_passwords(task['result']['main']['action'])
@@ -2589,6 +2589,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
                 arr = task['result'][key]
                 for x in arr:
                     normalize_saved_action_results(x['action']['results'])
+                    clear_saved_action_passwords(x['action'])
 
             task_metadata = task.get('result', {}).get('metadata', {})
             return beautify_db_entry({

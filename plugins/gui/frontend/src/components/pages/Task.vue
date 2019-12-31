@@ -91,6 +91,9 @@
             { title: this.name }
           ]
         },
+        taskFetching (state) {
+          return state.tasks.current.fetching
+        },
         taskData (state) {
           let period = this.triggerPeriods.find((x) => {
             return x[state.tasks.current.data.period] !== undefined
@@ -140,7 +143,13 @@
         return this.taskData.result
       },
       mainAction () {
-        if (!this.taskResult) return []
+        if (!this.taskResult) {
+          return {
+            condition: 'main',
+            id: 'main_action',
+            titlePrefix: 'action'
+          }
+        }
         let mainAction = this.taskResult[mainCondition].action
         return {
           condition: mainCondition, key: mainCondition,
@@ -189,6 +198,13 @@
       return {
         actionInView: {
           position: null, definition: null
+        }
+      }
+    },
+    watch: {
+      taskFetching () {
+        if (!this.taskFetching) {
+          this.initData()
         }
       }
     },
@@ -262,12 +278,10 @@
         this.$router.push({ path: `/${this.triggerView.entity}` })
       }
     },
-    created () {
-      if (!this.taskData.name || this.taskData.uuid !== this.id) {
-        this.fetchTask(this.id).then(() => {
-          this.initData()
-        })
-      } else {
+    mounted () {
+      if (!this.taskFetching && (!this.taskData.name || this.taskData.uuid !== this.id)) {
+        this.fetchTask(this.id)
+      } else if (this.taskData.name) {
         this.initData()
       }
     }

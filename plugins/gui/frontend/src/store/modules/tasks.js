@@ -1,7 +1,8 @@
 import { REQUEST_API } from '../actions'
+import { SET } from '@storybook/addon-knobs'
 
 export const FETCH_TASK = 'FETCH_TASK'
-export const SET_TASK = 'SET_TASK'
+export const UPDATE_TASK = 'UPDATE_TASK'
 
 export const tasks = {
     state: {
@@ -20,11 +21,15 @@ export const tasks = {
         current: { fetching: false, data: { }, error: '' }
     },
     mutations: {
-        [ SET_TASK ] (state, taskData) {
+        [ UPDATE_TASK ] (state, payload) {
             /*
                 Set given data, as Task in the handle
              */
-            state.current.data = { ...taskData }
+            state.current.fetching = payload.fetching
+            state.current.error = payload.error
+            if (payload.data) {
+                state.current.data = { ...payload.data }
+            }
         }
     },
     actions: {
@@ -33,11 +38,8 @@ export const tasks = {
                 Ask server for a complete, specific task, with all details of the run
              */
             return dispatch(REQUEST_API, {
-                rule: `tasks/${taskId}`
-            }).then((response) => {
-                if (response.status === 200 && response.data) {
-                    commit(SET_TASK, response.data)
-                }
+                rule: `tasks/${taskId}`,
+                type: UPDATE_TASK
             })
         }
     }
