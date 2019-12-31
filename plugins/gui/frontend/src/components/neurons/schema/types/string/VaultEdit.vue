@@ -101,7 +101,7 @@
                 this.success = false
                 this.error = ''
                 this.loading = true
-                this.data = {query: this.queryModal.current_query, type: 'cyberark_vault'}
+                this.validate()
                 axios.post('/api/password_vault', {
                         query: this.queryModal.current_query,
                         field: this.schema.name,
