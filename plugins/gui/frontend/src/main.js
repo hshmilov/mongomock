@@ -1,8 +1,8 @@
 import Vue from 'vue'
-
+import { createVuetifyConfigObject } from './plugins/vuetify'
+import App from './components/App.vue'
 import router from './router/index'
 import store from './store/index'
-import App from './components/App.vue'
 
 import {
 	MdSwitch, MdDatepicker, MdField, MdIcon, MdButton, MdDialog, MdCard, MdList, MdChips, MdCheckbox, MdMenu, MdProgress, MdDivider, MdDrawer,
@@ -43,27 +43,9 @@ Vue.use(VueAnalytics, {
 	customResourceURL: '/src/analytics.js'
 })
 
-import Vuetify from 'vuetify'
-import 'vuetify/dist/vuetify.min.css'
-import '@mdi/font/css/materialdesignicons.css'
-Vue.use(Vuetify)
-const vuetifyOptions = {
-	theme: {
-		themes: {
-			light: {
-				primary: '#FF7D46',
-				anchor: '-webkit-link'
-			}
-		}
-	},
-	icons: {
-		iconfont: 'mdi'
-	}
-}
-
 new Vue({
 	el: '#app',
-	vuetify: new Vuetify(vuetifyOptions),
+	vuetify: createVuetifyConfigObject(),
 	components: {App},
 	template: '<App />',
 	router,

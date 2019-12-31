@@ -4,7 +4,7 @@ const { VueLoaderPlugin } = require('vue-loader')
 const CleanWebpackPlugin = require('clean-webpack-plugin')
 const HtmlWebpackPlugin = require('html-webpack-plugin')
 
-module.exports = env => {
+module.exports = (env) => {
     return {
         entry: {
             main: path.resolve(__dirname, 'src/main.js')
@@ -46,10 +46,11 @@ module.exports = env => {
                 template: __dirname + '/index.html'
             }),
             new webpack.DefinePlugin({
-                    ENV: {
-                        medical: false
-                    }
-                })
+                ENV: {
+                    medical: false,
+                    client: env ? JSON.stringify(env.client) : undefined
+                }
+            })
         ],
         stats: {
             modules: true,

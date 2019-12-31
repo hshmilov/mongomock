@@ -3,9 +3,9 @@ import os
 from collections import defaultdict
 import secrets
 import logging
+import re
 import requests
 from funcy import chunks
-
 from axonius.consts.gui_consts import (CONFIG_CONFIG, ROLES_COLLECTION, USERS_COLLECTION,
                                        DASHBOARD_COLLECTION, DASHBOARD_SPACES_COLLECTION,
                                        DASHBOARD_SPACE_DEFAULT, DASHBOARD_SPACE_PERSONAL,
@@ -1007,10 +1007,12 @@ class GuiService(PluginService, UpdatablePluginMixin):
     # I don't want to change all dockerfiles
     # pylint: disable=W0221
     def get_dockerfile(self, *args, docker_internal_env_vars=None, **kwargs):
+        client_filter = list(filter(re.compile(r'CLIENT=(\w)').match, docker_internal_env_vars or []))
+        npm_params = f'-- --env.{client_filter[0].lower()}' if client_filter else ''
 
         build_command = '' if self.is_dev else f'''
 # Compile npm, assuming we have it from axonius-libs
-RUN cd ./gui/frontend/ && npm run build
+RUN cd ./gui/frontend/ && npm run build {npm_params}
 '''
         install_command = '' if self.is_dev else '''
 # Prepare build packages

@@ -28,12 +28,6 @@ module.exports = env => {
                             options: {
                                 resources: path.resolve(__dirname, './src/assets/scss/config.scss')
                             }
-                        },
-                        {
-                            loader: 'sass-resources-loader',
-                            options: {
-                                resources: path.resolve(__dirname, './src/assets/scss/custom_config.scss')
-                            }
                         }
                     ]
                 }
@@ -47,13 +41,13 @@ module.exports = env => {
                 cacheGroups: {
                     vendor: {
                         test: /[\\/]node_modules[\\/]/,
-                        name(module) {
+                        name (module) {
                             // Extract name. E.g. node_modules/packageName/not/this/part.js
-                            const packageName = module.context.match(/[\\/]node_modules[\\/](.*?)([\\/]|$)/)[1];
+                            const packageName = module.context.match(/[\\/]node_modules[\\/](.*?)([\\/]|$)/)[1]
 
                             // npm package names are URL-safe, but some servers don't like @ symbols
-                            return `npm.${packageName.replace('@', '')}`;
-                        },
+                            return `npm.${packageName.replace('@', '')}`
+                        }
                     },
                     styles: {
                         name: 'styles',
@@ -68,7 +62,7 @@ module.exports = env => {
         plugins: [
             new MiniCssExtractPlugin({
                 filename: '[name].[hash].css',
-                chunkFilename: '[id].[hash].css',
+                chunkFilename: '[id].[hash].css'
             })
         ],
         output: {
@@ -77,4 +71,4 @@ module.exports = env => {
             publicPath: '/dist/'
         }
     })
-};
+}

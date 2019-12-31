@@ -1,8 +1,10 @@
 import Vue from 'vue';
 import { storiesOfAxons } from './index.stories';
-import { withKnobs, text, boolean } from '@storybook/addon-knobs';
+import { text, boolean } from '@storybook/addon-knobs';
+import XButton from '../src/components/axons/inputs/Button.vue';
 
-storiesOfAxons.add('XButton', () => ({
+storiesOfAxons.add('Button', () => ({
+  components: { XButton },
   props: {
     disabled: {
       default: boolean('disabled', false)
@@ -35,5 +37,5 @@ storiesOfAxons.add('XButton', () => ({
       default: text('Text', 'Axonius Button')
     }
   },
-  template: `<x-button :active="active" :emphasize="emphasize" :link="link" :right="right" :light="light" :invers="invers" :inverseEmphasize="inverseEmphasize" :great="great" :disabled="disabled">{{ text }}</x-button>`
+  template: `<x-button :active="active" :emphasize="emphasize" :link="link" :right="right" :light="light" :inverse="inverse" :inverseEmphasize="inverseEmphasize" :great="great" :disabled="disabled">{{ text }}</x-button>`
 }));
