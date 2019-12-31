@@ -181,7 +181,7 @@ class PromisecAdapter(AdapterBase, Configurable):
                     'title': 'SQL pagination'
                 }
             ],
-            'required': [],
+            'required': ['devices_fetched_at_a_time'],
             'pretty_name': 'Promisec Configuration',
             'type': 'array'
         }

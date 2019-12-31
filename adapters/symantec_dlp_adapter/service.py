@@ -152,7 +152,7 @@ class SymantecDlpAdapter(AdapterBase, Configurable):
                     'title': 'SQL pagination'
                 }
             ],
-            'required': [],
+            'required': ['devices_fetched_at_a_time'],
             'pretty_name': 'Symantec Configuration',
             'type': 'array'
         }

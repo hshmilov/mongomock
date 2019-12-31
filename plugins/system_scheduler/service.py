@@ -145,14 +145,9 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
                     ],
                     'name': 'discovery_settings',
                     'title': 'Discovery Settings',
-                    'type': 'array'
+                    'type': 'array',
+                    'required': ['system_research_rate', 'save_history', 'constant_alerts', 'analyse_reimage']
                 }
-            ],
-            'required': [
-                'system_research_rate',
-                'save_history',
-                'constant_alerts',
-                'analyse_reimage'
             ],
             'type': 'array'
         }

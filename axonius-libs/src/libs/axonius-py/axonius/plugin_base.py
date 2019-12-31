@@ -3082,7 +3082,7 @@ class PluginBase(Configurable, Feature, ABC):
                 },
                 {
                     'type': 'array',
-                    'title': 'CyberArk Setting',
+                    'title': 'CyberArk Settings',
                     'name': 'vault_settings',
                     'required': ['enabled', 'domain',
                                  'application_id', 'certificate_key', 'port'],

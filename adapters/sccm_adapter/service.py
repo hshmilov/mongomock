@@ -733,7 +733,7 @@ class SccmAdapter(AdapterBase, Configurable):
                     'type': 'string'
                 }
             ],
-            "required": ['drop_no_last_seen', 'exclude_ipv6'],
+            "required": ['drop_no_last_seen', 'exclude_ipv6', 'devices_fetched_at_a_time'],
             "pretty_name": "SCCM Configuration",
             "type": "array"
         }

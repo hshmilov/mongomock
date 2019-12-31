@@ -167,7 +167,7 @@ class ObserveitAdapter(AdapterBase, Configurable):
                     'title': 'SQL pagination'
                 }
             ],
-            'required': [],
+            'required': ['devices_fetched_at_a_time'],
             'pretty_name': 'ObserveIT Configuration',
             'type': 'array'
         }

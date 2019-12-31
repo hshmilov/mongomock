@@ -39,7 +39,7 @@ class WebscanEnrichment(ActionTypeBase):
                 },
                 {
                     'name': 'pool_size',
-                    'title': 'Scan Thread Pool Size',
+                    'title': 'Number of Parallel Connections',
                     'type': 'integer',
                     'required': True,
                     'default': DEFAULT_POOL_SIZE

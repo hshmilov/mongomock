@@ -222,6 +222,8 @@ class CsvAdapter(AdapterBase):
             ],
             'required': [
                 'user_id',
+                'is_users_csv',
+                'is_installed_sw'
             ],
             'type': 'array'
         }

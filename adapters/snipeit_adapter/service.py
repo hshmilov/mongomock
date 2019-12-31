@@ -226,7 +226,7 @@ class SnipeitAdapter(AdapterBase, Configurable):
                     'type': 'bool'
                 }
             ],
-            'required': [],
+            'required': ['use_asset_tag_as_hostname'],
             'pretty_name': 'SnipeIT Configuration',
             'type': 'array'
         }
