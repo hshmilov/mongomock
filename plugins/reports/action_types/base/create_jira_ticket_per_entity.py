@@ -129,6 +129,7 @@ class JiraIncidentPerEntityAction(ActionTypeBase):
                 first_name = None
                 username = None
                 log_message_full = self._config['incident_description']
+                summary = self._config['incident_title']
                 for adapter_data in entry['adapters']:
                     adapter_data = adapter_data.get('data') or {}
                     if adapter_data.get('hostname') and not hostname:
@@ -139,14 +140,19 @@ class JiraIncidentPerEntityAction(ActionTypeBase):
                         username = adapter_data.get('username')
                 if hostname:
                     log_message_full = log_message_full.replace(HOSTNAME_MAGIC_WORD, hostname)
+                    summary = summary.replace(HOSTNAME_MAGIC_WORD, hostname)
                 if username:
                     log_message_full = log_message_full.replace(USERNAME_MAGIC_WORD, username)
+                    summary = summary.replace(USERNAME_MAGIC_WORD, username)
                 if first_name:
                     log_message_full = log_message_full.replace(FIRST_NAME_MAGIC_WORD, first_name)
+                    summary = summary.replace(FIRST_NAME_MAGIC_WORD, first_name)
+
                 if self._config.get('add_full_device_content'):
                     log_message_full += '\n\n' + str(entry)
+
                 message = self._plugin_base.create_jira_ticket(self._config['project_key'],
-                                                               self._config['incident_title'],
+                                                               summary,
                                                                log_message_full, self._config['issue_type'],
                                                                assignee=self._config.get('assignee'),
                                                                labels=self._config.get('labels'),

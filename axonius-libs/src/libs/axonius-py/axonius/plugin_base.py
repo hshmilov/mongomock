@@ -2672,9 +2672,9 @@ class PluginBase(Configurable, Feature, ABC):
                 issue_dict['components'] = [{'name': component} for component in components]
             if labels and isinstance(labels, str):
                 issue_dict['labels'] = labels.split(',')
-            issue = jira.create_issue(fields=issue_dict)
             if assignee:
-                issue.update(assignee=assignee)
+                issue_dict['assignee'] = {'name': assignee}
+            issue = jira.create_issue(fields=issue_dict)
             if csv_file_name and csv_bytes:
                 jira.add_attachment(issue=issue, attachment=csv_bytes, filename=csv_file_name)
             return ''
