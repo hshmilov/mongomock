@@ -369,6 +369,7 @@ class DeviceAdapterSoftwareCVE(SmartJsonClass):
     software_vendor = Field(str, "Software Vendor")
     cvss_version = Field(str, "CVSS Version", enum=['v2.0', 'v3.0'])
     cvss = Field(float, "CVSS")
+    cvss_str = Field(str, 'CVSS String')
     cve_severity = Field(str, "CVE Severity", enum=["NONE", "LOW", "MEDIUM", "HIGH", "CRITICAL"])
     cve_description = Field(str, "CVE Description")
     cve_synopsis = Field(str, "CVE Synopsis")
@@ -983,9 +984,11 @@ class DeviceAdapter(SmartJsonClass):
             version_raw=version_raw, **kwargs))
 
     def add_vulnerable_software(self, cvss=None, **kwargs):
+        cvss_str = None
         if cvss:
             try:
                 cvss = float(cvss)
+                cvss_str = f'CVSS {str(cvss)}'
             except Exception:
                 logger.exception(f'Invalid cvss {cvss}')
                 return
@@ -999,7 +1002,8 @@ class DeviceAdapter(SmartJsonClass):
         except Exception:
             logger.exception('Problem parsing raw version')
 
-        self.software_cves.append(DeviceAdapterSoftwareCVE(cvss=cvss, version_raw=version_raw, **kwargs))
+        self.software_cves.append(DeviceAdapterSoftwareCVE(cvss_str=cvss_str,
+                                                           cvss=cvss, version_raw=version_raw, **kwargs))
 
     def add_key_value_tag(self, key, value):
         self.tags.append(DeviceTagKeyValue(tag_key=key, tag_value=value))
