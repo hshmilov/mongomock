@@ -32,6 +32,7 @@ class DashboardPage(Page):
     SYMMETRIC_DIFFERENCE_FROM_FIRST_QUERY_SLICE_CSS = 'svg > g.slice-1 > text'
     SYMMETRIC_DIFFERENCE_FROM_SECOND_QUERY_SLICE_CSS = 'svg > g.slice-3 > text'
     NEW_CARD_WIZARD_CSS = '.x-tab.active .x-card.chart-new'
+    NEW_CARD_WIZARD_OVERLAY_CSS = '.x-modal .x-chart-wizard'
     CHART_METRIC_DROP_DOWN_CSS = '#metric > div'
     INTERSECTION_CHART_FIRST_QUERY_DROP_DOWN_CSS = '#intersectingFirst > div'
     INTERSECTION_CHART_SECOND_QUERY_DROP_DOWN_CSS = '#intersectingSecond > div'
@@ -168,9 +169,24 @@ class DashboardPage(Page):
         self.click_button('View in Users', partial_class=True, should_scroll_into_view=False)
 
     def open_new_card_wizard(self):
+        """
+        fix for flakiness element click, sometimes the click action doesnt work and wont return an error
+        or raise exception. try to click on that element until the desire element will appear or raise TimeoutError
+        the timeout is 60sec, with 0.5sec interval try 120 clicks (defined in wait_until)
+        :return:
+        """
+        wait_until(func=self.do_open_card_wizard, tolerated_exceptions_list=[NoSuchElementException])
+
+    def do_open_card_wizard(self):
+        """
+        click on new card wizard and check if the click worked by checking the existence of the modal overlay
+        if the click didnt work an NoSuchElementException will be raised
+        this function designed to run in wait_until loop, witch expecting the NoSuchElementException exception
+        :return: the overlay element of the desired wizard
+        """
         new_card = self.wait_for_element_present_by_css(self.NEW_CARD_WIZARD_CSS)
-        self.scroll_into_view(new_card, window=TAB_BODY)
         new_card.click()
+        return self.driver.find_element_by_css_selector(self.NEW_CARD_WIZARD_OVERLAY_CSS)
 
     def select_chart_metric(self, option):
         self.wait_for_element_present_by_css(self.CHART_METRIC_DROP_DOWN_CSS)
