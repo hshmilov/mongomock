@@ -62,6 +62,8 @@ class TestDashboard(TestBase):
     AD_DOMAIN_CONTROLLERS_OPTION_NAME = 'AD Domain Controllers'
     OS_SERVICE_PACK_OPTION_NAME = 'OS: Service Pack'
     OS_TYPE_OPTION_NAME = 'OS: Type'
+    NETWORK_IPS_OPTION_NAME = 'IPs'
+    NETWORK_MAC_OPTION_NAME = 'MAC'
     MANAGED_DEVICES_OPTION_NAME = 'Managed Devices'
     NOT_LOCAL_USERS_OPTION_NAME = 'Not Local Users'
     NOT_FROM_US_USERS_OPTION_NAME = 'Users Not From US'
@@ -1098,3 +1100,35 @@ class TestDashboard(TestBase):
             self.dashboard_page.select_chart_view_name(WINDOWS_QUERY_NAME, views_list[0])
             self.dashboard_page.select_chart_wizard_module(self.USERS_MODULE, views_list[1])
             self.dashboard_page.select_chart_view_name(self.NOT_LOCAL_USERS_OPTION_NAME, views_list[1])
+
+    def test_dashboard_segmentation_multiple_filters(self):
+        # test for feature : https://axonius.atlassian.net/browse/AX-5662
+        self.dashboard_page.switch_to_page()
+        self.base_page.run_discovery()
+        self.dashboard_page.open_new_card_wizard()
+        self.dashboard_page.select_chart_metric('Field Segmentation')
+        self.dashboard_page.fill_text_field_by_element_id(self.dashboard_page.CHART_TITLE_ID, self.TEST_EDIT_CARD_TITLE)
+        assert self.dashboard_page.is_chart_segment_include_empty_enabled()
+        self.dashboard_page.select_chart_wizard_module(self.DEVICES_MODULE)
+        self.dashboard_page.select_chart_wizard_field(self.dashboard_page.FIELD_NETWORK_INTERFACES_IPS)
+        assert not self.dashboard_page.is_card_save_button_disabled()
+        assert self.dashboard_page.is_add_chart_segment_filter_button_disabled()
+        self.dashboard_page.fill_chart_segment_filter(self.NETWORK_IPS_OPTION_NAME, '', 1)
+        assert self.dashboard_page.is_card_save_button_disabled()
+        self.dashboard_page.fill_chart_segment_filter(self.NETWORK_IPS_OPTION_NAME, '10', 1)
+        assert not self.dashboard_page.is_chart_segment_include_empty_enabled()
+        self.dashboard_page.remove_chart_segment_filter(1)
+        assert self.dashboard_page.is_chart_segment_include_empty_enabled()
+        self.fill_chart_segment_filter_and_add_filter(self.NETWORK_IPS_OPTION_NAME, '10.0', 1)
+        self.fill_chart_segment_filter_and_add_filter(self.NETWORK_IPS_OPTION_NAME, '0.2.', 2)
+        self.fill_chart_segment_filter_and_add_filter(self.NETWORK_MAC_OPTION_NAME, '06:3a', 3, True)
+        self.dashboard_page.fill_chart_segment_filter(self.NETWORK_MAC_OPTION_NAME, '06:3a', 3)
+        self.dashboard_page.click_card_save()
+        card = self.dashboard_page.find_dashboard_card(self.TEST_EDIT_CARD_TITLE)
+        self.dashboard_page.assert_histogram_lines_data(card, ['1', '1', '1'])
+
+    def fill_chart_segment_filter_and_add_filter(self, filter_name, filter_value, filter_position, do_remove=False):
+        self.dashboard_page.fill_chart_segment_filter(filter_name, filter_value, filter_position)
+        self.dashboard_page.add_chart_segment_filter_row()
+        if do_remove:
+            self.dashboard_page.remove_chart_segment_filter(filter_position)

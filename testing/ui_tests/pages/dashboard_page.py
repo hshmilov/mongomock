@@ -54,6 +54,7 @@ class DashboardPage(Page):
     SEGMENTATION_FILTER_DELETE_CSS = '.x-filter-contains .x-filter-expression-contains:nth-child({index}) button'
     SEGMENTATION_FILTER_DROP_DOWN_CSS = '.x-filter-contains .x-filter-expression-contains:nth-child({index})' \
                                         ' .x-dropdown'
+    SEGMENTATION_ADD_FILTER_BUTTON_CSS = '.x-filter-contains > button'
     SUMMARY_CARD_TEXT_CSS = 'div.x-summary > div.summary'
     CARD_CLOSE_BTN_CSS = '.actions > .remove'
     CARD_EDIT_BTN_CSS = '.actions > .edit'
@@ -253,6 +254,10 @@ class DashboardPage(Page):
     def check_chart_segment_include_empty(self):
         self.find_chart_segment_include_empty().click()
 
+    def is_chart_segment_include_empty_enabled(self):
+        checkbox = self.find_checkbox_with_label_by_label('Include entities with no value')
+        return checkbox.find_element_by_css_selector('input').is_enabled()
+
     def fill_chart_segment_filter(self, value_name, value_filter, list_position=1):
         self.select_option_without_search(
             self.SEGMENTATION_FILTER_DROP_DOWN_CSS.format(index=list_position),
@@ -261,6 +266,13 @@ class DashboardPage(Page):
             parent=None)
         self.fill_text_field_by_css_selector(
             f'{self.CHART_WIZARD_CSS} {self.SEGMENTATION_FILTER_INPUT_CSS.format(index=list_position)}', value_filter)
+
+    def add_chart_segment_filter_row(self):
+        self.driver.find_element_by_css_selector(self.SEGMENTATION_ADD_FILTER_BUTTON_CSS).click()
+
+    def is_add_chart_segment_filter_button_disabled(self):
+        return 'disabled' in self.driver.find_element_by_css_selector(
+            self.SEGMENTATION_ADD_FILTER_BUTTON_CSS).get_attribute('class')
 
     def remove_chart_segment_filter(self, list_position=1):
         self.driver.find_element_by_css_selector(
@@ -321,6 +333,9 @@ class DashboardPage(Page):
         self.click_button('Save')
         self.wait_for_element_absent_by_css(self.MODAL_OVERLAY_CSS, interval=1)
         self.wait_for_card_spinner_to_end()
+
+    def is_card_save_button_disabled(self):
+        return 'disabled' in self.find_element_by_text('Save').get_attribute('class')
 
     def add_segmentation_card(self, module, field, title, chart_type='histogram', view_name='', partial_text=True,
                               include_empty: bool = True, value_filter: str = ''):

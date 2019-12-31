@@ -9,7 +9,6 @@ from ui_tests.pages.entities_page import EntitiesPage
 
 
 class DevicesPage(EntitiesPage):
-    FIELD_NETWORK_INTERFACES_IPS = 'Network Interfaces: IPs'
     FIELD_NETWORK_INTERFACES_MAC = 'Network Interfaces: Mac'
     FIELD_NETWORK_INTERFACES = 'Network Interfaces'
     FIELD_NETWORK_INTERFACES_NAME = 'network_interfaces'
