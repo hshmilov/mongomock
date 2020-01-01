@@ -314,7 +314,13 @@ class AbstractCiscoData:
         if 'connected_devices' in instance:
             self._handle_connected(new_device, instance)
 
-        new_device.hostname = instance.get('hostname')
+        hostname = instance.get('hostname')
+        if hostname:
+            if '(' in hostname:
+                new_device.name = hostname
+                new_device.hostname = hostname[:hostname.find('(')]
+            else:
+                new_device.hostname = hostname
         new_device.device_model = instance.get('device_model')
 
         new_device.figure_os(instance.get('device_model'))

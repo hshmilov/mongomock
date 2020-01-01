@@ -19,7 +19,7 @@ from axonius.utils.parsing import (NORMALIZED_MACS,
                                    compare_hostname,
                                    compare_id, compare_last_used_users,
                                    get_ad_name_or_azure_display_name,
-                                   get_asset_name, get_asset_or_host,
+                                   get_asset_name, get_asset_or_host, get_manufacturer_from_mac,
                                    get_asset_snow_or_host, compare_snow_asset_hosts,
                                    get_bios_serial_or_serial, get_cloud_data,
                                    get_hostname, get_id, compare_full_mac,
@@ -385,14 +385,21 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
             if mac in mac_indexed:
                 del mac_indexed[mac]
 
-        for matches in mac_indexed.values():
+        for mac, matches in mac_indexed.items():
             if 30 >= len(matches) >= 2:
+                inner_compare_funcs = [compare_macs_or_one_is_jamf]
+                mac_manufacturer = None
+                try:
+                    mac_manufacturer = get_manufacturer_from_mac(mac)
+                except Exception:
+                    pass
+                if not mac_manufacturer or 'cisco systems' not in mac_manufacturer.lower():
+                    inner_compare_funcs.append(if_soalrwinds_compare_all)
                 yield from self._bucket_correlate(matches,
                                                   [],
                                                   [],
                                                   [],
-                                                  [compare_macs_or_one_is_jamf,
-                                                   if_soalrwinds_compare_all],
+                                                  inner_compare_funcs,
                                                   {'Reason': 'They have the same MAC'},
                                                   CorrelationReason.StaticAnalysis)
 
