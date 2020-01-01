@@ -5,8 +5,6 @@
 
     var current_exports = [];
     var current_export_details_i = 0;
-    var current_exports_in_progress = [];
-    var show_completed_exports = false;
     var advanced_usage = false;
 
     var current_auto_tests_in_progress = [];
@@ -302,35 +300,6 @@
 
         update_datatable("exports_table", dataSet, update_export_details)
     }
-    function rewrite_exports_in_progress_table() {
-        // Update all exports currently in progress.
-        let dataSet = [];
-        for (var i in current_exports_in_progress) {
-            var export_i = current_exports_in_progress[i];
-            if (show_completed_exports === true || export_i['status'] !== 'completed') {
-                export_data_or_empty = function (name) { return export_i[name] || '' }
-                var data = [];
-
-                // Capitalize owner name
-                export_i["owner"] = capitalize_str(export_data_or_empty("owner"))
-
-                // Push all of the data
-                data.push(parseInt(i) + 1);
-                data.push(export_data_or_empty("version"));
-                data.push(export_data_or_empty("owner"));
-                data.push(export_data_or_empty("fork"));
-                data.push(export_data_or_empty("branch"));
-                data.push(export_data_or_empty("client_name"));
-                data.push(export_data_or_empty("comments"));
-                data.push('<a href="/api/exports/' + export_i['version'] + '/log" target="_blank">Click here</a>');
-                data.push(export_data_or_empty("status"));
-                data.push(export_data_or_empty("date"));
-                dataSet.push(data);
-            }
-        }
-        update_datatable("exports_in_progress_table", dataSet)
-    }
-
 
     // Update instance details functions
     function update_instance_details(i) {
@@ -554,15 +523,13 @@
             ["Installer Download Link", export_data_or_empty('installer_download_link')],
             ["AMI ID", export_data_or_empty('ami_id')],
             ["GCE Name", export_data_or_empty('gce_name')],
-            ["Log (deprecated)", '<a href="/api/exports/' + exp['version'] + '/log" target="_blank">Click here</a>'],
             ["Installer Log", export_data_or_empty('installer_log')],
             ["Cloud Log", export_data_or_empty('cloud_log')],
             ["OVA Log", export_data_or_empty('ova_log')],
             ["AMI Test Log", export_data_or_empty('ami_test_log')],
             ["OVA Test Log", export_data_or_empty('ova_test_log')],
             ["AMI Test Return Code", export_data_or_empty('ami_test_return_code')],
-            ["OVA Test Return Code", export_data_or_empty('ova_test_return_code')],
-            ["Delete", wrap_modal_with_td("Are you sure you want to delete this export?", delete_export, [], undefined, exp['version'])]
+            ["OVA Test Return Code", export_data_or_empty('ova_test_return_code')]
         ];
 
         update_panel("tbody_export_info", export_info_data);
@@ -712,10 +679,8 @@
 
         $.ajax({url: "/api/exports", type: "POST", data: data})
             .done(function(data) {
-                flush_url("/api/exportsinprogress", function(data) {
-                    current_exports_in_progress = data["current"];
-                    rewrite_exports_in_progress_table();
-                    changeMenu($("#vm_exports_link"));
+                flush_url("/api/exports", function(data) {
+                    rewrite_exports_table();
                 });
             })
             .fail(exception_modal)
@@ -907,33 +872,6 @@
         }
     }
 
-    /* Export menu functions */
-    function toggle_completed_exports_view() {
-        if (show_completed_exports == false) {
-            show_completed_exports = true;
-            $("#tcev_text").text("Hide");
-        }
-        else {
-            show_completed_exports = false;
-            $("#tcev_text").text("Show");
-        }
-        rewrite_exports_in_progress_table();
-    }
-
-    function delete_export(always_function) {
-        var id = current_exports[current_export_details_i]['version'];
-        var data = {}
-
-        $.ajax({url: "/api/exports/" + id, type: "DELETE", data: data})
-            .done(function(data) {
-                current_exports = data["current"];
-                rewrite_exports_table();
-                update_export_details(0);
-            })
-            .fail(exception_modal)
-            .always(always_function);
-    }
-
     /* Initialization and menu */
     function rewrite_all_tables(data) {
         current_instances = [];
@@ -1078,25 +1016,9 @@
             ]
         });
 
-        $("#exports_in_progress_table").DataTable({
-            columns: [
-                { title: "#" },
-                { title: "Version" },
-                { title: "Owner" },
-                { title: "Fork" },
-                { title: "Branch" },
-                { title: "Client Name" },
-                { title: "Comments" },
-                { title: "Log" },
-                { title: "Status" },
-                { title: "Last Modified" }
-            ]
-        });
-
         update_datatable("instances_table", [["1", "Loading...", "", "", "", ""]]);
         update_datatable("demos_table", [["1", "Loading...", "", "", "", "", ""]]);
         update_datatable("exports_table", [["1", "Loading...", "", "", "", "", "", "", ""]]);
-        update_datatable("exports_in_progress_table", [["1", "Loading...", "", "", "", "", "", "", "", ""]]);
         update_datatable("auto_tests_table", [["1", "Loading...", "", "", "", ""]]);
 
         // load all data.
@@ -1107,11 +1029,6 @@
             rewrite_exports_table();
             update_export_details(0);
             load_ami_list(current_exports)
-        });
-
-        flush_url("/api/exportsinprogress", function(data) {
-            current_exports_in_progress = data["current"];
-            rewrite_exports_in_progress_table();
         });
     });
 

@@ -117,7 +117,7 @@ HOME_DIRECTORY=/home/ubuntu/builds_log/
 mkdir -p $HOME_DIRECTORY
 LOG_FILE=$HOME_DIRECTORY"install.log"
 exec 1>$LOG_FILE 2>&1
-echo prepend domain-name-servers 192.168.20.4\; >> /etc/dhcp/dhclient.conf
+echo prepend domain-name-servers 10.0.2.68\; >> /etc/dhcp/dhclient.conf
 echo prepend domain-search \\"axonius.lan\\"\; >> /etc/dhcp/dhclient.conf
 dhclient -v
 {install_system_line}
@@ -203,22 +203,11 @@ def update_export_from_teamcity_hook():
     return jsonify({'result': True})
 
 
-@app.route('/api/exports/<key>', methods=['GET', 'DELETE'])
+@app.route('/api/exports/<key>', methods=['GET'])
 @authorize
 def export_by_key(key):
     """Does all sort of actions on a specific export"""
-    if request.method == 'DELETE':
-        json_result = context.bm.delete_export(version=key)
-        return jsonify({'result': json_result, 'current': context.bm.get_exports()})
-    elif request.method == 'GET':
-        return jsonify({'result': context.bm.get_export_by_version(key)})
-
-
-@app.route('/api/exports/<key>/log', methods=['GET'])
-@authorize
-def export_log_by_key(key):
-    """Does all sort of actions on a specific export"""
-    return context.bm.get_export_by_version(key)['log'].replace('\n', '<br>')
+    return jsonify({'result': context.bm.get_export_by_version(key)})
 
 
 @app.route('/api/exportsinprogress', methods=['GET'])

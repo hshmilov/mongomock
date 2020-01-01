@@ -212,6 +212,3 @@ class AWSComputeManager:
                 failed_instances.append(instance_id)
 
         assert not failed_instances, f'Failed terminating: {str(failed_instances)}'
-
-    def deregister_ami(self, ami_id: str, delete_snapshot: bool):
-        self.ec2_client.deregister_image(ImageId=ami_id, delete_snapshot=delete_snapshot)

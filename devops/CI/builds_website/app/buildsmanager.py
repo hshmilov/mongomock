@@ -207,49 +207,13 @@ class BuildsManager(object):
 
         return list(export_tasks)[::-1]
 
-    def delete_export(self, version):
-        """Deletes an export. """
-        def _delete_s3_export():
-            exports = self.bcm.aws_s3.s3_client.list_objects(Bucket=S3_BUCKET_NAME_FOR_OVA)['Contents']
-            to_delete = []
-            for export in exports:
-                if version == export['Key'].split('/')[0]:
-                    to_delete.append(export)
-
-            for current_deletion in to_delete:
-                self.bcm.aws_s3.s3_client.delete_object(Bucket=S3_BUCKET_NAME_FOR_OVA, Key=current_deletion['Key'])
-
-            return to_delete
-
-        def delete_from_db():
-            self.db.exports.update_one(
-                {'version': version},
-                {'$set': {
-                    'status': 'deleted',
-                    'date': datetime.datetime.utcnow()
-                }}
-            )
-
-        export = self.db.exports.find_one({'version': version}, projection={'ami_id': True})
-        ami_id = export.get('ami_id')
-        gce_name = export.get('gce_name')
-        deleted = _delete_s3_export()
-
-        delete_from_db()
-        if ami_id:
-            self.bcm.aws_compute.deregister_ami(ami_id, delete_snapshot=True)
-
-        if gce_name:
-            self.bcm.gcp_compute.delete_image(gce_name)
-
-        return len(deleted) > 0
-
     def get_export_by_version(self, version):
         return self.db.exports.find_one({'version': version})
 
     def get_exports(self, status=None, limit=0):
         """Return all vm exports we have on our s3 bucket."""
         if status is None:
+            # Even though we don't support deletions now, let's not show old deleted exports.
             exports = self.db.exports.find({'status': {"$nin": ["deleted"]}}, {"_id": 0}) \
                 .sort('_id', DESCENDING). \
                 limit(limit)
@@ -329,8 +293,14 @@ class BuildsManager(object):
         db_old_export_updated.update(db_set_entry)
 
         return_codes_to_check = {'ami_test_return_code', 'ova_test_return_code'}
-        if all(str(db_old_export_updated.get(return_code, None)) == '0' for return_code in return_codes_to_check):
+
+        # None for unspecified.
+        actual_return_codes = [db_old_export_updated.get(return_code, None) for return_code in return_codes_to_check]
+
+        if all(r == 0 for r in actual_return_codes):
             new_status = 'completed'
+        elif any(r != 0 for r in actual_return_codes):
+            new_status = 'failed'
         elif request_params.get('status') == 'failure':
             new_status = 'failed'
         elif db_old_export.get('status') == 'failure':
