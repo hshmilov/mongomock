@@ -56,7 +56,6 @@ class DevicesPage(EntitiesPage):
     FIELD_INSTALLED_SOFTWARE = 'Installed Software'
     FIELD_INSTALLED_SOFTWARE_NAME = 'Name'
     FIELD_INSTALLED_SOFTWARE_VERSION = 'Version'
-    VALUE_SAVED_QUERY_LINUX = 'Linux Operating System'
     VALUE_OS_WINDOWS = 'Windows'
     TAG_MODAL_CSS = '.x-tag-modal'
     TAG_CHECKBOX_CSS = f'{TAG_MODAL_CSS} .v-select-list .v-list-item'
@@ -74,6 +73,9 @@ class DevicesPage(EntitiesPage):
     TAGGING_X_DEVICE_MESSAGE = 'Tagged {number} devices!'
     MULTI_LINE_CSS = 'div.x-data-table.multiline'
     FILTER_HOSTNAME = 'specific_data.data.hostname == regex("{filter_value}", "i")'
+    FILTER_OS = 'specific_data.data.os.type == "{os}"'
+    FILTER_OS_WINDOWS = FILTER_OS.format(os='Windows')
+    FILTER_OS_LINUX = FILTER_OS.format(os='Linux')
     ENFORCEMENT_DIALOG_DROPDOWN_CSS = 'div.x-select-trigger'
     QUERY_FIELD_VALUE = '.x-select-typed-field .x-dropdown.x-select.field-select'
     DELETE_DIALOG_TEXT_REGEX = 'You are about to delete \\d+ devices\\.'
@@ -242,15 +244,6 @@ class DevicesPage(EntitiesPage):
     def get_first_fetch_time(self):
         return self.driver.find_element_by_css_selector(
             '[format="date-time"] > label[for="first_fetch_time"] + div').text
-
-    def create_saved_query(self, data_query, query_name):
-        self.switch_to_page()
-        self.reset_query()
-        self.fill_filter(data_query)
-        self.enter_search()
-        self.click_save_query()
-        self.fill_query_name(query_name)
-        self.click_save_query_save_button()
 
     def get_value_for_label_in_device_page(self, label_text):
         text = self.driver.find_element_by_xpath(self.DIV_BY_LABEL_TEMPLATE.format(label_text=label_text)).text

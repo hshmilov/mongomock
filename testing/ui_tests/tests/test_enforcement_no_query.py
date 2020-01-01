@@ -9,11 +9,10 @@ from axonius.consts.metric_consts import SystemMetric
 from axonius.utils.wait import wait_until
 from axonius.utils.parsing import normalize_timezone_date
 from ui_tests.tests.ui_test_base import TestBase
+from ui_tests.tests.ui_consts import MANAGED_DEVICES_QUERY_NAME
 from ui_tests.pages.enforcements_page import ActionCategory, Action
 
 ENFORCEMENT_NAME = 'Special enforcement name'
-COMMON_ENFORCEMENT_QUERY = 'Enabled AD Devices'
-
 ENFORCEMENT_CHANGE_NAME = 'test_enforcement_change'
 ENFORCEMENT_CHANGE_FILTER = 'adapters_data.json_file_adapter.test_enforcement_change == 5'
 
@@ -33,7 +32,7 @@ FIELD_LAST_TRIGGERED = 'Last Triggered'
 
 class TestEnforcementNoQuery(TestBase):
     def test_remove_enforcement(self):
-        self.enforcements_page.create_notifying_enforcement(ENFORCEMENT_NAME, COMMON_ENFORCEMENT_QUERY)
+        self.enforcements_page.create_notifying_enforcement(ENFORCEMENT_NAME, MANAGED_DEVICES_QUERY_NAME)
         self.base_page.run_discovery()
         self.notification_page.verify_amount_of_notifications(1)
         assert self.notification_page.is_text_in_peek_notifications(ENFORCEMENT_NAME)
@@ -53,7 +52,7 @@ class TestEnforcementNoQuery(TestBase):
         assert old_length == new_length
 
     def test_enforcement_invalid(self):
-        self.enforcements_page.create_basic_enforcement(ENFORCEMENT_NAME, COMMON_ENFORCEMENT_QUERY, save=False)
+        self.enforcements_page.create_basic_enforcement(ENFORCEMENT_NAME, MANAGED_DEVICES_QUERY_NAME, save=False)
         self.enforcements_page.check_conditions()
 
         # Check negative values
@@ -66,7 +65,7 @@ class TestEnforcementNoQuery(TestBase):
         self.enforcements_page.add_push_system_notification(ENFORCEMENT_CHANGE_NAME)
         self.enforcements_page.click_save_button()
         duplicate_name = f'{ENFORCEMENT_NAME} Duplicate'
-        self.enforcements_page.create_basic_enforcement(duplicate_name, COMMON_ENFORCEMENT_QUERY)
+        self.enforcements_page.create_basic_enforcement(duplicate_name, MANAGED_DEVICES_QUERY_NAME)
         with pytest.raises(NoSuchElementException):
             self.enforcements_page.add_push_system_notification(ENFORCEMENT_CHANGE_NAME)
         assert self.enforcements_page.find_element_by_text(DUPLICATE_ACTION_NAME_ERROR)
@@ -78,47 +77,47 @@ class TestEnforcementNoQuery(TestBase):
         self.enforcements_page.wait_for_table_to_load()
         self.enforcements_page.click_row_checkbox(2)
         self.enforcements_page.remove_selected_enforcements(confirm=True)
-        self.enforcements_page.create_basic_enforcement(duplicate_name, COMMON_ENFORCEMENT_QUERY)
+        self.enforcements_page.create_basic_enforcement(duplicate_name, MANAGED_DEVICES_QUERY_NAME)
         self.enforcements_page.add_push_system_notification(ENFORCEMENT_CHANGE_NAME)
         self.enforcements_page.click_save_button()
 
     def test_above_threshold(self):
         self.enforcements_page.create_notifying_enforcement_above('above 1',
-                                                                  COMMON_ENFORCEMENT_QUERY,
+                                                                  MANAGED_DEVICES_QUERY_NAME,
                                                                   above=ENFORCEMENT_NUMBER_OF_DEVICES + 10)
 
         self.base_page.run_discovery()
         self.notification_page.verify_amount_of_notifications(0)
 
         self.enforcements_page.create_notifying_enforcement_above('above 2',
-                                                                  COMMON_ENFORCEMENT_QUERY,
+                                                                  MANAGED_DEVICES_QUERY_NAME,
                                                                   above=ENFORCEMENT_NUMBER_OF_DEVICES - 10)
 
         self.base_page.run_discovery()
         self.notification_page.verify_amount_of_notifications(1)
         assert self.axonius_system.gui.log_tester.is_metric_in_log(SystemMetric.ENFORCEMENT_RAW,
-                                                                   COMMON_ENFORCEMENT_QUERY)
+                                                                   MANAGED_DEVICES_QUERY_NAME)
 
     def test_below_threshold(self):
         self.enforcements_page.create_notifying_enforcement_below('below 1',
-                                                                  COMMON_ENFORCEMENT_QUERY,
+                                                                  MANAGED_DEVICES_QUERY_NAME,
                                                                   below=ENFORCEMENT_NUMBER_OF_DEVICES - 10)
 
         self.base_page.run_discovery()
         self.notification_page.verify_amount_of_notifications(0)
 
         self.enforcements_page.create_notifying_enforcement_below('below 2',
-                                                                  COMMON_ENFORCEMENT_QUERY,
+                                                                  MANAGED_DEVICES_QUERY_NAME,
                                                                   below=ENFORCEMENT_NUMBER_OF_DEVICES + 10)
 
         self.base_page.run_discovery()
         self.notification_page.verify_amount_of_notifications(1)
         assert self.axonius_system.gui.log_tester.is_metric_in_log(SystemMetric.ENFORCEMENT_RAW,
-                                                                   COMMON_ENFORCEMENT_QUERY)
+                                                                   MANAGED_DEVICES_QUERY_NAME)
 
     def test_no_scheduling(self):
         self.enforcements_page.create_basic_enforcement(
-            ENFORCEMENT_CHANGE_NAME, COMMON_ENFORCEMENT_QUERY, schedule=False)
+            ENFORCEMENT_CHANGE_NAME, MANAGED_DEVICES_QUERY_NAME, schedule=False)
         self.enforcements_page.add_push_system_notification()
         self.enforcements_page.click_save_button()
         self.base_page.run_discovery()
@@ -136,11 +135,11 @@ class TestEnforcementNoQuery(TestBase):
                    total_timeout=60 * 2)
 
     def test_enforcement_table_content(self):
-        self.enforcements_page.create_notifying_enforcement(ENFORCEMENT_NAME, COMMON_ENFORCEMENT_QUERY)
+        self.enforcements_page.create_notifying_enforcement(ENFORCEMENT_NAME, MANAGED_DEVICES_QUERY_NAME)
 
         # Check initial state of Enforcement in table
         assert ENFORCEMENT_NAME in self.enforcements_page.get_column_data_inline(FIELD_NAME)
-        assert COMMON_ENFORCEMENT_QUERY in self.enforcements_page.get_column_data_inline(FIELD_QUERY_NAME)
+        assert MANAGED_DEVICES_QUERY_NAME in self.enforcements_page.get_column_data_inline(FIELD_QUERY_NAME)
         assert not self.enforcements_page.get_column_data_inline(FIELD_LAST_TRIGGERED)
         assert '0' in self.enforcements_page.get_column_data_inline(FIELD_TIMES_TRIGGERED)
 
@@ -150,7 +149,7 @@ class TestEnforcementNoQuery(TestBase):
 
         # Check triggered state of Enforcement in table
         assert ENFORCEMENT_NAME in self.enforcements_page.get_column_data_inline(FIELD_NAME)
-        assert COMMON_ENFORCEMENT_QUERY in self.enforcements_page.get_column_data_inline(FIELD_QUERY_NAME)
+        assert MANAGED_DEVICES_QUERY_NAME in self.enforcements_page.get_column_data_inline(FIELD_QUERY_NAME)
         assert datetime.now().strftime('%Y-%m-%d') in normalize_timezone_date(
             self.enforcements_page.get_column_data_inline(FIELD_LAST_TRIGGERED)[0])
         assert '1' in self.enforcements_page.get_column_data_inline(FIELD_TIMES_TRIGGERED)
@@ -168,7 +167,7 @@ class TestEnforcementNoQuery(TestBase):
         Test an Enforcement containing a Main action as well as success, failure and post actions
         """
         with CarbonblackResponseService().contextmanager(take_ownership=True):
-            self.enforcements_page.create_deploying_enforcement(ENFORCEMENT_NAME, COMMON_ENFORCEMENT_QUERY)
+            self.enforcements_page.create_deploying_enforcement(ENFORCEMENT_NAME, MANAGED_DEVICES_QUERY_NAME)
             wait_until(lambda: self.enforcements_page.add_deploying_consequences(ENFORCEMENT_NAME, SUCCESS_TAG_NAME,
                                                                                  FAILURE_TAG_NAME,
                                                                                  FAILURE_ISOLATE_NAME),
@@ -206,7 +205,7 @@ class TestEnforcementNoQuery(TestBase):
         triggered again if no new results
         """
         self.enforcements_page.switch_to_page()
-        self.enforcements_page.create_notifying_enforcement(ENFORCEMENT_NAME, COMMON_ENFORCEMENT_QUERY, added=True)
+        self.enforcements_page.create_notifying_enforcement(ENFORCEMENT_NAME, MANAGED_DEVICES_QUERY_NAME, added=True)
         self.base_page.run_discovery()
         self.notification_page.verify_amount_of_notifications(1)
 

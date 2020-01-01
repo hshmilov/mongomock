@@ -27,11 +27,10 @@ from test_credentials.test_esx_credentials import \
 from test_helpers.log_tester import LogTester
 from ui_tests.pages.enforcements_page import (ENFORCEMENT_WMI_SAVED_QUERY,
                                               ENFORCEMENT_WMI_SAVED_QUERY_NAME)
-from ui_tests.tests.ui_consts import REPORTS_LOG_PATH, Enforcements
+from ui_tests.tests.ui_consts import REPORTS_LOG_PATH, Enforcements, MANAGED_DEVICES_QUERY_NAME
 from ui_tests.tests.ui_test_base import TestBase
 
 ENFORCEMENT_NAME = 'Special enforcement name'
-COMMON_ENFORCEMENT_QUERY = 'Enabled AD Devices'
 ENFORCEMENT_CHANGE_NAME = 'test_enforcement_change'
 ENFORCEMENT_TEST_NAME_1 = 'Test_enforcement_1'
 ENFORCEMENT_TEST_NAME_2 = 'Test_enforcement_2'
@@ -79,7 +78,7 @@ class TestEnforcementActions(TestBase):
     def _create_notifications(self, count=1) -> List[str]:
         enforcement_names = [create_enforcement_name(i) for i in range(count)]
         for name in enforcement_names:
-            self.enforcements_page.create_notifying_enforcement(name, COMMON_ENFORCEMENT_QUERY,
+            self.enforcements_page.create_notifying_enforcement(name, MANAGED_DEVICES_QUERY_NAME,
                                                                 False, False)
         self.base_page.run_discovery()
 
@@ -156,7 +155,7 @@ class TestEnforcementActions(TestBase):
         self.settings_page.click_toggle_button(toggle, make_yes=False)
         self.settings_page.click_save_global_settings()
 
-        self.enforcements_page.create_basic_enforcement(ENFORCEMENT_NAME, COMMON_ENFORCEMENT_QUERY)
+        self.enforcements_page.create_basic_enforcement(ENFORCEMENT_NAME, MANAGED_DEVICES_QUERY_NAME)
         self.enforcements_page.add_send_email()
         self.enforcements_page.find_missing_email_server_notification()
 
@@ -174,7 +173,7 @@ class TestEnforcementActions(TestBase):
             self.settings_page.click_save_button()
 
             # switch to enforcements page
-            self.enforcements_page.create_basic_enforcement(ENFORCEMENT_NAME, COMMON_ENFORCEMENT_QUERY)
+            self.enforcements_page.create_basic_enforcement(ENFORCEMENT_NAME, MANAGED_DEVICES_QUERY_NAME)
             self.enforcements_page.add_push_system_notification()
 
             self.enforcements_page.add_notify_syslog(action_cond=self.enforcements_page.POST_ACTIONS_TEXT)
@@ -182,7 +181,7 @@ class TestEnforcementActions(TestBase):
 
             self.base_page.run_discovery()
             syslog_expected = f'Alert - "{ENFORCEMENT_NAME}"' + \
-                              f' for the following query has been triggered: {COMMON_ENFORCEMENT_QUERY}'
+                              f' for the following query has been triggered: {MANAGED_DEVICES_QUERY_NAME}'
             _verify_in_syslog_data(syslog_server, syslog_expected)
 
             # Verifying the multiple actions in enforcement worked
@@ -199,7 +198,7 @@ class TestEnforcementActions(TestBase):
 
             # make another enforcement
             new_enforcement_name = f'{ENFORCEMENT_NAME} SSL'
-            self.enforcements_page.create_basic_enforcement(new_enforcement_name, COMMON_ENFORCEMENT_QUERY)
+            self.enforcements_page.create_basic_enforcement(new_enforcement_name, MANAGED_DEVICES_QUERY_NAME)
             self.enforcements_page.add_push_system_notification(f'{ENFORCEMENT_NAME} push')
 
             self.enforcements_page.add_notify_syslog(f'{ENFORCEMENT_NAME} syslog',
@@ -208,7 +207,7 @@ class TestEnforcementActions(TestBase):
 
             self.base_page.run_discovery()
             syslog_expected = f'Alert - "{new_enforcement_name}"' + \
-                              f' for the following query has been triggered: {COMMON_ENFORCEMENT_QUERY}'
+                              f' for the following query has been triggered: {MANAGED_DEVICES_QUERY_NAME}'
             _verify_in_syslog_data(syslog_server, syslog_expected)
 
     def test_remove_tag_from_unqueried(self):
@@ -394,6 +393,7 @@ class TestEnforcementActions(TestBase):
                                                                delete_after_verification=True)
 
     def test_tag_entities_dropdown(self):
+        self.devices_page.create_saved_query(self.devices_page.FILTER_OS_WINDOWS, Enforcements.enforcement_query_1)
         self.enforcements_page.switch_to_page()
         self.enforcements_page.wait_for_table_to_load()
         self.base_page.run_discovery()

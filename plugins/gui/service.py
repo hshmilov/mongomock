@@ -567,13 +567,17 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
             config.read(os.path.abspath(os.path.join(os.path.dirname(__file__), f'configs/{default_views_ini_path}')))
 
             # Save default views
-            for name, view in config.items():
+            for name, data in config.items():
                 if name == 'DEFAULT':
                     # ConfigParser always has a fake DEFAULT key, skip it
                     continue
                 try:
                     self._insert_view(
-                        self.gui_dbs.entity_query_views_db_map[entity_type], name, json.loads(view['view']))
+                        self.gui_dbs.entity_query_views_db_map[entity_type],
+                        name,
+                        json.loads(data['view']),
+                        data.get('description', ''),
+                        json.loads(data.get('tags', '[]')))
                 except Exception:
                     logger.exception(f'Error adding default view {name}')
         except Exception:
@@ -624,23 +628,25 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
         except Exception as e:
             logger.exception(f'Error adding default dashboard chart. Reason: {repr(e)}')
 
-    def _insert_view(self, views_collection, name, mongo_view):
+    def _insert_view(self, views_collection, name, mongo_view, description, tags):
         existed_view = views_collection.find_one({
-            'name': name
+            'name': {
+                '$regex': name,
+                '$options': 'i'
+            },
+            PREDEFINED_FIELD: True,
+            UPDATED_BY_FIELD: '*'
         })
-        if existed_view is not None and not existed_view.get('archived'):
-            logger.info(f'view {name} already exists id: {existed_view["_id"]}')
-            if not existed_view.get(PREDEFINED_FIELD):
-                views_collection.update_one({'name': name}, {
-                    '$set': {
-                        PREDEFINED_FIELD: True
-                    }
-                })
-            return existed_view['_id']
-
+        find_query = {
+            '_id': existed_view['_id']
+        } if existed_view else {
+            'name': name
+        }
         current_time = datetime.now()
-        result = views_collection.replace_one({'name': name}, {
+        views_collection.replace_one(find_query, {
             'name': name,
+            'description': description,
+            'tags': tags,
             'view': mongo_view,
             'query_type': 'saved',
             'timestamp': current_time,
@@ -649,8 +655,6 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
             LAST_UPDATED_FIELD: current_time,
             PREDEFINED_FIELD: True
         }, upsert=True)
-        logger.info(f'Added view {name} id: {result.upserted_id}')
-        return result.upserted_id
 
     def _upsert_report_config(self, name, report_data, clear_generated_report) -> ObjectId:
         if clear_generated_report:
@@ -696,8 +700,8 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
     def _insert_dashboard_chart(self, dashboard_name, dashboard_metric, dashboard_view, dashboard_data,
                                 hide_empty=False, space_id=None):
         existed_dashboard_chart = self.__dashboard_collection.find_one({'name': dashboard_name})
-        if existed_dashboard_chart is not None and not existed_dashboard_chart.get('archived'):
-            logger.info(f'Report {dashboard_name} already exists under id: {existed_dashboard_chart["_id"]}')
+        if existed_dashboard_chart is not None and existed_dashboard_chart.get('archived'):
+            logger.info(f'Report {dashboard_name} was removed')
             return
 
         result = self.__dashboard_collection.replace_one({
@@ -711,7 +715,6 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
             'user_id': '*',
             'space': space_id
         }, upsert=True)
-        logger.info(f'Added report {dashboard_name} id: {result.upserted_id}')
         return result.upserted_id
 
     def _set_first_time_use(self):

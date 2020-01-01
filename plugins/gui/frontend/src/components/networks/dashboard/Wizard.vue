@@ -252,10 +252,6 @@
             align-items: center;
         }
 
-        .x-select {
-            text-transform: capitalize;
-        }
-
         .link {
             margin: auto;
         }

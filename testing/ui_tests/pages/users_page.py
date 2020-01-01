@@ -5,9 +5,13 @@ class UsersPage(EntitiesPage):
     FIELD_USERNAME_NAME = 'username'
     FIELD_USERNAME_TITLE = 'User Name'
     FIELD_LOGON_COUNT = 'Logon Count'
-    FILTER_USERNAME = 'specific_data.data.username == regex("{filter_value}")'
     FIELD_TAGS = 'Tags'
     FIELD_LAST_SEEN_IN_DOMAIN = 'Last Seen In Domain'
+
+    FILTER_USERNAME = 'specific_data.data.username == regex("{filter_value}")'
+    FILTER_IS_ADMIN = '(specific_data.data.is_admin == true)'
+
+    ADMIN_QUERY_NAME = 'Admin Users'
 
     @property
     def url(self):

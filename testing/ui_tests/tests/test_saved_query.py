@@ -7,7 +7,7 @@ from services.plugins.device_control_service import DeviceControlService
 from ui_tests.tests.ui_test_base import TestBase
 from ui_tests.tests.ui_consts import (READ_ONLY_USERNAME, NEW_PASSWORD,
                                       UPDATE_USERNAME, UPDATE_PASSWORD, UPDATE_FIRST_NAME, UPDATE_LAST_NAME,
-                                      WINDOWS_QUERY_NAME)
+                                      WINDOWS_QUERY_NAME, LINUX_QUERY_NAME)
 
 
 class TestSavedQuery(TestBase):
@@ -141,6 +141,9 @@ class TestSavedQuery(TestBase):
             assert self.devices_page.count_entities() > tasks_results_count
 
     def test_read_only_query(self):
+        self.devices_page.create_saved_query(self.devices_page.FILTER_OS_WINDOWS, WINDOWS_QUERY_NAME)
+        wait_until(lambda: self.devices_page.find_query_title_text() != self.NEW_QUERY_TITLE)
+        self.devices_page.reset_query()
         self.settings_page.switch_to_page()
         self.settings_page.click_manage_users_settings()
         self.settings_page.create_new_user(READ_ONLY_USERNAME, NEW_PASSWORD,
@@ -160,6 +163,8 @@ class TestSavedQuery(TestBase):
         assert self.devices_page.is_query_save_as_disabled()
 
     def test_saved_queries_execute(self):
+        self.devices_page.create_saved_query(self.devices_page.FILTER_OS_WINDOWS, WINDOWS_QUERY_NAME)
+        self.devices_page.create_saved_query(self.devices_page.FILTER_OS_LINUX, LINUX_QUERY_NAME)
         self.settings_page.switch_to_page()
         self.base_page.run_discovery()
 
@@ -176,7 +181,7 @@ class TestSavedQuery(TestBase):
                    self.devices_page.get_column_data_inline(self.devices_page.FIELD_OS_TYPE))
         self.devices_page.fill_filter('linux')
         self.devices_page.open_search_list()
-        self.devices_page.select_query_by_name('Linux Operating System')
+        self.devices_page.select_query_by_name(LINUX_QUERY_NAME)
         self.devices_page.wait_for_spinner_to_end()
         assert not len(self.devices_page.get_column_data_inline(self.devices_page.FIELD_OS_TYPE))
 
@@ -223,6 +228,7 @@ class TestSavedQuery(TestBase):
         assert self.devices_queries_page.get_all_table_rows() == []
 
     def test_saved_queries_search(self):
+        self.devices_page.create_saved_query(self.devices_page.FILTER_OS_WINDOWS, WINDOWS_QUERY_NAME)
         self.settings_page.switch_to_page()
         self.base_page.run_discovery()
         self.devices_queries_page.switch_to_page()

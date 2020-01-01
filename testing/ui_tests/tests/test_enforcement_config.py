@@ -5,11 +5,10 @@ from flaky import flaky
 from selenium.common.exceptions import NoSuchElementException
 
 from axonius.consts.metric_consts import SystemMetric
+from ui_tests.tests.ui_consts import MANAGED_DEVICES_QUERY_NAME
 from ui_tests.tests.ui_test_base import TestBase
 from test_credentials.json_file_credentials import client_details as json_file_creds
 
-
-COMMON_ENFORCEMENT_QUERY = 'Enabled AD Devices'
 
 ENFORCEMENT_CHANGE_NAME = 'test_enforcement_change'
 ENFORCEMENT_CHANGE_FILTER = 'adapters_data.json_file_adapter.test_enforcement_change == 5'
@@ -138,7 +137,6 @@ class TestEnforcementSanity(TestBase):
         self.enforcements_page.wait_for_table_to_load()
         self.enforcements_page.edit_enforcement(ENFORCEMENT_CHANGE_NAME)
         self.enforcements_page.select_trigger()
-        self.enforcements_page.select_saved_view(ENFORCEMENT_CHANGE_NAME)
         text = self.enforcements_page.get_saved_query_text()
         formatted = f'{ENFORCEMENT_CHANGE_NAME} (deleted)'
         assert text == formatted
@@ -180,7 +178,7 @@ class TestEnforcementSanity(TestBase):
         self._create_enforcement_change_query()
         self.enforcements_page.switch_to_page()
         enforcement_names = ['Test 3', 'Test 2', 'Test 5', 'Test 1', 'Test 4']
-        enforcement_queries = [COMMON_ENFORCEMENT_QUERY, ENFORCEMENT_CHANGE_NAME, COMMON_ENFORCEMENT_QUERY,
+        enforcement_queries = [MANAGED_DEVICES_QUERY_NAME, ENFORCEMENT_CHANGE_NAME, MANAGED_DEVICES_QUERY_NAME,
                                ENFORCEMENT_CHANGE_NAME, ENFORCEMENT_CHANGE_NAME]
         for i, name in enumerate(enforcement_names):
             self.enforcements_page.create_notifying_enforcement(name, enforcement_queries[i])
@@ -219,7 +217,7 @@ class TestEnforcementSanity(TestBase):
         self._create_enforcement_change_query()
         self.enforcements_page.switch_to_page()
         enforcement_names = ['Test 3', 'Test 2', 'Test 5', 'Test 1', 'Test 4']
-        enforcement_queries = [COMMON_ENFORCEMENT_QUERY, ENFORCEMENT_CHANGE_NAME, COMMON_ENFORCEMENT_QUERY,
+        enforcement_queries = [MANAGED_DEVICES_QUERY_NAME, ENFORCEMENT_CHANGE_NAME, MANAGED_DEVICES_QUERY_NAME,
                                ENFORCEMENT_CHANGE_NAME, ENFORCEMENT_CHANGE_NAME]
         for i, name in enumerate(enforcement_names):
             self.enforcements_page.create_notifying_enforcement(name, enforcement_queries[i])

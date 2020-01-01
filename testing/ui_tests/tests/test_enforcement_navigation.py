@@ -1,4 +1,4 @@
-from ui_tests.tests.ui_consts import WINDOWS_QUERY_NAME
+from ui_tests.tests.ui_consts import MANAGED_DEVICES_QUERY_NAME
 from ui_tests.tests.ui_test_base import TestBase
 
 ENFORCEMENT_NAME_INCLUDE = 'Test Enforcement Include'
@@ -17,9 +17,9 @@ class TestEnforcementNavigation(TestBase):
 
         # Add new enforcements (2)
         self.enforcements_page.create_notifying_enforcement(enforcement_name=ENFORCEMENT_NAME_INCLUDE,
-                                                            enforcement_view='Devices')
+                                                            enforcement_view=MANAGED_DEVICES_QUERY_NAME)
         self.enforcements_page.create_notifying_enforcement(enforcement_name=ENFORCEMENT_NAME_EXCLUDE,
-                                                            enforcement_view='Devices')
+                                                            enforcement_view=MANAGED_DEVICES_QUERY_NAME)
         self.enforcements_page.edit_enforcement(ENFORCEMENT_NAME_INCLUDE)
 
         # Run enforcement & wait to end
@@ -32,7 +32,7 @@ class TestEnforcementNavigation(TestBase):
         self.enforcements_page.wait_for_table_to_load()
 
         # Search and filter tasks
-        self.enforcements_page.fill_enter_table_search(WINDOWS_QUERY_NAME)
+        self.enforcements_page.fill_enter_table_search(MANAGED_DEVICES_QUERY_NAME)
         self.enforcements_page.wait_for_table_to_load()
 
         tasks = self.enforcements_page.get_tasks_data_from_table()
@@ -46,7 +46,7 @@ class TestEnforcementNavigation(TestBase):
 
         # Add new enforcement (1)
         self.enforcements_page.create_notifying_enforcement(enforcement_name='long_running',
-                                                            enforcement_view='Devices')
+                                                            enforcement_view=MANAGED_DEVICES_QUERY_NAME)
         self.enforcements_page.edit_enforcement('long_running')
         self.enforcements_page.click_run_button()
         self.enforcements_page.wait_for_toaster_to_end(TOASTER_TEXT)

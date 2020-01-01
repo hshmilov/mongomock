@@ -107,7 +107,7 @@ class TestUsersTable(TestEntitiesTable):
         view_data = self.users_page.get_all_data_proper()
 
         # Load some default view, to see that the saved one changes it
-        self.users_page.execute_saved_query('Users Created in Last 30 Days')
+        self.users_page.execute_saved_query('Users created in the last 30 days')
         assert self.users_page.get_all_data_proper() != view_data
 
         self.users_page.clear_filter()

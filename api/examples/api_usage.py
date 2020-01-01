@@ -368,7 +368,7 @@ class RESTExample:
                                                        triggers=[{
                                                            'name': ALERT_NAME,
                                                            'view': {
-                                                               'name': 'Users Created in Last 30 Days',
+                                                               'name': 'Users created in the last 30 days',
                                                                'entity': 'users'
                                                            },
                                                            'conditions': trigger_dict,

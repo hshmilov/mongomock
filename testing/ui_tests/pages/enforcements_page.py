@@ -533,9 +533,11 @@ class EnforcementsPage(EntitiesPage):
 
     def select_saved_view(self, text, entity='Devices'):
         self.select_option_without_search(self.SELECT_VIEW_ENTITY_CSS, self.DROPDOWN_SELECTED_OPTION_CSS, entity)
-        self.select_option(
-            self.SELECT_VIEW_NAME_CSS, self.DROPDOWN_TEXT_BOX_CSS, self.DROPDOWN_SELECTED_OPTION_CSS, text
-        )
+        self.select_option(self.SELECT_VIEW_NAME_CSS,
+                           self.DROPDOWN_TEXT_BOX_CSS,
+                           self.DROPDOWN_SELECTED_OPTION_CSS,
+                           text,
+                           partial_text=False)
 
     def save_action(self):
         self.click_button(

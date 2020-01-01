@@ -59,6 +59,9 @@ AWS_ADAPTER_NAME = 'Amazon Web Services (AWS)'
 SHODAN_ADAPTER = 'shodan_adapter'
 
 WINDOWS_QUERY_NAME = 'Windows Operating System'
+LINUX_QUERY_NAME = 'Linux Operating System'
+AD_MISSING_AGENTS_QUERY_NAME = 'AD devices missing agents'
+MANAGED_DEVICES_QUERY_NAME = 'Managed Devices'
 
 
 class EmailSettings:

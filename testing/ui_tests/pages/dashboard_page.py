@@ -28,9 +28,8 @@ class DashboardPage(Page):
     UNCOVERED_PIE_SLICE_CSS = 'svg > g.slice-0 > text.scaling'
     COVERED_PIE_SLICE_CSS = 'svg > g.slice-1 > text.scaling'
     INTERSECTION_PIE_INTERSECTION_SLICE_CSS = 'svg > g.slice-2 > text'
-    SYMMETRIC_DIFFERENCE_FROM_BASE_QUERY_SLICE_CSS = 'svg > g.slice-0'
+    SYMMETRIC_DIFFERENCE_FROM_BASE_QUERY_SLICE_CSS = 'svg > g.slice-0 > text'
     SYMMETRIC_DIFFERENCE_FROM_FIRST_QUERY_SLICE_CSS = 'svg > g.slice-1 > text'
-    SYMMETRIC_DIFFERENCE_FROM_SECOND_QUERY_SLICE_CSS = 'svg > g.slice-3 > text'
     NEW_CARD_WIZARD_CSS = '.x-tab.active .x-card.chart-new'
     NEW_CARD_WIZARD_OVERLAY_CSS = '.x-modal .x-chart-wizard'
     CHART_METRIC_DROP_DOWN_CSS = '#metric > div'
@@ -198,7 +197,8 @@ class DashboardPage(Page):
                            self.DROPDOWN_TEXT_BOX_CSS,
                            self.DROPDOWN_SELECTED_OPTION_CSS,
                            view_name,
-                           parent=parent)
+                           parent=parent,
+                           partial_text=False)
 
     def select_intersection_chart_first_query(self, query):
         self.select_option_without_search(self.INTERSECTION_CHART_FIRST_QUERY_DROP_DOWN_CSS,
@@ -462,10 +462,8 @@ class DashboardPage(Page):
 
     def click_pie_slice(self, slice_css, card_title):
         card = self.wait_for_element_present_by_xpath(self.PANEL_BY_NAME_XPATH.format(panel_name=card_title))
-        time.sleep(2)
-        card_slice = self.get_pie_chart_from_card(card).find_element_by_css_selector(slice_css)
-        self.scroll_into_view(card_slice, window=TAB_BODY)
-        card_slice.click()
+        time.sleep(1.2)
+        self.get_pie_chart_from_card(card).find_element_by_css_selector(slice_css).click()
 
     @staticmethod
     def get_title_from_card(card):

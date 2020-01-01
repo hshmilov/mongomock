@@ -11,7 +11,7 @@ from ui_tests.tests.ui_consts import (AD_ADAPTER_NAME,
                                       JSON_ADAPTER_NAME,
                                       WINDOWS_QUERY_NAME,
                                       STRESSTEST_SCANNER_ADAPTER,
-                                      STRESSTEST_ADAPTER)
+                                      STRESSTEST_ADAPTER, LINUX_QUERY_NAME)
 from services.plugins.general_info_service import GeneralInfoService
 from services.adapters.cisco_service import CiscoService
 from services.adapters.esx_service import EsxService
@@ -706,7 +706,9 @@ class TestDevicesQuery(TestBase):
     def test_query_wizard_combos(self):
         self.settings_page.switch_to_page()
         self.base_page.run_discovery()
-        self.devices_page.switch_to_page()
+        self.devices_page.create_saved_query(self.devices_page.FILTER_OS_WINDOWS, WINDOWS_QUERY_NAME)
+        self.devices_page.reset_query()
+        self.devices_page.wait_for_table_to_load()
         self.devices_page.click_query_wizard()
         self._test_adapters_filter_change_icon()
         self._test_complex_obj()
@@ -824,6 +826,8 @@ class TestDevicesQuery(TestBase):
         self.settings_page.switch_to_page()
         self.base_page.run_discovery()
         self.devices_page.switch_to_page()
+        self.devices_page.create_saved_query(self.devices_page.FILTER_OS_WINDOWS, WINDOWS_QUERY_NAME)
+        self.devices_page.create_saved_query(self.devices_page.FILTER_OS_LINUX, LINUX_QUERY_NAME)
         self.devices_page.click_query_wizard()
 
         expressions = self.devices_page.find_expressions()
@@ -835,7 +839,7 @@ class TestDevicesQuery(TestBase):
         for os_type in self.devices_page.get_column_data_slicer(self.devices_page.FIELD_OS_TYPE):
             assert os_type == self.devices_page.VALUE_OS_WINDOWS
 
-        self.devices_page.select_query_value(self.devices_page.VALUE_SAVED_QUERY_LINUX, parent=expressions[0])
+        self.devices_page.select_query_value(LINUX_QUERY_NAME, parent=expressions[0])
         self.devices_page.wait_for_spinner_to_end()
         assert self.devices_page.is_query_error()
         assert not len(self.devices_page.get_all_data())

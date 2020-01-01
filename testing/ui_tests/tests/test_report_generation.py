@@ -10,6 +10,7 @@ from services.standalone_services.maildiranasaurus_service import Maildiranasaur
 from services.standalone_services.smtp_service import generate_random_valid_email
 from test_credentials.test_gui_credentials import DEFAULT_USER
 from ui_tests.tests.ui_test_base import TestBase
+from ui_tests.tests.ui_consts import MANAGED_DEVICES_QUERY_NAME
 from ui_tests.tests import ui_consts
 from ui_tests.pages.reports_page import ReportConfig
 from axonius.utils.wait import wait_until
@@ -191,7 +192,7 @@ class TestReportGeneration(TestBase):
 
                 dashboard_chart_page = doc.pages[3]
 
-                assert dashboard_chart_page.extractText().count('Managed Devices') == 2
+                assert dashboard_chart_page.extractText().count(MANAGED_DEVICES_QUERY_NAME) == 2
         finally:
             self.wait_for_adapter_down(ui_consts.STRESSTEST_ADAPTER)
             self.wait_for_adapter_down(ui_consts.STRESSTEST_SCANNER_ADAPTER)
@@ -404,7 +405,7 @@ class TestReportGeneration(TestBase):
 
                 dashboard_chart_page = doc.pages[3]
 
-                assert dashboard_chart_page.extractText().count('Managed Devices') == 2
+                assert dashboard_chart_page.extractText().count(MANAGED_DEVICES_QUERY_NAME) == 2
 
                 new_query = 'histogram_query'
 

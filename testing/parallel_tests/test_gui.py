@@ -50,7 +50,7 @@ def test_default_views():
     views = axonius_system.db.get_collection(gui_service.unique_name, 'device_views')
 
     # A sample Default View as set in default_views_devices.ini under gui/src
-    name = 'AD Printers'
+    name = 'All installed software on devices'
 
     existed_query = views.find_one({'name': name})
     assert existed_query is not None
