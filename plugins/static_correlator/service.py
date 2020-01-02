@@ -177,26 +177,29 @@ class StaticCorrelatorService(CorrelatorBase):
         """
         axonius_devices_count = 0
         for err in self.__find_erroneous_devices():
-            axonius_devices_count += 1
-            logger.info(f'Found correlation error: {err}')
+            try:
+                axonius_devices_count += 1
+                logger.info(f'Found correlation error: {err}')
 
-            if should_fix_errors:
-                for group in err.groups_to_split:
-                    for adapter_device in group:
-                        self.unlink_adapter(EntityType.Devices,
-                                            adapter_device.plugin_unique_name,
-                                            adapter_device.data_id)
+                if should_fix_errors:
+                    for group in err.groups_to_split:
+                        for adapter_device in group:
+                            self.unlink_adapter(EntityType.Devices,
+                                                adapter_device.plugin_unique_name,
+                                                adapter_device.data_id)
 
-                    if len(group) > 1:
-                        devices_to_link = [(adapter_device.plugin_unique_name, adapter_device.data_id)
-                                           for adapter_device
-                                           in group]
-                        correlation_result = CorrelationResult(devices_to_link,
-                                                               {
-                                                                   'reason': 'Split due to error',
-                                                               },
-                                                               CorrelationReason.DetectedError)
-                        self.link_adapters(EntityType.Devices, correlation_result)
+                        if len(group) > 1:
+                            devices_to_link = [(adapter_device.plugin_unique_name, adapter_device.data_id)
+                                               for adapter_device
+                                               in group]
+                            correlation_result = CorrelationResult(devices_to_link,
+                                                                   {
+                                                                       'reason': 'Split due to error',
+                                                                   },
+                                                                   CorrelationReason.DetectedError)
+                            self.link_adapters(EntityType.Devices, correlation_result)
+            except Exception:
+                pass
         return {
             'devices_cleared': axonius_devices_count
         }
