@@ -63,6 +63,7 @@ import _get from 'lodash/get'
 import XGettingStarted from '../components/networks/getting-started/GettingStarted.vue'
 
 import './axons/icons'
+import { FETCH_ADAPTERS } from '../store/modules/adapters'
 
 export const GettingStartedPubSub = new Vue()
 
@@ -172,7 +173,8 @@ export default {
       fetchConstants: FETCH_CONSTANTS,
       fetchFirstHistoricalDate: FETCH_FIRST_HISTORICAL_DATE,
       fetchAllowedDates: FETCH_ALLOWED_DATES,
-      fetchDataFields: FETCH_DATA_FIELDS
+      fetchDataFields: FETCH_DATA_FIELDS,
+      fetchAdapters: FETCH_ADAPTERS
     }),
     changeChecklistOpenState() {
         this.open = !this.open
@@ -180,6 +182,9 @@ export default {
     fetchGlobalData() {
       this.fetchConstants()
       if (!this.isExpired) {
+        if (this.userPermissions.Adapters !== 'Restricted') {
+          this.fetchAdapters()
+        }
         entities.forEach(entity => {
           if (this.entityRestricted(entity.title)) return
           this.fetchDataFields({ module: entity.name })
