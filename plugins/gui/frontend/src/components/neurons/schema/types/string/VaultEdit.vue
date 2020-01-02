@@ -84,8 +84,8 @@
                 }
             },
             getTooltip () {
-                if (this.data && this.error) return this.error
-                if (this.data && this.success) return this.queryModal.current_query
+                if (this.error) return this.error
+                if (this.success) return this.queryModal.current_query
                 return 'Use CyberArk Vault'
             },
             isUnchangedPassword () {
