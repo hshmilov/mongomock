@@ -1,3 +1,5 @@
+#!/usr/bin/env python3.6
+
 import time
 import json
 import signal
@@ -11,6 +13,8 @@ import subprocess
 
 import boto3
 import requests
+
+from CI.exports.version_passwords import VersionPasswords
 
 
 class ExportFileAlreadyExists(Exception):
@@ -43,6 +47,7 @@ def main():
     s3_upload_parser.add_argument('--export-name', required=True, dest='name')
     s3_upload_parser.add_argument('--installer', type=pathlib.Path, default=None)
     s3_upload_parser.add_argument('--ova', type=pathlib.Path, default=None)
+    s3_upload_parser.add_argument('--zip', type=pathlib.Path, default=None)
     s3_upload_parser.set_defaults(entrypoint=s3_upload)
 
     installer_parser = subparsers.add_parser('installer')
@@ -56,6 +61,7 @@ def main():
     installer_parser.add_argument('--git-hash-file', type=pathlib.Path,
                                   default=None, required=False,
                                   help='Will use axonius_[name]_git_hash.txt where name is the argument given as name if not specified. This file contains the commit hash of the resulting installer.')
+    installer_parser.add_argument('--zip-output', type=pathlib.Path, default=None)
     installer_parser.set_defaults(entrypoint=installer)
 
     cloud_parser = subparsers.add_parser('cloud')
@@ -118,12 +124,18 @@ def installer(args, notify):
     installer_packer_file = _SCRIPT_FOLDER.joinpath('axonius_generate_installer.json')
     output_installer_file = (args.output or pathlib.Path(f'axonius_{args.name}.py')).absolute()
     git_hash_file = (args.git_hash_file or pathlib.Path(f'axonius_{args.name}_git_hash.txt')).absolute()
+    zip_installer_path = (args.zip_output or pathlib.Path(f'axonius_{args.name}.zip')).absolute()
+    version_password = VersionPasswords()
+    password = version_password.get_password_for_version(args.name)
     subprocess.run(['packer', 'build', '-timestamp-ui',
                     '-var', f'build_name={args.name}',
                     '-var', f'output_file={output_installer_file}',
                     '-var', f'git_hash_file={git_hash_file}',
                     '-var', f'fork={args.fork}',
-                    '-var', f'branch={args.branch}', installer_packer_file],
+                    '-var', f'branch={args.branch}',
+                    '-var', f'version_password={password}',
+                    '-var', f'zip_installer_path={zip_installer_path}',
+                    installer_packer_file],
                    check=True, cwd=_SCRIPT_FOLDER)
     notify({'name': args.name, 'subcommand': 'installer', 'step': 'finished', 'fork': args.fork,
             'branch': args.branch, 'installer_git_hash': git_hash_file.read_text()})
@@ -155,6 +167,7 @@ def cloud(args, notify):
                 # A bit of a hack, for GCE `artificat_id` is just the image name (which may not contain ':'), and for
                 # AWS, it is in the format `region`:`ami_id`, so we want to take the last part only.
                 def extract_id(s): return s.split(':')[-1]
+
                 artifacts = {f'artifact.{build["builder_type"]}': extract_id(
                     build["artifact_id"]) for build in manifest['builds']}
 
@@ -175,6 +188,7 @@ def ova(args, notify):
 def s3_upload(args, notify):
     notify({'name': args.name, 'subcommand': 's3_upload', 'step': 'start'})
     s3_keys = {'installer': f'{args.name}/axonius_{args.name}.py',
+               'zip': f'{args.name}/axonius_{args.name}.zip',
                'ova': f'{args.name}/{args.name}/{args.name}_export.ova'}
 
     bucket = args.s3_bucket
@@ -221,7 +235,7 @@ def local_installer_path(args):
         yield args.installer
     else:
         releases_bucket = args.s3_bucket
-        axonius_releases_url_for_release = f'https://{releases_bucket}.s3.us-east-2.amazonaws.com/{{0}}/axonius_{{0}}.py'.format
+        axonius_releases_url_for_release = f'https://{releases_bucket}.s3.us-east-2.amazonaws.com/{{0}}/axonius_{{0}}.zip'.format
         url = args.installer_url or axonius_releases_url_for_release(args.installer_s3_name)
         with tempfile.TemporaryDirectory() as temporary_directory:
             installer_name = pathlib.PosixPath(urllib.parse.urlparse(url).path).name
@@ -238,8 +252,10 @@ def remote_vmdk_path(args):
     else:
         gce_image_name = args.gce_image_name or 'axonius-' + args.name
         remote_vmdk_name = f'temp_vmdk_export_{hex(int(time.time() * 10))}' + gce_image_name + '.vmdk'
-        vmdk_export_arguments = ['gcloud', 'compute', 'images', 'export', f'--destination-uri=gs://axonius-releases/{remote_vmdk_name}',
-                                 '--export-format=vmdk', f'--image={gce_image_name}', '--network=axonius-office-vpc', '--subnet=private-subnet',
+        vmdk_export_arguments = ['gcloud', 'compute', 'images', 'export',
+                                 f'--destination-uri=gs://axonius-releases/{remote_vmdk_name}',
+                                 '--export-format=vmdk', f'--image={gce_image_name}', '--network=axonius-office-vpc',
+                                 '--subnet=private-subnet',
                                  '--log-location=gs://axonius-releases/logs', '--zone=us-east1-b']
         subprocess.run(vmdk_export_arguments, check=True)
         try:

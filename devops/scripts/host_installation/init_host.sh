@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+
 function _wait_for_apt {
     i=0
 
@@ -109,11 +111,12 @@ retry timeout 20 add-apt-repository \
 curl -sSk https://nexus.axonius.lan/ppa_certs/deadcert.key | sudo apt-key add -
 source /etc/lsb-release
 sudo add-apt-repository "deb https://axoniusreadonly:7wr7E6kfttdVgn5e@nexus.axonius.lan/repository/proxy-python3.6 ${DISTRIB_CODENAME} main"
-cd "$(dirname "$0")"
-cp ./nexus-apt /etc/apt/apt.conf.d/nexus
+cd $SCRIPT_DIR
+cp ./uploads/nexus-apt /etc/apt/apt.conf.d/nexus
 _wait_for_apt update
 echo "Installing various dependencies..."
 _wait_for_apt install -yq sshpass open-vm-tools stunnel4 htop moreutils gparted sysstat python-apt python3-apt net-tools iputils-ping libpq-dev tmux screen nano vim curl python3-dev python-dev libffi-dev libxml2-dev libxslt-dev musl-dev make gcc tcl-dev tk-dev openssl git python libpango1.0-0 libcairo2 software-properties-common python-software-properties ssh libxmlsec1 ncdu traceroute libc6:i386 libstdc++6:i386 cntlm
+_wait_for_apt install -yq zip unzip
 echo "Installing python 3.6..."
 # unixodbc-dev https://github.com/mkleehammer/pyodbc/issues/276 is needed for pyodbc
 _wait_for_apt install -yq python3.6 python3.6-dev python3.6-venv ipython python-pip htpdate unixodbc-dev
@@ -126,7 +129,7 @@ curl https://bootstrap.pypa.io/get-pip.py | python3.6
 echo "Setting python3.6 as the default python and upgrading pip..."
 ln -sf /usr/bin/python2 /usr/local/bin/python
 ln -sf /usr/bin/python3.6 /usr/local/bin/python3
-cp ./pip.conf /etc/pip.conf
+cp ./uploads/pip.conf /etc/pip.conf
 python2 -m pip install --upgrade pip
 python3 -m pip install --upgrade pip
 echo "Installing virtualenv and setuptools..."
@@ -137,18 +140,28 @@ pip3 install --upgrade setuptools
 pip3 install ipython
 pip3 install PyYaml
 pip3 install netifaces==0.10.9
+pip3 install python-crontab==2.4.0
 echo "Installing docker-ce..."
 _wait_for_apt install -yq docker-ce=5:19.03.5~3-0~ubuntu-xenial
 systemctl enable docker
 echo "Adding ubuntu to the docker group, please note that you must logout and login!"
 usermod -aG docker ubuntu
 gpasswd -a ubuntu docker
+
+cd $SCRIPT_DIR
+echo "dir"
+echo pwd
+echo "What is inside:"
+ls -la
+
+
 echo "Installing weave"
-cp ./daemon.json /etc/docker/daemon.json
-cp ./weave-2.6.0 /usr/local/bin/weave
+cp ./uploads/daemon.json /etc/docker/daemon.json
+cp ./uploads/weave-2.6.0 /usr/local/bin/weave
 echo "Restarting Docker Service for Registry setup"
 systemctl restart docker
 chmod a+x /usr/local/bin/weave
+
 echo "Setting system-wide settings"
 sudo timedatectl set-timezone UTC
 
@@ -161,10 +174,11 @@ else
     chown netconfig /home/netconfig
     usermod -s /home/netconfig/login netconfig
     echo netconfig:netconfig | /usr/sbin/chpasswd
-    cp ./ip_wizard/login.c /home/netconfig/login.c
-    cp ./ip_wizard/login.py /home/netconfig/login.py
+    cp ./uploads/ip_wizard/login.c /home/netconfig/login.c
+    cp ./uploads/ip_wizard/login.py /home/netconfig/login.py
     cd /home/netconfig
     gcc login.c -o login && chown root:root /home/netconfig/login && chmod 4555 /home/netconfig/login
+    cd $SCRIPT_DIR
     chown root:root /home/netconfig/login.py
     chmod 0444 /home/netconfig/login.py
     echo DenyUsers netconfig >> /etc/ssh/sshd_config
@@ -184,6 +198,31 @@ else
     /usr/sbin/usermod -aG sudo customer
     echo customer:customer | /usr/sbin/chpasswd
 fi
+
+DECRYPT_USER=decrypt
+if [ $(cat /etc/passwd | grep $DECRYPT_USER | wc -l) -ne 0 ]; then
+    echo "User $DECRYPT_USER exists"
+else
+    cd $SCRIPT_DIR
+    echo "Setting $DECRYPT_USER user"
+    useradd $DECRYPT_USER
+    mkdir -p /home/$DECRYPT_USER
+    chown decrypt /home/$DECRYPT_USER
+    usermod -s /home/$DECRYPT_USER/decrypt_user.py decrypt
+    usermod -aG sudo $DECRYPT_USER
+    echo $DECRYPT_USER:decrypt | /usr/sbin/chpasswd
+    cp ./uploads/decrypt_wizard/decrypt_user.py /home/$DECRYPT_USER/decrypt_user.py
+    cp ./uploads/decrypt_wizard/first_install.py /home/$DECRYPT_USER/first_install.py
+    cp ./uploads/decrypt_wizard/install_and_run.sh /home/$DECRYPT_USER/install_and_run.sh
+    chmod +x /home/$DECRYPT_USER/install_and_run.sh
+    chown -R $DECRYPT_USER:$DECRYPT_USER /home/$DECRYPT_USER/
+    chmod 0744 /home/$DECRYPT_USER/*.py
+    echo "decrypt ALL=(ALL) NOPASSWD: /home/$DECRYPT_USER/first_install.py" > /etc/sudoers.d/90-decrypt
+    echo "Done setting user $DECRYPT_USER"
+fi
+
+echo "making ubuntu passwordless sudo"
+echo "ubuntu ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/90-ubuntu
 
 echo "Installing swap"
 if [ $(cat /etc/fstab | grep swapfile | wc -l) -ne 0 ]; then

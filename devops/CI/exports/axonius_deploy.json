@@ -82,40 +82,14 @@
       ]
     },
     {
-      "type": "shell",
-      "inline": [
-        "mkdir -p /home/ubuntu/cortex/devops/scripts/host_installation"
-      ]
-    },
-    {
       "type": "file",
-      "source": "{{user `host_installation`}}ip_wizard",
-      "destination": "/home/ubuntu/cortex/devops/scripts/host_installation/ip_wizard"
-    },
-    {
-      "type": "file",
-      "source": "{{user `host_installation`}}daemon.json",
-      "destination": "/home/ubuntu/cortex/devops/scripts/host_installation/daemon.json"
-    },
-    {
-      "type": "file",
-      "source": "{{user `host_installation`}}nexus-apt",
-      "destination": "/home/ubuntu/cortex/devops/scripts/host_installation/nexus-apt"
-    },
-    {
-      "type": "file",
-      "source": "{{user `host_installation`}}pip.conf",
-      "destination": "/home/ubuntu/cortex/devops/scripts/host_installation/pip.conf"
-    },
-    {
-      "type": "file",
-      "source": "{{user `host_installation`}}weave-2.6.0",
-      "destination": "/home/ubuntu/cortex/devops/scripts/host_installation/weave-2.6.0"
+      "source": "{{user `host_installation`}}uploads",
+      "destination": "/home/ubuntu/uploads"
     },
     {
       "type": "shell",
       "script": "{{user `host_installation`}}init_host.sh",
-      "remote_folder": "/home/ubuntu/cortex/devops/scripts/host_installation",
+      "remote_folder": "/home/ubuntu/",
       "execute_command": "sudo -S sh -c '{{ .Vars }} {{ .Path }}'"
     },
     {
@@ -147,15 +121,7 @@
     {
       "type": "file",
       "source": "{{user `installer`}}",
-      "destination": "/home/ubuntu/axonius_installer.py"
-    },
-    {
-      "type": "shell",
-      "inline": [
-        "python3 ./axonius_installer.py --first-time",
-        "chown -R ubuntu:ubuntu ./cortex"
-      ],
-      "execute_command": "sudo -S sh -c '{{ .Vars }} {{ .Path }}'"
+      "destination": "/home/ubuntu/version.zip"
     },
     {
       "type": "shell",
@@ -168,40 +134,18 @@
     },
     {
       "type": "shell",
+      "remote_folder": "/home/ubuntu",
       "inline": [
-        "rm -f /home/ubuntu/axonius_installer.py"
-      ]
-    },
-    {
-      "type": "file",
-      "source": "setup_crons.py",
-      "destination": "/home/ubuntu/cortex/setup_crons.py"
-    },
-    {
-      "type": "file",
-      "source": "setup_network.sh",
-      "destination": "/home/ubuntu/cortex/setup_network.sh"
-    },
-    {
-      "type": "file",
-      "source": "create_swap.py",
-      "destination": "/home/ubuntu/cortex/create_swap.py"
-    },
-    {
-      "type": "shell",
-      "remote_folder": "/home/ubuntu/cortex",
-      "inline": [
-        "/home/ubuntu/cortex/venv/bin/python /home/ubuntu/cortex/setup_crons.py",
-        "rm -f setup_network.sh setup_crons.py create_swap.py",
+        "mkdir -p /etc/cron.d/",
+        "cp uploads/cron.d/* /etc/cron.d/",
+        "chmod +700 /etc/cron.d/*",
+        "chown -R root:root /etc/cron.d/*",
+        "rm -rf /home/ubuntu/.ssh/authorized_keys",
+        "python3 uploads/create_pre_installed_crons.py",
+        "rm -rf uploads",
         "cat /dev/null > /home/ubuntu/.bash_history"
       ],
       "execute_command": "sudo -S sh -c '{{ .Vars }} {{ .Path }}'"
-    },
-    {
-      "type": "shell",
-      "inline": [
-        "rm -rf /home/ubuntu/.ssh/authorized_keys"
-      ]
     }
   ],
   "post-processors": [
@@ -212,4 +156,3 @@
     }
   ]
 }
-

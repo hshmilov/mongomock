@@ -6,7 +6,8 @@
     "git_hash_file": "axonius_{{user `build_name`}}_git_hash.txt",
     "password": "bringorder",
     "branch": "develop",
-    "fork": "axonius"
+    "fork": "axonius",
+    "zip_installer_path": "axonius_{{user `build_name`}}_installer.zip"
   },
   "builders": [
     {
@@ -34,40 +35,14 @@
       ]
     },
     {
-      "type": "shell",
-      "inline": [
-        "mkdir -p /home/ubuntu/cortex/devops/scripts/host_installation"
-      ]
-    },
-    {
       "type": "file",
-      "source": "{{user `host_installation`}}ip_wizard",
-      "destination": "/home/ubuntu/cortex/devops/scripts/host_installation/ip_wizard"
-    },
-    {
-      "type": "file",
-      "source": "{{user `host_installation`}}daemon.json",
-      "destination": "/home/ubuntu/cortex/devops/scripts/host_installation/daemon.json"
-    },
-    {
-      "type": "file",
-      "source": "{{user `host_installation`}}nexus-apt",
-      "destination": "/home/ubuntu/cortex/devops/scripts/host_installation/nexus-apt"
-    },
-    {
-      "type": "file",
-      "source": "{{user `host_installation`}}pip.conf",
-      "destination": "/home/ubuntu/cortex/devops/scripts/host_installation/pip.conf"
-    },
-    {
-      "type": "file",
-      "source": "{{user `host_installation`}}weave-2.6.0",
-      "destination": "/home/ubuntu/cortex/devops/scripts/host_installation/weave-2.6.0"
+      "source": "{{user `host_installation`}}uploads",
+      "destination": "/home/ubuntu/uploads"
     },
     {
       "type": "shell",
       "script": "{{user `host_installation`}}init_host.sh",
-      "remote_folder": "/home/ubuntu/cortex/devops/scripts/host_installation",
+      "remote_folder": "/home/ubuntu/",
       "execute_command": "sudo -S sh -c '{{ .Vars }} {{ .Path }}'"
     },
     {
@@ -107,6 +82,20 @@
       "source": "/home/ubuntu/cortex/axonius_{{user `build_name`}}.py",
       "direction": "download",
       "destination": "{{user `output_file`}}"
+    },
+    {
+      "type": "shell",
+      "inline": [
+        "cd /home/ubuntu/cortex",
+        "mv axonius_{{user `build_name`}}.py axonius_install.py",
+        "zip -P {{user `version_password`}} version.zip axonius_install.py"
+      ]
+    },
+    {
+      "type": "file",
+      "source": "/home/ubuntu/cortex/version.zip",
+      "direction": "download",
+      "destination": "{{user `zip_installer_path`}}"
     }
   ],
   "post-processors": [

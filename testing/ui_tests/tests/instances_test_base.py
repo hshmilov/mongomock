@@ -12,6 +12,7 @@ import paramiko
 import pytest
 from retrying import retry
 
+from CI.exports.version_passwords import VersionPasswords
 from axonius.consts.system_consts import CUSTOMER_CONF_PATH
 from axonius.utils.wait import wait_until
 from builds import Builds
@@ -25,6 +26,9 @@ from ui_tests.tests.ui_test_base import TestBase
 
 NODE_MAKER_USERNAME = 'node_maker'
 NODE_MAKER_PASSWORD = 'M@ke1tRain'
+
+DECRYPT_USERNAME = 'decrypt'
+DECRYPT_PASSWORD = 'decrypt'
 
 DEFAULT_IMAGE_USERNAME = 'ubuntu'
 DEFAULT_IMAGE_PASSWORD = 'bringorder'
@@ -211,7 +215,8 @@ def wait_for_booted_for_production(instance: BuildsInstance):
     get_log_command = f'tail {RESTART_LOG_PATH.as_posix()} -n 100'
     restart_log_tail = instance.ssh(get_log_command)
     print(f'Log so far: {restart_log_tail}')
-    assert 'root root' in state[1]
+    print(f'state0 = {state[0]} state1 = {state[1]}')
+    assert state[0] == 0  # ls success on files that exist
 
 
 def bring_restart_on_reboot_node_log(instance: BuildsInstance, logger):
@@ -264,8 +269,10 @@ def setup_instances(logger, instance_name, export_name=None):
             now = datetime.now()
             logger.info('Waiting for server to boot to production')
             try:
+                decrypt_node(logger, current_instance)
                 wait_for_booted_for_production(current_instance)
             except Exception:
+                logger.exception(f'system failed to boot')
                 bring_restart_on_reboot_node_log(current_instance, logger)
                 logger.info(f'Failed once, trying again, failed after {(datetime.now() - now).total_seconds()}')
                 wait_for_booted_for_production(current_instance)
@@ -278,6 +285,48 @@ def setup_instances(logger, instance_name, export_name=None):
             raise
 
     return instances
+
+
+def read_ssh_until(logger, ssh_chan: paramiko.Channel, what):
+    data = b''
+    try:
+        for _ in range(MAX_CHARS):
+            received = ssh_chan.recv(30)
+            logger.info(f'Data read is: {received.decode("utf-8")}')
+            if not received:
+                raise RuntimeError('Connection Closed')
+            data += received
+            if data.endswith(what):
+                break
+        return data
+    except Exception:
+        logger.exception(f'failed read_until: {what}')
+        logger.error(f'data received until failure: {data}')
+        raise
+
+
+def decrypt_node(logger, instance):
+    logger.info(f'about to decrypt {instance}')
+    channel = connect_to_linux_user(instance, DECRYPT_PASSWORD, DECRYPT_PASSWORD)
+    read_ssh_until(logger, channel, b'Please enter the decryption key> ')
+    logger.info(f'Got the decrypt login message')
+    version_password = VersionPasswords()
+    # we can support fetching password per version later, fow now - latest
+    decrypt_password = version_password.get_password_for_version('latest')
+    channel.sendall(f'{decrypt_password}\n')
+    read_ssh_until(logger, channel, b'Decrypt user - end\n')
+    logger.info(f'Decrypted axonius, waiting for the system to start')
+
+
+def connect_to_linux_user(instance, password, username):
+    client = paramiko.SSHClient()
+    client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    client.connect(instance.ip, username=username, password=password, timeout=60,
+                   auth_timeout=60, look_for_keys=False, allow_agent=False)
+    chan: paramiko.Channel = client.get_transport().open_session()
+    chan.settimeout(SSH_CHANNEL_TIMEOUT)
+    chan.invoke_shell()
+    return chan
 
 
 class TestInstancesBase(TestBase):
@@ -296,43 +345,19 @@ class TestInstancesBase(TestBase):
         super().teardown_method(method)
 
     @staticmethod
-    def connect_node_maker(instance, password=NODE_MAKER_PASSWORD):
-        client = paramiko.SSHClient()
-        client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        client.connect(instance.ip, username=NODE_MAKER_USERNAME, password=password, timeout=60,
-                       auth_timeout=60, look_for_keys=False, allow_agent=False)
-        return client
+    def connect_node_maker(instance, password=NODE_MAKER_PASSWORD, username=NODE_MAKER_USERNAME):
+        return connect_to_linux_user(instance, password, username)
 
     def join_node(self):
-        def read_until(ssh_chan: paramiko.Channel, what):
-            data = b''
-            try:
-                for _ in range(MAX_CHARS):
-                    received = ssh_chan.recv(30)
-                    self.logger.info(f'Data read is: {received.decode("utf-8")}')
-                    if not received:
-                        raise RuntimeError('Connection Closed')
-                    data += received
-                    if data.endswith(what):
-                        break
-                return data
-            except Exception:
-                self.logger.exception(f'failed read_until: {what}')
-                self.logger.error(f'data received until failure: {data}')
-                raise
-
         ip_output = subprocess.check_output(['ip', 'a']).decode('utf-8')
         master_ip_address = re.search(PRIVATE_IP_ADDRESS_REGEX, ip_output).group(1)
         node_join_token = self.instances_page.get_node_join_token()
-        ssh_client = self.connect_node_maker(self._instances[0])
-        chan: paramiko.Channel = ssh_client.get_transport().open_session()
-        chan.settimeout(SSH_CHANNEL_TIMEOUT)
-        chan.invoke_shell()
-        node_join_message = read_until(chan, b'Please enter connection string:')
+        chan = TestInstancesBase.connect_node_maker(self._instances[0])
+        node_join_message = read_ssh_until(self.logger, chan, b'Please enter connection string:')
         self.logger.info(f'node_maker login message: {node_join_message.decode("utf-8")}')
         chan.sendall(f'{master_ip_address} {node_join_token} {NODE_NAME}\n')
         try:
-            node_join_log = read_until(chan, b'Node successfully joined Axonius cluster.\n')
+            node_join_log = read_ssh_until(self.logger, chan, b'Node successfully joined Axonius cluster.\n')
             self.logger.info(f'node join log: {node_join_log.decode("utf-8")}')
         except Exception:
             self.logger.exception('Failed to connect node.')
@@ -363,9 +388,11 @@ class TestInstancesBase(TestBase):
 
     def _delete_nexpose_adapter_and_data(self):
         self.adapters_page.remove_server(adapter_name=NEXPOSE_ADAPTER_NAME, delete_associated_entities=True)
+
         @retry(stop_max_attempt_number=100, wait_fixed=2000)
         def to_check():
             assert self._check_device_count() == 0
+
         to_check()
 
     def check_ssh_tunnel(self):

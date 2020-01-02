@@ -47,22 +47,10 @@ def copy_file(local_path, dest_path, mode=0o700, user='root', group='root'):
     shutil.chown(dest_path, user=user, group=group)
 
 
-def place_sched_prov():
-    print(f'First time - placing sched_prov files')
-    resources_as_path = Path(RESOURCES_PATH)
-    sh_file = 'chef_scheduled_provision.sh'
-    py_file = 'sched_prov.py'
-    copy_file(resources_as_path / sh_file, CRON_D_PATH / sh_file)
-    copy_file(resources_as_path / py_file, CRON_D_PATH / py_file)
-
-
 def after_venv_activation(first_time, root_pass):
     print(f'installing on top of customer_conf: {get_customer_conf_json()}')
     if not first_time:
         stop_old(keep_diag=True, keep_tunnel=True)
-
-    if first_time:
-        place_sched_prov()
 
     setup_host()
     load_images()
@@ -139,11 +127,11 @@ def setup_instances_user():
 def create_cronjob(script_path, cronjob_timing, specific_run_env='', keep_script_location=False):
     print_state(f'Creating {script_path} cronjob')
     if keep_script_location:
-        crontab_command = 'crontab -l | {{ cat; echo "{timing} {specific_run_env}{script_name} > ' \
+        crontab_command = 'crontab -l | {{ cat; echo "{timing} {specific_run_env}{script_name} >> ' \
                           '/var/log/{log_name} 2>&1"; }} | crontab -'
     else:
         crontab_command = 'crontab -l | {{ cat; echo "{timing} {specific_run_env}' \
-                          + str(CRON_D_PATH) + '/{script_name} > /var/log/{log_name} 2>&1"; }} | crontab -'
+                          + str(CRON_D_PATH) + '/{script_name} >> /var/log/{log_name} 2>&1"; }} | crontab -'
 
         copy_file(script_path, CRON_D_PATH / os.path.basename(script_path))
 
@@ -210,7 +198,7 @@ def setup_instances():
     setup_instances_cronjobs()
 
     resources_as_path = Path(RESOURCES_PATH)
-    copy_file(resources_as_path / 'weave-2.6.0', '/usr/local/bin/weave',  mode=0o755, user='root', group='root')
+    copy_file(resources_as_path / 'weave-2.6.0', '/usr/local/bin/weave', mode=0o755, user='root', group='root')
 
 
 def setup_host():
