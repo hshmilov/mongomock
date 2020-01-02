@@ -16,7 +16,7 @@ CSV_ADAPTER_QUERY = 'adapters_data.csv_adapter.id == exists(true)'
 CSV_FILE_NAME = 'csv'
 CSV_NAME = 'CSV Serials'
 CSV_PLUGIN_NAME = 'csv_adapter'
-QUERY_WIZARD_CSV_DATE_PICKER_VALUE = '2018-12-30 02:13:24.485Z'
+QUERY_WIZARD_CSV_DATE_PICKER_VALUE = '2020-01-02 02:13:24.485Z'
 
 ESX_NAME = 'VMware ESXi'
 ESX_PLUGIN_NAME = 'esx_adapter'

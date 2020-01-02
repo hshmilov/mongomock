@@ -23,6 +23,7 @@ VERIFY_SSL = 'verify_ssl'
 
 
 class NexposeScannerCorrelator(ScannerCorrelatorBase):
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._all_aws_devices_by_id = {x['data']['id']: x
@@ -52,6 +53,7 @@ class NexposeScannerCorrelator(ScannerCorrelatorBase):
 
 class NexposeAdapter(ScannerAdapterBase, Configurable):
     """ Adapter for Rapid7's nexpose """
+    DEFAULT_LAST_SEEN_THRESHOLD_HOURS = 24 * 365 * 2
 
     class MyDeviceAdapter(DeviceAdapter):
         nexpose_hostname = Field(str, 'Nexpose Hostname')
