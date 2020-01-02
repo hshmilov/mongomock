@@ -113,3 +113,4 @@ ucsmsdk==0.9.8
 python-crontab==2.4.0
 pip==19.3.1
 pymongocrypt==0.1b1
+pem==19.3.0
