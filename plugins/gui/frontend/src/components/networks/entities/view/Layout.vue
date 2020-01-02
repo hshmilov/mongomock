@@ -28,7 +28,7 @@
       <x-tab
         id="generic"
         key="generic"
-        title="General Data"
+        title="Aggregated"
         :selected="singleAdapter"
       >
         <x-entity-general

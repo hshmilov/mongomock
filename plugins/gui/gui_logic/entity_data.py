@@ -90,7 +90,7 @@ def _get_entity_actual_data(advance_data: list, items: list) -> Generator[dict, 
 
 def get_entity_data(entity_type: EntityType, entity_id, history_date: datetime = None):
     """
-    Fetch the general data needed for a single entity, excluding advanced fields which are fetched separately
+    Fetch the Aggregated/general data needed for a single entity, excluding advanced fields which are fetched separately
     (defined by mongo_projection_out)
 
     :param entity_id:            internal_axon_id to find the entity by

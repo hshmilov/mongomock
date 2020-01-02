@@ -138,7 +138,7 @@ class TestHyperlinks(TestBase):
             self.base_page.run_discovery()
             self.devices_page.switch_to_page()
 
-            # Test General Data Advanced tables links
+            # Test Aggregated/General Data Advanced tables links
             self.devices_page.click_query_wizard()
             self.devices_page.select_query_field(self.devices_page.FIELD_CONNECTED_DEVICES)
             self.devices_page.select_query_comp_op(self.devices_page.QUERY_COMP_EXISTS)
@@ -150,7 +150,7 @@ class TestHyperlinks(TestBase):
             self.devices_page.wait_for_table_to_load()
             assert link_text in self.devices_page.get_column_data_slicer(self.devices_page.FIELD_NETWORK_INTERFACES_IPS)
 
-            # Test General Data Basic Info links
+            # Test Aggregated/General Data Basic Info links
             self.devices_page.switch_to_page()
             self.devices_page.run_filter_query(self.devices_page.JSON_ADAPTER_FILTER)
             link = self.devices_page.find_general_data_basic_link(self.devices_page.FIELD_LAST_USED_USERS)
