@@ -5,7 +5,7 @@ from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
 from axonius.devices.device_adapter import DeviceAdapter
-from axonius.fields import Field
+from axonius.fields import Field, ListField
 from axonius.utils.files import get_local_config_file
 from zabbix_adapter.connection import ZabbixConnection
 
@@ -15,6 +15,7 @@ logger = logging.getLogger(f'axonius.{__name__}')
 class ZabbixAdapter(AdapterBase):
     class MyDeviceAdapter(DeviceAdapter):
         location = Field(str, 'Location')
+        host_groups = ListField(str, 'Host Groups')
 
     def __init__(self):
         super().__init__(get_local_config_file(__file__))
@@ -91,6 +92,7 @@ class ZabbixAdapter(AdapterBase):
             'type': 'array'
         }
 
+    # pylint: disable=too-many-branches, too-many-statements, too-many-locals, too-many-nested-blocks
     def create_device(self, device_raw, apps_host_dict):
         device = self._new_device_adapter()
         device_id = device_raw.get('hostid')
@@ -130,6 +132,13 @@ class ZabbixAdapter(AdapterBase):
                 device.add_nic(None, ips)
         except Exception:
             logger.exception(f'Problem adding nic to {device_raw}')
+        try:
+            host_groups = device_raw.get('groups') or []
+            for host_group in host_groups:
+                if isinstance(host_group, dict) and host_group.get('name'):
+                    device.host_groups.append(host_group.get('name'))
+        except Exception:
+            logger.exception(f'Problem with host groups')
         device.id = device_id + '_' + (device_raw.get('name') or '')
         device.set_raw(device_raw)
 

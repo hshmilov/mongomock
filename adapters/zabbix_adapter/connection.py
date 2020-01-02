@@ -52,7 +52,8 @@ class ZabbixConnection(RESTConnection):
                                                                         'selectInterfaces':
                                                                             consts.EXTEND_VALUE_IN_PARAMS,
                                                                         'selectInventory':
-                                                                            consts.EXTEND_VALUE_IN_PARAMS},
+                                                                            consts.EXTEND_VALUE_IN_PARAMS,
+                                                                        'selectGroups': consts.EXTEND_VALUE_IN_PARAMS},
                                                                    consts.ID_KEY_NAME: consts.RANDOM_ID_DEVICES,
                                                                    consts.AUTH_KEY_NAME:
                                                                        self._auth})[consts.RESULT_ATTRIBUTE_NAME]:
