@@ -10,7 +10,7 @@
     <div class="tag-list w-lg">
       <template v-for="(tag, i) in tags">
         <div :key="i">
-          <md-chip class="tag">{{ tag }}</md-chip>
+          <v-chip class="tag">{{ tag }}</v-chip>
         </div>
         <x-button
           :key="tag"

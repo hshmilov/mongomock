@@ -3,13 +3,13 @@
         <div v-if="title || breadcrumbs" class="header">
             <template v-if="title">
                 <h4 class="page-title">{{ title }}</h4>
-                <md-chip v-if="beta">BETA</md-chip>
+                <v-chip v-if="beta">BETA</v-chip>
             </template>
             <h4 class="page-title" v-else>
                 <!-- Adding title for each breadcrumb, linked to the page, except last one which is the viewed page -->
                 <div v-for="(breadcrumb, i) in breadcrumbs.slice(0, breadcrumbs.length - 1)" :key="i" class="crumb">
                     <router-link :to="breadcrumb.path" active-class="">{{ breadcrumb.title }}</router-link>
-                    <md-chip v-if="beta && !i">BETA</md-chip>
+                    <v-chip v-if="beta && !i">BETA</v-chip>
                 </div>
                 <!-- Adding currently viewed page without a link -->
                 <span>{{breadcrumbs[breadcrumbs.length - 1].title}}</span>
@@ -107,7 +107,7 @@
                 }
             }
 
-            .md-chip {
+            .v-chip {
                 background-color: rgba($theme-orange, 0.2);
                 height: 20px;
                 line-height: 20px;

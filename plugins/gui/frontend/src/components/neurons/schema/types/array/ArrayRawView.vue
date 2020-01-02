@@ -1,5 +1,5 @@
 <template>
-  <md-chip class="x-array-raw-view">
+  <v-chip class="x-array-raw-view">
     <div
       v-for="item in valuableItems"
       :key="item.name"
@@ -8,7 +8,7 @@
       <label>{{ item.title }}:</label>
       <div class="value">{{ data[item.name] }}</div>
     </div>
-  </md-chip>
+  </v-chip>
 </template>
 
 <script>

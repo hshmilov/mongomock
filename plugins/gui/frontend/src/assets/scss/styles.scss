@@ -519,10 +519,16 @@ table {
   border-bottom: 1px solid $grey-4;
 }
 
-.md-chip.tag {
-  background-color: rgba($theme-orange, 0.2);
-  height: 20px;
-  line-height: 20px;
+.theme--light.v-chip {
+  &.tag {
+    background-color: rgba($theme-orange, 0.2);
+    height: 20px;
+    line-height: 20px;
+  }
+
+  &:hover:before {
+    opacity: 0;
+  }
 }
 
 /* Common Animations */

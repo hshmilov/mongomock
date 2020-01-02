@@ -273,16 +273,16 @@
                 word-break: break-word;
 
                 .item {
-                  &:not(.md-chip) {
+                  &:not(.v-chip) {
                     line-height: 20px;
                   }
 
-                  .md-chip:not(.tag) {
+                  .v-chip:not(.tag) {
                     white-space: pre-line;
                     height: auto;
                   }
 
-                  &:first-child .md-chip {
+                  &:first-child .v-chip {
                     margin-left: 0;
                   }
                 }

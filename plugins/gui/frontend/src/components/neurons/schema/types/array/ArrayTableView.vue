@@ -10,7 +10,7 @@
       />
     </template>
     <template v-else-if="wrapChip">
-      <md-chip
+      <v-chip
         v-for="{schema, data} in dataSchemaItems"
         :key="schema.name"
         class="item"
@@ -21,7 +21,7 @@
           :schema="schema"
           :value="data"
         />
-      </md-chip>
+      </v-chip>
     </template>
     <template v-else>
       <div
@@ -106,19 +106,20 @@
       line-height: 24px;
       display: flex;
 
-      &.md-chip {
-          transition: none;
+      &.v-chip {
+        cursor: pointer;
 
-          &:not(.tag):not(.x-array-raw-view) {
-            font-size: 14px;
-            border: 1px solid rgba($theme-orange, 0.2)!important;
-            background-color: transparent!important;
-            height: 24px;
-            line-height: 24px;
-          }
+        &:not(.tag):not(.x-array-raw-view) {
+          font-size: 14px;
+          border: 1px solid rgba($theme-orange, 0.2)!important;
+          background-color: transparent!important;
+          height: 24px;
+          line-height: 24px;
+        }
+
       }
 
-      &:first-child.md-chip {
+      &:first-child.v-chip {
         margin-left: -12px;
       }
     }
