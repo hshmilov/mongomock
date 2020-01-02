@@ -134,12 +134,7 @@ class AxoniusService:
                                 f'--dns-domain="{AXONIUS_DNS_SUFFIX}"', '--ipalloc-range', subnet_ip_range,
                                 '--password',
                                 encryption_key.strip()]
-        # this env should make weave shell script download our customized weave docker image
-        # instead of the default one from weavenetworks
-        my_env = os.environ.copy()
-        my_env['DOCKERHUB_USER'] = DOCKERHUB_USER
-        my_env['WEAVE_VERSION'] = WEAVE_VERSION
-        subprocess.check_call(weave_launch_command, env=my_env)
+        subprocess.check_call(weave_launch_command)
 
     @staticmethod
     def register_service(service: PluginService):

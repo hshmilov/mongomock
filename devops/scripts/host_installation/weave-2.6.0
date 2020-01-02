@@ -4,15 +4,14 @@ set -e
 [ -n "$WEAVE_DEBUG" ] && set -x
 
 SCRIPT_VERSION="2.6.0"
-IMAGE_VERSION=latest
-[ "$SCRIPT_VERSION" = "unreleased" ] || IMAGE_VERSION=$SCRIPT_VERSION
-IMAGE_VERSION=${WEAVE_VERSION:-$IMAGE_VERSION}
+IMAGE_VERSION="2.6.0"
+WEAVE_VERSION="2.6.0"
 
 # Minimum tested version of Docker + Weave Net
 MIN_DOCKER_VERSION=1.10.0
 
 # These are needed for remote execs, hence we introduce them here
-DOCKERHUB_USER=${DOCKERHUB_USER:-weaveworks}
+DOCKERHUB_USER=nexus.axonius.lan/axonius
 BASE_EXEC_IMAGE=$DOCKERHUB_USER/weaveexec
 EXEC_IMAGE=$BASE_EXEC_IMAGE:$IMAGE_VERSION
 WEAVEDB_IMAGE=$DOCKERHUB_USER/weavedb:latest
@@ -136,7 +135,9 @@ exec_remote() {
         --pid host \
         $(exec_options "$@") \
         -e DOCKERHUB_USER="$DOCKERHUB_USER" \
-        -e WEAVE_VERSION \
+        -e IMAGE_VERSION="$IMAGE_VERSION" \
+        -e SCRIPT_VERSION="$SCRIPT_VERSION" \
+        -e WEAVE_VERSION="$WEAVE_VERSION" \
         -e WEAVE_DEBUG \
         -e WEAVE_DOCKER_ARGS \
         -e WEAVE_PASSWORD \
