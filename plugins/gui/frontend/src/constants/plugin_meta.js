@@ -17,6 +17,10 @@ export const pluginMeta = {
         title: 'RiskIQ Digital Footprint',
         description: 'RiskIQ Digital Footprint software provides an active, comprehensive inventory of all of the organization’s IPs, domains, and hosts.'
     },
+    men_and_mice_adapter: {
+        title: 'Men&Mice DNS Management',
+        description: 'Men&Mice DNS Management is a Network Management software providing secure, centralized, and highly resilient control of DNS across diverse platforms.'
+    },
     ansible_tower_adapter: {
         title: 'Red Hat Ansible Tower',
         description: 'Red Hat Ansible Tower is a web console and REST API for operationalizing Ansible across teams, organizations, and the enterprise.',

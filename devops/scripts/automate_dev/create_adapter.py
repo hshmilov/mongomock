@@ -189,7 +189,7 @@ def client_id_action(filename: str, _):
 def consts_action(filename: str, _):
     template = \
         """DEVICE_PER_PAGE = 200
-MAX_NUMBER_OF_DEVICES = 1000000
+MAX_NUMBER_OF_DEVICES = 2000000
 """
 
     with open(filename, 'w') as file_:

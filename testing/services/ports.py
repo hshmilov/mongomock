@@ -223,6 +223,7 @@ DOCKER_PORTS = {
     'cisco-ucsm-adapter':               10010,
     'cisco-stealthwatch-adapter':       10001,
     'arista-eos-adapter':               10002,
+    'men-and-mice-adapter':             10004,
     'netbrain-adapter':                 13371,
     'cscglobal-adapter':                13372,
     'riskiq-adapter':                   13373,
