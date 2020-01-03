@@ -19,6 +19,18 @@ py_charm_debug_template = """
             <option name="name" value="DOCKER" />
             <option name="value" value="true" />
           </DockerEnvVarImpl>
+          <DockerEnvVarImpl>
+            <option name="name" value="DB_KEY" />
+            <option name="value" value="{db_key}" />
+          </DockerEnvVarImpl>
+          <DockerEnvVarImpl>
+            <option name="name" value="NODE_ID" />
+            <option name="value" value="{node_id}" />
+          </DockerEnvVarImpl>
+         <DockerEnvVarImpl>
+            <option name="name" value="REQUESTS_CA_BUNDLE" />
+            <option name="value" value="/etc/ssl/certs/ca-certificates.crt" />
+          </DockerEnvVarImpl>
         </list>
       </option>
       <option name="extraHosts">
@@ -38,24 +50,7 @@ py_charm_debug_template = """
       <option name="version" value="1" />
       <option name="volumeBindings">
         <list>
-          <DockerVolumeBindingImpl>
-            <option name="containerPath" value="/app/" />
-            <option name="editable" value="true" />
-            <option name="hostPath" value="$PROJECT_DIR$/{run_type}" />
-            <option name="readOnly" value="true" />
-          </DockerVolumeBindingImpl>
-          <DockerVolumeBindingImpl>
-            <option name="containerPath" value="/home/axonius/logs" />
-            <option name="editable" value="true" />
-            <option name="hostPath" value="$PROJECT_DIR$/logs/{container_name}" />
-            <option name="readOnly" value="false" />
-          </DockerVolumeBindingImpl>
-          <DockerVolumeBindingImpl>
-            <option name="containerPath" value="/home/axonius/libs" />
-            <option name="editable" value="true" />
-            <option name="hostPath" value="$PROJECT_DIR$/axonius-libs/src/libs" />
-            <option name="readOnly" value="true" />
-          </DockerVolumeBindingImpl>
+          {volumes}
         </list>
       </option>
     </EXTENSION>
@@ -76,3 +71,76 @@ py_charm_debug_port_template = """
             <option name="hostPort" value="{host_port}" />
             <option name="protocol" value="tcp" />
           </DockerPortBindingImpl>"""[1:]
+
+
+py_charm_debug_volumes_template = '''
+          <DockerVolumeBindingImpl>
+            <option name="containerPath" value="/app/" />
+            <option name="editable" value="true" />
+            <option name="hostPath" value="$PROJECT_DIR$/{run_type}" />
+            <option name="readOnly" value="true" />
+          </DockerVolumeBindingImpl>
+          <DockerVolumeBindingImpl>
+            <option name="containerPath" value="/home/axonius/logs" />
+            <option name="editable" value="true" />
+            <option name="hostPath" value="$PROJECT_DIR$/logs/{container_name}" />
+            <option name="readOnly" value="false" />
+          </DockerVolumeBindingImpl>
+          <DockerVolumeBindingImpl>
+            <option name="containerPath" value="/home/axonius/libs" />
+            <option name="editable" value="true" />
+            <option name="hostPath" value="$PROJECT_DIR$/axonius-libs/src/libs" />
+            <option name="readOnly" value="true" />
+          </DockerVolumeBindingImpl>
+          <DockerVolumeBindingImpl>
+            <option name="containerPath" value="/home/axonius/uploaded_files" />
+            <option name="editable" value="true" />
+            <option name="hostPath" value="$PROJECT_DIR$/uploaded_files" />
+            <option name="readOnly" value="false" />
+          </DockerVolumeBindingImpl>
+          <DockerVolumeBindingImpl>
+            <option name="containerPath" value="/home/axonius/shared_readonly_files" />
+            <option name="editable" value="true" />
+            <option name="hostPath" value="$PROJECT_DIR$/shared_readonly_files" />
+            <option name="readOnly" value="true" />
+          </DockerVolumeBindingImpl>'''[1:]
+
+
+py_charm_debug_volumes_template_gui_service = '''
+        <DockerVolumeBindingImpl>
+            <option name="containerPath" value="/app/" />
+            <option name="editable" value="true" />
+            <option name="hostPath" value="$PROJECT_DIR$/{run_type}" />
+            <option name="readOnly" value="true" />
+          </DockerVolumeBindingImpl>
+          <DockerVolumeBindingImpl>
+            <option name="containerPath" value="/home/axonius/logs" />
+            <option name="editable" value="true" />
+            <option name="hostPath" value="$PROJECT_DIR$/logs/{container_name}" />
+            <option name="readOnly" value="false" />
+          </DockerVolumeBindingImpl>
+          <DockerVolumeBindingImpl>
+            <option name="containerPath" value="/home/axonius/libs" />
+            <option name="editable" value="true" />
+            <option name="hostPath" value="$PROJECT_DIR$/axonius-libs/src/libs" />
+            <option name="readOnly" value="true" />
+          </DockerVolumeBindingImpl>
+          <DockerVolumeBindingImpl>
+            <option name="containerPath" value="/home/axonius/uploaded_files" />
+            <option name="editable" value="true" />
+            <option name="hostPath" value="$PROJECT_DIR$/uploaded_files" />
+            <option name="readOnly" value="false" />
+          </DockerVolumeBindingImpl>
+          <DockerVolumeBindingImpl>
+            <option name="containerPath" value="/home/axonius/shared_readonly_files" />
+            <option name="editable" value="true" />
+            <option name="hostPath" value="$PROJECT_DIR$/shared_readonly_files" />
+            <option name="readOnly" value="true" />
+          </DockerVolumeBindingImpl>
+          <DockerVolumeBindingImpl>
+            <option name="containerPath" value="/home/axonius/.axonius_settings" />
+            <option name="editable" value="true" />
+            <option name="hostPath" value="$PROJECT_DIR$/.axonius_settings" />
+            <option name="readOnly" value="false" />
+          </DockerVolumeBindingImpl>
+          '''[1:]

@@ -32,7 +32,9 @@ from axonius.utils.files import CONFIG_FILE_NAME
 from axonius.utils.json import from_json
 from axonius.utils.threading import singlethreaded
 from services.debug_template import (py_charm_debug_port_template,
-                                     py_charm_debug_template)
+                                     py_charm_debug_template,
+                                     py_charm_debug_volumes_template,
+                                     py_charm_debug_volumes_template_gui_service)
 from services.plugins.mongo_service import MongoService
 from services.ports import DOCKER_PORTS
 from services.weave_service import WeaveService
@@ -327,13 +329,28 @@ class PluginService(WeaveService):
     def log_tester(self):
         return LogTester(self.log_path)
 
-    def generate_debug_template(self):
-        name = self.adapter_name.replace("-", "_") if isinstance(self, AdapterService) else self.package_name
+    def generate_debug_template(self, db_key=None, node_id=None):
+
+        name = self.adapter_name.replace('-', '_') if isinstance(self, AdapterService) else self.package_name
         ports = '\n'.join([py_charm_debug_port_template.format(host_port=host_port, internal_port=internal_port)
                            for host_port, internal_port in self.exposed_ports])
-        output = py_charm_debug_template.format(name=name, container_name=self.container_name, ports=ports,
-                                                run_type='adapters' if isinstance(self, AdapterService) else 'plugins')
-        path = os.path.join(os.path.dirname(__file__), '..', '..', '.idea', 'runConfigurations', name + '_debug.xml')
+
+        run_type = 'adapters' if isinstance(self, AdapterService) else 'plugins'
+
+        volumes = (py_charm_debug_volumes_template_gui_service.format(run_type=run_type,
+                                                                      container_name=self.container_name)
+                   if name == 'gui'
+                   else py_charm_debug_volumes_template.format(run_type=run_type, container_name=self.container_name))
+
+        output = py_charm_debug_template.format(name=name,
+                                                container_name=self.container_name,
+                                                ports=ports,
+                                                db_key=db_key,
+                                                node_id=node_id,
+                                                volumes=volumes,
+                                                run_type=run_type)
+
+        path = Path(__file__).parents[2] / ('.idea/runConfigurations/' + name + '_debug.xml')
         open(path, 'w').write(output)
 
     def get_configurable_config(self, conf_name: str) -> dict:

@@ -362,3 +362,6 @@ plugins/instance_control/rsa_keys
 
 # other
 **/secrets/*.json
+
+#idea remote debug code gen filez
+.idea/runConfigurations/*_debug.xml
