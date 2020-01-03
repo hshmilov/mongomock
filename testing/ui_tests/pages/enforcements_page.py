@@ -204,6 +204,13 @@ class EnforcementsPage(EntitiesPage):
         # Due to a UI bug, the screen will change again to EC table
         time.sleep(10)
 
+    def add_main_action_send_email(self, action_name, recipient):
+        self.add_main_action(ActionCategory.Notify, Action.send_emails.value)
+        self.fill_send_email_config(action_name, recipient=recipient)
+        self.click_save_button()
+        # Due to a UI bug, the screen will change again to EC table
+        time.sleep(10)
+
     def add_send_csv_to_s3(self):
         self.find_element_by_text(self.MAIN_ACTION_TEXT).click()
         self.wait_for_action_library()
@@ -764,6 +771,8 @@ class EnforcementsPage(EntitiesPage):
         self.fill_text_field_by_element_id(self.ACTION_NAME_ID, name)
         if recipient:
             self.fill_text_field_by_css_selector('.md-input', recipient, context=self.find_field_by_label('Recipients'))
+            elem = self.find_field_by_label('Recipients').find_element_by_css_selector('.md-input')
+            self.key_down_enter(elem)
         if body:
             custom_message_element = self.driver.find_element_by_xpath(
                 self.DIV_BY_LABEL_TEMPLATE.format(label_text='Custom Message (up to 200 characters)')
