@@ -56,23 +56,27 @@ class GSuiteAdminConnection:
         """
         Get chromeosdevices devices
         """
-        chromeosdevices = self._connection.chromeosdevices().list(customerId='my_customer',
-                                                                  maxResults=DEVICES_PER_PAGE).execute()
-        yield from chromeosdevices.get('chromeosdevices', [])
-        next_page_token = chromeosdevices.get('nextPageToken') or ''
-        number_of_pages = 1
-        while next_page_token and (number_of_pages * DEVICES_PER_PAGE < MAX_NUMBER_OF_DEVICES):
-            try:
-                number_of_pages += 1
-                chromeosdevices = self._connection.chromeosdevices().list(customerId='my_customer',
-                                                                          pageToken=next_page_token,
-                                                                          maxResults=DEVICES_PER_PAGE).execute()
-                yield from chromeosdevices.get('mobiledevices', [])
-                next_page_token = chromeosdevices.get('nextPageToken') or ''
-            except Exception:
-                # Breaking here to Avoid infinite loop
-                logger.exception(f'Problem getting page number {number_of_pages}')
-                break
+        try:
+            chromeosdevices = self._connection.chromeosdevices().list(customerId='my_customer',
+                                                                      maxResults=DEVICES_PER_PAGE).execute()
+            yield from chromeosdevices.get('chromeosdevices', [])
+            next_page_token = chromeosdevices.get('nextPageToken') or ''
+            number_of_pages = 1
+            while next_page_token and (number_of_pages * DEVICES_PER_PAGE < MAX_NUMBER_OF_DEVICES):
+                try:
+                    number_of_pages += 1
+                    chromeosdevices = self._connection.chromeosdevices().list(customerId='my_customer',
+                                                                              pageToken=next_page_token,
+                                                                              maxResults=DEVICES_PER_PAGE).execute()
+                    yield from chromeosdevices.get('mobiledevices', [])
+                    next_page_token = chromeosdevices.get('nextPageToken') or ''
+                except Exception:
+                    # Breaking here to Avoid infinite loop
+                    logger.exception(f'Problem getting page number {number_of_pages}')
+                    break
+        except Exception:
+            logger.exception('Problem with Chrome devices')
+            return
 
     def get_users(self) -> List[dict]:
         """
