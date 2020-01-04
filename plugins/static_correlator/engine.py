@@ -393,7 +393,8 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
                     mac_manufacturer = get_manufacturer_from_mac(mac)
                 except Exception:
                     pass
-                if not mac_manufacturer or 'cisco systems' not in mac_manufacturer.lower():
+                # pylint: disable=line-too-long
+                if not mac_manufacturer or ('cisco systems' not in mac_manufacturer.lower() and 'juniper networks' not in mac_manufacturer.lower()):
                     inner_compare_funcs.append(if_soalrwinds_compare_all)
                 yield from self._bucket_correlate(matches,
                                                   [],
