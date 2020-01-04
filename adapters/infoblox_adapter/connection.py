@@ -80,9 +80,11 @@ class InfobloxConnection(RESTConnection):
         fields_to_return = 'served_by,starts,ends,address,binding_state,hardware,client_hostname,network_view'
         if self.__api_version >= 2.5:
             fields_to_return += ',fingerprint'
-        params = {'_return_fields': fields_to_return}
+        params = dict()
         if date_filter:
             params[DATE_FILTER_FIELD] = date_filter
+            fields_to_return += ',discovered_data'
+        params['_return_fields'] = fields_to_return
         cidr_blacklist_networks = []
         if cidr_blacklist and isinstance(cidr_blacklist, str):
             for cidr_blacklist_network in cidr_blacklist.split(','):

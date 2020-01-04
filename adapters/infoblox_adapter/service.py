@@ -4,6 +4,7 @@ import logging
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
+from axonius.utils.datetime import parse_date
 from axonius.clients.rest.exception import RESTException
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.fields import Field
@@ -16,12 +17,15 @@ logger = logging.getLogger(f'axonius.{__name__}')
 
 
 class InfobloxAdapter(AdapterBase, Configurable):
+    # pylint: disable=too-many-instance-attributes
     class MyDeviceAdapter(DeviceAdapter):
         infoblox_network_view = Field(str, 'Network View')
         served_by = Field(str, 'Served By')
         start_time = Field(datetime.datetime, 'Start Time')
         end_time = Field(datetime.datetime, 'End Time')
         fingerprint = Field(str, 'Fingerprint')
+        discoverer = Field(str, 'Discoverer')
+        infoblox_device_type = Field(str, 'Device Type')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -216,7 +220,18 @@ class InfobloxAdapter(AdapterBase, Configurable):
                             logger.exception(f'Could not set attr {attr_name} with value {attr_value}')
                 except Exception:
                     logger.exception(f'Problem setting external attributes')
-
+                try:
+                    discovered_data = device_raw.get('discovered_data')
+                    if not isinstance(discovered_data, dict):
+                        discovered_data = {}
+                    device.last_seen = parse_date(discovered_data.get('last_discovered'))
+                    device.first_seen = parse_date(discovered_data.get('first_discovered'))
+                    device.figure_os(discovered_data.get('os'))
+                    device.discoverer = discovered_data.get('discoverer')
+                    device.infoblox_device_type = discovered_data.get('device_type')
+                    device.device_manufacturer = discovered_data.get('device_vendor')
+                except Exception:
+                    logger.exception(f'Problem with discovered data for {device_raw}')
                 device.set_raw(device_raw)
                 yield device
             except Exception:
