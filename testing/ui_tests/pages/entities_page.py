@@ -136,7 +136,7 @@ class EntitiesPage(Page):
     TAGS_TAB_CSS = 'li#tags'
     CUSTOM_DATA_TAB_CSS = 'li#gui_unique'
     GENERAL_DATA_TAB_TITLE = 'Aggregated'
-    ADAPTERS_DATA_TAB_TITLE = 'Adapters Data'
+    ADAPTERS_DATA_TAB_TITLE = 'Adapter Connections'
     ADAPTERS_DATA_TAB_CSS = '.x-entity-adapters'
     ENFORCEMENT_DATA_TAB_TITLE = 'Enforcement Tasks'
     EXTENDED_DATA_TAB_TITLE = 'Extended Data'

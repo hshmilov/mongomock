@@ -15,7 +15,7 @@
         v-if="!this.singleAdapter"
         id="specific"
         key="specific"
-        title="Adapters Data"
+        title="Adapter Connections"
         :selected="true"
       >
         <x-entity-adapters
