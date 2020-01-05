@@ -23,23 +23,33 @@ class Code42Connection(RESTConnection):
                               'pgNum': 1},
                   do_basic_auth=True)
 
-    def get_device_list(self):
+    def _get_api_endpoint(self, endponint, dict_name, url_params_extra=None):
         page_num = 1
-        response = self._get('Computer',
-                             url_params={'pgSize': DEVICE_PER_PAGE,
-                                         'pgNum': page_num},
+        url_params = {'pgSize': DEVICE_PER_PAGE, 'pgNum': page_num}
+        if url_params_extra:
+            url_params.update(url_params_extra)
+        response = self._get(endponint,
+                             url_params=url_params,
                              do_basic_auth=True)
-        yield from response['data']['computers']
+        yield from response['data'][dict_name]
         while page_num * DEVICE_PER_PAGE < MAX_NUMBER_OF_DEVICES:
             try:
                 page_num += 1
-                response = self._get('Computer',
-                                     url_params={'pgSize': DEVICE_PER_PAGE,
-                                                 'pgNum': page_num},
+                url_params = {'pgSize': DEVICE_PER_PAGE, 'pgNum': page_num}
+                if url_params_extra:
+                    url_params.update(url_params_extra)
+                response = self._get(endponint,
+                                     url_params=url_params,
                                      do_basic_auth=True)
-                if not response['data'].get('computers'):
+                if not response['data'].get(dict_name):
                     break
-                yield from response['data']['computers']
+                yield from response['data'][dict_name]
             except Exception:
                 logger.exception(f'Problem at page number {page_num}')
                 break
+
+    def get_user_list(self):
+        yield from self._get_api_endpoint('User', 'users')
+
+    def get_device_list(self):
+        yield from self._get_api_endpoint('Computer', 'computers', url_params_extra={'incBackupUsage': 'true'})

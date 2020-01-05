@@ -134,7 +134,7 @@ class OktaConnection:
                         except Exception:
                             logger.exception(f'Exception while parsing async response for {text_answer}'
                                              f'. Yielding with no data')
-                    else:
+                    elif raw_answer:
                         msg = f'Got an async response which is not exception or ClientResponse. ' \
                               f'This should never happen! response is {raw_answer}'
                         logger.critical(msg)
