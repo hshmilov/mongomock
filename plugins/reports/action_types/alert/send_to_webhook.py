@@ -11,6 +11,11 @@ from reports.action_types.action_type_alert import ActionTypeAlert
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
+CUSTOM_FORMAT_STRING = '{$BODY}'
+BODY_EXAMPLE = '{"entitiesList": {$BODY}}'
+TIMEOUT_CONNECT = 10
+TIMEOUT_READ = 1200
+
 
 class SendWebhookAction(ActionTypeAlert):
     """
@@ -56,11 +61,29 @@ class SendWebhookAction(ActionTypeAlert):
                     'name': 'extra_headers',
                     'title': 'Additional Headers',
                     'type': 'string'
+                },
+                {
+                    'name': 'custom_format',
+                    'title': 'Custom format for body. Use {$BODY} as keyword.',
+                    'type': 'string'
+                },
+                {
+                    'name': 'connect_timeout',
+                    'title': 'Timeout (in seconds) for connection attempts.',
+                    'type': 'string'
+                },
+                {
+                    'name': 'read_timeout',
+                    'title': 'Timeout (in seconds) for writing data to the webhook.',
+                    'type': 'string'
                 }
             ],
             'required': [
                 'webhook_url',
-                'verify_ssl'
+                'verify_ssl',
+                'custom_format',
+                'connect_timeout',
+                'read_timeout'
             ],
             'type': 'array'
         }
@@ -68,12 +91,15 @@ class SendWebhookAction(ActionTypeAlert):
     @staticmethod
     def default_config() -> dict:
         return {
-            'extra_headers': '',
+            'extra_headers': '{"Content-type": "application/json"}',
             'https_proxy': None,
             'http_proxy': None,
             'auth_username': None,
             'auth_password': None,
-            'verify_ssl': False
+            'verify_ssl': False,
+            'custom_format': '{"entities": {$BODY}}',
+            'connect_timeout': TIMEOUT_CONNECT,
+            'read_timeout': TIMEOUT_READ
         }
 
     @staticmethod
@@ -107,7 +133,15 @@ class SendWebhookAction(ActionTypeAlert):
         username = self._config.get('auth_username', '')
         password = self._config.get('auth_password', '')
         auth_tuple = (username, password) if (username and password) else None
-
+        try:
+            timeout_read = int(self._config.get('read_timeout'))
+        except (ValueError, TypeError):
+            timeout_read = TIMEOUT_READ
+        try:
+            timeout_connect = int(self._config.get('connect_timeout'))
+        except (ValueError, TypeError):
+            timeout_connect = TIMEOUT_CONNECT
+        timeout = (timeout_connect, timeout_read)
         if query:
             parsed_query_filter = parse_filter(query['view']['query']['filter'])
             field_list = query['view'].get('fields', [])
@@ -131,15 +165,15 @@ class SendWebhookAction(ActionTypeAlert):
                                                            in field_list
                                                        },
                                                        self._entity_type)
-        entities = list()
-        for entity_raw in entities_raw:
-            entities.append(to_json(entity_raw))
+        entities = list(entities_raw)
         entities_json = to_json(entities or None)
-        response = requests.post(self._config['webhook_url'], json=entities_json,
+        final_body = self._config['custom_format'].replace(CUSTOM_FORMAT_STRING, entities_json)
+        response = requests.post(self._config['webhook_url'], data=final_body,
                                  verify=self._config['verify_ssl'],
                                  auth=auth_tuple,
                                  headers=extra_headers,
-                                 proxies=proxies)
+                                 proxies=proxies,
+                                 timeout=timeout)
         logger.debug(f'Sent webhook request to {self._config["webhook_url"]}, '
                      f'got {str(response.status_code)}')
         result = response.status_code == 200
