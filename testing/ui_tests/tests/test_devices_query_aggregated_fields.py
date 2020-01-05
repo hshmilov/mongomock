@@ -1,5 +1,6 @@
 import datetime
 import time
+import pytest
 
 from axonius.utils.wait import wait_until
 from services.adapters.stresstest_service import StresstestService
@@ -66,6 +67,7 @@ class TestDevicesQueryAggregated(TestBase):
         wait_until(lambda: tester.is_pattern_in_log(
             f'"message": "Took \d+.\d+ seconds, matched {modified_count}, modified {modified_count}"', 5))
 
+    @pytest.mark.skip('AX-5956')
     def test_hostname_aggregated(self):
         """
         Tests using hostname (contains) X or hostname = X will result in the usage of the aggregate field hostnames
@@ -98,6 +100,7 @@ class TestDevicesQueryAggregated(TestBase):
             lambda: None,
             lambda: self.devices_page.fill_query_string_value('vm'))
 
+    @pytest.mark.skip('AX-5956')
     def test_last_seen_aggregated(self):
         self.dashboard_page.switch_to_page()
         self.base_page.run_discovery()

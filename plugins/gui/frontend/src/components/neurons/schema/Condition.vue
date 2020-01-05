@@ -264,7 +264,7 @@
           return field
         }
         // only compare operators of fields that are found in aggregated fields map and include the comperator operator
-        const aggDef = AGGREGATED_FIELDS_CONVERTER.find(item => item.path == field)
+        const aggDef = AGGREGATED_FIELDS_CONVERTER.find(item => item.path === field)
         if (aggDef === undefined) {
           return field
         }
@@ -475,7 +475,7 @@
       getConditionExpression () {
         let cond = '({val})'
         if (this.opsMap[this.compOp]) {
-          cond = this.opsMap[this.compOp].replace(/{field}/g, this.aggregatedField)
+          cond = this.opsMap[this.compOp].replace(/{field}/g, this.field)
         } else if (this.opsList.length) {
           this.compOp = ''
           this.value = ''
