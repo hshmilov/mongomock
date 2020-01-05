@@ -306,13 +306,25 @@ def read_ssh_until(logger, ssh_chan: paramiko.Channel, what):
 
 
 def decrypt_node(logger, instance):
+    def extract_version_name(passw_prompt):
+        passw_prompt = passw_prompt.decode()
+        try:
+            return re.search('Axonius version is <(.*)>', passw_prompt, re.MULTILINE).group(1)
+        except Exception as e:
+            print(f'failed to extract version, will just assume latest - {e}')
+            return 'latest'
+
     logger.info(f'about to decrypt {instance}')
     channel = connect_to_linux_user(instance, DECRYPT_PASSWORD, DECRYPT_PASSWORD)
-    read_ssh_until(logger, channel, b'Please enter the decryption key> ')
+    prompt = read_ssh_until(logger, channel, b'Please enter the decryption key> ')
+    version = extract_version_name(prompt)
+    print(f'the version appears to be = {version}')
+
+    passwords_helper = VersionPasswords()
+    decrypt_password = passwords_helper.get_password_for_version(version)
+
+    print(f'calculated decrypt password = {decrypt_password}')
     logger.info(f'Got the decrypt login message')
-    version_password = VersionPasswords()
-    # we can support fetching password per version later, fow now - latest
-    decrypt_password = version_password.get_password_for_version('latest')
     channel.sendall(f'{decrypt_password}\n')
     read_ssh_until(logger, channel, b'Decrypt user - end\n')
     logger.info(f'Decrypted axonius, waiting for the system to start')

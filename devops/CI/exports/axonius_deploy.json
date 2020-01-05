@@ -40,11 +40,13 @@
         "Description": "Axonius Export {{user `name`}}."
       },
       "instance_type": "t2.xlarge",
-      "launch_block_device_mappings": [{
-        "device_name": "/dev/sda1",
-	"volume_size": 500,
-        "encrypted": false
-      }],
+      "launch_block_device_mappings": [
+        {
+          "device_name": "/dev/sda1",
+          "volume_size": 500,
+          "encrypted": false
+        }
+      ],
       "ami_name": "{{user `image_name`}}",
       "vpc_id": "vpc-12290d7b",
       "subnet_id": "subnet-843a4cff",
@@ -52,7 +54,7 @@
       "ami_regions": "{{user `ami_regions`}}"
     }
   ],
-"provisioners": [
+  "provisioners": [
     {
       "type": "shell",
       "inline": [
@@ -60,20 +62,26 @@
       ]
     },
     {
-	"type": "shell",
-	"inline": ["echo ubuntu:bringorder | sudo /usr/sbin/chpasswd"]
+      "type": "shell",
+      "inline": [
+        "echo ubuntu:bringorder | sudo /usr/sbin/chpasswd"
+      ]
     },
     {
       "type": "shell",
       "script": "clean_aws_machine.sh",
       "execute_command": "sudo -S sh -c '{{ .Vars }} {{ .Path }}'",
-      "only": ["amazon-ebs"]
+      "only": [
+        "amazon-ebs"
+      ]
     },
     {
       "type": "shell",
       "script": "clean_gce_machine.sh",
       "execute_command": "sudo -S sh -c '{{ .Vars }} {{ .Path }}'",
-      "only": ["googlecompute"]
+      "only": [
+        "googlecompute"
+      ]
     },
     {
       "type": "shell",
@@ -122,6 +130,14 @@
       "type": "file",
       "source": "{{user `installer`}}",
       "destination": "/home/ubuntu/version.zip"
+    },
+    {
+      "type": "shell",
+      "inline": [
+        "echo '{{user `name`}}' | sudo tee /home/decrypt/version.txt",
+        "sudo chown decrypt:decrypt /home/decrypt/version.txt",
+        "sudo chmod 0444 /home/decrypt/version.txt"
+      ]
     },
     {
       "type": "shell",

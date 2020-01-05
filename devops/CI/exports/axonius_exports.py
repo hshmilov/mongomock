@@ -127,6 +127,7 @@ def installer(args, notify):
     zip_installer_path = (args.zip_output or pathlib.Path(f'axonius_{args.name}.zip')).absolute()
     version_password = VersionPasswords()
     password = version_password.get_password_for_version(args.name)
+    print(f'Password for version {args.name} is {password}')
     subprocess.run(['packer', 'build', '-timestamp-ui',
                     '-var', f'build_name={args.name}',
                     '-var', f'output_file={output_installer_file}',

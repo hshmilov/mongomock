@@ -6,6 +6,7 @@ import shlex
 from subprocess import STDOUT, run
 from pathlib import Path
 
+from CI.exports.version_passwords import VersionPasswords
 from builds import Builds
 
 AWS_KEY_VAR = 'AWS_ACCESS_KEY_ID'
@@ -92,8 +93,13 @@ def copy_to_protected_link(aws_key, aws_secret, gen_new_pass, **_):
 
 
 def print_epilog(version_name, ami_id, commit_hash, **_):
+
+    version_password = VersionPasswords()
+    password = version_password.get_password_for_version(version_name)
+
     log(f'commit_hash: {commit_hash}')
     log(f'ami-id: {ami_id}')
+    log(f'version password {password}')
     log(
         f'OVA link: https://axonius-releases.s3-accelerate.amazonaws.com/{version_name}/{version_name}/{version_name}_export.ova')
     log(f'Upgrader link: https://axonius-releases.s3-accelerate.amazonaws.com/{version_name}/axonius_{version_name}.py')
