@@ -71,11 +71,12 @@
   import xToast from '../../../axons/popover/Toast.vue'
   import { JSONView } from "vue-json-component"
 
-  import {mapState, mapMutations, mapActions} from 'vuex'
+  import {mapState, mapMutations, mapActions, mapGetters} from 'vuex'
   import {SAVE_CUSTOM_DATA, FETCH_DATA_FIELDS} from '../../../../store/actions'
 
   import {pluginMeta} from '../../../../constants/plugin_meta'
   import {guiPluginName, initCustomData} from '../../../../constants/entities'
+  import {GET_CONNECTION_LABEL} from "../../../../store/getters"
 
   const lastSeenByModule = {
     'users': 'last_seen_in_devices',
@@ -120,6 +121,9 @@
           return state[this.module].hyperlinks.data
         }
       }),
+      ...mapGetters({
+        getConnectionLabel: GET_CONNECTION_LABEL
+      }),
       sortedSpecificData() {
         let lastSeen = new Set()
         let res = this.adapters.filter((item) => {
@@ -139,8 +143,9 @@
           return new Date(secondSeen) - new Date(firstSeen)
         }).map((item) => {
           item.id = `${item.plugin_unique_name}_${item.data.id}`
+          const connectionLabel = this.getConnectionLabel(item['client_used'], item['plugin_name'])
           if (pluginMeta[item.plugin_name]) {
-            item.pretty_name = pluginMeta[item.plugin_name].title
+            item.pretty_name = pluginMeta[item.plugin_name].title + connectionLabel
           }
           if (lastSeen.has(item.plugin_name)) return {...item, outdated: true}
           lastSeen.add(item.plugin_name)

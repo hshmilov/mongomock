@@ -121,6 +121,7 @@ PROXY_DATA_PATH = AXONIUS_SETTINGS_PATH / PROXY_DATA_FILE
 # Other consts
 SPECIFIC_DATA = 'specific_data'
 ADAPTERS_DATA = 'adapters_data'
+ADAPTERS_META = 'adapters_meta'
 PROXY_ERROR_MESSAGE = 'Bad proxy settings or no internet connection'
 
 GETTING_STARTED_CHECKLIST_SETTING = 'getting_started_checklist'

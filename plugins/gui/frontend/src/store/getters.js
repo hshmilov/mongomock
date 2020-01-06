@@ -71,3 +71,15 @@ export const IS_EXPIRED = 'IS_EXPIRED'
 export const isExpired = (state) => {
     return state.expired.data && state.auth.currentUser.data.user_name !== '_axonius'
 }
+
+export const GET_CONNECTION_LABEL = 'GET_CONNECTION_LABEL'
+export const getConnectionLabel = (state) => (clientId, adapterName) => {
+    // extract the connection label saved in client config
+    // get the clientId and adapter name to find the client config in state
+    const adaptersClients = state.adapters.clients
+    const currentClient = adaptersClients.find( item => item.adapter === adapterName && item['client_id'] === clientId )
+    if ( !currentClient ) return ''
+    const connectionLabel = currentClient['client_config']['connection_label']
+    if ( !connectionLabel ) return ''
+    return ` - ${connectionLabel}`
+}

@@ -65,7 +65,8 @@ import {
   GET_DATA_SCHEMA_BY_NAME, getDataSchemaByName,
   SINGLE_ADAPTER, singleAdapter,
   AUTO_QUERY, autoQuery,
-  IS_EXPIRED, isExpired
+  IS_EXPIRED, isExpired,
+  GET_CONNECTION_LABEL, getConnectionLabel
 } from './getters'
 
 import { adapters } from './modules/adapters'
@@ -104,7 +105,8 @@ export default new Vuex.Store({
     [GET_DATA_SCHEMA_BY_NAME]: getDataSchemaByName,
     [SINGLE_ADAPTER]: singleAdapter,
     [AUTO_QUERY]: autoQuery,
-    [IS_EXPIRED]: isExpired
+    [IS_EXPIRED]: isExpired,
+    [GET_CONNECTION_LABEL]: getConnectionLabel
   },
   mutations: {
     [TOGGLE_SIDEBAR]: toggleSidebar,

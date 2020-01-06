@@ -76,8 +76,10 @@
   import xTooltip from '../../axons/popover/Tooltip.vue'
   import {pluginMeta} from '../../../constants/plugin_meta'
   import _isEmpty from 'lodash/isEmpty'
+  import _orderBy from 'lodash/orderBy'
 
-  import {mapState} from 'vuex'
+  import {mapState, mapGetters} from 'vuex'
+  import {GET_CONNECTION_LABEL} from '../../../store/getters'
 
   export default {
     name: 'XEntityTableData',
@@ -136,6 +138,9 @@
           return state[this.module].fields.data.generic[0]
         }
       }),
+      ...mapGetters({
+        getConnectionLabel: GET_CONNECTION_LABEL
+      }),
       fieldName () {
         return this.schema.name
       },
@@ -152,12 +157,12 @@
         return (this.hoverRow || this.expandData) && this.adaptersLength > 1 && this.fieldName.includes('specific_data')
                 && !_isEmpty(this.data[this.fieldName])
       },
-      adaptersListSorted() {
-        return this.data[this.adaptersFieldName].concat().sort().map(adapter => [adapter])
+      adaptersList() {
+        return this.data[this.adaptersFieldName].concat().map(adapter => [adapter])
       },
       details () {
         if (this.isAdaptersField) {
-          return this.adaptersListSorted
+          return this.adaptersList
         }
         return this.data[`${this.fieldName}_details`]
       },
@@ -169,7 +174,7 @@
           ],
           data: this.details.map((detail, i) => {
             return {
-              [this.adaptersFieldName]: this.adaptersListSorted[i],
+              [this.adaptersFieldName]: this.adaptersList[i],
               [this.fieldName]: detail
             }
           }),
@@ -205,12 +210,15 @@
             this.schema, {
               name: 'name', title: 'Name', type: 'string'
           }],
-          data: this.adaptersListSorted.map(adapter => {
+          data: _orderBy(this.adaptersList.map((adapter, index) => {
+            const clientId = this.data['meta_data.client_used'][index]
+            const connectionLabel = this.getConnectionLabel(clientId, adapter[0])
+            const name = ( pluginMeta[adapter[0]] ? pluginMeta[adapter[0]].title : adapter[0] ) + connectionLabel
             return {
               [this.fieldName]: adapter,
-              name: pluginMeta[adapter[0]] ? pluginMeta[adapter[0]].title : adapter[0]
+              name
             }
-          }),
+          }),[this.fieldName]),
           colFilters: {
             [this.schema.name]: this.filter
           },

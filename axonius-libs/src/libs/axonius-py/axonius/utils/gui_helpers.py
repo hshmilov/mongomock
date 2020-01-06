@@ -6,6 +6,7 @@ import logging
 import itertools
 import os
 import re
+from collections import defaultdict
 from datetime import datetime
 from enum import Enum
 from threading import Lock
@@ -39,7 +40,7 @@ PAGINATION_LIMIT_MAX = 2000
 FIELDS_TO_PROJECT = ['internal_axon_id', 'adapters.pending_delete', f'adapters.{PLUGIN_NAME}',
                      'tags.type', 'tags.name', f'tags.{PLUGIN_NAME}',
                      'accurate_for_datetime', ADAPTERS_LIST_LENGTH,
-                     'tags.data']
+                     'tags.data', 'adapters.client_used']
 
 FIELDS_TO_PROJECT_FOR_GUI = ['internal_axon_id', 'adapters', 'unique_adapter_names', 'labels', ADAPTERS_LIST_LENGTH]
 
@@ -526,7 +527,7 @@ def find_entity_field(entity_data, field_path):
 def parse_entity_fields(entity_data, fields, include_details=False, field_filters: dict = None):
     """
     For each field in given list, if it begins with adapters_data, just fetch it from corresponding adapter.
-
+    also check for metadata
     :param entity_data:     A nested dict representing parsed values of an entity
     :param fields:          List of paths to values in the entity_data dict
     :param include_details: For each requested field, add also <field>_details,
@@ -563,6 +564,16 @@ def parse_entity_fields(entity_data, fields, include_details=False, field_filter
         generic_field = _extract_name(field_path)
         field_to_value[f'{field_path}_details'] = [find_entity_field(data, generic_field) if generic_field else ''
                                                    for data in adapter_datas]
+    # in case the entity has meta data added like connection_label
+    if include_details:
+        all_metas = defaultdict(list)
+        for field_list in entity_data.get('adapters_meta', {}).values():
+            for field in field_list:
+                for field_name, field_value in field.items():
+                    all_metas[field_name].append(field_value)
+
+        for field_name in all_metas:
+            field_to_value[f'meta_data.{field_name}'] = all_metas[field_name]
     return field_to_value
 
 

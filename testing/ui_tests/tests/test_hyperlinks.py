@@ -91,6 +91,7 @@ class TestHyperlinks(TestBase):
                     service.decrypt_dict(client_config)
                     if client_config['name'] == 'testing default value':
                         assert {
+                            'connection_label': '',
                             'default': 5,
                             'device_count': 1,
                             'name': 'testing default value'
@@ -121,6 +122,7 @@ class TestHyperlinks(TestBase):
                     service.decrypt_dict(client_config)
                     if client_config['name'] == 'lol lol lol':
                         assert {
+                            'connection_label': '',
                             'device_count': 2,
                             'name': 'lol lol lol',
                             'default': 10

@@ -75,6 +75,7 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
     DEFAULT_CONNECT_CLIENT_TIMEOUT = 300
     DEFAULT_FETCHING_TIMEOUT = 5400
     DEFAULT_LAST_SEEN_PRIORITIZED = False
+    DEFAULT_CLIENT_CONFIG_PARAMS = ['connection_label']
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -566,6 +567,7 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
                         raise adapter_exceptions.CredentialErrorException(
                             'No credentials found for client {0}. Reason: {1}'.format(client_name, str(e)))
                     self._decrypt_client_config(current_client.get('client_config'))
+                    self._clean_unneeded_client_config_fields(current_client.get('client_config'))
                     if current_client.get('status') != 'success':
                         raise
                 try:
@@ -674,8 +676,9 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
         client_config = request.get_json(silent=True)
         if not client_config:
             return return_error('Invalid client')
-
-        return '' if self._route_test_reachability(client_config) else return_error('Client is not reachable.')
+        self._clean_unneeded_client_config_fields(client_config)
+        return '' if self._route_test_reachability(client_config) \
+            else return_error('Client is not reachable.')
 
     @add_rule('clients', methods=['GET', 'POST', 'PUT'])
     def clients(self):
@@ -735,6 +738,7 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
             logger.info(f'Deleting client {client_unique_id}')
             client = self._clients_collection.find_one_and_delete({'_id': ObjectId(client_unique_id)})
             self._decrypt_client_config(client['client_config'])
+            self._clean_unneeded_client_config_fields(client['client_config'])
             if client is None:
                 return '', 204
             client_id = ''
@@ -972,10 +976,23 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
 
         return client_config_copy
 
+    def _clean_unneeded_client_config_fields(self, client_config):
+        """
+        clean default fields from client config like connection_label
+        there is adapters that expect only their schema fields, unknown field will cause exceptions
+        :param client_config: clean and ready to ship client_config
+        """
+        if not client_config:
+            return
+
+        for param in self.DEFAULT_CLIENT_CONFIG_PARAMS:
+            if param in client_config:
+                del client_config[param]
+
     def _route_connect_client(self, client_config, *args, **kwargs):
         if self.__is_in_mock_mode:
             return self.__adapter_mock.mock_connect_client()
-
+        self._clean_unneeded_client_config_fields(client_config)
         normalized_client_config = self._normalize_password_fields(client_config)
         return self._connect_client(normalized_client_config, *args, **kwargs)
 
@@ -1313,6 +1330,7 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
             client_config = client.get('client_config')
             if client_config:
                 self._decrypt_client_config(client_config)
+                self._clean_unneeded_client_config_fields(client_config)
             yield client
 
     def _get_client_config_by_client_id(self, client_id: str):
@@ -1324,6 +1342,7 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
             raise adapter_exceptions.CredentialErrorException(f'No credentials found for client {client_id} in the db.')
         client_config = current_client['client_config']
         self._decrypt_client_config(client_config)
+        self._clean_unneeded_client_config_fields(client_config)
         return self._normalize_password_fields(client_config)
 
     def _update_clients_schema_in_db(self, schema):

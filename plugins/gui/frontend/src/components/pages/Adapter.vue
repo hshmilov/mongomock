@@ -81,14 +81,26 @@
           @submit="saveServer"
           @validate="validateServer"
         />
-        <div v-if="instances && instances.length > 0" id="serverInstancesList">
-          <label for="serverInstance" align="left">Choose Instance</label>
-          <x-select
-            id="serverInstance"
-            align="left"
-            v-model="serverModal.instanceName"
-            :options="instances"
-          />
+        <div class="double-column">
+          <div v-if="instances && instances.length > 0" id="serverInstancesList">
+            <label for="serverInstance">Choose Instance</label>
+            <x-select
+              id="serverInstance"
+              v-model="serverModal.instanceName"
+              :options="instances"
+            />
+          </div>
+          <div>
+            <label for="connectionLabel">
+              Connection Label
+              <div class="hint">optional</div>
+            </label>
+            <input
+              id="connectionLabel"
+              v-model="serverModal.connectionLabel"
+              :maxlength="20"
+            />
+          </div>
         </div>
       </div>
       <template slot="footer">
@@ -217,6 +229,7 @@
         const fields =  [
           {name: 'status', title: '', type: 'string', format: 'icon'},
           {name: 'node_name', title: 'Instance Name', type: 'string'},
+          {name: 'connection_label', title: 'Connection Label', type: 'string'},
           ...this.adapterSchema.items.filter(field => (field.type !== 'file' && field.format !== 'password'))
         ]
         return fields
@@ -232,6 +245,7 @@
           open: false,
           serverData: {},
           instanceName: '',
+          connectionLabel: '',
           error: '',
           serverName: 'New Server',
           uuid: null,
@@ -279,6 +293,7 @@
             serverData: {...client.client_config, oldInstanceName: client.node_id},
             instanceName: client.node_id,
             serverName: client.client_id,
+            connectionLabel: client.client_config.connection_label,
             uuid: client.uuid,
             error: client.error,
             valid: true
@@ -316,7 +331,11 @@
         this.message = 'Connecting to Server...'
         this.updateServer({
           adapterId: this.adapterId,
-          serverData: {...this.serverModal.serverData, instanceName: this.serverModal.instanceName},
+          serverData: {
+            ...this.serverModal.serverData,
+            instanceName: this.serverModal.instanceName,
+            connection_label: this.serverModal.connectionLabel
+          },
           uuid: this.serverModal.uuid
         }).then((updateRes) => {
           if (this.selectedServers.includes('')) {
@@ -365,6 +384,7 @@
       },
       toggleServerModal() {
         this.serverModal.open = !this.serverModal.open
+        if(!this.serverModal.open) this.serverModal.connectionLabel = ''
       },
       validateConfig(valid) {
         this.configValid = valid
@@ -407,12 +427,18 @@
     margin-right: 5px;
   }
 
-  #serverInstancesList {
-    width: 45%
-  }
-
   #VaultQueryInput {
     width: 60%
+  }
+
+  .double-column {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-gap: 12px 24px;
+    input {
+      width: 100%;
+      height: 32px;
+    }
   }
 
   .x-adapter {

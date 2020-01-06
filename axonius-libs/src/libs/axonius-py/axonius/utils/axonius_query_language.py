@@ -9,13 +9,15 @@ import cachetools
 from bson.json_util import default
 from frozendict import frozendict
 
-from axonius.consts.gui_consts import SPECIFIC_DATA, ADAPTERS_DATA
+from axonius.consts.gui_consts import SPECIFIC_DATA, ADAPTERS_DATA, ADAPTERS_META
 from axonius.consts.plugin_consts import PLUGIN_NAME, ADAPTERS_LIST_LENGTH
 from axonius.utils.datetime import parse_date
 from axonius.utils.mongo_chunked import read_chunked
 import axonius.pql
 
 logger = logging.getLogger(f'axonius.{__name__}')
+
+METADATA_FIELDS_TO_PROJECT_FOR_GUI = ['client_used']
 
 
 def convert_many_queries_to_elemmatch_helper(name: str, value: object, length_of_prefix: int):
@@ -428,6 +430,16 @@ def translate_filter_not(filter_obj):
     return filter_obj
 
 
+def extract_adapter_metadata(adapter: dict) -> dict:
+    """
+    extract metadata from adapter data dict, use predefined list of fields to project
+    :param adapter: adapter data as dict
+    :return: a dict representing the field and his value
+    """
+    return {current_field: adapter[current_field] for current_field
+            in METADATA_FIELDS_TO_PROJECT_FOR_GUI if current_field in adapter}
+
+
 # pylint: disable=R0912
 def convert_db_entity_to_view_entity(entity: dict, ignore_errors: bool = False) -> dict:
     """
@@ -476,6 +488,17 @@ def convert_db_entity_to_view_entity(entity: dict, ignore_errors: bool = False) 
                 raise
         adapters_data = dict(adapters_data)
 
+        adapters_meta = defaultdict(list)
+        try:
+            for adapter in specific_data:
+                adapters_meta[adapter[PLUGIN_NAME]].append(extract_adapter_metadata(adapter))
+        except Exception:
+            if ignore_errors:
+                adapters_meta = {}
+            else:
+                raise
+        adapters_meta = dict(adapters_meta)
+
         try:
             generic_data = [tag
                             for tag in entity['tags']
@@ -503,6 +526,7 @@ def convert_db_entity_to_view_entity(entity: dict, ignore_errors: bool = False) 
             'generic_data': generic_data,
             SPECIFIC_DATA: specific_data,
             ADAPTERS_DATA: adapters_data,
+            ADAPTERS_META: adapters_meta,
             'adapters': adapters,
             'labels': labels,
             'accurate_for_datetime': entity.get('accurate_for_datetime')
