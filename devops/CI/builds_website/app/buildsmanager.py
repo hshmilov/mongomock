@@ -299,7 +299,7 @@ class BuildsManager(object):
 
         if all(r == 0 for r in actual_return_codes):
             new_status = 'completed'
-        elif any(r != 0 for r in actual_return_codes):
+        elif any((r is not None and r != 0) for r in actual_return_codes):
             new_status = 'failed'
         elif request_params.get('status') == 'failure':
             new_status = 'failed'
