@@ -144,6 +144,27 @@ class SplunkConnection(object):
         return raw_device
 
     @staticmethod
+    def parse_dhcp_macro(result):
+        raw_object = dict()
+        try:
+            raw_object['hostname'] = result[b'HostName'].decode('utf-8')
+        except Exception:
+            pass
+        try:
+            raw_object['ip'] = result[b'IPAddress'].decode('utf-8')
+        except Exception:
+            pass
+        try:
+            raw_object['mac'] = result[b'MAC Address'].decode('utf-8')
+        except Exception:
+            pass
+        try:
+            raw_object['description'] = result[b'Description'].decode('utf-8')
+        except Exception:
+            pass
+        return raw_object
+
+    @staticmethod
     def parse_nexpose(raw_line):
         return dict([x.split('="', 1) for x in raw_line[:-1].split('", ')])
 
@@ -184,7 +205,10 @@ class SplunkConnection(object):
                         if devices_count % 1000 == 0:
                             logger.info(f"Got {devices_count} devices so far")
                         try:
-                            raw = result[b'_raw'].decode('utf-8')
+                            try:
+                                raw = result[b'_raw'].decode('utf-8')
+                            except Exception:
+                                raw = ''
                             if not send_object_to_raw:
                                 new_item = split_raw(raw)
                             else:
@@ -263,6 +287,12 @@ class SplunkConnection(object):
                               maximum_records_per_search,
                               'Landesk')
         fetch_hours = fetch_plugins_dict.get('win_logs_fetch_hours') or 3
+        yield from self.fetch('search `axonius_dhcp`',
+                              SplunkConnection.parse_dhcp_macro,
+                              earliest,
+                              maximum_records_per_search,
+                              'DHCP Macro',
+                              send_object_to_raw=True)
         yield from self.fetch('search "SourceName=Microsoft Windows security auditing" AND '
                               '"Audit Success"AND NOT "Account_Name=SYSTEM" |dedup ComputerName',
                               SplunkConnection.parse_win_events,
