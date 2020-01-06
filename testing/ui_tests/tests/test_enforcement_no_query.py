@@ -221,10 +221,11 @@ class TestEnforcementNoQuery(TestBase):
         self.enforcements_page.click_new_enforcement()
         self.enforcements_page.wait_for_action_library()
         self.enforcements_page.fill_action_library_search('de')
-        assert self.enforcements_page.get_action_categories() == [ActionCategory.Deploy, ActionCategory.Isolate,
+        assert self.enforcements_page.get_action_categories() == [ActionCategory.Incident,
                                                                   ActionCategory.Enrichment,
-                                                                  ActionCategory.Block, ActionCategory.ManageAD,
-                                                                  ActionCategory.Incident]
+                                                                  ActionCategory.Isolate,
+                                                                  ActionCategory.ManageAD,
+                                                                  ActionCategory.Deploy]
         assert self.enforcements_page.get_action_category_items(ActionCategory.Isolate) == [
             Action.cybereason_isolate.value,
             Action.cybereason_unisolate.value,

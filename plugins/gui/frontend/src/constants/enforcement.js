@@ -210,7 +210,8 @@ export const failCondition = 'failure'
 export const postCondition = 'post'
 
 export const actionCategories = [
-    'deploy_software', 'run_command', 'isolate_edr', 'scan_va','enrich_device_or_user_data',
-    'block_fw', 'create_cmdb_computer', 'manage_directory',
-    'notify', 'create_incident', 'axonius'
+    'notify', 'create_incident', 'axonius',
+    'enrich_device_or_user_data', 'scan_va', 'run_command', 'isolate_edr',
+    'create_cmdb_computer', 'manage_directory',
+    'deploy_software'
 ]

@@ -46,11 +46,5 @@ class FeatureFlags(Configurable):
     def _db_config_default(cls):
         return {
             FeatureFlagsNames.TrialEnd: (datetime.now() + timedelta(days=30)).isoformat()[:10].replace('-', '/'),
-            FeatureFlagsNames.LockedActions: [
-                'cybereason_isolate',
-                'cybereason_unisolate',
-                'carbonblack_defense_change_policy',
-                'tenable_sc_add_ips_to_asset',
-                'tenable_io_add_ips_to_target_group'
-            ]
+            FeatureFlagsNames.LockedActions: []
         }
