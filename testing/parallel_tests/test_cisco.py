@@ -24,7 +24,3 @@ class TestCiscoAdapter(AdapterTestBase):
     @pytest.mark.skip("No reachability test")
     def test_check_reachability(self):
         pass
-
-    @pytest.mark.skip('AX-5961')
-    def test_fetch_devices(self):
-        pass
