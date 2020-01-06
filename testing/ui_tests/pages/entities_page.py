@@ -97,7 +97,7 @@ class EntitiesPage(Page):
                                '//div[@class=\'x-table\']//thead/tr'
     NAME_ADAPTERS_JSON = 'json_file_adapter'
     NAME_ADAPTERS_AD = 'active_directory_adapter'
-    VALUE_ADAPTERS_GENERAL = 'General'
+    VALUE_ADAPTERS_GENERAL = 'Aggregated'
     TABLE_HEADER_CELLS_CSS = 'th'
     TABLE_HEADER_CELLS_XPATH = '//th[child::img[contains(@class, \'logo\')]]'
     TABLE_HEADER_SORT_XPATH = '//th[contains(@class, \'sortable\') and contains(text(), \'{col_name_text}\')]'
@@ -268,7 +268,7 @@ class EntitiesPage(Page):
 
     def get_adapters_list(self):
         adapters_list = self.driver.find_element_by_css_selector(self.DROPDOWN_SELECTED_OPTIONS_CSS).text.split('\n')
-        adapters_list.remove('General')
+        adapters_list.remove(self.VALUE_ADAPTERS_GENERAL)
         return adapters_list
 
     def select_query_comp_op(self, text, parent=None):

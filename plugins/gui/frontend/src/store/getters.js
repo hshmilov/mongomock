@@ -9,7 +9,7 @@ export const getDataFieldsByPlugin = (state) => (module, objectView) => {
 
     return [
         {
-            name: 'axonius', title: 'General', fields: selectFields(fields.generic, objectView)
+            name: 'axonius', title: 'Aggregated', fields: selectFields(fields.generic, objectView)
         }, ...Object.keys(fields.specific).map((name) => {
             let title = pluginMeta[name] ? pluginMeta[name].title : name
             return {

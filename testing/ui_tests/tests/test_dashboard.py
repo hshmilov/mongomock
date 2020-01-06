@@ -182,7 +182,7 @@ class TestDashboard(TestBase):
         # i.e act like changing to general
         self.dashboard_page.select_chart_wizard_adapter(JSON_ADAPTER_NAME)
         assert self.dashboard_page.get_chart_wizard_field_value() == 'ID'
-        self.dashboard_page.select_chart_wizard_adapter('General')
+        self.dashboard_page.select_chart_wizard_adapter(self.devices_page.VALUE_ADAPTERS_GENERAL)
         try:
             self.dashboard_page.get_chart_wizard_field_value()
         except NoSuchElementException:

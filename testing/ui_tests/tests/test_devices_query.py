@@ -242,7 +242,7 @@ class TestDevicesQuery(TestBase):
 
     def edit_columns(self, column_list):
         self.devices_page.edit_columns(add_col_names=column_list,
-                                       adapter_title='General')
+                                       adapter_title=self.devices_page.VALUE_ADAPTERS_GENERAL)
 
     def _create_query(self):
         self.devices_page.click_query_wizard()
@@ -853,7 +853,7 @@ class TestDevicesQuery(TestBase):
         expressions = self.devices_page.find_expressions()
         assert len(expressions) == 1
 
-        self.devices_page.select_query_adapter('General', parent=expressions[0])
+        self.devices_page.select_query_adapter(self.devices_page.VALUE_ADAPTERS_GENERAL, parent=expressions[0])
         fields = list(self.devices_page.get_all_fields_in_field_selection())
         # swap_cached is only returned by chef, not by AD or JSON
         assert 'Total Swap GB' not in fields
