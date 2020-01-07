@@ -454,8 +454,8 @@ class SccmAdapter(AdapterBase, Configurable):
                     device.part_of_domain = True
                     device.domain = domain
 
-                device.figure_os(device_raw.get('operatingSystem0'))
-
+                device.figure_os((device_raw.get('operatingSystem0') or '') + ' ' +
+                                 (device_raw.get('Operating_System_Name_and0') or ''))
                 mac_total = []
                 ips_total = []
                 for nic in (device_raw.get('Network Interfaces') or '').split(';'):

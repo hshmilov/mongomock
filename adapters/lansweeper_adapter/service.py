@@ -316,6 +316,8 @@ class LansweeperAdapter(AdapterBase, Configurable):
                         state_id = custom_data.get('State')
                         if state_id:
                             device.state_name = state_name_dict.get(state_id)
+                        device.device_model = custom_data.get('Model')
+                        device.device_manufacturer = custom_data.get('Manufacturer')
                 except Exception:
                     logger.exception(f'Problem getting custom data')
                 try:
