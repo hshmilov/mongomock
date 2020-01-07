@@ -26,6 +26,7 @@ class InfobloxAdapter(AdapterBase, Configurable):
         fingerprint = Field(str, 'Fingerprint')
         discoverer = Field(str, 'Discoverer')
         infoblox_device_type = Field(str, 'Device Type')
+        binding_state = Field(str, 'Binding State')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -165,7 +166,7 @@ class InfobloxAdapter(AdapterBase, Configurable):
                 ip_address = device_raw.get('address')
                 network = device_raw.get('network')
                 device.fingerprint = device_raw.get('fingerprint')
-
+                device.binding_state = device_raw.get('binding_state')
                 try:
                     device.add_nic(mac_address,
                                    [ip_address] if ip_address else None,

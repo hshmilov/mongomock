@@ -194,6 +194,14 @@ class TenableIoAdapter(ScannerAdapterBase, Configurable):
         device.id = device_id
         device.has_agent = bool(device_raw.get('has_agent'))
         device.last_seen = parse_date(device_raw.get('last_seen'))
+        tags_raw = device_raw.get('tags')
+        if not isinstance(tags_raw, list):
+            tags_raw = []
+        for tag_raw in tags_raw:
+            try:
+                device.add_key_value_tag(tag_raw.get('key'), tag_raw.get('value'))
+            except Exception:
+                logger.exception(f'Problem with tag raw {tag_raw}')
         ipv4_raw = device_raw.get('ipv4s') or []
         ipv6_raw = device_raw.get('ipv6s') or []
         mac_addresses_raw = device_raw.get('mac_addresses') or []
