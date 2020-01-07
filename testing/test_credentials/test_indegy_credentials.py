@@ -1,7 +1,7 @@
 from test_helpers.file_mock_credentials import FileForCredentialsMock
 
 CLIENT_DETAILS = {
-    'domain': '192.168.10.249',
+    'domain': '192.168.20.249',
     'verify_ssl': False,
     'robot_name': 'robot2',
     'cert_file': FileForCredentialsMock('cert_file', b'''-----BEGIN CERTIFICATE-----
