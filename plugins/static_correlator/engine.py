@@ -128,6 +128,18 @@ def is_netbox_adapter(adapter_device):
     return adapter_device.get('plugin_name') == 'netbox_adapter'
 
 
+def get_solarwinds_ip_or_hostname(adapter_device):
+    return adapter_device['data'].get('solarwinds_ip') or adapter_device['data'].get('hostname')
+
+
+def compare_solarwinds_ip_or_hostname(adapter_device1, adapter_device2):
+    solarwinds_ip_1 = get_solarwinds_ip_or_hostname(adapter_device1)
+    solarwinds_ip_2 = get_solarwinds_ip_or_hostname(adapter_device2)
+    if not solarwinds_ip_1 or not solarwinds_ip_2:
+        return False
+    return solarwinds_ip_1 == solarwinds_ip_2
+
+
 def is_ca_cmdb_adapter(adapter_device):
     return adapter_device.get('plugin_name') == 'ca_cmdb_adapter'
 
@@ -179,10 +191,16 @@ def force_mac_adapters(adapter_device):
 # Solarwinds Node are bad for MAC correlation
 def not_solarwinds_node(adapter_device):
     if adapter_device.get('plugin_name') == 'solarwinds_orion_adapter' \
-            and adapter_device['data'].get('node_id')\
-            and adapter_device['data'].get('node_id') == adapter_device['data'].get('id'):
+            and adapter_device['data'].get('device_type') != 'Node Device':
         return False
     return True
+
+
+def is_solarwinds_node_or_junos_basic(adapter_device):
+    if adapter_device.get('plugin_name') in ['solarwinds_orion_adapter', 'junos_adapter'] \
+            and adapter_device['data'].get('device_type') in ['Juniper Device', 'Node Device']:
+        return True
+    return False
 
 
 def if_soalrwinds_compare_all(adapter_device1, adapter_device2):
@@ -430,6 +448,18 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
                                        not_wifi_adapters,
                                        cloud_id_do_not_contradict],
                                       {'Reason': 'They have the same hostname and IPs'},
+                                      CorrelationReason.StaticAnalysis)
+
+    def _correlat_junos_solar_ips_hostname(self, adapters_to_correlate):
+        logger.info('Starting to correlate on Solarwinds Junos IP')
+        filtered_adapters_list = filter(is_solarwinds_node_or_junos_basic, adapters_to_correlate)
+        filtered_adapters_list = filter(get_solarwinds_ip_or_hostname, filtered_adapters_list)
+        return self._bucket_correlate(list(filtered_adapters_list),
+                                      [get_solarwinds_ip_or_hostname],
+                                      [compare_solarwinds_ip_or_hostname],
+                                      [],
+                                      [],
+                                      {'Reason': 'Solarwinds Junos Ips'},
                                       CorrelationReason.StaticAnalysis)
 
     def _correlate_hostname_user(self, adapters_to_correlate):
@@ -776,6 +806,8 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
         yield from self._correlate_hostname_domain(adapters_to_correlate)
 
         yield from self._correlate_hostname_user(adapters_to_correlate)
+
+        yield from self._correlat_junos_solar_ips_hostname(adapters_to_correlate)
 
         csv_full_hostname = bool(self._correlation_config and
                                  self._correlation_config.get('csv_full_hostname') is True)

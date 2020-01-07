@@ -28,6 +28,7 @@ SOLARWINDS_DEVICES_TYPES = [NODE_DEVICE, LAN_DEVICE, DHCP_DEVICE, WIFI_DEVICE]
 class SolarwindsOrionAdapter(AdapterBase, Configurable):
     class MyDeviceAdapter(DeviceAdapter):
         device_type = Field(str, 'Device Type', enum=SOLARWINDS_DEVICES_TYPES)
+        solarwinds_ip = Field(str)
         uri = Field(str, 'URI')
         ip_address_guid = Field(str, 'IP Address GUID')
         software_hardware_makeup = Field(str, 'Node Makeup')
@@ -207,6 +208,7 @@ class SolarwindsOrionAdapter(AdapterBase, Configurable):
         try:
             device = self._new_device_adapter()
             device.device_type = NODE_DEVICE
+            device.solarwinds_ip = raw_device_data.get('IPAddress')
             # NodeID is the unique identifier over time
             id_check = raw_device_data.get('NodeID')
             if not id_check:
