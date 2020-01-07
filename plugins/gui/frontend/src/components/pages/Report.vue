@@ -271,7 +271,7 @@
         disableDownloadReport() {
           return this.downloading
         },
-        dashboard_spaces(state) {
+        dashboardSpaces(state) {
           let custom_spaces = state.dashboard.spaces.data.filter(space => space.type === 'custom')
           let default_space = state.dashboard.spaces.data.find(space => space.type === 'default')
           if(default_space) {
@@ -351,7 +351,7 @@
             'title': '',
             'name': 'uuid',
             'type': 'string',
-            'enum': this.dashboard_spaces
+            'enum': this.dashboardSpaces
           },
           'type': 'array'
         }
@@ -472,7 +472,7 @@
           }
 
           if(this.report.spaces.length > 0){
-            let validDashboardSpaces = this.dashboard_spaces.reduce((map, space) => {
+            let validDashboardSpaces = this.dashboardSpaces.reduce((map, space) => {
               map[space.name] = space.title;
               return map;
             }, {})

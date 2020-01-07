@@ -45,19 +45,23 @@
     </template>
     <template v-else-if="isStringList && schema.items.enum">
       <label>{{ schema.title }}</label>
-      <md-field>
-        <md-select
-          v-model="data"
-          :placeholder="placeholder"
-          multiple
-        >
-          <md-option
-            v-for="option in schema.items.enum"
-            :key="option.name"
-            :value="option.name"
-          >{{ option.title }}</md-option>
-        </md-select>
-      </md-field>
+      <v-combobox
+        v-model="data"
+        :items="schema.items.enum"
+        :return-object="false"
+        :menu-props="{
+          closeOnClick: true
+        }"
+        item-text="title"
+        item-value="name"
+        multiple
+        dense
+        clearable
+      >
+        <template #selection="{ item }">
+          <v-chip small>{{ getItemTitle(item) }}</v-chip>
+        </template>
+      </v-combobox>
     </template>
     <template v-else>
       <label>{{ schema.title }}</label>
@@ -243,6 +247,10 @@
           valid,
           error: this.stringListValid? '': this.stringListError
         })
+      },
+      getItemTitle (name) {
+        const item = this.schema.items.enum.find(item => item.name === name)
+        return item ? item.title : ''
       }
     }
   }
@@ -284,6 +292,12 @@
 
       .upload-file {
         margin-top: 8px;
+      }
+    }
+
+    .v-select.v-autocomplete {
+      input {
+        border-style: none;
       }
     }
   }

@@ -33,9 +33,6 @@ import 'vue-svgicon/dist/polyfill'
 import * as svgicon from 'vue-svgicon'
 Vue.use(svgicon, {tagName: 'svg-icon'})
 
-import VmSelect from 'vue-multiple-select'
-Vue.use(VmSelect)
-
 import VueAnalytics from 'vue-analytics'
 Vue.use(VueAnalytics, {
 	id: 'UA-123123123-0', // set in backend

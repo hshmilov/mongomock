@@ -145,7 +145,8 @@ class Page:
     TABLE_ROW_CHECKBOX_CSS = 'tbody .x-table-row.clickable:nth-child({child_index}) td:nth-child(1) .x-checkbox'
     TABLE_ROW_TEXT_CELL_CSS = 'tbody .x-table-row.clickable:nth-child({row_index}) td:nth-child({cell_index}) div'
 
-    FIELD_WITH_LABEL_XPATH = '//div[child::label[text()=\'{label_text}\']]/div[contains(@class, \'md-field\')]'
+    FIELD_WITH_LABEL_XPATH = '//div[child::label[text()=\'{label_text}\']]' \
+                             '/div[contains(@class, \'md-field\') or contains(@class, \'v-text-field\')]'
     DROPDOWN_TAGS_CSS = 'div.x-dropdown.x-select.all-tags'
     DROPDOWN_TAGS_VALUE_CSS = 'div.x-dropdown.x-select.all-tags div.trigger-text'
     DROPDOWN_TEXT_BOX_CSS = 'div.x-search-input.x-select-search > input'
@@ -931,3 +932,7 @@ class Page:
 
     def switch_tab(self, tab):
         self.driver.switch_to_window(tab)
+
+    def get_multiple_select_values(self):
+        chips = self.driver.find_elements_by_css_selector('.v-select .v-select__selections .v-chip')
+        return [chip.text for chip in chips]

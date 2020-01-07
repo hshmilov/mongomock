@@ -23,5 +23,5 @@ class TestReportSettings(TestBase):
         self.reports_page.switch_to_page()
         self.reports_page.click_new_report()
         self.reports_page.click_include_dashboard()
-        spaces_options = self.reports_page.get_spaces_options()
+        spaces_options = self.reports_page.get_multiple_select_values()
         assert spaces_options.count(DASHBOARD_SPACE_DEFAULT) == 1

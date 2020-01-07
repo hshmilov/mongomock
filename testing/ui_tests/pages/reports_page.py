@@ -1,5 +1,3 @@
-import time
-
 from selenium.common.exceptions import NoSuchElementException
 from dataclasses import dataclass
 from dataclasses_json import DataClassJsonMixin
@@ -326,18 +324,6 @@ class ReportsPage(EntitiesPage):
 
     def click_spaces_select(self):
         self.find_element_following_label(self.SPACES_LABEL).click()
-
-    def get_spaces(self):
-        element = self.find_element_following_label(self.SPACES_LABEL)
-        return [elm.get_attribute('value')
-                for elm in element.find_elements_by_css_selector('.md-select .md-input.md-select-value')]
-
-    def get_spaces_options(self):
-        self.click_spaces_select()
-        self.wait_for_element_present_by_css('.md-list-item-text')
-        # Wait for entrance animation to end
-        time.sleep(0.5)
-        return [e.text for e in self.driver.find_elements_by_css_selector('.md-list-item-text')]
 
     def create_report(self,
                       report_config: ReportConfig,
