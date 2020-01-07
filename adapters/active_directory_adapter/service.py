@@ -312,7 +312,7 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, ActiveDirectory
 
                 if not success_domains:
                     if len(failure_domains) > 0:
-                        raise ClientConnectionException(f'Can not connect: {failure_domains[0]}')
+                        raise ClientConnectionException(f'Can not connect: {list(failure_domains.values())[0]}')
                     else:
                         raise ClientConnectionException(f'Did not find any server in the GC.')
 
@@ -334,6 +334,7 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, ActiveDirectory
             message = f'Error: {additional_msg}.'
             logger.exception(message)
         except Exception:
+            message = 'Error - please check your credentials.'
             logger.exception(f'Error in _connect_client: {get_exception_string()}')
         raise ClientConnectionException(message)
 

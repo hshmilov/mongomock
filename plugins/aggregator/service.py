@@ -453,15 +453,18 @@ class AggregatorService(Triggerable, PluginBase):
                     'client_name': client_name,
                     'check_fetch_time': check_fetch_time
                 })
-                if data.content and from_json(data.content).get('min_time_check') is True:
-                    logger.info(f'got min_time_check in adapter {adapter}: '
-                                f'The minimum time between fetches hasn\'t been reached yet.')
-                    break
+                try:
+                    if data.content and from_json(data.content).get('min_time_check') is True:
+                        logger.info(f'got min_time_check in adapter {adapter}: '
+                                    f'The minimum time between fetches hasn\'t been reached yet.')
+                        break
+                except Exception:
+                    logger.exception(f'Error parsing json data, content is: {data.content}')
                 check_fetch_time = False
             except Exception as e:
                 # request failed
-                logger.exception(f"{repr(e)}")
-                raise AdapterOffline()
+                logger.exception(f"Exception while querying adapter {adapter} with client {client_name}: {repr(e)}")
+                continue
             if data.status_code != 200 or not data.content:
                 logger.warn(f"{client_name} client for adapter {adapter} is returned HTTP {data.status_code}. "
                             f"Reason: {str(data.content)}")

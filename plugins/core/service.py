@@ -310,6 +310,17 @@ class CoreService(Triggerable, PluginBase, Configurable):
 
             return password
 
+    @add_rule('system_id')
+    def system_id(self):
+        node_metadata = self._get_collection('nodes_metadata').find_one({NODE_ID: self.node_id})
+        if not node_metadata:
+            raise ValueError(f'Unknown System Id')
+        node_name = node_metadata.get('node_name')
+        node_hostname = node_metadata.get('hostname')
+        node_ips = '_'.join(node_metadata.get('ips') or [])
+
+        return f'{node_name}_{node_hostname}_{node_ips}'.replace(' ', '_')
+
     @add_rule('dbpass', methods=['GET'], should_authenticate=False)
     def db_pass(self):
         """

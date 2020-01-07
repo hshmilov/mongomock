@@ -12,6 +12,7 @@ from apscheduler.executors.pool import \
 from apscheduler.triggers.interval import IntervalTrigger
 
 from axonius.adapter_base import AdapterBase
+from axonius.consts.gui_consts import RootMasterNames
 from axonius.consts.metric_consts import SystemMetric
 
 from axonius.consts.plugin_consts import PLUGIN_NAME, PLUGIN_UNIQUE_NAME, CONFIGURABLE_CONFIGS_COLLECTION, \
@@ -28,13 +29,18 @@ from axonius.mixins.configurable import Configurable
 from axonius.mixins.triggerable import Triggerable, StoredJobStateCompletion
 from axonius.plugin_base import PluginBase, add_rule, return_error
 from axonius.thread_stopper import StopThreadException
+from axonius.utils.backup import backup_to_s3
 from axonius.utils.files import get_local_config_file
 from flask import jsonify
+
+from axonius.utils.host_utils import get_free_disk_space
+from axonius.utils.root_master.root_master import root_master_restore_from_s3
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
 # Plugins that should always run async
 ALWAYS_ASYNC_PLUGINS = [STATIC_ANALYSIS_PLUGIN_NAME, GENERAL_INFO_PLUGIN_NAME]
+MIN_GB_TO_SAVE_HISTORY = 15
 
 
 class SystemSchedulerService(Triggerable, PluginBase, Configurable):
@@ -67,6 +73,14 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
                                           next_run_time=datetime.now(),
                                           max_instances=1)
         self.__realtime_scheduler.start()
+
+    @add_rule('trigger_s3_backup')
+    def trigger_s3_backup(self):
+        return str(backup_to_s3())
+
+    @add_rule('trigger_root_master_s3_restore')
+    def trigger_root_master_s3_restore(self):
+        return str(root_master_restore_from_s3())
 
     @add_rule('state', should_authenticate=False)
     def get_state(self):
@@ -255,6 +269,11 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
             # Fetch Devices Data.
             try:
                 self._run_aggregator_phase(PluginSubtype.AdapterBase)
+                if (self.feature_flags_config().get(RootMasterNames.root_key) or {}).get(RootMasterNames.enabled):
+                    logger.info(f'Root Master mode enabled - Restoring from s3 instead of fetch')
+                    root_master_restore_from_s3()
+                    self._request_gui_dashboard_cache_clear()
+                    return  # do not continue the rest of the cycle
                 self._request_gui_dashboard_cache_clear()
             except Exception:
                 logger.critical('Failed running fetch_devices phase', exc_info=True)
@@ -319,7 +338,11 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
                 if self.__save_history:
                     # Save history.
                     _change_subphase(scheduler_consts.ResearchPhases.Save_Historical)
-                    self._run_historical_phase()
+                    free_disk_space_in_gb = get_free_disk_space() / (1024 ** 3)
+                    if free_disk_space_in_gb < MIN_GB_TO_SAVE_HISTORY:
+                        logger.error(f'Can not save history - less than 15 GB on disk!')
+                    else:
+                        self._run_historical_phase()
 
                 self._request_gui_dashboard_cache_clear(clear_slow=True)
             except Exception:
@@ -337,6 +360,14 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
             if self._notify_on_adapters is True:
                 self.create_notification(f'Finished {scheduler_consts.Phases.Research.name} Phase Successfully.')
             self.send_external_info_log(f'Finished {scheduler_consts.Phases.Research.name} Phase Successfully.')
+
+            try:
+                if (self.feature_flags_config().get(RootMasterNames.root_key) or {}).get(RootMasterNames.enabled):
+                    logger.info(f'Root Master mode enabled - not backing up')
+                elif self._aws_s3_settings.get('enabled') and self._aws_s3_settings.get('enable_backups'):
+                    threading.Thread(target=backup_to_s3).start()
+            except Exception:
+                logger.exception(f'Could not run s3-backup phase')
 
     def __get_all_realtime_adapters(self):
         db_connection = self._get_db_connection()

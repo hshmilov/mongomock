@@ -1,5 +1,6 @@
 import logging
 import os
+import pem
 
 import OpenSSL
 from OpenSSL import crypto
@@ -55,9 +56,9 @@ def validate_cert_with_ca(cert_binary: bytes, ca_binary: bytes) -> bool:
         raise Exception(f'Certificate is invalid: {str(e)}')
 
     try:
-        ca_obj = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, ca_binary)
         store = OpenSSL.crypto.X509Store()
-        store.add_cert(ca_obj)
+        for _ca in pem.parse(ca_binary):
+            store.add_cert(OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, str(_ca)))
     except OpenSSL.crypto.Error as e:
         logger.exception(f'Error parsing CA')
         raise Exception(f'CA is invalid: {str(e)}')

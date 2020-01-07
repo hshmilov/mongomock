@@ -701,7 +701,7 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
                 try:
                     client_id = self._get_client_id(client_config)
                 except Exception as e:
-                    err_msg = 'invalid client id'
+                    err_msg = 'invalid client id - Please check the credentials'
                     log_metric(logger, metric_name=Adapters.CREDENTIALS_CHANGE_ERROR,
                                metric_value=f'{err_msg} - {e}')
                     logger.warning(f'{err_msg}', exc_info=True)
@@ -754,7 +754,7 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
 
     def _write_client_to_db(self, client_id, client_config, status, error_msg, upsert=True):
         if client_id is not None:
-            logger.info(f'Updating new client status in db - {status}. client id: {client_id}')
+            logger.info(f'Updating new client status in db - {status}. client id: {client_id}. error - {error_msg}')
             return self._clients_collection.replace_one({'client_id': client_id},
                                                         {'client_id': client_id,
                                                          'client_config': client_config,

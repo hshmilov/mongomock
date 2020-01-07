@@ -40,6 +40,7 @@ from onelogin.saml2.auth import OneLogin_Saml2_Auth
 from onelogin.saml2.idp_metadata_parser import OneLogin_Saml2_IdPMetadataParser
 
 from axonius.background_scheduler import LoggedBackgroundScheduler
+from axonius.clients.aws.utils import aws_list_s3_objects
 from axonius.clients.ldap.exceptions import LdapException
 from axonius.clients.ldap.ldap_connection import LdapConnection
 from axonius.clients.rest.connection import RESTConnection
@@ -111,6 +112,7 @@ from axonius.types.ssl_state import (COMMON_SSL_CONFIG_SCHEMA,
                                      SSLState)
 from axonius.users.user_adapter import UserAdapter
 from axonius.utils import gui_helpers
+from axonius.utils.backup import verify_preshared_key
 from axonius.utils.db_querying_helper import get_entities
 from axonius.utils.axonius_query_language import parse_filter
 from axonius.utils.datetime import next_weekday, time_from_now
@@ -2772,6 +2774,32 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
                 if not ssl_check_result:
                     return return_error(f'Private key and public certificate do not match each other', 400)
 
+            aws_s3_settings = config_to_set.get('aws_s3_settings')
+            if aws_s3_settings and aws_s3_settings.get('enabled') is True:
+                enable_backups = aws_s3_settings.get('enable_backups')
+                preshared_key = aws_s3_settings.get('preshared_key') or ''
+                if enable_backups is True:
+                    try:
+                        verify_preshared_key(preshared_key)
+                    except Exception as e:
+                        return return_error(f'Error: {str(e)}', 400)
+                bucket_name = aws_s3_settings.get('bucket_name')
+                aws_access_key_id = aws_s3_settings.get('aws_access_key_id')
+                aws_secret_access_key = aws_s3_settings.get('aws_secret_access_key')
+                if (aws_access_key_id and not aws_secret_access_key) \
+                        or (aws_secret_access_key and not aws_access_key_id):
+                    return return_error(f'Error: Please specify both AWS Access Key ID and AWS Secret Access Key', 400)
+                try:
+                    for _ in aws_list_s3_objects(
+                            bucket_name=bucket_name,
+                            access_key_id=aws_access_key_id,
+                            secret_access_key=aws_secret_access_key,
+                            just_one=True
+                    ):
+                        break
+                except Exception as e:
+                    logger.exception(f'Error listing AWS s3 objects')
+                    return return_error(f'Error listing AWS S3 Objects: {str(e)}', 400)
             getting_started_conf = config_to_set.get(GETTING_STARTED_CHECKLIST_SETTING)
             getting_started_feature_enabled = getting_started_conf.get('enabled')
 
@@ -5006,14 +5034,14 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
             # Disable mandatory Mutual TLS
             mutual_tls_state = f'optional_no_ca' if self._mutual_tls_settings.get('enabled') else 'off'
             try:
-                logger.info(f'Deleting mutual tls settings')
-                with open(MUTUAL_TLS_CONFIG_FILE, 'wt') as mtls_config_file:
-                    mtls_config_file.write(f'ssl_verify_client {mutual_tls_state};')
                 if os.path.exists(MUTUAL_TLS_CA_PATH):
+                    logger.info(f'Deleting mutual tls settings')
+                    with open(MUTUAL_TLS_CONFIG_FILE, 'wt') as mtls_config_file:
+                        mtls_config_file.write(f'ssl_verify_client {mutual_tls_state};')
+                    # Restart Openresty (NGINX)
+                    subprocess.check_call(['openresty', '-s', 'reload'])
                     os.unlink(MUTUAL_TLS_CA_PATH)
-                # Restart Openresty (NGINX)
-                subprocess.check_call(['openresty', '-s', 'reload'])
-                logger.info(f'Successfuly loaded new mutual TLS settings: {mutual_tls_state}')
+                    logger.info(f'Successfuly loaded new mutual TLS settings: {mutual_tls_state}')
             except Exception:
                 logger.exception(f'Can not delete mutual tls settings')
 

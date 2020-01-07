@@ -91,6 +91,8 @@ class AggregatorService(PluginService, UpdatablePluginMixin):
             print(f'{col.name} size on disk is {size}')
             total_capped_data_on_disk += size
 
+        # This is a bug! docker is not always mounted on root. to get the real disk usage do this:
+        # shutil.disk_usage(docker.from_env().info()['DockerRootDir']).free / (1024 ** 3)
         disk_usage = shutil.disk_usage("/")
         # Size for all capped collections:
         # (disk_free + total_current_capped_collection) * 0.8 - 5GB

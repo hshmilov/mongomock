@@ -132,6 +132,12 @@ class FeatureFlagsNames:
     LockedActions = 'locked_actions'
 
 
+class RootMasterNames:
+    root_key = 'root_master_settings'
+    enabled = 'enabled'
+    delete_backups = 'delete_backups'
+
+
 class Signup:
     SignupCollection = 'signup'
     SignupField = 'signup'

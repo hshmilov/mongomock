@@ -7,11 +7,13 @@ import sys
 import os
 import subprocess
 
+from axonius.consts.adapter_consts import SHOULD_NOT_REFRESH_CLIENTS, ADAPTER_SETTINGS
 from axonius.consts.plugin_subtype import PluginSubtype
 from axonius.utils.debug import redprint, yellowprint
 from axonius.entities import EntityType
 from services.plugins.reimage_tags_analysis_service import ReimageTagsAnalysisService
 from services.plugins.reports_service import ReportsService
+from services.plugins.system_scheduler_service import SystemSchedulerService
 from testing.services.plugins.aggregator_service import AggregatorService
 from testing.services.plugins.core_service import CoreService
 from testing.services.plugins.static_correlator_service import StaticCorrelatorService
@@ -45,7 +47,8 @@ def usage():
     return f'''
     {name} al - list all running adapters & scanners
     {name} af [plugin_unique_name] - fetches devices from a specific plugin unique name
-    {name} sc - run static correlator & static users correlator
+    {name} afc [adapter_name] [client_id] - Uses this host's adapter to fetch the client [client_id]
+    {name} sc (devices/users)- run static correlator & static users correlator
     {name} de [dry/wet] - run static correlator to detect errors, pass 'de wet' to fix errors 
     {name} cd - run clean devices (clean db)
     {name} rr - run reports
@@ -57,6 +60,9 @@ def usage():
     {name} db rf [device/user] [plugin_name] [field] - removes a field from an adapter. 
                                                        e.g. `db rf device aws_adapter _old`
                                                        will remove '_old' from all aws devices.
+    {name} disable_client_evaluation [adapter_unique_name] - disables client evaluation for the next run only
+    {name} s3_backup - Trigger s3 backup
+    {name} root_master_s3_restore - Trigger 'Root Master mode' s3 restore
     '''
 
 
@@ -80,6 +86,7 @@ def main():
     rr = ReportsService()
     sa = StaticAnalysisService()
     rta = ReimageTagsAnalysisService()
+    ss = SystemSchedulerService()
 
     def get_all_running_adapters_and_scanners():
         result = dict()
@@ -103,11 +110,31 @@ def main():
         print(f'Fetching & Rebuilding db (Blocking) for {pun}...')
         ag.query_devices(pun)
 
+    elif component == 'afc':
+        if not action:
+            print('Please specify an adapter/service')
+            return -1
+        try:
+            client_name = sys.argv[3]
+        except Exception:
+            print('Please specify client_id')
+            return -1
+        try:
+            service = _get_docker_service(action, type_name='adapters')
+        except Exception:
+            print(f'No such adapter "{action}"!')
+            return -1
+
+        print(f'Requesting {action} on this host to fetch client {client_name}...')
+        service.trigger_insert_to_db(client_name)
+
     elif component == 'sc':
-        print('Running static correlator..')
-        sc.correlate(True)
-        print('Running static users correlator..')
-        scu.correlate(True)
+        if not action or action == 'devices':
+            print('Running static correlator..')
+            sc.correlate(True)
+        if not action or action == 'users':
+            print('Running static users correlator..')
+            scu.correlate(True)
 
     elif component == 'de':
         fix_errors = action == 'wet'
@@ -181,6 +208,31 @@ def main():
         print(f'Running DB Migration for {action}...')
         service._migrate_db()   # pylint: disable=protected-access
         print(f'Done!')
+
+    elif component == 'disable_client_evaluation':
+        pun = action
+        assert pun, usage()
+        assert pun in get_all_running_adapters_and_scanners().keys(), \
+            f'{pun} not running!'
+
+        print(f'Disabling client evaluation for {pun}...')
+        ag.db.client[pun][ADAPTER_SETTINGS].update_one(
+            {
+                SHOULD_NOT_REFRESH_CLIENTS: {'$exists': True}
+            },
+            {
+                '$set': {
+                    SHOULD_NOT_REFRESH_CLIENTS: True
+                }
+            },
+            upsert=True
+        )
+
+    elif component == 's3_backup':
+        ss.trigger_s3_backup()
+
+    elif component == 'root_master_s3_restore':
+        ss.trigger_root_master_s3_restore()
 
     elif component == 'db':
         if action == 'rf':

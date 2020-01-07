@@ -2867,6 +2867,7 @@ class PluginBase(Configurable, Feature, ABC):
         self._jira_settings = config['jira_settings']
         self._proxy_settings = config[PROXY_SETTINGS]
         self._vault_settings = config['vault_settings']
+        self._aws_s3_settings = config.get('aws_s3_settings') or {}
 
         if self._vault_settings['enabled'] is True:
             self._cyberark_vault = CyberArkVaultConnection(self._vault_settings['domain'],
@@ -2989,18 +2990,21 @@ class PluginBase(Configurable, Feature, ABC):
         except Exception:
             logger.exception(f'Failed setting up syslog handler, no syslog handler has been set up, {syslog_settings}')
 
+    def feature_flags_config(self) -> dict:
+        return self._get_collection(CONFIGURABLE_CONFIGS_COLLECTION, GUI_PLUGIN_NAME).find_one({
+            'config_name': FEATURE_FLAGS_CONFIG
+        })['config']
+
     @singlethreaded()
     @cachetools.cached(cachetools.TTLCache(maxsize=1, ttl=5), lock=threading.Lock())
     def trial_expired(self):
         """
         Check whether system has a trial expiration that has passed
         """
-        feature_flags_config = self._get_collection(CONFIGURABLE_CONFIGS_COLLECTION, GUI_PLUGIN_NAME).find_one({
-            'config_name': FEATURE_FLAGS_CONFIG
-        })
-        if not feature_flags_config['config'].get(FeatureFlagsNames.TrialEnd):
+        feature_flags_config = self.feature_flags_config()
+        if not feature_flags_config.get(FeatureFlagsNames.TrialEnd):
             return False
-        return parse_date(feature_flags_config['config'][FeatureFlagsNames.TrialEnd]) < parse_date(datetime.now())
+        return parse_date(feature_flags_config[FeatureFlagsNames.TrialEnd]) < parse_date(datetime.now())
 
     @staticmethod
     def global_settings_schema():
@@ -3357,6 +3361,46 @@ class PluginBase(Configurable, Feature, ABC):
                     'title': 'Getting Started with Axonius Settings',
                     'type': 'array',
                     'required': ['enabled']
+                },
+                {
+                    'items': [
+                        {
+                            'name': 'enabled',
+                            'title': 'Enable AWS S3 Integration',
+                            'type': 'bool'
+                        },
+                        {
+                            'name': 'enable_backups',
+                            'title': 'Enable Backups to AWS S3',
+                            'type': 'bool'
+                        },
+                        {
+                            'name': 'preshared_key',
+                            'title': 'Backups Encryption Key',
+                            'type': 'string',
+                            'format': 'password'
+                        },
+                        {
+                            'name': 'bucket_name',
+                            'title': 'Bucket Name',
+                            'type': 'string'
+                        },
+                        {
+                            'name': 'aws_access_key_id',
+                            'title': 'AWS Access Key Id',
+                            'type': 'string'
+                        },
+                        {
+                            'name': 'aws_secret_access_key',
+                            'title': 'AWS Secret Access Key',
+                            'type': 'string',
+                            'format': 'password'
+                        },
+                    ],
+                    'name': 'aws_s3_settings',
+                    'title': 'AWS S3 Settings',
+                    'type': 'array',
+                    'required': ['enabled', 'enable_backups', 'bucket_name']
                 }
             ],
             'pretty_name': 'Global Configuration',
@@ -3439,6 +3483,14 @@ class PluginBase(Configurable, Feature, ABC):
             },
             'getting_started_checklist': {
                 'enabled': False,
+            },
+            'aws_s3_settings': {
+                'enabled': False,
+                'enable_backups': False,
+                'bucket_name': None,
+                'preshared_key': None,
+                'aws_access_key_id': None,
+                'aws_secret_access_key': None
             }
         }
 

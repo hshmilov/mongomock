@@ -3397,7 +3397,7 @@ class AwsAdapter(AdapterBase, Configurable):
                 },
                 {
                     'name': 'drop_turned_off_machines',
-                    'title': 'Do not fetch machines that are turned off',
+                    'title': 'Do not fetch EC2 machines that are turned off',
                     'type': 'bool'
                 }
             ],
