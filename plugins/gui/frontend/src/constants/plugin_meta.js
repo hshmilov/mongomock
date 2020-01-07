@@ -988,3 +988,12 @@ export const pluginMeta = {
         description: 'Alibaba Cloud provides cloud computing services and cloud Infrastructure as a service.'
     }
 }
+
+const pluginTitlesToNamesMap = Object.keys(pluginMeta).reduce((map, obj) => {
+    map[pluginMeta[obj].title] = obj
+    return map
+}, {})
+
+export const pluginTitlesToNames = () => {
+    return pluginTitlesToNamesMap
+}

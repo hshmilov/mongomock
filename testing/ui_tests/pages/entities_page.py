@@ -43,7 +43,7 @@ class EntitiesPage(Page):
     EXP1_TRIGGER_CSS = '.expression-value > .trigger.arrow'
     EXP2_INPUT_CSS = '.expression-value .content.expand .x-search-input.x-select-search .input-value'
 
-    QUERY_SEARCH_DROPDOWN_XPATH = '//div[@id=\'query_select\']//div[text()=\'{query_name_text}\']'
+    QUERY_SEARCH_DROPDOWN_XPATH = '//div[@id=\'query_select\']//div[contains(text(),\'{query_name_text}\')]'
     QUERY_SEARCH_EVERYWHERE_CSS = 'div.x-menu>div>.item-content'
     QUERY_ADD_EXPRESSION_CSS = '.x-filter .footer .x-button'
     QUERY_NEST_EXPRESSION_CSS = '.x-filter .x-expression .x-button.expression-nest'
@@ -116,7 +116,8 @@ class EntitiesPage(Page):
     TABLE_ACTIONS_TAG_CSS = 'div.content.w-sm > div > div:nth-child(1) > div.item-content'
     TABLE_ACTIONS_DELETE_CSS = 'div.content.w-sm > div > div:nth-child(2) > div.item-content'
     TABLE_ACTIONS_ENFORCE_CSS = 'div.content.w-sm > div > div:nth-child(5) > div.item-content'
-    TABLE_ACTION_ITEM_XPATH = '//div[@class=\'actions\']//div[@class=\'item-content\' and text()=\'{action}\']'
+    TABLE_ACTION_ITEM_XPATH = \
+        '//div[@class=\'actions\']//div[@class=\'item-content\' and contains(text(),\'{action}\')]'
 
     SAVE_QUERY_ID = 'query_save'
     SAVE_QUERY_NAME_ID = 'saveName'
@@ -1211,3 +1212,14 @@ class EntitiesPage(Page):
         self.click_save_query()
         self.fill_query_name(query_name)
         self.click_save_query_save_button()
+
+    def open_filter_out_dialog(self):
+        self.click_button(self.ACTIONS_BUTTON, partial_class=True)
+        self.driver.find_element_by_xpath(
+            self.TABLE_ACTION_ITEM_XPATH.format(action='Filter out from query results')).click()
+
+    def confirm_filter_out(self):
+        self.driver.find_element_by_css_selector('.modal-container.w-xl>.modal-footer>div>button:nth-child(2)').click()
+
+    def click_filter_out_clear(self):
+        self.driver.find_element_by_css_selector('.remove-filter-out').click()

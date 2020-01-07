@@ -376,8 +376,6 @@ class TestDevicesQuery(TestBase):
         self.devices_page.add_query_expression()
         expressions = self.devices_page.find_expressions()
         assert len(expressions) == 2
-        self.devices_page.click_on_select_all_filter_adapters(parent=expressions[0])
-        self.devices_page.click_on_filter_adapter(AD_ADAPTER_NAME, parent=expressions[0])
         self.devices_page.select_query_field(self.devices_page.FIELD_LAST_SEEN, parent=expressions[0])
         self.devices_page.select_query_comp_op('days', parent=expressions[0])
         self.devices_page.fill_query_value(365, parent=expressions[0])
@@ -390,7 +388,7 @@ class TestDevicesQuery(TestBase):
         self.devices_page.select_query_comp_op('days', parent=expressions[1])
         self.devices_page.fill_query_value(1, parent=expressions[1])
         self.devices_page.wait_for_table_to_load()
-        assert self.devices_page.find_search_value().count(self.devices_page.NAME_ADAPTERS_AD) == 2
+        assert self.devices_page.find_search_value().count(self.devices_page.NAME_ADAPTERS_AD) == 1
         assert len(self.devices_page.get_all_data()) < results_count
 
         self.devices_page.click_on_select_all_filter_adapters(parent=expressions[0])
@@ -962,6 +960,79 @@ class TestDevicesQuery(TestBase):
         self.devices_page.wait_for_table_to_load()
         assert results_count == self.devices_page.count_entities()
         assert query == self.devices_page.find_query_search_input()
+
+    def test_exclude_entities_with_no_query(self):
+        self.dashboard_page.switch_to_page()
+        self.base_page.run_discovery()
+        self.devices_page.switch_to_page()
+        self.devices_page.wait_for_table_to_load()
+
+        self._text_exclude_entities_on_current_data()
+
+    def test_exclude_with_or_query(self):
+        self.dashboard_page.switch_to_page()
+        self.base_page.run_discovery()
+        self.devices_page.switch_to_page()
+        self.devices_page.wait_for_table_to_load()
+
+        self.devices_page.click_query_wizard()
+
+        self.devices_page.add_query_expression()
+        self.devices_page.add_query_expression()
+        expressions = self.devices_page.find_expressions()
+        assert len(expressions) == 3
+        self.devices_page.select_query_adapter(JSON_ADAPTER_NAME, parent=expressions[0])
+        self.devices_page.select_query_logic_op(self.devices_page.QUERY_LOGIC_OR)
+        self.devices_page.select_query_adapter(AD_ADAPTER_NAME, parent=expressions[1])
+        self.devices_page.select_query_field(self.devices_page.FIELD_LAST_SEEN, parent=expressions[2])
+        self.devices_page.select_query_comp_op('exists', parent=expressions[2])
+        self.devices_page.select_query_logic_op(self.devices_page.QUERY_LOGIC_AND, parent=expressions[2])
+        self.devices_page.click_search()
+        self.devices_page.wait_for_table_to_load()
+        self._text_exclude_entities_on_current_data()
+
+    def test_exclude_clear_query(self):
+        self.dashboard_page.switch_to_page()
+        self.base_page.run_discovery()
+        self.devices_page.switch_to_page()
+        self.devices_page.wait_for_table_to_load()
+
+        self.devices_page.click_query_wizard()
+
+        self.devices_page.add_query_expression()
+        self.devices_page.add_query_expression()
+        expressions = self.devices_page.find_expressions()
+        assert len(expressions) == 3
+        self.devices_page.select_query_adapter(JSON_ADAPTER_NAME, parent=expressions[0])
+        self.devices_page.select_query_logic_op(self.devices_page.QUERY_LOGIC_OR)
+        self.devices_page.select_query_adapter(AD_ADAPTER_NAME, parent=expressions[1])
+        self.devices_page.select_query_field(self.devices_page.FIELD_LAST_SEEN, parent=expressions[2])
+        self.devices_page.select_query_comp_op('exists', parent=expressions[2])
+        self.devices_page.select_query_logic_op(self.devices_page.QUERY_LOGIC_AND, parent=expressions[2])
+        self.devices_page.click_search()
+        self.devices_page.wait_for_table_to_load()
+        filtered_out_indices = self._text_exclude_entities_on_current_data()
+        self.devices_page.click_query_wizard()
+        self.devices_page.click_filter_out_clear()
+        self.devices_page.wait_for_table_to_load()
+
+        self.devices_page.count_selected_entities()
+        for index in filtered_out_indices:
+            assert self.devices_page.is_toggle_selected(self.devices_page.get_row_checkbox(index))
+
+    def _text_exclude_entities_on_current_data(self):
+        real_devices_count = self.devices_page.count_entities()
+        devices_count = real_devices_count
+        # limit the number of devices to sample to the first page
+        devices_count = devices_count if devices_count <= 20 else 20
+        indices = random.sample(range(1, devices_count), math.ceil(devices_count / 3))
+        for index in indices:
+            self.devices_page.click_row_checkbox(index)
+        self.devices_page.open_filter_out_dialog()
+        self.devices_page.confirm_filter_out()
+        self.devices_page.wait_for_table_to_load()
+        assert self.devices_page.count_entities() == (real_devices_count - len(indices))
+        return indices
 
     def test_in_enum_query(self):
         stress = stresstest_service.StresstestService()

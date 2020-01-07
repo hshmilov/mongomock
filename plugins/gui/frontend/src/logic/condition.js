@@ -1,0 +1,326 @@
+import IP from 'ip'
+
+import { getExcludedAdaptersFilter } from '../constants/utils'
+import {AGGREGATED_FIELDS_CONVERTER, compOps, opTitleTranslation} from '../constants/filter'
+import {pluginTitlesToNames} from "../constants/plugin_meta";
+
+/**
+ * A module that calculates a single condition in an expression
+ * @param {string} field - the field of the condition
+ * @param {object} fieldSchema - the schema of the field
+ * @param {string} adapter - the adapter this field belongs to
+ * @param {string} compOp - the compare operator (equals, contains...)
+ * @param {string} value - the value of the condition
+ * @param {array} filteredAdapters - the filtered out adapters (if there are any)
+ * @param {boolean} isUniqueAdapters - is the unique adapters flag is up (for the aggregated fields)
+ * @return {{formatCondition: function, composeCondition: function}}
+ * @constructor
+ */
+const Condition = function(field, fieldSchema, adapter, compOp, value, filteredAdapters, isUniqueAdapters) {
+    const operator = getOpsMap(fieldSchema)[compOp]
+    let processedValue = ''
+
+    const formatNotInSubnet = () => {
+        let subnets = value.split(',')
+        let rawIpsArray = []
+        let result = [[0, 0xffffffff]]
+        for (let i = 0; i < subnets.length; i++) {
+            let subnet = subnets[i].trim()
+            if (subnet === '') {
+                continue
+            }
+            let rawIps = convertSubnetToRaw(subnet)
+            if (rawIps.length === 0) {
+                return `Invalid "${subnet}", Specify <address>/<CIDR>`
+            }
+            rawIpsArray.push(rawIps)
+
+        }
+        rawIpsArray.sort((range1, range2) => {return range1[0] - range2[0]})
+        rawIpsArray.forEach(range => {
+            let lastRange = result.pop(-1)
+            let new1 = [lastRange[0], range[0]]
+            let new2 = [range[1], lastRange[1]]
+            result.push(new1)
+            result.push(new2)
+        })
+        result = result.map(range => {return `${field}_raw == match({"$gte": ${range[0]}, "$lte": ${range[1]}})`}).join(' or ')
+        result = `(${result})`
+        processedValue = result
+        return ''
+    }
+
+    const formatInSubnet = () => {
+        let subnet =  value
+        let rawIps = convertSubnetToRaw(subnet)
+
+        if (rawIps.length === 0) {
+            return 'Specify <address>/<CIDR> to filter IP by subnet'
+        }
+        processedValue = rawIps
+        return ''
+    }
+
+    const formatVersion = () => {
+        let rawVersion =  convertVersionToRaw(value)
+        if (rawVersion.length === 0) {
+            return 'Invalid version format, must be <optional>:<period>.<separated>.<numbers>'
+        }
+        processedValue = "'" + rawVersion + "'"
+        return ''
+    }
+
+    const formatIn = () => {
+        let values = value.match(/(\\,|[^,])+/g)
+        if(field === 'adapters'){
+            values = values.map(value => {
+                return  pluginTitlesToNames()[value.trim()]
+            }).filter(value => value != null)
+        }
+        if(['integer', 'number'].includes(fieldSchema.type)){
+            processedValue = values.map(value => parseFloat(value)).filter(value => !isNaN(value)).join(',')
+        } else {
+            processedValue = '"' + values.join('","') + '"'
+        }
+        processedValue = processedValue.replace('\\\\,',',')
+        return ''
+    }
+
+    const getConditionExpression = () => {
+        let cond = '({val})'
+        if ( operator) {
+            cond =  operator.replace(/{field}/g, field)
+        }
+
+        let val =  processedValue ?  processedValue :  value
+        let iVal = Array.isArray(val) ? -1 : undefined
+        return cond.replace(/{val}/g, () => {
+            if (iVal === undefined) return val
+            iVal = (iVal + 1) % val.length
+            return val[iVal]
+        })
+    }
+
+    const isFieldTypeFiltered = () => {
+        return  filteredAdapters
+            && ! filteredAdapters.selectAll
+            && ! filteredAdapters.clearAll
+    }
+
+    // Substitutes fields to aggregated fields if they exist.
+    const aggregatedField = () => {
+        // Check whether outdated adapter was toggled in the Wizard
+        if ( isUniqueAdapters || isFieldTypeFiltered()) {
+            return field
+        }
+        // only compare operators of fields that are found in aggregated fields map and include the cooperator operator
+        const aggDef = AGGREGATED_FIELDS_CONVERTER.find(item => item.path === field)
+        if (aggDef === undefined) {
+            return field
+        }
+        const aggOps = aggDef.validOps
+        if (!aggOps.includes(compOp)) {
+            return field
+        }
+        return aggDef.aggregatedName
+    }
+
+    /**
+     * Format the condition value before the compilation
+     * @returns {string} - the first error if there is at least one
+     */
+    const formatCondition = () => {
+        processedValue = ''
+        if(compOp === 'IN'){
+            return formatIn()
+        }
+        if (fieldSchema && fieldSchema.format &&  fieldSchema.format === 'ip') {
+            if (compOp === 'subnet') {
+                return formatInSubnet()
+            }
+            if (compOp === 'notInSubnet') {
+                return formatNotInSubnet()
+            }
+        }
+
+        if (fieldSchema && fieldSchema.format &&  fieldSchema.format === 'version') {
+            if ( compOp === 'earlier than' ||  compOp === 'later than') {
+                return formatVersion()
+            }
+        }
+        if (fieldSchema && fieldSchema.enum &&  fieldSchema.enum.length &&  value) {
+            if (!schemaEnumFind( fieldSchema,  value)) {
+                return 'Specify a valid value for enum field'
+            }
+        }
+        return ''
+    }
+
+    /**
+     * Compose/Compile the condition into string condition
+     * @returns {string} - the string condition
+     */
+    const composeCondition = () => {
+        if (! field) return ''
+
+        let error = getError( field,  fieldSchema,  compOp,  value)
+        if(error){
+            throw error
+        }
+
+        return `(${getExcludedAdaptersFilter( adapter,  field,
+            filteredAdapters, getConditionExpression())})`
+    }
+
+    return {
+        formatCondition,
+        composeCondition
+    }
+}
+
+export const schemaEnumFind = (schema, value) => {
+    return schema.enum.find((item, index) => {
+        if(schema.type === 'integer' && isNaN(item)) {
+            return index+1 === value
+        }
+        else {
+            return (item.name || item) === value
+        }
+    })
+}
+
+const extendVersionField = (val) => {
+    let extended = ''
+    for (let i = 0; i < 8 - val.length; i ++) {
+        extended = '0' + extended
+    }
+    extended = extended + val
+    return extended
+}
+
+const convertVersionToRaw = (version) => {
+    try {
+        let converted = '0'
+        if (version.includes(':')) {
+            if (version.includes('.') && version.indexOf(':') > version.indexOf('.')) {
+                return ''
+            }
+            let epoch_split = version.split(':')
+            converted = epoch_split[0]
+            version = epoch_split[1]
+        }
+        let split_version = [version]
+        if (version.includes('.')) {
+            split_version = version.split('.')
+        }
+        for (let i = 0; i < split_version.length; i ++) {
+            if (isNaN(split_version[i])) {
+                return ''
+            }
+            if (split_version[i].length > 8) {
+                split_version[i] = split_version[i].substring(0,9)
+            }
+            let extended = extendVersionField(split_version[i])
+            converted = converted + extended
+        }
+        return converted
+    } catch (err) {
+        return ''
+    }
+}
+
+const convertSubnetToRaw = (val) => {
+    if (!val.includes('/') || val.indexOf('/') === val.length - 1) {
+        return []
+    }
+    try {
+        let subnetInfo = IP.cidrSubnet(val)
+        return [IP.toLong(subnetInfo.networkAddress), IP.toLong(subnetInfo.broadcastAddress)]
+    } catch (err) {
+        return []
+    }
+}
+
+/**
+ * Check if the condition is not valid
+ * @param {string} field - the field of the condition
+ * @param {object} fieldSchema - the schema of the field
+ * @param {string} compOp - the compare operator (equals, contains...)
+ * @param {string} value - the value of the condition
+ * @returns {string}
+ */
+export const getError = (field, fieldSchema, compOp, value) => {
+    if (!field) {
+        return ''
+    }
+    let opsMap = getOpsMap(fieldSchema)
+    if (getOpsList(opsMap).length && (!compOp || !opsMap[compOp])) {
+        return 'Comparison operator is needed to add expression to the filter'
+    } else if (checkShowValue(fieldSchema, compOp) && (typeof value !== 'number' || isNaN(value))
+        && (!value || !value.length)) {
+        return 'A value to compare is needed to add expression to the filter'
+    }
+    return ''
+}
+
+/**
+ * Checks if this condition uses the value attribute
+ * @param {object} fieldSchema - the schema of the field
+ * @param {string} compOp - the compare operator (equals, contains...)
+ * @returns {*|boolean|number}
+ */
+export const checkShowValue = (fieldSchema, compOp) => {
+    let opsMap = getOpsMap(fieldSchema)
+    return (fieldSchema && (fieldSchema.format === 'predefined' ||
+        (compOp && getOpsList(opsMap).length && opsMap[compOp] && opsMap[compOp].includes('{val}')))) ||
+        !fieldSchema
+}
+
+/**
+ * Get the operator map
+ * @param {object} schema - the schema of the current page
+ * @returns {{}} - a map of the operators available
+ */
+export const getOpsMap = (schema) => {
+    if (!schema || !schema) return {}
+    let ops = {}
+    if (schema.type === 'array') {
+        ops = compOps[`array_${schema.format}`] || compOps['array']
+        schema = schema.items
+    }
+    if (schema.enum && schema.format !== 'predefined' && schema.format !== 'tag') {
+        ops = {
+            ...ops,
+            equals: compOps[schema.type].equals,
+            exists: compOps[schema.type].exists,
+            IN: compOps[schema.type].IN
+        }
+    } else if (schema.format) {
+        ops = { ...ops, ...compOps[schema.format] }
+    } else {
+        ops = { ...ops, ...compOps[schema.type] }
+    }
+    if (schema.type === 'array' && ops.exists) {
+        ops.exists = `(${ops.exists} and {field} != [])`
+    }
+    if (schema.name === 'labels') {
+        delete ops.size
+    }
+    return ops
+}
+
+/**
+ * Get the operator list for display
+ * @param {object} opsMap - the operator map of the current schema
+ * @returns {{name: string, title: string}[]} - a operator list for display
+ */
+export const getOpsList = (opsMap) => {
+    return Object.keys(opsMap).map((op) => {
+        return {
+            name: op,
+            title: opTitleTranslation[op] ? opTitleTranslation[op].toLowerCase() : op.toLowerCase()
+        }
+    })
+}
+
+export default Condition

@@ -1,8 +1,15 @@
 <template>
-    <div class="x-menu-item" :class="{nested: nested, active: isActive}" @mouseover="isActive = true" tabindex="-1"
-         @mouseout="isActive = false" @click="$emit('click')" @keyup.enter="$emit('click')">
-        <div class="item-content">{{ title }}</div>
-        <div v-show="isActive">
+    <div class="x-menu-item" :class="{nested: nested, active: isActive, disabled: disabled }" @mouseover="isActive = true" tabindex="-1"
+         @mouseout="isActive = false" @click="onClick" @keyup.enter="onClick">
+        <div class="item-content">{{ title }}
+            <svg-icon
+                v-if="disabled"
+                name="symbol/info"
+                :original="true" height="16"
+                :title="disabledDescription"
+            />
+        </div>
+        <div v-show="isActive && !disabled">
             <slot></slot>
         </div>
     </div>
@@ -11,7 +18,18 @@
 <script>
     export default {
         name: 'x-menu-item',
-        props: {title: {required: true}, selected: {default: false}},
+        props: {
+            title: {required: true},
+            selected: {default: false},
+            disabled: {
+                type: Boolean,
+                default: false
+            },
+            disabledDescription: {
+                type: String,
+                default: ''
+            }
+            },
         computed: {
             nested() {
                 return this.$slots !== undefined && this.$slots.default !== undefined && this.$slots.default.length
@@ -34,6 +52,13 @@
         },
         created() {
             this.isActive = this.selected
+        },
+        methods: {
+            onClick() {
+                if (!this.disabled) {
+                    this.$emit('click')
+                }
+            }
         }
     }
 </script>
@@ -46,6 +71,11 @@
         padding-left: 12px;
         margin: 4px 0px;
         position: relative;
+
+        &.disabled {
+            opacity: 0.6;
+            cursor: default;
+        }
 
         &.active {
             background-color: $grey-2;
@@ -66,6 +96,11 @@
                 height: 8px;
                 transform: rotate(45deg);
             }
+        }
+
+        svg {
+            float: right;
+            margin-top: 4px;
         }
     }
 </style>

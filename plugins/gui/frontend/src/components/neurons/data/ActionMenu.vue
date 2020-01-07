@@ -16,6 +16,8 @@
           v-if="item.title"
           :key="item.title"
           :title="item.title"
+          :disabled="item.disableLink"
+          :disabled-description="item.disabledDescription"
           @click="activate(item)"
         />
       </x-menu>
@@ -51,6 +53,7 @@
         :fields="fields"
       />
     </x-action-menu-item>
+
   </div>
 </template>
 
@@ -63,8 +66,9 @@
   import xTagModal from '../popover/TagModal.vue'
   import xButton from '../../axons/inputs/Button.vue'
 
-  import { mapState, mapActions } from 'vuex'
+  import { mapState, mapActions, mapMutations } from 'vuex'
   import { DELETE_DATA, DISABLE_DATA, SAVE_CUSTOM_DATA, FETCH_DATA_FIELDS } from '../../../store/actions'
+  import { UPDATE_DATA_VIEW } from '../../../store/mutations'
 
   export default {
     name: 'XActionMenu',
@@ -84,7 +88,8 @@
       entitiesMeta: {
         type: Object,
         default: () => {}
-      }
+      },
+
     },
     data () {
       return {
@@ -116,6 +121,9 @@
         deleteData: DELETE_DATA,
         saveCustomData: SAVE_CUSTOM_DATA,
         fetchDataFields: FETCH_DATA_FIELDS
+      }),
+      ...mapMutations({
+          updateView: UPDATE_DATA_VIEW
       }),
       activate (item) {
         if (!item || !item.activate) return

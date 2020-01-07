@@ -140,11 +140,11 @@
         })
 
       },
-      updateEntities (reset = true) {
+      updateEntities (reset = true, selectIds = []) {
         this.$refs.table.fetchContentPages(true)
         this.fetchDataFields({ module: this.module })
         if (reset) {
-          this.selection = {'ids': [], include: true}
+          this.selection = {'ids': selectIds, include: true}
         } else {
           this.updateSelection(this.selection)
         }

@@ -94,18 +94,13 @@
       },
       querySearch: {
         type: String,
-        default: ''
-      },
-      valid: {
-        type: Boolean,
-        default: true
+        default: null
       }
     },
     data () {
       return {
         searchValue: '',
-        inTextSearch: false,
-        queryMenuIndex: -1
+        queryMenuIndex: -1,
       }
     },
     computed: {
@@ -162,18 +157,18 @@
       }
     },
     watch: {
-      value () {
-        if (!this.inTextSearch) {
-          this.searchValue = this.value
+      value: {
+        immediate: true,
+        handler() {
+          if (!this.querySearch) {
+            this.searchValue = this.value
+          } else if (this.querySearch) {
+            this.searchValue = this.querySearch
+          }
         }
       }
     },
     created () {
-      if (this.querySearch) {
-        this.searchValue = this.querySearch
-      } else if (this.value) {
-        this.searchValue = this.value
-      }
       this.fetchViewsHistory()
     },
     methods: {
@@ -193,12 +188,11 @@
       },
       selectQuery ({ view, uuid }) {
         /* Load given view by settings current filter and expressions to it */
-        this.inTextSearch = false
         view.enforcement = null
         this.updateView({
           module: this.module, view, uuid
         })
-        if (!this.inTextSearch) {
+        if (!this.querySearch) {
           this.searchValue = view.query.filter
         }
         this.$emit('validate')
@@ -226,22 +220,20 @@
         }
       },
       submitFilter () {
-        if (!this.valid) return
         if (this.isSearchSimple) {
           // Search for value in all selected fields
           this.searchText()
         } else {
           // Use the search value as a filter
           this.$emit('input', this.searchValue)
-          this.inTextSearch = false
         }
         this.$emit('validate')
         this.closeInput()
       },
       searchText () {
         /* Plug the search value in the template for filtering by any of currently selected fields */
+        this.$emit('update:query-search', this.searchValue)
         this.$emit('input', this.textSearchPattern.replace(/{val}/g, this.searchValue))
-        this.inTextSearch = true
         this.closeInput()
       },
       isSelectedSaved (index) {

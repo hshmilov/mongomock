@@ -18,10 +18,22 @@
         ref="filter"
         v-model="queryExpressions"
         :module="module"
+        :error="error"
         @change="onChangeFilter"
         @clear="clearFilter"
-        @error="$emit('error')"
+        @error="onError"
       />
+      <div
+        v-if="!filterOutExpression.showIds && filterOutIdCount > 0"
+        class="filter-out-ids"
+      >Filtered out from query results ({{ filterOutIdCount }})
+        <x-button
+          key="remove-filter-out"
+          link
+          class="remove-filter-out"
+          @click="removeFilterOutExpression"
+        >Clear</x-button>
+      </div>
       <md-switch
         v-model="isUniqueAdapters"
         :disabled="!value"
@@ -51,7 +63,6 @@
 
   import { mapState, mapMutations } from 'vuex'
   import { UPDATE_DATA_VIEW } from '../../../../store/mutations'
-  import { INCLUDE_OUDATED_MAGIC } from '../../../../constants/filter'
 
   export default {
     name: 'XQueryWizard',
@@ -64,8 +75,12 @@
         required: true
       },
       value: {
-        type: String,
-        default: ''
+        type: Object,
+        default: () => {}
+      },
+      error: {
+          type: String,
+          default: ''
       }
     },
     computed: {
@@ -76,30 +91,30 @@
       }),
       queryExpressions: {
         get () {
-          return this.query.expressions
+          return this.value.expressions
         },
         set (expressions) {
-          this.updateView({
-            module: this.module,
-            view: {
-              query: { filter: this.query.filter, expressions },
-              page: 0
-            }
-          })
+          this.updateQuery(this.value.filter, this.value.onlyExpressionsFilter, this.value.meta, expressions)
         }
       },
       isUniqueAdapters: {
         get () {
-          return this.value.includes(INCLUDE_OUDATED_MAGIC)
+          return this.value.meta ? this.value.meta.uniqueAdapters : false
         },
         set (isUniqueAdapters) {
-          this.sendFilter(isUniqueAdapters ? `${INCLUDE_OUDATED_MAGIC}${this.value}`
-            : this.value.replace(INCLUDE_OUDATED_MAGIC, ''))
+          const meta = {...this.value.meta, uniqueAdapters: isUniqueAdapters}
+          this.updateQuery(this.value.filter, this.value.onlyExpressionsFilter, meta, this.value.expressions)
         }
       },
       prettyModule () {
         return this.module[0].toUpperCase() + this.module.slice(1)
-      }
+      },
+      filterOutExpression() {
+        return this.value.meta && this.value.meta.filterOutExpression ? this.value.meta.filterOutExpression : {}
+      },
+      filterOutIdCount() {
+        return this.value.meta && this.value.meta.filterOutExpression ? this.value.meta.filterOutExpression.value.split(',').length : 0
+      },
     },
     methods: {
       ...mapMutations({
@@ -107,30 +122,35 @@
       }),
       compileFilter () {
         // Instruct the filter to re-compile, in case filter was edited
-        this.$refs.filter.compile()
+        this.$emit('submit')
         this.$refs.wizard.close()
       },
       clearFilter () {
-        // Restart the expressions, search input and filter
-        this.sendFilter('')
-        this.queryExpressions = []
-        this.updateView({
-          module: this.module,
-          uuid: null
-        })
-        this.$nextTick(() => {
-          this.$refs.filter.reset()
-        })
+        this.$emit('reset')
+         this.$nextTick(() => {
+             this.$refs.filter.reset()
+         })
       },
-      onChangeFilter (filter) {
-        if (this.isUniqueAdapters) {
-          this.sendFilter(`${INCLUDE_OUDATED_MAGIC}${filter}`)
-        } else {
-          this.sendFilter(filter)
-        }
+      onChangeFilter (expressions) {
+        this.updateQuery(this.value.filter, this.value.onlyExpressionsFilter, this.value.meta, expressions)
       },
-      sendFilter (filter) {
-        this.$emit('input', filter)
+      onError(error){
+          this.$emit('error', error)
+      },
+      removeFilterOutExpression(){
+        const filterOutExpression = {...this.value.meta.filterOutExpression}
+        filterOutExpression.showIds = true
+        const meta = {...this.value.meta, filterOutExpression: filterOutExpression}
+        this.updateQuery(this.value.filter, this.value.onlyExpressionsFilter, meta, this.value.expressions)
+        this.$refs.wizard.close()
+      },
+      updateQuery(filter, onlyExpressionsFilter, meta, expressions){
+        this.$emit('input', {
+          filter: filter,
+          onlyExpressionsFilter: onlyExpressionsFilter,
+          meta: meta,
+          expressions: expressions
+        })
       }
     }
   }
@@ -140,6 +160,14 @@
     .x-query-wizard {
         .content {
             padding: 12px;
+
+          .filter-out-ids {
+            display: block;
+            padding-top: 16px;
+            .link {
+              padding-left: 4px;
+            }
+          }
         }
     }
 </style>

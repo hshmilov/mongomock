@@ -34,7 +34,6 @@
       :first="first"
       :is-parent="expression.obj"
       @change="onChangeCondition"
-      @error="onErrorCondition"
     />
 
     <!-- Option to add ')' and to remove the expression -->
@@ -58,8 +57,7 @@
           v-model="nestedExpr.expression"
           :module="module"
           :parent-field="expression.field"
-          @change="(cond) => onChangeCondition(cond, i)"
-          @error="onErrorCondition"
+          @input="(cond) => onChangeCondition(cond, i)"
         />
         <x-button
           :key="`remove_${nestedExpr.i}`"
@@ -85,9 +83,9 @@
   import xButton from '../../axons/inputs/Button.vue'
   import { nestedExpression } from '../../../constants/filter'
 
-  import {mapGetters, mapMutations} from 'vuex'
+  import {mapGetters} from 'vuex'
   import { AUTO_QUERY } from "../../../store/getters"
-  import { calcMaxIndex, getExcludedAdaptersFilter } from '../../../constants/utils'
+  import { calcMaxIndex } from '../../../constants/utils'
 
   export default {
     name: 'XExpression',
@@ -114,9 +112,6 @@
     },
     data () {
       return {
-        condition: '',
-        error: '',
-        errorCondition: ''
       }
     },
     computed: {
@@ -150,8 +145,8 @@
             field: condition.field,
             compOp: condition.compOp,
             filteredAdapters: condition.filteredAdapters,
-            fieldType: condition.fieldType
-          }, false)
+            fieldType: condition.fieldType,
+          })
         }
       },
       logicOp: {
@@ -161,29 +156,15 @@
         set (logicOp) {
           this.updateExpression({ logicOp })
         }
-      },
-      nestedExpressionCond () {
-        return this.expression.nested
-          .filter(item => item.condition)
-          .map(item => item.condition)
-          .join(' and ')
       }
     },
     methods: {
-      updateExpression (update, compile = true) {
-        const isPropUpdated = ([key, value]) => {
-          return this.expression[key] === value && (value !== 0 || this.expression[key] === 0)
-        }
-        if (Object.entries(update).every(isPropUpdated)) {
-          return
-        }
+      updateExpression (update) {
         this.$emit('input', {
           ...this.expression,
           ...update
         })
-        if (compile) {
-          this.$nextTick(this.compileExpression)
-        }
+        this.$emit('change')
       },
       toggleLeftBracket () {
         this.updateExpression({
@@ -206,84 +187,26 @@
           field: ''
         })
       },
-      checkErrors () {
-        if (!this.first && !this.logicOp) {
-          return 'Logical operator is needed to add expression to the filter'
-        } else if (this.expression.obj && !this.expression.field) {
-          return 'Select an object to add nested conditions'
-        }
-        return ''
-      },
-      compileExpression (force = false) {
-        if (!force && !this.autoQuery) {
-          this.$emit('change', {
-            error: this.errorCondition
-          })
-          return
-        }
-        if (!this.expression.field || (this.expression.obj && !this.nestedExpressionCond)) {
-          this.$emit('change', { filter: '', bracketWeight: 0 })
-          return
-        }
-        let error = this.errorCondition || this.checkErrors()
-        if (error) {
-          this.$emit('change', { error })
-          return
-        }
-        let filterStack = []
-        if (this.logicOp && !this.first) {
-          filterStack.push(this.logicOp + ' ')
-        }
-        let bracketWeight = 0
-        if (this.expression.leftBracket) {
-          filterStack.push('(')
-          bracketWeight -= 1
-        }
-        if (this.expression.not) {
-          filterStack.push('not ')
-        }
-        if (this.expression.obj) {
-            let expression = this.getMatchExpression(this.expression.field, this.nestedExpressionCond)
-            filterStack.push('({val})'.replace(/{val}/g, getExcludedAdaptersFilter(this.expression.fieldType,
-                this.expression.field, this.expression.filteredAdapters, expression)))
-        } else {
-          filterStack.push(this.condition)
-        }
-        if (this.expression.rightBracket) {
-          filterStack.push(')')
-          bracketWeight += 1
-        }
-        this.$emit('change', { filter: filterStack.join(''), bracketWeight })
-      },
-      getMatchExpression(field, condition){
-          return `${field} == match([${condition}])`
-      },
       addNestedExpression () {
         this.expression.nested.push({
           ...nestedExpression,
           i: calcMaxIndex(this.expression.nested),
           filteredAdapters: this.expression.filteredAdapters
         })
+        this.$emit('change')
       },
       onChangeCondition (condition, nestedIndex) {
         if (nestedIndex !== undefined) {
           this.expression.nested[nestedIndex].condition = condition
-        } else if (condition !== undefined) {
-          this.condition = condition
         }
-        this.errorCondition = ''
-        this.compileExpression()
-      },
-      onErrorCondition (error) {
-        this.errorCondition = error
-        this.compileExpression(true)
+        this.$emit('change')
       },
       removeNestedExpression (index) {
         this.expression.nested.splice(index, 1)
         if (!this.expression.nested.length) {
           this.addNestedExpression()
         }
-        this.compileExpression()
+        this.$emit('change')
       }
     }
   }

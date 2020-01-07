@@ -182,7 +182,13 @@
           module: this.module, view: {
             enforcement: null,
             query: {
-              filter: '', expressions: [], search: ''
+              filter: '',
+              expressions: [],
+              search: null,
+              meta: {
+                uniqueAdapters: false,
+                enforcementFilter: null
+              },
             },
             sort: {
               field: '', desc: true

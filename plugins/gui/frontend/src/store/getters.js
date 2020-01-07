@@ -1,10 +1,14 @@
 import {pluginMeta} from '../constants/plugin_meta.js'
 import {isObjectListField} from '../constants/utils'
 
-export const GET_DATA_FIELDS_BY_PLUGIN = 'GET_DATA_FIELDS_BY_PLUGIN'
-export const getDataFieldsByPlugin = (state) => (module, objectView) => {
-    if (!state[module] || !state[module].fields || !state[module].fields.data) return []
-    let fields = state[module].fields.data
+import _get from 'lodash/get'
+
+export const GET_MODULE_SCHEMA = 'GET_MODULE_SCHEMA'
+export const getModuleSchema = (state) => (module, objectView) => {
+    const fields = _get(state[module], 'fields.data')
+    if(!fields){
+        return []
+    }
     if (!fields.generic || !fields.generic.length || (objectView && !fields.schema.generic)) return []
 
     return [

@@ -39,6 +39,27 @@
       <div class="mb-8">There are {{ selectionCount }} {{ module }} selected. Select the Enforcement Set:</div>
       <x-select v-model="selectedEnforcement" :options="enforcementOptions"></x-select>
     </x-action-menu-item>
+    <x-action-menu-item
+      title="Filter out from query results"
+      :handle-save="filterSelectedEntitiesOutOfQueryResult"
+      :message="`${module} were filtered out`"
+      :disable-link="isAllSelected"
+      :disabled="totalSelectedCharactersForFilterOut >= 10000"
+      disabled-description="Select all is not applicable. Please use the query wizard to filter the query"
+      action-text="Yes"
+    >
+      <div
+        v-if="totalSelectedCharactersForFilterOut >= 10000"
+        class="table-error"
+      >Maximum filtered out assets has been reached. Please use the query wizard to filter the query</div>
+      <div
+        v-else
+      >
+        <h5>Do you wish to continue?</h5>
+        <div>The {{ selectionCount }} selected assets will be filtered from this query</div>
+      </div>
+
+    </x-action-menu-item>
   </x-action-menu>
 </template>
 
@@ -47,9 +68,16 @@
   import xActionMenuItem from '../../neurons/data/ActionMenuItem.vue'
   import xSelect from '../../axons/inputs/select/Select.vue'
 
-  import { mapState, mapActions } from 'vuex'
+  import {mapState, mapActions, mapGetters, mapMutations} from 'vuex'
   import { ADD_DATA_LABELS, LINK_DATA, UNLINK_DATA, ENFORCE_DATA } from '../../../store/actions'
   import { FETCH_DATA_CONTENT } from '../../../store/actions'
+  import {filterOutExpression} from '../../../constants/filter'
+  import {GET_MODULE_SCHEMA} from "../../../store/getters";
+
+  import {UPDATE_DATA_VIEW, SHOW_TOASTER_MESSAGE} from "../../../store/mutations";
+  import QueryBuilder from "../../../logic/query_builder";
+
+  import _get from 'lodash/get'
 
   export default {
     name: 'XEntitiesActionMenu',
@@ -84,13 +112,28 @@
           let user = state.auth.currentUser.data
           if (!user || !user.permissions) return true
           return user.permissions.Enforcements === 'Restricted'
+        },
+        view (state) {
+            return state[this.module].view
         }
       }),
+      ...mapGetters({
+          getModuleSchema: GET_MODULE_SCHEMA
+      }),
+      isAllSelected(){
+        return this.entities.include !== undefined && !this.entities.include
+      },
       selectionCount () {
         if (this.entities.include === undefined || this.entities.include) {
           return this.entities.ids.length
         }
         return this.dataCount - this.entities.ids.length
+      },
+      totalSelectedCharactersForFilterOut(){
+        return this.getFilterOutExpressionValue().length
+      },
+      schema () {
+          return this.getModuleSchema(this.module)
       }
     },
     data() {
@@ -114,6 +157,10 @@
           enforceData: ENFORCE_DATA,
           fetchContent: FETCH_DATA_CONTENT
         }),
+      ...mapMutations({
+          updateView: UPDATE_DATA_VIEW,
+          showToasterMessage: SHOW_TOASTER_MESSAGE
+      }),
       linkEntities () {
         return this.linkData({
           module: this.module, data: this.entities
@@ -129,6 +176,44 @@
           module: this.module, data: {
             entities: this.entities, enforcement: this.selectedEnforcement
           }
+        })
+      },
+      getFilterOutExpressionValue(){
+        let entitiesIdsToExclude = this.entities.ids.join(',')
+        const prevFilterOutExpression = _get(this.view, 'query.meta.filterOutExpression')
+        if(prevFilterOutExpression && !prevFilterOutExpression.showIds){
+          entitiesIdsToExclude = `${entitiesIdsToExclude},${prevFilterOutExpression.value}`
+        }
+        return entitiesIdsToExclude
+      },
+      getFilterOutExpression() {
+        return Object.assign(filterOutExpression, { value: this.getFilterOutExpressionValue()})
+      },
+      filterSelectedEntitiesOutOfQueryResult() {
+        return new Promise((resolve) => {
+          try {
+            const meta = {...this.view.query.meta, filterOutExpression: this.getFilterOutExpression()}
+            const expressions = [...this.view.query.expressions]
+            const queryBuilder = QueryBuilder(this.schema, expressions, meta, this.view.query.onlyExpressionsFilter)
+            const recompile = false;
+            const resultFilters = queryBuilder.compileQuery(recompile)
+            this.updateView({
+              module: this.module, view: {
+                query: {
+                  filter: resultFilters.resultFilter,
+                  onlyExpressionsFilter: resultFilters.onlyExpressionsFilter,
+                  expressions: expressions,
+                  meta: meta
+                },
+                page: 0
+              },
+            })
+            // When the view state is updated fetch the new date using 'done' event
+          } catch (error) {
+            this.showToasterMessage(error)
+          }
+          this.$emit('done')
+          resolve()
         })
       }
     }

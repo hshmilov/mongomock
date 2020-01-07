@@ -83,7 +83,7 @@
   import {defaultFields} from '../../../constants/entities'
 
   import { mapState, mapGetters, mapMutations } from 'vuex'
-  import { GET_DATA_FIELDS_BY_PLUGIN, GET_DATA_SCHEMA_BY_NAME } from '../../../store/getters'
+  import { GET_MODULE_SCHEMA, GET_DATA_SCHEMA_BY_NAME } from '../../../store/getters'
   import { UPDATE_DATA_VIEW } from '../../../store/mutations'
   import { getTypeFromField } from '../../../constants/utils'
 
@@ -103,11 +103,11 @@
         }
       }),
       ...mapGetters({
-        getDataFieldsByPlugin: GET_DATA_FIELDS_BY_PLUGIN,
+        getModuleSchema: GET_MODULE_SCHEMA,
         getDataSchemaByName: GET_DATA_SCHEMA_BY_NAME
       }),
       schemaByPlugin () {
-        return this.getDataFieldsByPlugin(this.module)
+        return this.getModuleSchema(this.module)
       },
       schemaByName () {
         return this.getDataSchemaByName(this.module)

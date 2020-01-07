@@ -48,7 +48,7 @@
   import {getParentFromField, isObjectListField} from '../../../../constants/utils'
 
   import { mapGetters } from 'vuex'
-  import { GET_DATA_FIELDS_BY_PLUGIN, GET_DATA_SCHEMA_BY_NAME } from '../../../../store/getters'
+  import { GET_MODULE_SCHEMA, GET_DATA_SCHEMA_BY_NAME } from '../../../../store/getters'
 
   export default {
     name: 'XChartSegment',
@@ -58,7 +58,7 @@
     mixins: [chartMixin],
     computed: {
       ...mapGetters({
-        getDataFieldsByPlugin: GET_DATA_FIELDS_BY_PLUGIN, getDataSchemaByName: GET_DATA_SCHEMA_BY_NAME
+        getModuleSchema: GET_MODULE_SCHEMA, getDataSchemaByName: GET_DATA_SCHEMA_BY_NAME
       }),
       initConfig () {
         return  {
@@ -120,7 +120,7 @@
       },
       fieldOptions () {
         if (!this.entity) return []
-        return this.getDataFieldsByPlugin(this.entity).map(category => {
+        return this.getModuleSchema(this.entity).map(category => {
           return {
             ...category,
             fields: category.fields.filter(field => {

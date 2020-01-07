@@ -123,7 +123,7 @@ export const updateDataView = (state, payload) => {
 }
 
 export const UPDATE_DATA_VIEW_FILTER = 'UPDATE_DATA_VIEW_FILTER'
-export const updateDataViewFilter = (state, payload) => {UPDATE_DATA_VIEW_FILTER
+export const updateDataViewFilter = (state, payload) => {
 	let module = getModule(state, payload)
 	if (!module) return
 	if (payload.view) {

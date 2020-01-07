@@ -60,7 +60,7 @@ import {
   REMOVE_TOASTER, removeToaster
 } from './mutations'
 import {
-  GET_DATA_FIELDS_BY_PLUGIN, getDataFieldsByPlugin,
+  GET_MODULE_SCHEMA, getModuleSchema,
   GET_DATA_SCHEMA_LIST, getDataSchemaList,
   GET_DATA_SCHEMA_BY_NAME, getDataSchemaByName,
   SINGLE_ADAPTER, singleAdapter,
@@ -100,7 +100,7 @@ export default new Vuex.Store({
     toast: { message: '', timeout: 3000 }
   },
   getters: {
-    [GET_DATA_FIELDS_BY_PLUGIN]: getDataFieldsByPlugin,
+    [GET_MODULE_SCHEMA]: getModuleSchema,
     [GET_DATA_SCHEMA_LIST]: getDataSchemaList,
     [GET_DATA_SCHEMA_BY_NAME]: getDataSchemaByName,
     [SINGLE_ADAPTER]: singleAdapter,

@@ -41,6 +41,14 @@
       disabled: {
         type: Boolean,
         default: false
+      },
+      disableLink: {
+        type: Boolean,
+        default: false
+      },
+      disabledDescription: {
+        type: String,
+        default: ''
       }
     },
     data () {

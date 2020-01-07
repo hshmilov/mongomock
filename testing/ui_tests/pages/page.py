@@ -832,8 +832,18 @@ class Page:
     def find_active_page_size(self):
         return self.driver.find_element_by_xpath(self.TABLE_PAGE_SIZE_ACTIVE_XPATH).text
 
-    def click_row_checkbox(self, index=1):
-        self.driver.find_element_by_css_selector(self.TABLE_ROW_CHECKBOX_CSS.format(child_index=index)).click()
+    def click_row_checkbox(self, index=1, window='.x-table'):
+        try:
+            self.get_row_checkbox(index).click()
+        except Exception:
+            toggle = self.get_row_checkbox(index)
+            self.click_toggle_button(
+                toggle,
+                make_yes=not self.is_toggle_selected(toggle),
+                window=window)
+
+    def get_row_checkbox(self, index=1):
+        return self.driver.find_element_by_css_selector(self.TABLE_ROW_CHECKBOX_CSS.format(child_index=index))
 
     def click_table_checkbox(self):
         self.driver.find_element_by_css_selector(self.TABLE_ALL_CHECKBOX_CSS).click()

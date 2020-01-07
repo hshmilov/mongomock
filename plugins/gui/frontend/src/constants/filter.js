@@ -19,6 +19,19 @@ export const expression = {
     nested: []
 }
 
+export const filterOutExpression = {
+    logicOp: '',
+    not: true,
+    obj: false,
+    leftBracket: false,
+    field: 'internal_axon_id',
+    fieldType: 'axonius',
+    compOp: 'IN',
+    rightBracket: false,
+    nested: [],
+    showIds: false
+}
+
 export const INCLUDE_OUDATED_MAGIC = 'INCLUDE OUTDATED: '
 
 export const AGGREGATED_FIELDS_CONVERTER = [
@@ -116,4 +129,12 @@ export const compOps = {
     percentage: numerical,
     number: numerical,
     integer: numerical
+}
+
+export const opTitleTranslation = {
+    count_equals: 'count =',
+    count_below: 'count <',
+    count_above: 'count >',
+    notInSubnet: 'not in subnet',
+    subnet: 'in subnet'
 }
