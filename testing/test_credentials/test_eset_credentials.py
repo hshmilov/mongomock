@@ -1,6 +1,6 @@
 
 eset_details = {
-    "host": "192.168.20.18",
+    "host": "192.168.20.52",
     "port": "2223",
     "username": "Administrator",
     "password": "IAmDeanSysMan1@",
