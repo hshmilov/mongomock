@@ -38,3 +38,11 @@ class TestRiskiqAdapter(AdapterTestBase):
     @pytest.mark.skip('Not working')
     def test_check_reachability(self):
         pass
+
+    @pytest.mark.skip('no server')
+    def test_removing_adapter_creds_with_devices(self):
+        pass
+
+    @pytest.mark.skip('no server')
+    def test_removing_adapter_creds_with_users(self):
+        pass
