@@ -9,21 +9,23 @@
       <svg-icon name="symbol/info" :original="true" height="16" />
       With all {{module}} selected, you can add new tags but cannot remove existing ones.
     </div>
-    <x-select-box
-      v-model="selected"
-      :items="labels"
-      :indeterminate.sync="indeterminate"
-      :multiple="true"
-      :keep-open="true"
-      :max-chips-to-display="6"
-      search-placeholder="Add or Search tags"
-    ></x-select-box>
+    <v-row>
+      <v-col cols="12">
+        <x-combobox
+          v-model="selected"
+          :items="labels"
+          :indeterminate.sync="indeterminate"
+          multiple
+          keep-open
+        />
+      </v-col>
+    </v-row>
   </x-feedback-modal>
 </template>
 
 <script>
 import xFeedbackModal from "./FeedbackModal.vue"
-import xSelectBox from "../../axons/inputs/select/SelectBox.vue"
+import xCombobox from "../../axons/inputs/combobox/index.vue"
 
 import _flatten from 'lodash/flatten'
 import _uniq from 'lodash/uniq'
@@ -40,7 +42,7 @@ import { TAG_DEVICE } from "../../../constants/getting-started"
 
 export default {
   name: "XTagModal",
-  components: { xFeedbackModal, xSelectBox },
+  components: { xFeedbackModal, xCombobox },
   props: {
     module: {
       type: String,
@@ -75,12 +77,13 @@ export default {
   computed: {
     ...mapState({
       labels(state) {
-        return state[this.module].labels.data || []
+        const res = state[this.module].labels.data || []
+        return res.map(i => i.name)
       }
     }),
     initialSelection() {
       if (this.value) {
-        return this.value
+        return this.value.map(i => i.name)
       }
       return _intersection(...Object.values(this.entitiesMeta))
     },

@@ -58,18 +58,17 @@ class DevicesPage(EntitiesPage):
     FIELD_INSTALLED_SOFTWARE_VERSION = 'Version'
     VALUE_OS_WINDOWS = 'Windows'
     TAG_MODAL_CSS = '.x-tag-modal'
-    TAG_CHECKBOX_CSS = f'{TAG_MODAL_CSS} .v-select-list .v-list-item'
-    TAGS_TEXTBOX_CSS = f'{TAG_MODAL_CSS} .x-search-input .input-value'
-    TAG_CREATE_NEW_CSS = f'{TAG_MODAL_CSS} .v-select-list .new-item'
-    TAG_CHECKBOX_XPATH = '//div[contains(@class, \'x-tag-modal\')]//div[contains(@class, \'v-select-list\')]' \
-                         '//div[contains(@class, \'v-list-item\')]//span[text()=\'{tag_text}\']'
-    TAG_PARTIAL_INPUT_CSS = TAG_CHECKBOX_XPATH + '/preceding-sibling::div' \
-        '//div[contains(@class, \'v-input__control\')]//input'
-    TAG_PARTIAL_INPUT_ICON = TAG_CHECKBOX_XPATH + '/preceding-sibling::div' \
-        '//div[contains(@class, \'v-input__control\')]//i'
-    TAG_INDETERMINATE = f'{TAG_MODAL_CSS} .v-select-list .'
-    TAG_NEW_ITEM_XPATH = '//div[contains(@class, \'x-tag-modal\')]' \
-                         '//div[contains(@class, \'v-list-item\') and .//text()=\'{tag}\']'
+    TAG_CHECKBOX_CSS = f'{TAG_MODAL_CSS} .v-list .v-input--checkbox'
+    TAGS_TEXTBOX_CSS = f'{TAG_MODAL_CSS} .x-combobox_text-field--keep-open input'
+    TAG_CREATE_NEW_CSS = f'{TAG_MODAL_CSS} .x-combobox_create-new-item'
+    TAG_CHECKBOX_XPATH = '//div[contains(@class, \'x-tag-modal\')]//div[contains(@class, \'v-list\')]//' \
+                         'div[contains(@class, \'v-list-item__title\') and text()=\'{tag_text}\']'
+    TAG_PARTIAL_BASE_CSS = TAG_CHECKBOX_XPATH + '/../preceding-sibling::div' \
+                                                '[contains(@class, \'v-list-item__action\')]' \
+                                                '//div[contains(@class, \'v-input--checkbox\')]'
+    TAG_PARTIAL_INPUT_CSS = TAG_PARTIAL_BASE_CSS + '//input'
+    TAG_PARTIAL_INPUT_ICON = TAG_PARTIAL_BASE_CSS + '//i'
+    TAG_NEW_ITEM_XPATH = TAG_CHECKBOX_XPATH
     TAGGING_X_DEVICE_MESSAGE = 'Tagged {number} devices!'
     MULTI_LINE_CSS = 'div.x-data-table.multiline'
     FILTER_HOSTNAME = 'specific_data.data.hostname == regex("{filter_value}", "i")'
@@ -185,7 +184,7 @@ class DevicesPage(EntitiesPage):
             self.fill_text_field_by_css_selector(self.TAGS_TEXTBOX_CSS, tag_text)
             time.sleep(0.1)
             self.driver.find_element_by_css_selector(self.TAG_CREATE_NEW_CSS).click()
-            self.wait_for_element_present_by_xpath(self.TAG_NEW_ITEM_XPATH.format(tag=tag_text))
+            self.wait_for_element_present_by_xpath(self.TAG_NEW_ITEM_XPATH.format(tag_text=tag_text))
         self.click_tag_save_button()
         self.wait_for_success_tagging_message(number)
         self.wait_for_spinner_to_end()
