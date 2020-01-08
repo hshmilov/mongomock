@@ -392,7 +392,6 @@ class SccmAdapter(AdapterBase, Configurable):
                         logger.error(f'Got a device with no distinguished name {device_raw}')
                         continue
                 device = self._new_device_adapter()
-                device.id = device_id
                 device.sccm_server = sccm_server
                 os_data = os_dict.get(device_raw.get('ResourceID'))
                 if not isinstance(os_data, dict):
@@ -444,15 +443,22 @@ class SccmAdapter(AdapterBase, Configurable):
                 device.resource_id = str(device_raw.get('ResourceID'))
                 device.organizational_unit = get_organizational_units_from_dn(device_id)
                 domain = device_raw.get('Full_Domain_Name0')
-                device.add_agent_version(version=device_raw.get('Client_Version0'),
-                                         agent=AGENT_NAMES.sccm)
-                device.hostname = device_raw.get('Netbios_Name0')
-                if self.__machine_domain_whitelist and domain and domain.lower() not in self.__machine_domain_whitelist:
-                    continue
-                if domain and device_raw.get('Netbios_Name0'):
-                    device.hostname += '.' + domain
+                if domain:
                     device.part_of_domain = True
                     device.domain = domain
+                device.add_agent_version(version=device_raw.get('Client_Version0'),
+                                         agent=AGENT_NAMES.sccm)
+                if self.__machine_domain_whitelist and domain and domain.lower() not in self.__machine_domain_whitelist:
+                    continue
+
+                device_full_hostname = device_raw.get('Netbios_Name0')
+                if device_full_hostname:
+                    if domain:
+                        device_full_hostname += '.' + domain
+                    device.hostname = device_full_hostname
+                    device_id += f'${device.hostname}'
+
+                device.id = device_id
 
                 device.figure_os((device_raw.get('operatingSystem0') or '') + ' ' +
                                  (device_raw.get('Operating_System_Name_and0') or ''))

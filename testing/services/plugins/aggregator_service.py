@@ -76,8 +76,10 @@ class AggregatorService(PluginService, UpdatablePluginMixin):
             self._update_schema_version_21()
         if self.db_schema_version < 22:
             self._update_schema_version_22()
+        if self.db_schema_version < 23:
+            self._update_schema_version_23()
 
-        if self.db_schema_version != 22:
+        if self.db_schema_version != 23:
             print(f'Upgrade failed, db_schema_version is {self.db_schema_version}')
 
     def __create_capped_collections(self):
@@ -1015,6 +1017,57 @@ class AggregatorService(PluginService, UpdatablePluginMixin):
             self.db_schema_version = 22
         except Exception as e:
             print(f'Exception while upgrading core db to version 22. Details: {e}')
+            traceback.print_exc()
+            raise
+
+    def _update_schema_version_23(self):
+        print('Update to schema 23 - fix sccm  id')
+        try:
+            # Upgrade bigfix id from {device_id} to {device_id}_{device_hostname}
+            entities_db = self._entity_db_map[EntityType.Devices]
+            to_fix = []
+            for entity in entities_db.find({f'adapters.{PLUGIN_NAME}': 'sccm_adapter'}, projection={
+                '_id': 1,
+                f'adapters.{PLUGIN_NAME}': 1,
+                f'adapters.{PLUGIN_UNIQUE_NAME}': 1,
+                f'adapters.data.id': 1,
+                f'adapters.data.hostname': 1,
+            }):
+                all_sccm = [x for x in entity['adapters'] if x[PLUGIN_NAME] == 'sccm_adapter']
+                for sccm_adapter in all_sccm:
+                    sccm_data = sccm_adapter['data']
+                    sccm_current_hostname = sccm_data.get('hostname')
+                    sccm_current_id = sccm_data.get('id')
+                    if not sccm_current_id:
+                        continue
+                    if not sccm_current_hostname:
+                        continue
+                    if sccm_current_id.endswith(f'${sccm_current_hostname}'):
+                        continue
+                    sccm_new_id = f'{sccm_current_id}${sccm_current_hostname}'
+                    to_fix.append(pymongo.operations.UpdateOne({
+                        '_id': entity['_id'],
+                        f'adapters.data.id': sccm_current_id
+                    }, {
+                        '$set': {
+                            'adapters.$.data.id': sccm_new_id,
+                            'adapters.$.quick_id': get_preferred_quick_adapter_id(
+                                sccm_adapter[PLUGIN_UNIQUE_NAME], sccm_new_id
+                            )
+                        }
+                    }))
+
+            if to_fix:
+                print(f'Upgrading Sccm ID format. Found {len(to_fix)} records..')
+                for i in range(0, len(to_fix), 1000):
+                    entities_db.bulk_write(to_fix[i: i + 1000], ordered=False)
+                    print(f'Fixed Chunk of {i + 1000} records')
+            else:
+                print(f'Sccm upgrade: Nothing to fix. Moving on')
+
+            self.db_schema_version = 23
+        except Exception as e:
+            print(f'Exception while upgrading core db to version 23. Details: {e}')
             traceback.print_exc()
             raise
 
