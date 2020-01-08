@@ -361,10 +361,9 @@ class CoreService(Triggerable, PluginBase, Configurable):
             logger.warning(f'Warning, found more than 1 unique name for a requested adapter: {result}')
         return result[0] if result else None
 
-    @staticmethod
-    def _request_plugin(resource, plugin_unique_name, method='get', **kwargs):
+    def _request_plugin(self, resource, plugin_unique_name, method='get', **kwargs):
         url = f'https://{plugin_unique_name}.{AXONIUS_DNS_SUFFIX}/api/{resource}'
-        return requests.request(method=method, url=url, timeout=30, **kwargs)
+        return self.irequests.request(method=method, url=url, timeout=30, **kwargs)
 
     def _triggered(self, job_name: str, post_json: dict, run_identifier: RunIdentifier, *args):
         """

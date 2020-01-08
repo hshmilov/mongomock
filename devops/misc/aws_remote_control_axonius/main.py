@@ -115,7 +115,7 @@ def show_help():
     {name} describe - show all instances
     {name} stop [instance-id]
     {name} start [instance-id]
-    {name} cycle [domain]
+    {name} cycle [host_or_ip]
 '''.strip().format(name=sys.argv[0]))
 
 

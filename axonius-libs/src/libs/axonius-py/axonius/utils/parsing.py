@@ -754,7 +754,11 @@ def compare_os_type(adapter_device1, adapter_device2):
 
 
 def compare_hostname(adapter_device1, adapter_device2):
-    return adapter_device1['data']['hostname'].lower() == adapter_device2['data']['hostname'].lower()
+    hostname1 = adapter_device1['data'].get('hostname')
+    hostname2 = adapter_device2['data'].get('hostname')
+    if not hostname1 or not hostname2:
+        return False
+    return hostname1.lower() == hostname2.lower()
 
 
 def compare_asset_name(adapter_device1, adapter_device2):

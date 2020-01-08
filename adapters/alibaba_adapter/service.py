@@ -3,6 +3,8 @@ import logging
 
 # The below APIs come from Alibaba Cloud open SDK for Python
 # The documentation can be accessed here: https://github.com/aliyun/aliyun-openapi-python-sdk
+import os
+
 from aliyunsdkcore.client import AcsClient
 from aliyunsdkcore.acs_exception.exceptions import ServerException
 from aliyunsdkecs.request.v20140526 import DescribeInstancesRequest
@@ -38,6 +40,13 @@ class AlibabaAdapter(AdapterBase):
 
     def _connect_client(self, client_config):
         try:
+            if client_config.get('https_proxy'):
+                proxy_addr = client_config['https_proxy'].replace('https://', '').replace('http://', '')
+                os.environ['https_proxy'] = proxy_addr
+                os.environ['http_proxy'] = proxy_addr
+            else:
+                os.environ.pop('https_proxy', None)
+                os.environ.pop('http_proxy', None)
             alibaba_client = AcsClient(client_config[ALIBABA_ACCESS_KEY_ID],
                                        client_config[ALIBABA_ACCESS_SECRET_KEY], client_config[REGION_ID])
 
@@ -45,12 +54,13 @@ class AlibabaAdapter(AdapterBase):
             request = DescribeInstancesRequest.DescribeInstancesRequest()
             _ = alibaba_client.do_action_with_exception(request)
 
-            return alibaba_client
+            return alibaba_client, client_config
         except Exception as e:
             logger.exception(f'Failed to connect to client {format(self._get_client_id(client_config))}')
             raise ClientConnectionException(str(e))
 
-    def _query_devices_by_client(self, client_name, client_data):
+    # pylint: disable=arguments-differ
+    def _query_devices_by_client(self, client_name, client_data_all):
         """
         The way the Alibaba Cloud API works, you must first make a generic DescribeInstanceseRequest that is
         independent of client_data and just specifies the kind of request and how many instances to display.
@@ -59,6 +69,15 @@ class AlibabaAdapter(AdapterBase):
         must be executed to return all the "pages" with all the instances.
         """
 
+        client_data, client_config = client_data_all
+
+        if client_config.get('https_proxy'):
+            proxy_addr = client_config['https_proxy'].replace('https://', '').replace('http://', '')
+            os.environ['https_proxy'] = proxy_addr
+            os.environ['http_proxy'] = proxy_addr
+        else:
+            os.environ.pop('https_proxy', None)
+            os.environ.pop('http_proxy', None)
         request = DescribeInstancesRequest.DescribeInstancesRequest()
         request.set_PageSize(100)
 
@@ -102,6 +121,11 @@ class AlibabaAdapter(AdapterBase):
                     'title': 'Alibaba Access Key Secret',
                     'type': 'string',
                     'format': 'password'
+                },
+                {
+                    'name': 'https_proxy',
+                    'title': 'HTTPS Proxy',
+                    'type': 'string'
                 }
             ],
             'required': [
@@ -161,6 +185,13 @@ class AlibabaAdapter(AdapterBase):
         # we are using different credentials just to see if we get an 'invalid access key id' that indicates
         # the server indeed responded
         try:
+            if client_config.get('https_proxy'):
+                proxy_addr = client_config['https_proxy'].replace('https://', '').replace('http://', '')
+                os.environ['https_proxy'] = proxy_addr
+                os.environ['http_proxy'] = proxy_addr
+            else:
+                os.environ.pop('https_proxy', None)
+                os.environ.pop('http_proxy', None)
             # We are assuming that if we have connectivity to one region than we have to all of them
             alibaba_client = AcsClient('a', 'a', 'us-west-1')
             request = DescribeInstancesRequest.DescribeInstancesRequest()

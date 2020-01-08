@@ -23,11 +23,16 @@ class CheckpointR80Connection(RESTConnection):
                        'password': self._password}
         if self._cp_domain:
             body_params['domain'] = self._cp_domain
-        response = self._post('login',
-                              body_params=body_params)
-        if 'sid' not in response:
-            raise RESTException(f'Got bad response with no token {response}')
-        self._session_headers['X-chkp-sid'] = response['sid']
+        raw_response = self._post('login',
+                                  body_params=body_params, use_json_in_response=False, return_response_raw=True)
+        try:
+            response = raw_response.json()
+            if 'sid' not in response:
+                raise RESTException(f'Got bad response with no token {response}')
+            self._session_headers['X-chkp-sid'] = response['sid']
+        except Exception:
+            logger.exception(f'Got invalid response: {raw_response.content}')
+            raise RESTException(f'Got invalid response: {raw_response.content}')
 
     def get_device_list(self):
         offset = 0

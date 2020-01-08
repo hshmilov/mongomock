@@ -92,6 +92,7 @@ from axonius.devices import deep_merge_only_dict
 from axonius.devices.device_adapter import LAST_SEEN_FIELD, DeviceAdapter
 from axonius.email_server import EmailServer
 from axonius.entities import EntityType
+from axonius.irequests import IRequests
 from axonius.logging.logger import create_logger
 from axonius.mixins.configurable import Configurable
 from axonius.mixins.feature import Feature
@@ -309,6 +310,7 @@ class PluginBase(Configurable, Feature, ABC):
         :raise KeyError: In case of environment variables missing
         """
         print(f'{datetime.now()} Hello docker from {type(self)}')
+        self.irequests = IRequests()
         run_memory_tracing()
 
         self.mongo_client = MongoClient(self.db_host, replicaSet='axon-cluster', retryWrites=True,
@@ -894,7 +896,7 @@ class PluginBase(Configurable, Feature, ABC):
             register_doc[NODE_ID] = node_id
 
         try:
-            response = requests.post(core_address, data=json.dumps(register_doc))
+            response = self.irequests.post(core_address, data=json.dumps(register_doc))
             return response.json()
         except Exception as e:
             # this is in print because this is called before logger is available
@@ -1073,7 +1075,7 @@ class PluginBase(Configurable, Feature, ABC):
             headers['Content-Type'] = 'application/json'
         result = None
         try:
-            result = requests.request(method, url, headers=headers, data=data, **kwargs)
+            result = self.irequests.request(method, url, headers=headers, data=data, **kwargs)
         except Exception:
             # If this plugin is not 'on demand' - there is no point trying again
             if not is_plugin_on_demand(plugin_unique_name):
@@ -1086,7 +1088,7 @@ class PluginBase(Configurable, Feature, ABC):
             # Otherwise, force a 'start:plugin' request
             self.__ask_core_to_raise_adapter(plugin_unique_name)
             try:
-                result = requests.request(method, url, headers=headers, data=data, **kwargs)
+                result = self.irequests.request(method, url, headers=headers, data=data, **kwargs)
             except Exception:
                 if raise_on_network_error:
                     raise
@@ -2910,7 +2912,7 @@ class PluginBase(Configurable, Feature, ABC):
                     ca_key = self._grab_file_contents(ca_file, stored_locally=False)
                     if not ca_key or b'-BEGIN CERTIFICATE-' not in ca_key or b'-END CERTIFICATE-' not in ca_key:
                         logger.error(f'Invalid SSL CA certificate at position {ca_file_index}, not updating')
-                    elif 'ENCRYPTED' in ca_key:
+                    elif b'ENCRYPTED' in ca_key:
                         logger.error(f'Encrypted SSL CA certificate at position {ca_file_index}, not updating')
                     else:
                         specific_ca_path = os.path.join(CA_CERT_PATH, f'customer_ca_{ca_file_index}.crt')

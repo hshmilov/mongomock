@@ -324,7 +324,33 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, ActiveDirectory
             if "socket connection error while opening: timed out" in str(e).lower():
                 additional_msg = "connection timed out"
             elif 'ldapinvalidcredentialsresult' in str(e).lower():
-                additional_msg = 'Invalid credentials'
+                if 'data 52e' in str(e).lower():
+                    additional_msg = 'Invalid credentials (AcceptSecurityContext error, data 52e)'
+                elif 'data 525' in str(e).lower():
+                    additional_msg = 'User not found (AcceptSecurityContext error, data 525)'
+                elif 'data 530' in str(e).lower():
+                    additional_msg = 'Not permitted to logon at this time (AcceptSecurityContext error, data 530)'
+                elif 'data 531' in str(e).lower():
+                    additional_msg = 'Not permitted to logon from ' \
+                                     'this workstation (AcceptSecurityContext error, data 531)'
+                elif 'data 532' in str(e).lower():
+                    additional_msg = 'Password expired (AcceptSecurityContext error, data 532)'
+                elif 'data 533' in str(e).lower():
+                    additional_msg = 'Account disabled (AcceptSecurityContext error, data 533)'
+                elif 'data 701' in str(e).lower():
+                    additional_msg = 'Account expired (AcceptSecurityContext error, data 701)'
+                elif 'data 773' in str(e).lower():
+                    additional_msg = 'User must reset password (AcceptSecurityContext error, data 773)'
+                elif 'data 775' in str(e).lower():
+                    additional_msg = 'Account locked out (AcceptSecurityContext error, data 775)'
+                else:
+                    if 'AcceptSecurityContex' in str(e):
+                        try:
+                            additional_msg = f'Invalid Credentials: {str(e)[str(e).find("AcceptSecurityContex"):]}'
+                        except Exception:
+                            additional_msg = f'Invalid credentials: {str(e)}'
+                    else:
+                        additional_msg = f'Invalid credentials: {str(e)}'
             elif 'socket ssl wrapping error' in str(e).lower():
                 additional_msg = 'Socket SSL wrapping error. Please check the SSL settings'
             elif 'invalid server address' in str(e).lower():
