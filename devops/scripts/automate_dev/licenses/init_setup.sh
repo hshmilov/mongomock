@@ -90,7 +90,7 @@ retry timeout 20 add-apt-repository \
 cd "$(dirname "$0")"
 _wait_for_apt update
 echo "Installing various dependencies..."
-_wait_for_apt install -yq python3 python3-pip docker-ce=5:19.03.5~3-0~ubuntu-xenial awscli
+_wait_for_apt install -yq python3 python3-pip docker-ce  awscli
 cp ./daemon.json /etc/docker/daemon.json
 pip3 install -U docker pip
 systemctl restart docker
