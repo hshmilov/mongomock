@@ -1,7 +1,7 @@
 import time
 
 import pytest
-from selenium.common.exceptions import NoSuchElementException
+from selenium.common.exceptions import NoSuchElementException, ElementNotInteractableException
 from services.adapters.cybereason_service import CybereasonService
 
 from test_credentials.test_gui_credentials import AXONIUS_USER
@@ -25,7 +25,7 @@ class TestFeatureFlags(TestBase):
         self.settings_page.click_feature_flags()
 
         wait_until(lambda: self.settings_page.set_locked_actions(self.ACTION_TO_LOCK), check_return_value=False,
-                   tolerated_exceptions_list=[NoSuchElementException])
+                   tolerated_exceptions_list=[NoSuchElementException, ElementNotInteractableException])
         self.settings_page.save_and_wait_for_toaster()
 
         self.settings_page.refresh()
@@ -35,7 +35,7 @@ class TestFeatureFlags(TestBase):
         wait_until(lambda: self.settings_page.is_locked_action(self.ACTION_TO_LOCK))
 
         wait_until(lambda: self.settings_page.set_locked_actions(self.ACTION_TO_LOCK), check_return_value=False,
-                   tolerated_exceptions_list=[NoSuchElementException])
+                   tolerated_exceptions_list=[NoSuchElementException, ElementNotInteractableException])
         self.settings_page.save_and_wait_for_toaster()
 
     def test_feature_flags_regular_user(self):

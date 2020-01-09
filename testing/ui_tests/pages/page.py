@@ -946,3 +946,8 @@ class Page:
     def get_multiple_select_values(self):
         chips = self.driver.find_elements_by_css_selector('.v-select .v-select__selections .v-chip')
         return [chip.text for chip in chips]
+
+    def get_multiple_select_options(self):
+        self.driver.find_element_by_css_selector('.v-select .v-select__selections').click()
+        options = self.driver.find_elements_by_css_selector('.v-select-list .v-list-item .v-list-item__content')
+        return [option.text for option in options]

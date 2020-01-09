@@ -613,10 +613,15 @@ class SettingsPage(Page):
     def is_locked_action(self, action_name):
         return action_name in self.get_multiple_select_values()
 
+    def get_locked_actions(self):
+        return self.find_field_by_label('Actions Locked for Client').find_element_by_css_selector(
+            '.v-select__selections')
+
     def set_locked_actions(self, action_name):
-        self.find_field_by_label('Actions Locked for Client').click()
+        locked_actions_el = self.get_locked_actions()
+        locked_actions_el.click()
         self.driver.find_element_by_xpath(self.LOCKED_ACTION_OPTION_XPATH.format(action_name=action_name)).click()
-        self.find_field_by_label('Actions Locked for Client').click()
+        locked_actions_el.click()
 
     def fill_trial_expiration_by_remainder(self, days_remaining=None):
         try:
