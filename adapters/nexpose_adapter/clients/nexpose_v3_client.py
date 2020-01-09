@@ -241,7 +241,17 @@ class NexposeV3Client(NexposeClient):
                                                                        address.get('ip') != '0.0.0.0') else [])
         if not device_raw.get('hostName') and not got_mac and drop_only_ip_devices:
             return None
-        device.hostname = device_raw.get('hostName', '')
+        device.hostname = device_raw.get('hostName')
+        device.nexpose_type = device_raw.get('type')
+        device.assessed_for_policies = device_raw.get('assessedForPolicies') \
+            if isinstance(device_raw.get('assessedForPolicies'), bool) else None
+        device.assessed_for_vulnerabilities = device_raw.get('assessedForVulnerabilities') \
+            if isinstance(device_raw.get('assessedForVulnerabilities'), bool) else None
+        if isinstance(device_raw.get('users'), list):
+            for user_raw in device_raw.get('users'):
+                if isinstance(user_raw, dict) and user_raw.get('name'):
+                    device.last_used_users.append(user_raw.get('name'))
+
         risk_score = device_raw.get('riskScore')
         if risk_score is not None:
             try:

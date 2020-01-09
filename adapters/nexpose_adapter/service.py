@@ -68,6 +68,9 @@ class NexposeAdapter(ScannerAdapterBase, Configurable):
         owner_tags = ListField(str, "Owners")
         criticality_tags = ListField(str, "Criticality")
         custom_tags = ListField(str, "Custom Tags")
+        nexpose_type = Field(str, 'Nexpose Device Type')
+        assessed_for_policies = Field(bool, 'Assessed For Policies')
+        assessed_for_vulnerabilities = Field(bool, 'Assessed For Vulnerabilities')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
