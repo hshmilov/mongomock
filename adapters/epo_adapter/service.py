@@ -188,9 +188,12 @@ class EpoAdapter(AdapterBase):
                 os_version = device_raw.get("EPOComputerProperties.OSVersion")
                 if os_version:
                     major, *minor = os_version.split(".")
-                    device.os.major = int(major)
-                    if len(minor) > 0:
-                        device.os.minor = int(minor[0])
+                    try:
+                        device.os.major = int(major)
+                        if len(minor) > 0:
+                            device.os.minor = int(minor[0])
+                    except Exception:
+                        pass
 
                 os_build_num = device_raw.get("EPOComputerProperties.OSBuildNum")
                 if os_build_num is not None:
