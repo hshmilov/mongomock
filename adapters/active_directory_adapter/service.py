@@ -270,6 +270,14 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, ActiveDirectory
         else:
             ca_file_data = get_ca_bundle()
 
+        ldap_connection_timeout = None
+        if self.__ldap_connection_timeout is not None:
+            ldap_connection_timeout = self.__ldap_connection_timeout
+
+        ldap_recieve_timeout = None
+        if self.__ldap_recieve_timeout is not None:
+            ldap_recieve_timeout = self.__ldap_recieve_timeout
+
         return LdapConnection(dc_details['dc_name'],
                               dc_details['user'],
                               dc_details['password'],
@@ -281,6 +289,8 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, ActiveDirectory
                               self._grab_file_contents(dc_details.get('private_key')),
                               dc_details.get('fetch_disabled_devices', False),
                               dc_details.get('fetch_disabled_users', False),
+                              ldap_connection_timeout=ldap_connection_timeout,
+                              ldap_recieve_timeout=ldap_recieve_timeout,
                               connect_with_gc_mode=dc_details.get('is_ad_gc', False),
                               ldap_ou_whitelist=dc_details.get('ldap_ou_whitelist'),
                               alternative_dns_suffix=dc_details.get('alternative_dns_suffix'),
@@ -343,6 +353,9 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, ActiveDirectory
                     additional_msg = 'User must reset password (AcceptSecurityContext error, data 773)'
                 elif 'data 775' in str(e).lower():
                     additional_msg = 'Account locked out (AcceptSecurityContext error, data 775)'
+                elif 'data 51f' in str(e).lower():
+                    additional_msg = 'The LDAP connector/server is in an overloaded state ' \
+                                     '(AcceptSecurityContext error, data 51f)'
                 else:
                     if 'AcceptSecurityContex' in str(e):
                         try:

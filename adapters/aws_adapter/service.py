@@ -1631,6 +1631,12 @@ class AwsAdapter(AdapterBase, Configurable):
                         bucket_raw['location'] = bucket_location_status.get('LocationConstraint')
                     except Exception:
                         pass
+
+                    try:
+                        bucket_location_status = s3_client.get_public_access_block(Bucket=bucket_raw.get('Name'))
+                        bucket_raw['access_block'] = bucket_location_status.get('PublicAccessBlockConfiguration')
+                    except Exception:
+                        pass
                     s3_buckets.append(bucket_raw)
 
                 raw_data['s3_buckets'] = s3_buckets
@@ -2791,18 +2797,21 @@ class AwsAdapter(AdapterBase, Configurable):
                         except Exception:
                             logger.exception(f'Failed adding db parameter group')
 
+                    all_security_groups = set()
                     for db_security_group in (rds_instance_raw.get('DBSecurityGroups') or []):
                         try:
+                            db_security_group_name = db_security_group.get('DBSecurityGroupName')
+                            db_security_group_status = db_security_group.get('Status')
                             rds_data.rds_db_security_group.append(
                                 RDSDBSecurityGroup(
-                                    db_security_group_name=db_security_group.get('DBSecurityGroupName'),
-                                    status=db_security_group.get('Status')
+                                    db_security_group_name=db_security_group_name,
+                                    status=db_security_group_status
                                 )
                             )
+                            if str(db_security_group_status).lower() == 'active':
+                                all_security_groups.add(db_security_group_name)
                         except Exception:
                             logger.exception(f'Failed adding db security group')
-
-                    all_vpc_security_groups = set()
                     for vpc_security_group in (rds_instance_raw.get('VpcSecurityGroups') or []):
                         try:
                             vpc_security_group_id = vpc_security_group.get('VpcSecurityGroupId')
@@ -2811,7 +2820,7 @@ class AwsAdapter(AdapterBase, Configurable):
                                 continue
 
                             if vpc_security_group_status and str(vpc_security_group_status).lower() == 'active':
-                                all_vpc_security_groups.add(vpc_security_group_id)
+                                all_security_groups.add(vpc_security_group_id)
                             rds_data.vpc_security_groups.append(
                                 RDSVPCSecurityGroup(
                                     vpc_security_group_id=vpc_security_group_id,
@@ -2822,11 +2831,15 @@ class AwsAdapter(AdapterBase, Configurable):
                             logger.exception(f'Failed adding vpc security group')
 
                     try:
-                        for security_group in all_vpc_security_groups:
+                        for security_group in all_security_groups:
                             security_group_raw = security_group_dict.get(security_group)
                             if security_group_raw and isinstance(security_group_raw, dict):
-                                outbound_rules = self.__make_ip_rules_list(
-                                    security_group_raw.get('IpPermissionsEgress'))
+                                try:
+                                    outbound_rules = self.__make_ip_rules_list(
+                                        security_group_raw.get('IpPermissionsEgress'))
+                                except Exception:
+                                    # That's probably a classic security group
+                                    outbound_rules = None
                                 inbound_rules = self.__make_ip_rules_list(security_group_raw.get('IpPermissions'))
                                 device.add_aws_security_group(name=security_group_raw.get('GroupName'),
                                                               outbound=outbound_rules,
@@ -2835,13 +2848,18 @@ class AwsAdapter(AdapterBase, Configurable):
                                 try:
                                     all_rules_lists = [(outbound_rules, 'EGRESS'), (inbound_rules, 'INGRESS')]
                                     for rule_list, direction in all_rules_lists:
-                                        self.__add_generic_firewall_rules(
-                                            device,
-                                            security_group_raw.get('GroupName'),
-                                            'AWS RDS Security Group',
-                                            direction,
-                                            rule_list
-                                        )
+                                        try:
+                                            if not rule_list:
+                                                continue
+                                            self.__add_generic_firewall_rules(
+                                                device,
+                                                security_group_raw.get('GroupName'),
+                                                'AWS RDS Security Group',
+                                                direction,
+                                                rule_list
+                                            )
+                                        except Exception:
+                                            logger.exception(f'Error adding generic firewall rules')
                                 except Exception:
                                     logger.exception(f'Could not add generic firewall rules')
                             else:
@@ -2899,12 +2917,14 @@ class AwsAdapter(AdapterBase, Configurable):
             for s3_bucket_raw in s3_buckets:
                 try:
                     device = self._new_device_adapter()
-                    device.id = s3_bucket_raw.get('Name')
+                    s3_bucket_name = s3_bucket_raw.get('Name')
+                    device.id = s3_bucket_name
                     device.name = s3_bucket_raw.get('Name')
                     device.aws_device_type = 'S3'
                     device.cloud_provider = 'AWS'
 
-                    device.s3_bucket_name = s3_bucket_raw.get('Name')
+                    device.s3_bucket_name = s3_bucket_name
+                    device.s3_bucket_url = f'https://{str(s3_bucket_name)}.s3.amazonaws.com'
                     device.s3_creation_date = s3_bucket_raw.get('CreationDate')
                     device.s3_owner_name = s3_bucket_raw.get('owner_display_name')
                     device.s3_owner_id = s3_bucket_raw.get('owner_id')
@@ -2950,6 +2970,18 @@ class AwsAdapter(AdapterBase, Configurable):
                             )
                     except Exception:
                         logger.exception(f'Problem parsing bucket policy')
+
+                    try:
+                        public_access_block = s3_bucket_raw.get('access_block')
+                        if isinstance(public_access_block, dict) and public_access_block:
+                            device.s3_public_access_block_policy = AWSS3PublicAccessBlockConfiguration(
+                                block_public_acls=public_access_block.get('BlockPublicAcls'),
+                                ignore_public_acls=public_access_block.get('IgnorePublicAcls'),
+                                block_public_policy=public_access_block.get('BlockPublicPolicy'),
+                                restrict_public_buckets=public_access_block.get('RestrictPublicBuckets')
+                            )
+                    except Exception:
+                        logger.exception(f'Problem parsing public access block')
 
                     device.set_raw(s3_bucket_raw)
                     yield device

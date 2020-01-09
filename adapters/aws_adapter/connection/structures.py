@@ -224,6 +224,13 @@ class AWSS3BucketPolicy(SmartJsonClass):
     statements = ListField(AWSS3PolicyStatement, 'Statements')
 
 
+class AWSS3PublicAccessBlockConfiguration(SmartJsonClass):
+    block_public_acls = Field(bool, 'Block Public Acls')
+    ignore_public_acls = Field(bool, 'Ignore Public Acls')
+    block_public_policy = Field(bool, 'Block Public Policy')
+    restrict_public_buckets = Field(bool, 'Restrict Public Buckets')
+
+
 class AWSMFADevice(SmartJsonClass):
     serial_number = Field(str, 'Serial Number')
     enable_date = Field(datetime.datetime, 'Enable Date')
@@ -377,6 +384,7 @@ class AWSDeviceAdapter(DeviceOrContainerAdapter, AWSAdapter):
 
     # S3 specific fields
     s3_bucket_name = Field(str, 'S3 Bucket Name')
+    s3_bucket_url = Field(str, 'S3 Bucket URL')
     s3_creation_date = Field(str, 'S3 Bucket Creation Date')
     s3_owner_name = Field(str, 'S3 Owner Display Name')
     s3_owner_id = Field(str, 'S3 Owner ID')
@@ -384,6 +392,7 @@ class AWSDeviceAdapter(DeviceOrContainerAdapter, AWSAdapter):
     s3_bucket_location = Field(str, 'S3 Bucket Location')
     s3_bucket_acls = ListField(AWSS3BucketACL, 'S3 ACL')
     s3_bucket_policy = Field(AWSS3BucketPolicy, 'S3 Bucket Policy')
+    s3_public_access_block_policy = Field(AWSS3PublicAccessBlockConfiguration, 'S3 Public Access Block Configuration')
 
     def add_aws_ec2_tag(self, **kwargs):
         self.aws_tags.append(AWSTagKeyValue(**kwargs))

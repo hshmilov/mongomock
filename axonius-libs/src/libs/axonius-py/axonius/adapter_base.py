@@ -754,7 +754,7 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
 
     def _write_client_to_db(self, client_id, client_config, status, error_msg, upsert=True):
         if client_id is not None:
-            logger.info(f'Updating new client status in db - {status}. client id: {client_id}. error - {error_msg}')
+            logger.info(f'Updating new client status in db - {status}. client id: {client_id}')
             return self._clients_collection.replace_one({'client_id': client_id},
                                                         {'client_id': client_id,
                                                          'client_config': client_config,

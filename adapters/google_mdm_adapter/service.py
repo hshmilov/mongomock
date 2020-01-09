@@ -1,5 +1,6 @@
 import json
 import logging
+import os
 
 from axonius.clients.g_suite_admin_connection import GSuiteAdminConnection
 from axonius.fields import Field, ListField
@@ -31,6 +32,7 @@ class OauthApp(SmartJsonClass):
     kind = Field(str, 'Kind')
     native_app = Field(bool, 'Native App')
     scopes = ListField(str, 'Scopes')
+    scopes_descriptions = ListField(str, 'Scopes Descriptions')
 
 
 class GoogleMdmAdapter(AdapterBase):
@@ -66,6 +68,12 @@ class GoogleMdmAdapter(AdapterBase):
 
     def __init__(self):
         super().__init__(get_local_config_file(__file__))
+        try:
+            with open(os.path.join(os.path.dirname(__file__), 'oauth2_scopes.json'), 'rt') as f:
+                self.oauth2_scopes = json.loads(f.read())
+        except Exception:
+            logger.exception(f'Problem reading oauth2_scopes')
+            self.oauth2_scopes = dict()
 
     def _get_client_id(self, client_config):
         auth_file = json.loads(self._grab_file_contents(client_config['keypair_file']))
@@ -291,6 +299,9 @@ class GoogleMdmAdapter(AdapterBase):
                     native_app = token_raw.get('nativeApp')
                     anonymous = token_raw.get('anonymous')
                     scopes = [str(scope_i) for scope_i in token_raw.get('scopes')]
+                    scopes_descriptions = [
+                        self.oauth2_scopes.get(scope) for scope in scopes if self.oauth2_scopes.get(scope)
+                    ]
                     user.oauth_apps.append(
                         OauthApp(
                             anonymous=anonymous if isinstance(anonymous, bool) else None,
@@ -300,6 +311,7 @@ class GoogleMdmAdapter(AdapterBase):
                             kind=token_raw.get('kind'),
                             native_app=native_app if isinstance(native_app, bool) else None,
                             scopes=scopes,
+                            scopes_descriptions=scopes_descriptions
                         )
                     )
                 except Exception:
