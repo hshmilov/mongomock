@@ -313,6 +313,21 @@ def refill_passwords_fields(data, data_from_db):
     return data
 
 
+def has_unchanged_password_value(value: object) -> bool:
+    """
+    Check if the current field value has an unchanged password or contains an inner unchanged password
+    :param value: the value of the checked field or the dict to check inside of
+    :return: True if the data contains an unchanged password
+    """
+    if value == UNCHANGED_MAGIC_FOR_GUI:
+        return True
+    if isinstance(value, dict):
+        for key in value.keys():
+            if has_unchanged_password_value(value[key]):
+                return True
+    return False
+
+
 def filter_by_name(names, additional_filter=None):
     """
     Returns a filter that filters in objects by names
@@ -1804,11 +1819,9 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
             logger.error(f'Error in client adding: {response.status_code}, {response.text}')
         return response.text, response.status_code
 
-    def _query_client_for_devices(self, adapter_unique_name, clients, data_from_db_for_unchanged=None):
+    def _query_client_for_devices(self, adapter_unique_name, clients):
         if clients is None:
             return return_error('Invalid client', 400)
-        if data_from_db_for_unchanged:
-            clients = refill_passwords_fields(clients, data_from_db_for_unchanged['client_config'])
         # adding client to specific adapter
         response = self.request_remote_plugin('clients', adapter_unique_name, 'put', json=clients,
                                               raise_on_network_error=True)
@@ -1819,6 +1832,30 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
         else:
             logger.error(f'Error in client adding: {response.status_code}, {response.text}')
         return response.text, response.status_code
+
+    def validate_and_fill_unchanged_passwords_fields(self,
+                                                     adapter_unique_name: str,
+                                                     client_id: str,
+                                                     data: object,
+                                                     data_for_unchanged_passwords: dict) -> bool:
+        """
+        Check if there is an unchanged password with a changed client_id
+        :param adapter_unique_name: the adapter name
+        :param client_id: the old client_id (from the db)
+        :param data: the data to change
+        :param data_for_unchanged_passwords: the data from the db for filling the unchanged passwords
+        :return: True if the data is valid False if not
+        """
+        if not has_unchanged_password_value(data):
+            return True
+        if data_for_unchanged_passwords:
+            refill_passwords_fields(data, data_for_unchanged_passwords)
+        get_client_id_response = self.request_remote_plugin('get_client_id', adapter_unique_name, 'post', json=data,
+                                                            raise_on_network_error=True)
+        if not get_client_id_response or not get_client_id_response.text:
+            return False
+        # return True if the new client id equals to client_id in the db
+        return get_client_id_response.text == client_id
 
     def _fetch_after_clients_thread(self, adapter_unique_name, client_id, client_to_add):
         # if there's no aggregator, that's fine
@@ -1925,6 +1962,14 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
         client_from_db = self._get_collection('clients', adapter_unique_name).find_one({'_id': ObjectId(client_id)})
         if not client_from_db:
             return return_error('Server is already gone, please try again after refreshing the page')
+        self._decrypt_client_config(client_from_db['client_config'])
+        if request.method == 'PUT' and \
+                not self.validate_and_fill_unchanged_passwords_fields(adapter_unique_name,
+                                                                      client_from_db['client_id'],
+                                                                      data,
+                                                                      client_from_db['client_config']):
+            return return_error('Failed to save connection details. '
+                                'Changing connection details requires re-entering credentials', 400)
         self.request_remote_plugin('clients/' + client_id, adapter_unique_name, method='delete')
         if request.method == 'PUT':
             if old_node_id != node_id:
@@ -1932,9 +1977,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
                 adapter_unique_name = self.request_remote_plugin(url).json().get('plugin_unique_name')
 
             self._adapters.clean_cache()
-            self._decrypt_client_config(client_from_db['client_config'])
-            return self._query_client_for_devices(adapter_unique_name, data,
-                                                  data_from_db_for_unchanged=client_from_db)
+            return self._query_client_for_devices(adapter_unique_name, data)
 
         self._adapters.clean_cache()
         return '', 200

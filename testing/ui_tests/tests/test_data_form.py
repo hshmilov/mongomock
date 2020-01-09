@@ -10,14 +10,29 @@ from ui_tests.tests.ui_consts import (ALERTLOGIC_ADAPTER,
 
 
 class TestDataForm(TestBase):
+    ALERTLOGIC_INPUT = {
+        'domain': 'publicapi.alertlogic.axon.net',
+        'apikey': 'rubbish',
+        'https_proxy': '18.18.18.18',
+        'verify_ssl': True
+    }
 
-    def update_optinal_password_field(self, plugin_title: str, password_field: str):
+    def update_optional_password_field(self, plugin_title: str, password_field: str):
         self.adapters_page.refresh()
         self.adapters_page.wait_for_adapter(plugin_title)
         self.adapters_page.click_adapter(plugin_title)
         self.adapters_page.wait_for_table_to_load()
         self.adapters_page.click_row()
         self.driver.find_element_by_id(password_field).clear()
+        self.adapters_page.click_save()
+
+    def update_field(self, plugin_title: str, field: str, value: str):
+        self.adapters_page.refresh()
+        self.adapters_page.wait_for_adapter(plugin_title)
+        self.adapters_page.click_adapter(plugin_title)
+        self.adapters_page.wait_for_table_to_load()
+        self.adapters_page.click_row()
+        self.adapters_page.fill_text_by_element(self.driver.find_element_by_id(field), value)
         self.adapters_page.click_save()
 
     def sync_on_server_connection_failure(self, adapter_plugin_name, domain):
@@ -41,26 +56,29 @@ class TestDataForm(TestBase):
         self.adapters_page.click_cancel()
 
     def test_alertlogicservice_default_data(self):
+        with AlertlogicService().contextmanager(take_ownership=True):
+            self.adapters_page.create_new_adapter_connection(plugin_title=ALERTLOGIC_ADAPTER_NAME,
+                                                             adapter_input=self.ALERTLOGIC_INPUT)
+            self.sync_on_server_connection_failure(ALERTLOGIC_ADAPTER_NAME, self.ALERTLOGIC_INPUT.get('domain'))
+            self.verify_adapter_connection_and_save(self.ALERTLOGIC_INPUT)
+            self.sync_on_server_connection_failure(ALERTLOGIC_ADAPTER_NAME, self.ALERTLOGIC_INPUT.get('domain'))
+            self.verify_adapter_connection_and_cancel(self.ALERTLOGIC_INPUT)
+        self.adapters_page.clean_adapter_servers(ALERTLOGIC_ADAPTER_NAME)
+        self.wait_for_adapter_down(ALERTLOGIC_ADAPTER)
 
-        adapter_input = {
-            'domain': 'publicapi.alertlogic.axon.net',
-            'apikey': 'rubbish',
-            'https_proxy': '18.18.18.18',
-            'verify_ssl': True
-        }
-
-        try:
-            with AlertlogicService().contextmanager(take_ownership=True):
-                self.adapters_page.create_new_adapter_connection(plugin_title=ALERTLOGIC_ADAPTER_NAME,
-                                                                 adapter_input=adapter_input)
-                self.sync_on_server_connection_failure(ALERTLOGIC_ADAPTER_NAME, adapter_input.get('domain'))
-                self.verify_adapter_connection_and_save(adapter_input)
-                self.sync_on_server_connection_failure(ALERTLOGIC_ADAPTER_NAME, adapter_input.get('domain'))
-                self.verify_adapter_connection_and_cancel(adapter_input)
-
-        finally:
-            self.adapters_page.clean_adapter_servers(ALERTLOGIC_ADAPTER_NAME)
-            self.wait_for_adapter_down(ALERTLOGIC_ADAPTER)
+    def test_alertlogicservice_change_without_password_data(self):
+        with AlertlogicService().contextmanager(take_ownership=True):
+            self.adapters_page.create_new_adapter_connection(plugin_title=ALERTLOGIC_ADAPTER_NAME,
+                                                             adapter_input=self.ALERTLOGIC_INPUT)
+            self.sync_on_server_connection_failure(ALERTLOGIC_ADAPTER_NAME, self.ALERTLOGIC_INPUT.get('domain'))
+            self.verify_adapter_connection_and_save(self.ALERTLOGIC_INPUT)
+            self.sync_on_server_connection_failure(ALERTLOGIC_ADAPTER_NAME, self.ALERTLOGIC_INPUT.get('domain'))
+            self.update_field(plugin_title=ALERTLOGIC_ADAPTER_NAME,
+                              field='domain',
+                              value='new_domain')
+            self.adapters_page.wait_for_credentials_problem_to_server()
+        self.adapters_page.clean_adapter_servers(ALERTLOGIC_ADAPTER_NAME)
+        self.wait_for_adapter_down(ALERTLOGIC_ADAPTER)
 
     def test_aws_default_data(self):
 
@@ -104,8 +122,8 @@ class TestDataForm(TestBase):
                 self.sync_on_server_connection_failure(AWS_ADAPTER_NAME, adapter_input.get('region_name'))
                 self.verify_adapter_connection_and_cancel(adapter_input)
                 adapter_input['aws_secret_access_key'] = ''
-                self.update_optinal_password_field(plugin_title=AWS_ADAPTER_NAME,
-                                                   password_field='aws_secret_access_key')
+                self.update_optional_password_field(plugin_title=AWS_ADAPTER_NAME,
+                                                    password_field='aws_secret_access_key')
                 self.sync_on_server_connection_failure(AWS_ADAPTER_NAME, adapter_input.get('region_name'))
                 self.verify_adapter_connection_and_cancel(adapter_input)
 

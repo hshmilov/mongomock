@@ -941,6 +941,11 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
         raise RuntimeError('Not implemented yet')
     # pylint: enable=R0201
 
+    @add_rule('get_client_id', methods=['POST'])
+    def get_client_id(self):
+        client_config = request.get_json(silent=True)
+        return self._get_client_id(client_config), 200
+
     @abstractmethod
     def _get_client_id(self, client_config):
         """

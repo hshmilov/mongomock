@@ -29,6 +29,8 @@ class AdaptersPage(EntitiesPage):
     TEST_CONNECTIVITY_CONNECTION_IS_VALID = 'Connection is valid.'
     TEST_CONNECTIVITY_NOT_SUPPORTED = 'Test reachability is not supported for this adapter.'
     TEST_CONNECTIVITY_PROBLEM = 'Problem connecting'
+    TEST_CREDENTIALS_PROBLEM = 'Failed to save connection details. ' \
+                               'Changing connection details requires re-entering credentials'
 
     ERROR_ICON_CLASS = '.md-icon.icon-error'
     SUCCESS_ICON_CLASS = '.md-icon.icon-success'
@@ -141,6 +143,9 @@ class AdaptersPage(EntitiesPage):
 
     def wait_for_problem_connecting_to_server(self):
         self.wait_for_element_present_by_text(self.TEST_CONNECTIVITY_PROBLEM)
+
+    def wait_for_credentials_problem_to_server(self):
+        self.wait_for_element_present_by_text(self.TEST_CREDENTIALS_PROBLEM)
 
     def wait_for_problem_connecting_try_again(self, retries=RETRY_WAIT_FOR_ELEMENT, interval=SLEEP_INTERVAL):
         self.wait_for_element_present_by_text(
