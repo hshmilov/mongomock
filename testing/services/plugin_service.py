@@ -621,8 +621,8 @@ class AdapterService(PluginService):
     def conf(self):
         return AdapterConfig(self.config_file_path)
 
-    def trigger_insert_to_db(self, client_name: str, check_fetch_time: bool = True):
-        return self.trigger('insert_to_db', blocking=True, post_json={
+    def trigger_insert_to_db(self, client_name: str, check_fetch_time: bool = True, blocking: bool = True):
+        return self.trigger('insert_to_db', blocking=blocking, post_json={
             'client_name': client_name,
             'check_fetch_time': check_fetch_time
         })

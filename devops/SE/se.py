@@ -46,8 +46,9 @@ def usage():
     name = sys.argv[0]
     return f'''
     {name} al - list all running adapters & scanners
-    {name} af [plugin_unique_name] - fetches devices from a specific plugin unique name
-    {name} afc [adapter_name] [client_id] - Uses this host's adapter to fetch the client [client_id]
+    {name} af <plugin_unique_name> [--nonblock] - fetches devices from a specific plugin unique name
+    {name} afc <adapter_name> <client_id> [--nonblock] - Uses this host's adapter to fetch the client [client_id]
+    {name} sc - run static correlator & static users correlator
     {name} sc (devices/users)- run static correlator & static users correlator
     {name} de [dry/wet] - run static correlator to detect errors, pass 'de wet' to fix errors 
     {name} cd - run clean devices (clean db)
@@ -55,6 +56,8 @@ def usage():
     {name} sa - run static analysis [job_name]
     {name} rta - run reimage tags analysis
     {name} re [service/adapter] - restart some service/adapter
+    {name} frontend-build - rebuild frontend (locally)
+    {name} frontend-install - run npm install inside gui
     {name} rel [service/adapter] - uwsgi-reload the flask server of some service/adapter (reload only the python)
     {name} migrate [service/adapter] - run db migrations on some service/adapter. e.g. `migrate aggregator`
     {name} db rf [device/user] [plugin_name] [field] - removes a field from an adapter. 
@@ -108,7 +111,11 @@ def main():
             f'{pun} not running!'
 
         print(f'Fetching & Rebuilding db (Blocking) for {pun}...')
-        ag.query_devices(pun)
+        try:
+            blocking = not (sys.argv[3] == '--nonblock')
+        except Exception:
+            blocking = True
+        ag.query_devices(pun, blocking=blocking)
 
     elif component == 'afc':
         if not action:
@@ -124,9 +131,13 @@ def main():
         except Exception:
             print(f'No such adapter "{action}"!')
             return -1
+        try:
+            blocking = not (sys.argv[4] == '--nonblock')
+        except Exception:
+            blocking = True
 
         print(f'Requesting {action} on this host to fetch client {client_name}...')
-        service.trigger_insert_to_db(client_name)
+        service.trigger_insert_to_db(client_name, blocking=blocking)
 
     elif component == 'sc':
         if not action or action == 'devices':
@@ -190,6 +201,19 @@ def main():
             f'{AXONIUS_SH} {service_type} {action} up --restart --prod', shell=True, cwd=ROOT_DIR
         )
 
+    elif component == 'frontend-build':
+        print(f'Rebuilding frontend')
+        subprocess.check_call(
+            'docker exec -w /home/axonius/app/gui/frontend -t gui npm run build', shell=True, cwd=ROOT_DIR
+        )
+    elif component == 'frontend-install':
+        # In customers appliance we don't really need to install npm locally, because upgrade is doing this for us,
+        # but this shouldn't effected them.
+        # In local builds we need this.
+        print(f'Installing npm')
+        subprocess.check_call(
+            'docker exec -w /home/axonius/app/gui/frontend -t gui npm install', shell=True, cwd=ROOT_DIR
+        )
     elif component == 'rel':
         if not action:
             print('Please specify an adapter/service')

@@ -1138,9 +1138,11 @@ class AggregatorService(PluginService, UpdatablePluginMixin):
               f'{o.adapter_entities_counter / total_seconds} adapter entities/second')
 
     @retry(wait_random_min=2000, wait_random_max=7000, stop_max_delay=60 * 3 * 1000)
-    def query_devices(self, adapter_id):
-        response = requests.post(self.req_url + f"/trigger/{adapter_id}", headers={API_KEY_HEADER: self.api_key})
-
+    def query_devices(self, adapter_id, blocking: bool=True):
+        url = f'{self.req_url}/trigger/{adapter_id}'
+        if not blocking:
+            url = f'{url}?blocking={blocking}'
+        response = requests.post(url, headers={API_KEY_HEADER: self.api_key})
         assert response.status_code == 200, \
             f"Error in response: {str(response.status_code)}, " \
             f"{str(response.content)}"
