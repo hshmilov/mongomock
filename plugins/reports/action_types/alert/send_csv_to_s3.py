@@ -34,12 +34,6 @@ class SendCsvToS3(ActionTypeAlert):
                     'format': 'password'
                 },
                 {
-                    'name': 'use_aws_s3_system_settings',
-                    'title': 'Use AWS S3 credentials from system settings',
-                    'description': 'Use the AWS S3 System settings to get the credentials',
-                    'type': 'bool'
-                },
-                {
                     'name': 'use_attached_iam_role',
                     'title': 'Use attached IAM role',
                     'description': 'Use the IAM role attached to this instance instead of using the credentials',
@@ -68,7 +62,6 @@ class SendCsvToS3(ActionTypeAlert):
             ],
             'required': [
                 's3_bucket',
-                'use_aws_s3_system_settings',
                 'use_attached_iam_role',
                 'append_datetime',
                 'override_existing'
@@ -83,7 +76,6 @@ class SendCsvToS3(ActionTypeAlert):
             'secret_access_key': None,
             's3_bucket': None,
             's3_key': None,
-            'use_aws_s3_system_settings': False,
             'use_attached_iam_role': False,
             'append_datetime': True,
             'override_existing': True,
@@ -113,17 +105,10 @@ class SendCsvToS3(ActionTypeAlert):
                                              field_filters=field_filters)
 
             csv_data = io.BytesIO(csv_string.getvalue().encode('utf-8'))
-
-            if self._config.get('use_aws_s3_system_settings'):
-                # pylint: disable=protected-access
-                aws_access_key_id = (self._plugin_base._aws_s3_settings or {}).get('aws_access_key_id')
-                aws_secret_access_key = (self._plugin_base._aws_s3_settings or {}).get('aws_secret_access_key')
-                # pylint: enable=protected-access
-            else:
-                aws_access_key_id = None if self._config.get('use_attached_iam_role') else \
-                    self._config.get('access_key_id')
-                aws_secret_access_key = None if self._config.get('use_attached_iam_role') else \
-                    self._config.get('secret_access_key')
+            aws_access_key_id = None if self._config.get('use_attached_iam_role') else \
+                self._config.get('access_key_id')
+            aws_secret_access_key = None if self._config.get('use_attached_iam_role') else \
+                self._config.get('secret_access_key')
             # Write to s3
             s3_client = boto3.client(
                 's3',
