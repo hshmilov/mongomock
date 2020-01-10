@@ -24,7 +24,7 @@
         class="export"
         title="Export to CSV"
         link
-        @click="() => $emit('export')"
+        @click="$emit('export')"
       ><md-icon md-src="src/assets/icons/action/export.svg"></md-icon></x-button>
       <x-button
         v-if="editable"

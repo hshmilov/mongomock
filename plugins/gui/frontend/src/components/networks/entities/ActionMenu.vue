@@ -3,7 +3,7 @@
     :module="module"
     :entities="entities"
     :entities-meta="entitiesMeta"
-    @done="(reset) => $emit('done', reset)"
+    @done="onDone"
   >
     <x-action-menu-item
       :title="`Link ${module}`"
@@ -177,6 +177,9 @@
             entities: this.entities, enforcement: this.selectedEnforcement
           }
         })
+      },
+      onDone (reset) {
+        this.$emit('done', reset)
       },
       getFilterOutExpressionValue(){
         let entitiesIdsToExclude = this.entities.ids.join(',')

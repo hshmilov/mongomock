@@ -10,7 +10,7 @@
         :options="entities"
         type="icon"
         placeholder="Module..."
-        @input="(entity) => updateEntity(index, entity)"
+        @input="updateEntity(index, $event)"
       />
       <x-select
         :value="view.name"
@@ -18,12 +18,12 @@
         :searchable="true"
         placeholder="Query..."
         class="view-name"
-        @input="(name) => updateName(index, name)"
+        @input="updateName(index, $event)"
       />
       <x-button
         v-if="isItemDeletable(index)"
         link
-        @click="() => removeView(index)"
+        @click="removeView(index)"
       >x</x-button>
       <div
         v-else

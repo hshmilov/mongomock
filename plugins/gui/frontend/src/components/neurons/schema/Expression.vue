@@ -57,7 +57,7 @@
           v-model="nestedExpr.expression"
           :module="module"
           :parent-field="expression.field"
-          @input="(cond) => onChangeCondition(cond, i)"
+          @input="onChangeCondition($event, i)"
         />
         <x-button
           :key="`remove_${nestedExpr.i}`"

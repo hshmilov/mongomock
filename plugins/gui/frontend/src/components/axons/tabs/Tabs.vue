@@ -11,7 +11,7 @@
         class="header-tab"
         :class="{active: tab.isActive, disabled: tab.disabled}"
         @click="selectTab(tab.id)"
-        @dblclick="() => renameTab(tab)"
+        @dblclick="renameTab(tab)"
       >
         <x-title
           v-if="tab.logo"
@@ -25,7 +25,7 @@
         <x-button
           v-if="tab.removable"
           link
-          @click.stop="() => removeTab(tab)"
+          @click.stop="removeTab(tab)"
         >x</x-button>
       </li>
       <li

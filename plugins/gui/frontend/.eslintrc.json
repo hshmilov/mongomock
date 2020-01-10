@@ -1,0 +1,18 @@
+{
+  "env": {
+    "browser": true,
+    "es6": true
+  },
+  "parserOptions": {
+    "parser": "babel-eslint",
+    "sourceType": "module",
+    "ecmaFeatures": {
+      "jsx": true
+    }
+  },
+  "extends": [
+    "airbnb-base",
+    "plugin:vue/recommended"
+  ],
+  "rules": {}
+}

@@ -1,21 +1,24 @@
 <template>
-  <v-chip class="x-array-raw-view">
+  <div class="x-array-raw-view">
     <div
       v-for="item in valuableItems"
       :key="item.name"
       class="item"
     >
-      <label>{{ item.title }}:</label>
-      <div class="value">{{ data[item.name] }}</div>
+      <label class="item__label">{{ item.title }}:</label>
+      <div class="item__value">{{ value[item.name] }}</div>
     </div>
-  </v-chip>
+  </div>
 </template>
 
 <script>
+  import _get from 'lodash/get'
+  import _isEmpty from 'lodash/isEmpty'
+
   export default {
     name: 'XArrayRawView',
     props: {
-      data: {
+      value: {
         type: Object,
         required: true
       },
@@ -26,29 +29,30 @@
     },
     computed: {
       valuableItems () {
-        return this.schema.items.filter(item =>
-          this.data[item.name] !== undefined && this.data[item.name] !== null && this.data[item.name] !== '')
+        return this.schema.items.filter(item => !_isEmpty(_get(this.value, item.name)))
       }
     }
   }
 </script>
 
 <style lang="scss">
-    .x-array-raw-view {
-        display: grid;
-        grid-gap: 0 4px;
-        grid-auto-flow: column;
-        align-items: center;
-        background-color: rgba($grey-3, 0.2);
-        height: 24px;
-        line-height: 24px;
-        .item {
-            label {
-                font-weight: 300;
-            }
-            .value {
-                margin-left: 4px;
-            }
-        }
+  .x-array-raw-view {
+    display: grid;
+    grid-gap: 0 4px;
+    grid-auto-flow: column;
+    line-height: 24px;
+    height: 24px;
+
+    .item {
+      display: flex;
+
+      &__label {
+        font-weight: 300;
+      }
+
+      &__value {
+        margin-left: 4px;
+      }
     }
+  }
 </style>

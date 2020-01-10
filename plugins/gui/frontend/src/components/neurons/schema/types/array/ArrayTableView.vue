@@ -1,41 +1,18 @@
 <template>
   <div class="array inline">
-    <template v-if="showRaw">
-      <x-array-raw-view
-        v-for="{schema, data} in dataSchemaItems"
-        :key="schema.name"
-        :data="data"
+    <component
+      :is="itemWrapper"
+      v-for="{schema, data} in dataSchemaItems"
+      :key="schema.name"
+      class="item"
+      :class="schema.format || format"
+    >
+      <component
+        :is="schema.type"
         :schema="schema"
-        class="item"
+        :value="data"
       />
-    </template>
-    <template v-else-if="wrapChip">
-      <v-chip
-        v-for="{schema, data} in dataSchemaItems"
-        :key="schema.name"
-        class="item"
-        :class="schema.format"
-      >
-        <component
-          :is="schema.type"
-          :schema="schema"
-          :value="data"
-        />
-      </v-chip>
-    </template>
-    <template v-else>
-      <div
-        v-for="{schema, data} in dataSchemaItems"
-        :key="schema.name"
-        class="item"
-      >
-        <component
-          :is="schema.type"
-          :schema="schema"
-          :value="data"
-        />
-      </div>
-    </template>
+    </component>
   </div>
 </template>
 
@@ -45,8 +22,7 @@
   import integer from '../numerical/IntegerView.vue'
   import bool from '../boolean/BooleanView.vue'
   import file from './FileView.vue'
-  import xArrayRawView from './ArrayRawView.vue'
-  import xTable from '../../../../axons/tables/Table.vue'
+  import array from './ArrayRawView.vue'
 
   import arrayMixin from '../../../../../mixins/array'
   import { isObjectListField } from '../../../../../constants/utils'
@@ -55,7 +31,7 @@
   export default {
     name: 'XArrayTableView',
     components: {
-      string, number, integer, bool, file, xArrayRawView, xTable
+      string, number, integer, bool, file, array
     },
     mixins: [arrayMixin],
     data () {
@@ -68,7 +44,10 @@
       }
     },
     computed: {
-      showRaw () {
+      format () {
+        return this.schema.format
+      },
+      isRaw () {
         return isObjectListField(this.schema)
       },
       isTag () {
@@ -76,7 +55,10 @@
       },
       wrapChip () {
         const isSeparatedList = this.dataSchemaItems.length > 1 && this.schema.name !=='adapters'
-        return isSeparatedList || this.isTag
+        return isSeparatedList || this.isTag || this.isRaw
+      },
+      itemWrapper () {
+        return this.wrapChip ? 'v-chip' : 'div'
       },
       processedData () {
         if (this.isOrderedObject) {
@@ -109,12 +91,17 @@
       &.v-chip {
         cursor: pointer;
 
-        &:not(.tag):not(.x-array-raw-view) {
+        &:not(.tag) {
           font-size: 14px;
-          border: 1px solid rgba($theme-orange, 0.2)!important;
-          background-color: transparent!important;
           height: 24px;
           line-height: 24px;
+          border: 1px solid rgba($theme-orange, 0.2);
+          background-color: transparent;
+
+          &.table {
+            background-color: rgba($grey-3, 0.2);
+            border: 0;
+          }
         }
 
       }
