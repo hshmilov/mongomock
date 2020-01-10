@@ -1,3 +1,4 @@
+import pytest
 # pylint: disable=unused-import
 from services.adapters.preempt_service import PreemptService, preempt_fixture
 from test_helpers.adapter_test_base import AdapterTestBase
@@ -29,3 +30,11 @@ class TestPreemptAdapter(AdapterTestBase):
     @property
     def some_user_id(self):
         raise NotImplementedError()
+
+    @pytest.mark.skip('AX-6003')
+    def test_fetch_devices(self):
+        pass
+
+    @pytest.mark.skip('AX-6003')
+    def test_check_reachability(self):
+        pass
