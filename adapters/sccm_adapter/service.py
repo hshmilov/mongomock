@@ -80,6 +80,7 @@ class SccmAdapter(AdapterBase, Configurable):
         tpm_is_enabled = Field(bool, 'TPM Is Enabled')
         tpm_is_owned = Field(bool, 'TPM Is Owned')
         collections = ListField(str, 'Collections')
+        compliance_status = Field(str, 'Compliance Status')
 
         def add_sccm_vm(self, **kwargs):
             try:
@@ -330,7 +331,15 @@ class SccmAdapter(AdapterBase, Configurable):
                     asset_patch_dict[asset_id].append(asset_patch_data)
             except Exception:
                 logger.warning(f'Problem getting query patch', exc_info=True)
-
+            compliance_dict = dict()
+            try:
+                for compliance_data in client_data.query(consts.COMPLIANCE_QUERY):
+                    asset_id = compliance_data.get('ResourceID')
+                    if not asset_id:
+                        continue
+                    compliance_dict[asset_id] = compliance_data
+            except Exception:
+                logger.warning(f'Problem getting compliance', exc_info=True)
             asset_bios_dict = dict()
             try:
                 for asset_bios_data in client_data.query(consts.BIOS_QUERY):
@@ -346,7 +355,7 @@ class SccmAdapter(AdapterBase, Configurable):
                     asset_bios_dict, asset_users_dict, asset_top_dict, asset_malware_dict, \
                     asset_lenovo_dict, asset_chasis_dict, asset_encryption_dict,\
                     asset_vm_dict, owner_dict, tpm_dict, computer_dict,\
-                    clients_dict, os_dict, nics_dict, collections_dict, collections_data_dict
+                    clients_dict, os_dict, nics_dict, collections_dict, collections_data_dict, compliance_dict
 
     def _clients_schema(self):
         return {
@@ -380,7 +389,7 @@ class SccmAdapter(AdapterBase, Configurable):
             tpm_dict,
             computer_dict,
             clients_dict,
-            os_dict, nics_dict, collections_dict, collections_data_dict
+            os_dict, nics_dict, collections_dict, collections_data_dict, compliance_dict
         ) in devices_raw_data:
             try:
                 device_id = device_raw.get('Distinguished_Name0')
@@ -525,6 +534,12 @@ class SccmAdapter(AdapterBase, Configurable):
                         device.bios_serial = bios_data.get('SerialNumber0')
                         device_manufacturer = bios_data.get('Manufacturer0')
                         device.device_manufacturer = device_manufacturer
+                except Exception:
+                    logger.exception(f'Problem getting bios data dor {device_raw}')
+                try:
+                    if isinstance(compliance_dict.get(device_raw.get('ResourceID')), dict):
+                        compliance_data = compliance_dict.get(device_raw.get('ResourceID'))
+                        device.compliance_status = compliance_data.get('Status')
                 except Exception:
                     logger.exception(f'Problem getting bios data dor {device_raw}')
                 device.sccm_type = computer_data.get('SystemType0')

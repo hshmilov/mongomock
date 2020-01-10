@@ -79,4 +79,14 @@ class AirwatchConnection(RESTConnection):
                 device_raw['DeviceApps'] = device_apps_list
             except Exception:
                 logger.exception(f'Problem fetching apps for {device_raw}')
+            try:
+                device_raw['DeviceNotes'] = self._get(f'mdm/devices/{str(device_id)}/notes',
+                                                      do_basic_auth=True)['DeviceNotes']
+            except Exception:
+                pass
+            try:
+                device_raw['DeviceTags'] = self._get(f'mdm/devices/{str(device_id)}/tags',
+                                                     do_basic_auth=True)['Tag']
+            except Exception:
+                pass
             yield device_raw

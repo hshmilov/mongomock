@@ -25,6 +25,8 @@ class SentineloneAdapter(AdapterBase):
         basic_device_id = Field(str, 'Basic ID')
         user_actions_needed = ListField(str, 'User Actions Needed')
         external_ip = Field(str, 'External IP')
+        site_name = Field(str, 'Site Name')
+        group_name = Field(str, 'Group Name')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -234,6 +236,8 @@ class SentineloneAdapter(AdapterBase):
                 return None
             device.id = device_id + computer_name
             device.uuid = device_raw.get('uuid')
+            device.site_name = device_raw.get('siteName')
+            device.group_name = device_raw.get('groupName')
             device.basic_device_id = device_id
             device.external_ip = device_raw.get('externalIp')
             device.add_agent_version(agent=AGENT_NAMES.sentinelone, version=device_raw.get('agentVersion'))

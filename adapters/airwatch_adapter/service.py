@@ -6,7 +6,7 @@ from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.exception import RESTException
 from axonius.devices.device_adapter import DeviceAdapter
-from axonius.fields import Field
+from axonius.fields import Field, ListField
 from axonius.utils.files import get_local_config_file
 from axonius.utils.datetime import parse_date
 from axonius.clients.rest.connection import RESTConnection
@@ -23,6 +23,8 @@ class AirwatchAdapter(AdapterBase):
         udid = Field(str, 'UdId')
         friendly_name = Field(str, 'Friendly Name')
         last_enrolled_on = Field(datetime.datetime, 'Last Enrolled On')
+        notes = ListField(str, 'Notes')
+        device_tags = ListField(str, 'Device Tags')
 
     def __init__(self):
         super().__init__(get_local_config_file(__file__))
@@ -169,6 +171,24 @@ class AirwatchAdapter(AdapterBase):
                 device.friendly_name = device_raw.get('DeviceFriendlyName')
 
                 device.last_enrolled_on = parse_date(device_raw.get('LastEnrolledOn'))
+                try:
+                    notes_raw = device_raw.get('DeviceNotes')
+                    if not isinstance(notes_raw, list):
+                        notes_raw = []
+                    for note_raw in notes_raw:
+                        if isinstance(note_raw, dict) and note_raw.get('Note'):
+                            device.notes.append(note_raw.get('Note'))
+                except Exception:
+                    logger.exception(f'Problem getting notes for {device_raw}')
+                try:
+                    tags_raw = device_raw.get('DeviceTags')
+                    if not isinstance(tags_raw, list):
+                        tags_raw = []
+                    for tag_raw in tags_raw:
+                        if isinstance(tag_raw, dict) and tag_raw.get('TagName'):
+                            device.device_tags.append(tag_raw.get('TagName'))
+                except Exception:
+                    logger.exception(f'Problem getting notes for {device_raw}')
 
                 device.last_used_users = (device_raw.get('UserName') or '').split(',')
                 try:

@@ -18,6 +18,14 @@ logger = logging.getLogger(f'axonius.{__name__}')
 class SpacewalkAdapter(AdapterBase):
     class MyDeviceAdapter(DeviceAdapter):
         creation_time = Field(datetime.datetime, 'Creation Time')
+        currency_score = Field(int, 'System Currency Score')
+        moderate_count = Field(int, 'Moderate Security Errata Count')
+        critical_count = Field(int, 'Critical Security Errata Count')
+        low_count = Field(int, 'Low Security Errata Count')
+        bug_count = Field(int, 'Bug Fix Errata Count')
+        important_count = Field(int, 'Important Security Errata Count')
+        enhancement_count = Field(int, 'Enhancement Errata Count')
+        running_kernel = Field(str, 'Running Kernel')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -57,17 +65,36 @@ class SpacewalkAdapter(AdapterBase):
         :return: A json with all the attributes returned from the Server
         """
         connection, key = self.get_connection(client_data)
+        currency_dict = dict()
+        try:
+            for currency_raw in connection.system.getSystemCurrencyScores(key):
+                currency_dict[currency_raw['sid']] = currency_raw
+        except Exception:
+            logger.exception(f'Problem getting currency data')
         for device_raw in connection.system.listSystems(key):
             try:
                 device_id = device_raw.get('id')
+                if not device_id:
+                    continue
+            except Exception:
+                continue
+            try:
+                if currency_dict.get(device_id):
+                    device_raw['currency_raw'] = currency_dict.get(device_id)
+            except Exception:
+                logger.exception(f'Problemg getting currency for device')
+            try:
                 device_raw['network'] = connection.system.getNetworkDevices(key, device_id)
             except Exception:
                 logger.exception(f'Problem getting network for {device_raw}')
             try:
-                device_id = device_raw.get('id')
                 device_raw['packages'] = connection.system.listPackages(key, device_id)
             except Exception:
                 logger.exception(f'Problem getting packages')
+            try:
+                device_raw['running_kernel'] = connection.system.getRunningKernel(key, device_id)
+            except Exception:
+                logger.exception(f'Problem getting running_kernel for {device_raw}')
             yield device_raw
 
     @staticmethod
@@ -147,6 +174,28 @@ class SpacewalkAdapter(AdapterBase):
                         logger.exception(f'Problem getting package {package}')
             except Exception:
                 logger.exception(f'Problem with packages')
+            try:
+                currency_raw = device_raw.get('currency_raw')
+                if not isinstance(currency_raw, dict):
+                    currency_raw = {}
+                device.currency_score = currency_raw.get('score') \
+                    if isinstance(currency_raw.get('score'), int) else None
+                device.moderate_count = currency_raw.get('mod') \
+                    if isinstance(currency_raw.get('mod'), int) else None
+                device.critical_count = currency_raw.get('crit') \
+                    if isinstance(currency_raw.get('crit'), int) else None
+                device.low_count = currency_raw.get('low') \
+                    if isinstance(currency_raw.get('low'), int) else None
+                device.bug_count = currency_raw.get('bug') \
+                    if isinstance(currency_raw.get('bug'), int) else None
+                device.important_count = currency_raw.get('imp') \
+                    if isinstance(currency_raw.get('imp'), int) else None
+                device.enhancement_count = currency_raw.get('enh') \
+                    if isinstance(currency_raw.get('enh'), int) else None
+
+            except Exception:
+                logger.exception(f'Problem parsing ')
+            device.running_kernel = device_raw.get('running_kernel')
             for key in device_raw:
                 device_raw[key] = str(device_raw[key])
             device.set_raw(device_raw)
