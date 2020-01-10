@@ -9,6 +9,10 @@ export const pluginMeta = {
         link: 'https://docs.axonius.com/docs/cisco-stealthwatch',
         description: 'Cisco Stealthwatch is an agentless malware detection solution that provides visibility and network traffic security analytics across the extended network, including endpoints, branch, data center, and cloud.'
     },
+    github_adapter: {
+        title: 'GitHub',
+        description: 'GitHub provides hosting for software development version control using Git, including distributed version control and source code management (SCM) functionality.'
+    },
     cscglobal_adapter: {
         title: 'CSC DomainManager',
         description: 'CSC DomainManager is a web-based portfolio management platform which consolidates your domains alongside your social media usernames, SSL digital certificates and DNS.'
