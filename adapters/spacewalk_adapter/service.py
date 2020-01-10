@@ -16,6 +16,7 @@ logger = logging.getLogger(f'axonius.{__name__}')
 
 
 class SpacewalkAdapter(AdapterBase):
+    # pylint: disable=too-many-instance-attributes
     class MyDeviceAdapter(DeviceAdapter):
         creation_time = Field(datetime.datetime, 'Creation Time')
         currency_score = Field(int, 'System Currency Score')

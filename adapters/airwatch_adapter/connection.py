@@ -24,6 +24,7 @@ class AirwatchConnection(RESTConnection):
         except Exception:
             self._get('mdm/devices/search', url_params={'pagesize': 1, 'page': 1}, do_basic_auth=True)
 
+    # pylint: disable=too-many-statements
     def get_device_list(self):
         devices_raw_list = []
         try:
