@@ -90,18 +90,17 @@ class TestDataForm(TestBase):
             'get_all_regions': True
         }
 
-        try:
-            with AwsService().contextmanager(take_ownership=True):
-                self.adapters_page.create_new_adapter_connection(plugin_title=AWS_ADAPTER_NAME,
-                                                                 adapter_input=adapter_input)
-                self.sync_on_server_connection_failure(AWS_ADAPTER_NAME, adapter_input.get('region_name'))
-                self.verify_adapter_connection_and_save(adapter_input)
-                self.sync_on_server_connection_failure(AWS_ADAPTER_NAME, adapter_input.get('region_name'))
-                self.verify_adapter_connection_and_cancel(adapter_input)
+        with AwsService().contextmanager(take_ownership=True):
+            self.adapters_page.create_new_adapter_connection(plugin_title=AWS_ADAPTER_NAME,
+                                                             adapter_input=adapter_input)
+            self.sync_on_server_connection_failure(AWS_ADAPTER_NAME, adapter_input.get('region_name'))
+            self.verify_adapter_connection_and_save(adapter_input)
+            self.sync_on_server_connection_failure(AWS_ADAPTER_NAME, adapter_input.get('region_name'))
+            self.verify_adapter_connection_and_cancel(adapter_input)
 
-        finally:
-            self.adapters_page.clean_adapter_servers(AWS_ADAPTER_NAME)
-            self.wait_for_adapter_down(AWS_ADAPTER)
+        # Cleanup.
+        self.adapters_page.clean_adapter_servers(AWS_ADAPTER_NAME)
+        self.wait_for_adapter_down(AWS_ADAPTER)
 
     @pytest.mark.skip('AX-5367')
     def test_aws_clear_password_field(self):
