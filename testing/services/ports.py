@@ -148,6 +148,7 @@ DOCKER_PORTS = {
     'preempt-adapter':                  6055,
     'cherwell-adapter':                 6056,
     'hp-nnmi-adapter':                  6057,
+    'netskope-adapter':                 6065,
     'guardium-adapter':                 6070,
     'paloalto-xdr-adapter':             6123,
     'diag-w':                           6665,  # reserved

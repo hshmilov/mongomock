@@ -270,6 +270,10 @@ export const pluginMeta = {
         link: 'https://docs.axonius.com/docs/ibm-maas360-with-watson',
         description: 'IBM MaaS360 with Watson is a Unified Endpoint Management (UEM) platform covering endpoints, end-users, apps, content, and data. It also gives visibility and control to manage mobile devices running iOS, macOS, Android, and Windows.'
     },
+    netskope_adapter: {
+        title: 'Netskope',
+        description: 'The Netskope Security Cloud provides unrivaled visibility and real-time data and threat protection when accessing cloud services, websites, and private apps from anywhere, on any device.'
+    },
     imperva_dam_adapter: {
         title: 'Imperva Data Activity Monitoring (DAM)',
         link: 'https://docs.axonius.com/docs/imperva-data-activity-monitoring-dam',
