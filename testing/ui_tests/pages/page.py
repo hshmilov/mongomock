@@ -942,9 +942,12 @@ class Page:
         self.driver.execute_script(f'window.open("{self.base_url}");')
         return self.driver.window_handles[len(self.driver.window_handles) - 1]
 
-    def close_current_tab(self):
-        element = self.driver.find_element_by_css_selector('body')
-        element.send_keys(Keys.LEFT_CONTROL, 'w')
+    def open_empty_tab(self):
+        self.driver.execute_script(f'window.open("");')
+        return self.driver.window_handles[len(self.driver.window_handles) - 1]
+
+    def change_current_tab_url(self, url):
+        self.driver.get(url)
 
     def switch_tab(self, tab):
         self.driver.switch_to_window(tab)

@@ -1,6 +1,6 @@
 import { REQUEST_API } from '../actions'
-import {entities} from '../../constants/entities'
 import _get from 'lodash/get'
+import { updateSessionExpirationCookie } from '../../constants/session_utils';
 
 export const IS_ENTITY_RESTRICTED = 'IS_ENTITY_RESTRICTED'
 export const IS_ENTITY_EDITABLE = 'IS_ENTITY_EDITABLE'
@@ -39,7 +39,7 @@ export const IS_USER_ADMIN = 'IS_USER_ADMIN'
 
 const capitalizeString = (moduleName) => {
   return moduleName.charAt(0).toUpperCase() + moduleName.slice(1)
-}
+};
 
 export const auth = {
   state: {
@@ -83,6 +83,8 @@ export const auth = {
         state.currentUser.data = { ...payload.data }
       } else if(payload.userTimedOut){
         state.currentUser.userTimedOut = true
+        state.currentUser.data = {}
+        state.currentUser.error = 'Session timed out'
       }
     },
     [SET_LOGIN_OPTIONS] (state, payload) {
@@ -162,6 +164,7 @@ export const auth = {
           if (!response || !response.status) {
             reject(commit(SET_USER, { error: 'Login failed.' }))
           } else if (response.status === 200) {
+            updateSessionExpirationCookie()
             resolve(dispatch(GET_USER))
           } else {
             reject(commit(SET_USER, { error: response.data.message, fetching: false }))
@@ -188,8 +191,8 @@ export const auth = {
       }).then((response) => {
         if (!response || !response.status) {
           commit(SET_USER, { error: 'Login failed.' })
-
         } else if (response.status === 200) {
+          updateSessionExpirationCookie()
           dispatch(GET_USER)
         } else {
           commit(SET_USER, { error: response.data.message, fetching: false })
@@ -208,6 +211,7 @@ export const auth = {
         rule: 'logout'
       }).then(() => {
         if(payload) {
+          payload.fetching = false
           return commit(SET_USER, payload)
         }
       })

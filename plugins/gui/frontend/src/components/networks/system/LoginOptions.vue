@@ -63,8 +63,9 @@
   import userErrorMixin from '../../../mixins/user_error'
 
   import {mapActions} from 'vuex'
-  import {LDAP_LOGIN, GET_LOGIN_OPTIONS} from '../../../store/modules/auth'
+  import { LDAP_LOGIN, GET_LOGIN_OPTIONS } from '../../../store/modules/auth'
   import * as OktaAuth from '@okta/okta-auth-js'
+  import { updateSessionExpirationCookie } from '../../../constants/session_utils';
 
   export default {
     name: 'XLoginOptions',
@@ -148,6 +149,7 @@
         this.ldapLogin(this.ldapData.credentials)
       },
       onOktaLogin () {
+        updateSessionExpirationCookie()
         let gui2URL = this.oktaConfig.gui2_url.endsWith('/') ?
           this.oktaConfig.gui2_url.substr(0, this.oktaConfig.gui2_url.length - 1)
           :
@@ -168,6 +170,7 @@
         })
       },
       onSamlLogin () {
+        updateSessionExpirationCookie()
         window.location.href = '/api/login/saml'
       },
       toggleLdapLogin () {

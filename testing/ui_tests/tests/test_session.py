@@ -55,6 +55,36 @@ class TestSession(TestBase):
 
         self.login_page.assert_not_logged_in()
 
+    def test_changing_url_and_opening_after_timeout(self):
+        self.login_page.logout()
+        self.login_page.wait_for_login_page_to_load()
+
+        self.login(False)
+
+        self.settings_page.switch_to_page()
+        self.settings_page.set_session_timeout(True, self.TIMEOUT_IN_MINUTES)
+
+        self.dashboard_page.switch_to_page()
+
+        first_tab = self.settings_page.get_current_window()
+
+        self.settings_page.switch_to_page()
+
+        self.settings_page.switch_tab(first_tab)
+
+        self.settings_page.change_current_tab_url('https://www.axonius.com/')
+
+        # Wait for the timeout time + 30 seconds
+        time.sleep(self.TIMEOUT_IN_MINUTES * 60 + 30)
+
+        new_tab = self.settings_page.open_new_tab()
+
+        self.settings_page.switch_tab(new_tab)
+
+        self.login_page.wait_for_login_page_to_load()
+
+        assert self.login_page.get_error_msg() == 'Session timed out'
+
     def test_multiple_tabs(self):
         self.settings_page.switch_to_page()
         self.settings_page.set_session_timeout(True, self.TIMEOUT_IN_MINUTES)

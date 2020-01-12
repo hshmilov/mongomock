@@ -8,7 +8,7 @@
     <!--Link for downloading files-->
     <a id="file-auto-download-link"></a>
     <!-- Nested navigation linking to routes defined in router/index.js -->
-    <template v-if="userName">
+    <template v-if="userName && isSessionCookieValid()">
       <x-side-bar class="print-exclude" @access-violation="notifyAccess" />
       <x-fab-transition>
         <div
