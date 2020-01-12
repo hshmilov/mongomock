@@ -49,7 +49,9 @@
 
   import { mapState, mapGetters } from 'vuex'
   import { GET_MODULE_SCHEMA, GET_DATA_SCHEMA_BY_NAME } from '../../../store/getters'
-  import {checkShowValue, getOpsList, getOpsMap, schemaEnumFind} from '../../../logic/condition'
+  import {checkShowValue, getOpsList, getOpsMap, getValueSchema, schemaEnumFind} from '../../../logic/condition'
+
+  import _isEqual from 'lodash/isEqual'
 
   export default {
     name: 'XCondition',
@@ -106,7 +108,12 @@
           return this.condition.compOp
         },
         set (compOp) {
-          this.updateCondition({ compOp })
+          let value = this.value
+          // Reset the value if the value schema is about to change
+          if(!_isEqual(getValueSchema(this.fieldSchema, compOp), this.valueSchema)) {
+            value = ''
+          }
+          this.updateCondition({ compOp, value })
         }
       },
       value: {
@@ -161,22 +168,7 @@
         return this.schemaByName[this.field]
       },
       valueSchema () {
-        if (this.fieldSchema && ['integer', 'number', 'array'].includes(this.fieldSchema.type) && (this.compOp === 'IN' || this.compOp ==='contains')) {
-            return { type: 'string' }
-        }
-        if (this.fieldSchema && this.fieldSchema.type === 'array'
-          && ['contains', 'equals', 'subnet', 'notInSubnet', 'starts', 'ends'].includes(this.compOp)) {
-          return this.fieldSchema.items
-        }
-        if (this.fieldSchema && this.fieldSchema.format && this.fieldSchema.format === 'date-time'
-          && ['days'].includes(this.compOp)) {
-          return { type: 'integer' }
-        }
-        let newSchema = this.fieldSchema
-        if(this.compOp === 'IN' && this.fieldSchema.enum){
-            newSchema = { ...newSchema, enum: undefined }
-        }
-        return newSchema
+        return getValueSchema(this.fieldSchema, this.compOp)
       },
       opsMap () {
           return getOpsMap(this.fieldSchema)

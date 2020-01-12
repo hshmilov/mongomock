@@ -323,4 +323,23 @@ export const getOpsList = (opsMap) => {
     })
 }
 
+export const getValueSchema = (fieldSchema, compOp) =>{
+    if (fieldSchema && ['integer', 'number', 'array'].includes(fieldSchema.type) && (compOp === 'IN' || compOp ==='contains')) {
+        return { type: 'string' }
+    }
+    if (fieldSchema && fieldSchema.type === 'array'
+      && ['contains', 'equals', 'subnet', 'notInSubnet', 'starts', 'ends'].includes(compOp)) {
+        return fieldSchema.items
+    }
+    if (fieldSchema && fieldSchema.format && fieldSchema.format === 'date-time'
+      && ['days'].includes(compOp)) {
+        return { type: 'integer' }
+    }
+    let newSchema = fieldSchema
+    if(compOp === 'IN' && fieldSchema.enum){
+        newSchema = { ...newSchema, enum: undefined }
+    }
+    return newSchema
+}
+
 export default Condition

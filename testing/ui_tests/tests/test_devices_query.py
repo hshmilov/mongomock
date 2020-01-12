@@ -38,6 +38,8 @@ class TestDevicesQuery(TestBase):
     CYCLANCE_PLUGIN_NAME = 'cylance_adapter'
     CYCLANCE_PRETTY_NAME = 'CylancePROTECT'
 
+    QUERY_WIZARD_DATE_PICKER_VALUE = '2019-01-02 02:13:24.485Z'
+
     def test_bad_subnet(self):
         self.dashboard_page.switch_to_page()
         self.base_page.run_discovery()
@@ -284,6 +286,25 @@ class TestDevicesQuery(TestBase):
         self.devices_page.wait_for_table_to_load()
         self.check_all_columns_exist(columns_list)
         assert self.devices_page.find_query_title_text() == 'New Query'
+
+    def test_change_comp_op_with_different_value_schema(self):
+        self.settings_page.switch_to_page()
+        self.base_page.run_discovery()
+        self.devices_page.switch_to_page()
+        self.devices_page.click_query_wizard()
+        expressions = self.devices_page.find_expressions()
+        self.devices_page.select_query_field(self.devices_page.FIELD_LAST_SEEN, parent=expressions[0])
+        self.devices_page.select_query_comp_op('>', parent=expressions[0])
+        self.devices_page.fill_query_wizard_date_picker(self.QUERY_WIZARD_DATE_PICKER_VALUE, parent=expressions[0])
+        self.devices_page.close_datepicker()
+        self.devices_page.wait_for_spinner_to_end()
+        query_filter = self.devices_page.find_search_value()
+        results_count = len(self.devices_page.get_all_data())
+        self.devices_page.select_query_comp_op('days', parent=expressions[0])
+        self.devices_page.wait_for_spinner_to_end()
+        assert len(self.devices_page.get_all_data()) == results_count
+        assert self.devices_page.find_search_value() == query_filter
+        assert self.devices_page.is_query_error(self.devices_page.MSG_ERROR_QUERY_WIZARD)
 
     def test_host_name_and_adapter_filters_query(self):
         self.settings_page.switch_to_page()
