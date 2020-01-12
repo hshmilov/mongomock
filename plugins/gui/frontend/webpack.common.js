@@ -34,6 +34,15 @@ module.exports = (env) => {
         },
         resolve: {
             alias: {
+                '@': path.resolve(__dirname, 'src'),
+                '@components': path.resolve(__dirname, 'src/components'),
+                '@axons': path.resolve(__dirname, 'src/components/axons'),
+                '@networks': path.resolve(__dirname, 'src/components/networks'),
+                '@neurons': path.resolve(__dirname, 'src/components/neurons'),
+                '@pages': path.resolve(__dirname, 'src/components/pages'),
+                '@api': path.resolve(__dirname, 'src/api'),
+                '@store': path.resolve(__dirname, 'src/store'),
+                '@constants': path.resolve(__dirname, 'src/constants'),
                 'vue$': 'vue/dist/vue.esm.js',
                 Logos: path.resolve(__dirname, '../../../axonius-libs/src/libs/axonius-py/axonius/assets/logos/')
             }

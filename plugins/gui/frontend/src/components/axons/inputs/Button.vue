@@ -82,7 +82,7 @@
         }
         &.disabled {
             opacity: 0.4;
-            cursor: default;
+            cursor: default !important;
             &:hover {
                 box-shadow: none;
             }

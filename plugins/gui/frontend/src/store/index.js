@@ -67,7 +67,9 @@ import {
   AUTO_QUERY, autoQuery, 
   EXACT_SEARCH, exactSearch,
   IS_EXPIRED, isExpired,
-  GET_CONNECTION_LABEL, getConnectionLabel
+  GET_CONNECTION_LABEL, getConnectionLabel,
+  getSavedQueryById,
+  configuredAdaptersFields
 } from './getters'
 
 import { adapters } from './modules/adapters'
@@ -108,7 +110,9 @@ export default new Vuex.Store({
     [AUTO_QUERY]: autoQuery,
     [EXACT_SEARCH]: exactSearch,
     [IS_EXPIRED]: isExpired,
-    [GET_CONNECTION_LABEL]: getConnectionLabel
+    [GET_CONNECTION_LABEL]: getConnectionLabel,
+    getSavedQueryById,
+    configuredAdaptersFields
   },
   mutations: {
     [TOGGLE_SIDEBAR]: toggleSidebar,

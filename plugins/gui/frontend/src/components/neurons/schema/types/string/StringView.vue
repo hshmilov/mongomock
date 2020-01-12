@@ -20,6 +20,7 @@
     :class="`icon-${props.value}`"
   />
   <div
+    :class="`table-td-content-${props.schema.name}`"
     v-else-if="props.value"
     :title="$options.methods.formatDetails(props.value, props.schema)"
   >{{ $options.methods.format(props.value, props.schema) }}</div>
@@ -52,7 +53,7 @@
       },
       formatDetails(value, schema) {
         if (schema.name !== UPDATED_BY_FIELD) {
-          return
+          return value
         }
         value = JSON.parse(value)
         const username = this.formatUsername(value)

@@ -9,7 +9,7 @@
     :items="mergedItemsList"
     :search-input.sync="searchField"
     :hide-no-data="!allowCreateNew"
-    :label="label"
+    :placeholder="label"
     item-color="transparent"
     color="black"
     background-color="#fff"
@@ -35,19 +35,22 @@
 
     <!-- slot for rendering item in menu -->
     <template v-slot:item="{ index, item }">
-      <v-checkbox
-        :input-value="isSelectedItem(item)"
-        :indeterminate="isIndeterminateItem(item)"
-        :label="item"
-        color="black"
-      />
-      <v-chip
-        v-if="isNewItem(item)"
-        x-small
-        class="ma-2"
-        color="secondary"
-        outlined
-      >New</v-chip>
+      <div class='x-combobox__list-item-container'>
+        <v-checkbox
+          :input-value="isSelectedItem(item)"
+          :indeterminate="isIndeterminateItem(item)"
+          :label="item"
+          color="black"
+        />
+        <v-chip
+          v-if="isNewItem(item)"
+          x-small
+          class="ma-2"
+          color="secondary"
+          outlined
+        >New</v-chip>
+      </div>
+        
     </template>
 
     <!-- slot for create-new and quick-selection actions -->
@@ -149,9 +152,10 @@
               <template v-slot:default="{ active, toggle }">
                 <v-list-item-action>
                   <v-checkbox
+                    :class="getCheckBoxClass(active, item)"
                     :input-value="active"
                     :indeterminate="isIndeterminateItem(item)"
-                    @click="toggle"
+                    @click.stop="toggle"
                   />
                 </v-list-item-action>
                 <v-list-item-content>
@@ -263,8 +267,8 @@ export default {
         return {
             showCreateNewForSubMatches: true,
             searchField: null,
-            newItems: [],
             sortedItems: [...this.items].sort(compare.bind(this)),
+            newItems: [],
             sourceData: {
                 indeterminate: new Set(this.indeterminate)
             }
@@ -276,15 +280,14 @@ export default {
                 return this.value
             },
             set(newSelections) {
-                /**
-                  when in regular (not keep open) mode, adding new is not going through the pipeline of addNewItem method. 
-                  selectedItem is in 2-way-binding with the Combobox component, 
-                  and that is the reason why the decision whether to add items into the "new" array made here
-                 */
-                  this.insertIntoNewItemsIfNew(newSelections)	
-                  const selections = this.handleIndeterminateItems(newSelections)
+              /**
+                when in regular (not keep open) mode, adding new is not going through the pipeline of addNewItem method. 
+                selectedItem is in 2-way-binding with the Combobox component, 
+                and that is the reason why the decision whether to add items into the "new" array made here
+                */
+                this.insertIntoNewItemsIfNew(newSelections)	
+                const selections = this.handleIndeterminateItems(newSelections)
                 
-
                 this.$emit('input', selections)
             }
         },
@@ -440,6 +443,10 @@ export default {
           } else {
             this.selectedItems = this.selectedItems.filter(i => i !== item)
           }
+        },
+        getCheckBoxClass(active, item) {
+          const indeterminateOrUnchecked = this.isIndeterminateItem(item) ? 'checkbox--partial' : 'checkbox--unchecked'
+          return active ? 'checkbox--checked' : indeterminateOrUnchecked;
         }
     },
 }
@@ -491,6 +498,7 @@ export default {
   @mixin label-element-styling {
      // fix label positioning
     .v-label {
+      font-size: 14px !important;
       top: 11px;
       left: 8px !important;
 
@@ -568,12 +576,18 @@ export default {
   }
 
   .x-combobox {
-
+    @include input-element-spacing;
     @include label-element-styling;
 
     // eliminate the border-style inset
     input, textarea {
         border-style: none !important; 
+    }
+
+    &__list-item-container {
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
     }
 
     // fix bug that input cover the label when not in active mode

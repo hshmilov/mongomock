@@ -1,4 +1,5 @@
 import logging
+import time
 
 from ui_tests.pages.entities_page import EntitiesPage
 logger = logging.getLogger(f'axonius.{__name__}')
@@ -9,6 +10,7 @@ class QueriesPage(EntitiesPage):
     QUERY_NAME_BY_PART_XPATH = '//div[contains(text(), \'{query_name_part}\')]'
     SAFEGUARD_REMOVE_BUTTON_SINGLE = 'Remove Saved Query'
     SAFEGUARD_REMOVE_BUTTON_MULTI = 'Remove Saved Queries'
+    RUN_QUERY_BUTTON_TEXT = 'Run Query'
 
     @property
     def url(self):
@@ -30,6 +32,12 @@ class QueriesPage(EntitiesPage):
         self.wait_for_table_to_load()
         self.click_button('Saved Queries', partial_class=True)
 
+    def run_query(self):
+        self.wait_for_element_present_by_css('.saved-query-panel')
+        # wait for drawer animation end
+        time.sleep(2)
+        self.click_button(text=self.RUN_QUERY_BUTTON_TEXT)
+
     def find_query_row_by_name(self, query_name):
         return self.driver.find_element_by_xpath(self.QUERY_ROW_BY_NAME_XPATH.format(query_name=query_name))
 
@@ -44,7 +52,10 @@ class QueriesPage(EntitiesPage):
             self.remove_selected_with_safeguard()
 
     def enforce_selected_query(self):
-        self.find_element_by_text(self.test_base.enforcements_page.NEW_ENFORCEMENT_BUTTON).click()
+        self.wait_for_element_present_by_css('.saved-query-panel')
+        # wait for drawer animation end
+        time.sleep(2)
+        self.wait_for_element_present_by_css('.action-enforce').click()
 
     def find_query_name_by_part(self, query_name_part):
         return self.find_elements_by_xpath(self.QUERY_NAME_BY_PART_XPATH.format(query_name_part=query_name_part))

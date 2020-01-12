@@ -1,6 +1,5 @@
-import {pluginMeta} from '../constants/plugin_meta.js'
-import {isObjectListField} from '../constants/utils'
-
+import { pluginMeta } from '../constants/plugin_meta.js'
+import { isObjectListField } from '../constants/utils'
 import _get from 'lodash/get'
 
 export const GET_MODULE_SCHEMA = 'GET_MODULE_SCHEMA'
@@ -32,8 +31,8 @@ export const getModuleSchema = (state) => (module, objectView) => {
 
 const selectFields = (schema, objectView) => {
     return objectView
-      ? schema.filter(isObjectListField)
-      : schema
+        ? schema.filter(isObjectListField)
+        : schema
 }
 
 export const GET_DATA_SCHEMA_LIST = 'GET_DATA_SCHEMA_LIST'
@@ -44,7 +43,7 @@ export const getDataSchemaList = (state) => (module) => {
     let allFieldsList = [...fields.generic]
     if (fields.specific) {
         allFieldsList = Object.entries(fields.specific).reduce((aggregatedList, [specificName, currentList]) => {
-            currentList.map(field => field.logo = (singleAdapter(state)? undefined: specificName))
+            currentList.map(field => field.logo = (singleAdapter(state) ? undefined : specificName))
             return aggregatedList.concat(currentList)
         }, allFieldsList)
     }
@@ -94,4 +93,33 @@ export const getConnectionLabel = (state) => (clientId, adapterName) => {
     const connectionLabel = currentClient['client_config']['connection_label']
     if ( !connectionLabel ) return ''
     return ` - ${connectionLabel}`
+}
+
+const savedQueries = (state, namespace) => {
+    const data =  state[namespace].views.saved.content.data || []
+    return data.filter(view => view)
+}
+
+export const getSavedQueryById = (state) => (id, namespace) => {
+    return savedQueries(state, namespace).find(q => id === q.uuid)
+}
+
+
+export const configuredAdaptersFields = (state) => (entity) => {
+
+    // entity can be 'devices' either 'users'
+    const entityState = state[entity]
+    
+    const genericFields = entityState.fields.data.generic.map(f => f.name)
+    const adaptersSpecificFields = entityState.fields.data.specific
+
+    const configuredAdaptesSchemas = Object.values(adaptersSpecificFields)
+    const specificFields = configuredAdaptesSchemas.reduce((fields, currentAdaptersFields) => {
+        return [
+            ...fields,
+            ...currentAdaptersFields.map(field => field.name)
+        ]
+    }, [])
+
+    return new Set([...genericFields, ...specificFields])
 }

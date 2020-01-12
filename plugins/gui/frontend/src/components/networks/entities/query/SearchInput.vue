@@ -107,7 +107,7 @@
     computed: {
       ...mapState({
         savedViews (state) {
-          if (!this.isSearchSimple) return state[this.module].views.saved.content.data
+          if (!this.isSearchSimple) return state[this.module].views.saved.content.data || []
           return state[this.module].views.saved.content.data
                   .filter(item => item && item.name.toLowerCase().includes(this.searchValue.toLowerCase()))
         },

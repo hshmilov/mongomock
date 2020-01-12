@@ -175,6 +175,7 @@ class TestSavedQuery(TestBase):
         self.devices_queries_page.wait_for_spinner_to_end()
         windows_query_row = self.devices_queries_page.find_query_row_by_name(WINDOWS_QUERY_NAME)
         windows_query_row.click()
+        self.devices_queries_page.run_query()
         assert 'devices' in self.driver.current_url and 'query' not in self.driver.current_url
         self.devices_page.wait_for_spinner_to_end()
         assert all(x == self.devices_page.VALUE_OS_WINDOWS for x in
@@ -262,14 +263,17 @@ class TestSavedQuery(TestBase):
         self.devices_queries_page.switch_to_page()
         self.devices_queries_page.wait_for_table_to_load()
         self.devices_queries_page.wait_for_spinner_to_end()
-        query_row_cells = self.devices_queries_page.find_query_row_by_name(query_name).find_elements_by_css_selector(
-            'td:not(.top) div')
-        assert date_str in normalize_timezone_date(query_row_cells[1].text)
+        query_row = self.devices_queries_page.find_query_row_by_name(query_name)
+        last_updated_cell_content = query_row.find_elements_by_css_selector('.table-td-last_updated div')[0].text
+        assert date_str in normalize_timezone_date(last_updated_cell_content)
+
+        username_cell = query_row.find_elements_by_css_selector('.table-td-updated_by div')[0]
+        username_cell_content = username_cell.text
         user_name = f'internal/{username}'
-        assert query_row_cells[2].text == user_name
+        assert username_cell_content == user_name
         full_name = f'{first_name} {last_name}'.strip()
         expected_title = f'{user_name} - {full_name}' if full_name else user_name
-        assert query_row_cells[2].get_attribute('title') == expected_title
+        assert username_cell.get_attribute('title') == expected_title
 
     def _test_user_query(self, date_str):
         self.settings_page.add_user_with_permission(UPDATE_USERNAME, UPDATE_PASSWORD,
@@ -305,6 +309,7 @@ class TestSavedQuery(TestBase):
         self.settings_page.click_update_user()
         self._check_saved_query(self.CUSTOM_QUERY_SAVE_NAME_2, today_str, UPDATE_USERNAME, '', UPDATE_LAST_NAME)
         self.devices_queries_page.find_query_row_by_name(self.CUSTOM_QUERY_SAVE_NAME_2).click()
+        self.devices_queries_page.run_query()
         self.devices_page.wait_for_table_to_load()
         self.devices_page.fill_enter_table_search('test')
         self.devices_page.save_existing_query()

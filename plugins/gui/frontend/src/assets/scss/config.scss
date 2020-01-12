@@ -41,6 +41,52 @@ $text-shadow: 1px 1px rgba(0, 0, 0, 0.2);
 $popup-shadow: 0 2px 4px 0 rgba(0, 0, 0, .4), 0 2px 42px 0 rgba(0, 0, 0, .2);
 $textbox-shadow: 4px 4px 8px 0px rgba(0, 0, 0, .2);
 
+/* Color Classes */
+
+$theme-colors : (
+  "theme-orange": #FF7D46,
+  "theme-black": #1D222C,
+  "theme-blue": #0076FF,
+  "theme-white": #FFFFFF,
+);
+
+$grey: (
+  "grey-0": #F3F3F3,
+  "grey-1": #F7F7F7,
+  "grey-2": #DEDEDE,
+  "grey-3": #ADADAD,
+  "grey-4": #727272,
+  "grey-5": #4A4A4A,
+  "grey-dient": linear-gradient($grey-1, $theme-white)
+);
+
+$indicators: (
+  "indicator-error": #D0011B,
+  "indicator-warning": #F6A623,
+  "indicator-info": #4796E4,
+  "indicator-success": #0FBC18
+);
+
+$colors: (
+  "theme": $theme-colors,
+  "grey": $grey,
+  "indicators": $indicators
+);
+
+@each $color_name, $color in $colors {
+  @each $color_type, $color_value in $color {
+    .#{$color_type} {
+      background-color: $color_value !important;
+    }
+    .#{$color_type}--text {
+      color: $color_value !important;
+    }
+  }
+}
+/***************************************/
+
+
+
 /* Mixins */
 
 @mixin triangle($direction, $size: 4px, $color: $grey-4) {

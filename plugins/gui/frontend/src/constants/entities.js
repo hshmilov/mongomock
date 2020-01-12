@@ -7,6 +7,11 @@ export const entities = [
     }
 ]
 
+export const EntitiesEnum = {
+    devices: 'devices',
+    users: 'users'
+}
+
 export const defaultFields = {
     devices: [
         'adapters', 'specific_data.data.name', 'specific_data.data.hostname', 'specific_data.data.last_seen',

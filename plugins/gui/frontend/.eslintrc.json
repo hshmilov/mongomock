@@ -14,5 +14,10 @@
     "airbnb-base",
     "plugin:vue/recommended"
   ],
-  "rules": {}
+  "rules": {},
+  "settings": {
+    "webpack": {
+      "config": "webpack.common.js"
+    }
+  }
 }

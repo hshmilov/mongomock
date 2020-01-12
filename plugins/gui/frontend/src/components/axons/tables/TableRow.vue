@@ -33,6 +33,7 @@
       v-for="schema in fields"
       :key="schema.name"
       nowrap
+      :class="`table-td-${schema.name}`"
     >
       <slot v-bind="{schema, data, sort, filter: filters[schema.name], hoverRow, expandRow}" />
     </td>

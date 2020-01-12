@@ -217,7 +217,7 @@
             line-height: 28px;
             color: $theme-black;
             box-shadow: 8px 0 4px 0 $grey-2;
-            z-index: 10;
+            z-index: 5;
           }
         }
       }

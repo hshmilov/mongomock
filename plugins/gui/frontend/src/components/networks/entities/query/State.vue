@@ -7,9 +7,10 @@
       </template>
       <x-button
         v-else-if="selectedView && !readOnly"
+        :disabled="selectedView.predefined"
         link
         class="query-title"
-        @click="openRenameView"
+        @click="openEditCurrentQueryModal"
       >{{ selectedView.name }}</x-button>
       <div
         v-else-if="selectedView"
@@ -37,7 +38,7 @@
       <x-button
         slot="trigger"
         link
-        :disabled="disabled"
+        :disabled="disabled || selectedView.predefined"
         @click.stop="saveSelectedView"
       >Save</x-button>
       <div slot="content">
@@ -62,9 +63,9 @@
     />
     <x-save-modal
       v-if="viewNameModal.isActive"
-      :module="module"
+      v-model="viewNameModal.isActive"
+      :namespace="module"
       :view="viewNameModal.view"
-      @close="closeSaveView"
     />
   </div>
 </template>
@@ -73,7 +74,7 @@
   import xButton from '../../../axons/inputs/Button.vue'
   import xDropdown from '../../../axons/popover/Dropdown.vue'
   import xHistoricalDate from '../../../neurons/inputs/HistoricalDate.vue'
-  import xSaveModal from './SaveModal.vue'
+  import xSaveModal from '../../saved-queries/SavedQueryModal.vue'
   import {defaultFields} from '../../../../constants/entities'
   import _isEqual from 'lodash/isEqual'
 
@@ -205,16 +206,15 @@
         this.$router.push({path: `/tasks/${this.enforcement.id}`})
       },
       openSaveView () {
+        this.viewNameModal.view = null
         this.viewNameModal.isActive = true
       },
-      closeSaveView () {
-        this.viewNameModal.isActive = false
-      },
-      openRenameView () {
+      openEditCurrentQueryModal () {
         this.viewNameModal.isActive = true
         this.viewNameModal.view = {
           uuid: this.selectedView.uuid,
-          name: this.selectedView.name
+          name: this.selectedView.name,
+          description: this.selectedView.description
         }
       },
       saveSelectedView () {

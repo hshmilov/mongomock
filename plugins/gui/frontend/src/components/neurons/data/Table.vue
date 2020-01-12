@@ -189,7 +189,6 @@
       return {
         loading: true,
         enableSelectAll: false,
-        allSelected: false,
         searchValue: ''
       }
     },
@@ -213,6 +212,14 @@
           return state.configuration.data.system.defaultNumOfEntitiesPerPage
         }
       }),
+      allSelected: {
+        get() {
+          return !this.value.include
+        },
+        set(selectAll) {
+          this.$emit('input', {ids: [], include: !selectAll})
+        }
+      },
       ...mapGetters({
         getFieldSchemaByName: GET_DATA_SCHEMA_BY_NAME
       }),
@@ -302,7 +309,7 @@
       pageSelection: {
         get() {
           if (this.value === undefined) return undefined
-          return this.pageIds.filter(id => this.allSelected? !this.value.ids.includes(id): this.value.ids.includes(id))
+          return this.pageIds.filter(id => this.allSelected ? !this.value.ids.includes(id): this.value.ids.includes(id))
         },
         set (selectedList) {
           let newIds = this.value.ids.filter(id => !this.pageIds.includes(id)).concat(
@@ -477,11 +484,9 @@
       },
       selectAllData () {
         this.allSelected = true
-        this.$emit('input', { ids: [], include: false })
       },
       clearAllData () {
         this.allSelected = false
-        this.$emit('input', { ids: [], include: true })
       },
       onClickAll (selected) {
         this.enableSelectAll = selected

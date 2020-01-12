@@ -67,7 +67,7 @@ class DevicesPage(EntitiesPage):
                                                 '[contains(@class, \'v-list-item__action\')]' \
                                                 '//div[contains(@class, \'v-input--checkbox\')]'
     TAG_PARTIAL_INPUT_CSS = TAG_PARTIAL_BASE_CSS + '//input'
-    TAG_PARTIAL_INPUT_ICON = TAG_PARTIAL_BASE_CSS + '//i'
+    TAG_PARTIAL_INPUT_ICON = TAG_PARTIAL_BASE_CSS
     TAG_NEW_ITEM_XPATH = TAG_CHECKBOX_XPATH
     TAGGING_X_DEVICE_MESSAGE = 'Tagged {number} devices!'
     MULTI_LINE_CSS = 'div.x-data-table.multiline'
@@ -86,9 +86,9 @@ class DevicesPage(EntitiesPage):
         'UNCHECKED': 'false'
     }
     PartialIcon = {
-        'PARTIAL': 'mdi-minus-box',
-        'CHECKED': 'mdi-checkbox-marked',
-        'UNCHECKED': 'mdi-checkbox-blank-outline'
+        'PARTIAL': 'checkbox--partial',
+        'CHECKED': 'checkbox--checked',
+        'UNCHECKED': 'checkbox--unchecked'
     }
 
     @property

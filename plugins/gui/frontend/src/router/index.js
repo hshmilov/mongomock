@@ -8,7 +8,6 @@ const Dashboard = () => import('../components/pages/Dashboard.vue')
 const DashboardExplorer = () => import('../components/pages/DashboardExplorer.vue')
 const Device = () => import('../components/pages/Device.vue')
 const Devices = () => import('../components/pages/Devices.vue')
-const DevicesQuery = () => import('../components/pages/DevicesQuery.vue')
 const Enforcement = () => import('../components/pages/Enforcement.vue')
 const Enforcements = () => import('../components/pages/Enforcements.vue')
 const Tasks = () => import('../components/pages/Tasks.vue')
@@ -20,10 +19,10 @@ const Reports = () => import('../components/pages/Reports.vue')
 const Settings = () => import('../components/pages/Settings.vue')
 const User = () => import('../components/pages/User.vue')
 const Users = () => import('../components/pages/Users.vue')
-const UsersQuery = () => import('../components/pages/UsersQuery.vue')
 import Report from '../components/pages/Report.vue'
 const ExternalViewComponent = () => import('../components/pages/medical/ExternalViewComponent.vue')
 const FleetViewer = () => import('../components/pages/medical/FleetViewer.vue')
+import { xDevicesSavedQueries, xUsersSavedQueries } from '../components/pages/SavedQueries'
 
 Vue.use(Router)
 
@@ -90,9 +89,9 @@ if (ENV.medical) {
             name: 'Device',
         },
         {
-            path: '/devices/query/saved',
-            name: 'Device Queries',
-            component: DevicesQuery
+            path: '/devices/query/saved/:queryId?',
+            name: 'devices-queries',
+            component: xDevicesSavedQueries
         },
         {
             path: '/users',
@@ -105,9 +104,9 @@ if (ENV.medical) {
             name: 'User'
         },
         {
-            path: '/users/query/saved',
-            name: 'User Queries',
-            component: UsersQuery
+            path: '/users/query/saved/:queryId?',
+            name: 'users-queries',
+            component: xUsersSavedQueries
         },
         {
             path: '/adapters',

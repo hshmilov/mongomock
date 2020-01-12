@@ -889,14 +889,19 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
 
         if method == 'POST':
             view_data = self.get_request_data_as_object()
+            tags = view_data.get('tags', [])
+
             if not view_data.get('name'):
                 return return_error(f'Name is required in order to save a view', 400)
             if not view_data.get('view'):
                 return return_error(f'View data is required in order to save one', 400)
             view_to_update = {
                 'name': view_data['name'],
+                'description': view_data.get('description', ''),
                 'view': view_data['view'],
                 'query_type': query_type,
+                'tags': tags,
+                'archived': False,
             }
             if view_data.get(PREDEFINED_FIELD):
                 view_to_update[PREDEFINED_FIELD] = view_data[PREDEFINED_FIELD]
@@ -934,6 +939,8 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
         view_set_data = {
             'name': view_data['name'],
             'view': view_data['view'],
+            'description': view_data.get('description', ''),
+            'tags': view_data.get('tags', []),
         }
         if not self._is_hidden_user():
             view_set_data[LAST_UPDATED_FIELD] = datetime.now()
@@ -943,6 +950,25 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
         }, {
             '$set': view_set_data
         })
+
+    def _get_queries_tags_by_entity(self, entity_type):
+        """
+        Find all tags that assigned to users/devices saved queries and return them as a distinct list
+        :param entity_type: users/devices
+        :return: distinct list of tags
+        """
+        return self.gui_dbs.entity_query_views_db_map[entity_type].distinct('tags')
+
+    def _get_queries_names_by_entity(self, entity_type):
+        """
+        Return a list of all existing saved-queries names in system for a specific entity type
+        :param entity_type: users / devices
+        :return: list of saved-queries names
+        """
+        not_archived_saved_queries = filter_archived({'query_type': 'saved'})
+        return self.gui_dbs.entity_query_views_db_map[entity_type].find(
+            not_archived_saved_queries, {'name': 1, '_id': 0}
+        )
 
     def _entity_labels(self, db, namespace, mongo_filter):
         """
@@ -1339,6 +1365,16 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
         self._entity_views_update(EntityType.Devices, query_id)
         return ''
 
+    @gui_add_rule_logged_in('devices/views/tags', methods=['GET'],
+                            required_permissions={Permission(PermissionType.Devices, PermissionLevel.ReadOnly)})
+    def get_devices_saved_queries_tags(self):
+        return jsonify(self._get_queries_tags_by_entity(EntityType.Devices))
+
+    @gui_add_rule_logged_in('devices/views/names_list', methods=['GET'],
+                            required_permissions={Permission(PermissionType.Devices, PermissionLevel.ReadOnly)})
+    def get_devices_saved_queries_names_list(self):
+        return jsonify(self._get_queries_names_by_entity(EntityType.Devices))
+
     @gui_helpers.filtered()
     @gui_add_rule_logged_in('devices/views/<query_type>/count', methods=['GET'],
                             required_permissions={Permission(PermissionType.Devices, PermissionLevel.ReadOnly)})
@@ -1547,7 +1583,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
             self._entity_views(request.method, EntityType.Users, limit, skip, mongo_filter, mongo_sort, query_type))
 
     @gui_add_rule_logged_in('users/views/saved/<query_id>', methods=['POST'],
-                            required_permissions={Permission(PermissionType.Devices, PermissionLevel.ReadWrite)})
+                            required_permissions={Permission(PermissionType.Users, PermissionLevel.ReadWrite)})
     def users_views_update(self, query_id):
         """
         Update name of an existing view
@@ -1555,6 +1591,16 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
         """
         self._entity_views_update(EntityType.Users, query_id)
         return ''
+
+    @gui_add_rule_logged_in('users/views/tags', methods=['GET'],
+                            required_permissions={Permission(PermissionType.Users, PermissionLevel.ReadOnly)})
+    def get_users_saved_queries_tags(self):
+        return jsonify(self._get_queries_tags_by_entity(EntityType.Users))
+
+    @gui_add_rule_logged_in('users/views/names_list', methods=['GET'],
+                            required_permissions={Permission(PermissionType.Users, PermissionLevel.ReadOnly)})
+    def get_users_saved_queries_names_list(self):
+        return jsonify(self._get_queries_names_by_entity(EntityType.Users))
 
     @gui_helpers.filtered()
     @gui_add_rule_logged_in('users/views/<query_type>/count', methods=['GET'],

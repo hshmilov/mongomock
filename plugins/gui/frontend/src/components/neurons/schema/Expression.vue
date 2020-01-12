@@ -2,6 +2,7 @@
   <div class="x-expression">
     <!-- Choice of logical operator, available from second expression --->
     <x-select
+      :readOnly="disabled"
       v-if="!first"
       v-model="logicOp"
       :options="logicOps"
@@ -11,24 +12,28 @@
     <div v-else />
     <!-- Option to add '(', to negate expression and choice of field to filter -->
     <x-button
+      :disabled="disabled"
       light
       class="checkbox-label expression-bracket-left"
       :active="expression.leftBracket"
       @click="toggleLeftBracket"
     >(</x-button>
     <x-button
+      :disabled="disabled"
       light
       class="checkbox-label expression-not"
       :active="expression.not"
       @click="toggleNot"
     >NOT</x-button>
     <x-button
+      :disabled="disabled"
       light
       class="checkbox-label expression-obj"
       :active="expression.obj"
       @click="toggleObj"
     >OBJ</x-button>
     <x-condition
+      :readOnly="disabled"
       v-model="expressionCond"
       :module="module"
       :first="first"
@@ -38,12 +43,14 @@
 
     <!-- Option to add ')' and to remove the expression -->
     <x-button
+      :disabled="disabled"
       light
       class="checkbox-label expression-bracket-right"
       :active="expression.rightBracket"
       @click="toggleRightBracket"
     >)</x-button>
     <x-button
+      v-if="!disabled"
       link
       class="expression-remove"
       @click="$emit('remove')"
@@ -53,6 +60,7 @@
       <template v-for="(nestedExpr, i) in expression.nested">
         <div class="grid-span4" />
         <x-condition
+          :readOnly="disabled"
           :key="'cond' + nestedExpr.i"
           v-model="nestedExpr.expression"
           :module="module"
@@ -60,6 +68,7 @@
           @input="onChangeCondition($event, i)"
         />
         <x-button
+          v-if="!disabled"
           :key="`remove_${nestedExpr.i}`"
           link
           class="condition-remove"
@@ -69,6 +78,7 @@
       </template>
       <div class="grid-span4" />
       <x-button
+         v-if="!disabled"
         link
         class="expression-nest"
         @click="addNestedExpression"
@@ -106,6 +116,10 @@
         required: true
       },
       first: {
+        type: Boolean,
+        default: false
+      },
+      disabled: {
         type: Boolean,
         default: false
       }
@@ -240,10 +254,6 @@
         .x-button.light {
             input {
                 display: none;
-            }
-
-            &.disabled {
-                visibility: hidden;
             }
         }
 

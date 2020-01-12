@@ -6,6 +6,7 @@
       :value="field"
       :filtered-adapters="condition.filteredAdapters"
       :options="schema"
+      :read-only="readOnly"
       @input="onChangeFieldType"
     />
     <x-select
@@ -14,6 +15,7 @@
       :options="schema"
       :searchable="true"
       class="field-select field-select__indented"
+      :read-only="readOnly"
       @input="onChangeFieldType"
     />
     <x-select
@@ -23,12 +25,14 @@
       :options="opsList"
       placeholder="func..."
       class="expression-comp"
+      :read-only="readOnly"
     />
     <component
       :is="valueSchema.type"
       v-if="showValue"
       :id="valueId"
       v-model="value"
+      :read-only="readOnly"
       :schema="valueSchema"
       class="expression-value"
       :class="{'grid-span2': !opsList.length}"
@@ -52,6 +56,8 @@
   import {checkShowValue, getOpsList, getOpsMap, getValueSchema, schemaEnumFind} from '../../../logic/condition'
 
   import _isEqual from 'lodash/isEqual'
+
+  import _get from 'lodash/get'
 
   export default {
     name: 'XCondition',
@@ -80,6 +86,10 @@
         default: ''
       },
       first: {
+        type: Boolean,
+        default: false
+      },
+      readOnly: {
         type: Boolean,
         default: false
       }
@@ -140,9 +150,9 @@
         /* Compose a schema by which to offer fields and values for building query expressions in the wizard */
         schema[0].fields = [{
           name: 'saved_query', title: 'Saved Query', type: 'string', format: 'predefined',
-          enum: this.savedViews.map((view) => {
+          enum: this.savedViews.filter(v => v).map((view) => {
             return {
-              name: view.view.query.filter, title: view.name
+              name: _get(view, 'view.query.filter', ''), title:  view ? view.name : ''
             }
           })
         }, ...schema[0].fields]

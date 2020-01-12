@@ -137,7 +137,7 @@ export const addDataView = (state, payload) => {
 	const views = state[payload.module].views.saved.content
 	if (!views.data) views.data = []
 	views.data = [{
-		uuid: payload.uuid, name: payload.name, view: payload.view
+		uuid: payload.uuid, name: payload.name, view: payload.view, description: payload.description
 	}, ...views.data.filter(item => item.name !== payload.name)]
 }
 
@@ -148,9 +148,17 @@ export const changeDataView = (state, payload) => {
 	const views = stateModule.views.saved.content
 	if (!views || !views.data || !views.data.length) return
 	views.data = views.data.map(item => {
-		if (item.uuid === payload.uuid) {
-			item.name = payload.name
-			item.view = payload.view
+		// because of the way we handle paging, the last item in this array might be null
+		if (item && (item.uuid === payload.uuid)) {
+			const { name, description, view, tags } = payload
+			return {
+				...item,
+				name,
+				description,
+				view,
+				tags,
+				last_updated: new Date().toGMTString()
+			}
 		}
 		return item
 	})

@@ -249,7 +249,7 @@ class TestEnforcementSanity(TestBase):
         self.devices_queries_page.switch_to_page()
         self.devices_queries_page.wait_for_table_to_load()
         self.devices_queries_page.wait_for_spinner_to_end()
-        self.devices_queries_page.check_query_by_name(ENFORCEMENT_CHANGE_NAME)
+        self.devices_queries_page.find_query_row_by_name(ENFORCEMENT_CHANGE_NAME).click()
         self.devices_queries_page.enforce_selected_query()
 
         self.enforcements_page.find_existing_trigger()

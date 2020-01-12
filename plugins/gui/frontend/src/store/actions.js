@@ -286,20 +286,21 @@ export const saveDataView = ({state, dispatch, commit}, payload) => {
 
 export const SAVE_VIEW = 'SAVE_VIEW'
 export const saveView = ({dispatch, commit}, payload) => {
+	const { name, description, view, tags, predefined, uuid, module } = payload
 	let data = {
-		name: payload.name, view: {
-			query: payload.view.query,
-			fields: payload.view.fields,
-			sort: payload.view.sort,
-			colFilters: payload.view.colFilters
+		name, description, tags, view: {
+			query: view.query,
+			fields: view.fields,
+			sort: view.sort,
+			colFilters: view.colFilters
 		}
 	}
-	if (payload.predefined) {
+	if (predefined) {
 		data.predefined = true
 	}
-	if (payload.uuid) {
+	if (uuid) {
 		return dispatch(REQUEST_API, {
-			rule: `${payload.module}/views/saved/${payload.uuid}`,
+			rule: `${module}/views/saved/${uuid}`,
 			method: 'POST',
 			data
 		}).then(() => {
@@ -307,16 +308,16 @@ export const saveView = ({dispatch, commit}, payload) => {
 		})
 	}
 	dispatch(REQUEST_API, {
-		rule: payload.module + '/views/saved',
+		rule: module + '/views/saved',
 		method: 'POST',
 		data
 	}).then((response) => {
 		if (response.status === 200) {
 			commit(ADD_DATA_VIEW, {
-				module: payload.module, uuid: response.data, ...data
+				module: module, uuid: response.data, ...data
 			})
-			if (!payload.predefined) {
-				commit(UPDATE_DATA_VIEW, {module: payload.module, uuid: response.data})
+			if (!predefined) {
+				commit(UPDATE_DATA_VIEW, {module: module, uuid: response.data})
 			}
 		}
 	}).catch(console.log.bind(console))

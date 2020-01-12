@@ -883,6 +883,7 @@ class TestDashboard(TestBase):
         self.devices_queries_page.fill_enter_table_search(default_chart['query_name'])
         self.devices_page.wait_for_spinner_to_end()
         self.devices_queries_page.find_query_row_by_name(default_chart['query_name']).click()
+        self.devices_queries_page.run_query()
         assert 'devices' in self.driver.current_url and 'query' not in self.driver.current_url
         self.devices_page.wait_for_spinner_to_end()
         self.driver.find_element_by_css_selector(table_state)

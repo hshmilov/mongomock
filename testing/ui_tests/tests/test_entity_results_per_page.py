@@ -44,6 +44,7 @@ class TestEntityResultsPerPage(TestBase):
         assert entity_queries_page.find_active_page_size() == self.TWENTY_RESULTS_PER_PAGE
         query_row = entity_queries_page.find_query_row_by_name(query_name)
         query_row.click()
+        entity_queries_page.run_query()
         entities_page.wait_for_table_to_load()
         assert entities_page.find_active_page_size() == self.HUNDRED_RESULTS_PER_PAGE
 

@@ -52,6 +52,9 @@
     >
       <v-checkbox
         v-if="multiple"
+        :on-icon="icons.checked"
+        :off-icon="icons.unchecked"
+        :indeterminate-icon="icons.indeterminate"
         :ripple="false"
         :input-value="attrs.inputValue"
         :indeterminate="indeterminate.includes(item.title)"
@@ -84,6 +87,7 @@
 
 <script>
 import xSearchInput from '../../../neurons/inputs/SearchInput.vue';
+import { mdiCheckboxBlankOutline, mdiMinusBox, mdiCheckboxMarked } from '@mdi/js';
 
 export default {
   name: 'XSelectBox',
@@ -120,6 +124,11 @@ export default {
   },
   data() {
     return {
+      icons: {
+        indeterminate: mdiMinusBox,
+        checked: mdiCheckboxMarked,
+        unchecked: mdiCheckboxBlankOutline
+      },
       // For filtering items from the list
       searchInput: '',
 

@@ -1,9 +1,20 @@
 import Vue from 'vue'
 import Vuetify from 'vuetify'
 import 'vuetify/dist/vuetify.min.css'
-import '@mdi/font/css/materialdesignicons.css'
+import EnfrocementsCustomIcon from '../components/axons/icons/axoniusIcons/enforcements.vue'
 
 import defaultTheme from '../assets/themes/default.json'
+
+const axoniusIcons = {
+  enforcements: {
+      component: EnfrocementsCustomIcon,
+      props: {
+          strokeWidth: '24px',
+          strokeColor: '#fff',
+          fillColor: '#fff',
+      }
+  }
+}
 
 export const createVuetifyConfigObject = () => {
   Vue.use(Vuetify)
@@ -22,8 +33,9 @@ export const createVuetifyConfigObject = () => {
       }
     },
     icons: {
-      iconfont: 'mdi'
-    }
+      iconfont: 'mdiSvg',
+      values: axoniusIcons
+  },
   }
   return new Vuetify(vuetifyOptions)
 }

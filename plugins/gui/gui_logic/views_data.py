@@ -22,22 +22,29 @@ def _process_filter_views(entity_type: EntityType, mongo_filter):
 
     # If a query is predefined and has a reference to a plugin that doesn't exist - filter it out.
     # If a query is not predefined, than we're fine
-    mongo_filter['$or'] = [
-        {
-            PREDEFINED_FIELD: {
-                '$ne': True
-            }
-        },
-        {
-            'view.query.filter': {
-                '$not': {
-                    '$regex': f'adapters_data.(?!{"|".join(fielded_plugins)}).'
-                }
-            }
-        }
-    ]
+
     mongo_filter['query_type'] = mongo_filter.get('query_type', 'saved')
-    return filter_archived(mongo_filter)
+    return filter_archived({
+        '$and': [
+            mongo_filter,
+            {
+                '$or': [
+                    {
+                        PREDEFINED_FIELD: {
+                            '$ne': True
+                        }
+                    },
+                    {
+                        'view.query.filter': {
+                            '$not': {
+                                '$regex': f'adapters_data.(?!{"|".join(fielded_plugins)}).'
+                            }
+                        }
+                    }
+                ]
+            }
+        ]
+    })
 
 
 def get_views(entity_type: EntityType, limit, skip, mongo_filter, mongo_sort) -> Iterable[dict]:

@@ -1,8 +1,9 @@
 <template>
   <div class="x-filter">
-    <div class="filter-title">Show only data:</div>
+    <div v-if="!disabled" class="filter-title">Show only data:</div>
     <x-expression
       v-for="(expression, i) in expressions"
+      :disabled="disabled"
       :key="expression.i"
       ref="expression"
       v-model="expressions[i]"
@@ -11,7 +12,7 @@
       @change="onExpressionsChange"
       @remove="() => removeExpression(i)"
     />
-    <div class="footer">
+    <div v-if="!disabled" class="footer">
       <x-button
         light
         @click="addEmptyExpression"
@@ -48,6 +49,10 @@
           type: String,
           default: ''
       },
+      disabled: {
+        type: Boolean,
+        default: false
+      }
     },
     data () {
       return {

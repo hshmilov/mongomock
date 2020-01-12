@@ -1,6 +1,7 @@
 <template>
   <div class="x-select-typed-field">
     <x-select-symbol
+      :readOnly="readOnly"
       v-model="filterTypeWithFilters"
       :options="options"
       :minimal="minimal"
@@ -8,6 +9,7 @@
     />
     <x-select
       :id="id"
+      :readOnly="readOnly"
       :options="currentFields"
       :value="value"
       placeholder="field..."
@@ -46,6 +48,10 @@
       minimal: {
         type: Boolean,
         default: true
+      },
+      readOnly: {
+        type: Boolean,
+        default: false
       }
     },
     data () {

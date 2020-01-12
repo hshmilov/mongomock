@@ -4,6 +4,7 @@
     class="x-select-symbol"
     :class="{minimal}"
     @input="selectOption"
+    :readOnly="readOnly"
   >
     <template slot-scope="{ option }">
       <div class="x-type-img">
@@ -37,6 +38,10 @@
     name: 'XSelectSymbol',
     components: { xSelect },
     props: {
+      readOnly: {
+        type: Boolean,
+        default: false
+      },
       options: {
         type: Array,
         required: true

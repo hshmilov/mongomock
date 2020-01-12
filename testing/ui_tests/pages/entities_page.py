@@ -120,7 +120,7 @@ class EntitiesPage(Page):
         '//div[@class=\'actions\']//div[@class=\'item-content\' and contains(text(),\'{action}\')]'
 
     SAVE_QUERY_ID = 'query_save'
-    SAVE_QUERY_NAME_ID = 'saveName'
+    SAVE_QUERY_NAME_SELECTOR = '.name-input'
     SAVE_QUERY_SAVE_BUTTON_ID = 'query_save_confirm'
     ALL_ENTITIES_CSS = 'tbody>tr'
 
@@ -187,6 +187,8 @@ class EntitiesPage(Page):
 
     FIELD_UPDATED_BY = 'Updated By'
     FIELD_LAST_UPDATED = 'Last Updated'
+
+    QUERY_MODAL_OVERLAY = '.v-overlay'
 
     @property
     def url(self):
@@ -745,7 +747,7 @@ class EntitiesPage(Page):
         return self.is_element_disabled(self.find_element_by_text(self.SAVE_BUTTON))
 
     def fill_query_name(self, name):
-        self.fill_text_field_by_element_id(self.SAVE_QUERY_NAME_ID, name)
+        self.fill_text_field_by_css_selector(self.SAVE_QUERY_NAME_SELECTOR, name)
 
     def click_actions_tag_button(self):
         self.driver.find_element_by_css_selector(self.TABLE_ACTIONS_TAG_CSS).click()
@@ -757,8 +759,8 @@ class EntitiesPage(Page):
         self.click_button('Edit Tags', partial_class=True)
 
     def click_save_query_save_button(self):
-        self.driver.find_element_by_id(self.SAVE_QUERY_SAVE_BUTTON_ID).click()
-        self.wait_for_element_absent_by_css(self.MODAL_OVERLAY_CSS)
+        self.click_button(text='Save', partial_class=True)
+        self.wait_for_element_absent_by_css(self.QUERY_MODAL_OVERLAY)
 
     def reset_query(self):
         self.click_button('Reset', partial_class=True)
