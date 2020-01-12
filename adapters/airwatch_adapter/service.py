@@ -124,7 +124,7 @@ class AirwatchAdapter(AdapterBase):
                 if not device_raw.get('Id'):
                     continue
                 else:
-                    device.id = str(device_raw.get('Id').get('Value'))
+                    device_id_value = str(device_raw.get('Id').get('Value'))
                 device.imei = device_raw.get('Imei')
                 device.last_seen = parse_date(str(device_raw.get('LastSeen', '')))
                 device.figure_os((device_raw.get('Platform') or '') + ' ' + (device_raw.get('OperatingSystem') or ''))
@@ -149,7 +149,7 @@ class AirwatchAdapter(AdapterBase):
                 device.device_serial = device_raw.get('SerialNumber')
                 device.udid = device_raw.get('Udid')
 
-                name = device_raw.get('DeviceFriendlyName')
+                name = device_raw.get('DeviceFriendlyName') or ''
                 username = device_raw.get('UserName')
                 if username and name and name.startswith(username + ' '):
                     name = name[len(username) + 1:]
@@ -167,7 +167,9 @@ class AirwatchAdapter(AdapterBase):
                     name = name.replace('(', '')
                     name = name.replace(')', '')
                     name = name.replace('.', '-')
-                device.name = name + '_' + str(device_raw.get('MacAddress'))
+                device_name = name + '_' + str(device_raw.get('MacAddress'))
+                device.name = device_name
+                device.id = device_id_value + '_' + device_name
                 device.friendly_name = device_raw.get('DeviceFriendlyName')
 
                 device.last_enrolled_on = parse_date(device_raw.get('LastEnrolledOn'))
