@@ -193,6 +193,7 @@ class StaticAnalysisService(Triggerable, PluginBase):
 
         created_device = self._new_device_adapter()
         created_device.id = self.plugin_unique_name + '!' + 'cve' + '!' + device_id
+        created_device.software_cves = []
 
         # Add the enriched cve data to a new DeviceAdapter object and return it
         if device_cves:
