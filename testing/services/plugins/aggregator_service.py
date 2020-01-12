@@ -9,7 +9,7 @@ from collections import defaultdict
 from typing import List, Tuple
 
 from bson import Code
-from pymongo.errors import OperationFailure
+from pymongo.errors import OperationFailure, PyMongoError
 from retrying import retry
 
 from axonius.devices.device_adapter import LAST_SEEN_FIELD
@@ -78,8 +78,10 @@ class AggregatorService(PluginService, UpdatablePluginMixin):
             self._update_schema_version_22()
         if self.db_schema_version < 23:
             self._update_schema_version_23()
+        if self.db_schema_version < 24:
+            self._update_schema_version_24()
 
-        if self.db_schema_version != 23:
+        if self.db_schema_version != 24:
             print(f'Upgrade failed, db_schema_version is {self.db_schema_version}')
 
     def __create_capped_collections(self):
@@ -1068,6 +1070,29 @@ class AggregatorService(PluginService, UpdatablePluginMixin):
             self.db_schema_version = 23
         except Exception as e:
             print(f'Exception while upgrading core db to version 23. Details: {e}')
+            traceback.print_exc()
+            raise
+
+    def _update_schema_version_24(self):
+        """
+        See Jira Issue: AX-5956
+        """
+        print('Update to schema 24 - remove aggregated fields index')
+        try:
+            # Remove aggregated fields indexes
+            for current_collection in ['devices_db', 'users_db',
+                                       'historical_devices_db_view', 'historical_users_db_view']:
+                try:
+                    self.db.client['aggregator'][current_collection].drop_index([('hostnames', pymongo.ASCENDING)])
+                except PyMongoError:
+                    print(f'Index hostnames doesn\'t exist on {current_collection}')
+                try:
+                    self.db.client['aggregator'][current_collection].drop_index([('last_seen', pymongo.ASCENDING)])
+                except PyMongoError:
+                    print(f'Index last_seen doesn\'t exist on {current_collection}')
+            self.db_schema_version = 24
+        except Exception as e:
+            print(f'Exception while upgrading aggregator db to version 24. Details: {e}')
             traceback.print_exc()
             raise
 

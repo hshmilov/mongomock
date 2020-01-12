@@ -31,7 +31,7 @@ class TestDashboard(TestBase):
 
     IPS_192_168_QUERY = 'specific_data.data.network_interfaces.ips == regex("192.168", "i")'
     IPS_192_168_QUERY_NAME = 'IPs Subnet 192.168.0.0'
-    HOSTNAME_DC_QUERY = 'hostnames == regex("dc", "i")'
+    HOSTNAME_DC_QUERY = 'specific_data.data.hostname == regex("dc", "i")'
     HOSTNAME_DC_QUERY_NAME = 'DC Devices'
     INTERSECTION_QUERY = f'({IPS_192_168_QUERY}) and ({HOSTNAME_DC_QUERY})'
     SYMMETRIC_DIFFERENCE_FROM_FIRST_QUERY = f'({IPS_192_168_QUERY}) and not ({HOSTNAME_DC_QUERY})'
