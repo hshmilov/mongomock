@@ -44,6 +44,7 @@ from axonius.clients.aws.utils import aws_list_s3_objects
 from axonius.clients.ldap.exceptions import LdapException
 from axonius.clients.ldap.ldap_connection import LdapConnection
 from axonius.clients.rest.connection import RESTConnection
+from axonius.compliance.compliance import get_compliance
 from axonius.consts import adapter_consts, report_consts
 from axonius.consts.core_consts import CORE_CONFIG_NAME, ACTIVATED_NODE_STATUS, DEACTIVATED_NODE_STATUS
 from axonius.consts.gui_consts import (ENCRYPTION_KEY_PATH,
@@ -5494,3 +5495,12 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
     def _get_entity_count(self, entity, mongo_filter, history, quick):
         return str(gui_helpers.get_entities_count(mongo_filter, self.get_appropriate_view(history, entity),
                                                   history_date=history, quick=quick))
+
+    # TODO: permissions requirements
+    @gui_add_rule_logged_in('compliance/<compliance_name>/<method>')
+    def compliance(self, compliance_name: str, method: str):
+        try:
+            return jsonify(get_compliance(compliance_name, method))
+        except Exception as e:
+            logger.exception(f'Error in get_compliance')
+            return return_error(f'Error: {str(e)}')
