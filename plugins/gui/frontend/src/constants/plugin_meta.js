@@ -14,15 +14,18 @@ export const pluginMeta = {
         description: 'GitHub provides hosting for software development version control using Git, including distributed version control and source code management (SCM) functionality.'
     },
     cscglobal_adapter: {
-        title: 'CSC DomainManager',
-        description: 'CSC DomainManager is a web-based portfolio management platform which consolidates your domains alongside your social media usernames, SSL digital certificates and DNS.'
+        title: 'CSCDomainManager',
+        link: 'https://docs.axonius.com/docs/cscdomainmanager',
+        description: 'CSCDomainManager is a web-based portfolio management platform consolidating domains alongside social media usernames, SSL digital certificates, and DNS.'
     },
     riskiq_adapter: {
         title: 'RiskIQ Digital Footprint',
+        link: 'https://docs.axonius.com/docs/riskiq-digital-footprint',
         description: 'RiskIQ Digital Footprint software provides an active, comprehensive inventory of all of the organization’s IPs, domains, and hosts.'
     },
     men_and_mice_adapter: {
         title: 'Men&Mice DNS Management',
+        link: 'https://docs.axonius.com/docs/menmice-dns-management',
         description: 'Men&Mice DNS Management is a Network Management software providing secure, centralized, and highly resilient control of DNS across diverse platforms.'
     },
     ansible_tower_adapter: {

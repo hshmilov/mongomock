@@ -13,6 +13,8 @@ from reports.action_types.action_type_alert import ActionTypeAlert
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
+DEFAULT_S3_OBJECT_KEY = 'axonius_csv'
+
 
 class SendCsvToS3(ActionTypeAlert):
     """
@@ -24,7 +26,7 @@ class SendCsvToS3(ActionTypeAlert):
             'items': [
                 {
                     'name': 'access_key_id',
-                    'title': 'IAM Access Key ID',
+                    'title': 'IAM Access Key Id',
                     'type': 'string'
                 },
                 {
@@ -41,17 +43,17 @@ class SendCsvToS3(ActionTypeAlert):
                 },
                 {
                     'name': 's3_bucket',
-                    'title': 'S3 Bucket',
+                    'title': 'Amazon S3 bucket name',
                     'type': 'string',
                 },
                 {
                     'name': 's3_key',
-                    'title': 'S3 Key',
+                    'title': 'Amazon S3 object location (key)',
                     'type': 'string',
                 },
                 {
                     'name': 'append_datetime',
-                    'title': 'Append date & time to file name',
+                    'title': 'Append date and time to file name',
                     'type': 'bool',
                 },
                 {
@@ -75,7 +77,7 @@ class SendCsvToS3(ActionTypeAlert):
             'access_key_id': None,
             'secret_access_key': None,
             's3_bucket': None,
-            's3_key': None,
+            's3_key': DEFAULT_S3_OBJECT_KEY,
             'use_attached_iam_role': False,
             'append_datetime': True,
             'override_existing': True,
@@ -115,7 +117,7 @@ class SendCsvToS3(ActionTypeAlert):
                 aws_access_key_id=aws_access_key_id,
                 aws_secret_access_key=aws_secret_access_key
             )
-            csv_name = self._config['s3_key'] if self._config.get('s3_key') else 'axonius_csv'
+            csv_name = self._config['s3_key'] if self._config.get('s3_key') else DEFAULT_S3_OBJECT_KEY
             if self._config['append_datetime']:
                 csv_name += '_' + datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S').replace(' ', '-')
             csv_name += '.csv'

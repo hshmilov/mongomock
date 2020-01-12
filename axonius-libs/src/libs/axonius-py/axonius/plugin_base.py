@@ -3368,23 +3368,12 @@ class PluginBase(Configurable, Feature, ABC):
                     'items': [
                         {
                             'name': 'enabled',
-                            'title': 'Enable AWS S3 Integration',
+                            'title': 'Enable Amazon S3 integration',
                             'type': 'bool'
-                        },
-                        {
-                            'name': 'enable_backups',
-                            'title': 'Enable Backups to AWS S3',
-                            'type': 'bool'
-                        },
-                        {
-                            'name': 'preshared_key',
-                            'title': 'Backups Encryption Key',
-                            'type': 'string',
-                            'format': 'password'
                         },
                         {
                             'name': 'bucket_name',
-                            'title': 'Bucket Name',
+                            'title': 'Amazon S3 bucket name',
                             'type': 'string'
                         },
                         {
@@ -3398,9 +3387,20 @@ class PluginBase(Configurable, Feature, ABC):
                             'type': 'string',
                             'format': 'password'
                         },
+                        {
+                            'name': 'enable_backups',
+                            'title': 'Enable backup to Amazon S3',
+                            'type': 'bool'
+                        },
+                        {
+                            'name': 'preshared_key',
+                            'title': 'Backup encryption passphrase',
+                            'type': 'string',
+                            'format': 'password'
+                        },
                     ],
                     'name': 'aws_s3_settings',
-                    'title': 'AWS S3 Settings',
+                    'title': 'Amazon S3 Settings',
                     'type': 'array',
                     'required': ['enabled', 'enable_backups', 'bucket_name']
                 }

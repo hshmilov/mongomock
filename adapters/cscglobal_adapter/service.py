@@ -113,7 +113,7 @@ class CscglobalAdapter(AdapterBase):
             'items': [
                 {
                     'name': 'domain',
-                    'title': 'Cscglobal API host',
+                    'title': 'CSC API Server',
                     'default': 'https://apis.cscglobal.com',
                     'type': 'string'
                 },

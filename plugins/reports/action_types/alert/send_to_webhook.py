@@ -33,12 +33,12 @@ class SendWebhookAction(ActionTypeAlert):
                 },
                 {
                     'name': 'auth_username',
-                    'title': 'Authorization Header User Name',
+                    'title': 'Authorization header user name',
                     'type': 'string'
                 },
                 {
                     'name': 'auth_password',
-                    'title': 'Authorization Header Password',
+                    'title': 'Authorization header password',
                     'type': 'string',
                     'format': 'password'
                 },
@@ -49,32 +49,32 @@ class SendWebhookAction(ActionTypeAlert):
                 },
                 {
                     'name': 'https_proxy',
-                    'title': 'HTTPS Proxy',
+                    'title': 'HTTPS proxy',
                     'type': 'string'
                 },
                 {
                     'name': 'http_proxy',
-                    'title': 'HTTP Proxy',
+                    'title': 'HTTP proxy',
                     'type': 'string'
                 },
                 {
                     'name': 'extra_headers',
-                    'title': 'Additional Headers',
+                    'title': 'Additional headers',
                     'type': 'string'
                 },
                 {
                     'name': 'custom_format',
-                    'title': 'Custom format for body. Use {$BODY} as keyword.',
+                    'title': 'Custom format for body (use {$BODY} as keyword)',
                     'type': 'string'
                 },
                 {
                     'name': 'connect_timeout',
-                    'title': 'Timeout (in seconds) for connection attempts.',
+                    'title': 'Connection timeout (seconds)',
                     'type': 'string'
                 },
                 {
                     'name': 'read_timeout',
-                    'title': 'Timeout (in seconds) for writing data to the webhook.',
+                    'title': 'Writing data to webhook timeout (seconds)',
                     'type': 'string'
                 }
             ],
