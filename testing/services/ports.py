@@ -228,6 +228,7 @@ DOCKER_PORTS = {
     'netbrain-adapter':                 13371,
     'cscglobal-adapter':                13372,
     'riskiq-adapter':                   13373,
+    'digicert-certcentral-adapter':     13374,
     'mongo':                            27017,
     'mockingbird-db':                   28017
 }

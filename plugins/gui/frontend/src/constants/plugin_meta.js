@@ -1,4 +1,9 @@
 export const pluginMeta = {
+    digicert_certcentral_adapter: {
+        title: 'DigiCert CertCentral Adapter',
+        link: 'https://docs.axonius.com/docs/digicert',
+        description: 'With DigiCert CertCentral, you can use the ACME protocol to automate the renewal and installation of every certificate. This saves time and gives you confidence that your site is always secure. Automate the Lifecycle of Every SSL Certificate'
+    },
     arista_eos_adapter: {
         title: 'Arista Extensible Operating System (EOS)',
         link:'https://docs.axonius.com/docs/arista-eos',
