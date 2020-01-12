@@ -1034,16 +1034,18 @@ def normalize_username(username):
 
 
 def compare_last_used_users(adapter_device1, adapter_device2):
+    def normalize_users_list(users_list):
+        return [normalize_username(username) for username in users_list
+                if (normalize_username(username) and 'admin' not in username.lower() and 'user' not in username.lower()
+                    and 'guest' not in username.lower() and 'root' not in username.lower()
+                    and not username.lower().startswith('_') and 'nobody' not in username.lower()
+                    and '-svc' not in username.lower())]
     users1 = get_last_used_users(adapter_device1)
     users2 = get_last_used_users(adapter_device2)
     if not users1 or not users2:
         return False
-    users1 = [normalize_username(username) for username in users1
-              if (normalize_username(username) and 'admin' not in username.lower() and
-                  'user' not in username.lower() and 'guest' not in username.lower())]
-    users2 = [normalize_username(username) for username in users2
-              if (normalize_username(username) and 'admin' not in username.lower()
-                  and 'user' not in username.lower() and 'guest' not in username.lower())]
+    users1 = normalize_users_list(users1)
+    users2 = normalize_users_list(users2)
     if not users1 or not users2:
         return False
     return is_items_in_list1_are_in_list2(users1, users2) or is_items_in_list1_are_in_list2(users2, users1)

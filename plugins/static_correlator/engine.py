@@ -51,6 +51,7 @@ from axonius.utils.parsing import (NORMALIZED_MACS,
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
+USERS_CORRELATION_ADAPTERS = ['illusive_adapter', 'carbonblack_protection_adapter']
 ALLOW_OLD_MAC_LIST = ['clearpass_adapter', 'tenable_security_center', 'nexpose_adapter', 'nessus_adapter',
                       'nessus_csv_adapter', 'tenable_io_adapter', 'qualys_scans_adapter', 'airwave_adapter']
 DANGEROUS_ADAPTERS = ['lansweeper_adapter', 'carbonblack_protection_adapter',
@@ -83,8 +84,12 @@ def is_only_host_adapter(adapter_device):
                                               'symantec_dlp_adapter',
                                               'druva_adapter']):
         return True
-    if adapter_device.get('plugin_name') == 'active_directory_adapter' and DOES_AD_HAVE_ONE_CLIENT:
-        return True
+    try:
+        if adapter_device.get('plugin_name') == 'active_directory_adapter' and \
+                (DOES_AD_HAVE_ONE_CLIENT or 'OU=Linux,' in adapter_device['data'].get('id')):
+            return True
+    except Exception:
+        pass
     return False
 
 
@@ -469,7 +474,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
         return self._bucket_correlate(list(filtered_adapters_list),
                                       [get_normalized_hostname_str],
                                       [compare_device_normalized_hostname],
-                                      [lambda x: x.get('plugin_name') == 'illusive_adapter'],
+                                      [lambda x: x.get('plugin_name') in USERS_CORRELATION_ADAPTERS],
                                       [compare_last_used_users,
                                        not_wifi_adapters,
                                        serials_do_not_contradict],

@@ -22,6 +22,7 @@ class BigfixAdapter(AdapterBase):
     class MyDeviceAdapter(DeviceAdapter):
         bigfix_device_type = Field(str, 'Device type')
         bigfix_computer_type = Field(str, 'Computer type')
+        identify_number = Field(str, 'Identify Number')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -61,12 +62,17 @@ class BigfixAdapter(AdapterBase):
         try:
             client_data.connect()
             try:
-                installed_software_dict = client_data.get_software_per_device_list()
+                installed_software_dict = client_data.get_query_data_per_device_list('Installed Applications')
             except Exception:
                 installed_software_dict = dict()
                 logger.exception(f'Failed getting installed software list, continuing')
+            try:
+                identify_dict = client_data.get_query_data_per_device_list('Identifying Number')
+            except Exception:
+                identify_dict = dict()
+                logger.exception(f'Failed getting identify, continuing')
             for device_raw in client_data.get_device_list():
-                yield device_raw, installed_software_dict
+                yield device_raw, installed_software_dict, identify_dict
         finally:
             client_data.close()
 
@@ -116,7 +122,7 @@ class BigfixAdapter(AdapterBase):
         }
 
     def _parse_raw_data(self, devices_raw_data):
-        for device_raw_xml, computer_id_to_installed_software in devices_raw_data:
+        for device_raw_xml, computer_id_to_installed_software, identify_dict in devices_raw_data:
             try:
                 device_raw = dict()
                 for xml_property in ET.fromstring(device_raw_xml)[0]:
@@ -207,6 +213,12 @@ class BigfixAdapter(AdapterBase):
                 except Exception:
                     logger.exception(f'Problem adding fields to {device_raw}')
 
+                try:
+                    identify_list = identify_dict.get(str(device_id))
+                    if identify_list:
+                        device.identify_number = identify_list[0]
+                except Exception:
+                    logger.exception(f'Problem with idetify number for {device_raw}')
                 try:
                     for installed_software in computer_id_to_installed_software.get(str(device_id)) or []:
                         try:
