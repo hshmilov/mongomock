@@ -9,14 +9,23 @@ from services.adapters.nexpose_service import NexposeService
 from test_credentials.test_esx_credentials import client_details as esx_client_details
 from test_credentials.test_nexpose_credentials import client_details as nexpose_client_details
 from test_credentials.test_csv_credentials import \
-    client_details as csv_client_details
+    client_details as csv_client_details, USERS_CLIENT_FILES
 from ui_tests.tests.ui_test_base import TestBase
 
 CSV_ADAPTER_QUERY = 'adapters_data.csv_adapter.id == exists(true)'
 CSV_FILE_NAME = 'csv'
+CSV_INPUT_ID = 'csv'
 CSV_NAME = 'CSV Serials'
+JSON_NAME = 'JSON File'
 CSV_PLUGIN_NAME = 'csv_adapter'
 QUERY_WIZARD_CSV_DATE_PICKER_VALUE = '2020-01-02 02:13:24.485Z'
+EXPECTED_ADAPTER_LIST_LABELS = [
+    'CSV Serials - users_1',
+    'CSV Serials - users_2',
+    'CSV Serials - users_3',
+    'JSON File - JSON File'
+]
+
 
 ESX_NAME = 'VMware ESXi'
 ESX_PLUGIN_NAME = 'esx_adapter'
@@ -31,14 +40,7 @@ class TestAdapters(TestBase):
     def test_upload_csv_file(self):
         try:
             with CsvService().contextmanager(take_ownership=True):
-                self.adapters_page.wait_for_adapter(CSV_NAME)
-                self.adapters_page.click_adapter(CSV_NAME)
-                self.adapters_page.wait_for_spinner_to_end()
-                self.adapters_page.wait_for_table_to_load()
-                self.adapters_page.click_new_server()
-                self.adapters_page.upload_file_by_id(CSV_FILE_NAME, csv_client_details[CSV_FILE_NAME].file_contents)
-                self.adapters_page.fill_creds(user_id=CSV_FILE_NAME)
-                self.adapters_page.click_save()
+                self._upload_csv(CSV_FILE_NAME, csv_client_details)
                 self.base_page.run_discovery()
                 self.devices_page.switch_to_page()
                 self.devices_page.fill_filter(CSV_ADAPTER_QUERY)
@@ -56,14 +58,7 @@ class TestAdapters(TestBase):
     def test_query_wizard_include_outdated_adapter_devices(self):
         try:
             with CsvService().contextmanager(take_ownership=True):
-                self.adapters_page.wait_for_adapter(CSV_NAME)
-                self.adapters_page.click_adapter(CSV_NAME)
-                self.adapters_page.wait_for_spinner_to_end()
-                self.adapters_page.wait_for_table_to_load()
-                self.adapters_page.click_new_server()
-                self.adapters_page.upload_file_by_id(CSV_FILE_NAME, csv_client_details[CSV_FILE_NAME].file_contents)
-                self.adapters_page.fill_creds(user_id=CSV_FILE_NAME)
-                self.adapters_page.click_save()
+                self._upload_csv(CSV_FILE_NAME, csv_client_details)
                 self.base_page.run_discovery()
                 self.devices_page.switch_to_page()
                 self.devices_page.click_query_wizard()
@@ -156,3 +151,52 @@ class TestAdapters(TestBase):
             self.adapters_page.clean_adapter_servers(NEXPOSE_NAME)
             self.wait_for_adapter_down(ESX_PLUGIN_NAME)
             self.wait_for_adapter_down(NEXPOSE_PLUGIN_NAME)
+
+    def test_adapter_clients_label(self):
+        """
+        this test check for the connection label ( defined in the client configuration of the adapter ) existence
+        upload 3 csv files and define a connection label to json_file adapter, check after correlation we have one user
+        with all 4 labels at the right place
+        :return:
+        """
+        with CsvService().contextmanager(take_ownership=True):
+            for position, client in enumerate(USERS_CLIENT_FILES, start=1):
+                self._upload_csv(list(client.keys())[0], client, True)
+                self.adapters_page.wait_for_server_green(position)
+            self.adapters_page.switch_to_page()
+            self._open_add_edit_server(JSON_NAME, 1)
+            self.adapters_page.fill_creds(connectionLabel=JSON_NAME)
+            self.adapters_page.click_save()
+            self.adapters_page.wait_for_server_green(1)
+            self.base_page.run_discovery()
+            self.users_page.switch_to_page()
+            self.users_page.run_filter_query('avidor')
+            self.users_page.hover_over_entity_adapter_icon(index=0)
+            data = self.users_page.get_adapters_popup_table_data()
+            names = [item['Name'] for item in data]
+            all_is_good = True
+            for name in EXPECTED_ADAPTER_LIST_LABELS:
+                if name not in names:
+                    all_is_good = False
+
+            assert all_is_good
+            self.adapters_page.clean_adapter_servers(CSV_NAME, True)
+            self.wait_for_adapter_down(CSV_PLUGIN_NAME)
+
+    def _upload_csv(self, csv_file_name, csv_data, is_user_file=False):
+        self._open_add_edit_server(CSV_NAME)
+        self.adapters_page.upload_file_by_id(CSV_INPUT_ID, csv_data[csv_file_name].file_contents)
+        self.adapters_page.fill_creds(user_id=csv_file_name, connectionLabel=csv_file_name)
+        if is_user_file:
+            self.adapters_page.find_checkbox_by_label('Is Users CSV File').click()
+        self.adapters_page.click_save()
+
+    def _open_add_edit_server(self, adapter_name, row_position=0):
+        self.adapters_page.wait_for_adapter(adapter_name)
+        self.adapters_page.click_adapter(adapter_name)
+        self.adapters_page.wait_for_spinner_to_end()
+        self.adapters_page.wait_for_table_to_load()
+        if row_position == 0:
+            self.adapters_page.click_new_server()
+        else:
+            self.adapters_page.click_edit_server(row_position - 1)

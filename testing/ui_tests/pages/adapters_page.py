@@ -33,7 +33,8 @@ class AdaptersPage(EntitiesPage):
                                'Changing connection details requires re-entering credentials'
 
     ERROR_ICON_CLASS = '.md-icon.icon-error'
-    SUCCESS_ICON_CLASS = '.md-icon.icon-success'
+    SUCCESS_ICON_CLASS = '.x-table-row:nth-child({position}) .md-icon.icon-success'
+    ADAPTERS_SUCCESS_ICON_CLASS = '.adapters-table .table-row:nth-child({position}) .md-icon.icon-success'
     TYPE_ICON_CSS = '.md-icon.icon-{status_type}'
     WARNING_MARKER_CSS = '.marker.indicator-bg-warning'
     NEW_CONNECTION_BUTTON_ID = 'new_connection'
@@ -103,6 +104,9 @@ class AdaptersPage(EntitiesPage):
                                 should_scroll_into_view=False,
                                 scroll_into_view_container=PAGE_BODY)
 
+    def click_edit_server(self, index=0):
+        self.get_all_table_rows_elements()[index].click()
+
     def click_advanced_settings(self):
         self.find_element_by_text('Advanced Settings').click()
         time.sleep(1.5)
@@ -125,8 +129,12 @@ class AdaptersPage(EntitiesPage):
     def select_all_servers(self):
         self.driver.find_element_by_css_selector(self.CHECKBOX_CSS).click()
 
-    def wait_for_server_green(self):
-        self.wait_for_element_present_by_css(self.SUCCESS_ICON_CLASS, retries=300, interval=1)
+    def wait_for_server_green(self, position=1):
+        self.wait_for_element_present_by_css(self.SUCCESS_ICON_CLASS.format(position=position), retries=300, interval=1)
+
+    def wait_for_adapter_green(self, position=1):
+        self.wait_for_element_present_by_css(self.ADAPTERS_SUCCESS_ICON_CLASS.format(position=position),
+                                             retries=300, interval=1)
 
     def wait_for_server_red(self):
         self.wait_for_element_present_by_css(self.ERROR_ICON_CLASS)

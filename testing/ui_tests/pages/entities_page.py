@@ -179,6 +179,7 @@ class EntitiesPage(Page):
     TOOLTIP_CSS = '.x-tooltip'
     TOOLTIP_TABLE_HEAD_CSS = f'{TOOLTIP_CSS} .x-table .table thead .clickable th'
     TOOLTIP_TABLE_DATA_CSS = f'{TOOLTIP_CSS} .x-table .table tbody .x-table-row td'
+    ADAPTERS_TOOLTIP_TABLE_CSS = f'{TOOLTIP_CSS} .table'
 
     ACTIVE_TAB_TABLE_ROWS = '.body .x-tabs.vertical .body .x-tab.active .x-table-row'
     ACTIVE_TAB_TABLE_ROWS_HEADERS = '.body .x-tabs.vertical .body .x-tab.active .x-table thead th'
@@ -1223,3 +1224,14 @@ class EntitiesPage(Page):
 
     def click_filter_out_clear(self):
         self.driver.find_element_by_css_selector('.remove-filter-out').click()
+
+    def get_adapters_popup_table_data(self):
+        return self.get_table_data(self.ADAPTERS_TOOLTIP_TABLE_CSS, ['Adapters', 'Name'])
+
+    @retry(stop_max_delay=10000, wait_fixed=500)
+    def hover_over_entity_adapter_icon(self, index=0):
+        table_rows = self.get_all_table_rows_elements()
+        table_row = table_rows[index]
+        icon = table_row.find_elements_by_tag_name('td')[2]
+        ActionChains(self.driver).move_to_element(icon).perform()
+        assert self.driver.find_element_by_css_selector(self.ADAPTERS_TOOLTIP_TABLE_CSS)

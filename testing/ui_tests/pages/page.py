@@ -708,6 +708,12 @@ class Page:
                 self.driver.find_elements_by_css_selector(self.TABLE_ROWS_CSS if clickable_rows
                                                           else self.TABLE_NON_CLICKABLE_ROWS_CSS) if elem.text]
 
+    def get_all_table_rows_elements(self, parent=None):
+        if not parent:
+            parent = self.driver
+        return [elem for elem in
+                parent.find_elements_by_css_selector(self.TABLE_ROWS_CSS) if elem]
+
     def get_all_tables_counters(self):
         counters = self.driver.find_elements_by_css_selector(self.TABLE_COUNTER)
         extracted_counters = []
@@ -946,6 +952,20 @@ class Page:
     def get_multiple_select_values(self):
         chips = self.driver.find_elements_by_css_selector('.v-select .v-select__selections .v-chip')
         return [chip.text for chip in chips]
+
+    def get_table_data(self, table_css, list_of_columns):
+        table_data = []
+        table = self.driver.find_element_by_css_selector(table_css)
+        # Use from index 1 to avoid selecting the table head
+        rows = table.find_elements_by_tag_name('tr')[1:]
+        for row in rows:
+            # Get the columns in order
+            data = {}
+            for position, column in enumerate(list_of_columns, start=0):
+                data[column] = row.find_elements_by_tag_name('td')[position].text
+            table_data.append(data)
+
+        return table_data
 
     def get_multiple_select_options(self):
         self.driver.find_element_by_css_selector('.v-select .v-select__selections').click()

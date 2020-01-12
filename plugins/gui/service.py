@@ -1767,7 +1767,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
                 self._decrypt_client_config(client['client_config'])
                 client['client_config'] = clear_passwords_fields(client['client_config'], schema)
                 client[NODE_ID] = adapter[NODE_ID]
-                client['adapter'] = adapter[PLUGIN_NAME]
+                client['adapter_name'] = adapter[PLUGIN_NAME]
             status = ''
             if len(clients):
                 status = 'success' if all(client.get('status') == 'success' for client in clients) \

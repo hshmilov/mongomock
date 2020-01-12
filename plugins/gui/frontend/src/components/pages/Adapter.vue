@@ -331,6 +331,7 @@
         this.message = 'Connecting to Server...'
         this.updateServer({
           adapterId: this.adapterId,
+          client_id: this.serverModal.serverName,
           serverData: {
             ...this.serverModal.serverData,
             instanceName: this.serverModal.instanceName,

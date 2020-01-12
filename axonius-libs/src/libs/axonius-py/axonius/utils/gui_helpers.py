@@ -564,17 +564,51 @@ def parse_entity_fields(entity_data, fields, include_details=False, field_filter
         generic_field = _extract_name(field_path)
         field_to_value[f'{field_path}_details'] = [find_entity_field(data, generic_field) if generic_field else ''
                                                    for data in adapter_datas]
-    # in case the entity has meta data added like connection_label
-    if include_details:
-        all_metas = defaultdict(list)
-        for field_list in entity_data.get('adapters_meta', {}).values():
-            for field in field_list:
-                for field_name, field_value in field.items():
-                    all_metas[field_name].append(field_value)
+    # in case the entity has meta data added like client_used
+    if not include_details:
+        return field_to_value
 
-        for field_name in all_metas:
-            field_to_value[f'meta_data.{field_name}'] = all_metas[field_name]
+    all_metadata = _get_all_metadata_from_entity_data(entity_data)
+    for field_name in all_metadata:
+        field_to_value[f'meta_data.{field_name}'] = all_metadata[field_name]
     return field_to_value
+
+
+def _get_all_metadata_from_entity_data(entity_data):
+    all_metas = defaultdict(list)
+    specific_datas = entity_data.get('specific_data', [])
+    for adapter_name, field_list in entity_data.get('adapters_meta', {}).items():
+        for field in field_list:
+            # filed -> field value from the list eg ('client_used' : 'users_2')
+            for field_name, field_value in field.items():
+                # get the position to insert from the specific data
+                # needed for exact pairing of the data in FE
+                position = _get_adapter_position_in_specific_data(adapter_name,
+                                                                  field_name,
+                                                                  field_value,
+                                                                  specific_datas,
+                                                                  len(all_metas[field_name]))
+                all_metas[field_name].insert(position, field_value)
+    return all_metas
+
+
+def _get_adapter_position_in_specific_data(adapter_name,  field_name, field_value, specific_datas, default_position=0):
+    """
+    search in specific data the position of the adapter client,
+    this position is very important for the data to be valid,
+    in the GUI we need to pair adapter and his data the returned position is the key for pairing the data
+    :param adapter_name: the name of the adapter
+    :param field_name: the metadata field name
+    :param field_value: the value of that field
+    :param specific_datas: the specific data dict, holds the true order of the adapters
+    :param default_position: the default position to return if no position found
+    :return: the position of the requested adapter data or the default position
+    """
+    for index, specific_data in enumerate(specific_datas):
+        if specific_data.get(field_name, '') == field_value \
+                and specific_data.get('plugin_name', '') == adapter_name:
+            return index
+    return default_position
 
 
 def _is_subjson_check_list_value(subset_list, superset_list):

@@ -1,6 +1,7 @@
-import { REQUEST_API } from '../actions'
-import { pluginMeta } from '../../constants/plugin_meta.js'
+import {REQUEST_API} from '../actions'
+import {pluginMeta} from '../../constants/plugin_meta.js'
 import shortid from 'shortid'
+import _omit from 'lodash/omit'
 
 export const HINT_ADAPTER_UP = 'HINT_ADAPTER_UP'
 export const FETCH_ADAPTERS = 'FETCH_ADAPTERS'
@@ -141,15 +142,15 @@ export const adapters = {
 					status: 'warning'
 				}
 			})
-
+			newClient['adapter_name'] = adapterId
 			state.adapters.data = newAdaptersList
 			state.clients.push(newClient)
 
 		},
 		[UPDATE_EXISTING_CLIENT](state, payload){
 			// update exsiting client
-			const { adapterId, uuidToSwap = payload.uuid, status: clientStatus, ...updatedClient } = payload
-
+			const { adapterId, uuidToSwap = payload.uuid, ...updatedClient } = payload
+			const clientStatus = updatedClient.status
 			const newAdaptersList = state.adapters.data.map(adapter => {
 				if (adapterId !== adapter.id) {
 					return adapter
@@ -176,8 +177,14 @@ export const adapters = {
 			})
 
 			state.adapters.data = newAdaptersList
-
-			state.clients.push({...updatedClient, status: clientStatus})
+			_omit(updatedClient, ['uuidToSwap'])
+			updatedClient['adapter_name'] = adapterId
+			state.clients = state.clients.map(client => {
+				if (client.uuid === uuidToSwap) {
+					return updatedClient
+				}
+				return client
+			})
 		},
 		[REMOVE_CLIENT](state, { clientId, adapterId }) {
 
@@ -230,7 +237,6 @@ export const adapters = {
 			 */
 			const { serverData } = payload
 			const { instanceName: instanceId } = serverData
-
 			const instance = getters.getInstancesMap.get(instanceId)
 			if (!payload || !payload.adapterId || !payload.serverData) { 
 				return 
@@ -246,13 +252,15 @@ export const adapters = {
 			// that way, if the server operation failed, the data will remain not updated.
 			// Moreover, why is it looks like the client id is being changed after update?!
 			// if we want to change the status we can use designated mutation
-
+			const client_id = payload.client_id
 			const client = {
+				client_id,
 				adapterId: payload.adapterId,
 				client_config: payload.serverData,
 				uuid: isNewClient ? uniqueTmpId : payload.uuid,
-				...instance,
-				status: 'warning'
+				status: 'warning',
+				node_id: instance.node_id,
+				error: null
 			}
 
 			if (isNewClient) {
@@ -267,13 +275,14 @@ export const adapters = {
 				data: payload.serverData
 			}).then(response => {
 				commit(UPDATE_EXISTING_CLIENT, {
+					client_id: response.data.client_id,
 					adapterId: payload.adapterId,
+					client_config: payload.serverData,
 					uuidToSwap: isNewClient ? uniqueTmpId : payload.uuid,
 					uuid: response.data.id,
 					status: response.data.status,
-					client_config: payload.serverData,
-					error: response.data.error,
-					node_id: instance.node_id
+					node_id: instance.node_id,
+					error: response.data.error
 				})
 				return response
 			})

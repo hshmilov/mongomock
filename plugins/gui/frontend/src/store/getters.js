@@ -81,7 +81,8 @@ export const getConnectionLabel = (state) => (clientId, adapterName) => {
     // extract the connection label saved in client config
     // get the clientId and adapter name to find the client config in state
     const adaptersClients = state.adapters.clients
-    const currentClient = adaptersClients.find( item => item.adapter === adapterName && item['client_id'] === clientId )
+    const currentClient = adaptersClients.find( item => item['adapter_name'] === adapterName
+                                                        && item['client_id'] === clientId )
     if ( !currentClient ) return ''
     const connectionLabel = currentClient['client_config']['connection_label']
     if ( !connectionLabel ) return ''
