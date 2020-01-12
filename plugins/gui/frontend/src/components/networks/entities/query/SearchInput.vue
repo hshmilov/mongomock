@@ -74,8 +74,9 @@
 
   import viewsMixin from '../../../../mixins/views'
 
-  import { mapState, mapMutations } from 'vuex'
+  import { mapState, mapMutations, mapGetters} from 'vuex'
   import { UPDATE_DATA_VIEW } from '../../../../store/mutations'
+  import { EXACT_SEARCH } from '../../../../store/getters'
 
   export default {
     name: 'XQuerySearchInput',
@@ -118,7 +119,10 @@
         },
         fields (state) {
           return state[this.module].view.fields
-        }
+        },
+      }),
+      ...mapGetters({
+        exactSearch: EXACT_SEARCH
       }),
       isSearchSimple () {
         /* Determine whether current search input value is an AQL filter, or just text */
@@ -151,8 +155,15 @@
         this.fields.forEach((field) => {
           // Filter fields containing image data, since it is not relevant for searching
           if (field.includes('image')) return
-          patternParts.push(field + ' == regex("{val}", "i")')
+          if (this.exactSearch) {
+            patternParts.push(field + ' == "{val}"')
+          } else {
+            patternParts.push(field + ' == regex("{val}", "i")')
+          }
         })
+        if (this.exactSearch) {
+          patternParts.push('search("{val}")')
+        }
         return patternParts.join(' or ')
       }
     },

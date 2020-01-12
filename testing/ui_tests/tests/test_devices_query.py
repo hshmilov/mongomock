@@ -27,8 +27,8 @@ from devops.scripts.automate_dev import credentials_inputer
 
 
 class TestDevicesQuery(TestBase):
-    SEARCH_TEXT_WINDOWS = 'windows'
-    SEARCH_TEXT_TESTDOMAIN = 'testdomain'
+    SEARCH_TEXT_WINDOWS = 'Windows'
+    SEARCH_TEXT_CB_FIRST = 'CB First'
     ERROR_TEXT_QUERY_BRACKET = 'Missing {direction} bracket'
     CUSTOM_QUERY = 'Clear_query_test'
     CISCO_PLUGIN_NAME = 'cisco_adapter'
@@ -178,7 +178,7 @@ class TestDevicesQuery(TestBase):
         self.devices_page.wait_for_table_to_load()
         all_data = self.devices_page.get_all_data()
         assert len(all_data)
-        assert any(text in x.lower() for x in all_data)
+        assert any(text in x for x in all_data)
 
     def test_search_everywhere(self):
         self.settings_page.switch_to_page()
@@ -187,12 +187,15 @@ class TestDevicesQuery(TestBase):
         self.devices_page.fill_filter(self.SEARCH_TEXT_WINDOWS)
         self.devices_page.enter_search()
         self._check_search_text_result(self.SEARCH_TEXT_WINDOWS)
-        self.devices_page.fill_filter(self.SEARCH_TEXT_TESTDOMAIN)
+        self.devices_page.fill_filter(self.SEARCH_TEXT_CB_FIRST)
         self.devices_page.open_search_list()
         self.devices_page.select_search_everywhere()
-        self._check_search_text_result(self.SEARCH_TEXT_TESTDOMAIN)
+        self._check_search_text_result(self.SEARCH_TEXT_CB_FIRST)
         self.devices_page.click_query_wizard()
-        self._check_search_text_result(self.SEARCH_TEXT_TESTDOMAIN)
+        self._check_search_text_result(self.SEARCH_TEXT_CB_FIRST)
+        self.devices_page.fill_filter(self.SEARCH_TEXT_CB_FIRST.lower())
+        self.devices_page.enter_search()
+        self._check_search_text_result(self.SEARCH_TEXT_CB_FIRST)
 
     def _test_comp_op_change(self):
         """

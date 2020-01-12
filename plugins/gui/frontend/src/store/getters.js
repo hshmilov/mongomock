@@ -71,6 +71,13 @@ export const autoQuery = (state) => {
     return state.configuration.data.system.autoQuery
 }
 
+export const EXACT_SEARCH = 'EXACT_SEARCH'
+export const exactSearch = (state) => {
+    if (!state.configuration || !state.configuration.data || !state.configuration.data.system) return false
+    return state.configuration.data.system.exactSearch
+}
+
+
 export const IS_EXPIRED = 'IS_EXPIRED'
 export const isExpired = (state) => {
     return state.expired.data && state.auth.currentUser.data.user_name !== '_axonius'

@@ -5316,6 +5316,11 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
                             'type': 'bool'
                         },
                         {
+                            'name': 'exactSearch',
+                            'title': 'Use Exact Match for Assets Search',
+                            'type': 'bool',
+                        },
+                        {
                             'name': 'defaultColumnLimit',
                             'title': 'Number of Values Displayed in each Column',
                             'type': 'string',
@@ -5365,7 +5370,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
                         }
                     ],
                     'required': ['refreshRate', 'defaultNumOfEntitiesPerPage', 'singleAdapter', 'multiLine',
-                                 'defaultSort', 'autoQuery', 'defaultColumnLimit'],
+                                 'defaultSort', 'autoQuery', 'exactSearch', 'defaultColumnLimit'],
                     'name': SYSTEM_SETTINGS,
                     'title': 'System Settings',
                     'type': 'array'
@@ -5553,6 +5558,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
                 'multiLine': False,
                 'defaultSort': True,
                 'autoQuery': True,
+                'exactSearch': False,
                 ''
                 'defaultColumnLimit': 2,
                 'percentageThresholds': {

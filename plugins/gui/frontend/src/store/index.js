@@ -64,7 +64,8 @@ import {
   GET_DATA_SCHEMA_LIST, getDataSchemaList,
   GET_DATA_SCHEMA_BY_NAME, getDataSchemaByName,
   SINGLE_ADAPTER, singleAdapter,
-  AUTO_QUERY, autoQuery,
+  AUTO_QUERY, autoQuery, 
+  EXACT_SEARCH, exactSearch,
   IS_EXPIRED, isExpired,
   GET_CONNECTION_LABEL, getConnectionLabel
 } from './getters'
@@ -105,6 +106,7 @@ export default new Vuex.Store({
     [GET_DATA_SCHEMA_BY_NAME]: getDataSchemaByName,
     [SINGLE_ADAPTER]: singleAdapter,
     [AUTO_QUERY]: autoQuery,
+    [EXACT_SEARCH]: exactSearch,
     [IS_EXPIRED]: isExpired,
     [GET_CONNECTION_LABEL]: getConnectionLabel
   },

@@ -109,6 +109,11 @@ class Parser(AstHandler):
     def get_options(self):
         return self._operator_map.get_options()
 
+    def handle_Call(self, op):
+        if op.func.id != 'search':
+            raise ParseError(f'Unsupported method call {op.func.id}')
+        return {'$text': {'$search': f'\"{op.args[0].s}\"', '$caseSensitive': False}}
+
     def handle_BoolOp(self, op):
         return {self.handle(op.op): list(map(self.handle, op.values))}
 
