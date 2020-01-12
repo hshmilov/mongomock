@@ -96,8 +96,9 @@ class InstancesPage(EntitiesPage):
         self.wait_for_table_to_load()
         instances_row = self.find_query_row_by_name(current_node_name)
         instances_row.click()
-        self.fill_text_field_by_element_id('instanceName', new_node_name)
-        self.click_button('Change Name')
+        self.fill_text_field_by_element_id('node_name', new_node_name)
+        self.click_button('Save')
+        self.wait_for_element_absent_by_css(self.MODAL_OVERLAY_CSS)
 
     def find_query_row_by_name(self, instance_name):
         return self.driver.find_element_by_xpath(self.INSTANCES_ROW_BY_NAME_XPATH.format(instance_name=instance_name))

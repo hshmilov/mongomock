@@ -3,6 +3,7 @@ import logging
 import os
 import socket
 import struct
+import time
 from typing import Dict, Iterable
 
 import paramiko
@@ -14,7 +15,7 @@ from axonius.background_scheduler import LoggedBackgroundScheduler
 from axonius.consts import instance_control_consts
 from axonius.consts.plugin_subtype import PluginSubtype
 from axonius.mixins.triggerable import RunIdentifier, Triggerable
-from axonius.plugin_base import PluginBase
+from axonius.plugin_base import PluginBase, add_rule, return_error
 from axonius.utils.files import get_local_config_file
 from axonius.utils.threading import LazyMultiLocker
 
@@ -92,7 +93,7 @@ class InstanceControlService(Triggerable, PluginBase):
 
     def __init__(self, *args, **kwargs):
         super().__init__(get_local_config_file(__file__), *args, **kwargs)
-        # pylint: disable=W0511
+        #pylint: disable=W0511
         # TODO: Figure out if this connection has be refreshed from time to time
         self.__host_ssh = get_ssh_connection()
         self.__cortex_path = os.environ['CORTEX_PATH']
@@ -143,9 +144,42 @@ class InstanceControlService(Triggerable, PluginBase):
             # else - stop
             return self.stop_adapter(sh_plugin_name)
 
+    @add_rule('instances/host/<hostname>', methods=['PUT'], should_authenticate=False)
+    def update_hostname(self, hostname):
+        """
+        update instance hostname by calling hostnamectl set-hostname.
+        """
+        try:
+            current_hostname = instance_control_consts.HOSTNAME_FILE_PATH.read_text().strip()
+            logger.info(f'Start updating axonius node hostname, current:{current_hostname} new:{hostname} . . . ')
+            cmd = f'sudo hostnamectl set-hostname {hostname}'
+            self.__exec_command_verbose(cmd)
+
+            return_val = ''
+
+            for file_sync_retry in range(5):
+                resp = self.__exec_command('cat /etc/hostname')
+                current_hostname = resp.read().decode('utf-8').strip()
+                if current_hostname == hostname:
+                    logger.debug(f'Hostname {hostname} updated sucessfuly ')
+                    return 'Success'
+                logger.debug(f'Retry {file_sync_retry}  verification for /etc/hostname updated,'
+                             f' current:{current_hostname}  new:{hostname}')
+                if file_sync_retry > 2:
+                    time.sleep(3)
+                else:
+                    time.sleep(1)
+
+            logger.error(f'Hostname {hostname} failed name changed verification')
+            return return_error(f'verify etc/hostname is updated failed  ', 500)
+        except Exception:
+            logger.exception('fatal error during hostname update ')
+            return return_error(f'fatal error during hostname update   ', 500)
+
     def __get_hostname_and_ips(self):
         logger.info('Starting Thread: Sending instance data to core.')
         return_val = 'Success'
+
         hostname = instance_control_consts.HOSTNAME_FILE_PATH.read_text().strip()
         ips = []
 
@@ -193,6 +227,20 @@ class InstanceControlService(Triggerable, PluginBase):
         """
         _, stdout, _ = self.__host_ssh.exec_command(cmd)
         return stdout
+
+    @retry(wait_fixed=10000,
+           stop_max_delay=120000,
+           retry_on_exception=retry_if_parallelism_maxed)
+    def __exec_command_verbose(self, cmd: str) -> paramiko.ChannelFile:
+        """
+        Executes a command on the host using ssh and log stdout and stderr streams .
+        command doesn't return stdout .
+        :param cmd: command to execute
+        """
+        _, stdout, stderr = self.__host_ssh.exec_command(cmd)
+        err = stderr.read().decode('utf-8').strip()
+        out = stdout.read().decode('utf-8').strip()
+        logger.debug(f'[ExecCmd] {err} ; {out} ')
 
     def start_adapter(self, adapter_name: str):
         """

@@ -34,13 +34,16 @@ from retry.api import retry_call
 from axonius.background_scheduler import LoggedBackgroundScheduler
 from axonius.consts.plugin_consts import (NODE_ID,
                                           NODE_INIT_NAME,
-                                          NODE_NAME,
+                                          NODE_STATUS,
                                           NODE_USER_PASSWORD,
+                                          NODE_NAME,
                                           PLUGIN_UNIQUE_NAME,
                                           HEAVY_LIFTING_PLUGIN_NAME,
                                           NODE_ID_PATH,
                                           NODE_ID_ENV_VAR_NAME,
-                                          PLUGIN_NAME, AXONIUS_DNS_SUFFIX)
+                                          PLUGIN_NAME,
+                                          AXONIUS_DNS_SUFFIX,
+                                          NODE_HOSTNAME, NODE_IP_LIST)
 from axonius.mixins.configurable import Configurable
 from axonius.plugin_base import (VOLATILE_CONFIG_PATH, PluginBase, add_rule,
                                  return_error)
@@ -258,6 +261,7 @@ class CoreService(Triggerable, PluginBase, Configurable):
                 '$set': {f'tags.{data["tags"]}': data["tags"]}}, upsert=True)
             return ''
         elif request.method == 'DELETE':
+
             data = self.get_request_data_as_object()
             self._get_collection('nodes_metadata').find_one_and_update({NODE_ID: node_id}, {
                 '$unset': {f'tags.{data["tags"]}': data["tags"]}})
@@ -293,7 +297,7 @@ class CoreService(Triggerable, PluginBase, Configurable):
         data = self.get_request_data_as_object()
         if request.method == 'POST':
             key = data.get('key', NODE_NAME)
-            assert key in ['hostname', NODE_NAME, 'ips', 'status']
+            assert key in [NODE_HOSTNAME, NODE_STATUS, NODE_NAME, NODE_IP_LIST]
             self._set_node_metadata(node_id, key, data['value'])
             return ''
         else:
@@ -307,7 +311,6 @@ class CoreService(Triggerable, PluginBase, Configurable):
                 self._set_node_metadata(node_id, NODE_USER_PASSWORD, password)
             else:
                 password = node_metadata.get(NODE_USER_PASSWORD)
-
             return password
 
     @add_rule('system_id')

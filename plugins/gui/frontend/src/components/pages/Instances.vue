@@ -1,33 +1,69 @@
 <template>
-    <x-page title="instances" class="x-instances">
-        <x-table-wrapper title="Edit, Deactivate or Reactivate Instances" :loading="loading">
-            <template slot="actions">
-                <x-button id="get-connection-string" @click="connecting= !connecting" :disabled="isReadOnly">Connect Node</x-button>
-                <x-button link v-if="showActivationOption === 'Activated'" @click="deactivateServers">Deactivate</x-button>
-                <x-button link v-if="showActivationOption === 'Deactivated'" @click="reactivateServers">Reactivate</x-button>
-            </template>
-            <x-table v-if="instances" slot="table" id-field="node_id" :data="instances" :fields="fields"
-                     v-model="isReadOnly ? undefined : selectedInstance"
-                     :on-click-row="isReadOnly ? undefined : showNameChangeModal"/>
-        </x-table-wrapper>
-        <x-modal v-if="renaming" @close="closeNameChange" @confirm="instanceNameChange" approve-text="Change Name">
-            <div slot="body">How do you want to name this instance?<br/><br/>
-                <input class="form-control" id="instanceName" v-model="newInstanceName">
-            </div>
-        </x-modal>
-        <x-modal v-if="connecting && !isReadOnly" @close="connecting= !connecting" @confirm="connecting= !connecting">
-            <div slot="body">How to connect a new node<br/><br/>
-                1. Deploy another Axonius machine on the required subnet.<br/>
-                2. Log in to that machine via ssh with these credentials: node_maker:M@ke1tRain<br/>
-                3. Paste a connection string that looks like (with spaces): {{ hostIP }} {{ connectionEncriptionKey }}
-                &lt;User-Nickname&gt;
-            </div>
-            <div slot="footer">
-                <x-button @click="connecting= !connecting">OK</x-button>
-            </div>
-            <button>Copy To Clipboard</button>
-        </x-modal>
-    </x-page>
+  <x-page
+    title="instances"
+    class="x-instances"
+  >
+    <x-table-wrapper
+      title="Edit, Deactivate or Reactivate Instances"
+      :loading="loading"
+    >
+      <template slot="actions">
+        <x-button
+          id="get-connection-string"
+          :disabled="isReadOnly"
+          @click="connecting= !connecting"
+        >Connect Node</x-button>
+        <x-button
+          v-if="showActivationOption === 'Activated'"
+          link
+          @click="deactivateServers"
+        >Deactivate</x-button>
+        <x-button
+          v-if="showActivationOption === 'Deactivated'"
+          link
+          @click="reactivateServers"
+        >Reactivate</x-button>
+      </template>
+      <x-table
+        v-if="instances"
+        slot="table"
+        v-model="isReadOnly ? undefined : selectedInstance"
+        id-field="node_id"
+        :data="instances"
+        :fields="fields"
+        :on-click-row="isReadOnly ? undefined : showNameChangeModal"
+      />
+    </x-table-wrapper>
+    <x-modal
+      v-if="instanceDetails.nodeIds"
+      approve-text="Save"
+      @close="closeNameChange"
+      @confirm="instanceNameChange"
+    >
+      <div slot="body">
+        <x-form
+          v-model="instanceDetails"
+          :schema="instanceDetailsSchema"
+        />
+      </div>
+    </x-modal>
+    <x-modal
+      v-if="connecting && !isReadOnly"
+      @close="connecting= !connecting"
+      @confirm="connecting= !connecting"
+    >
+      <div slot="body">How to connect a new node<br><br>
+        1. Deploy another Axonius machine on the required subnet.<br>
+        2. Log in to that machine via ssh with these credentials: node_maker:M@ke1tRain<br>
+        3. Paste a connection string that looks like (with spaces): {{ hostIP }} {{ connectionEncriptionKey }}
+        &lt;User-Nickname&gt;
+      </div>
+      <div slot="footer">
+        <x-button @click="connecting= !connecting">OK</x-button>
+      </div>
+      <button>Copy To Clipboard</button>
+    </x-modal>
+  </x-page>
 </template>
 
 <script>
@@ -36,6 +72,7 @@
     import xTable from '../axons/tables/Table.vue'
     import xButton from '../axons/inputs/Button.vue'
     import xModal from '../axons/popover/Modal.vue'
+    import xForm from '../neurons/schema/Form.vue'
     import axios from 'axios'
 
     import {mapState, mapMutations, mapActions} from 'vuex'
@@ -43,8 +80,8 @@
     import {SHOW_TOASTER_MESSAGE} from "../../store/mutations";
 
     export default {
-        name: 'x-instances',
-        components: {xPage, xTableWrapper, xTable, xButton, xModal},
+        name: 'XInstances',
+        components: {xPage, xTableWrapper, xTable, xButton, xModal, xForm},
         computed: {
             ...mapState({
                 isReadOnly(state) {
@@ -80,33 +117,64 @@
                 loading: true,
                 selectedInstance: [],
                 instances: null,
-                renaming: false,
                 connecting: false,
-                newInstanceName: '',
+                instanceDetails: {
+                    nodeIds: null,
+                    node_name: '',
+                    hostname: ''
+                },
+                instanceDetailsSchema: {
+                    type: 'array',
+
+                    items: [{
+                        type: 'string',
+                        name: 'node_name',
+                        title: 'Instance Name',
+                    }, {
+                        type: 'string',
+                        name: 'hostname',
+                        title: 'Hostname',
+                    }
+                     ], required: [
+                    'node_name',
+                    'hostname'
+                  ],
+                },
                 machineIP: '',
                 connectionKey: '',
-                instanceChangeId: null
             }
         },
         methods: {
             ...mapMutations({showToasterMessage: SHOW_TOASTER_MESSAGE}),
             ...mapActions({fetchData: REQUEST_API}),
             instanceNameChange() {
-                axios.post('/api/instances', {
-                    node_id: this.instanceChangeId,
-                    key: 'node_name',
-                    value: this.newInstanceName
+                        this.fetchData({
+                            rule: 'instances',
+                            method: 'POST',
+                            data: { ...this.instanceDetails }
                 }).then(() => {
                     this.loading = true
                     this.loadData()
-                    this.renaming = false
+                    this.initInstanceDetails()
+                }).catch((errorResponse) => {
+                          this.showToasterMessage({ message: errorResponse.response.data.message})
+                          this.closeNameChange()
                 })
-                this.instanceChangeId = null
-                this.newInstanceName = ''
+            },
+            instanceHostNameValidity(valid){
+              this.validHostName = valid
+            },
+
+            initInstanceDetails () {
+                this.instanceDetails.nodeIds = null
+                this.instanceDetails.node_name = ''
+                this.instanceDetails.hostname = ''
             },
             showNameChangeModal(instanceId) {
-                this.instanceChangeId = instanceId
-                this.renaming = true
+                const currentInstance = this.instances.find(instance => instance.node_id === instanceId)
+                this.instanceDetails.nodeIds = instanceId
+                this.instanceDetails.node_name = currentInstance.node_name
+                this.instanceDetails.hostname = currentInstance.hostname
             },
             deactivateServers() {
                 if (this.isReadOnly) return
@@ -117,7 +185,7 @@
                   `,
                     confirmText: 'Deactivate',
                     onConfirm: () => {
-                        this.doDeactivateServers()
+                       this.doDeactivateServers()
                     }
                 })
             },
@@ -134,10 +202,10 @@
                 })
             },
             doReactivateServers(){
-                axios.post('/api/instances', {
-                    'node_id': this.selectedInstance[0],
-                    'key': 'status',
-                    'value': 'Activated'
+                this.fetchData({
+                        rule: 'instances',
+                        method: 'POST',
+                        data: { 'nodeIds': this.selectedInstance[0],'status': 'Activated'}
                 }).then(() => this.loadData())
             },
             doDeactivateServers() {
@@ -152,9 +220,7 @@
                 })
             },
             closeNameChange() {
-                this.instanceChangeId = null
-                this.newInstanceName = ''
-                this.renaming = false
+                this.initInstanceDetails()
             },
             loadData() {
                 this.fetchData({

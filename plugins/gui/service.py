@@ -78,12 +78,13 @@ from axonius.consts.plugin_consts import (AGGREGATOR_PLUGIN_NAME,
                                           CORE_UNIQUE_NAME,
                                           DEVICE_CONTROL_PLUGIN_NAME, GUI_PLUGIN_NAME,
                                           GUI_SYSTEM_CONFIG_COLLECTION,
-                                          METADATA_PATH, NODE_ID, NODE_NAME,
+                                          METADATA_PATH, NODE_ID, NODE_NAME, NODE_HOSTNAME,
                                           PLUGIN_NAME, PLUGIN_UNIQUE_NAME, PROXY_SETTINGS,
                                           STATIC_CORRELATOR_PLUGIN_NAME,
                                           STATIC_USERS_CORRELATOR_PLUGIN_NAME,
                                           SYSTEM_SCHEDULER_PLUGIN_NAME,
-                                          SYSTEM_SETTINGS, REPORTS_PLUGIN_NAME, EXECUTION_PLUGIN_NAME, PROXY_VERIFY)
+                                          SYSTEM_SETTINGS, REPORTS_PLUGIN_NAME, EXECUTION_PLUGIN_NAME, PROXY_VERIFY,
+                                          NODE_DATA_INSTANCE_ID, NODE_STATUS)
 from axonius.consts.plugin_subtype import PluginSubtype
 from axonius.consts.report_consts import (ACTIONS_FAILURE_FIELD, ACTIONS_FIELD,
                                           ACTIONS_MAIN_FIELD,
@@ -342,6 +343,20 @@ def filter_by_name(names, additional_filter=None):
 
 if os.environ.get('HOT') == 'true':
     session = None
+
+
+def _is_valid_node_hostname(hostname):
+    """
+    verify hostname is a valid lnx hostname pattern .
+    """
+    import re
+    if len(hostname) > 255:
+        return False
+    if hostname[-1] == '.':
+        hostname = hostname[:-1]
+    # pylint: disable=C4001,W1401
+    allowed = re.compile("(?!-)[A-Z\d-]{1,63}(?<!-)$", re.IGNORECASE)
+    return all(allowed.match(x) for x in hostname.split('.'))
 
 
 class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
@@ -4892,6 +4907,46 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
     def instances(self):
         return self._instances()
 
+    def _is_node_activated(self, target_node_id=None) -> bool:
+
+        if target_node_id == self.node_id:
+            logger.debug(f'node id {target_node_id} is The MASTER ')
+            return True
+
+        node = self._get_db_connection()['core']['nodes_metadata'].find_one({NODE_ID: target_node_id})
+
+        if node is None or not node.get(NODE_STATUS, ACTIVATED_NODE_STATUS) == ACTIVATED_NODE_STATUS:
+            logger.error(f'node id {target_node_id} is not Activated ')
+            return False
+        logger.debug(f'node id {target_node_id} is online  ')
+        return True
+
+    def _update_hostname_on_node(self, instance_data=None):
+        node_id = instance_data.get(NODE_DATA_INSTANCE_ID, None)
+        logger.info(f'Starting to update hostname for target node id {node_id}')
+        new_hostname = str(instance_data.get(NODE_HOSTNAME))
+
+        url = f'find_plugin_unique_name/nodes/{node_id}/plugins/instance_control'
+        node_unique_name = self.request_remote_plugin(url).json().get('plugin_unique_name')
+
+        if node_unique_name is None:
+            logger.error(f'unable to allocate target instance control plugin_unique_name with id  {node_id}')
+            return False
+
+        if self._is_node_activated(node_id) and node_unique_name:
+            resp = self.request_remote_plugin(f'instances/host/{new_hostname}',
+                                              node_unique_name,
+                                              method='put',
+                                              raise_on_network_error=True)
+            if resp.status_code != 200:
+                logger.error(f'failure to update node hostname response '
+                             f'back from instance control {str(resp.content)} ')
+            else:
+                return True
+        else:
+            logger.error('node is offline aborting hostname update')
+        return False
+
     def _instances(self):
         if request.method == 'GET':
             db_connection = self._get_db_connection()
@@ -4908,14 +4963,35 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
                 }
             })
         elif request.method == 'POST':
+
             data = self.get_request_data_as_object()
 
-            self.request_remote_plugin(f'node/{data["node_id"]}', method='POST',
-                                       json={'key': data['key'], 'value': data['value']})
+            def update_instance(instance_data=None, attribute=None):
+                if instance_data.get(attribute, None):
+                    node_id = instance_data.get(NODE_DATA_INSTANCE_ID)
+                    self.request_remote_plugin(f'node/{node_id}', method='POST',
+                                               json={'key': attribute, 'value': instance_data.get(attribute)})
+                else:
+                    logger.debug(f'{attribute} is null skip update. ')
+
+            # REACTIVATE NODE
+            if NODE_DATA_INSTANCE_ID in data and NODE_STATUS in data:
+                update_instance(instance_data=data, attribute=NODE_STATUS)
+            # UPDATE NODE NAME AND HOSTNAME
+            elif NODE_DATA_INSTANCE_ID in data:
+                update_instance(instance_data=data, attribute=NODE_NAME)
+                if _is_valid_node_hostname(data[NODE_HOSTNAME]):
+                    if self._update_hostname_on_node(instance_data=data):
+                        update_instance(instance_data=data, attribute=NODE_HOSTNAME)
+                    else:
+                        return return_error(f'Failed to change hostname', 500)
+                else:
+                    return return_error(f'Illegal hostname value entered', 500)
             return ''
+
         elif request.method == 'DELETE':
             data = self.get_request_data_as_object()
-            node_ids = data['nodeIds']
+            node_ids = data[NODE_DATA_INSTANCE_ID]
             if self.node_id in node_ids:
                 return return_error('Can\'t Deactivate Master.', 400)
 
