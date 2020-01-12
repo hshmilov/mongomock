@@ -93,8 +93,6 @@ class ReportGenerator:
                 self._get_saved_views_data(include_all_saved_views,
                                            saved_views, attach_views_csvs) if include_saved_views else None
         }
-        if not include_saved_views:
-            log_metric(logger, 'query.report', None)
         if report.get('adapters'):
             report_data['adapter_data'] = self.report_params.get('adapters')
         return report_data
