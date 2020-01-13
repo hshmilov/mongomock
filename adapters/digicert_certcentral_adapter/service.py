@@ -7,11 +7,13 @@ from axonius.clients.rest.connection import RESTException
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.fields import Field
 from axonius.utils.files import get_local_config_file
-from axonius.utils.parsing import is_valid_ip, parse_date
+from axonius.utils.parsing import parse_date
 from digicert_certcentral_adapter.client_id import get_client_id
 from digicert_certcentral_adapter.connection import DigicertCertcentralConnection
-from digicert_certcentral_adapter.consts import REST_PATH_DISCOVERY_API
+from digicert_certcentral_adapter.consts import REST_PATH_DISCOVERY_API, ENUM_UNKNOWN_VALUE_LOG_PREFIX, \
+    ENUM_CERT_RATING, ENUM_CERT_STATUS, ENUM_CERT_VULNS, ENUM_BLACKLISTED_VALUE_LOG_PREFIX
 from digicert_certcentral_adapter.structures import DigicertScan, Endpoint, DigicertScannedCertificate
+from digicert_certcentral_adapter.utils import partition
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -115,16 +117,41 @@ class DigicertCertcentralAdapter(AdapterBase):
         }
 
     @staticmethod
+    def _parse_enum(field_name: str, device_raw: dict, whitelist: list):
+        values_list = device_raw.get(field_name)
+        # remove empty values
+        if not values_list:
+            return None
+
+        # split and strip comma separated string (implicitly non empty) values
+        if isinstance(values_list, str):
+            values_list = list(map(str.strip, values_list.split(',')))
+
+        # log invalid values and remove
+        if not isinstance(values_list, list):
+            logger.warning(f'{ENUM_UNKNOWN_VALUE_LOG_PREFIX}'
+                           f' Unexpected values retrieved for field "{field_name}" in raw: {device_raw}')
+            return None
+
+        # filter out blacklisted values
+        blacklisted, whitelisted = list(map(list, partition(whitelist.__contains__, values_list)))
+        if blacklisted:
+            logger.warning(f'{ENUM_BLACKLISTED_VALUE_LOG_PREFIX}'
+                           f' Unknown "{field_name}" value encountered "{",".join(blacklisted)}"'
+                           f' for whitelist {whitelist} in raw: {device_raw}.')
+        return whitelisted
+
+    @staticmethod
     def _parse_endpoint(device_raw):
         try:
             endpoint = Endpoint()
-            endpoint.server_id = device_raw.get('serverId', '')
-            endpoint.hardware_type = device_raw.get('deviceType', '')
-            endpoint.server_software = device_raw.get('serverName', '')
-            endpoint.server_version = device_raw.get('serverVersion', '')
-            endpoint.domain_name = device_raw.get('domainName', '')
-            endpoint.port_status = device_raw.get('portStatus', '')
-            endpoint.security_rating = device_raw.get('serverSecurityRating', '')
+            endpoint.server_id = device_raw.get('serverId')
+            endpoint.hardware_type = device_raw.get('deviceType')
+            endpoint.server_software = device_raw.get('serverName')
+            endpoint.server_version = device_raw.get('serverVersion')
+            endpoint.domain_name = device_raw.get('domainName')
+            endpoint.port_status = device_raw.get('portStatus')
+            endpoint.security_rating = device_raw.get('serverSecurityRating')
             return endpoint
         except Exception:
             logger.exception(f'Failed to parse endpoint for device {device_raw}')
@@ -135,13 +162,13 @@ class DigicertCertcentralAdapter(AdapterBase):
         try:
             cert = DigicertScannedCertificate()
 
-            cert.cert_id = device_raw.get('certificateId', '')
-            cert.cert_rating = device_raw.get('certRating', '')
-            cert.cert_status = device_raw.get('certStatus', '')
+            cert.cert_id = device_raw.get('certificateId')
+            cert.cert_rating = DigicertCertcentralAdapter._parse_enum('certRating', device_raw, ENUM_CERT_RATING)
+            cert.cert_status = DigicertCertcentralAdapter._parse_enum('certStatus', device_raw, ENUM_CERT_STATUS)
 
-            cert.cert_ca = device_raw.get('ca', '')
-            cert.cert_cn = device_raw.get('commonName', '')
-            cert.cert_san = device_raw.get('san').split(',') if device_raw.get('san') else []
+            cert.cert_ca = device_raw.get('ca')
+            cert.cert_cn = device_raw.get('commonName')
+            cert.cert_san = device_raw.get('san').split(',') if device_raw.get('san') else None
             cert.cert_org = device_raw.get('org')
             try:
                 cert.cert_expiry_date = parse_date(device_raw.get('certExpiryDate'))
@@ -156,16 +183,19 @@ class DigicertCertcentralAdapter(AdapterBase):
     def _parse_scan(device_raw):
         try:
             scan = DigicertScan()
-            scan.scan_id = device_raw.get('scanId', '')
-            scan.scan_name = device_raw.get('scanName', '')
+            scan.scan_id = device_raw.get('scanId')
+            scan.scan_name = device_raw.get('scanName')
             try:
                 scan.scan_first_discovery_date = parse_date(device_raw.get('firstDiscoveredDate'))
             except Exception:
                 logger.exception(f'Failed to parse firstDiscoveredDate for {device_raw} ')
-            scan.scan_protocol = device_raw.get('service', '')
-            scan.scan_vulnerabilities = filter(lambda val: val not in ['NO_VULNERABILITY_FOUND'],
-                                               device_raw.get('vulnerabilityName').split(',')) \
-                if device_raw.get('vulnerabilityName') else []
+            scan.scan_protocol = device_raw.get('service')
+            scan_vulnerabilities = DigicertCertcentralAdapter._parse_enum(
+                'vulnerabilityName', device_raw, ENUM_CERT_VULNS)
+            if scan_vulnerabilities:
+                # Filter out sparse values
+                scan.scan_vulnerabilities = list(filter(lambda val: val not in ['NO_VULNERABILITY_FOUND'],
+                                                        scan_vulnerabilities))
             return scan
         except Exception:
             logger.exception(f'Failed to parse scan for device {device_raw}')
@@ -175,25 +205,25 @@ class DigicertCertcentralAdapter(AdapterBase):
     def _fill_generic_fields(device, device_raw):
         try:
             device_id = device_raw.get('certificateId')
-            if device_id is None:
+            if not device_id:
                 message = f'Bad device with no ID {device_raw}'
                 logger.warning(message)
                 raise Exception(message)
 
-            ip_address = device_raw.get('ipAddress', '')
-            device.id = f'{device_id}_{ip_address}'
+            ip_address = device_raw.get('ipAddress')
+            device.id = f'{device_id}_{ip_address or ""}'
+
+            try:
+                device.add_ips_and_macs(ips=[ip_address])
+            except Exception:
+                logger.exception(f'Failed to parse IP for device {device_raw}')
+
             device.hostname = device_raw.get('domainName')
 
             try:
                 device.figure_os(' '.join(device_raw.get(field, '') for field in ['os', 'osVersion']))
             except Exception:
                 logger.exception(f'Failed to parse OS for device {device_raw}')
-
-            try:
-                if ip_address and is_valid_ip(ip_address):
-                    device.add_ips_and_macs(ips=[ip_address])
-            except Exception:
-                logger.exception(f'Failed to parse IP for device {device_raw}')
 
             try:
                 if device_raw.get('port'):
@@ -211,7 +241,7 @@ class DigicertCertcentralAdapter(AdapterBase):
 
             try:
                 if device_raw.get('deviceType'):
-                    device.add_connected_hardware(name=device_raw.get('deviceType'))
+                    device.device_model = device_raw.get('deviceType')
             except Exception:
                 logger.exception(f'Failed to parse deviceType for device {device_raw}')
 

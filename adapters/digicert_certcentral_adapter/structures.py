@@ -2,6 +2,7 @@ import datetime
 
 from axonius.fields import Field, ListField
 from axonius.smart_json_class import SmartJsonClass
+from digicert_certcentral_adapter.consts import ENUM_CERT_STATUS, ENUM_CERT_RATING, ENUM_CERT_VULNS
 
 
 class Endpoint(SmartJsonClass):
@@ -38,8 +39,7 @@ class DigicertScan(SmartJsonClass):
                           description='Communication protocol, such as https.')
     scan_vulnerabilities = ListField(str, 'Endpoint vulnerabilities found',
                                      description='Vulnerabilities found based on known endpoint details.',
-                                     enum=['BEAST', 'BREACH', 'CRIME', 'DROWN', 'FREEK', 'Heartbleed', 'LogJam',
-                                           'POODLE(SSLv3)', 'POODLE(TLS)', 'RC4', 'SWEET32', 'NO_VULNERABILITY_FOUND'])
+                                     enum=ENUM_CERT_VULNS)
 
 
 class Certificate(SmartJsonClass):
@@ -64,7 +64,7 @@ class DigicertScannedCertificate(Certificate):
     cert_rating = Field(str, 'Certificate Security rating',
                         description='Certificate security rating, '
                                     'based on industry standards and the certificate\'s settings.',
-                        enum=['At risk', 'Not secure', 'Secure', 'Very secure'])
+                        enum=ENUM_CERT_RATING)
     cert_status = Field(str, 'Certificate status',
                         description='Status of the certificate found on the endpoint.',
-                        enum=['VALID', 'REVOKED', 'EXPIRED', 'UNDETERMINED'])
+                        enum=ENUM_CERT_STATUS)

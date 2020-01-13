@@ -112,7 +112,7 @@ class DigicertCertcentralConnection(RESTConnection):
         try:
             for response in self._paginated_post(REST_PATH_LIST_ENDPOINTS, limit=max_devices, body_params=body_params):
                 devices_chunk = response.get('onlineIPPortDetailsDTOList') or None
-                if (devices_chunk is None) or (not isinstance(devices_chunk, list)):
+                if not isinstance(devices_chunk, list):
                     logger.warning(f'Retrieved invalid "onlineIPPortDetailsDTOList" for response {response}')
                     return
                 for raw_device in devices_chunk:
