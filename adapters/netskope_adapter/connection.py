@@ -42,6 +42,7 @@ class NetskopeConnection(RESTConnection):
         while offset < MAX_NUMBER_OF_DEVICES:
             try:
                 yield from self._yield_data_from_offset(offset)
+                offset += DEVICE_PER_PAGE
             except Exception:
                 logger.info(f'Break at offset {offset}', exc_info=True)
                 break
