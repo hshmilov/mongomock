@@ -52,6 +52,7 @@
         :menu-props="{
           closeOnClick: true
         }"
+        :placeholder="placeholder"
         item-text="title"
         item-value="name"
         multiple

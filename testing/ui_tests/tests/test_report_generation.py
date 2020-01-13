@@ -244,6 +244,13 @@ class TestReportGeneration(TestBase):
             self.wait_for_adapter_down(ui_consts.STRESSTEST_ADAPTER)
             self.wait_for_adapter_down(ui_consts.STRESSTEST_SCANNER_ADAPTER)
 
+    def _test_reports_dashboard_placeholder(self):
+        self.reports_page.switch_to_page()
+        self.reports_page.click_new_report()
+
+        self.reports_page.click_include_dashboard()
+        assert self.reports_page.get_spaces_select_placeholder() == 'Select spaces (or empty for all)'
+
     def test_spaces_in_pdf(self):
         stress = stresstest_service.StresstestService()
         stress_scanner = stresstest_scanner_service.StresstestScannerService()
@@ -262,6 +269,7 @@ class TestReportGeneration(TestBase):
             self.dashboard_page.find_space_header(3).click()
             self.dashboard_page.add_segmentation_card('Devices', 'OS: Type', self.CUSTOM_SPACE_PANEL_NAME)
 
+            self._test_reports_dashboard_placeholder()
             self.reports_page.create_report(ReportConfig(report_name=self.TEST_REPORT_SPACES, add_dashboard=True,
                                                          spaces=[self.TEST_DASHBOARD_SPACE]))
 

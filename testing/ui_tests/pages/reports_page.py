@@ -322,8 +322,14 @@ class ReportsPage(EntitiesPage):
     def click_report_download(self):
         self.driver.find_element_by_id(self.REPORT_DOWNLOAD_ID).click()
 
+    def get_spaces_select(self):
+        return self.find_element_following_label(self.SPACES_LABEL)
+
     def click_spaces_select(self):
-        self.find_element_following_label(self.SPACES_LABEL).click()
+        self.get_spaces_select().click()
+
+    def get_spaces_select_placeholder(self):
+        return self.get_spaces_select().find_element_by_tag_name('input').get_attribute('placeholder')
 
     def create_report(self,
                       report_config: ReportConfig,
