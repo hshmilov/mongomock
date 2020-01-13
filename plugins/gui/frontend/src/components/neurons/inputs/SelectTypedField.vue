@@ -162,7 +162,7 @@
         .field-select {
             flex: 1 0 auto;
             width: 180px;
-            margin-left: -2px;
+            margin-left: -1px;
             border-bottom-left-radius: 0;
             border-top-left-radius: 0;
         }

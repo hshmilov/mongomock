@@ -30,18 +30,17 @@ class EntitiesPage(Page):
 
     QUERY_WIZARD_ID = 'query_wizard'
     QUERY_EXPRESSIONS_CSS = '.x-filter .x-expression'
-    QUERY_CONDITIONS_CSS = '.x-condition'
-    QUERY_FIELD_DROPDOWN_CSS = '.x-dropdown.x-select.field-select'
+    QUERY_CONDITIONS_CSS = '.x-condition__child'
+    QUERY_FIELD_DROPDOWN_CSS = '.x-select.field-select'
     QUERY_ADAPTER_DROPDOWN_CSS = '.x-select-typed-field .x-dropdown.x-select.x-select-symbol'
     QUERY_COMP_OP_DROPDOWN_CSS = 'div.x-select.expression-comp'
-    QUERY_DATE_PICKER_CSS = '.expression-value .md-datepicker .md-input'
-    QUERY_VALUE_COMPONENT_INPUT_CSS = '.expression-value input'
-    QUERY_VALUE_COMPONENT_CSS = '.expression-value'
-    QUERY_FIELD_DROPDOWN_SELECT_CSS = '#query_value .x-select-trigger > div'
+    QUERY_DATE_PICKER_CSS = '.x-condition-function .argument .md-datepicker .md-input'
+    QUERY_VALUE_COMPONENT_INPUT_CSS = '.x-condition-function .argument input'
+    QUERY_VALUE_COMPONENT_CSS = '.x-condition-function .argument'
     QUERY_SEARCH_INPUT_CSS = '#query_list .input-value'
-    EXPRESSION_INPUT_INT_TRIGGER_CSS = '.expression-value .x-select-trigger'
-    EXP1_TRIGGER_CSS = '.expression-value > .trigger.arrow'
-    EXP2_INPUT_CSS = '.expression-value .content.expand .x-search-input.x-select-search .input-value'
+    EXPRESSION_INPUT_INT_TRIGGER_CSS = '.x-condition-function .argument .x-select-trigger'
+    EXP1_TRIGGER_CSS = '.x-condition-function .argument > .trigger.arrow'
+    EXP2_INPUT_CSS = '.x-condition-function .argument .content.expand .x-search-input.x-select-search .input-value'
 
     QUERY_SEARCH_DROPDOWN_XPATH = '//div[@id=\'query_select\']//div[contains(text(),\'{query_name_text}\')]'
     QUERY_SEARCH_EVERYWHERE_CSS = 'div.x-menu>div>.item-content'
@@ -50,7 +49,7 @@ class EntitiesPage(Page):
     QUERY_BRACKET_LEFT_CSS = '.expression-bracket-left'
     QUERY_BRACKET_RIGHT_CSS = '.expression-bracket-right'
     QUERY_NOT_CSS = '.expression-not'
-    QUERY_OBJ_CSS = '.expression-obj'
+    QUERY_CONTEXT_CSS = '.expression-context'
     QUERY_REMOVE_EXPRESSION_CSS = '.x-button.expression-remove'
     QUERY_LOGIC_DROPDOWN_CSS = 'div.x-select.x-select-logic'
     QUERY_ERROR_CSS = '.x-filter .error-text'
@@ -303,7 +302,7 @@ class EntitiesPage(Page):
                            text, parent=parent)
 
     def select_query_value_without_search(self, value, parent=None):
-        self.select_option_without_search(self.QUERY_FIELD_DROPDOWN_SELECT_CSS,
+        self.select_option_without_search(self.QUERY_VALUE_COMPONENT_CSS,
                                           self.DROPDOWN_SELECTED_OPTION_CSS,
                                           value, parent=parent)
 
@@ -422,8 +421,17 @@ class EntitiesPage(Page):
             expression_element = self.driver
         expression_element.find_element_by_css_selector(self.QUERY_NOT_CSS).click()
 
-    def toggle_obj(self, expression_element):
-        expression_element.find_element_by_css_selector(self.QUERY_OBJ_CSS).click()
+    def select_context_obj(self, expression_element):
+        self.select_option_without_search(self.QUERY_CONTEXT_CSS,
+                                          self.DROPDOWN_SELECTED_OPTION_CSS,
+                                          'Complex Field',
+                                          parent=expression_element)
+
+    def select_context_all(self, expression_element):
+        self.select_option_without_search(self.QUERY_CONTEXT_CSS,
+                                          self.DROPDOWN_SELECTED_OPTION_CSS,
+                                          'Aggregated Data',
+                                          parent=expression_element)
 
     def remove_query_expression(self, expression_element):
         expression_element.find_element_by_css_selector(self.QUERY_REMOVE_EXPRESSION_CSS).click()

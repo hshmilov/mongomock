@@ -1,5 +1,6 @@
 import _find from 'lodash/find'
 import _matchesProperty from 'lodash/matchesProperty'
+import _get from 'lodash/get'
 
 import {INCLUDE_OUDATED_MAGIC} from '../constants/filter'
 import Expression from "./expression";
@@ -27,7 +28,7 @@ const QueryBuilder = function(schema, expressions, meta, prevExpressionsQuery) {
             if(recompile) {
                 if (!expression.fieldType ||
                   !expression.field ||
-                  (!expression.compOp && !expression.obj && expression.field !== 'saved_query')) {
+                  (!expression.compOp && !expression.context && expression.field !== 'saved_query')) {
                     return
                 }
 
@@ -49,15 +50,32 @@ const QueryBuilder = function(schema, expressions, meta, prevExpressionsQuery) {
                     return
                 }
 
-                if (expression.obj) {
-                    expression.nested.forEach(nestedExpression => {
-                        if (nestedExpression.expression.field) {
-                            let nestedFieldSchema = _find(fieldSchema.items.items, _matchesProperty('name', nestedExpression.expression.field))
-                            nestedExpression.condition = compileCondition(nestedExpression.expression, nestedFieldSchema)
-                        } else {
-                            nestedExpression.condition = ''
-                        }
-                    })
+                if (expression.context) {
+                    if (expression.context === 'OBJ') {
+                        expression.children.forEach(child => {
+                            if (child.expression.field) {
+                                let childFieldSchema = _find(fieldSchema.items.items, _matchesProperty('name', child.expression.field))
+                                child.condition = compileCondition(child.expression, childFieldSchema)
+                            } else {
+                                child.condition = ''
+                            }
+                        })
+                    } else {
+                        expression.children.forEach(child => {
+                            const childField = _get(child, 'expression.field')
+                            if (childField) {
+                                const adapterSchema = fields.find(field => field.name === childField)
+                                const childFieldCompileName = childField.replace(`adapters_data.${expression.field}`, 'data')
+                                child.condition = compileCondition({
+                                    ...child.expression, field: childFieldCompileName
+                                }, {
+                                    ...adapterSchema, name: childFieldCompileName
+                                })
+                            } else {
+                                child.condition = ''
+                            }
+                        })
+                    }
                 }
 
                 let expressionResult = Expression(
@@ -78,8 +96,6 @@ const QueryBuilder = function(schema, expressions, meta, prevExpressionsQuery) {
                     bracketWeights.push(expression.bracketWeight)
                 }
             }
-
-
         })
 
         let filter = ''
@@ -137,15 +153,13 @@ const QueryBuilder = function(schema, expressions, meta, prevExpressionsQuery) {
             expression.fieldType,
             expression.compOp,
             expression.value,
-            expression.filteredAdapters,
-            meta ? meta.uniqueAdapters : false
+            expression.filteredAdapters
         )
         let conditionError = conditionCalculator.formatCondition()
-        if(conditionError){
+        if (conditionError) {
             throw conditionError
         }
-
-        return !expression.obj ? conditionCalculator.composeCondition() : ''
+        return !expression.context ? conditionCalculator.composeCondition() : ''
     }
 
     const getError = () => {

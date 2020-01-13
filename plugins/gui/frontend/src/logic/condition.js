@@ -1,8 +1,10 @@
 import IP from 'ip'
 
 import { getExcludedAdaptersFilter } from '../constants/utils'
-import {AGGREGATED_FIELDS_CONVERTER, compOps, opTitleTranslation} from '../constants/filter'
-import {pluginTitlesToNames} from "../constants/plugin_meta";
+import {compOps, opTitleTranslation} from '../constants/filter'
+import {pluginTitlesToNames} from "../constants/plugin_meta"
+
+import _isEmpty from 'lodash/isEmpty'
 
 /**
  * A module that calculates a single condition in an expression
@@ -12,11 +14,10 @@ import {pluginTitlesToNames} from "../constants/plugin_meta";
  * @param {string} compOp - the compare operator (equals, contains...)
  * @param {string} value - the value of the condition
  * @param {array} filteredAdapters - the filtered out adapters (if there are any)
- * @param {boolean} isUniqueAdapters - is the unique adapters flag is up (for the aggregated fields)
  * @return {{formatCondition: function, composeCondition: function}}
  * @constructor
  */
-const Condition = function(field, fieldSchema, adapter, compOp, value, filteredAdapters, isUniqueAdapters) {
+const Condition = function(field, fieldSchema, adapter, compOp, value, filteredAdapters) {
     const operator = getOpsMap(fieldSchema)[compOp]
     let processedValue = ''
 
@@ -71,13 +72,14 @@ const Condition = function(field, fieldSchema, adapter, compOp, value, filteredA
     }
 
     const formatIn = () => {
-        let values = value.match(/(\\,|[^,])+/g)
-        if(field === 'adapters'){
-            values = values.map(value => {
-                return  pluginTitlesToNames()[value.trim()]
-            }).filter(value => value != null)
+        if (!value) {
+            return ''
         }
-        if(['integer', 'number'].includes(fieldSchema.type)){
+        let values = value.match(/(\\,|[^,])+/g)
+        if (field === 'adapters') {
+            values = values.map(adapter => pluginTitlesToNames[adapter.trim()]).filter(value => value)
+        }
+        if (['integer', 'number'].includes(fieldSchema.type)) {
             processedValue = values.map(value => parseFloat(value)).filter(value => !isNaN(value)).join(',')
         } else {
             processedValue = '"' + values.join('","') + '"'
@@ -101,40 +103,19 @@ const Condition = function(field, fieldSchema, adapter, compOp, value, filteredA
         })
     }
 
-    const isFieldTypeFiltered = () => {
-        return  filteredAdapters
-            && ! filteredAdapters.selectAll
-            && ! filteredAdapters.clearAll
-    }
-
-    // Substitutes fields to aggregated fields if they exist.
-    const aggregatedField = () => {
-        // Check whether outdated adapter was toggled in the Wizard
-        if ( isUniqueAdapters || isFieldTypeFiltered()) {
-            return field
-        }
-        // only compare operators of fields that are found in aggregated fields map and include the cooperator operator
-        const aggDef = AGGREGATED_FIELDS_CONVERTER.find(item => item.path === field)
-        if (aggDef === undefined) {
-            return field
-        }
-        const aggOps = aggDef.validOps
-        if (!aggOps.includes(compOp)) {
-            return field
-        }
-        return aggDef.aggregatedName
-    }
-
     /**
      * Format the condition value before the compilation
      * @returns {string} - the first error if there is at least one
      */
     const formatCondition = () => {
         processedValue = ''
-        if(compOp === 'IN'){
+        if (compOp === 'IN') {
             return formatIn()
         }
-        if (fieldSchema && fieldSchema.format &&  fieldSchema.format === 'ip') {
+        if (!fieldSchema) {
+            return ''
+        }
+        if (fieldSchema.format && fieldSchema.format === 'ip') {
             if (compOp === 'subnet') {
                 return formatInSubnet()
             }
@@ -143,13 +124,14 @@ const Condition = function(field, fieldSchema, adapter, compOp, value, filteredA
             }
         }
 
-        if (fieldSchema && fieldSchema.format &&  fieldSchema.format === 'version') {
-            if ( compOp === 'earlier than' ||  compOp === 'later than') {
+        if (fieldSchema.format && fieldSchema.format === 'version') {
+            if (compOp === 'earlier than' ||  compOp === 'later than') {
                 return formatVersion()
             }
         }
-        if (fieldSchema && fieldSchema.enum &&  fieldSchema.enum.length &&  value) {
-            if (!schemaEnumFind( fieldSchema,  value)) {
+        const valueSchema = getValueSchema(fieldSchema, compOp)
+        if (value && !_isEmpty(valueSchema.enum)) {
+            if (compOp === 'equals' && !schemaEnumFind(valueSchema,  value)) {
                 return 'Specify a valid value for enum field'
             }
         }
@@ -164,7 +146,7 @@ const Condition = function(field, fieldSchema, adapter, compOp, value, filteredA
         if (! field) return ''
 
         let error = getError( field,  fieldSchema,  compOp,  value)
-        if(error){
+        if (error) {
             throw error
         }
 
@@ -180,10 +162,9 @@ const Condition = function(field, fieldSchema, adapter, compOp, value, filteredA
 
 export const schemaEnumFind = (schema, value) => {
     return schema.enum.find((item, index) => {
-        if(schema.type === 'integer' && isNaN(item)) {
-            return index+1 === value
-        }
-        else {
+        if (schema.type === 'integer' && isNaN(item)) {
+            return index + 1 === value
+        } else {
             return (item.name || item) === value
         }
     })
@@ -323,23 +304,38 @@ export const getOpsList = (opsMap) => {
     })
 }
 
+const isExpectedValueString = (schema, compOp) => {
+    const typesExpectingString = ['string', 'integer', 'number', 'array'];
+    const opsExpectingString = ['IN', 'contains'];
+    return typesExpectingString.includes(schema.type) && opsExpectingString.includes(compOp);
+}
+
+const isExpectedValueItems = (schema, compOp) => {
+    const typesExpectingItems = ['array'];
+    const opsExpectingItems = ['contains', 'equals', 'subnet', 'notInSubnet', 'starts', 'ends'];
+    return typesExpectingItems.includes(schema.type) && opsExpectingItems.includes(compOp);
+}
+
+const isExpectedValueInteger = (schema, compOp) => {
+    const opsExpectingInteger = ['days'];
+    const isSchemaDate = schema.format && schema.format === 'date-time';
+    return isSchemaDate && opsExpectingInteger.includes(compOp);
+}
+
 export const getValueSchema = (fieldSchema, compOp) =>{
-    if (fieldSchema && ['integer', 'number', 'array'].includes(fieldSchema.type) && (compOp === 'IN' || compOp ==='contains')) {
-        return { type: 'string' }
+    if (!fieldSchema) {
+        return {};
     }
-    if (fieldSchema && fieldSchema.type === 'array'
-      && ['contains', 'equals', 'subnet', 'notInSubnet', 'starts', 'ends'].includes(compOp)) {
-        return fieldSchema.items
+    if (isExpectedValueString(fieldSchema, compOp)) {
+        return { type: 'string' };
     }
-    if (fieldSchema && fieldSchema.format && fieldSchema.format === 'date-time'
-      && ['days'].includes(compOp)) {
-        return { type: 'integer' }
+    if (isExpectedValueItems(fieldSchema, compOp)) {
+        return fieldSchema.items;
     }
-    let newSchema = fieldSchema
-    if(compOp === 'IN' && fieldSchema.enum){
-        newSchema = { ...newSchema, enum: undefined }
+    if (isExpectedValueInteger(fieldSchema, compOp)) {
+        return { type: 'integer' };
     }
-    return newSchema
+    return fieldSchema;
 }
 
 export default Condition

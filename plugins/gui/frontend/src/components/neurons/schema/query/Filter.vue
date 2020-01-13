@@ -27,11 +27,9 @@
 
 <script>
   import xExpression from './Expression.vue'
-  import xButton from '../../axons/inputs/Button.vue'
-  import { calcMaxIndex } from '../../../constants/utils'
-  import {mapGetters} from "vuex";
-  import {GET_MODULE_SCHEMA} from "../../../store/getters";
-  import {expression, nestedExpression} from "../../../constants/filter";
+  import xButton from '../../../axons/inputs/Button.vue'
+  import { calcMaxIndex } from '../../../../constants/utils'
+  import {expression} from "../../../../constants/filter";
 
   export default {
     name: 'XFilter',
@@ -60,9 +58,6 @@
       }
     },
     computed: {
-        ...mapGetters({
-            getModuleSchema: GET_MODULE_SCHEMA
-        }),
       expressions: {
         get () {
           return this.value
@@ -85,7 +80,7 @@
           this.$emit('change', this.expressions)
       },
       addEmptyExpression () {
-          this.expressions.push({...expression, i: this.maxIndex, nested: [{ ...nestedExpression, i: 0 }]})
+          this.expressions.push({...expression, i: this.maxIndex})
           this.onExpressionsChange()
       },
       removeExpression (index) {

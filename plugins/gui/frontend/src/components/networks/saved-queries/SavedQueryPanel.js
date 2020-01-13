@@ -7,7 +7,7 @@ import _stubTrue from 'lodash/stubTrue';
 import _cond from 'lodash/cond';
 import _isEmpty from 'lodash/isEmpty';
 
-import xFilter from '@neurons/schema/Filter.vue';
+import xFilter from '@neurons/schema/query/Filter.vue';
 import xStringView from '@neurons/schema/types/string/StringView.vue';
 import xButton from '@axons/inputs/Button.vue';
 import xSelectBox from '@axons/inputs/select/SelectBox.vue';

@@ -1,6 +1,6 @@
 <template>
   <div class="x-filter-contains">
-    <x-filter-expression-contains
+    <x-expression-contains
       v-for="(filter, index) in filters"
       :key="filter.index"
       :value="filters[index]"
@@ -17,14 +17,14 @@
 </template>
 
 <script>
-    import xButton from '../../axons/inputs/Button.vue'
-    import XFilterExpressionContains from './FilterExpressionContains.vue'
+    import xButton from '../../../axons/inputs/Button.vue'
+    import xExpressionContains from './ExpressionContains.vue'
 
     const fieldFilterEmpty = { name: '', value: '' }
     export default {
         name: 'XFilterContains',
         components: {
-          xButton, XFilterExpressionContains
+          xButton, xExpressionContains
         },
         props: {
             value: {

@@ -1,22 +1,22 @@
-export const nestedExpression = {
+export const childExpression = {
     expression: {
         field: '',
         compOp: '',
         value: null,
         filteredAdapters: null
-    }, condition: ''
+    },
+    condition: ''
 }
 
 export const expression = {
     logicOp: '',
     not: false,
-    obj: false,
     leftBracket: false,
     field: '',
     compOp: '',
     value: null,
     rightBracket: false,
-    nested: []
+    children: []
 }
 
 export const filterOutExpression = {
@@ -28,25 +28,11 @@ export const filterOutExpression = {
     fieldType: 'axonius',
     compOp: 'IN',
     rightBracket: false,
-    nested: [],
+    children: [],
     showIds: false
 }
 
 export const INCLUDE_OUDATED_MAGIC = 'INCLUDE OUTDATED: '
-
-export const AGGREGATED_FIELDS_CONVERTER = [
-    {
-        path: 'specific_data.data.hostname',
-        validOps: ['contains', 'exists'],
-        aggregatedName: 'hostnames'
-    },
-    {
-        path: 'specific_data.data.last_seen',
-        validOps: ['days', '>'],
-        aggregatedName: 'last_seen'
-    }
-]
-
 
 const exists = '({field} == ({"$exists":true,"$ne":null}))'
 const exists_str = '({field} == ({"$exists":true,"$ne":""}))'

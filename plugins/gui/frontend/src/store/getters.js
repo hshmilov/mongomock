@@ -1,32 +1,36 @@
 import { pluginMeta } from '../constants/plugin_meta.js'
 import { isObjectListField } from '../constants/utils'
 import _get from 'lodash/get'
+import _isEmpty from 'lodash/isEmpty'
 
 export const GET_MODULE_SCHEMA = 'GET_MODULE_SCHEMA'
 export const getModuleSchema = (state) => (module, objectView) => {
     const fields = _get(state[module], 'fields.data')
-    if(!fields){
+    if (_isEmpty(fields) || _isEmpty(fields.generic) ||  (objectView && _isEmpty(fields.schema))) {
         return []
     }
-    if (!fields.generic || !fields.generic.length || (objectView && !fields.schema.generic)) return []
-
-    return [
-        {
-            name: 'axonius', title: 'Aggregated', fields: selectFields(fields.generic, objectView)
-        }, ...Object.keys(fields.specific).map((name) => {
-            let title = pluginMeta[name] ? pluginMeta[name].title : name
-            return {
-                title, name, fields: selectFields(fields.specific[name], objectView)
-            }
-        }).sort((first, second) => {
-            // Sort by adapters plugin name (the one that is shown in the gui).
-            let firstText = first.title.toLowerCase()
-            let secondText = second.title.toLowerCase()
-            if (firstText < secondText) return -1
-            if (firstText > secondText) return 1
-            return 0
-        })
-    ]
+    const plugins = Object.keys(fields.specific).map((name) => {
+        const title = pluginMeta[name] ? pluginMeta[name].title : name
+        return { title, name }
+    })
+    return [{
+        name: 'axonius',
+        title: 'Aggregated',
+        fields: selectFields(fields.generic, objectView),
+        plugins
+    }, ...plugins.map(plugin => {
+        return {
+            ...plugin,
+            fields: selectFields(fields.specific[plugin.name], objectView)
+        }
+    }).sort((first, second) => {
+        // Sort by adapters plugin name (the one that is shown in the gui).
+        let firstText = first.title.toLowerCase()
+        let secondText = second.title.toLowerCase()
+        if (firstText < secondText) return -1
+        if (firstText > secondText) return 1
+        return 0
+    })]
 }
 
 const selectFields = (schema, objectView) => {

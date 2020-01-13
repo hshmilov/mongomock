@@ -17,8 +17,8 @@
 </template>
 
 <script>
-    import xSelect from '../../axons/inputs/select/Select.vue'
-    import xButton from '../../axons/inputs/Button.vue'
+    import xSelect from '../../../axons/inputs/select/Select.vue'
+    import xButton from '../../../axons/inputs/Button.vue'
 
     export default {
         name: 'XFilterExpressionContains',

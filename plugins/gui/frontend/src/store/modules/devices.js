@@ -1,6 +1,5 @@
 
 import {defaultFields} from '../../constants/entities'
-import _get from 'lodash/get'
 
 export const devices = {
 	state: {

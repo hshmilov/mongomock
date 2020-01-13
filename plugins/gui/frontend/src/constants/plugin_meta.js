@@ -1005,11 +1005,7 @@ export const pluginMeta = {
     }
 }
 
-const pluginTitlesToNamesMap = Object.keys(pluginMeta).reduce((map, obj) => {
+export const pluginTitlesToNames = Object.keys(pluginMeta).reduce((map, obj) => {
     map[pluginMeta[obj].title] = obj
     return map
 }, {})
-
-export const pluginTitlesToNames = () => {
-    return pluginTitlesToNamesMap
-}

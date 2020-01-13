@@ -42,7 +42,7 @@
   import xSelect from '../../../axons/inputs/select/Select.vue'
   import xSelectSymbol from '../../../neurons/inputs/SelectSymbol.vue'
   import xSelectTypedField from '../../../neurons/inputs/SelectTypedField.vue'
-  import XFilterContains from '../../../neurons/schema/FilterContains.vue'
+  import XFilterContains from '../../../neurons/schema/query/FilterContains.vue'
   import xCheckbox from '../../../axons/inputs/Checkbox.vue'
   import chartMixin from './chart'
   import {getParentFromField, isObjectListField} from '../../../../constants/utils'

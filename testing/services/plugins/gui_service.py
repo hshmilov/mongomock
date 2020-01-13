@@ -54,7 +54,7 @@ class GuiService(PluginService, UpdatablePluginMixin):
             self._update_under_20()
         if self.db_schema_version < 30:
             self._update_under_30()
-        if self.db_schema_version != 26:
+        if self.db_schema_version != 27:
             print(f'Upgrade failed, db_schema_version is {self.db_schema_version}')
 
     def _update_under_10(self):
@@ -112,6 +112,8 @@ class GuiService(PluginService, UpdatablePluginMixin):
             self._update_schema_version_25()
         if self.db_schema_version < 26:
             self._update_schema_version_26()
+        if self.db_schema_version < 27:
+            self._update_schema_version_27()
 
     def _update_schema_version_1(self):
         print('upgrade to schema 1')
@@ -930,6 +932,53 @@ class GuiService(PluginService, UpdatablePluginMixin):
             self.db_schema_version = 26
         except Exception as e:
             print(f'Exception while upgrading gui db to version 26. Details: {e}')
+
+    def _update_schema_version_27(self):
+        """
+        Change in structure of an 'expression' object:
+        - 'obj' bool becomes 'context' str, containing one of ['', 'OBJ', 'ENT']
+        - 'nested' array becomes 'children' array
+        """
+        print('Upgrade to schema 27')
+        try:
+            for entity_type in EntityType:
+                self._entity_views_map[entity_type].update_many({}, {
+                    '$set': {
+                        'view.query.expressions.$[obj].context': 'OBJ',
+                        'view.query.expressions.$[all].context': '',
+                    }
+                }, array_filters=[{
+                    'obj.obj': True
+                }, {
+                    'all.obj': False
+                }])
+                self._entity_views_map[entity_type].update_many({}, [{
+                    '$set': {
+                        'view.query.expressions': {
+                            '$map': {
+                                'input': '$view.query.expressions',
+                                'as': 'expression',
+                                'in': {
+                                    '$mergeObjects': [{
+                                        'children': '$$expression.nested'
+                                    }, {
+                                        '$arrayToObject': {
+                                            '$filter': {
+                                                'input': {'$objectToArray': '$$expression'},
+                                                'as': 'expression',
+                                                'cond': {'$ne': ['$$expression.k', 'nested']}
+                                            }
+                                        }
+                                    }]
+                                }
+                            }
+                        }
+                    }
+                }])
+
+                self.db_schema_version = 27
+        except Exception as e:
+            print(f'Exception while upgrading gui db to version 27. Details: {e}')
 
     def _update_default_locked_actions(self, new_actions):
         """

@@ -21,10 +21,10 @@
         <div
           class="trigger-text"
           :title="selectedOption.title"
-        >{{ selectedOption.title }}</div>
+        >{{ presentSelectionValue? selectedOption.name || placeholder : selectedOption.title }}</div>
       </slot>
       <div
-        v-if="!value && placeholder"
+        v-if="!selectedOption && placeholder"
         class="placeholder"
       >{{ placeholder }}</div>
     </div>
@@ -39,10 +39,11 @@
       :missing-items-label="missingItemsLabel"
       :allow-custom-option="allowCustomOption"
       @close="() => closeDropdown()"
-    ><slot
-      slot-scope="{ option }"
-      :option="option"
-    />
+    >
+      <slot
+        slot-scope="{ option }"
+        :option="option"
+      />
     </x-select-content>
   </x-dropdown>
 </template>
@@ -100,6 +101,10 @@
         default: 'deleted'
       },
       allowCustomOption: {
+        type: Boolean,
+        default: false
+      },
+      presentSelectionValue: {
         type: Boolean,
         default: false
       }

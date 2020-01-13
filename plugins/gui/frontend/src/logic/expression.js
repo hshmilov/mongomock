@@ -18,7 +18,7 @@ const Expression = function(expression, condition, isFirst) {
      * @returns {{error: string}|{filter: string, bracketWeight: number}}
      */
     const compileExpression = () => {
-        if (!expression.field || (expression.obj && !nestedExpressionCond())) {
+        if (!expression.field || (expression.context && !childExpressionCond())) {
             return { filter: '', bracketWeight: 0 }
         }
         let error = checkErrors()
@@ -40,10 +40,15 @@ const Expression = function(expression, condition, isFirst) {
         if (expression.not) {
             filterStack.push('not ')
         }
-        if (expression.obj) {
-            let nestedExpression = getMatchExpression(expression.field, nestedExpressionCond())
-            filterStack.push('({val})'.replace(/{val}/g, getExcludedAdaptersFilter(expression.fieldType,
-                expression.field, expression.filteredAdapters, nestedExpression)))
+        if (expression.context) {
+            if (expression.context === 'OBJ') {
+                let childExpression = getMatchExpression(expression.field, childExpressionCond())
+                filterStack.push('({val})'.replace(/{val}/g, getExcludedAdaptersFilter(expression.fieldType,
+                    expression.field, expression.filteredAdapters, childExpression)))
+            } else {
+                const adapterChildExpression = `plugin_name == '${expression.field}' and ${childExpressionCond()}`
+                filterStack.push(getMatchExpression('specific_data', adapterChildExpression))
+            }
         } else {
             filterStack.push(condition)
         }
@@ -58,14 +63,14 @@ const Expression = function(expression, condition, isFirst) {
     const checkErrors = () => {
         if (!isFirst && !expression.logicOp) {
             return 'Logical operator is needed to add expression to the filter'
-        } else if (expression.obj && !expression.field) {
+        } else if (expression.context && !expression.field) {
             return 'Select an object to add nested conditions'
         }
         return ''
     }
 
-    const nestedExpressionCond = () => {
-        return expression.nested
+    const childExpressionCond = () => {
+        return expression.children
             .filter(item => item.condition)
             .map(item => item.condition)
             .join(' and ')
