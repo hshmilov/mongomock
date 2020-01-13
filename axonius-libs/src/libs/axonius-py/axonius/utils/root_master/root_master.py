@@ -81,30 +81,28 @@ def root_master_parse_entities_fields(entity_type: EntityType, info):
             )
         elif schema_name in ['parsed', 'dynamic']:
             if plugin_unique_name:
-                current_db_items = (fields_db_map.find_one(
+                current_db_items = ((fields_db_map.find_one(
                     {
                         'name': schema_name,
                         'plugin_unique_name': plugin_unique_name
                     }
-                ) or {}).get('items') or []
+                ) or {}).get('schema') or {}).get('items') or []
 
-                new_schema = entity.get('items') or []
+                new_schema = (entity.get('schema') or {}).get('items') or []
                 new_names = [field['name'] for field in new_schema]
 
                 for current_item in current_db_items:
                     if current_item['name'] not in new_names:
                         new_schema.append(current_item)
 
-                fields_db_map.update_one(
+                entity['schema']['items'] = new_schema
+
+                fields_db_map.replace_one(
                     {
                         'name': schema_name,
                         'plugin_unique_name': plugin_unique_name
                     },
-                    {
-                        '$set': {
-                            'schema': {'items': new_schema}
-                        }
-                    },
+                    entity,
                     upsert=True
                 )
         elif schema_name in ['exist', 'raw']:

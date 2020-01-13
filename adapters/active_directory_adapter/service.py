@@ -335,7 +335,7 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, ActiveDirectory
                 additional_msg = "connection timed out"
             elif 'ldapinvalidcredentialsresult' in str(e).lower():
                 if 'data 52e' in str(e).lower():
-                    additional_msg = 'Invalid credentials (AcceptSecurityContext error, data 52e)'
+                    additional_msg = 'Invalid credentials'
                 elif 'data 525' in str(e).lower():
                     additional_msg = 'User not found (AcceptSecurityContext error, data 525)'
                 elif 'data 530' in str(e).lower():

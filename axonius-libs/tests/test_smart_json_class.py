@@ -39,6 +39,12 @@ def test_regular_usage():
     } == device.get_fields_info()
 
 
+def test_empty_lists():
+    device = create_smart_json_class()
+    device.tags = []
+    assert device.to_dict() == {'tags': []}
+
+
 def test_usage_with_inner_subclasses():
     class MyDeviceSubclass(SmartJsonClass):
         num = Field(int, 'Number')
@@ -102,7 +108,7 @@ def test_str_auto_convert():
     device.hostname = 5
     assert {'hostname': '5'} == device.to_dict()
     device.hostname = ['abcd', 'efgh']
-    assert {'hostname': '[\'abcd\', \'efgh\']'}
+    assert {'hostname': '[\'abcd\', \'efgh\']'} == device.to_dict()
 
 
 def test_inheritance_override():
