@@ -30,14 +30,14 @@ class LoginPage(Page):
     def url(self):
         pass
 
-    def login(self, username, password, remember_me=False):
+    def login(self, username, password, remember_me=False, wait_for_getting_started=True):
         self.fill_username(username)
         self.fill_password(password)
         if remember_me:
             self.click_remember_me()
         self.click_login_button()
 
-        if self.test_base.should_getting_started_open():
+        if wait_for_getting_started and self.test_base.should_getting_started_open():
             self.make_getting_started_disappear()
 
     def fill_username(self, username):
@@ -75,6 +75,9 @@ class LoginPage(Page):
 
     def click_login_with_okta(self):
         self.driver.find_element_by_id('okta_login_link').click()
+
+    def click_login_with_saml(self):
+        self.driver.find_element_by_id('saml_login_link').click()
 
     def fill_okta_client_login_details(self, login_details):
         self.wait_for_element_present_by_id(self.OKTA_LOGIN_USERNAME_ID)

@@ -13,7 +13,8 @@ from selenium import webdriver
 from devops.scripts.backup.axonius_full_backup_restore import backup
 import conftest
 
-from axonius.consts.gui_consts import FEATURE_FLAGS_CONFIG, FeatureFlagsNames, DASHBOARD_SPACE_TYPE_CUSTOM
+from axonius.consts.gui_consts import FEATURE_FLAGS_CONFIG, FeatureFlagsNames,\
+    DASHBOARD_SPACE_TYPE_CUSTOM, CONFIG_CONFIG
 from axonius.consts.plugin_consts import AXONIUS_USER_NAME, CORE_UNIQUE_NAME, PLUGIN_NAME
 from axonius.consts.system_consts import AXONIUS_DNS_SUFFIX, LOGS_PATH_HOST
 from axonius.plugin_base import EntityType
@@ -112,7 +113,9 @@ class TestBase:
     @staticmethod
     def _get_local_browser():
         if pytest.config.option.browser == conftest.CHROME:
-            return webdriver.Chrome()
+            options = webdriver.ChromeOptions()
+            options.add_argument('--ignore-certificate-errors')
+            return webdriver.Chrome(chrome_options=options)
         if pytest.config.option.browser == conftest.FIREFOX:
             return webdriver.Firefox()
         raise AssertionError('Invalid browser selected')
@@ -262,6 +265,9 @@ class TestBase:
             }
         })
 
+        self.axonius_system.db.gui_config_collection().delete_one({'config_name': CONFIG_CONFIG})
+        self.axonius_system.gui.update_config()
+
     def change_base_url(self, new_url):
         old_base_url = self.base_url
         self.base_url = new_url
@@ -342,11 +348,12 @@ class TestBase:
 
     # wait for the element and
 
-    def login(self, remember_me=True):
+    def login(self, remember_me=True, wait_for_getting_started=True):
         self.driver.get(self.base_url)
         self.fill_signup_screen()
         self.login_page.wait_for_login_page_to_load()
-        self.login_page.login(username=self.username, password=self.password, remember_me=remember_me)
+        self.login_page.login(username=self.username, password=self.password, remember_me=remember_me,
+                              wait_for_getting_started=wait_for_getting_started)
 
     def fill_signup_screen(self):
         if self.axonius_system.gui.get_signup_status() is False:

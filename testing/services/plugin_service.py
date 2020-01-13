@@ -386,6 +386,9 @@ class PluginService(WeaveService):
                                                                                       {f"config."
                                                                                        f"{specific_key}": value}})
         self._verify_plugin_is_up(self.unique_name)
+        self.update_config()
+
+    def update_config(self):
         response = requests.post(self.req_url + "/update_config", headers={API_KEY_HEADER: self.api_key})
         response.raise_for_status()
 

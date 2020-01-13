@@ -1,4 +1,5 @@
 import time
+import collections
 from datetime import datetime, timedelta
 
 from selenium.common.exceptions import NoSuchElementException
@@ -46,6 +47,8 @@ class SettingsPage(Page):
     FRESH_SERVICE_API_KEY = 'api_key'
     FRESH_SERVICE_ADMIN_EMAIL = 'admin_email'
     SAML_IDP = 'idp_name'
+    SAML_METADATA = 'metadata_url'
+    SAML_AXONIUS_EXTERNAL_URL = 'axonius_external_url'
     HISTORY_GATHERED = 'Should history be gathered'
     DC_ADDRESS = 'dc_address'
     GROUP_CN = 'group_cn'
@@ -101,6 +104,8 @@ class SettingsPage(Page):
     ROLE_PLACEHOLDER_CSS = '.user-role .x-select .placeholder'
 
     PERMISSION_LABEL_DEVICES = 'Devices'
+    PERMISSION_LABEL_DASHBOARD = 'Dashboard'
+    PERMISSION_LABEL_USERS = 'Users'
 
     CA_CERTIFICATE_ENABLED = '//*[contains(text(),\'Certificate\')]'
 
@@ -201,8 +206,14 @@ class SettingsPage(Page):
         self.click_manage_users_settings()
         self.create_new_user(username, password, first_name, last_name)
         if permission_type and permission_level:
-            self.select_permissions(permission_type, permission_level)
-            self.click_save_manage_users_settings()
+            all_users = self.get_users_with_permissions_from_users_and_roles()
+
+            # We need to get the user element in order to change its permissions.
+            maybe_created_user = [u for u in all_users if u.source == 'internal' and username in u.title]
+            assert len(maybe_created_user) == 1, 'Failed getting created user'
+            created_user = maybe_created_user[0]
+            self.select_permissions(permission_type, permission_level, created_user.selenium_user)
+            self.click_save_manage_users_settings(created_user.selenium_user)
             self.wait_for_user_permissions_saved_toaster()
 
     def get_all_users_from_users_and_roles(self):
@@ -240,8 +251,10 @@ class SettingsPage(Page):
     def click_save_gui_settings(self):
         self.click_generic_save_button('gui-settings-save')
 
-    def click_save_manage_users_settings(self):
-        self.click_generic_save_button('user-settings-save')
+    def click_save_manage_users_settings(self, selenium_user=None):
+        parent = self.driver if selenium_user is None else selenium_user
+        button = parent.find_element_by_id('user-settings-save')
+        self.handle_button(button, scroll_into_view_container=self.TABS_BODY_CSS)
 
     def click_generic_save_button(self, button_id):
         self.click_button_by_id(button_id, scroll_into_view_container=self.TABS_BODY_CSS)
@@ -371,6 +384,12 @@ class SettingsPage(Page):
     def fill_saml_idp(self, idp):
         self.fill_text_field_by_element_id(self.SAML_IDP, idp)
 
+    def fill_saml_metadata_url(self, metadata_url):
+        self.fill_text_field_by_element_id(self.SAML_METADATA, metadata_url)
+
+    def fill_saml_axonius_external_url(self, external_url):
+        self.fill_text_field_by_element_id(self.SAML_AXONIUS_EXTERNAL_URL, external_url)
+
     def fill_session_timeout(self, timeout):
         self.fill_text_field_by_element_id(self.TIMEOUT_ID, timeout)
 
@@ -496,10 +515,18 @@ class SettingsPage(Page):
     def assert_screen_is_restricted(self):
         self.driver.find_element_by_css_selector('li.nav-item.disabled #settings')
 
-    def select_permissions(self, label_text, permission):
-        self.driver.find_element_by_xpath(self.DIV_BY_LABEL_TEMPLATE.format(label_text=label_text)). \
-            find_element_by_css_selector('div.trigger-text'). \
-            click()
+    def select_permissions(self, label_text, permission, parent_user_selenium=None):
+        """
+        :param label_text: Name of the label of the permission to select
+        :param permission: The permission to select
+        :param parent_user_selenium: Optional, a Selenium element which the selecting process
+        will be performed under, if None, will select the permissions of the first user.
+        :return:
+        """
+        parent = self.driver if parent_user_selenium is None else parent_user_selenium
+        label_element = parent.find_element_by_css_selector(f'label[for={label_text}')
+        permission_object_element = label_element.find_element_by_xpath('parent::*')
+        permission_object_element.find_element_by_css_selector('div.trigger-text').click()
         self.fill_text_field_by_css_selector('input.input-value', permission)
         self.driver.find_element_by_css_selector(self.SELECT_OPTION_CSS).click()
 
@@ -508,6 +535,27 @@ class SettingsPage(Page):
             self.DIV_BY_LABEL_TEMPLATE.format(label_text=label_text)). \
             find_element_by_css_selector('div > div'). \
             text
+
+    @staticmethod
+    def _parse_selenium_user(selenium_user):
+        User = collections.namedtuple('User', 'username title source permissions selenium_user')
+        user_title = selenium_user.find_element_by_class_name('user-details-title').text
+        username = user_title.split(' - ')[0]  # Format is username - given name surname
+        user_source = selenium_user.find_element_by_class_name('user-source').text
+
+        permission_items = selenium_user.find_elements_by_css_selector('.user-permissions .item ')
+
+        permissions = {i.find_element_by_tag_name('label').text: i.find_element_by_class_name('trigger-text').text
+                       for i in permission_items}
+
+        return User(title=user_title, source=user_source, permissions=permissions,
+                    selenium_user=selenium_user, username=username)
+
+    def get_users_with_permissions_from_users_and_roles(self):
+        """
+        :returns list of user objects, user object is a namedtuple, see _parse_selenium_user
+        """
+        return [self._parse_selenium_user(u) for u in self.driver.find_elements_by_class_name('user')]
 
     @staticmethod
     def get_permission_labels():

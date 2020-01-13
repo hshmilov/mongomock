@@ -18,6 +18,7 @@ def pytest_addoption(parser):
     add_option('browser', action='store', default=CHROME, help='Choose browser')
     add_option('host-hub', action='store_true', default=False, help='Run with hub in host')
     add_option('export-name', action='store', default=None, help='An export name to use')
+    add_option('no-backup-on-failure', action='store_true', default=False, help='Don\'t save backup on failure')
 
 
 @pytest.hookimpl(tryfirst=True, hookwrapper=True)
@@ -26,8 +27,12 @@ def pytest_runtest_teardown(item, nextitem):
     if not hasattr(item.session, 'last_testsfailed_status'):
         item.session.last_testsfailed_status = 0
 
-    if item.session.testsfailed and item.session.testsfailed > item.session.last_testsfailed_status:
+    backup_on_failure = not item.session.config.getoption('--no-backup-on-failure')
+    last_test_failed = item.session.testsfailed and item.session.testsfailed > item.session.last_testsfailed_status
+
+    if backup_on_failure and last_test_failed:
         TestBase.save_backup(item.name)
+
     item.session.last_testsfailed_status = item.session.testsfailed
 
 
