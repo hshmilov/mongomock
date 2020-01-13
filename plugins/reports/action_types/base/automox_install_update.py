@@ -69,7 +69,7 @@ class AutomoxInstallUpdateAction(ActionTypeBase):
                         if response.status_code == 200:
                             res = EntityResult(entry['internal_axon_id'], True, 'Success')
                         elif response.status_code == 500:
-                            res = EntityResult(entry['internal_axon_id'], False, response.content)
+                            res = EntityResult(entry['internal_axon_id'], False, response.data.message)
                         else:
                             res = EntityResult(entry['internal_axon_id'], False, 'Unexpected Error')
 
