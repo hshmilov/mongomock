@@ -38,7 +38,7 @@
       v-model="expressionCond"
       :module="module"
       :context="context"
-      :read-only="readOnly"
+      :read-only="disabled"
     />
 
     <!-- Option to add ')' and to remove the expression -->

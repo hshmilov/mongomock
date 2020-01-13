@@ -146,7 +146,7 @@ export default {
       return this.isEntityEditable(this.namespace);
     },
     adaptersEntityFields() {
-      return this.configuredAdaptersFields(this.namespace);
+      return this.configuredAdaptersFields(this.namespace, ['saved_query']);
     },
   },
   methods: {

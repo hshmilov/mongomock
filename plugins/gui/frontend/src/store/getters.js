@@ -109,7 +109,7 @@ export const getSavedQueryById = (state) => (id, namespace) => {
 }
 
 
-export const configuredAdaptersFields = (state) => (entity) => {
+export const configuredAdaptersFields = (state) => (entity, customFieldsToInclude = []) => {
 
     // entity can be 'devices' either 'users'
     const entityState = state[entity]
@@ -125,5 +125,5 @@ export const configuredAdaptersFields = (state) => (entity) => {
         ]
     }, [])
 
-    return new Set([...genericFields, ...specificFields])
+    return new Set([...genericFields, ...specificFields, ...customFieldsToInclude])
 }
