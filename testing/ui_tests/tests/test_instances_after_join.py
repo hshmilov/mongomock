@@ -10,7 +10,7 @@ from services.adapters.ad_service import AdService
 from services.adapters.json_file_service import JsonFileService
 from test_credentials.test_ad_credentials import ad_client1_details
 from ui_tests.tests.instances_test_base import TestInstancesBase, NODE_NAME, NODE_HOSTNAME, NEW_NODE_NAME, \
-    NEXPOSE_ADAPTER_NAME, wait_for_booted_for_production
+    NEXPOSE_ADAPTER_NAME, wait_for_booted_for_production, UPDATE_HOSTNAME
 
 
 class TestInstancesAfterNodeJoin(TestInstancesBase):
@@ -31,6 +31,7 @@ class TestInstancesAfterNodeJoin(TestInstancesBase):
         self.check_correct_ip_is_shown_in_table()
         self.check_correct_hostname_is_shown_in_table()
         self.check_change_node_name()
+        self.update_hostname_form_gui_and_check_slave_node()
         self.check_deactivate_node()
         self.check_ssh_tunnel()
         self.check_node_restart()
@@ -117,6 +118,14 @@ class TestInstancesAfterNodeJoin(TestInstancesBase):
         self._instances[0].sshc.close()
         self._instances[0].wait_for_ssh()
 
+    def get_hostname_from_node(self):
+        rc, output = self._instances[0].ssh('cat /etc/hostname')
+        self.logger.debug(f'/etc/hostname return rc is {rc}')
+        self.logger.debug(f'/etc/hostname return output is {output}')
+        self._instances[0].sshc.close()
+        self._instances[0].wait_for_ssh()
+        return output
+
     def check_correct_hostname_is_shown_in_table(self):
         node_hostname_from_table = self.instances_page.get_node_hostname(NODE_NAME)
         self.logger.info(f'{NODE_NAME} hostname recognised as:{node_hostname_from_table}')
@@ -174,3 +183,32 @@ class TestInstancesAfterNodeJoin(TestInstancesBase):
 
         # Re-adding client after deactivation deleted it (without it's devices).
         self._add_nexpose_adadpter_and_discover_devices()
+
+    def verify_hostname_changed(self):
+        output = self.get_hostname_from_node()
+        if output == UPDATE_HOSTNAME:
+            return True
+        self.logger.debug(f'verification: /etc/hostname ser to current:{output}  expected:{NODE_HOSTNAME}')
+        return False
+
+    def update_hostname_form_gui_and_check_slave_node(self):
+
+        self.logger.info('SUB TEST  1 : Negative Flow hostname with space should fail validation ')
+        self.instances_page.switch_to_page()
+        illegal_hostname = 'BAD HOSTNAME'
+        self.instances_page.change_instance_hostname(current_node_name=NEW_NODE_NAME,
+                                                     new_hostname=illegal_hostname,
+                                                     negative_test=True)
+        self.logger.info('SUB TEST  2 : Positive Flow update hostname')
+        self.instances_page.switch_to_page()
+
+        self.instances_page.change_instance_hostname(current_node_name=NEW_NODE_NAME,
+                                                     new_hostname=UPDATE_HOSTNAME)
+
+        wait_until(self.verify_hostname_changed,
+                   total_timeout=3,
+                   interval=3)
+
+        # at this point test pass,  reverting hostname to original.
+        self.instances_page.change_instance_hostname(current_node_name=NEW_NODE_NAME,
+                                                     new_hostname=NODE_HOSTNAME)

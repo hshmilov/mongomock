@@ -18,6 +18,7 @@ class InstancesPage(EntitiesPage):
     INSTANCES_STATUS_XPATH = './/td[position()=6]/div'
     INSTANCES_IP_XPATH = './/td[position()=4]/div'
     BUTTON_LINK_CLASS = 'x-button link'
+    TOASTER_FOR_FAILED_NODE_HOSTNAME_VALIDATION = 'Illegal hostname value entered'
 
     @property
     def url(self):
@@ -100,6 +101,18 @@ class InstancesPage(EntitiesPage):
         self.click_button('Save')
         self.wait_for_element_absent_by_css(self.MODAL_OVERLAY_CSS)
 
+    def change_instance_hostname(self, current_node_name, new_hostname, negative_test=False):
+        self.switch_to_page()
+        self.refresh()
+        self.wait_for_table_to_load()
+        instances_row = self.find_query_row_by_name(current_node_name)
+        instances_row.click()
+        self.fill_text_field_by_element_id('hostname', new_hostname)
+        self.click_button('Save')
+        if negative_test:
+            self.wait_for_toaster(text=self.TOASTER_FOR_FAILED_NODE_HOSTNAME_VALIDATION)
+        self.wait_for_element_absent_by_css(self.MODAL_OVERLAY_CSS)
+
     def find_query_row_by_name(self, instance_name):
         return self.driver.find_element_by_xpath(self.INSTANCES_ROW_BY_NAME_XPATH.format(instance_name=instance_name))
 
@@ -115,3 +128,9 @@ class InstancesPage(EntitiesPage):
         self.click_button(self.REACTIVATE_BUTTON, button_class=self.BUTTON_LINK_CLASS)
         self.click_button(self.REACTIVATE_BUTTON)
         self.wait_for_element_absent_by_css(self.SAFEGUARD_OVERLAY_CSS)
+
+    def set_node_hostname(self, node_name):
+        self.switch_to_page()
+        self.refresh()
+        instances_row = self.find_query_row_by_name(node_name)
+        return instances_row.find_element_by_xpath(self.INSTANCES_USER_PASSWORD_XPATH).text

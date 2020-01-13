@@ -42,6 +42,7 @@ SSH_CHANNEL_TIMEOUT = 60 * 35
 NODE_NAME = 'node_1'
 NEW_NODE_NAME = 'Changed_node'
 NODE_HOSTNAME = 'node-test-hostname'
+UPDATE_HOSTNAME = 'SLAVE-1'
 NEXPOSE_ADAPTER_NAME = 'Rapid7 Nexpose'
 NEXPOSE_ADAPTER_FILTER = 'adapters == "nexpose_adapter"'
 PRIVATE_IP_ADDRESS_REGEX = r'inet (10\..*|192\.168.*|172\..*)\/'
