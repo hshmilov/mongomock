@@ -123,7 +123,7 @@ export const configuredAdaptersFields = (state) => (entity, customFieldsToInclud
             ...fields,
             ...currentAdaptersFields.map(field => field.name)
         ]
-    }, [])
+    }, Object.keys(adaptersSpecificFields))
 
     return new Set([...genericFields, ...specificFields, ...customFieldsToInclude])
 }
