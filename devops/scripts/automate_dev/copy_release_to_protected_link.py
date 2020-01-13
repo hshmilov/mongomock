@@ -1,12 +1,11 @@
 #!/usr/bin/env python3
 import argparse
 import random
-import shlex
 import string
 from pathlib import Path
-from subprocess import run, STDOUT
+from subprocess import STDOUT
 
-from devops.scripts.automate_dev.release_checklist import get_env
+from devops.scripts.automate_dev.release_checklist import get_env, run_on_subprocess
 
 
 def new_passw(length=12):
@@ -19,7 +18,7 @@ def copy_release_to_password_protected(env):
           's3://axonius-releases/latest_release/axonius_release.ova ' \
           's3://release-links/axonius_release.ova ' \
           '--region us-east-2'
-    run(shlex.split(cmd), env=env, check=True, shell=True, stderr=STDOUT)
+    run_on_subprocess(cmd, env=env, check=True, shell=True, stderr=STDOUT)
 
 
 def regenereate_password(env):
@@ -28,14 +27,14 @@ def regenereate_password(env):
     pass_file = Path('password')
     pass_file.write_text(new_pass)
     cmd = f'aws s3 cp {pass_file} s3://deploy-pass/password --region us-east-2'
-    run(shlex.split(cmd), env=env, check=True, shell=True, stderr=STDOUT)
+    run_on_subprocess(cmd, env=env, check=True, shell=True, stderr=STDOUT)
     pass_file.unlink()
 
 
 def remove_public_link(env):
     print(f'Deleting old release link')
     cmd = 'aws s3 rm s3://axonius-releases/latest_release/axonius_release.ova --region us-east-2'
-    run(shlex.split(cmd), env=env, check=True, shell=True, stderr=STDOUT)
+    run_on_subprocess(cmd, env=env, check=True, shell=True, stderr=STDOUT)
 
 
 def main():

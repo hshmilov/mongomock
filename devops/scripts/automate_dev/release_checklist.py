@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-import os
-import sys
 import argparse
+import os
 import shlex
-from subprocess import STDOUT, run
+import sys
 from pathlib import Path
+from subprocess import STDOUT, run
 
 from CI.exports.version_passwords import VersionPasswords
 from builds import Builds
@@ -31,6 +31,13 @@ def get_env(aws_key, aws_secret):
     return env
 
 
+def run_on_subprocess(command, *args, **kwargs):
+    if 'win' in sys.platform:
+        command = shlex.split(command)
+
+    return run(command, *args, **kwargs)
+
+
 def upload_to_tests_folder(aws_key, aws_secret, version_name, **_):
     env = get_env(aws_key, aws_secret)
 
@@ -40,7 +47,7 @@ def upload_to_tests_folder(aws_key, aws_secret, version_name, **_):
               f' --region {REGION}'
 
     log('Copying upgrader to automatic tests folder')
-    run(shlex.split(command), env=env, shell=True, check=True, stderr=STDOUT)
+    run_on_subprocess(command, env=env, shell=True, check=True, stderr=STDOUT)
 
 
 def upload_to_production(aws_key, aws_secret, version_name, ami_id, **_):
@@ -57,16 +64,16 @@ def upload_to_production(aws_key, aws_secret, version_name, ami_id, **_):
     env = get_env(aws_key, aws_secret)
 
     log('Copying upgrader to production')
-    run(shlex.split(upgrader_command), env=env, shell=True, check=True, stderr=STDOUT)
+    run_on_subprocess(upgrader_command, env=env, shell=True, check=True, stderr=STDOUT)
 
     log('Copying OVA to production')
-    run(shlex.split(ova_command), env=env, shell=True, check=True, stderr=STDOUT)
+    run_on_subprocess(ova_command, env=env, shell=True, check=True, stderr=STDOUT)
 
     log('Set latest ami')
     ami_id_file = Path('ami_id.txt')
     ami_id_file.write_text(ami_id)
     set_ami_id_command = f'aws s3 cp ami_id.txt s3://axonius-releases/latest_release/ami_id.txt --acl public-read'
-    run(shlex.split(set_ami_id_command), env=env, shell=True, check=True, stderr=STDOUT)
+    run_on_subprocess(set_ami_id_command, env=env, shell=True, check=True, stderr=STDOUT)
     ami_id_file.unlink()
 
     log('Files copied to production')
@@ -77,8 +84,8 @@ def create_tag(version_name, commit_hash, **_):
     push_command = f'git push upstream {version_name}'
 
     log('Creating tag')
-    run(shlex.split(tag_command), shell=True, check=True, stderr=STDOUT)
-    run(shlex.split(push_command), shell=True, check=True, stderr=STDOUT)
+    run_on_subprocess(tag_command, shell=True, check=True, stderr=STDOUT)
+    run_on_subprocess(push_command, shell=True, check=True, stderr=STDOUT)
 
 
 def copy_to_protected_link(aws_key, aws_secret, gen_new_pass, **_):
@@ -89,7 +96,7 @@ def copy_to_protected_link(aws_key, aws_secret, gen_new_pass, **_):
     env = get_env(aws_key, aws_secret)
 
     log('Copying to protected link')
-    run(shlex.split(copy_to_protected_link_command), env=env, shell=True, check=True, stderr=STDOUT)
+    run_on_subprocess(copy_to_protected_link_command, env=env, shell=True, check=True, stderr=STDOUT)
 
 
 def print_epilog(version_name, ami_id, commit_hash, **_):
