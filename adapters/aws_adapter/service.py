@@ -935,6 +935,17 @@ class AwsAdapter(AdapterBase, Configurable):
                 except Exception:
                     logger.exception(f'Problem getting complaince summary')
 
+                all_patches_general_info = {}
+                try:
+                    for patch_page in get_paginated_next_token_api(ssm.describe_available_patches):
+                        for patch_raw in (patch_page.get('Patches') or []):
+                            if patch_raw.get('KbNumber'):
+                                all_patches_general_info[patch_raw.get('KbNumber')] = patch_raw
+                            elif patch_raw.get('MsrcNumber'):
+                                all_patches_general_info[patch_raw.get('MsrcNumber')] = patch_raw
+                except Exception:
+                    pass
+
                 for iid, iid_basic_data in all_instances.items():
                     raw_instance = dict()
                     raw_instance['basic_data'] = iid_basic_data
@@ -982,7 +993,7 @@ class AwsAdapter(AdapterBase, Configurable):
                     # Get compliance summaries
                     raw_instance['compliance_summary'] = resource_id_to_compliance_summaries.get(iid)
 
-                    yield raw_instance, patch_groups_to_patch_baseline, extra_data
+                    yield raw_instance, patch_groups_to_patch_baseline, extra_data, all_patches_general_info
             except Exception:
                 logger.exception(f'Problem fetching data for ssm')
 
@@ -3093,9 +3104,10 @@ class AwsAdapter(AdapterBase, Configurable):
 
     def _parse_raw_data_inner_ssm(
             self,
-            device_raw_data_all: Tuple[Dict[str, Dict], Dict[str, Dict], Dict[str, str]],
+            device_raw_data_all: Tuple[Dict[str, Dict], Dict[str, Dict], Dict[str, str], Dict[str, dict]],
     ) -> Optional[MyDeviceAdapter]:
-        device_raw_data, patch_group_to_patch_baseline_mapping, extra_data = device_raw_data_all
+        device_raw_data, patch_group_to_patch_baseline_mapping, extra_data, all_patches_general_info = \
+            device_raw_data_all
         basic_data = device_raw_data.get('basic_data')
         if not basic_data:
             logger.warning('Wierd device, no basic data!')
@@ -3275,11 +3287,13 @@ class AwsAdapter(AdapterBase, Configurable):
                         )
                     else:
                         # could be 'missing', 'failed', or 'not_applicable', in all cases it is not installed
+                        kb_id = pc_raw.get('KBId')
                         device.add_available_security_patch(
                             title=pc_raw.get('Title') + ' ' + pc_raw.get('KBId'),
-                            kb_article_ids=[pc_raw.get('KBId')] if pc_raw.get('KBId') else None,
+                            kb_article_ids=[kb_id] if kb_id else None,
                             state=patch_state,
-                            severity=pc_raw.get('Severity')
+                            severity=pc_raw.get('Severity'),
+                            publish_date=parse_date((all_patches_general_info.get(kb_id) or {}).get('ReleaseDate'))
                         )
                 except Exception:
                     logger.exception(f'Failed to add patch compliance {pc_raw} for host {hostname}')

@@ -61,6 +61,9 @@ def parse_date(datetime_to_parse):
     Parses date and returns it as UTC
     """
     try:
+        if datetime_to_parse is None:
+            # Optimizations
+            return None
         if isinstance(datetime_to_parse, int):
             datetime_from_int = _parse_unix_timestamp(datetime_to_parse)
             if datetime_from_int:
