@@ -26,6 +26,7 @@ import xConditionFunction from './ConditionFunction.vue';
 
 
 import { GET_MODULE_SCHEMA, GET_DATA_SCHEMA_BY_NAME } from '../../../../store/getters';
+import { getUpdatedValueAfterFieldChange } from '../../../../logic/condition';
 
 export default {
   name: 'XConditionAggregatedData',
@@ -88,14 +89,21 @@ export default {
       };
     },
     fieldSchema() {
-      return this.field
-        ? this.schemaByName[this.field]
-        : {};
+      return this.getFieldSchema(this.field);
     },
   },
   methods: {
     onChangeField(field, fieldType, filteredAdapters) {
-      const update = { field, fieldType, filteredAdapters };
+      const value = getUpdatedValueAfterFieldChange(this.getFieldSchema(field),
+        this.fieldSchema,
+        this.condition.compOp,
+        this.condition.value);
+      const update = {
+        field,
+        fieldType,
+        filteredAdapters,
+        value,
+      };
       if (field.endsWith('.id')) {
         update.compOp = 'exists';
       }
@@ -103,6 +111,11 @@ export default {
     },
     onUpdateConditionFunction(conditionFunction) {
       this.$emit('update', conditionFunction);
+    },
+    getFieldSchema(field) {
+      return field
+        ? this.schemaByName[field]
+        : {};
     },
   },
 };

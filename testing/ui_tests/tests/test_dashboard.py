@@ -277,10 +277,18 @@ class TestDashboard(TestBase):
         self.dashboard_page.click_uncovered_pie_slice()
         self.devices_page.wait_for_table_to_load()
         assert self.devices_page.find_search_value() == self.UNCOVERED_QUERY
+        self.devices_page.click_query_wizard()
+        # make sure there is no error in the wizard
+        assert self.devices_page.is_query_error()
+        self.devices_page.click_search()
         self.dashboard_page.switch_to_page()
         self.dashboard_page.click_covered_pie_slice()
         self.devices_page.wait_for_table_to_load()
         assert self.devices_page.find_search_value() == self.COVERED_QUERY
+        self.devices_page.click_query_wizard()
+        # make sure there is no error in the wizard
+        assert self.devices_page.is_query_error()
+        self.devices_page.click_search()
 
     def test_dashboard_intersection_chart(self):
         self.devices_page.create_saved_query(self.IPS_192_168_QUERY, self.IPS_192_168_QUERY_NAME)

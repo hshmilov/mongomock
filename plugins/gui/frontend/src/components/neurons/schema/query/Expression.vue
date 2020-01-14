@@ -5,7 +5,7 @@
       v-if="!first"
       v-model="logicOp"
       :options="logicOps"
-      :readOnly="disabled"
+      :read-only="disabled"
       placeholder="op..."
       class="x-select-logic"
     />

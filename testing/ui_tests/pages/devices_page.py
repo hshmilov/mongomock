@@ -10,6 +10,7 @@ from ui_tests.pages.entities_page import EntitiesPage
 
 class DevicesPage(EntitiesPage):
     FIELD_NETWORK_INTERFACES_MAC = 'Network Interfaces: Mac'
+    FIELD_NETWORK_INTERFACES_PORT = 'Network Interfaces: Port'
     FIELD_NETWORK_INTERFACES = 'Network Interfaces'
     FIELD_NETWORK_INTERFACES_NAME = 'network_interfaces'
     FIELD_IPS = 'IPs'
@@ -56,6 +57,7 @@ class DevicesPage(EntitiesPage):
     FIELD_INSTALLED_SOFTWARE = 'Installed Software'
     FIELD_INSTALLED_SOFTWARE_NAME = 'Name'
     FIELD_INSTALLED_SOFTWARE_VERSION = 'Version'
+    FIELD_FIREWALL_RULES_FROM_PORT = 'Firewall Rules: From port'
     VALUE_OS_WINDOWS = 'Windows'
     TAG_MODAL_CSS = '.x-tag-modal'
     TAG_CHECKBOX_CSS = f'{TAG_MODAL_CSS} .v-list .v-input--checkbox'

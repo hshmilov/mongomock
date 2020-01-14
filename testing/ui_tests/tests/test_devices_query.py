@@ -7,7 +7,9 @@ from selenium.common.exceptions import NoSuchElementException
 from axonius.utils.hash import get_preferred_quick_adapter_id
 from axonius.utils.wait import wait_until
 from ui_tests.tests.ui_test_base import TestBase
-from ui_tests.tests.ui_consts import (AD_ADAPTER_NAME,
+from ui_tests.tests.ui_consts import (AWS_ADAPTER,
+                                      AWS_ADAPTER_NAME,
+                                      AD_ADAPTER_NAME,
                                       JSON_ADAPTER_NAME,
                                       WINDOWS_QUERY_NAME,
                                       STRESSTEST_SCANNER_ADAPTER,
@@ -16,6 +18,7 @@ from services.plugins.general_info_service import GeneralInfoService
 from services.adapters.cisco_service import CiscoService
 from services.adapters.esx_service import EsxService
 from services.adapters.cylance_service import CylanceService
+from services.adapters.aws_service import AwsService
 from services.adapters import stresstest_scanner_service, stresstest_service
 from test_credentials.json_file_credentials import (DEVICE_FIRST_IP,
                                                     DEVICE_THIRD_IP,
@@ -23,6 +26,7 @@ from test_credentials.json_file_credentials import (DEVICE_FIRST_IP,
                                                     DEVICE_SUBNET,
                                                     DEVICE_FIRST_VLAN_TAGID,
                                                     DEVICE_SECOND_VLAN_NAME)
+from test_credentials.test_aws_credentials import client_details as aws_client_details
 from devops.scripts.automate_dev import credentials_inputer
 
 
@@ -1057,6 +1061,32 @@ class TestDevicesQuery(TestBase):
         self.devices_page.wait_for_table_to_load()
         assert self.devices_page.count_entities() == (real_devices_count - len(indices))
         return indices
+
+    def test_change_field_with_different_value_schema(self):
+        with AwsService().contextmanager(take_ownership=True):
+            self.adapters_page.wait_for_adapter(AWS_ADAPTER_NAME)
+            self.adapters_page.create_new_adapter_connection(AWS_ADAPTER_NAME, aws_client_details[0][0])
+            self.settings_page.switch_to_page()
+            self.base_page.run_discovery()
+            self.devices_page.switch_to_page()
+            self.devices_page.click_query_wizard()
+            expressions = self.devices_page.find_expressions()
+            self.devices_page.select_query_field(self.devices_page.FIELD_HOSTNAME_TITLE, parent=expressions[0])
+            self.devices_page.select_query_comp_op('equals', parent=expressions[0])
+            self.devices_page.fill_query_string_value('w', parent=expressions[0])
+            self.devices_page.wait_for_spinner_to_end()
+            query_filter = self.devices_page.find_search_value()
+            results_count = len(self.devices_page.get_all_data())
+            self.devices_page.select_query_field(self.devices_page.FIELD_FIREWALL_RULES_FROM_PORT,
+                                                 parent=expressions[0])
+            self.devices_page.wait_for_spinner_to_end()
+            assert len(self.devices_page.get_all_data()) == results_count
+            assert self.devices_page.find_search_value() == query_filter
+            assert self.devices_page.is_query_error(self.devices_page.MSG_ERROR_QUERY_WIZARD)
+            self.devices_page.click_search()
+
+        self.adapters_page.clean_adapter_servers(AWS_ADAPTER_NAME, delete_associated_entities=True)
+        self.wait_for_adapter_down(AWS_ADAPTER)
 
     def test_in_enum_query(self):
         stress = stresstest_service.StresstestService()

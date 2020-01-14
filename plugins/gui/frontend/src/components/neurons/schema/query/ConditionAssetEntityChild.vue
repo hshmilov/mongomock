@@ -33,10 +33,12 @@
 
 <script>
 import _keyBy from 'lodash/keyBy';
-import XStringView from '../types/string/StringView.vue'
+import _isEqual from 'lodash/isEqual';
+import XStringView from '../types/string/StringView.vue';
 import XSelect from '../../../axons/inputs/select/Select.vue';
 import XConditionFunction from './ConditionFunction.vue';
 import XButton from '../../../axons/inputs/Button.vue';
+import { getUpdatedValueAfterFieldChange, getValueSchema } from '../../../../logic/condition';
 
 
 export default {
@@ -72,21 +74,28 @@ export default {
         return this.condition.field;
       },
       set(field) {
-        this.$emit('change', { ...this.condition, field });
+        const value = getUpdatedValueAfterFieldChange(this.getFieldSchema(field),
+          this.fieldSchema,
+          this.condition.compOp,
+          this.condition.value);
+        this.$emit('change', { ...this.condition, field, value });
       },
     },
     schemaByName() {
       return _keyBy(this.schema, (field) => field.name);
     },
     fieldSchema() {
-      return this.field
-        ? this.schemaByName[this.condition.field]
-        : {};
+      return this.getFieldSchema(this.field);
     },
   },
   methods: {
     onUpdateConditionFunction(conditionFunction) {
       this.$emit('change', { ...this.condition, ...conditionFunction });
+    },
+    getFieldSchema(field) {
+      return field
+        ? this.schemaByName[field]
+        : {};
     },
   },
 };

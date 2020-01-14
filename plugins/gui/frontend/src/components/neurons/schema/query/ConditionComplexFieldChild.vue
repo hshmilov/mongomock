@@ -28,6 +28,7 @@ import _keyBy from 'lodash/keyBy';
 import xSelect from '../../../axons/inputs/select/Select.vue';
 import xConditionFunction from './ConditionFunction.vue';
 import xButton from '../../../axons/inputs/Button.vue';
+import { getUpdatedValueAfterFieldChange } from '../../../../logic/condition';
 
 
 export default {
@@ -59,21 +60,28 @@ export default {
         return this.condition.field;
       },
       set(field) {
-        this.$emit('change', { ...this.condition, field });
+        const value = getUpdatedValueAfterFieldChange(this.getFieldSchema(field),
+          this.fieldSchema,
+          this.condition.compOp,
+          this.condition.value);
+        this.$emit('change', { ...this.condition, field, value });
       },
     },
     schemaByName() {
       return _keyBy(this.schema, (field) => field.name);
     },
     fieldSchema() {
-      return this.field
-        ? this.schemaByName[this.condition.field]
-        : {};
+      return this.getFieldSchema(this.field);
     },
   },
   methods: {
     onUpdateConditionFunction(conditionFunction) {
       this.$emit('change', { ...this.condition, ...conditionFunction });
+    },
+    getFieldSchema(field) {
+      return field
+        ? this.schemaByName[field]
+        : {};
     },
   },
 };
