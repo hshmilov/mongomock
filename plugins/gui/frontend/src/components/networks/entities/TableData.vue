@@ -158,7 +158,7 @@
                 && !_isEmpty(this.data[this.fieldName])
       },
       adaptersList() {
-        return this.data[this.adaptersFieldName].concat().map(adapter => [adapter])
+        return this.data[this.adaptersFieldName].concat().map(adapter => [adapter]).sort()
       },
       details () {
         if (this.isAdaptersField) {

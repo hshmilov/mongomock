@@ -942,7 +942,11 @@ class GuiService(PluginService, UpdatablePluginMixin):
         print('Upgrade to schema 27')
         try:
             for entity_type in EntityType:
-                self._entity_views_map[entity_type].update_many({}, {
+                self._entity_views_map[entity_type].update_many({
+                    'view.query.expressions': {
+                        '$exists': True
+                    }
+                }, {
                     '$set': {
                         'view.query.expressions.$[obj].context': 'OBJ',
                         'view.query.expressions.$[all].context': '',
@@ -952,7 +956,11 @@ class GuiService(PluginService, UpdatablePluginMixin):
                 }, {
                     'all.obj': False
                 }])
-                self._entity_views_map[entity_type].update_many({}, [{
+                self._entity_views_map[entity_type].update_many({
+                    'view.query.expressions': {
+                        '$exists': True
+                    }
+                }, [{
                     '$set': {
                         'view.query.expressions': {
                             '$map': {

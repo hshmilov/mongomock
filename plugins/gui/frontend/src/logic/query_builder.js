@@ -165,7 +165,7 @@ const QueryBuilder = (schema, expressions, meta, prevExpressionsQuery) => {
       filter = onlyExpressionsFilter;
     }
 
-    if (meta && meta.uniqueAdapters) {
+    if (filter && meta && meta.uniqueAdapters) {
       filter = `${INCLUDE_OUDATED_MAGIC}${filter}`;
     }
 

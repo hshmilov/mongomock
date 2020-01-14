@@ -36,7 +36,7 @@
       </div>
       <md-switch
         v-model="isUniqueAdapters"
-        :disabled="!value"
+        :disabled="!value.filter"
         v-if="module === 'devices'"
       >Include outdated Adapter {{ prettyModule }}
         in query

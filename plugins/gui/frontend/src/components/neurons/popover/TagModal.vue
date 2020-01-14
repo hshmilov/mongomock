@@ -83,7 +83,7 @@ export default {
     }),
     initialSelection() {
       if (this.value) {
-        return this.value.map(i => i.name)
+        return this.value.map(i => i.name ? i.name : i)
       }
       return _intersection(...Object.values(this.entitiesMeta))
     },
