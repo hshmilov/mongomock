@@ -116,8 +116,11 @@ class CsvAdapter(AdapterBase):
 
         if csv_data_bytes is None:
             raise Exception('Bad CSV, could not parse the data')
-        encoding = chardet.detect(csv_data_bytes)['encoding']  # detect decoding automatically
-        encoding = encoding or 'utf-8'
+        if not client_config.get('encoding'):
+            encoding = chardet.detect(csv_data_bytes)['encoding']  # detect decoding automatically
+            encoding = encoding or 'utf-8'
+        else:
+            encoding = client_config.get('encoding')
         csv_data = csv_data_bytes.decode(encoding)
         csv_dict = make_dict_from_csv(csv_data)
         fields = get_csv_field_names(csv_dict.fieldnames)
@@ -218,6 +221,11 @@ class CsvAdapter(AdapterBase):
                     'description': 'Leave blank to use the attached IAM role',
                     'type': 'string',
                     'format': 'password'
+                },
+                {
+                    'name': 'encoding',
+                    'title': 'Encoding',
+                    'type': 'string'
                 }
             ],
             'required': [
