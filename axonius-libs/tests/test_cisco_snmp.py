@@ -116,6 +116,7 @@ def test_cdp_data(mocks):
                      + 'Copyright (c) 1986-2014 by Cisco Systems, Inc.\n'
                      + 'Compiled Wed 10-Dec-14 03:54 by prod_rel_team',
             'type': 'Cisco',
+            'os_str': 'none',
         },
         'raw': {
             'connected_devices': [{'iface': '', 'name': '194.1.146.0', 'type': 'Direct'}],
@@ -171,7 +172,7 @@ def test_arp_data(mocks):
             }
         ],
         'connected_devices': [{'remote_name': 'cisco-switch', 'connection_type': 'Indirect'}],
-        'os': {},
+        'os': {'os_str': 'none'},
         'raw': {
             'mac': '90:6C:AC:FE:5B:BC',
             'ip': '192.168.10.1',
@@ -2404,7 +2405,8 @@ def test_basic_info_parsed_data(mocks):
             ],
             'os': {
                 'build': 'Cisco IOS Software, C2960 Software (C2960-LANBASEK9-M), Version 12.2(55)SE10, RELEASE SOFTWARE (fc2)\r\nTechnical Support: http://www.cisco.com/techsupport\r\nCopyright (c) 1986-2015 by Cisco Systems, Inc.\r\nCompiled Wed 11-Feb-15 11:46 by prod_rel_team',
-                'type': 'Cisco'
+                'type': 'Cisco',
+                'os_str': 'cisco'
             },
             'port_access': [
                 {
@@ -3231,7 +3233,8 @@ def test_basic_info_devices(mocks):
         ],
         'os': {
             'build': 'Cisco IOS Software, C2960 Software (C2960-LANBASEK9-M), Version 12.2(55)SE10, RELEASE SOFTWARE (fc2)\r\nTechnical Support: http://www.cisco.com/techsupport\r\nCopyright (c) 1986-2015 by Cisco Systems, Inc.\r\nCompiled Wed 11-Feb-15 11:46 by prod_rel_team',
-            'type': 'Cisco'
+            'type': 'Cisco',
+            'os_str': 'cisco'
         },
         'port_access': [
             {

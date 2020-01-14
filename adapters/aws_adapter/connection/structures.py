@@ -328,6 +328,7 @@ class AWSUserAdapter(UserAdapter, AWSAdapter):
     user_attached_keys = ListField(AWSIAMAccessKey, 'Access Keys')
 
     user_associated_mfa_devices = ListField(AWSMFADevice, 'Associated MFA Devices')
+    has_associated_mfa_devices = Field(bool, 'Has Associated MFA Devices')
     user_is_password_enabled = Field(bool, 'User Is Password Enabled')
 
 

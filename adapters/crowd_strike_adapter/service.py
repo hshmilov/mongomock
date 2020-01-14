@@ -242,6 +242,7 @@ class CrowdStrikeAdapter(AdapterBase, Configurable):
                 try:
                     device.figure_os((device_raw.get('platform_name') or '') +
                                      (device_raw.get('os_version') or ''))
+                    device.os.build = device_raw.get('build_number')
                 except Exception:
                     logger.exception(f'Problem getting OS for {device_raw}')
                 try:

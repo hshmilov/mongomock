@@ -113,7 +113,7 @@ def test_arp(client):
             'fetch_proto': 'ARP',
             'id': 'arp_C0:00:07:A8:00:01',
             'network_interfaces': [{'ips': ['10.0.0.2'], 'ips_raw': [167_772_162], 'mac': 'C0:00:07:A8:00:01'}],
-            'os': {},
+            'os': {'os_str': 'none'},
             'raw': {
                 'connected_devices': [{'iface': 'fastethernet0/1', 'name': 'mock', 'type': 'Indirect'}],
                 'ip': '10.0.0.2',
@@ -129,7 +129,7 @@ def test_arp(client):
             'fetch_proto': 'ARP',
             'id': 'arp_11:33:33:77:DE:AD',
             'network_interfaces': [{'ips': ['10.0.0.1'], 'ips_raw': [167_772_161], 'mac': '11:33:33:77:DE:AD'}],
-            'os': {},
+            'os': {'os_str': 'none'},
             'raw': {
                 'connected_devices': [{'iface': 'fastethernet0/1', 'name': 'mock', 'type': 'Indirect'}],
                 'ip': '10.0.0.1',
@@ -145,7 +145,7 @@ def test_arp(client):
             'fetch_proto': 'ARP',
             'id': 'arp_C0:00:07:A8:00:00',
             'network_interfaces': [{'ips': ['192.168.20.30'], 'ips_raw': [3_232_240_670], 'mac': 'C0:00:07:A8:00:00'}],
-            'os': {},
+            'os': {'os_str': 'none'},
             'raw': {
                 'connected_devices': [{'iface': 'fastethernet0/0', 'name': 'mock', 'type': 'Indirect'}],
                 'ip': '192.168.20.30',
@@ -168,7 +168,7 @@ def test_arp(client):
                     'manufacturer': 'VMware, Inc (3401 Hillview Avenue PALO ALTO CA 94304 US)',
                 }
             ],
-            'os': {},
+            'os': {'os_str': 'none'},
             'raw': {
                 'connected_devices': [{'iface': 'fastethernet0/0', 'name': 'mock', 'type': 'Indirect'}],
                 'ip': '192.168.20.18',
@@ -191,7 +191,7 @@ def test_arp(client):
                     'manufacturer': 'Fortinet Inc (899 Kifer Road Sunnyvale California 94086 US)',
                 }
             ],
-            'os': {},
+            'os': {'os_str': 'none'},
             'raw': {
                 'connected_devices': [{'iface': 'fastethernet0/0', 'name': 'mock', 'type': 'Indirect'}],
                 'ip': '192.168.20.1',
@@ -207,7 +207,7 @@ def test_arp(client):
             'fetch_proto': 'ARP',
             'id': 'arp_C0:00:07:A8:00:01',
             'network_interfaces': [{'ips': ['10.0.0.201'], 'ips_raw': [167_772_361], 'mac': 'C0:00:07:A8:00:01'}],
-            'os': {},
+            'os': {'os_str': 'none'},
             'raw': {
                 'connected_devices': [{'iface': 'fastethernet0/1', 'name': 'mock', 'type': 'Indirect'}],
                 'ip': '10.0.0.201',
@@ -235,6 +235,7 @@ def test_cdp(client):
             'device_model': 'Cisco 2691',
             'os': {
                 'type': 'Cisco',
+                'os_str': 'none',
                 'build': 'Cisco IOS Software, 2600 Software (C2691-ENTSERVICESK9-M), Version 12.4(13b), RELEASE SOFTWARE (fc3)\nTechnical Support: http://www.cisco.com/techsupport\nCopyright (c) 1986-2007 by Cisco Systems, Inc.\nCompiled Tue 24-Apr-07 15:33 by prod_rel_team',
             },
             'raw': {
@@ -295,7 +296,7 @@ def test_dhcp(client):
             'fetch_proto': 'DHCP',
             'id': 'dhcp_11:33:33:77:DE:AD',
             'network_interfaces': [{'ips': ['10.0.0.1'], 'ips_raw': [167_772_161], 'mac': '11:33:33:77:DE:AD'}],
-            'os': {},
+            'os': {'os_str': 'none'},
             'raw': {
                 'connected_devices': [{'iface': 'Fa0/0', 'name': 'mock', 'type': 'Indirect'}],
                 'ip': '10.0.0.1',
@@ -324,7 +325,7 @@ def test_instance_parser(client):
             'fetch_proto': 'DHCP',
             'id': 'dhcp_11:33:33:77:DE:AD',
             'network_interfaces': [{'ips': ['10.0.0.1'], 'ips_raw': [167_772_161], 'mac': '11:33:33:77:DE:AD'}],
-            'os': {},
+            'os': {'os_str': 'none'},
             'raw': {
                 'connected_devices': [{'iface': 'Fa0/0', 'name': 'mock', 'type': 'Indirect'}],
                 'ip': '10.0.0.1',
@@ -351,6 +352,7 @@ def test_instance_parser(client):
                          'Copyright (c) 1986-2007 by Cisco Systems, Inc.\n'
                          'Compiled Tue 24-Apr-07 15:33 by prod_rel_team',
                 'type': 'Cisco',
+                'os_str': 'none',
             },
             'raw': {
                 'connected_devices': [{'iface': 'FastEthernet0/1', 'name': 'mock', 'type': 'Direct'}],
@@ -380,7 +382,7 @@ def test_instance_parser(client):
             'fetch_proto': 'ARP',
             'id': 'arp_C0:00:07:A8:00:01',
             'network_interfaces': [{'mac': 'C0:00:07:A8:00:01'}],
-            'os': {},
+            'os': {'os_str': 'none'},
             'raw': {
                 'connected_devices': [
                     {'iface': 'fastethernet0/1', 'name': 'mock', 'type': 'Indirect'},
@@ -399,7 +401,7 @@ def test_instance_parser(client):
             'fetch_proto': 'ARP',
             'id': 'arp_11:33:33:77:DE:AD',
             'network_interfaces': [{'mac': '11:33:33:77:DE:AD'}],
-            'os': {},
+            'os': {'os_str': 'none'},
             'raw': {
                 'connected_devices': [{'iface': 'fastethernet0/1', 'name': 'mock', 'type': 'Indirect'}],
                 'mac': '11:33:33:77:DE:AD',
@@ -415,7 +417,7 @@ def test_instance_parser(client):
             'fetch_proto': 'ARP',
             'id': 'arp_C0:00:07:A8:00:00',
             'network_interfaces': [{'mac': 'C0:00:07:A8:00:00'}],
-            'os': {},
+            'os': {'os_str': 'none'},
             'raw': {
                 'connected_devices': [{'iface': 'fastethernet0/0', 'name': 'mock', 'type': 'Indirect'}],
                 'mac': 'C0:00:07:A8:00:00',
@@ -436,7 +438,7 @@ def test_instance_parser(client):
                     'manufacturer': 'VMware, Inc (3401 Hillview Avenue PALO ALTO CA 94304 US)',
                 }
             ],
-            'os': {},
+            'os': {'os_str': 'none'},
             'raw': {
                 'connected_devices': [{'iface': 'fastethernet0/0', 'name': 'mock', 'type': 'Indirect'}],
                 'mac': '00:50:56:91:A6:6B',
@@ -457,7 +459,7 @@ def test_instance_parser(client):
                     'manufacturer': 'Fortinet Inc (899 Kifer Road Sunnyvale California 94086 US)',
                 }
             ],
-            'os': {},
+            'os': {'os_str': 'none'},
             'raw': {
                 'connected_devices': [{'iface': 'fastethernet0/0', 'name': 'mock', 'type': 'Indirect'}],
                 'mac': '90:6C:AC:FE:5B:CB',

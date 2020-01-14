@@ -341,7 +341,8 @@ def figure_out_os(s):
 
     return {'type': os_type,
             'distribution': distribution,
-            'bitness': bitness}
+            'bitness': bitness,
+            'os_str': s}
 
 
 def convert_ldap_searchpath_to_domain_name(ldap_search_path):

@@ -147,6 +147,7 @@ class DeviceAdapterOS(SmartJsonClass):
                            'F5 Networks Big-IP', 'Solaris', 'AIX', 'Printer', 'PlayStation', 'Check Point', "Arista"]
     )
     distribution = Field(str, 'Distribution')
+    os_str = Field(str, 'Full OS String')
     bitness = Field(int, 'Bitness', enum=[32, 64])
     sp = Field(str, 'Service Pack')
     install_date = Field(datetime.datetime, "Install Date")

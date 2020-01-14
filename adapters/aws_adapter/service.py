@@ -1890,6 +1890,7 @@ class AwsAdapter(AdapterBase, Configurable):
                             enable_date=associated_mfa_device_raw.get('EnableDate')
                         )
                     )
+                user.has_associated_mfa_devices = True if associated_mfa_devices else False
             except Exception:
                 logger.exception(f'Problem parsing mfa devices')
 
