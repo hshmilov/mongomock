@@ -366,11 +366,11 @@ class StaticAnalysisService(Triggerable, PluginBase):
             prefix_to_dns = self.get_global_keyval('ldap_nbns_to_dns') or {}
             dns_name = prefix_to_dns.get(prefix.lower())
             if dns_name:
-                return f'{name}@{dns_name}'
-            return f'{name}@{prefix}'
+                return f'{name}@{dns_name}'.lower()
+            return f'{name}@{prefix}'.lower()
         except Exception:
             pass
-        return username
+        return username.lower()
 
     @staticmethod
     def get_first_data(fd_d, fd_attr):
@@ -434,7 +434,8 @@ class StaticAnalysisService(Triggerable, PluginBase):
         # Notice that we select by filter. we do this to include users that came both from adapters and plugins.
         devices_with_users_association = self.devices_db.find(
             parse_filter(
-                'specific_data.data.users == exists(true) or specific_data.data.last_used_users == exists(true)'),
+                'specific_data.data.users == exists(true) or specific_data.data.last_used_users == exists(true) or '
+                'adapters_data.azure_ad_adapter.user_principal_name == ({"$exists":true,"$ne":""})'),
             batch_size=10
         )
 
@@ -493,6 +494,10 @@ class StaticAnalysisService(Triggerable, PluginBase):
                 d['data']['last_used_users'] for d in all_device_data
                 if isinstance(d['data'], dict) and isinstance(d['data'].get('last_used_users'), list)
             ]
+            for d in all_device_data:
+                if isinstance(d['data'], dict) and isinstance(d['data'].get('user_principal_name'), str):
+                    sd_last_used_users_list.append([d['data']['user_principal_name']])
+
             for sd_last_used_users in sd_last_used_users_list:
                 for sd_last_used_user in sd_last_used_users:
                     sd_last_used_user = self.__try_convert_username_prefix_to_username_upn(sd_last_used_user)
@@ -616,7 +621,8 @@ class StaticAnalysisService(Triggerable, PluginBase):
         # of mongo is to lose a cursor that hasn't been fetched in 10 minutes, so this will cause a 'cursor not found'.
         devices_with_last_used_users = self.devices_db.find(
             parse_filter(
-                'specific_data.data.last_used_users == exists(true)'
+                '((adapters_data.azure_ad_adapter.user_principal_name == ({"$exists":true,"$ne":""}))) '
+                'or ((specific_data.data.last_used_users == ({"$exists":true,"$ne":""})))'
             ),
             batch_size=10
         )
@@ -637,6 +643,11 @@ class StaticAnalysisService(Triggerable, PluginBase):
                         upn_name = \
                             self.__try_convert_username_prefix_to_username_upn(device_adapter_data_last_used_user)
                         device_last_used_users_set.add(upn_name)
+                user_principal_name = (device_adapter_data.get('data') or {}).get('user_principal_name')
+                if user_principal_name:
+                    upn_name = \
+                        self.__try_convert_username_prefix_to_username_upn(user_principal_name)
+                    device_last_used_users_set.add(upn_name)
 
             # Now we have a set of all last used users for this device, from all of its adapters.
             # Lets try to get each of these users to achieve their department
