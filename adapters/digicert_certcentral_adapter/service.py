@@ -53,7 +53,7 @@ class DigicertCertcentralAdapter(AdapterBase):
         try:
             return self.get_connection(client_config)
         except RESTException as e:
-            message = f'Error connecting to client with reason: {0}'.format(str(e))
+            message = f'Error connecting to client with reason: {str(e)}'
             logger.exception(message)
             raise ClientConnectionException(message)
 

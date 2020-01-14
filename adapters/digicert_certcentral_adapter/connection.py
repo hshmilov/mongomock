@@ -53,7 +53,7 @@ class DigicertCertcentralConnection(RESTConnection):
             raise RESTException('No API Key')
         self._update_headers()
         self._refresh_permissions()
-        self._fetch_devices(max_devices=1)
+        _ = list(self._fetch_devices(max_devices=1))
 
     def _paginated_post(self, *args, limit: int = 0, **kwargs):
 
@@ -118,7 +118,8 @@ class DigicertCertcentralConnection(RESTConnection):
                 for raw_device in devices_chunk:
                     yield raw_device
         except RESTException as e:
-            if '"message": "Forbidden"' in str(e):
+            # pylint: disable=invalid-string-quote
+            if "'message': 'Forbidden'" in str(e):
                 message = f'Access denied to CertCentral Discovery Endpoint'
                 logger.exception(message)
                 raise RESTConnectionError(message)
