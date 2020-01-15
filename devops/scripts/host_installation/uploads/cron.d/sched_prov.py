@@ -60,6 +60,10 @@ SCALYR_TEMPLATE = '''
      {{
        path: "/var/log/machine_boot.log",
        attributes: {{parser: "rawlog"}}
+     }},
+     {{
+       path: "/var/log/chef.log",
+       attributes: {{parser: "rawlog"}}
      }}
   ]
 }}
@@ -166,7 +170,9 @@ def provision():
     client_rb_template = [f'chef_server_url  "https://manage.chef.io/organizations/axonius"',
                           f'node_name  "{node_name}"',
                           f'validation_key "/home/ubuntu/axonius-validator-2.pem"',
-                          f'validation_client_name "axonius-validator-2"']
+                          f'validation_client_name "axonius-validator-2"',
+                          f'log_location "/var/log/chef.log"',
+                          f'log_level :info']
 
     client_rb_template.append(
         'automatic_attribute_blacklist [["filesystem","by_mountpoint"], ["filesystem","by_pair"], '
