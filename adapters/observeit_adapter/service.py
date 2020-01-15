@@ -144,7 +144,11 @@ class ObserveitAdapter(AdapterBase, Configurable):
                                          version=device_raw.get('SrvVersion'),
                                          status=device_raw.get('SrvMonitorStatus'))
                 try:
-                    device.last_seen = parse_date(str(device_raw.get('ScreenshotLastActivityDate')))
+                    last_seen = parse_date(str(device_raw.get('ScreenshotLastActivityDate')))
+                    if last_seen:
+                        device.last_seen = last_seen
+                    else:
+                        device.last_seen = parse_date(device_raw.get('ConfigLastUpdatedDate'))
                 except Exception:
                     logger.exception(f'Problem adding last seen to {device_raw}')
                 device.client_type = device_raw.get('AgentType')
