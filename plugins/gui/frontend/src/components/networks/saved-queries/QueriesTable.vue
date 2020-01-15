@@ -6,32 +6,47 @@
           v-model="searchValue"
           class="search__input"
           placeholder="Search Queries..."
-          @keyup.enter.native="updateCurrentView"
+          @keyup.enter.native="applySearchAndFilter"
         />
-        <x-button 
-          class="search__reset" 
-          link 
+        <div class="tags-filter">
+          <x-combobox
+            v-if="entityTags.length"
+            v-model="filterTags"
+            height="30"
+            :selection-display-limit="1"
+            :items="entityTags"
+            label="Tags"
+            multiple
+            :allow-create-new="false"
+            :hide-quick-selections="false"
+            :prepend-icon="filterIcon"
+            :menu-props="{maxWidth: 300}"
+            @change="applySearchAndFilter"
+          />
+        </div>
+        <x-button
+          class="search__reset"
+          link
           @click="resetSearchAndFilters"
         >Reset</x-button>
       </div>
-      <x-button 
-        link 
+      <x-button
+        link
         @click="openAxoniusDocs"
       >
-        <v-icon 
+        <v-icon
           small
           color="secondary"
-        >{{ helpIconSvgPath }}</v-icon>Learn about Axonius use cases
-      </x-button>
+        >{{ helpIconSvgPath }}</v-icon>Learn about Axonius use cases</x-button>
     </section>
     <x-saved-queries-panel
-      v-model="isPanelOpen" 
-      :namespace="module" 
-      @input="panelStateChanged" 
-      @run="runQuery" 
-      @delete="handleSelectedQueriesDeletion" 
-      @save-changes="saveQueryChanges" 
-      @close="closeQuerySidePanel" 
+      v-model="isPanelOpen"
+      :namespace="namespace"
+      @input="panelStateChanged"
+      @run="runQuery"
+      @delete="handleSelectedQueriesDeletion"
+      @save-changes="saveQueryChanges"
+      @close="closeQuerySidePanel"
       @new-enforcement="createEnforcement"
     />
     <x-table
@@ -43,11 +58,11 @@
       :on-click-row="openQuerySidePanel"
     >
       <template slot="actions">
-        <x-button 
-          v-if="hasSelection"  
-          id="remove-queries-btn" 
-          :disabled="readOnly" 
-          link 
+        <x-button
+          v-if="hasSelection"
+          id="remove-queries-btn"
+          :disabled="readOnly"
+          link
           @click="handleSelectedQueriesDeletion"
         >Remove</x-button>
       </template>
@@ -56,229 +71,262 @@
 </template>
 
 <script>
-  import xSearch from '../../neurons/inputs/SearchInput.vue'
-  import xTable from '../../neurons/data/Table.vue'
-  import xButton from '../../axons/inputs/Button.vue'
-  import xSavedQueriesPanel from './SavedQueryPanel'
+import { mapState, mapMutations, mapActions } from 'vuex';
+import { mdiHelpCircleOutline, mdiFilter } from '@mdi/js';
+import _get from 'lodash/get';
+import _debounce from 'lodash/debounce';
+import xSearch from '@neurons/inputs/SearchInput.vue';
+import xTable from '@neurons/data/Table.vue';
+import xButton from '@axons/inputs/Button.vue';
+import xSavedQueriesPanel from '@networks/saved-queries/SavedQueryPanel';
+import xCombobox from '@axons/inputs/combobox/index.vue';
 
-  import { mapState, mapMutations, mapActions } from 'vuex'
-  import { UPDATE_DATA_VIEW } from '../../../store/mutations'
-  import { DELETE_DATA, SAVE_VIEW } from '../../../store/actions'
-  import { SET_ENFORCEMENT, initTrigger } from '../../../store/modules/enforcements'
+import { UPDATE_DATA_VIEW } from '@store/mutations';
+import { DELETE_DATA, SAVE_VIEW } from '@store/actions';
+import { SET_ENFORCEMENT, initTrigger } from '@store/modules/enforcements';
 
-  import { mdiHelpCircleOutline } from '@mdi/js'
-  import _get from 'lodash/get'
+import { featchEntityTags } from '@api/saved-queries';
 
-  export default {
-    name: 'XQueriesTable',
-    components: {
-      xSearch, xTable, xButton, xSavedQueriesPanel
+
+export default {
+  name: 'XQueriesTable',
+  components: {
+    xSearch, xTable, xButton, xSavedQueriesPanel, xCombobox,
+  },
+  props: {
+    namespace: {
+      type: String,
+      required: true,
     },
-    props: {
-      module: {
-        type: String,
-        required: true
+    readOnly: {
+      type: Boolean,
+      default: false,
+    },
+  },
+  data() {
+    return {
+      isPanelOpen: false,
+      selection: { ids: [], include: true },
+      searchValue: '',
+      helpIconSvgPath: mdiHelpCircleOutline,
+      entityTags: [],
+      filterTags: [],
+    };
+  },
+  computed: {
+    ...mapState({
+      savedQueries(state) {
+        return state[this.namespace].views.saved.content.data;
       },
-      readOnly: {
-        type: Boolean,
-        default: false
-      }
+      isEnforcementsWrite(state) {
+        const user = _get(state, 'auth.currentUser.data');
+        const noUserOrPermissionsDefined = !user || !user.permissions;
+        const userEnforcementsPermissionsLevel = _get(user, 'permissions.Enforcements');
+        const isUserAdminRole = user.admin;
+
+        return userEnforcementsPermissionsLevel === 'ReadWrite' || noUserOrPermissionsDefined || isUserAdminRole;
+      },
+    }),
+    queriesRowsSelections: {
+      get() {
+        return this.readOnly ? undefined : this.selection;
+      },
+      set(newSelections) {
+        this.selection = newSelections;
+      },
     },
-    data () {
-      return {
-        isPanelOpen: false,
-        selection: { ids: [], include: true },
-        searchValue: '',
-        helpIconSvgPath: mdiHelpCircleOutline,
-      }
+    pathToSavedQueryInState() {
+      return `${this.namespace}/views/saved`;
     },
-    computed: {
-      ...mapState({
-        savedQueries (state) {
-          return state[this.module].views.saved.content.data
+    hasSelection() {
+      return (this.selection.ids && this.selection.ids.length) || this.selection.include === false;
+    },
+    numberOfSelections() {
+      return this.selection.ids ? this.selection.ids.length : 0;
+    },
+    queriesTableFieldsSchema() {
+      return [
+        {
+          name: 'name',
+          title: 'Name',
+          type: 'string',
         },
-        isEnforcementsWrite (state) {
-          const user = _get(state, 'auth.currentUser.data')
-          const noUserOrPermissionsDefined = !user || !user.permissions
-          const userEnforcementsPermissionsLevel = _get(user, permissions.Enforcements)
-          const isUserAdminRole = user.admin
-
-          return userEnforcementsPermissionsLevel === 'ReadWrite' || noUserOrPermissionsDefined || isUserAdminRole
-        }
-      }),
-      queriesRowsSelections: {
-        get() {
-          return this.readOnly ? undefined : this.selection
+        {
+          name: 'description',
+          title: 'Description',
+          type: 'string',
         },
-        set(newSelections) {
-          this.selection = newSelections
-        }
-      },
-      pathToSavedQueryInState() {
-        return `${this.module}/views/saved`
-      },
-      hasSelection () {
-        return (this.selection.ids && this.selection.ids.length) || this.selection.include === false
-      },
-      numberOfSelections() {
-        return this.selection.ids ? this.selection.ids.length : 0
-      },
-      queriesTableFieldsSchema() {
-        return [
-          {
-            name: 'name', 
-            title: 'Name', 
+        {
+          name: 'tags',
+          title: 'Tags',
+          type: 'array',
+          items: {
+            format: 'tag',
             type: 'string',
           },
-          {
-            name: 'description', 
-            title: 'Description', 
-            type: 'string',
-          },
-          {
-            name: 'tags', 
-            title: 'Tags', 
-            type: 'array', 
-            items: {
-              format: 'tag',
-              type: 'string'
-            }
-          },
-          {
-            name: 'last_updated', title: 'Last Updated', type: 'string', format: 'date-time'
-          },
-          {
-            name: 'updated_by', title: 'Updated By', type: 'string'
-          },
-        ]
-      },
-      searchFilter() {
-        if (!this.searchValue) return ''
-        return `name == regex("${this.searchValue}", "i") or description == regex("${this.searchValue}", "i")`
-      },
-      selectedName () {
-        return this.savedQueries.filter(v => v).find(view => this.selection.ids[0] === view.uuid).name
+        },
+        {
+          name: 'last_updated', title: 'Last Updated', type: 'string', format: 'date-time',
+        },
+        {
+          name: 'updated_by', title: 'Updated By', type: 'string',
+        },
+      ];
+    },
+    searchFilter() {
+      const queryStringParts = [];
+      if (this.searchValue) {
+        queryStringParts.push(`(name == regex("${this.searchValue}", "i") or description == regex("${this.searchValue}", "i"))`);
+      } if (this.filterTags.length) {
+        queryStringParts.push(`tags in ["${this.filterTags.join('","')}"]`);
+      }
+      return queryStringParts.join(' and ');
+    },
+    selectedName() {
+      return this.savedQueries.filter((v) => v)
+        .find((view) => this.selection.ids[0] === view.uuid).name;
+    },
+    filterIcon() {
+      return this.filterTags.length ? mdiFilter : '';
+    },
+  },
+  mounted() {
+    const { queryId } = this.$route.params;
+    this.fetchTagsApi();
+    if (queryId) {
+      this.isPanelOpen = true;
+      this.selection.ids = [queryId];
+    }
+  },
+  methods: {
+    async saveQueryChanges({ queryData, done }) {
+      try {
+        await this.updateQuery({
+          module: this.namespace,
+          ...queryData,
+        });
+        this.fetchTagsApi();
+        done();
+      } catch (ex) {
+        done(ex);
       }
     },
-    mounted(){
-      const { queryId } = this.$route.params
+    async fetchTagsApi() {
+      this.entityTags = [];
+      try {
+        const tags = await featchEntityTags(this.namespace);
+        this.entityTags = tags;
+      } catch (ex) {
+        console.warn('featch tags failed');
+      }
+    },
+    runQuery(viewId) {
+      const selectedView = this.savedQueries.find((view) => view.uuid === viewId);
+      this.updateView({
+        module: this.namespace,
+        view: selectedView.view,
+        uuid: selectedView.uuid,
+      });
+      this.$router.push({ path: `/${this.namespace}` });
+    },
+    createEnforcement(queryName) {
+      this.setEnforcement({
+        uuid: 'new',
+        actions: {
+          main: null,
+          success: [],
+          failure: [],
+          post: [],
+        },
+        triggers: [{
+          ...initTrigger,
+          name: 'Trigger',
+          view: {
+            name: queryName, entity: this.namespace,
+          },
+        }],
+      });
+      /* Navigating to new enforcement - requested queries will be selected as triggers there */
+      this.$router.push({ path: '/enforcements/new' });
+    },
+    async handleSelectedQueriesDeletion(e, queryId) {
       if (queryId) {
-        this.isPanelOpen = true
-        this.selection.ids = [queryId]
+        // The remover invoked from within the panel and the panel should be closed.
+        this.closeQuerySidePanel();
       }
-    },
-    methods: {
-      async saveQueryChanges({queryData, done}) {
-        try {
-          await this.updateQuery({
-            module: this.module,
-            ...queryData
-          })
-          done()
-        } catch (ex) {
-          done(ex)
-        }
-      },
-      runQuery (viewId) {
-        const selectedView = this.savedQueries.find(view => view.uuid === viewId)
-        this.updateView({
-          module: this.module,
-          view: selectedView.view,
-          uuid: selectedView.uuid
-        })
-        this.$router.push({ path: `/${this.module}` })
-      },
-      createEnforcement (queryName) {
-        this.setEnforcement({
-          uuid: 'new',
-          actions: {
-            main: null,
-            success: [],
-            failure: [],
-            post: []
-          },
-          triggers: [{
-            ...initTrigger,
-            name: 'Trigger',
-            view: {
-              name: queryName, entity: this.module
-            }
-          }]
-        })
-        /* Navigating to new enforcement - requested queries will be selected as triggers there */
-        this.$router.push({ path: '/enforcements/new' })
-      },
-      async handleSelectedQueriesDeletion(e, queryId) {
-        if (queryId) {
-          // The remover invoked from within the panel and the panel should be closed.
-          this.closeQuerySidePanel()
-        }
-        this.$safeguard.show({
-          text: `
-            The selected Saved ${ this.numberOfSelections > 1 ? 'Queries' : 'Query' } will be completely removed from the
+      this.$safeguard.show({
+        text: `
+            The selected Saved ${this.numberOfSelections > 1 ? 'Queries' : 'Query'} will be completely removed from the
             system and no other user will be able to use it.
             <br />
-            Removing the Saved ${ this.numberOfSelections > 1 ? 'Queries' : 'Query' } is an irreversible action.
+            Removing the Saved ${this.numberOfSelections > 1 ? 'Queries' : 'Query'} is an irreversible action.
             <br />Do you wish to continue?
           `,
-          confirmText: this.numberOfSelections > 1 ? 'Remove Saved Queries' : 'Remove Saved Query',
-          onConfirm: async () => {
-            try {
-              await this.removeData({ module: this.pathToSavedQueryInState, selection: !queryId ? this.selection : {ids: [queryId], include: true} })
-              this.updateCurrentView()
-              this.closeQuerySidePanel()
-            } catch(ex) {
-              console.error(ex)
-            }
+        confirmText: this.numberOfSelections > 1 ? 'Remove Saved Queries' : 'Remove Saved Query',
+        onConfirm: async () => {
+          try {
+            await this.removeData({
+              module: this.pathToSavedQueryInState,
+              selection: !queryId ? this.selection : { ids: [queryId], include: true },
+            });
+            this.updateCurrentView();
+            this.closeQuerySidePanel();
+          } catch (ex) {
+            console.error(ex);
           }
-        })
-      },
-      panelStateChanged(open) {
-        if(!open) {
-          this.$router.push({ name: `${this.module}-queries`})
-          this.resetTableSelections()
-        }
-      },  
-      openQuerySidePanel(selectedQueryId) {
-        this.isPanelOpen = !this.isPanelOpen
-        this.selection = { ids: [selectedQueryId], include: true }
-        this.$router.push({ path: '', params: { queryId: selectedQueryId } })
-      },
-      closeQuerySidePanel() {
-        this.isPanelOpen = false
-      },
-      ...mapMutations({
-        updateView: UPDATE_DATA_VIEW, setEnforcement: SET_ENFORCEMENT
-      }),
-      ...mapActions({
-        removeData: DELETE_DATA,
-        updateQuery: SAVE_VIEW
-      }),
-      resetSearchAndFilters() {
-        this.searchValue = ''
-        this.updateCurrentView()
-      },
-      openAxoniusDocs() {
-        window.open('https://docs.axonius.com/docs/use-cases', '_blank')
-      },
-      resetTableSelections() {
-        this.selection.ids = []
-      },
-      updateCurrentView () {
-        this.resetTableSelections()
-        this.updateView({
-          module: this.pathToSavedQueryInState,
-          view: {
-            query: {
-              filter: this.searchFilter
-            },
-            page: 0
-          }
-        })
-        this.$refs.table.fetchContentPages(true)
+        },
+      });
+    },
+    panelStateChanged(open) {
+      if (!open) {
+        this.$router.push({ name: `${this.namespace}-queries` });
+        this.resetTableSelections();
       }
-    }
-  }
+    },
+    openQuerySidePanel(selectedQueryId) {
+      this.isPanelOpen = !this.isPanelOpen;
+      this.selection = { ids: [selectedQueryId], include: true };
+      this.$router.push({ path: '', params: { queryId: selectedQueryId } });
+    },
+    closeQuerySidePanel() {
+      this.isPanelOpen = false;
+    },
+    ...mapMutations({
+      updateView: UPDATE_DATA_VIEW, setEnforcement: SET_ENFORCEMENT,
+    }),
+    ...mapActions({
+      removeData: DELETE_DATA,
+      updateQuery: SAVE_VIEW,
+    }),
+    resetSearchAndFilters() {
+      this.searchValue = '';
+      this.filterTags = [];
+      this.updateCurrentView();
+    },
+    openAxoniusDocs() {
+      window.open('https://docs.axonius.com/docs/use-cases', '_blank');
+    },
+    resetTableSelections() {
+      this.selection.ids = [];
+    },
+    applySearchAndFilter: _debounce(function applySearchAndFilter() {
+      this.updateCurrentView();
+    }, 250),
+    updateCurrentView() {
+      this.resetTableSelections();
+      this.updateView({
+        module: this.pathToSavedQueryInState,
+        view: {
+          query: {
+            filter: this.searchFilter,
+          },
+          page: 0,
+        },
+      });
+      this.$refs.table.fetchContentPages(true);
+    },
+  },
+};
 </script>
 
 <style lang="scss">
@@ -305,10 +353,29 @@
     display: flex;
     justify-content: space-between;
     .queries-table-header__search {
-      width: 30%;
+      width: 50%;
       display: flex;
+      align-items: flex-end;
       .search__input {
-        width: 90%;
+        line-height: 32px;
+        height: 32px;
+        width: 45%;
+
+        .input-icon {
+          top: 0px;
+          left: 4px;
+        }
+      }
+      .tags-filter {
+        width: 300px;
+        margin-left: 40px;
+        .x-combobox {
+          font-size: 14px;
+
+          .v-input__control {
+            border: 1px solid #DEDEDE !important;
+          }
+        }
       }
       .search__reset {
         width: 10%;

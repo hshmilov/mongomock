@@ -16,8 +16,10 @@
   ],
   "rules": {},
   "settings": {
-    "webpack": {
-      "config": "webpack.common.js"
+    "import/resolver": {
+      "webpack": {
+        "config": "webpack.common.js"
+      } 
     }
   }
 }

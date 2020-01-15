@@ -237,11 +237,14 @@ class TestSavedQuery(TestBase):
         self.devices_queries_page.wait_for_spinner_to_end()
         saved_queries_count = self.devices_queries_page.count_entities()
         self.devices_queries_page.fill_enter_table_search('operating system')
+        self.devices_queries_page.wait_for_table_to_load()
+        self.devices_queries_page.wait_for_spinner_to_end()
         for value in self.devices_queries_page.get_column_data_inline('Name'):
             assert 'operating system' in value.lower()
         assert self.devices_queries_page.count_entities() < saved_queries_count
         self.devices_queries_page.fill_enter_table_search('')
         self.devices_queries_page.wait_for_table_to_load()
+        self.devices_queries_page.wait_for_spinner_to_end()
         assert self.devices_queries_page.count_entities() == saved_queries_count
         self.devices_page.switch_to_page()
         self.devices_page.execute_saved_query(WINDOWS_QUERY_NAME)

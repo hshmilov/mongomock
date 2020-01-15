@@ -271,6 +271,7 @@ export default {
                     onInput={selections => this.tags = selections}
                     items={this.entityTags}
                     multiple
+                    menuProps={{ maxWidth: 744 }}
                     keep-open={false}
                 />)
         } else {
