@@ -316,7 +316,7 @@ def decrypt_node(logger, instance):
             return 'latest'
 
     logger.info(f'about to decrypt {instance}')
-    channel = connect_to_linux_user(instance, DECRYPT_PASSWORD, DECRYPT_PASSWORD)
+    channel = connect_to_linux_user(instance, DECRYPT_PASSWORD, DECRYPT_USERNAME)
     prompt = read_ssh_until(logger, channel, b'Please enter the decryption key> ')
     version = extract_version_name(prompt)
     print(f'the version appears to be = {version}')
