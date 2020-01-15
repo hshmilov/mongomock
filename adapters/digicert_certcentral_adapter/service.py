@@ -83,6 +83,7 @@ class DigicertCertcentralAdapter(AdapterBase):
                     'name': 'api_key',
                     'title': 'API Key',
                     'type': 'string',
+                    'format': 'password',
                 },
                 {
                     'name': 'account_id',
