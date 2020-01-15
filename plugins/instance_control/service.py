@@ -10,9 +10,15 @@ import paramiko
 from apscheduler.executors.pool import ThreadPoolExecutor
 from apscheduler.triggers.interval import IntervalTrigger
 from retrying import retry
+from flask import jsonify
 
 from axonius.background_scheduler import LoggedBackgroundScheduler
 from axonius.consts import instance_control_consts
+from axonius.consts.gui_consts import Signup
+from axonius.consts.instance_control_consts import InstanceControlConsts
+from axonius.consts.plugin_consts import (PLUGIN_UNIQUE_NAME,
+                                          PLUGIN_NAME,
+                                          NODE_ID, GUI_PLUGIN_NAME)
 from axonius.consts.plugin_subtype import PluginSubtype
 from axonius.mixins.triggerable import RunIdentifier, Triggerable
 from axonius.plugin_base import PluginBase, add_rule, return_error
@@ -93,7 +99,7 @@ class InstanceControlService(Triggerable, PluginBase):
 
     def __init__(self, *args, **kwargs):
         super().__init__(get_local_config_file(__file__), *args, **kwargs)
-        #pylint: disable=W0511
+        # pylint: disable=W0511
         # TODO: Figure out if this connection has be refreshed from time to time
         self.__host_ssh = get_ssh_connection()
         self.__cortex_path = os.environ['CORTEX_PATH']
@@ -143,6 +149,33 @@ class InstanceControlService(Triggerable, PluginBase):
                 return self.start_adapter(sh_plugin_name)
             # else - stop
             return self.stop_adapter(sh_plugin_name)
+
+    @add_rule(InstanceControlConsts.DescribeClusterEndpoint, methods=['GET'], should_authenticate=False)
+    def describe_cluster(self):
+        instance_projection = {
+            PLUGIN_UNIQUE_NAME: True,
+            NODE_ID: True,
+            'status': True,
+            'last_seen': True,
+            '_id': False
+        }
+        my_plugin_entity = self.core_configs_collection.find_one({
+            PLUGIN_UNIQUE_NAME: self.plugin_unique_name
+        }, projection=instance_projection)
+        insances = self.core_configs_collection.find({PLUGIN_NAME: 'instance_control'},
+                                                     projection=instance_projection)
+        signup_collection = self._get_collection(Signup.SignupCollection, db_name=GUI_PLUGIN_NAME)
+        signup = signup_collection.find_one({})
+        if signup:
+            signup.pop('_id', None)
+            signup['newPassword'] = ''
+
+        result = {
+            'my_entity': my_plugin_entity,
+            'instances': insances,
+            'signup': signup
+        }
+        return jsonify(result)
 
     @add_rule('instances/host/<hostname>', methods=['PUT'], should_authenticate=False)
     def update_hostname(self, hostname):

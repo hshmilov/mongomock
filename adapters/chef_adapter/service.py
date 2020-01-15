@@ -11,6 +11,7 @@ from axonius.consts.gui_consts import FeatureFlagsNames
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.fields import Field, ListField
 from axonius.users.user_adapter import UserAdapter
+from axonius.utils.dynamic_fields import put_dynamic_field
 from axonius.utils.files import get_local_config_file
 from axonius.utils.datetime import parse_date
 from axonius.utils.parsing import format_mac, is_valid_ip
@@ -327,13 +328,20 @@ class ChefAdapter(AdapterBase):
                     automatic['packages'] = {}
                     automatic['filesystem'] = {}
 
-                    net = automatic.get('network')
+                    net = automatic.get('network', {}) or {}
                     net['interfaces'] = {}
 
                     counters = automatic.get('counters', {}) or {}
                     counters['network'] = {}
 
                     device.set_raw(raw_copy)  # store selected data for axonius node
+
+                for key, val in device_raw_automatic.items():
+                    try:
+                        if key.startswith('axonius_auto') and val:
+                            put_dynamic_field(device, key, val, key)
+                    except Exception:
+                        logger.exception(f'Failed to {key} {val}')
 
                 yield device
             except Exception:

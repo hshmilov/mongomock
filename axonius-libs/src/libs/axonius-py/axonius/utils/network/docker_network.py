@@ -3,6 +3,7 @@ import json
 import logging
 import socket
 import subprocess
+import shlex
 
 from urllib3.util.url import parse_url
 
@@ -58,3 +59,8 @@ def read_weave_network_range():
     report = json.loads(report)
     weave_netrowk_range = report['IPAM']['Range']
     return weave_netrowk_range
+
+
+def run_cmd_in_container(container, cmd):
+    env = {'DOCKER_HOST': 'unix:///var/run/weave/weave.sock'}
+    return subprocess.check_output(shlex.split(f'docker exec {container} {cmd}'), env=env).decode()

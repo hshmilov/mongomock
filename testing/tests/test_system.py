@@ -1,5 +1,6 @@
 import random
 import time
+import json
 
 import pytest
 import requests
@@ -13,6 +14,7 @@ from axonius.consts.system_consts import (CUSTOMER_CONF_PATH,
 from axonius_system import process_exclude_from_config
 from devops.axonius_system import main as system_main
 from exclude_helper import ExcludeHelper
+from scripts.maintenance_tools.cluster_reader import read_cluster_data
 from services.adapters.infinite_sleep_service import (InfiniteSleepService,
                                                       infinite_sleep_fixture)
 from services.adapters.stresstest_scanner_service import (StresstestScanner_fixture,
@@ -190,3 +192,10 @@ def test_master_proxy():
     assert requests.get('https://manage.chef.io',
                         proxies={'https': f'https://localhost:{port}'},
                         timeout=(20, 90)).status_code == 200
+
+
+def test_cluster_reader():
+    data = json.loads(read_cluster_data())
+    print(f'  {data}')
+    assert 'instance_type' in data
+    assert len(data['my_entity']) > 0
