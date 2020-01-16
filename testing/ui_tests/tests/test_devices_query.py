@@ -3,6 +3,7 @@ import math
 from datetime import datetime
 from uuid import uuid4
 
+from pytest import raises
 from selenium.common.exceptions import NoSuchElementException
 from axonius.utils.hash import get_preferred_quick_adapter_id
 from axonius.utils.wait import wait_until
@@ -33,6 +34,7 @@ from devops.scripts.automate_dev import credentials_inputer
 class TestDevicesQuery(TestBase):
     SEARCH_TEXT_WINDOWS = 'Windows'
     SEARCH_TEXT_CB_FIRST = 'CB First'
+    SEARCH_TEXT_TESTDOMAIN = 'TestDomain'
     ERROR_TEXT_QUERY_BRACKET = 'Missing {direction} bracket'
     CUSTOM_QUERY = 'Clear_query_test'
     CISCO_PLUGIN_NAME = 'cisco_adapter'
@@ -184,8 +186,40 @@ class TestDevicesQuery(TestBase):
         assert len(all_data)
         assert any(text in x for x in all_data)
 
-    def test_search_everywhere(self):
+    def test_search_everywhere_exact_search_off(self):
         self.settings_page.switch_to_page()
+        self.settings_page.click_gui_settings()
+        self.settings_page.wait_for_spinner_to_end()
+        toggle = self.settings_page.find_exact_search_toggle()
+        self.settings_page.click_toggle_button(toggle, make_yes=False, scroll_to_toggle=True)
+        self.settings_page.click_save_button()
+        self.settings_page.wait_for_saved_successfully_toaster()
+
+        self.base_page.run_discovery()
+        self.devices_page.switch_to_page()
+        self.devices_page.fill_filter(self.SEARCH_TEXT_WINDOWS)
+        self.devices_page.enter_search()
+        self._check_search_text_result(self.SEARCH_TEXT_WINDOWS)
+        # check contains works when exact search is off
+        self.devices_page.fill_filter(self.SEARCH_TEXT_TESTDOMAIN)
+        self.devices_page.open_search_list()
+        self.devices_page.select_search_everywhere()
+        self._check_search_text_result(self.SEARCH_TEXT_TESTDOMAIN)
+
+        # contains won't work when exact search is on
+        self.devices_page.fill_filter('Dom')
+        self.devices_page.enter_search()
+        self._check_search_text_result('Dom')
+
+    def test_search_everywhere_exact_search_on(self):
+        self.settings_page.switch_to_page()
+        self.settings_page.click_gui_settings()
+        self.settings_page.wait_for_spinner_to_end()
+        toggle = self.settings_page.find_exact_search_toggle()
+        self.settings_page.click_toggle_button(toggle, make_yes=True, scroll_to_toggle=True)
+        self.settings_page.click_save_button()
+        self.settings_page.wait_for_saved_successfully_toaster()
+
         self.base_page.run_discovery()
         self.devices_page.switch_to_page()
         self.devices_page.fill_filter(self.SEARCH_TEXT_WINDOWS)
@@ -200,6 +234,12 @@ class TestDevicesQuery(TestBase):
         self.devices_page.fill_filter(self.SEARCH_TEXT_CB_FIRST.lower())
         self.devices_page.enter_search()
         self._check_search_text_result(self.SEARCH_TEXT_CB_FIRST)
+
+        # contains won't work when exact search is on
+        self.devices_page.fill_filter('dom')
+        self.devices_page.enter_search()
+        with raises(AssertionError):
+            self._check_search_text_result('dom')
 
     def _test_comp_op_change(self):
         """

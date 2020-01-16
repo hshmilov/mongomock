@@ -34,6 +34,7 @@ class SettingsPage(Page):
     USE_SYSLOG_LABEL = 'Use Syslog'
     LDAP_LOGINS_LABEL = 'Allow LDAP Logins'
     OKTA_LOGINS_LABEL = 'Allow Okta Logins'
+    EXACT_SEARCH_LABEL = 'Use Exact Match for Assets Search'
     SAML_LOGINS_LABEL = 'Allow SAML-Based Logins'
     TRIAL_MODE_FLAG_LABEL = 'Is trial mode'
     EMAIL_PORT_ID = 'smtpPort'
@@ -434,6 +435,9 @@ class SettingsPage(Page):
 
     def find_allow_ldap_logins_toggle(self):
         return self.find_checkbox_by_label(self.LDAP_LOGINS_LABEL)
+
+    def find_exact_search_toggle(self):
+        return self.find_checkbox_by_label(self.EXACT_SEARCH_LABEL)
 
     def find_allow_okta_logins_toggle(self):
         return self.find_checkbox_by_label(self.OKTA_LOGINS_LABEL)
