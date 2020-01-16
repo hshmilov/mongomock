@@ -156,12 +156,15 @@
         "cp uploads/cron.d/* /etc/cron.d/",
         "chmod +700 /etc/cron.d/*",
         "chown -R root:root /etc/cron.d/*",
-        "rm -rf /home/ubuntu/.ssh/authorized_keys",
         "python3 uploads/create_pre_installed_crons.py",
         "rm -rf uploads",
         "cat /dev/null > /home/ubuntu/.bash_history"
       ],
       "execute_command": "sudo -S sh -c '{{ .Vars }} {{ .Path }}'"
+    },
+    {
+      "type": "shell",
+      "script": "./clean_machine_after_installation.sh"
     }
   ],
   "post-processors": [
