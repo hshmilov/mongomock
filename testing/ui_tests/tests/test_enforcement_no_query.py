@@ -154,14 +154,6 @@ class TestEnforcementNoQuery(TestBase):
             self.enforcements_page.get_column_data_inline(FIELD_LAST_TRIGGERED)[0])
         assert '1' in self.enforcements_page.get_column_data_inline(FIELD_TIMES_TRIGGERED)
 
-    def test_coming_soon(self):
-        self.enforcements_page.switch_to_page()
-        self.enforcements_page.click_new_enforcement()
-        self.enforcements_page.open_action_category(ActionCategory.Scan)
-        # Opening animation time
-        time.sleep(0.2)
-        assert self.enforcements_page.find_disabled_action(Action.scan_with_qualys.value)
-
     def test_full_action_flow(self):
         """
         Test an Enforcement containing a Main action as well as success, failure and post actions

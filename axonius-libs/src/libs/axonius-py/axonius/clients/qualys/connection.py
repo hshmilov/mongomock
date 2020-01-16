@@ -1,9 +1,10 @@
 import logging
+from typing import List
 
+from axonius.clients.qualys import consts, xmltodict
 from axonius.clients.rest.connection import RESTConnection
-from axonius.clients.rest.exception import RESTException
 from axonius.clients.rest.consts import get_default_timeout
-from qualys_scans_adapter import consts
+from axonius.clients.rest.exception import RESTException
 
 logger = logging.getLogger(f'axonius.{__name__}')
 '''
@@ -39,21 +40,29 @@ class IteratorCounter:
 
 class QualysScansConnection(RESTConnection):
 
-    def __init__(self, request_timeout, chunk_size, devices_per_page, retry_sleep_time, max_retries,
-                 *args, date_filter=None, **kwargs):
+    def __init__(self,
+                 *args,
+                 request_timeout=None,
+                 chunk_size=None,
+                 devices_per_page=None,
+                 retry_sleep_time=None,
+                 max_retries=None,
+                 date_filter=None,
+                 **kwargs):
         """ Initializes a connection to Illusive using its rest API
 
         :param obj logger: Logger object of the system
         :param str domain: domain address for Illusive
         """
+        request_timeout = request_timeout or consts.DEFAULT_REQUEST_TIMEOUT
         super().__init__(*args, session_timeout=(get_default_timeout().read_timeout, request_timeout), **kwargs)
         self._permanent_headers = {'X-Requested-With': 'Axonius Qualys Scans Adapter',
                                    'Accept': 'application/json'}
         self._date_filter = date_filter
-        self._chunk_size = chunk_size
-        self._devices_per_page = devices_per_page
-        self._retry_sleep_time = retry_sleep_time
-        self._max_retries = max_retries
+        self._chunk_size = chunk_size or consts.DEFAULT_CHUNK_SIZE
+        self._devices_per_page = devices_per_page or consts.DEVICES_PER_PAGE
+        self._retry_sleep_time = retry_sleep_time or consts.RETRY_SLEEP_TIME
+        self._max_retries = max_retries or consts.MAX_RETRIES
 
     def _connect(self):
         if not self._username or not self._password:
@@ -165,3 +174,106 @@ class QualysScansConnection(RESTConnection):
                 yield device_raw
         except Exception:
             logger.exception(f'Problem getting hostassets')
+
+    def add_assets_by_hostname(self, hosts: List):
+        """seems like add assets by hostname isn"t implemented yet"""
+        # https://github.com/paragbaxi/qualysapi/blob/master/qualysapi/api_actions.py
+        raise NotImplementedError()
+
+    def add_assets_by_ip(self, ips: List):
+        """Permissions - A Manager has permissions to add IP addresses.
+           A Unit Manager can add IP addresses when the “Add assets” permission is enabled in their account.
+           Users with other roles (Scanner, Reader, Auditor) do not have permissions to add IP addresses."""
+        try:
+            ips = ','.join(ips)
+            resp = self._post('api/2.0/fo/asset/ip/',
+                              do_basic_auth=True,
+                              use_json_in_body=False,
+                              use_json_in_response=False,
+                              url_params={'action': 'add'},
+                              body_params={'ips': ips, 'enable_vm': 1})
+            resp = xmltodict.parse(resp)
+            text = resp['SIMPLE_RETURN']['RESPONSE']['TEXT']
+            return text == 'IPs successfully added to Vulnerability Management', text
+        except Exception as e:
+            logger.debug(f'Failed with {e}')
+            return False, ''
+
+    def get_asset_by_ip(self, ips: List):
+        """Permissions - A Manager has permissions to add IP addresses.
+           A Unit Manager can add IP addresses when the “Add assets” permission is enabled in their account.
+           Users with other roles (Scanner, Reader, Auditor) do not have permissions to add IP addresses."""
+        try:
+            ips = ','.join(ips)
+            resp = self._post('api/2.0/fo/asset/ip/',
+                              do_basic_auth=True,
+                              use_json_in_body=False,
+                              use_json_in_response=False,
+                              url_params={'action': 'list'},
+                              body_params={'ips': ips})
+            resp = xmltodict.parse(resp)
+            text = resp['IP_LIST_OUTPUT']['RESPONSE']['IP_SET']['IP']
+            return text
+        except Exception as e:
+            logger.debug(f'Failed with {e}')
+            return []
+
+    def get_asset_group_id_by_title(self, title):
+        try:
+            resp = self._post('api/2.0/fo/asset/group/',
+                              do_basic_auth=True,
+                              use_json_in_body=False,
+                              use_json_in_response=False,
+                              url_params={'action': 'list'},
+                              body_params={'title': title, 'show_attributes': 'ID'})
+            resp = xmltodict.parse(resp)
+            return resp['ASSET_GROUP_LIST_OUTPUT']['RESPONSE']['ID_SET']['ID']
+        except Exception as e:
+            logger.debug(f'Failed with {e}')
+            return None
+
+    def delete_group(self, id_):
+        try:
+            resp = self._post('api/2.0/fo/asset/group/',
+                              do_basic_auth=True,
+                              use_json_in_body=False,
+                              use_json_in_response=False,
+                              url_params={'action': 'delete'},
+                              body_params={'id': id_})
+            resp = xmltodict.parse(resp)
+            text = resp['SIMPLE_RETURN']['RESPONSE']['TEXT']
+            return text == 'Asset Group Deleted Successfully', text
+        except Exception as e:
+            logger.debug(f'Failed with {e}')
+            return False, ''
+
+    def create_group(self, title, ips: List=None, hostnames: List=None):
+        try:
+            if not ips:
+                ips = []
+            if not hostnames:
+                hostnames = []
+
+            ips = ','.join(ips)
+            hostnames = ','.join(hostnames)
+
+            body_params = {'title': title}
+            if ips:
+                body_params['ips'] = ips
+
+            if hostnames:
+                body_params['dns_names'] = hostnames
+
+            resp = self._post('api/2.0/fo/asset/group/',
+                              do_basic_auth=True,
+                              use_json_in_body=False,
+                              use_json_in_response=False,
+                              url_params={'action': 'add'},
+                              body_params=body_params)
+            resp = xmltodict.parse(resp)
+
+            text = resp['SIMPLE_RETURN']['RESPONSE']['TEXT']
+            return text == 'Asset Group successfully added.', text
+        except Exception as e:
+            logger.debug(f'Failed with {e}')
+            return False, ''

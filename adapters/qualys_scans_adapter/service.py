@@ -14,8 +14,8 @@ from axonius.scanner_adapter_base import ScannerAdapterBase
 from axonius.smart_json_class import SmartJsonClass
 from axonius.utils.datetime import parse_date
 from axonius.utils.files import get_local_config_file
-from qualys_scans_adapter import consts
-from qualys_scans_adapter.connection import QualysScansConnection
+from axonius.clients.qualys import consts
+from axonius.clients.qualys.connection import QualysScansConnection
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -499,8 +499,8 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
     @classmethod
     def _db_config_default(cls):
         return {
-            'request_timeout': 200,
-            'async_chunk_size': 50,
+            'request_timeout': consts.DEFAULT_REQUEST_TIMEOUT,
+            'async_chunk_size': consts.DEFAULT_CHUNK_SIZE,
             'retry_sleep_time': consts.RETRY_SLEEP_TIME,
             'max_retries': consts.MAX_RETRIES,
             'devices_per_page': consts.DEVICES_PER_PAGE,

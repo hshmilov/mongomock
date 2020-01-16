@@ -47,8 +47,8 @@ export const actionsMeta = {
     sentinelone_initiate_scan_action: {
         title: 'Initiate SentinelOne Scan'
     },
-    scan_with_qualys: {
-        title: 'Add to Qualys Cloud Platform'
+    qualys_create_asset: {
+        title: 'Add IPs to Qualys Cloud Platform'
     },
     tenable_io_add_ips_to_target_group: {
         title: 'Add IPs to Tenable.io Target Group'
@@ -166,7 +166,7 @@ export const actionsMeta = {
     },
     scan_va: {
         title: 'Add Device to VA Scan',
-        items: ['tenable_sc_add_ips_to_asset', 'tenable_io_add_ips_to_target_group', 'tenable_io_create_asset', 'scan_with_qualys']
+        items: ['qualys_create_asset', 'tenable_sc_add_ips_to_asset', 'tenable_io_add_ips_to_target_group', 'tenable_io_create_asset']
     },
     patch_device: {
         title: 'Patch Device',

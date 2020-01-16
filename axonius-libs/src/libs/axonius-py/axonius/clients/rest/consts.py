@@ -2,8 +2,8 @@ import logging
 from collections import namedtuple
 
 logger = logging.getLogger(f'axonius.{__name__}')
-DEFAULT_TIMEOUT = (5, 300)
 SessionTimeoutTuple = namedtuple('SessionTimeoutTuple', ['read_timeout', 'recv_timeout'])
+DEFAULT_TIMEOUT = SessionTimeoutTuple(5, 300)
 
 
 def get_default_timeout():
