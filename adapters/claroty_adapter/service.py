@@ -17,6 +17,7 @@ logger = logging.getLogger(f'axonius.{__name__}')
 class ClarotyAdapter(ScannerAdapterBase):
     # pylint: disable=too-many-instance-attributes
     class MyDeviceAdapter(DeviceAdapter):
+        tenant_tag = Field(str, 'Tenant Tag')
         asset_type = Field(str, 'Asset Type')
         vendor = Field(str, 'Vendor')
         criticality = Field(str, 'Criticality')
@@ -47,7 +48,7 @@ class ClarotyAdapter(ScannerAdapterBase):
                                            )
             with connection:
                 pass  # check that the connection credentials are valid
-            return connection
+            return connection, client_config.get('tenant_tag')
         except RESTException as e:
             message = 'Error connecting to client with domain {0}, reason: {1}'.format(
                 client_config['domain'], str(e))
@@ -64,8 +65,10 @@ class ClarotyAdapter(ScannerAdapterBase):
 
         :return: A json with all the attributes returned from the Server
         """
-        with client_data:
-            yield from client_data.get_device_list()
+        connection, tenant_tag = client_data
+        with connection:
+            for device_raw in connection.get_device_list():
+                yield device_raw, tenant_tag
 
     @staticmethod
     def _clients_schema():
@@ -96,6 +99,11 @@ class ClarotyAdapter(ScannerAdapterBase):
                     'name': 'verify_ssl',
                     'title': 'Verify SSL',
                     'type': 'bool'
+                },
+                {
+                    'name': 'tenant_tag',
+                    'title': 'Tenant Tag',
+                    'type': 'string'
                 }
             ],
             'required': [
@@ -109,7 +117,7 @@ class ClarotyAdapter(ScannerAdapterBase):
 
     # pylint: disable=too-many-branches, too-many-statements, too-many-locals, too-many-nested-blocks
     def _parse_raw_data(self, devices_raw_data):
-        for device_raw in devices_raw_data:
+        for device_raw, tenant_tag in devices_raw_data:
             try:
                 device = self._new_device_adapter()
                 device_id = device_raw.get('id')
@@ -118,6 +126,7 @@ class ClarotyAdapter(ScannerAdapterBase):
                     continue
                 name = device_raw.get('name')
                 device.id = str(device_id) + (name or '')
+                device.tenant_tag = tenant_tag
                 if name:
                     if name.endswith(' (external)'):
                         name = name[:-len(' (external)')]
