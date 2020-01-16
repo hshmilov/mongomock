@@ -10,6 +10,9 @@ from axonius.clients.rest.connection import RESTConnection
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
+STORAGE_BASE_URL = 'https://www.googleapis.com/storage/v1'
+BUCKETS_BASE_URL = f'{STORAGE_BASE_URL}/b'
+
 
 class GoogleCloudPlatformConnection(RESTConnection):
     def __init__(self, service_account_file: dict, *args, **kwargs):
@@ -24,10 +27,19 @@ class GoogleCloudPlatformConnection(RESTConnection):
         self.__sa_file = service_account_file
         self.__access_token = None
         self.__last_token_fetch = None
+        self.__scopes = [
+            'https://www.googleapis.com/auth/cloudplatformprojects.readonly',
+            'https://www.googleapis.com/auth/cloud-platform.read-only',
+            'https://www.googleapis.com/auth/devstorage.read_only'
+        ]
+
+    def _get_scopes(self):
+        return ' '.join(self.__scopes)
 
     def _paginated_request(self, method, *args, **kwargs):
         self.refresh_token()
         resp = self._do_request(method, *args, **kwargs)
+        # logger.debug(f'Got response: {resp}')
         yield resp
         while resp.get('nextPageToken'):
             url_params = kwargs.pop('url_params', None) or {}
@@ -49,6 +61,7 @@ class GoogleCloudPlatformConnection(RESTConnection):
             sa_email = self.__sa_file['client_email']
 
             logger.debug(f'refreshing token')
+
             # build payload
             payload = {
                 'iat': now,
@@ -56,7 +69,7 @@ class GoogleCloudPlatformConnection(RESTConnection):
                 # iss must match 'issuer' in the security configuration in your
                 # swagger spec (e.g. service account email). It can be any string.
                 'iss': sa_email,
-                'scope': 'https://www.googleapis.com/auth/cloudplatformprojects.readonly',
+                'scope': self._get_scopes(),
                 # aud must be either your Endpoints service name, or match the value
                 # specified as the 'x-google-audience' in the OpenAPI document.
                 'aud':  'https://oauth2.googleapis.com/token',
@@ -94,6 +107,54 @@ class GoogleCloudPlatformConnection(RESTConnection):
             if 'projects' not in page:
                 raise ValueError(f'Bad response while getting projects: {page}')
             yield from page['projects']
+
+    def _get_buckets_list(self, project_id: str, get_objects: bool = True):
+        base_url = BUCKETS_BASE_URL
+
+        for page in self._paginated_get(base_url, url_params={'project': project_id}, force_full_url=True):
+            if 'items' not in page:
+                raise ValueError(f'Bad response while getting buckets: {page}')
+            for item in page['items']:
+                item['project_id'] = project_id
+                if get_objects:
+                    try:
+                        item['x_objects'] = list(self._get_bucket_objects(item['id']))
+                    except ValueError as e:
+                        message = f'Failed to get objects for {item.get("id")}: {str(e)}'
+                        logger.warning(message)
+                        item['x_objects'] = []
+                else:
+                    item['x_objects'] = []
+                yield item
+
+    def _get_bucket_objects(self, bucket_id: str):
+        bucket_url = f'{BUCKETS_BASE_URL}/{bucket_id}/o'
+        for page in self._paginated_get(bucket_url, force_full_url=True):
+            if 'items' not in page:
+                raise ValueError(f'Bad response while getting objects from bucket {bucket_id}: {page}')
+            yield from page['items']
+
+    def get_storage_list(self, get_bucket_objects=True, project_id=None):  # , paginated=False):
+        """
+        Get storage buckets for each project.
+        If ``get_bucket_objects`` is set, then also get the objects for each bucket.
+        :param get_bucket_objects: Optional. Set to True to get storage objects for each bucket.
+        :param project_id: Optional. Get buckets only for this project_id (or a list of project_ids)
+               By default, fetch buckets for all projects.
+        :return: Yield dictionaries representing storage buckets.
+        """
+        if isinstance(project_id, list):
+            projects = [{'project_id': x} for x in project_id]
+        else:
+            projects = [{'project_id': project_id}] if project_id is not None else self.get_project_list()
+        for project in projects:
+            project_id = project['projectId']
+            try:
+                yield from self._get_buckets_list(project_id, get_objects=get_bucket_objects)
+            except Exception:
+                logger.warning(f'Failed to get buckets and info for project {project_id}.',
+                               exc_info=True)
+                continue
 
     def get_device_list(self):
         pass

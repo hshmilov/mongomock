@@ -1,25 +1,27 @@
+import datetime
+import enum
 import ipaddress
 import json
 import logging
-import datetime
 from collections import defaultdict
-from typing import List, Tuple, Iterable
+from typing import Iterable, List, Tuple
 
 from libcloud.compute.drivers.gce import GCEFirewall
 from libcloud.compute.providers import get_driver
 from libcloud.compute.types import NodeState, Provider
 
-from axonius.clients.rest.connection import RESTConnection
-from axonius.smart_json_class import SmartJsonClass
 
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
+from axonius.clients.rest.connection import RESTConnection
 from axonius.devices.device_adapter import DeviceAdapter, DeviceRunningState
-from axonius.fields import Field, ListField, JsonStringFormat
+from axonius.fields import Field, JsonArrayFormat, JsonStringFormat, ListField
+from axonius.mixins.configurable import Configurable
+from axonius.smart_json_class import SmartJsonClass
 from axonius.users.user_adapter import UserAdapter
+from axonius.utils.datetime import parse_date
 from axonius.utils.files import get_local_config_file
 from axonius.utils.json_encoders import IgnoreErrorJSONEncoder
-from axonius.utils.datetime import parse_date
 from axonius.utils.parsing import format_subnet
 from gce_adapter.connection import GoogleCloudPlatformConnection
 
@@ -37,6 +39,12 @@ POWER_STATE_MAP = {
     NodeState.REBOOTING: DeviceRunningState.Rebooting,
     NodeState.STARTING: DeviceRunningState.StartingUp,
 }
+
+
+class DeviceType(enum.Enum):
+    COMPUTE = 1
+    STORAGE = 2
+    STORAGE_LIMITED = 3
 
 
 class GceTag(SmartJsonClass):
@@ -66,13 +74,40 @@ class GceFirewall(SmartJsonClass):
     rules = ListField(GceFirewallRule, 'Rules')
 
 
+class GCPBucketIamConf(SmartJsonClass):
+    uniform_blaccess = Field(bool, 'Uniform Bucket Level Access')
+    bucket_policy_only = Field(bool, 'Bucket Policy Only')
+
+
+class GCPStorageObject(SmartJsonClass):
+    content_type = Field(str, 'Content Type')
+    name = Field(str, 'Object Name')
+    etag = Field(str, 'Storage Object eTag')
+    generation = Field(str, 'Generation')
+    md5_hash = Field(str, 'MD5 Hash')
+    modified = Field(datetime.datetime, 'Last Modified')
+    crc32c = Field(str, 'CRC32 Checksum')
+    metageneration = Field(str, 'Metageneration')
+    media_url = Field(str, 'Media Link')
+    size = Field(int, 'Size')
+    created = Field(datetime.datetime, 'Created')
+    id = Field(str, 'Storage Object ID')
+    self_link = Field(str, 'API Self-Link')
+    storage_class = Field(str, 'Storage Class')
+    storage_class_updated = Field(datetime.datetime, 'Time Storage Class Updated')
+
+
 # pylint: disable=too-many-instance-attributes
-class GceAdapter(AdapterBase):
+class GceAdapter(AdapterBase, Configurable):
     class MyDeviceAdapter(DeviceAdapter):
-        project_id = Field(str, 'Project ID')
-        image = Field(str, 'Device image')
-        size = Field(str, 'Google Device Size')
+        # Device type
+        device_type = Field(str, 'Asset Type', enum=list(dev.name for dev in DeviceType))
+        # generic things
         creation_time_stamp = Field(datetime.datetime, 'Creation Time Stamp')
+        project_id = Field(str, 'Project ID')
+        # COMPUTE things
+        size = Field(str, 'Google Device Size')
+        image = Field(str, 'Device image')
         cluster_name = Field(str, 'GCE Cluster Name')
         cluster_uid = Field(str, 'GCE Cluster Unique ID')
         cluster_location = Field(str, 'GCE Cluster Location')
@@ -81,6 +116,19 @@ class GceAdapter(AdapterBase):
         gce_network_tags = ListField(str, 'GCE Network Tags')
         service_accounts = ListField(str, 'GCE Service Accounts')
         firewalls = ListField(GceFirewall, 'GCE Firewalls')
+        # STORAGE things
+        etag = Field(str, 'eTag')
+        loc_type = Field(str, 'Location Type')
+        updated = Field(datetime.datetime, 'Updated')
+        bkt_id = Field(str, 'Bucket ID')
+        metageneration = Field(str, 'Metageneration')
+        loc = Field(str, 'Location')
+        storage_class = Field(str, 'Storage Class')
+        project_num = Field(int, 'Project Number')
+        url = Field(str, 'API Self-Link')
+        iam_config = Field(GCPBucketIamConf, 'Bucket IAM Config', json_format=JsonArrayFormat.table)
+        object_count = Field(int, 'Storage Object Count')
+        storage_objects = ListField(GCPStorageObject, 'Storage Objects', json_format=JsonArrayFormat.table)
 
     class MyUserAdapter(UserAdapter):
         project_ids = ListField(str, 'Project IDs')
@@ -114,6 +162,32 @@ class GceAdapter(AdapterBase):
             logger.error(f'Failed to connect to client {client_id}')
             raise ClientConnectionException(f'Error: {e}')
 
+    def _query_devices_by_client(self, client_name: str,
+                                 client_data: Tuple[GoogleCloudPlatformConnection, dict]):
+        """
+        XXX: Add your own device querying here!
+        :param client_name: string client name
+        :param client_data: gcp connection object and client dict
+        :return:
+        """
+        yield from self._query_compute_devices_by_client(client_name, client_data)
+        if self.__fetch_buckets:
+            yield from self._query_storage_devices_by_client(client_name, client_data)
+
+    # pylint: disable=arguments-differ
+    @staticmethod
+    def _query_users_by_client(client_name: str,
+                               client_data: Tuple[GoogleCloudPlatformConnection, dict]):
+        client, client_dict = client_data
+        with client:
+            for project in client.get_project_list():
+                try:
+                    project_id = project.get('projectId')
+                    all_iam_data = list(client.get_user_list(project_id))
+                    yield all_iam_data, project
+                except Exception:
+                    logger.exception(f'Error while fetching users for project {project.get("projectId")}')
+
     @staticmethod
     def __get_firewalls(provider):
         try:
@@ -133,7 +207,43 @@ class GceAdapter(AdapterBase):
             logger.exception(f'Can not get firewalls')
             return []
 
-    def _query_devices_by_client(self, client_name: str, client_data: Tuple[GoogleCloudPlatformConnection, dict]):
+    @staticmethod
+    def __get_compute_provider(auth_json, project=None, proxy_url=None):
+        return get_driver(Provider.GCE)(
+            auth_json['client_email'],
+            auth_json['private_key'],
+            project=project or auth_json['project_id'],
+            proxy_url=proxy_url
+        )
+
+    def _query_storage_devices_by_client(self, client_name: str,
+                                         client_data: Tuple[GoogleCloudPlatformConnection, dict]):
+        client, client_config = client_data
+        auth_json = json.loads(self._grab_file_contents(client_config['keypair_file']))
+        try:
+            with client:
+                try:
+                    for bucket in client.get_storage_list(get_bucket_objects=self.__fetch_bkt_objects):
+                        yield {
+                            'type': DeviceType.STORAGE,
+                            'device_data': (bucket,)
+                        }
+                except Exception:
+                    logger.warning(f'Failed to get storage devices for all projects. '
+                                   f'Attempting alternate...',
+                                   exc_info=True)
+                    for bucket in client.get_storage_list(get_bucket_objects=self.__fetch_bkt_objects,
+                                                          project_id=auth_json['project_id']):
+                        yield {
+                            'type': DeviceType.STORAGE,
+                            'device_data': (bucket,)
+                        }
+        except Exception:
+            logger.exception(f'Failed to get storage objects for {client_name}')
+            yield {}
+
+    def _query_compute_devices_by_client(self, client_name: str,
+                                         client_data: Tuple[GoogleCloudPlatformConnection, dict]):
         client, client_config = client_data
         auth_json = json.loads(self._grab_file_contents(client_config['keypair_file']))
         try:
@@ -142,41 +252,64 @@ class GceAdapter(AdapterBase):
             for i, project in enumerate(all_projects):
                 logger.info(f'Handling project {i}/{len(all_projects)} - {project.get("projectId")}')
                 try:
-                    provider = get_driver(Provider.GCE)(
-                        auth_json['client_email'],
-                        auth_json['private_key'],
-                        project=project.get('projectId'),
-                        proxy_url=client_config.get('https_proxy')
+                    compute_provider = self.__get_compute_provider(
+                        auth_json,
+                        project.get('projectId'),
+                        client_config.get('https_proxy')
                     )
-                    firewalls = self.__get_firewalls(provider)
-                    for device_raw in provider.list_nodes():
-                        yield device_raw, project.get('projectId'), firewalls
+                    firewalls = self.__get_firewalls(compute_provider)
+                    for device_raw in compute_provider.list_nodes():
+                        yield {
+                            'type': DeviceType.COMPUTE,
+                            'device_data': (device_raw, project.get('projectId'), firewalls)
+                        }
                 except Exception:
                     logger.warning(f'Problem with project {project}', exc_info=True)
         except Exception:
             logger.exception(f'exception in getting all projects. using alternative path')
-            provider = get_driver(Provider.GCE)(
-                auth_json['client_email'],
-                auth_json['private_key'],
-                project=auth_json['project_id'],
-                proxy_url=client_config.get('https_proxy')
-            )
+            provider = self.__get_compute_provider(auth_json, None,
+                                                   client_config.get('https_proxy'))
             firewalls = self.__get_firewalls(provider)
             for device_raw in provider.list_nodes():
-                yield device_raw, auth_json['project_id'], firewalls
+                yield {
+                    'type': DeviceType.COMPUTE,
+                    'device_data': (device_raw, auth_json['project_id'], firewalls)
+                }
 
-    # pylint: disable=arguments-differ
-    @staticmethod
-    def _query_users_by_client(client_name: str, client_data: Tuple[GoogleCloudPlatformConnection, dict]):
-        client, client_dict = client_data
-        with client:
-            for project in client.get_project_list():
-                try:
-                    project_id = project.get('projectId')
-                    all_iam_data = list(client.get_user_list(project_id))
-                    yield all_iam_data, project
-                except Exception:
-                    logger.exception(f'Error while fetching users for project {project.get("projectId")}')
+    @classmethod
+    def _db_config_schema(cls) -> dict:
+        return {
+            'items': [
+                {
+                    'name': 'fetch_buckets',
+                    'type': 'bool',
+                    'title': 'Fetch Google Cloud Storage buckets'
+                },
+                {
+                    'name': 'fetch_bucket_objects',
+                    'type': 'bool',
+                    'title': 'Fetch Object metadata in Google Cloud Storage buckets'
+                }
+            ],
+            'required': [
+                'fetch_buckets',
+                'fetch_bucket_objects'
+            ],
+            'pretty_name': 'Google Cloud configuration',
+            'type': 'array'
+        }
+
+    @classmethod
+    def _db_config_default(cls) -> dict:
+        return {
+            'fetch_buckets': False,
+            'fetch_bucket_objects': False
+        }
+
+    def _on_config_update(self, config):
+        logger.info(f'Loading GCP config: {config}')
+        self.__fetch_buckets = config['fetch_buckets']
+        self.__fetch_bkt_objects = config['fetch_bucket_objects']
 
     @staticmethod
     def _clients_schema():
@@ -200,74 +333,112 @@ class GceAdapter(AdapterBase):
             'type': 'array'
         }
 
+    def create_device(self, device_dict, *args, **kwargs):
+        dev_type = device_dict['type']
+        device_data = device_dict['device_data']
+        if dev_type == DeviceType.COMPUTE:
+            create_device = self.create_compute_device
+            # return self.create_compute_device(*device_data, *args, **kwargs)
+        elif dev_type == DeviceType.STORAGE:
+            create_device = self.create_storage_device
+            # return self.create_storage_device(*device_data, *args, **kwargs)
+        else:
+            create_device = None
+        if create_device:
+            return create_device(*device_data, *args, **kwargs)
+        logger.warning(f'Unknown device type: {dev_type}. '
+                       f'Cannot process device data {device_data}')
+        return None
+
     # pylint: disable=too-many-branches, too-many-statements, too-many-locals, too-many-nested-blocks
-    def create_device(self, raw_device_data, project_id, firewalls: List[GCEFirewall]):
+    def create_storage_device(self, device_raw, *args, **kwargs):
+        try:
+            device = self._new_device_adapter()
+            device_id = device_raw.get('id')
+            if not device_id:
+                logger.warning(f'Bad device with no ID: {device_raw}')
+                return None
+            # generic Axonius stuff
+            device.id = device_id + '_' + (device_raw.get('project_id') or '')
+            device.pretty_id = f''
+            device.cloud_provider = 'GCP'
+            device.name = device_raw.get('name')
+
+            # GCP specific stuff
+            device.project_id = device_raw.get('project_id')
+            device.device_type = DeviceType.STORAGE.name
+            device.creation_time_stamp = parse_date(device_raw.get('timeCreated'))
+
+            # STORAGE specific stuff
+            device.etag = device_raw.get('etag')
+            device.loc_type = device_raw.get('locationType')
+            device.metageneration = device_raw.get('metageneration')
+            device.bkt_id = device_raw.get('id')
+            device.loc = device_raw.get('location')
+            device.updated = parse_date(device_raw.get('updated'))
+            try:
+                device.project_num = int(device_raw.get('projectNumber'))
+            except Exception:
+                logger.debug(f'Failed to get device project num for {device_raw}', exc_info=True)
+            device.storage_class = device_raw.get('storageClass')
+            device.url = device_raw.get('selfLink')
+            try:
+                iam_dict = device_raw.get('iamConfiguration') or {}
+                device.iam_config = GCPBucketIamConf(
+                    uniform_blaccess=iam_dict.get('uniformBucketLevelAccess').get('enabled'),
+                    bucket_policy_only=iam_dict.get('bucketPolicyOnly').get('enabled')
+                )
+            except Exception:
+                logger.warning(f'Failed to add iam_config for device: {device_raw}',
+                               exc_info=True)
+
+            # Handle storage container objects
+            if not isinstance(device_raw.get('x_objects'), list):
+                logger.warning(f'Expected a list of objects for device {device_id}, '
+                               f'got instead {device_raw.get("x_objects")}')
+                device_raw['x_objects'] = []
+            device.object_count = len(device_raw.get('x_objects'))
+
+            for object_raw in device_raw.get('x_objects'):
+                try:
+                    device.storage_objects.append(GCPStorageObject(
+                        content_type=object_raw.get('contentType') or '',
+                        name=object_raw.get('name') or '',
+                        etag=object_raw.get('etag') or '',
+                        generation=object_raw.get('generation') or '',
+                        md5_hash=object_raw.get('md5Hash') or '',
+                        modified=parse_date(object_raw.get('updated')),
+                        crc32c=object_raw.get('crc32c') or '',
+                        metageneration=object_raw.get('metageneration') or '',
+                        media_url=object_raw.get('mediaLink') or '',
+                        size=int(object_raw.get('size', 0) or 0),
+                        created=parse_date(object_raw.get('timeCreated')),
+                        id=object_raw.get('id') or '',
+                        self_link=object_raw.get('selfLink') or '',
+                        storage_class=object_raw.get('storageClass') or '',
+                        storage_class_updated=parse_date(object_raw.get('timeStorageClassUpdated'))
+                    ))
+                except Exception:
+                    message = f'Failed to add storage object for device {device_id}: {object_raw}'
+                    logger.exception(message)
+                    continue
+            # raw (json)
+            device.set_raw(device_raw)
+        except Exception:
+            logger.exception(f'Failed to create storage device for {device_raw}')
+            device = None
+        return device
+
+    # pylint: disable=too-many-branches, too-many-statements, too-many-locals, too-many-nested-blocks
+    def create_compute_device(self, raw_device_data, project_id, firewalls: List[GCEFirewall], *args, **kwargs):
         device = self._new_device_adapter()
+        device.device_type = DeviceType.COMPUTE.name
         device.id = raw_device_data.id
         device.cloud_provider = 'GCP'
         device.cloud_id = device.id
         device.project_id = project_id
-        try:
-            device.power_state = POWER_STATE_MAP.get(raw_device_data.state,
-                                                     DeviceRunningState.Unknown)
-        except Exception:
-            logger.exception(f'Coudn\'t get power state for {str(raw_device_data)}')
-        try:
-            device.figure_os(raw_device_data.image)
-        except Exception:
-            logger.exception(f'Coudn\'t get os for {str(raw_device_data)}')
-        try:
-            device.name = raw_device_data.name
-        except Exception:
-            logger.exception(f'Coudn\'t get name for {str(raw_device_data)}')
-        try:
-            device.add_nic(ips=raw_device_data.private_ips)
-        except Exception:
-            logger.exception(f'Coudn\'t get ips for {str(raw_device_data)}')
-        try:
-            public_ips = raw_device_data.public_ips
-            if public_ips:
-                for ip in public_ips:
-                    if ip:
-                        device.add_nic(ips=[ip])
-                        device.add_public_ip(ip)
-        except Exception:
-            logger.exception(f'Problem getting public IP for {str(raw_device_data)}')
-        try:
-            device.image = raw_device_data.image
-        except Exception:
-            logger.exception(f'Problem getting image for {str(raw_device_data)}')
-        try:
-            device.size = raw_device_data.size
-        except Exception:
-            logger.exception(f'Problem getting data size for {str(raw_device_data)}')
-        try:
-            device.creation_time_stamp = parse_date(raw_device_data.extra.get('creationTimestamp'))
-        except Exception:
-            logger.exception(f'Problem getting creation time for {str(raw_device_data)}')
-        try:
-            for item in (raw_device_data.extra.get('metadata').get('items') or []):
-                if item.get('key') == 'cluster-name':
-                    device.cluster_name = item.get('value')
-                elif item.get('key') == 'cluster-uid':
-                    device.cluster_uid = item.get('value')
-                elif item.get('key') == 'cluster-location':
-                    device.cluster_location = item.get('value')
-                else:
-                    try:
-                        gce_key = item.get('key')
-                        gce_value = item.get('value')
-                        device.gce_tags.append(GceTag(gce_key=gce_key, gce_value=gce_value))
-                    except Exception:
-                        logger.exception(f'Problem getting extra tags for {raw_device_data}')
-        except Exception:
-            logger.exception(f'Problem getting cluster info for {str(raw_device_data)}')
-
-        try:
-            for key, value in (raw_device_data.extra.get('labels') or {}).items():
-                device.gce_labels.append(GceTag(gce_key=key, gce_value=value))
-        except Exception:
-            logger.exception(f'Problem adding gce labels to instance')
+        self._compute_device_parse_generic(device, raw_device_data)
+        self._compute_device_parse_metadata(device, raw_device_data)
 
         gce_network_tags = []
         try:
@@ -292,6 +463,22 @@ class GceAdapter(AdapterBase):
         except Exception:
             logger.exception(f'Problem adding Service Accounts')
 
+        self._compute_device_parse_firewalls(device, device_service_accounts, firewalls,
+                                             gce_network_tags, raw_device_data)
+
+        try:
+            # some fields might not be basic types
+            # by using IgnoreErrorJSONEncoder with JSON encode we verify that this
+            # will pass a JSON encode later by mongo
+            device.set_raw(json.loads(json.dumps(
+                raw_device_data.__dict__, cls=IgnoreErrorJSONEncoder)))
+        except Exception:
+            logger.exception(f'Can\'t set raw for {str(device.id)}')
+        return device
+
+    @staticmethod
+    def _compute_device_parse_firewalls(device, device_service_accounts, firewalls,
+                                        gce_network_tags, raw_device_data):
         # Try to find matching firewalls
         try:
             # Matching can be done by ip, service account, or tag.
@@ -352,7 +539,7 @@ class GceAdapter(AdapterBase):
                                           (fw.extra.get('destinationRanges') or [])]
                     device.firewalls.append(GceFirewall(
                         name=fw.name,
-                        direction=fw.direction or 'INGRESS',    # if not specified, documentation says its ingress.
+                        direction=fw.direction or 'INGRESS',  # if not specified, documentation says its ingress.
                         priority=fw.priority,
                         match=matched_by,
                         source_ranges=source_ranges,
@@ -416,22 +603,83 @@ class GceAdapter(AdapterBase):
         except Exception:
             logger.exception(f'Could not parse matching firewalls for instance')
 
+    @staticmethod
+    def _compute_device_parse_metadata(device, raw_device_data):
         try:
-            # some fields might not be basic types
-            # by using IgnoreErrorJSONEncoder with JSON encode we verify that this
-            # will pass a JSON encode later by mongo
-            device.set_raw(json.loads(json.dumps(raw_device_data.__dict__, cls=IgnoreErrorJSONEncoder)))
+            device.image = raw_device_data.image
         except Exception:
-            logger.exception(f'Can\'t set raw for {str(device.id)}')
-        return device
+            logger.exception(f'Problem getting image for {str(raw_device_data)}')
+        try:
+            device.size = raw_device_data.size
+        except Exception:
+            logger.exception(f'Problem getting data size for {str(raw_device_data)}')
+        try:
+            device.creation_time_stamp = parse_date(raw_device_data.extra.get('creationTimestamp'))
+        except Exception:
+            logger.exception(f'Problem getting creation time for {str(raw_device_data)}')
+        try:
+            for item in (raw_device_data.extra.get('metadata').get('items') or []):
+                if item.get('key') == 'cluster-name':
+                    device.cluster_name = item.get('value')
+                elif item.get('key') == 'cluster-uid':
+                    device.cluster_uid = item.get('value')
+                elif item.get('key') == 'cluster-location':
+                    device.cluster_location = item.get('value')
+                else:
+                    try:
+                        gce_key = item.get('key')
+                        gce_value = item.get('value')
+                        device.gce_tags.append(GceTag(gce_key=gce_key, gce_value=gce_value))
+                    except Exception:
+                        logger.exception(f'Problem getting extra tags for {raw_device_data}')
+        except Exception:
+            logger.exception(f'Problem getting cluster info for {str(raw_device_data)}')
+        try:
+            for key, value in (raw_device_data.extra.get('labels') or {}).items():
+                device.gce_labels.append(GceTag(gce_key=key, gce_value=value))
+        except Exception:
+            logger.exception(f'Problem adding gce labels to instance')
+
+    @staticmethod
+    def _compute_device_parse_generic(device, raw_device_data):
+        try:
+            device.power_state = POWER_STATE_MAP.get(raw_device_data.state,
+                                                     DeviceRunningState.Unknown)
+        except Exception:
+            logger.exception(f'Coudn\'t get power state for {str(raw_device_data)}')
+        try:
+            device.figure_os(raw_device_data.image)
+        except Exception:
+            logger.exception(f'Coudn\'t get os for {str(raw_device_data)}')
+        try:
+            device.name = raw_device_data.name
+        except Exception:
+            logger.exception(f'Coudn\'t get name for {str(raw_device_data)}')
+        try:
+            device.add_nic(ips=raw_device_data.private_ips)
+        except Exception:
+            logger.exception(f'Coudn\'t get ips for {str(raw_device_data)}')
+        try:
+            public_ips = raw_device_data.public_ips
+            if public_ips:
+                for ip in public_ips:
+                    if ip:
+                        device.add_nic(ips=[ip])
+                        device.add_public_ip(ip)
+        except Exception:
+            logger.exception(f'Problem getting public IP for {str(raw_device_data)}')
 
     def _parse_raw_data(self, devices_raw_data):
-        for raw_device_data, project_id, firewalls in iter(devices_raw_data):
+        for device_dict in iter(devices_raw_data):
+            if not device_dict:
+                continue
             try:
-                device = self.create_device(raw_device_data, project_id, firewalls)
-                yield device
+                # device = self.create_device(raw_device_data, project_id, firewalls)
+                device = self.create_device(device_dict)
+                if device:
+                    yield device
             except Exception:
-                logger.exception(f'Got exception for raw_device_data: {raw_device_data}')
+                logger.exception(f'Got exception for raw_device_data: {device_dict}')
 
     # pylint: disable=undefined-variable
     def create_user_entity(self) -> MyUserAdapter:
