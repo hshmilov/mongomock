@@ -33,7 +33,7 @@ class TestStopDiscoverySanity(TestBase):
         time.sleep(5)
         self.adapters_page.click_row()
         self.adapters_page.click_save()
-        self.adapters_page.wait_for_server_green()
+        self.adapters_page.wait_for_server_green(retries=400)
         self.adapters_page.wait_for_table_to_load()
         self.adapters_page.wait_for_data_collection_toaster_absent()
 
