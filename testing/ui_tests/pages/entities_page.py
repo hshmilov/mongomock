@@ -926,10 +926,10 @@ class EntitiesPage(Page):
             'sort': sort, 'desc': ('1' if desc else '0')
         })
 
-    def assert_csv_match_ui_data(self, result, ui_data=None, ui_headers=None):
-        self.assert_csv_match_ui_data_with_content(result.content, ui_data, ui_headers)
+    def assert_csv_match_ui_data(self, result, ui_data=None, ui_headers=None, sort_columns=True):
+        self.assert_csv_match_ui_data_with_content(result.content, ui_data, ui_headers, sort_columns)
 
-    def assert_csv_match_ui_data_with_content(self, content, ui_data=None, ui_headers=None):
+    def assert_csv_match_ui_data_with_content(self, content, ui_data=None, ui_headers=None, sort_columns=True):
         had_bom = 0
         while isinstance(content, bytes) and content.startswith(codecs.BOM_UTF8):
             had_bom += 1
@@ -949,7 +949,10 @@ class EntitiesPage(Page):
         # we don't writ image to csv
         if 'Image' in ui_headers:
             ui_headers.remove('Image')
-        assert sorted(ui_headers) == sorted(csv_headers)
+        if sort_columns:
+            assert sorted(ui_headers) == sorted(csv_headers)
+        else:
+            assert ui_headers == csv_headers
         # for every cell in the ui_data_rows we check if its in the csv_data_row
         # the reason we check it is because the csv have more columns with data
         # than the columns that we getting from the ui (boolean in the ui are represented by the css)
