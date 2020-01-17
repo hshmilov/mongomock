@@ -9,7 +9,6 @@ from axonius.clients.rest.connection import RESTException
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.fields import Field
 from axonius.mixins.configurable import Configurable
-from axonius.utils.parsing import is_domain_valid
 from axonius.utils.files import get_local_config_file
 from axonius.clients.fresh_service.connection import FreshServiceConnection
 from axonius.clients.fresh_service.consts import IMPACT_DICT
@@ -139,26 +138,29 @@ class FreshServiceAdapter(AdapterBase, Configurable):
             device.device_manufacturer = device_raw.get('vendor_name')
             device.state_name = device_raw.get('state_name')
             try:
+                extra_data_raw = device_raw.get('levelfield_values')
+                if not isinstance(extra_data_raw, dict):
+                    extra_data_raw = {}
                 ci_type_id = device_raw.get('ci_type_id')
-                device.figure_os((device_raw.get(f'os_{ci_type_id}') or '') + ' ' +
-                                 (device_raw.get(f'os_version_{ci_type_id}') or ''))
-                device.warranty = parse_date(device_raw.get(f'warranty_expiry_date_{ci_type_id}'))
-                device.acquisition = parse_date(device_raw.get(f'acquisition_date_date_{ci_type_id}'))
-                domain = device_raw.get(f'domain_{ci_type_id}')
-                if is_domain_valid(domain):
-                    device.domain = domain
-                device.hostname = device_raw.get(f'hostname_{ci_type_id}')
-                if device_raw.get(f'last_login_by_{ci_type_id}'):
-                    device.last_used_users = [device_raw.get(f'last_login_by_{ci_type_id}')]
+                ci_parent_id = ci_type_id - 5
+                device.figure_os((extra_data_raw.get(f'os_{ci_type_id}') or '') + ' ' +
+                                 (extra_data_raw.get(f'os_version_{ci_type_id}') or ''))
+                device.warranty = parse_date(extra_data_raw.get(f'warranty_expiry_date_{ci_parent_id}'))
+                device.acquisition = parse_date(extra_data_raw.get(f'acquisition_date_date_{ci_type_id}'))
+                device.hostname = extra_data_raw.get(f'hostname_{ci_type_id}')
+                if extra_data_raw.get(f'last_login_by_{ci_type_id}'):
+                    device.last_used_users = [extra_data_raw.get(f'last_login_by_{ci_type_id}')]
                 ips = []
-                if device_raw.get(f'computer_ip_address_{ci_type_id}'):
-                    ips = device_raw.get(f'computer_ip_address_{ci_type_id}').split(',')
+                if extra_data_raw.get(f'computer_ip_address_{ci_type_id}'):
+                    ips_raw = extra_data_raw.get(f'computer_ip_address_{ci_type_id}')
+                    ips_raw = ips_raw[:ips_raw.find('%')]
+                    ips = ips_raw.split(',')
                 mac = None
-                if device_raw.get(f'mac_address_{ci_type_id}'):
-                    mac = device_raw.get(f'mac_address_{ci_type_id}')
+                if extra_data_raw.get(f'mac_address_{ci_type_id}'):
+                    mac = extra_data_raw.get(f'mac_address_{ci_type_id}')
                 if ips or mac:
                     device.add_nic(mac=mac, ips=ips)
-                device.device_serial = device_raw.get(f'serial_number_{ci_type_id}')
+                device.device_serial = extra_data_raw.get(f'serial_number_{ci_parent_id}')
             except Exception:
                 logger.exception(f'Problem getting extra fields for {device_raw}')
             device.set_raw(device_raw)
