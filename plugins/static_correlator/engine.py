@@ -51,7 +51,7 @@ from axonius.utils.parsing import (NORMALIZED_MACS,
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
-USERS_CORRELATION_ADAPTERS = ['illusive_adapter', 'carbonblack_protection_adapter']
+USERS_CORRELATION_ADAPTERS = ['illusive_adapter', 'carbonblack_protection_adapter', 'quest_kace_adapter']
 ALLOW_OLD_MAC_LIST = ['clearpass_adapter', 'tenable_security_center', 'nexpose_adapter', 'nessus_adapter',
                       'nessus_csv_adapter', 'tenable_io_adapter', 'qualys_scans_adapter', 'airwave_adapter']
 DANGEROUS_ADAPTERS = ['lansweeper_adapter', 'carbonblack_protection_adapter',
@@ -82,6 +82,7 @@ def is_only_host_adapter(adapter_device):
                                               'ansible_tower_adapter',
                                               'cisco_ucm_adapter',
                                               'symantec_dlp_adapter',
+                                              'netskope_adapter',
                                               'druva_adapter']):
         return True
     try:

@@ -7,6 +7,7 @@ from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.exception import RESTException
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.fields import Field
+from axonius.mixins.configurable import Configurable
 from axonius.utils.files import get_local_config_file
 from axonius.utils.datetime import parse_date
 from claroty_adapter.connection import ClarotyConnection
@@ -14,7 +15,7 @@ from claroty_adapter.connection import ClarotyConnection
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
-class ClarotyAdapter(ScannerAdapterBase):
+class ClarotyAdapter(ScannerAdapterBase, Configurable):
     # pylint: disable=too-many-instance-attributes
     class MyDeviceAdapter(DeviceAdapter):
         tenant_tag = Field(str, 'Tenant Tag')
@@ -146,6 +147,8 @@ class ClarotyAdapter(ScannerAdapterBase):
                     logger.exception(f'Problem getting ipv6 for {device_raw}')
                 try:
                     macs = device_raw.get('mac') or []
+                    if not macs and self.__exclude_no_mac_address:
+                        continue
                     macs = list(macs)
                 except Exception:
                     logger.exception(f'Problem getting mac for {device_raw}')
@@ -168,7 +171,12 @@ class ClarotyAdapter(ScannerAdapterBase):
                 device.device_serial = device_raw.get('serial_number')
                 device.device_model = device_raw.get('model')
                 device.firmware_version = device_raw.get('firmware')
-                device.virtual_zone = device_raw.get('virtual_zone_name')
+                virtual_zone = device_raw.get('virtual_zone_name')
+                if virtual_zone and self.__virtual_zone_exclude_list \
+                        and virtual_zone in self.__virtual_zone_exclude_list:
+                    continue
+                device.virtual_zone = virtual_zone
+
                 criticality = device_raw.get('criticality__')
                 if isinstance(criticality, str) and len(criticality) > 1 and criticality.startswith('e'):
                     criticality = criticality[1:]
@@ -202,3 +210,37 @@ class ClarotyAdapter(ScannerAdapterBase):
         :return:
         """
         raise NotImplementedError()
+
+    @classmethod
+    def _db_config_schema(cls) -> dict:
+        return {
+            'items': [
+                {
+                    'name': 'virtual_zone_exclude_list',
+                    'title': 'Virtual Zone Exclude List',
+                    'type': 'string'
+                },
+                {
+                    'name': 'exclude_no_mac_address',
+                    'type': 'bool',
+                    'title': 'Exclude Devices With No MAC Address'
+                }
+            ],
+            'required': [
+                'exclude_no_mac_address'
+            ],
+            'pretty_name': 'Claroty Configuration',
+            'type': 'array'
+        }
+
+    @classmethod
+    def _db_config_default(cls):
+        return {
+            'virtual_zone_exclude_list': None,
+            'exclude_no_mac_address': False
+        }
+
+    def _on_config_update(self, config):
+        self.__virtual_zone_exclude_list = config['virtual_zone_exclude_list'].split(',') \
+            if config.get('virtual_zone_exclude_list') else None
+        self.__exclude_no_mac_address = config.get('exclude_no_mac_address') or False

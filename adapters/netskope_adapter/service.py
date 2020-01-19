@@ -116,6 +116,7 @@ class NetskopeAdapter(AdapterBase):
     def _create_device(self, device_raw):
         try:
             device = self._new_device_adapter()
+            device_raw = device_raw.get('attributes')
             device_id = device_raw.get('device_id')
             if device_id is None:
                 logger.warning(f'Bad device with no ID {device_raw}')

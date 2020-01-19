@@ -185,4 +185,5 @@ class AquaAdapter(AdapterBase, Configurable):
         }
 
     def _on_config_update(self, config):
-        self.__aqua_status_exclude_list = config['aqua_status_exclude_list']
+        self.__aqua_status_exclude_list = config['aqua_status_exclude_list'].split(',') \
+            if config.get('aqua_status_exclude_list') else None

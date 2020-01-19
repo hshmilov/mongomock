@@ -23,7 +23,7 @@ class NetskopeConnection(RESTConnection):
         response = self._get('clients', url_params={'skip': 0,
                                                     'limit': DEVICE_PER_PAGE,
                                                     'token': self._apikey})
-        if not isinstance(response, dict) or not response.get('data') or not isinstance(not response.get('data'), list):
+        if not isinstance(response, dict) or not response.get('data') or not isinstance(response.get('data'), list):
             logger.error(f'Invalid response: {str(response)}')
             raise RESTException(f'Invalid response. Please check the credentials')
 
