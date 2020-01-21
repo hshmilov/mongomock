@@ -8,6 +8,7 @@ QUALYS_SCANS_DOMAIN = 'Qualys_Scans_Domain'
 USERNAME = 'username'
 PASSWORD = 'password'
 VERIFY_SSL = 'verify_ssl'
+HTTPS_PROXY = 'https_proxy'
 AGENT_DEVICE = 'agent_device'
 SCAN_DEVICE = 'scan_device'
 

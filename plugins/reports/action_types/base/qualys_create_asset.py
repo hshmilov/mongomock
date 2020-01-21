@@ -20,6 +20,7 @@ class QualysCreateAsset(ActionTypeBase):
                 {'name': consts.USERNAME, 'title': 'User Name', 'type': 'string'},
                 {'name': consts.PASSWORD, 'title': 'Password', 'type': 'string', 'format': 'password'},
                 {'name': consts.VERIFY_SSL, 'title': 'Verify SSL', 'type': 'bool'},
+                {'name': consts.HTTPS_PROXY, 'title': 'HTTPS Proxy', 'type': 'string'},
                 {'name': 'create_group', 'title': 'Create Asset Group', 'type': 'bool'},
                 {'name': 'group_name', 'title': 'Group Name', 'type': 'string'},
                 {'name': 'use_private_ips', 'title': 'Use Private IPs', 'type': 'bool'},
@@ -45,6 +46,7 @@ class QualysCreateAsset(ActionTypeBase):
             consts.USERNAME: '',
             consts.PASSWORD: '',
             consts.VERIFY_SSL: False,
+            consts.HTTPS_PROXY: None,
             'group_name': '',
             'create_group': True,
             'use_private_ips': True,
@@ -58,7 +60,8 @@ class QualysCreateAsset(ActionTypeBase):
             connection = QualysScansConnection(domain=self._config[consts.QUALYS_SCANS_DOMAIN],
                                                verify_ssl=self._config[consts.VERIFY_SSL],
                                                username=self._config.get(consts.USERNAME),
-                                               password=self._config.get(consts.PASSWORD))
+                                               password=self._config.get(consts.PASSWORD),
+                                               https_proxy=self._config.get(consts.HTTPS_PROXY))
             current_result = self._get_entities_from_view({
                 'adapters.data.network_interfaces.ips': 1,
                 'internal_axon_id': 1
