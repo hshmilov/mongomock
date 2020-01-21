@@ -1,4 +1,5 @@
 import datetime
+import ipaddress
 import logging
 import urllib
 import xml.etree.ElementTree as ET
@@ -315,6 +316,8 @@ class NmapAdapter(ScannerAdapterBase):
                         if xml_property.tag == 'address':
                             if xml_property.attrib.get('addr'):
                                 device.add_nic(ips=xml_property.attrib.get('addr').split(','))
+                                if not ipaddress.ip_address(xml_property.attrib.get('addr')).is_private:
+                                    device.add_public_ip(xml_property.attrib.get('addr'))
                                 device.id = xml_property.attrib.get('addr')
                         elif xml_property.tag == 'ports':
                             try:
