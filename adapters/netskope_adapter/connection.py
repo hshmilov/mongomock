@@ -15,7 +15,6 @@ class NetskopeConnection(RESTConnection):
                          headers={'Content-Type': 'application/json',
                                   'Accept': 'application/json'},
                          **kwargs)
-        self._permanent_headers['Authorization'] = f'{self._apikey}'
 
     def _connect(self):
         if not self._apikey:
