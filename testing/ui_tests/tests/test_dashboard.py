@@ -91,7 +91,6 @@ class TestDashboard(TestBase):
     OSX_OPERATING_SYSTEM_NAME = 'OS X Operating System'
     OSX_OPERATING_SYSTEM_FILTER = 'specific_data.data.os.type == "OS X"'
 
-    @pytest.mark.skip('TBD')
     def test_system_empty_state(self):
         self.dashboard_page.switch_to_page()
         assert self.dashboard_page.find_show_me_how_button()

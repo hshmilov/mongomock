@@ -108,8 +108,8 @@ class DashboardPage(Page):
         return self.find_element_by_text('SEE ALL TO SECURE ALL')
 
     def assert_congratulations_message_found(self):
-        assert self.find_element_by_text(self.CONGRATULATIONS).text == \
-            f'{self.CONGRATULATIONS}\nhaving all your assets visible in one place.'
+        assert f'{self.CONGRATULATIONS}\nhaving all your assets visible in one place.' in self.find_element_by_text(
+            self.CONGRATULATIONS).text
 
     def find_managed_device_coverage_card(self):
         return self.driver.find_element_by_xpath(
