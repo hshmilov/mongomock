@@ -55,6 +55,7 @@ logger = logging.getLogger(f'axonius.{__name__}')
 
 CHUNK_SIZE = 1024
 MAX_INSTANCES_OF_SAME_PLUGIN = 100
+BROKEN_NODES_DIFF_IN_SECONDS = (60 * 60 * 3)    # If a node is not communicating for 3 hours, it is broken
 MASTER_NODE_NAME = 'Master'
 
 
@@ -159,6 +160,14 @@ class CoreService(Triggerable, PluginBase, Configurable):
                                     max_instances=1,
                                     coalesce=True)
 
+        self.cleaner_thread.add_job(func=self.report_broken_instances,
+                                    trigger=IntervalTrigger(hours=2),
+                                    next_run_time=datetime.now() + timedelta(seconds=120),
+                                    name='report_broken_instances',
+                                    id='report_broken_instances',
+                                    max_instances=1,
+                                    coalesce=True)
+
         self.cleaner_thread.start()
 
         # pool for global config updates
@@ -201,6 +210,33 @@ class CoreService(Triggerable, PluginBase, Configurable):
                            metric_value=round(diff, 2), details=str(node))
         except Exception:
             logger.exception(f'failed to compute nodes last seen metrics')
+
+    def report_broken_instances(self):
+        try:
+            nodes = self._get_nodes_table()
+            now_obj = pytz.utc.localize(datetime.utcnow())
+
+            broken_instances = []
+
+            for node in nodes:
+                node.pop(NODE_USER_PASSWORD, None)
+                parse = parser()
+                last_seen_obj = parse.parse(node['last_seen'])
+                node_ip_list = ','.join(node.get(NODE_IP_LIST)) if node.get(NODE_IP_LIST) else ''
+                diff = (now_obj - last_seen_obj).total_seconds()
+
+                if diff > BROKEN_NODES_DIFF_IN_SECONDS:
+                    broken_instances.append(
+                        f'node_name: {str(node.get(NODE_NAME))} ip_list: {str(node_ip_list)}')
+
+            if broken_instances:
+                broken_instances_message = 'Nodes communication error - ' \
+                                           'the following nodes are not communicating with the master ' \
+                                           'instance:\n' + '\n'.join(broken_instances)
+                self.send_external_info_log(broken_instances_message)
+                self.create_notification(f'Nodes communication error', broken_instances_message, severity_type='error')
+        except Exception:
+            logger.exception(f'failed to report broken instances')
 
     def clean_offline_plugins(self):
         """Thread for cleaning offline plugin.
