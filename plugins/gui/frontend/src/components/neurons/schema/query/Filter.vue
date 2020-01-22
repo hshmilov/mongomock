@@ -80,7 +80,8 @@
           this.$emit('change', this.expressions)
       },
       addEmptyExpression () {
-          this.expressions.push({...expression, i: this.maxIndex})
+        const logicOp = !this.expressions.length ? '' : 'and'
+          this.expressions.push({...expression, i: this.maxIndexת , logicOp})
           this.onExpressionsChange()
       },
       removeExpression (index) {
