@@ -4619,7 +4619,11 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
         generator_params['saved_view_count_func'] = self._get_entity_count
         generator_params['spaces'] = self.__dashboard_spaces_collection.find(filter_archived())
         system_config = self.system_collection.find_one({'type': 'server'}) or {}
-        server_name = system_config.get('server_name', 'localhost')
+        server_name = str(self.__saml_login.get('axonius_external_url') or '').strip()
+        if server_name:
+            server_name = parse_url(server_name).host
+        else:
+            server_name = system_config.get('server_name', 'localhost')
         logger.info(f'All data for report gathered - about to generate for server {server_name}')
         return ReportGenerator(report,
                                generator_params,
