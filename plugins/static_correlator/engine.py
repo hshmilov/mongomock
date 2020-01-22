@@ -78,6 +78,7 @@ def is_only_host_adapter(adapter_device):
                                               'sysaid_adapter',
                                               'logrhythm_adapter',
                                               'symantec_ee_adapter',
+                                              'guardium_adapter',
                                               'datadog_adapter',
                                               'ansible_tower_adapter',
                                               'cisco_ucm_adapter',

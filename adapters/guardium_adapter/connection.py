@@ -47,3 +47,7 @@ class GuardiumConnection(RESTConnection):
     def get_device_list(self):
         self._refresh_token()
         yield from self._get('restAPI/gim_registered_clients')
+        try:
+            yield from self._get('restAPI/stap')
+        except Exception:
+            pass

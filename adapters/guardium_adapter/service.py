@@ -1,4 +1,5 @@
 import logging
+import ipaddress
 
 from axonius.adapter_base import AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
@@ -123,11 +124,32 @@ class GuardiumAdapter(ScannerAdapterBase):
             'type': 'array'
         }
 
+    def _create_stap_device(self, device_raw):
+        try:
+            device = self._new_device_adapter()
+            device_id = device_raw.get('stap_id')
+            if device_id is None:
+                logger.warning(f'Bad device with no ID {device_raw}')
+                return None
+            device.id = device_id + '_' + (device_raw.get('stap_host') or '')
+            try:
+                ipaddress.ip_address(device_raw.get('stap_host'))
+                device.add_nic(ips=[device_raw.get('stap_host')])
+            except Exception:
+                device.hostname = device_raw.get('stap_host')
+            device.set_raw(device_raw)
+            return device
+        except Exception:
+            logger.exception(f'Problem with fetching Guardium Device for {device_raw}')
+            return None
+
     def _create_device(self, device_raw):
         try:
             device = self._new_device_adapter()
             device_id = device_raw.get('CLIENT_ID')
             if device_id is None:
+                if device_raw.get('stap_id'):
+                    return self._create_stap_device(device_raw)
                 logger.warning(f'Bad device with no ID {device_raw}')
                 return None
             device.id = device_id + '_' + (device_raw.get('IP') or '')
