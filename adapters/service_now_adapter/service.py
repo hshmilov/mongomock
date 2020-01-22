@@ -56,6 +56,7 @@ class ServiceNowAdapter(AdapterBase, Configurable):
         model_version_number = Field(str, 'Model Version Number')
         operational_status = Field(str, 'Operational Status')
         hardware_status = Field(str, 'Hardware Status')
+        vendor = Field(str, 'Vendor')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -97,6 +98,7 @@ class ServiceNowAdapter(AdapterBase, Configurable):
             if self.__exclude_vm_tables is True and class_name and 'cmdb_ci_vm' in class_name:
                 return None
             device.class_name = class_name
+            device.vendor = device_raw.get('vendor')
             try:
                 ip_addresses = device_raw.get('ip_address')
                 if fetch_ips and ip_addresses and not any(elem in ip_addresses for elem in ['DHCP',
@@ -343,13 +345,13 @@ class ServiceNowAdapter(AdapterBase, Configurable):
 
         :return: A json with all the attributes returned from the ServiceNow Server
         """
-        if self.__fetch_users:
-            with client_data:
-                yield from client_data.get_device_list(fetch_users_info_for_devices=self.__fetch_users_info_for_devices)
+        with client_data:
+            yield from client_data.get_device_list(fetch_users_info_for_devices=self.__fetch_users_info_for_devices)
 
     def _query_users_by_client(self, key, data):
-        with data:
-            yield from data.get_user_list()
+        if self.__fetch_users:
+            with data:
+                yield from data.get_user_list()
 
     def _clients_schema(self):
         """
