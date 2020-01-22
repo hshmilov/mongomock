@@ -184,6 +184,7 @@ class TestUsersTable(TestEntitiesTable):
         self.users_page.click_expand_cell(cell_index=self.users_page.count_sort_column(self.LAST_SEEN_COLUMN))
         self.users_page.wait_close_column_details_popup()
 
+    @pytest.mark.skip('AX-6101')
     def test_user_expand_cell(self):
         self.settings_page.switch_to_page()
         self.base_page.run_discovery()
