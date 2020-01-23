@@ -9,7 +9,7 @@ from axonius.utils.parsing import is_domain_valid
 from axonius.utils.datetime import parse_date
 from axonius.devices.device_adapter import DeviceAdapter, AGENT_NAMES
 from axonius.utils.files import get_local_config_file
-from axonius.fields import Field
+from axonius.fields import Field, ListField
 from paloalto_xdr_adapter.connection import PaloaltoXdrConnection
 from paloalto_xdr_adapter.client_id import get_client_id
 
@@ -20,11 +20,12 @@ class PaloaltoXdrAdapter(AdapterBase):
     # pylint: disable=too-many-instance-attributes
     class MyDeviceAdapter(DeviceAdapter):
         endpoint_type = Field(str, 'Endpoint Type')
-        group_name = Field(str, 'Group Name')
+        group_name = ListField(str, 'Group Name')
         install_date = Field(datetime.datetime, 'Install Date')
         installation_package = Field(str, 'Installation Package')
         content_version = Field(str, 'Content Version')
         alias = Field(str, 'Alias')
+        is_isolated = Field(str, 'Isolated Status')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -43,7 +44,7 @@ class PaloaltoXdrAdapter(AdapterBase):
                                            verify_ssl=client_config['verify_ssl'],
                                            https_proxy=client_config.get('https_proxy'),
                                            api_key_id=client_config['api_key_id'],
-                                           url_base_path=client_config['url_base_path'],
+                                           url_base_path=client_config.get('url_base_path'),
                                            apikey=client_config['apikey'])
         with connection:
             pass
@@ -116,7 +117,6 @@ class PaloaltoXdrAdapter(AdapterBase):
                 'domain',
                 'api_key_id',
                 'apikey',
-                'url_base_path',
                 'verify_ssl'
             ],
             'type': 'array'
@@ -142,16 +142,17 @@ class PaloaltoXdrAdapter(AdapterBase):
             domain = device_raw.get('domain')
             if is_domain_valid(domain):
                 device.domain = domain
-            device.is_isolated = device_raw.get('is_isolated') \
-                if isinstance(device_raw.get('is_isolated'), bool) else None
-            device.group_name = device_raw.get('group_name')
+            device.is_isolated = device_raw.get('is_isolated')
+            device.group_name = device_raw.get('group_name') if isinstance(device_raw.get('group_name'), list) else None
             device.install_date = parse_date(device_raw.get('install_date'))
+            device.last_used_users = device_raw.get('users') \
+                if isinstance(device_raw.get('users'), list) else None
             device.installation_package = device_raw.get('installation_package')
             device.content_version = device_raw.get('content_version')
             device.last_seen = parse_date(device_raw.get('last_seen'))
             device.first_seen = parse_date(device_raw.get('first_seen'))
-            if isinstance(device_raw.get('ip'), str) and device_raw.get('ip'):
-                device.add_nic(ips=device_raw.get('ip').split(','))
+            if isinstance(device_raw.get('ip'), list) and device_raw.get('ip'):
+                device.add_nic(ips=device_raw.get('ip'))
             device.alias = device_raw.get('alias')
             device.set_raw(device_raw)
             return device

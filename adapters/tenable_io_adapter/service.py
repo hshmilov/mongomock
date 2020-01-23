@@ -32,6 +32,7 @@ class TenableIoAdapter(ScannerAdapterBase, Configurable):
         last_connect = Field(datetime.datetime, 'Last Connect')
         last_scanned = Field(datetime.datetime, 'Last Scanned')
         linked_on = Field(datetime.datetime, 'Linked On')
+        last_scan_time = Field(datetime.datetime, 'Last Scan Time')
 
         def add_tenable_vuln(self, **kwargs):
             self.plugin_and_severities.append(TenableVulnerability(**kwargs))
@@ -194,6 +195,10 @@ class TenableIoAdapter(ScannerAdapterBase, Configurable):
         device.id = device_id
         device.has_agent = bool(device_raw.get('has_agent'))
         device.last_seen = parse_date(device_raw.get('last_seen'))
+        last_scan_time = parse_date(device_raw.get('last_scan_time'))
+        if self.__exclude_no_last_scan and not last_scan_time:
+            return None
+        device.last_scan_time = last_scan_time
         tags_raw = device_raw.get('tags')
         if not isinstance(tags_raw, list):
             tags_raw = []
@@ -307,7 +312,9 @@ class TenableIoAdapter(ScannerAdapterBase, Configurable):
                     if connection_type == 'export':
                         for device_id, device_asset_raw in devices_raw_data:
                             try:
-                                yield self._parse_export_device(device_id, device_asset_raw, client_data)
+                                device = self._parse_export_device(device_id, device_asset_raw, client_data)
+                                if device:
+                                    yield device
                             except Exception:
                                 logger.exception(f'Problem with parsing device {device_asset_raw}')
                     elif connection_type == 'csv':
@@ -435,10 +442,15 @@ class TenableIoAdapter(ScannerAdapterBase, Configurable):
                     'name': 'use_cache',
                     'title': 'Use Cache',
                     'type': 'bool'
+                },
+                {
+                    'name': 'exclude_no_last_scan',
+                    'title': 'Exclude Devices with No Last Scan',
+                    'type': 'bool'
                 }
             ],
             'required': [
-                'use_cache'
+                'use_cache', 'exclude_no_last_scan'
             ],
             'pretty_name': 'TenableIO Configuration',
             'type': 'array'
@@ -447,11 +459,13 @@ class TenableIoAdapter(ScannerAdapterBase, Configurable):
     @classmethod
     def _db_config_default(cls):
         return {
-            'use_cache': True
+            'use_cache': True,
+            'exclude_no_last_scan': False
         }
 
     def _on_config_update(self, config):
         self.__use_cache = config['use_cache']
+        self.__exclude_no_last_scan = config.get('exclude_no_last_scan')
 
     def outside_reason_to_live(self) -> bool:
         """
