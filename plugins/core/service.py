@@ -235,6 +235,10 @@ class CoreService(Triggerable, PluginBase, Configurable):
                                            'instance:\n' + '\n'.join(broken_instances)
                 self.send_external_info_log(broken_instances_message)
                 self.create_notification(f'Nodes communication error', broken_instances_message, severity_type='error')
+                if self.mail_sender and self._adapter_errors_mail_address:
+                    email = self.mail_sender.new_email('Axonius - Nodes communication error',
+                                                       self._adapter_errors_mail_address.split(','))
+                    email.send(broken_instances_message)
         except Exception:
             logger.exception(f'failed to report broken instances')
 
