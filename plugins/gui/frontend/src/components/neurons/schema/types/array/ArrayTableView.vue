@@ -89,8 +89,6 @@
       display: flex;
 
       &.v-chip {
-        cursor: pointer;
-
         &:not(.tag) {
           font-size: 14px;
           height: 24px;
