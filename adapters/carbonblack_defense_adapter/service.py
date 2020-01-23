@@ -133,15 +133,15 @@ class CarbonblackDefenseAdapter(AdapterBase, Configurable):
                     'type': 'string'
                 },
                 {
-                    'name': 'apikey',
-                    'title': 'API Key',
-                    'type': 'string',
-                    'format': 'password'
+                    'name': 'connector_id',
+                    'title': 'API ID',
+                    'type': 'string'
                 },
                 {
-                    'name': 'connector_id',
-                    'title': 'Connector ID',
-                    'type': 'string'
+                    'name': 'apikey',
+                    'title': 'API Secret Key',
+                    'type': 'string',
+                    'format': 'password'
                 },
                 {
                     'name': 'verify_ssl',
