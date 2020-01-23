@@ -43,6 +43,10 @@ def has_hostname(adapters):
     return does_entity_have_field(adapters, lambda adapter_data: 'hostname' in adapter_data)
 
 
+def has_resource_id(adapters):
+    return does_entity_have_field(adapters, lambda adapter_data: 'resource_id' in adapter_data)
+
+
 def has_nessus_scan_no_id(adapters):
     return does_entity_have_field(adapters, lambda adapter_data: 'nessus_no_scan_id' in adapter_data)
 

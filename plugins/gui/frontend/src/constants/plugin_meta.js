@@ -136,6 +136,14 @@ export const pluginMeta = {
         link: 'https://docs.axonius.com/docs/skybox-firewall-assurance',
         description: 'Skybox Firewall Assurance provides automation of firewall management tasks across different firewall vendors and complex rulesets.'
     },
+    observium_adapter: {
+        title: 'Observium',
+        description: 'Observium is a low-maintenance auto-discovering network monitoring platform supporting a wide range of device types, platforms and operating systems including Cisco, Windows, Linux, HP, Juniper, Dell, FreeBSD, Brocade, Netscaler, NetApp and many more. Observium focuses on providing a beautiful and powerful yet simple and intuitive interface to the health and status of your network.'
+    },
+    scep_adapter: {
+        title: 'Microsoft SCEP',
+        description: 'Microsoft System Center Endpoint Protection (SCEP) is an antivirus/antimalware product for Windows environments that includes a Windows Firewall manager. ... Designed for midsize to enterprise environments, SCEP is not a practical endpoint protection option for small organizations.'
+    },
     guardicore_adapter: {
         title: 'Guardicore',
         link: 'https://docs.axonius.com/docs/guardicore',

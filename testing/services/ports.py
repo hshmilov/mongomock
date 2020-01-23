@@ -99,6 +99,8 @@ DOCKER_PORTS = {
     'bamboohr-adapter':                 5965,
     'sysaid-adapter':                   5990,
     'cisco-adapter':                    6001,
+    'scep-adapter':                     6003,
+    'observium-adapter':                6004,
     'zabbix-adapter':                   6005,
     'tripwire-enterprise-adapter':      6007,
     'specops-adapter':                  6008,

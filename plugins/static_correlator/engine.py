@@ -6,7 +6,7 @@ from axonius.blacklists import ALL_BLACKLIST, FROM_FIELDS_BLACK_LIST_REG, compar
 from axonius.consts.plugin_consts import PLUGIN_NAME, ACTIVE_DIRECTORY_PLUGIN_NAME
 from axonius.correlator_base import (has_ad_or_azure_name, has_cloud_id,
                                      has_hostname, has_last_used_users,
-                                     has_mac, has_name, has_serial, has_nessus_scan_no_id)
+                                     has_mac, has_name, has_serial, has_nessus_scan_no_id, has_resource_id)
 from axonius.correlator_engine_base import (CorrelatorEngineBase, CorrelationMarker)
 from axonius.plugin_base import PluginBase
 from axonius.types.correlation import CorrelationReason
@@ -80,6 +80,7 @@ def is_only_host_adapter(adapter_device):
                                               'symantec_ee_adapter',
                                               'guardium_adapter',
                                               'datadog_adapter',
+                                              'observium_adapter',
                                               'ansible_tower_adapter',
                                               'cisco_ucm_adapter',
                                               'symantec_dlp_adapter',
@@ -111,6 +112,26 @@ def get_fqdn_or_hostname(adapter_device):
     if fqdn_hostname:
         return fqdn_hostname.split('.')[0].lower()
     return None
+
+
+def get_resource_id(adapter_device):
+    return adapter_device['data'].get('resource_id')
+
+
+def get_sccm_server(adapter_device):
+    return adapter_device['data'].get('sccm_server')
+
+
+def compare_resource_id(adapter_device1, adapter_device2):
+    if not get_resource_id(adapter_device1) or not get_resource_id(adapter_device2):
+        return False
+    return get_resource_id(adapter_device1) == get_resource_id(adapter_device2)
+
+
+def compare_sccm_server(adapter_device1, adapter_device2):
+    if not get_sccm_server(adapter_device1) or not get_sccm_server(adapter_device2):
+        return False
+    return get_sccm_server(adapter_device1) == get_sccm_server(adapter_device2)
 
 
 def compare_fqdn_or_hostname(adapter_device1, adapter_device2):
@@ -329,7 +350,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
         # this is the least of all acceptable preconditions for correlatable devices - if none is satisfied there's no
         # way to correlate the devices and so it won't be added to adapters_to_correlate
         return [has_hostname, has_name, has_mac, has_serial, has_cloud_id, has_ad_or_azure_name, has_last_used_users,
-                has_nessus_scan_no_id]
+                has_nessus_scan_no_id, has_resource_id]
 
     # pylint: disable=R0912,too-many-boolean-expressions
     def _correlate_mac(self, adapters_to_correlate, correlate_by_snow_mac):
@@ -788,6 +809,18 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
                                       {'Reason': 'They have the same Normalized hostname and both are Splunk VPN'},
                                       CorrelationReason.StaticAnalysis)
 
+    def _correlate_scep_sccm(self, adapters_to_correlate):
+        logger.info('Starting to correlate SCEP SCCM')
+        filtered_adapters_list = filter(get_resource_id, adapters_to_correlate)
+        filtered_adapters_list = filter(get_sccm_server, filtered_adapters_list)
+        return self._bucket_correlate(list(filtered_adapters_list),
+                                      [get_resource_id],
+                                      [compare_resource_id],
+                                      [],
+                                      [compare_sccm_server],
+                                      {'Reason': 'They have the same resource ID plus SCCM SERVER'},
+                                      CorrelationReason.StaticAnalysis)
+
     def _raw_correlate(self, entities):
         # WARNING WARNING WARNING
         # Adding or changing any type of correlation here might require changing the appropriate logic
@@ -857,7 +890,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
         yield from self._correlate_serial_with_hostname(adapters_to_correlate)
         yield from self._correlate_nessus_no_scan_id(adapters_to_correlate)
         yield from self._correlate_uuid(adapters_to_correlate)
-
+        yield from self._correlate_scep_sccm(adapters_to_correlate)
         yield from self._correlate_deep_aws_id(adapters_to_correlate)
         # Disable route53 correlation, because this usually correlates many instances of the same ELB
         # and we don't want these kind of correlations - they are not the same host.
