@@ -1,8 +1,8 @@
 export const pluginMeta = {
     digicert_certcentral_adapter: {
         title: 'DigiCert CertCentral',
-        link: 'https://docs.axonius.com/docs/digicert',
-        description: 'With DigiCert CertCentral, you can use the ACME protocol to automate the renewal and installation of every certificate. This saves time and gives you confidence that your site is always secure. Automate the Lifecycle of Every SSL Certificate'
+        link: 'https://docs.axonius.com/docs/digicert-certcentral',
+        description: 'CertCentral consolidates tasks for issuing, installing, inspecting, remediating, and renewing certificates.'
     },
     arista_eos_adapter: {
         title: 'Arista Extensible Operating System (EOS)',
@@ -16,6 +16,7 @@ export const pluginMeta = {
     },
     github_adapter: {
         title: 'GitHub',
+        link: 'https://docs.axonius.com/docs/github',
         description: 'GitHub provides hosting for software development version control using Git, including distributed version control and source code management (SCM) functionality.'
     },
     cscglobal_adapter: {
@@ -280,6 +281,7 @@ export const pluginMeta = {
     },
     netskope_adapter: {
         title: 'Netskope',
+        link: 'https://docs.axonius.com/docs/netskope',
         description: 'The Netskope Security Cloud provides unrivaled visibility and real-time data and threat protection when accessing cloud services, websites, and private apps from anywhere, on any device.'
     },
     imperva_dam_adapter: {
