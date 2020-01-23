@@ -1,6 +1,5 @@
 import { REQUEST_API } from '../actions'
 import _get from 'lodash/get'
-import { updateSessionExpirationCookie } from '../../constants/session_utils';
 
 export const IS_ENTITY_RESTRICTED = 'IS_ENTITY_RESTRICTED'
 export const IS_ENTITY_EDITABLE = 'IS_ENTITY_EDITABLE'
@@ -164,7 +163,6 @@ export const auth = {
           if (!response || !response.status) {
             reject(commit(SET_USER, { error: 'Login failed.' }))
           } else if (response.status === 200) {
-            updateSessionExpirationCookie()
             resolve(dispatch(GET_USER))
           } else {
             reject(commit(SET_USER, { error: response.data.message, fetching: false }))
@@ -192,7 +190,6 @@ export const auth = {
         if (!response || !response.status) {
           commit(SET_USER, { error: 'Login failed.' })
         } else if (response.status === 200) {
-          updateSessionExpirationCookie()
           dispatch(GET_USER)
         } else {
           commit(SET_USER, { error: response.data.message, fetching: false })

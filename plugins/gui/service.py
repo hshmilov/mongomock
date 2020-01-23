@@ -3239,7 +3239,9 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
                                                {'type': 'server', 'server_name': parse_url(request.referrer).host},
                                                upsert=True)
         self.__perform_login_with_user(user_from_db, remember_me)
-        return ''
+        response = Response('')
+        self._add_expiration_timeout_cookie(response)
+        return response
 
     def __perform_login_with_user(self, user, remember_me=False):
         """
@@ -3350,7 +3352,9 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
                 oidc.claims.get('family_name', '')
             )
 
-        return redirect('/', code=302)
+        redirect_response = redirect('/', code=302)
+        self._add_expiration_timeout_cookie(redirect_response)
+        return redirect_response
 
     @gui_helpers.add_rule_unauth('login/ldap', methods=['POST'])
     def ldap_login(self):
@@ -3418,7 +3422,9 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
                                              user.get('givenName') or '',
                                              user.get('sn') or '',
                                              image or self.DEFAULT_AVATAR_PIC)
-            return ''
+            response = Response('')
+            self._add_expiration_timeout_cookie(response)
+            return response
         except ldap3.core.exceptions.LDAPException:
             return return_error('LDAP verification has failed, please try again')
         except Exception:
@@ -3561,12 +3567,21 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
                                                  picture or self.DEFAULT_AVATAR_PIC)
 
                 logger.info(f'SAML Login success with name id {name_id}')
-                return redirect('/', code=302)
+                redirect_response = redirect('/', code=302)
+                self._add_expiration_timeout_cookie(redirect_response)
+                return redirect_response
             else:
                 return return_error(', '.join(errors) + f' - Last error reason: {auth.get_last_error_reason()}')
 
         else:
-            return redirect(auth.login())
+            redirect_response = redirect(auth.login())
+            self._add_expiration_timeout_cookie(redirect_response)
+            return redirect_response
+
+    @staticmethod
+    def _add_expiration_timeout_cookie(response):
+        response.set_cookie('session_expiration', 'session_expiration',
+                            expires=datetime.now() + timedelta(seconds=30))
 
     @gui_add_rule_logged_in('logout', methods=['GET'])
     def logout(self):
