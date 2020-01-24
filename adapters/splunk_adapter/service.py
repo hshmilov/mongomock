@@ -19,6 +19,7 @@ class SplunkAdapter(AdapterBase, Configurable):
         vlan = Field(str, 'Vlan')
         port = Field(str, 'port')
         cisco_device = Field(str, 'Cisco Device')
+        device_type = Field(str, 'Device Type')
         splunk_source = Field(str, "Splunk Source")
         vpn_source_ip = Field(str, 'VPN Source IP')
 
@@ -261,6 +262,18 @@ class SplunkAdapter(AdapterBase, Configurable):
                     except Exception:
                         logger.exception(f'Problem adding last used user to {device_raw}')
                     device.device_serial = device_raw.get('serial')
+                elif 'PED Macro' == device_type:
+                    device.hostname = device_raw.get('hostname')
+                    device.device_serial = device_raw.get('serial')
+                    device.id = 'PED_' + device_raw.get('hostname')
+                    device.splunk_source = 'PED Macro'
+                    device.device_type = device_raw.get('type')
+                elif 'Store Macro' == device_type:
+                    device.add_nic(mac=device_raw.get('mac'), ips=[device_raw.get('ip')])
+                    device.id = 'Store_' + device_raw.get('mac')
+                    device.bios_version = device_raw.get('bios_version')
+                    device.device_serial = device_raw.get('serial')
+                    device.splunk_source = 'Store Macro'
                 device.set_raw(device_raw)
                 yield device
             except Exception:

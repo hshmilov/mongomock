@@ -85,6 +85,7 @@ def is_only_host_adapter(adapter_device):
                                               'cisco_ucm_adapter',
                                               'symantec_dlp_adapter',
                                               'netskope_adapter',
+                                              'splunk_adapter',
                                               'druva_adapter']):
         return True
     try:

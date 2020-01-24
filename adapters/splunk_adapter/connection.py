@@ -144,6 +144,45 @@ class SplunkConnection(object):
         return raw_device
 
     @staticmethod
+    def parse_ped_macro(result):
+        raw_object = dict()
+        try:
+            raw_object['hostname'] = result[b'host'].decode('utf-8')
+        except Exception:
+            pass
+        try:
+            raw_object['serial'] = result[b'PEDSerialNumber'].decode('utf-8')
+        except Exception:
+            pass
+        try:
+            raw_object['type'] = result[b'PEDType'].decode('utf-8')
+        except Exception:
+            pass
+        return raw_object
+
+    @staticmethod
+    def parse_store_macro(result):
+        raw_object = dict()
+        try:
+            raw_object['bios_version'] = result[b'RegisterBiosVersion'].decode('utf-8')
+        except Exception:
+            pass
+        try:
+            raw_object['serial'] = result[b'RegisterSerialNumber'].decode('utf-8')
+        except Exception:
+            pass
+        try:
+            raw_object['mac'] = result[b'RegisterMAC'].decode('utf-8')
+        except Exception:
+            pass
+        try:
+            raw_object['ip'] = result[b'RegisterIP'].decode('utf-8')
+        except Exception:
+            pass
+
+        return raw_object
+
+    @staticmethod
     def parse_dhcp_macro(result):
         raw_object = dict()
         try:
@@ -215,8 +254,9 @@ class SplunkConnection(object):
                                 new_item = split_raw(result)
                             if new_item is not None:
                                 try:
-                                    new_item['raw_splunk_insertion_time'] = result[b'_time'].decode('utf-8')
                                     new_item['raw_line'] = raw
+                                    if result.get(b'_time'):
+                                        new_item['raw_splunk_insertion_time'] = result[b'_time'].decode('utf-8')
                                 except Exception:
                                     logger.exception(f"Couldn't fetch raw splunk insertion time for {new_item}")
 
@@ -281,6 +321,20 @@ class SplunkConnection(object):
         return raw_object
 
     def get_devices(self, earliest, maximum_records_per_search, fetch_plugins_dict):
+        yield from self.fetch('search `axon_ped_info_v1`',
+                              SplunkConnection.parse_ped_macro,
+                              earliest,
+                              maximum_records_per_search,
+                              'PED Macro',
+                              send_object_to_raw=True)
+
+        yield from self.fetch('search `axon_store_system_v1`',
+                              SplunkConnection.parse_store_macro,
+                              earliest,
+                              maximum_records_per_search,
+                              'Store Macro',
+                              send_object_to_raw=True)
+
         yield from self.fetch('search index=lnv_landesk',
                               SplunkConnection.parse_landesk,
                               earliest,
