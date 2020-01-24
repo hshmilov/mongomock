@@ -55,7 +55,7 @@ class BitdefenderConnection(RESTConnection):
                                                                               'id': RANDOM_REQUEST_ID_2,
                                                                               'method': 'getManagedEndpointDetails',
                                                                               'params': {'endpointId': device_id}},
-                                                      do_basic_auth=True)['result']
+                                                      do_basic_auth=True)
             except Exception:
                 logger.exception(f'problem getting extra data for {device_raw}')
             yield device_raw, YIELD_TYPE_DEVICE

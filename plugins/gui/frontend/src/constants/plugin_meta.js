@@ -107,6 +107,11 @@ export const pluginMeta = {
         link: 'https://docs.axonius.com/docs/ca-spectrum',
         description: 'CA Spectrum is a services and network infrastructure management system that enables the modeling of LAN, WAN, wired, wireless, physical, and virtual networks.'
     },
+    ivanti_sm_adapter: {
+        title: 'Ivanti Service Manager',
+        link: 'https://docs.axonius.com/docs/ivanti-service-manager',
+        description: 'Ivanti Service Manager, powered by HEAT, is a cloud based ITSM solution that provides workflows automation, IT help desk and support ticket features, and ITIL service management processes.'
+    },
     bigfix_inventory_adapter: {
         title: 'IBM BigFix Inventory',
         link: 'https://docs.axonius.com/docs/ibm-bigfix-inventory',

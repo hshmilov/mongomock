@@ -172,8 +172,13 @@ def is_ca_cmdb_adapter(adapter_device):
     return adapter_device.get('plugin_name') == 'ca_cmdb_adapter'
 
 
+def is_ivanti_cm_adapter(adapter_device):
+    return adapter_device.get('plugin_name') == 'ivanti_sm_adapter'
+
+
 def is_only_asset_nams_adapter(adapter_device):
-    return is_ca_cmdb_adapter(adapter_device) or is_netbox_adapter(adapter_device)
+    return is_ca_cmdb_adapter(adapter_device) or is_netbox_adapter(adapter_device)\
+        or is_ivanti_cm_adapter(adapter_device)
 
 
 def is_csv_adapter(adapter_device):

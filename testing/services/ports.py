@@ -179,6 +179,7 @@ DOCKER_PORTS = {
     'heavy-lifting':                    6688,
     'instance-control':                 6689,
     'master-proxy':                     8888,  # reserved
+    'ivanti-sm-adapter':                9940,
     'bitlocker-adapter':                9957,
     'ssh-socat':                        9958,
     'office-scan-adapter':              9959,
@@ -221,6 +222,7 @@ DOCKER_PORTS = {
     'snow-adapter':                     9996,
     'airwave-adapter':                  9997,
     'webscan-adapter':                  9998,
+
     'google-big-query-adapter':         9999,
     'ansible-tower-adapter':            10000,
     'cisco-ucsm-adapter':               10010,
