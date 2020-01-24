@@ -298,6 +298,12 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
                 hostname = device_raw.get('dnsHostName')
             if hostname != device_raw.get('address'):
                 device.hostname = hostname
+                try:
+                    if hostname and device_raw.get('fqdn') \
+                            and hostname.lower().split('.')[0] == device_raw.get('fqdn').lower().split('.')[0]:
+                        device.hostname = device_raw.get('fqdn')
+                except Exception:
+                    pass
             if device_raw.get('dnsHostName') and device_raw.get('name'):
                 device.name = device_raw.get('name')
             try:
@@ -394,7 +400,7 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
                             vuln_id=(vuln_raw.get('HostAssetVuln') or {}).get('hostInstanceVulnId'),
                             last_found=parse_date((vuln_raw.get('HostAssetVuln') or {}).get('lastFound')),
                             first_found=parse_date((vuln_raw.get('HostAssetVuln') or {}).get('firstFound')),
-                            qid=qid_info_entry.get('QID'),
+                            qid=qid,
                             severity=severity,
                             vuln_type=vuln_type,
                             title=qid_info_entry.get('Title'),
