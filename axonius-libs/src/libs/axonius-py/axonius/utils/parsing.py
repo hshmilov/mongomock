@@ -68,7 +68,7 @@ N_CHAR_EXTENSION = 8
 DEFAULT_VERSION_EXTENSION = '00000000'
 DEFAULT_LINUX_VERSION_EPOCH = '0'
 BAD_SERIALS = ['INVALID', 'NON-UNIQUES/N', '0', 'SYSTEMSERIALNUMBER',
-               'DEFAULTSTRING', 'NA', 'N/A', '123456789', 'UNKNOWN']
+               'DEFAULTSTRING', 'NA', 'N/A', '123456789', 'UNKNOWN', '-']
 
 
 # This number stands for the default number of days needed for us to say a device is old,
