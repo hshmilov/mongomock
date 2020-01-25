@@ -82,8 +82,10 @@ class AggregatorService(PluginService, UpdatablePluginMixin):
             self._update_schema_version_24()
         if self.db_schema_version < 25:
             self._update_schema_version_25()
+        if self.db_schema_version < 26:
+            self._update_schema_version_26()
 
-        if self.db_schema_version != 25:
+        if self.db_schema_version != 26:
             print(f'Upgrade failed, db_schema_version is {self.db_schema_version}')
 
     def __create_capped_collections(self):
@@ -1051,7 +1053,9 @@ class AggregatorService(PluginService, UpdatablePluginMixin):
                     sccm_new_id = f'{sccm_current_id}${sccm_current_hostname}'
                     to_fix.append(pymongo.operations.UpdateOne({
                         '_id': entity['_id'],
-                        f'adapters.data.id': sccm_current_id
+                        f'adapters.quick_id': get_preferred_quick_adapter_id(
+                            sccm_adapter[PLUGIN_UNIQUE_NAME], sccm_current_id
+                        )
                     }, {
                         '$set': {
                             'adapters.$.data.id': sccm_new_id,
@@ -1146,6 +1150,59 @@ class AggregatorService(PluginService, UpdatablePluginMixin):
             self.db_schema_version = 25
         except Exception as e:
             print(f'Exception while upgrading core db to version 25. Details: {e}')
+            traceback.print_exc()
+            raise
+
+    def _update_schema_version_26(self):
+        print('Update to schema 26 - fix quick_id for ad-sccm')
+        try:
+            entities_db = self._entity_db_map[EntityType.Devices]
+            to_fix = []
+            for entity in entities_db.find({f'adapters.{PLUGIN_NAME}': 'active_directory_adapter'}, projection={
+                '_id': 1,
+                f'adapters.{PLUGIN_NAME}': 1,
+                f'adapters.{PLUGIN_UNIQUE_NAME}': 1,
+                f'adapters.data.id': 1,
+                f'adapters.quick_id': 1,
+            }):
+                all_ad = [x for x in entity['adapters'] if x[PLUGIN_NAME] == 'active_directory_adapter']
+                for ad_adapter in all_ad:
+                    ad_current_plugin_unique_name = ad_adapter[PLUGIN_UNIQUE_NAME]
+                    ad_current_quick_id = ad_adapter['quick_id']
+                    ad_current_id = ad_adapter['data'].get('id')
+                    if not ad_current_id:
+                        continue
+                    if not ad_current_plugin_unique_name:
+                        continue
+                    if not ad_current_quick_id:
+                        continue
+                    if '$' not in ad_current_id:
+                        continue
+                    ad_preferred_quick_id_adapter = get_preferred_quick_adapter_id(
+                        ad_current_plugin_unique_name, ad_current_id
+                    )
+
+                    if ad_current_quick_id != ad_preferred_quick_id_adapter:
+                        to_fix.append(pymongo.operations.UpdateOne({
+                            '_id': entity['_id'],
+                            f'adapters.quick_id': ad_current_quick_id
+                        }, {
+                            '$set': {
+                                'adapters.$.quick_id': ad_preferred_quick_id_adapter
+                            }
+                        }))
+
+            if to_fix:
+                print(f'Upgrading AD Quick ID. Found {len(to_fix)} records..')
+                for i in range(0, len(to_fix), 1000):
+                    entities_db.bulk_write(to_fix[i: i + 1000], ordered=False)
+                    print(f'Fixed Chunk of {i + 1000} records')
+            else:
+                print(f'AD Quick ID upgrade: Nothing to fix. Moving on')
+
+            self.db_schema_version = 26
+        except Exception as e:
+            print(f'Exception while upgrading core db to version 26. Details: {e}')
             traceback.print_exc()
             raise
 
