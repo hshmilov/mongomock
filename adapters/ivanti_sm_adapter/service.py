@@ -5,6 +5,7 @@ from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
 from axonius.fields import Field
+from axonius.users.user_adapter import UserAdapter
 from axonius.clients.rest.connection import RESTException
 from axonius.utils.datetime import parse_date
 from axonius.utils.parsing import is_domain_valid
@@ -22,6 +23,9 @@ class IvantiSmAdapter(AdapterBase):
         owner = Field(str, 'Owner')
         last_modified_time = Field(datetime.datetime, 'Last Modified Time')
         agent_status = Field(str, 'Agent Status')
+
+    class MyUserAdapter(UserAdapter):
+        company = Field(str, 'Company')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -148,3 +152,37 @@ class IvantiSmAdapter(AdapterBase):
     @classmethod
     def adapter_properties(cls):
         return [AdapterProperty.Assets]
+
+    # pylint: disable=arguments-differ
+    @staticmethod
+    def _query_users_by_client(key, data):
+        with data:
+            yield from data.get_user_list()
+
+    def _create_user(self, user_raw):
+        try:
+            user = self._new_user_adapter()
+            user_id = user_raw.get('RecId')
+            if user_id is None:
+                logger.warning(f'Bad user with no ID {user_raw}')
+                return None
+            user.id = str(user_id) + '_' + (user_raw.get('DisplayName') or '')
+            user.username = user_raw.get('DisplayName')
+            user.first_name = user_raw.get('FirstName')
+            user.last_name = user_raw.get('LastName')
+            user.mail = user_raw.get('PrimaryEmail')
+            user.company = user_raw.get('Company')
+            user.image = user_raw.get('EmployeePhoto')
+            user.user_department = user_raw.get('Department')
+            user.user_title = user_raw.get('Title')
+            user.set_raw(user_raw)
+            return user
+        except Exception:
+            logger.exception(f'Problem with fetching BambooHR user for {user_raw}')
+            return None
+
+    def _parse_users_raw_data(self, users_raw_data):
+        for user_raw in users_raw_data:
+            user = self._create_user(user_raw)
+            if user:
+                yield user

@@ -28,6 +28,7 @@ class CiscoAMPConnection(RESTConnection):
             self._permanent_headers = {'Authorization': f'Basic {authorize}'}
         else:
             raise RESTException('No API key or Client ID')
+        self._get('v1/computers', url_params={'offset': 0, 'limit': consts.DEVICES_PER_PAGE})
 
     def get_device_list(self):
         """

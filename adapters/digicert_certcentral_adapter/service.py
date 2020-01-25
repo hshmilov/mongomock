@@ -80,15 +80,15 @@ class DigicertCertcentralAdapter(AdapterBase):
         return {
             'items': [
                 {
+                    'name': 'account_id',
+                    'title': 'Account ID',
+                    'type': 'string',
+                },
+                {
                     'name': 'api_key',
                     'title': 'API Key',
                     'type': 'string',
                     'format': 'password',
-                },
-                {
-                    'name': 'account_id',
-                    'title': 'Account ID',
-                    'type': 'string',
                 },
                 {
                     'name': 'division_ids',

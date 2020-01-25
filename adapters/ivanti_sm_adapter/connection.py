@@ -22,9 +22,10 @@ class IvantiSmConnection(RESTConnection):
             raise RESTException('No API Key')
         self._get('odata/businessobject/CI__computers')
 
-    def get_device_list(self):
+    def _get_business_object(self, business_object):
         skip = 0
-        response = self._get('odata/businessobject/CI__computers', url_params={'$top': DEVICE_PER_PAGE, '$skip': skip})
+        response = self._get(f'odata/businessobject/{business_object}',
+                             url_params={'$top': DEVICE_PER_PAGE, '$skip': skip})
         if not isinstance(response, dict) or not response.get('value') or not isinstance(response['value'], list):
             raise RESTException(f'Bad Response: {response}')
         count = response.get('@odata.count')
@@ -33,7 +34,7 @@ class IvantiSmConnection(RESTConnection):
         skip += DEVICE_PER_PAGE
         while skip < min(count, MAX_NUMBER_OF_PAGES):
             try:
-                response = self._get('odata/businessobject/CI__computers',
+                response = self._get(f'odata/businessobject/{business_object}',
                                      url_params={'$top': DEVICE_PER_PAGE, '$skip': skip})
                 if not isinstance(response, dict) or not response.get('value')\
                         or not isinstance(response['value'], list):
@@ -43,3 +44,9 @@ class IvantiSmConnection(RESTConnection):
             except Exception:
                 logger.exception(f'Problem with skip {skip}')
                 break
+
+    def get_user_list(self):
+        yield from self._get_business_object('Employees')
+
+    def get_device_list(self):
+        yield from self._get_business_object('CI__computers')

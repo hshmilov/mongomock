@@ -33,7 +33,7 @@ class DigicertCertcentralConnection(RESTConnection):
         try:
             response = self._get(REST_PATH_AUTH)
         except RESTException:
-            logger.exception(f'Failed to get permissions for client {self.client_id}')
+            logger.exception(f'Failed to get permissions')
             raise
 
         # debug print for test runs
