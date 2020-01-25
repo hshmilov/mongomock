@@ -479,6 +479,25 @@ class FirewallRule(SmartJsonClass):
     to_port = Field(int, 'To port')
 
 
+class ScriptInformation(SmartJsonClass):
+    script_id = Field(str, 'Script Id')
+    script_output = Field(str, 'Script Output')
+
+
+class NmapPortInfo(SmartJsonClass):
+    protocol = Field(str, 'Protocol')
+    portid = Field(str, 'Port Id')
+    state = Field(str, 'State')
+    reason = Field(str, 'Reason')
+    service_name = Field(str, 'Service Name')
+    service_product = Field(str, 'Service Product')
+    service_method = Field(str, 'Service Method')
+    service_conf = Field(str, 'Service Configuration')
+    service_extra_info = Field(str, 'Service Extra Info')
+    cpe = Field(str, 'cpe')
+    script_information = ListField(ScriptInformation, 'Script Information')
+
+
 class DeviceAdapter(SmartJsonClass):
     """ A definition for the json-scheme for a Device """
     name = Field(str, 'Asset Name')
@@ -496,6 +515,7 @@ class DeviceAdapter(SmartJsonClass):
         converter=format_ip_raw,
     )
     open_ports = ListField(DeviceOpenPort, 'Open Ports', json_format=JsonArrayFormat.table)
+    ports_info = ListField(NmapPortInfo, 'Ports Information', json_format=JsonArrayFormat.table)
     network_interfaces = ListField(
         DeviceAdapterNetworkInterface, 'Network Interfaces', json_format=JsonArrayFormat.table
     )

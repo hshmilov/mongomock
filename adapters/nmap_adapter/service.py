@@ -11,11 +11,10 @@ from smb.SMBHandler import SMBHandler
 from axonius.adapter_base import AdapterProperty
 from axonius.scanner_adapter_base import ScannerAdapterBase
 from axonius.utils.parsing import is_domain_valid
-from axonius.devices.device_adapter import DeviceAdapter
+from axonius.devices.device_adapter import DeviceAdapter, NmapPortInfo, ScriptInformation
 from axonius.clients.aws.utils import get_s3_object
 from axonius.clients.rest.consts import get_default_timeout
-from axonius.smart_json_class import SmartJsonClass
-from axonius.fields import Field, ListField
+from axonius.fields import Field
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.utils.files import get_local_config_file
 from axonius.utils.xml2json_parser import Xml2Json
@@ -24,31 +23,11 @@ from axonius.utils.xml2json_parser import Xml2Json
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
-class ScriptInformation(SmartJsonClass):
-    script_id = Field(str, 'Script Id')
-    script_output = Field(str, 'Script Output')
-
-
-class NmapPortInfo(SmartJsonClass):
-    protocol = Field(str, 'Protocol')
-    portid = Field(str, 'Port Id')
-    state = Field(str, 'State')
-    reason = Field(str, 'Reason')
-    service_name = Field(str, 'Service Name')
-    service_product = Field(str, 'Service Product')
-    service_method = Field(str, 'Service Method')
-    service_conf = Field(str, 'Service Configuration')
-    service_extra_info = Field(str, 'Service Extra Info')
-    cpe = Field(str, 'cpe')
-    script_information = ListField(ScriptInformation, 'Script Information')
-
-
 class NmapAdapter(ScannerAdapterBase):
     class MyDeviceAdapter(DeviceAdapter):
         file_name = Field(str, 'Nmap File Name')
         start_time = Field(datetime.datetime, 'Start Time')
         end_time = Field(datetime.datetime, 'End Time')
-        ports_info = ListField(NmapPortInfo, 'Ports Information')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
