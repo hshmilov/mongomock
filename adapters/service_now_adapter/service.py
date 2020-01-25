@@ -98,7 +98,6 @@ class ServiceNowAdapter(AdapterBase, Configurable):
             if self.__exclude_vm_tables is True and class_name and 'cmdb_ci_vm' in class_name:
                 return None
             device.class_name = class_name
-            device.vendor = device_raw.get('vendor')
             try:
                 ip_addresses = device_raw.get('ip_address')
                 if fetch_ips and ip_addresses and not any(elem in ip_addresses for elem in ['DHCP',
@@ -240,6 +239,12 @@ class ServiceNowAdapter(AdapterBase, Configurable):
                 if owned_by.get('email'):
                     device.email = owned_by.get('email')
             try:
+                try:
+                    vendor_link = (device_raw.get('vendor') or {}).get('value')
+                    if vendor_link and companies_table_dict.get(vendor_link):
+                        device.vendor = companies_table_dict.get(vendor_link).get('name')
+                except Exception:
+                    logger.exception(f'Problem getting vendor for {device_raw}')
                 try:
                     manufacturer_link = (device_raw.get('manufacturer') or {}).get('value')
                     if manufacturer_link and companies_table_dict.get(manufacturer_link):
