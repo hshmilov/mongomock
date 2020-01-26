@@ -53,7 +53,7 @@
       },
       formatDetails(value, schema) {
         if (schema.name !== UPDATED_BY_FIELD) {
-          return value
+          return this.format(value, schema);
         }
         value = JSON.parse(value)
         const username = this.formatUsername(value)
