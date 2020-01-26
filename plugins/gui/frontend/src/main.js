@@ -43,6 +43,8 @@ Vue.use(VueAnalytics, {
 	customResourceURL: '/src/analytics.js'
 })
 
+import './mixpanel_init'
+
 new Vue({
 	el: '#app',
 	vuetify: createVuetifyConfigObject(),
