@@ -144,7 +144,8 @@ export const pluginMeta = {
     },
     observium_adapter: {
         title: 'Observium',
-        description: 'Observium is a low-maintenance auto-discovering network monitoring platform supporting a wide range of device types, platforms and operating systems including Cisco, Windows, Linux, HP, Juniper, Dell, FreeBSD, Brocade, Netscaler, NetApp and many more. Observium focuses on providing a beautiful and powerful yet simple and intuitive interface to the health and status of your network.'
+        link: 'https://docs.axonius.com/docs/observium',
+        description: 'Observium is an auto-discovering network monitoring platform supporting a wide range of device types, platforms and operating systems.'
     },
     scep_adapter: {
         title: 'Microsoft SCEP',
