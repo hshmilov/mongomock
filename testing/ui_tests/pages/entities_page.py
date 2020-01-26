@@ -248,6 +248,7 @@ class EntitiesPage(Page):
         filter_adapter_box = self.driver.find_element_by_css_selector(self.FILTER_ADAPTERS_BOX_CSS)
         self.find_element_by_text(adapter, filter_adapter_box).click()
         self.driver.find_element_by_css_selector(self.FILTER_ADAPTERS_CSS).click()
+        time.sleep(0.5)
 
     def click_on_select_all_filter_adapters(self, parent=None):
         self.click_on_filter_adapter('Select all', parent)
@@ -350,6 +351,7 @@ class EntitiesPage(Page):
 
     def enter_search(self):
         self.key_down_enter(self.find_query_search_input())
+        self.wait_for_spinner_to_end()
 
     def open_search_list(self):
         self.key_down_arrow_down(self.find_query_search_input())
@@ -743,7 +745,7 @@ class EntitiesPage(Page):
         if not text:
             self.wait_for_element_absent_by_css(self.QUERY_ERROR_CSS)
             return True
-        return text == self.driver.find_element_by_css_selector(self.QUERY_ERROR_CSS).text
+        return text == self.wait_for_element_present_by_css(self.QUERY_ERROR_CSS).text
 
     def click_save_query(self):
         self.driver.find_element_by_id(self.SAVE_QUERY_ID).click()
@@ -987,6 +989,7 @@ class EntitiesPage(Page):
         self.fill_filter(filter_value)
         self.enter_search()
         self.wait_for_table_to_load()
+        self.wait_for_spinner_to_end()
 
     def open_delete_dialog(self):
         self.click_button(self.ACTIONS_BUTTON, partial_class=True)

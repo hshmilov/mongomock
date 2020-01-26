@@ -30,185 +30,187 @@
 </template>
 
 <script>
-  import xQueryState from './State.vue'
-  import xQuerySearchInput from './SearchInput.vue'
-  import xQueryWizard from './Wizard.vue'
-  import xButton from '../../../axons/inputs/Button.vue'
+import { mapState, mapGetters, mapMutations } from 'vuex';
+import xQueryState from './State.vue';
+import xQuerySearchInput from './SearchInput.vue';
+import xQueryWizard from './Wizard.vue';
+import xButton from '../../../axons/inputs/Button.vue';
 
-  import { mapState, mapGetters, mapMutations } from 'vuex'
-  import {AUTO_QUERY, GET_MODULE_SCHEMA} from '../../../../store/getters'
-  import { UPDATE_DATA_VIEW } from '../../../../store/mutations'
-  import QueryBuilder from "../../../../logic/query_builder";
+import { AUTO_QUERY, GET_MODULE_SCHEMA } from '../../../../store/getters';
+import { UPDATE_DATA_VIEW } from '../../../../store/mutations';
+import QueryBuilder from '../../../../logic/query_builder';
 
-  export default {
-    name: 'XQuery',
-    components: {
-      xQueryState, xQuerySearchInput, xQueryWizard, xButton
+export default {
+  name: 'XQuery',
+  components: {
+    xQueryState, xQuerySearchInput, xQueryWizard, xButton,
+  },
+  props: {
+    module: {
+      type: String,
+      required: true,
     },
-    props: {
-      module: {
-        type: String,
-        required: true
-      },
-      readOnly: {
-        type: Boolean,
-        default: false
-      }
+    readOnly: {
+      type: Boolean,
+      default: false,
     },
-    data () {
-      return {
-        filterValid: true,
-        error: ''
-      }
+  },
+  data() {
+    return {
+      filterValid: true,
+      error: '',
+    };
+  },
+  computed: {
+    ...mapState({
+      view(state) {
+        return state[this.module].view;
+      },
+    }),
+    ...mapGetters({
+      getModuleSchema: GET_MODULE_SCHEMA, autoQuery: AUTO_QUERY,
+    }),
+    query: {
+      get() {
+        return this.view.query;
+      },
+      set(query) {
+        this.updateQuery(query, false);
+      },
     },
-    computed: {
-      ...mapState({
-        view (state) {
-          return state[this.module].view
-        }
-      }),
-      ...mapGetters({
-        getModuleSchema: GET_MODULE_SCHEMA, autoQuery: AUTO_QUERY
-      }),
-      query: {
-          get (){
-              return this.view.query
-          },
-          set (query){
-              this.updateQuery(query, false)
-          }
-      },
-      enforcementFilter () {
-        if (!this.view.enforcement) return ''
-        return this.view.enforcement.filter
-      },
-      queryFilter: {
-        get () {
-          return this.query.filter
-        },
-        set (filter) {
-          let prevFilter = this.query.filter
-          let queryMeta = {
-            ...this.query.meta,
-            enforcementFilter: this.enforcementFilter
-          }
-          this.updateView({
-            module: this.module, view: {
-              query: {
-                filter: filter,
-                expressions: this.query.expressions,
-                meta: queryMeta,
-                search: this.query.search ? this.query.search : null
-              },
-              page: 0
-            },
-          })
-          this.filterValid = filter !== ''
-          if (prevFilter !== filter) {
-            this.$emit('done')
-          }
-        }
-      },
-      schema () {
-        return this.getModuleSchema(this.module)
-      }
+    enforcementFilter() {
+      if (!this.view.enforcement) return '';
+      return this.view.enforcement.filter;
     },
-    methods: {
-      ...mapMutations({
-        updateView: UPDATE_DATA_VIEW
-      }),
-      navigateSavedQueries () {
-        this.$router.push({ path: `/${this.module}/query/saved` })
+    queryFilter: {
+      get() {
+        return this.query.filter;
       },
-      onValid () {
-        this.filterValid = true
-        this.$emit('done')
-      },
-      onError (error) {
-        this.filterValid = false
-        this.error = error
-      },
-       compileFilter (query, filter, queryMeta) {
-        let resultFilters = {}
-        if (query.expressions.length === 0) {
-          resultFilters.resultFilter = ''
-        } else {
-          try {
-            let queryBuilder = QueryBuilder(this.schema, this.query.expressions, queryMeta, query.onlyExpressionsFilter)
-            resultFilters = queryBuilder.compileQuery()
-            this.error = queryBuilder.getError()
-            this.filterValid = !this.error
-          } catch (error) {
-            this.onError(error)
-            this.filterValid = false
-          }
-        }
-        return resultFilters
-      },
-      updateQuery(query, force = false) {
-        const prevFilter = this.query.filter
-
+      set(filter) {
+        const prevFilter = this.query.filter;
         const queryMeta = {
           ...this.query.meta,
-          ...query.meta,
-          enforcementFilter: this.enforcementFilter
-        }
-
-        const filterShouldRecompile = force || this.autoQuery
-        let filter
-        // Check if the calculation is forced (using the search button) or the autoQuery value is chosen
-        let resultFilters = {};
-        if (filterShouldRecompile) {
-          resultFilters = this.compileFilter(query, filter, queryMeta)
-          filter = resultFilters.resultFilter
-        }
-
-        let selectIds = []
-        if(queryMeta && queryMeta.filterOutExpression && queryMeta.filterOutExpression.showIds ){
-          selectIds = queryMeta.filterOutExpression.value.split(',')
-          queryMeta.filterOutExpression = null
-        }
-
-        // Update the view in any case, even if the filter has not changed
-        this.updateView({
-          module: this.module, view: {
-            query: {
-              filter: filter ? filter : prevFilter,
-              onlyExpressionsFilter: filterShouldRecompile ? resultFilters.onlyExpressionsFilter : this.query.onlyExpressionsFilter,
-              expressions: query.expressions,
-              meta: queryMeta,
-              search: null
-            },
-            page: 0
-          },
-        })
-
-        // Fetch the entities only if the filter has changed
-        if (prevFilter !== filter && filter) {
-          this.$emit('done', true, selectIds)
-        }
-      },
-      onReset(){
+          enforcementFilter: this.enforcementFilter,
+        };
         this.updateView({
           module: this.module,
           view: {
             query: {
-              filter: '',
-              onlyExpressionsFilter: '',
-              meta: {
-                uniqueAdapters: false,
-                enforcementFilter: this.enforcementFilter
-              },
-              expressions: [],
-              search: null
-            }
+              filter,
+              expressions: this.query.expressions,
+              meta: queryMeta,
+              search: this.query.search ? this.query.search : null,
+            },
+            page: 0,
           },
-          uuid: null
-        })
-        this.$emit('done')
+        });
+        this.filterValid = filter !== '';
+        if (prevFilter !== filter) {
+          this.$emit('done');
+        }
+      },
+    },
+    schema() {
+      return this.getModuleSchema(this.module);
+    },
+  },
+  methods: {
+    ...mapMutations({
+      updateView: UPDATE_DATA_VIEW,
+    }),
+    navigateSavedQueries() {
+      this.$router.push({ path: `/${this.module}/query/saved` });
+    },
+    onValid() {
+      this.filterValid = true;
+      this.$emit('done');
+    },
+    onError(error) {
+      this.filterValid = false;
+      this.error = error;
+    },
+    compileFilter(query, filter, queryMeta) {
+      let resultFilters = {};
+      if (query.expressions.length === 0) {
+        resultFilters.resultFilter = '';
+      } else {
+        try {
+          const queryBuilder = QueryBuilder(this.schema, this.query.expressions, queryMeta, query.onlyExpressionsFilter);
+          resultFilters = queryBuilder.compileQuery();
+          this.error = queryBuilder.getError();
+          this.filterValid = !this.error;
+        } catch (error) {
+          this.onError(error);
+          this.filterValid = false;
+        }
       }
-    }
-  }
+      return resultFilters;
+    },
+    updateQuery(query, force = false) {
+      const prevFilter = this.query.filter;
+
+      const queryMeta = {
+        ...this.query.meta,
+        ...query.meta,
+        enforcementFilter: this.enforcementFilter,
+      };
+
+      const filterShouldRecompile = force || this.autoQuery;
+      let filter;
+      // Check if the calculation is forced (using the search button) or the autoQuery value is chosen
+      let resultFilters = {};
+      if (filterShouldRecompile) {
+        resultFilters = this.compileFilter(query, filter, queryMeta);
+        filter = resultFilters.resultFilter;
+      }
+
+      let selectIds = [];
+      if (queryMeta && queryMeta.filterOutExpression && queryMeta.filterOutExpression.showIds) {
+        selectIds = queryMeta.filterOutExpression.value.split(',');
+        queryMeta.filterOutExpression = null;
+      }
+
+      // Update the view in any case, even if the filter has not changed
+      this.updateView({
+        module: this.module,
+        view: {
+          query: {
+            filter: filter || prevFilter,
+            onlyExpressionsFilter: filterShouldRecompile ? resultFilters.onlyExpressionsFilter : this.query.onlyExpressionsFilter,
+            expressions: query.expressions,
+            meta: queryMeta,
+            search: null,
+          },
+          page: 0,
+        },
+      });
+
+      // Fetch the entities only if the filter has changed
+      if (prevFilter !== filter && filter) {
+        this.$emit('done', true, selectIds);
+      }
+    },
+    onReset() {
+      this.updateView({
+        module: this.module,
+        view: {
+          query: {
+            filter: '',
+            onlyExpressionsFilter: '',
+            meta: {
+              uniqueAdapters: false,
+              enforcementFilter: this.enforcementFilter,
+            },
+            expressions: [],
+            search: null,
+          },
+        },
+        uuid: null,
+      });
+      this.$emit('done');
+    },
+  },
+};
 </script>
 
 <style lang="scss">

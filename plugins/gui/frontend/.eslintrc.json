@@ -14,7 +14,16 @@
     "airbnb-base",
     "plugin:vue/recommended"
   ],
-  "rules": {},
+  "rules": {
+    "vue/multiline-html-element-content-newline": ["warn", {
+      "ignoreWhenEmpty": true,
+      "ignores": ["x-button", "v-btn"],
+      "allowEmptyLines": false
+    }]
+  },
+  "globals": {
+    "arguments": "readonly"
+  },
   "settings": {
     "import/resolver": {
       "webpack": {

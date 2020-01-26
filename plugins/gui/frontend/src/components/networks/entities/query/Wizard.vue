@@ -35,12 +35,10 @@
         >Clear</x-button>
       </div>
       <md-switch
+        v-if="module === 'devices'"
         v-model="isUniqueAdapters"
         :disabled="!value.filter"
-        v-if="module === 'devices'"
-      >Include outdated Adapter {{ prettyModule }}
-        in query
-      </md-switch>
+      >Include outdated Adapter {{ prettyModule }} in query</md-switch>
       <div class="place-right">
         <x-button
           link
@@ -57,103 +55,112 @@
 </template>
 
 <script>
-  import xDropdown from '../../../axons/popover/Dropdown.vue'
-  import xButton from '../../../axons/inputs/Button.vue'
-  import xFilter from '../../../neurons/schema/query/Filter.vue'
+import { mapState, mapMutations } from 'vuex';
+import _debounce from 'lodash/debounce';
 
-  import { mapState, mapMutations } from 'vuex'
-  import { UPDATE_DATA_VIEW } from '../../../../store/mutations'
+import xDropdown from '../../../axons/popover/Dropdown.vue';
+import xButton from '../../../axons/inputs/Button.vue';
+import xFilter from '../../../neurons/schema/query/Filter.vue';
 
-  export default {
-    name: 'XQueryWizard',
-    components: {
-      xDropdown, xButton, xFilter
+import { UPDATE_DATA_VIEW } from '../../../../store/mutations';
+
+
+export default {
+  name: 'XQueryWizard',
+  components: {
+    xDropdown, xButton, xFilter,
+  },
+  props: {
+    module: {
+      type: String,
+      required: true,
     },
-    props: {
-      module: {
-        type: String,
-        required: true
-      },
-      value: {
-        type: Object,
-        default: () => {}
-      },
-      error: {
-          type: String,
-          default: ''
-      }
+    value: {
+      type: Object,
+      default: () => {},
     },
-    computed: {
-      ...mapState({
-        query (state) {
-          return state[this.module].view.query
-        }
-      }),
-      queryExpressions: {
-        get () {
-          return this.value.expressions
-        },
-        set (expressions) {
-          this.updateQuery(this.value.filter, this.value.onlyExpressionsFilter, this.value.meta, expressions)
-        }
+    error: {
+      type: String,
+      default: '',
+    },
+  },
+  computed: {
+    ...mapState({
+      query(state) {
+        return state[this.module].view.query;
       },
-      isUniqueAdapters: {
-        get () {
-          return this.value.meta ? this.value.meta.uniqueAdapters : false
-        },
-        set (isUniqueAdapters) {
-          const meta = {...this.value.meta, uniqueAdapters: isUniqueAdapters}
-          this.updateQuery(this.value.filter, this.value.onlyExpressionsFilter, meta, this.value.expressions)
-        }
+    }),
+    queryExpressions: {
+      get() {
+        return this.value.expressions;
       },
-      prettyModule () {
-        return this.module[0].toUpperCase() + this.module.slice(1)
-      },
-      filterOutExpression() {
-        return this.value.meta && this.value.meta.filterOutExpression ? this.value.meta.filterOutExpression : {}
-      },
-      filterOutIdCount() {
-        return this.value.meta && this.value.meta.filterOutExpression ? this.value.meta.filterOutExpression.value.split(',').length : 0
+      set(expressions) {
+        this.debouncedUpdateQueryEvent(this.value.filter, this.value.onlyExpressionsFilter, this.value.meta, expressions);
       },
     },
-    methods: {
-      ...mapMutations({
-        updateView: UPDATE_DATA_VIEW
-      }),
-      compileFilter () {
-        // Instruct the filter to re-compile, in case filter was edited
-        this.$emit('submit')
-        this.$refs.wizard.close()
+    isUniqueAdapters: {
+      get() {
+        return this.value.meta ? this.value.meta.uniqueAdapters : false;
       },
-      clearFilter () {
-        this.$emit('reset')
-         this.$nextTick(() => {
-             this.$refs.filter.reset()
-         })
+      set(isUniqueAdapters) {
+        const meta = { ...this.value.meta, uniqueAdapters: isUniqueAdapters };
+        this.updateQuery(this.value.filter, this.value.onlyExpressionsFilter, meta, this.value.expressions);
       },
-      onChangeFilter (expressions) {
-        this.updateQuery(this.value.filter, this.value.onlyExpressionsFilter, this.value.meta, expressions)
-      },
-      onError(error){
-          this.$emit('error', error)
-      },
-      removeFilterOutExpression(){
-        const filterOutExpression = {...this.value.meta.filterOutExpression}
-        filterOutExpression.showIds = true
-        const meta = {...this.value.meta, filterOutExpression: filterOutExpression}
-        this.updateQuery(this.value.filter, this.value.onlyExpressionsFilter, meta, this.value.expressions)
-        this.$refs.wizard.close()
-      },
-      updateQuery(filter, onlyExpressionsFilter, meta, expressions){
-        this.$emit('input', {
-          filter: filter,
-          onlyExpressionsFilter: onlyExpressionsFilter,
-          meta: meta,
-          expressions: expressions
-        })
-      }
-    }
-  }
+    },
+    prettyModule() {
+      return this.module[0].toUpperCase() + this.module.slice(1);
+    },
+    filterOutExpression() {
+      return this.value.meta && this.value.meta.filterOutExpression ? this.value.meta.filterOutExpression : {};
+    },
+    filterOutIdCount() {
+      return this.value.meta && this.value.meta.filterOutExpression ? this.value.meta.filterOutExpression.value.split(',').length : 0;
+    },
+  },
+  methods: {
+    ...mapMutations({
+      updateView: UPDATE_DATA_VIEW,
+    }),
+    compileFilter() {
+      // Instruct the filter to re-compile, in case filter was edited
+      this.$emit('submit');
+      this.$refs.wizard.close();
+    },
+    clearFilter() {
+      this.$emit('reset');
+      this.$nextTick(() => {
+        this.$refs.filter.reset();
+      });
+    },
+    onChangeFilter(expressions) {
+      this.debouncedUpdateQueryEvent(this.value.filter, this.value.onlyExpressionsFilter, this.value.meta, expressions);
+    },
+    onError(error) {
+      this.$emit('error', error);
+    },
+    removeFilterOutExpression() {
+      const filterOutExpression = { ...this.value.meta.filterOutExpression };
+      filterOutExpression.showIds = true;
+      const meta = { ...this.value.meta, filterOutExpression };
+      this.debouncedUpdateQueryEvent(this.value.filter, this.value.onlyExpressionsFilter, meta, this.value.expressions);
+      this.$refs.wizard.close();
+    },
+    debouncedUpdateQueryEvent: _debounce(function debouncedUpdateQueryEvent(...args) {
+      this.updateQuery(...args);
+    }, 400, {
+      leading: true,
+      trailing: true,
+    }),
+    updateQuery(filter, onlyExpressionsFilter, meta, expressions) {
+      this.$emit('input', {
+        filter,
+        onlyExpressionsFilter,
+        meta,
+        expressions,
+      });
+    },
+  },
+};
 </script>
 
 <style lang="scss">

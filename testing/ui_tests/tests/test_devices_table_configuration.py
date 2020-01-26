@@ -165,4 +165,5 @@ class TestDevicesTable(TestEntitiesTable):
         self.devices_page.select_query_field(self.devices_page.FIELD_NETWORK_INTERFACES_MAC, expressions[3])
         self.devices_page.select_query_comp_op(self.devices_page.QUERY_COMP_EXISTS, expressions[3])
         self.devices_page.wait_for_table_to_load()
+        self.devices_page.wait_for_spinner_to_end()
         assert len(self.devices_page.get_all_data()) == 1

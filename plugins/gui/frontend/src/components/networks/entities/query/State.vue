@@ -2,8 +2,12 @@
   <div class="x-query-state">
     <div class="header">
       <template v-if="enforcement">
-        <div class="query-title">{{ enforcement.name }}</div>
-        <div class="subtitle">{{ enforcement.outcome }} results of "{{ enforcement.action }}" action</div>
+        <div class="query-title">
+          {{ enforcement.name }}
+        </div>
+        <div class="subtitle">
+          {{ enforcement.outcome }} results of "{{ enforcement.action }}" action
+        </div>
       </template>
       <x-button
         v-else-if="selectedView && !readOnly"
@@ -15,12 +19,18 @@
       <div
         v-else-if="selectedView"
         class="query-title"
-      >{{ selectedView.name }}</div>
+      >
+        {{ selectedView.name }}
+      </div>
       <div
         v-else
         class="query-title"
-      >New Query</div>
-      <div class="status">{{ status }}</div>
+      >
+        New Query
+      </div>
+      <div class="status">
+        {{ status }}
+      </div>
     </div>
     <x-button
       v-if="enforcement"
@@ -71,182 +81,187 @@
 </template>
 
 <script>
-  import xButton from '../../../axons/inputs/Button.vue'
-  import xDropdown from '../../../axons/popover/Dropdown.vue'
-  import xHistoricalDate from '../../../neurons/inputs/HistoricalDate.vue'
-  import xSaveModal from '../../saved-queries/SavedQueryModal.vue'
-  import {defaultFields} from '../../../../constants/entities'
-  import _isEqual from 'lodash/isEqual'
+import _isEqual from 'lodash/isEqual';
+import { mapState, mapMutations, mapActions } from 'vuex';
+import _debounce from 'lodash/debounce';
+import xButton from '../../../axons/inputs/Button.vue';
+import xDropdown from '../../../axons/popover/Dropdown.vue';
+import xHistoricalDate from '../../../neurons/inputs/HistoricalDate.vue';
+import xSaveModal from '../../saved-queries/SavedQueryModal.vue';
+import { defaultFields } from '../../../../constants/entities';
 
-  import {mapState, mapMutations, mapActions} from 'vuex'
-  import {UPDATE_DATA_VIEW} from '../../../../store/mutations'
-  import { SAVE_DATA_VIEW } from '../../../../store/actions'
+import { UPDATE_DATA_VIEW } from '../../../../store/mutations';
+import { SAVE_DATA_VIEW } from '../../../../store/actions';
 
-  export default {
-    name: 'XQueryState',
-    components: {
-      xButton, xDropdown, xHistoricalDate, xSaveModal
+
+export default {
+  name: 'XQueryState',
+  components: {
+    xButton, xDropdown, xHistoricalDate, xSaveModal,
+  },
+  props: {
+    module: {
+      type: String,
+      required: true,
     },
-    props: {
-      module: {
-        type: String,
-        required: true
+    readOnly: {
+      type: Boolean,
+      default: false,
+    },
+    valid: {
+      type: Boolean,
+      default: true,
+    },
+  },
+  data() {
+    return {
+      viewNameModal: {
+        isActive: false,
+        view: null,
       },
-      readOnly: {
-        type: Boolean,
-        default: false
+    };
+  },
+  computed: {
+    ...mapState({
+      view(state) {
+        return state[this.module].view;
       },
-      valid: {
-        type: Boolean,
-        default: true
+      allowedDates(state) {
+        return state.constants.allowedDates[this.module];
+      },
+      selectedView(state) {
+        const uuid = state[this.module].selectedView;
+        if (!uuid) return null;
+        return state[this.module].views.saved.content.data.find((view) => view.uuid === uuid);
+      },
+    }),
+    enforcement() {
+      return this.view.enforcement;
+    },
+    disabled() {
+      return !this.valid || this.readOnly || this.isDefaultView;
+    },
+    historical: {
+      get() {
+        if (!this.view.historical) return '';
+        return this.view.historical.substring(0, 10);
+      },
+      set(newDate) {
+        this.updateView({
+          module: this.module,
+          view: {
+            historical: this.allowedDates[newDate],
+          },
+        });
+        this.$emit('done');
+      },
+    },
+    title() {
+      if (this.enforcement) {
+        return '';
       }
-    },
-    data () {
-      return {
-        viewNameModal: {
-          isActive: false,
-          view: null
-        }
+      if (this.selectedView) {
+        return this.selectedView.name;
       }
+      return 'New Query';
     },
-    computed: {
-      ...mapState({
-        view (state) {
-          return state[this.module].view
-        },
-        allowedDates (state) {
-          return state.constants.allowedDates[this.module]
-        },
-        selectedView (state) {
-          let uuid = state[this.module].selectedView
-          if (!uuid) return null
-          return state[this.module].views.saved.content.data.find(view => view.uuid === uuid)
-        }
-      }),
-      enforcement () {
-        return this.view.enforcement
-      },
-      disabled () {
-        return !this.valid || this.readOnly || this.isDefaultView
-      },
-      historical: {
-        get () {
-          if (!this.view.historical) return ''
-          return this.view.historical.substring(0, 10)
-        },
-        set (newDate) {
-          this.updateView({
-            module: this.module, view: {
-              historical: this.allowedDates[newDate]
-            }
-          })
-          this.$emit('done')
-        }
-      },
-      title () {
-        if (this.enforcement) {
-          return ``
-        }
-        if (this.selectedView) {
-          return this.selectedView.name
-        }
-        return 'New Query'
-      },
-      isDefaultView () {
-        return this.view.query.filter === ''
+    isDefaultView() {
+      return this.view.query.filter === ''
                 && _isEqual(this.view.fields, defaultFields[this.module])
                 && this.view.sort.field === ''
-                && (!Object.keys(this.view.colFilters).length || !Object.values(this.view.colFilters).find(val => val))
-      },
-      isEdited () {
-        return this.selectedView && this.selectedView.view &&
-                (this.selectedView.view.query.filter !== this.view.query.filter
+                && (!Object.keys(this.view.colFilters).length || !Object.values(this.view.colFilters).find((val) => val));
+    },
+    isEdited() {
+      return this.selectedView && this.selectedView.view
+                && (this.selectedView.view.query.filter !== this.view.query.filter
                 || !_isEqual(this.view.fields, this.selectedView.view.fields)
                 || this.view.sort.field !== this.selectedView.view.sort.field
                 || this.view.sort.desc !== this.selectedView.view.sort.desc
-                || !this.objsValuesMatch(this.view.colFilters, this.selectedView.view.colFilters))
-      },
-      status () {
-        if (this.enforcement) return ''
-        return !this.selectedView? '[Unsaved]' : (this.isEdited ? '[Edited]' : '')
-      }
+                || !this.objsValuesMatch(this.view.colFilters, this.selectedView.view.colFilters));
     },
-    methods: {
-      ...mapMutations({
-        updateView: UPDATE_DATA_VIEW
-      }),
-      ...mapActions({
-        saveView: SAVE_DATA_VIEW
-      }),
-      resetQuery () {
-        this.updateView({
-          module: this.module, view: {
-            enforcement: null,
-            query: {
-              filter: '',
-              expressions: [],
-              search: null,
-              meta: {
-                uniqueAdapters: false,
-                enforcementFilter: null
-              },
-            },
-            sort: {
-              field: '', desc: true
-            },
-            fields: defaultFields[this.module],
-            colFilters: {},
-            page: 0
-          },
-          uuid: null
-        })
-        this.$emit('done')
-      },
-      navigateFilteredTask() {
-        this.$router.push({path: `/tasks/${this.enforcement.id}`})
-      },
-      openSaveView () {
-        this.viewNameModal.view = null
-        this.viewNameModal.isActive = true
-      },
-      openEditCurrentQueryModal () {
-        this.viewNameModal.isActive = true
-        this.viewNameModal.view = {
-          uuid: this.selectedView.uuid,
-          name: this.selectedView.name,
-          description: this.selectedView.description
-        }
-      },
-      saveSelectedView () {
-        if (!this.selectedView || !this.selectedView.uuid) return
+    status() {
+      if (this.enforcement) return '';
+      return !this.selectedView ? '[Unsaved]' : (this.isEdited ? '[Edited]' : '');
+    },
+  },
+  methods: {
+    ...mapMutations({
+      updateView: UPDATE_DATA_VIEW,
+    }),
+    ...mapActions({
+      saveView: SAVE_DATA_VIEW,
+    }),
 
-        this.saveView({
-          module: this.module,
-          name: this.selectedView.name,
-          uuid: this.selectedView.uuid
-        })
-      },
-      reloadSelectedView () {
-        this.updateView({
-          module: this.module,
-          view: { ...this.selectedView.view }
-        })
-        this.$emit('done')
-      },
-      objContained (superset, subset) {
-        return Object.entries(subset).every(([key, value]) => _isEqual(superset[key], value))
-      },
-      objsValuesMatch (objA, objB) {
-        /*
+    resetQuery: _debounce(function resetQuery() {
+      this.updateView({
+        module: this.module,
+        view: {
+          enforcement: null,
+          query: {
+            filter: '',
+            expressions: [],
+            search: null,
+            meta: {
+              uniqueAdapters: false,
+              enforcementFilter: null,
+            },
+          },
+          sort: {
+            field: '', desc: true,
+          },
+          fields: defaultFields[this.module],
+          colFilters: {},
+          page: 0,
+        },
+        uuid: null,
+      });
+      this.$emit('done');
+    }, 400, { leading: true, trailing: false }),
+    navigateFilteredTask() {
+      this.$router.push({ path: `/tasks/${this.enforcement.id}` });
+    },
+    openSaveView() {
+      this.viewNameModal.view = null;
+      this.viewNameModal.isActive = true;
+    },
+    openEditCurrentQueryModal() {
+      this.viewNameModal.isActive = true;
+      this.viewNameModal.view = {
+        uuid: this.selectedView.uuid,
+        name: this.selectedView.name,
+        description: this.selectedView.description,
+      };
+    },
+    saveSelectedView() {
+      if (!this.selectedView || !this.selectedView.uuid) return;
+
+      this.saveView({
+        module: this.module,
+        name: this.selectedView.name,
+        uuid: this.selectedView.uuid,
+      });
+    },
+    reloadSelectedView() {
+      this.updateView({
+        module: this.module,
+        view: { ...this.selectedView.view },
+      });
+      this.$emit('done');
+    },
+    objContained(superset, subset) {
+      return Object.entries(subset).every(([key, value]) => _isEqual(superset[key], value));
+    },
+    objsValuesMatch(objA, objB) {
+      /*
         This is checking that any key in objA has the same value as the key in objB
         (including undefined - if it is undefined in one and non existent in the other, it passes)
          */
-        objA = objA || {}
-        objB = objB || {}
-        return this.objContained(objA, objB) && this.objContained(objB, objA)
-      }
-    }
-  }
+      objA = objA || {};
+      objB = objB || {};
+      return this.objContained(objA, objB) && this.objContained(objB, objA);
+    },
+  },
+};
 </script>
 
 <style lang="scss">
