@@ -28,7 +28,8 @@ class GoogleBigQueryAdapter(AdapterBase):
 
     @staticmethod
     def _test_reachability(client_config):
-        return RESTConnection.test_reachability('https://bigquery.googleapis.com/discovery/v1/apis/bigquery/v2/rest')
+        return RESTConnection.test_reachability('https://bigquery.googleapis.com/discovery/v1/apis/bigquery/v2/rest',
+                                                https_proxy=client_config.get('https_proxy'))
 
     def get_connection(self, client_config):
         connection = GoogleBigQueryConnection(

@@ -36,7 +36,8 @@ class DigicertCertcentralAdapter(AdapterBase):
 
     @staticmethod
     def _test_reachability(client_config):
-        return RESTConnection.test_reachability(REST_PATH_DISCOVERY_API)
+        return RESTConnection.test_reachability(REST_PATH_DISCOVERY_API,
+                                                http_proxy=client_config.get('https_proxy'))
 
     @staticmethod
     def get_connection(client_config):

@@ -53,7 +53,8 @@ class DivvycloudAdapter(AdapterBase):
     def _test_reachability(self, client_config):
         return RESTConnection.test_reachability(client_config.get('domain', ''),
                                                 client_config.get('port') or consts.DEFAULT_PORT,
-                                                ssl='https://' in client_config.get('domain', ''))
+                                                ssl='https://' in client_config.get('domain', ''),
+                                                http_proxy=client_config.get('https_proxy'))
 
     def _connect_client(self, client_config):
         try:

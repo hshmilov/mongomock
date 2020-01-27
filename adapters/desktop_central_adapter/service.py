@@ -26,7 +26,10 @@ class DesktopCentralAdapter(AdapterBase):
         return client_config['domain']
 
     def _test_reachability(self, client_config):
-        return RESTConnection.test_reachability(client_config.get('domain'))
+        return RESTConnection.test_reachability(client_config.get('domain'),
+                                                port=client_config.get('port') or consts.DEFAULT_PORT,
+                                                https_proxy=client_config.get('https_proxy'),
+                                                http_proxy=client_config.get('http_proxy'))
 
     def _connect_client(self, client_config):
         try:

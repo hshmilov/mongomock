@@ -28,7 +28,8 @@ class RiverbedAdapter(AdapterBase):
 
     @staticmethod
     def _test_reachability(client_config):
-        return RESTConnection.test_reachability(client_config.get('domain'))
+        return RESTConnection.test_reachability(client_config.get('domain'),
+                                                https_proxy=client_config.get('https_proxy'))
 
     @staticmethod
     def _connect_client(client_config):
@@ -37,7 +38,8 @@ class RiverbedAdapter(AdapterBase):
                                     verify_ssl=client_config['verify_ssl'],
                                     username=client_config.get('username'),
                                     password=client_config.get('password'),
-                                    apikey=client_config.get('apikey')) as connection:
+                                    apikey=client_config.get('apikey'),
+                                    https_proxy=client_config.get('https_proxy')) as connection:
                 return connection
         except RESTException as e:
             message = 'Error connecting to client with domain {0}, reason: {1}'.format(
@@ -93,6 +95,11 @@ class RiverbedAdapter(AdapterBase):
                     'name': 'verify_ssl',
                     'title': 'Verify SSL',
                     'type': 'bool'
+                },
+                {
+                    'name': 'https_proxy',
+                    'title': 'HTTPS Proxy',
+                    'type': 'string'
                 }
             ],
             'required': [

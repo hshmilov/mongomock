@@ -24,8 +24,10 @@ class CynetAdapter(AdapterBase):
     def _get_client_id(self, client_config):
         return client_config['domain']
 
-    def _test_reachability(self, client_config):
-        return RESTConnection.test_reachability(client_config.get('domain'))
+    @staticmethod
+    def _test_reachability(client_config):
+        return RESTConnection.test_reachability(client_config.get('domain'),
+                                                https_proxy=client_config.get('https_proxy'))
 
     def _connect_client(self, client_config):
         try:

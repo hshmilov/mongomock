@@ -58,7 +58,8 @@ class FireeyeHxAdapter(AdapterBase):
         return client_config['domain']
 
     def _test_reachability(self, client_config):
-        return RESTConnection.test_reachability(client_config.get("domain"), client_config.get("port"))
+        return RESTConnection.test_reachability(client_config.get("domain"), client_config.get("port"),
+                                                https_proxy=client_config.get('https_proxy'))
 
     def _connect_client(self, client_config):
         try:

@@ -39,13 +39,15 @@ class ClarotyAdapter(ScannerAdapterBase, Configurable):
 
     @staticmethod
     def _test_reachability(client_config):
-        return RESTConnection.test_reachability(client_config.get('domain'))
+        return RESTConnection.test_reachability(client_config.get('domain'),
+                                                https_proxy=client_config.get('https_proxy'))
 
     @staticmethod
     def _connect_client(client_config):
         try:
             connection = ClarotyConnection(domain=client_config['domain'], verify_ssl=client_config['verify_ssl'],
                                            username=client_config['username'], password=client_config['password'],
+                                           https_proxy=client_config.get('https_proxy')
                                            )
             with connection:
                 pass  # check that the connection credentials are valid
@@ -104,6 +106,11 @@ class ClarotyAdapter(ScannerAdapterBase, Configurable):
                 {
                     'name': 'tenant_tag',
                     'title': 'Tenant Tag',
+                    'type': 'string'
+                },
+                {
+                    'name': 'https_proxy',
+                    'title': 'HTTPS Proxy',
                     'type': 'string'
                 }
             ],

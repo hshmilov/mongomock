@@ -26,7 +26,8 @@ class SaltstackAdapter(AdapterBase):
 
     @staticmethod
     def _test_reachability(client_config):
-        return RESTConnection.test_reachability(client_config.get('domain'))
+        return RESTConnection.test_reachability(client_config.get('domain'),
+                                                https_proxy=client_config.get('https_proxy'))
 
     @staticmethod
     def _connect_client(client_config):
@@ -34,6 +35,7 @@ class SaltstackAdapter(AdapterBase):
             with SaltstackConnection(domain=client_config['domain'], verify_ssl=client_config['verify_ssl'],
                                      eauth=client_config['eauth'],
                                      username=client_config['username'], password=client_config['password'],
+                                     https_proxy=client_config.get('https_proxy')
                                      ) as connection:
                 return connection
         except RESTException as e:
@@ -89,6 +91,11 @@ class SaltstackAdapter(AdapterBase):
                     'name': 'verify_ssl',
                     'title': 'Verify SSL',
                     'type': 'bool'
+                },
+                {
+                    'name': 'https_proxy',
+                    'title': 'HTTPS Proxy',
+                    'type': 'string'
                 }
             ],
             'required': [

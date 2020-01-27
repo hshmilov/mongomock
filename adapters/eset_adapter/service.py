@@ -8,6 +8,7 @@ logger = logging.getLogger(f'axonius.{__name__}')
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.utils.datetime import parse_date
 from axonius.utils.parsing import format_mac
+from axonius.clients.rest.connection import RESTConnection
 from axonius.devices.device_adapter import DeviceAdapter
 import axonius.adapter_exceptions
 from axonius.utils.files import get_local_config_file
@@ -78,7 +79,8 @@ class EsetAdapter(AdapterBase):
                 {
                     "name": ESET_PORT,
                     "title": "Port",
-                    "type": "integer"
+                    "type": "integer",
+                    'default': 2223
                 },
                 {
                     "name": USER,
@@ -144,7 +146,8 @@ class EsetAdapter(AdapterBase):
         return f"{client_config[ESET_HOST]}:{client_config.get(ESET_PORT, 2223)}"
 
     def _test_reachability(self, client_config):
-        raise NotImplementedError()
+        return RESTConnection.test_reachability(client_config.get(ESET_HOST),
+                                                port=client_config.get(ESET_PORT))
 
     def _connect_client(self, client_config):
         eset_host = parse_url(client_config[ESET_HOST]).host

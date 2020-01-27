@@ -37,7 +37,8 @@ class InfobloxAdapter(AdapterBase, Configurable):
 
     @staticmethod
     def _test_reachability(client_config):
-        return RESTConnection.test_reachability(client_config.get('domain'))
+        return RESTConnection.test_reachability(client_config.get('domain'),
+                                                https_proxy=client_config.get('https_proxy'))
 
     def _connect_client(self, client_config):
         try:
@@ -45,7 +46,8 @@ class InfobloxAdapter(AdapterBase, Configurable):
             connection = InfobloxConnection(
                 api_vesrion,
                 domain=client_config['domain'], verify_ssl=client_config['verify_ssl'],
-                username=client_config['username'], password=client_config['password']
+                username=client_config['username'], password=client_config['password'],
+                https_proxy=client_config.get('https_proxy')
             )
             with connection:
                 pass  # check that the connection credentials are valid
@@ -112,6 +114,11 @@ class InfobloxAdapter(AdapterBase, Configurable):
                     'name': 'use_api_version_25',
                     'title': 'Use API version 2.5',
                     'type': 'bool'
+                },
+                {
+                    'name': 'https_proxy',
+                    'title': 'HTTPS Proxy',
+                    'type': 'string'
                 }
             ],
             'required': [

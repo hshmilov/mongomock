@@ -6,6 +6,7 @@ logger = logging.getLogger(f'axonius.{__name__}')
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.devices.device_adapter import DeviceAdapter
+from axonius.clients.rest.connection import RESTConnection
 from axonius.utils.parsing import format_mac
 from axonius.utils.files import get_local_config_file
 from hyper_v_adapter.exceptions import HyperVException
@@ -45,7 +46,7 @@ class HyperVAdapter(AdapterBase):
             raise ClientConnectionException(message)
 
     def _test_reachability(self, client_config):
-        raise NotImplementedError()
+        return RESTConnection.test_reachability(client_config.get(HYPER_V_HOST))
 
     def _query_devices_by_client(self, client_name, client_data):
         """

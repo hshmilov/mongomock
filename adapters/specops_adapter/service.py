@@ -6,6 +6,7 @@ from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.mssql.connection import MSSQLConnection
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.fields import Field
+from axonius.clients.rest.connection import RESTConnection
 from axonius.mixins.configurable import Configurable
 from axonius.utils.datetime import parse_date
 from axonius.utils.files import get_local_config_file
@@ -29,7 +30,8 @@ class SpecopsAdapter(AdapterBase, Configurable):
         return client_config[consts.SPECOPS_HOST]
 
     def _test_reachability(self, client_config):
-        raise NotImplementedError()
+        return RESTConnection.test_reachability(client_config.get('server'),
+                                                port=client_config.get('port'))
 
     def _connect_client(self, client_config):
         try:

@@ -39,7 +39,8 @@ class SysaidAdapter(AdapterBase):
     @staticmethod
     def get_connection(client_config):
         with SysaidConnection(domain=client_config['domain'], verify_ssl=client_config['verify_ssl'],
-                              username=client_config['username'], password=client_config['password']) as connection:
+                              username=client_config['username'], password=client_config['password'],
+                              https_proxy=client_config.get('https_proxy')) as connection:
             return connection
 
     @staticmethod
@@ -48,7 +49,8 @@ class SysaidAdapter(AdapterBase):
 
     @staticmethod
     def _test_reachability(client_config):
-        return RESTConnection.test_reachability(client_config.get('domain'))
+        return RESTConnection.test_reachability(client_config.get('domain'),
+                                                https_proxy=client_config.get('https_proxy'))
 
     def _connect_client(self, client_config):
         try:
@@ -101,6 +103,11 @@ class SysaidAdapter(AdapterBase):
                     'name': 'verify_ssl',
                     'title': 'Verify SSL',
                     'type': 'bool'
+                },
+                {
+                    'name': 'https_proxy',
+                    'title': 'HTTPS Proxy',
+                    'type': 'string'
                 }
             ],
             'required': [

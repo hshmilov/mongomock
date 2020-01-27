@@ -34,7 +34,8 @@ class CiscoAmpAdapter(AdapterBase):
         return client_config[consts.CLIENT_ID]
 
     def _test_reachability(self, client_config):
-        return RESTConnection.test_reachability(client_config.get(consts.DOMAIN))
+        return RESTConnection.test_reachability(client_config.get(consts.DOMAIN),
+                                                https_proxy=client_config.get('https_proxy'))
 
     def _connect_client(self, client_config):
         """
@@ -43,7 +44,8 @@ class CiscoAmpAdapter(AdapterBase):
         """
         try:
             connection = CiscoAMPConnection(domain=client_config[consts.DOMAIN], apikey=client_config[consts.API_KEY],
-                                            client_id=client_config[consts.CLIENT_ID])
+                                            client_id=client_config[consts.CLIENT_ID],
+                                            https_proxy=client_config.get('https_proxy'))
 
             with connection:
                 pass
@@ -80,6 +82,11 @@ class CiscoAmpAdapter(AdapterBase):
                 {
                     'name': consts.API_KEY,
                     'title': 'API Key',
+                    'type': 'string'
+                },
+                {
+                    'name': 'https_proxy',
+                    'title': 'HTTPS Proxy',
                     'type': 'string'
                 }
             ],

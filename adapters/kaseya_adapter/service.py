@@ -25,7 +25,8 @@ class KaseyaAdapter(AdapterBase):
         return client_config['Kaseya_Domain']
 
     def _test_reachability(self, client_config):
-        return RESTConnection.test_reachability(client_config.get('Kaseya_Domain'))
+        return RESTConnection.test_reachability(client_config.get('Kaseya_Domain'),
+                                                https_proxy=client_config.get('https_proxy'))
 
     def _connect_client(self, client_config):
         try:

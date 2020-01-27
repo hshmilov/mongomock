@@ -316,8 +316,10 @@ class ServiceNowAdapter(AdapterBase, Configurable):
     def _get_client_id(self, client_config):
         return client_config['domain']
 
-    def _test_reachability(self, client_config):
-        return RESTConnection.test_reachability(client_config.get('domain'))
+    @staticmethod
+    def _test_reachability(client_config):
+        return RESTConnection.test_reachability(client_config.get('domain'),
+                                                https_proxy=client_config.get('https_proxy'))
 
     @staticmethod
     def get_connection(client_config):

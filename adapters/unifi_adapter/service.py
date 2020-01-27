@@ -44,7 +44,8 @@ class UnifiAdapter(AdapterBase, Configurable):
     def _test_reachability(client_config):
         fields = CLIENT_CONFIG_FIELDS
         domain = client_config.get(fields.domain)
-        return RESTConnection.test_reachability(domain)
+        return RESTConnection.test_reachability(domain,
+                                                https_proxy=client_config.get(fields.https_proxy))
 
     @staticmethod
     def get_connection(client_config):

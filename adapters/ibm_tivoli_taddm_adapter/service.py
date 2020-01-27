@@ -30,7 +30,8 @@ class IbmTivoliTaddmAdapter(AdapterBase, Configurable):
 
     @staticmethod
     def _test_reachability(client_config):
-        return RESTConnection.test_reachability(client_config.get('host'))
+        return RESTConnection.test_reachability(client_config.get('host'),
+                                                https_proxy=client_config.get('https_proxy'))
 
     def _connect_client(self, client_config):
         client_id = self._get_client_id(client_config)
@@ -77,6 +78,11 @@ class IbmTivoliTaddmAdapter(AdapterBase, Configurable):
                     'name': 'verify_ssl',
                     'title': 'Verify SSL',
                     'type': 'bool'
+                },
+                {
+                    'name': 'https_proxy',
+                    'title': 'HTTPS Proxy',
+                    'type': 'string'
                 }
             ],
             'required': ['host', 'username', 'password', 'verify_ssl'],

@@ -6,6 +6,7 @@ from axonius.clients.mssql.connection import MSSQLConnection
 from axonius.devices.device_adapter import DeviceAdapter, AGENT_NAMES
 from axonius.fields import Field
 from axonius.mixins.configurable import Configurable
+from axonius.clients.rest.connection import RESTConnection
 from axonius.utils.datetime import parse_date
 from axonius.utils.files import get_local_config_file
 from axonius.utils.parsing import get_exception_string, is_domain_valid
@@ -25,7 +26,8 @@ class ObserveitAdapter(AdapterBase, Configurable):
         return client_config[consts.OBSERVEIT_HOST]
 
     def _test_reachability(self, client_config):
-        raise NotImplementedError()
+        return RESTConnection.test_reachability(client_config.get('server'),
+                                                port=client_config.get('port'))
 
     def _connect_client(self, client_config):
         try:

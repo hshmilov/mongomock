@@ -172,7 +172,8 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
 
     @staticmethod
     def _test_reachability(client_config):
-        return RESTConnection.test_reachability(client_config.get(consts.QUALYS_SCANS_DOMAIN))
+        return RESTConnection.test_reachability(client_config.get(consts.QUALYS_SCANS_DOMAIN),
+                                                https_proxy=client_config.get('https_proxy'))
     # pylint: disable=too-many-function-args
 
     def _connect_client(self, client_config):

@@ -53,7 +53,8 @@ class IcingaAdapter(AdapterBase, Configurable):
     @staticmethod
     def _test_reachability(client_config):
         return RESTConnection.test_reachability(client_config.get('domain'),
-                                                port=client_config.get('port', consts.DEFAULT_API_PORT))
+                                                port=client_config.get('port', consts.DEFAULT_API_PORT),
+                                                https_proxy=client_config.get('https_proxy'))
 
     @staticmethod
     def get_connection(client_config):

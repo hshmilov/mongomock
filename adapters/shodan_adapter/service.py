@@ -9,6 +9,7 @@ from axonius.clients.rest.connection import RESTException
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.utils.files import get_local_config_file
 from axonius.clients.shodan.connection import ShodanConnection
+from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.shodan.consts import DEFAULT_DOMAIN
 from axonius.utils.parsing import make_dict_from_csv
 from axonius.fields import Field
@@ -38,7 +39,8 @@ class ShodanAdapter(ShodanExecutionMixIn, ScannerAdapterBase):
 
     @staticmethod
     def _test_reachability(client_config):
-        raise NotImplementedError()
+        return RESTConnection.test_reachability(client_config.get('domain') or 'api.shodan.io',
+                                                https_proxy=client_config.get('https_proxy'))
 
     def _connect_client(self, client_config):
         try:

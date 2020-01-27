@@ -52,7 +52,8 @@ class SoftlayerAdapter(AdapterBase, Configurable):
         return client_config[USERNAME]
 
     def _test_reachability(self, client_config):
-        return RESTConnection.test_reachability('https://api.softlayer.com/xmlrpc/v3/')
+        return RESTConnection.test_reachability('https://api.softlayer.com/xmlrpc/v3/',
+                                                https_proxy=client_config.get(PROXY))
 
     def _connect_client(self, client_config):
         try:

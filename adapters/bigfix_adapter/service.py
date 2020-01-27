@@ -32,7 +32,8 @@ class BigfixAdapter(AdapterBase):
 
     def _test_reachability(self, client_config):
         return RESTConnection.test_reachability(client_config.get('domain'),
-                                                client_config.get('port') or consts.DEFAULT_PORT)
+                                                client_config.get('port') or consts.DEFAULT_PORT,
+                                                https_proxy=client_config.get('https_proxy'))
 
     def _connect_client(self, client_config):
         try:
@@ -41,6 +42,7 @@ class BigfixAdapter(AdapterBase):
                                           username=client_config['username'],
                                           password=client_config['password'],
                                           url_base_prefix='/api/',
+                                          https_proxy=client_config.get('https_proxy'),
                                           port=(client_config.get('port') or consts.DEFAULT_PORT))
             with connection:
                 pass  # check that the connection credentials are valid
@@ -110,6 +112,11 @@ class BigfixAdapter(AdapterBase):
                     'name': 'verify_ssl',
                     'title': 'Verify SSL',
                     'type': 'bool'
+                },
+                {
+                    'name': 'https_proxy',
+                    'title': 'HTTPS Proxy',
+                    'type': 'string'
                 }
             ],
             'required': [

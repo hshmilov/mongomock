@@ -34,7 +34,8 @@ class IndegyAdapter(ScannerAdapterBase):
 
     @staticmethod
     def _test_reachability(client_config):
-        return RESTConnection.test_reachability(client_config.get('domain'), port=consts.DEFAULT_API_PORT)
+        return RESTConnection.test_reachability(client_config.get('domain'), port=consts.DEFAULT_API_PORT,
+                                                https_proxy=client_config.get('https_proxy'))
 
     def get_connection(self, client_config):
         try:

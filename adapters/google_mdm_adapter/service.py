@@ -5,6 +5,7 @@ import os
 from axonius.clients.g_suite_admin_connection import GSuiteAdminConnection
 from axonius.fields import Field, ListField
 from axonius.smart_json_class import SmartJsonClass
+from axonius.clients.rest.connection import RESTConnection
 from axonius.users.user_adapter import UserAdapter
 
 logger = logging.getLogger(f'axonius.{__name__}')
@@ -80,7 +81,7 @@ class GoogleMdmAdapter(AdapterBase):
         return auth_file['client_id']
 
     def _test_reachability(self, client_config):
-        raise NotImplementedError()
+        return RESTConnection.test_reachability(client_config.get('https://developers.google.com/'))
 
     def _connect_client(self, client_config) -> GSuiteAdminConnection:
         try:

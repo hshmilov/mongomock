@@ -78,7 +78,8 @@ class JamfAdapter(AdapterBase, Configurable):
 
     @staticmethod
     def _test_reachability(client_config):
-        return RESTConnection.test_reachability(client_config.get(consts.JAMF_DOMAIN))
+        return RESTConnection.test_reachability(client_config.get(consts.JAMF_DOMAIN),
+                                                https_proxy=client_config.get(consts.HTTPS_PROXY))
 
     def _connect_client(self, client_config):
         try:

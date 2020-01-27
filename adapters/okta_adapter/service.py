@@ -31,7 +31,8 @@ class OktaAdapter(AdapterBase, Configurable):
         return client_config['url'] + '_' + api_declassified
 
     def _test_reachability(self, client_config):
-        return RESTConnection.test_reachability(client_config.get('url'))
+        return RESTConnection.test_reachability(client_config.get('url'),
+                                                https_proxy=client_config.get('https_proxy'))
 
     def _connect_client(self, client_config):
         connection = OktaConnection(url=client_config['url'],

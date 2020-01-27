@@ -8,6 +8,7 @@ from juniper_adapter.client import JuniperClient
 from axonius.clients.juniper import rpc
 from axonius.clients.juniper.device import create_device, JuniperDeviceAdapter, update_connected
 from axonius.adapter_base import AdapterBase, AdapterProperty
+from axonius.clients.rest.connection import RESTConnection
 from axonius.mixins.configurable import Configurable
 from axonius.adapter_exceptions import AdapterException, ClientConnectionException
 from axonius.utils.files import get_local_config_file
@@ -112,7 +113,7 @@ class JuniperAdapter(AdapterBase, Configurable):
         return f'{client_config[consts.USER]}@{client_config[consts.JUNIPER_HOST]}'
 
     def _test_reachability(self, client_config):
-        raise NotImplementedError()
+        return RESTConnection.test_reachability(client_config.get(consts.JUNIPER_HOST))
 
     def _connect_client(self, client_config):
         try:

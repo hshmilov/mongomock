@@ -52,7 +52,8 @@ class SymantecCloudWorkloadAdapter(AdapterBase):
 
     @staticmethod
     def _test_reachability(client_config):
-        return RESTConnection.test_reachability(client_config.get('domain') or DEFAULT_DOMAIN)
+        return RESTConnection.test_reachability(client_config.get('domain') or DEFAULT_DOMAIN,
+                                                https_proxy=client_config.get('https_proxy'))
 
     @staticmethod
     def get_connection(client_config):

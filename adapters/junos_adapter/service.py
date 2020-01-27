@@ -5,6 +5,7 @@ from jnpr.junos.exception import RpcError
 
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.utils.files import get_local_config_file
+from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.juniper import rpc
 from axonius.clients.juniper.device import create_device, JuniperDeviceAdapter, update_connected
 from axonius.adapter_exceptions import ClientConnectionException
@@ -24,7 +25,8 @@ class JunosAdapter(AdapterBase):
         return get_client_id(client_config)
 
     def _test_reachability(self, client_config):
-        raise NotImplementedError()
+        return RESTConnection.test_reachability(client_config.get('host'),
+                                                port=client_config.get('port'))
 
     def _connect_client(self, client_config):
         try:

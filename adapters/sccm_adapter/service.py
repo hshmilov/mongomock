@@ -8,6 +8,7 @@ from axonius.devices.ad_entity import ADEntity
 from axonius.devices.device_adapter import DeviceAdapter, AGENT_NAMES
 from axonius.fields import Field, ListField
 from axonius.mixins.configurable import Configurable
+from axonius.clients.rest.connection import RESTConnection
 from axonius.smart_json_class import SmartJsonClass
 from axonius.utils.datetime import parse_date
 from axonius.utils.files import get_local_config_file
@@ -95,7 +96,8 @@ class SccmAdapter(AdapterBase, Configurable):
         return client_config[consts.SCCM_HOST]
 
     def _test_reachability(self, client_config):
-        raise NotImplementedError()
+        return RESTConnection.test_reachability(client_config.get('server'),
+                                                port=client_config.get('port'))
 
     def _connect_client(self, client_config):
         try:
