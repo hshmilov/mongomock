@@ -4035,9 +4035,11 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
 
     @gui_helpers.paginated()
     @gui_helpers.historical_range()
+    @gui_helpers.search_filter()
     @gui_add_rule_logged_in('dashboards/<space_id>/panels/<panel_id>', methods=['GET', 'DELETE', 'POST'],
                             required_permissions={Permission(PermissionType.Dashboard, ReadOnlyJustForGet)})
-    def update_dashboard_panel(self, space_id, panel_id, skip, limit, from_date: datetime, to_date: datetime):
+    def update_dashboard_panel(self, space_id, panel_id, skip, limit, from_date: datetime, to_date: datetime,
+                               search: str):
         """
         DELETE an existing Dashboard Panel and DELETE its panelId from the
         "panels_order" in the "dashboard_space" collection
@@ -4049,7 +4051,16 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
         :param skip: For GET, requested offset of panel's data
         :param limit: For GET, requested limit of panel's data
         :return: ObjectId of the Panel to delete
+        :param search: a string to filter the data
+        :param to_date: the latest date to get the data
+        :param from_date: the earlier date to start get the data
         """
+        def get_string_value(base_value):
+            if isinstance(base_value, datetime):
+                return base_value.strftime('%a, %d %b %Y %H:%M:%S GMT')
+            else:
+                return str(base_value)
+
         panel_id = ObjectId(panel_id)
         if request.method == 'GET':
             if from_date and to_date:
@@ -4057,10 +4068,14 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
             else:
                 generated_dashboard = generate_dashboard(panel_id)
             dashboard_data = generated_dashboard.get('data', [])
+            if search:
+                dashboard_data = [data for data in dashboard_data
+                                  if search.lower() in get_string_value(data['name']).lower()]
             if not skip:
                 return jsonify(self._process_initial_dashboard_data(dashboard_data))
             return jsonify({
-                'data': dashboard_data[skip: skip + limit]
+                'data': dashboard_data[skip: skip + limit],
+                'count': len(dashboard_data)
             })
 
         if request.method == 'DELETE':

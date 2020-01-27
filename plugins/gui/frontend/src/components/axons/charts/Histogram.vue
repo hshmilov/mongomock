@@ -14,13 +14,14 @@
           <img
             v-if="condensed"
             :src="require(`Logos/adapters/${item.name}.png`)"
-            width="30">
+            width="30"
+          >
           <div class="bar-container">
             <div :style="{width: calculateBarHeight(item.value) + 'px'}">
               <div
                 class="bar growing-x"
-                :title="item.name">
-              </div>
+                :title="item.name"
+              />
             </div>
             <div class="quantity">{{ item.title || item.value }}</div>
           </div>
@@ -29,11 +30,11 @@
           v-if="!condensed"
           class="item-title"
           :title="item.name"
-        >{{item.name}}</div>
+        >{{ item.name }}</div>
       </div>
     </div>
     <template v-if="dataLength">
-      <div class="separator"></div>
+      <div class="separator" />
       <x-paginator
         :from.sync="dataFrom"
         :to.sync="dataTo"
@@ -45,83 +46,83 @@
 </template>
 
 <script>
-  import xPaginator from '../layout/Paginator.vue'
+import xPaginator from '../layout/Paginator.vue';
 
-  export default {
-    name: 'XHistogram',
-    components: { xPaginator },
-    props: {
-      data: {
-        type: Array,
-        required: true
-      },
-      limit: {
-        type: Number,
-        default: 5
-      },
-      condensed: {
-        type: Boolean,
-        default: false
-      },
-      readOnly: {
-        type: Boolean,
-        default: false
-      }
+export default {
+  name: 'XHistogram',
+  components: { xPaginator },
+  props: {
+    data: {
+      type: Array,
+      required: true,
     },
-    data () {
-      return {
-        dataFrom: 1,
-        dataTo: 0
-      }
+    limit: {
+      type: Number,
+      default: 5,
     },
-    computed: {
-      maxWidth () {
-        if (this.condensed) return 280
-        return 240
-      },
-      maxQuantity () {
-        if (!this.pageData.length) {
-          return 0
-        }
-        let max = this.pageData[0].value
-        this.pageData.slice(1).forEach(item => {
-          if (item && item.value > max) {
-            max = item.value
-          }
-        })
-        return max
-      },
-      dataLength () {
-        return this.data.length
-      },
-      nextFetchFrom () {
-        return this.dataTo + this.limit
-      },
-      prevFetchFrom () {
-        return this.dataFrom - 1 - this.limit
-      },
-      pageData () {
-        if (this.nextFetchFrom < this.dataLength && !this.data[this.nextFetchFrom]) {
-          this.$emit('fetch', this.nextFetchFrom)
-        }
-        if (this.prevFetchFrom >= 0 && !this.data[this.prevFetchFrom]) {
-          this.$emit('fetch', Math.max(1, this.prevFetchFrom - 100 + this.limit))
-        }
-        if (!this.data[this.dataFrom - 1]) {
-          return []
-        }
-        return this.data.slice(this.dataFrom - 1, this.dataTo)
-      }
+    condensed: {
+      type: Boolean,
+      default: false,
     },
-    methods: {
-      calculateBarHeight (quantity) {
-        return (this.maxWidth * quantity) / this.maxQuantity
-      },
-      onClick (pageIndex) {
-        this.$emit('click-one', this.dataFrom + pageIndex - 1)
+    readOnly: {
+      type: Boolean,
+      default: false,
+    },
+  },
+  data() {
+    return {
+      dataFrom: 1,
+      dataTo: 0,
+    };
+  },
+  computed: {
+    maxWidth() {
+      if (this.condensed) return 280;
+      return 240;
+    },
+    maxQuantity() {
+      if (!this.pageData.length) {
+        return 0;
       }
-    }
-  }
+      let max = this.pageData[0].value;
+      this.pageData.slice(1).forEach((item) => {
+        if (item && item.value > max) {
+          max = item.value;
+        }
+      });
+      return max;
+    },
+    dataLength() {
+      return this.data.length;
+    },
+    nextFetchFrom() {
+      return this.dataTo + this.limit;
+    },
+    prevFetchFrom() {
+      return this.dataFrom - 1 - this.limit;
+    },
+    pageData() {
+      if (this.nextFetchFrom < this.dataLength && !this.data[this.nextFetchFrom]) {
+        this.$emit('fetch', this.nextFetchFrom);
+      }
+      if (this.prevFetchFrom >= 0 && !this.data[this.prevFetchFrom]) {
+        this.$emit('fetch', Math.max(1, this.prevFetchFrom - 100 + this.limit));
+      }
+      if (!this.data[this.dataFrom - 1]) {
+        return [];
+      }
+      return this.data.slice(this.dataFrom - 1, this.dataTo);
+    },
+  },
+  methods: {
+    calculateBarHeight(quantity) {
+      return (this.maxWidth * quantity) / this.maxQuantity;
+    },
+    onClick(pageIndex) {
+      this.$emit('click-one', this.dataFrom + pageIndex - 1);
+    },
+  },
+};
 </script>
 
 <style lang="scss">

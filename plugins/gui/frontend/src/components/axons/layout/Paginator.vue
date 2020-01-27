@@ -53,78 +53,79 @@
   </div>
 </template>
 <script>
-  import xButton from '../../axons/inputs/Button.vue'
+import xButton from '../inputs/Button.vue';
 
-  export default {
-    name: 'XPaginator',
-    components: { xButton },
-    props: {
-      limit: {
-        type: Number,
-        default: 5
-      },
-      from: {
-        type: Number,
-        required: true
-      },
-      to: {
-        type: Number,
-        required: true
-      },
-      count: {
-        type: Number,
-        required: true
-      }
+export default {
+  name: 'XPaginator',
+  components: { xButton },
+  props: {
+    limit: {
+      type: Number,
+      default: 5,
     },
-    data () {
-      return {
-        page: 1
-      }
+    from: {
+      type: Number,
+      required: true,
     },
-    computed: {
-      pageTo () {
-        if (this.limit <= this.count) {
-          return Math.min(this.page * this.limit, this.count)
-        }
-        return this.count
-      },
-      pageFrom () {
-        if (this.count % this.limit !== 0 && this.page === this.pageCount) {
-          return this.count - this.count % this.limit + 1
-        }
-        return this.pageTo - this.limit + 1
-      },
-      pageCount () {
-        return this.count % this.limit === 0 ?
-          Math.floor(this.count / this.limit) :
-          Math.floor(this.count / this.limit) + 1
-      },
-      isNextDisabled () {
-        return !(this.page + 1 <= this.pageCount && this.to < this.count)
-      },
-      isBackDisabled () {
-        return !(this.page - 1 >= 1)
-      }
+    to: {
+      type: Number,
+      required: true,
     },
-    watch: {
-      count () {
-        this.emitRange()
-      }
+    count: {
+      type: Number,
+      required: true,
     },
-    mounted () {
-      this.onClickPage(1)
-    },
-    methods: {
-      onClickPage (page) {
-        this.page = page
-        this.emitRange()
-      },
-      emitRange () {
-        this.$emit('update:from', this.pageFrom)
-        this.$emit('update:to', this.pageTo)
+  },
+  data() {
+    return {
+      page: 1,
+    };
+  },
+  computed: {
+    pageTo() {
+      if (this.limit <= this.count) {
+        return Math.min(this.page * this.limit, this.count);
       }
-    }
-  }
+      return this.count;
+    },
+    pageFrom() {
+      if (this.count % this.limit !== 0 && this.page === this.pageCount) {
+        return this.count - (this.count % this.limit) + 1;
+      }
+      return this.pageTo - this.limit + 1;
+    },
+    pageCount() {
+      return this.count % this.limit === 0
+        ? this.count / this.limit
+        : Math.floor(this.count / this.limit) + 1;
+    },
+    isNextDisabled() {
+      return !(this.page + 1 <= this.pageCount && this.to < this.count);
+    },
+    isBackDisabled() {
+      return !(this.page - 1 >= 1);
+    },
+  },
+  watch: {
+    count() {
+      this.page = 1;
+      this.emitRange();
+    },
+  },
+  mounted() {
+    this.onClickPage(1);
+  },
+  methods: {
+    onClickPage(page) {
+      this.page = page;
+      this.emitRange();
+    },
+    emitRange() {
+      this.$emit('update:from', this.pageFrom);
+      this.$emit('update:to', this.pageTo);
+    },
+  },
+};
 </script>
 <style lang="scss">
   .x-paginator {

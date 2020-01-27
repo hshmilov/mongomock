@@ -58,6 +58,7 @@ class DashboardPage(Page):
     CARD_CLOSE_BTN_CSS = '.actions > .remove'
     CARD_EDIT_BTN_CSS = '.actions > .edit'
     CARD_EXPORT_TO_CSV_BTN_CSS = '.actions > .export'
+    CARD_SEARCH_INPUT_CSS = '.x-search-input > input'
     BANNER_BY_TEXT_XPATH = '//div[contains(@class, \'x-banner\') and .//text() = \'{banner_text}\']'
     SPACES_XPATH = '//div[@class=\'x-spaces\']'
     ACTIVE_SPACE_HEADERS_XPATH = f'{SPACES_XPATH}//li[@class=\'header-tab active\']'
@@ -128,6 +129,11 @@ class DashboardPage(Page):
         sl_cycle = self.get_cycle_from_card(sl_card)
         ActionChains(self.driver).move_to_element(sl_cycle).perform()
         assert self.get_lifecycle_tooltip()
+
+    @retry(stop_max_delay=10000, wait_fixed=500)
+    def hover_over_card(self, card):
+        ActionChains(self.driver).move_to_element(card).perform()
+        assert card.find_element_by_css_selector(self.CARD_CLOSE_BTN_CSS)
 
     def get_lifecycle_tooltip_table_data(self):
         table_data = []
@@ -851,3 +857,9 @@ class DashboardPage(Page):
 
         finally:
             self.click_card_cancel()
+
+    def fill_card_search_input(self, card, text):
+        self.fill_text_field_by_css_selector(self.CARD_SEARCH_INPUT_CSS, text, card)
+
+    def get_card_search_input_text(self, card):
+        return card.find_element_by_css_selector(self.CARD_SEARCH_INPUT_CSS).text

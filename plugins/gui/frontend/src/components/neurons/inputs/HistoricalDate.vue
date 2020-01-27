@@ -13,66 +13,65 @@
 
 
 <script>
-  import xDateEdit from '../schema/types/string/DateEdit.vue'
-  import { mapState } from 'vuex'
+import { mapState } from 'vuex';
+import xDateEdit from '../schema/types/string/DateEdit.vue';
 
-  export default {
-    name: 'XHistoricalDate',
-    components: {
-      xDateEdit
+export default {
+  name: 'XHistoricalDate',
+  components: {
+    xDateEdit,
+  },
+  props: {
+    value: {
+      type: [String, Date],
+      default: null,
     },
-    props: {
-      value: {
-        type: [String, Date],
-        default: null
-      },
-      module: {
-        type: String,
-        default: ''
-      },
-      hide: {
-        type: Boolean,
-        default: false
-      }
+    module: {
+      type: String,
+      default: '',
     },
-    computed: {
-      ...mapState({
-        firstHistoricalDate (state) {
-          let historicalDate = null
-          if (this.module) {
-            historicalDate = state.constants.firstHistoricalDate[this.module]
-          } else {
-            historicalDate = Object.values(state.constants.firstHistoricalDate).reduce((a, b) => {
-              return (new Date(a) < new Date(b)) ? a : b
-            }, new Date())
-          }
-          historicalDate = new Date(historicalDate)
-          historicalDate.setDate(historicalDate.getDate() - 1)
-          return historicalDate
-        },
-        allowedDates (state) {
-          return state.constants.allowedDates[this.module]
-        }
-      }),
-      currentDate () {
-        return new Date()
-      }
+    hide: {
+      type: Boolean,
+      default: false,
     },
-    methods: {
-      isDateUnavailable (date) {
-        if (date < this.firstHistoricalDate || date > this.currentDate) return true
-
-        return (this.allowedDates && !this.allowedDates[date.toISOString().substring(0, 10)])
-      },
-      onInput (historical) {
-        if (historical && this.isDateUnavailable(new Date(historical))) {
-          this.$refs.date.onClear()
+  },
+  computed: {
+    ...mapState({
+      firstHistoricalDate(state) {
+        let historicalDate = null;
+        if (this.module) {
+          historicalDate = state.constants.firstHistoricalDate[this.module];
         } else {
-          this.$emit('input', historical)
+          historicalDate = Object.values(state.constants.firstHistoricalDate)
+            .reduce((a, b) => ((new Date(a) < new Date(b)) ? a : b), new Date());
         }
+        historicalDate = new Date(historicalDate);
+        historicalDate.setDate(historicalDate.getDate() - 1);
+        return historicalDate;
+      },
+      allowedDates(state) {
+        return state.constants.allowedDates[this.module];
+      },
+    }),
+    currentDate() {
+      return new Date();
+    },
+  },
+  methods: {
+    isDateUnavailable(date) {
+      if (date < this.firstHistoricalDate || date > this.currentDate) return true;
+
+      return (this.allowedDates && !this.allowedDates[date.toISOString().substring(0, 10)]);
+    },
+    onInput(historical) {
+      if (historical && this.isDateUnavailable(new Date(historical))) {
+        this.$refs.date.onClear();
+      } else {
+        this.$emit('input', historical);
       }
-    }
-  }
+    },
+  },
+};
 </script>
 
 
@@ -89,6 +88,7 @@
 
             .md-input {
                 max-width: 160px;
+                padding-right: 10px;
             }
         }
     }

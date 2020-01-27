@@ -323,6 +323,22 @@ def paginated(limit_max=PAGINATION_LIMIT_MAX):
     return wrap
 
 
+def search_filter():
+    """
+    Decorator stating that the view supports '?search=X' for filtering chart data by name
+    """
+    def wrap(func):
+        def actual_wrapper(self, *args, **kwargs):
+            # it's fine to raise here - an exception will be nicely JSONly displayed by add_rule
+            content = request.args if request.method == 'GET' else self.get_request_data_as_object()
+            term = content.get('search', '')
+            return func(self, search=term, *args, **kwargs)
+
+        return actual_wrapper
+
+    return wrap
+
+
 def historical_range(force: bool = False):
     """
     Decorator stating that the view supports '?date_from=DATE&date_to=DATE' for historical views

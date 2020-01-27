@@ -9,7 +9,7 @@
         name="action/search"
         :original="true"
         height="18"
-      ></svg-icon>
+      />
     </div>
     <input
       ref="input"
@@ -23,51 +23,57 @@
       @click.stop="focused = true"
       @keyup.enter="$emit('keyup-enter')"
     >
-    <slot></slot>
+    <slot />
   </div>
 </template>
 
 <script>
-  export default {
-    name: 'XSearchInput',
-    props: {
-      value: {
-        type: String,
-        default: ''
-      },
-      placeholder: {
-        type: String,
-        default: 'Search...'
-      },
-      disabled: {
-        type: Boolean, default: false
-      }
+export default {
+  name: 'XSearchInput',
+  props: {
+    value: {
+      type: String,
+      default: '',
     },
-    data () {
-      return {
-        searchValue: this.value,
-        focused: false
-      }
+    placeholder: {
+      type: String,
+      default: 'Search...',
     },
-    watch: {
-      value (newValue) {
-        this.searchValue = newValue
-      }
+    disabled: {
+      type: Boolean, default: false,
     },
-    mounted () {
-      this.focus()
+    autoFocus: {
+      type: Boolean,
+      default: true,
     },
-    methods: {
-      updateSearchValue () {
-        this.$emit('input', this.searchValue)
-      },
-      focus () {
-        if (this.disabled) return
-        this.focused = true
-        this.$refs.input.focus()
-      }
+  },
+  data() {
+    return {
+      searchValue: this.value,
+      focused: false,
+    };
+  },
+  watch: {
+    value(newValue) {
+      this.searchValue = newValue;
+    },
+  },
+  mounted() {
+    if (this.autoFocus) {
+      this.focus();
     }
-  }
+  },
+  methods: {
+    updateSearchValue() {
+      this.$emit('input', this.searchValue);
+    },
+    focus() {
+      if (this.disabled) return;
+      this.focused = true;
+      this.$refs.input.focus();
+    },
+  },
+};
 </script>
 
 <style lang="scss">
