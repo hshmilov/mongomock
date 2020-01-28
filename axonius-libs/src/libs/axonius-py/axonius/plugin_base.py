@@ -3016,18 +3016,18 @@ class PluginBase(Configurable, Feature, ABC):
                     'items': [
                         {
                             'name': 'enabled',
-                            'title': 'Override Default SSL Settings',
+                            'title': 'Override default SSL settings',
                             'type': 'bool'
                         },
                         {
                             'name': 'hostname',
-                            'title': 'Site Hostname',
+                            'title': 'Site hostname',
                             'type': 'string'
                         },
                         *MANDATORY_SSL_CONFIG_SCHEMA,
                         {
                             'name': 'passphrase',
-                            'title': 'Private Key Passphrase',
+                            'title': 'Private key passphrase',
                             'description': 'An optional passphrase for the private key file',
                             'type': 'string',
                             'format': 'password'
@@ -3046,7 +3046,7 @@ class PluginBase(Configurable, Feature, ABC):
                     'items': [
                         {
                             'name': 'enabled',
-                            'title': 'Use Custom CA Certificate',
+                            'title': 'Use custom CA certificate',
                             'type': 'bool'
                         },
                         {
@@ -3067,28 +3067,28 @@ class PluginBase(Configurable, Feature, ABC):
                     'items': [
                         {
                             'name': 'enabled',
-                            'title': 'Proxy Enabled',
+                            'title': 'Proxy enabled',
                             'type': 'bool',
                             'required': True
                         },
                         {
                             'name': PROXY_ADDR,
-                            'title': 'Proxy Address',
+                            'title': 'Proxy address',
                             'type': 'string'
                         },
                         {
                             'name': PROXY_PORT,
-                            'title': 'Proxy Port',
+                            'title': 'Proxy port',
                             'type': 'number'
                         },
                         {
                             'name': PROXY_USER,
-                            'title': 'Proxy User Name',
+                            'title': 'Proxy user name',
                             'type': 'string'
                         },
                         {
                             'name': PROXY_PASSW,
-                            'title': 'Proxy Password',
+                            'title': 'Proxy password',
                             'type': 'string',
                             'format': 'password'
                         },
@@ -3113,7 +3113,7 @@ class PluginBase(Configurable, Feature, ABC):
                         },
                         {
                             'name': 'domain',
-                            'title': 'CyberArk Domain',
+                            'title': 'CyberArk domain',
                             'type': 'string'
                         },
                         {
@@ -3129,7 +3129,7 @@ class PluginBase(Configurable, Feature, ABC):
                         },
                         {
                             'name': 'certificate_key',
-                            'title': 'Certificate Key',
+                            'title': 'Certificate key',
                             'type': 'file'
                         }
                     ]
@@ -3138,12 +3138,12 @@ class PluginBase(Configurable, Feature, ABC):
                     'items': [
                         {
                             'name': 'enabled',
-                            'title': 'Send Emails',
+                            'title': 'Send emails',
                             'type': 'bool'
                         },
                         {
                             'name': 'smtpHost',
-                            'title': 'Email Host',
+                            'title': 'Email host',
                             'type': 'string'
                         },
                         {
@@ -3154,7 +3154,7 @@ class PluginBase(Configurable, Feature, ABC):
                         },
                         {
                             'name': 'smtpUser',
-                            'title': 'User Name',
+                            'title': 'User name',
                             'type': 'string'
                         },
                         {
@@ -3166,7 +3166,7 @@ class PluginBase(Configurable, Feature, ABC):
                         *COMMON_SSL_CONFIG_SCHEMA,
                         {
                             'name': 'sender_address',
-                            'title': 'Sender Address',
+                            'title': 'Sender address',
                             'type': 'string'
                         }
                     ],
@@ -3184,7 +3184,7 @@ class PluginBase(Configurable, Feature, ABC):
                         },
                         {
                             'name': 'syslogHost',
-                            'title': 'Syslog Host',
+                            'title': 'Syslog host',
                             'type': 'string'
                         },
                         {
@@ -3208,12 +3208,12 @@ class PluginBase(Configurable, Feature, ABC):
                     'items': [
                         {
                             'name': 'enabled',
-                            'title': 'Use HTTPS Logs',
+                            'title': 'Use HTTPS logs',
                             'type': 'bool'
                         },
                         {
                             'name': 'https_log_server',
-                            'title': 'HTTPS Logs Host',
+                            'title': 'HTTPS logs host',
                             'type': 'string'
                         },
                         {
@@ -3224,7 +3224,7 @@ class PluginBase(Configurable, Feature, ABC):
                         },
                         {
                             'name': 'https_proxy',
-                            'title': 'HTTPS Proxy',
+                            'title': 'HTTPS proxy',
                             'type': 'string'
                         }
                     ],
@@ -3247,17 +3247,17 @@ class PluginBase(Configurable, Feature, ABC):
                         },
                         {
                             'name': 'domain',
-                            'title': 'Jira Domain',
+                            'title': 'Jira domain',
                             'type': 'string'
                         },
                         {
                             'name': 'username',
-                            'title': 'User Name',
+                            'title': 'User name',
                             'type': 'string'
                         },
                         {
                             'name': 'password',
-                            'title': 'API Key',
+                            'title': 'API key',
                             'type': 'string',
                             'format': 'password'
                         },
@@ -3272,17 +3272,17 @@ class PluginBase(Configurable, Feature, ABC):
                     'items': [
                         {
                             'name': NOTIFY_ADAPTERS_FETCH,
-                            'title': 'Notify On Adapters Fetch',
+                            'title': 'Notify on adapters fetch',
                             'type': 'bool'
                         },
                         {
                             'name': ADAPTERS_ERRORS_MAIL_ADDRESS,
-                            'title': 'Adapters Errors Email Address',
+                            'title': 'Adapters errors email address',
                             'type': 'string'
                         },
                         {
                             'name': ADAPTERS_ERRORS_WEBHOOK_ADDRESS,
-                            'title': 'Adapters Errors Webhook Address',
+                            'title': 'Adapters errors webhook address',
                             'type': 'string'
                         }
                     ],
@@ -3295,7 +3295,7 @@ class PluginBase(Configurable, Feature, ABC):
                     'items': [
                         {
                             'name': CORRELATE_BY_EMAIL_PREFIX,
-                            'title': 'Correlate Users by Email Prefix',
+                            'title': 'Correlate users by email prefix',
                             'type': 'bool'
                         },
                         {
@@ -3307,12 +3307,12 @@ class PluginBase(Configurable, Feature, ABC):
                         {
                             'name': CSV_FULL_HOSTNAME,
                             'type': 'bool',
-                            'title': 'Correlate CSV Adapter only if Full Hostnames are Equal'
+                            'title': 'Correlate CSV adapter only if full hostnames are equal'
                         },
                         {
                             'name': CORRELATE_BY_SNOW_MAC,
                             'type': 'bool',
-                            'title': 'Correlate ServiceNow Adapter based on MAC Address Only'
+                            'title': 'Correlate ServiceNow adapter based on MAC address only'
                         }
                     ],
                     'name': CORRELATION_SETTINGS,
@@ -3324,7 +3324,7 @@ class PluginBase(Configurable, Feature, ABC):
                     'items': [
                         {
                             'name': FETCH_EMPTY_VENDOR_SOFTWARE_VULNERABILITES,
-                            'title': 'Fetch Software Vulnerabilities Even when the Vendor Name is Unknown',
+                            'title': 'Fetch software vulnerabilities even when the vendor name is unknown',
                             'type': 'bool'
                         }
                     ],
@@ -3337,12 +3337,12 @@ class PluginBase(Configurable, Feature, ABC):
                     'items': [
                         {
                             'name': MAX_WORKERS,
-                            'title': 'Maximum Adapters to Execute Asynchronously',
+                            'title': 'Maximum adapters to execute asynchronously',
                             'type': 'integer',
                         },
                         {
                             'name': SOCKET_READ_TIMEOUT,
-                            'title': 'Socket Read-Timeout in Seconds',
+                            'title': 'Socket read-timeout in seconds',
                             'type': 'integer'
                         }
                     ],
@@ -3355,7 +3355,7 @@ class PluginBase(Configurable, Feature, ABC):
                     'items': [
                         {
                             'name': 'enabled',
-                            'title': 'Enable Getting Started with Axonius Checklist',
+                            'title': 'Enable Getting Started with Axonius checklist',
                             'type': 'bool'
                         },
                     ],

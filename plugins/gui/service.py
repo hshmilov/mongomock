@@ -5430,43 +5430,43 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
                     'items': [
                         {
                             'name': 'refreshRate',
-                            'title': 'Auto-Refresh Rate (seconds)',
+                            'title': 'Auto-refresh rate (seconds)',
                             'type': 'number'
                         },
                         {
                             'name': 'defaultNumOfEntitiesPerPage',
-                            'title': 'Default Number of Query Results Displayed Per Page',
+                            'title': 'Default number of query results displayed per page',
                             'type': 'string',
                             'enum': [20, 50, 100]
                         },
                         {
                             'name': 'singleAdapter',
-                            'title': 'Use Single Adapter View',
+                            'title': 'Use single adapter view',
                             'type': 'bool'
                         },
                         {
                             'name': 'multiLine',
-                            'title': 'Use Table Multi Line View',
+                            'title': 'Use table multi line view',
                             'type': 'bool'
                         },
                         {
                             'name': 'defaultSort',
-                            'title': 'Sort by Number of Adapters in Default View',
+                            'title': 'Sort by number of adapters in default view',
                             'type': 'bool'
                         },
                         {
                             'name': 'autoQuery',
-                            'title': 'Perform a Query Every Keypress',
+                            'title': 'Perform a query every keypress',
                             'type': 'bool'
                         },
                         {
                             'name': 'exactSearch',
-                            'title': 'Use Exact Match for Assets Search',
+                            'title': 'Use exact match for assets search',
                             'type': 'bool',
                         },
                         {
                             'name': 'defaultColumnLimit',
-                            'title': 'Number of Values Displayed in each Column',
+                            'title': 'Number of values displayed in each column',
                             'type': 'string',
                             'enum': [1, 2]
                         },
@@ -5476,12 +5476,12 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
                             'items': [
                                 {
                                     'name': 'enabled',
-                                    'title': 'Enable Session Timeout',
+                                    'title': 'Enable session timeout',
                                     'type': 'bool'
                                 },
                                 {
                                     'name': 'timeout',
-                                    'title': 'Session Idle Timeout (Minutes)',
+                                    'title': 'Session idle timeout (minutes)',
                                     'type': 'number',
                                     'default': 120
                                 }
@@ -5523,23 +5523,23 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
                     'items': [
                         {
                             'name': 'enabled',
-                            'title': 'Allow Okta Logins',
+                            'title': 'Allow Okta logins',
                             'type': 'bool'
                         },
                         {
                             'name': 'client_id',
-                            'title': 'Okta Application Client Id',
+                            'title': 'Okta application client ID',
                             'type': 'string'
                         },
                         {
                             'name': 'client_secret',
-                            'title': 'Okta Application Client Secret',
+                            'title': 'Okta application client secret',
                             'type': 'string',
                             'format': 'password'
                         },
                         {
                             'name': 'url',
-                            'title': 'Okta Application URL',
+                            'title': 'Okta application URL',
                             'type': 'string'
                         },
                         {
@@ -5557,32 +5557,32 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
                     'items': [
                         {
                             'name': 'enabled',
-                            'title': 'Allow LDAP Logins',
+                            'title': 'Allow LDAP logins',
                             'type': 'bool'
                         },
                         {
                             'name': 'dc_address',
-                            'title': 'The Host Domain Controller IP or DNS',
+                            'title': 'The host domain controller IP or DNS',
                             'type': 'string'
                         },
                         {
                             'name': 'group_cn',
-                            'title': 'A Group the User Must be Part of',
+                            'title': 'Group the user must be part of',
                             'type': 'string'
                         },
                         {
                             'name': 'use_group_dn',
-                            'title': 'Match Group Name by DN',
+                            'title': 'Match group name by DN',
                             'type': 'bool'
                         },
                         {
                             'name': 'default_domain',
-                            'title': 'Default Domain to Present to the User',
+                            'title': 'Default domain to present to the user',
                             'type': 'string'
                         },
                         {
                             'name': 'cache_time_in_hours',
-                            'title': 'Cache Time (Hours)',
+                            'title': 'Cache time (hours)',
                             'type': 'integer'
                         },
                         *COMMON_SSL_CONFIG_SCHEMA
@@ -5596,12 +5596,12 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
                     'items': [
                         {
                             'name': 'enabled',
-                            'title': 'Allow SAML-Based Logins',
+                            'title': 'Allow SAML-based logins',
                             'type': 'bool'
                         },
                         {
                             'name': 'idp_name',
-                            'title': 'Name of the Identity Provider',
+                            'title': 'Name of the identity provider',
                             'type': 'string'
                         },
                         {
@@ -5611,12 +5611,12 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
                         },
                         {
                             'name': 'axonius_external_url',
-                            'title': 'Axonius External URL',
+                            'title': 'Axonius external URL',
                             'type': 'string'
                         },
                         {
                             'name': 'sso_url',
-                            'title': 'Single Sign-On Service URL',
+                            'title': 'Single sign-on service URL',
                             'type': 'string'
                         },
                         {
@@ -5626,7 +5626,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
                         },
                         {
                             'name': 'certificate',
-                            'title': 'Signing Certificate (Base64 Encoded)',
+                            'title': 'Signing certificate (Base64 encoded)',
                             'type': 'file'
                         }
                     ],
@@ -5639,17 +5639,17 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
                     'items': [
                         {
                             'name': 'enabled',
-                            'title': 'Enable Mutual TLS',
+                            'title': 'Enable mutual TLS',
                             'type': 'bool'
                         },
                         {
                             'name': 'mandatory',
-                            'title': 'Enforce Client Certificate Validation',
+                            'title': 'Enforce client certificate validation',
                             'type': 'bool'
                         },
                         {
                             'name': 'ca_certificate',
-                            'title': 'CA Certificate',
+                            'title': 'CA certificate',
                             'description': 'A pem encoded certificate to authenticate users',
                             'type': 'file'
                         }

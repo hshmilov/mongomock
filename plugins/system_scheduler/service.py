@@ -135,18 +135,18 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
                     'items': [
                         {
                             'name': 'system_research_rate',
-                            'title': 'Schedule Rate (hours)',
+                            'title': 'Schedule rate (hours)',
                             'type': 'number'
                         },
                         {
                             'name': 'save_history',
-                            'title': 'Should history be gathered',
+                            'title': 'Gather historical data',
                             'type': 'bool',
                             'required': True
                         },
                         {
                             'name': 'constant_alerts',
-                            'title': 'Always run Alerts',
+                            'title': 'Always run alerts',
                             'type': 'bool',
                             'required': True
                         },

@@ -10,13 +10,13 @@ class SSLState(Enum):
 MANDATORY_SSL_CONFIG_SCHEMA = [
     {
         'name': 'cert_file',
-        'title': 'Certificate File',
+        'title': 'Certificate file',
         'description': 'The binary contents of the cert_file',
         'type': 'file',
     },
     {
         'name': 'private_key',
-        'title': 'Private Key File',
+        'title': 'Private key file',
         'description': 'The binary contents of the private_key',
         'type': 'file',
     }
@@ -30,14 +30,14 @@ MANDATORY_SSL_CONFIG_SCHEMA_DEFAULTS = {
 COMMON_SSL_CONFIG_SCHEMA_CA_ONLY = [
     {
         'name': 'use_ssl',
-        'title': 'Use SSL for Connection',
+        'title': 'Use SSL for connection',
         'type': 'string',
         'enum': [SSLState.Unencrypted.name, SSLState.Verified.name, SSLState.Unverified.name],
         'default': SSLState.Unencrypted.name,
     },
     {
         'name': 'ca_file',
-        'title': 'CA File',
+        'title': 'CA file',
         'description': 'The binary contents of the ca_file',
         'type': 'file',
     }

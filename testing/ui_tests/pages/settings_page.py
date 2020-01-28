@@ -18,10 +18,10 @@ class SettingsPage(Page):
     MANAGE_USERS_CSS = 'li#user-settings-tab'
     FEATURE_FLAGS_CSS = 'li#feature-flags-tab'
     ABOUT_CSS = 'li#about-settings-tab'
-    SEND_EMAILS_LABEL = 'Send Emails'
-    SESSION_TIMEOUT_LABEL = 'Enable Session Timeout'
-    GETTING_STARTED_LABEL = 'Enable Getting Started with Axonius Checklist'
-    GLOBAL_SSL_LABEL = 'Override Default SSL Settings'
+    SEND_EMAILS_LABEL = 'Send emails'
+    SESSION_TIMEOUT_LABEL = 'Enable session timeout'
+    GETTING_STARTED_LABEL = 'Enable Getting Started with Axonius checklist'
+    GLOBAL_SSL_LABEL = 'Override default SSL settings'
     REMOTE_SUPPORT_LABEL_OLD = 'Remote Support - Warning: turning off this feature prevents Axonius from' \
                                '                             updating the system and can lead' \
                                ' to slower issue resolution time.                             ' \
@@ -32,10 +32,10 @@ class SettingsPage(Page):
     ANALYTICS_LABEL = 'Anonymized Analytics'
     PROVISION_LABEL = 'Remote Support'
     USE_SYSLOG_LABEL = 'Use Syslog'
-    LDAP_LOGINS_LABEL = 'Allow LDAP Logins'
-    OKTA_LOGINS_LABEL = 'Allow Okta Logins'
-    EXACT_SEARCH_LABEL = 'Use Exact Match for Assets Search'
-    SAML_LOGINS_LABEL = 'Allow SAML-Based Logins'
+    LDAP_LOGINS_LABEL = 'Allow LDAP logins'
+    OKTA_LOGINS_LABEL = 'Allow Okta logins'
+    EXACT_SEARCH_LABEL = 'Use exact match for assets search'
+    SAML_LOGINS_LABEL = 'Allow SAML-based logins'
     TRIAL_MODE_FLAG_LABEL = 'Is trial mode'
     EMAIL_PORT_ID = 'smtpPort'
     EMAIL_HOST_ID = 'smtpHost'
@@ -50,11 +50,11 @@ class SettingsPage(Page):
     SAML_IDP = 'idp_name'
     SAML_METADATA = 'metadata_url'
     SAML_AXONIUS_EXTERNAL_URL = 'axonius_external_url'
-    HISTORY_GATHERED = 'Should history be gathered'
+    HISTORY_GATHERED = 'Gather historical data'
     DC_ADDRESS = 'dc_address'
     GROUP_CN = 'group_cn'
-    SINGLE_ADAPTER_VIEW = 'Use Single Adapter View'
-    TABLE_MULTI_LINE_VIEW = 'Use Table Multi Line View'
+    SINGLE_ADAPTER_VIEW = 'Use single adapter view'
+    TABLE_MULTI_LINE_VIEW = 'Use table multi line view'
     ALLOW_GOOGLE_LOGINS = 'Allow Google logins'
     GOOGLE_CLIENT_ID_OLD = 'client_id'
     GOOGLE_CLIENT_ID = 'client'
@@ -71,7 +71,7 @@ class SettingsPage(Page):
     ADMIN_ROLE = 'Admin'
     READ_ONLY_ROLE = 'Read Only User'
     RESTRICTED_ROLE = 'Restricted User'
-    USE_PROXY = 'Proxy Enabled'
+    USE_PROXY = 'Proxy enabled'
     USE_CYBERARK_VAULT = 'Use CyberArk'
     VALUES_COUNT_PER_COLUMN_DROPDOWN_CSS = 'label[for="defaultColumnLimit"]~.x-dropdown.x-select'
     VALUES_COUNT_ENTITIES_PER_PAGE_CSS = 'label[for="defaultNumOfEntitiesPerPage"]~.x-dropdown.x-select'
@@ -108,7 +108,7 @@ class SettingsPage(Page):
     PERMISSION_LABEL_DASHBOARD = 'Dashboard'
     PERMISSION_LABEL_USERS = 'Users'
 
-    CA_CERTIFICATE_ENABLED = '//*[contains(text(),\'Certificate\')]'
+    CA_CERTIFICATE_ENABLED = '//*[contains(text(),\'certificate\')]'
 
     CA_ADD_CERT_BUTTON = '#ca_files ~ .x-button.light'
     CA_ADD_CERT_BUTTON_CSS = 'div.x-array-edit > div:nth-child(2) > div > div > div:nth-child(3) > div > div > button'
@@ -264,7 +264,7 @@ class SettingsPage(Page):
         self.fill_text_field_by_element_id(self.SCHEDULE_RATE_ID, text)
 
     def find_schedule_rate_error(self):
-        self.find_element_by_text('\'Schedule Rate (hours)\' has an illegal value')
+        self.find_element_by_text('\'Schedule rate (hours)\' has an illegal value')
 
     def get_schedule_rate_value(self):
         return self.driver.find_element_by_id(self.SCHEDULE_RATE_ID).get_attribute('value')
