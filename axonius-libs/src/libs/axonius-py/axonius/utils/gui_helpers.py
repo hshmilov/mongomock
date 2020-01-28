@@ -455,7 +455,8 @@ def get_entities_count(entities_filter, entity_collection, history_date: datetim
     return entity_collection.count_documents(processed_filter)
 
 
-def find_entity_field(entity_data, field_path):
+# pylint: disable=too-many-return-statements,too-many-branches
+def find_entity_field(entity_data, field_path, skip_unique=False):
     """
     Recursively expand given entity, following period separated properties of given field_path,
     until reaching the requested value
@@ -464,6 +465,20 @@ def find_entity_field(entity_data, field_path):
     :param field_path:  A path to a field ('.' separated chain of keys)
     :return:
     """
+
+    if not skip_unique and field_path == 'specific_data.data.last_seen':
+        result = find_entity_field(entity_data, field_path, skip_unique=True)
+        if result is None:
+            result = []
+        if not isinstance(result, list):
+            result = [result]
+        if result:
+            try:
+                return max(result)
+            except Exception:
+                return result[0]
+        return None
+
     if entity_data is None:
         # Return no value for this path
         return ''

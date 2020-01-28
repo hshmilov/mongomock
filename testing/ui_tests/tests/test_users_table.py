@@ -150,7 +150,6 @@ class TestUsersTable(TestEntitiesTable):
         self.users_page.find_query_search_input().click()
 
         self._test_column_data_expanded_row(self.USER_NAME_COLUMN)
-        self._test_column_data_expanded_row(self.LAST_SEEN_COLUMN)
         self._test_column_data_expanded_row(self.ADMIN_COLUMN)
 
         adapters = self.users_page.get_column_data_adapter_names()
