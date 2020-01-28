@@ -237,6 +237,13 @@ export const fetchDataContentCSV = ({state, dispatch}, payload) => {
 	})
 }
 
+const formattedTimeOptions = {
+  timeZone: 'Etc/UTC',
+  hour12 : false,
+  hour:  '2-digit',
+  minute: '2-digit',
+  second: '2-digit',
+    }
 
 export const downloadFile = (fileType, response, objName) => {
 	let format = '';
@@ -255,12 +262,12 @@ export const downloadFile = (fileType, response, objName) => {
     let link = document.getElementById('file-auto-download-link')
     link.href = window.URL.createObjectURL(blob)
     let now = new Date()
-    let formattedDate = now.toLocaleDateString().replace(/\//g,'')
-    let formattedTime = now.toLocaleTimeString().replace(/:/g,'')
+    let formattedDate = now.toLocaleDateString().replace(/\//g,'-')
+    let formattedTime = now.toLocaleTimeString('en-US',formattedTimeOptions).replace(/:/g,'-')
 	if (objName) {
-		link.download = `axonius_chart_${objName.replace(/[\s,-]/g, '_')}_${formattedDate}-${formattedTime}.${format}`
+		link.download = `axonius_chart_${objName.replace(/[\s,-]/g, '_')}_${formattedDate}T${formattedTime}UTC.${format}`
 	} else {
-		link.download = `axonius-${reportType}_${formattedDate}-${formattedTime}.${format}`
+		link.download = `axonius-${reportType}_${formattedDate}T${formattedTime}UTC.${format}`
 	}
     link.click()
 }
@@ -271,9 +278,9 @@ export const downloadPdfReportFile = (name, response) => {
     let link = document.getElementById('file-auto-download-link')
     link.href = window.URL.createObjectURL(blob)
     let now = new Date()
-    let formattedDate = now.toLocaleDateString().replace(/\//g,'')
-    let formattedTime = now.toLocaleTimeString().replace(/:/g,'')
-    link.download = `${name}_${formattedDate}-${formattedTime}.${format}`
+    let formattedDate = now.toLocaleDateString().replace(/\//g,'-')
+    let formattedTime = now.toLocaleTimeString('en-US',formattedTimeOptions).replace(/:/g,'-')
+    link.download = `${name}_${formattedDate}T${formattedTime}UTC.${format}`
     link.click()
 }
 
