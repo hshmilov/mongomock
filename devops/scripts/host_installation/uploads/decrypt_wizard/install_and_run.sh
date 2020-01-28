@@ -2,11 +2,25 @@
 
 set -e
 
+INSTALL_LOCK=/tmp/install.lock
+
+if [ -f $INSTALL_LOCK ]; then
+    echo "install lock exists, exiting"
+    exit 1
+fi
+
 function finish {
-    rm /tmp/install.lock
+    rm $INSTALL_LOCK
 }
 
 trap finish EXIT
+
+touch $INSTALL_LOCK
+
+DECRYPTION_KEY=$1
+
+sudo unzip -o -P $DECRYPTION_KEY version.zip
+ls -la axonius_install.py
 
 cd /home/ubuntu
 python3 ./axonius_install.py --first-time

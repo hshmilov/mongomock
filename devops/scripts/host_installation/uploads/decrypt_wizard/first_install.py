@@ -33,35 +33,32 @@ def main():
 
     try:
         if INSTALL_LOCK.is_file():
-            print(f'decryption in process ...')
+            print(f'Decryption is already in process. ')
             return
 
-        INSTALL_LOCK.touch()
-        # this file will be deleted either when the shell terminates with an error, or when install is done
-
-        run_command_in_background(f'sudo unzip -o -P {decryption_key} version.zip',
-                                  ok_msg=f'Decrypt completed',
-                                  err_msg='Unzip failed',
+        print(f'Testing decryption key ...')
+        run_command_with_messages(f'sudo unzip -t -P {decryption_key} version.zip',
+                                  ok_msg=f'Decryption key is correct',
+                                  err_msg='Invalid decryption key',
                                   cwd=str(INSTALL_HOME),
+                                  stdout=subprocess.PIPE,
+                                  stderr=subprocess.PIPE,
                                   shell=True)
 
         wait_until_machine_is_ready()
         print(f'Machine is ready, Axonius should start soon.')
 
         os.chdir(INSTALL_HOME)
-
-        if not Path('axonius_install.py').is_file():
-            raise Exception(f'Installer file not found after decrypt!')
-
         # this command should run after this user terminates ssh
-        os.system('sudo /usr/bin/nohup /home/decrypt/install_and_run.sh >> /var/log/machine_boot.log 2>&1 &')
+        os.system(
+            f'sudo /usr/bin/nohup '
+            f'/home/decrypt/install_and_run.sh {decryption_key} >> /var/log/machine_boot.log 2>&1 &')
 
     except Exception as e:
         print(e)
-        INSTALL_LOCK.unlink()
 
 
-def run_command_in_background(cmd, ok_msg, err_msg, **kwargs):
+def run_command_with_messages(cmd, ok_msg, err_msg, **kwargs):
     process = subprocess.run(cmd, **kwargs)
     if process.returncode != 0:
         print(err_msg)
