@@ -465,8 +465,7 @@ def find_entity_field(entity_data, field_path, skip_unique=False):
     :param field_path:  A path to a field ('.' separated chain of keys)
     :return:
     """
-
-    if not skip_unique and field_path == 'specific_data.data.last_seen':
+    def return_field_max():
         result = find_entity_field(entity_data, field_path, skip_unique=True)
         if result is None:
             result = []
@@ -478,6 +477,18 @@ def find_entity_field(entity_data, field_path, skip_unique=False):
             except Exception:
                 return result[0]
         return None
+
+    def return_true_if_list():
+        result = find_entity_field(entity_data, field_path, skip_unique=True)
+        if isinstance(result, list) and True in result and False in result:
+            return True
+        return result
+
+    if not skip_unique:
+        if field_path in ['specific_data.data.last_seen']:
+            return return_field_max()
+        if field_path in ['specific_data.data.part_of_domain']:
+            return return_true_if_list()
 
     if entity_data is None:
         # Return no value for this path
