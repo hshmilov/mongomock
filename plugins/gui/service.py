@@ -3581,8 +3581,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
 
     @staticmethod
     def _add_expiration_timeout_cookie(response):
-        response.set_cookie('session_expiration', 'session_expiration',
-                            expires=datetime.now() + timedelta(seconds=30))
+        response.set_cookie('session_expiration', 'session_expiration')
 
     @gui_add_rule_logged_in('logout', methods=['GET'])
     def logout(self):
