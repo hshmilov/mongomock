@@ -152,6 +152,7 @@ DOCKER_PORTS = {
     'hp-nnmi-adapter':                  6057,
     'netskope-adapter':                 6065,
     'guardium-adapter':                 6070,
+    'landesk-adapter':                  6076,
     'paloalto-xdr-adapter':             6123,
     'diag-w':                           6665,  # reserved
     'diag-l':                           6666,  # reserved
