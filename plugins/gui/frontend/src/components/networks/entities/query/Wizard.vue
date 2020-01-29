@@ -55,15 +55,12 @@
 </template>
 
 <script>
-import { mapState, mapMutations } from 'vuex';
+import { mapState } from 'vuex';
 import _debounce from 'lodash/debounce';
 
 import xDropdown from '../../../axons/popover/Dropdown.vue';
 import xButton from '../../../axons/inputs/Button.vue';
 import xFilter from '../../../neurons/schema/query/Filter.vue';
-
-import { UPDATE_DATA_VIEW } from '../../../../store/mutations';
-
 
 export default {
   name: 'XQueryWizard',
@@ -118,9 +115,6 @@ export default {
     },
   },
   methods: {
-    ...mapMutations({
-      updateView: UPDATE_DATA_VIEW,
-    }),
     compileFilter() {
       // Instruct the filter to re-compile, in case filter was edited
       this.$emit('submit');

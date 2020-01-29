@@ -7,9 +7,18 @@ import Expression from './expression';
 import Condition from './condition';
 
 const validateBrackets = (bracketWeights) => {
-  const totalBrackets = bracketWeights.reduce(
-    (accumulator, currentVal) => accumulator + currentVal, 0,
-  );
+  // eslint-disable-next-line arrow-body-style
+  let imbalance;
+  const totalBrackets = bracketWeights.reduce((accumulator, currentVal) => {
+    if (accumulator > 0) {
+      imbalance = true;
+    }
+    return accumulator + currentVal;
+  }, 0);
+
+  if (imbalance) {
+    return 'Missing left bracket';
+  }
   if (totalBrackets !== 0) {
     return (totalBrackets < 0) ? 'Missing right bracket' : 'Missing left bracket';
   }

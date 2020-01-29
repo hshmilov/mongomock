@@ -135,7 +135,7 @@ export default {
         resultFilters.resultFilter = '';
       } else {
         try {
-          const queryBuilder = QueryBuilder(this.schema, this.query.expressions, queryMeta, query.onlyExpressionsFilter);
+          const queryBuilder = QueryBuilder(this.schema, query.expressions, queryMeta, query.onlyExpressionsFilter);
           resultFilters = queryBuilder.compileQuery();
           this.error = queryBuilder.getError();
           this.filterValid = !this.error;
