@@ -3620,6 +3620,9 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
                            .skip(skip)
                            .limit(limit))
         # Handle PUT - only option left
+        if session.get('user', {}).get('role_name', '') != PREDEFINED_ROLE_ADMIN and not is_admin_user():
+            return return_error('Only admin users are permitted to create users!', 401)
+
         post_data = self.get_request_data_as_object()
         post_data['password'] = bcrypt.hash(post_data['password'])
         # Make sure user is unique by combo of name and source (no two users can have same name and same source)
