@@ -351,8 +351,8 @@ class SccmAdapter(AdapterBase, Configurable):
                     asset_bios_dict[asset_id] = asset_bios_data
             except Exception:
                 logger.warning(f'Problem getting query bios', exc_info=True)
-
-            for device_raw in client_data.query(consts.SCCM_MAIN_QUERY):
+            devices_raw_query = list(client_data.query(consts.SCCM_MAIN_QUERY))
+            for device_raw in devices_raw_query:
                 yield device_raw, client_data.server, asset_software_dict, asset_patch_dict, asset_program_dict, \
                     asset_bios_dict, asset_users_dict, asset_top_dict, asset_malware_dict, \
                     asset_lenovo_dict, asset_chasis_dict, asset_encryption_dict,\
