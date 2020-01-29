@@ -6,6 +6,7 @@ from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.mssql.connection import MSSQLConnection
 from axonius.devices.ad_entity import ADEntity
 from axonius.devices.device_adapter import DeviceAdapter, AGENT_NAMES
+from axonius.utils.parsing import is_domain_valid
 from axonius.fields import Field, ListField
 from axonius.mixins.configurable import Configurable
 from axonius.clients.rest.connection import RESTConnection
@@ -126,6 +127,18 @@ class SccmAdapter(AdapterBase, Configurable):
     def _query_devices_by_client(self, client_name, client_data):
         client_data.set_devices_paging(self.__devices_fetched_at_a_time)
         with client_data:
+
+            local_admins_dict = dict()
+            try:
+                for local_admin_data in client_data.query(consts.LOCAL_ADMIN_QUERY):
+                    asset_id = local_admin_data.get('ResourceID')
+                    if not asset_id:
+                        continue
+                    if asset_id not in local_admins_dict:
+                        local_admins_dict[asset_id] = []
+                    local_admins_dict[asset_id].append(local_admin_data)
+            except Exception:
+                logger.warning(f'Problem getting local admins dict', exc_info=True)
 
             collections_data_dict = dict()
             try:
@@ -357,7 +370,8 @@ class SccmAdapter(AdapterBase, Configurable):
                     asset_bios_dict, asset_users_dict, asset_top_dict, asset_malware_dict, \
                     asset_lenovo_dict, asset_chasis_dict, asset_encryption_dict,\
                     asset_vm_dict, owner_dict, tpm_dict, computer_dict,\
-                    clients_dict, os_dict, nics_dict, collections_dict, collections_data_dict, compliance_dict
+                    clients_dict, os_dict, nics_dict, collections_dict,\
+                    collections_data_dict, compliance_dict, local_admins_dict
 
     def _clients_schema(self):
         return {
@@ -391,7 +405,7 @@ class SccmAdapter(AdapterBase, Configurable):
             tpm_dict,
             computer_dict,
             clients_dict,
-            os_dict, nics_dict, collections_dict, collections_data_dict, compliance_dict
+            os_dict, nics_dict, collections_dict, collections_data_dict, compliance_dict, local_admins_dict
         ) in devices_raw_data:
             try:
                 device_id = device_raw.get('Distinguished_Name0')
@@ -554,6 +568,23 @@ class SccmAdapter(AdapterBase, Configurable):
                 except Exception:
                     logger.exception(f'Problem getting top user data dor {device_raw}')
 
+                try:
+                    if isinstance(local_admins_dict.get(device_raw.get('ResourceID')), list):
+                        for local_admin_data in local_admins_dict.get(device_raw.get('ResourceID')):
+                            try:
+                                user_local_admin = local_admin_data.get('User')
+                                domain_local_admin = local_admin_data.get('Domain')
+                                if is_domain_valid(domain_local_admin):
+                                    if '.' not in domain_local_admin:
+                                        user_local_admin = f'{domain_local_admin}\\{user_local_admin}'
+                                    else:
+                                        user_local_admin = f'{user_local_admin}@{domain_local_admin}'
+                                device.add_local_admin(admin_name=user_local_admin,
+                                                       admin_type='Admin User')
+                            except Exception:
+                                logger.exception(f'Problem with local admin data {nic_data}')
+                except Exception:
+                    logger.exception(f'Problem getting vm data dor {device_raw}')
                 try:
                     if isinstance(nics_dict.get(device_raw.get('ResourceID')), list):
                         for nic_data in nics_dict.get(device_raw.get('ResourceID')):

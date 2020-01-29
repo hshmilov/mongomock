@@ -365,6 +365,10 @@ export const pluginMeta = {
         link: 'https://docs.axonius.com/docs/zscaler-web-security',
         description: 'Zscaler Web Security, part of the Zscaler Cloud Security Platform, is a secure Internet and web gateway delivered as a service, stops malware, advanced threats, phishing, browser exploits, malicious URLs, botnets, and more.'
     },
+    wsus_adapter: {
+        title: 'Windows Server Update Services (WSUS)',
+        description: 'Windows Server Update Services (WSUS), previously Software Update Services (SUS), enables administrators to manage the distribution of updates and hotfixes released for Microsoft products.'
+    },
     alertlogic_adapter: {
         title: 'Alert Logic',
         link: 'https://docs.axonius.com/docs/alert-logic',

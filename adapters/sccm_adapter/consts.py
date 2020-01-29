@@ -58,3 +58,4 @@ TPM_QUERY = 'select ResourceID, IsActivated_InitialValue0, IsEnabled_InitialValu
 COLLECTIONS_QUERY = 'select ResourceID, CollectionID from v_FullCollectionMembership'
 COLLECTIONS_DATA_QUERY = 'select CollectionID, Name from v_Collection'
 COMPLIANCE_QUERY = 'select ResourceID, Status from v_UpdateComplianceStatus'
+LOCAL_ADMIN_QUERY = 'select ResourceID, User, Domain from v_G_System_LOCAL_ADMINISTRATORS'

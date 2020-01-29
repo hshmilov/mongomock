@@ -36,7 +36,7 @@ AGENTS = namedtuple('Agents', (
     'secdo', 'sentinelone', 'signalsciences', 'traps',
     'sophos', 'symantec', 'symantec_cloud_workload', 'symantec_ee', 'symantec_12', 'tanium', 'tenable_io', 'tripwire',
     'truefort', 'guardicore', 'deep_security', 'illusive', 'bitdefender',
-    'twistlock', 'webroot', 'aqua', 'symantec_dlp', 'bitlocker', 'wazuh'
+    'twistlock', 'webroot', 'aqua', 'symantec_dlp', 'bitlocker', 'wazuh', 'wsus'
 ))
 
 AGENT_NAMES = AGENTS(
@@ -60,7 +60,7 @@ AGENT_NAMES = AGENTS(
     tripwire='Tripwire Agent', truefort='TrueFort Agent', twistlock='Twistlock Agent',
     webroot='Webroot Agent', symantec_12='Symantec SEP 12 Agent', wazuh='Wazuh Agent',
     aqua='Aqua Enforcer', symantec_dlp='Symantec DLP Agent', guardicore='Guardicore Agent',
-    deep_security='DeepSecurity Agent'
+    deep_security='DeepSecurity Agent', wsus='WSUS Client'
 )
 
 logger = logging.getLogger(f'axonius.{__name__}')
