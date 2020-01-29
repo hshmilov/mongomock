@@ -114,6 +114,8 @@ class GuiService(PluginService, UpdatablePluginMixin):
             self._update_schema_version_26()
         if self.db_schema_version < 27:
             self._update_schema_version_27()
+        if self.db_schema_version < 28:
+            self._update_schema_version_28()
 
     def _update_schema_version_1(self):
         print('upgrade to schema 1')
@@ -987,6 +989,23 @@ class GuiService(PluginService, UpdatablePluginMixin):
                 self.db_schema_version = 27
         except Exception as e:
             print(f'Exception while upgrading gui db to version 27. Details: {e}')
+
+    def _update_schema_version_28(self):
+        print('upgrade to schema 28')
+        try:
+            config_match = {
+                'config_name': CONFIG_CONFIG
+            }
+            current_config = self.db.get_collection(
+                GUI_PLUGIN_NAME, CONFIGURABLE_CONFIGS_COLLECTION).find_one(config_match)
+            if not current_config:
+                return
+            current_config['config']['system_settings']['exactSearch'] = True
+            self.db.get_collection(GUI_PLUGIN_NAME, CONFIGURABLE_CONFIGS_COLLECTION).replace_one(
+                config_match, current_config)
+            self.db_schema_version = 28
+        except Exception as e:
+            print(f'Exception while upgrading gui db to version 28. Details: {e}')
 
     def _update_default_locked_actions(self, new_actions):
         """

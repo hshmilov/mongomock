@@ -5704,7 +5704,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
                 'multiLine': False,
                 'defaultSort': True,
                 'autoQuery': True,
-                'exactSearch': False,
+                'exactSearch': True,
                 ''
                 'defaultColumnLimit': 2,
                 'percentageThresholds': {

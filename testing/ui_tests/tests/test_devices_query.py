@@ -182,14 +182,7 @@ class TestDevicesQuery(TestBase):
         assert any(text in x for x in all_data)
 
     def test_search_everywhere_exact_search_off(self):
-        self.settings_page.switch_to_page()
-        self.settings_page.click_gui_settings()
-        self.settings_page.wait_for_spinner_to_end()
-        toggle = self.settings_page.find_exact_search_toggle()
-        self.settings_page.click_toggle_button(toggle, make_yes=False, scroll_to_toggle=True)
-        self.settings_page.click_save_button()
-        self.settings_page.wait_for_saved_successfully_toaster()
-
+        self.settings_page.set_exact_search(False)
         self.base_page.run_discovery()
         self.devices_page.switch_to_page()
         self.devices_page.fill_filter(self.SEARCH_TEXT_WINDOWS)
@@ -207,14 +200,7 @@ class TestDevicesQuery(TestBase):
         self._check_search_text_result('Dom')
 
     def test_search_everywhere_exact_search_on(self):
-        self.settings_page.switch_to_page()
-        self.settings_page.click_gui_settings()
-        self.settings_page.wait_for_spinner_to_end()
-        toggle = self.settings_page.find_exact_search_toggle()
-        self.settings_page.click_toggle_button(toggle, make_yes=True, scroll_to_toggle=True)
-        self.settings_page.click_save_button()
-        self.settings_page.wait_for_saved_successfully_toaster()
-
+        self.settings_page.set_exact_search(True)
         self.base_page.run_discovery()
         self.devices_page.switch_to_page()
         self.devices_page.fill_filter(self.SEARCH_TEXT_WINDOWS)

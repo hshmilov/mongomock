@@ -92,7 +92,9 @@ class TestDashboard(TestBase):
 
     OSX_OPERATING_SYSTEM_NAME = 'OS X Operating System'
     OSX_OPERATING_SYSTEM_FILTER = 'specific_data.data.os.type == "OS X"'
+    DASHBOARD_EXACT_SEARCH_TERM = 'TestDomain'
 
+    @pytest.mark.skip('TBD')
     def test_system_empty_state(self):
         self.dashboard_page.switch_to_page()
         assert self.dashboard_page.find_show_me_how_button()
@@ -705,7 +707,32 @@ class TestDashboard(TestBase):
         results = self.dashboard_page.get_all_table_rows()
         return len(results) > 1 and results[1]
 
+    def test_dashboard_search_with_exact(self):
+        """
+        Test dashboard search when exact is turned on
+        """
+        self.settings_page.set_exact_search(True)
+        self.dashboard_page.switch_to_page()
+        self.base_page.run_discovery()
+        self.dashboard_page.fill_query_value('TestDomain')
+        self.dashboard_page.enter_search()
+        self.dashboard_page.wait_for_table_to_load()
+        wait_until(self._does_user_appear)
+        results = self.dashboard_page.get_all_table_rows()
+        for result in results:
+            assert any('testdomain' in s.lower() for s in result)
+        # Test search without any term
+        self.dashboard_page.switch_to_page()
+        self.base_page.run_discovery()
+        self.dashboard_page.fill_query_value('')
+        self.dashboard_page.enter_search()
+        self.dashboard_page.wait_for_table_to_load()
+        wait_until(self._does_user_appear)
+        results = self.dashboard_page.get_all_table_rows()
+        assert len(results) == 35
+
     def test_dashboard_search(self):
+        self.settings_page.set_exact_search(False)
         string_to_search = 'be'
         self.dashboard_page.switch_to_page()
         self.base_page.run_discovery()
@@ -747,6 +774,7 @@ class TestDashboard(TestBase):
         assert hostname == 'EC2AMAZ-61GTBER.TestDomain.test'
 
     def test_dashboard_search_url(self):
+        self.settings_page.set_exact_search(False)
         self.dashboard_page.switch_to_page()
         self.base_page.run_discovery()
         self.driver.get(f'{self.driver.current_url}dashboard/explorer?search=dc')

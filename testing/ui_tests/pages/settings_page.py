@@ -807,3 +807,12 @@ class SettingsPage(Page):
         if enabled:
             self.fill_session_timeout(timeout)
             self.save_and_wait_for_toaster()
+
+    def set_exact_search(self, enable=True):
+        self.switch_to_page()
+        self.click_gui_settings()
+        self.wait_for_spinner_to_end()
+        toggle = self.find_exact_search_toggle()
+        self.click_toggle_button(toggle, make_yes=enable, scroll_to_toggle=True)
+        self.click_save_button()
+        self.wait_for_saved_successfully_toaster()

@@ -24,9 +24,10 @@
   import xSearchInput from './SearchInput.vue'
   import xAccessModal from '../popover/AccessModal.vue'
 
-  import { mapState, mapMutations } from 'vuex'
+  import { mapState, mapMutations, mapGetters} from 'vuex'
   import { UPDATE_DATA_VIEW } from '../../../store/mutations'
   import { entities } from '../../../constants/entities'
+import { EXACT_SEARCH } from '../../../store/getters'
 
   export default {
     name: 'XSearchInsights',
@@ -44,6 +45,9 @@
           if (!user || !user.permissions) return true
           return user.permissions.Devices === 'Restricted' || user.permissions.Users === 'Restricted'
         }
+      }),
+      ...mapGetters({
+        exactSearch: EXACT_SEARCH
       }),
       searchValue: {
         get () {
@@ -101,9 +105,18 @@
         entities.forEach(entity => {
           let patternParts = []
           this.entitiesView[entity.name].fields.forEach(field => {
-            expressions.forEach(expression =>
-              patternParts.push(`${field} == regex("${expression.trim()}", "i")`))
+            expressions.forEach(expression => {
+              // In case there is no search value, use the default with regex otherwise no data will return
+              const expressionString = `${expression.trim()}`
+              const expressionValue = (this.exactSearch && this.searchValue)? `"${expressionString}"` : `regex("${expressionString}", "i")`
+              patternParts.push(`${field} == ${expressionValue}`)
+            })
           })
+          // Only push if we are in exact search mode and there is a search value
+          // if there is no search value we will not add the "search" term
+          if (this.exactSearch && this.searchValue)  {
+              patternParts.push(`search("${this.searchValue}")`)
+          }
           this.updateDataView({
             module: entity.name, view: {
               query: {
