@@ -648,6 +648,12 @@ class StaticAnalysisService(Triggerable, PluginBase):
                     upn_name = \
                         self.__try_convert_username_prefix_to_username_upn(user_principal_name)
                     device_last_used_users_set.add(upn_name)
+                jamf_location = (device_adapter_data.get('data') or {}).get('jamf_location')
+                if isinstance(jamf_location, dict):
+                    jamf_email = jamf_location.get('email_address')
+                    if jamf_email:
+                        upn_name = self.__try_convert_username_prefix_to_username_upn(jamf_email)
+                        device_last_used_users_set.add(upn_name)
 
             # Now we have a set of all last used users for this device, from all of its adapters.
             # Lets try to get each of these users to achieve their department
