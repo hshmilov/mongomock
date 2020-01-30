@@ -1,3 +1,4 @@
+import pytest
 # pylint: disable=unused-import
 from services.adapters.men_and_mice_service import MenAndMiceService, men_and_mice_fixture
 from test_helpers.adapter_test_base import AdapterTestBase
@@ -33,3 +34,11 @@ class TestMenAndMiceAdapter(AdapterTestBase):
     @property
     def some_user_id(self):
         return SOME_USER_ID
+
+    @pytest.mark.skip('AX-6171')
+    def test_fetch_devices(self):
+        pass
+
+    @pytest.mark.skip('AX-6171')
+    def test_fetch_users(self):
+        pass
