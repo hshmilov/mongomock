@@ -422,10 +422,10 @@ export default {
                         // conditionally render action button in footer
                         this.editingMode
                           ? [
-                                <x-button link nativeOnClick={this.discardChanges}>Discard Changes</x-button>,
-                                <x-button nativeOnClick={this.saveChanges} disabled={this.$v.$error}>Save Changes</x-button>,
+                                <x-button link onClick={this.discardChanges}>Discard Changes</x-button>,
+                                <x-button onClick={this.saveChanges} disabled={this.$v.$error}>Save Changes</x-button>,
                           ]
-                          : <x-button nativeOnClick={this.runQuery} disabled={this.isQueryContainsUnsupportedFields()}>Run Query</x-button>
+                          : <x-button onClick={this.runQuery} disabled={this.isQueryContainsUnsupportedFields()}>Run Query</x-button>
                     }
                 </div>
             </div>
