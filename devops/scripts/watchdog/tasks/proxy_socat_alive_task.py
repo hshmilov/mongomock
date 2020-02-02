@@ -19,6 +19,8 @@ class SocatAliveTask(WatchdogTask):
 
         while True:
             try:
+                time.sleep(SLEEP_SECONDS)
+
                 if NODE_MARKER_PATH.is_file():
                     try:
                         self.report_info(f'node flow')
@@ -42,7 +44,6 @@ class SocatAliveTask(WatchdogTask):
                 else:
                     self.report_info(f'master flow')
 
-                time.sleep(SLEEP_SECONDS)
             except Exception as e:
                 self.report_error(f'error in watchdog {e}')
 

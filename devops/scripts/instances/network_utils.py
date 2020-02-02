@@ -71,7 +71,7 @@ def run_proxy_socat():
 
     # Removing old tunnler if exists (If this script is being run to reconnect an existing node).
     subprocess.call(shlex.split(f'docker rm -f {container_name}'))
-    subprocess.check_call(command, env=my_env)
+    subprocess.call(command, env=my_env)
 
 
 def connect_to_master(master_ip, weave_pass):
