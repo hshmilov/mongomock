@@ -15,8 +15,8 @@ import xSidePanel from '@networks/side-panel/SidePanel.vue';
 import { xActionItem, xActionsGroup } from '@networks/side-panel/PanelActions';
 import xCombobox from '@axons/inputs/combobox/index.vue';
 
-import { mdiPencil } from '@mdi/js';
-import { mdiDelete } from '@mdi/js';
+import { mdiPencil, mdiDelete } from '@mdi/js';
+
 import './saved-query-panel.scss';
 
 import { featchEntityTags, featchEntitySavedQueriesNames } from '@api/saved-queries';
@@ -75,7 +75,9 @@ export default {
         tags: null,
       },
       schemas: {
-        lastUpdate: { name: 'last_updated', title: 'Last Updated', type: 'string', format: 'date-time' },
+        lastUpdate: {
+          name: 'last_updated', title: 'Last Updated', type: 'string', format: 'date-time',
+        },
         updatedBy: { name: 'updated_by', title: 'Updated By', type: 'string' },
       },
       entityTags: [],
@@ -151,219 +153,219 @@ export default {
   },
   methods: {
     saveChanges() {
-        // validate on submission
-        this.$v.$touch()
-        if (this.$v.$invalid) return
+      // validate on submission
+      this.$v.$touch();
+      if (this.$v.$invalid) return;
 
-        const updated = {
-            ...this.query,
-            ...(_isNull(this.queryFieldsProxies.name) ? false : {name: this.queryFieldsProxies.name}),
-            ...(_isNull(this.queryFieldsProxies.description) ? false : {description: this.queryFieldsProxies.description}),
-            ...(_isNull(this.queryFieldsProxies.tags) ? false : {tags: this.queryFieldsProxies.tags}),
-        }
-        
-        this.$emit('save-changes', { queryData: updated, done: (err) => {
-            this.featchEntityTags()
-            this.toggleEditMode()
-            if (!err) {
-                this.fetchQueriesNames()
-            }
-        } })
+      const updated = {
+        ...this.query,
+        ...(_isNull(this.queryFieldsProxies.name) ? false : { name: this.queryFieldsProxies.name }),
+        ...(_isNull(this.queryFieldsProxies.description) ? false : { description: this.queryFieldsProxies.description }),
+        ...(_isNull(this.queryFieldsProxies.tags) ? false : { tags: this.queryFieldsProxies.tags }),
+      };
+
+      this.$emit('save-changes', {
+        queryData: updated,
+        done: (err) => {
+          this.featchEntityTags();
+          this.toggleEditMode();
+          if (!err) {
+            this.fetchQueriesNames();
+          }
+        },
+      });
     },
     async fetchQueriesNames() {
-        try {
-            let names = await featchEntitySavedQueriesNames(Entities[this.namespace])
-            names = names.filter(q => q.name)
-            names = names.map(q => q.name.toLocaleLowerCase())
-            this.existingQueriesNamesList = new Set(names)
-        } catch (ex) {
-            console.error(ex)
-        }
+      try {
+        let names = await featchEntitySavedQueriesNames(Entities[this.namespace]);
+        names = names.filter((q) => q.name);
+        names = names.map((q) => q.name.toLocaleLowerCase());
+        this.existingQueriesNamesList = new Set(names);
+      } catch (ex) {
+        console.error(ex);
+      }
     },
     discardChanges() {
-        this.reset()
+      this.reset();
     },
     isValidQueryWithoutExpression() {
-        /**
+      /**
          * The query is valid, but does not include any expressions.
          * Saved with a modified columns selection
          */
-        return Array.isArray(this.expressions) && !this.expressions.length
+      return Array.isArray(this.expressions) && !this.expressions.length;
     },
     isQueryContainsUnsupportedFields() {
-        /**
+      /**
          * The query is valid, but not supported in the current system.
          * The query contains fields of some non-connected adapter
          */
-        const isFieldNotSupported = (expression) => {
-            const { field } = expression
-            return !this.adaptersEntityFields.has(field)
-        }
+      const isFieldNotSupported = (expression) => {
+        const { field } = expression;
+        return !this.adaptersEntityFields.has(field);
+      };
 
-        return this.expressions.some(isFieldNotSupported);
+      return this.expressions.some(isFieldNotSupported);
     },
     setNameField(e) {
-        this.name = e.target.value
-        this.$v.name.$touch()
+      this.name = e.target.value;
+      this.$v.name.$touch();
     },
     setDescriptionField(e) {
-        this.description = e.target.value
-        this.$v.description.$touch()
+      this.description = e.target.value;
+      this.$v.description.$touch();
     },
     setTagsField(value) {
-        this.tags = value
+      this.tags = value;
     },
     reset() {
-        this.$v.$reset()
-        if (this.editingMode) {
-            this.toggleEditMode()
-        }
-        this.queryFieldsProxies = {
-            name: null,
-            description: null,
-            tags: null
-        }
+      this.$v.$reset();
+      if (this.editingMode) {
+        this.toggleEditMode();
+      }
+      this.queryFieldsProxies = {
+        name: null,
+        description: null,
+        tags: null,
+      };
     },
-    newEnforcement(){
-        this.$emit('new-enforcement', this.query.name)
+    newEnforcement() {
+      this.$emit('new-enforcement', this.query.name);
     },
     closePanel() {
-        this.$emit('close')
+      this.$emit('close');
     },
     toggleEditMode() {
-        this.editingMode = !this.editingMode
+      this.editingMode = !this.editingMode;
     },
-    removeQuery(){
-        this.$emit('delete', undefined, this.queryId)
+    removeQuery() {
+      this.$emit('delete', undefined, this.queryId);
     },
     runQuery() {
-        this.$emit('run', this.queryId)
+      this.$emit('run', this.queryId);
     },
     onPanelStateChange(isOpen) {
-        if(!isOpen) {
-            this.closePanel()
-            this.reset()
-        }
-        this.$emit('input', isOpen)
+      if (!isOpen) {
+        this.closePanel();
+        this.reset();
+      }
+      this.$emit('input', isOpen);
     },
     genQueryExpressionMarkup(usecase) {
-        return () => {
-            switch (usecase) {
-                case 'empty':
-                    return <span>No query defined</span>
-                case 'not_supported':
-                    return <span>Query not supported for the existing data</span>
-                default:
-                    return (
+      return () => {
+        switch (usecase) {
+          case 'empty':
+            return <span>No query defined</span>;
+          case 'not_supported':
+            return <span>Query not supported for the existing data</span>;
+          default:
+            return (
                         <x-filter
                             disabled
                             value={[...this.expressions]}
                             module={this.namespace}
                         />
-                    );
-            }
+            );
         }
+      };
     },
     genTagsMarkup() {
-        if (this.editingMode && !_isEmpty(this.entityTags)) {
-            return (<x-combobox
+      if (this.editingMode && !_isEmpty(this.entityTags)) {
+        return (<x-combobox
                     value={this.tags}
-                    onInput={selections => this.tags = selections}
+                    onInput={(selections) => this.tags = selections}
                     items={this.entityTags}
                     multiple
                     menuProps={{ maxWidth: 744 }}
                     keep-open={false}
-                />)
-        } else {
-            return !_isEmpty(this.tags) ? this.tags.map(t => {
-                return <v-chip color="rgba(255, 125, 70, 0.2)" small class="chips">{t}</v-chip>
-            }) : (<p>No tags associated</p>)
-        }
+                />);
+      }
+      return !_isEmpty(this.tags) ? this.tags.map((t) => <v-chip color="rgba(255, 125, 70, 0.2)" small class="chips">{t}</v-chip>) : (<p>No tags associated</p>);
     },
     genDescriptionMarkup() {
-        const description = _get(this.query, 'description') || 'No description provided'
-        const descriptionError = this.$v.description.$error
+      const description = _get(this.query, 'description') || 'No description provided';
+      const descriptionError = this.$v.description.$error;
 
-        // return description field markup if in editing mode. Else, return plain text.
-        const descriptionMarkup = this.editingMode ? (
+      // return description field markup if in editing mode. Else, return plain text.
+      const descriptionMarkup = this.editingMode ? (
         <div class="description">
             {descriptionError && <p class="error-input indicator-error--text">Description is limited to 300 chars</p>}
-            <textarea class="description_input" rows="5" value={this.description} onInput={this.setDescriptionField} /> 
+            <textarea class="description_input" rows="5" value={this.description} onInput={this.setDescriptionField} />
         </div>
-        ) : <p>{description}</p>
+      ) : <p>{description}</p>;
 
-        return descriptionMarkup
-
+      return descriptionMarkup;
     },
-    genNameMarkup(){
-        // are there any form errors?
-        const nameError = this.$v.name.$error
-        const nameRequired = !this.$v.name.required
+    genNameMarkup() {
+      // are there any form errors?
+      const nameError = this.$v.name.$error;
+      const nameRequired = !this.$v.name.required;
 
-        // return name field markup if in editing mode. Else, return null.
-        const nameMarkup = this.editingMode ? (
+      // return name field markup if in editing mode. Else, return null.
+      const nameMarkup = this.editingMode ? (
             <div class="name">
                 <h5>Name</h5>
                 {nameError && <p class="error-input indicator-error--text">{nameRequired ? 'Query Name is a required field' : 'Query Name is used by another query'}</p>}
                 <input class="name_input" value={this.name} onInput={this.setNameField}/>
             </div>
-        ) : null
+      ) : null;
 
-        return nameMarkup
+      return nameMarkup;
     },
     genActionsButtonsMarkup() {
-        let actions = [];
+      let actions = [];
 
-        if (!this.editingMode) {
-            actions = [
-                <x-action-item
-                    class="action-enforce"
-                    title="New Enforcement"
-                    onClick={this.newEnforcement} 
-                    size="20" 
-                    color="#fff"
-                    icon="$vuetify.icons.enforcements"
-                />,
-                <x-action-item
-                    class="action-remove"
-                    title="Remove"
-                    onClick={this.removeQuery} 
-                    size="20" 
-                    color="#fff"
-                    icon={mdiDelete}
-                />
-            ]
+      if (!this.editingMode) {
+        if (this.isEntityEditable('Enforcements')) {
+          actions.push(<x-action-item
+            class="action-enforce"
+            title="New Enforcement"
+            onClick={this.newEnforcement}
+            size="20"
+            color="#fff"
+            icon="$vuetify.icons.enforcements"
+        />);
         }
 
-        if (this.isEditable && !this.editingMode) {
-            actions = [(
-                (<x-action-item
+        actions.push(<x-action-item
+                    class="action-remove"
+                    title="Remove"
+                    onClick={this.removeQuery}
+                    size="20"
+                    color="#fff"
+                    icon={mdiDelete}
+                />);
+      }
+
+      if (this.isEditable && !this.editingMode) {
+        actions = [(
+          (<x-action-item
                     class="action-edit"
                     title="Edit"
-                    onClick={this.toggleEditMode} 
-                    size="20" 
+                    onClick={this.toggleEditMode}
+                    size="20"
                     color="#fff"
                     icon={mdiPencil}
                 />)
-            ), ...actions]
-        }
-    return actions;
+        ), ...actions];
+      }
+      return actions;
     },
     async featchEntityTags() {
-        const tags = await featchEntityTags(Entities[this.namespace])
-        this.entityTags = tags
-    }
+      const tags = await featchEntityTags(Entities[this.namespace]);
+      this.entityTags = tags;
+    },
   },
   watch: {
-        async editingMode(isEditing) {
-            // Whenever user enter edit mode, fetch the latest list of tags
-            if(isEditing) {
-                this.featchEntityTags()
-            }
-        }
+    async editingMode(isEditing) {
+      // Whenever user enter edit mode, fetch the latest list of tags
+      if (isEditing) {
+        this.featchEntityTags();
+      }
+    },
   },
   created() {
-        this.fetchQueriesNames()
+    this.fetchQueriesNames();
   },
   render(h) {
     // renderExpression is a function that will return the expression markup
@@ -381,8 +383,8 @@ export default {
             title={this.name}
             onInput={this.onPanelStateChange}
         >
-            { this.userHasPermissionToEntity && 
-                <x-actions-group slot="panelHeader">
+            { this.userHasPermissionToEntity
+                && <x-actions-group slot="panelHeader">
                     {this.genActionsButtonsMarkup()}
                 </x-actions-group>
 
