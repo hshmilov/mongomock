@@ -250,7 +250,7 @@ class ActionTypeBase(ABC):
         except Exception as e:
             logger.exception(
                 f'Error - {e} - performing action {type(self).__name__} with parameters '
-                f'{self._triggered_set}, {self._config},')
+                f'{self._triggered_set}')
             tb = ''.join(traceback.format_tb(e.__traceback__))
             return ActionRunResults([],
                                     [EntityResult(x, False, f'Error {e}') for x in self._internal_axon_ids],

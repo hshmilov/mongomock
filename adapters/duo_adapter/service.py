@@ -6,6 +6,9 @@ from axonius.users.user_adapter import UserAdapter
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.utils.files import get_local_config_file
 from axonius.adapter_exceptions import ClientConnectionException
+from axonius.utils.datetime import parse_date
+from axonius.smart_json_class import SmartJsonClass
+from axonius.fields import Field, ListField
 from axonius.clients.rest.connection import RESTConnection
 
 
@@ -16,9 +19,21 @@ USERS_PER_PAGE = 100
 MAX_USERS = 1000000
 
 
+class DuoGroup(SmartJsonClass):
+    description = Field(str, 'Description')
+    name = Field(str, 'Name')
+    status = Field(str, 'Status')
+    push_enabled = Field(bool, 'Push Enabled')
+    sms_enabled = Field(bool, 'SMS Enabled')
+    mobile_otp_enabled = Field(bool, 'Mobile OTP Enabled')
+    voice_enabled = Field(bool, 'Voice Enabled')
+
+
 class DuoAdapter(AdapterBase):
     class MyUserAdapter(UserAdapter):
-        pass
+        notes = Field(str, 'Notes')
+        is_enrolled = Field(bool, 'Is Enrolled')
+        duo_groups = ListField(DuoGroup, 'Duo Groups')
 
     def __init__(self):
         super().__init__(get_local_config_file(__file__))
@@ -95,11 +110,30 @@ class DuoAdapter(AdapterBase):
         user.first_name = raw_user_data.get('firstname') or raw_user_data.get('realname')
         user.last_name = raw_user_data.get('lastname')
         last_logon_raw = raw_user_data.get('last_login')
+        user.user_created = parse_date(raw_user_data.get('parse_date'))
+        groups_raw = raw_user_data.get('groups')
+        if not isinstance(groups_raw, list):
+            groups_raw = []
+        for group_raw in groups_raw:
+            try:
+                user.duo_groups.append(DuoGroup(name=group_raw.get('name'),
+                                                description=group_raw.get('desc'),
+                                                status=group_raw.get('status'),
+                                                voice_enabled=group_raw.get('voice_enabled'),
+                                                sms_enabled=group_raw.get('sms_enabled'),
+                                                push_enabled=group_raw.get('push_enabled'),
+                                                mobile_otp_enabled=group_raw.get('mobile_otp_enabled')))
+            except Exception:
+                logger.exception(f'Problem with group {group_raw}')
+
         if last_logon_raw:
             try:
                 user.last_logon = datetime.fromtimestamp(last_logon_raw)
             except Exception:
                 logger.exception(f"Couldn't get last logon for {raw_user_data}")
+        user.is_enrolled = raw_user_data.get('is_enrolled') \
+            if isinstance(raw_user_data.get('is_enrolled'), bool) else None
+        user.notes = raw_user_data.get('notes')
         return user
 
     def _parse_users_raw_data(self, raw_data):

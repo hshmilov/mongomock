@@ -104,6 +104,8 @@ class SysaidIncidentAction(ActionTypeAlert):
             return f'Got exception creating Sysaid incident: {str(e)}'
 
     def _run(self) -> AlertActionResult:
+        if not self._internal_axon_ids:
+            return AlertActionResult(False, 'No Data')
         query_name = self._run_configuration.view.name
         old_results_num_of_devices = len(self._internal_axon_ids) + len(self._removed_axon_ids) - \
             len(self._added_axon_ids)

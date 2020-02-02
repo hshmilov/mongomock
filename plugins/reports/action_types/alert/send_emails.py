@@ -122,6 +122,8 @@ class SendEmailsAction(ActionTypeAlert):
 
     # pylint: disable=too-many-branches
     def _run(self) -> AlertActionResult:
+        if not self._internal_axon_ids:
+            return AlertActionResult(False, 'No Data')
         mail_sender = self._plugin_base.mail_sender
         if not mail_sender:
             logger.info('Email cannot be sent because no email server is configured')

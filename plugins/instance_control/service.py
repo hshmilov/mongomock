@@ -144,11 +144,13 @@ class InstanceControlService(Triggerable, PluginBase):
                     return self.start_service('heavy_lifting')
                 # else - stop
                 return self.stop_service('heavy_lifting')
-            sh_plugin_name = self.__adapters[plugin_name]
-            if operation_type == 'start':
-                return self.start_adapter(sh_plugin_name)
-            # else - stop
-            return self.stop_adapter(sh_plugin_name)
+            sh_plugin_name = self.__adapters.get(plugin_name)
+            if sh_plugin_name:
+                if operation_type == 'start':
+                    return self.start_adapter(sh_plugin_name)
+                # else - stop
+                return self.stop_adapter(sh_plugin_name)
+            return ''
 
     @add_rule(InstanceControlConsts.DescribeClusterEndpoint, methods=['GET'], should_authenticate=False)
     def describe_cluster(self):

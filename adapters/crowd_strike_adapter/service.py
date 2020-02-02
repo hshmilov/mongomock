@@ -62,12 +62,14 @@ class Policy(SmartJsonClass):
 
 
 class CrowdStrikeAdapter(AdapterBase, Configurable):
+    # pylint: disable=too-many-instance-attributes
     class MyDeviceAdapter(DeviceAdapter):
         external_ip = Field(str, 'External IP')
         groups = ListField(Group, 'Groups')
         prevention_policy = Field(Policy, 'Prevention Policy')
         sensor_update_policy = Field(Policy, 'Sensor Update Policy')
         cs_agent_version = Field(str, 'CrowdStrike Agent Version')
+        system_product_name = Field(str, 'System Product Name')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -271,6 +273,7 @@ class CrowdStrikeAdapter(AdapterBase, Configurable):
                         device_raw.pop('device_policies')
                 except Exception:
                     logger.exception(f'Problem getting policies at {device_raw}')
+                device.system_product_name = device_raw.get('system_product_name')
                 device.set_raw(device_raw)
                 yield device
             except Exception:

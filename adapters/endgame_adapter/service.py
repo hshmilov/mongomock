@@ -9,6 +9,7 @@ from axonius.devices.device_adapter import DeviceAdapter, AGENT_NAMES
 from axonius.fields import Field, ListField
 from axonius.utils.datetime import parse_date
 from axonius.smart_json_class import SmartJsonClass
+from axonius.mixins.configurable import Configurable
 from axonius.utils.files import get_local_config_file
 from endgame_adapter.connection import EndgameConnection
 from endgame_adapter.client_id import get_client_id
@@ -26,7 +27,7 @@ class DeviceSensor(SmartJsonClass):
     policy_status = Field(str, 'Policy Status')
 
 
-class EndgameAdapter(AdapterBase):
+class EndgameAdapter(AdapterBase, Configurable):
     # pylint: disable=too-many-instance-attributes
     class MyDeviceAdapter(DeviceAdapter):
         machine_id = Field(str, 'Machine Id')
@@ -165,7 +166,10 @@ class EndgameAdapter(AdapterBase):
                 logger.exception(f'Problem adding groups to {device_raw}')
             device.alert_count = device_raw.get('alert_count')
             device.figure_os(device_raw.get('display_operating_system'))
-            device.agent_status = device_raw.get('status')
+            agent_status = device_raw.get('status')
+            if agent_status and self.__device_status_exclude_list and agent_status in self.__device_status_exclude_list:
+                return None
+            device.agent_status = agent_status
             device.is_isolated = bool(device_raw.get('is_isolated'))
             try:
                 macs = device_raw.get('mac_address').split(',') if device_raw.get('mac_address') else None
@@ -207,3 +211,29 @@ class EndgameAdapter(AdapterBase):
     @classmethod
     def adapter_properties(cls):
         return [AdapterProperty.Agent, AdapterProperty.Endpoint_Protection_Platform]
+
+    @classmethod
+    def _db_config_schema(cls) -> dict:
+        return {
+            'items': [
+                {
+                    'name': 'device_status_exclude_list',
+                    'title': 'Endgame Status Exclude List',
+                    'type': 'string'
+                }
+            ],
+            'required': [
+            ],
+            'pretty_name': 'Endgame Configuration',
+            'type': 'array'
+        }
+
+    @classmethod
+    def _db_config_default(cls):
+        return {
+            'device_status_exclude_list': None
+        }
+
+    def _on_config_update(self, config):
+        self.__device_status_exclude_list = config['device_status_exclude_list'].split(',') \
+            if config.get('device_status_exclude_list') else None

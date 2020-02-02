@@ -216,6 +216,8 @@ class InfobloxAdapter(AdapterBase, Configurable):
 
                             if normalized_column_name.lower() == 'infoblox_vlan':
                                 field_type = int
+                                device.declare_new_field(
+                                    f'{normalized_column_name}_str', Field(str, f'Infoblox {cn_capitalized} String'))
                             else:
                                 field_type = str
 
@@ -225,7 +227,12 @@ class InfobloxAdapter(AdapterBase, Configurable):
                         try:
                             device[normalized_column_name] = attr_value
                         except Exception:
-                            logger.exception(f'Could not set attr {attr_name} with value {attr_value}')
+                            pass
+                        try:
+                            if normalized_column_name.lower() == 'infoblox_vlan':
+                                device[f'{normalized_column_name}_str'] = attr_value
+                        except Exception:
+                            pass
                 except Exception:
                     logger.exception(f'Problem setting external attributes')
                 try:

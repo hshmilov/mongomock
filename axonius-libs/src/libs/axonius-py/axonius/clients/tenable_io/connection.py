@@ -34,7 +34,8 @@ class TenableIoConnection(RESTConnection):
             # We should just use the given api keys
             self._should_use_token = False
             self._set_api_headers()
-            self._tio = TenableIO(self._access_key, self._secret_key, proxies=self._proxies)
+            self._tio = TenableIO(self._access_key, self._secret_key, proxies=self._proxies,
+                                  vendor='Axonius', product='Axonius', build='1.0.0')
         else:
             raise RESTException('Missing user/password or api keys')
 

@@ -53,6 +53,8 @@ class SlackSendMessageAction(ActionTypeAlert):
         }
 
     def _run(self) -> AlertActionResult:
+        if not self._internal_axon_ids:
+            return AlertActionResult(False, 'No Data')
         query_name = self._run_configuration.view.name
         query = self._plugin_base.gui_dbs.entity_query_views_db_map[self._entity_type].find_one(
             {

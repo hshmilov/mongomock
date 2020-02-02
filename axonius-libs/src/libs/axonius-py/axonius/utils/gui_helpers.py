@@ -478,6 +478,19 @@ def find_entity_field(entity_data, field_path, skip_unique=False):
                 return result[0]
         return None
 
+    def return_field_min():
+        result = find_entity_field(entity_data, field_path, skip_unique=True)
+        if result is None:
+            result = []
+        if not isinstance(result, list):
+            result = [result]
+        if result:
+            try:
+                return min(result)
+            except Exception:
+                return result[0]
+        return None
+
     def return_true_if_list():
         result = find_entity_field(entity_data, field_path, skip_unique=True)
         if isinstance(result, list) and True in result and False in result:
@@ -485,9 +498,23 @@ def find_entity_field(entity_data, field_path, skip_unique=False):
         return result
 
     if not skip_unique:
-        if field_path in ['specific_data.data.last_seen']:
+        if field_path in ['specific_data.data.last_seen',
+                          'specific_data.data.fetch_time',
+                          'specific_data.data.last_seen_in_devices',
+                          'specific_data.data.last_lockout_time',
+                          'specific_data.data.last_bad_logon',
+                          'specific_data.data.last_password_change',
+                          'specific_data.data.last_logoff',
+                          'specific_data.data.last_logon',
+                          'specific_data.data.last_logon_timestamp']:
             return return_field_max()
-        if field_path in ['specific_data.data.part_of_domain']:
+        if field_path in ['specific_data.data.first_seen',
+                          'specific_data.data.first_fetch_time',
+                          'specific_data.data.password_expiration_date',
+                          'specific_data.data.account_expires']:
+            return return_field_min()
+        if field_path in ['specific_data.data.part_of_domain',
+                          'specific_data.data.device_disabled']:
             return return_true_if_list()
 
     if entity_data is None:

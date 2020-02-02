@@ -85,6 +85,8 @@ class SendCsvToS3(ActionTypeAlert):
 
     def _run(self) -> AlertActionResult:
         try:
+            if not self._internal_axon_ids:
+                return AlertActionResult(False, 'No Data')
             query_name = self._run_configuration.view.name
             query = self._plugin_base.gui_dbs.entity_query_views_db_map[self._entity_type].find_one({
                 'name': query_name
@@ -118,7 +120,7 @@ class SendCsvToS3(ActionTypeAlert):
                 aws_secret_access_key=aws_secret_access_key
             )
             csv_name = self._config['s3_key'] if self._config.get('s3_key') else DEFAULT_S3_OBJECT_KEY
-            if self._config['append_datetime']:
+            if self._config.get('append_datetime'):
                 csv_name += '_' + datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S').replace(' ', '-')
             csv_name += '.csv'
             bucket_name = self._config.get('s3_bucket')

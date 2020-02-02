@@ -73,8 +73,21 @@ class BigfixAdapter(AdapterBase):
             except Exception:
                 identify_dict = dict()
                 logger.exception(f'Failed getting identify, continuing')
+
+            try:
+                manufacturer_dict = client_data.get_query_data_per_device_list('Manufacturer')
+            except Exception:
+                manufacturer_dict = dict()
+                logger.exception(f'Failed getting manufacturer_dict, continuing')
+
+            try:
+                model_dict = client_data.get_query_data_per_device_list('Model')
+            except Exception:
+                model_dict = dict()
+                logger.exception(f'Failed getting model_dict, continuing')
+
             for device_raw in client_data.get_device_list():
-                yield device_raw, installed_software_dict, identify_dict
+                yield device_raw, installed_software_dict, identify_dict, manufacturer_dict, model_dict
         finally:
             client_data.close()
 
@@ -129,7 +142,8 @@ class BigfixAdapter(AdapterBase):
         }
 
     def _parse_raw_data(self, devices_raw_data):
-        for device_raw_xml, computer_id_to_installed_software, identify_dict in devices_raw_data:
+        for device_raw_xml, computer_id_to_installed_software, identify_dict, manufacturer_dict, model_dict in \
+                devices_raw_data:
             try:
                 device_raw = dict()
                 for xml_property in ET.fromstring(device_raw_xml)[0]:
@@ -219,6 +233,20 @@ class BigfixAdapter(AdapterBase):
                             logger.exception(f'Problem adding key {key_name}')
                 except Exception:
                     logger.exception(f'Problem adding fields to {device_raw}')
+
+                try:
+                    manufacturer_list = manufacturer_dict.get(str(device_id))
+                    if manufacturer_list:
+                        device.device_manufacturer = manufacturer_list[0]
+                except Exception:
+                    logger.exception(f'Problem with manufacture for {device_raw}')
+
+                try:
+                    model_list = model_dict.get(str(device_id))
+                    if model_list:
+                        device.device_model = model_list[0]
+                except Exception:
+                    logger.exception(f'Problem with model for {device_raw}')
 
                 try:
                     identify_list = identify_dict.get(str(device_id))

@@ -31,7 +31,8 @@ class BlackberryUemAdapter(AdapterBase):
         return client_config['domain']
 
     def _test_reachability(self, client_config):
-        return RESTConnection.test_reachability(client_config.get('domain'), port=consts.DEFAULT_PORT,
+        return RESTConnection.test_reachability(client_config.get('domain'),
+                                                port=client_config.get('port') or consts.DEFAULT_PORT,
                                                 https_proxy=client_config.get('https_proxy'))
 
     def _connect_client(self, client_config):

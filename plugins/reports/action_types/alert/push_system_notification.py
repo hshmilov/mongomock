@@ -23,6 +23,9 @@ class SystemNotificationAction(ActionTypeAlert):
         }
 
     def _run(self) -> AlertActionResult:
+        # We can't keep this code for now because many tests uses Push Notification even when no data in the query
+        # if not self._internal_axon_ids:
+        #    return AlertActionResult(False, 'No Data')
         query_name = self._run_configuration.view.name
         title = report_consts.REPORT_TITLE.format(name=self._report_data['name'], query=query_name)
 

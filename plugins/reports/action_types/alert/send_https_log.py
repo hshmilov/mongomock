@@ -68,6 +68,8 @@ class SendHttpsLogAction(ActionTypeAlert):
         }
 
     def _run(self) -> AlertActionResult:
+        if not self._internal_axon_ids:
+            return AlertActionResult(False, 'No Data')
         # Check if send device data is checked.
         authorization_header = self._config.get('authorization_header')
         query_name = self._run_configuration.view.name

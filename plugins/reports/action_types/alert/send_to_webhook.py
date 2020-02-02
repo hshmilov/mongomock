@@ -113,7 +113,10 @@ class SendWebhookAction(ActionTypeAlert):
             return parsed_headers
 
     # pylint: disable=R0912,R0914
+    # pylint: disable=too-many-statements
     def _run(self) -> AlertActionResult:
+        if not self._internal_axon_ids:
+            return AlertActionResult(False, 'No Data')
         query_name = self._run_configuration.view.name
         query = self._plugin_base.gui_dbs.entity_query_views_db_map[self._entity_type].find_one(
             {
@@ -167,7 +170,8 @@ class SendWebhookAction(ActionTypeAlert):
                                                        self._entity_type)
         entities = list(entities_raw)
         entities_json = to_json(entities or None)
-        final_body = self._config['custom_format'].replace(CUSTOM_FORMAT_STRING, entities_json)
+        final_body = (self._config.get('custom_format') or '{"entities": {$BODY}}').replace(CUSTOM_FORMAT_STRING,
+                                                                                            entities_json)
         response = requests.post(self._config['webhook_url'], data=final_body,
                                  verify=self._config['verify_ssl'],
                                  auth=auth_tuple,

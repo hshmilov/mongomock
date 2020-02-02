@@ -184,6 +184,9 @@ def figure_out_cloud(s):
 
 
 def figure_out_windows_dist(s):
+    # We do this to avoid cases like "Windows 10 XXX 2016"
+    if 'windows 10 ' in s.lower() and 'server' not in s.lower():
+        return '10'
     s = s.replace('Windows ', '').replace('Windows', '').replace('Win', '')
     dist_name = ''
     if 'server' in s:
