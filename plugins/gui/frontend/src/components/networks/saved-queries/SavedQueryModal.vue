@@ -15,7 +15,9 @@
           <span
             v-if="$v.queryFormProxies.name.$error"
             class="error-input"
-          >{{ !$v.queryFormProxies.name.required ? 'Query Name is a required field' : 'Query Name is used by another query' }}</span>
+          >
+            {{ !$v.queryFormProxies.name.required ? 'Query Name is a required field' : 'Query Name is used by another query' }}
+          </span>
           <input
             id="name"
             v-model="name"
@@ -29,23 +31,24 @@
           <span
             v-if="$v.queryFormProxies.description.$error"
             class="error-input"
-          >Description is limited to 300 chars</span>
+          >
+            Description is limited to 300 chars
+          </span>
           <textarea
             v-model="description"
             rows="5"
             name="description"
-            @keyup.enter="onConfirm"
           />
         </div>
       </section>
 
       <section class="actions">
-        <x-button 
-          link 
+        <x-button
+          link
           @click="onClose"
         >Cancel</x-button>
-        <x-button 
-          :disabled="$v.$error" 
+        <x-button
+          :disabled="$v.$error"
           @click="onConfirm"
         >Save</x-button>
       </section>
@@ -54,187 +57,187 @@
 </template>
 
 <script>
-  import {mapActions} from 'vuex'
-  import { required, maxLength } from 'vuelidate/lib/validators'
-  import _get from 'lodash/get'
-  import _isNull from 'lodash/isNull'
-  import _isEmpty from 'lodash/isEmpty'
+import { mapActions } from 'vuex';
+import { required, maxLength } from 'vuelidate/lib/validators';
+import _get from 'lodash/get';
+import _isNull from 'lodash/isNull';
+import _isEmpty from 'lodash/isEmpty';
 
-  import xButton from '@axons/inputs/Button.vue'
+import xButton from '@axons/inputs/Button.vue';
 
-  import {SAVE_DATA_VIEW} from '@store/actions'
-  import { SET_GETTING_STARTED_MILESTONE_COMPLETION } from '@store/modules/onboarding';
-  import { SAVE_QUERY } from '@constants/getting-started'
+import { SAVE_DATA_VIEW } from '@store/actions';
+import { SET_GETTING_STARTED_MILESTONE_COMPLETION } from '@store/modules/onboarding';
+import { SAVE_QUERY } from '@constants/getting-started';
 
-  import { featchEntityTags, featchEntitySavedQueriesNames } from '@api/saved-queries'
-  import { EntitiesEnum as Entities } from '@constants/entities'
-  
-  /**
+import { featchEntitySavedQueriesNames } from '@api/saved-queries';
+import { EntitiesEnum as Entities } from '@constants/entities';
+
+/**
    * @param {any} value - the input value to validate against
-   * 
+   *
    * @this {VueInstance} the component instance
-   * 
+   *
    * @description custom vuelidate validator - validates query names are unique
-   * 
+   *
    * @returns {Boolean} true if valid
    */
-  const uniqueQueryName = function(inputValue) {
-    if ((this.isEdit && inputValue === this.initialName) || _isEmpty(inputValue)) return true
-    return !this.existingQueriesNamesList.has(inputValue.toLocaleLowerCase())
-  }
+const uniqueQueryName = function uniqueQueryName(inputValue) {
+  if ((this.isEdit && inputValue === this.initialName) || _isEmpty(inputValue)) return true;
+  return !this.existingQueriesNamesList.has(inputValue.toLocaleLowerCase());
+};
 
-  export default {
-    name: 'XSaveModal',
-    components: {
-      xButton
+export default {
+  name: 'XSaveModal',
+  components: {
+    xButton,
+  },
+  model: {
+    prop: 'value',
+    event: 'closed',
+  },
+  props: {
+    namespace: {
+      type: String,
+      required: true,
     },
-    model: {
-    prop: "value",
-    event: "closed"
+    view: {
+      type: Object,
+      default: null,
     },
-    props: {
-      namespace: {
-        type: String,
-        required: true
-      },
-      view: {
-        type: Object,
-        default: null
-      },
-      value: {
-        type: Boolean,
-        default: false
-      }
+    value: {
+      type: Boolean,
+      default: false,
     },
-    data () {
-      return {
-        queryFormProxies: {
-          name: null,
-          description: null
-        },
-        existingQueriesNamesList: new Set()
-      }
-    },
-    validations: {
+  },
+  data() {
+    return {
       queryFormProxies: {
-        name: {
-          required,
-          uniqueQueryName
-        },
-        description: {
-          maxLength: maxLength(300)
-        }
-      }
-    },
-    computed: {
-      isEdit () {
-        return Boolean(this.view)
+        name: null,
+        description: null,
       },
-      query() {
-        return this.view || {}
-      },
+      existingQueriesNamesList: new Set(),
+    };
+  },
+  validations: {
+    queryFormProxies: {
       name: {
-        get() {
-          if(this.isEdit) {
-            const { name } = this.queryFormProxies
-            return !_isNull(name) ? name : this.query.name
-          }
-          return this.queryFormProxies.name
-        },
-        set(value) {
-          this.queryFormProxies.name = value
-        }
+        required,
+        uniqueQueryName,
       },
       description: {
-        get() {
-          if(this.isEdit) {
-            const { description } = this.queryFormProxies
-            return !_isNull(description) ? description : this.query.description
-          }
-          return this.queryFormProxies.description
-        },
-        set(value) {
-          this.queryFormProxies.description = value
-        }
-      },
-      initialName() {
-        return _get(this.query, 'name')
-      },
-      initialDescription() {
-        return _get(this.query, 'description')
+        maxLength: maxLength(300),
       },
     },
-    created() {
-      this.fetchQueriesNames()
+  },
+  computed: {
+    isEdit() {
+      return Boolean(this.view);
     },
-    methods: {
-      ...mapActions({
-        saveView: SAVE_DATA_VIEW,
-        milestoneCompleted: SET_GETTING_STARTED_MILESTONE_COMPLETION,
-      }),
-      dialogStateChanged(isOpen) {
-        if (!isOpen) {
-          // when save modal closed, reset the queryFormProxies and the form validation state
-          this.$v.queryFormProxies.$reset()
-          this.queryFormProxies = {
-            name: null,
-            description: null
-          }
-        } else {
-          // when the save modal opened, (if in edit mode) init the queryFormProxies so validation will work as expected
-          if (this.isEdit) {
-            this.queryFormProxies.name = this.query.name
-            this.queryFormProxies.description = this.query.description
-          }
+    query() {
+      return this.view || {};
+    },
+    name: {
+      get() {
+        if (this.isEdit) {
+          const { name } = this.queryFormProxies;
+          return !_isNull(name) ? name : this.query.name;
         }
+        return this.queryFormProxies.name;
       },
-      onClose () {
-        this.resetForm()
-        this.$emit('closed')
+      set(value) {
+        this.queryFormProxies.name = value;
       },
-      resetForm() {
+    },
+    description: {
+      get() {
+        if (this.isEdit) {
+          const { description } = this.queryFormProxies;
+          return !_isNull(description) ? description : this.query.description;
+        }
+        return this.queryFormProxies.description;
+      },
+      set(value) {
+        this.queryFormProxies.description = value;
+      },
+    },
+    initialName() {
+      return _get(this.query, 'name');
+    },
+    initialDescription() {
+      return _get(this.query, 'description');
+    },
+  },
+  created() {
+    this.fetchQueriesNames();
+  },
+  methods: {
+    ...mapActions({
+      saveView: SAVE_DATA_VIEW,
+      milestoneCompleted: SET_GETTING_STARTED_MILESTONE_COMPLETION,
+    }),
+    dialogStateChanged(isOpen) {
+      if (!isOpen) {
+        // when save modal closed, reset the queryFormProxies and the form validation state
+        this.$v.queryFormProxies.$reset();
         this.queryFormProxies = {
           name: null,
-          description: null
+          description: null,
+        };
+      } else {
+        // when the save modal opened, (if in edit mode) init the queryFormProxies so validation will work as expected
+        if (this.isEdit) {
+          this.queryFormProxies.name = this.query.name;
+          this.queryFormProxies.description = this.query.description;
         }
-        this.$v.$reset()
-      },
-      hasFormDataChanged() {
-        const namechanged = this.name !== this.initialName
-        const descriptionchanged = this.description !== this.initialDescription
-
-        return namechanged || descriptionchanged
-      },
-      onConfirm () {
-        // validate on submission
-        this.$v.$touch()
-        if (this.hasFormDataChanged() && this.$v.$invalid) return
-
-        this.saveView({
-          module: this.namespace,
-          name: this.name,
-          description: this.description,
-          uuid: this.isEdit? this.view.uuid : null
-        }).then(() => {
-          if (this.namespace === 'devices') {
-            this.milestoneCompleted({ milestoneName: SAVE_QUERY })
-          }
-          this.fetchQueriesNames()
-          this.onClose()
-        })
-      },
-      async fetchQueriesNames() {
-        try {
-          let names = await featchEntitySavedQueriesNames(Entities[this.namespace])
-          names = names.filter(q => q.name)
-          names = names.map(q => q.name.toLocaleLowerCase())
-          this.existingQueriesNamesList = new Set(names)
-        } catch (ex) {
-          console.error(ex)
-        }
-      },
+      }
     },
-  }
+    onClose() {
+      this.resetForm();
+      this.$emit('closed');
+    },
+    resetForm() {
+      this.queryFormProxies = {
+        name: null,
+        description: null,
+      };
+      this.$v.$reset();
+    },
+    hasFormDataChanged() {
+      const namechanged = this.name !== this.initialName;
+      const descriptionchanged = this.description !== this.initialDescription;
+
+      return namechanged || descriptionchanged;
+    },
+    onConfirm() {
+      // validate on submission
+      this.$v.$touch();
+      if (this.hasFormDataChanged() && this.$v.$invalid) return;
+
+      this.saveView({
+        module: this.namespace,
+        name: this.name,
+        description: this.description,
+        uuid: this.isEdit ? this.view.uuid : null,
+      }).then(() => {
+        if (this.namespace === 'devices') {
+          this.milestoneCompleted({ milestoneName: SAVE_QUERY });
+        }
+        this.fetchQueriesNames();
+        this.onClose();
+      });
+    },
+    async fetchQueriesNames() {
+      try {
+        let names = await featchEntitySavedQueriesNames(Entities[this.namespace]);
+        names = names.filter((q) => q.name);
+        names = names.map((q) => q.name.toLocaleLowerCase());
+        this.existingQueriesNamesList = new Set(names);
+      } catch (ex) {
+        console.error(ex);
+      }
+    },
+  },
+};
 </script>
 
 <style lang="scss">
@@ -252,14 +255,14 @@
       display: flex;
       flex-direction: column;
       justify-content: space-between;
-    
+
       section {
         width: 100%;
 
         &.form {
           margin-bottom: 32px;
         }
-        
+
         .form-item {
           display: flex;
           flex-direction: column;
@@ -271,7 +274,7 @@
             border-style: solid;
             border-width: 0.5px;
           }
-          
+
           label {
             margin-bottom: 4px;
           }
