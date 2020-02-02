@@ -19,7 +19,7 @@ import pymongo
 from bson import ObjectId
 from flask import request, session, g
 
-from axonius.consts.gui_consts import SPECIFIC_DATA, ADAPTERS_DATA
+from axonius.consts.gui_consts import SPECIFIC_DATA, ADAPTERS_DATA, JSONIFY_DEFAULT_TIME_FORMAT
 from axonius.entities import EntitiesNamespace
 
 from axonius.consts.plugin_consts import (ADAPTERS_LIST_LENGTH, PLUGIN_NAME,
@@ -1143,3 +1143,15 @@ def find_filter_by_name(entity_type: EntityType, name) -> Dict[str, object]:
         logger.info(f'No record found for view {name}')
         return None
     return view_doc['view']
+
+
+def get_string_from_field_value(base_value):
+    """
+    translate field value to string, for now check for datetime and parse it with
+    default jsonify time format ( UTC (GMT) in RFC 1123 format )
+    :param base_value: field value to parse
+    :return: string
+    """
+    if isinstance(base_value, datetime):
+        return base_value.strftime(JSONIFY_DEFAULT_TIME_FORMAT)
+    return str(base_value)

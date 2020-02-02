@@ -658,7 +658,7 @@ class EntitiesPage(Page):
     def get_all_custom_data(self):
         return [data.text for data in self.find_elements_by_xpath(self.TABLE_SCHEMA_CUSTOM)]
 
-    def select_all_current_page_rows_checkbox(self):
+    def toggle_select_all_rows_checkbox(self):
         self.driver.find_element_by_css_selector(self.TABLE_SELECT_ALL_CURRENT_PAGE_CHECKBOX_CSS).click()
 
     # retrying because sometimes the table hasn't fully loaded

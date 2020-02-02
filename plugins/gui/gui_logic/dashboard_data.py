@@ -14,7 +14,7 @@ from axonius.consts.gui_consts import (ChartMetrics, ChartViews, ChartFuncs, Cha
 from axonius.entities import EntityType
 from axonius.plugin_base import PluginBase, return_error
 from axonius.utils.axonius_query_language import (convert_db_entity_to_view_entity, parse_filter)
-from axonius.utils.gui_helpers import (find_filter_by_name, find_entity_field)
+from axonius.utils.gui_helpers import (find_filter_by_name, find_entity_field, get_string_from_field_value)
 from axonius.utils.revving_cache import rev_cached, rev_cached_entity_type
 from axonius.utils.threading import GLOBAL_RUN_AND_FORGET
 from gui.gui_logic.db_helpers import beautify_db_entry
@@ -262,9 +262,10 @@ def _query_chart_segment_results(field_parent: str, view, entity: EntityType, fo
             '$ne': ['$$i.data._old', True]
         }
     ]
+    empty_field_name = ''
     # prepare field parent name
     if field_parent.startswith(SPECIFIC_DATA):
-        empty_field_name = field_parent[len(SPECIFIC_DATA) + 1:]
+        empty_field_name = '.' + field_parent[len(SPECIFIC_DATA) + 1:]
 
     elif field_parent.startswith(ADAPTERS_DATA):
         # e.g. adapters_data.aws_adapter.some_field
@@ -276,10 +277,10 @@ def _query_chart_segment_results(field_parent: str, view, entity: EntityType, fo
         adapter_conditions.append({
             '$eq': [f'$$i.{PLUGIN_NAME}', adapter_data_adapter_name]
         })
-        empty_field_name = 'data.' + '.'.join(splitted[2:]) if len(splitted) > 2 else 'data'
+        empty_field_name = '.data.' + '.'.join(splitted[2:]) if len(splitted) > 2 else 'data'
 
-    adapter_parent_field_name = '$adapters.' + empty_field_name
-    tags_parent_field_name = '$tags.' + empty_field_name
+    adapter_parent_field_name = '$adapters' + empty_field_name
+    tags_parent_field_name = '$tags' + empty_field_name
 
     # prepare list of inputs for filtering requested data ( single or multiple fields )
     filter_inputs = []
@@ -496,7 +497,7 @@ def _match_result_item_to_filters(extra_data: list, filters: dict) -> bool:
         is_valid = True
         for filter_name in filters:
             for match in filters[filter_name]:
-                if match.lower() not in str(data[filter_name]).lower():
+                if match.lower() not in get_string_from_field_value(data[filter_name]).lower():
                     is_valid = False
         if is_valid:
             is_item_legit = True
@@ -513,8 +514,8 @@ def _generate_segmented_query_filter(result_name, filters, field_parent, segment
     :return: query string composed from the segmented field query and a match query list of filters
     """
     query_filters = []
-    segment_filter = _generate_segmented_field_query_filter('.'.join([field_parent, segmented_field_name]),
-                                                            result_name)
+    segment_field_name = '.'.join([field_parent, segmented_field_name]) if field_parent else segmented_field_name
+    segment_filter = _generate_segmented_field_query_filter(segment_field_name, result_name)
     for field_name, field_value in filters.items():
         # Build the filter, according to the supported types
         if field_name == segmented_field_name:
@@ -564,6 +565,9 @@ def _generate_aggregate_combine_inputs_reduce(field_adapter_parent, field_tags_p
     :param key: the key to use in the reduce ( equivalent to field name )
     :return: object representing one filter reduce to be in array of reduces
     """
+    field_name = field_key = key
+    if field_key == 'labels':
+        field_key = 'name'
     return {
         '$reduce': {
             'input': {
@@ -586,7 +590,7 @@ def _generate_aggregate_combine_inputs_reduce(field_adapter_parent, field_tags_p
                             },
                             'as': 'i',
                             'in': {
-                                f'{key}': {'$ifNull': [f'$$i.{key}', None]}
+                                f'{field_name}': {'$ifNull': [f'$$i.{field_key}', None]}
                             }
                         }
                     }

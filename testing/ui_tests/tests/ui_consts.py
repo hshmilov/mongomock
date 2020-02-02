@@ -63,6 +63,28 @@ LINUX_QUERY_NAME = 'Linux Operating System'
 AD_MISSING_AGENTS_QUERY_NAME = 'AD devices missing agents'
 MANAGED_DEVICES_QUERY_NAME = 'Managed Devices'
 
+HOSTNAME_DC_QUERY = 'specific_data.data.hostname == regex("dc", "i")'
+HOSTNAME_DC_QUERY_NAME = 'DC Devices'
+IPS_192_168_QUERY = 'specific_data.data.network_interfaces.ips == regex("192.168", "i")'
+IPS_192_168_QUERY_NAME = 'IPs Subnet 192.168.0.0'
+
+DEVICES_MODULE = 'Devices'
+USERS_MODULE = 'Users'
+
+OS_SERVICE_PACK_OPTION_NAME = 'OS: Service Pack'
+IS_ADMIN_OPTION_NAME = 'Is Admin'
+IS_LOCAL_OPTION_NAME = 'Is Local'
+USER_NAME_OPTION_NAME = 'User Name'
+AD_PRIMARY_GROUP_ID_OPTION_NAME = 'AD Primary group ID'
+COUNT_OPTION_NAME = 'Count'
+AVERAGE_OPTION_NAME = 'Average'
+OS_TYPE_OPTION_NAME = 'OS: Type'
+NETWORK_IPS_OPTION_NAME = 'IPs'
+NETWORK_MAC_OPTION_NAME = 'MAC'
+TAGS_OPTION_NAME = 'Tags'
+ASSET_NAME_FIELD_NAME = 'Asset Name'
+TAGS_FIELD_NAME = 'Tags'
+
 
 class EmailSettings:
     port = '25'

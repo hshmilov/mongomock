@@ -100,7 +100,7 @@ class ReportsPage(EntitiesPage):
             self.remove_selected_with_safeguard()
 
     def click_select_all_reports(self):
-        self.select_all_current_page_rows_checkbox()
+        self.toggle_select_all_rows_checkbox()
 
     def click_select_report(self, index):
         self.click_row_checkbox(index)

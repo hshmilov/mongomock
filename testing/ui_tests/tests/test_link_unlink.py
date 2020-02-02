@@ -16,7 +16,7 @@ class TestLinkUnlink(TestBase):
         self.devices_page.wait_for_table_to_load()
         assert self.devices_page.count_entities() == 2
 
-        self.devices_page.select_all_current_page_rows_checkbox()
+        self.devices_page.toggle_select_all_rows_checkbox()
         self.devices_page.open_link_dialog()
         wait_until(lambda: 'You are about to link 2 devices.' in self.devices_page.read_delete_dialog())
         self.devices_page.confirm_link()

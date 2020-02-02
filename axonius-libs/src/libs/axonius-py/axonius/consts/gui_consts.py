@@ -183,3 +183,4 @@ UPDATED_BY_FIELD = 'updated_by'
 
 PREDEFINED_FIELD = 'predefined'
 PREDEFINED_PLACEHOLDER = 'Predefined'
+JSONIFY_DEFAULT_TIME_FORMAT = '%a, %d %b %Y %H:%M:%S GMT'

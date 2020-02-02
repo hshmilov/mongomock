@@ -46,7 +46,7 @@ class TestDevicesTable(TestEntitiesTable):
         self.devices_page.switch_to_page()
         self.devices_page.wait_for_table_to_load()
         self.devices_page.run_filter_query(self.devices_page.FILTER_OS_WINDOWS)
-        self.devices_page.select_all_current_page_rows_checkbox()
+        self.devices_page.toggle_select_all_rows_checkbox()
         self.devices_page.click_select_all_entities()
         self.devices_page.add_new_tags([self.ALL_TAG_TEST], self.devices_page.get_table_count())
         assert self.ALL_TAG_TEST in self.devices_page.get_first_row_tags()
@@ -152,7 +152,7 @@ class TestDevicesTable(TestEntitiesTable):
     def _test_remove_all_tags(self):
         self.devices_page.reset_query()
         self.devices_page.wait_for_table_to_load()
-        self.devices_page.select_all_current_page_rows_checkbox()
+        self.devices_page.toggle_select_all_rows_checkbox()
         self.devices_page.click_select_all_entities()
         self.devices_page.remove_all_tags([self.LABEL_A_MAJOR_ISSUE, self.LABEL_CASE_ID,
                                            self.LABEL_OS_SERVICE_PACK_ISSUE, self.LABEL_TAG_BUG])

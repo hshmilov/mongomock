@@ -167,7 +167,7 @@ class TestDevicesTable(TestEntitiesTable):
             self.base_page.run_discovery(wait=True)
             self.devices_page.switch_to_page()
             self.devices_page.wait_for_table_to_load()
-            self.devices_page.select_all_current_page_rows_checkbox()
+            self.devices_page.toggle_select_all_rows_checkbox()
 
             assert self.devices_page.count_entities() > self.devices_page.count_selected_entities()
             self.devices_page.click_select_all_entities()
@@ -224,16 +224,16 @@ class TestDevicesTable(TestEntitiesTable):
                 self.devices_page.wait_for_table_to_load()
                 assert self.devices_page.find_active_page_number() == '1'
                 self.devices_page.select_page_size(20)
-                self.devices_page.select_all_current_page_rows_checkbox()
+                self.devices_page.toggle_select_all_rows_checkbox()
                 self.devices_page.select_page_size(50)
                 assert self.devices_page.count_selected_entities() == 20
-                self.devices_page.select_all_current_page_rows_checkbox()
+                self.devices_page.toggle_select_all_rows_checkbox()
                 assert self.devices_page.verify_no_entities_selected()
-                self.devices_page.select_all_current_page_rows_checkbox()
+                self.devices_page.toggle_select_all_rows_checkbox()
                 assert self.devices_page.count_selected_entities() == 50
                 self.devices_page.select_pagination_index(4)
                 assert self.devices_page.find_active_page_number() == '2'
-                self.devices_page.select_all_current_page_rows_checkbox()
+                self.devices_page.toggle_select_all_rows_checkbox()
                 assert self.devices_page.count_selected_entities() == 100
                 self.devices_page.select_pagination_index(5)
                 assert self.devices_page.find_active_page_number() == '3'
@@ -242,7 +242,7 @@ class TestDevicesTable(TestEntitiesTable):
                 self.devices_page.click_row_checkbox(7)
                 self.devices_page.select_pagination_index(11)
                 self.devices_page.wait_for_spinner_to_end()
-                self.devices_page.select_all_current_page_rows_checkbox()
+                self.devices_page.toggle_select_all_rows_checkbox()
                 assert self.devices_page.count_selected_entities() == 103 + (self.devices_page.count_entities() % 50)
                 self.devices_page.click_select_all_entities()
                 assert self.devices_page.count_selected_entities() == self.devices_page.count_entities()

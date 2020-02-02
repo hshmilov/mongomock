@@ -122,7 +122,7 @@ class DevicesPage(EntitiesPage):
 
     def enforce_action_on_query(self, query, action):
         self.run_filter_query(query)
-        self.select_all_current_page_rows_checkbox()
+        self.toggle_select_all_rows_checkbox()
         self.open_enforce_dialog()
         self.select_option_without_search(
             self.ENFORCEMENT_DIALOG_DROPDOWN_CSS,
@@ -165,7 +165,7 @@ class DevicesPage(EntitiesPage):
         return partial_tag_icon_ele
 
     def remove_all_tags(self, tags):
-        self.select_all_current_page_rows_checkbox()
+        self.toggle_select_all_rows_checkbox()
         self.click_select_all_entities()
         self.open_tag_dialog()
         for tag in tags:
@@ -232,7 +232,7 @@ class DevicesPage(EntitiesPage):
         if query_filter:
             self.click_row_checkbox()
         else:
-            self.select_all_current_page_rows_checkbox()
+            self.toggle_select_all_rows_checkbox()
             self.click_select_all_entities()
         self.open_delete_dialog()
         wait_until(lambda: re.match(self.DELETE_DIALOG_TEXT_REGEX, self.read_delete_dialog()) is not None)
