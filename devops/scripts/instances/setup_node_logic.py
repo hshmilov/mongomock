@@ -10,7 +10,7 @@ from scripts.instances.instances_consts import (ADAPTER_RESTART_COMMAND,
                                                 BOOTED_FOR_PRODUCTION_MARKER_PATH,
                                                 CORTEX_PATH)
 from services.axonius_service import get_service
-from axonius.consts.system_consts import NODE_MARKER_PATH
+from axonius.consts.system_consts import NODE_MARKER_PATH, DOCKERHUB_URL
 
 
 def shut_down_system():
@@ -59,7 +59,7 @@ def get_db_pass_from_core() -> str:
     try:
         my_env = os.environ.copy()
         my_env['DOCKER_HOST'] = 'unix:///var/run/weave/weave.sock'
-        command = f'docker run --rm appropriate/curl -kfsSL {DB_PASSWORD_GET_URL}'
+        command = f'docker run --rm {DOCKERHUB_URL}appropriate/curl -kfsSL {DB_PASSWORD_GET_URL}'
         password = subprocess.check_output(shlex.split(command), env=my_env).decode('ascii')
         if not password:
             print("Error getting db pass")

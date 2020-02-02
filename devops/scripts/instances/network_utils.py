@@ -4,7 +4,7 @@ import string
 import subprocess
 import shlex
 
-from axonius.consts.system_consts import NODE_MARKER_PATH, DB_KEY_PATH
+from axonius.consts.system_consts import NODE_MARKER_PATH, DB_KEY_PATH, DOCKERHUB_URL
 from conf_tools import get_customer_conf_json
 from scripts.instances.instances_consts import (MASTER_ADDR_HOST_PATH,
                                                 ENCRYPTION_KEY_HOST_PATH,
@@ -45,7 +45,7 @@ def run_tunnler():
     host_ip = host_ip[len('--dns='):]
     container_name = 'tunnler'
     command = shlex.split(
-        f'docker run -d --restart=always --name {container_name} alpine/socat ' +
+        f'docker run -d --restart=always --name {container_name} {DOCKERHUB_URL}alpine/socat ' +
         f'tcp-listen:9958,reuseaddr,fork,forever tcp:{host_ip}:22')
 
     my_env = os.environ.copy()
@@ -63,7 +63,7 @@ def run_proxy_socat():
     command = shlex.split(
         f'docker run -d --restart=always '
         f'--publish 127.0.0.1:{proxy_port}:{proxy_port} '
-        f'--name {container_name} alpine/socat '
+        f'--name {container_name} {DOCKERHUB_URL}alpine/socat '
         f'tcp-listen:{proxy_port},reuseaddr,fork,forever tcp:{proxy_dns}:{proxy_port}')
 
     my_env = os.environ.copy()

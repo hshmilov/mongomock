@@ -145,7 +145,7 @@ def build_images(pull=False, rebuild=False, exclude=None, prod=True):
     axonius_system = get_service()
     axonius_system.take_process_ownership()
     images = []
-    base_image = 'axonius/axonius-base-image'
+    base_image = 'nexus.axonius.lan/axonius/axonius-base-image'
     if not pull:
         base_image_exists = base_image in subprocess.check_output(['docker', 'images', base_image]).decode('utf-8')
         if not base_image_exists:

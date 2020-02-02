@@ -14,7 +14,7 @@ from axonius.consts.plugin_consts import (CONFIGURABLE_CONFIGS_COLLECTION,
                                           PLUGIN_UNIQUE_NAME, SYSTEM_SETTINGS)
 from axonius.consts.system_consts import (AXONIUS_DNS_SUFFIX, AXONIUS_NETWORK,
                                           NODE_MARKER_PATH, WEAVE_NETWORK,
-                                          WEAVE_PATH, DOCKERHUB_USER, WEAVE_VERSION)
+                                          WEAVE_PATH, DOCKERHUB_USER, WEAVE_VERSION, DOCKERHUB_URL)
 from axonius.devices.device_adapter import NETWORK_INTERFACES_FIELD
 from axonius.plugin_base import EntityType
 from scripts.instances.network_utils import (get_encryption_key,
@@ -588,16 +588,17 @@ class AxoniusService:
         return weave_images
 
     def pull_curl_image(self, repull=False, show_print=True):
-        curl_image = 'appropriate/curl'
+
+        curl_image = f'{DOCKERHUB_URL}appropriate/curl'
         return self._pull_image(curl_image, repull, show_print)
 
     def pull_tunnler(self, repull=False, show_print=True):
         # Tunnler is a tunnel to host:22 for ssh and scp from master to nodes.
-        tunnler_image = 'alpine/socat'
+        tunnler_image = f'{DOCKERHUB_URL}alpine/socat'
         return self._pull_image(tunnler_image, repull, show_print)
 
     def pull_base_image(self, repull=False, show_print=True):
-        base_image = 'axonius/axonius-base-image'
+        base_image = f'{DOCKERHUB_URL}axonius/axonius-base-image'
         return self._pull_image(base_image, repull, show_print)
 
     def build_libs(self, rebuild=False, show_print=True):
