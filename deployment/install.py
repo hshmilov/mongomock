@@ -57,6 +57,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--first-time', action='store_true', default=False, help='First Time install')
     parser.add_argument('--root-pass', action='store_true', default='', help='Sudo password')
+    parser.add_argument('--no-research', action='store_true', default=False, help='Sudo password')
 
     try:
         args = parser.parse_args()
@@ -66,12 +67,13 @@ def main():
 
     start = time.time()
     root_pass = args.root_pass
+    no_research = args.no_research
 
     if root_pass == '' and os.geteuid() != 0:
         # we are not root, and don't have root password :(
         root_pass = getpass.getpass('sudo password: ')
 
-    install(args.first_time, root_pass)
+    install(args.first_time, root_pass, no_research)
     print_state(f'Done, took {int(time.time() - start)} seconds')
 
 
@@ -186,7 +188,7 @@ def save_master_ip():
         print(f'master ip was present at {master_key_path}')
 
 
-def install(first_time, root_pass):
+def install(first_time, root_pass, no_research):
     if not first_time:
         validate_old_state(root_pass)
         save_master_ip()  # before we destroy weave net - backup the master ip. can remove after 2.5
@@ -204,7 +206,7 @@ def install(first_time, root_pass):
     # from this line on - we can use venv!
 
     from deployment.with_venv_install import after_venv_activation
-    after_venv_activation(first_time, root_pass)
+    after_venv_activation(first_time, root_pass, no_research)
 
 
 if __name__ == '__main__':

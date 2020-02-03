@@ -181,6 +181,7 @@ DOCKER_PORTS = {
     'heavy-lifting':                    6688,
     'instance-control':                 6689,
     'master-proxy':                     8888,  # reserved
+    'httpd-service':                    8889,  # reserved
     'ivanti-sm-adapter':                9940,
     'bitlocker-adapter':                9957,
     'ssh-socat':                        9958,

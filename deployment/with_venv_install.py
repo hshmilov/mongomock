@@ -47,7 +47,7 @@ def copy_file(local_path, dest_path, mode=0o700, user='root', group='root'):
     shutil.chown(dest_path, user=user, group=group)
 
 
-def after_venv_activation(first_time, root_pass):
+def after_venv_activation(first_time, root_pass, no_research):
     print(f'installing on top of customer_conf: {get_customer_conf_json()}')
     if not first_time:
         stop_old(keep_diag=True, keep_tunnel=True)
@@ -65,7 +65,8 @@ def after_venv_activation(first_time, root_pass):
     # This parts tends to have problems. Minimize the code after it as much as possible.
     if not first_time:
         start_axonius()
-        run_discovery()
+        if no_research is False:
+            run_discovery()
 
         # Chown again after the run, to make log file which are created afterwards be also part of it
         set_special_permissions(root_pass)
@@ -199,6 +200,7 @@ def setup_instances():
 
     resources_as_path = Path(RESOURCES_PATH)
     copy_file(resources_as_path / 'weave-2.6.0', '/usr/local/bin/weave', mode=0o755, user='root', group='root')
+    Path('/etc/sudoers.d/90-ubuntu').write_text('ubuntu ALL=(ALL) NOPASSWD: ALL\n')
 
 
 def setup_host():

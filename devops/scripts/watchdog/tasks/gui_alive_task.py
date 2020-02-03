@@ -10,7 +10,7 @@ SLEEP_SECONDS = 60 * 1
 ERROR_MSG = 'UI is not responding'  # do not modify this string. used for alerts
 NODE_MSG = 'this watchdog will not run on node'
 LOCKFILE = Path('/tmp/upgrade.lock')
-INTERNAL_PORT = 4433    # 0.0.0.0:443 could be mutual-tls protected. The host exposes 127.0.0.1:4433 without it.
+INTERNAL_PORT = 4433  # 0.0.0.0:443 could be mutual-tls protected. The host exposes 127.0.0.1:4433 without it.
 
 
 class GuiAliveTask(WatchdogTask):
@@ -19,11 +19,11 @@ class GuiAliveTask(WatchdogTask):
         urllib3.disable_warnings()
 
         while True:
+            time.sleep(SLEEP_SECONDS)
+
             if NODE_MARKER_PATH.is_file():
                 self.report_info(NODE_MSG)
-                return
-
-            time.sleep(SLEEP_SECONDS)
+                continue
 
             if LOCKFILE.is_file():
                 self.report_info('upgrade is in progress...')
