@@ -19,12 +19,12 @@ class RemedyTicketAction(ActionTypeAlert):
             'items': [
                 {
                     'name': 'domain',
-                    'title': 'BMC Helix Remedy Domain',
+                    'title': 'BMC Helix Remedy domain',
                     'type': 'string'
                 },
                 {
                     'name': 'username',
-                    'title': 'User Name',
+                    'title': 'User name',
                     'type': 'string'
                 },
                 {
@@ -40,23 +40,23 @@ class RemedyTicketAction(ActionTypeAlert):
                 },
                 {
                     'name': 'https_proxy',
-                    'title': 'HTTPS Proxy',
+                    'title': 'HTTPS proxy',
                     'type': 'string'
                 },
                 {
                     'name': 'form_name',
-                    'title': 'Form Name',
+                    'title': 'Form name',
                     'type': 'string'
                 },
                 {
                     'name': 'ticket_description',
-                    'title': 'Ticket Description',
+                    'title': 'Ticket description',
                     'type': 'string',
                     'format': 'text'
                 },
                 {
                     'name': 'description_default',
-                    'title': 'Add Ticket Description Default',
+                    'title': 'Add default ticket description',
                     'type': 'bool'
                 },
                 {

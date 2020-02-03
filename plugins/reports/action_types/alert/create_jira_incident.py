@@ -22,12 +22,12 @@ class JiraIncidentAction(ActionTypeAlert):
             'items': [
                 {
                     'name': 'project_key',
-                    'title': 'Project Key',
+                    'title': 'Project key',
                     'type': 'string'
                 },
                 {
                     'name': 'issue_type',
-                    'title': 'Issue Type',
+                    'title': 'Issue type',
                     'type': 'string',
                 },
                 {
@@ -40,6 +40,11 @@ class JiraIncidentAction(ActionTypeAlert):
                     'title': 'Description',
                     'type': 'string',
                     'format': 'text'
+                },
+                {
+                    'name': 'description_default',
+                    'title': 'Add default incident description',
+                    'type': 'bool'
                 },
                 {
                     'name': 'assignee',
@@ -57,15 +62,10 @@ class JiraIncidentAction(ActionTypeAlert):
                     'type': 'string'
                 },
                 {
-                    'name': 'description_default',
-                    'title': 'Add Incident Description Default',
-                    'type': 'bool'
-                },
-                {
                     'name': 'send_csv_data',
-                    'title': 'Send CSV Data',
+                    'title': 'Send CSV data',
                     'type': 'bool'
-                },
+                }
             ],
             'required': [
                 'description_default',

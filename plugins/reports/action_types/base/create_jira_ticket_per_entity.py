@@ -26,12 +26,12 @@ class JiraIncidentPerEntityAction(ActionTypeBase):
             'items': [
                 {
                     'name': 'project_key',
-                    'title': 'Project Key',
+                    'title': 'Project key',
                     'type': 'string'
                 },
                 {
                     'name': 'issue_type',
-                    'title': 'Issue Type',
+                    'title': 'Issue type',
                     'type': 'string',
                 },
                 {
@@ -44,6 +44,11 @@ class JiraIncidentPerEntityAction(ActionTypeBase):
                     'title': 'Description',
                     'type': 'string',
                     'format': 'text'
+                },
+                {
+                    'name': 'add_full_device_content',
+                    'title': 'Add full device content',
+                    'type': 'bool'
                 },
                 {
                     'name': 'assignee',
@@ -59,11 +64,6 @@ class JiraIncidentPerEntityAction(ActionTypeBase):
                     'name': 'components',
                     'title': 'Components',
                     'type': 'string'
-                },
-                {
-                    'name': 'add_full_device_content',
-                    'title': 'Add Full Device Content',
-                    'type': 'bool'
                 }
             ],
             'required': [

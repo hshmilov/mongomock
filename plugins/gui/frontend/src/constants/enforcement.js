@@ -105,7 +105,7 @@ export const actionsMeta = {
         title: 'Create Jira Issue'
     },
     jira_incident_per_entity_action: {
-        title: 'Create Jira Issue Per Entity'
+        title: 'Create Jira Issue per Entity'
     },
     create_sysaid_incident: {
         title: 'Create SysAid Incident'

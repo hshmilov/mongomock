@@ -16,15 +16,15 @@ class QualysCreateAsset(ActionTypeBase):
     def config_schema() -> dict:
         schema = {
             'items': [
-                {'name': consts.QUALYS_SCANS_DOMAIN, 'title': 'Qualys Scanner Domain', 'type': 'string'},
-                {'name': consts.USERNAME, 'title': 'User Name', 'type': 'string'},
+                {'name': consts.QUALYS_SCANS_DOMAIN, 'title': 'Qualys Cloud Platform domain', 'type': 'string'},
+                {'name': consts.USERNAME, 'title': 'User name', 'type': 'string'},
                 {'name': consts.PASSWORD, 'title': 'Password', 'type': 'string', 'format': 'password'},
                 {'name': consts.VERIFY_SSL, 'title': 'Verify SSL', 'type': 'bool'},
-                {'name': consts.HTTPS_PROXY, 'title': 'HTTPS Proxy', 'type': 'string'},
-                {'name': 'create_group', 'title': 'Create Asset Group', 'type': 'bool'},
-                {'name': 'group_name', 'title': 'Group Name', 'type': 'string'},
-                {'name': 'use_private_ips', 'title': 'Use Private IPs', 'type': 'bool'},
-                {'name': 'use_public_ips', 'title': 'Use Public IPs', 'type': 'bool'},
+                {'name': consts.HTTPS_PROXY, 'title': 'HTTPS proxy', 'type': 'string'},
+                {'name': 'create_group', 'title': 'Create asset group', 'type': 'bool'},
+                {'name': 'group_name', 'title': 'Group name', 'type': 'string'},
+                {'name': 'use_private_ips', 'title': 'Use private IPs', 'type': 'bool'},
+                {'name': 'use_public_ips', 'title': 'Use public IPs', 'type': 'bool'},
                 {'name': 'cidr_exclude_list', 'type': 'string', 'title': 'CIDRs exclude list'},
             ],
             'required': [consts.QUALYS_SCANS_DOMAIN,

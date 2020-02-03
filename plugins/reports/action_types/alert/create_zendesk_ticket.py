@@ -19,12 +19,12 @@ class ZendeskTicketAction(ActionTypeAlert):
             'items': [
                 {
                     'name': 'domain',
-                    'title': 'Zendesk Domain',
+                    'title': 'Zendesk domain',
                     'type': 'string'
                 },
                 {
                     'name': 'username',
-                    'title': 'User Name Email',
+                    'title': 'User name email',
                     'type': 'string'
                 },
                 {
@@ -40,23 +40,23 @@ class ZendeskTicketAction(ActionTypeAlert):
                 },
                 {
                     'name': 'https_proxy',
-                    'title': 'HTTPS Proxy',
+                    'title': 'HTTPS proxy',
                     'type': 'string'
                 },
                 {
                     'name': 'ticket_subject',
-                    'title': 'Ticket Subject',
+                    'title': 'Ticket subject',
                     'type': 'string'
                 },
                 {
                     'name': 'ticket_body',
-                    'title': 'Ticket Body',
+                    'title': 'Ticket body',
                     'type': 'string',
                     'format': 'text'
                 },
                 {
                     'name': 'description_default',
-                    'title': 'Add Incident Description Default',
+                    'title': 'Add default incident description',
                     'type': 'bool'
                 },
                 {

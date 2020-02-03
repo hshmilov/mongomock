@@ -26,12 +26,12 @@ class FreshServiceIncidentAction(ActionTypeAlert):
             'items': [
                 {
                     'name': 'domain',
-                    'title': 'Freshservice Domain',
+                    'title': 'Freshservice domain',
                     'type': 'string'
                 },
                 {
                     'name': 'apikey',
-                    'title': 'API Key',
+                    'title': 'API key',
                     'type': 'string',
                     'format': 'password'
                 },
@@ -42,7 +42,7 @@ class FreshServiceIncidentAction(ActionTypeAlert):
                 },
                 {
                     'name': 'https_proxy',
-                    'title': 'HTTPS Proxy',
+                    'title': 'HTTPS proxy',
                     'type': 'string'
                 },
                 {
@@ -52,18 +52,18 @@ class FreshServiceIncidentAction(ActionTypeAlert):
                 },
                 {
                     'name': 'incident_description',
-                    'title': 'Ticket Description',
+                    'title': 'Ticket description',
                     'type': 'string',
                     'format': 'text'
                 },
                 {
                     'name': 'description_default',
-                    'title': 'Add Ticket Description Default',
+                    'title': 'Add default ticket description',
                     'type': 'bool'
                 },
                 {
                     'name': 'ticket_email',
-                    'title': 'Ticket Requester Email',
+                    'title': 'Ticket requester email',
                     'type': 'string'
                 },
                 {

@@ -19,17 +19,17 @@ class ServiceNowIncidentAction(ActionTypeAlert):
             'items': [
                 {
                     'name': 'use_adapter',
-                    'title': 'Use ServiceNow Adapter',
+                    'title': 'Use ServiceNow adapter',
                     'type': 'bool'
                 },
                 {
                     'name': 'domain',
-                    'title': 'ServiceNow Domain',
+                    'title': 'ServiceNow domain',
                     'type': 'string'
                 },
                 {
                     'name': 'username',
-                    'title': 'User Name',
+                    'title': 'User name',
                     'type': 'string'
                 },
                 {
@@ -45,36 +45,36 @@ class ServiceNowIncidentAction(ActionTypeAlert):
                 },
                 {
                     'name': 'https_proxy',
-                    'title': 'HTTPS Proxy',
+                    'title': 'HTTPS proxy',
                     'type': 'string'
                 },
                 {
                     'name': 'incident_title',
-                    'title': 'Incident Short Description',
+                    'title': 'Incident short description',
                     'type': 'string'
                 },
                 {
                     'name': 'add_link_to_title',
                     'type': 'bool',
-                    'title': 'Add Query Name to Incident Short Description'
-                },
-                {
-                    'name': 'severity',
-                    'title': 'Message Severity',
-                    'type': 'string',
-                    'enum': [
-                        'info', 'warning', 'error'
-                    ]
+                    'title': 'Add Saved Query name to incident short description'
                 },
                 {
                     'name': 'incident_description',
-                    'title': 'Incident Description',
+                    'title': 'Incident description',
                     'type': 'string'
                 },
                 {
                     'name': 'description_default',
-                    'title': 'Add Incident Description Default',
+                    'title': 'Add default incident description',
                     'type': 'bool'
+                },
+                {
+                    'name': 'severity',
+                    'title': 'Message severity',
+                    'type': 'string',
+                    'enum': [
+                        'info', 'warning', 'error'
+                    ]
                 },
                 {
                     'name': 'u_incident_type',
@@ -98,7 +98,7 @@ class ServiceNowIncidentAction(ActionTypeAlert):
                 },
                 {
                     'name': 'assignment_group',
-                    'title': 'Assignment Group',
+                    'title': 'Assignment group',
                     'type': 'string'
                 },
                 {
@@ -113,9 +113,10 @@ class ServiceNowIncidentAction(ActionTypeAlert):
                 }
             ],
             'required': [
-                'use_adapter'
+                'use_adapter',
                 'description_default',
                 'incident_description',
+                'description_default',
                 'severity',
                 'incident_title',
                 'add_link_to_title'

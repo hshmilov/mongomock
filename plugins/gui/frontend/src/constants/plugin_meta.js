@@ -367,6 +367,7 @@ export const pluginMeta = {
     },
     wsus_adapter: {
         title: 'Windows Server Update Services (WSUS)',
+        link: 'https://docs.axonius.com/docs/windows-server-update-services-wsus',
         description: 'Windows Server Update Services (WSUS), previously Software Update Services (SUS), enables administrators to manage the distribution of updates and hotfixes released for Microsoft products.'
     },
     alertlogic_adapter: {
@@ -404,8 +405,8 @@ export const pluginMeta = {
         link: '',
         description: 'Spacewalk is an open-source systems management solution for system provisioning, patching and configuration.'},
     unifi_adapter: {
-        title: 'Ubiquti UniFi Network Controller',
-        link: '',
+        title: 'Ubiquiti Networks UniFi Controller',
+        link: 'https://docs.axonius.com/docs/ubiquiti-networks-unifi-controller',
         description: 'The UniFi Controller is a wireless network management software solution for managing multiple wireless networks using a web browser.'
     },
     webroot_adapter: {
@@ -425,7 +426,7 @@ export const pluginMeta = {
     },
     symantec_ee_adapter: {
         title: 'Symantec Endpoint Encryption',
-        link: '',
+        link: 'https://docs.axonius.com/docs/symantec-endpoint-encryption',
         description: 'Symantec Endpoint Encryption combines full-disk and removable media encryption with centralized management to protect sensitive information and ensure regulatory compliance.'
     },
     promisec_adapter: {

@@ -222,7 +222,7 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
         """
         return {
             'items': [
-                {'name': consts.QUALYS_SCANS_DOMAIN, 'title': 'Qualys Scanner Domain', 'type': 'string'},
+                {'name': consts.QUALYS_SCANS_DOMAIN, 'title': 'Qualys Cloud Platform Domain', 'type': 'string'},
                 {'name': consts.USERNAME, 'title': 'User Name', 'type': 'string'},
                 {'name': consts.PASSWORD, 'title': 'Password', 'type': 'string', 'format': 'password'},
                 {'name': consts.VERIFY_SSL, 'title': 'Verify SSL', 'type': 'bool'},

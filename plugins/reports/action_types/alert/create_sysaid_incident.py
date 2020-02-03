@@ -18,29 +18,18 @@ class SysaidIncidentAction(ActionTypeAlert):
         return {
             'items': [
                 {
-                    'name': 'incident_description',
-                    'title': 'Incident Description',
-                    'type': 'string',
-                    'format': 'text'
-                },
-                {
-                    'name': 'description_default',
-                    'title': 'Add Incident Description Default',
-                    'type': 'bool'
-                },
-                {
                     'name': 'use_adapter',
-                    'title': 'Use Sysaid Adapter',
+                    'title': 'Use Sysaid adapter',
                     'type': 'bool'
                 },
                 {
                     'name': 'domain',
-                    'title': 'Sysaid Domain',
+                    'title': 'Sysaid domain',
                     'type': 'string'
                 },
                 {
                     'name': 'username',
-                    'title': 'User Name',
+                    'title': 'User name',
                     'type': 'string'
                 },
                 {
@@ -56,13 +45,25 @@ class SysaidIncidentAction(ActionTypeAlert):
                 },
                 {
                     'name': 'https_proxy',
-                    'title': 'HTTPS Proxy',
+                    'title': 'HTTPS proxy',
                     'type': 'string'
-                }
+                },
+                {
+                    'name': 'incident_description',
+                    'title': 'Incident description',
+                    'type': 'string',
+                    'format': 'text'
+                },
+                {
+                    'name': 'description_default',
+                    'title': 'Add default incident description',
+                    'type': 'bool'
+                },
 
             ],
             'required': [
                 'use_adapter',
+                'verify_ssl',
                 'description_default',
                 'incident_description',
             ],

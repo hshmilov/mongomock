@@ -23,17 +23,17 @@ class ServiceNowIncidentPerEntity(ActionTypeBase):
             'items': [
                 {
                     'name': 'use_adapter',
-                    'title': 'Use ServiceNow Adapter',
+                    'title': 'Use ServiceNow adapter',
                     'type': 'bool'
                 },
                 {
                     'name': 'domain',
-                    'title': 'ServiceNow Domain',
+                    'title': 'ServiceNow domain',
                     'type': 'string'
                 },
                 {
                     'name': 'username',
-                    'title': 'User Name',
+                    'title': 'User name',
                     'type': 'string'
                 },
                 {
@@ -54,12 +54,12 @@ class ServiceNowIncidentPerEntity(ActionTypeBase):
                 },
                 {
                     'name': 'incident_title',
-                    'title': 'Incident Short Description',
+                    'title': 'Incident short description',
                     'type': 'string'
                 },
                 {
                     'name': 'severity',
-                    'title': 'Message Severity',
+                    'title': 'Message severity',
                     'type': 'string',
                     'enum': [
                         'info', 'warning', 'error'
@@ -68,7 +68,7 @@ class ServiceNowIncidentPerEntity(ActionTypeBase):
                 {
                     'name': 'u_incident_type',
                     'type': 'string',
-                    'title': 'Incident Type'
+                    'title': 'Incident type'
                 },
                 {
                     'name': 'caller_id',
@@ -82,7 +82,7 @@ class ServiceNowIncidentPerEntity(ActionTypeBase):
                 },
                 {
                     'name': 'cmdb_ci',
-                    'title': 'Configuration Item',
+                    'title': 'Configuration item',
                     'type': 'string'
                 },
                 {
@@ -92,7 +92,7 @@ class ServiceNowIncidentPerEntity(ActionTypeBase):
                 },
                 {
                     'name': 'assignment_group',
-                    'title': 'Assignment Group',
+                    'title': 'Assignment group',
                     'type': 'string'
                 },
                 {
@@ -107,7 +107,7 @@ class ServiceNowIncidentPerEntity(ActionTypeBase):
                 }
             ],
             'required': [
-                'use_adapter'
+                'use_adapter',
                 'severity',
                 'incident_title',
                 'verify_ssl'
