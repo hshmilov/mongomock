@@ -45,14 +45,29 @@ class TaniumConnection(RESTConnection):
                                   'User-Agent': 'axonius/tanium_adapter'},
                          **kwargs)
 
-    def advanced_connect(self, asset_dvc, fetch_discovery, sq_name):
+    def advanced_connect(self, fetch_system_status, asset_dvc, fetch_discovery, sq_name):
+        # since new config item, default could be None for old cnx
+        # treat None as True to keep behavior the same
+        do_fetch_system_status = fetch_system_status in [True, None]
+
+        if not any([do_fetch_system_status, asset_dvc, fetch_discovery, sq_name]):
+            msg = (
+                f'Must select at least one fetch option Saved Question: {sq_name!r}, Discover {fetch_discovery!r}, '
+                f'Asset Report {asset_dvc!r}, System Status {fetch_system_status!r}'
+            )
+            raise RESTException(msg)
+
         # TEST USER HAS PERMISSIONS TO GET system_status
-        options = {'row_count': 1, 'row_start': 0}
-        self._tanium_get('system_status', options=options)
+        if do_fetch_system_status:
+            options = {'row_count': 1, 'row_start': 0}
+            self._tanium_get('system_status', options=options)
 
         # TEST SAVED QUESTION EXISTS AND USER HAS PERMISSIONS
         if sq_name:
-            self._get_saved_question(name=sq_name)
+            split_sq_names = [x.strip() for x in sq_name.split(',')]
+
+            for split_sq_name in split_sq_names:
+                self._get_saved_question(name=split_sq_name)
 
         # TEST DISCOVER MODULE EXISTS AND USER HAS PERMISSIONS
         if fetch_discovery:
@@ -68,12 +83,12 @@ class TaniumConnection(RESTConnection):
         selects = question.get('selects', [])
         sensor_names = [x.get('sensor', {}).get('name') for x in selects]
         if 'Computer ID' not in sensor_names:
-            raise RESTException('No sensor named “Computer ID” found in Saved Question')
+            raise RESTException(f'No sensor named “Computer ID” found in Saved Question {name!r}')
         if not any([x in STRONG_SENSORS for x in sensor_names]):
             found_sensors = ', '.join(sensor_names)
             strong_sensors = ', '.join(STRONG_SENSORS)
             msg = (
-                f'No strong identifier sensor found. Found sensors: {found_sensors}, '
+                f'No strong identifier sensor found for Saved Question {name!r}. Found sensors: {found_sensors}, '
                 f'strong identifier sensors: {strong_sensors}'
             )
             raise RESTException(msg)
@@ -192,35 +207,56 @@ class TaniumConnection(RESTConnection):
             raise RESTException(f'Bad response with no data for endpoint {endpoint}')
         return response['data']
 
-    # pylint: disable=arguments-differ
+    # pylint: disable=arguments-differ, too-many-branches
     def get_device_list(
             self,
             asset_dvc=None,
             fetch_discovery=False,
+            fetch_system_status=True,
             sq_name=None,
             sq_refresh=False,
             sq_max_hours=0,
-            client_name=None):
-        metadata = {'server_name': client_name, 'server_version': self._get_version()}
+            client_name=None,
+            domain=None):
+        metadata = {
+            'server_name': domain,
+            'client_name': client_name,
+            'server_version': self._get_version()
+        }
 
-        for device_raw in self._get_endpoints():
-            yield device_raw, metadata, ENDPOINT_TYPE
+        try:
+            metadata['workbenches'] = self._get(f'nocache/config/workbenches.json')
+        except Exception:
+            logger.exception(f'Problem fetching workbenches.json')
+            metadata['workbenches'] = {}
+
+        do_fetch_system_status = fetch_system_status in [True, None]
+
+        if do_fetch_system_status:
+            for device_raw in self._get_endpoints():
+                yield device_raw, metadata, ENDPOINT_TYPE
+
         if fetch_discovery:
             try:
                 for device_raw in self._get_discover_assets():
                     yield device_raw, metadata, DISCOVERY_TYPE
             except Exception:
                 logger.exception(f'Problem fetching Discover Module assets')
+
         if sq_name:
-            try:
-                for device_raw in self._get_sq_results(name=sq_name,
-                                                       refresh=sq_refresh,
-                                                       max_hours=sq_max_hours):
-                    device_raw, sq_query_text = device_raw
-                    data_to_yield = device_raw, sq_name, sq_query_text
-                    yield data_to_yield, metadata, SQ_TYPE
-            except Exception:
-                logger.exception(f'Problem fetching Saved Question assets')
+            split_sq_names = [x.strip() for x in sq_name.split(',')]
+
+            for split_sq_name in split_sq_names:
+                try:
+                    for device_raw in self._get_sq_results(name=split_sq_name,
+                                                           refresh=sq_refresh,
+                                                           max_hours=sq_max_hours):
+                        device_raw, sq_query_text = device_raw
+                        data_to_yield = device_raw, split_sq_name, sq_query_text
+                        yield data_to_yield, metadata, SQ_TYPE
+                except Exception:
+                    logger.exception(f'Problem fetching Saved Question assets for {split_sq_name}')
+
         if asset_dvc:
             try:
                 for device_raw in self._get_asset_report_assets(report_name=asset_dvc):

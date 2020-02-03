@@ -58,6 +58,7 @@ def calc_ghz(num):
         return None
 
 
+# pylint: disable=too-many-branches
 def map_tanium_sq_value_type(value, value_type: str):
     """Value type mappings from tanium.
 
@@ -77,8 +78,18 @@ def map_tanium_sq_value_type(value, value_type: str):
     RegexMatch         str (?)
     LastOperatorType   str (?)
     """
-    if not isinstance(value, (tuple, list, str)) or value in [[], None, '']:
-        return None
+    def check_value(checkv):
+        if checkv is None or checkv == '' or '[no results]' in checkv:
+            return False
+        return True
+
+    if isinstance(value, (tuple, list)):
+        value = [x for x in value if check_value(x)]
+        if not value:
+            return None, {}
+    else:
+        if not check_value(value):
+            return None, {}
 
     field_args = {
         'field_type': str,
@@ -108,7 +119,7 @@ def map_tanium_sq_value_type(value, value_type: str):
         else:
             value = parse_date(value)
         field_args['field_type'] = datetime.datetime
-    elif value_type == 'IPAddress':
+    elif value_type == 'IPAddress' and ':' not in value:
         field_args['converter'] = format_ip
         field_args['json_format'] = JsonStringFormat.ip
     return value, field_args
@@ -161,6 +172,8 @@ def put_tanium_sq_dynamic_field(entity: SmartJsonClass, name: str, value_map: di
             except Exception:
                 logger.exception(f'Failed to map value {value} with type {value_type}')
                 return
+            if value in [None, []]:
+                return
             field_value = field_type(title=title, **field_args)
             entity.declare_new_field(field_name=key, field_value=field_value)
 
@@ -196,13 +209,30 @@ class TaniumAdapter(AdapterBase):
         asset_report_category = Field(str, 'Asset Report Category')
         asset_report_created_at = Field(datetime.datetime, 'Asset Report Created At')
         asset_report_updated_at = Field(datetime.datetime, 'Asset Report Updated At')
+        module_version = Field(str, 'Module Version', json_format=JsonStringFormat.version)
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
 
     @staticmethod
     def _get_client_id(client_config):
-        return client_config['domain']
+        # add all of the elements of the cnx to the client id to ensure uniqueness
+        domain = client_config['domain']
+        username = client_config['username']
+        fetch_system_status = client_config.get('fetch_system_status', True)
+        fetch_discovery = (client_config.get('fetch_discovery') or False)
+        asset_dvc = client_config.get('asset_dvc')
+        sq_name = client_config.get('sq_name')
+
+        client_id = [
+            f'{domain}',
+            f'{username}',
+            f'status-{fetch_system_status}',
+            f'asset-{asset_dvc}',
+            f'disco-{fetch_discovery}',
+            f'sq-{sq_name}',
+        ]
+        return '_'.join(client_id)
 
     @staticmethod
     def _test_reachability(client_config):
@@ -221,6 +251,7 @@ class TaniumAdapter(AdapterBase):
         with connection:
             connection.advanced_connect(
                 sq_name=client_config.get('sq_name'),
+                fetch_system_status=client_config.get('fetch_system_status', True),
                 fetch_discovery=(client_config.get('fetch_discovery') or False),
                 asset_dvc=client_config.get('asset_dvc'),
             )
@@ -247,18 +278,23 @@ class TaniumAdapter(AdapterBase):
         """
         connection, client_config = client_data
         fetch_discovery = (client_config.get('fetch_discovery') or False)
+        fetch_system_status = client_config.get('fetch_system_status', True)
         asset_dvc = client_config.get('asset_dvc')
         sq_name = client_config.get('sq_name')
         sq_max_hours = (client_config.get('sq_max_hours') or 0)
         sq_refresh = (client_config.get('sq_refresh') or False)
+        domain = client_config['domain']
+
         with connection:
             yield from connection.get_device_list(
+                fetch_system_status=fetch_system_status,
                 fetch_discovery=fetch_discovery,
                 asset_dvc=asset_dvc,
                 sq_name=sq_name,
                 sq_max_hours=sq_max_hours,
                 sq_refresh=sq_refresh,
                 client_name=client_name,
+                domain=domain,
             )
 
     @staticmethod
@@ -287,6 +323,11 @@ class TaniumAdapter(AdapterBase):
                     'format': 'password'
                 },
                 {
+                    'name': 'fetch_system_status',
+                    'type': 'bool',
+                    'title': 'Fetch devices from Tanium System Status',
+                },
+                {
                     'name': 'fetch_discovery',
                     'type': 'bool',
                     'title': 'Fetch devices from Tanium Discover Module'
@@ -299,7 +340,7 @@ class TaniumAdapter(AdapterBase):
                 {
                     'name': 'sq_name',
                     'type': 'string',
-                    'title': 'Saved Question Name'
+                    'title': 'Saved Question Names (comma seperated)'
                 },
                 {
                     'name': 'sq_refresh',
@@ -329,6 +370,7 @@ class TaniumAdapter(AdapterBase):
                 'sq_refresh',
                 'verify_ssl',
                 'fetch_discovery',
+                'fetch_system_status',
             ],
             'type': 'array'
         }
@@ -364,10 +406,17 @@ class TaniumAdapter(AdapterBase):
     # pylint: disable=too-many-branches, too-many-statements, too-many-nested-blocks
     def _create_discovery_device(self, device_raw, metadata):
         try:
+            module_version = metadata.get('workbenches', {}).get('discover', {}).get('version')
+        except Exception:
+            logger.exception(f'Problem parsing discover module version from metadata {metadata}')
+            module_version = None
+
+        try:
             device = self._new_device_adapter()
             device.server_name = metadata['server_name']
             device.server_version = metadata['server_version']
             device.tanium_type = DISCOVERY_TYPE
+            device.module_version = module_version
             is_managed = device_raw.get('ismanaged') == 1
             if not is_managed:
                 device.adapter_properties = [AdapterProperty.Network]
@@ -427,6 +476,12 @@ class TaniumAdapter(AdapterBase):
     # pylint: disable=too-many-branches,too-many-locals
     def _create_asset_device(self, device_raw, metadata):
         try:
+            module_version = metadata.get('workbenches', {}).get('asset', {}).get('version')
+        except Exception:
+            logger.exception(f'Problem parsing asset module version from metadata {metadata}')
+            module_version = None
+
+        try:
             device_raw, report_meta = device_raw
             report_info = report_meta.get('data', {}).get('report', {})
             device = self._new_device_adapter()
@@ -441,8 +496,10 @@ class TaniumAdapter(AdapterBase):
             if not computer_id:
                 device.adapter_properties = [AdapterProperty.Network]
 
+            report_name = report_info.get('reportName')
+
             use_id = computer_id or system_uuid
-            device.id = f'ASSET_DEVICE_{use_id}'
+            device.id = f'ASSET_DEVICE_{report_name}_{use_id}'
             device.uuid = format(use_id)
 
             updated_at = parse_date(device_raw.get('updated_at'))
@@ -453,10 +510,11 @@ class TaniumAdapter(AdapterBase):
             device.updated_at = updated_at
             device.last_seen = updated_at
 
+            device.module_version = module_version
             device.server_name = metadata.get('server_name')
             device.server_version = metadata.get('server_version')
             device.tanium_type = ASSET_TYPE
-            device.asset_report = report_info.get('reportName')
+            device.asset_report = report_name
             device.asset_report_description = report_info.get('description')
             device.asset_report_category = report_info.get('categoryName')
             device.asset_report_created_at = parse_date(report_info.get('createdAt'))
@@ -559,31 +617,37 @@ class TaniumAdapter(AdapterBase):
             logger.exception(f'Problem with fetching Asset Device {device_raw}')
             return None
 
+    @property
+    def _values_skip(self):
+        return ['n/a', '[no results]']
+
+    @property
+    def _values_empty(self):
+        return [None, '', []]
+
     # pylint: disable=too-many-branches,too-many-locals
     def _create_sq_device(self, device_raw, metadata):
-        def _check_sensor_data_one_item(sensor_data):
-            if not sensor_data.get('value') or not isinstance(sensor_data.get('value'), list):
-                return None
-            value = sensor_data.get('value')[0]
-            if 'n/a' in format(value).lower():
-                return None
-            return value
-
-        def _check_sensor_data_full_list(sensor_data):
-            if not sensor_data.get('value') or not isinstance(sensor_data.get('value'), list) \
-                    or sensor_data.get('value')[0] == '[no results]':
+        def _check_sensor_data(sensor_data, first=False):
+            value = sensor_data.get('value', None)
+            if value in self._values_empty or not isinstance(value, list):
                 return None
 
-            value = sensor_data.get('value')
-            if any(['n/a' in format(x) for x in value]):
+            value_check = [format(x).lower() for x in value]
+
+            if any([x in y for y in value_check for x in self._values_skip]):
                 return None
+
+            if first:
+                if not value:
+                    return None
+                return value[0]
             return value
 
         try:
             device_raw, sq_name, question = device_raw
             device = self._new_device_adapter()
-            device.server_name = metadata['server_name']
-            device.server_version = metadata['server_version']
+            device.server_name = metadata.get('server_name')
+            device.server_version = metadata.get('server_version')
             device.tanium_type = SQ_TYPE
             device.sq_name = sq_name
             device.sq_query_text = question.get('query_text')
@@ -601,21 +665,21 @@ class TaniumAdapter(AdapterBase):
             for sensor_name, sensor_data in device_raw.items():
                 try:
                     if sensor_name == 'Computer ID':
-                        computer_id = _check_sensor_data_one_item(sensor_data)
+                        computer_id = _check_sensor_data(sensor_data, True)
                         if not computer_id:
                             logger.warning(f'Bad device with no id {device_raw}')
                             return None
                         computer_id = str(computer_id)
-                        device.id = 'SQ_DEVICE' + '_' + computer_id
+                        device.id = f'SQ_DEVICE_{sq_name}_{computer_id}'
                         device.uuid = computer_id
                     elif sensor_name == 'Computer Name':
-                        device.hostname = _check_sensor_data_one_item(sensor_data)
+                        device.hostname = _check_sensor_data(sensor_data, True)
                     elif sensor_name == 'Computer Serial Number':
-                        device.device_serial = _check_sensor_data_one_item(sensor_data)
+                        device.device_serial = _check_sensor_data(sensor_data, True)
                     elif sensor_name in ['IP Address', 'IPv4 Address', 'IPv6 Address', 'Static IP Addresses']:
-                        device.add_nic(ips=_check_sensor_data_full_list(sensor_data))
+                        device.add_nic(ips=_check_sensor_data(sensor_data, False))
                     elif sensor_name == 'Installed Applications':
-                        apps_raw = _check_sensor_data_full_list(sensor_data) or []
+                        apps_raw = _check_sensor_data(sensor_data, False) or []
                         for app_raw in apps_raw:
                             try:
                                 app_name = (app_raw.get('Name') or {}).get('value')
@@ -626,31 +690,32 @@ class TaniumAdapter(AdapterBase):
                             except Exception:
                                 logger.exception(f'Problem with app raw {app_raw}')
                     elif sensor_name == 'Chassis Type':
-                        device.chassis_type = _check_sensor_data_one_item(sensor_data)
+                        device.chassis_type = _check_sensor_data(sensor_data, True)
                     elif sensor_name == 'Last Logged In User':
-                        users = [x for x in _check_sensor_data_full_list(sensor_data) if check_user_name(x)]
+                        users = _check_sensor_data(sensor_data, False) or []
+                        users = [x for x in users if check_user_name(x)]
                         device.last_used_users.extend(users)
                     elif sensor_name == 'Last Reboot':
-                        device.set_boot_time(boot_time=parse_date(_check_sensor_data_one_item(sensor_data)))
+                        device.set_boot_time(boot_time=parse_date(_check_sensor_data(sensor_data, True)))
                     elif sensor_name == 'Model':
-                        device.device_model = _check_sensor_data_one_item(sensor_data)
+                        device.device_model = _check_sensor_data(sensor_data, True)
                     elif sensor_name == 'Manufacturer':
-                        device.device_manufacturer = _check_sensor_data_one_item(sensor_data)
+                        device.device_manufacturer = _check_sensor_data(sensor_data, True)
                     elif sensor_name == 'Custom Tags':
-                        if _check_sensor_data_one_item(sensor_data) \
-                                and _check_sensor_data_one_item(sensor_data) != '[No Tags]':
-                            device.sensor_tags = _check_sensor_data_full_list(sensor_data)
+                        if _check_sensor_data(sensor_data, True) \
+                                and _check_sensor_data(sensor_data, True) != '[No Tags]':
+                            device.sensor_tags = _check_sensor_data(sensor_data, False)
                     elif sensor_name == 'Open Ports':
-                        for port_raw in _check_sensor_data_full_list(sensor_data):
+                        for port_raw in _check_sensor_data(sensor_data, False):
                             device.add_open_port(port_id=port_raw)
                     elif sensor_name == 'CPU Details':
-                        cpu_data = _check_sensor_data_one_item(sensor_data)
+                        cpu_data = _check_sensor_data(sensor_data, True)
                         if not isinstance(cpu_data, dict):
                             cpu_data = {}
                         device.add_cpu(name=(cpu_data.get('CPU') or {}).get('value'),
                                        cores=int((cpu_data.get('Total Cores') or {}).get('value')))
                     elif sensor_name == 'Network Adapters':
-                        nics_raw = _check_sensor_data_full_list(sensor_data)
+                        nics_raw = _check_sensor_data(sensor_data, False)
                         for nic_raw in nics_raw:
                             try:
                                 ips = (nic_raw.get('IP Address') or {}).get('value')
@@ -663,9 +728,9 @@ class TaniumAdapter(AdapterBase):
                             except Exception:
                                 logger.exception(f'Problem with nic {nic_raw}')
                     elif sensor_name == 'Operating System':
-                        device.figure_os(_check_sensor_data_one_item(sensor_data))
+                        device.figure_os(_check_sensor_data(sensor_data, True))
                     elif sensor_name == 'Service Details':
-                        for service_raw in _check_sensor_data_full_list(sensor_data) or []:
+                        for service_raw in _check_sensor_data(sensor_data, False) or []:
                             display_name = (service_raw.get('Service Display Name') or {}).get('value')
                             service_status = (service_raw.get('Service Status') or {}).get('value')
                             service_name = (service_raw.get('Service Name') or {}).get('value')
@@ -673,18 +738,18 @@ class TaniumAdapter(AdapterBase):
                                                name=service_status,
                                                status=service_name)
                     elif sensor_name == 'Service Pack':
-                        service_pack = _check_sensor_data_one_item(sensor_data)
+                        service_pack = _check_sensor_data(sensor_data, True)
                         if service_pack and 'no service pack found' not in format(service_pack).lower():
                             device.os.sp = service_pack
                     elif sensor_name in ['RAM', 'Total Memory']:
                         try:
-                            total_memory = format(_check_sensor_data_one_item(sensor_data)).lower.replace(' mb', '')
+                            total_memory = format(_check_sensor_data(sensor_data, True)).lower().replace(' mb', '')
                             device.total_physical_memory = int(total_memory) / 1024
                         except Exception:
                             logger.exception(f'Problem parsing total memory from {sensor_name}: {sensor_data}')
                     elif sensor_name == 'Uptime':
                         try:
-                            device.uptime = int(_check_sensor_data_one_item(sensor_data).lower.replace(' days', ''))
+                            device.uptime = int(_check_sensor_data(sensor_data, True).lower().replace(' days', ''))
                         except Exception:
                             logger.exception(f'Problem parsing uptime from {sensor_name}: {sensor_data}')
                 except Exception:
