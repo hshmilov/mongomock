@@ -144,6 +144,16 @@ class SplunkConnection(object):
         return raw_device
 
     @staticmethod
+    def general_macro(result):
+        raw_object = dict()
+        for key, value in result.items():
+            try:
+                raw_object[key.decode('utf-8')] = value.decode('utf-8')
+            except Exception:
+                pass
+        return raw_object
+
+    @staticmethod
     def parse_ped_macro(result):
         raw_object = dict()
         try:
@@ -320,20 +330,16 @@ class SplunkConnection(object):
             raw_object['domain'] = raw_line[raw_line.find('domain=') + len("domain=") + 1:].split('"')[0]
         return raw_object
 
-    def get_devices(self, earliest, maximum_records_per_search, fetch_plugins_dict):
-        yield from self.fetch('search `axon_ped_info_v1`',
-                              SplunkConnection.parse_ped_macro,
-                              earliest,
-                              maximum_records_per_search,
-                              'PED Macro',
-                              send_object_to_raw=True)
-
-        yield from self.fetch('search `axon_store_system_v1`',
-                              SplunkConnection.parse_store_macro,
-                              earliest,
-                              maximum_records_per_search,
-                              'Store Macro',
-                              send_object_to_raw=True)
+    def get_devices(self, earliest, maximum_records_per_search, fetch_plugins_dict,
+                    splunk_macros_list):
+        if splunk_macros_list:
+            for macro_str in splunk_macros_list:
+                yield from self.fetch(f'search `{macro_str}`',
+                                      SplunkConnection.general_macro,
+                                      earliest,
+                                      maximum_records_per_search,
+                                      f'General Macro {macro_str}',
+                                      send_object_to_raw=True)
 
         yield from self.fetch('search index=lnv_landesk',
                               SplunkConnection.parse_landesk,

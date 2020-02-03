@@ -6,11 +6,17 @@ from axonius.clients.rest.connection import RESTConnection
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.utils.files import get_local_config_file
 from axonius.utils.datetime import parse_date
+from axonius.utils.parsing import normalize_var_name
+from axonius.consts.csv_consts import get_csv_field_names
+from axonius.adapter_exceptions import GetDevicesError
 from axonius.fields import Field
 from axonius.mixins.configurable import Configurable
 from splunk_adapter.connection import SplunkConnection
 
 logger = logging.getLogger(f'axonius.{__name__}')
+
+
+DEVICES_NEEDED_FIELDS = ['id', 'serial', 'mac_address', 'hostname', 'name']
 
 
 class SplunkAdapter(AdapterBase, Configurable):
@@ -68,7 +74,8 @@ class SplunkAdapter(AdapterBase, Configurable):
         with client_data:
             yield from client_data.get_devices(f'-{self.__max_log_history}d',
                                                self.__maximum_records,
-                                               self.__fetch_plugins)
+                                               self.__fetch_plugins,
+                                               splunk_macros_list=self.__splunk_macros_list)
 
     def _clients_schema(self):
         """
@@ -274,6 +281,92 @@ class SplunkAdapter(AdapterBase, Configurable):
                     device.bios_version = device_raw.get('bios_version')
                     device.device_serial = device_raw.get('serial')
                     device.splunk_source = 'Store Macro'
+                elif device_type.startswith('General Macro '):
+                    device.splunk_source = device_type
+                    fields = get_csv_field_names(list(device_raw.keys()))
+                    if not any(id_field in fields for id_field in DEVICES_NEEDED_FIELDS):
+                        logger.error(f'Bad devices fields names {str(list(device_raw.keys()))}')
+                        raise GetDevicesError(f'Strong identifier is missing for devices')
+                    vals = {field_name: device_raw.get(fields[field_name][0]) for field_name in fields}
+
+                    macs = (vals.get('mac_address') or '').split(',')
+                    macs = [mac.strip() for mac in macs if mac.strip()]
+                    mac_as_id = macs[0] if macs else None
+
+                    device_id = str(vals.get('id', '')) or vals.get('serial') or mac_as_id or vals.get('hostname')
+                    if not device_id:
+                        logger.debug(f'can not get device id for {device_raw}, continuing')
+                        continue
+
+                    device.id = device_type + '_' + device_id
+                    device.device_serial = vals.get('serial')
+                    device.name = vals.get('name')
+                    hostname = vals.get('hostname')
+                    if hostname == 'unknown':
+                        hostname = None
+                    hostname_domain = None
+                    if hostname and '\\' in hostname:
+                        hostname = hostname.split('\\')[1]
+                        hostname_domain = hostname.split('\\')[0]
+                    device.hostname = hostname
+                    if not hostname:
+                        device.hostname = vals.get('name')
+                    device.device_model = vals.get('model')
+                    device.domain = vals.get('domain') or hostname_domain
+                    device.last_seen = parse_date(vals.get('last_seen'))
+                    device.device_manufacturer = vals.get('manufacturer')
+                    try:
+                        device.total_physical_memory = vals.get('total_physical_memory_gb')
+                    except Exception:
+                        pass
+                    # OS is a special case, instead of getting the first found column we take all of them and combine them
+                    if 'os' in fields:
+                        os_raw = '_'.join([device_raw.get(os_column) for os_column in fields['os']])
+                        try:
+                            device.figure_os(os_raw)
+                        except Exception:
+                            logger.error(f'Can not parse os {os_raw}')
+
+                    try:
+                        device.os.kernel_version = vals.get('kernel')
+                    except Exception:
+                        pass
+
+                    ips = (vals.get('ip') or '').split(',')
+                    ips = [ip.strip() for ip in ips if ip.strip()]
+                    if vals.get('ip') == 'unknown':
+                        ips = []
+
+                    if vals.get('username'):
+                        device.last_used_users = [vals.get('username')]
+
+                    device.add_ips_and_macs(macs, ips)
+
+                    try:
+                        cve_ids = vals.get('cve_id')
+                        if isinstance(cve_ids, str) and cve_ids:
+                            cve_ids = cve_ids.split(',')
+                            for cve_id in cve_ids:
+                                device.add_vulnerable_software(cve_id=cve_id)
+                    except Exception:
+                        logger.warning(f'Problem with cve id', exc_info=True)
+
+                    for column_name, column_value in device_raw.items():
+                        try:
+                            normalized_column_name = device_type.replace(' ', '_').lower()\
+                                + '_' + normalize_var_name(column_name)
+                            field_type = str
+                            if not device.does_field_exist(normalized_column_name):
+                                # Currently we treat all columns as str
+                                cn_capitalized = ' '.join([word.capitalize() for word in column_name.split(' ')])
+                                device.declare_new_field(
+                                    normalized_column_name, Field(field_type, f'Splunk {device_type} {cn_capitalized}'))
+
+                            value = str(column_value)
+                            device[normalized_column_name] = value
+                        except Exception:
+                            logger.warning(f'Could not parse column {column_name} with value {column_value}',
+                                           exc_info=True)
                 device.set_raw(device_raw)
                 yield device
             except Exception:
@@ -283,6 +376,8 @@ class SplunkAdapter(AdapterBase, Configurable):
         logger.info(f"Loading Splunk config: {config}")
         self.__max_log_history = int(config['max_log_history'])
         self.__maximum_records = int(config['maximum_records'])
+        self.__splunk_macros_list = config.get('splunk_macros_list').split(',') \
+            if config.get('splunk_macros_list') else None
         self.__fetch_plugins = {
             'nexpose': bool(config['fetch_nexpose']),
             'win_logs_fetch_hours': int(config['win_logs_fetch_hours'])
@@ -292,6 +387,11 @@ class SplunkAdapter(AdapterBase, Configurable):
     def _db_config_schema(cls) -> dict:
         return {
             "items": [
+                {
+                    'name': 'splunk_macros_list',
+                    'title': 'Splunk Macros List',
+                    'type': 'string'
+                },
                 {
                     'name': 'max_log_history',
                     'title': 'Number of days to fetch',
@@ -329,6 +429,7 @@ class SplunkAdapter(AdapterBase, Configurable):
             'max_log_history': 30,
             'maximum_records': 100000,
             'fetch_nexpose': False,
+            'splunk_macros_list': None,
             'win_logs_fetch_hours': 3
         }
 

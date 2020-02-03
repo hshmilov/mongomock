@@ -77,6 +77,7 @@ def is_only_host_adapter(adapter_device):
                                               'signalsciences_adapter',
                                               'sysaid_adapter',
                                               'logrhythm_adapter',
+                                              'splunk_adapter',
                                               'symantec_ee_adapter',
                                               'guardium_adapter',
                                               'datadog_adapter',
