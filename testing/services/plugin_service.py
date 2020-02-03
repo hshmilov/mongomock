@@ -430,6 +430,14 @@ class PluginService(WeaveService):
         decrypted = mongo_encrypt.db_decrypt(enc, data_to_decrypt)
         return decrypted
 
+    def encrypt_dict(self, plugin_unique_name: str, data: dict):
+        """
+        Encrypt dict values
+        """
+        for key, val in data.items():
+            if val:
+                data[key] = self.db_encrypt(plugin_unique_name, val)
+
     def decrypt_dict(self, data: dict):
         """
         Decrypt dict values

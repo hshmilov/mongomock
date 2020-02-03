@@ -53,7 +53,10 @@ class CoreService(PluginService, UpdatablePluginMixin):
         if self.db_schema_version < 8:
             self._update_schema_version_8()
 
-        if self.db_schema_version != 8:
+        if self.db_schema_version < 9:
+            self._update_schema_version_9()
+
+        if self.db_schema_version != 9:
             print(f'Upgrade failed, db_schema_version is {self.db_schema_version}')
 
     def _update_schema_version_1(self):
@@ -366,6 +369,63 @@ class CoreService(PluginService, UpdatablePluginMixin):
             print('Cannot upgrade db to version 8, libmongocrypt error')
         except Exception as e:
             print(f'Exception while upgrading core db to version 8. Details: {e}')
+            traceback.print_exc()
+            raise
+
+    def _update_schema_version_9(self):
+        # Change client_id + set schema fetch_system_status as True
+        print('Upgrade to schema 9 - Tanium adapter schema')
+        try:
+            # Get a list of all tanium adapters in the systems (we could have a couple - each on a different node)
+            all_tanium_plugins = self.db.client['core']['configs'].find(
+                {
+                    'plugin_name': 'tanium_adapter'
+                })
+            for tanium_plugin in all_tanium_plugins:
+                plugin_unique_name = tanium_plugin.get('plugin_unique_name')
+                clients = self.db.client[plugin_unique_name]['clients'].find({})
+                # These are all the clients ("connections"). Each one of them is encrypted, so we'd have to
+                # decrypt that.
+                for client in clients:
+                    new_client_config = client['client_config'].copy()
+                    self.decrypt_dict(new_client_config)
+
+                    # Set a default value for the fetch_system_status key
+                    new_client_config['fetch_system_status'] = True
+
+                    # Re-build the client_id as the tanium adapter needs it.
+                    domain = new_client_config.get('domain') or ''
+                    username = new_client_config.get('username') or ''
+                    fetch_system_status = new_client_config.get('fetch_system_status', True)
+                    fetch_discovery = (new_client_config.get('fetch_discovery') or False)
+                    asset_dvc = new_client_config.get('asset_dvc')
+                    sq_name = new_client_config.get('sq_name')
+
+                    new_client_id = '_'.join([
+                        f'{domain}',
+                        f'{username}',
+                        f'status-{fetch_system_status}',
+                        f'asset-{asset_dvc}',
+                        f'disco-{fetch_discovery}',
+                        f'sq-{sq_name}',
+                    ])
+
+                    # Update the client
+                    self.encrypt_dict(plugin_unique_name, new_client_config)
+                    self.db.client[plugin_unique_name]['clients'].update(
+                        {
+                            '_id': client['_id']
+                        },
+                        {
+                            '$set':
+                                {
+                                    'client_id': new_client_id,
+                                    'client_config': new_client_config
+                                }
+                        })
+            self.db_schema_version = 9
+        except Exception as e:
+            print(f'Exception while upgrading tanium schema to version 9. Details: {e}')
             traceback.print_exc()
             raise
 

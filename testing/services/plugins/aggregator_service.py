@@ -84,8 +84,10 @@ class AggregatorService(PluginService, UpdatablePluginMixin):
             self._update_schema_version_25()
         if self.db_schema_version < 26:
             self._update_schema_version_26()
+        if self.db_schema_version < 27:
+            self._update_schema_version_27()
 
-        if self.db_schema_version != 26:
+        if self.db_schema_version != 27:
             print(f'Upgrade failed, db_schema_version is {self.db_schema_version}')
 
     def __create_capped_collections(self):
@@ -1203,6 +1205,66 @@ class AggregatorService(PluginService, UpdatablePluginMixin):
             self.db_schema_version = 26
         except Exception as e:
             print(f'Exception while upgrading core db to version 26. Details: {e}')
+            traceback.print_exc()
+            raise
+
+    def _update_schema_version_27(self):
+        print('Update to schema 27 - migrate tanium id')
+        try:
+            # for each tanium id that starts with SQ_DEVICE or ASSET_DEVICE, fix the id to the new format
+            entities_db = self._entity_db_map[EntityType.Devices]
+            to_fix = []
+            # Get all devices which have tanium adapter
+            for entity in entities_db.find({f'adapters.{PLUGIN_NAME}': 'tanium_adapter'}, projection={
+                '_id': 1,
+                f'adapters.{PLUGIN_NAME}': 1,
+                f'adapters.{PLUGIN_UNIQUE_NAME}': 1,
+                f'adapters.data.id': 1,
+                f'adapters.data.uuid': 1,
+                f'adapters.data.asset_report': 1,
+                f'adapters.data.sq_name': 1
+            }):
+                # Then go on all tanium device-adapters on each device (each device might have multiple tanium adapters)
+                all_tanium = [x for x in entity['adapters'] if x[PLUGIN_NAME] == 'tanium_adapter']
+                for tanium_adapter in all_tanium:
+                    tanium_data = tanium_adapter['data']
+                    tanium_uuid = tanium_data.get('uuid') or ''
+                    tanium_current_id = tanium_data.get('id')
+                    if not tanium_current_id:
+                        continue
+                    if tanium_current_id.startswith('SQ_DEVICE'):
+                        sq_name = tanium_data.get('sq_name') or ''  # if does not exist, this is '', and not None
+                        tanium_new_id = f'SQ_DEVICE_{sq_name}_{tanium_uuid}'
+                    elif tanium_current_id.startswith('ASSET_DEVICE'):
+                        report_name = tanium_data.get('asset_report')    # could be None and that is fine
+                        tanium_new_id = f'ASSET_DEVICE_{report_name}_{tanium_uuid}'
+                    else:
+                        continue
+                    to_fix.append(pymongo.operations.UpdateOne({
+                        '_id': entity['_id'],
+                        f'adapters.data.quick_id': get_preferred_quick_adapter_id(
+                            tanium_adapter[PLUGIN_UNIQUE_NAME], tanium_current_id
+                        )
+                    }, {
+                        '$set': {
+                            'adapters.$.data.id': tanium_new_id,
+                            'adapters.$.quick_id': get_preferred_quick_adapter_id(
+                                tanium_adapter[PLUGIN_UNIQUE_NAME], tanium_new_id
+                            )
+                        }
+                    }))
+
+            if to_fix:
+                print(f'Upgrading Tanium ID format. Found {len(to_fix)} records..')
+                for i in range(0, len(to_fix), 1000):
+                    entities_db.bulk_write(to_fix[i: i + 1000], ordered=False)
+                    print(f'Fixed Chunk of {i + 1000} records')
+            else:
+                print(f'Tanium ID upgrade: Nothing to fix. Moving on')
+
+            self.db_schema_version = 27
+        except Exception as e:
+            print(f'Exception while upgrading core db to version 27. Details: {e}')
             traceback.print_exc()
             raise
 
