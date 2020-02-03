@@ -140,25 +140,6 @@ except AttributeError:
     pass
 
 
-@AXONIUS_REST.after_request
-def after_request(response):
-    """This function is used to allow other domains to send post messages to this app.
-
-    These headers are used to provide the cross origin resource sharing (cors) policy of this domain.
-    Modern browsers do not permit sending requests (especially post, put, etc) to different domains
-    without the explicit permission of the webserver on this domain.
-    This is why we have to add headers that say that we allow these methods from all domains.
-
-    :param str docker_base_url: The response of the client (Will change is headers)
-
-    :return: Fixed response that allow other domain to send all methods
-    """
-    response.headers.add('Access-Control-Allow-Origin', '*')
-    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
-    response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
-    return response
-
-
 # Global list of all the functions we are registering.
 ROUTED_FUNCTIONS = list()
 
