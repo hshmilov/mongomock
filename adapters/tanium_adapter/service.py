@@ -425,7 +425,11 @@ class TaniumAdapter(AdapterBase):
                 logger.warning(f'Bad discover module device with no ID {device_raw}')
                 return None
             device.id = str(device_id) + '_' + str(device_raw.get('computerid'))
-            ips = [device_raw.get('ipaddress')] if device_raw.get('ipaddress') else None
+            # ips = [device_raw.get('ipaddress')] if device_raw.get('ipaddress') else None
+            ips_raw = device_raw.get('ipaddress')
+            if ips_raw in ['172.17.0.1', '172.18.0.1']:
+                ips_raw = None
+            ips = [ips_raw] if ips_raw else None
             device.add_nic(mac=device_raw.get('macaddress'), ips=ips)
             device.uuid = str(device_raw.get('computerid')) if device_raw.get('computerid') else None
             device.natipaddress = device_raw.get('natipaddress')
