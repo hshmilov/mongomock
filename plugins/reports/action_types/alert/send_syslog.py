@@ -24,7 +24,7 @@ class NotifySyslogAction(ActionTypeAlert):
                 },
                 {
                     'name': 'severity',
-                    'title': 'Message Severity',
+                    'title': 'Message severity',
                     'type': 'string',
                     'enum': [
                         'info', 'warning', 'error'
@@ -32,6 +32,7 @@ class NotifySyslogAction(ActionTypeAlert):
                 }
             ],
             'required': [
+                'send_device_data',
                 'severity'
             ],
             'type': 'array'

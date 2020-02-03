@@ -23,6 +23,12 @@ class SendHttpsLogAction(ActionTypeAlert):
         return {
             'items': [
                 {
+                    'name': 'authorization_header',
+                    'title': 'Authorization header',
+                    'type': 'string',
+                    'format': 'password'
+                },
+                {
                     'name': 'description',
                     'title': 'Description',
                     'type': 'string',
@@ -35,18 +41,13 @@ class SendHttpsLogAction(ActionTypeAlert):
                 },
                 {
                     'name': 'description_default',
-                    'title': 'Add Incident Description Default',
+                    'title': 'Add default incident description',
                     'type': 'bool'
                 },
                 {
                     'name': 'send_csv_data',
-                    'title': 'Send CSV Data',
+                    'title': 'Send CSV data',
                     'type': 'bool'
-                },                {
-                    'name': 'authorization_header',
-                    'title': 'Authorization Header',
-                    'type': 'string',
-                    'format': 'password'
                 }
             ],
             'required': [

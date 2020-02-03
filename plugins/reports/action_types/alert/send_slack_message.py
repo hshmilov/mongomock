@@ -20,7 +20,7 @@ class SlackSendMessageAction(ActionTypeAlert):
             'items': [
                 {
                     'name': 'webhook_url',
-                    'title': 'Incoming Webhook URL',
+                    'title': 'Incoming webhook URL',
                     'type': 'string'
                 },
                 {
@@ -30,7 +30,7 @@ class SlackSendMessageAction(ActionTypeAlert):
                 },
                 {
                     'name': 'incident_description',
-                    'title': 'Incident Description',
+                    'title': 'Incident description',
                     'type': 'string',
                     'format': 'text'
                 },

@@ -24,17 +24,17 @@ class SendCsvToShare(ActionTypeAlert):
             'items': [
                 {
                     'name': 'csv_share',
-                    'title': 'CSV Share Path',
+                    'title': 'CSV share path',
                     'type': 'string'
                 },
                 {
                     'name': 'csv_share_username',
-                    'title': 'CSV Share Username',
+                    'title': 'CSV share user name',
                     'type': 'string'
                 },
                 {
                     'name': 'csv_share_password',
-                    'title': 'CSV Share Password',
+                    'title': 'CSV share password',
                     'type': 'string',
                     'format': 'password'
                 },

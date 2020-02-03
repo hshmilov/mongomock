@@ -19,12 +19,12 @@ class SendEmailToEntities(ActionTypeBase):
             'items': [
                 {
                     'name': 'mail_subject',
-                    'title': 'Mail Subject',
+                    'title': 'Email subject',
                     'type': 'string'
                 },
                 {
                     'name': 'mail_content',
-                    'title': 'Mail Content',
+                    'title': 'Custom message',
                     'type': 'string',
                     'format': 'text'
                 },

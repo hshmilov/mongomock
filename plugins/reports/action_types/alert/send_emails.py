@@ -64,12 +64,12 @@ class SendEmailsAction(ActionTypeAlert):
             'items': [
                 {
                     'name': 'mailSubject',
-                    'title': 'Subject',
+                    'title': 'Email subject',
                     'type': 'string'
                 },
                 {
                     'name': 'emailBody',
-                    'title': 'Custom Message (up to 200 characters)',
+                    'title': 'Custom message (up to 200 characters)',
                     'type': 'string',
                     'format': 'text',
                     'limit': 200
@@ -94,12 +94,12 @@ class SendEmailsAction(ActionTypeAlert):
                 },
                 {
                     'name': 'sendDeviceCSV',
-                    'title': 'Attach CSV with Query results',
+                    'title': 'Attach CSV with query results',
                     'type': 'bool'
                 },
                 {
                     'name': 'sendDevicesChangesCSV',
-                    'title': 'Attach CSV with Changes in Query results',
+                    'title': 'Attach CSV with changes in query results',
                     'type': 'bool'
                 }
             ],
