@@ -79,6 +79,7 @@ class ActionCategory:
 
 class EnforcementsPage(EntitiesPage):
     SAVE_AND_RUN_BUTTON_TEXT = 'Save & Run'
+    TASK_IN_PROGRESS = 'Enforcement Task is in progress'
     NEW_ENFORCEMENT_BUTTON = '+ New Enforcement'
     ENFORCEMENT_NAME_ID = 'enforcement_name'
     TRIGGER_CONTAINER_CSS = '.x-trigger'
@@ -558,6 +559,9 @@ class EnforcementsPage(EntitiesPage):
 
     def click_run_button(self):
         self.click_button(self.SAVE_AND_RUN_BUTTON_TEXT, partial_class=True)
+
+    def wait_for_task_in_progress_toaster(self):
+        self.wait_for_toaster_to_end(self.TASK_IN_PROGRESS)
 
     def click_tasks_button(self):
         self.click_button('View Tasks', partial_class=True)

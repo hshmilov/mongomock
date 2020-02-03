@@ -292,6 +292,22 @@ def filtered_fields():
     return wrap
 
 
+def accounts():
+    """
+    Relevant only if the request.method is POST
+    Decorator stating that the accounts array=['account_1', 'account_2'...]
+    """
+    def wrap(func):
+        def actual_wrapper(self, *args, **kwargs):
+            accounts_list = []
+            if request.method == 'POST':
+                content = self.get_request_data_as_object()
+                accounts_list = content.get('accounts')
+            return func(self, accounts=accounts_list, *args, **kwargs)
+        return actual_wrapper
+    return wrap
+
+
 def paginated(limit_max=PAGINATION_LIMIT_MAX):
     """
     Decorator stating that the view supports '?limit=X&start=Y' for pagination

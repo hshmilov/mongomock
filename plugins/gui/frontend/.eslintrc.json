@@ -17,7 +17,7 @@
   "rules": {
     "vue/multiline-html-element-content-newline": ["warn", {
       "ignoreWhenEmpty": true,
-      "ignores": ["x-button", "v-btn"],
+      "ignores": ["x-button", "v-btn", "div", "md-icon"],
       "allowEmptyLines": false
     }]
   },

@@ -16,11 +16,11 @@
       <div class="actions">
         <slot name="panelHeader" />
         <span
-          class="action-close" 
+          class="action-close"
           title="Close"
         >
           <v-icon
-            size="20" 
+            size="20"
             color="#fff"
             @click="closePanel"
           >{{ closeSvgIconPath }}
@@ -28,7 +28,7 @@
         </span>
       </div>
     </header>
-    <section class="x-side-panel__content"> 
+    <section class="x-side-panel__content">
       <slot name="panelContent" />
     </section>
     <footer class="x-side-panel__footer">
@@ -38,7 +38,7 @@
 </template>
 
 <script>
-import { mdiClose } from '@mdi/js'
+import { mdiClose } from '@mdi/js';
 
 export default {
   name: 'XSidePanel',
@@ -49,31 +49,31 @@ export default {
     },
     value: {
       type: Boolean,
-      default: false
+      default: false,
     },
     width: {
       type: String,
-      default: '800'
+      default: '800',
     },
     title: {
       type: String,
-      default: ''
-    }
+      default: '',
+    },
   },
   data() {
     return {
-      closeSvgIconPath: mdiClose
-    }
+      closeSvgIconPath: mdiClose,
+    };
   },
   methods: {
     stateChanged(panelState) {
-      this.$emit('input', panelState)
+      this.$emit('input', panelState);
     },
     closePanel() {
-      this.$emit('input', false)
-    }
-  }
-}
+      this.$emit('input', false);
+    },
+  },
+};
 </script>
 
 <style lang="scss">

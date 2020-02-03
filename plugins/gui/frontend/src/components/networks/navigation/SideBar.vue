@@ -1,112 +1,194 @@
 <template>
-    <aside class="x-side-bar" :class="{ collapse: collapseSidebar }">
-        <div class="x-user">
-            <div v-if="medicalConfig" class="x-user-profile medical">
-                <svg-icon :name=logoSVG :height=logoSize :original="true"/>
-            </div>
-            <div v-else class="x-user-profile">
-                <img :src="userDetails.pic"/>
-                <h5>{{ userDetails.name }}</h5>
-            </div>
-            <div  v-if="!medicalConfig" class="x-user-actions">
-                <a @click="onLogout" title="Logout">
-                    <svg-icon name="navigation/logout" height="16" :original="true"/>
-                </a>
-                <router-link :to="{name: 'My Account'}" active-class="active" @click.native="$emit('click')"
-                             title="My Account">
-                    <svg-icon name="navigation/settings" height="16" :original="true"/>
-                </router-link>
-            </div>
-        </div>
-        <x-nav v-if="medicalConfig">
-            <x-nav-item v-bind="navigationProps('Fleet Viewer')" icon="reports" :exact="true" id="fleet"/>
-            <x-nav-item v-bind="navigationProps('Infuser Programing')" icon="pairing" id="pairing"/>
-            <x-nested-nav name="Infuser Manager" icon="settings" childRoot="/infuser_manager">
-                <x-nav-item v-bind="navigationProps('Infuser Settings')" id="infuser_settings"/>
-                <x-nav-item v-bind="navigationProps('Treatments Settings')" id="treatments_settings"/>
-                <x-nav-item v-bind="navigationProps('Drug List Settings')" id="drug_list_settings"/>
-                <x-nav-item v-bind="navigationProps('Preset Programs')" id="preset_programs"/>
-            </x-nested-nav>
-        </x-nav>
-        <x-nav v-else>
-            <x-nav-item v-bind="navigationProps('Dashboard', 'dashboard')" :exact="true" />
-            <x-nav-item v-bind="navigationProps('Devices', 'devices')" />
-            <x-nav-item v-bind="navigationProps('Users', 'users')" />
-            <x-nav-item v-bind="navigationProps('Enforcements', 'enforcements', 'Enforcement Center')" />
-            <x-nav-item v-bind="navigationProps('Adapters', 'adapters')" />
-            <x-nav-item v-bind="navigationProps('Reports', 'reports')" />
-            <x-nav-item v-bind="navigationProps('Instances', 'instances')" />
-        </x-nav>
-    </aside>
+  <aside
+    class="x-side-bar"
+    :class="{ collapse: collapseSidebar }"
+  >
+    <div class="x-user">
+      <div
+        v-if="medicalConfig"
+        class="x-user-profile medical"
+      >
+        <svg-icon
+          :name="logoSVG"
+          :height="logoSize"
+          :original="true"
+        />
+      </div>
+      <div
+        v-else
+        class="x-user-profile"
+      >
+        <img :src="userDetails.pic">
+        <h5>{{ userDetails.name }}</h5>
+      </div>
+      <div
+        v-if="!medicalConfig"
+        class="x-user-actions"
+      >
+        <a
+          title="Logout"
+          @click="onLogout"
+        >
+          <svg-icon
+            name="navigation/logout"
+            height="16"
+            :original="true"
+          />
+        </a>
+        <router-link
+          :to="{name: 'My Account'}"
+          active-class="active"
+          title="My Account"
+          @click.native="$emit('click')"
+        >
+          <svg-icon
+            name="navigation/settings"
+            height="16"
+            :original="true"
+          />
+        </router-link>
+      </div>
+    </div>
+    <x-nav v-if="medicalConfig">
+      <x-nav-item
+        id="fleet"
+        v-bind="navigationProps('Fleet Viewer')"
+        icon="reports"
+        :exact="true"
+      />
+      <x-nav-item
+        id="pairing"
+        v-bind="navigationProps('Infuser Programing')"
+        icon="pairing"
+      />
+      <x-nested-nav
+        name="Infuser Manager"
+        icon="settings"
+        child-root="/infuser_manager"
+      >
+        <x-nav-item
+          id="infuser_settings"
+          v-bind="navigationProps('Infuser Settings')"
+        />
+        <x-nav-item
+          id="treatments_settings"
+          v-bind="navigationProps('Treatments Settings')"
+        />
+        <x-nav-item
+          id="drug_list_settings"
+          v-bind="navigationProps('Drug List Settings')"
+        />
+        <x-nav-item
+          id="preset_programs"
+          v-bind="navigationProps('Preset Programs')"
+        />
+      </x-nested-nav>
+    </x-nav>
+    <x-nav v-else-if="isFeatureFlagsLoaded">
+      <x-nav-item
+        v-bind="navigationProps('Dashboard', 'dashboard')"
+        :exact="true"
+      />
+      <x-nav-item v-bind="navigationProps('Devices', 'devices')" />
+      <x-nav-item v-bind="navigationProps('Users', 'users')" />
+      <x-nav-item
+        v-if="isComplianceVisible"
+        v-bind="navigationProps('Cloud Compliance', 'compliance', 'Cloud Compliance')"
+      />
+      <x-nav-item v-bind="navigationProps('Enforcements', 'enforcements', 'Enforcement Center')" />
+      <x-nav-item v-bind="navigationProps('Adapters', 'adapters')" />
+      <x-nav-item v-bind="navigationProps('Reports', 'reports')" />
+      <x-nav-item v-bind="navigationProps('Instances', 'instances')" />
+    </x-nav>
+  </aside>
 </template>
 
 <script>
-    import xNav from '../../axons/menus/Nav.vue'
-    import xNavItem from '../../axons/menus/NavItem.vue'
-    import xNestedNav from '../../axons/menus/NestedNav.vue'
-    import {LOGOUT} from '../../../store/modules/auth'
+import { mapState, mapActions } from 'vuex';
+import _find from 'lodash/find';
+import xNav from '../../axons/menus/Nav.vue';
+import xNavItem from '../../axons/menus/NavItem.vue';
+import xNestedNav from '../../axons/menus/NestedNav.vue';
+import { LOGOUT } from '../../../store/modules/auth';
+import featureFlagsMixin from '../../../mixins/feature_flags';
 
-    import {mapState, mapActions} from 'vuex'
 
-    export default {
-        name: 'x-side-bar',
-        components: {xNav, xNavItem, xNestedNav},
-        computed: {...mapState({
-            userDetails(state) {
-                return {
-                    name: `${state.auth.currentUser.data.first_name} ${state.auth.currentUser.data.last_name}`,
-                    pic: state.auth.currentUser.data.pic_name
-                }
-            },
-            userPermissions(state) {
-                return state.auth.currentUser.data.permissions
-            },
-            collapseSidebar(state) {
-                return state.interaction.collapseSidebar
-            },
-            medicalConfig(state) {
-                return state.staticConfiguration.medicalConfig
-            },
-        }),
-        logoSize: {
-            get(){
-                return this.collapseSidebar ? '47' : '114'
-            }
-        },
-        logoSVG: {
-            get(){
-                return this.collapseSidebar ? 'logo/avoset-mini' : 'logo/avoset'
-            }
-        }
-        },
-        methods: {
-            ...mapActions({
-                logout: LOGOUT
-            }),
-            navigationProps(name, id, title) {
-                let restricted = this.isRestricted(name)
-                return {
-                    id,
-                    name,
-                    title,
-                    icon: id,
-                    disabled: restricted,
-                    clickHandler: restricted ? this.notifyAccess : undefined
-                }
-            },
-            isRestricted(name) {
-                return this.userPermissions && this.userPermissions[name] === 'Restricted'
-            },
-            notifyAccess(name) {
-                this.$emit('access-violation', name)
-            },
-            onLogout() {
-                this.logout().then(() => {
-                    this.$router.push('/')
-                })
-            }
-        }
-    }
+export default {
+  name: 'XSideBar',
+  components: { xNav, xNavItem, xNestedNav },
+  mixins: [featureFlagsMixin],
+  computed: {
+    ...mapState({
+      userDetails(state) {
+        return {
+          name: `${state.auth.currentUser.data.first_name} ${state.auth.currentUser.data.last_name}`,
+          pic: state.auth.currentUser.data.pic_name,
+        };
+      },
+      userPermissions(state) {
+        return state.auth.currentUser.data.permissions;
+      },
+      collapseSidebar(state) {
+        return state.interaction.collapseSidebar;
+      },
+      medicalConfig(state) {
+        return state.staticConfiguration.medicalConfig;
+      },
+    }),
+    isFeatureFlagsLoaded() {
+      return this.featureFlags;
+    },
+    isComplianceVisible() {
+      return this.featureFlags && this.featureFlags.cloud_compliance
+        ? this.featureFlags.cloud_compliance.enabled : false;
+    },
+    logoSize: {
+      get() {
+        return this.collapseSidebar ? '47' : '114';
+      },
+    },
+    logoSVG: {
+      get() {
+        return this.collapseSidebar ? 'logo/avoset-mini' : 'logo/avoset';
+      },
+    },
+  },
+  methods: {
+    ...mapActions({
+      logout: LOGOUT,
+    }),
+    navigationProps(name, id, title) {
+      const restricted = this.isRestricted(name);
+      return {
+        id,
+        name,
+        title,
+        icon: id,
+        disabled: restricted,
+        clickHandler: restricted ? this.notifyAccess : undefined,
+      };
+    },
+    isRestricted(name) {
+      // If the user doesn't have permissions to the Users and Devices
+      // than he can't access the Cloud Compliance too
+      if (name === 'Cloud Compliance' && this.isUsersOrDevicesRestricted()) {
+        return true;
+      }
+      return this.userPermissions && this.userPermissions[name] === 'Restricted';
+    },
+    isUsersOrDevicesRestricted() {
+      return this.isRestricted('Users') || this.isRestricted('Devices');
+    },
+    notifyAccess(name) {
+      this.$emit('access-violation', name);
+    },
+    onLogout() {
+      this.logout().then(() => {
+        this.$router.push('/');
+      });
+    },
+  },
+};
 </script>
 
 <style lang="scss">

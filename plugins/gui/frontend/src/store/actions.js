@@ -233,7 +233,7 @@ export const fetchDataContentCSV = ({state, dispatch}, payload) => {
 		method: 'POST',
 		data: createPostContentRequest(state, payload)
 	}).then((response) => {
-        downloadFile('csv', response)
+        downloadFile('csv', response, null, payload.source)
 	})
 }
 
@@ -245,17 +245,17 @@ const formattedTimeOptions = {
   second: '2-digit',
     }
 
-export const downloadFile = (fileType, response, objName) => {
+export const downloadFile = (fileType, response, objName, source) => {
 	let format = '';
 	let reportType = '';
 	switch (fileType) {
         case 'csv':
             format = 'csv';
-            reportType = 'data';
+            reportType = source || 'data';
             break
         case 'pdf':
             format = 'pdf';
-            reportType = 'report';
+            reportType = source || 'report';
             break
     }
     let blob = new Blob([response.data], { type: response.headers["content-type"]} )

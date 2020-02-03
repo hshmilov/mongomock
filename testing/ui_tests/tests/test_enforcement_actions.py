@@ -392,6 +392,7 @@ class TestEnforcementActions(TestBase):
                                                                ACTION_WMI_REGISTRY_KEY_CPU_TYPE,
                                                                delete_after_verification=True)
 
+    # pylint: disable=too-many-statements
     def test_tag_entities_dropdown(self):
         self.devices_page.create_saved_query(self.devices_page.FILTER_OS_WINDOWS, Enforcements.enforcement_query_1)
         self.enforcements_page.switch_to_page()
@@ -407,6 +408,7 @@ class TestEnforcementActions(TestBase):
         self.enforcements_page.add_tag_entities(ENFORCEMENT_TEST_NAME_1, CUSTOM_TAG,
                                                 self.enforcements_page.POST_ACTIONS_TEXT)
         self.enforcements_page.click_run_button()
+        self.enforcements_page.wait_for_task_in_progress_toaster()
         self.check_tag_added(Enforcements.enforcement_query_1, CUSTOM_TAG)
         self.devices_page.refresh()
         # create new task to remove custom tag to all windows based devices
@@ -421,6 +423,7 @@ class TestEnforcementActions(TestBase):
         self.enforcements_page.remove_tag_entities(ENFORCEMENT_TEST_NAME_2, CUSTOM_TAG,
                                                    self.enforcements_page.POST_ACTIONS_TEXT)
         self.enforcements_page.click_run_button()
+        self.enforcements_page.wait_for_task_in_progress_toaster()
         # go to device page and check if the tag removed
         self.devices_page.switch_to_page()
         self.devices_page.wait_for_table_to_load()
@@ -449,6 +452,7 @@ class TestEnforcementActions(TestBase):
         self.enforcements_page.select_tag_entities(ENFORCEMENT_TEST_NAME_3, TAG_ALL_COMMENT,
                                                    self.enforcements_page.POST_ACTIONS_TEXT)
         self.enforcements_page.click_run_button()
+        self.enforcements_page.wait_for_task_in_progress_toaster()
         self.check_tag_added(Enforcements.enforcement_query_1, TAG_ALL_COMMENT)
 
     def check_tag_added(self, query, tag):

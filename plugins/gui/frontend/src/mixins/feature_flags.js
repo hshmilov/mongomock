@@ -4,23 +4,24 @@ import {LOAD_PLUGIN_CONFIG, CHANGE_PLUGIN_CONFIG} from '../store/modules/setting
 
 export default {
   computed: mapState({
-    featureFlags (state) {
-      if (!state.settings.configurable.gui || !state.settings.configurable.gui.FeatureFlags) return null
-      return state.settings.configurable.gui.FeatureFlags.config
-    }
+    featureFlags(state) {
+      if (!state.settings.configurable.gui
+        || !state.settings.configurable.gui.FeatureFlags) return null;
+      return state.settings.configurable.gui.FeatureFlags.config;
+    },
   }),
-  mounted() {
-    let config = {
+  async mounted() {
+    const config = {
       pluginId: 'gui',
-      configName: 'FeatureFlags'
-    }
-    this.changePluginConfig({
+      configName: 'FeatureFlags',
+    };
+    await this.changePluginConfig({
       fetching: false,
       error: '',
       data: {},
-      ...config
-    })
-    this.loadPluginConfig(config)
+      ...config,
+    });
+    await this.loadPluginConfig(config);
   },
   methods: {
     ...mapActions({
@@ -28,6 +29,6 @@ export default {
     }),
     ...mapMutations({
       changePluginConfig: CHANGE_PLUGIN_CONFIG
-    })
-  }
+    }),
+  },
 }

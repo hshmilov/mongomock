@@ -130,6 +130,12 @@ GETTING_STARTED_CHECKLIST_SETTING = 'getting_started_checklist'
 class FeatureFlagsNames:
     TrialEnd = 'trial_end'
     LockedActions = 'locked_actions'
+    CloudCompliance = 'cloud_compliance'
+
+
+class CloudComplianceNames:
+    Enabled = 'cis_enabled'
+    Visible = 'enabled'
 
 
 class RootMasterNames:

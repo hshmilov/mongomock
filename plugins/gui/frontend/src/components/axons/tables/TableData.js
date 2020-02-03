@@ -1,21 +1,21 @@
-import string from '../../neurons/schema/types/string/StringView.vue'
-import number from '../../neurons/schema/types/numerical/NumberView.vue'
-import integer from '../../neurons/schema/types/numerical/IntegerView.vue'
-import bool from '../../neurons/schema/types/boolean/BooleanView.vue'
-import file from '../../neurons/schema/types/array/FileView.vue'
-import array from '../../neurons/schema/types/array/ArrayTableView.vue'
-import xHyperlink from '../../neurons/schema/Hyperlink.vue'
+import string from '../../neurons/schema/types/string/StringView.vue';
+import number from '../../neurons/schema/types/numerical/NumberView.vue';
+import integer from '../../neurons/schema/types/numerical/IntegerView.vue';
+import bool from '../../neurons/schema/types/boolean/BooleanView.vue';
+import file from '../../neurons/schema/types/array/FileView.vue';
+import array from '../../neurons/schema/types/array/ArrayTableView.vue';
+import xHyperlink from '../../neurons/schema/Hyperlink.vue';
 
-import {isObject, isObjectListField} from '../../../constants/utils'
+import { isObject, isObjectListField } from '../../../constants/utils';
 
 function processData(data, schema) {
   if (!schema.name || !isObject(data)) {
-    return data
+    return data;
   }
   if (isObjectListField(schema)) {
-    return Array.isArray(data)? data : [data]
+    return Array.isArray(data) ? data : [data];
   }
-  return data[schema.name]
+  return data[schema.name];
 }
 
 export default {
@@ -23,28 +23,36 @@ export default {
   props: {
     schema: {
       type: Object,
-      required: true
+      required: true,
     },
     data: {
       type: [String, Number, Boolean, Array, Object],
-      default: undefined
-    }
+      default: undefined,
+    },
+    formatTitle: {
+      type: Function,
+      default: null,
+    },
   },
-  render(createElement, {props}) {
-    const {schema, data} = props
-    const value = processData(data, schema)
-    const components = {string, number, integer, bool, file, array}
-    const dataElement = createElement(components[Array.isArray(value)? 'array' : schema.type], {
+  render(createElement, { props }) {
+    const { schema, data } = props;
+    const value = processData(data, schema);
+    const components = {
+      string, number, integer, bool, file, array,
+    };
+    const title = props.formatTitle ? props.formatTitle(data, schema.name) : undefined;
+    const dataElement = createElement(components[Array.isArray(value) ? 'array' : schema.type], {
       props: {
         schema,
-        value
-      }
-    })
+        value,
+        title,
+      },
+    });
     if (schema.hyperlinks) {
       return createElement(xHyperlink, {
-        props: schema.hyperlinks(value)
-      }, [dataElement])
+        props: schema.hyperlinks(value),
+      }, [dataElement]);
     }
-    return dataElement
-  }
-}
+    return dataElement;
+  },
+};

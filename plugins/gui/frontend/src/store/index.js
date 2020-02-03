@@ -84,6 +84,7 @@ import { reports } from './modules/reports'
 import { settings } from './modules/settings'
 import { tasks } from './modules/tasks'
 import { users } from './modules/users'
+import { compliance } from './modules/compliance'
 
 Vue.use(Vuex)
 export default new Vuex.Store({
@@ -188,6 +189,7 @@ export default new Vuex.Store({
     reports,
     settings,
     tasks,
-    users
+    users,
+    compliance
   }
 })

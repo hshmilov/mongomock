@@ -147,7 +147,7 @@ from gui.cached_session import CachedSessionInterface
 from gui.feature_flags import FeatureFlags
 from gui.gui_logic.entity_data import (get_entity_data, entity_data_field_csv,
                                        entity_notes, entity_notes_update, entity_tasks_actions,
-                                       entity_tasks_actions_csv, get_task_full_name)
+                                       entity_tasks_actions_csv, get_task_full_name, get_export_csv)
 from gui.gui_logic.dashboard_data import (adapter_data, fetch_chart_segment, fetch_chart_segment_historical,
                                           generate_dashboard, generate_dashboard_uncached,
                                           generate_dashboard_historical)
@@ -2248,7 +2248,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
         return self._delete_report_configs(self.get_request_data_as_object()), 200
 
     @gui_helpers.filtered()
-    @gui_add_rule_logged_in('reports/count', required_permissions={Permission(PermissionType.Enforcements,
+    @gui_add_rule_logged_in('reports/count', required_permissions={Permission(PermissionType.Reports,
                                                                               PermissionLevel.ReadOnly)})
     def reports_count(self, mongo_filter):
         reports_collection = self.reports_config_collection
@@ -5724,11 +5724,52 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
         return str(gui_helpers.get_entities_count(mongo_filter, self.get_appropriate_view(history, entity),
                                                   history_date=history, quick=quick))
 
-    # TODO: permissions requirements
-    @gui_add_rule_logged_in('compliance/<compliance_name>/<method>')
-    def compliance(self, compliance_name: str, method: str):
+    @gui_helpers.accounts()
+    @gui_add_rule_logged_in('compliance/<name>/<method>', methods=['GET', 'POST'],
+                            required_permissions=[Permission(PermissionType.Devices, ReadOnlyJustForGet),
+                                                  Permission(PermissionType.Users, ReadOnlyJustForGet)]
+                            )
+    def compliance(self, name, method, accounts):
         try:
-            return jsonify(get_compliance(compliance_name, method))
+            return jsonify(get_compliance(name, method, accounts))
         except Exception as e:
             logger.exception(f'Error in get_compliance')
             return return_error(f'Error: {str(e)}')
+
+    @gui_helpers.schema_fields()
+    @gui_add_rule_logged_in('compliance/<name>/csv', methods=['POST'],
+                            required_permissions=[Permission(PermissionType.Devices, ReadOnlyJustForGet),
+                                                  Permission(PermissionType.Users, ReadOnlyJustForGet)]
+                            )
+    def compliance_csv(self, name, schema_fields):
+        try:
+            return self._get_compliance_rules_csv(name, schema_fields)
+        except Exception as e:
+            logger.exception(f'Error in get_compliance')
+            return return_error(f'Error: {str(e)}')
+
+    @staticmethod
+    def _get_compliance_rules_csv(compliance_name, schema_fields):
+        rules = get_compliance(compliance_name, 'report', None)
+
+        def _get_order(elem):
+            return elem.get('order')
+
+        schema_fields.sort(key=_get_order)
+
+        field_by_name = {
+            field['name']: field for field in
+            # show only the fields with 0 or more in the order attribute
+            list(filter(lambda f: _get_order(f) >= 0, schema_fields))
+        }
+        for rule in rules:
+            rule['entities_results'] = rule.get('error') \
+                if rule.get('error') else rule.get('entities_results')
+
+        csv_string = get_export_csv(rules, field_by_name, None)
+        output = make_response(csv_string.getvalue().encode('utf-8'))
+        timestamp = datetime.now().strftime('%d%m%Y-%H%M%S')
+        output.headers[
+            'Content-Disposition'] = f'attachment; filename=axonius_cloud_{timestamp}.csv'
+        output.headers['Content-type'] = 'text/csv'
+        return output

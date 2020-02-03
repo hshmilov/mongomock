@@ -1,7 +1,7 @@
 import logging
 from datetime import datetime, timedelta
 
-from axonius.consts.gui_consts import FeatureFlagsNames, RootMasterNames
+from axonius.consts.gui_consts import FeatureFlagsNames, RootMasterNames, CloudComplianceNames
 from axonius.mixins.configurable import Configurable
 
 logger = logging.getLogger(f'axonius.{__name__}')
@@ -36,6 +36,26 @@ class FeatureFlags(Configurable):
                     }
                 },
                 {
+                    'name': FeatureFlagsNames.CloudCompliance,
+                    'title': 'Cloud Asset Compliance Center',
+                    'type': 'array',
+                    'items': [
+                        {
+                            'name': CloudComplianceNames.Visible,
+                            'title': 'Visible',
+                            'type': 'bool'
+                        },
+                        {
+                            'name': CloudComplianceNames.Enabled,
+                            'title': 'Enable',
+                            'type': 'bool',
+                        },
+                    ],
+                    'required': [
+                        CloudComplianceNames.Visible, CloudComplianceNames.Enabled
+                    ],
+                },
+                {
                     'name': RootMasterNames.root_key,
                     'title': 'Root Master Settings',
                     'type': 'array',
@@ -67,6 +87,10 @@ class FeatureFlags(Configurable):
         return {
             FeatureFlagsNames.TrialEnd: (datetime.now() + timedelta(days=30)).isoformat()[:10].replace('-', '/'),
             FeatureFlagsNames.LockedActions: [],
+            FeatureFlagsNames.CloudCompliance: {
+                CloudComplianceNames.Visible: False,
+                CloudComplianceNames.Enabled: False,
+            },
             RootMasterNames.root_key: {
                 RootMasterNames.enabled: False,
                 RootMasterNames.delete_backups: False,

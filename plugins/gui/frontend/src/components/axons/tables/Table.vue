@@ -4,7 +4,7 @@
       <thead>
         <tr class="clickable">
           <th
-            v-if="value"
+            v-if="value && multipleRowSelection"
             class="w-14"
           >
             <x-checkbox
@@ -27,6 +27,7 @@
             :sortable="sortable(field)"
             :filter="getFilter(field.name)"
             :filterable="filterable"
+            :show-checkboxes="multipleRowSelection"
             @click="clickCol"
             @filter="(filter) => filterCol(field.name, filter)"
           />
@@ -45,6 +46,9 @@
           :expandable="expandable"
           :clickable="onClickRow !== undefined"
           :read-only="readOnly.includes(row[idField])"
+          :row-class="rowClass"
+          :format-title="formatTitle"
+          :multiple-row-selection="multipleRowSelection"
           @input="(selected) => onSelect(row[idField], selected)"
           @click.native="() => clickRow(row[idField])"
         >
@@ -74,129 +78,141 @@
 </template>
 
 <script>
-  import xTableData from './TableData.js'
-  import xTableHead from './TableHead.vue'
-  import xTableRow from './TableRow.vue'
-  import xCheckbox from '../inputs/Checkbox.vue'
+import xTableData from './TableData';
+import xTableHead from './TableHead.vue';
+import xTableRow from './TableRow.vue';
+import xCheckbox from '../inputs/Checkbox.vue';
 
-  export default {
-    name: 'XTable',
-    components: {
-      xTableHead, xTableRow, xTableData, xCheckbox
+export default {
+  name: 'XTable',
+  components: {
+    xTableHead, xTableRow, xTableData, xCheckbox,
+  },
+  props: {
+    fields: {
+      type: Array,
+      required: true,
     },
-    props: {
-      fields: {
-        type: Array,
-        required: true
+    data: {
+      type: [Object, Array],
+      required: true,
+    },
+    pageSize: {
+      type: Number,
+      default: null,
+    },
+    sort: {
+      type: Object,
+      default: () => {
+        return { field: '', desc: true };
       },
-      data: {
-        type: [Object, Array],
-        required: true
-      },
-      pageSize: {
-        type: Number,
-        default: null
-      },
-      sort: {
-        type: Object,
-        default: () => {
-          return { field: '', desc: true }
-        }
-      },
-      colFilters: {
-        type: Object,
-        default: undefined
-      },
-      idField: {
-        type: String,
-        default: 'uuid'
-      },
-      value: {
-        type: Array,
-        default: undefined
-      },
-      expandable: {
-        type: Boolean,
-        default: false
-      },
-      filterable: {
-        type: Boolean,
-        default: false
-      },
-      onClickRow: {
-        type: Function,
-        default: undefined
-      },
-      onClickCol: {
-        type: Function,
-        default: undefined
-      },
-      onClickAll: {
-        type: Function,
-        default: undefined
-      },
-      readOnly: {
-        type: Array,
-        default: () => []
+    },
+    colFilters: {
+      type: Object,
+      default: undefined,
+    },
+    idField: {
+      type: String,
+      default: 'uuid',
+    },
+    value: {
+      type: Array,
+      default: undefined,
+    },
+    expandable: {
+      type: Boolean,
+      default: false,
+    },
+    filterable: {
+      type: Boolean,
+      default: false,
+    },
+    onClickRow: {
+      type: Function,
+      default: undefined,
+    },
+    onClickCol: {
+      type: Function,
+      default: undefined,
+    },
+    onClickAll: {
+      type: Function,
+      default: undefined,
+    },
+    readOnly: {
+      type: Array,
+      default: () => [],
+    },
+    rowClass: {
+      type: [Function, String],
+      default: '',
+    },
+    formatTitle: {
+      type: Function,
+      default: null,
+    },
+    multipleRowSelection: {
+      type: Boolean,
+      default: true,
+    },
+  },
+  computed: {
+    ids() {
+      return this.data.map(item => item[this.idField]);
+    },
+    partSelected() {
+      return Boolean(this.value && this.value.length && this.value.length < this.data.length);
+    },
+    allSelected() {
+      return Boolean(this.value && this.value.length && this.value.length === this.data.length);
+    },
+  },
+  methods: {
+    clickRow(id) {
+      if (!this.onClickRow || this.readOnly.includes(id)) return;
+      if (!document.getSelection().isCollapsed) return;
+
+      this.onClickRow(id);
+    },
+    clickCol(name) {
+      if (!this.onClickCol) return;
+
+      this.onClickCol(name);
+    },
+    onSelect(id, isSelected) {
+      if (isSelected) {
+        this.$emit('input', [...this.value, id]);
+      } else {
+        this.$emit('input', this.value.filter(currentId => currentId !== id));
       }
     },
-    computed: {
-      ids () {
-        return this.data.map(item => item[this.idField])
-      },
-      partSelected () {
-        return Boolean(this.value && this.value.length && this.value.length < this.data.length)
-      },
-      allSelected () {
-        return Boolean(this.value && this.value.length && this.value.length === this.data.length)
+    onSelectAll(selected) {
+      if (selected && (!this.value || !this.value.length)) {
+        this.$emit('input', this.ids.filter(id => !this.readOnly.includes(id)));
+      } else {
+        this.$emit('input', []);
+      }
+      if (this.onClickAll) {
+        this.onClickAll(selected);
       }
     },
-    methods: {
-      clickRow (id) {
-        if (!this.onClickRow || this.readOnly.includes(id)) return
-        if (!document.getSelection().isCollapsed) return
-
-        this.onClickRow(id)
-      },
-      clickCol (name) {
-        if (!this.onClickCol) return
-
-        this.onClickCol(name)
-      },
-      onSelect (id, isSelected) {
-        if (isSelected) {
-          this.$emit('input', [...this.value, id])
-        } else {
-          this.$emit('input', this.value.filter(currentId => currentId !== id))
-        }
-      },
-      onSelectAll (selected) {
-        if (selected && (!this.value || !this.value.length)) {
-          this.$emit('input', this.ids.filter(id => !this.readOnly.includes(id)))
-        } else {
-          this.$emit('input', [])
-        }
-        if (this.onClickAll) {
-          this.onClickAll(selected)
-        }
-      },
-      filterCol (fieldName, filter) {
-        this.$emit('filter', {
-          ...this.colFilters,
-          [fieldName]: filter.toLowerCase() || undefined
-        })
-      },
-      getFilter(fieldName) {
-        if (!this.colFilters) {
-          return undefined
-        }
-        return this.colFilters[fieldName] || ''
-      },
-      sortable (field) {
-        return (this.onClickCol !== undefined) && field.name !== 'adapters'
+    filterCol(fieldName, filter) {
+      this.$emit('filter', {
+        ...this.colFilters,
+        [fieldName]: filter.toLowerCase() || undefined,
+      });
+    },
+    getFilter(fieldName) {
+      if (!this.colFilters) {
+        return undefined;
       }
-    }
-  }
+      return this.colFilters[fieldName] || '';
+    },
+    sortable(field) {
+      return (this.onClickCol !== undefined) && field.name !== 'adapters';
+    },
+  },
+};
 </script>
 
 <style lang="scss">

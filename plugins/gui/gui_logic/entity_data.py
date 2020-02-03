@@ -313,15 +313,19 @@ def get_export_csv(rows: list, field_by_name: dict, sort: dict):
         if any(data.get(field) is not None for data in rows)
     }
     sort_data(rows, field_by_name, sort)
+    result_data = []
     for data in rows:
+        result_row = {}
         for field in field_by_name.keys():
             # Replace field paths with their pretty titles
             if field in data:
-                data[field_by_name[field]['title']] = get_csv_canonized_value(data[field])
-                del data[field]
-    dw = csv.DictWriter(string_output, [field['title'] for field in field_by_name.values()])
+                title = field_by_name[field]['title'] if field_by_name[field]['title'] else field.capitalize()
+                result_row[title] = get_csv_canonized_value(data[field])
+        result_data.append(result_row)
+    dw = csv.DictWriter(string_output, [field['title'] or field['name'].capitalize()
+                                        for field in field_by_name.values()])
     dw.writeheader()
-    dw.writerows(rows)
+    dw.writerows(result_data)
     return string_output
 
 ##############

@@ -5,6 +5,7 @@
     height="24"
     :style="{borderRadius: '50%'}"
     class="md-image"
+    alt=""
   >
   <img
     v-else-if="props.schema.format && props.schema.format === 'logo'"
@@ -20,65 +21,82 @@
     :class="`icon-${props.value}`"
   />
   <div
-    :class="`table-td-content-${props.schema.name}`"
+    v-else-if="props.schema.format && props.schema.format === 'status'"
+    :title="$options.methods.formatDetails(props.value, props.schema, props.title)"
+    :class="`status ${$options.methods.format(props.value, props.schema).
+      toLowerCase().replace(' ', '-')}`"
+  >
+    &nbsp;
+  </div>
+  <div
     v-else-if="props.value"
-    :title="$options.methods.formatDetails(props.value, props.schema)"
+    :class="`table-td-content-${props.schema.name}`"
+    :title="$options.methods.formatDetails(props.value, props.schema, props.title)"
   >{{ $options.methods.format(props.value, props.schema) }}</div>
-  <div v-else>&nbsp;</div>
+  <div v-else>
+&nbsp;
+  </div>
 </template>
 
 <script>
-  import { formatDate } from '../../../../../constants/utils'
+import { formatDate } from '../../../../../constants/utils';
 
-  const UPDATED_BY_FIELD = 'updated_by'
+const UPDATED_BY_FIELD = 'updated_by';
 
-  export default {
-    name: 'XStringView',
-    props: {
-      schema: {
-        type: Object,
-        required: true
-      },
-      value: {
-        type: String,
-        default: ''
-      }
+export default {
+  name: 'XStringView',
+  props: {
+    schema: {
+      type: Object,
+      required: true,
     },
-    methods: {
-      formatUsername(value) {
-        if (value.source) {
-          return `${value.source}/${value.username}`
-        }
-        return value.username
-      },
-      formatDetails(value, schema) {
-        if (schema.name !== UPDATED_BY_FIELD) {
-          return this.format(value, schema);
-        }
-        value = JSON.parse(value)
-        const username = this.formatUsername(value)
-        const fullName = `${value.first_name} ${value.last_name}`.trim()
-        const deleted = value.deleted? ' (deleted)' : ''
-        if (fullName) {
-          return `${username} - ${fullName}${deleted}`
-        }
-        return `${username}${deleted}`
-      },
-      format(value, schema) {
-        if (schema.name === UPDATED_BY_FIELD) {
-          return this.formatUsername(JSON.parse(value))
-        }
-        if (!schema.format) return value
-        if (schema.format.includes('date') || schema.format.includes('time')) {
-          return formatDate(value, schema)
-        }
-        if (schema.format === 'password') {
-          return '********'
-        }
-        return value
+    value: {
+      type: String,
+      default: '',
+    },
+    title: {
+      type: String,
+      default: null,
+    },
+  },
+  methods: {
+    formatUsername(value) {
+      if (value.source) {
+        return `${value.source}/${value.username}`;
       }
-    }
-  };
+      return value.username;
+    },
+    formatDetails(value, schema, title) {
+      if (title != null) {
+        return title;
+      }
+      if (schema.name !== UPDATED_BY_FIELD) {
+        return this.format(value, schema);
+      }
+      const parsedValue = JSON.parse(value);
+      const username = this.formatUsername(parsedValue);
+      const fullName = `${parsedValue.first_name} ${parsedValue.last_name}`.trim();
+      const deleted = parsedValue.deleted ? ' (deleted)' : '';
+      if (fullName) {
+        return `${username} - ${fullName}${deleted}`;
+      }
+      return `${username}${deleted}`;
+    },
+    format(value, schema) {
+      if (schema.name === UPDATED_BY_FIELD) {
+        return this.formatUsername(JSON.parse(value));
+      }
+      if (!schema.format) return value;
+      if (schema.format.includes('date') || schema.format.includes('time')) {
+        return formatDate(value, schema);
+      }
+      if (schema.format === 'password') {
+        return '********';
+      }
+      return value;
+    },
+  },
+};
 </script>
 
 <style lang="scss" scoped>
