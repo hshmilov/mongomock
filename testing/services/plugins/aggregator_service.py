@@ -1242,7 +1242,7 @@ class AggregatorService(PluginService, UpdatablePluginMixin):
                         continue
                     to_fix.append(pymongo.operations.UpdateOne({
                         '_id': entity['_id'],
-                        f'adapters.data.quick_id': get_preferred_quick_adapter_id(
+                        f'adapters.quick_id': get_preferred_quick_adapter_id(
                             tanium_adapter[PLUGIN_UNIQUE_NAME], tanium_current_id
                         )
                     }, {
