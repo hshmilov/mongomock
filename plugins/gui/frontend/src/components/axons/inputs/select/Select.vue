@@ -12,7 +12,6 @@
       slot="trigger"
       class="x-select-trigger"
       :tabindex="-1"
-      @keyup.down="incActiveOption"
     >
       <slot
         v-if="selectedOption"
@@ -21,12 +20,16 @@
         <div
           class="trigger-text"
           :title="selectedOption.title"
-        >{{ presentSelectionValue? selectedOption.name || placeholder : selectedOption.title }}</div>
+        >
+          {{ presentSelectionValue? selectedOption.name || placeholder : selectedOption.title }}
+        </div>
       </slot>
       <div
         v-if="!selectedOption && placeholder"
         class="placeholder"
-      >{{ placeholder }}</div>
+      >
+        {{ placeholder }}
+      </div>
     </div>
     <x-select-content
       slot="content"
@@ -49,113 +52,113 @@
 </template>
 
 <script>
-  import xDropdown from '../../popover/Dropdown.vue'
-  import xSelectContent from './SelectContent.vue'
+import xDropdown from '../../popover/Dropdown.vue';
+import xSelectContent from './SelectContent.vue';
 
-  export default {
-    name: 'XSelect',
-    components: { xDropdown, xSelectContent },
-    props: {
-      options: {
-        type: Array,
-        default: () => []
-      },
-      value: {
-        type: [String, Number, Boolean, Object],
-        default: null
-      },
-      placeholder: {
-        type: String,
-        default: ''
-      },
-      searchable: {
-        type: Boolean,
-        default: false
-      },
-      id: {
-        type: String,
-        default: undefined
-      },
-      size: {
-        type: String,
-        default: ''
-      },
-      alignAgile: {
-        type: Boolean,
-        default: true
-      },
-      container: {
-        type: Element,
-        default: undefined
-      },
-      readOnly: {
-        type: Boolean,
-        default: false
-      },
-      searchPlaceholder: {
-        type: String,
-        default: undefined
-      },
-      missingItemsLabel: {
-        type: String,
-        default: 'deleted'
-      },
-      allowCustomOption: {
-        type: Boolean,
-        default: false
-      },
-      presentSelectionValue: {
-        type: Boolean,
-        default: false
-      }
+export default {
+  name: 'XSelect',
+  components: { xDropdown, xSelectContent },
+  props: {
+    options: {
+      type: Array,
+      default: () => [],
     },
-    data() {
-      return {
-        searchValue: false
-      }
+    value: {
+      type: [String, Number, Boolean, Object],
+      default: null,
     },
-    computed: {
-      completeOptions () {
-        if (this.stringValue && !this.options.find(item => item.name === this.stringValue)) {
-          const title = this.stringValue + ( this.missingItemsLabel !== '' ? ` (${this.missingItemsLabel})` : '' )
-          return [...this.options, {
-            name: this.stringValue, title: title
-          }]
-        }
-        return this.options
-      },
-      selectedOption () {
-        if (this.stringValue === undefined || this.stringValue === null || !this.completeOptions.length) return undefined
-        return this.completeOptions.find(option => (option && option.name === this.stringValue));
-      },
-      selectContentValue: {
-        get() {
-            return this.value
-        },
-        set(value) {
-            this.$emit('input', value)
-        }
-      },
-      stringValue() {
-        if (this.value && typeof this.value === 'object') {
-          return this.value.value
-        }
-        return this.value
-      }
+    placeholder: {
+      type: String,
+      default: '',
     },
-    methods: {
-      selectOption (value) {
-        this.$emit('input', value)
-        this.closeDropdown()
-      },
-      closeDropdown () {
-        if (!this.$refs.dropdown) {
-          return
-        }
-        this.$refs.dropdown.close()
-      }
+    searchable: {
+      type: Boolean,
+      default: false,
     },
-  }
+    id: {
+      type: String,
+      default: undefined,
+    },
+    size: {
+      type: String,
+      default: '',
+    },
+    alignAgile: {
+      type: Boolean,
+      default: true,
+    },
+    container: {
+      type: Element,
+      default: undefined,
+    },
+    readOnly: {
+      type: Boolean,
+      default: false,
+    },
+    searchPlaceholder: {
+      type: String,
+      default: undefined,
+    },
+    missingItemsLabel: {
+      type: String,
+      default: 'deleted',
+    },
+    allowCustomOption: {
+      type: Boolean,
+      default: false,
+    },
+    presentSelectionValue: {
+      type: Boolean,
+      default: false,
+    },
+  },
+  data() {
+    return {
+      searchValue: false,
+    };
+  },
+  computed: {
+    completeOptions() {
+      if (this.stringValue && !this.options.find((item) => item.name === this.stringValue)) {
+        const title = this.stringValue + (this.missingItemsLabel !== '' ? ` (${this.missingItemsLabel})` : '');
+        return [...this.options, {
+          name: this.stringValue, title,
+        }];
+      }
+      return this.options;
+    },
+    selectedOption() {
+      if (this.stringValue === undefined || this.stringValue === null || !this.completeOptions.length) return undefined;
+      return this.completeOptions.find((option) => (option && option.name === this.stringValue));
+    },
+    selectContentValue: {
+      get() {
+        return this.value;
+      },
+      set(value) {
+        this.$emit('input', value);
+      },
+    },
+    stringValue() {
+      if (this.value && typeof this.value === 'object') {
+        return this.value.value;
+      }
+      return this.value;
+    },
+  },
+  methods: {
+    selectOption(value) {
+      this.$emit('input', value);
+      this.closeDropdown();
+    },
+    closeDropdown() {
+      if (!this.$refs.dropdown) {
+        return;
+      }
+      this.$refs.dropdown.close();
+    },
+  },
+};
 </script>
 
 <style lang="scss">

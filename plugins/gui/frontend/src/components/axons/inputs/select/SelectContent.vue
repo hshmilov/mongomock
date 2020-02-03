@@ -15,7 +15,12 @@
       :placeholder="placeholder"
       @keyup-enter="onEnter"
     />
-    <div class="x-select-options" :class="{'with-footer': allowCustomOption}">
+    <div
+      class="x-select-options"
+      :class="{'with-footer': allowCustomOption}"
+      @keydown.down.prevent
+      @keydown.up.prevent
+    >
       <template v-for="(currentOption, index) in filteredOptions">
         <div
           :key="index"
@@ -32,7 +37,9 @@
             :data="getAdapterValue(currentOption.name)"
             @change="(value) => selectOption(currentOption.name, value)"
           />
-          <slot :option="getOption(currentOption)">{{ currentOption.title }}</slot>
+          <slot :option="getOption(currentOption)">
+            {{ currentOption.title }}
+          </slot>
         </div>
         <x-select-content
           v-if="currentOption.plugins !== undefined"
@@ -43,9 +50,11 @@
           :options="currentOption.plugins"
           :searchable="currentOption.plugins !== undefined"
         >
-          <slot slot-scope="{ option }" :option="option" />
+          <slot
+            slot-scope="{ option }"
+            :option="option"
+          />
         </x-select-content>
-
       </template>
     </div>
     <template v-for="(extraOption, index) in extraOptions">
@@ -56,10 +65,15 @@
         @click="() => selectOption(extraOption.name)"
         @keyup.enter.stop.prevent="selectOption(extraOption.name)"
       >
-        <slot :option="getOption(extraOption)">{{ extraOption.title }}</slot>
+        <slot :option="getOption(extraOption)">
+          {{ extraOption.title }}
+        </slot>
       </div>
     </template>
-    <div v-if="multiSelect" class="all-buttons">
+    <div
+      v-if="multiSelect"
+      class="all-buttons"
+    >
       <div class="select-all">
         <x-button
           link
@@ -72,252 +86,246 @@
       >Clear all</x-button>
     </div>
   </div>
-</template>  
+</template>
 
 <script>
-    import xSearchInput from '../../../neurons/inputs/SearchInput.vue'
-    import XCheckbox from "../../inputs/Checkbox.vue";
-    import XButton from "../../inputs/Button.vue";    
+import _some from 'lodash/some';
+import _head from 'lodash/head';
+import xSearchInput from '../../../neurons/inputs/SearchInput.vue';
+import XCheckbox from '../Checkbox.vue';
+import XButton from '../Button.vue';
 
-    import _some from 'lodash/some'
-    import _head from 'lodash/head'
 
-    export default {
-        name: 'XSelectContent',
-        components: {XCheckbox, XButton, xSearchInput},
-        props: {
-            multiSelect: {
-                type: Boolean,
-                default: false
-            },
-            options: {
-                type: Array,
-                default: () => []
-            },
-            value: {
-                type: [String, Number, Boolean, Object],
-                default: null
-            },
-            placeholder: {
-                type: String,
-                default: undefined
-            },
-            searchable: {
-                type: Boolean,
-                default: false
-            },
-            id: {
-                type: String,
-                default: undefined
-            },
-            size: {
-                type: String,
-                default: ''
-            },
-            alignAgile: {
-                type: Boolean,
-                default: true
-            },
-            container: {
-                type: Element,
-                default: undefined
-            },
-            readOnly: {
-                type: Boolean,
-                default: false
-            },
-            missingItemsLabel: {
-              type: String,
-              default: 'deleted'
-            },
-            allowCustomOption: {
-              type: Boolean,
-              default: false
-            }
-        },
-        data() {
-            return {
-                activeOptionIndex: -1,
-                selectAll: true,
-                clearAll: false,
-                searchValue: ''
-            }
-        },
-        computed: {
-            completeOptions() {
-                if (this.value && !this.options.find(item => item.name === this.value)) {
-                    let currentOptions = [...this.options];
-                    const title = this.value + ( this.missingItemsLabel !== '' ? ` ${this.missingItemsLabel}` : '')
-                    if (this.value.length > 0) {
-                        currentOptions.push({
-                            name: this.value, title: title
-                        })
-                    }
-                    return currentOptions;
-                }
-                return this.options
-            },
-            filteredOptions() {
-                if (!this.completeOptions || !Array.isArray(this.completeOptions)) return []
-                return this.completeOptions.filter(option =>
-                    option.title && option.title.toLowerCase().includes(this.searchValue.toLowerCase()))
-            },
-            extraOptions() {
-              if(!this.allowCustomOption) return false
-              if(this.searchValue !== '' && !_some(this.completeOptions, {name:this.searchValue})) {
-                return [{ name: this.searchValue, title: `${this.searchValue} (create new)` }]
-              }
-              return []
-            },
-            secondaryValues: {
-                get() {
-                    if(this.value) {
-                        return this.value['secondaryValues']
-                    }
-                    return {}
-                },
-                set(secondaryValues) {
-                    this.value['secondaryValues'] = secondaryValues
-                    this.onOptionChanged(this.value)
-                }
-            },
-            selectedValues: {
-                get() {
-                    if(this.value && !this.value['secondaryValues']){
-                        return this.value['selectedValues']
-                    }
-                    let newSelectedValues = {}
-                    this.filteredOptions.forEach(option => newSelectedValues[option.name] = true)
-                    return newSelectedValues
-                },
-                set(selectedValues) {
-                    this.onOptionChanged(selectedValues)
-                }
-            }
-        },
-        watch: {
-            filteredOptions() {
-                this.activeOptionIndex = -1
-            }
-        },
-        methods: {
-            selectOption(name, value) {
-                if (!this.multiSelect) {
-                    let currentValue = {'value': name}
-                    let currentOption = this.filteredOptions.find(option => option.name === name)
-                    if(!currentOption) currentOption = this.extraOptions.find(option => option.name === name)
-                    if (currentOption.plugins && this.secondaryValues) {
-                        currentValue['secondaryValues'] = this.secondaryValues;
-                    } else {
-                        currentValue = name
-                    }
-                    this.$emit('input', currentValue)
-                    this.$emit('close')
-                    this.searchValue = ''
-                } else {
-                    let newValue = value
-                    if(newValue === undefined) {
-                        newValue = !this.selectedValues[name]
-                    }
-                    if(!newValue){
-                        this.selectAll = false
-                    } else {
-                        this.clearAll = false
-                    }
-                    this.selectedValues = {...this.selectedValues, [name]: newValue}
-
-                }
-            },
-            onOptionChanged(selectedValues){
-                if(this.multiSelect){
-                    this.selectAll = Object.keys(selectedValues).filter(key => selectedValues[key]).length === this.options.length
-                    this.clearAll = Object.keys(selectedValues).filter(key => !selectedValues[key]).length === this.options.length
-                    this.$emit('input', { selectedValues: selectedValues, selectAll: this.selectAll, clearAll: this.clearAll })
-                } else {
-                    this.$emit('input', selectedValues)
-                }
-
-            },
-            incActiveOption() {
-                this.focusOptions()
-                this.activeOptionIndex++
-                if (this.activeOptionIndex === this.filteredOptions.length) {
-                    this.activeOptionIndex = -1
-                }
-                this.scrollOption()
-            },
-            decActiveOption() {
-                this.activeOptionIndex--
-                if (this.activeOptionIndex < -1) {
-                    this.activeOptionIndex = this.filteredOptions.length - 1
-                }
-                this.scrollOption()
-            },
-            focusOptions() {
-                if (this.searchable) {
-                    this.$refs.searchInput.focus()
-                } else {
-                    this.$refs.option[0].focus()
-                }
-            },
-            scrollOption() {
-                if (this.activeOptionIndex >= 0 && this.activeOptionIndex < this.filteredOptions.length) {
-                    this.$refs.option[this.activeOptionIndex].scrollIntoView(false)
-                }
-            },
-            selectActive() {
-                if (this.activeOptionIndex === -1) return
-                this.selectOption(this.filteredOptions[this.activeOptionIndex].name)
-            },
-            selectAllData () {
-                let selectedValues = {}
-                this.selectAll = true
-                this.filteredOptions.forEach(option => {
-                    selectedValues[option.name] = true
-                })
-                this.onOptionChanged(selectedValues)
-            },
-            clearAllData () {
-                let selectedValues = {}
-                this.selectAll = false
-                this.filteredOptions.forEach(option => {
-                    selectedValues[option.name] = false
-                })
-                this.onOptionChanged(selectedValues)
-            },
-            getOption(currentOption){
-                if(currentOption.plugins && this.value['secondaryValues']){
-                    let numOfPlugins = Object.values(this.value['secondaryValues']).filter(value => value).length
-                    if(numOfPlugins > 0 && numOfPlugins < currentOption.plugins.length) {
-                        return {...currentOption, filtered: true}
-                    }
-                }
-                return currentOption
-            },
-            getAdapterValue(adapterName){
-                return this.selectedValues[adapterName] === undefined ? true : this.selectedValues[adapterName]
-            },
-            close() {
-              this.$emit('close')
-            },
-            onEnter() {
-              if(this.searchValue === '') return
-              let nameToSelect = this.extraOptions.length ? _head(this.extraOptions).name : false
-              if(nameToSelect) {
-                // in case we have extra option
-                // (when create new anabel and the search vale wont exist in the filtered options array)
-                this.selectOption(nameToSelect)
-                return
-              }
-              nameToSelect = this.filteredOptions.length ? _head(this.filteredOptions).name : false
-              if(nameToSelect && nameToSelect !== this.searchValue) {
-                // in case we have filtered options
-                // (when create new disabled and the search vale exist in the filtered options array)
-                this.selectOption(nameToSelect)
-              }
-            }
+export default {
+  name: 'XSelectContent',
+  components: { XCheckbox, XButton, xSearchInput },
+  props: {
+    multiSelect: {
+      type: Boolean,
+      default: false,
+    },
+    options: {
+      type: Array,
+      default: () => [],
+    },
+    value: {
+      type: [String, Number, Boolean, Object],
+      default: null,
+    },
+    placeholder: {
+      type: String,
+      default: undefined,
+    },
+    searchable: {
+      type: Boolean,
+      default: false,
+    },
+    id: {
+      type: String,
+      default: undefined,
+    },
+    size: {
+      type: String,
+      default: '',
+    },
+    alignAgile: {
+      type: Boolean,
+      default: true,
+    },
+    container: {
+      type: Element,
+      default: undefined,
+    },
+    readOnly: {
+      type: Boolean,
+      default: false,
+    },
+    missingItemsLabel: {
+      type: String,
+      default: 'deleted',
+    },
+    allowCustomOption: {
+      type: Boolean,
+      default: false,
+    },
+  },
+  data() {
+    return {
+      activeOptionIndex: -1,
+      selectAll: true,
+      clearAll: false,
+      searchValue: '',
+    };
+  },
+  computed: {
+    completeOptions() {
+      if (this.value && !this.options.find((item) => item.name === this.value)) {
+        const currentOptions = [...this.options];
+        const title = this.value + (this.missingItemsLabel !== '' ? ` ${this.missingItemsLabel}` : '');
+        if (this.value.length > 0) {
+          currentOptions.push({
+            name: this.value, title,
+          });
         }
-    }
+        return currentOptions;
+      }
+      return this.options;
+    },
+    filteredOptions() {
+      if (!this.completeOptions || !Array.isArray(this.completeOptions)) return [];
+      return this.completeOptions.filter((option) => option.title && option.title.toLowerCase().includes(this.searchValue.toLowerCase()));
+    },
+    extraOptions() {
+      if (!this.allowCustomOption) return false;
+      if (this.searchValue !== '' && !_some(this.completeOptions, { name: this.searchValue })) {
+        return [{ name: this.searchValue, title: `${this.searchValue} (create new)` }];
+      }
+      return [];
+    },
+    secondaryValues: {
+      get() {
+        if (this.value) {
+          return this.value.secondaryValues;
+        }
+        return {};
+      },
+      set(secondaryValues) {
+        this.value.secondaryValues = secondaryValues;
+        this.onOptionChanged(this.value);
+      },
+    },
+    selectedValues: {
+      get() {
+        if (this.value && !this.value.secondaryValues) {
+          return this.value.selectedValues;
+        }
+        const newSelectedValues = {};
+        this.filteredOptions.forEach((option) => newSelectedValues[option.name] = true);
+        return newSelectedValues;
+      },
+      set(selectedValues) {
+        this.onOptionChanged(selectedValues);
+      },
+    },
+  },
+  watch: {
+    filteredOptions() {
+      this.activeOptionIndex = -1;
+    },
+  },
+  methods: {
+    selectOption(name, value) {
+      if (!this.multiSelect) {
+        let currentValue = { value: name };
+        let currentOption = this.filteredOptions.find((option) => option.name === name);
+        if (!currentOption) currentOption = this.extraOptions.find((option) => option.name === name);
+        if (currentOption.plugins && this.secondaryValues) {
+          currentValue.secondaryValues = this.secondaryValues;
+        } else {
+          currentValue = name;
+        }
+        this.$emit('input', currentValue);
+        this.$emit('close');
+        this.searchValue = '';
+      } else {
+        let newValue = value;
+        if (newValue === undefined) {
+          newValue = !this.selectedValues[name];
+        }
+        if (!newValue) {
+          this.selectAll = false;
+        } else {
+          this.clearAll = false;
+        }
+        this.selectedValues = { ...this.selectedValues, [name]: newValue };
+      }
+    },
+    onOptionChanged(selectedValues) {
+      if (this.multiSelect) {
+        this.selectAll = Object.keys(selectedValues).filter((key) => selectedValues[key]).length === this.options.length;
+        this.clearAll = Object.keys(selectedValues).filter((key) => !selectedValues[key]).length === this.options.length;
+        this.$emit('input', { selectedValues, selectAll: this.selectAll, clearAll: this.clearAll });
+      } else {
+        this.$emit('input', selectedValues);
+      }
+    },
+    incActiveOption() {
+      this.activeOptionIndex++;
+      if (this.activeOptionIndex === this.filteredOptions.length) {
+        this.activeOptionIndex = -1;
+      }
+      this.focusOptions();
+    },
+    decActiveOption() {
+      this.activeOptionIndex--;
+      if (this.activeOptionIndex < -1) {
+        this.activeOptionIndex = this.filteredOptions.length - 1;
+      }
+      this.focusOptions();
+    },
+    focusOptions() {
+      const ref = this.$refs.option[this.activeOptionIndex <= 0 ? 0 : this.activeOptionIndex];
+      ref.focus();
+      this.scrollOption(ref);
+    },
+    scrollOption(ref) {
+      if (this.activeOptionIndex >= 0 && this.activeOptionIndex < this.filteredOptions.length) {
+        ref.scrollIntoView(true);
+      }
+    },
+    selectActive() {
+      if (this.activeOptionIndex === -1) return;
+      this.selectOption(this.filteredOptions[this.activeOptionIndex].name);
+    },
+    selectAllData() {
+      const selectedValues = {};
+      this.selectAll = true;
+      this.filteredOptions.forEach((option) => {
+        selectedValues[option.name] = true;
+      });
+      this.onOptionChanged(selectedValues);
+    },
+    clearAllData() {
+      const selectedValues = {};
+      this.selectAll = false;
+      this.filteredOptions.forEach((option) => {
+        selectedValues[option.name] = false;
+      });
+      this.onOptionChanged(selectedValues);
+    },
+    getOption(currentOption) {
+      if (currentOption.plugins && this.value.secondaryValues) {
+        const numOfPlugins = Object.values(this.value.secondaryValues).filter((value) => value).length;
+        if (numOfPlugins > 0 && numOfPlugins < currentOption.plugins.length) {
+          return { ...currentOption, filtered: true };
+        }
+      }
+      return currentOption;
+    },
+    getAdapterValue(adapterName) {
+      return this.selectedValues[adapterName] === undefined ? true : this.selectedValues[adapterName];
+    },
+    close() {
+      this.$emit('close');
+    },
+    onEnter() {
+      if (this.searchValue === '') return;
+      let nameToSelect = this.extraOptions.length ? _head(this.extraOptions).name : false;
+      if (nameToSelect) {
+        // in case we have extra option
+        // (when create new anabel and the search vale wont exist in the filtered options array)
+        this.selectOption(nameToSelect);
+        return;
+      }
+      nameToSelect = this.filteredOptions.length ? _head(this.filteredOptions).name : false;
+      if (nameToSelect && nameToSelect !== this.searchValue) {
+        // in case we have filtered options
+        // (when create new disabled and the search vale exist in the filtered options array)
+        this.selectOption(nameToSelect);
+      }
+    },
+  },
+};
 </script>
 
 <style lang="scss">
