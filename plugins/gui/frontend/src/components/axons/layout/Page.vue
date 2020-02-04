@@ -118,7 +118,8 @@
         > .body {
             padding: 0;
             height: calc(100% - 68px);
-            overflow: auto;
+            overflow: hidden;
+            overflow-y: auto;
             position: relative;
         }
     }
