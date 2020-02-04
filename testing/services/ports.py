@@ -84,6 +84,7 @@ DOCKER_PORTS = {
     'selenium-vnc':                     5900,
     'lansweeper-adapter':               5907,
     'portnox':                          5908,
+    'compliance':                       5909,
     'cynet-adapter':                    5910,
     'illusive-adapter':                 5911,
     'nmap-adapter':                     5920,

@@ -1489,7 +1489,7 @@ class PluginBase(Configurable, Feature, ABC):
             return self._historical_entity_views_db_map[entity_type]
         return self._entity_db_map[entity_type]
 
-    def _grab_file(self, field_data, stored_locally=True) -> gridfs.GridOut:
+    def _grab_file(self, field_data, stored_locally=True, alternative_db_name=None) -> gridfs.GridOut:
         """
         Fetches the file pointed by `field_data` from the DB.
         The user should not assume anything about the internals of the file.
@@ -1498,20 +1498,24 @@ class PluginBase(Configurable, Feature, ABC):
         :return: stream like object
         """
         if field_data:
-            db_name = self.plugin_unique_name if stored_locally else CORE_UNIQUE_NAME
+            if alternative_db_name:
+                db_name = alternative_db_name
+            else:
+                db_name = self.plugin_unique_name if stored_locally else CORE_UNIQUE_NAME
             return gridfs.GridFS(self._get_db_connection()[db_name]).get(ObjectId(field_data['uuid']))
         return None
 
-    def _grab_file_contents(self, field_data, stored_locally=True) -> gridfs.GridOut:
+    def _grab_file_contents(self, field_data, stored_locally=True, alternative_db_name=None) -> gridfs.GridOut:
         """
         Fetches the file pointed by `field_data` from the DB.
         The user should not assume anything about the internals of the file.
         :param field_data:
         :param stored_locally: Is the file stored in current plugin or in core (so it's generally available)
+        :param alternative_db_name: If specified, uses this specific db name
         :return: stream like object
         """
         if field_data:
-            return self._grab_file(field_data, stored_locally).read()
+            return self._grab_file(field_data, stored_locally, alternative_db_name).read()
         return None
 
     @property

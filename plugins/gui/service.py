@@ -5762,9 +5762,11 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
             # show only the fields with 0 or more in the order attribute
             list(filter(lambda f: _get_order(f) >= 0, schema_fields))
         }
+        # pylint: disable=unsupported-assignment-operation
         for rule in rules:
             rule['entities_results'] = rule.get('error') \
                 if rule.get('error') else rule.get('entities_results')
+        # pylint: enable=unsupported-assignment-operation
 
         csv_string = get_export_csv(rules, field_by_name, None)
         output = make_response(csv_string.getvalue().encode('utf-8'))

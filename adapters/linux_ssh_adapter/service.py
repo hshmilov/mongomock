@@ -70,6 +70,7 @@ class LinuxSshAdapter(LinuxSshExecutionMixIn, AdapterBase, Configurable):
 
         return client_config
 
+    # pylint: disable=arguments-differ
     def _grab_file_contents(self, field_data, stored_locally=True):
         # XXX: Ugly hack to handle EC
         try:

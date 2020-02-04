@@ -11,6 +11,7 @@ from axonius.consts.adapter_consts import SHOULD_NOT_REFRESH_CLIENTS, ADAPTER_SE
 from axonius.consts.plugin_subtype import PluginSubtype
 from axonius.utils.debug import redprint, yellowprint
 from axonius.entities import EntityType
+from services.plugins.compliance_service import ComplianceService
 from services.plugins.reimage_tags_analysis_service import ReimageTagsAnalysisService
 from services.plugins.reports_service import ReportsService
 from services.plugins.system_scheduler_service import SystemSchedulerService
@@ -68,6 +69,7 @@ def usage():
     {name} disable_client_evaluation [adapter_unique_name] - disables client evaluation for the next run only
     {name} s3_backup - Trigger s3 backup
     {name} root_master_s3_restore - Trigger 'Root Master mode' s3 restore
+    {name} compliance run - Run Compliance Report
     '''
 
 
@@ -92,6 +94,7 @@ def main():
     sa = StaticAnalysisService()
     rta = ReimageTagsAnalysisService()
     ss = SystemSchedulerService()
+    cs = ComplianceService()
 
     def get_all_running_adapters_and_scanners():
         result = dict()
@@ -156,6 +159,14 @@ def main():
             'should_fix_errors': fix_errors
         })
         print(f'Response: {res.json().get("devices_cleared")} errors found')
+
+    elif component == 'compliance':
+        if action == 'run':
+            print(f'Running compliance report generation...')
+            cs.trigger_execute(True)
+        else:
+            print(f'Invalid action {action}')
+            return -1
 
     elif component == 'cd':
         if not action:

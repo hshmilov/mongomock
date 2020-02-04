@@ -1,5 +1,14 @@
-# pylint: disable=too-many-lines,duplicate-code
-def get_cis_aws_compliance_report():
+# pylint: disable=too-many-lines,duplicate-code, protected-access
+from typing import List
+
+from axonius.consts.plugin_consts import COMPLIANCE_PLUGIN_NAME
+from axonius.plugin_base import PluginBase
+
+
+DEFAULT_ACCOUNT_NAME = 'Primary'
+
+
+def get_default_cis_aws_compliance_report():
     return {
         'status': 'ok',
         'rules': [
@@ -1442,13 +1451,18 @@ Security Group State
 
 
 def get_compliance_accounts():
-    return ['897766578789', 'test1234']
+    # pylint: disable=protected-access
+    reports_db = PluginBase.Instance._get_db_connection()[COMPLIANCE_PLUGIN_NAME]['reports']
+    all_account_names = list(reports_db.distinct('account_name'))
+    if not all_account_names:
+        return [DEFAULT_ACCOUNT_NAME]
+    return all_account_names
 
 
 def get_compliance(compliance_name: str, method: str, accounts: list):
     if compliance_name == 'cis_aws':
         if method == 'report':
-            return get_compliance_rules(accounts)
+            return list(get_compliance_rules(accounts))
         if method == 'accounts':
             return get_compliance_accounts()
         if method == 'report_no_data':
@@ -1461,26 +1475,35 @@ def get_compliance(compliance_name: str, method: str, accounts: list):
     raise ValueError(f'Data not found')
 
 
-def get_compliance_rules(accounts):
-    def beautify_compliance(compliance):
+def get_compliance_rules(accounts) -> List[dict]:
+    def beautify_compliance(compliance, account_name):
+        compliance_results = compliance.get('results') or {}
         beautify_object = {
-            'status': compliance['status'],
-            'section': compliance['section'],
-            'category': compliance['category'],
-            'account': compliance['account'],
-            'results': f'{compliance["results"].get("failed")}/{compliance["results"].get("checked")}',
+            'status': compliance.get('status'),
+            'section': compliance.get('section'),
+            'category': compliance.get('category'),
+            'account': account_name,
+            'results': f'{compliance_results.get("failed", 0)}/{compliance_results.get("checked", 0)}',
             'entities_results': compliance.get('entities_results'),
             'error': compliance.get('error'),
-            'affected': compliance['affected_entities'],
-            'cis': compliance['cis'],
-            'description': compliance['description'],
-            'remediation': compliance['remediation'],
-            'rule': compliance['rule_name'],
+            'affected': compliance.get('affected_entities'),
+            'cis': compliance.get('cis'),
+            'description': compliance.get('description'),
+            'remediation': compliance.get('remediation'),
+            'rule': compliance.get('rule_name'),
             'entities_results_query': compliance.get('entities_results_query'),
         }
         return beautify_object
 
-    rules = get_cis_aws_compliance_report().get('rules')
-    accounts_set = set(accounts)
-    return [beautify_compliance(compliance) for compliance in
-            list(filter(lambda r: len(accounts_set) == 0 or r.get('account') in accounts_set, rules))]
+    # pylint: disable=protected-access
+    all_reports = list(PluginBase.Instance._get_db_connection()[COMPLIANCE_PLUGIN_NAME]['reports'].find({}))
+    all_accounts = set(accounts)
+
+    if not all_reports:
+        default_rules = get_default_cis_aws_compliance_report().get('rules')
+        for account in all_accounts:
+            yield from (beautify_compliance(rule, account) for rule in default_rules)
+
+    for report in all_reports:
+        if report['account_name'] in all_accounts:
+            yield from (beautify_compliance(rule, report['account_name']) for rule in report['report']['rules'])

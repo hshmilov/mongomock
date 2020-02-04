@@ -16,7 +16,7 @@ from scep_adapter.consts import SCEP_DATABASE, SCEP_HOST, SCEP_PORT, DEFAULT_SCE
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
-class Scepdapter(AdapterBase, Configurable):
+class ScepAdapter(AdapterBase, Configurable):
     # pylint: disable=too-many-instance-attributes
     class MyDeviceAdapter(DeviceAdapter):
         resource_id = Field(str, 'Resource ID')

@@ -3041,7 +3041,7 @@ class AwsAdapter(AdapterBase, Configurable):
                         except Exception:
                             logger.exception(f'Can not add root volume information')
 
-                    workspace_connection_status = workspace_connection_statuses.get(workspace_id)
+                    workspace_connection_status = workspace_connection_statuses.get(workspace_id) or {}
                     workspace_connection_status_timestamp = None
                     try:
                         workspace_connection_status_timestamp = parse_date(
