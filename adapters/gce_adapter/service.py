@@ -44,7 +44,6 @@ POWER_STATE_MAP = {
 class DeviceType(enum.Enum):
     COMPUTE = 1
     STORAGE = 2
-    STORAGE_LIMITED = 3
 
 
 class GceTag(SmartJsonClass):
@@ -150,6 +149,7 @@ class GceAdapter(AdapterBase, Configurable):
         try:
             client = GoogleCloudPlatformConnection(
                 service_account_file=json.loads(self._grab_file_contents(client_config['keypair_file'])),
+                fetch_storage=self.__fetch_buckets,
                 https_proxy=client_config.get('https_proxy')
             )
             with client:
@@ -359,8 +359,8 @@ class GceAdapter(AdapterBase, Configurable):
                 logger.warning(f'Bad device with no ID: {device_raw}')
                 return None
             # generic Axonius stuff
-            device.id = device_id + '_' + (device_raw.get('project_id') or '')
-            device.pretty_id = f''
+            project_id = device_raw.get('project_id')
+            device.id = f'{device_id}_{project_id}_{device_raw.get("name")}'
             device.cloud_provider = 'GCP'
             device.name = device_raw.get('name')
 
@@ -419,12 +419,14 @@ class GceAdapter(AdapterBase, Configurable):
                         storage_class_updated=parse_date(object_raw.get('timeStorageClassUpdated'))
                     ))
                 except Exception:
-                    message = f'Failed to add storage object for device {device_id}: {object_raw}'
+                    message = f'Failed to add storage object for device {device_id}'
                     logger.exception(message)
                     continue
             # raw (json)
             device.set_raw(device_raw)
         except Exception:
+            # remove objects to make device_raw not hueg
+            device_raw.pop('x_objects')
             logger.exception(f'Failed to create storage device for {device_raw}')
             device = None
         return device

@@ -15,7 +15,11 @@ BUCKETS_BASE_URL = f'{STORAGE_BASE_URL}/b'
 
 
 class GoogleCloudPlatformConnection(RESTConnection):
-    def __init__(self, service_account_file: dict, *args, **kwargs):
+    def __init__(self,
+                 service_account_file: dict,
+                 *args,
+                 fetch_storage: bool = False,
+                 **kwargs):
         super().__init__(
             *args, domain='https://cloudresourcemanager.googleapis.com',
             headers={
@@ -24,17 +28,22 @@ class GoogleCloudPlatformConnection(RESTConnection):
             },
             **kwargs
         )
+        self.__fetch_storage = fetch_storage
         self.__sa_file = service_account_file
         self.__access_token = None
         self.__last_token_fetch = None
-        self.__scopes = [
-            'https://www.googleapis.com/auth/cloudplatformprojects.readonly',
-            'https://www.googleapis.com/auth/cloud-platform.read-only',
-            'https://www.googleapis.com/auth/devstorage.read_only'
-        ]
+        self.__scopes = {
+            'compute': ['https://www.googleapis.com/auth/cloudplatformprojects.readonly'],
+            'storage': ['https://www.googleapis.com/auth/cloud-platform.read-only',
+                        'https://www.googleapis.com/auth/devstorage.read_only'],
+        }
 
     def _get_scopes(self):
-        return ' '.join(self.__scopes)
+        scopes = list()
+        scopes.extend(self.__scopes['compute'])
+        if self.__fetch_storage:
+            scopes.extend(self.__scopes['storage'])
+        return ' '.join(scopes)
 
     def _paginated_request(self, method, *args, **kwargs):
         self.refresh_token()
@@ -119,7 +128,7 @@ class GoogleCloudPlatformConnection(RESTConnection):
                 if get_objects:
                     try:
                         item['x_objects'] = list(self._get_bucket_objects(item['id']))
-                    except ValueError as e:
+                    except Exception as e:
                         message = f'Failed to get objects for {item.get("id")}: {str(e)}'
                         logger.warning(message)
                         item['x_objects'] = []
