@@ -218,12 +218,14 @@ class LdapConnection(object):
         self.ca_file_data_param = ca_file_data
         self.cert_file_param = cert_file
         self.private_key_param = private_key
-        if (ca_file_data or cert_file or private_key) and not (ca_file_data and cert_file and private_key):
-            ca_file_data = None
+        if (cert_file or private_key) and not (cert_file and private_key):
             cert_file = None
             private_key = None
 
-        self.__ca_file = create_temp_file(ca_file_data) if ca_file_data else None
+        try:
+            self.__ca_file = create_temp_file(ca_file_data) if ca_file_data else None
+        except Exception:
+            self.__ca_file = create_temp_file(ca_file_data.encode('utf-8')) if ca_file_data else None
         self.__cert_file = create_temp_file(cert_file) if cert_file else None
         self.__private_key_file = create_temp_file(private_key) if private_key else None
         self.__ldap_ou_whitelist = ldap_ou_whitelist
