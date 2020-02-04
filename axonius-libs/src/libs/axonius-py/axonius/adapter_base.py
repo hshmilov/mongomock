@@ -1338,7 +1338,6 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
             client_config = client.get('client_config')
             if client_config:
                 self._decrypt_client_config(client_config)
-                self._clean_unneeded_client_config_fields(client_config)
             yield client
 
     def _get_client_config_by_client_id(self, client_id: str):

@@ -159,7 +159,8 @@ class TestAdapters(TestBase):
         with all 4 labels at the right place
         :return:
         """
-        with CsvService().contextmanager(take_ownership=True):
+        service = CsvService()
+        with service.contextmanager(take_ownership=True):
             for position, client in enumerate(USERS_CLIENT_FILES, start=1):
                 self._upload_csv(list(client.keys())[0], client, True)
                 self.adapters_page.wait_for_server_green(position)
@@ -168,20 +169,31 @@ class TestAdapters(TestBase):
             self.adapters_page.fill_creds(connectionLabel=JSON_NAME)
             self.adapters_page.click_save()
             self.adapters_page.wait_for_server_green(1)
-            self.base_page.run_discovery()
-            self.users_page.switch_to_page()
-            self.users_page.run_filter_query('avidor')
-            self.users_page.hover_over_entity_adapter_icon(index=0)
-            data = self.users_page.get_adapters_popup_table_data()
-            names = [item['Name'] for item in data]
-            all_is_good = True
-            for name in EXPECTED_ADAPTER_LIST_LABELS:
-                if name not in names:
-                    all_is_good = False
-
-            assert all_is_good
+            self.check_for_connection_labels()
+            # restart the adapter and check again
+            # https://axonius.atlassian.net/browse/AX-6191
+            service.stop()
+            service.start_and_wait()
+            self.adapters_page.switch_to_page()
+            self._open_add_edit_server(CSV_NAME, 1)
+            self.adapters_page.click_save()
+            self.check_for_connection_labels()
             self.adapters_page.clean_adapter_servers(CSV_NAME, True)
             self.wait_for_adapter_down(CSV_PLUGIN_NAME)
+
+    def check_for_connection_labels(self):
+        self.base_page.run_discovery()
+        self.users_page.switch_to_page()
+        self.users_page.run_filter_query('avidor')
+        self.users_page.hover_over_entity_adapter_icon(index=0)
+        data = self.users_page.get_adapters_popup_table_data()
+        names = [item['Name'] for item in data]
+        all_is_good = True
+        for name in EXPECTED_ADAPTER_LIST_LABELS:
+            if name not in names:
+                all_is_good = False
+
+        assert all_is_good
 
     def _upload_csv(self, csv_file_name, csv_data, is_user_file=False):
         self._open_add_edit_server(CSV_NAME)
