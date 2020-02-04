@@ -560,9 +560,9 @@ export const pluginMeta = {
         description: 'Absolute specializes in software to manage and secure Windows computers and Android smartphones.'
     },
     landesk_adapter: {
-        title: 'Ivanti Landesk',
-        link: '',
-        description: 'Ivanti Unified Endpoint Manager (UEM) is endpoint and user-profile management software that helps IT administrators gather detailed device data, automate software and OS deployments, personalize workspace environments, and fix user issues.'
+        title: 'Ivanti (Landesk) Unified Endpoint Manager',
+        link: 'https://docs.axonius.com/docs/ivanti-unified-endpoint-manager',
+        description: 'Ivanti (formerly Landesk) Unified Endpoint Manager (UEM) helps IT administrators gather detailed device data, automate software and OS deployments, personalize workspace environments, and fix user issues.'
     },
     lansweeper_adapter: {
         title: 'Lansweeper',

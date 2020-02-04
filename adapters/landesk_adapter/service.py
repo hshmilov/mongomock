@@ -79,7 +79,7 @@ class LandeskAdapter(AdapterBase):
             'items': [
                 {
                     'name': 'domain',
-                    'title': 'Landesk Domain',
+                    'title': 'Ivanti UEM Domain',
                     'type': 'string'
                 },
                 {
