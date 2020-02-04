@@ -568,10 +568,11 @@ class AdapterService(PluginService):
         assert response.status_code == 200, str(response)
         return from_json(response.content)
 
-    def trigger_clean_db(self):
+    def trigger_clean_db(self, do_not_look_at_last_cycle=False):
         # This help guarantee consistency for transactions
         time.sleep(1)
         response = self.post('/trigger/clean_devices?priority=True',
+                             data={'do_not_look_at_last_cycle': do_not_look_at_last_cycle},
                              headers={
                                  API_KEY_HEADER: self.api_key
                              })

@@ -346,7 +346,7 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
 
         return counter
 
-    def clean_db(self):
+    def clean_db(self, do_not_look_at_last_cycle=False):
         """
         Figures out which devices are too old and removes them from the db.
         Unlinks devices first if necessary.
@@ -356,7 +356,7 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
         user_age_cutoff = self.__user_time_cutoff()
         try:
             last_cycle_start = self.__get_last_cycle_start_time()
-            if last_cycle_start:
+            if do_not_look_at_last_cycle is False and last_cycle_start:
                 # We want to delete all entities that are old. an old entity is an entity that has not been fetched in
                 # a defined time, AND was not fetched in the last cycle.
                 if device_age_cutoff[1]:
@@ -399,7 +399,10 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
                 delayed_trigger_gc()
                 raise
         elif job_name == 'clean_devices':
-            return to_json(self.clean_db())
+            do_not_look_at_last_cycle = False
+            if post_json and post_json.get('do_not_look_at_last_cycle') is True:
+                do_not_look_at_last_cycle = True
+            return to_json(self.clean_db(do_not_look_at_last_cycle))
         else:
             raise RuntimeError('Wrong job_name')
 

@@ -51,7 +51,9 @@ def usage():
     {name} sc - run static correlator & static users correlator
     {name} sc (devices/users)- run static correlator & static users correlator
     {name} de [dry/wet] - run static correlator to detect errors, pass 'de wet' to fix errors 
-    {name} cd - run clean devices (clean db)
+    {name} cd - run clean devices (clean db) [specific_adapter] [--do-not-look-at-last-cycle]
+                if --do-not-look-at-last-cycle is specified, only in a specific adapter, it will clean without the 
+                'do not clean devices that has been fetched in last cycle' protection.
     {name} rr - run reports
     {name} sa - run static analysis [job_name]
     {name} rta - run reimage tags analysis
@@ -167,7 +169,11 @@ def main():
                 return -1
 
             print(f'Running clean devices for {action} (Blocking)...')
-            service.trigger_clean_db()
+            if len(sys.argv) > 3 and sys.argv[3] == '--do-not-look-at-last-cycle':
+                print(f'Not looking at last cycle')
+                service.trigger_clean_db(do_not_look_at_last_cycle=True)
+            else:
+                service.trigger_clean_db()
 
     elif component == 'rr':
         print('Running reports (Blocking)...')
