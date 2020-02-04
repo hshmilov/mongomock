@@ -15,7 +15,7 @@ def read_cluster_data():
         cluster['master_ip'] = MASTER_ADDR_HOST_PATH.read_text()
     else:
         cluster['instance_type'] = 'master'
-    cluster['network'] = subprocess.check_output('weave status connections'.split()).decode()
+    cluster['network'] = subprocess.check_output('weave status connections'.split(), timeout=60).decode()
     return json.dumps(cluster)
 
 

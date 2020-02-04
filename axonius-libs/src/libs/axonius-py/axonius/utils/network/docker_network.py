@@ -61,6 +61,7 @@ def read_weave_network_range():
     return weave_netrowk_range
 
 
-def run_cmd_in_container(container, cmd):
+def run_cmd_in_container(container, cmd, timeout=60):
     env = {'DOCKER_HOST': 'unix:///var/run/weave/weave.sock'}
-    return subprocess.check_output(shlex.split(f'docker exec {container} {cmd}'), env=env).decode()
+    return subprocess.check_output(shlex.split(f'docker exec {container} {cmd}'),
+                                   env=env, timeout=timeout).decode()
