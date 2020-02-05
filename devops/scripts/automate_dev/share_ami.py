@@ -1,6 +1,7 @@
 import argparse
 import boto3
 
+from scripts.automate_dev.aws_accounts_dict import AwsAccountsStore
 from scripts.automate_dev.latest_ami import get_latest_ami
 
 
@@ -91,6 +92,7 @@ def main():
     parser.add_argument('--src_region', type=str, default='us-east-2')
     parser.add_argument('--dest_region', type=str, required=True)
     parser.add_argument('--dest_account', type=str, required=True)
+    parser.add_argument('--customer', type=str, default='')
 
     args = parser.parse_args()
     print(args)
@@ -104,10 +106,17 @@ def main():
 
     dst_region = args.dest_region
     dst_account_id = args.dest_account
+    customer = args.customer
 
     amishare = AmiShare(region=src_region)
     image_id = amishare.copy_to_region(image_to_share, dst_region)
     amishare.modify_permissions(image_id, dst_account=dst_account_id, region=dst_region)
+
+    try:
+        aws_accounts = AwsAccountsStore()
+        aws_accounts.set_data_for_account(dst_account_id, customer)
+    except Exception as e:
+        print(f'Failed to set data {e}')
 
 
 if __name__ == '__main__':
