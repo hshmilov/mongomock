@@ -332,6 +332,7 @@ class SplunkConnection(object):
 
     def get_devices(self, earliest, maximum_records_per_search, fetch_plugins_dict,
                     splunk_macros_list):
+        fetch_cisco = fetch_plugins_dict.get('fetch_plugins_dict')
         if splunk_macros_list:
             for macro_str in splunk_macros_list:
                 yield from self.fetch(f'search `{macro_str}`',
@@ -360,11 +361,6 @@ class SplunkConnection(object):
                               maximum_records_per_search,
                               'Windows Login',
                               send_object_to_raw=True)
-        yield from self.fetch('search sourcetype="*cisco*" AND "BT PROCESS" AND "M="',
-                              SplunkConnection.parse_cisco_bt,
-                              earliest,
-                              maximum_records_per_search,
-                              'Cisco client BT PROCESS')
         yield from self.fetch('search index=inf_netauth AND "PulseSecure:" AND "NCIP"',
                               SplunkConnection.parse_vpn,
                               earliest,
@@ -375,26 +371,33 @@ class SplunkConnection(object):
                               earliest,
                               1000,  # This repeats it very fast
                               'VPN')
+        if fetch_cisco:
+            yield from self.fetch('search sourcetype="*cisco*" AND "BT PROCESS" AND "M="',
+                                  SplunkConnection.parse_cisco_bt,
+                                  earliest,
+                                  maximum_records_per_search,
+                                  'Cisco client BT PROCESS')
+            yield from self.fetch('search sourcetype="*Cisco*"  AND "from port"  AND "to port"',
+                                  SplunkConnection.parse_cisco_port,
+                                  earliest,
+                                  maximum_records_per_search,
+                                  'Cisco client port')
+            yield from self.fetch('search sourcetype="*Cisco*" AND "Target MAC Address"',
+                                  SplunkConnection.parse_cisco_arp,
+                                  earliest,
+                                  maximum_records_per_search,
+                                  'Cisco client')
+            yield from self.fetch('search sourcetype="*cisco*" AND NOT "(Target MAC Address) [" AND "mac= "',
+                                  SplunkConnection.parse_cisco_sig_alarm,
+                                  earliest,
+                                  maximum_records_per_search,
+                                  'Cisco client SIG')
+
         yield from self.fetch('search index=winevents sourcetype=DhcpSrvLog',
                               SplunkConnection.parse_dhcp,
                               earliest,
                               maximum_records_per_search,
                               'DHCP')
-        yield from self.fetch('search sourcetype="*Cisco*"  AND "from port"  AND "to port"',
-                              SplunkConnection.parse_cisco_port,
-                              earliest,
-                              maximum_records_per_search,
-                              'Cisco client port')
-        yield from self.fetch('search sourcetype="*Cisco*" AND "Target MAC Address"',
-                              SplunkConnection.parse_cisco_arp,
-                              earliest,
-                              maximum_records_per_search,
-                              'Cisco client')
-        yield from self.fetch('search sourcetype="*cisco*" AND NOT "(Target MAC Address) [" AND "mac= "',
-                              SplunkConnection.parse_cisco_sig_alarm,
-                              earliest,
-                              maximum_records_per_search,
-                              'Cisco client SIG')
 
         if fetch_plugins_dict.get("nexpose"):
             yield from self.fetch('search sourcetype="rapid7:nexpose:asset" site_id=* index=rapid7 | dedup asset_id | fields version asset_id ip hostname site_name version mac description installed_software services',

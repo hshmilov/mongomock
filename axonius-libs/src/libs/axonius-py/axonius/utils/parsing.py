@@ -839,6 +839,13 @@ def hostname_not_problematic(adapter_device):
              and 'loaner' != get_normalized_hostname_str(adapter_device).split('.')[0].strip().lower()
              and 'macbook-air' != get_normalized_hostname_str(adapter_device).split('.')[0].strip().lower()
              and 'mac-mini' != get_normalized_hostname_str(adapter_device).split('.')[0].strip().lower()
+             and 'billing' != get_normalized_hostname_str(adapter_device).split('.')[0].strip().lower()
+             and 'work' != get_normalized_hostname_str(adapter_device).split('.')[0].strip().lower()
+             and 'fullservice' != get_normalized_hostname_str(adapter_device).split('.')[0].strip().lower()
+             and 'harmony' != get_normalized_hostname_str(adapter_device).split('.')[0].strip().lower()
+             and 'cs' != get_normalized_hostname_str(adapter_device).split('.')[0].strip().lower()
+             and 'timeclock' != get_normalized_hostname_str(adapter_device).split('.')[0].strip().lower()
+             and 'ops' != get_normalized_hostname_str(adapter_device).split('.')[0].strip().lower()
              and 'macbook-pro' != get_normalized_hostname_str(adapter_device).split('.')[0].strip().lower())):
         return True
     return False
@@ -1156,7 +1163,8 @@ def compare_bios_serial_serial_no_s(adapter_device1, adapter_device2):
 
 
 def get_asset_name(adapter_device):
-    if adapter_device['data'].get('name') and not is_qualys_adapter(adapter_device):
+    if adapter_device['data'].get('name') and not is_qualys_adapter(adapter_device) \
+            and (not is_bluecat_adapter(adapter_device) or not adapter_device.get(NORMALIZED_MACS)):
         return adapter_device['data'].get('name').upper()
     return None
 

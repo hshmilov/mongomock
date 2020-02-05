@@ -7,25 +7,22 @@ from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.connection import RESTException
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.utils.files import get_local_config_file
-from axonius.fields import Field
-from axonius.utils.parsing import parse_unix_timestamp
-from rumble_adapter.connection import RumbleConnection
-from rumble_adapter.client_id import get_client_id
-from rumble_adapter.consts import DEFAULT_RUMBLE_DOMAIN
+from axonius.utils.datetime import parse_date
+from axonius.fields import Field, ListField
+from axonius.utils.dynamic_fields import put_dynamic_field
+from arsenal_adapter.connection import ArsenalConnection
+from arsenal_adapter.client_id import get_client_id
+from arsenal_adapter.consts import ALLOWED_TYPES
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
-class RumbleAdapter(AdapterBase):
+class ArsenalAdapter(AdapterBase):
     # pylint: disable=too-many-instance-attributes
     class MyDeviceAdapter(DeviceAdapter):
-        org_id = Field(str, 'Organization Id')
-        site_id = Field(str, 'Site Id')
-        created_at = Field(datetime.datetime, 'Created At')
-        updated_at = Field(datetime.datetime, 'Updated At')
-        device_type = Field(str, 'Device Type')
-        alive = Field(bool, 'Alive')
-        detected_by = Field(str, 'Detected By')
+        asset_type = Field(str, 'Asset Type')
+        hostnames = ListField(str, 'Hostnames')
+        last_modified_date = Field(datetime.datetime, 'Last Modified Date')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -36,16 +33,14 @@ class RumbleAdapter(AdapterBase):
 
     @staticmethod
     def _test_reachability(client_config):
-        return RESTConnection.test_reachability(client_config.get('domain') or DEFAULT_RUMBLE_DOMAIN,
+        return RESTConnection.test_reachability(client_config.get('domain'),
                                                 https_proxy=client_config.get('https_proxy'))
 
     @staticmethod
     def get_connection(client_config):
-        connection = RumbleConnection(domain=client_config.get('domain') or DEFAULT_RUMBLE_DOMAIN,
-                                      verify_ssl=client_config['verify_ssl'],
-                                      https_proxy=client_config.get('https_proxy'),
-                                      apikey=client_config['apikey'],
-                                      org_id=client_config['org_id'])
+        connection = ArsenalConnection(domain=client_config['domain'],
+                                       verify_ssl=client_config['verify_ssl'],
+                                       https_proxy=client_config.get('https_proxy'))
         with connection:
             pass
         return connection
@@ -75,7 +70,7 @@ class RumbleAdapter(AdapterBase):
     @staticmethod
     def _clients_schema():
         """
-        The schema RumbleAdapter expects from configs
+        The schema ArsenalAdapter expects from configs
 
         :return: JSON scheme
         """
@@ -83,20 +78,8 @@ class RumbleAdapter(AdapterBase):
             'items': [
                 {
                     'name': 'domain',
-                    'title': 'Rumble Network Discovery Domain',
-                    'type': 'string',
-                    'default': DEFAULT_RUMBLE_DOMAIN
-                },
-                {
-                    'name': 'org_id',
-                    'title': 'Organization Id',
+                    'title': 'Arsenal Domain',
                     'type': 'string'
-                },
-                {
-                    'name': 'apikey',
-                    'title': 'API Key',
-                    'type': 'string',
-                    'format': 'password'
                 },
                 {
                     'name': 'verify_ssl',
@@ -111,41 +94,54 @@ class RumbleAdapter(AdapterBase):
             ],
             'required': [
                 'domain',
-                'apikey',
-                'org_id',
+                'username',
+                'password',
                 'verify_ssl'
             ],
             'type': 'array'
         }
 
-    # pylint: disable=too-many-branches, too-many-statements, too-many-locals, too-many-nested-blocks
+    # pylint: disable=too-many-branches, too-many-statements
     def _create_device(self, device_raw):
         try:
+            if device_raw.get('type') not in ALLOWED_TYPES:
+                return None
             device = self._new_device_adapter()
-            device_id = device_raw.get('id')
+            device_id = device_raw.get('id').get('id')
             if device_id is None:
                 logger.warning(f'Bad device with no ID {device_raw}')
                 return None
-            device.id = device_id + '_' + str((device_raw.get('names') or ''))
-            if device_raw.get('names') and isinstance(device_raw.get('names'), list):
-                device.hostname = device_raw.get('names')[0]
-            device.add_ips_and_macs(ips=device_raw.get('addresses'), macs=device_raw.get('macs'))
-            device.last_seen = parse_unix_timestamp(device_raw.get('last_seen'))
-            device.first_seen = parse_unix_timestamp(device_raw.get('first_seen'))
-            device.alive = bool(device_raw.get('alive'))
-            device.site_id = device_raw.get('site_id')
-            device.created_at = parse_unix_timestamp(device_raw.get('created_at'))
-            device.updated_at = parse_unix_timestamp(device_raw.get('updated_at'))
-            device.org_id = device_raw.get('organization_id')
-            device.detected_by = device_raw.get('detected_by')
+            device.id = device_id + '_' + (device_raw.get('serialNumber') or '')
+            device.device_serial = device_raw.get('serialNumber')
+            device.asset_type = device_raw.get('type')
             try:
-                device.figure_os((device_raw.get('os') or '') + ' ' + (device_raw.get('os_version') or ''))
+                ips_opinions_raw = (device_raw.get('ips') or {}).get('opinions') or {}
+                for ips_values_raw in ips_opinions_raw.values():
+                    if ips_values_raw.get('values'):
+                        device.add_nic(ips=ips_values_raw.get('values'))
             except Exception:
-                logger.exception(f'Problem getting os for {device_raw}')
-            device.set_raw({})
+                logger.exception(f'Problem getting ips for {device_raw}')
+            try:
+                hostnames_opinions_raw = (device_raw.get('hostNames') or {}).get('opinions')
+                for hostname_values_raw in hostnames_opinions_raw.values():
+                    if hostname_values_raw.get('values'):
+                        device.hostname = hostname_values_raw.get('values')[0]
+                        device.hostnames.append(hostname_raw for hostname_raw in hostname_values_raw.get('values')
+                                                if hostname_raw)
+            except Exception:
+                logger.exception(f'Problem getting hostnames for {device_raw}')
+
+            device.last_modified_date = parse_date(device_raw.get('lastModifiedDate'))
+
+            for key, value in device_raw.items():
+                try:
+                    put_dynamic_field(device, f'arsenal_{key}', value, f'arsenal.{key}')
+                except Exception:
+                    logger.exception(f'Failed putting key {key} with value {value}')
+            device.set_raw(device_raw)
             return device
         except Exception:
-            logger.exception(f'Problem with fetching Rumble Device for {device_raw}')
+            logger.exception(f'Problem with fetching Arsenal Device for {device_raw}')
             return None
 
     def _parse_raw_data(self, devices_raw_data):
@@ -156,4 +152,4 @@ class RumbleAdapter(AdapterBase):
 
     @classmethod
     def adapter_properties(cls):
-        return [AdapterProperty.Network]
+        return [AdapterProperty.Assets]

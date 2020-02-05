@@ -79,6 +79,7 @@ def is_only_host_adapter(adapter_device):
                                               'logrhythm_adapter',
                                               'splunk_adapter',
                                               'symantec_ee_adapter',
+                                              'arsenal_adapter',
                                               'guardium_adapter',
                                               'datadog_adapter',
                                               'observium_adapter',
@@ -156,6 +157,15 @@ def get_prefix_private_dns_or_hostname(adapter_device):
 
 def is_netbox_adapter(adapter_device):
     return adapter_device.get('plugin_name') == 'netbox_adapter'
+
+
+def is_claroty_adapter_more_mac(adapter_device):
+    if not adapter_device.get('plugin_name') == 'claroty_adapter':
+        return False
+    macs = adapter_device.get(NORMALIZED_MACS)
+    if macs and len(macs) > 0:
+        return True
+    return False
 
 
 def get_solarwinds_ip_or_hostname(adapter_device):
@@ -392,6 +402,8 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
         filtered_adapters_list = filter(not_lansweeper_assetname_no_hostname, filtered_adapters_list)
         if not correlate_by_snow_mac:
             filtered_adapters_list = filter(lambda adap: not is_snow_adapter(adap), filtered_adapters_list)
+
+        filtered_adapters_list = filter(lambda adap: not is_claroty_adapter_more_mac(adap), filtered_adapters_list)
 
         allow_old_mac_list = ALLOW_OLD_MAC_LIST
 

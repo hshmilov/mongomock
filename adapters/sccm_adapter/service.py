@@ -134,6 +134,8 @@ class SccmAdapter(AdapterBase, Configurable):
                     asset_id = local_admin_data.get('ResourceID')
                     if not asset_id:
                         continue
+                    if local_admin_data.get('name0') != 'Administrators':
+                        continue
                     if asset_id not in local_admins_dict:
                         local_admins_dict[asset_id] = []
                     local_admins_dict[asset_id].append(local_admin_data)
@@ -572,17 +574,21 @@ class SccmAdapter(AdapterBase, Configurable):
                     if isinstance(local_admins_dict.get(device_raw.get('ResourceID')), list):
                         for local_admin_data in local_admins_dict.get(device_raw.get('ResourceID')):
                             try:
-                                user_local_admin = local_admin_data.get('User')
-                                domain_local_admin = local_admin_data.get('Domain')
+                                user_local_admin = local_admin_data.get('account0')
+                                domain_local_admin = local_admin_data.get('domain0')
+                                admin_type = None
+                                if local_admin_data.get('type0') == 'UserAccount':
+                                    admin_type = 'Admin User'
+                                if local_admin_data.get('type0') == 'Group':
+                                    admin_type = 'Group Membership'
                                 if is_domain_valid(domain_local_admin):
                                     if '.' not in domain_local_admin:
                                         user_local_admin = f'{domain_local_admin}\\{user_local_admin}'
                                     else:
                                         user_local_admin = f'{user_local_admin}@{domain_local_admin}'
-                                device.add_local_admin(admin_name=user_local_admin,
-                                                       admin_type='Admin User')
+                                device.add_local_admin(admin_name=user_local_admin, admin_type=admin_type)
                             except Exception:
-                                logger.exception(f'Problem with local admin data {nic_data}')
+                                logger.exception(f'Problem with local admin data {local_admin_data}')
                 except Exception:
                     logger.exception(f'Problem getting vm data dor {device_raw}')
                 try:

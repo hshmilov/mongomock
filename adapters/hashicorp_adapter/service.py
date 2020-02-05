@@ -104,10 +104,10 @@ class HashicorpAdapter(AdapterBase):
         try:
             device = self._new_device_adapter()
             device_id = device_raw.get('ID')
-            if device_id is None:
+            if device_id is None and not device_raw.get('Node'):
                 logger.warning(f'Bad device with no ID {device_raw}')
                 return None
-            device.id = device_id + '_' + (device_raw.get('Node') or '')
+            device.id = (device_id or '') + '_' + (device_raw.get('Node') or '')
             device.name = device_raw.get('Node')
             device.datacenter = device_raw.get('Datacenter')
             ips = device_raw.get('Address')

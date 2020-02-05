@@ -345,6 +345,9 @@ class StaticUserCorrelatorEngine(CorrelatorEngineBase):
                                       CorrelationReason.StaticAnalysis)
 
     def _raw_correlate(self, entities):
+        if self._correlation_config and self._correlation_config.get('correlate_only_on_username_domain') is True:
+            yield from self._correlate_username_domain(normalize_adapter_users(entities))
+            return
         yield from self._correlate_mail(normalize_adapter_users(entities))
         yield from self._correlate_ad_upn(normalize_adapter_users(entities))
         yield from self._correlate_ad_upn_mail(normalize_adapter_users(entities))

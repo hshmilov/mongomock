@@ -57,7 +57,7 @@ from axonius.consts.plugin_consts import (ADAPTERS_LIST_LENGTH,
                                           AGGREGATION_SETTINGS,
                                           AGGREGATOR_PLUGIN_NAME,
                                           CONFIGURABLE_CONFIGS_COLLECTION,
-                                          CORE_UNIQUE_NAME,
+                                          CORE_UNIQUE_NAME, CORRELATE_BY_USERNAME_DOMAIN_ONLY,
                                           CORRELATE_BY_EMAIL_PREFIX, CORRELATE_AD_SCCM,
                                           CSV_FULL_HOSTNAME, CORRELATE_BY_SNOW_MAC,
                                           CORRELATION_SETTINGS,
@@ -2846,6 +2846,7 @@ class PluginBase(Configurable, Feature, ABC):
         self._adapter_errors_mail_address = config[NOTIFICATIONS_SETTINGS].get(ADAPTERS_ERRORS_MAIL_ADDRESS)
         self._adapter_errors_webhook = config[NOTIFICATIONS_SETTINGS].get(ADAPTERS_ERRORS_WEBHOOK_ADDRESS)
         self._email_prefix_correlation = config[CORRELATION_SETTINGS].get(CORRELATE_BY_EMAIL_PREFIX)
+        self._correlate_only_on_username_domain = config[CORRELATION_SETTINGS].get(CORRELATE_BY_USERNAME_DOMAIN_ONLY)
         self._fetch_empty_vendor_software_vulnerabilites = (config.get(STATIC_ANALYSIS_SETTINGS) or {}).get(
             FETCH_EMPTY_VENDOR_SOFTWARE_VULNERABILITES) or False
         self._correlate_ad_sccm = config[CORRELATION_SETTINGS].get(CORRELATE_AD_SCCM, True)
@@ -3284,6 +3285,11 @@ class PluginBase(Configurable, Feature, ABC):
                             'type': 'bool'
                         },
                         {
+                            'name': CORRELATE_BY_USERNAME_DOMAIN_ONLY,
+                            'title': 'Correlate users by username and domain only',
+                            'type': 'bool'
+                        },
+                        {
                             'name': CORRELATE_AD_SCCM,
                             'title': 'Correlate Microsoft Active Directory (AD) and '
                                      'Microsoft SCCM data based on Distinguished Names',
@@ -3303,7 +3309,9 @@ class PluginBase(Configurable, Feature, ABC):
                     'name': CORRELATION_SETTINGS,
                     'title': 'Correlation Settings',
                     'type': 'array',
-                    'required': [CORRELATE_BY_EMAIL_PREFIX, CORRELATE_AD_SCCM, CSV_FULL_HOSTNAME, CORRELATE_BY_SNOW_MAC]
+                    'required': [CORRELATE_BY_EMAIL_PREFIX,
+                                 CORRELATE_AD_SCCM, CSV_FULL_HOSTNAME,
+                                 CORRELATE_BY_SNOW_MAC, CORRELATE_BY_USERNAME_DOMAIN_ONLY]
                 },
                 {
                     'items': [
@@ -3457,6 +3465,7 @@ class PluginBase(Configurable, Feature, ABC):
             },
             CORRELATION_SETTINGS: {
                 CORRELATE_BY_EMAIL_PREFIX: False,
+                CORRELATE_BY_USERNAME_DOMAIN_ONLY: False,
                 CORRELATE_AD_SCCM: False,
                 CSV_FULL_HOSTNAME: False,
                 CORRELATE_BY_SNOW_MAC: False,

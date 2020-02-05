@@ -122,6 +122,11 @@ export const pluginMeta = {
         link: 'https://docs.axonius.com/docs/freshservice',
         description: 'Freshservice is a cloud-based IT help desk and service management solution that enables organizations to simplify their IT operations.'
     },
+    defender_atp_adapter: {
+        title: 'Microsoft Defender ATP',
+        description: 'Microsoft Defender Advanced Threat Protection is a platform designed to help enterprise networks prevent, detect, investigate, and respond to advanced threats.'
+    },
+
     paloalto_xdr_adapter: {
         title: 'Palo Alto Networks Cortex XDR',
         link: 'https://docs.axonius.com/docs/palo-alto-networks-cortex-xdr',
@@ -170,6 +175,10 @@ export const pluginMeta = {
         title: 'Symantec DLP',
         link: 'https://docs.axonius.com/docs/symantec-dlp',
         description: 'Symantec DLP is a data loss protection and prevention solution. Its management console, the DLP Enforce Platform, and its reporting tool, IT Analytics for DLP, allows writing and enforce policies to reduce information risks.'
+    },
+    arsenal_adapter: {
+        title: 'Arsenal',
+        description: 'Arsenal by Uber'
     },
     cisco_ucm_adapter: {
         title: 'Cisco Unified Communications Manager',

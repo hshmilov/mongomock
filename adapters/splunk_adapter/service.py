@@ -380,6 +380,7 @@ class SplunkAdapter(AdapterBase, Configurable):
             if config.get('splunk_macros_list') else None
         self.__fetch_plugins = {
             'nexpose': bool(config['fetch_nexpose']),
+            'cisco': config['fetch_cisco'] if 'fetch_cisco' in config else True,
             'win_logs_fetch_hours': int(config['win_logs_fetch_hours'])
         }
 
@@ -411,11 +412,17 @@ class SplunkAdapter(AdapterBase, Configurable):
                     "name": "fetch_nexpose",
                     "title": "Fetch devices from the splunk-nexpose plugin",
                     "type": "bool"
+                },
+                {
+                    'name': 'fetch_cisco',
+                    'title': 'Fetch devices from Cisco',
+                    'type': 'bool'
                 }
             ],
             "required": [
                 'max_log_history',
                 "maximum_records",
+                'fetch_cisco',
                 'fetch_nexpose',
                 'win_logs_fetch_hours'
             ],
@@ -429,6 +436,7 @@ class SplunkAdapter(AdapterBase, Configurable):
             'max_log_history': 30,
             'maximum_records': 100000,
             'fetch_nexpose': False,
+            'fetch_cisco': True,
             'splunk_macros_list': None,
             'win_logs_fetch_hours': 3
         }

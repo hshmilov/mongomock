@@ -16,7 +16,9 @@ class StaticUsersCorrelatorService(CorrelatorBase):
     def _correlate(self, entities: list):
         return self._correlation_engine.correlate(entities,
                                                   correlation_config={
-                                                      'email_prefix_correlation': self._email_prefix_correlation})
+                                                      'email_prefix_correlation': self._email_prefix_correlation,
+                                                      'correlate_only_on_username_domain':
+                                                          self._correlate_only_on_username_domain})
 
     @property
     def _entity_to_correlate(self) -> EntityType:

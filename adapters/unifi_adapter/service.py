@@ -122,7 +122,7 @@ class UnifiAdapter(AdapterBase, Configurable):
                 {
                     'name': CLIENT_CONFIG_FIELDS.https_proxy,
                     'title': CLIENT_CONFIG_TITLES.https_proxy,
-                    'type': 'bool'
+                    'type': 'string'
                 },
             ],
             'required': REQUIRED_SCHEMA_FIELDS,

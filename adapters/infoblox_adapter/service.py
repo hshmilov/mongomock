@@ -237,14 +237,13 @@ class InfobloxAdapter(AdapterBase, Configurable):
                     logger.exception(f'Problem setting external attributes')
                 try:
                     discovered_data = device_raw.get('discovered_data')
-                    if not isinstance(discovered_data, dict):
-                        discovered_data = {}
-                    device.last_seen = parse_date(discovered_data.get('last_discovered'))
-                    device.first_seen = parse_date(discovered_data.get('first_discovered'))
-                    device.figure_os(discovered_data.get('os'))
-                    device.discoverer = discovered_data.get('discoverer')
-                    device.infoblox_device_type = discovered_data.get('device_type')
-                    device.device_manufacturer = discovered_data.get('device_vendor')
+                    if isinstance(discovered_data, dict):
+                        device.last_seen = parse_date(discovered_data.get('last_discovered'))
+                        device.first_seen = parse_date(discovered_data.get('first_discovered'))
+                        device.figure_os(discovered_data.get('os'))
+                        device.discoverer = discovered_data.get('discoverer')
+                        device.infoblox_device_type = discovered_data.get('device_type')
+                        device.device_manufacturer = discovered_data.get('device_vendor')
                 except Exception:
                     logger.exception(f'Problem with discovered data for {device_raw}')
                 device.set_raw(device_raw)
