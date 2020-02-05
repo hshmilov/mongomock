@@ -43,7 +43,7 @@
       link
       :disabled="disabled"
       @click="openSaveView"
-    >Save as</x-button>
+    >Save As</x-button>
     <x-dropdown v-else>
       <x-button
         slot="trigger"
@@ -56,7 +56,7 @@
           link
           :disabled="disabled"
           @click="openSaveView"
-        >Save as</x-button>
+        >Save As</x-button>
         <x-button
           link
           @click="reloadSelectedView"

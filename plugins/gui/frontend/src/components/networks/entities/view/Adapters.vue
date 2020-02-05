@@ -22,7 +22,7 @@
             v-else
             link
             @click="toggleView"
-          >View {{ viewBasic? 'advanced': 'basic' }}</x-button>
+          >View {{ viewBasic? 'Advanced': 'Basic' }}</x-button>
         </div>
         <x-list
           v-if="viewBasic || isGuiAdapterData(item)"

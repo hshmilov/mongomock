@@ -11,7 +11,7 @@
       @input="updateEntity"
     />
 
-    <label>Base Query:</label>
+    <label>Base query:</label>
     <x-select
       id="baseQuery"
       v-model="base"
@@ -21,7 +21,7 @@
       class="grid-span2 view-name"
     />
 
-    <label>Intersecting Query:</label>
+    <label>Intersecting query:</label>
     <x-select
       id="intersectingFirst"
       :value="intersecting[0]"
@@ -32,7 +32,7 @@
       @input="(view) => updateIntersecting(0, view)"
     />
     <template v-if="intersecting.length > 1">
-      <label>Intersecting Query:</label>
+      <label>Intersecting query:</label>
       <x-select
         id="intersectingSecond"
         :value="intersecting[1]"

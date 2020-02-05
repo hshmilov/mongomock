@@ -114,7 +114,7 @@ class Page:
     CANCEL_BUTTON = 'Cancel'
     SAVE_BUTTON = 'Save'
     SAVE_AND_CONNECT_BUTTON = 'Save and Connect'
-    SAVE_AS_BUTTON = 'Save as'
+    SAVE_AS_BUTTON = 'Save As'
     OK_BUTTON = 'OK'
     REMOVE_BUTTON = 'Remove'
     DELETE_BUTTON = 'Delete'

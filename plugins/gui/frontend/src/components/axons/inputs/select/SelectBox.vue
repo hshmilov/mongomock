@@ -107,7 +107,7 @@ export default {
     },
     searchPlaceholder: {
       type: String,
-      default: 'Add or Search items'
+      default: 'Add or search items'
     },
     selectionDisplayLimit: {
       type: Number,

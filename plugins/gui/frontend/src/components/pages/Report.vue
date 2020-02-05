@@ -14,7 +14,7 @@
       <div class="page-content main">
         <div class="report-title">The report will be generated as a PDF file, every Discovery Cycle<span v-if="isLatestReport">, {{ lastGenerated }}</span></div>
         <div class="item">
-          <label class="report-name-label">Report Name</label>
+          <label class="report-name-label">Report name</label>
           <input
             v-if="id === 'new'"
             id="report_name"
@@ -127,9 +127,8 @@
               class="schedule-title"
               @click="toggleScheduling"
             >Email Configuration</h5>
-            <div class="hint">Optional</div>
           </div>
-          <div class="email-description">Scheduled Email with the report attached will be sent</div>
+          <div class="email-description">Scheduled email with the report attached will be sent</div>
           <div class="inner-content schedule">
             <x-array-edit
               v-if="report.add_scheduling"
@@ -368,7 +367,7 @@
             },
               {
                   'name': 'mailMessage',
-                  'title': 'Custom Message (up to 200 characters)',
+                  'title': 'Custom message (up to 200 characters)',
                   'type': 'string',
                   'format': 'text',
                   'limit': 200,

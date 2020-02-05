@@ -149,7 +149,7 @@ class EntitiesPage(Page):
 
     CONFIG_ADVANCED_TEXT_CSS = '.x-entity-adapters>div.x-tabs>div.body>div.active>div.header>button.link'
     ADVANCED_VIEW_RAW_FIELD = 'raw:'
-    CONFIG_BASIC_TEXT = 'View basic'
+    CONFIG_BASIC_TEXT = 'View Basic'
 
     ID_FIELD = 'ID'
     ENTITY_FIELD_VALUE_XPATH = '//div[@class=\'object\' and child::label[text()=\'{field_name}\']]/div'

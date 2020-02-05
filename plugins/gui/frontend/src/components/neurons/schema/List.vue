@@ -4,11 +4,11 @@
       <x-button
         link
         @click="expandAll"
-      >+ Expand all</x-button>
+      >+ Expand All</x-button>
       <x-button
         link
         @click="collapseAll"
-      >- Collapse all</x-button>
+      >- Collapse All</x-button>
     </div>
     <x-array-view
       ref="arrayView"

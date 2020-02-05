@@ -7,7 +7,7 @@
     />
     <input
       v-model="fieldValue"
-      placeholder="Segment By..."
+      placeholder="Segment by..."
     >
     <x-button
       link

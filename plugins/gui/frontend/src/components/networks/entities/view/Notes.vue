@@ -4,7 +4,7 @@
       <x-search-input
         id="search-notes"
         v-model="searchValue"
-        placeholder="Search Notes..."
+        placeholder="Search notes..."
       />
       <div class="actions">
         <x-button
@@ -139,7 +139,7 @@
         if (this.configNoteModal.id) {
           return 'Edit note'
         } else {
-          return 'Add new note'
+          return 'Add New Note'
         }
       },
       readOnlyNotes () {

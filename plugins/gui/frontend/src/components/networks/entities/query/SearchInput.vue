@@ -9,7 +9,7 @@
       slot="trigger"
       ref="greatInput"
       v-model="searchValue"
-      placeholder="Insert your query or start typing to filter recent Queries"
+      placeholder="Insert your query or start typing to filter recent queries"
       :tabindex="-1"
       @keyup.enter.native.stop="submitFilter"
       @keyup.down.native="incQueryMenuIndex"

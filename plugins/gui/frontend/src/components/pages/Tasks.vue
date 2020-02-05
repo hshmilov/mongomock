@@ -2,7 +2,7 @@
   <x-page class="x-tasks" :breadcrumbs="breadcrumbs">
     <x-search
       v-model="searchValue"
-      placeholder="Search Tasks..."
+      placeholder="Search tasks..."
       @keyup.enter.native="onSearchConfirm"
     />
     <x-table

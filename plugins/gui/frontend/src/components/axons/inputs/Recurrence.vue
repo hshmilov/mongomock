@@ -59,7 +59,7 @@
       <div class="send-hour">
         <x-time-picker
           v-model="value.period_config.send_time"
-          label="Send Email at:"
+          label="Send email at:"
           :read-only="readOnly"
           @validate="validateSendTime"
         />

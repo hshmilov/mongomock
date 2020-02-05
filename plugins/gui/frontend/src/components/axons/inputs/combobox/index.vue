@@ -243,7 +243,7 @@ export default {
   props: {
     label: {
       type: String,
-      default: 'Add or Search items',
+      default: 'Add or search items',
     },
     value: {
       type: Array,

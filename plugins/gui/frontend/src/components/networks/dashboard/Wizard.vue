@@ -56,7 +56,7 @@
       </template>
 
       <!-- Last name to appear as a title above the chart -->
-      <label for="chart_name">Chart Title</label>
+      <label for="chart_name">Chart title</label>
       <input
         id="chart_name"
         v-model="dashboard.name"

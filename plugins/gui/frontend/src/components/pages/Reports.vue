@@ -5,7 +5,7 @@
       :static-fields="fields"
       :on-click-row="navigateReport"
       module="reports"
-      title="Saved Reports"
+      title="Reports"
     >
       <template slot="actions">
         <x-button v-if="hasSelection" link @click="remove">Remove</x-button>
