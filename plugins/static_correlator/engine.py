@@ -813,7 +813,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
                                       [get_uuid],
                                       [compare_uuid],
                                       [],
-                                      [],
+                                      [hostnames_do_not_contradict],
                                       {'Reason': 'They have the same UUID'},
                                       CorrelationReason.StaticAnalysis)
 

@@ -445,7 +445,10 @@ class TaniumAdapter(AdapterBase):
                         device.add_open_port(port_id=port_raw)
             except Exception:
                 logger.exception(f'Problem getting ports for {device_raw}')
-            device.figure_os(device_raw.get('os'))
+            if device_raw.get('tags') == 'RedHat' and device_raw.get('os') == 'Windows':
+                device.figure_os(device_raw.get('tags'))
+            else:
+                device.figure_os(device_raw.get('os'))
             try:
                 if isinstance(device_raw.get('method'), str) and device_raw.get('method'):
                     methods = device_raw.get('method').split(',')
