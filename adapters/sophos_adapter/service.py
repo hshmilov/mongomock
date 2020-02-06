@@ -8,6 +8,7 @@ from axonius.clients.rest.exception import RESTException
 from axonius.devices.device_adapter import DeviceAdapter, AGENT_NAMES
 from axonius.utils.files import get_local_config_file
 from axonius.utils.datetime import parse_date
+from axonius.fields import ListField
 from sophos_adapter.connection import SophosConnection
 
 logger = logging.getLogger(f'axonius.{__name__}')
@@ -15,7 +16,7 @@ logger = logging.getLogger(f'axonius.{__name__}')
 
 class SophosAdapter(AdapterBase):
     class MyDeviceAdapter(DeviceAdapter):
-        pass
+        assigned_products = ListField(str, 'Assigned Products')
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, config_file_path=get_local_config_file(__file__), **kwargs)
@@ -148,14 +149,21 @@ class SophosAdapter(AdapterBase):
                     else:
                         ipv6 = []
                     ip_list = ipv4 + ipv6
+                    macs = device_info.get('macAddresses')
+                    if not isinstance(macs, list):
+                        macs = None
                     if ip_list:
-                        device.add_nic(None, ip_list)
+                        device.add_ips_and_macs(macs=macs, ips=ip_list)
                 except Exception:
                     logger.exception(f'Problem getting nic for {device_raw}')
                 try:
                     device.last_seen = parse_date(device_raw.get('last_activity'))
                 except Exception:
                     logger.exception(f'Problem getting last seen for {device_raw}')
+                device.assigned_products = device_raw.get('assignedProducts')\
+                    if isinstance(device_raw.get('assignedProducts'), list) else None
+                device.device_serial = device_info.get('serialNumber')
+                device.first_seen = parse_date(device_raw.get('registered_at'))
                 device.set_raw(device_raw)
                 yield device
             except Exception:
