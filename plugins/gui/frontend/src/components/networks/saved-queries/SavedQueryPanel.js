@@ -403,13 +403,17 @@ export default {
                     <h5>Query Wizard Expressions</h5>
                     {renderExpression()}
                 </div>
-                <div class="update">
-                    <h5>Last Updated</h5>
-                    <xStringView
-                        schema={this.schemas.lastUpdate}
-                        value={this.query.last_updated}
-                    />
-                </div>
+                {
+                  this.query.predefined
+                    ? null
+                    : <div class="update">
+                        <h5>Last Updated</h5>
+                        <xStringView
+                            schema={this.schemas.lastUpdate}
+                            value={this.query.last_updated}
+                        />
+                      </div>
+                }
                 <div class="updater">
                     <h5>Updated By</h5>
                     <xStringView

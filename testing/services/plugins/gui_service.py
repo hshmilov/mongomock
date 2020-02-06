@@ -116,6 +116,8 @@ class GuiService(PluginService, UpdatablePluginMixin):
             self._update_schema_version_27()
         if self.db_schema_version < 28:
             self._update_schema_version_28()
+        if self.db_schema_version < 29:
+            self._update_schema_version_29()
 
     def _update_schema_version_1(self):
         print('upgrade to schema 1')
@@ -1006,6 +1008,25 @@ class GuiService(PluginService, UpdatablePluginMixin):
             self.db_schema_version = 28
         except Exception as e:
             print(f'Exception while upgrading gui db to version 28. Details: {e}')
+
+    def _update_schema_version_29(self):
+        """
+        For 3.0 - remove last_updated field from Predefined Saved Queries
+        :return:
+        """
+        print('Upgrade to schema 29')
+        try:
+            for entity_type in EntityType:
+                self._entity_views_map[entity_type].update_many({
+                    PREDEFINED_FIELD: True
+                }, [{
+                    '$set': {
+                        LAST_UPDATED_FIELD: None
+                    }
+                }])
+            self.db_schema_version = 29
+        except Exception as e:
+            print(f'Exception while upgrading gui db to version 29. Details: {e}')
 
     def _update_default_locked_actions(self, new_actions):
         """
