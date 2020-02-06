@@ -186,9 +186,9 @@ if (ENV.medical) {
       component: Instances,
     },
     {
-      path: '/cloud_compliance/:section?',
+      path: '/cloud_compliance/:id?',
       component: CloudCompliance,
-      name: 'Cloud Compliance',
+      name: 'Cloud Asset Compliance',
     },
   ];
 }

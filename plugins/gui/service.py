@@ -5726,8 +5726,8 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
 
     @gui_helpers.accounts()
     @gui_add_rule_logged_in('compliance/<name>/<method>', methods=['GET', 'POST'],
-                            required_permissions=[Permission(PermissionType.Devices, ReadOnlyJustForGet),
-                                                  Permission(PermissionType.Users, ReadOnlyJustForGet)]
+                            required_permissions=[Permission(PermissionType.Devices, PermissionLevel.ReadOnly),
+                                                  Permission(PermissionType.Users, PermissionLevel.ReadOnly)]
                             )
     def compliance(self, name, method, accounts):
         try:
@@ -5736,21 +5736,22 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
             logger.exception(f'Error in get_compliance')
             return return_error(f'Error: {str(e)}')
 
+    @gui_helpers.accounts()
     @gui_helpers.schema_fields()
     @gui_add_rule_logged_in('compliance/<name>/csv', methods=['POST'],
-                            required_permissions=[Permission(PermissionType.Devices, ReadOnlyJustForGet),
-                                                  Permission(PermissionType.Users, ReadOnlyJustForGet)]
+                            required_permissions=[Permission(PermissionType.Devices, PermissionLevel.ReadOnly),
+                                                  Permission(PermissionType.Users, PermissionLevel.ReadOnly)]
                             )
-    def compliance_csv(self, name, schema_fields):
+    def compliance_csv(self, name, schema_fields, accounts):
         try:
-            return self._get_compliance_rules_csv(name, schema_fields)
+            return self._get_compliance_rules_csv(name, schema_fields, accounts)
         except Exception as e:
             logger.exception(f'Error in get_compliance')
             return return_error(f'Error: {str(e)}')
 
     @staticmethod
-    def _get_compliance_rules_csv(compliance_name, schema_fields):
-        rules = get_compliance(compliance_name, 'report', None)
+    def _get_compliance_rules_csv(compliance_name, schema_fields, accounts):
+        rules = get_compliance(compliance_name, 'report', accounts)
 
         def _get_order(elem):
             return elem.get('order')

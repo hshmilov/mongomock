@@ -1,32 +1,38 @@
 <template>
   <div class="x-compliance-table">
-    <x-table-wrapper
-      title="Rules"
-      :count="data.length"
+    <div
+      v-if="loading"
+      class="v-spinner-bg"
+    />
+    <pulse-loader
       :loading="loading"
-      :error="error"
+      color="#FF7D46"
+    />
+    <x-table
+      slot="table"
+      v-model="selectedRules"
+      title="Rules"
+      module="compliance/cis_aws/report"
+      :static-data="data"
+      :row-class="getRowClass"
+      :pagination="true"
+      page-size="42"
+      :page-sizes="[42, 84]"
+      :on-click-row="openSidePanel"
+      :static-fields="getTableFields()"
+      :static-sort="false"
+      :format-title="formatTitle"
+      :multiple-row-selection="false"
+      id-field="id"
     >
       <template slot="actions">
         <x-button
           link
           @click="exportCSV"
-        >Export CSV</x-button>
+        >Export CSV
+        </x-button>
       </template>
-      <x-table
-        slot="table"
-        v-model="selectedRules"
-        :fields="filteredFields"
-        module="compliance"
-        :data="data"
-        :row-class="getRowClass"
-        :pagination="false"
-        :on-click-row="openSidePanel"
-        :static-sort="false"
-        :format-title="formatTitle"
-        :multiple-row-selection="false"
-        id-field="section"
-      />
-    </x-table-wrapper>
+    </x-table>
     <x-compliance-panel
       :data="currentRule"
       :fields="fields"
@@ -36,19 +42,38 @@
 </template>
 <script>
 import { mapActions, mapState } from 'vuex';
+import PulseLoader from 'vue-spinner/src/PulseLoader.vue';
+
 import { FETCH_DATA_CONTENT_CSV } from '@store/actions';
-import xTable from '@components/axons/tables/Table.vue';
-import xTableWrapper from '@axons/tables/TableWrapper.vue';
+import xTable from '@components/neurons/data/Table.vue';
 import xButton from '@axons/inputs/Button.vue';
 import xCompliancePanel from './CompliancePanel';
+
+const tableFields = [{
+  name: 'status', title: '', type: 'string', format: 'status',
+}, {
+  name: 'section', title: 'Section', type: 'string',
+}, {
+  name: 'rule', title: 'Rule', type: 'string',
+}, {
+  name: 'category', title: 'Category', type: 'string',
+}, {
+  name: 'account', title: 'Account', type: 'string',
+}, {
+  name: 'results', title: 'Results (Failed/Checked)', type: 'string',
+}, {
+  name: 'affected', title: 'Affected Devices/Users', type: 'integer',
+}, {
+  name: 'last_updated', title: 'Last Updated', type: 'string', format: 'date-time',
+}];
 
 export default {
   name: 'XComplianceTable',
   components: {
     xCompliancePanel,
     xTable,
-    xTableWrapper,
     xButton,
+    PulseLoader,
   },
   props: {
     module: {
@@ -71,18 +96,16 @@ export default {
       type: String,
       default: null,
     },
+    accounts: {
+      type: Array,
+      default: () => [],
+    },
   },
   data() {
     return {
       currentRule: null,
       exporting: null,
     };
-  },
-  mounted() {
-    const { section } = this.$route.params;
-    if (section) {
-      this.currentRule = this.complianceRulesBySection[section];
-    }
   },
   computed: {
     ...mapState({
@@ -91,28 +114,36 @@ export default {
       },
     }),
     selectedRules() {
-      return this.currentRule ? [this.currentRule.section] : [];
+      return this.currentRule ? { ids: [this.currentRule.section], include: true }
+        : { ids: [], include: true };
     },
-    complianceRulesBySection() {
+    complianceRulesById() {
       return this.data.reduce((map, rule) => {
-        map[rule.section] = rule;
+        // eslint-disable-next-line no-param-reassign
+        map[rule.id] = rule;
         return map;
       }, {});
     },
-    filteredFields() {
-      return this.fields.filter((field) => field.expanded === undefined);
-    },
+  },
+  mounted() {
+    const { id } = this.$route.params;
+    if (id) {
+      this.currentRule = this.complianceRulesById[id];
+    }
   },
   methods: {
     ...mapActions({
       fetchContentCSV: FETCH_DATA_CONTENT_CSV,
     }),
+    getTableFields() {
+      return tableFields;
+    },
     getRowClass(rowData) {
       return rowData.status.toLowerCase().replace(' ', '-');
     },
-    openSidePanel(section) {
-      this.currentRule = this.complianceRulesBySection[section];
-      this.$router.push({ path: encodeURI(`/cloud_compliance/${section}`) });
+    openSidePanel(id) {
+      this.currentRule = this.complianceRulesById[id];
+      this.$router.push({ path: encodeURI(`/cloud_compliance/${id}`) });
     },
     closeSidePanel() {
       this.currentRule = null;
@@ -123,6 +154,7 @@ export default {
         module: this.module,
         endpoint: `${this.module}/${this.cisName}`,
         source: 'cloud',
+        accounts: this.accounts,
       }).then(() => {
         this.exporting = false;
       });
@@ -138,13 +170,15 @@ export default {
 };
 </script>
 <style lang="scss">
-  $header-height: 60px;
+  $header-height: 20px;
 
   .x-compliance-table {
     height: calc(100% - #{$header-height});
+
     .x-table-head {
       min-width: 20px;
     }
+
     .header {
       display: flex;
       line-height: 28px;
@@ -168,7 +202,17 @@ export default {
     }
 
     .table-td-rule {
-      width: 700px;
+      width: 500px;
+      text-overflow: ellipsis;
+      overflow: hidden;
+    }
+
+    .table-td-category {
+      width: 300px;
+    }
+
+    .table-td-account {
+      width: 400px;
     }
 
     .failed {
@@ -195,7 +239,7 @@ export default {
       }
 
       &.no-data {
-        background-color: transparent!important;
+        background-color: transparent !important;
         width: 0;
         height: 0;
         border-left: 6px solid transparent;

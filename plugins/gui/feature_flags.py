@@ -42,12 +42,12 @@ class FeatureFlags(Configurable):
                     'items': [
                         {
                             'name': CloudComplianceNames.Visible,
-                            'title': 'Visible',
+                            'title': 'Cloud Visible',
                             'type': 'bool'
                         },
                         {
                             'name': CloudComplianceNames.Enabled,
-                            'title': 'Enable',
+                            'title': 'Cloud Enabled',
                             'type': 'bool',
                         },
                     ],

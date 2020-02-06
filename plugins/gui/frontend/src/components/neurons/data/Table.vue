@@ -54,8 +54,10 @@
         :expandable="expandable"
         :filterable="filterable"
         :on-click-row="onClickRow"
-        :on-click-col="onClickSort"
+        :on-click-col="staticData && !staticSort ? undefined : onClickSort"
         :on-click-all="onClickAll"
+        :multiple-row-selection="multipleRowSelection"
+        :row-class="rowClass"
         @filter="updateColFilters"
       >
         <template #default="slotProps">
@@ -69,7 +71,7 @@
       <div class="x-sizes">
         <div class="number-of-results-title">results per page:</div>
         <div
-          v-for="size in [20, 50, 100]"
+          v-for="size in pageSizes"
           :key="size"
           class="x-link"
           :class="{active: size === pageSize}"
@@ -170,7 +172,7 @@
       },
       staticSort: {
         type: Boolean,
-        default: false
+        default: true
       },
       searchable: {
         type: Boolean,
@@ -183,7 +185,19 @@
               field: '', desc: true
           }
         }
-      }
+      },
+      multipleRowSelection: {
+        type: Boolean,
+        default: true,
+      },
+      pageSizes: {
+        type: Array,
+        default: () => [20, 50, 100],
+      },
+      rowClass: {
+        type: [Function, String],
+        default: '',
+      },
     },
     data () {
       return {
@@ -228,7 +242,7 @@
         return this.module.charAt(0).toUpperCase() + this.module.slice(1).toLowerCase()
       },
       content () {
-        if (this.staticData) return {fetching: false}
+        if (this.staticData && !this.moduleState.content) return { fetching: false }
         return this.moduleState.content
       },
       data () {
@@ -332,7 +346,8 @@
       },
       sortedData() {
           return _orderBy(this.staticData, [(item) => {
-              if (!this.view.sort.field) return 1
+              if (!this.staticSort) return 1;
+              if (!this.view.sort.field) return 1;
               let value = item[this.view.sort.field] || ''
               if (Array.isArray(value)) {
                   value = value.join('')

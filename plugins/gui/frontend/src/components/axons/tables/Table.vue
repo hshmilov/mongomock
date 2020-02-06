@@ -27,7 +27,6 @@
             :sortable="sortable(field)"
             :filter="getFilter(field.name)"
             :filterable="filterable"
-            :show-checkboxes="multipleRowSelection"
             @click="clickCol"
             @filter="(filter) => filterCol(field.name, filter)"
           />
@@ -64,7 +63,7 @@
             :key="data.length + n"
             class="x-table-row"
           >
-            <td v-if="value">&nbsp;</td>
+            <td v-if="value && multipleRowSelection">&nbsp;</td>
             <td v-if="expandable">&nbsp;</td>
             <td
               v-for="field in fields"

@@ -6,13 +6,27 @@ import { UPDATE_DATA_VIEW } from '@store/mutations';
 import { mapMutations } from 'vuex';
 import _capitalize from 'lodash/capitalize';
 import _isNil from 'lodash/isNil';
+import _has from 'lodash/has';
 
-/**
- * @param {any} value - the input value to validate against
- * @this {VueInstance} the component instance
- * @description custom vuelidate validator - validates query names are unique
- * @returns {Boolean} true if valid
- */
+const nonExpandablePanelFields = [{
+  name: 'rule', title: 'Rule', type: 'string',
+}, {
+  name: 'category', title: 'Category', type: 'string',
+},{
+  name: 'account', title: 'Account', type: 'string',
+}];
+
+const expandablePanelFields = [{
+  name: 'description', title: 'Description', type: 'text', expanded: true,
+}, {
+  name: 'remediation', title: 'Remediation', type: 'text', expanded: false,
+}, {
+  name: 'entities_results', title: 'Results', type: 'text', expanded: true,
+}, {
+  name: 'error', title: 'Error', type: 'text', expanded: true,
+}, {
+  name: 'cis', title: 'CIS Controls', type: 'text', expanded: true,
+}];
 
 export default {
   name: 'xCompliancePanel',
@@ -36,23 +50,30 @@ export default {
   mounted() {
     this.updateActivePanels();
   },
-  computed: {
-    filteredFields() {
-      return this.fields.filter((field) => field.expanded !== undefined);
-    },
-  },
   methods: {
     ...mapMutations({ updateView: UPDATE_DATA_VIEW }),
     updateActivePanels() {
       this.expandedValues = [];
-      this.filteredFields.forEach((field, index) => {
+      expandablePanelFields.forEach((field, index) => {
         if (field.expanded) {
           this.expandedValues.push(index);
         }
       });
     },
-    renderFields() {
-      return this.filteredFields.map((field) => {
+    renderNonExpandableFields() {
+      return nonExpandablePanelFields.map((field) => (
+        <div class="{field.name}">
+          <h5>
+            {field.title}
+          </h5>
+          <p>
+            {this.data[field.name]}
+          </p>
+        </div>
+      ));
+    },
+    renderExpandableFields() {
+      return expandablePanelFields.map((field) => {
         if (!this.data[field.name]) {
           return null;
         }
@@ -105,28 +126,20 @@ export default {
       }
       return (
         <div slot="panelContent" class="body">
-          <div class="rule">
-            <h5>
-              Rule
-            </h5>
+          <div class="last-updated">
             <p>
-              {this.data.rule}
+              Last updated: {this.data.last_updated}
             </p>
           </div>
-          <div class="category">
-            <h5>
-              Category
-            </h5>
-            <p>
-              {this.data.category}
-            </p>
-          </div>
+          {
+            this.renderNonExpandableFields()
+          }
           <v-expansion-panels
             value={this.expandedValues}
             multiple
             accordion
           >
-            {this.renderFields()}
+            {this.renderExpandableFields()}
           </v-expansion-panels>
         </div>
       );

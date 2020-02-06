@@ -1,48 +1,50 @@
 <template>
   <x-page
-    class="x-cloud-compliance"
+    class="x-cloud-compliance-page"
     title="Cloud Asset Compliance Center"
     :beta="true"
   >
-    <div class="cis-header">
-      <div class="subtitle">
-        CIS Amazon Web Services Foundations Benchmark V1.2
+    <div class="x-cloud-compliance">
+      <div class="cis-header">
+        <div class="subtitle">
+          CIS Amazon Web Services Foundations Benchmark V1.2
+        </div>
+        <div class="accounts-filter">
+          <x-combobox
+            v-if="accounts"
+            v-model="filterAccounts"
+            height="30"
+            :selection-display-limit="2"
+            :items="accounts"
+            label="Accounts"
+            multiple
+            :allow-create-new="false"
+            :hide-quick-selections="false"
+            :menu-props="{maxWidth: 800}"
+            @change="applySearchAndFilter"
+          />
+        </div>
+        <x-button
+          class="search__reset"
+          link
+          @click="resetAccountsFilter"
+        >Reset</x-button>
+        <md-switch
+          v-model="failedOnly"
+          class="failed-only"
+        >Failed rules only</md-switch>
       </div>
-      <div class="accounts-filter">
-        <x-combobox
-          v-if="accounts.length"
-          v-model="filterAccounts"
-          height="30"
-          :selection-display-limit="1"
-          :items="accounts"
-          label="Accounts"
-          multiple
-          :allow-create-new="false"
-          :hide-quick-selections="false"
-          :menu-props="{maxWidth: 300}"
-          @change="applySearchAndFilter"
-        />
-      </div>
-      <x-button
-        class="search__reset"
-        link
-        @click="resetAccountsFilter"
-      >Reset</x-button>
-      <md-switch
-        v-model="failedOnly"
-        class="failed-only"
-      >Failed rules only</md-switch>
+      <x-compliance-table
+        module="compliance"
+        :cis-name="cisName"
+        :data="filteredData"
+        :loading="loading"
+        :error="error"
+        :accounts="accounts"
+      />
     </div>
-    <x-compliance-table
-      v-if="allCloudComplianceRules"
-      module="compliance"
-      :cis-name="cisName"
-      :data="filteredData"
-      :loading="loading"
-      :error="error"
-    />
     <x-compliance-tip
-      v-if="!enabled"
+      v-if="featureFlags && !enabled"
     />
   </x-page>
 </template>
@@ -51,6 +53,7 @@ import _filter from 'lodash/filter';
 import _debounce from 'lodash/debounce';
 import _get from 'lodash/get';
 import { mapState, mapGetters } from 'vuex';
+
 import xPage from '@axons/layout/Page.vue';
 import xButton from '@axons/inputs/Button.vue';
 import xCombobox from '@axons/inputs/combobox/index.vue';
@@ -71,8 +74,8 @@ export default {
   data() {
     return {
       cisName: 'cis_aws',
-      allCloudComplianceRules: null,
-      accounts: [],
+      allCloudComplianceRules: [],
+      accounts: null,
       filterAccounts: [],
       failedOnly: false,
       loading: false,
@@ -102,17 +105,20 @@ export default {
       return this.allCloudComplianceRules;
     },
     enabled() {
-      return this.inTrial
-        || (_get(this.featureFlags, 'cloud_compliance.cis_enabled'));
+      const cisEnabled = _get(this.featureFlags, 'cloud_compliance.cis_enabled');
+      return this.inTrial || cisEnabled;
     },
   },
-  async created() {
-    this.loading = true;
-    await this.fetchComplianceAccounts();
-    await this.fetchComplianceRows();
-    this.loading = false;
+  mounted() {
+    this.fetchAllData();
   },
   methods: {
+    async fetchAllData() {
+      this.loading = true;
+      await this.fetchComplianceAccounts();
+      await this.fetchComplianceRows();
+      this.loading = false;
+    },
     async fetchComplianceRows() {
       try {
         this.allCloudComplianceRules = await fetchCompliance(this.cisName, this.filterAccounts);
@@ -147,7 +153,11 @@ export default {
 
 
 <style lang="scss">
+  $cloud-asset-compliance-header-height: 15px;
+
   .x-cloud-compliance {
+    height: calc(100% - #{$cloud-asset-compliance-header-height});
+
     .cis-header {
       display: flex;
       align-items: flex-end;
@@ -160,9 +170,10 @@ export default {
         color: $theme-black;
         margin-top: 12px;
         margin-right: 24px;
+        width: 440px;
       }
       .accounts-filter {
-        width: 300px;
+        width: 800px;
         margin-left: 40px;
         .x-combobox {
           font-size: 14px;

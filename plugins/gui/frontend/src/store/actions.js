@@ -180,6 +180,10 @@ const createPostContentRequest = (state, payload) => {
 	if (payload.isRefresh) {
 		params['is_refresh'] = 1
 	}
+
+	if (payload.accounts) {
+		params['accounts'] = payload.accounts;
+	}
 	return params
 }
 

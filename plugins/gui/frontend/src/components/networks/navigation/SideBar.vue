@@ -93,7 +93,7 @@
       <x-nav-item v-bind="navigationProps('Users', 'users')" />
       <x-nav-item
         v-if="isComplianceVisible"
-        v-bind="navigationProps('Cloud Compliance', 'compliance', 'Cloud Compliance')"
+        v-bind="navigationProps('Cloud Asset Compliance', 'compliance', 'Cloud Compliance')"
       />
       <x-nav-item v-bind="navigationProps('Enforcements', 'enforcements', 'Enforcement Center')" />
       <x-nav-item v-bind="navigationProps('Adapters', 'adapters')" />
@@ -171,7 +171,7 @@ export default {
     isRestricted(name) {
       // If the user doesn't have permissions to the Users and Devices
       // than he can't access the Cloud Compliance too
-      if (name === 'Cloud Compliance' && this.isUsersOrDevicesRestricted()) {
+      if (name === 'Cloud Asset Compliance' && this.isUsersOrDevicesRestricted()) {
         return true;
       }
       return this.userPermissions && this.userPermissions[name] === 'Restricted';

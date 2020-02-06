@@ -1,11 +1,9 @@
 # pylint: disable=too-many-lines,duplicate-code, protected-access
 from typing import List
+from datetime import datetime
 
 from axonius.consts.plugin_consts import COMPLIANCE_PLUGIN_NAME
 from axonius.plugin_base import PluginBase
-
-
-DEFAULT_ACCOUNT_NAME = 'Primary'
 
 
 def get_default_cis_aws_compliance_report():
@@ -17,7 +15,7 @@ def get_default_cis_aws_compliance_report():
                 'section': '1.1',
                 'rule_name': 'Avoid the use of the "root" Account',
                 'category': 'Identity and Access Management',
-                'account': '897766578789',
+                'account': '',
                 'results': {
                     'failed': 0,
                     'checked': 3,
@@ -52,7 +50,7 @@ aws cloudwatch put-metric-alarm --alarm-name  `<root_usage_alarm>`  --metricname
                 'rule_name': 'Ensure multi-factor authentication (MFA) is enabled for all IAM users that have a '
                              'console password',
                 'category': 'Identity and Access Management',
-                'account': '897766578789',
+                'account': '',
                 'results': {
                     'failed': 1,
                     'checked': 3,
@@ -91,7 +89,7 @@ Perform the following to enable MFA:
                 'section': '1.3',
                 'rule_name': 'Ensure credentials unused for 90 days or greater are disabled',
                 'category': 'Identity and Access Management',
-                'account': '897766578789',
+                'account': '',
                 'results': {
                     'failed': 0,
                     'checked': 0,
@@ -109,7 +107,7 @@ After you identify the inactive accounts or unused credentials, use the followin
 3. In the User Name list, choose the user with credentials over 90 days old.
 4. Choose the Security Credentials tab, and then choose Make inactive. 
                                 '''.strip(),
-                'cis': '16.9 Disable Dormant Accounts'
+                'cis': '16.9 Disable Dormant Accounts\n'
                        'Automatically disable dormant accounts after a set period of inactivity. '
             },
             {
@@ -117,7 +115,7 @@ After you identify the inactive accounts or unused credentials, use the followin
                 'section': '1.4',
                 'rule_name': 'Ensure access keys are rotated every 90 days or less',
                 'category': 'Identity and Access Management',
-                'account': '897766578789',
+                'account': '',
                 'results': {
                     'failed': 0,
                     'checked': 0,
@@ -149,7 +147,7 @@ Perform the following to rotate access keys:
                 'section': '1.5',
                 'rule_name': 'Ensure IAM password policy requires at least one uppercase letter',
                 'category': 'Identity and Access Management',
-                'account': '897766578789',
+                'account': '',
                 'results': {
                     'failed': 0,
                     'checked': 0,
@@ -175,7 +173,7 @@ Perform the following to set the password policy as prescribed:
                 'section': '1.6',
                 'rule_name': 'Ensure IAM password policy requires at least one lowercase letter',
                 'category': 'Identity and Access Management',
-                'account': '897766578789',
+                'account': '',
                 'results': {
                     'failed': 0,
                     'checked': 0,
@@ -201,7 +199,7 @@ Perform the following to set the password policy as prescribed:
                 'section': '1.7',
                 'rule_name': 'Ensure IAM password policy requires at least one symbol',
                 'category': 'Identity and Access Management',
-                'account': '897766578789',
+                'account': '',
                 'results': {
                     'failed': 0,
                     'checked': 0,
@@ -227,7 +225,7 @@ Perform the following to set the password policy as prescribed:
                 'section': '1.8',
                 'rule_name': 'Ensure IAM password policy requires at least one number',
                 'category': 'Identity and Access Management',
-                'account': '897766578789',
+                'account': '',
                 'results': {
                     'failed': 0,
                     'checked': 0,
@@ -253,7 +251,7 @@ Perform the following to set the password policy as prescribed:
                 'section': '1.9',
                 'rule_name': 'Ensure IAM password policy requires a minimum length of 14 or greater',
                 'category': 'Identity and Access Management',
-                'account': '897766578789',
+                'account': '',
                 'results': {
                     'failed': 0,
                     'checked': 0,
@@ -279,7 +277,7 @@ Perform the following to set the password policy as prescribed:
                 'section': '1.10',
                 'rule_name': 'Ensure IAM password policy prevents password reuse',
                 'category': 'Identity and Access Management',
-                'account': '897766578789',
+                'account': '',
                 'results': {
                     'failed': 0,
                     'checked': 0,
@@ -306,7 +304,7 @@ Perform the following to set the password policy as prescribed:
                 'section': '1.11',
                 'rule_name': 'Ensure IAM password policy expires passwords within 90 days or less',
                 'category': 'Identity and Access Management',
-                'account': '897766578789',
+                'account': '',
                 'results': {
                     'failed': 0,
                     'checked': 0,
@@ -338,7 +336,7 @@ Perform the following to set the password policy as prescribed:
                 'section': '1.12',
                 'rule_name': 'Ensure no root account access key exists',
                 'category': 'Identity and Access Management',
-                'account': '897766578789',
+                'account': '',
                 'results': {
                     'failed': 0,
                     'checked': 0,
@@ -371,7 +369,7 @@ Perform the following to delete or disable active root access keys being used:
                 'section': '1.13',
                 'rule_name': 'Ensure MFA is enabled for the "root" account',
                 'category': 'Identity and Access Management',
-                'account': '897766578789',
+                'account': '',
                 'results': {
                     'failed': 0,
                     'checked': 0,
@@ -405,7 +403,7 @@ Perform the following to establish MFA for the root account:
                 'section': '1.14',
                 'rule_name': 'Ensure hardware MFA is enabled for the "root" account',
                 'category': 'Identity and Access Management',
-                'account': '897766578789',
+                'account': '',
                 'results': {
                     'failed': 0,
                     'checked': 0,
@@ -439,7 +437,7 @@ Perform the following to establish MFA for the root account:
                 'section': '1.16',
                 'rule_name': 'Ensure IAM policies are attached only to groups or roles',
                 'category': 'Identity and Access Management',
-                'account': '897766578789',
+                'account': '',
                 'results': {
                     'failed': 0,
                     'checked': 0,
@@ -471,12 +469,12 @@ To remove direct association between a user and a policy:
 1. Sign in to the AWS Management Console and open the IAM console at https://console.aws.amazon.com/iam/.
 2. In the left navigation pane, click on Users
 3. For each user:
-       1. Select the user
-       2. Click on the Permissions tab
-       3. Expand Managed Policies
-       4. Click Detach Policy for each policy
-       5. Expand Inline Policies
-       6. Click Remove Policy for each policy 
+       - Select the user
+       - Click on the Permissions tab
+       - Expand Managed Policies
+       - Click Detach Policy for each policy
+       - Expand Inline Policies
+       - Click Remove Policy for each policy 
                     '''.strip(),
                 'entities_results': '',
                 'cis': '16 Account Monitoring and Control\nAccount Monitoring and Control'
@@ -486,7 +484,7 @@ To remove direct association between a user and a policy:
                 'section': '1.22',
                 'rule_name': 'Ensure IAM policies that allow full "*:*" administrative privileges are not created',
                 'category': 'Identity and Access Management',
-                'account': '897766578789',
+                'account': '',
                 'results': {
                     'failed': 0,
                     'checked': 0,
@@ -523,7 +521,7 @@ Perform the following to detach the policy that has full administrative privileg
                 'section': '2.1',
                 'rule_name': 'Ensure CloudTrail is enabled in all Regions',
                 'category': 'Logging',
-                'account': '897766578789',
+                'account': '',
                 'results': {
                     'failed': 0,
                     'checked': 0,
@@ -567,7 +565,7 @@ Perform the following to enable global (Multi-region) CloudTrail logging:
                 'section': '2.2',
                 'rule_name': 'Ensure CloudTrail log file validation is enabled',
                 'category': 'Logging',
-                'account': '897766578789',
+                'account': '',
                 'results': {
                     'failed': 0,
                     'checked': 0,
@@ -598,7 +596,7 @@ Perform the following to enable log file validation on a given trail:
                 'section': '2.3',
                 'rule_name': 'Ensure the S3 bucket CloudTrail logs to is not publicly accessible',
                 'category': 'Logging',
-                'account': '897766578789',
+                'account': '',
                 'results': {
                     'failed': 0,
                     'checked': 0,
@@ -634,7 +632,7 @@ Perform the following to remove any public access that has been granted to the b
                 'section': '2.4',
                 'rule_name': 'Ensure CloudTrail trails are integrated with Amazon CloudWatch Logs',
                 'category': 'Logging',
-                'account': '897766578789',
+                'account': '',
                 'results': {
                     'failed': 0,
                     'checked': 0,
@@ -678,7 +676,7 @@ Perform the following to establish the prescribed state:
                 'section': '2.5',
                 'rule_name': 'Ensure AWS Config is enabled in all regions',
                 'category': 'Logging',
-                'account': '897766578789',
+                'account': '',
                 'results': {
                     'failed': 0,
                     'checked': 0,
@@ -717,7 +715,7 @@ To implement AWS Config configuration: Via AWS Management Console:
                 'section': '2.6',
                 'rule_name': 'Ensure S3 bucket access logging is enabled on the CloudTrail S3 bucket',
                 'category': 'Logging',
-                'account': '897766578789',
+                'account': '',
                 'results': {
                     'failed': 0,
                     'checked': 0,
@@ -752,7 +750,7 @@ Perform the following to enable S3 bucket logging:
                 'section': '2.7',
                 'rule_name': 'Ensure CloudTrail logs are encrypted at rest using AWS KMS CMKs',
                 'category': 'Logging',
-                'account': '897766578789',
+                'account': '',
                 'results': {
                     'failed': 0,
                     'checked': 0,
@@ -789,7 +787,7 @@ Note: You will need to apply a KMS Key policy on the selected CMK in order for C
                 'section': '2.8',
                 'rule_name': 'Ensure rotation for customer-created CMKs is enabled',
                 'category': 'Logging',
-                'account': '897766578789',
+                'account': '',
                 'results': {
                     'failed': 0,
                     'checked': 0,
@@ -819,7 +817,7 @@ Note: You will need to apply a KMS Key policy on the selected CMK in order for C
                 'section': '2.9',
                 'rule_name': 'Ensure VPC flow logging is enabled in all VPCs',
                 'category': 'Logging',
-                'account': '897766578789',
+                'account': '',
                 'results': {
                     'failed': 0,
                     'checked': 0,
@@ -855,7 +853,7 @@ Perform the following to determine if VPC Flow logs is enabled:
                 'section': '3.1',
                 'rule_name': 'Ensure a log metric filter and alarm exist for unauthorized API calls',
                 'category': 'Monitoring',
-                'account': '897766578789',
+                'account': '',
                 'results': {
                     'failed': 0,
                     'checked': 0,
@@ -890,7 +888,7 @@ aws cloudwatch put-metric-alarm --alarm-name  `<unauthorized_api_calls_alarm>`  
                 'rule_name': 'Ensure a log metric filter and alarm exist for AWS Management Console sign-in without '
                              'MFA',
                 'category': 'Monitoring',
-                'account': '897766578789',
+                'account': '',
                 'results': {
                     'failed': 0,
                     'checked': 0,
@@ -921,7 +919,7 @@ aws cloudwatch put-metric-alarm --alarm-name  `<no_mfa_console_signin_alarm>`  -
                 'section': '3.3',
                 'rule_name': 'Ensure a log metric filter and alarm exist for usage of "root" account',
                 'category': 'Monitoring',
-                'account': '897766578789',
+                'account': '',
                 'results': {
                     'failed': 0,
                     'checked': 0,
@@ -953,7 +951,7 @@ aws cloudwatch put-metric-alarm --alarm-name  `<root_usage_alarm>`  --metricname
                 'section': '3.4',
                 'rule_name': 'Ensure a log metric filter and alarm exist for IAM policy changes',
                 'category': 'Monitoring',
-                'account': '897766578789',
+                'account': '',
                 'results': {
                     'failed': 0,
                     'checked': 0,
@@ -984,7 +982,7 @@ aws cloudwatch put-metric-alarm --alarm-name  `<iam_changes_alarm>`  -metric-nam
                 'section': '3.5',
                 'rule_name': 'Ensure a log metric filter and alarm exist for CloudTrail configuration changes',
                 'category': 'Monitoring',
-                'account': '897766578789',
+                'account': '',
                 'results': {
                     'failed': 0,
                     'checked': 0,
@@ -1017,7 +1015,7 @@ aws cloudwatch put-metric-alarm --alarm-name  `<cloudtrail_cfg_changes_alarm>`  
                 'rule_name': 'Ensure a log metric filter and alarm exist for '
                              'AWS Management Console authentication failures',
                 'category': 'Monitoring',
-                'account': '897766578789',
+                'account': '',
                 'results': {
                     'failed': 0,
                     'checked': 0,
@@ -1051,7 +1049,7 @@ aws cloudwatch put-metric-alarm --alarm-name  `<console_signin_failure_alarm>`  
                 'rule_name': 'Ensure a log metric filter and alarm exist for '
                              'disabling or scheduled deletion of customer created CMKs',
                 'category': 'Monitoring',
-                'account': '897766578789',
+                'account': '',
                 'results': {
                     'failed': 0,
                     'checked': 0,
@@ -1082,7 +1080,7 @@ aws cloudwatch put-metric-alarm --alarm-name  `<s3_bucket_policy_changes_alarm>`
                 'section': '3.8',
                 'rule_name': 'Ensure a log metric filter and alarm exist for S3 bucket policy changes',
                 'category': 'Monitoring',
-                'account': '897766578789',
+                'account': '',
                 'results': {
                     'failed': 0,
                     'checked': 0,
@@ -1116,7 +1114,7 @@ aws cloudwatch put-metric-alarm --alarm-name  `<disable_or_delete_cmk_changes_al
                 'section': '3.9',
                 'rule_name': 'Ensure a log metric filter and alarm exist for AWS Config configuration changes',
                 'category': 'Monitoring',
-                'account': '897766578789',
+                'account': '',
                 'results': {
                     'failed': 0,
                     'checked': 0,
@@ -1162,7 +1160,7 @@ aws cloudwatch put-metric-alarm --alarm-name  `<aws_config_changes_alarm>`  -met
                 'section': '3.10',
                 'rule_name': 'Ensure a log metric filter and alarm exist for security group changes',
                 'category': 'Monitoring',
-                'account': '897766578789',
+                'account': '',
                 'results': {
                     'failed': 0,
                     'checked': 0,
@@ -1198,7 +1196,7 @@ aws cloudwatch put-metric-alarm --alarm-name  `<security_group_changes_alarm>`  
                 'rule_name': 'Ensure a log metric filter and alarm exist for '
                              'changes to Network Access Control Lists (NACL)',
                 'category': 'Monitoring',
-                'account': '897766578789',
+                'account': '',
                 'results': {
                     'failed': 0,
                     'checked': 0,
@@ -1232,7 +1230,7 @@ aws cloudwatch put-metric-alarm --alarm-name  `<nacl_changes_alarm>`  -metric-na
                 'section': '3.12',
                 'rule_name': 'Ensure a log metric filter and alarm exist for changes to network gateways',
                 'category': 'Monitoring',
-                'account': '897766578789',
+                'account': '',
                 'results': {
                     'failed': 0,
                     'checked': 0,
@@ -1269,7 +1267,7 @@ aws cloudwatch put-metric-alarm --alarm-name  `<network_gw_changes_alarm>`  -met
                 'section': '3.13',
                 'rule_name': 'Ensure a log metric filter and alarm exist for route table changes',
                 'category': 'Monitoring',
-                'account': '897766578789',
+                'account': '',
                 'results': {
                     'failed': 0,
                     'checked': 0,
@@ -1306,7 +1304,7 @@ aws cloudwatch put-metric-alarm --alarm-name  `<route_table_changes_alarm>`  --m
                 'section': '3.14',
                 'rule_name': 'Ensure a log metric filter and alarm exist for VPC changes',
                 'category': 'Monitoring',
-                'account': '897766578789',
+                'account': '',
                 'results': {
                     'failed': 0,
                     'checked': 0,
@@ -1342,7 +1340,7 @@ aws cloudwatch put-metric-alarm --alarm-name  `<vpc_changes_alarm>`  -metric-nam
                 'section': '4.1',
                 'rule_name': 'Ensure no security groups allow ingress from 0.0.0.0/0 to port 22',
                 'category': 'Networking',
-                'account': '897766578789',
+                'account': '',
                 'results': {
                     'failed': 0,
                     'checked': 0,
@@ -1373,7 +1371,7 @@ Perform the following to implement the prescribed state:
                 'section': '4.2',
                 'rule_name': 'Ensure no security groups allow ingress from 0.0.0.0/0 to port 3389',
                 'category': 'Networking',
-                'account': '897766578789',
+                'account': '',
                 'results': {
                     'failed': 0,
                     'checked': 0,
@@ -1404,7 +1402,7 @@ Perform the following to implement the prescribed state:
                 'section': '4.3',
                 'rule_name': 'Ensure the default security group of every VPC restricts all traffic',
                 'category': 'Networking',
-                'account': '897766578789',
+                'account': '',
                 'results': {
                     'failed': 0,
                     'checked': 0,
@@ -1455,7 +1453,7 @@ def get_compliance_accounts():
     reports_db = PluginBase.Instance._get_db_connection()[COMPLIANCE_PLUGIN_NAME]['reports']
     all_account_names = list(reports_db.distinct('account_name'))
     if not all_account_names:
-        return [DEFAULT_ACCOUNT_NAME]
+        return []
     return all_account_names
 
 
@@ -1479,6 +1477,7 @@ def get_compliance_rules(accounts) -> List[dict]:
     def beautify_compliance(compliance, account_name):
         compliance_results = compliance.get('results') or {}
         beautify_object = {
+            'id': f'{account_name}__{compliance["section"]}',
             'status': compliance.get('status'),
             'section': compliance.get('section'),
             'category': compliance.get('category'),
@@ -1492,18 +1491,22 @@ def get_compliance_rules(accounts) -> List[dict]:
             'remediation': compliance.get('remediation'),
             'rule': compliance.get('rule_name'),
             'entities_results_query': compliance.get('entities_results_query'),
+            'last_updated': datetime.now()
         }
         return beautify_object
 
     # pylint: disable=protected-access
     all_reports = list(PluginBase.Instance._get_db_connection()[COMPLIANCE_PLUGIN_NAME]['reports'].find({}))
+
     all_accounts = set(accounts)
 
     if not all_reports:
         default_rules = get_default_cis_aws_compliance_report().get('rules')
+        if len(all_accounts) == 0:
+            yield from (beautify_compliance(rule, rule['account']) for rule in default_rules)
         for account in all_accounts:
-            yield from (beautify_compliance(rule, account) for rule in default_rules)
+            yield from (beautify_compliance(rule, account) for rule in default_rules if rule['account'] == account)
 
     for report in all_reports:
-        if report['account_name'] in all_accounts:
+        if len(all_accounts) == 0 or report['account_name'] in all_accounts:
             yield from (beautify_compliance(rule, report['account_name']) for rule in report['report']['rules'])

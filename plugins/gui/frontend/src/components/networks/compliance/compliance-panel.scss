@@ -1,9 +1,19 @@
 .compliance-panel {
+    .x-side-panel__content {
+        padding-top: 10px;
+    }
+
     .body {
         padding-bottom: 84px;
 
         > div {
             margin-bottom: 20px;
+        }
+
+        .last-updated {
+            font-size: 12px;
+            opacity: 0.73;
+            margin-bottom: 10px
         }
 
         h5 {

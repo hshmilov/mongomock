@@ -53,6 +53,12 @@ export default {
   components: {
     xModal, xButton,
   },
+  props: {
+    enabled: {
+      type: Boolean,
+      default: true,
+    },
+  },
   computed: {
     arrowIcon() {
       return mdiArrowRight;
