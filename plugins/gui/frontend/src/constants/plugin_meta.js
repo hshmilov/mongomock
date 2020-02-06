@@ -1,4 +1,9 @@
 export const pluginMeta = {
+    json_adapter: {
+        title: 'JSON',
+        link: 'https://docs.axonius.com/docs/json',
+        description: 'The JSON adapter is able to import .json files with information about: devices, users or installed software.'
+    },
     digicert_certcentral_adapter: {
         title: 'DigiCert CertCentral',
         link: 'https://docs.axonius.com/docs/digicert-certcentral',
@@ -815,7 +820,7 @@ export const pluginMeta = {
     },
     nessus_csv_adapter: {
         title: 'Tenable Nessus CSV File',
-        link: '',
+        link: 'https://docs.axonius.com/docs/tenable-nessus-csv-file',
         description: 'Tenable Nessus CSV File Adapter imports device information from vulnerability scan data.'
     },
     esx_adapter: {
@@ -860,7 +865,7 @@ export const pluginMeta = {
     },
     forcepoint_csv_adapter: {
         title: 'Forcepoint Web Security Endpoint',
-        link: '',
+        link: 'https://docs.axonius.com/docs/forcepoint-web-security-endpoint',
         description: 'Forcepoint Web Security Endpoint enables end-users to authenticate and receive policy enforcement via the Forcepoint Web Security Cloud infrastructure.'
     },
     csv_adapter: {

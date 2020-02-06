@@ -1528,6 +1528,16 @@ class PluginBase(Configurable, Feature, ABC):
             return self._grab_file(field_data, stored_locally, alternative_db_name).read()
         return None
 
+    def grab_local_file(self, field_data) -> gridfs.GridOut:
+        """
+        Fetches the file pointed by `field_data` from the DB, assuming the file is stored
+        in current plugin.
+        The user should not assume anything else about the internals of the file.
+        :param field_data:
+        :return: stream like object
+        """
+        return self._grab_file_contents(field_data, True)
+
     @property
     def plugin_type(self):
         return 'Plugin'

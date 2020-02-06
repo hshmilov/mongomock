@@ -26,14 +26,14 @@ def get_column_types(csv_data: List[OrderedDict]) -> Dict[str, type]:
                     int(column_value)
                     column_types[column_name] = int
                     continue
-                except ValueError:
+                except (ValueError, TypeError):
                     pass
 
                 try:
                     float(column_value)
                     column_types[column_name] = float
                     continue
-                except ValueError:
+                except (ValueError, TypeError):
                     pass
 
                 if parse_date(column_value):

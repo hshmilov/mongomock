@@ -24,6 +24,7 @@ import requests
 
 
 class AggregatorService(PluginService, UpdatablePluginMixin):
+
     def __init__(self):
         super().__init__('aggregator')
 
@@ -1261,7 +1262,6 @@ class AggregatorService(PluginService, UpdatablePluginMixin):
                     print(f'Fixed Chunk of {i + 1000} records')
             else:
                 print(f'Tanium ID upgrade: Nothing to fix. Moving on')
-
             self.db_schema_version = 27
         except Exception as e:
             print(f'Exception while upgrading core db to version 27. Details: {e}')

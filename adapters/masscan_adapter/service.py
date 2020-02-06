@@ -1,21 +1,15 @@
-import logging
-import urllib
 import json
-import requests
-import chardet
-# pylint: disable=import-error
-from smb.SMBHandler import SMBHandler
+import logging
 
 from axonius.adapter_base import AdapterProperty
-from axonius.utils.datetime import parse_date
-from axonius.scanner_adapter_base import ScannerAdapterBase
+from axonius.consts import remote_file_consts
 from axonius.devices.device_adapter import DeviceAdapter
-from axonius.clients.aws.utils import get_s3_object
 from axonius.fields import Field, ListField
-from axonius.clients.rest.consts import get_default_timeout
-from axonius.adapter_exceptions import ClientConnectionException
+from axonius.scanner_adapter_base import ScannerAdapterBase
+from axonius.utils.datetime import parse_date
 from axonius.utils.files import get_local_config_file
-
+from axonius.utils.remote_file_utils import (load_remote_data,
+                                             test_file_reachability)
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -33,85 +27,21 @@ class MasscanAdapter(ScannerAdapterBase):
         return client_config['user_id']
 
     def _test_reachability(self, client_config):
-        raise NotImplementedError()
+        return test_file_reachability(client_config)
 
     def _connect_client(self, client_config):
-        if not client_config.get('masscan_http') and 'masscan_file' not in client_config \
-                and not client_config.get('masscan_share') \
-                and not client_config.get('s3_bucket') and not client_config.get('s3_object_location'):
-            raise ClientConnectionException('Bad params. No File or URL or Share for masscan')
         self.create_masscan_info_from_client_config(client_config)
         return client_config
 
     # pylint: disable=too-many-branches, too-many-statements
-    def create_masscan_info_from_client_config(self, client_config):
-        masscan_data_bytes = None
-        if client_config.get('masscan_http'):
-            try:
-                masscan_data_bytes = requests.get(client_config.get('masscan_http'),
-                                                  verify=False,
-                                                  timeout=get_default_timeout()).content
-            except Exception:
-                logger.exception(f'Couldn\'t get masscan info from URL')
-        elif client_config.get('masscan_share'):
-            try:
-                share_username = client_config.get('masscan_share_username')
-                share_password = client_config.get('masscan_share_password')
-                if not share_password or not share_username:
-                    share_password = None
-                    share_username = None
-                share_path = client_config.get('masscan_share')
-                if not share_path.startswith('\\\\'):
-                    raise Exception('Bad Share Format')
-                share_path = share_path[2:]
-                share_path = share_path.replace('\\', '/')
-                if share_username and share_password:
-                    share_path = f'{urllib.parse.quote(share_username)}:' \
-                                 f'{urllib.parse.quote(share_password)}@{share_path}'
-                share_path = 'smb://' + share_path
-                opener = urllib.request.build_opener(SMBHandler)
-                with opener.open(share_path) as fh:
-                    masscan_data_bytes = fh.read()
-            except Exception:
-                logger.exception(f'Couldn\'t get masscan info from share')
-        elif 'masscan_file' in client_config:
-            masscan_data_bytes = self._grab_file_contents(client_config['masscan_file'])
-        elif client_config.get('s3_bucket') or client_config.get('s3_object_location'):
-            s3_bucket = client_config.get('s3_bucket')
-            s3_object_location = client_config.get('s3_object_location')
-            s3_access_key_id = client_config.get('s3_access_key_id')
-            s3_secret_access_key = client_config.get('s3_secret_access_key')
-
-            if not (s3_bucket and s3_object_location):
-                raise ClientConnectionException(
-                    f'Error - Please specify both Amazon S3 Bucket and Amazon S3 Object Location')
-
-            if (s3_access_key_id or s3_secret_access_key) and not (s3_access_key_id and s3_secret_access_key):
-                raise ClientConnectionException(f'Error - Please specify both access key id and secret access key, '
-                                                f'or leave blank to use the attached IAM role')
-
-            try:
-                masscan_data_bytes = get_s3_object(
-                    bucket_name=s3_bucket,
-                    object_location=s3_object_location,
-                    access_key_id=s3_access_key_id,
-                    secret_access_key=s3_secret_access_key
-                )
-            except Exception as e:
-                if 'SignatureDoesNotMatch' in str(e):
-                    raise ClientConnectionException(f'Amazon S3 Bucket - Invalid Credentials. Response is: {str(e)}')
-                raise
-
-        if masscan_data_bytes is None:
-            raise Exception('Bad masscan, could not parse the data')
-        encoding = chardet.detect(masscan_data_bytes)['encoding']  # detect decoding automatically
-        encoding = encoding or 'utf-8'
-        masscan_data = masscan_data_bytes.decode(encoding)
+    @staticmethod
+    def create_masscan_info_from_client_config(client_config):
+        file_name, masscan_data = load_remote_data(client_config)
         masscan_json = json.loads(masscan_data)
         if not masscan_json or not isinstance(masscan_json, list) \
                 or not isinstance(masscan_json[0], dict) or not masscan_json[0].get('ip'):
             raise Exception(f'Bad Masscan Json')
-        return masscan_json, client_config['user_id']
+        return masscan_json, file_name
 
     def _query_devices_by_client(self, client_name, client_data):
         return self.create_masscan_info_from_client_config(client_data)
@@ -120,64 +50,10 @@ class MasscanAdapter(ScannerAdapterBase):
     def _clients_schema():
         return {
             'items': [
-                {
-                    'name': 'user_id',
-                    'title': 'Masscan File Name',
-                    'type': 'string'
-                },
-                {
-                    'name': 'masscan_file',
-                    'title': 'Masscan JSON File',
-                    'description': 'The binary contents of the masscan XML File',
-                    'type': 'file'
-                },
-                {
-                    'name': 'masscan_http',
-                    'title': 'Masscan JSON URL Path',
-                    'type': 'string'
-                },
-                {
-                    'name': 'masscan_share',
-                    'title': 'Masscan JSON Share Path',
-                    'type': 'string'
-                },
-                {
-                    'name': 'masscan_share_username',
-                    'title': 'Masscan Share User Name',
-                    'type': 'string'
-                },
-                {
-                    'name': 'masscan_share_password',
-                    'title': 'Masscan Share Password',
-                    'type': 'string',
-                    'format': 'password'
-                },
-                {
-                    'name': 's3_bucket',
-                    'title': 'Amazon S3 Bucket Name',
-                    'type': 'string',
-                },
-                {
-                    'name': 's3_object_location',
-                    'title': 'Amazon S3 Object Location (Key)',
-                    'type': 'string',
-                },
-                {
-                    'name': 's3_access_key_id',
-                    'title': 'Amazon S3 Access Key Id',
-                    'description': 'Leave blank to use the attached IAM role',
-                    'type': 'string',
-                },
-                {
-                    'name': 's3_secret_access_key',
-                    'title': 'Amazon S3 Secret Access Key',
-                    'description': 'Leave blank to use the attached IAM role',
-                    'type': 'string',
-                    'format': 'password'
-                }
+                *remote_file_consts.FILE_CLIENTS_SCHEMA
             ],
             'required': [
-                'user_id',
+                *remote_file_consts.FILE_SCHEMA_REQUIRED
             ],
             'type': 'array'
         }

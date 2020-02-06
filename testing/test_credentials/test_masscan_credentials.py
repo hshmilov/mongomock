@@ -1,4 +1,4 @@
 CLIENT_DETAILS = {
-}  # AUTOADAPTER - insert client information to test
+}  # Add client details
 
-SOME_DEVICE_ID = 'AUTOADAPTER - give one device_id that should return from the above client'
+SOME_DEVICE_ID = ''  # No tests

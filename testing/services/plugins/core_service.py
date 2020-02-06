@@ -56,7 +56,10 @@ class CoreService(PluginService, UpdatablePluginMixin):
         if self.db_schema_version < 9:
             self._update_schema_version_9()
 
-        if self.db_schema_version != 9:
+        if self.db_schema_version < 10:
+            self._update_schema_version_10()
+
+        if self.db_schema_version != 10:
             print(f'Upgrade failed, db_schema_version is {self.db_schema_version}')
 
     def _update_schema_version_1(self):
@@ -426,6 +429,126 @@ class CoreService(PluginService, UpdatablePluginMixin):
             self.db_schema_version = 9
         except Exception as e:
             print(f'Exception while upgrading tanium schema to version 9. Details: {e}')
+            traceback.print_exc()
+            raise
+
+    # pylint:disable=too-many-locals,too-many-statements,too-many-branches
+    def _update_schema_version_10(self):
+        print('Update to schema 10 - modernize file-based adapters')
+        try:
+            csv_adapters = list(self.db.client['core']['configs'].find({PLUGIN_NAME: 'csv_adapter'}))
+            fp_csv_adapters = list(self.db.client['core']['configs'].find({PLUGIN_NAME: 'forcepoint_csv_adapter'}))
+            nessus_csv_adapters = list(self.db.client['core']['configs'].find({PLUGIN_NAME: 'nessus_csv_adapter'}))
+            masscan_adapters = list(self.db.client['core']['configs'].find({PLUGIN_NAME: 'masscan_adapter'}))
+            nmap_adapters = list(self.db.client['core']['configs'].find({PLUGIN_NAME: 'nmap_adapter'}))
+
+            csv_names = [doc[PLUGIN_UNIQUE_NAME] for doc in csv_adapters]
+            fp_csv_names = [doc[PLUGIN_UNIQUE_NAME] for doc in fp_csv_adapters]
+            nessus_csv_names = [doc[PLUGIN_UNIQUE_NAME] for doc in nessus_csv_adapters]
+            masscan_names = [doc[PLUGIN_UNIQUE_NAME] for doc in masscan_adapters]
+            nmap_names = [doc[PLUGIN_UNIQUE_NAME] for doc in nmap_adapters]
+            puns = csv_names + nessus_csv_names + nmap_names + fp_csv_names + masscan_names
+            for plugin_unique_name in puns:
+                for client in self.db.client[plugin_unique_name]['clients'].find({}):
+                    client_config = client['client_config']
+                    client_config_new = client_config.copy()
+                    # explicitly verify user_id
+                    client_config_id = client_config.get('user_id')
+                    if not client_config_id:
+                        raise Exception(f'What in the nine hells? Expected user_id, got {client_config_id} instead.')
+                    # is_users
+                    if 'is_users_csv' in client_config:
+                        client_config_new['is_users'] = client_config.get('is_users_csv')
+                    configured_items = list()
+                    # http -> resource_path
+                    resource_path = None
+                    if 'csv_http' in client_config:
+                        resource_path = client_config.get('csv_http')
+                    elif 'masscan_http' in client_config:
+                        resource_path = client_config.get('masscan_http')
+                    elif 'nmap_http' in client_config:
+                        resource_path = client_config.get('nmap_http')
+                    if resource_path is not None:
+                        client_config_new['resource_path'] = resource_path
+                        configured_items.append('HTTP')
+                    # reset resource path to prevent false positive
+                    resource_path = None
+                    # handle smb
+                    # if http is configured but also smb, print a warning
+                    if 'csv_share' in client_config:
+                        resource_path = client_config.get('csv_share')
+                    elif 'masscan_share' in client_config:
+                        resource_path = client_config.get('masscan_share')
+                    elif 'nmap_share' in client_config:
+                        resource_path = client_config.get('nmap_share')
+                    if resource_path is not None:
+                        configured_items.append('SMB Share')
+                        if 'HTTP' in configured_items:
+                            print('[GENERIC_FILE_MIGRATION] - identified both URL and SMB share')
+                        else:
+                            print('[GENERIC_FILE_MIGRATION] - Setting SMB share (http not configured)')
+                            client_config_new['resource_path'] = resource_path
+                    # username - ignored if http is used
+                    username = None
+                    if 'csv_share_username' in client_config:
+                        username = client_config.get('csv_share_username')
+                    elif 'nmap_share_username' in client_config:
+                        username = client_config.get('nmap_share_username')
+                    elif 'masscan_share_username' in client_config:
+                        username = client_config.get('masscan_share_username')
+                    if username is not None:
+                        configured_items.append('SMB Username')
+                        if 'HTTP' in configured_items:
+                            print('[GENERIC_FILE_MIGRATION] - identified both URL and SMB username')
+                        else:
+                            print('[GENERIC_FILE_MIGRATION] - Setting SMB username (http not configured)')
+                            client_config_new['username'] = username
+                    # password - ignored if http is used
+                    password = None
+                    if 'csv_share_password' in client_config:
+                        password = client_config.get('csv_share_password')
+                    elif 'nmap_share_password' in client_config:
+                        password = client_config.get('nmap_share_password')
+                    elif 'masscan_share_password' in client_config:
+                        password = client_config.get('masscan_share_password')
+                    if password is not None:
+                        configured_items.append('SMB Password')
+                        if 'HTTP' in configured_items:
+                            print('[GENERIC_FILE_MIGRATION] - identified both URL and SMB password')
+                        else:
+                            print('[GENERIC_FILE_MIGRATION] - Setting SMB password (http not configured)')
+                            client_config_new['password'] = password
+                    if client_config.get('s3_bucket'):
+                        configured_items.append('S3 Bucket')
+                        print('[GENERIC_FILE_MIGRATION] - identified s3 bucket')
+                    # file path
+                    file_path = None
+                    if 'csv' in client_config:
+                        file_path = client_config.get('csv')
+                    elif 'masscan_file' in client_config:
+                        file_path = client_config.get('masscan_file')
+                    elif 'nmap_file' in client_config:
+                        file_path = client_config.get('nmap_file')
+                    if file_path is not None:
+                        configured_items.append('File Path')
+                        client_config_new['file_path'] = file_path
+                        if 'S3 Bucket' in configured_items:
+                            print(f'[GENERIC_FILE_MIGRATION] - Identified both upload file and S3 config')
+                    self.db.client[plugin_unique_name]['clients'].update(
+                        {
+                            '_id': client['_id']
+                        },
+                        {
+                            '$set': {
+                                'client_config': client_config_new
+                            }
+                        }
+                    )
+                    print(f'[GENERIC_FILE_MIGRATION] - Summary - '
+                          f'Identified configuration for {",".join(configured_items)}')
+            self.db_schema_version = 10
+        except Exception as e:
+            print(f'Exception while upgrading core db to version 10. Details: {e}')
             traceback.print_exc()
             raise
 

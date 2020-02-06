@@ -1,25 +1,19 @@
-import re
 import datetime
 import logging
-import urllib
-import requests
-import chardet
-# pylint: disable=import-error
-from smb.SMBHandler import SMBHandler
+import re
 
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import GetDevicesError
-from axonius.clients.aws.utils import get_s3_object
 from axonius.clients.csv.utils import get_column_types
+from axonius.consts import remote_file_consts
+from axonius.consts.csv_consts import get_csv_field_names
 from axonius.devices.device_adapter import DeviceAdapter
-from axonius.users.user_adapter import UserAdapter
-from axonius.clients.rest.consts import get_default_timeout
 from axonius.fields import Field
-from axonius.adapter_exceptions import ClientConnectionException
+from axonius.users.user_adapter import UserAdapter
 from axonius.utils.datetime import parse_date
 from axonius.utils.files import get_local_config_file
 from axonius.utils.parsing import make_dict_from_csv, normalize_var_name
-from axonius.consts.csv_consts import get_csv_field_names
+from axonius.utils.remote_file_utils import load_remote_data, test_file_reachability
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -27,8 +21,9 @@ DEVICES_NEEDED_FIELDS = ['id', 'serial', 'mac_address', 'hostname', 'name']
 USERS_NEEDED_FIELDS = ['id', 'username', 'mail', 'name']
 SW_NEEDED_FIELDS = ['hostname', 'installed_sw_name']
 
-
 # pylint: disable=R1702,R0201,R0912,R0915,R0914
+
+
 class CsvAdapter(AdapterBase):
     DEFAULT_LAST_FETCHED_THRESHOLD_HOURS = 24
 
@@ -47,84 +42,19 @@ class CsvAdapter(AdapterBase):
         return client_config['user_id']
 
     def _test_reachability(self, client_config):
-        raise NotImplementedError()
+        return test_file_reachability(client_config)
 
     def _connect_client(self, client_config):
-        if not client_config.get('csv_http') and 'csv' not in client_config and not client_config.get('csv_share') \
-                and not client_config.get('s3_bucket'):
-            raise ClientConnectionException('Bad params. No File / URL / Share / Amazon S3 Bucket for CSV')
+        load_remote_data(client_config)
         self.create_csv_info_from_client_config(client_config)
         return client_config
 
-    def create_csv_info_from_client_config(self, client_config):
-        csv_data_bytes = None
-        if client_config.get('csv_http'):
-            try:
-                csv_data_bytes = requests.get(client_config.get('csv_http'),
-                                              verify=False,
-                                              timeout=get_default_timeout()).content
-            except Exception:
-                logger.exception(f'Couldn\'t get csv info from URL')
-        elif client_config.get('csv_share'):
-            try:
-                share_username = client_config.get('csv_share_username')
-                share_password = client_config.get('csv_share_password')
-                if not share_password or not share_username:
-                    share_password = None
-                    share_username = None
-                share_path = client_config.get('csv_share')
-                if not share_path.startswith('\\\\'):
-                    raise Exception('Bad Share Format')
-                share_path = share_path[2:]
-                share_path = share_path.replace('\\', '/')
-                if share_username and share_password:
-                    share_path = f'{urllib.parse.quote(share_username)}:' \
-                                 f'{urllib.parse.quote(share_password)}@{share_path}'
-                share_path = 'smb://' + share_path
-                opener = urllib.request.build_opener(SMBHandler)
-                with opener.open(share_path) as fh:
-                    csv_data_bytes = fh.read()
-            except Exception:
-                logger.exception(f'Couldn\'t get csv info from share')
-        elif client_config.get('s3_bucket') or client_config.get('s3_object_location'):
-            s3_bucket = client_config.get('s3_bucket')
-            s3_object_location = client_config.get('s3_object_location')
-            s3_access_key_id = client_config.get('s3_access_key_id')
-            s3_secret_access_key = client_config.get('s3_secret_access_key')
-
-            if not (s3_bucket and s3_object_location):
-                raise ClientConnectionException(
-                    f'Error - Please specify both Amazon S3 Bucket and Amazon S3 Object Location')
-
-            if (s3_access_key_id or s3_secret_access_key) and not (s3_access_key_id and s3_secret_access_key):
-                raise ClientConnectionException(f'Error - Please specify both access key id and secret access key, '
-                                                f'or leave blank to use the attached IAM role')
-
-            try:
-                csv_data_bytes = get_s3_object(
-                    bucket_name=s3_bucket,
-                    object_location=s3_object_location,
-                    access_key_id=s3_access_key_id,
-                    secret_access_key=s3_secret_access_key
-                )
-            except Exception as e:
-                if 'SignatureDoesNotMatch' in str(e):
-                    raise ClientConnectionException(f'Amazon S3 Bucket - Invalid Credentials. Response is: {str(e)}')
-                raise
-        elif 'csv' in client_config:
-            csv_data_bytes = self._grab_file_contents(client_config['csv'])
-
-        if csv_data_bytes is None:
-            raise Exception('Bad CSV, could not parse the data')
-        if not client_config.get('encoding'):
-            encoding = chardet.detect(csv_data_bytes)['encoding']  # detect decoding automatically
-            encoding = encoding or 'utf-8'
-        else:
-            encoding = client_config.get('encoding')
-        csv_data = csv_data_bytes.decode(encoding)
+    @staticmethod
+    def create_csv_info_from_client_config(client_config):
+        file_name, csv_data = load_remote_data(client_config)
         csv_dict = make_dict_from_csv(csv_data)
         fields = get_csv_field_names(csv_dict.fieldnames)
-        is_users_csv = client_config.get('is_users_csv', False)
+        is_users_csv = client_config.get('is_users', False)
         is_installed_sw = client_config.get('is_installed_sw', False)
         if is_users_csv:
             csv_needed_fields = USERS_NEEDED_FIELDS
@@ -139,99 +69,46 @@ class CsvAdapter(AdapterBase):
         if not any(id_field in fields for id_field in csv_needed_fields):
             logger.error(f'Bad fields names {str(csv_dict.fieldnames)}')
             raise Exception(f'Strong identifier is missing')
-        return csv_dict, True, client_config.get('user_id')
+        return csv_dict, True, file_name
 
     def _query_users_by_client(self, key, data):
-        is_users_csv = data.get('is_users_csv', False)
+        is_users_csv = data.get('is_users', False)
         if not is_users_csv:
             return None
         return self.create_csv_info_from_client_config(data)
 
     def _query_devices_by_client(self, client_name, client_data):
-        is_users_csv = client_data.get('is_users_csv', False)
+        is_users_csv = client_data.get('is_users', False)
         is_installed_sw = client_data.get('is_installed_sw', False)
         if is_users_csv:
             return None
         return self.create_csv_info_from_client_config(client_data), is_installed_sw
 
-    def _clients_schema(self):
+    @staticmethod
+    def _clients_schema():
+        """
+        The schema CSVAdapter expects from configs
+
+        :return: JSON scheme
+        """
         return {
             'items': [
                 {
-                    'name': 'is_users_csv',
-                    'title': 'Is Users CSV File',
+                    'name': 'is_users',
+                    'title': 'File contains users information',
                     'type': 'bool'
                 },
                 {
                     'name': 'is_installed_sw',
-                    'title': 'Is Installed Software File',
+                    'title': 'File contains installed software information',
                     'type': 'bool'
                 },
-                {
-                    'name': 'user_id',
-                    'title': 'CSV File Name',
-                    'type': 'string'
-                },
-                {
-                    'name': 'csv',
-                    'title': 'CSV File',
-                    'description': 'The binary contents of the csv',
-                    'type': 'file'
-                },
-                {
-                    'name': 'csv_http',
-                    'title': 'CSV URL Path',
-                    'type': 'string'
-                },
-                {
-                    'name': 'csv_share',
-                    'title': 'CSV Share Path',
-                    'type': 'string'
-                },
-                {
-                    'name': 'csv_share_username',
-                    'title': 'CSV Share Username',
-                    'type': 'string'
-                },
-                {
-                    'name': 'csv_share_password',
-                    'title': 'CSV Share Password',
-                    'type': 'string',
-                    'format': 'password'
-                },
-                {
-                    'name': 's3_bucket',
-                    'title': 'Amazon S3 Bucket Name',
-                    'type': 'string',
-                },
-                {
-                    'name': 's3_object_location',
-                    'title': 'Amazon S3 Object Location (Key)',
-                    'type': 'string',
-                },
-                {
-                    'name': 's3_access_key_id',
-                    'title': 'Amazon S3 Access Key Id',
-                    'description': 'Leave blank to use the attached IAM role',
-                    'type': 'string',
-                },
-                {
-                    'name': 's3_secret_access_key',
-                    'title': 'Amazon S3 Secret Access Key',
-                    'description': 'Leave blank to use the attached IAM role',
-                    'type': 'string',
-                    'format': 'password'
-                },
-                {
-                    'name': 'encoding',
-                    'title': 'Encoding',
-                    'type': 'string'
-                }
+                *remote_file_consts.FILE_CLIENTS_SCHEMA
             ],
             'required': [
-                'user_id',
-                'is_users_csv',
-                'is_installed_sw'
+                'is_users',
+                'is_installed_sw',
+                *remote_file_consts.FILE_SCHEMA_REQUIRED
             ],
             'type': 'array'
         }
@@ -303,7 +180,7 @@ class CsvAdapter(AdapterBase):
             except Exception:
                 logger.exception(f'Problem adding user: {str(user_raw)}')
 
-    def _parse_instaleld_sw_file(self, csv_data, file_name):
+    def _parse_installed_sw_file(self, csv_data, file_name):
         hostname_sw_dict = dict()
         fields = get_csv_field_names(csv_data.fieldnames)
         for device_raw in csv_data:
@@ -341,7 +218,7 @@ class CsvAdapter(AdapterBase):
         devices_raw_data_inner, is_installed_sw = devices_raw_data
         csv_data, should_parse_all_columns, file_name = devices_raw_data_inner
         if is_installed_sw:
-            yield from self._parse_instaleld_sw_file(csv_data, file_name)
+            yield from self._parse_installed_sw_file(csv_data, file_name)
             return
         fields = get_csv_field_names(csv_data.fieldnames)
         if not any(id_field in fields for id_field in DEVICES_NEEDED_FIELDS):

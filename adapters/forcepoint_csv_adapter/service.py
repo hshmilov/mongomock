@@ -1,15 +1,15 @@
 import logging
-import requests
 
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.devices.device_adapter import DeviceAdapter, AGENT_NAMES
 from axonius.fields import Field
-from axonius.clients.rest.consts import get_default_timeout
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.utils.files import get_local_config_file
 from axonius.utils.datetime import parse_date
 from axonius.adapter_exceptions import GetDevicesError
 from axonius.utils.parsing import make_dict_from_csv
+from axonius.utils.remote_file_utils import load_remote_data, test_file_reachability
+from axonius.consts import remote_file_consts
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -25,55 +25,26 @@ class ForcepointCsvAdapter(AdapterBase):
         return client_config['user_id']
 
     def _test_reachability(self, client_config):
-        raise NotImplementedError()
+        return test_file_reachability(client_config)
 
     def _connect_client(self, client_config):
-        if not client_config.get('csv_http') and 'csv' not in client_config:
-            raise ClientConnectionException('Bad params. No File or URL for CSV')
-        if client_config.get('csv_http'):
-            r = requests.get(client_config.get('csv_http'),
-                             verify=False,
-                             timeout=get_default_timeout()).content
-            r.raise_for_status()
+        if not self._test_reachability(client_config):
+            raise ClientConnectionException('Configuration error.')
         return client_config
 
-    def _query_devices_by_client(self, client_name, client_data):
-        csv_data = None
-        if client_data.get('csv_http'):
-            try:
-                csv_data = requests.get(client_data.get('csv_http'),
-                                        verify=False,
-                                        timeout=get_default_timeout()).content
-            except Exception:
-                logger.exception(f'Couldn\'t get csv info from URL')
-        if csv_data is None:
-            filedata = self._grab_file_contents(client_data['csv'])
-            csv_data = filedata.decode('utf-8')
+    # pylint:disable=arguments-differ
+    @staticmethod
+    def _query_devices_by_client(client_name, client_data):
+        file_name, csv_data = load_remote_data(client_data)
         return make_dict_from_csv(csv_data)
 
     def _clients_schema(self):
         return {
             'items': [
-                {
-                    'name': 'user_id',
-                    'title': 'CSV File ID',
-                    'type': 'string'
-                },
-                {
-                    'name': 'csv',
-                    'title': 'CSV File',
-                    'description': 'The binary contents of the csv',
-                    'type': 'file',
-
-                },
-                {
-                    'name': 'csv_http',
-                    'title': 'CSV URL Path',
-                    'type': 'string'
-                }
+                *remote_file_consts.FILE_CLIENTS_SCHEMA
             ],
             'required': [
-                'user_id'
+                *remote_file_consts.FILE_SCHEMA_REQUIRED
             ],
             'type': 'array'
         }

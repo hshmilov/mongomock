@@ -96,7 +96,6 @@ adapters/mobileiron_adapter/connection.py
 adapters/nessus_adapter/connection.py
 adapters/nessus_adapter/exceptions.py
 adapters/nessus_adapter/service.py
-adapters/nessus_csv_adapter/service.py
 adapters/nexpose_adapter/service.py
 adapters/nexpose_adapter/clients/nexpose_base_client.py
 adapters/nexpose_adapter/clients/nexpose_v2_client.py
@@ -548,7 +547,6 @@ testing/test_credentials/test_kaseya_credentials.py
 testing/test_credentials/test_minerva_credentials.py
 testing/test_credentials/test_mobileiron_credentials.py
 testing/test_credentials/test_nessus_credentials.py
-testing/test_credentials/test_nessus_csv_credentials.py
 testing/test_credentials/test_observeit_credentials.py
 testing/test_credentials/test_openstack_credentials.py
 testing/test_credentials/test_oracle_vm_credentials.py

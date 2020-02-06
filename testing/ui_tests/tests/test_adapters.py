@@ -13,8 +13,8 @@ from test_credentials.test_csv_credentials import \
 from ui_tests.tests.ui_test_base import TestBase
 
 CSV_ADAPTER_QUERY = 'adapters_data.csv_adapter.id == exists(true)'
-CSV_FILE_NAME = 'csv'
-CSV_INPUT_ID = 'csv'
+CSV_FILE_NAME = 'file_path'  # Changed by Alex A on Jan 27 2020 - because schema changed
+CSV_INPUT_ID = 'file_path'  # Changed by Alex A on Jan 27 2020 - because schema changed
 CSV_NAME = 'CSV Serials'
 JSON_NAME = 'JSON File'
 CSV_PLUGIN_NAME = 'csv_adapter'
@@ -200,7 +200,7 @@ class TestAdapters(TestBase):
         self.adapters_page.upload_file_by_id(CSV_INPUT_ID, csv_data[csv_file_name].file_contents)
         self.adapters_page.fill_creds(user_id=csv_file_name, connectionLabel=csv_file_name)
         if is_user_file:
-            self.adapters_page.find_checkbox_by_label('Is Users CSV File').click()
+            self.adapters_page.find_checkbox_by_label('File contains users information').click()
         self.adapters_page.click_save()
 
     def _open_add_edit_server(self, adapter_name, row_position=0):
