@@ -25,26 +25,26 @@ SHOULD_DELETE_AFTER_EXEC_NAME = 'should_delete_after_exec'
 UPLOAD_PERMISSIONS_NAME = 'upload_permissions'
 BASE_SCHEMA = {
     'items': [
-        {'name': USERNAME, 'title': 'User Name', 'type': 'string'},
+        {'name': USERNAME, 'title': 'User name', 'type': 'string'},
         {'name': PASSWORD, 'title': 'Password', 'type': 'string', 'format': 'password'},
         {
             'name': PRIVATE_KEY,
-            'title': 'Private Key',
-            'description': 'SSH Private Key for authentication',
+            'title': 'Private key',
+            'description': 'SSH private key for authentication',
             'type': 'file',
         },
         {
             'name': PASSPHRASE,
-            'title': 'Private Key Passphrase',
-            'description': 'SSH Private Key passphrase',
+            'title': 'Private key passphrase',
+            'description': 'SSH private key passphrase',
             'type': 'string',
             'format': 'password',
         },
         {
             'name': PORT,
-            'title': 'SSH Port',
+            'title': 'SSH port',
             'type': 'integer',
-            'description': 'Protocol Port',
+            'description': 'Protocol port',
         },
         {
             'name': IS_SUDOER,
@@ -56,7 +56,7 @@ BASE_SCHEMA = {
         },
         {
             'name': SUDO_PATH,
-            'title': 'Sudo Path',
+            'title': 'Sudo path',
             'type': 'string'
         },
     ],
@@ -72,15 +72,15 @@ SCAN_ACTION_SCHEMA = copy.deepcopy(BASE_SCHEMA)
 
 CMD_ACTION_SCHEMA = copy.deepcopy(BASE_SCHEMA)
 CMD_ITEM = {'name': COMMAND, 'title': 'Command', 'type': 'string'}
-CMDNAME_ITEM = {'name': COMMAND_NAME, 'title': 'Command Name', 'type': 'string'}
-UPLOAD_PATH_ITEM = {'name': UPLOAD_PATH_NAME, 'title': 'Upload Path', 'type': 'string'}
+CMDNAME_ITEM = {'name': COMMAND_NAME, 'title': 'Command name', 'type': 'string'}
+UPLOAD_PATH_ITEM = {'name': UPLOAD_PATH_NAME, 'title': 'Upload path', 'type': 'string'}
 SHOULD_DELETE_AFTER_EXEC = {'name': SHOULD_DELETE_AFTER_EXEC_NAME,
-                            'title': 'Delete Files After Execution', 'type': 'bool'}
-UPLOAD_PERMISSIONS = {'name': UPLOAD_PERMISSIONS_NAME, 'title': 'Upload Files Permissions', 'type': 'integer',
+                            'title': 'Delete files after execution', 'type': 'bool'}
+UPLOAD_PERMISSIONS = {'name': UPLOAD_PERMISSIONS_NAME, 'title': 'Upload files permissions', 'type': 'integer',
                       'default': DEFAULT_UPLOAD_PERMISSIONS}
 EXTRA_FILES = {
     'name': EXTRA_FILES_NAME,
-    'title': 'Files to deploy',
+    'title': 'Files to Deploy',
     'type': 'array',
     'items':
         {
@@ -113,5 +113,5 @@ for current_item in ADAPTER_SCHEMA['items']:
     if current_item['name'] in BASE_DEFAULTS_SCHEMA:
         current_item['default'] = BASE_DEFAULTS_SCHEMA[current_item['name']]
 
-ADAPTER_SCHEMA['items'].insert(0, {'name': HOSTNAME, 'title': 'Host Name', 'type': 'string'})
+ADAPTER_SCHEMA['items'].insert(0, {'name': HOSTNAME, 'title': 'Host name', 'type': 'string'})
 ADAPTER_SCHEMA['required'].insert(0, HOSTNAME)

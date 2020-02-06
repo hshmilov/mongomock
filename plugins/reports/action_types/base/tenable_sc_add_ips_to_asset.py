@@ -22,17 +22,17 @@ class TenableScAddIPsToAsset(ActionTypeBase):
             'items': [
                 {
                     'name': 'use_adapter',
-                    'title': 'Use Tenable.sc Adapter',
+                    'title': 'Use stored credentials from the Tenable.sc Adapter',
                     'type': 'bool'
                 },
                 {
                     'name': 'domain',
-                    'title': 'Tenable.sc Domain',
+                    'title': 'Tenable.sc domain',
                     'type': 'string'
                 },
                 {
                     'name': 'username',
-                    'title': 'User Name',
+                    'title': 'User name',
                     'type': 'string'
                 },
                 {
@@ -48,36 +48,36 @@ class TenableScAddIPsToAsset(ActionTypeBase):
                 },
                 {
                     'name': 'https_proxy',
-                    'title': 'HTTPS Proxy',
+                    'title': 'HTTPS proxy',
                     'type': 'string'
                 },
                 {
                     'name': 'asset_name',
-                    'title': 'Asset Name',
+                    'title': 'Asset name',
                     'type': 'string'
                 },
                 {
                     'name': 'create_new_asset',
-                    'title': 'Create New Asset',
+                    'title': 'Create new asset',
                     'type': 'bool'
                 },
                 {
                     'name': 'use_public_ips',
-                    'title': 'Use Public IPs',
+                    'title': 'Use public IP addresses',
                     'type': 'bool'},
                 {
                     'name': 'use_private_ips',
-                    'title': 'Use Private IPs',
+                    'title': 'Use private IP addresses',
                     'type': 'bool'
                 },
                 {
                     'name': 'exclude_ipv6',
-                    'title': 'Exclude IPv6',
+                    'title': 'Exclude IPv6 addresses',
                     'type': 'bool'
                 },
                 {
                     'name': 'override_ips',
-                    'title': 'Override Current IPs List',
+                    'title': 'Override current IP address list',
                     'type': 'bool',
                 },
                 {
@@ -87,6 +87,7 @@ class TenableScAddIPsToAsset(ActionTypeBase):
                 }
             ],
             'required': [
+                'verify_ssl',
                 'asset_name',
                 'create_new_asset',
                 'use_private_ips',

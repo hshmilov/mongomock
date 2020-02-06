@@ -24,13 +24,13 @@ class HaveibeenpwnedEnrichment(ActionTypeBase):
             'items': [
                 {
                     'name': 'domain_preferred',
-                    'title': 'Have I Been Pwned Domain',
+                    'title': 'Have I Been Pwned domain',
                     'type': 'string',
                     'default': HAVEIBEENPWNED_DOMAIN
                 },
                 {
                     'name': 'apikey',
-                    'title': 'API Key',
+                    'title': 'API key',
                     'type': 'string',
                     'format': 'password'
                 },
@@ -46,7 +46,7 @@ class HaveibeenpwnedEnrichment(ActionTypeBase):
                 },
                 {
                     'name': 'alternative_suffix',
-                    'title': 'Alternative Email Suffix',
+                    'title': 'Alternative email suffix',
                     'type': 'string'
                 }
             ],

@@ -22,7 +22,7 @@ class CarbonblackDefenseChangePolicyAction(ActionTypeBase):
             'items': [
                 {
                     'name': 'policy_name',
-                    'title': 'Policy Name',
+                    'title': 'Policy name',
                     'type': 'string'
                 },
             ],

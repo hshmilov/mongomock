@@ -23,19 +23,19 @@ class ShodanEnrichment(ActionTypeBase):
             'items': [
                 {
                     'name': 'domain',
-                    'title': 'Shodan Domain',
+                    'title': 'Shodan domain',
                     'type': 'string',
                     'default': DEFAULT_DOMAIN
                 },
                 {
                     'name': 'apikey',
-                    'title': 'API Key',
+                    'title': 'API key',
                     'type': 'string',
                     'format': 'password'
                 },
                 {
                     'name': 'https_proxy',
-                    'title': 'HTTPS Proxy',
+                    'title': 'HTTPS proxy',
                     'type': 'string'
                 },
             ],

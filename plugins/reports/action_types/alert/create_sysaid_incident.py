@@ -19,7 +19,7 @@ class SysaidIncidentAction(ActionTypeAlert):
             'items': [
                 {
                     'name': 'use_adapter',
-                    'title': 'Use Sysaid adapter',
+                    'title': 'Use stored credentials from the Sysaid adapter',
                     'type': 'bool'
                 },
                 {

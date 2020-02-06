@@ -56,13 +56,13 @@ class ChangeLdapAttribute(ActionTypeBase):
                             'items': [
                                 {
                                     'name': 'attribute_name',
-                                    'title': 'Attribute Name',
+                                    'title': 'Attribute name',
                                     'type': 'string',
                                     'required': True
                                 },
                                 {
                                     'name': 'attribute_value',
-                                    'title': 'Attribute Value',
+                                    'title': 'Attribute value',
                                     'type': 'string',
                                     'required': True
                                 }

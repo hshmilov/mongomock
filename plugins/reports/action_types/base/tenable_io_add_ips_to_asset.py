@@ -23,23 +23,23 @@ class TenableIoAddIPsToTargetGroup(ActionTypeBase):
             'items': [
                 {
                     'name': 'use_adapter',
-                    'title': 'Use Tenable.io Adapter',
+                    'title': 'Use stored credentials from the Tenable.io Adapter',
                     'type': 'bool'
                 },
                 {
                     'name': 'domain',
-                    'title': 'Tenable.io Domain',
+                    'title': 'Tenable.io domain',
                     'type': 'string'
                 },
                 {
                     'name': 'access_key',
-                    'title': 'Access API Key',
+                    'title': 'Access API key',
                     'type': 'string',
                     'format': 'password'
                 },
                 {
                     'name': 'secret_key',
-                    'title': 'Secret API Key',
+                    'title': 'Secret API key',
                     'type': 'string',
                     'format': 'password'
                 },
@@ -55,31 +55,31 @@ class TenableIoAddIPsToTargetGroup(ActionTypeBase):
                 },
                 {
                     'name': 'target_group_name',
-                    'title': 'Target Group Name',
+                    'title': 'Target group name',
                     'type': 'string'
                 },
                 {
                     'name': 'create_new_asset',
-                    'title': 'Create New Target Group',
+                    'title': 'Create new target group',
                     'type': 'bool'
                 },
                 {
                     'name': 'use_public_ips',
-                    'title': 'Use Public IPs',
+                    'title': 'Use public IP addresses',
                     'type': 'bool'},
                 {
                     'name': 'use_private_ips',
-                    'title': 'Use Private IPs',
+                    'title': 'Use private IP addresses',
                     'type': 'bool'
                 },
                 {
                     'name': 'exclude_ipv6',
-                    'title': 'Exclude IPv6',
+                    'title': 'Exclude IPv6 addresses',
                     'type': 'bool'
                 },
                 {
                     'name': 'override_ips',
-                    'title': 'Override Current IPs List',
+                    'title': 'Override current IP address List',
                     'type': 'bool',
                 },
                 {
@@ -89,6 +89,7 @@ class TenableIoAddIPsToTargetGroup(ActionTypeBase):
                 }
             ],
             'required': [
+                'verify_ssl',
                 'target_group_name',
                 'create_new_asset',
                 'use_private_ips',

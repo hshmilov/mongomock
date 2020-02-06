@@ -28,25 +28,25 @@ class WebscanEnrichment(ActionTypeBase):
             'items': [
                 {
                     'name': 'port',
-                    'title': 'Web Server Port',
+                    'title': 'Web server port',
                     'type': 'integer',
                     'default': DEFAULT_SSL_PORT
                 },
                 {
                     'name': 'https_proxy',
-                    'title': 'HTTPS Proxy',
+                    'title': 'HTTPS proxy',
                     'type': 'string'
                 },
                 {
                     'name': 'pool_size',
-                    'title': 'Number of Parallel Connections',
+                    'title': 'Number of parallel connections',
                     'type': 'integer',
                     'required': True,
                     'default': DEFAULT_POOL_SIZE
                 },
                 {
                     'name': 'fetch_ssllabs',
-                    'title': 'Fetch Data from SSL Labs',
+                    'title': 'Fetch data from Qualys SSL Labs',
                     'type': 'bool',
                     'required': True,
                     'default': False

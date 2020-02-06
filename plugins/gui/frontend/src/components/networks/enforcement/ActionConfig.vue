@@ -1,7 +1,7 @@
 <template>
   <div class="x-action-config">
     <div class="header">
-      <label for="action-name">Action Name:</label>
+      <label for="action-name">Action name:</label>
       <input
         id="action-name"
         ref="name"
@@ -124,7 +124,7 @@
       nameError () {
         if (this.disableName) return ''
         if (this.name === '') {
-          return 'Action Name is a required field'
+          return 'Action name is a required field'
         } else if ((this.actionNameExists(this.name) && !this.include.includes(this.name))
                 || this.exclude.includes(this.name)) {
           return 'Name already taken by another saved Action'

@@ -23,7 +23,7 @@ class AutomoxInstallUpdateAction(ActionTypeBase):
             'items': [
                 {
                     'name': 'update_name',
-                    'title': 'Package Name to Install',
+                    'title': 'Package name to install',
                     'type': 'string'
                 },
             ],

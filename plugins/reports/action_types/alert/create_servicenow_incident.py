@@ -19,7 +19,7 @@ class ServiceNowIncidentAction(ActionTypeAlert):
             'items': [
                 {
                     'name': 'use_adapter',
-                    'title': 'Use ServiceNow adapter',
+                    'title': 'Use stored credentials from the ServiceNow adapter',
                     'type': 'bool'
                 },
                 {

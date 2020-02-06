@@ -19,23 +19,23 @@ class TenableIoCreateAsset(ActionTypeBase):
             'items': [
                 {
                     'name': 'use_adapter',
-                    'title': 'Use Tenable.io Adapter',
+                    'title': 'Use stored credentials from the Tenable.io Adapter',
                     'type': 'bool'
                 },
                 {
                     'name': 'domain',
-                    'title': 'Tenable.io Domain',
+                    'title': 'Tenable.io fomain',
                     'type': 'string'
                 },
                 {
                     'name': 'access_key',
-                    'title': 'Access API Key',
+                    'title': 'Access API key',
                     'type': 'string',
                     'format': 'password'
                 },
                 {
                     'name': 'secret_key',
-                    'title': 'Secret API Key',
+                    'title': 'Secret API key',
                     'type': 'string',
                     'format': 'password'
                 },

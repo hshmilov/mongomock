@@ -13,13 +13,13 @@ BASE_SCHEMA = {
     'items': [
         {
             'name': DOMAIN,
-            'title': 'Censys Domain',
+            'title': 'Censys domain',
             'type': 'string',
             'default': 'censys.io'
         },
         {
             'name': IS_PAID_TIER,
-            'title': 'Is Paid Tier',
+            'title': 'Is paid tier',
             'type': 'bool'
         },
         {
@@ -29,13 +29,13 @@ BASE_SCHEMA = {
         },
         {
             'name': API_SECRET,
-            'title': 'API Secret',
+            'title': 'API secret',
             'type': 'string',
             'format': 'password'
         },
         {
             'name': 'https_proxy',
-            'title': 'HTTPS Proxy',
+            'title': 'HTTPS proxy',
             'type': 'string'
         }
     ],

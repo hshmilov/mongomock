@@ -27,12 +27,12 @@ class RunExecutable(ActionTypeBase):
                 },
                 {
                     'name': 'wmi_username',
-                    'title': 'WMI User',
+                    'title': 'WMI user name',
                     'type': 'string'
                 },
                 {
                     'name': 'wmi_password',
-                    'title': 'WMI Password',
+                    'title': 'WMI password',
                     'type': 'string',
                     'format': 'password'
                 },

@@ -22,17 +22,17 @@ class ServiceNowComputerAction(ActionTypeBase):
             'items': [
                 {
                     'name': 'use_adapter',
-                    'title': 'Use ServiceNow Adapter',
+                    'title': 'Use stored credentials from the ServiceNow adapter',
                     'type': 'bool'
                 },
                 {
                     'name': 'domain',
-                    'title': 'ServiceNow Domain',
+                    'title': 'ServiceNow domain',
                     'type': 'string'
                 },
                 {
                     'name': 'username',
-                    'title': 'User Name',
+                    'title': 'User name',
                     'type': 'string'
                 },
                 {
@@ -48,12 +48,12 @@ class ServiceNowComputerAction(ActionTypeBase):
                 },
                 {
                     'name': 'https_proxy',
-                    'title': 'HTTPS Proxy',
+                    'title': 'HTTPS proxy',
                     'type': 'string'
                 },
                 {
                     'name': 'cmdb_ci_table',
-                    'title': 'CMDB CI Table Name',
+                    'title': 'CMDB CI table name',
                     'type': 'string'
                 }
             ],

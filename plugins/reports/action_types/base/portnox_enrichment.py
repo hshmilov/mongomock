@@ -22,12 +22,12 @@ class PortnoxEnrichment(ActionTypeBase):
             'items': [
                 {
                     'name': 'domain',
-                    'title': 'Portnox Domain',
+                    'title': 'Portnox domain',
                     'type': 'string'
                 },
                 {
                     'name': 'username',
-                    'title': 'User Name',
+                    'title': 'User name',
                     'type': 'string'
                 },
                 {
@@ -43,7 +43,7 @@ class PortnoxEnrichment(ActionTypeBase):
                 },
                 {
                     'name': 'https_proxy',
-                    'title': 'HTTPS Proxy',
+                    'title': 'HTTPS proxy',
                     'type': 'string'
                 },
             ],
