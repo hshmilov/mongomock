@@ -295,7 +295,7 @@ class GceAdapter(AdapterBase, Configurable):
                 'fetch_buckets',
                 'fetch_bucket_objects'
             ],
-            'pretty_name': 'Google Cloud configuration',
+            'pretty_name': 'Google Cloud Platform configuration',
             'type': 'array'
         }
 

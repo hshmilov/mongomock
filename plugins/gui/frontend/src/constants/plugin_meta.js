@@ -629,7 +629,7 @@ export const pluginMeta = {
         description: 'Dropbox is a file hosting service that offers cloud storage, file synchronization, personal cloud, and client software.'
     },
     azure_ad_adapter: {
-        title: 'Microsoft Azure Active Directory (Azure AD)',
+        title: 'Microsoft Azure Active Directory (Azure AD) and Microsoft Intune',
         link: '',
         description: 'Microsoft Azure Active Directory (Azure AD) is Microsoft\'s multi-tenant, cloud-based directory, and identity management service.'
     },
@@ -685,7 +685,7 @@ export const pluginMeta = {
     },
     duo_adapter: {
         title: 'Duo Beyond',
-        link: '',
+        link: 'https://docs.axonius.com/docs/duo-beyond',
         description: 'Duo Beyond identifies corporate vs. personal devices, blocks untrusted devices, and give users secure access to internal applications.'
     },
     datadog_adapter: {
@@ -724,9 +724,9 @@ export const pluginMeta = {
         description: 'RescueAssist (formerly GoToAssist) is a cloud-based toolset for IT and customer support teams including remote support, IT monitoring, and service desk management.'
     },
     airwatch_adapter: {
-        title: 'VMWare AirWatch',
+        title: 'VMWare Workspace ONE (Airwatch)',
         link: 'https://docs.axonius.com/docs/vmware-airwatch',
-        description: 'VMWare AirWatch provides of enterprise mobility management (EMM) software and standalone management systems for content, applications, and email.'
+        description: 'VMWare Workspace ONE (formerly AirWatch) provides enterprise mobility management (EMM) software and standalone management systems for content, applications, and email.'
     },
     fireeye_hx_adapter: {
         title: 'FireEye Endpoint Security (formerly HX)',
@@ -894,7 +894,7 @@ export const pluginMeta = {
         description: 'Bitdefender GravityZone Business Security uses machine learning and heuristics to protect against malware, phishing, ransomware, exploits and zero-days.'
     },
     bomgar_adapter: {
-        title: 'BeyondTrust Remote Support',
+        title: 'BeyondTrust Remote Support (Bomgar)',
         link: 'https://docs.axonius.com/docs/beyondtrust-remote-support',
         description: 'BeyondTrust Remote Support (formerly Bomgar) allows support technicians to remotely connect to end-user systems through firewalls from their computer or mobile devices.'
     },
@@ -1014,7 +1014,7 @@ export const pluginMeta = {
         description: 'Microsoft Hyper-V is a native hypervisor; it can create virtual machines on x86-64 systems running Windows.'
     },
     symantec_altiris_adapter: {
-        title: 'Symantec Endpoint Management Suite',
+        title: 'Symantec Endpoint Management Suite (Altiris)',
         link: 'https://docs.axonius.com/docs/symantec-endpoint-management-suite-altiris',
         description: 'Symantec Endpoint Management Suite (formerly Altiris) manages, patches, and remediates application and OS configurations on desktops, laptops and servers to strengthen endpoint security and maximize user productivity.'
     },

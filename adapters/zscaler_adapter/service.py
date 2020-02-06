@@ -202,7 +202,7 @@ class ZscalerAdapter(AdapterBase, Configurable):
             'items': [
                 {
                     'name': 'ignore_macs_dups',
-                    'title': 'Ignore Duplicated Macs',
+                    'title': 'Ignore duplicated MAC addresses',
                     'type': 'bool'
                 }
             ],

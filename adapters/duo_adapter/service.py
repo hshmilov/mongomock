@@ -78,12 +78,12 @@ class DuoAdapter(AdapterBase):
             "items": [
                 {
                     "name": "host",
-                    "title": "Host",
+                    "title": "Duo Admin API Host",
                     "type": "string",
                 },
                 {
                     "name": "instance_key",
-                    "title": "Instance key",
+                    "title": "Integration key",
                     "type": "string"
                 },
                 {

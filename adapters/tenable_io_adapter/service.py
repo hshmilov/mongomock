@@ -160,11 +160,6 @@ class TenableIoAdapter(ScannerAdapterBase, Configurable):
                     'type': 'string'
                 },
                 {
-                    'name': 'verify_ssl',
-                    'title': 'Verify SSL',
-                    'type': 'bool'
-                },
-                {
                     'name': 'access_key',
                     'title': 'Access API Key',
                     'type': 'string',
@@ -175,6 +170,11 @@ class TenableIoAdapter(ScannerAdapterBase, Configurable):
                     'title': 'Secret API Key',
                     'type': 'string',
                     'format': 'password'
+                },
+                {
+                    'name': 'verify_ssl',
+                    'title': 'Verify SSL',
+                    'type': 'bool'
                 },
                 {
                     'name': 'https_proxy',
