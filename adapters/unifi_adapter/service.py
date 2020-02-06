@@ -277,12 +277,12 @@ class UnifiAdapter(AdapterBase, Configurable):
             'items': [
                 {
                     'name': 'unifi_ssid_white_list',
-                    'title': 'UniFi SSID Whitelist',
+                    'title': 'UniFi SSID whitelist',
                     'type': 'string'
                 }
             ],
             'required': [],
-            'pretty_name': 'UniFi Configuration',
+            'pretty_name': 'UniFi Controller Configuration',
             'type': 'array'
         }
 

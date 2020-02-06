@@ -181,22 +181,22 @@ class NexposeAdapter(ScannerAdapterBase, Configurable):
             "items": [
                 {
                     'name': 'fetch_tags',
-                    'title': 'Fetch Tags',
+                    'title': 'Fetch tags',
                     'type': 'bool'
                 },
                 {
                     'name': 'num_of_simultaneous_devices',
-                    'title': 'Number Of Simultaneous Device',
+                    'title': 'Number Of simultaneous devices',
                     'type': 'integer'
                 },
                 {
                     'name': 'drop_only_ip_devices',
-                    'title': 'Drop Devices With Only IP',
+                    'title': 'Do not fetch devices with only IP address',
                     'type': 'bool'
                 },
                 {
                     'name': 'fetch_vulnerabilities',
-                    'title': 'Fetch Vulnerabilities',
+                    'title': 'Fetch vulnerabilities',
                     'type': 'bool'
                 }
             ],
@@ -206,7 +206,7 @@ class NexposeAdapter(ScannerAdapterBase, Configurable):
                 'num_of_simultaneous_devices',
                 'fetch_vulnerabilities'
             ],
-            "pretty_name": "Nexpose Configuration",
+            "pretty_name": "Rapid7 Nexpose Configuration",
             "type": "array"
         }
 

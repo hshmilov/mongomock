@@ -390,7 +390,7 @@ class SplunkAdapter(AdapterBase, Configurable):
             "items": [
                 {
                     'name': 'splunk_macros_list',
-                    'title': 'Splunk Macros List',
+                    'title': 'Splunk macros list',
                     'type': 'string'
                 },
                 {
@@ -405,7 +405,7 @@ class SplunkAdapter(AdapterBase, Configurable):
                 },
                 {
                     'name': 'win_logs_fetch_hours',
-                    'title': 'Windows Login Fetch Hours',
+                    'title': 'Windows login hours to fetch',
                     'type': 'number'
                 },
                 {

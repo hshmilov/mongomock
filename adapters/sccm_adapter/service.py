@@ -779,7 +779,7 @@ class SccmAdapter(AdapterBase, Configurable):
                 },
                 {
                     'name': 'drop_no_last_seen',
-                    'title': 'Do not fetch Devices without Last Seen',
+                    'title': 'Do not fetch devices without \'Last Seen\'',
                     'type': 'bool'
                 },
                 {
@@ -789,7 +789,7 @@ class SccmAdapter(AdapterBase, Configurable):
                 },
                 {
                     'name': 'machine_domain_whitelist',
-                    'title': 'Machine Domain Whitelist',
+                    'title': 'Machine domain whitelist',
                     'type': 'string'
                 }
             ],

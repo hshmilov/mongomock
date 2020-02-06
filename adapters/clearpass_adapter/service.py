@@ -219,12 +219,12 @@ class ClearpassAdapter(AdapterBase, Configurable):
             'items': [
                 {
                     'name': 'get_extended_info',
-                    'title': 'Get Extended Agent Information',
+                    'title': 'Get extended agent information',
                     'type': 'bool'
                 },
                 {
                     'name': 'drop_no_last_seen',
-                    'title': 'Do not fetch Devices without Last Seen',
+                    'title': 'Do not fetch devices without \'Last Seen\'',
                     'type': 'bool'
                 }
             ],

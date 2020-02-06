@@ -289,19 +289,19 @@ class CrowdStrikeAdapter(AdapterBase, Configurable):
             'items': [
                 {
                     'name': 'get_policies',
-                    'title': 'Get Devices Policies',
+                    'title': 'Get devices policies',
                     'type': 'bool'
                 },
                 {
                     'name': 'machine_domain_whitelist',
-                    'title': 'Machine Domain Whitelist',
+                    'title': 'Machine domain whitelist',
                     'type': 'string'
                 }
             ],
             'required': [
                 'get_policies'
             ],
-            'pretty_name': 'CrowdStrike Configuration',
+            'pretty_name': 'CrowdStrike Falcon Configuration',
             'type': 'array'
         }
 

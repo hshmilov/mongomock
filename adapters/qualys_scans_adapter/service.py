@@ -466,33 +466,33 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
             'items': [
                 {
                     'name': 'request_timeout',
-                    'title': 'Request Timeout',
+                    'title': 'Request timeout',
                     'type': 'integer'
                 },
                 {
                     'name': 'async_chunk_size',
-                    'title': 'Chunk Size',
+                    'title': 'Chunk size',
                     'type': 'integer',
                 },
                 {
                     'name': 'devices_per_page',
-                    'title': 'Devices Per Page',
+                    'title': 'Devices per page',
                     'type': 'integer',
                 },
                 {
                     'name': 'retry_sleep_time',
-                    'title': 'Intervals between Retries in Seconds',
+                    'title': 'Intervals between retries (seconds)',
                     'type': 'integer',
                 },
                 {
                     'name': 'max_retries',
-                    'title': 'Number of Retries',
+                    'title': 'Number of retries',
                     'type': 'integer',
                 },
                 {
                     'name': 'qualys_tags_white_list',
                     'type': 'string',
-                    'title': 'Qualys Tags Whitelist'
+                    'title': 'Qualys tags whitelist'
                 }
             ],
             'required': [

@@ -223,12 +223,12 @@ class SnipeitAdapter(AdapterBase, Configurable):
             'items': [
                 {
                     'name': 'snipeit_category_white_list',
-                    'title': 'SnipeIT Category Whitelist',
+                    'title': 'SnipeIT category whitelist',
                     'type': 'string'
                 },
                 {
                     'name': 'use_asset_tag_as_hostname',
-                    'title': 'Use Asset Tag As Hostname',
+                    'title': 'Use asset tag as hostname',
                     'type': 'bool'
                 }
             ],

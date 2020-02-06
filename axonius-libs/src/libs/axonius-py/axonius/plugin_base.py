@@ -3306,7 +3306,7 @@ class PluginBase(Configurable, Feature, ABC):
                         },
                         {
                             'name': CORRELATE_BY_USERNAME_DOMAIN_ONLY,
-                            'title': 'Correlate users by username and domain only',
+                            'title': 'Correlate users by user name and domain only',
                             'type': 'bool'
                         },
                         {

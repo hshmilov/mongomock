@@ -31,7 +31,7 @@ CLIENT_CONFIG_TITLES = ClientConfig(domain='Cisco ISE Domain',
 PxGridObject = namedtuple('PxGrid', ('client_id', 'username', 'password'))
 
 FETCH_ENDPOINTS_FIELD = 'fetch_endpoints'
-FETCH_ENDPOINTS_TITLE = 'Fetch Endpoints'
+FETCH_ENDPOINTS_TITLE = 'Fetch endpoints'
 
 SECRETS = ['previousSharedSecret', 'roCommunity', 'radiusSharedSecret', 'sharedSecret']
 

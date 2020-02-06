@@ -536,13 +536,13 @@ class JamfAdapter(AdapterBase, Configurable):
             "items": [
                 {
                     "name": "fetch_department",
-                    "title": "Should Find Department Of Users",
+                    "title": "Fetch department of users",
                     "type": "bool"
                 },
                 {
                     'name': 'should_fetch_policies',
                     'type': 'bool',
-                    'title': 'Fetch Policies'
+                    'title': 'Fetch policies'
                 },
                 {
                     'name': 'num_of_threads',
@@ -557,11 +557,11 @@ class JamfAdapter(AdapterBase, Configurable):
                 {
                     'name': 'threads_time_sleep',
                     'type': 'number',
-                    'title': 'Seconds to sleep before sending https requests'
+                    'title': 'Seconds to sleep before sending HTTPS requests'
                 },
                 {
                     'name': 'fetch_mobile_devices',
-                    'title': 'Fetch Mobile Devices',
+                    'title': 'Fetch mobile devices',
                     'type': 'bool'
                 }
             ],

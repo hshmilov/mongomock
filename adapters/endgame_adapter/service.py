@@ -218,7 +218,7 @@ class EndgameAdapter(AdapterBase, Configurable):
             'items': [
                 {
                     'name': 'device_status_exclude_list',
-                    'title': 'Endgame Status Exclude List',
+                    'title': 'Endgame status exclude list',
                     'type': 'string'
                 }
             ],

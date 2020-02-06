@@ -284,12 +284,12 @@ class MobileironAdapter(AdapterBase, Configurable):
             'items': [
                 {
                     'name': 'fetch_apps',
-                    'title': 'Fetch Applications',
+                    'title': 'Fetch applications',
                     'type': 'bool'
                 },
                 {
                     'name': 'exclude_no_last_seen_devices',
-                    'title': 'Exclude No Last Seen Devices',
+                    'title': 'Exclude no \'Last Seen\' devices',
                     'type': 'bool'
                 }
             ],
@@ -297,7 +297,7 @@ class MobileironAdapter(AdapterBase, Configurable):
                 'fetch_apps',
                 'exclude_no_last_seen_devices'
             ],
-            'pretty_name': 'Mobileiron Configuration',
+            'pretty_name': 'MobileIron EMM Configuration',
             'type': 'array'
         }
 

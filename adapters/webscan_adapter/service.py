@@ -153,7 +153,7 @@ class WebscanAdapter(WebscanExecutionMixIn, AdapterBase, Configurable):
     def _db_config_schema(cls) -> dict:
         items = [{
             'name': 'fetch_ssllabs',
-            'title': 'Fetch Data from SSL Labs',
+            'title': 'Fetch data from Qualys SSL Labs',
             'type': 'bool',
             'required': True,
             'default': False

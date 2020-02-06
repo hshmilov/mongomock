@@ -169,7 +169,7 @@ class AquaAdapter(AdapterBase, Configurable):
             'items': [
                 {
                     'name': 'aqua_status_exclude_list',
-                    'title': 'Aqua Status Exclude List',
+                    'title': 'Aqua status exclude list',
                     'type': 'string'
                 }
             ],

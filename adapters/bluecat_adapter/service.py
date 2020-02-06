@@ -311,15 +311,15 @@ class BluecatAdapter(AdapterBase, Configurable):
                 {
                     'name': 'sleep_between_requests_in_sec',
                     'type': 'integer',
-                    'title': 'time in seconds to sleep between each request'
+                    'title': 'Time in seconds to sleep between each request'
                 },
                 {
                     'name': 'get_extra_host_data',
-                    'title': 'Get Extra Host Data',
+                    'title': 'Get extra host data',
                     'type': 'bool'
                 }
             ],
-            'required': ['get_extra_host_data'],
+            'required': ['sleep_between_requests_in_sec', 'get_extra_host_data'],
             'pretty_name': 'BlueCat Configuration',
             'type': 'array'
         }

@@ -442,12 +442,12 @@ class TenableIoAdapter(ScannerAdapterBase, Configurable):
             'items': [
                 {
                     'name': 'use_cache',
-                    'title': 'Use Cache',
+                    'title': 'Use cache',
                     'type': 'bool'
                 },
                 {
                     'name': 'exclude_no_last_scan',
-                    'title': 'Exclude Devices with No Last Scan',
+                    'title': 'Do not fetch devices with no \'Last Scan\'',
                     'type': 'bool'
                 }
             ],

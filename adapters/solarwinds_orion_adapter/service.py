@@ -310,7 +310,7 @@ class SolarwindsOrionAdapter(AdapterBase, Configurable):
                 },
                 {
                     'name': 'fetch_mac_ipam',
-                    'title': 'Fetch IPAM Only If MAC Exists',
+                    'title': 'Fetch IPAM only if MAC address exists',
                     'type': 'bool'
                 }
             ],

@@ -209,7 +209,7 @@ class SnowAdapter(AdapterBase, Configurable):
             'items': [
                 {
                     'name': 'fetch_apps',
-                    'title': 'Fetch Applications',
+                    'title': 'Fetch applications',
                     'type': 'bool'
                 }
             ],

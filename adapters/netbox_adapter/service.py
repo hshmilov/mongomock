@@ -222,7 +222,7 @@ class NetboxAdapter(AdapterBase, Configurable):
             'items': [
                 {
                     'name': 'netbox_role_white_list',
-                    'title': 'NetBox Role Whitelist',
+                    'title': 'NetBox role whitelist',
                     'type': 'string'
                 }
             ],

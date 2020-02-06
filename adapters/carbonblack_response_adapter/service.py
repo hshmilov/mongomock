@@ -262,7 +262,7 @@ class CarbonblackResponseAdapter(AdapterBase, Configurable):
             'items': [
                 {
                     'name': 'fetch_uninstall',
-                    'title': 'Fetch Uninstalled Devices',
+                    'title': 'Fetch uninstalled devices',
                     'type': 'bool'
                 }
             ],

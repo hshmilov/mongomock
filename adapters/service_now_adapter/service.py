@@ -527,37 +527,37 @@ class ServiceNowAdapter(AdapterBase, Configurable):
                 {
                     'name': 'fetch_users_info_for_devices',
                     'type': 'bool',
-                    'title': 'Fetch Users Data'
+                    'title': 'Fetch users data'
                 },
                 {
                     'name': 'fetch_users',
                     'type': 'bool',
-                    'title': 'Create Users'
+                    'title': 'Create users'
                 },
                 {
                     'name': 'fetch_ips',
                     'type': 'bool',
-                    'title': 'Fetch IPs'
+                    'title': 'Fetch IP addresses'
                 },
                 {
                     'name': 'exclude_disposed_devices',
-                    'title': 'Exclude Disposed and Decommissioned Devices',
+                    'title': 'Exclude disposed and decommissioned devices',
                     'type': 'bool'
                 },
                 {
                     'name': 'exclude_no_strong_identifier',
-                    'title': 'Exclude Devices Without IP, MAC and Serial Number',
+                    'title': 'Do not fetch devices without IP address, MAC address and serial number',
                     'type': 'bool'
                 },
                 {
                     'name': 'use_ci_table_for_install_status',
-                    'title': 'Use CMDB_CI Table Instead Of ALM ASSET Table for Install Status',
+                    'title': 'Use CMDB_CI table instead of ALM ASSET table for install status',
                     'type': 'bool'
                 },
                 {
                     'name': 'exclude_vm_tables',
                     'type': 'bool',
-                    'title': 'Exclude VMs Tables'
+                    'title': 'Exclude VMs tables'
                 }
             ],
             "required": [

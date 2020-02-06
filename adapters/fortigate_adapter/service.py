@@ -275,12 +275,12 @@ class FortigateAdapter(AdapterBase, Configurable):
             'items': [
                 {
                     'name': consts.DHCP_LEASE_TIME,
-                    'title': 'DHCP Lease Time (In Seconds)',
+                    'title': 'DHCP lease time (seconds)',
                     'type': 'integer'
                 },
                 {
                     'name': 'interfaces_exclude_list',
-                    'title': 'Interfaces Exclude List',
+                    'title': 'Interfaces exclude list',
                     'type': 'string',
                     'description': 'A comma-delimeted list of interfaces to exclude'
                 }
@@ -288,7 +288,7 @@ class FortigateAdapter(AdapterBase, Configurable):
             'required': [
                 consts.DHCP_LEASE_TIME
             ],
-            'pretty_name': 'Fortigate Configuration',
+            'pretty_name': 'Fortinet FortiGate Configuration',
             'type': 'array'
         }
 

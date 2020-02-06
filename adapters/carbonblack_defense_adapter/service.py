@@ -302,7 +302,7 @@ class CarbonblackDefenseAdapter(AdapterBase, Configurable):
             'items': [
                 {
                     'name': 'fetch_deregistred',
-                    'title': 'Fetch Deregistred Devices',
+                    'title': 'Fetch deregistred devices',
                     'type': 'bool'
                 }
             ],

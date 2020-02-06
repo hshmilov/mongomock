@@ -167,12 +167,12 @@ class OktaAdapter(AdapterBase, Configurable):
             'items': [
                 {
                     'name': 'fetch_apps',
-                    'title': 'Fetch Users Apps',
+                    'title': 'Fetch users apps',
                     'type': 'bool'
                 },
                 {
                     'name': 'fetch_factors',
-                    'title': 'Fetch Users Authentication Factors',
+                    'title': 'Fetch users authentication factors',
                     'type': 'bool'
                 },
                 {

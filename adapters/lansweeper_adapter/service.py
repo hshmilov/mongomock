@@ -591,7 +591,7 @@ class LansweeperAdapter(AdapterBase, Configurable):
                 {
                     'name': 'drop_no_mac_addresses_device',
                     'type': 'bool',
-                    'title': 'Drop Devices With No MAC Address'
+                    'title': 'Do not fetch devices with mo MAC address'
                 }
             ],
             'required': ['drop_no_mac_addresses_device'],

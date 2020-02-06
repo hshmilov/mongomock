@@ -224,13 +224,13 @@ class ClarotyAdapter(ScannerAdapterBase, Configurable):
             'items': [
                 {
                     'name': 'virtual_zone_exclude_list',
-                    'title': 'Virtual Zone Exclude List',
+                    'title': 'Virtual zone exclude list',
                     'type': 'string'
                 },
                 {
                     'name': 'exclude_no_mac_address',
                     'type': 'bool',
-                    'title': 'Exclude Devices With No MAC Address'
+                    'title': 'Do not fetch devices with no MAC address'
                 }
             ],
             'required': [

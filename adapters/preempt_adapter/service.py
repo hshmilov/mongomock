@@ -290,7 +290,7 @@ class PreemptAdapter(AdapterBase, Configurable):
             'items': [
                 {
                     'name': 'drop_no_last_seen',
-                    'title': 'Do not fetch devices without Last Seen',
+                    'title': 'Do not fetch devices without \'Last Seen\'',
                     'type': 'bool'
                 },
                 {

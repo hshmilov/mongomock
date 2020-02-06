@@ -159,12 +159,12 @@ class CarbonblackProtectionAdapter(AdapterBase, Configurable):
             'items': [
                 {
                     'name': 'fetch_uninstall',
-                    'title': 'Fetch Uninstall Devices',
+                    'title': 'Fetch uninstalled devices',
                     'type': 'bool'
                 },
                 {
                     'name': 'devices_per_page',
-                    'title': 'Fetch Devices Per Page',
+                    'title': 'Fetch devices per page',
                     'type': 'integer'
                 }
             ],

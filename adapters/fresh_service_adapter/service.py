@@ -187,7 +187,7 @@ class FreshServiceAdapter(AdapterBase, Configurable):
                 {
                     'name': 'fresh_service_white_list',
                     'type': 'string',
-                    'title': 'Freshservice CI Type White List'
+                    'title': 'Freshservice CI type whitelist'
                 }
             ],
             'required': [],

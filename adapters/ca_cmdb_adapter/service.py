@@ -226,16 +226,16 @@ class CaCmdbAdapter(AdapterBase, Configurable):
                 {
                     'name': 'ca_cmdb_white_list',
                     'type': 'string',
-                    'title': 'CA CMDB Device Type Whitelist'
+                    'title': 'CA CMDB device type whitelist'
                 },
                 {
                     'name': 'ca_cmdb_lifecycle_white_list',
-                    'title': 'CA CMDB Asset Lifecycle Status Whitelist',
+                    'title': 'CA CMDB asset lifecycle status whitelist',
                     'type': 'string'
                 },
                 {
                     'name': 'fetch_only_active_device',
-                    'title': 'Fetch Only Active Devices',
+                    'title': 'Fetch only active devices',
                     'type': 'bool'
                 }
             ],

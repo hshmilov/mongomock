@@ -196,7 +196,7 @@ class PaloaltoCortexAdapter(AdapterBase, Configurable):
             'items': [
                 {
                     'name': 'weeks_ago_to_fetch',
-                    'title': 'Number of weeks ago to fetch',
+                    'title': 'Number of weeks to fetch',
                     'type': 'integer'
                 }
             ],

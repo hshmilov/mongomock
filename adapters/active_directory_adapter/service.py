@@ -1805,7 +1805,7 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, ActiveDirectory
             "items": [
                 {
                     'name': 'resolving_enabled',
-                    'title': 'Enable IP Resolving',
+                    'title': 'Enable IP resolving',
                     'type': 'bool'
                 },
                 {
@@ -1825,12 +1825,12 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, ActiveDirectory
                 },
                 {
                     "name": "report_generation_interval",
-                    "title": "Report Generation Interval (Minutes)",
+                    "title": "Report generation interval (minutes)",
                     "type": "number",
                 },
                 {
                     'name': 'fetch_users_image',
-                    'title': 'Fetch Users Image',
+                    'title': 'Fetch users image',
                     'type': 'bool'
                 },
                 {
@@ -1840,7 +1840,7 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, ActiveDirectory
                 },
                 {
                     'name': 'add_ip_conflict',
-                    'title': 'Should Add IP Conflict Tags',
+                    'title': 'Add IP conflict tags',
                     'type': 'bool'
                 },
                 {
