@@ -388,7 +388,9 @@ def not_wifi_adapters(adapter_device1, adapter_device2):
 def not_wifi_adapter(adapter_device):
     if adapter_device.get('plugin_name').lower() == 'aruba_adapter' or \
             (adapter_device.get('plugin_name').lower() == 'cisco_prime_adapter' and
-             adapter_device['data'].get('fetch_proto') == 'PRIME_WIFI_CLIENT'):
+             adapter_device['data'].get('fetch_proto') == 'PRIME_WIFI_CLIENT') or\
+            (adapter_device.get('plugin_name').lower() == 'tanium_adapter' and
+             adapter_device['data'].get('tanium_type') == 'Discover Device'):
         return False
     return True
 
