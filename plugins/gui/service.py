@@ -5591,7 +5591,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
                     ],
                     'required': ['enabled', 'dc_address', 'use_group_dn', 'cache_time_in_hours'],
                     'name': 'ldap_login_settings',
-                    'title': 'Ldap Login Settings',
+                    'title': 'LDAP Login Settings',
                     'type': 'array'
                 },
                 {
@@ -5681,7 +5681,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
                 'default_domain': '',
                 'group_cn': '',
                 'use_group_dn': False,
-                'cache_time_in_hours': 1,
+                'cache_time_in_hours': 720,
                 **COMMON_SSL_CONFIG_SCHEMA_DEFAULTS
             },
             'saml_login_settings': {
