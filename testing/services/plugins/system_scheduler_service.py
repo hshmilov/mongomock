@@ -4,6 +4,15 @@ from axonius.consts.scheduler_consts import Phases, SchedulerState
 from services.plugin_service import PluginService, API_KEY_HEADER
 from services.updatable_service import UpdatablePluginMixin
 
+DEAFULT_SYSTEM_RESEARCH_RATE = 12
+DEAFULT_SYSTEM_RESEARCH_RATE_ATTRIB_NAME = 'system_research_rate'
+DEAFULT_SYSTEM_RESEARCH_DATE = '13:00'
+DEAFULT_SYSTEM_RESEARCH_DATE_ATTRIB_NAME = 'system_research_date'
+DEFAULT_SYSTEM_SAVE_HISTORY = True
+DEFAULT_SYSTEM_SAVE_HISTORY_ATTRIB_NAME = 'save_history'
+DEFAULT_SYSTEM_RESEARCH_MODE = DEAFULT_SYSTEM_RESEARCH_RATE_ATTRIB_NAME
+DEFAULT_SYSTEM_RESEARCH_MODE_ATTRIB_NAME = 'conditional'
+
 
 class SystemSchedulerService(PluginService, UpdatablePluginMixin):
     def __init__(self):
@@ -62,8 +71,10 @@ class SystemSchedulerService(PluginService, UpdatablePluginMixin):
         # Do not change this to 1.
         if self.db_schema_version < 2:
             self._update_schema_version_2()
+        if self.db_schema_version < 3:
+            self._update_schema_version_3()
 
-        if self.db_schema_version != 2:
+        if self.db_schema_version != 3:
             print(f'Upgrade failed, db_schema_version is {self.db_schema_version}')
 
     def _update_schema_version_2(self):
@@ -82,8 +93,10 @@ class SystemSchedulerService(PluginService, UpdatablePluginMixin):
                 print(f'Weird config - continue ({current_config})')
                 return
 
-            system_research_rate = current_config.get('system_research_rate', 12)
-            save_history = current_config.get('save_history', True)
+            system_research_rate = current_config.get(DEAFULT_SYSTEM_RESEARCH_RATE_ATTRIB_NAME,
+                                                      DEAFULT_SYSTEM_RESEARCH_RATE)
+            save_history = current_config.get(DEFAULT_SYSTEM_SAVE_HISTORY_ATTRIB_NAME,
+                                              DEFAULT_SYSTEM_SAVE_HISTORY)
 
             config_collection.replace_one(
                 {
@@ -93,8 +106,8 @@ class SystemSchedulerService(PluginService, UpdatablePluginMixin):
                     'config_name': 'SystemSchedulerService',
                     'config': {
                         'discovery_settings': {
-                            'system_research_rate': system_research_rate,
-                            'save_history': save_history
+                            DEAFULT_SYSTEM_RESEARCH_RATE_ATTRIB_NAME: system_research_rate,
+                            DEFAULT_SYSTEM_SAVE_HISTORY_ATTRIB_NAME: save_history
                         }
                     }
                 }
@@ -105,3 +118,54 @@ class SystemSchedulerService(PluginService, UpdatablePluginMixin):
         finally:
             print('Upgraded system scheduler to version 2')
             self.db_schema_version = 2
+
+    def _update_schema_version_3(self):
+        print('upgrade to schema 3')
+        try:
+            config_collection = self.db.get_collection(self.plugin_name, 'configurable_configs')
+            current_config = config_collection.find_one({
+                'config_name': 'SystemSchedulerService'
+            })
+            if not current_config:
+                print('No config present - continue')
+                return
+
+            current_config = current_config.get('config')
+            if not current_config:
+                print(f'Weird config - continue ({current_config})')
+                return
+
+            discovery_settings = current_config.get('discovery_settings')
+
+            if not discovery_settings:
+                print(f'Weird config - continue ({discovery_settings})')
+                return
+
+            system_research_rate = discovery_settings.get(DEAFULT_SYSTEM_RESEARCH_RATE_ATTRIB_NAME,
+                                                          DEAFULT_SYSTEM_RESEARCH_RATE)
+            save_history = discovery_settings.get(DEFAULT_SYSTEM_SAVE_HISTORY_ATTRIB_NAME, DEFAULT_SYSTEM_SAVE_HISTORY)
+            system_research_date = discovery_settings.get(DEAFULT_SYSTEM_RESEARCH_DATE_ATTRIB_NAME,
+                                                          DEAFULT_SYSTEM_RESEARCH_DATE)
+            system_research_conditional_mode = discovery_settings.get(DEFAULT_SYSTEM_RESEARCH_MODE_ATTRIB_NAME,
+                                                                      DEFAULT_SYSTEM_RESEARCH_MODE)
+            config_collection.replace_one(
+                {
+                },
+                {
+                    'config_name': 'SystemSchedulerService',
+                    'config': {
+                        'discovery_settings': {
+                            DEFAULT_SYSTEM_RESEARCH_MODE_ATTRIB_NAME: system_research_conditional_mode,
+                            DEAFULT_SYSTEM_RESEARCH_DATE_ATTRIB_NAME: system_research_date,
+                            DEAFULT_SYSTEM_RESEARCH_RATE_ATTRIB_NAME: system_research_rate,
+                            DEFAULT_SYSTEM_SAVE_HISTORY_ATTRIB_NAME: save_history
+                        }
+                    }
+                }
+            )
+
+        except Exception as e:
+            print(f'Exception while upgrading scheduler db to version 3. Details: {e}')
+        finally:
+            print('Upgraded system scheduler to version 3')
+            self.db_schema_version = 3

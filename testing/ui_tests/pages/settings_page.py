@@ -12,6 +12,7 @@ from ui_tests.pages.page import PAGE_BODY, TAB_BODY, Page
 class SettingsPage(Page):
     SCHEDULE_RATE_ID = 'system_research_rate'
     DEFAULT_SCHEDULE_RATE = '12'
+    DEFAULT_SCHEDILE_DATE = '13:00'
     GLOBAL_SETTINGS_CSS = 'li#global-settings-tab'
     GUI_SETTINGS_CSS = 'li#gui-settings-tab'
     LIFECYCLE_SETTINGS_CSS = 'li#research-settings-tab'
@@ -117,6 +118,11 @@ class SettingsPage(Page):
                      ' div:nth-child(3) > div > div > div:nth-child({file_index})'
 
     CA_CERT_DELETE_BUTTON = f'{CA_CERTS_FILES} > button'
+
+    DISCOVERY_SCHEDULE_MODE_DDL = '.x-select .x-select-trigger'
+    DISCOVERY_SCHEDULE_TIME_PICKER_INPUT_CSS = '.time-picker-text input'
+    DISCOVERY_SCHEDULE_INTERVAL_TEXT = 'Interval'
+    DISCOVERY_SCHEDULE_DAILY_TEXT = 'Daily'
 
     @property
     def url(self):
@@ -265,6 +271,9 @@ class SettingsPage(Page):
 
     def find_schedule_rate_error(self):
         self.find_element_by_text('\'Schedule rate (hours)\' has an illegal value')
+
+    def fill_schedule_date(self, text):
+        self.fill_text_field_by_css_selector(self.DISCOVERY_SCHEDULE_TIME_PICKER_INPUT_CSS, text)
 
     def get_schedule_rate_value(self):
         return self.driver.find_element_by_id(self.SCHEDULE_RATE_ID).get_attribute('value')
@@ -816,3 +825,28 @@ class SettingsPage(Page):
         self.click_toggle_button(toggle, make_yes=enable, scroll_to_toggle=True)
         self.click_save_button()
         self.wait_for_saved_successfully_toaster()
+
+    def find_discovery_mode_dropdown(self):
+        return self.driver.find_element_by_css_selector(self.DISCOVERY_SCHEDULE_MODE_DDL)
+
+    def set_discovery_mode_dropdown_to_rate(self):
+        self.select_option_without_search(self.DISCOVERY_SCHEDULE_MODE_DDL,
+                                          self.SELECT_OPTION_CSS,
+                                          self.DISCOVERY_SCHEDULE_INTERVAL_TEXT)
+
+    def set_discovery_mode_dropdown_to_date(self):
+        self.select_option_without_search(self.DISCOVERY_SCHEDULE_MODE_DDL,
+                                          self.SELECT_OPTION_CSS,
+                                          self.DISCOVERY_SCHEDULE_DAILY_TEXT)
+
+    def set_discovery_mode_to_rate_value(self, rate_hour_value):
+        self.driver.fill_schedule_rate(rate_hour_value)
+
+    def set_discovery_mode_to_date_value(self, time_of_day_value):
+        self.driver.fill_schedule_rate(time_of_day_value)
+
+    def get_discovery_rate_value(self):
+        return self.driver.find_element_by_id('system_research_rate').get_attribute('value')
+
+    def get_selected_discovery_mode(self):
+        return self.find_discovery_mode_dropdown().text

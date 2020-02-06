@@ -4,7 +4,7 @@ from services.standalone_services.syslog_service import SyslogService
 from test_credentials.test_ad_credentials import ad_client1_details
 from test_credentials.test_okta_credentials import OKTA_LOGIN_DETAILS
 from ui_tests.pages.page import TAB_BODY
-from ui_tests.tests.ui_consts import EmailSettings, Saml
+from ui_tests.tests.ui_consts import EmailSettings, Saml, DISCOVERY_UPDATED_VALUE
 from ui_tests.tests.ui_test_base import TestBase
 
 
@@ -60,6 +60,9 @@ class TestPrepareGlobalSettings(TestBase):
 
         self.settings_page.click_toggle_button(self.settings_page.find_should_history_be_gathered_toggle(),
                                                make_yes=False)
+
+        # change default discovery rate and verify value set post upgrade
+        self.settings_page.fill_schedule_rate(DISCOVERY_UPDATED_VALUE)
         self.settings_page.save_and_wait_for_toaster()
 
     def test_gui_settings(self):

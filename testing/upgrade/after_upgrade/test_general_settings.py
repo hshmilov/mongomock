@@ -2,7 +2,7 @@ from services.standalone_services.syslog_service import SyslogService
 from test_credentials.test_ad_credentials import ad_client1_details
 from test_credentials.test_okta_credentials import OKTA_LOGIN_DETAILS
 from ui_tests.tests.ui_test_base import TestBase
-from ui_tests.tests.ui_consts import EmailSettings, Saml, TEMP_FILE_PREFIX
+from ui_tests.tests.ui_consts import EmailSettings, Saml, TEMP_FILE_PREFIX, DISCOVERY_UPDATED_VALUE
 
 
 class TestGeneralSettings(TestBase):
@@ -41,6 +41,10 @@ class TestGeneralSettings(TestBase):
 
         assert self.settings_page.is_toggle_selected(
             self.settings_page.find_should_history_be_gathered_toggle()) is False
+
+        # verify mode set to interval and value been migrated
+        assert self.settings_page.get_selected_discovery_mode() == self.settings_page.DISCOVERY_SCHEDULE_INTERVAL_TEXT
+        assert self.settings_page.get_discovery_rate_value() == DISCOVERY_UPDATED_VALUE
 
     def test_gui_settings(self):
         self.settings_page.switch_to_page()

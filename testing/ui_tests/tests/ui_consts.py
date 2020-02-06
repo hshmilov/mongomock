@@ -85,6 +85,9 @@ TAGS_OPTION_NAME = 'Tags'
 ASSET_NAME_FIELD_NAME = 'Asset Name'
 TAGS_FIELD_NAME = 'Tags'
 
+DISCOVERY_DEFAULT_VALUE = '12'
+DISCOVERY_UPDATED_VALUE = '8'
+
 
 class EmailSettings:
     port = '25'

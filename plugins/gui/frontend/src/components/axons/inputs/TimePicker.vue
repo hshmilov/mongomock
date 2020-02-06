@@ -1,4 +1,5 @@
 <template>
+
   <v-menu
     ref="menu"
     v-model="timeModal"
@@ -10,15 +11,25 @@
     class="x-time-picker"
   >
     <template v-slot:activator="{ on }">
-      <div class="time-picker-text">
-        <label v-if="label">{{ label }}</label>
-        <v-text-field
-          :value="formattedTime()"
-          :error="error"
-          :read-only="readOnly"
-          @change="onInput"
-          v-on="on"
-        />
+      <div class="time-picker-wrapper">
+        <div class="time-picker-text">
+          <label v-if="label">{{ label }}</label>
+          <v-text-field
+                  :value="formattedTime()"
+                  :error="timePickerError"
+                  :read-only="readOnly"
+                  @change="onInput"
+                  v-on="on"
+          />
+        </div>
+        <span class="server-time">
+          <svg-icon
+                  name="symbol/info"
+                  :original="true"
+                  height="16"
+          />
+            Timezone is UTC
+        </span>
       </div>
     </template>
     <v-time-picker
@@ -32,70 +43,79 @@
 </template>
 
 <script>
-    import moment from 'moment'
+import moment from 'moment';
+import primitiveMixin from '../../../mixins/primitive.js';
 
-    export default {
-        name: 'XTimePicker',
-        props: {
-            value: {
-                type: String,
-                default: ''
-            },
-            readOnly: {
-                type: Boolean, default: false
-            },
-            label: {
-                type: String,
-                default: ''
-            }
-        },
-        data() {
-          return {
-              timeModal: false,
-              error: false
-          }
-        },
-        computed: {
-            timePickerActive () {
-                if (!this.$refs.time) return false
-                return this.$refs.time.showDialog
-            },
-            timeValue: {
-                get() {
-                    return this.value
-                },
-                set(value) {
-                    this.error = false
-                    this.$emit('input', value)
-                    this.$emit('validate', true)
-                }
+export default {
+  name: 'XTimePicker',
+  mixins: [primitiveMixin],
+  props: {
+    value: {
+      type: String,
+      default: '',
+    },
+    readOnly: {
+      type: Boolean, default: false,
+    },
+    label: {
+      type: String,
+      default: '',
+    },
+    schema: {
+      type: Object,
+      default: () => {},
+    },
+  },
+  data() {
+    return {
+      timeModal: false,
+      error: false,
+    };
+  },
+  computed: {
+    timePickerActive() {
+      if (!this.$refs.time) return false;
+      return this.$refs.time.showDialog;
+    },
+    timePickerError() {
+      return Boolean(this.error);
+    },
+    timeValue: {
+      get() {
+        return this.value;
+      },
+      set(value) {
+        this.error = '';
+        this.$emit('input', value);
+        this.emitValidity();
+      },
 
-            }
-        },
-        methods: {
-            formattedTime() {
-                return moment(this.value, 'HH:mm').format('h:mma')
-            },
-            onInput (selectedTime) {
-                let time = moment(selectedTime, 'h:mma');
-                if(!time.isValid()){
-                    this.error = true
-                    this.$emit('validate', false)
-                    return;
-                }
-                this.error = false
-
-                this.$emit('input', time.format('HH:mm'))
-                this.$emit('validate', true)
-            }
-        }
-    }
+    },
+  },
+  methods: {
+    formattedTime() {
+      return moment(this.value, 'HH:mm').format('h:mma');
+    },
+    onInput(selectedTime) {
+      const time = moment(selectedTime, 'h:mma', true);
+      if (!time.isValid()) {
+        this.error = '\'Daily discovery time\' has an illegal value';
+        this.valid = false;
+      } else {
+        this.error = '';
+        this.valid = true;
+        this.$emit('input', time.format('HH:mm'));
+      }
+      this.emitValidity();
+    },
+  },
+};
 </script>
 
 <style lang="scss">
   .time-picker-text {
     .x-button.link {
-      margin-left: -16px;
+      margin-left: -10px;
       margin-bottom: 0;
       z-index: 100;
     }

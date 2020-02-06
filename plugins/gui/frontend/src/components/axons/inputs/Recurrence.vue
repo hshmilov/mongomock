@@ -64,10 +64,6 @@
           @validate="validateSendTime"
         />
       </div>
-      <label class="server-time">
-        <svg-icon name="symbol/info" :original="true" height="16"/>
-        Timezone is UTC
-      </label>
     </div>
   </div>
 </template>
@@ -168,6 +164,9 @@
         }
       }
       .send-hour {
+          .time-picker-wrapper {
+            display: inline-flex;
+          }
         .time-picker-text {
           display: flex;
           flex-direction: row;

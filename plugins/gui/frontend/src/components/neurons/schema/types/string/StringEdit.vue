@@ -8,6 +8,14 @@
             :clearable="clearable"
             @input="input"
     />
+    <x-time-picker
+      v-else-if="isTime"
+      v-model="data"
+      :schema="schema"
+      :read-only="readOnly"
+      @validate="onValidate"
+      @input="input"
+    />
     <textarea
             v-else-if="isText"
             v-model="data"
@@ -61,11 +69,12 @@
   import xSelect from '../../../../axons/inputs/select/Select.vue'
   import { xTagSelect } from '../../../../axons/inputs/dynamicSelects.js'
   import xDateEdit from './DateEdit.vue'
+  import xTimePicker from '../../../../axons/inputs/TimePicker.vue'
   import { validateEmail } from '../../../../../constants/validations'
 
   export default {
     name: 'XStringEdit',
-    components: { xSelect, xDateEdit, xTagSelect },
+    components: { xSelect, xDateEdit, xTimePicker, xTagSelect },
     mixins: [primitiveMixin],
     props: {
       clearable: {
@@ -94,6 +103,9 @@
       },
       isDate () {
         return (this.schema.format === 'date-time' || this.schema.format === 'date')
+      },
+      isTime() {
+        return this.schema.format === 'time'
       },
       isText () {
         return this.schema.format === 'text'
@@ -131,7 +143,7 @@
           this.data = ''
         }
       },
-      onValidate (validity) {
+      onValidate (validity){
         this.$emit('validate', validity)
       },
       checkData () {

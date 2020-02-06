@@ -1,38 +1,46 @@
 import logging
 import threading
 import time
-from concurrent.futures import ALL_COMPLETED, wait, as_completed, ThreadPoolExecutor
+from concurrent.futures import (ALL_COMPLETED, ThreadPoolExecutor,
+                                as_completed, wait)
 from contextlib import contextmanager
 from datetime import datetime, timezone
-from dateutil import tz
+from enum import Enum
 from typing import Set
 
+import pytz
 from apscheduler.executors.pool import \
     ThreadPoolExecutor as ThreadPoolExecutorApscheduler
+from apscheduler.triggers.base import BaseTrigger
+from apscheduler.triggers.cron import CronTrigger
 from apscheduler.triggers.interval import IntervalTrigger
+from dateutil import tz
+from flask import jsonify
 
 from axonius.adapter_base import AdapterBase
+from axonius.background_scheduler import LoggedBackgroundScheduler
+from axonius.consts import adapter_consts, plugin_consts, scheduler_consts
 from axonius.consts.gui_consts import RootMasterNames
 from axonius.consts.metric_consts import SystemMetric
-
-from axonius.consts.plugin_consts import PLUGIN_NAME, PLUGIN_UNIQUE_NAME, CONFIGURABLE_CONFIGS_COLLECTION, \
-    STATIC_CORRELATOR_PLUGIN_NAME, CORE_UNIQUE_NAME, REIMAGE_TAGS_ANALYSIS_PLUGIN_NAME, STATIC_ANALYSIS_PLUGIN_NAME, \
-    GENERAL_INFO_PLUGIN_NAME, REPORTS_PLUGIN_NAME, HEAVY_LIFTING_PLUGIN_NAME
+from axonius.consts.plugin_consts import (CONFIGURABLE_CONFIGS_COLLECTION,
+                                          CORE_UNIQUE_NAME,
+                                          GENERAL_INFO_PLUGIN_NAME,
+                                          HEAVY_LIFTING_PLUGIN_NAME,
+                                          PLUGIN_NAME, PLUGIN_UNIQUE_NAME,
+                                          REIMAGE_TAGS_ANALYSIS_PLUGIN_NAME,
+                                          REPORTS_PLUGIN_NAME,
+                                          STATIC_ANALYSIS_PLUGIN_NAME,
+                                          STATIC_CORRELATOR_PLUGIN_NAME)
+from axonius.consts.plugin_subtype import PluginSubtype
 from axonius.consts.scheduler_consts import SchedulerState
 from axonius.logging.metric_helper import log_metric
-
-from axonius.plugin_exceptions import PhaseExecutionException
-from axonius.background_scheduler import LoggedBackgroundScheduler
-from axonius.consts import plugin_consts, scheduler_consts, adapter_consts
-from axonius.consts.plugin_subtype import PluginSubtype
 from axonius.mixins.configurable import Configurable
-from axonius.mixins.triggerable import Triggerable, StoredJobStateCompletion
+from axonius.mixins.triggerable import StoredJobStateCompletion, Triggerable
 from axonius.plugin_base import PluginBase, add_rule, return_error
+from axonius.plugin_exceptions import PhaseExecutionException
 from axonius.thread_stopper import StopThreadException
 from axonius.utils.backup import backup_to_s3
 from axonius.utils.files import get_local_config_file
-from flask import jsonify
-
 from axonius.utils.host_utils import get_free_disk_space
 from axonius.utils.root_master.root_master import root_master_restore_from_s3
 
@@ -41,6 +49,15 @@ logger = logging.getLogger(f'axonius.{__name__}')
 # Plugins that should always run async
 ALWAYS_ASYNC_PLUGINS = [STATIC_ANALYSIS_PLUGIN_NAME, GENERAL_INFO_PLUGIN_NAME]
 MIN_GB_TO_SAVE_HISTORY = 15
+
+
+class SystemSchedulerResearchMode(Enum):
+    '''
+    Rate : is the legacy mode which start discovery per hour interval .
+    Date : a cron base , curently ony supporting time of day .
+    '''
+    rate = 'system_research_rate'
+    date = 'system_research_date'
 
 
 class SystemSchedulerService(Triggerable, PluginBase, Configurable):
@@ -113,7 +130,13 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
         self.__constant_alerts = config['discovery_settings']['constant_alerts']
         self.__analyse_reimage = config['discovery_settings']['analyse_reimage']
         self.__system_research_rate = float(config['discovery_settings']['system_research_rate'])
+        self.__system_research_date = config['discovery_settings']['system_research_date']
+        self.__system_research_mode = config['discovery_settings']['conditional']
+
+        logger.info(f'Setting research mode to: {self.__system_research_mode}')
         logger.info(f'Setting research rate to: {self.__system_research_rate}')
+        logger.info(f'Setting research date to: {self.__system_research_date}')
+
         scheduler = getattr(self, '_research_phase_scheduler', None)
         self.__save_history = bool(config['discovery_settings']['save_history'])
 
@@ -125,7 +148,17 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
         # Saving next_run in order to restore it after 'reschedule_job' overrides this value. We want to restore
         # this value because updating schedule rate should't change the next scheduled time
         scheduler.reschedule_job(
-            scheduler_consts.RESEARCH_THREAD_ID, trigger=IntervalTrigger(hours=self.__system_research_rate))
+            scheduler_consts.RESEARCH_THREAD_ID, trigger=self.get_research_trigger_by_mode())
+
+    def get_research_trigger_by_mode(self) -> BaseTrigger:
+        if self.__system_research_mode == SystemSchedulerResearchMode.rate.value:
+            return IntervalTrigger(hours=self.__system_research_rate, timezone=pytz.utc)
+        if self.__system_research_mode == SystemSchedulerResearchMode.date.value:
+            hour, minute = self.__system_research_date.split(':')
+            return CronTrigger(hour=hour,
+                               minute=minute,
+                               second='0')
+        raise Exception(f' {self.__system_research_mode } is invalid research mode ')
 
     @classmethod
     def _db_config_schema(cls) -> dict:
@@ -134,9 +167,28 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
                 {
                     'items': [
                         {
+                            'name': 'conditional',
+                            'title': 'Discovery schedule',
+                            'enum': [{
+                                'name': 'system_research_rate',
+                                'title': 'Interval'
+                            },
+                                {
+                                'name': 'system_research_date',
+                                'title': 'Daily'
+                            }],
+                            'type': 'string'
+                        },
+                        {
                             'name': 'system_research_rate',
-                            'title': 'Schedule rate (hours)',
+                            'title': 'Hours between discovery cycles',
                             'type': 'number'
+                        },
+                        {
+                            'name': 'system_research_date',
+                            'title': 'Daily discovery time',
+                            'type': 'string',
+                            'format': 'time'
                         },
                         {
                             'name': 'save_history',
@@ -160,7 +212,8 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
                     'name': 'discovery_settings',
                     'title': 'Discovery Settings',
                     'type': 'array',
-                    'required': ['system_research_rate', 'save_history', 'constant_alerts', 'analyse_reimage']
+                    'required': ['conditional', 'system_research_rate', 'system_research_date',
+                                 'save_history', 'constant_alerts', 'analyse_reimage']
                 }
             ],
             'type': 'array'
@@ -171,9 +224,12 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
         return {
             'discovery_settings': {
                 'system_research_rate': 12,
+                'system_research_date': '13:00',
                 'save_history': True,
                 'constant_alerts': False,
-                'analyse_reimage': False
+                'analyse_reimage': False,
+                'conditional': 'system_research_rate'
+
             }
         }
 
