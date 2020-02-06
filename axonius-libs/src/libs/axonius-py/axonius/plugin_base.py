@@ -143,6 +143,16 @@ except AttributeError:
 # Global list of all the functions we are registering.
 ROUTED_FUNCTIONS = list()
 
+# I know its ugly, but this way the function wont even be initialized in production
+# otherwise every request would have go thru the after_request and do nothing in there...
+if os.environ.get('HOT') == 'true':
+    @AXONIUS_REST.after_request
+    def after_request(response):
+        response.headers.add('Access-Control-Allow-Origin', '*')
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
+        response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
+        return response
+
 
 def add_rule(rule, methods=('GET',), should_authenticate: bool = True):
     """ Decorator for adding function to URL.
