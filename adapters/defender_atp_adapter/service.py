@@ -80,7 +80,7 @@ class DefenderAtpAdapter(AdapterBase):
             'items': [
                 {
                     'name': 'tenant_id',
-                    'title': 'tenant_id',
+                    'title': 'Tenant ID',
                     'type': 'string'
                 },
                 {

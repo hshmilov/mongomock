@@ -129,7 +129,8 @@ export const pluginMeta = {
     },
     defender_atp_adapter: {
         title: 'Microsoft Defender ATP',
-        description: 'Microsoft Defender Advanced Threat Protection is a platform designed to help enterprise networks prevent, detect, investigate, and respond to advanced threats.'
+        link: 'https://docs.axonius.com/docs/microsoft-defender-atp',
+        description: 'Microsoft Defender Advanced Threat Protection (ATP) helps enterprise networks prevent, detect, investigate, and respond to advanced threats.'
     },
 
     paloalto_xdr_adapter: {
