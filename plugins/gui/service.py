@@ -13,7 +13,6 @@ import threading
 import time
 import calendar
 import urllib.parse
-import base64
 from collections import defaultdict
 from datetime import date, datetime, timedelta
 from multiprocessing.pool import ThreadPool
@@ -5159,69 +5158,6 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
                                         )
             if response.status_code != 200:
                 logger.error('Failed to submit ga data {response}')
-
-    @gui_helpers.add_rule_unauth('mixpanel_endpoint/<method>/', methods=['GET', 'POST'])
-    def mixpanel_proxy(self, method):
-        logger.info(f'mixpanel_proxy')
-        self.handle_mixpanel_request(method)
-        return ''
-
-    def handle_mixpanel_request(self, method):
-        values = dict(request.values)
-        encoded = values.get('data', '')
-
-        params = dict(request.args)
-
-        if method != 'track':
-            return  # for now we support only the track method
-
-        logger.info(f'mixpanel - method:{method} - values:{values}')
-        logger.info(f'encoded = {encoded}')
-
-        decoded = base64.b64decode(encoded).decode()
-        as_dict = json.loads(decoded)
-
-        # our mixplanel token
-        as_dict['properties']['token'] = 'e5df057b75dfb007a8829f9d93088819'
-
-        signup_collection = self._get_collection(Signup.SignupCollection)
-        signup = signup_collection.find_one({})
-        if signup:
-            customer = signup.get(Signup.CompanyField, 'company-not-set')
-            if not customer or customer in [SIGNUP_TEST_CREDS[Signup.CompanyField], SIGNUP_TEST_COMPANY_NAME]:
-                return
-
-            if has_request_context():
-                user = session.get('user')
-                if user is None:
-                    return
-                user = dict(user)
-                user_name = user.get('user_name')
-                source = user.get('source')
-
-                if user_name == AXONIUS_USER_NAME and source == 'internal':
-                    return
-
-            as_dict['properties']['account'] = customer
-            # can insert customer id here we are ok with that
-            # as_dict['properties']['user_id'] = f'{user_name}:{source}'
-
-            values['data'] = base64.b64encode(json.dumps(as_dict).encode()).decode()
-
-            logger.info(f'as_json={as_dict}')
-
-            logger.info(f'values={values}, params={params}')
-
-            response = requests.request(request.method,
-                                        f'https://api.mixpanel.com/{method}',
-                                        params=params,
-                                        data=values,
-                                        timeout=(10, 30)
-                                        )
-
-            logger.info(f'response={response}')
-            if response.status_code != 200:
-                logger.error(f'Failed to submit mixpanel data {response}')
 
     #################
     # Vault Service #
