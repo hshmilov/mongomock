@@ -196,6 +196,7 @@ class TaniumAdapter(AdapterBase):
         methods_used = ListField(str, 'Discover Methods Used')
         natipaddress = Field(str, 'Discover NAT IP Address')
         discovery_tags = ListField(str, 'Discover Tags')
+        discover_hostname = Field(str, 'Discover Hostname')
         sensor_tags = ListField(str, 'Sensor Tags')
         chassis_type = Field(str, 'Chassis Type')
         sq_name = Field(str, 'Saved Question Name')
@@ -433,7 +434,7 @@ class TaniumAdapter(AdapterBase):
             device.add_nic(mac=device_raw.get('macaddress'), ips=ips)
             device.uuid = str(device_raw.get('computerid')) if device_raw.get('computerid') else None
             device.natipaddress = device_raw.get('natipaddress')
-            device.hostname = device_raw.get('hostname')
+            device.discover_hostname = device_raw.get('hostname')
             try:
                 if isinstance(device_raw.get('tags'), str) and device_raw.get('tags'):
                     device.discovery_tags = device_raw.get('tags').split(',')

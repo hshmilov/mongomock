@@ -342,6 +342,7 @@ class DeviceAdapterInstalledSoftware(SmartJsonClass):
 
     name = Field(str, "Software Name")
     version = Field(str, "Software Version", json_format=JsonStringFormat.version)
+    name_version = Field(str, 'Software Name and Version')
     architecture = Field(
         str, "Software Architecture", enum=["x86", "x64", "MIPS", "Alpha", "PowerPC", "ARM", "ia64", "all", 'i686']
     )
@@ -996,13 +997,17 @@ class DeviceAdapter(SmartJsonClass):
 
         version_raw = ''
         version = kwargs.get('version')
+        name = kwargs.get('name')
         if version:
             version = version.strip()
             version_raw = parse_versions_raw(version) or ''
             kwargs['version'] = version
+        name_version = None
+        if name and version:
+            name_version = f'{name}-{version}'
 
         self.installed_software.append(DeviceAdapterInstalledSoftware(
-            version_raw=version_raw, **kwargs))
+            version_raw=version_raw, name_version=name_version, **kwargs))
 
     def add_vulnerable_software(self, cvss=None, **kwargs):
         cvss_str = None

@@ -1,7 +1,6 @@
 import datetime
 import logging
 
-from airwatch_adapter.connection import AirwatchConnection
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.exception import RESTException
@@ -10,6 +9,8 @@ from axonius.fields import Field, ListField
 from axonius.utils.files import get_local_config_file
 from axonius.utils.datetime import parse_date
 from axonius.clients.rest.connection import RESTConnection
+from airwatch_adapter.connection import AirwatchConnection
+from airwatch_adapter.consts import NOT_ENROLLED_DEVICE, ENROLLED_DEVICE
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -18,6 +19,7 @@ class AirwatchAdapter(AdapterBase):
 
     # pylint: disable=too-many-instance-attributes
     class MyDeviceAdapter(DeviceAdapter):
+        airwatch_type = Field(str, 'Airwatch Device Type', enum=[ENROLLED_DEVICE, NOT_ENROLLED_DEVICE])
         imei = Field(str, 'IMEI')
         phone_number = Field(str, 'Phone Number')
         udid = Field(str, 'UdId')
@@ -25,6 +27,8 @@ class AirwatchAdapter(AdapterBase):
         last_enrolled_on = Field(datetime.datetime, 'Last Enrolled On')
         notes = ListField(str, 'Notes')
         device_tags = ListField(str, 'Device Tags')
+        profile_name = Field(str, 'Profile Name')
+        ownership = Field(str, 'Ownership')
 
     def __init__(self):
         super().__init__(get_local_config_file(__file__))
@@ -117,9 +121,30 @@ class AirwatchAdapter(AdapterBase):
             'type': 'array'
         }
 
+    def _create_not_enrolled_device(self, device_raw):
+        try:
+            device = self._new_device_adapter()
+            device.id = device_raw.get('deviceSerialNumber')
+            device.device_serial = device_raw.get('deviceSerialNumber')
+            device.friendly_name = device_raw.get('DeviceFriendlyName')
+            device.profile_name = device_raw.get('profileName')
+            device.imei = device_raw.get('deviceImei')
+            device.ownership = device_raw.get('deviceOwnership')
+            device.device_model = device_raw.get('deviceModel')
+            device.set_raw(device_raw)
+            yield device
+        except Exception:
+            logger.exception(f'Problem with fetching not enrolledd Airwatch Device {device_raw}')
+
     # pylint: disable=R0912,R0915
+    # pylint: disable=too-many-locals,using-constant-test
     def _parse_raw_data(self, devices_raw_data):
-        for device_raw in devices_raw_data:
+        for device_raw, device_type in devices_raw_data:
+            if device_type == NOT_ENROLLED_DEVICE:
+                device = self._create_not_enrolled_device(device_raw)
+                if device:
+                    yield device
+                continue
             try:
                 device = self._new_device_adapter()
                 if not device_raw.get('Id'):
@@ -127,6 +152,7 @@ class AirwatchAdapter(AdapterBase):
                 else:
                     device_id_value = str(device_raw.get('Id').get('Value'))
                 device.imei = device_raw.get('Imei')
+                device.airwatch_type = ENROLLED_DEVICE
                 device.last_seen = parse_date(str(device_raw.get('LastSeen', '')))
                 device.figure_os((device_raw.get('Platform') or '') + ' ' + (device_raw.get('OperatingSystem') or ''))
                 device.phone_number = device_raw.get('PhoneNumber')

@@ -12,6 +12,7 @@ from axonius.clients.rest.connection import RESTConnection
 from axonius.devices.device_adapter import DeviceAdapter, DeviceRunningState
 from axonius.fields import Field, ListField
 from axonius.utils.datetime import parse_date
+from axonius.mixins.configurable import Configurable
 from axonius.utils.files import get_local_config_file
 from esx_adapter.vcenter_api import rawify_vcenter_data, vCenterApi
 
@@ -36,7 +37,7 @@ class ESXDeviceType(Enum):
     VMMachine = auto()
 
 
-class EsxAdapter(AdapterBase):
+class EsxAdapter(AdapterBase, Configurable):
     class MyDeviceAdapter(DeviceAdapter):
         vm_tools_status = Field(str, 'VM Tools Status')
         vm_physical_path = Field(str, 'VM physical path')
@@ -167,6 +168,8 @@ class EsxAdapter(AdapterBase):
         try:
             if details.get('runtime', {}).get('powerState') == 'poweredOn':
                 device.last_seen = datetime.datetime.now()
+            elif self.__fetch_only_turned_on_machines:
+                return None
         except Exception:
             logger.warning(f'Problem addding last seen for {details}', exc_info=True)
         if isinstance((details.get('runtime') or {}).get('consolidationNeeded'), bool):
@@ -244,3 +247,29 @@ class EsxAdapter(AdapterBase):
     @classmethod
     def adapter_properties(cls):
         return [AdapterProperty.Assets, AdapterProperty.Virtualization]
+
+    @classmethod
+    def _db_config_schema(cls) -> dict:
+        return {
+            'items': [
+                {
+                    'name': 'fetch_only_turned_on_machines',
+                    'title': 'Fetch Only Turned On Machines',
+                    'type': 'bool'
+                }
+            ],
+            'required': [
+                'fetch_only_turned_on_machines'
+            ],
+            'pretty_name': 'ESX Configuration',
+            'type': 'array'
+        }
+
+    @classmethod
+    def _db_config_default(cls):
+        return {
+            'fetch_only_turned_on_machines': False
+        }
+
+    def _on_config_update(self, config):
+        self.__fetch_only_turned_on_machines = config.get('fetch_only_turned_on_machines') or False
