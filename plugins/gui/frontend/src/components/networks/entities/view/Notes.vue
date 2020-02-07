@@ -15,7 +15,7 @@
         <x-button
           :disabled="readOnly"
           @click="createNote"
-        >+ Note</x-button>
+        >Add Note</x-button>
       </div>
     </div>
     <x-table

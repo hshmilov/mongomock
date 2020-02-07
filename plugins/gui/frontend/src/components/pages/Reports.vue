@@ -9,7 +9,7 @@
     >
       <template slot="actions">
         <x-button v-if="hasSelection" link @click="remove">Remove</x-button>
-        <x-button id="report_new" :disabled="isReadOnly" @click="navigateReport('new')">+ New Report</x-button>
+        <x-button id="report_new" :disabled="isReadOnly" @click="navigateReport('new')">Add Report</x-button>
       </template>
     </x-table>
   </x-page>

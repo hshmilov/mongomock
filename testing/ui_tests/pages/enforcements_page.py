@@ -80,7 +80,7 @@ class ActionCategory:
 class EnforcementsPage(EntitiesPage):
     SAVE_AND_RUN_BUTTON_TEXT = 'Save & Run'
     TASK_IN_PROGRESS = 'Enforcement Task is in progress'
-    NEW_ENFORCEMENT_BUTTON = '+ New Enforcement'
+    NEW_ENFORCEMENT_BUTTON = 'Add Enforcement'
     ENFORCEMENT_NAME_ID = 'enforcement_name'
     TRIGGER_CONTAINER_CSS = '.x-trigger'
     TRIGGER_CONF_CONTAINER_CSS = '.x-trigger-config'

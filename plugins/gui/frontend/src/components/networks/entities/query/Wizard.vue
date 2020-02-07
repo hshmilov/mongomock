@@ -12,7 +12,7 @@
     <x-button
       id="query_wizard"
       slot="trigger"
-    >+ Query Wizard</x-button>
+    >Query Wizard</x-button>
     <div slot="content">
       <x-filter
         ref="filter"

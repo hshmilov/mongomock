@@ -13,7 +13,7 @@
           link
           @click="removeConnection"
         >Remove</x-button>
-        <x-button @click="configConnection('new')" id="new_connection" :disabled="isReadOnly">+ New Connection</x-button>
+        <x-button @click="configConnection('new')" id="new_connection" :disabled="isReadOnly">Add Connection</x-button>
       </template>
       <x-table
         slot="table"

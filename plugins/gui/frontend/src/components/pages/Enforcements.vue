@@ -19,7 +19,7 @@
           id="enforcement_new"
           :disabled="isReadOnly"
           @click="navigateEnforcement('new')"
-        >+ New Enforcement</x-button>
+        >Add Enforcement</x-button>
         <x-button emphasize @click="navigateTasks">View Tasks</x-button>
       </template>
     </x-table>

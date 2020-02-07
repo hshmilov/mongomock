@@ -154,7 +154,7 @@ class SettingsPage(Page):
         self.driver.find_element_by_css_selector(self.MANAGE_USERS_CSS).click()
 
     def click_new_user(self):
-        self.click_button('+ New User')
+        self.click_button('Add User')
 
     def click_edit_user(self, user_name):
         self.driver.find_element_by_id(user_name).click()

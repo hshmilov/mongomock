@@ -11,7 +11,7 @@
         id="create-user"
         :disabled="readOnly"
         @click="() => openUserConfig()"
-      >+ New User</x-button>
+      >Add User</x-button>
     </div>
     <div
       v-for="user in users"

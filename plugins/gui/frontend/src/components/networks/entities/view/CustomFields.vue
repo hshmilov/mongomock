@@ -19,11 +19,11 @@
       <x-button
         link
         @click="addPredefinedField"
-      >+ Predefined field</x-button>
+      >Add Predefined field</x-button>
       <x-button
         link
         @click="addCustomField"
-      >+ New field</x-button>
+      >Add New field</x-button>
       <div
         v-if="error"
         class="error-text"

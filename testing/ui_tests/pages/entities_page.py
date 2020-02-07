@@ -867,7 +867,7 @@ class EntitiesPage(Page):
         self.wait_for_toaster(toast_text)
 
     def create_note(self, note_text):
-        self.click_button('+ Note')
+        self.click_button('Add Note')
         self.fill_save_note(note_text, self.NOTES_CREATED_TOASTER)
 
     def edit_note(self, note_text):
@@ -1059,10 +1059,10 @@ class EntitiesPage(Page):
         return self.find_custom_data_edit().click()
 
     def click_custom_data_add_predefined(self):
-        return self.click_button('+ Predefined field', partial_class=True)
+        return self.click_button('Add Predefined field', partial_class=True)
 
     def click_custom_data_add_new(self):
-        return self.click_button('+ New field', partial_class=True)
+        return self.click_button('Add New field', partial_class=True)
 
     def find_custom_data_save(self, context=None):
         if not context:
