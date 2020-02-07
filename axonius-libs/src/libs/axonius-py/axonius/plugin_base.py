@@ -58,7 +58,7 @@ from axonius.consts.plugin_consts import (ADAPTERS_LIST_LENGTH,
                                           AGGREGATOR_PLUGIN_NAME,
                                           CONFIGURABLE_CONFIGS_COLLECTION,
                                           CORE_UNIQUE_NAME, CORRELATE_BY_USERNAME_DOMAIN_ONLY,
-                                          CORRELATE_BY_EMAIL_PREFIX, CORRELATE_AD_SCCM,
+                                          CORRELATE_BY_EMAIL_PREFIX, CORRELATE_AD_SCCM, CORRELATE_AD_DISPLAY_NAME,
                                           CSV_FULL_HOSTNAME, CORRELATE_BY_SNOW_MAC,
                                           CORRELATION_SETTINGS,
                                           GUI_PLUGIN_NAME,
@@ -2866,6 +2866,7 @@ class PluginBase(Configurable, Feature, ABC):
         self._adapter_errors_mail_address = config[NOTIFICATIONS_SETTINGS].get(ADAPTERS_ERRORS_MAIL_ADDRESS)
         self._adapter_errors_webhook = config[NOTIFICATIONS_SETTINGS].get(ADAPTERS_ERRORS_WEBHOOK_ADDRESS)
         self._email_prefix_correlation = config[CORRELATION_SETTINGS].get(CORRELATE_BY_EMAIL_PREFIX)
+        self._ad_display_name_correlation = config[CORRELATION_SETTINGS].get(CORRELATE_AD_DISPLAY_NAME)
         self._correlate_only_on_username_domain = config[CORRELATION_SETTINGS].get(CORRELATE_BY_USERNAME_DOMAIN_ONLY)
         self._fetch_empty_vendor_software_vulnerabilites = (config.get(STATIC_ANALYSIS_SETTINGS) or {}).get(
             FETCH_EMPTY_VENDOR_SOFTWARE_VULNERABILITES) or False
@@ -3305,6 +3306,11 @@ class PluginBase(Configurable, Feature, ABC):
                             'type': 'bool'
                         },
                         {
+                            'name': CORRELATE_AD_DISPLAY_NAME,
+                            'title': 'Correlate users by AD display name',
+                            'type': 'bool'
+                        },
+                        {
                             'name': CORRELATE_BY_USERNAME_DOMAIN_ONLY,
                             'title': 'Correlate users by user name and domain only',
                             'type': 'bool'
@@ -3329,7 +3335,7 @@ class PluginBase(Configurable, Feature, ABC):
                     'name': CORRELATION_SETTINGS,
                     'title': 'Correlation Settings',
                     'type': 'array',
-                    'required': [CORRELATE_BY_EMAIL_PREFIX,
+                    'required': [CORRELATE_BY_EMAIL_PREFIX, CORRELATE_AD_DISPLAY_NAME,
                                  CORRELATE_AD_SCCM, CSV_FULL_HOSTNAME,
                                  CORRELATE_BY_SNOW_MAC, CORRELATE_BY_USERNAME_DOMAIN_ONLY]
                 },
@@ -3485,6 +3491,7 @@ class PluginBase(Configurable, Feature, ABC):
             },
             CORRELATION_SETTINGS: {
                 CORRELATE_BY_EMAIL_PREFIX: False,
+                CORRELATE_AD_DISPLAY_NAME: True,
                 CORRELATE_BY_USERNAME_DOMAIN_ONLY: False,
                 CORRELATE_AD_SCCM: False,
                 CSV_FULL_HOSTNAME: False,

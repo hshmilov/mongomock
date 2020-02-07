@@ -18,7 +18,9 @@ class StaticUsersCorrelatorService(CorrelatorBase):
                                                   correlation_config={
                                                       'email_prefix_correlation': self._email_prefix_correlation,
                                                       'correlate_only_on_username_domain':
-                                                          self._correlate_only_on_username_domain})
+                                                          self._correlate_only_on_username_domain,
+                                                      'ad_display_name_correlation':
+                                                          self._ad_display_name_correlation})
 
     @property
     def _entity_to_correlate(self) -> EntityType:

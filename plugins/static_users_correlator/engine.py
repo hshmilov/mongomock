@@ -351,8 +351,9 @@ class StaticUserCorrelatorEngine(CorrelatorEngineBase):
         yield from self._correlate_mail(normalize_adapter_users(entities))
         yield from self._correlate_ad_upn(normalize_adapter_users(entities))
         yield from self._correlate_ad_upn_mail(normalize_adapter_users(entities))
-        yield from self._correlate_ad_display_name(normalize_adapter_users(entities))
-        yield from self._correlate_ad_display_name_username(normalize_adapter_users(entities))
+        if self._correlation_config and self._correlation_config.get('ad_display_name_correlation') is True:
+            yield from self._correlate_ad_display_name(normalize_adapter_users(entities))
+            yield from self._correlate_ad_display_name_username(normalize_adapter_users(entities))
         yield from self._correlate_aws_username_mail(normalize_adapter_users(entities))
         yield from self._correlate_username_aws(normalize_adapter_users(entities))
         yield from self._correlate_username_domain(normalize_adapter_users(entities))
