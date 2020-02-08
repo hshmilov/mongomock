@@ -495,7 +495,7 @@ export const pluginMeta = {
         description: 'BlueCat Enterprise DNS connects all disparate DNS and DHCP with centralized management of all clients and critical assets.'
     },
     logrhythm_adapter: {
-        title: 'LogRhythm - BETA',
+        title: 'LogRhythm',
         link: '',
         description: 'LogRhythm combines SIEM, user and entity behavior analytics, network traffic and behavior analytics, and security automation and orchestration.'
     },

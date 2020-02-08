@@ -36,6 +36,7 @@ class ApplicationData(SmartJsonClass):
 class IgarAdapter(AdapterBase):
     # pylint: disable=too-many-instance-attributes
     class MyDeviceAdapter(DeviceAdapter):
+        igar_server_id = Field(str, 'Igar Server ID')
         has_ip_duplication = Field(bool, 'Has IP Duplication')
         last_modified = Field(datetime.datetime, 'Last Modified')
         network_zone = Field(str, 'Network Zone')
@@ -291,6 +292,7 @@ class IgarAdapter(AdapterBase):
                     logger.warning(f'Bad device with no ID {device_raw}')
                     continue
                 device.id = server_id + '_' + (device_raw.get('ServerName') or '')
+                device.igar_server_id = server_id
                 device.has_ip_duplication = False
                 device.name = device_raw.get('ServerName')
                 device.hostname = device_raw.get('ServerFQDN')

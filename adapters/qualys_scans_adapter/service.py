@@ -126,6 +126,7 @@ class QualysAgentPort(SmartJsonClass):
 
 class QualysScansAdapter(ScannerAdapterBase, Configurable):
     class MyDeviceAdapter(DeviceAdapter):
+        qualys_id = Field(str, 'Qualys ID')
         qualys_agent_vulns = ListField(QualysAgentVuln, 'Vulnerabilities')
         qualys_agnet_ports = ListField(QualysAgentPort, 'Qualys Open Ports')
         qualys_tags = ListField(str, 'Qualys Tags')
@@ -291,6 +292,7 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
                 logger.warning(f'Bad device with no ID {device_raw}')
                 return None
             device = self._new_device_adapter()
+            device.qualys_id = device_id
             device.id = str(device_id) + '_' + (device_raw.get('name') or '')
             hostname = (device_raw.get('netbiosName') or device_raw.get('dnsHostName')) or device_raw.get('name')
             if device_raw.get('netbiosName') and device_raw.get('dnsHostName') and \

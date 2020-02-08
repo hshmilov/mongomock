@@ -9,7 +9,7 @@ class LogrhythmConnection(RESTConnection):
     """ rest client for Logrhythm adapter """
 
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, url_base_prefix='',
+        super().__init__(*args, url_base_prefix='lr-admin-api/',
                          headers={'Content-Type': 'application/json',
                                   'Accept': 'application/json'}, **kwargs)
         self._permanent_headers['Authorization'] = f'Bearer {self._apikey}'
