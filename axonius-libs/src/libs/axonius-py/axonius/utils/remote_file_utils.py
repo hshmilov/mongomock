@@ -116,8 +116,10 @@ def load_from_smb(client_config) -> bytes:
         opener = urllib.request.build_opener(SMBHandler)
         with opener.open(final_path) as file_obj:
             return file_obj.read()
-    except Exception:
-        logger.exception(f'Error - Failed to read from SMB Share')
+    except Exception as e:
+        message = f'Error - Failed to read from SMB Share: {str(e)}'
+        logger.exception(message)
+        raise ClientConnectionException(message)
 
 
 def load_local_file(client_config) -> bytes:
@@ -188,7 +190,9 @@ def test_file_reachability(client_config):
             share_path = resource_path[2:]
             share_path = 'smb://' + share_path.replace('\\', '/')
             parsed_url = urlparse(share_path)
-            return RESTConnection.test_reachability(parsed_url.hostname, port=445)
+            test_445 = RESTConnection.test_reachability(parsed_url.hostname, port=445)
+            test_137 = RESTConnection.test_reachability(parsed_url.hostname, port=137)
+            return test_445 and test_137
         logger.error('Test reachability failed: resource_path invalid')
         return False
     logger.error('Test reachability failed: Invalid configuration.')

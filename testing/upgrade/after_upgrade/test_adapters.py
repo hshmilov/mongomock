@@ -6,7 +6,7 @@ class TestAdapters(TestBase):
         self.adapters_page.switch_to_page()
         self.adapters_page.wait_for_spinner_to_end()
 
-        for key in ('json', 'stress', 'qcore', 'traiana'):
+        for key in ('json file', 'stress', 'qcore', 'traiana'):
             self.adapters_page.search(key)
             adapter_list = self.adapters_page.get_adapter_list()
             assert len(adapter_list) == 0

@@ -454,8 +454,9 @@ class CoreService(PluginService, UpdatablePluginMixin):
                     client_config_new = client_config.copy()
                     # explicitly verify user_id
                     client_config_id = client_config.get('user_id')
+                    message_prefix = f'[GENERIC_FILE_MIGRATION] - {plugin_unique_name}_{client_config_id} -'
                     if not client_config_id:
-                        raise Exception(f'What in the nine hells? Expected user_id, got {client_config_id} instead.')
+                        raise Exception(f'ERROR: Expected user_id, got {client_config_id} instead.')
                     # is_users
                     if 'is_users_csv' in client_config:
                         client_config_new['is_users'] = client_config.get('is_users_csv')
@@ -468,7 +469,7 @@ class CoreService(PluginService, UpdatablePluginMixin):
                         resource_path = client_config.get('masscan_http')
                     elif 'nmap_http' in client_config:
                         resource_path = client_config.get('nmap_http')
-                    if resource_path is not None:
+                    if resource_path:
                         client_config_new['resource_path'] = resource_path
                         configured_items.append('HTTP')
                     # reset resource path to prevent false positive
@@ -481,12 +482,12 @@ class CoreService(PluginService, UpdatablePluginMixin):
                         resource_path = client_config.get('masscan_share')
                     elif 'nmap_share' in client_config:
                         resource_path = client_config.get('nmap_share')
-                    if resource_path is not None:
+                    if resource_path:
                         configured_items.append('SMB Share')
                         if 'HTTP' in configured_items:
-                            print('[GENERIC_FILE_MIGRATION] - identified both URL and SMB share')
+                            print(f'{message_prefix} identified both URL and SMB share')
                         else:
-                            print('[GENERIC_FILE_MIGRATION] - Setting SMB share (http not configured)')
+                            print(f'{message_prefix} Setting SMB share (http not configured)')
                             client_config_new['resource_path'] = resource_path
                     # username - ignored if http is used
                     username = None
@@ -496,12 +497,12 @@ class CoreService(PluginService, UpdatablePluginMixin):
                         username = client_config.get('nmap_share_username')
                     elif 'masscan_share_username' in client_config:
                         username = client_config.get('masscan_share_username')
-                    if username is not None:
+                    if username:
                         configured_items.append('SMB Username')
                         if 'HTTP' in configured_items:
-                            print('[GENERIC_FILE_MIGRATION] - identified both URL and SMB username')
+                            print(f'{message_prefix} identified both URL and SMB username')
                         else:
-                            print('[GENERIC_FILE_MIGRATION] - Setting SMB username (http not configured)')
+                            print(f'{message_prefix} Setting SMB username (http not configured)')
                             client_config_new['username'] = username
                     # password - ignored if http is used
                     password = None
@@ -511,16 +512,16 @@ class CoreService(PluginService, UpdatablePluginMixin):
                         password = client_config.get('nmap_share_password')
                     elif 'masscan_share_password' in client_config:
                         password = client_config.get('masscan_share_password')
-                    if password is not None:
+                    if password:
                         configured_items.append('SMB Password')
                         if 'HTTP' in configured_items:
-                            print('[GENERIC_FILE_MIGRATION] - identified both URL and SMB password')
+                            print(f'{message_prefix} identified both URL and SMB password')
                         else:
-                            print('[GENERIC_FILE_MIGRATION] - Setting SMB password (http not configured)')
+                            print(f'{message_prefix} Setting SMB password (http not configured)')
                             client_config_new['password'] = password
                     if client_config.get('s3_bucket'):
                         configured_items.append('S3 Bucket')
-                        print('[GENERIC_FILE_MIGRATION] - identified s3 bucket')
+                        print(f'{message_prefix} Identified s3 bucket')
                     # file path
                     file_path = None
                     if 'csv' in client_config:
@@ -529,11 +530,11 @@ class CoreService(PluginService, UpdatablePluginMixin):
                         file_path = client_config.get('masscan_file')
                     elif 'nmap_file' in client_config:
                         file_path = client_config.get('nmap_file')
-                    if file_path is not None:
+                    if file_path:
                         configured_items.append('File Path')
                         client_config_new['file_path'] = file_path
                         if 'S3 Bucket' in configured_items:
-                            print(f'[GENERIC_FILE_MIGRATION] - Identified both upload file and S3 config')
+                            print(f'{message_prefix} Identified both upload file and S3 config')
                     self.db.client[plugin_unique_name]['clients'].update(
                         {
                             '_id': client['_id']
@@ -544,7 +545,7 @@ class CoreService(PluginService, UpdatablePluginMixin):
                             }
                         }
                     )
-                    print(f'[GENERIC_FILE_MIGRATION] - Summary - '
+                    print(f'{message_prefix} Summary - '
                           f'Identified configuration for {",".join(configured_items)}')
             self.db_schema_version = 10
         except Exception as e:
