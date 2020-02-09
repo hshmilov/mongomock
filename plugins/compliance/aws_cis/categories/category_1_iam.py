@@ -105,11 +105,11 @@ class CISAWSCategory1:
                     )
                 if access_key_1_last_used_date and access_key_1_last_used_date > a_month_ago:
                     error_messages.append(
-                        f'Access Key 1 been used with password in the last 30 days: {access_key_1_last_used_date}'
+                        f'Access Key 1 has been used with password in the last 30 days: {access_key_1_last_used_date}'
                     )
                 if access_key_2_last_used_date and access_key_2_last_used_date > a_month_ago:
                     error_messages.append(
-                        f'Access Key 2 been used with password in the last 30 days: {access_key_2_last_used_date}'
+                        f'Access Key 2 has been used with password in the last 30 days: {access_key_2_last_used_date}'
                     )
 
                 if error_messages:
@@ -149,7 +149,7 @@ class CISAWSCategory1:
         for user in data:
             if user['password_enabled'].lower() == 'true' and user['mfa_active'].lower() == 'false':
                 failed_users.append(f'User "{user["user"]}" ({user["arn"]}) '
-                                    f'has password enabled but does not have mfa active')
+                                    f'has password enabled but does not have MFA enabled')
 
         if failed_users:
             self.report.add_rule(
@@ -206,7 +206,7 @@ class CISAWSCategory1:
                     user_failed = True
                     failed_entities += 1
                     error_messages.append(f'Password for user "{user["user"]}" ({user["arn"]}) '
-                                          f'has been used in {password_last_used}')
+                                          f'has been used at {password_last_used}')
 
             if access_key_1_enabled:
                 overall_entities += 1
@@ -214,7 +214,7 @@ class CISAWSCategory1:
                     user_failed = True
                     failed_entities += 1
                     error_messages.append(f'Access Key 1 for user "{user["user"]}" ({user["arn"]}) '
-                                          f'has been used in {access_key_1_last_used_date}')
+                                          f'has been used at {access_key_1_last_used_date}')
 
             if access_key_2_enabled:
                 overall_entities += 1
@@ -222,7 +222,7 @@ class CISAWSCategory1:
                     user_failed = True
                     failed_entities += 1
                     error_messages.append(f'Access Key 2 for user "{user["user"]}" ({user["arn"]}) '
-                                          f'has been used in {access_key_2_last_used_date}')
+                                          f'has been used at {access_key_2_last_used_date}')
 
             if user_failed:
                 failed_users += 1
@@ -279,7 +279,7 @@ class CISAWSCategory1:
                     user_failed = True
                     failed_entities += 1
                     error_messages.append(f'Access Key 1 for user "{user["user"]}" ({user["arn"]}) '
-                                          f'has last been rotated in {access_key_1_last_rotated}')
+                                          f'has last been rotated at {access_key_1_last_rotated}')
 
             if access_key_2_enabled:
                 overall_entities += 1
@@ -287,7 +287,7 @@ class CISAWSCategory1:
                     user_failed = True
                     failed_entities += 1
                     error_messages.append(f'Access Key 2 for user "{user["user"]}" ({user["arn"]}) '
-                                          f'has last been rotated in {access_key_2_last_rotated}')
+                                          f'has last been rotated at {access_key_2_last_rotated}')
 
             if user_failed:
                 failed_users += 1
@@ -602,7 +602,7 @@ class CISAWSCategory1:
                         rule_section,
                         (1, 1),
                         0,
-                        'Root user has active access keys'
+                        'Root account has active access keys'
                     )
                 else:
                     self.report.add_rule(
@@ -676,7 +676,7 @@ class CISAWSCategory1:
                         rule_section,
                         (1, 1),
                         0,
-                        'Root Account is using virtual MFA'
+                        'Root account is using virtual MFA'
                     )
                     return
 

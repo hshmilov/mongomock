@@ -354,13 +354,13 @@ class CISAWSCategory2:
                     response = s3_client.get_bucket_logging(Bucket=s3_bucket_name)
                 except Exception as e:
                     errors.append(f'CloudTrail "{cloudtrail.get("Name")}" ({cloudtrail.get("TrailARN")}): '
-                                  f'Could not verify Bucket logging for bucket {s3_bucket_name} '
+                                  f'Could not verify Bucket access logging for bucket {s3_bucket_name} '
                                   f'(using s3.get_bucket_logging): {str(e)}')
                     continue
 
                 if 'LoggingEnabled' not in response:
                     errors.append(f'CloudTrail "{cloudtrail.get("Name")}" ({cloudtrail.get("TrailARN")}): '
-                                  f'Bucket {s3_bucket_name} does not have bucket logging enabled')
+                                  f'Bucket {s3_bucket_name} does not have bucket access logging enabled')
                     continue
 
         if errors:
@@ -450,7 +450,7 @@ class CISAWSCategory2:
             for key in keys:
                 num_of_keys += 1
                 if not key.get('KeyRotationEnabled'):
-                    errors.append(f'Rotation for key "{key.get("KeyArn")}" not enabled.')
+                    errors.append(f'Rotation for key "{key.get("KeyArn")}" is not enabled.')
 
         if errors:
             self.report.add_rule(

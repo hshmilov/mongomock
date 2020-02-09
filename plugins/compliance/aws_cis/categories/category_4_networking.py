@@ -175,7 +175,7 @@ class CISAWSCategory4:
                 bad_default_security_groups.append(
                     f'Default security group "{security_group["GroupName"]}" '
                     f'({security_group["GroupId"]}) in region '
-                    f'{security_group["region_name"]} do not restrict access to all traffic')
+                    f'{security_group["region_name"]} does not restrict access to all traffic')
 
         if bad_default_security_groups:
             self.report.add_rule(
