@@ -374,6 +374,7 @@ class AWSDeviceAdapter(DeviceOrContainerAdapter, AWSAdapter):
     subnet_name = Field(str, 'Subnet Name')
     vpc_id = Field(str, 'VPC Id')
     vpc_name = Field(str, 'VPC Name')
+    vpc_tags = ListField(AWSTagKeyValue, 'VPC Tags')
 
     # ECS / EKS specific fields
     container_instance_arn = Field(str, 'Task ContainerInstance ID/ARN')
@@ -415,6 +416,9 @@ class AWSDeviceAdapter(DeviceOrContainerAdapter, AWSAdapter):
 
     def add_aws_ec2_tag(self, **kwargs):
         self.aws_tags.append(AWSTagKeyValue(**kwargs))
+
+    def add_aws_vpc_tag(self, **kwargs):
+        self.vpc_tags.append(AWSTagKeyValue(**kwargs))
 
     def add_aws_security_group(self, **kwargs):
         self.security_groups.append(AWSSecurityGroup(**kwargs))

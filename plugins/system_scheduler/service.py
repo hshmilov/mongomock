@@ -4,7 +4,7 @@ import time
 from concurrent.futures import (ALL_COMPLETED, ThreadPoolExecutor,
                                 as_completed, wait)
 from contextlib import contextmanager
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from enum import Enum
 from typing import Set
 
@@ -90,6 +90,45 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
                                           next_run_time=datetime.now(),
                                           max_instances=1)
         self.__realtime_scheduler.start()
+
+        self.plugin_settings = self._get_collection('plugin_settings')
+
+    def detect_correlation_errors(self):
+        """
+        Once a week, run 'detect correlation errors'
+        :return:
+        """
+        res = self.plugin_settings.find_one({'name': 'last_detect_correlation_errors_date'})
+        if res and (res['date'] + timedelta(days=7) > datetime.now()):
+            # We need to run once a week only.
+            logger.info(f'Not running detect correlation errors: last time it ran was {res["date"]}')
+            return
+        self.plugin_settings.update_one(
+            {'name': 'last_detect_correlation_errors_date'},
+            {
+                '$set': {
+                    'date': datetime.now()
+                }
+            },
+            upsert=True
+        )
+        logger.info(f'Running detect correlation errors')
+
+        # Run detect errors
+        self._trigger_remote_plugin(
+            STATIC_CORRELATOR_PLUGIN_NAME,
+            job_name='detect_errors',
+            data={'should_fix_errors': True},
+            timeout=3600 * 6,
+            stop_on_timeout=True
+        )
+
+        # Run static correlator
+        self._trigger_remote_plugin(
+            STATIC_CORRELATOR_PLUGIN_NAME,
+            timeout=3600 * 8,
+            stop_on_timeout=True
+        )
 
     @add_rule('trigger_s3_backup')
     def trigger_s3_backup(self):
@@ -316,6 +355,25 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
             self.state.Phase = scheduler_consts.Phases.Research
             _change_subphase(scheduler_consts.ResearchPhases.Fetch_Devices)
 
+            if (self.feature_flags_config().get(RootMasterNames.root_key) or {}).get(RootMasterNames.enabled):
+                try:
+                    logger.info(f'Root Master mode enabled - Restoring from s3 instead of fetch')
+                    # 1. Restore from s3
+                    root_master_restore_from_s3()
+                    self._request_gui_dashboard_cache_clear()
+                    # 2. Run enforcement center
+                    _change_subphase(scheduler_consts.ResearchPhases.Post_Correlation)
+                    post_correlation_plugins = [plugin for plugin in self._get_plugins(PluginSubtype.PostCorrelation)
+                                                if plugin[PLUGIN_NAME] == REPORTS_PLUGIN_NAME]
+                    if post_correlation_plugins:
+                        self._run_plugins(post_correlation_plugins)
+                        self._request_gui_dashboard_cache_clear()
+
+                except Exception:
+                    logger.critical(f'Warning - could not complete root-master cycle')
+
+                return  # do not continue the rest of the cycle
+
             try:
                 # this is important and is described at https://axonius.atlassian.net/wiki/spaces/AX/pages/799211552/
                 self.request_remote_plugin('wait/execute', REPORTS_PLUGIN_NAME)
@@ -325,14 +383,14 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
             # Fetch Devices Data.
             try:
                 self._run_aggregator_phase(PluginSubtype.AdapterBase)
-                if (self.feature_flags_config().get(RootMasterNames.root_key) or {}).get(RootMasterNames.enabled):
-                    logger.info(f'Root Master mode enabled - Restoring from s3 instead of fetch')
-                    root_master_restore_from_s3()
-                    self._request_gui_dashboard_cache_clear()
-                    return  # do not continue the rest of the cycle
                 self._request_gui_dashboard_cache_clear()
             except Exception:
                 logger.critical('Failed running fetch_devices phase', exc_info=True)
+
+            try:
+                self.detect_correlation_errors()
+            except Exception:
+                logger.critical(f'Failed running detect correlation errors', exc_info=True)
 
             # Fetch Scanners Data.
             try:

@@ -3,6 +3,8 @@ import logging
 from typing import Optional
 
 import boto3
+from botocore.config import Config
+
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
@@ -10,7 +12,8 @@ def get_s3_object(
         bucket_name: str,
         object_location: str,
         access_key_id: Optional[str] = None,
-        secret_access_key: Optional[str] = None
+        secret_access_key: Optional[str] = None,
+        https_proxy: Optional[str] = None
 ):
     """
     Gets an object from an s3 bucket.
@@ -18,12 +21,15 @@ def get_s3_object(
     :param object_location: the location of the object within the bucket.
     :param access_key_id: access key id to access the bucket. pass None to use the instance attached IAM role.
     :param secret_access_key: secret access key to access the bucket. pass None to use the instance attached IAM role.
+    :param https_proxy: optional https proxy
     :return:
     """
+    aws_config = Config(proxies={'https': https_proxy}) if https_proxy else None
     s3_client = boto3.client(
         's3',
         aws_access_key_id=access_key_id,
-        aws_secret_access_key=secret_access_key
+        aws_secret_access_key=secret_access_key,
+        config=aws_config
     )
     s3_object = s3_client.get_object(Bucket=bucket_name, Key=object_location)
     if 'Body' not in s3_object:

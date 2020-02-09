@@ -139,7 +139,7 @@ def _describe_vpcs_from_client(ec2_client):
             except Exception:
                 logger.exception(f'Error while parsing vpc tag {vpc_tag_raw}')
 
-        vpc_dict[vpc_id] = vpc_tags.get('Name')
+        vpc_dict[vpc_id] = vpc_tags
 
     # make a dictionary from ami key to the value
     return vpc_dict
@@ -2092,7 +2092,12 @@ class AwsAdapter(AdapterBase, Configurable):
                     if vpc_id and isinstance(vpc_id, str):
                         vpc_id = vpc_id.lower()
                         device.vpc_id = vpc_id
-                        device.vpc_name = vpcs_by_id.get(vpc_id)
+                        device.vpc_name = (vpcs_by_id.get(vpc_id) or {}).get('Name')
+                        try:
+                            for vpc_tag_key, vpc_tag_value in (vpcs_by_id.get(vpc_id) or {}).items():
+                                device.add_aws_vpc_tag(key=vpc_tag_key, value=vpc_tag_value)
+                        except Exception:
+                            logger.exception(f'Could not parse aws vpc tags')
                     subnet_id = device_raw.get('SubnetId')
                     if subnet_id:
                         device.subnet_id = subnet_id
@@ -2399,7 +2404,12 @@ class AwsAdapter(AdapterBase, Configurable):
                                         device.cloud_id = eks_ec2_instance_id
 
                                     device.vpc_id = vpc_id
-                                    device.vpc_name = vpcs_by_id.get(vpc_id)
+                                    device.vpc_name = (vpcs_by_id.get(vpc_id) or {}).get('Name')
+                                    try:
+                                        for vpc_tag_key, vpc_tag_value in (vpcs_by_id.get(vpc_id) or {}).items():
+                                            device.add_aws_vpc_tag(key=vpc_tag_key, value=vpc_tag_value)
+                                    except Exception:
+                                        logger.exception(f'Could not parse aws vpc tags')
                                     device.cluster_name = cluster_name
                                     device.cluster_id = eks_raw_data.get('arn')
                                     device.name = container_raw.get('name')
@@ -2668,7 +2678,12 @@ class AwsAdapter(AdapterBase, Configurable):
                                     device_vpc_id = vpc_id
                         if device_vpc_id:
                             device.vpc_id = device_vpc_id
-                            device.vpc_name = vpcs_by_id.get(device_vpc_id)
+                            device.vpc_name = (vpcs_by_id.get(device_vpc_id) or {}).get('Name')
+                            try:
+                                for vpc_tag_key, vpc_tag_value in (vpcs_by_id.get(device_vpc_id) or {}).items():
+                                    device.add_aws_vpc_tag(key=vpc_tag_key, value=vpc_tag_value)
+                            except Exception:
+                                logger.exception(f'Could not parse aws vpc tags')
 
                         device.set_raw(
                             {
@@ -2699,7 +2714,12 @@ class AwsAdapter(AdapterBase, Configurable):
                     if vpc_id and isinstance(vpc_id, str):
                         vpc_id = vpc_id.lower()
                         device.vpc_id = vpc_id
-                        device.vpc_name = vpcs_by_id.get(vpc_id)
+                        device.vpc_name = (vpcs_by_id.get(vpc_id) or {}).get('Name')
+                        try:
+                            for vpc_tag_key, vpc_tag_value in (vpcs_by_id.get(vpc_id) or {}).items():
+                                device.add_aws_vpc_tag(key=vpc_tag_key, value=vpc_tag_value)
+                        except Exception:
+                            logger.exception(f'Could not parse aws vpc tags')
 
                     subnet_id = nat_gateway_raw.get('SubnetId')
                     if subnet_id:
@@ -2753,7 +2773,12 @@ class AwsAdapter(AdapterBase, Configurable):
                 if elb_dns:
                     device.dns_names.append(elb_dns)
                 device.vpc_id = elb_raw.get('vpcid')
-                device.vpc_name = vpcs_by_id.get(elb_raw.get('vpcid'))
+                device.vpc_name = (vpcs_by_id.get(elb_raw.get('vpcid'))).get('Name')
+                try:
+                    for vpc_tag_key, vpc_tag_value in (vpcs_by_id.get(elb_raw.get('vpcid')) or {}).items():
+                        device.add_aws_vpc_tag(key=vpc_tag_key, value=vpc_tag_value)
+                except Exception:
+                    logger.exception(f'Could not parse aws vpc tags')
                 if last_ip_by_dns_query:
                     ips.append(last_ip_by_dns_query)
 
@@ -2951,7 +2976,12 @@ class AwsAdapter(AdapterBase, Configurable):
                     # To be added - parse db security groups, use `describe_db_security_groups`
 
                     device.vpc_id = subnet_group.get('VpcId')
-                    device.vpc_name = vpcs_by_id.get(subnet_group.get('VpcId'))
+                    device.vpc_name = (vpcs_by_id.get(subnet_group.get('VpcId')) or {}).get('Name')
+                    try:
+                        for vpc_tag_key, vpc_tag_value in (vpcs_by_id.get(subnet_group.get('VpcId')) or {}).items():
+                            device.add_aws_vpc_tag(key=vpc_tag_key, value=vpc_tag_value)
+                    except Exception:
+                        logger.exception(f'Could not parse aws vpc tags')
                     device.rds_data = rds_data
 
                     device.set_raw(rds_instance_raw)

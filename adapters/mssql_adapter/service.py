@@ -6,6 +6,7 @@ from axonius.adapter_exceptions import ClientConnectionException
 from axonius.adapter_exceptions import GetDevicesError
 from axonius.clients.mssql.connection import MSSQLConnection
 from axonius.clients.mysql.connection import MySQLConnection
+from axonius.clients.oracle_db.connection import OracleDBConnection
 from axonius.clients.postgres.connection import PostgresConnection
 from axonius.mixins.configurable import Configurable
 from axonius.utils.parsing import normalize_var_name
@@ -64,6 +65,14 @@ class MssqlAdapter(AdapterBase, Configurable):
                     client_config['username'],
                     client_config['password'],
                     client_config.get('database'),
+                )
+            elif db_type == SQLServers.Oracle.value:
+                connection = OracleDBConnection(
+                    client_config['domain'],
+                    int(client_config.get('port')),
+                    client_config['username'],
+                    client_config['password'],
+                    client_config.get('database')
                 )
             else:
                 raise ClientConnectionException(f'Unknown DB Type {db_type}!')

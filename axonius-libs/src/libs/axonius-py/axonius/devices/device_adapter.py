@@ -627,6 +627,7 @@ class DeviceAdapter(SmartJsonClass):
     )
     firewall_rules = ListField(FirewallRule, 'Firewall Rules', json_format=JsonArrayFormat.table)
     last_wmi_command_output = Field(str, 'Last WMI Command Output')
+    backup_source = Field(str, 'Backup Source')
     required = ['name', 'hostname', 'os', 'network_interfaces']
 
     def generate_direct_connected_devices(self):

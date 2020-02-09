@@ -18,6 +18,7 @@ import pytz
 from apscheduler.executors.pool import ThreadPoolExecutor
 from apscheduler.triggers.interval import IntervalTrigger
 
+from axonius.consts.core_consts import DEACTIVATED_NODE_STATUS
 from axonius.consts.metric_consts import InstancesMetrics
 from axonius.consts.plugin_subtype import PluginSubtype
 from axonius.logging.metric_helper import log_metric
@@ -202,6 +203,9 @@ class CoreService(Triggerable, PluginBase, Configurable):
             now_obj = pytz.utc.localize(datetime.utcnow())
 
             for node in nodes:
+                if node.get('status') == DEACTIVATED_NODE_STATUS:
+                    # We don't care about deactivated nodes
+                    continue
                 node.pop(NODE_USER_PASSWORD, None)
                 parse = parser()
                 last_seen_obj = parse.parse(node['last_seen'])
@@ -219,6 +223,9 @@ class CoreService(Triggerable, PluginBase, Configurable):
             broken_instances = []
 
             for node in nodes:
+                if node.get('status') == DEACTIVATED_NODE_STATUS:
+                    # We don't care about deactivated nodes
+                    continue
                 node.pop(NODE_USER_PASSWORD, None)
                 parse = parser()
                 last_seen_obj = parse.parse(node['last_seen'])

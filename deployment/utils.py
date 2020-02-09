@@ -1,6 +1,9 @@
+import shutil
 import sys
 import os
 import subprocess
+
+MIN_GB_FOR_INSTALLATION = 10
 
 
 # note: DO NOT IMPORT ANY EXTERNAL PACKAGE (axonius included) HERE. THIS FILE RUNS BEFORE VENV IS SET!
@@ -63,6 +66,30 @@ def run_as_root(args, passwd):
 def chown_folder(root_pass, path):
     cmd = f'chown -R ubuntu:ubuntu {path}'
     run_as_root(cmd.split(), root_pass)
+
+
+def verify_storage_requirements():
+    try:
+        current_dir_free_bytes_left = shutil.disk_usage(CWD).free
+        docker_info = subprocess.check_output(['docker', 'info']).decode('utf-8')
+        for line in docker_info.splitlines():
+            if 'docker root dir' in line.lower():
+                root_docker_dir = line.split(':')[1].strip()
+                break
+        else:
+            raise ValueError(f'Can not find "Root Docker Dir" in docker info')
+
+        current_docker_dir_free_bytes_left = shutil.disk_usage(root_docker_dir).free
+
+        print(f'Storage left in current directory: {round(current_dir_free_bytes_left / (1024 ** 3), 2)}gb')
+        print(f'Storage left in docker mount: {round(current_docker_dir_free_bytes_left / (1024 ** 3), 2)}gb')
+
+        overall_free_bytes_left = min(current_dir_free_bytes_left, current_docker_dir_free_bytes_left)
+        if round(overall_free_bytes_left / (1024 ** 3), 2) < MIN_GB_FOR_INSTALLATION:
+            print(f'Not proceeding - must have at least {MIN_GB_FOR_INSTALLATION}gb left')
+            sys.exit(-1)
+    except Exception as e:
+        print(f'Warning - could not get storage information: {str(e)}, continuing')
 
 
 CORTEX_PATH, current_file_system_path, zip_loader = get_resources()

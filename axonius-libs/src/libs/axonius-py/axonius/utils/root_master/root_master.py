@@ -22,7 +22,7 @@ AWS_RESTORE_FILE_GPG = 'aws_restore.tar.gz.gpg'
 
 
 # pylint: disable=protected-access, too-many-locals, too-many-branches, too-many-statements
-def root_master_parse_entities(entity_type: EntityType, info):
+def root_master_parse_entities(entity_type: EntityType, info, backup_source=None):
     entities = json.loads(info)
     db = PluginBase.Instance._entity_db_map[entity_type]
     bulk_replacements = []
@@ -31,6 +31,8 @@ def root_master_parse_entities(entity_type: EntityType, info):
         if 'internal_axon_id' not in entity:
             logger.warning(f'Weird device: {entity}')
             continue
+        if backup_source:
+            entity['backup_source'] = backup_source
         bulk_replacements.append(
             ReplaceOne(
                 {'internal_axon_id': entity['internal_axon_id']},
@@ -111,6 +113,9 @@ def root_master_parse_entities_fields(entity_type: EntityType, info):
                 'raw': 'raw'
             }[schema_name]
             exist_fields = entity.get(field_name) or []
+            if field_name == 'exist' and plugin_unique_name == '*':
+                # 'backup_source' is a mandatory field in root master
+                exist_fields.append('backup_source')
             if exist_fields and plugin_unique_name:
                 fields_db_map.update_one(
                     {
@@ -227,9 +232,13 @@ def root_master_restore_from_s3():
                     for member in tar_file.getmembers():
                         try:
                             if member.name.startswith('devices_'):
-                                root_master_parse_entities(EntityType.Devices, tar_file.extractfile(member).read())
+                                root_master_parse_entities(
+                                    EntityType.Devices, tar_file.extractfile(member).read(), s3_key
+                                )
                             elif member.name.startswith('users_'):
-                                root_master_parse_entities(EntityType.Users, tar_file.extractfile(member).read())
+                                root_master_parse_entities(
+                                    EntityType.Users, tar_file.extractfile(member).read(), s3_key
+                                )
                             elif member.name.startswith('raw_devices_'):
                                 root_master_parse_entities_raw(EntityType.Devices, tar_file.extractfile(member).read())
                             elif member.name.startswith('raw_users_'):

@@ -43,13 +43,16 @@ def load_from_s3(client_config) -> bytes:
                   f'or leave both blank to use the attached IAM role'
         raise ClientConnectionException(message)
 
+    https_proxy = client_config.get('https_proxy')
+
     # Now we can proceed to try an get an object
     try:
         return get_s3_object(
             bucket_name=s3_bucket,
             object_location=s3_obj_loc,
             access_key_id=s3_access_key_id,
-            secret_access_key=s3_secret_access_key
+            secret_access_key=s3_secret_access_key,
+            https_proxy=https_proxy
         )
     except Exception as e:
         if 'SignatureDoesNotMatch' in str(e):

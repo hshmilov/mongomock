@@ -4,6 +4,7 @@ from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
 from axonius.devices.device_adapter import DeviceAdapter
+from axonius.utils.dynamic_fields import put_dynamic_field
 from axonius.utils.files import get_local_config_file
 from axonius.utils.datetime import parse_date
 from axonius.utils.parsing import normalize_var_name
@@ -353,17 +354,7 @@ class SplunkAdapter(AdapterBase, Configurable):
 
                     for column_name, column_value in device_raw.items():
                         try:
-                            normalized_column_name = device_type.replace(' ', '_').lower()\
-                                + '_' + normalize_var_name(column_name)
-                            field_type = str
-                            if not device.does_field_exist(normalized_column_name):
-                                # Currently we treat all columns as str
-                                cn_capitalized = ' '.join([word.capitalize() for word in column_name.split(' ')])
-                                device.declare_new_field(
-                                    normalized_column_name, Field(field_type, f'Splunk {device_type} {cn_capitalized}'))
-
-                            value = str(column_value)
-                            device[normalized_column_name] = value
+                            put_dynamic_field(device, f'splunk_{column_name}', column_value, f'splunk.{column_name}')
                         except Exception:
                             logger.warning(f'Could not parse column {column_name} with value {column_value}',
                                            exc_info=True)

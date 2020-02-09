@@ -22,7 +22,7 @@ from utils import (AXONIUS_DEPLOYMENT_PATH,
                    current_file_system_path,
                    print_state,
                    run_as_root,
-                   chown_folder)
+                   chown_folder, verify_storage_requirements)
 
 TIMESTAMP = datetime.datetime.now().strftime('%y%m%d-%H%M')
 
@@ -58,6 +58,7 @@ def main():
     parser.add_argument('--first-time', action='store_true', default=False, help='First Time install')
     parser.add_argument('--root-pass', action='store_true', default='', help='Sudo password')
     parser.add_argument('--no-research', action='store_true', default=False, help='Sudo password')
+    parser.add_argument('--do-not-verify-storage', action='store_true', default=False, help='Skip storage verification')
 
     try:
         args = parser.parse_args()
@@ -68,9 +69,14 @@ def main():
     start = time.time()
     root_pass = args.root_pass
     no_research = args.no_research
+    do_not_verify_storage = args.do_not_verify_storage
+
+    if not do_not_verify_storage:
+        verify_storage_requirements()
 
     if root_pass == '' and os.geteuid() != 0:
         # we are not root, and don't have root password :(
+        print(f'Warning - Please run as root!')
         root_pass = getpass.getpass('sudo password: ')
 
     install(args.first_time, root_pass, no_research)
