@@ -32,13 +32,13 @@ class AutomoxInstallUpdateAction(ActionTypeBase):
             ],
             'type': 'array'
         }
-        return add_node_selection(schema, ADAPTER_NAME)
+        return add_node_selection(schema)
 
     @staticmethod
     def default_config() -> dict:
         return add_node_default({
             'update_name': None
-        }, ADAPTER_NAME)
+        })
 
     def _run(self) -> EntitiesResult:
         adapter_unique_name = self._plugin_base._get_adapter_unique_name(

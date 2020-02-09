@@ -20,11 +20,11 @@ class CensysEnrichment(ActionTypeBase):
 
     @staticmethod
     def config_schema() -> dict:
-        return add_node_selection(ACTION_SCHEMA, CENSYS_PLUGIN_NAME)
+        return add_node_selection(ACTION_SCHEMA)
 
     @staticmethod
     def default_config() -> dict:
-        return add_node_default(BASE_DEFAULTS_SCHEMA, CENSYS_PLUGIN_NAME)
+        return add_node_default(BASE_DEFAULTS_SCHEMA)
 
     def _trigger_censys_adapter(self):
         adapter_unique_name = PluginBase.Instance._get_adapter_unique_name(CENSYS_PLUGIN_NAME, self.action_node_id)

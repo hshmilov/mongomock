@@ -21,11 +21,11 @@ class RunLinuxSSHScan(ActionTypeBase):
 
     @staticmethod
     def config_schema() -> dict:
-        return add_node_selection(SCAN_ACTION_SCHEMA, LINUX_SSH_PLUGIN_NAME)
+        return add_node_selection(SCAN_ACTION_SCHEMA)
 
     @staticmethod
     def default_config() -> dict:
-        return add_node_default(BASE_DEFAULTS_SCHEMA, LINUX_SSH_PLUGIN_NAME)
+        return add_node_default(BASE_DEFAULTS_SCHEMA)
 
     def _trigger_linux_adapter(self, node_id):
         action_data = {'internal_axon_ids': self._internal_axon_ids, 'client_config': self._config}

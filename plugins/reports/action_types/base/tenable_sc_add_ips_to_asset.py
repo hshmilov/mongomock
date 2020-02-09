@@ -99,7 +99,7 @@ class TenableScAddIPsToAsset(ActionTypeBase):
             ],
             'type': 'array'
         }
-        return add_node_selection(schema, ADAPTER_NAME)
+        return add_node_selection(schema)
 
     @staticmethod
     def default_config() -> dict:
@@ -117,7 +117,7 @@ class TenableScAddIPsToAsset(ActionTypeBase):
             'username': None,
             'password': None,
             'override_ips': False
-        }, ADAPTER_NAME)
+        })
 
     # pylint: disable=R0912,R0914,R0915,R1702,W0212
     def _run(self) -> EntitiesResult:

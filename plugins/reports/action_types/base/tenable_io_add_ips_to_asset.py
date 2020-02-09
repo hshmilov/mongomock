@@ -101,7 +101,7 @@ class TenableIoAddIPsToTargetGroup(ActionTypeBase):
             ],
             'type': 'array'
         }
-        return add_node_selection(schema, ADAPTER_NAME)
+        return add_node_selection(schema)
 
     @staticmethod
     def default_config() -> dict:
@@ -119,7 +119,7 @@ class TenableIoAddIPsToTargetGroup(ActionTypeBase):
             'domain': None,
             'https_proxy': None,
             'override_ips': False
-        }, ADAPTER_NAME)
+        })
 
     # pylint: disable=R0912,R0914,R0915,R1702,W0212
     def _run(self) -> EntitiesResult:

@@ -6,7 +6,7 @@ from abc import ABC, abstractmethod
 from typing import Set, List, Iterable
 
 from axonius.consts.core_consts import ACTIVATED_NODE_STATUS
-from axonius.consts.plugin_consts import GUI_SYSTEM_CONFIG_COLLECTION, GUI_PLUGIN_NAME, PLUGIN_NAME, NODE_ID, NODE_NAME
+from axonius.consts.plugin_consts import GUI_SYSTEM_CONFIG_COLLECTION, GUI_PLUGIN_NAME, PLUGIN_NAME, NODE_ID
 from axonius.entities import EntityType
 from axonius.plugin_base import PluginBase
 from axonius.types.enforcement_classes import Trigger, ActionRunResults, EntitiesResult, EntityResult, TriggeredReason
@@ -17,7 +17,18 @@ logger = logging.getLogger(f'axonius.{__name__}')
 DEFAULT_INSTANCE = 'Master'
 INSTANCE = 'instance'
 
-INSTANCE_ITEM = {'name': INSTANCE, 'title': 'Instance Name', 'type': 'string'}
+INSTANCE_ITEM = {
+    'name': INSTANCE,
+    'title': 'Instance Name',
+    'type': 'string',
+    'enum': [],
+    'source': {
+        'key': 'all-instances',
+        'options': {
+            'allow-custom-option': False
+        }
+    }
+}
 
 
 # pylint: disable=W0212
@@ -51,30 +62,20 @@ def _get_list_of_nodes_with_online_adapter(adapter_name: str) -> list:
     return nodes_with_adapter
 
 
-def add_node_selection(config_schema: dict, adapter_name: str) -> dict:
+def add_node_selection(config_schema: dict = None) -> dict:
     """
     Adds the appropriate node selection (only nodes with the specific adapter online) dropdown to the action schema
     :param config_schema: The existing schema without the nodes.
     :type config_schema: dict
-    :param adapter_name: The adapter that should be online on the node.
-    :type adapter_name: str
     :return: A schema dict
     """
+    if not config_schema:
+        config_schema = {}
     # Copying schema
     schema = copy.deepcopy(config_schema)
 
     # Setting up default in dropdown
-    all_instances = PluginBase.Instance._get_nodes_table()
     instance_item = copy.deepcopy(INSTANCE_ITEM)
-    nodes_with_online_adapter = _get_list_of_nodes_with_online_adapter(adapter_name)
-
-    if not nodes_with_online_adapter:
-        logger.info(f'Action not available due to no supporting adapters ({adapter_name}) online.')
-        node_names = [{'name': '0', 'title': 'Action not available'}]
-    else:
-        node_names = [{'name': instance[NODE_ID], 'title': instance[NODE_NAME]} for instance in
-                      all_instances if instance[NODE_ID] in nodes_with_online_adapter]
-    instance_item['enum'] = node_names
 
     # Adding instances to schema
     if 'items' in schema:
@@ -96,28 +97,17 @@ def add_node_selection(config_schema: dict, adapter_name: str) -> dict:
     return schema
 
 
-def add_node_default(default_config: dict, adapter_name: str) -> dict:
+def add_node_default(default_config: dict = None) -> dict:
     """
     Adding the instances node default to the default schema dict.
     :param default_config: The existing schema without the default instance to use
     :type default_config: dict
-    :param adapter_name: The adapter that should be online on the instance.
-    :type adapter_name: str
     :return: The correct schema with the instances default.
     """
-    node_containing_adapter = _get_list_of_nodes_with_online_adapter(adapter_name)
 
-    # Making master default if it has the adapter online.
-    if PluginBase.Instance.node_id in node_containing_adapter:
-        default_instance = PluginBase.Instance.node_id
-    else:
-        if node_containing_adapter:
-            # Making the first node that has it online default if master doesn't have it.
-            default_instance = node_containing_adapter[0]
-        else:
-            default_instance = '0'
-
-    default_config[INSTANCE] = default_instance
+    if not default_config:
+        default_config = {}
+    default_config[INSTANCE] = PluginBase.Instance.node_id
     return default_config
 
 

@@ -44,11 +44,11 @@ class ShodanEnrichment(ActionTypeBase):
             ],
             'type': 'array'
         }
-        return add_node_selection(schema, SHODAN_PLUGIN_NAME)
+        return add_node_selection(schema)
 
     @staticmethod
     def default_config() -> dict:
-        return add_node_default({'domain': DEFAULT_DOMAIN}, SHODAN_PLUGIN_NAME)
+        return add_node_default({'domain': DEFAULT_DOMAIN})
 
     def _trigger_shodan_adapter(self):
         adapter_unique_name = self._plugin_base._get_adapter_unique_name(SHODAN_PLUGIN_NAME, self.action_node_id)

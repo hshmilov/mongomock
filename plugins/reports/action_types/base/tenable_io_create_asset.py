@@ -56,7 +56,7 @@ class TenableIoCreateAsset(ActionTypeBase):
             ],
             'type': 'array'
         }
-        return add_node_selection(schema, ADAPTER_NAME)
+        return add_node_selection(schema)
 
     @staticmethod
     def default_config() -> dict:
@@ -67,7 +67,7 @@ class TenableIoCreateAsset(ActionTypeBase):
             'verify_ssl': False,
             'domain': None,
             'https_proxy': None,
-        }, ADAPTER_NAME)
+        })
 
     def _run(self) -> EntitiesResult:
         try:

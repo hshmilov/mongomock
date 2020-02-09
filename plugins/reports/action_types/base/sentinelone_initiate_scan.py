@@ -19,12 +19,11 @@ class SentineloneInitiateScanAction(ActionTypeBase):
 
     @staticmethod
     def config_schema() -> dict:
-        return add_node_selection({}, ADAPTER_NAME)
+        return add_node_selection()
 
     @staticmethod
     def default_config() -> dict:
-        return add_node_default({
-        }, ADAPTER_NAME)
+        return add_node_default()
 
     def _run(self) -> EntitiesResult:
         adapter_unique_name = self._plugin_base._get_adapter_unique_name(ADAPTER_NAME, self.action_node_id)

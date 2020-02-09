@@ -56,7 +56,7 @@ class HaveibeenpwnedEnrichment(ActionTypeBase):
             ],
             'type': 'array'
         }
-        return add_node_selection(schema, HAVEIBEENPWNED_PLUGIN_NAME)
+        return add_node_selection(schema)
 
     @staticmethod
     def default_config() -> dict:
@@ -64,8 +64,7 @@ class HaveibeenpwnedEnrichment(ActionTypeBase):
                                  'https_proxy': None,
                                  'alternative_suffix': None,
                                  'apikey': None,
-                                 'domain_preferred': HAVEIBEENPWNED_DOMAIN},
-                                HAVEIBEENPWNED_PLUGIN_NAME)
+                                 'domain_preferred': HAVEIBEENPWNED_DOMAIN})
 
     def _trigger_haveibeenpwned_adapter(self):
         adapter_unique_name = self._plugin_base._get_adapter_unique_name(

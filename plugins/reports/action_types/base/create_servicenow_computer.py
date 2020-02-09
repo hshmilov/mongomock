@@ -63,7 +63,7 @@ class ServiceNowComputerAction(ActionTypeBase):
             ],
             'type': 'array'
         }
-        return add_node_selection(schema, ADAPTER_NAME)
+        return add_node_selection(schema)
 
     @staticmethod
     def default_config() -> dict:
@@ -75,7 +75,7 @@ class ServiceNowComputerAction(ActionTypeBase):
             'https_proxy': None,
             'cmdb_ci_table': 'cmdb_ci_computer',
             'verify_ssl': True
-        }, ADAPTER_NAME)
+        })
 
     def _create_service_now_computer(self, name, mac_address=None, ip_address=None,
                                      manufacturer=None, os_type=None, serial_number=None,

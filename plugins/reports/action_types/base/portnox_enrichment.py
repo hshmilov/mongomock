@@ -56,12 +56,12 @@ class PortnoxEnrichment(ActionTypeBase):
             ],
             'type': 'array'
         }
-        return add_node_selection(schema, PORTNOX_PLUGIN_NAME)
+        return add_node_selection(schema)
 
     @staticmethod
     def default_config() -> dict:
         return add_node_default({'domain': None, 'username': None,
-                                 'password': None, 'verify_ssl': False}, PORTNOX_PLUGIN_NAME)
+                                 'password': None, 'verify_ssl': False})
 
     def _trigger_portnox(self):
         adapter_unique_name = self._plugin_base._get_adapter_unique_name(PORTNOX_PLUGIN_NAME, self.action_node_id)

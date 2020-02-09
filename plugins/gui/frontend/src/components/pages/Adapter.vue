@@ -6,41 +6,66 @@
     ]"
     class="x-adapter"
   >
-    <x-table-wrapper title="Add or Edit Connections" :loading="loading">
+    <x-table-wrapper
+      title="Add or Edit Connections"
+      :loading="loading"
+    >
       <template slot="actions">
         <x-button
           v-if="selectedServers && selectedServers.length"
           link
           @click="removeConnection"
         >Remove</x-button>
-        <x-button @click="configConnection('new')" id="new_connection" :disabled="isReadOnly">Add Connection</x-button>
+        <x-button
+          id="new_connection"
+          :disabled="isReadOnly"
+          @click="configConnection('new')"
+        >Add Connection</x-button>
       </template>
       <x-table
         slot="table"
+        v-model="selectedServersModel"
         :fields="tableFields"
-        v-model="isReadOnly ? undefined : selectedServers"
         :on-click-row="isReadOnly ? undefined: configConnection"
         :data="adapterClients"
       />
     </x-table-wrapper>
 
     <div class="config-settings">
-      <x-button link class="header" :disabled="isReadOnly" @click="toggleSettings">
-        <svg-icon name="navigation/settings" :original="true" height="20" />Advanced Settings</x-button>
+      <x-button
+        link
+        class="header"
+        :disabled="isReadOnly"
+        @click="toggleSettings"
+      >
+        <svg-icon
+          name="navigation/settings"
+          :original="true"
+          height="20"
+        />Advanced Settings</x-button>
       <div class="content">
-        <x-tabs v-if="currentAdapter && advancedSettings" class="growing-y" ref="tabs">
-          <x-tab v-for="config, configName, i in currentAdapter.config"
-                 :key="i"
-                 :title="config.schema.pretty_name || configName"
-                 :id="configName"
-                 :selected="!i"
+        <x-tabs
+          v-if="currentAdapter && advancedSettings"
+          ref="tabs"
+          class="growing-y"
+        >
+          <x-tab
+            v-for="(config, configName, i) in currentAdapter.config"
+            :id="configName"
+            :key="i"
+            :title="config.schema.pretty_name || configName"
+            :selected="!i"
           >
             <div class="configuration">
-              <x-form :schema="config.schema" v-model="config.config" @validate="validateConfig" />
+              <x-form
+                v-model="config.config"
+                :schema="config.schema"
+                @validate="validateConfig"
+              />
               <x-button
-                @click="saveConfig(configName, config.config)"
                 tabindex="1"
                 :disabled="!configValid"
+                @click="saveConfig(configName, config.config)"
               >Save Config</x-button>
             </div>
           </x-tab>
@@ -70,9 +95,18 @@
             <md-icon>help_outline</md-icon>Help
           </x-button>
         </x-title>
-        <div class="server-error" v-if="serverModal.error">
-          <svg-icon name="symbol/error" :original="true" height="12"></svg-icon>
-          <div class="error-text">{{serverModal.error}}</div>
+        <div
+          v-if="serverModal.error"
+          class="server-error"
+        >
+          <svg-icon
+            name="symbol/error"
+            :original="true"
+            height="12"
+          />
+          <div class="error-text">
+            {{ serverModal.error }}
+          </div>
         </div>
         <x-form
           v-model="serverModal.serverData"
@@ -82,14 +116,6 @@
           @validate="validateServer"
         />
         <div class="double-column">
-          <div v-if="instances && instances.length > 0" id="serverInstancesList">
-            <label for="serverInstance">Choose Instance</label>
-            <x-select
-              id="serverInstance"
-              v-model="serverModal.instanceName"
-              :options="instances"
-            />
-          </div>
           <div>
             <label for="connectionLabel">
               Connection Label
@@ -99,327 +125,383 @@
               id="connectionLabel"
               v-model="serverModal.connectionLabel"
               :maxlength="20"
-            />
+            >
           </div>
+          <x-instances-select
+            id="serverInstance"
+            v-model="serverModal.instanceName"
+            :render-label="true"
+            render-label-text="Choose Instance"
+            :hide-in-one-option="true"
+          />
         </div>
       </div>
       <template slot="footer">
-        <x-button link @click="toggleServerModal">Cancel</x-button>
+        <x-button
+          link
+          @click="toggleServerModal"
+        >Cancel</x-button>
         <x-button
           id="test_reachability"
-          @click="testServer"
           :disabled="!serverModal.valid"
+          @click="testServer"
         >Test Reachability</x-button>
-        <x-button id="save_server" @click="saveServer" :disabled="!serverModal.valid">Save and Connect</x-button>
+        <x-button
+          id="save_server"
+          :disabled="!serverModal.valid"
+          @click="saveServer"
+        >Save and Connect</x-button>
       </template>
     </x-modal>
     <x-modal
       v-if="deleting"
+      approve-text="Delete"
       @close="closeConfirmDelete"
       @confirm="doRemoveServers"
-      approve-text="Delete"
     >
       <div slot="body">
         Are you sure you want to delete this server?
-        <br />
-        <br />
-        <input type="checkbox" id="deleteEntitiesCheckbox" v-model="deleteEntities" />
-        <label for="deleteEntitiesCheckbox">Also delete all associated entities (devices, users)</label>
+        <br>
+        <br>
+        <input
+          id="deleteEntitiesCheckbox"
+          v-model="deleteEntities"
+          type="checkbox"
+        >
+        <label
+          for="deleteEntitiesCheckbox"
+        >Also delete all associated entities (devices, users)</label>
       </div>
     </x-modal>
-    <x-toast v-if="message" v-model="message" :timeout="toastTimeout" />
+    <x-toast
+      v-if="message"
+      v-model="message"
+      :timeout="toastTimeout"
+    />
   </x-page>
 </template>
 
 <script>
-  import xPage from '../axons/layout/Page.vue'
-  import xTableWrapper from '../axons/tables/TableWrapper.vue'
-  import xTable from '../axons/tables/Table.vue'
-  import xTabs from '../axons/tabs/Tabs.vue'
-  import xTab from '../axons/tabs/Tab.vue'
-  import xForm from '../neurons/schema/Form.vue'
-  import xModal from '../axons/popover/Modal.vue'
-  import xSelect from '../axons/inputs/select/Select.vue'
-  import xButton from '../axons/inputs/Button.vue'
-  import xTitle from '../axons/layout/Title.vue'
-  import xToast from '../axons/popover/Toast.vue'
-  import {parseVaultError} from '../../constants/utils'
-  import {FETCH_SYSTEM_CONFIG} from '../../store/actions'
+import { mapActions, mapGetters, mapState } from 'vuex';
+import _get from 'lodash/get';
+import _isEmpty from 'lodash/isEmpty';
+import xPage from '@axons/layout/Page.vue';
+import xTableWrapper from '@axons/tables/TableWrapper.vue';
+import xTable from '@axons/tables/Table.vue';
+import xTabs from '@axons/tabs/Tabs.vue';
+import xTab from '@axons/tabs/Tab.vue';
+import xModal from '@axons/popover/Modal.vue';
+import xButton from '@axons/inputs/Button.vue';
+import xTitle from '@axons/layout/Title.vue';
+import xToast from '@axons/popover/Toast.vue';
+import { parseVaultError } from '@constants/utils';
+import { FETCH_SYSTEM_CONFIG } from '@store/actions';
+import xForm from '@neurons/schema/Form.vue';
 
-    import {mapState, mapGetters, mapActions} from 'vuex'
-    import {
-        FETCH_ADAPTERS, 
-        SAVE_ADAPTER_CLIENT, 
-        ARCHIVE_CLIENT, 
-        TEST_ADAPTER_SERVER, 
-        HINT_ADAPTER_UP
-    } from '../../store/modules/adapters'
-    import {SAVE_PLUGIN_CONFIG} from '../../store/modules/settings'
-    import _get from 'lodash/get'
-    import _isEmpty from 'lodash/isEmpty'
+import {
+  ARCHIVE_CLIENT,
+  FETCH_ADAPTERS,
+  HINT_ADAPTER_UP,
+  SAVE_ADAPTER_CLIENT,
+  TEST_ADAPTER_SERVER,
+} from '../../store/modules/adapters';
+import { SAVE_PLUGIN_CONFIG } from '../../store/modules/settings';
+import { xInstancesSelect } from '../axons/inputs/dynamicSelects';
 
-  export default {
-    name: 'x-adapter',
-    components: {
-      xPage, xTableWrapper, xTable, xTabs, xTab, xForm, xModal, xSelect, xButton, xTitle, xToast
+export default {
+  name: 'XAdapter',
+  components: {
+    xPage,
+    xTableWrapper,
+    xTable,
+    xTabs,
+    xTab,
+    xForm,
+    xModal,
+    xButton,
+    xTitle,
+    xToast,
+    xInstancesSelect,
+  },
+  data() {
+    return {
+      serverModal: {
+        open: false,
+        serverData: {},
+        instanceName: '',
+        connectionLabel: '',
+        error: '',
+        serverName: 'New Server',
+        uuid: null,
+        valid: false,
+      },
+      selectedServers: [],
+      message: '',
+      toastTimeout: 60000,
+      advancedSettings: false,
+      configValid: true,
+      deleting: false, // whether or not the modal for deleting confirmation is displayed
+      deleteEntities: false, // if 'deleting = true' and deleting was confirmed this means that
+      // also the entities of the associated users should be deleted
+    };
+  },
+  computed: {
+    ...mapGetters(['getAdapterById', 'getClientsMap', 'getInstancesMap']),
+    ...mapState({
+      loading(state) {
+        return state.adapters.adapters.fetching;
+      },
+      isReadOnly(state) {
+        const user = state.auth.currentUser.data;
+        if (!user || !user.permissions) return true;
+        return user.permissions.Adapters === 'ReadOnly';
+      },
+      allClients(state) {
+        return state.adapters.clients;
+      },
+      isCyberarkVault(state) {
+        return _get(state, 'configuration.data.global.cyberark_vault', false);
+      },
+    }),
+    selectedServersModel: {
+      get() {
+        return this.isReadOnly ? undefined : this.selectedServers;
+      },
+      set(value) {
+        this.selectedServers = value;
+      },
     },
-    computed: {
-      ...mapGetters(['getAdapterById', 'getClientsMap', 'getInstancesMap']),
-      ...mapState({
-        loading(state) {
-          return state.adapters.adapters.fetching
-        },
-        isReadOnly(state) {
-          let user = state.auth.currentUser.data
-          if (!user || !user.permissions) return true
-          return user.permissions.Adapters === 'ReadOnly'
-        },
-        allClients(state) {
-          return state.adapters.clients
-        },
-        isCyberarkVault(state) {
-          return _get(state, 'configuration.data.global.cyberark_vault', false)
-        }
-      }),
-      adapterId() {
-        return this.$route.params.id
-      },
-      currentAdapter() {
-        return this.getAdapterById(this.adapterId) || {}
-      },
-      title() {
-        return this.currentAdapter.title
-      },
-      adapterLink() {
-        return this.currentAdapter.link
-      },
-      adapterClients() {
-        const clients =  _get(this.currentAdapter, 'clients', [])
-        const instances = this.getInstancesMap
-        const res =  clients.map((c, index) => {
-          const client = this.getClientsMap.get(c)
-          const { node_id } = client
-          const instance = instances.get(node_id)
+    adapterId() {
+      return this.$route.params.id;
+    },
+    currentAdapter() {
+      return this.getAdapterById(this.adapterId) || {};
+    },
+    title() {
+      return this.currentAdapter.title;
+    },
+    adapterLink() {
+      return this.currentAdapter.link;
+    },
+    adapterClients() {
+      const clients = _get(this.currentAdapter, 'clients', []);
+      const instances = this.getInstancesMap;
+      return clients.map((c) => {
+        const client = this.getClientsMap.get(c);
+        // eslint-disable-next-line camelcase
+        const { node_id } = client;
+        const instance = instances.get(node_id);
 
-          return {
-            ...client,
-            ...client.client_config,
-            node_name: instance.node_name
-          }
-        })
-        return res
-      },
-      instances() {
-        const instancesIds =  _get(this.currentAdapter, 'instances', [])
-        return instancesIds.map(instance => {
-          const i = this.getInstancesMap.get(instance)
-          return {
-            name: i.node_id,
-            title: i.node_name
-          }
-        })
-      },
-      adapterSchema() {
-        const currentSchema = _get(this.currentAdapter, 'schema', null)
-        if (currentSchema) currentSchema['useVault'] =  this.isCyberarkVault
-        return currentSchema
-      },
-      tableFields() {
-        if (!this.adapterSchema || !this.adapterSchema.items) return []
-        const fields =  [
-          {name: 'status', title: '', type: 'string', format: 'icon'},
-          {name: 'node_name', title: 'Instance Name', type: 'string'},
-          {name: 'connection_label', title: 'Connection Label', type: 'string'},
-          ...this.adapterSchema.items.filter(field => (field.type !== 'file' && field.format !== 'password'))
-        ]
-        return fields
-
-      },
-      uploadFileEndpoint() {
-        return `adapters/${this.adapterId}/${this.serverModal.instanceName}`
-      }
+        return {
+          ...client,
+          ...client.client_config,
+          node_name: instance.node_name,
+        };
+      });
     },
-    data() {
-      return {
-        serverModal: {
-          open: false,
-          serverData: {},
-          instanceName: '',
-          connectionLabel: '',
-          error: '',
-          serverName: 'New Server',
-          uuid: null,
-          valid: false,
+    instances() {
+      const instancesIds = _get(this.currentAdapter, 'instances', []);
+      return instancesIds.map((instance) => {
+        const i = this.getInstancesMap.get(instance);
+        return {
+          name: i.node_id,
+          title: i.node_name,
+        };
+      });
+    },
+    adapterSchema() {
+      const currentSchema = _get(this.currentAdapter, 'schema', null);
+      if (currentSchema) currentSchema.useVault = this.isCyberarkVault;
+      return currentSchema;
+    },
+    tableFields() {
+      if (!this.adapterSchema || !this.adapterSchema.items) return [];
+      return [
+        {
+          name: 'status',
+          title: '',
+          type: 'string',
+          format: 'icon',
         },
-        selectedServers: [],
-        message: '',
-        toastTimeout: 60000,
-        advancedSettings: false,
-        configValid: true,
-        deleting: false,        // whether or not the modal for deleting confirmation is displayed
-        deleteEntities: false  // if 'deleting = true' and deleting was confirmed this means that
-        // also the entities of the associated users should be deleted
-      }
+        {
+          name: 'node_name',
+          title: 'Instance Name',
+          type: 'string',
+        },
+        {
+          name: 'connection_label',
+          title: 'Connection Label',
+          type: 'string',
+        },
+        ...this.adapterSchema.items.filter((field) => (field.type !== 'file' && field.format !== 'password')),
+      ];
     },
-    methods: {
-      ...mapActions({
-        fetchAdapters: FETCH_ADAPTERS,
-        updateServer: SAVE_ADAPTER_CLIENT,
-        testAdapter: TEST_ADAPTER_SERVER,
-        archiveServer: ARCHIVE_CLIENT,
-        updatePluginConfig: SAVE_PLUGIN_CONFIG,
-        hintAdapterUp: HINT_ADAPTER_UP,
-        fetchConfig: FETCH_SYSTEM_CONFIG
-      }),
-      openHelpLink() {
-        window.open(this.adapterLink, '_blank')
-      },
-      configConnection(clientId) {
-        this.message = ''
-        this.serverModal.valid = true
-        if (clientId === 'new') {
-          this.serverModal = {
-            ...this.serverModal,
-            serverData: {},
-            serverName: 'New Server',
-            uuid: clientId,
-            error: '',
-            valid: false
-          }
-        } else {
-          let client = this.adapterClients.find(c => c.uuid === clientId)
-          this.serverModal = {
-            ...this.serverModal,
-            serverData: {...client.client_config, oldInstanceName: client.node_id},
-            instanceName: client.node_id,
-            serverName: client.client_id,
-            connectionLabel: client.client_config.connection_label,
-            uuid: client.uuid,
-            error: client.error,
-            valid: true
-          }
-          if (client.error && client.error !== "" && client.error.startsWith("cyberark_vault_error")) {
-            let result = parseVaultError(client.error);
-            this.serverModal.serverData[result[1]].error = result[2]
-            this.serverModal.error = result[2]
-          }
-        }
-        this.toggleServerModal()
-      },
-      removeConnection() {
-        if (this.isReadOnly) return
-        this.deleting = true
-      },
-      doRemoveServers() {
-        this.selectedServers.forEach(serverId => this.archiveServer({
-          nodeId: this.adapterClients.find(client => (client.uuid === serverId)).node_id,
-          adapterId: this.adapterId,
-          serverId: serverId,
-          deleteEntities: this.deleteEntities
-        }))
-        this.selectedServers = []
-        this.deleting = false
-      },
-      closeConfirmDelete() {
-        this.deleting = false
-        this.deleteEntities = false
-      },
-      validateServer(valid) {
-        this.serverModal.valid = valid
-      },
-      saveServer() {
-        this.message = 'Connecting to Server...'
-        this.updateServer({
-          adapterId: this.adapterId,
-          client_id: this.serverModal.serverName,
-          serverData: {
-            ...this.serverModal.serverData,
-            instanceName: this.serverModal.instanceName,
-            connection_label: this.serverModal.connectionLabel
-          },
-          uuid: this.serverModal.uuid
-        }).then((updateRes) => {
-          if (this.selectedServers.includes('')) {
-            this.selectedServers.push(updateRes.data.id)
-            this.selectedServers = this.selectedServers.filter(selected => selected !== '')
-          }
-          if (updateRes.data.status === 'error') {
-            this.message = 'Problem connecting. Review error and try again.'
-          } else {
-            this.message = 'Connection established. Data collection initiated...'
-          }
-        }).catch((error)=>{
-          this.message = error.response.data.message
-        })
-        this.toggleServerModal()
-      },
-      testServer() {
-        this.message = 'Testing server connection...'
-        this.testAdapter({
-          adapterId: this.adapterId,
-          serverData: {...this.serverModal.serverData, instanceName: this.serverModal.instanceName},
-          uuid: this.serverModal.uuid
-        }).then((updateRes) => {
-          if (updateRes.data.status === 'error') {
-            if (updateRes.data.type === 'NotImplementedError') {
-              this.message = 'Test reachability is not supported for this adapter.'
-            } else {
-              this.message = 'Problem connecting to server.'
-            }
-          } else {
-            this.message = 'Connection is valid.'
-          }
-          setTimeout(() => {
-            this.message = ''
-          }, 60000)
-        }).catch((error) => {
-          if (error.response.data.type === 'NotImplementedError') {
-            this.message = 'Test reachability is not supported for this adapter.'
-          } else {
-            this.message = 'Problem connecting to server.'
-          }
-          setTimeout(() => {
-            this.message = ''
-          }, 60000)
-        })
-      },
-      toggleServerModal() {
-        this.serverModal.open = !this.serverModal.open
-        if(!this.serverModal.open) this.serverModal.connectionLabel = ''
-      },
-      validateConfig(valid) {
-        this.configValid = valid
-      },
-      saveConfig(configName, config) {
-        this.updatePluginConfig({
-          pluginId: this.adapterId,
-          configName: configName,
-          config: config
-        }).then(() => this.message = 'Adapter configuration saved.')
-      },
-      toggleSettings() {
-        if (this.advancedSettings) {
-          this.$refs.tabs.$el.classList.add('shrinking-y')
-          setTimeout(() => this.advancedSettings = false, 1000)
-        } else {
-          this.advancedSettings = true
-        }
-      },
-      setDefaultInstance () {
-        let instance = this.instances.find(i => i.title === 'Master') || this.instances[0]
-        this.serverModal.instanceName = instance.name
-      }
+    uploadFileEndpoint() {
+      return `adapters/${this.adapterId}/${this.serverModal.instanceName}`;
     },
-    created() {
-      this.fetchConfig()
-      this.hintAdapterUp(this.adapterId)
-      if (_isEmpty(this.currentAdapter)) {
-        this.fetchAdapters().then(this.setDefaultInstance)
-      } else {
-        this.setDefaultInstance()
-      }
+  },
+  created() {
+    this.fetchConfig();
+    this.hintAdapterUp(this.adapterId);
+    if (_isEmpty(this.currentAdapter)) {
+      this.fetchAdapters().then(this.setDefaultInstance);
+    } else {
+      this.setDefaultInstance();
     }
-  }
+  },
+  methods: {
+    ...mapActions({
+      fetchAdapters: FETCH_ADAPTERS,
+      updateServer: SAVE_ADAPTER_CLIENT,
+      testAdapter: TEST_ADAPTER_SERVER,
+      archiveServer: ARCHIVE_CLIENT,
+      updatePluginConfig: SAVE_PLUGIN_CONFIG,
+      hintAdapterUp: HINT_ADAPTER_UP,
+      fetchConfig: FETCH_SYSTEM_CONFIG,
+    }),
+    openHelpLink() {
+      window.open(this.adapterLink, '_blank');
+    },
+    configConnection(clientId) {
+      this.message = '';
+      this.serverModal.valid = true;
+      if (clientId === 'new') {
+        this.serverModal = {
+          ...this.serverModal,
+          serverData: {},
+          serverName: 'New Server',
+          uuid: clientId,
+          error: '',
+          valid: false,
+        };
+      } else {
+        const client = this.adapterClients.find((c) => c.uuid === clientId);
+        this.serverModal = {
+          ...this.serverModal,
+          serverData: { ...client.client_config, oldInstanceName: client.node_id },
+          instanceName: client.node_id,
+          serverName: client.client_id,
+          connectionLabel: client.client_config.connection_label,
+          uuid: client.uuid,
+          error: client.error,
+          valid: true,
+        };
+        if (client.error && client.error !== '' && client.error.startsWith('cyberark_vault_error')) {
+          const result = parseVaultError(client.error);
+          this.serverModal.serverData[result[1]].error = result[2];
+          this.serverModal.error = result[2];
+        }
+      }
+      this.toggleServerModal();
+    },
+    removeConnection() {
+      if (this.isReadOnly) return;
+      this.deleting = true;
+    },
+    doRemoveServers() {
+      this.selectedServers.forEach((serverId) => this.archiveServer({
+        nodeId: this.adapterClients.find((client) => (client.uuid === serverId)).node_id,
+        adapterId: this.adapterId,
+        serverId,
+        deleteEntities: this.deleteEntities,
+      }));
+      this.selectedServers = [];
+      this.deleting = false;
+    },
+    closeConfirmDelete() {
+      this.deleting = false;
+      this.deleteEntities = false;
+    },
+    validateServer(valid) {
+      this.serverModal.valid = valid;
+    },
+    saveServer() {
+      this.message = 'Connecting to Server...';
+      this.updateServer({
+        adapterId: this.adapterId,
+        client_id: this.serverModal.serverName,
+        serverData: {
+          ...this.serverModal.serverData,
+          instanceName: this.serverModal.instanceName,
+          connection_label: this.serverModal.connectionLabel,
+        },
+        uuid: this.serverModal.uuid,
+      }).then((updateRes) => {
+        if (this.selectedServers.includes('')) {
+          if (!this.isReadOnly) this.selectedServers.push(updateRes.data.id);
+          this.selectedServers = this.selectedServers.filter((selected) => selected !== '');
+        }
+        if (updateRes.data.status === 'error') {
+          this.message = 'Problem connecting. Review error and try again.';
+        } else {
+          this.message = 'Connection established. Data collection initiated...';
+        }
+      }).catch((error) => {
+        this.message = error.response.data.message;
+      });
+      this.toggleServerModal();
+    },
+    testServer() {
+      this.message = 'Testing server connection...';
+      this.testAdapter({
+        adapterId: this.adapterId,
+        serverData: { ...this.serverModal.serverData, instanceName: this.serverModal.instanceName },
+        uuid: this.serverModal.uuid,
+      }).then((updateRes) => {
+        if (updateRes.data.status === 'error') {
+          if (updateRes.data.type === 'NotImplementedError') {
+            this.message = 'Test reachability is not supported for this adapter.';
+          } else {
+            this.message = 'Problem connecting to server.';
+          }
+        } else {
+          this.message = 'Connection is valid.';
+        }
+        setTimeout(() => {
+          this.message = '';
+        }, 60000);
+      }).catch((error) => {
+        if (error.response.data.type === 'NotImplementedError') {
+          this.message = 'Test reachability is not supported for this adapter.';
+        } else {
+          this.message = 'Problem connecting to server.';
+        }
+        setTimeout(() => {
+          this.message = '';
+        }, 60000);
+      });
+    },
+    toggleServerModal() {
+      this.serverModal.open = !this.serverModal.open;
+      if (!this.serverModal.open) this.serverModal.connectionLabel = '';
+    },
+    validateConfig(valid) {
+      this.configValid = valid;
+    },
+    saveConfig(configName, config) {
+      this.updatePluginConfig({
+        pluginId: this.adapterId,
+        configName,
+        config,
+      }).then(() => {
+        this.message = 'Adapter configuration saved.';
+        return true;
+      });
+    },
+    toggleSettings() {
+      if (this.advancedSettings) {
+        this.$refs.tabs.$el.classList.add('shrinking-y');
+        setTimeout(() => this.advancedSettings = false, 1000);
+      } else {
+        this.advancedSettings = true;
+      }
+    },
+    setDefaultInstance() {
+      const instance = this.instances.find((i) => i.title === 'Master') || this.instances[0];
+      this.serverModal.instanceName = instance.name;
+    },
+  },
+};
 </script>
 
 <style lang="scss">

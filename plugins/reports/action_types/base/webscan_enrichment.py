@@ -57,12 +57,12 @@ class WebscanEnrichment(ActionTypeBase):
             ],
             'type': 'array'
         }
-        return add_node_selection(action_schema, WEBSCAN_PLUGIN_NAME)
+        return add_node_selection(action_schema)
 
     @staticmethod
     def default_config() -> dict:
         default_schema = {'port': DEFAULT_SSL_PORT, 'https_proxy': None}
-        return add_node_default(default_schema, WEBSCAN_PLUGIN_NAME)
+        return add_node_default(default_schema)
 
     def __run(self) -> EntitiesResult:
         for chunk in chunks(CHUNK_SIZE, self._internal_axon_ids):

@@ -114,7 +114,7 @@ class ServiceNowIncidentPerEntity(ActionTypeBase):
             ],
             'type': 'array'
         }
-        return add_node_selection(schema, ADAPTER_NAME)
+        return add_node_selection(schema)
 
     @staticmethod
     def default_config() -> dict:
@@ -134,7 +134,7 @@ class ServiceNowIncidentPerEntity(ActionTypeBase):
             'assignment_group': None,
             'category': None,
             'subcategory': None
-        }, ADAPTER_NAME)
+        })
 
     # pylint: disable=too-many-arguments
     def _create_service_now_incident(self, short_description, description, impact, u_incident_type,

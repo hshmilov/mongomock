@@ -76,11 +76,11 @@ class ChangeLdapAttribute(ActionTypeBase):
             ],
             'type': 'array'
         }
-        return add_node_selection(schema, ACTIVE_DIRECTORY_PLUGIN_NAME)
+        return add_node_selection(schema)
 
     @staticmethod
     def default_config() -> dict:
-        return add_node_default({'use_adapter': False}, ACTIVE_DIRECTORY_PLUGIN_NAME)
+        return add_node_default({'use_adapter': False})
 
     def _run(self) -> EntitiesResult:
         credentials_exist = self._config.get('username') and self._config.get('password')

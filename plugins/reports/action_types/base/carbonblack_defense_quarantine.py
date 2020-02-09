@@ -25,12 +25,11 @@ class CarbonblackDefenseQuarantineAction(ActionTypeBase):
             ],
             'type': 'array'
         }
-        return add_node_selection(schema, ADAPTER_NAME)
+        return add_node_selection(schema)
 
     @staticmethod
     def default_config() -> dict:
-        return add_node_default({
-        }, ADAPTER_NAME)
+        return add_node_default()
 
     def _run(self) -> EntitiesResult:
         adapter_unique_name = self._plugin_base._get_adapter_unique_name(
