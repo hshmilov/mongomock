@@ -685,7 +685,6 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
             'timestamp': current_time,
             'user_id': '*',
             UPDATED_BY_FIELD: '*',
-            LAST_UPDATED_FIELD: current_time,
             PREDEFINED_FIELD: True
         }, upsert=True)
 
