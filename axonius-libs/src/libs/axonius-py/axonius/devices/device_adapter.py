@@ -33,7 +33,7 @@ AGENTS = namedtuple('Agents', (
     'cylance', 'datadog', 'desktop_central', 'dropbox', 'druva', 'endgame', 'ensilo', 'epo', 'fireeye_hx',
     'forcepoint_csv', 'imperva_dam', 'jumpcloud', 'kaseya', 'lansweeper', 'minerva', 'mobi_control', 'mobileiron',
     'observeit', 'opswat', 'paloalto_cortex', 'qualys_scans', 'quest_kace', 'redcloak', 'sccm',
-    'secdo', 'sentinelone', 'signalsciences', 'traps',
+    'secdo', 'sentinelone', 'signalsciences', 'traps', 'eclypsium',
     'sophos', 'symantec', 'symantec_cloud_workload', 'symantec_ee', 'symantec_12', 'tanium', 'tenable_io', 'tripwire',
     'truefort', 'guardicore', 'deep_security', 'illusive', 'bitdefender',
     'twistlock', 'webroot', 'aqua', 'symantec_dlp', 'bitlocker', 'wazuh', 'wsus'
@@ -51,7 +51,7 @@ AGENT_NAMES = AGENTS(
     imperva_dam='Imperva DAM Agent', jumpcloud='JumpCloud Agent', kaseya='Kaseya Agent', lansweeper='Lansweeper Agent',
     minerva='Minerva Labs Agent', mobi_control='MobiControl Agent', mobileiron='MobileIron Client',
     observeit='ObserveIT Client', opswat='OPSWAT Agent', paloalto_cortex='Palo Alto Networks Cortex Agent',
-    sccm='Microsoft SCCM Client',
+    sccm='Microsoft SCCM Client', eclypsium='Eclypsium Agent',
     qualys_scans='Qualys Agent', quest_kace='Quest Client', redcloak='Redcloak Agent', secdo='Secdo Agent',
     sentinelone='SentinelOne Agent', signalsciences='Signalsciences Agent',
     sophos='Sophos Agent', symantec='Symantec SEP 14 Agent', illusive='Illusive Agent',

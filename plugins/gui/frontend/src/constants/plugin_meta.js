@@ -158,6 +158,10 @@ export const pluginMeta = {
         link: 'https://docs.axonius.com/docs/observium',
         description: 'Observium is an auto-discovering network monitoring platform supporting a wide range of device types, platforms and operating systems.'
     },
+    eclypsium_adapter: {
+        title: 'Eclypsium',
+        description: 'Eclypsium protects the foundation of your computing infrastructure, controlling risks and stopping threats to enterprise firmware and hardware devices.'
+    },
     scep_adapter: {
         title: 'Microsoft SCEP',
         description: 'Microsoft System Center Endpoint Protection (SCEP) is an antivirus/antimalware product for Windows environments that includes a Windows Firewall manager. ... Designed for midsize to enterprise environments, SCEP is not a practical endpoint protection option for small organizations.'

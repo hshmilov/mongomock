@@ -158,6 +158,7 @@ DOCKER_PORTS = {
     'paloalto-xdr-adapter':             6123,
     'arsenal-adapter':                  6130,
     'defender-atp-adapter':             6131,
+    'eclypsium-adapter':                6132,
     'diag-w':                           6665,  # reserved
     'diag-l':                           6666,  # reserved
     'code42-adapter':                   6667,

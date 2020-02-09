@@ -28,6 +28,7 @@ class OmnivistaAdapter(AdapterBase):
         running_from = Field(str, 'Running From')
         changes = ListField(str, 'Changes')
         chassis_name = Field(str, 'Chassis Name')
+        allow_port_disabling = Field(bool, 'Allow Port Disabling')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -136,12 +137,23 @@ class OmnivistaAdapter(AdapterBase):
                 device.changes = [changes_raw.strip() for changes_raw in device_raw.get('changes').split(',')]
             device.traps = device_raw.get('traps')
             device.location = device_raw.get('location')
+            device.allow_port_disabling = device_raw.get('allowPortDisabling') \
+                if isinstance(device_raw.get('allowPortDisabling'), bool) else None
             others_raw = device_raw.get('others')
             if not isinstance(others_raw, dict):
                 others_raw = {}
             device.chassis_name = others_raw.get('ChassisName')
             if others_raw.get('lastReboot'):
                 device.set_boot_time(boot_time=others_raw.get('lastReboot'))
+            nics_raw = others_raw.get('IpAddressesInfo')
+            if not isinstance(nics_raw, list):
+                nics_raw = []
+            for nic_raw in nics_raw:
+                try:
+                    if nic_raw.get('ipAddr') or nic_raw.get('macAddress'):
+                        device.add_nic(mac=nic_raw.get('macAddress'), ips=[nic_raw.get('ipAddr')])
+                except Exception:
+                    logger.exception(f'Problem with nic_raw {nic_raw}')
             device.first_seen = parse_date(device_raw.get('discoveredDateTime'))
             device.device_version = device_raw.get('version')
             device.last_seen = parse_date(device_raw.get('lastKnownUpAt'))
