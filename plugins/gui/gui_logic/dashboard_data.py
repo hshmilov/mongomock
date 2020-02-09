@@ -493,11 +493,23 @@ def _match_result_item_to_filters(extra_data: list, filters: dict) -> bool:
     :return: boolean representing if item pass the check
     """
     is_item_legit = False
+    # for each set of result, expected only one.
+    # its because the aggregation must output a list in the group stage
     for data in extra_data:
         is_valid = True
+        # for each requested filter name
         for filter_name in filters:
+            # the user can ask several matches to the field
+            # if one match not exist the item wont pass this test
             for match in filters[filter_name]:
-                if match.lower() not in get_string_from_field_value(data[filter_name]).lower():
+                try:
+                    # we come across an error when the data in extra data is not in a form of dict
+                    # wrap it in try expect and log the error for further investigations
+                    if match.lower() not in get_string_from_field_value(data[filter_name]).lower():
+                        is_valid = False
+                except TypeError:
+                    logger.error(f'segmentation data return unexpected type:{type(data)} data:{data} '
+                                 f'filter_name:{filter_name}')
                     is_valid = False
         if is_valid:
             is_item_legit = True
