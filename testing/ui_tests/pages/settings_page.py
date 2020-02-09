@@ -121,6 +121,7 @@ class SettingsPage(Page):
 
     DISCOVERY_SCHEDULE_MODE_DDL = '.x-select .x-select-trigger'
     DISCOVERY_SCHEDULE_TIME_PICKER_INPUT_CSS = '.time-picker-text input'
+    DISCOVERY_SCHEDULE_INTERVAL_INPUT_CSS = '#system_research_rate'
     DISCOVERY_SCHEDULE_INTERVAL_TEXT = 'Interval'
     DISCOVERY_SCHEDULE_DAILY_TEXT = 'Daily'
 
@@ -266,11 +267,14 @@ class SettingsPage(Page):
     def click_generic_save_button(self, button_id):
         self.click_button_by_id(button_id, scroll_into_view_container=self.TABS_BODY_CSS)
 
-    def fill_schedule_rate(self, text):
-        self.fill_text_field_by_element_id(self.SCHEDULE_RATE_ID, text)
-
     def find_schedule_rate_error(self):
-        self.find_element_by_text('\'Schedule rate (hours)\' has an illegal value')
+        return self.find_element_by_text('\'Hours between discovery cycles\' has an illegal value')
+
+    def find_schedule_date_error(self):
+        return self.find_element_by_text('\'Daily discovery time\' has an illegal value')
+
+    def fill_schedule_rate(self, text):
+        self.fill_text_field_by_css_selector(self.DISCOVERY_SCHEDULE_INTERVAL_INPUT_CSS, text)
 
     def fill_schedule_date(self, text):
         self.fill_text_field_by_css_selector(self.DISCOVERY_SCHEDULE_TIME_PICKER_INPUT_CSS, text)
@@ -826,27 +830,64 @@ class SettingsPage(Page):
         self.click_save_button()
         self.wait_for_saved_successfully_toaster()
 
-    def find_discovery_mode_dropdown(self):
-        return self.driver.find_element_by_css_selector(self.DISCOVERY_SCHEDULE_MODE_DDL)
-
-    def set_discovery_mode_dropdown_to_rate(self):
-        self.select_option_without_search(self.DISCOVERY_SCHEDULE_MODE_DDL,
-                                          self.SELECT_OPTION_CSS,
-                                          self.DISCOVERY_SCHEDULE_INTERVAL_TEXT)
-
-    def set_discovery_mode_dropdown_to_date(self):
-        self.select_option_without_search(self.DISCOVERY_SCHEDULE_MODE_DDL,
-                                          self.SELECT_OPTION_CSS,
-                                          self.DISCOVERY_SCHEDULE_DAILY_TEXT)
-
-    def set_discovery_mode_to_rate_value(self, rate_hour_value):
-        self.driver.fill_schedule_rate(rate_hour_value)
-
-    def set_discovery_mode_to_date_value(self, time_of_day_value):
-        self.driver.fill_schedule_rate(time_of_day_value)
-
     def get_discovery_rate_value(self):
-        return self.driver.find_element_by_id('system_research_rate').get_attribute('value')
+        return self.driver.find_element_by_id(self.SCHEDULE_RATE_ID).get_attribute('value')
 
     def get_selected_discovery_mode(self):
         return self.find_discovery_mode_dropdown().text
+
+    def find_discovery_mode_dropdown(self):
+        self.wait_for_element_present_by_css(self.DISCOVERY_SCHEDULE_MODE_DDL)
+        return self.driver.find_element_by_css_selector(self.DISCOVERY_SCHEDULE_MODE_DDL)
+
+    def get_discovery_mode_selected_item(self):
+        return self.find_discovery_mode_dropdown().text
+
+    def set_discovery_mode_dropdown_to_date(self):
+        if self.get_discovery_mode_selected_item() != self.DISCOVERY_SCHEDULE_DAILY_TEXT:
+            self.select_option_without_search(self.DISCOVERY_SCHEDULE_MODE_DDL,
+                                              self.SELECT_OPTION_CSS,
+                                              self.DISCOVERY_SCHEDULE_DAILY_TEXT)
+
+    def set_discovery_mode_dropdown_to_interval(self):
+        if self.get_discovery_mode_selected_item() != self.DISCOVERY_SCHEDULE_INTERVAL_TEXT:
+            self.select_option_without_search(self.DISCOVERY_SCHEDULE_MODE_DDL,
+                                              self.SELECT_OPTION_CSS,
+                                              self.DISCOVERY_SCHEDULE_INTERVAL_TEXT)
+
+    def set_discovery__to_interval_value(self, interval=0, negative_flow=False):
+        self._set_discovery_schedule_settings(mode=self.DISCOVERY_SCHEDULE_INTERVAL_TEXT,
+                                              time_value=interval,
+                                              negative_flow=negative_flow)
+
+    def set_discovery__to_time_of_day(self, time_of_day=0, negative_flow=False):
+        self._set_discovery_schedule_settings(mode=self.DISCOVERY_SCHEDULE_DAILY_TEXT,
+                                              time_value=time_of_day,
+                                              negative_flow=negative_flow)
+
+    def _set_discovery_schedule_settings(self, mode='', time_value=0, negative_flow=False):
+        self.switch_to_page()
+
+        if mode == self.DISCOVERY_SCHEDULE_INTERVAL_TEXT:
+            self.set_discovery_mode_dropdown_to_interval()
+            self.set_discovery_mode_to_rate_value(time_value)
+
+        elif mode == self.DISCOVERY_SCHEDULE_DAILY_TEXT:
+            self.set_discovery_mode_dropdown_to_date()
+            self.set_discovery_mode_to_date_value(time_value)
+
+        else:
+            raise RuntimeError('Invalid discovery schedule mode ')
+
+        if negative_flow:
+            # click to get error message display
+            self.click_save_button()
+            assert not self.is_save_button_enabled()
+        else:
+            self.save_and_wait_for_toaster()
+
+    def set_discovery_mode_to_rate_value(self, rate_hour_value):
+        self.fill_schedule_rate(rate_hour_value)
+
+    def set_discovery_mode_to_date_value(self, time_of_day_value):
+        self.fill_schedule_date(time_of_day_value)

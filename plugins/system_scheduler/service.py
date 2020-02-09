@@ -76,9 +76,10 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
         self.__realtime_lock = threading.Lock()
 
         executors = {'default': ThreadPoolExecutorApscheduler(1)}
+
         self._research_phase_scheduler = LoggedBackgroundScheduler(executors=executors)
         self._research_phase_scheduler.add_job(func=self._trigger,
-                                               trigger=IntervalTrigger(hours=self.__system_research_rate),
+                                               trigger=self.get_research_trigger_by_mode(),
                                                name=scheduler_consts.RESEARCH_THREAD_ID,
                                                id=scheduler_consts.RESEARCH_THREAD_ID,
                                                max_instances=1)
