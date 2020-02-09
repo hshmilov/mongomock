@@ -1,4 +1,5 @@
 import { REQUEST_API, downloadFile } from '../actions';
+import { RESET_DEVICES_MERGED_DATA_BY_ID } from '@store/modules/devices';
 
 export const FETCH_LIFECYCLE = 'FETCH_LIFECYCLE';
 export const UPDATE_LIFECYCLE = 'UPDATE_LIFECYCLE';
@@ -202,10 +203,15 @@ export const dashboard = {
     },
   },
   actions: {
-    [FETCH_LIFECYCLE]({ dispatch }) {
+    [FETCH_LIFECYCLE]({ dispatch, commit, state }) {
+      const currentLifecycleStatus = state.lifecycle.data.status;
       return dispatch(REQUEST_API, {
         rule: 'dashboard/lifecycle',
         type: UPDATE_LIFECYCLE,
+      }).then(() => {
+        if (currentLifecycleStatus !== 'done' && state.lifecycle.data.status === 'done') {
+          commit(RESET_DEVICES_MERGED_DATA_BY_ID);
+        }
       });
     },
     [FETCH_DISCOVERY_DATA]({ dispatch, state }, payload) {
