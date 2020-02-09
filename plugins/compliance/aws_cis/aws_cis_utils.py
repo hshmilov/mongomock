@@ -1,6 +1,6 @@
 import logging
 from functools import wraps
-from typing import Optional
+from typing import Optional, List
 
 from axonius.entities import EntityType
 from axonius.plugin_base import PluginBase
@@ -74,3 +74,7 @@ def get_count_incompliant_cis_rule(
                 }
         }
     ).count()
+
+
+def errors_to_gui(errors: List[str]):
+    return '\n'.join([f'- {x}' for x in errors])

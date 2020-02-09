@@ -11,7 +11,7 @@ from axonius.clients.aws.consts import REGIONS_NAMES
 from axonius.entities import EntityType
 from compliance.aws_cis.account_report import AccountReport, RuleStatus
 from compliance.aws_cis.aws_cis_utils import aws_cis_rule, bad_api_response, good_api_response, \
-    get_api_error, get_api_data, get_count_incompliant_cis_rule
+    get_api_error, get_api_data, get_count_incompliant_cis_rule, errors_to_gui
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -69,12 +69,14 @@ class CISAWSCategory4:
                                 and '0.0.0.0/0' in str(inbound_rules['IpRanges']):
                             bad_security_groups.append(f'Security group "{security_group["GroupName"]}" '
                                                        f'({security_group["GroupId"]}) in region '
-                                                       f'{security_group["region_name"]} opens port 22 to the world')
+                                                       f'{security_group["region_name"]} allow ingress '
+                                                       f'access to port 22 to the whole world')
                     except Exception:
                         if str(inbound_rules['IpProtocol']) == '-1' and '0.0.0.0/0' in str(inbound_rules['IpRanges']):
                             bad_security_groups.append(f'Security group "{security_group["GroupName"]}" '
                                                        f'({security_group["GroupId"]}) in region '
-                                                       f'{security_group["region_name"]} opens all ports to the world')
+                                                       f'{security_group["region_name"]} allow ingress '
+                                                       f'access in all ports to the whole world')
 
         if bad_security_groups:
             self.report.add_rule(
@@ -82,7 +84,7 @@ class CISAWSCategory4:
                 rule_section,
                 (len(bad_security_groups), len(data)),
                 get_count_incompliant_cis_rule(EntityType.Devices, self.account_id, rule_section),
-                '\n'.join(bad_security_groups),
+                errors_to_gui(bad_security_groups),
                 {
                     'type': 'devices',
                     'query': f'specific_data == match([plugin_name == \'aws_adapter\' and '
@@ -96,7 +98,7 @@ class CISAWSCategory4:
                 rule_section,
                 (0, len(data)),
                 0,
-                '\n'.join(bad_security_groups)
+                ''
             )
 
     @aws_cis_rule('4.2')
@@ -133,7 +135,7 @@ class CISAWSCategory4:
                 rule_section,
                 (len(bad_security_groups), len(data)),
                 get_count_incompliant_cis_rule(EntityType.Devices, self.account_id, rule_section),
-                '\n'.join(bad_security_groups),
+                errors_to_gui(bad_security_groups),
                 {
                     'type': 'devices',
                     'query': f'specific_data == match([plugin_name == \'aws_adapter\' and '
@@ -147,7 +149,7 @@ class CISAWSCategory4:
                 rule_section,
                 (0, len(data)),
                 0,
-                '\n'.join(bad_security_groups)
+                ''
             )
 
     @aws_cis_rule('4.3')
@@ -183,7 +185,7 @@ class CISAWSCategory4:
                 rule_section,
                 (len(bad_default_security_groups), len(all_default_security_groups)),
                 get_count_incompliant_cis_rule(EntityType.Devices, self.account_id, rule_section),
-                '\n'.join(bad_default_security_groups),
+                errors_to_gui(bad_default_security_groups),
                 {
                     'type': 'devices',
                     'query': f'specific_data == match([plugin_name == \'aws_adapter\' and '

@@ -1,18 +1,18 @@
 """
 AWS Cis helpers
 """
+# pylint: disable=too-many-branches
+import datetime
 import logging
 from typing import List
 
-from aws_adapter.connection.structures import AWSUserAdapter, AWSDeviceAdapter, AWSSecurityGroup
-
+from aws_adapter.connection.structures import AWSUserAdapter, AWSDeviceAdapter, AWSSecurityGroup, AWSIAMAccessKey, \
+    AWSIAMPolicy
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
 def append_aws_cis_data_to_device(device: AWSDeviceAdapter):
-    device.aws_cis_incompliant = []
-
     device_type = device.get_field_safe('aws_device_type')
 
     if device_type == 'S3':
@@ -49,4 +49,58 @@ def append_aws_cis_data_to_device(device: AWSDeviceAdapter):
 
 
 def append_aws_cis_data_to_user(user: AWSUserAdapter):
-    user.aws_cis_incompliant = []
+    username: str = user.get_field_safe('username')
+    a_month_ago: datetime.datetime = datetime.datetime.utcnow().astimezone(
+        datetime.timezone.utc) - datetime.timedelta(days=30)
+    a_3_months_ago: datetime.datetime = datetime.datetime.utcnow().astimezone(
+        datetime.timezone.utc) - datetime.timedelta(days=90)
+    password_last_used: datetime.datetime = user.get_field_safe('user_pass_last_used')
+    access_keys: List[AWSIAMAccessKey] = user.get_field_safe('user_attached_keys') or []
+    is_password_enabled = user.get_field_safe('user_is_password_enabled')
+
+    if username.endswith(':root'):
+        if password_last_used and password_last_used > a_month_ago:
+            user.add_aws_cis_incompliant_rule('1.1')
+        else:
+            for access_key in access_keys:
+                access_key_last_used_time = access_key.get_field_safe('last_used_time')
+                if access_key_last_used_time and access_key_last_used_time > a_month_ago:
+                    user.add_aws_cis_incompliant_rule('1.1')
+                    break
+
+        for access_key in access_keys:
+            if access_key.get_field_safe('status') == 'Active':
+                user.add_aws_cis_incompliant_rule('1.12')
+                break
+
+        if user.get_field_safe('has_associated_mfa_devices') is True:
+            user.add_aws_cis_incompliant_rule('1.13')
+
+        if user.get_field_safe('uses_virtual_mfa') is True:
+            user.add_aws_cis_incompliant_rule('1.14')
+
+    if is_password_enabled is True and not user.get_field_safe('has_associated_mfa_devices'):
+        user.add_aws_cis_incompliant_rule('1.2')
+
+    if is_password_enabled is True and password_last_used and password_last_used < a_3_months_ago:
+        user.add_aws_cis_incompliant_rule('1.3')
+    else:
+        for access_key in access_keys:
+            access_key_last_used_time = access_key.get_field_safe('last_used_time')
+            if access_key.get_field_safe('status') == 'Active' and \
+                    access_key_last_used_time and access_key_last_used_time < a_3_months_ago:
+                user.add_aws_cis_incompliant_rule('1.3')
+                break
+
+    for access_key in access_keys:
+        access_key_last_rotated = access_key.get_field_safe('create_date')
+        if access_key.get_field_safe('status') == 'Active' and \
+                access_key_last_rotated and access_key_last_rotated < a_3_months_ago:
+            user.add_aws_cis_incompliant_rule('1.4')
+            break
+
+    user_attached_policies: List[AWSIAMPolicy] = user.get_field_safe('user_attached_policies') or []
+    for user_attached_policy in user_attached_policies:
+        if user_attached_policy.get_field_safe('policy_type') in ['Managed', 'Inline']:
+            user.add_aws_cis_incompliant_rule('1.16')
+            break

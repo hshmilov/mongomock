@@ -1,7 +1,6 @@
 import logging
 
 from axonius.consts import plugin_consts
-from axonius.consts.gui_consts import FeatureFlagsNames, CloudComplianceNames
 from axonius.consts.plugin_subtype import PluginSubtype
 from axonius.mixins.triggerable import Triggerable, RunIdentifier
 from axonius.plugin_base import PluginBase
@@ -17,15 +16,11 @@ class ComplianceService(Triggerable, PluginBase):
                          requested_unique_plugin_name=plugin_consts.COMPLIANCE_PLUGIN_NAME, *args, **kwargs)
 
     def _triggered(self, job_name: str, post_json: dict, run_identifier: RunIdentifier, *args):
-        if job_name != 'execute':
+        if job_name not in ['execute', 'execute_force']:
             raise RuntimeError('Job name is wrong')
 
         try:
-            cloud_compliance_settings = self.feature_flags_config().get(FeatureFlagsNames.CloudCompliance) or {}
-            # If we are in trial, or if the cloud compliance feature has been enabled, run this.
-            is_cloud_compliance_enabled = cloud_compliance_settings.get(CloudComplianceNames.Enabled)
-            is_cloud_compliance_visible = cloud_compliance_settings.get(CloudComplianceNames.Visible)
-            if is_cloud_compliance_visible and (self.is_in_trial() or is_cloud_compliance_enabled):
+            if job_name == 'execute_force' or self.should_cloud_compliance_run():
                 logger.info(f'Running Compliance Report..')
                 self.run_compliance_report()
             else:

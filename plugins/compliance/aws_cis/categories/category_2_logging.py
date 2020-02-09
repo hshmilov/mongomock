@@ -16,7 +16,7 @@ from axonius.clients.aws.consts import REGIONS_NAMES
 from axonius.utils.datetime import parse_date
 from compliance.aws_cis.account_report import AccountReport, RuleStatus
 from compliance.aws_cis.aws_cis_utils import aws_cis_rule, \
-    get_api_error, get_api_data, AWS_CIS_DEFAULT_REGION
+    get_api_error, get_api_data, AWS_CIS_DEFAULT_REGION, errors_to_gui
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -108,7 +108,7 @@ class CISAWSCategory2:
                 rule_section,
                 (len(errors), num_of_cloudtrails),
                 0,
-                '\n'.join(errors)
+                errors_to_gui(errors)
             )
         else:
             self.report.add_rule(
@@ -191,7 +191,7 @@ class CISAWSCategory2:
                 rule_section,
                 (len(errors), num_of_cloudtrails),
                 len(errors),
-                '\n'.join(errors),
+                errors_to_gui(errors),
                 {
                     'type': 'devices',
                     'query': f'(adapters_data.aws_adapter.aws_cis_incompliant.rule_section == "{rule_section}")'
@@ -235,7 +235,10 @@ class CISAWSCategory2:
                 response = cloudtrail_client.get_trail_status(Name=cloudtrail.get('TrailARN'))
                 latest_delivery_time = parse_date(response.get('LatestcloudwatchLogdDeliveryTime'))
                 a_day_ago = datetime.datetime.utcnow().astimezone(datetime.timezone.utc) - datetime.timedelta(days=1)
-                if not latest_delivery_time or latest_delivery_time < a_day_ago:
+                if not latest_delivery_time:
+                    errors.append(f'CloudTrail "{cloudtrail.get("Name")}" ({cloudtrail.get("TrailARN")}): '
+                                  f'Latest Delivery time does not exist')
+                elif latest_delivery_time and latest_delivery_time < a_day_ago:
                     errors.append(f'CloudTrail "{cloudtrail.get("Name")}" ({cloudtrail.get("TrailARN")}): '
                                   f'Latest Delivery time is too old: {latest_delivery_time}')
                     continue
@@ -246,7 +249,7 @@ class CISAWSCategory2:
                 rule_section,
                 (len(errors), num_of_cloudtrails),
                 0,
-                '\n'.join(errors)
+                errors_to_gui(errors)
             )
         else:
             self.report.add_rule(
@@ -311,7 +314,7 @@ class CISAWSCategory2:
                 rule_section,
                 (len(errors), len(self.all_regions)),
                 0,
-                '\n'.join(errors)
+                errors_to_gui(errors)
             )
         else:
             self.report.add_rule(
@@ -369,7 +372,7 @@ class CISAWSCategory2:
                 rule_section,
                 (len(errors), num_of_cloudtrails),
                 len(errors),
-                '\n'.join(errors),
+                errors_to_gui(errors),
                 {
                     'type': 'devices',
                     'query': f'(adapters_data.aws_adapter.aws_cis_incompliant.rule_section == "{rule_section}")'
@@ -414,7 +417,7 @@ class CISAWSCategory2:
                 rule_section,
                 (len(errors), num_of_cloudtrails),
                 0,
-                '\n'.join(errors)
+                errors_to_gui(errors)
             )
         else:
             self.report.add_rule(
@@ -458,7 +461,7 @@ class CISAWSCategory2:
                 rule_section,
                 (len(errors), num_of_keys),
                 0,
-                '\n'.join(errors)
+                errors_to_gui(errors)
             )
         else:
             self.report.add_rule(
@@ -515,7 +518,7 @@ class CISAWSCategory2:
                 rule_section,
                 (len(errors), num_of_vpcs),
                 0,
-                '\n'.join(errors)
+                errors_to_gui(errors)
             )
         else:
             self.report.add_rule(

@@ -1,6 +1,7 @@
 """
 Contains all the scored rules for the "IAM" Category of AWS CIS
 """
+# pylint: disable=invalid-triple-quote
 import csv
 import datetime
 import logging
@@ -12,7 +13,7 @@ from axonius.clients.aws.aws_clients import get_boto3_client_by_session
 from axonius.utils.datetime import parse_date
 from compliance.aws_cis.account_report import AccountReport, RuleStatus
 from compliance.aws_cis.aws_cis_utils import bad_api_response, good_api_response, get_api_error, aws_cis_rule, \
-    AWS_CIS_DEFAULT_REGION, get_api_data
+    AWS_CIS_DEFAULT_REGION, get_api_data, errors_to_gui
 
 logger = logging.getLogger(f'axonius.{__name__}')
 CREDS_REPORT_DELAY_TIME_IN_SECONDS = 2
@@ -78,6 +79,7 @@ class CISAWSCategory1:
         self.credential_report = get_credential_report(self.iam_client)
         self.password_policy = get_password_policy(self.iam_client)
         self.account_summary = get_account_summary(self.iam_client)
+        self.account_id = account_dict.get('account_id_number')
 
     @aws_cis_rule('1.1')
     def check_cis_aws_1_1(self, **kwargs):
@@ -118,7 +120,13 @@ class CISAWSCategory1:
                         rule_section,
                         (1, 1),
                         0,
-                        '\n'.join(error_messages)
+                        errors_to_gui(error_messages),
+                        {
+                            'type': 'users',
+                            'query': f'specific_data == match([plugin_name == \'aws_adapter\' and '
+                                     f'(data.aws_cis_incompliant.rule_section == "{rule_section}") and '
+                                     f'(data.aws_account_id == {self.account_id or 0})])'
+                        }
                     )
                 else:
                     self.report.add_rule(
@@ -157,11 +165,12 @@ class CISAWSCategory1:
                 rule_section,
                 (len(failed_users), len(data)),
                 len(failed_users),
-                '\n'.join(failed_users),
+                errors_to_gui(failed_users),
                 {
                     'type': 'users',
-                    'query': '(adapters_data.aws_adapter.user_is_password_enabled == true) and '
-                             '(adapters_data.aws_adapter.has_associated_mfa_devices == false)'
+                    'query': f'specific_data == match([plugin_name == \'aws_adapter\' and '
+                             f'(data.aws_cis_incompliant.rule_section == "{rule_section}") and '
+                             f'(data.aws_account_id == {self.account_id or 0})])'
                 }
             )
         else:
@@ -233,10 +242,12 @@ class CISAWSCategory1:
                 rule_section,
                 (failed_entities, overall_entities),
                 failed_users,
-                '\n'.join(error_messages),
+                errors_to_gui(error_messages),
                 {
                     'type': 'users',
-                    'query': 'TBD'
+                    'query': f'specific_data == match([plugin_name == \'aws_adapter\' and '
+                             f'(data.aws_cis_incompliant.rule_section == "{rule_section}") and '
+                             f'(data.aws_account_id == {self.account_id or 0})])'
                 }
             )
         else:
@@ -298,10 +309,12 @@ class CISAWSCategory1:
                 rule_section,
                 (failed_entities, overall_entities),
                 failed_users,
-                '\n'.join(error_messages),
+                errors_to_gui(error_messages),
                 {
                     'type': 'users',
-                    'query': 'TBD'
+                    'query': f'specific_data == match([plugin_name == \'aws_adapter\' and '
+                             f'(data.aws_cis_incompliant.rule_section == "{rule_section}") and '
+                             f'(data.aws_account_id == {self.account_id or 0})])'
                 }
             )
         else:
@@ -327,7 +340,7 @@ class CISAWSCategory1:
                     rule_section,
                     (1, 1),
                     0,
-                    'The password policy does not exist'
+                    'Password policy does not exist'
                 )
             else:
                 self.report.add_rule_error(rule_section, error)
@@ -365,7 +378,7 @@ class CISAWSCategory1:
                     rule_section,
                     (1, 1),
                     0,
-                    'The password policy does not exist'
+                    'Password policy does not exist'
                 )
             else:
                 self.report.add_rule_error(rule_section, error)
@@ -403,7 +416,7 @@ class CISAWSCategory1:
                     rule_section,
                     (1, 1),
                     0,
-                    'The password policy does not exist'
+                    'Password policy does not exist'
                 )
             else:
                 self.report.add_rule_error(rule_section, error)
@@ -441,7 +454,7 @@ class CISAWSCategory1:
                     rule_section,
                     (1, 1),
                     0,
-                    'The password policy does not exist'
+                    'Password policy does not exist'
                 )
             else:
                 self.report.add_rule_error(rule_section, error)
@@ -479,7 +492,7 @@ class CISAWSCategory1:
                     rule_section,
                     (1, 1),
                     0,
-                    'The password policy does not exist'
+                    'Password policy does not exist'
                 )
             else:
                 self.report.add_rule_error(rule_section, error)
@@ -517,7 +530,7 @@ class CISAWSCategory1:
                     rule_section,
                     (1, 1),
                     0,
-                    'The password policy does not exist'
+                    'Password policy does not exist'
                 )
             else:
                 self.report.add_rule_error(rule_section, error)
@@ -555,7 +568,7 @@ class CISAWSCategory1:
                     rule_section,
                     (1, 1),
                     0,
-                    'The password policy does not exist'
+                    'Password policy does not exist'
                 )
             else:
                 self.report.add_rule_error(rule_section, error)
@@ -602,7 +615,13 @@ class CISAWSCategory1:
                         rule_section,
                         (1, 1),
                         0,
-                        'Root account has active access keys'
+                        'Root account has active access keys',
+                        {
+                            'type': 'users',
+                            'query': f'specific_data == match([plugin_name == \'aws_adapter\' and '
+                                     f'(data.aws_cis_incompliant.rule_section == "{rule_section}") and '
+                                     f'(data.aws_account_id == {self.account_id or 0})])'
+                        }
                     )
                 else:
                     self.report.add_rule(
@@ -634,7 +653,13 @@ class CISAWSCategory1:
                 rule_section,
                 (1, 1),
                 0,
-                'MFA is not enabled for the root account'
+                'MFA is not enabled for the root account',
+                {
+                    'type': 'users',
+                    'query': f'specific_data == match([plugin_name == \'aws_adapter\' and '
+                             f'(data.aws_cis_incompliant.rule_section == "{rule_section}") and '
+                             f'(data.aws_account_id == {self.account_id or 0})])'
+                }
             )
         else:
             self.report.add_rule(
@@ -663,7 +688,13 @@ class CISAWSCategory1:
                 rule_section,
                 (1, 1),
                 0,
-                'MFA is not enabled for the root account'
+                'No MFA (Virtual or Hardware) is enabled for the root account',
+                {
+                    'type': 'users',
+                    'query': f'specific_data == match([plugin_name == \'aws_adapter\' and '
+                             f'(data.aws_cis_incompliant.rule_section == "{rule_section}") and '
+                             f'(data.aws_account_id == {self.account_id or 0})])'
+                }
             )
             return
 
@@ -676,7 +707,13 @@ class CISAWSCategory1:
                         rule_section,
                         (1, 1),
                         0,
-                        'Root account is using virtual MFA'
+                        'Root account is using virtual MFA',
+                        {
+                            'type': 'users',
+                            'query': f'specific_data == match([plugin_name == \'aws_adapter\' and '
+                                     f'(data.aws_cis_incompliant.rule_section == "{rule_section}") and '
+                                     f'(data.aws_account_id == {self.account_id or 0})])'
+                        }
                     )
                     return
 
@@ -701,17 +738,23 @@ class CISAWSCategory1:
         for list_users_page in self.iam_client.get_paginator('list_users').paginate():
             for user in (list_users_page.get('Users') or []):
                 number_of_users += 1
-                errors_per_user = []
+                has_inline_policies = False
+                has_direct_policies = False
                 if self.iam_client.list_user_policies(UserName=user['UserName'], MaxItems=1).get('PolicyNames'):
-                    errors_per_user.append(f'User "{user["UserName"]}" ({user["Arn"]}) has inline policies attached.')
+                    has_inline_policies = True
                 if self.iam_client.list_attached_user_policies(
                         UserName=user['UserName'],
                         MaxItems=1
                 ).get('PolicyNames'):
-                    errors_per_user.append(f'User "{user["UserName"]}" ({user["Arn"]}) has policies attached.')
+                    has_direct_policies = True
 
-                if errors_per_user:
-                    failed_users.append('\n'.join(errors_per_user))
+                if has_inline_policies and has_direct_policies:
+                    failed_users.append(f'User "{user["UserName"]}" ({user["Arn"]}) has both direct and inline '
+                                        f'policies attached.')
+                elif has_inline_policies:
+                    failed_users.append(f'User "{user["UserName"]}" ({user["Arn"]}) has inline policies attached.')
+                elif has_direct_policies:
+                    failed_users.append(f'User "{user["UserName"]}" ({user["Arn"]}) has direct policies attached.')
 
         if failed_users:
             self.report.add_rule(
@@ -719,10 +762,12 @@ class CISAWSCategory1:
                 rule_section,
                 (len(failed_users), number_of_users),
                 len(failed_users),
-                '\n'.join(failed_users),
+                errors_to_gui(failed_users),
                 {
                     'type': 'users',
-                    'query': '(adapters_data.aws_adapter.user_attached_policies.policy_type == "Inline")'
+                    'query': f'specific_data == match([plugin_name == \'aws_adapter\' and '
+                             f'(data.aws_cis_incompliant.rule_section == "{rule_section}") and '
+                             f'(data.aws_account_id == {self.account_id or 0})])'
                 }
             )
         else:
@@ -732,6 +777,50 @@ class CISAWSCategory1:
                 (0, number_of_users),
                 0,
                 ''
+            )
+
+    @aws_cis_rule('1.20')
+    def check_cis_aws_1_20(self, **kwargs):
+        rule_section = kwargs['rule_section']
+        try:
+            policy_exists = False
+            for list_policies_page in self.iam_client.get_paginator('list_policies').paginate(
+                    Scope='AWS',
+                    OnlyAttached=False
+            ):
+                for policy_object in (list_policies_page.get('Policies') or []):
+                    if policy_object.get('PolicyName') == 'AWSSupportAccess':
+                        policy_exists = True
+                        if policy_object.get('AttachmentCount') and policy_object.get('AttachmentCount') > 0:
+                            self.report.add_rule(
+                                RuleStatus.Passed,
+                                rule_section,
+                                (0, 1),
+                                0,
+                                ''
+                            )
+                            return
+
+            if policy_exists:
+                self.report.add_rule(
+                    RuleStatus.Failed,
+                    rule_section,
+                    (1, 1),
+                    0,
+                    'The policy "AWSSupportAccess" exists but is not attached to any user, group or role'
+                )
+            else:
+                self.report.add_rule(
+                    RuleStatus.Failed,
+                    rule_section,
+                    (1, 1),
+                    0,
+                    'The policy "AWSSupportAccess" does not exist'
+                )
+        except Exception as e:
+            self.report.add_rule_error(
+                rule_section,
+                f'Error listing policies (iam.list_policies): {str(e)}'
             )
 
     @aws_cis_rule('1.22')
@@ -774,7 +863,13 @@ class CISAWSCategory1:
                 rule_section,
                 (len(policies_errors), number_of_policies),
                 0,
-                '\n'.join(policies_errors)
+                errors_to_gui(policies_errors),
+                {
+                    'type': 'users',
+                    'query': f'specific_data == match([plugin_name == \'aws_adapter\' and '
+                             f'(data.aws_cis_incompliant.rule_section == "{rule_section}") and '
+                             f'(data.aws_account_id == {self.account_id or 0})])'
+                }
             )
         else:
             self.report.add_rule(

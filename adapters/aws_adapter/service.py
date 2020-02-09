@@ -1,3 +1,4 @@
+import csv
 import threading
 import time
 import logging
@@ -421,6 +422,13 @@ class AwsAdapter(AdapterBase, Configurable):
         if asset_type == 'users':
             clients['iam'] = session.client('iam', **params)
             clients['iam'].list_users()  # if no privileges, propagate
+
+            try:
+                c = session.client('sts', **params)
+                c.get_caller_identity()
+                clients['sts'] = c
+            except Exception as e:
+                errors['sts'] = str(e)
 
         else:
             try:
@@ -851,6 +859,36 @@ class AwsAdapter(AdapterBase, Configurable):
                             error_logs_triggered.append('list_mfa_devices')
 
                     users.append(user)
+
+            try:
+                time_slept = 0
+                while iam_client.generate_credential_report()['State'] != 'COMPLETE':
+                    time.sleep(2)
+                    time_slept += 2
+                    if time_slept > 60 * 5:
+                        logger.error(f'Error - creds report took more than 5 minutes')
+                        raise ValueError(f'Error - creds report took more than 5 minutes')
+                response = iam_client.get_credential_report()
+                for user in list(csv.DictReader(response['Content'].decode('utf-8').splitlines(), delimiter=',')):
+                    if user.get('user') == '<root_account>':
+                        result['root_user'] = user
+                        break
+
+                try:
+                    uses_virtual_mfa = False
+                    for page in iam_client.get_paginator('list_virtual_mfa_devices').paginate(AssignmentStatus='Any'):
+                        for virtual_mfa_device in (page.get('VirtualMFADevices') or []):
+                            if 'mfa/root-account-mfa-device' in str(virtual_mfa_device).lower():
+                                uses_virtual_mfa = True
+                                break
+                        if uses_virtual_mfa:
+                            break
+
+                    result['root_user']['uses_virtual_mfa'] = uses_virtual_mfa
+                except Exception:
+                    pass
+            except Exception:
+                pass
 
             result['users'] = users
 
@@ -1843,6 +1881,45 @@ class AwsAdapter(AdapterBase, Configurable):
                 logger.exception(f'Problem parsing data from source {aws_source}')
 
     def _parse_raw_data_inner_users(self, users_raw_data: Dict) -> Optional[MyUserAdapter]:
+        root_user = users_raw_data.get('root_user')
+        if root_user:
+            try:
+                if root_user.get('arn'):
+                    user = self._new_user_adapter()
+                    user.id = root_user['arn']
+                    user.username = root_user['arn']
+                    user.user_create_date = parse_date(root_user.get('user_creation_time'))
+                    user.user_pass_last_used = parse_date(root_user.get('password_last_used'))
+                    if root_user.get('mfa_active') == 'true':
+                        user.user_associated_mfa_devices.append(
+                            AWSMFADevice()
+                        )
+                        user.has_associated_mfa_devices = True
+                    elif root_user.get('mfa_active') == 'false':
+                        user.user_associated_mfa_devices = []
+                        user.has_associated_mfa_devices = False
+
+                    for access_key_num in [1, 2]:
+                        access_key_status = root_user.get(f'access_key_{access_key_num}_active')
+                        if access_key_status:
+                            access_key_status = 'Active' if access_key_status == 'true' else 'Inactive'
+                        else:
+                            access_key_status = None
+                        user.user_attached_keys.append(
+                            AWSIAMAccessKey(
+                                status=access_key_status,
+                                create_date=parse_date(root_user.get(f'access_key_{access_key_num}_last_rotated')),
+                                last_used_time=parse_date(root_user.get(f'access_key_{access_key_num}_last_used_date')),
+                                last_used_service=root_user.get(f'access_key_{access_key_num}_last_used_service'),
+                                last_used_region=root_user.get(f'access_key_{access_key_num}_last_used_region')
+                            ))
+
+                    if root_user.get('uses_virtual_mfa') is not None:
+                        user.uses_virtual_mfa = root_user.get('uses_virtual_mfa')
+                    user.set_raw(root_user)
+                    yield user
+            except Exception:
+                logger.exception(f'Failed parsing root user')
         for user_raw in users_raw_data.get('users'):
             user = self._new_user_adapter()
             if not user_raw.get('UserId'):
@@ -1959,7 +2036,9 @@ class AwsAdapter(AdapterBase, Configurable):
     def _parse_raw_data(self, *args, **kwargs):
         for device in self.__parse_raw_data(*args, **kwargs):
             try:
-                append_aws_cis_data_to_device(device)
+                device.aws_cis_incompliant = []     # delete old rules which might be irrelevant now
+                if self.should_cloud_compliance_run():
+                    append_aws_cis_data_to_device(device)
             except Exception as e:
                 logger.debug(f'Failed adding cis device to data: {str(e)}')
             yield device
@@ -1967,7 +2046,9 @@ class AwsAdapter(AdapterBase, Configurable):
     def _parse_users_raw_data(self, *args, **kwargs):
         for user in self.__parse_users_raw_data(*args, **kwargs):
             try:
-                append_aws_cis_data_to_user(user)
+                user.aws_cis_incompliant = []       # delete old rules which might be irrelevant now
+                if self.should_cloud_compliance_run():
+                    append_aws_cis_data_to_user(user)
             except Exception:
                 pass
             yield user

@@ -4,6 +4,7 @@ import os
 from enum import Enum
 
 from typing import Tuple, Optional
+from axonius.utils.parsing import get_exception_string
 
 logger = logging.getLogger(f'axonius.{__name__}')
 AWS_CIS_RULES_FILE = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'aws_cis_rules.json')
@@ -77,6 +78,11 @@ class AccountReport:
 
         self.sections_added.append(section)
         self.rules.append(new_rule)
+
+        try:
+            logger.debug(f'add_rule_error for {section}: {error}\nTraceback: {get_exception_string()}')
+        except Exception:
+            pass
 
     def get_json(self):
         return {

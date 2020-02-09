@@ -324,7 +324,7 @@ class AWSAdapter:
     aws_tags = ListField(AWSTagKeyValue, 'AWS Tags')
 
     # AWS CIS
-    aws_cis_incompliant = ListField(AWSCISRule, 'AWS CIS Incompliant')
+    aws_cis_incompliant = ListField(AWSCISRule, 'Noncompliant CIS AWS Foundations')
 
     def add_aws_cis_incompliant_rule(self, rule_section):
         try:
@@ -346,6 +346,7 @@ class AWSUserAdapter(UserAdapter, AWSAdapter):
     user_associated_mfa_devices = ListField(AWSMFADevice, 'Associated MFA Devices')
     has_associated_mfa_devices = Field(bool, 'Has Associated MFA Devices')
     user_is_password_enabled = Field(bool, 'User Is Password Enabled')
+    uses_virtual_mfa = Field(bool, 'Uses Virtual MFA')
 
 
 class AWSDeviceAdapter(DeviceOrContainerAdapter, AWSAdapter):

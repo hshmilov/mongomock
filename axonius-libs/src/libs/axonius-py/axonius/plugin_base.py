@@ -52,7 +52,8 @@ from axonius.clients.cyberark_vault.connection import CyberArkVaultConnection
 from axonius.clients.rest.connection import RESTConnection
 from axonius.consts.adapter_consts import IGNORE_DEVICE
 from axonius.consts.core_consts import CORE_CONFIG_NAME, ACTIVATED_NODE_STATUS
-from axonius.consts.gui_consts import FEATURE_FLAGS_CONFIG, FeatureFlagsNames, GETTING_STARTED_CHECKLIST_SETTING
+from axonius.consts.gui_consts import FEATURE_FLAGS_CONFIG, FeatureFlagsNames, GETTING_STARTED_CHECKLIST_SETTING, \
+    CloudComplianceNames
 from axonius.consts.plugin_consts import (ADAPTERS_LIST_LENGTH,
                                           AGGREGATION_SETTINGS,
                                           AGGREGATOR_PLUGIN_NAME,
@@ -3003,6 +3004,15 @@ class PluginBase(Configurable, Feature, ABC):
         return self._get_collection(CONFIGURABLE_CONFIGS_COLLECTION, GUI_PLUGIN_NAME).find_one({
             'config_name': FEATURE_FLAGS_CONFIG
         })['config']
+
+    @singlethreaded()
+    @cachetools.cached(cachetools.TTLCache(maxsize=1, ttl=5), lock=threading.Lock())
+    def should_cloud_compliance_run(self) -> bool:
+        cloud_compliance_settings = self.feature_flags_config().get(FeatureFlagsNames.CloudCompliance) or {}
+        # If we are in trial, or if the cloud compliance feature has been enabled, run this.
+        is_cloud_compliance_enabled = cloud_compliance_settings.get(CloudComplianceNames.Enabled)
+        is_cloud_compliance_visible = cloud_compliance_settings.get(CloudComplianceNames.Visible)
+        return is_cloud_compliance_visible and (self.is_in_trial() or is_cloud_compliance_enabled)
 
     @singlethreaded()
     @cachetools.cached(cachetools.TTLCache(maxsize=1, ttl=5), lock=threading.Lock())

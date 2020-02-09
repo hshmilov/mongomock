@@ -420,6 +420,11 @@ class StaticAnalysisService(Triggerable, PluginBase):
                 axonius_query_language=f'specific_data.data.username == regex("^{llu_username}$", "i")'
             ))
 
+        if not users:
+            users = list(self.users.get(
+                axonius_query_language=f'specific_data.data.mail == regex("^{username}$", "i")'
+            ))
+
         return users
 
     # pylint: disable=too-many-locals, too-many-branches, too-many-statements

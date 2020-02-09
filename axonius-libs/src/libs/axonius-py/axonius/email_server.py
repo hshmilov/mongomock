@@ -60,9 +60,9 @@ class EmailServer:
                 # First with provided TLS data
                 # pylint: disable=W0212
                 context = ssl._create_stdlib_context(
-                    certfile=self.__cert_file.name,
-                    keyfile=self.__key_file.name,
-                    cafile=self.__ca_file.name,
+                    certfile=self.__cert_file.name if self.__cert_file else None,
+                    keyfile=self.__key_file.name if self.__key_file else None,
+                    cafile=self.__ca_file.name if self.__ca_file else None,
                     cert_reqs=ssl.CERT_REQUIRED if self.__ssl_state == SSLState.Verified else ssl.CERT_NONE)
                 server.starttls(context=context)
             else:

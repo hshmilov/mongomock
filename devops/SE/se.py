@@ -70,6 +70,7 @@ def usage():
     {name} s3_backup - Trigger s3 backup
     {name} root_master_s3_restore - Trigger 'Root Master mode' s3 restore
     {name} compliance run - Run Compliance Report
+    {name} trigger [service_name] (execute) - Trigger a job (by default execute) on the service name, on this node.
     '''
 
 
@@ -163,10 +164,21 @@ def main():
     elif component == 'compliance':
         if action == 'run':
             print(f'Running compliance report generation...')
-            cs.trigger_execute(True)
+            cs.trigger('execute_force', True)
         else:
             print(f'Invalid action {action}')
             return -1
+
+    elif component == 'trigger':
+        job_name = sys.argv[3] if len(sys.argv) > 3 else 'execute'
+        try:
+            service = _get_docker_service(action)
+        except Exception:
+            print(f'No such service "{action}"!')
+            return -1
+
+        print(f'Triggering {job_name} on {action}...')
+        service.trigger(job_name, True)
 
     elif component == 'cd':
         if not action:
