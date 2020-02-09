@@ -1,5 +1,7 @@
 import axios from 'axios';
+import store from '@store/index';
 import _merge from 'lodash/merge';
+import { INIT_USER } from '@store/modules/auth';
 
 let host = '';
 if (process.env.NODE_ENV === 'development') {
@@ -7,7 +9,7 @@ if (process.env.NODE_ENV === 'development') {
 }
 const baseURL = `${host}/api`;
 
-export default (uri, baseOptions = {}) => ({
+export default (uri, baseOptions = {}) => async ({
   method = 'GET',
   data,
   binary,
@@ -41,5 +43,15 @@ export default (uri, baseOptions = {}) => ({
 
 
   const allOptions = _merge(baseOptions, base, options);
-  return axios(allOptions);
+  try {
+    return await axios(allOptions);
+  } catch (error) {
+    if (error && error.response) {
+      const errorMessage = error.response.data.message;
+      if (error.response.status === 401) {
+        store.commit(INIT_USER, { fetching: false, error: errorMessage });
+      }
+    }
+    throw error;
+  }
 };

@@ -16,8 +16,6 @@
       :static-data="data"
       :row-class="getRowClass"
       :pagination="true"
-      page-size="42"
-      :page-sizes="[42, 84]"
       :on-click-row="openSidePanel"
       :static-fields="getTableFields()"
       :static-sort="false"
@@ -103,7 +101,7 @@ export default {
   },
   data() {
     return {
-      currentRule: null,
+      currentRuleId: null,
       exporting: null,
     };
   },
@@ -114,7 +112,7 @@ export default {
       },
     }),
     selectedRules() {
-      return this.currentRule ? { ids: [this.currentRule.section], include: true }
+      return this.currentRule ? { ids: [this.currentRuleId], include: true }
         : { ids: [], include: true };
     },
     complianceRulesById() {
@@ -124,11 +122,17 @@ export default {
         return map;
       }, {});
     },
+    currentRule() {
+      if (this.currentRuleId) {
+        return this.complianceRulesById[this.currentRuleId];
+      }
+      return null;
+    },
   },
   mounted() {
     const { id } = this.$route.params;
     if (id) {
-      this.currentRule = this.complianceRulesById[id];
+      this.currentRuleId = id;
     }
   },
   methods: {
@@ -142,12 +146,12 @@ export default {
       return rowData.status.toLowerCase().replace(' ', '-');
     },
     openSidePanel(id) {
-      this.currentRule = this.complianceRulesById[id];
-      this.$router.push({ path: encodeURI(`/cloud_compliance/${id}`) });
+      this.currentRuleId = id;
+      this.$router.push({ path: encodeURI(`/cloud_asset_compliance/${id}`) });
     },
     closeSidePanel() {
-      this.currentRule = null;
-      this.$router.push({ path: '/cloud_compliance' });
+      this.currentRuleId = null;
+      this.$router.push({ path: '/cloud_asset_compliance' });
     },
     exportCSV() {
       this.fetchContentCSV({
@@ -190,6 +194,9 @@ export default {
         color: $theme-black;
         margin-top: 12px;
         margin-right: 24px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
       }
     }
 
@@ -208,7 +215,7 @@ export default {
     }
 
     .table-td-category {
-      width: 300px;
+      width: 250px;
     }
 
     .table-td-account {

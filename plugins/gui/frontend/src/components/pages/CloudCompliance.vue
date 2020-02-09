@@ -20,7 +20,7 @@
             multiple
             :allow-create-new="false"
             :hide-quick-selections="false"
-            :menu-props="{maxWidth: 800}"
+            :menu-props="{maxWidth: 500}"
             @change="applySearchAndFilter"
           />
         </div>
@@ -153,7 +153,7 @@ export default {
 
 
 <style lang="scss">
-  $cloud-asset-compliance-header-height: 15px;
+  $cloud-asset-compliance-header-height: 30px;
 
   .x-cloud-compliance {
     height: calc(100% - #{$cloud-asset-compliance-header-height});
@@ -169,12 +169,12 @@ export default {
         font-weight: 400;
         color: $theme-black;
         margin-top: 12px;
-        margin-right: 24px;
-        width: 440px;
+        margin-right: 10px;
+        width: 405px;
       }
       .accounts-filter {
-        width: 800px;
-        margin-left: 40px;
+        width: 500px;
+        margin-left: 20px;
         .x-combobox {
           font-size: 14px;
 

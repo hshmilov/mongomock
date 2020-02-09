@@ -12,7 +12,7 @@ export const compliance = {
         count: { data: 0, fetching: false, error: '' },
         view: {
           page: 0,
-          pageSize: 42,
+          pageSize: 50,
           query: {
             filter: '', expressions: [],
           },
@@ -46,7 +46,7 @@ export const compliance = {
       }, {
         name: 'cis', title: 'CIS Controls', type: 'text', expanded: true, order: 10,
       }, {
-        name: 'last_updated', title: 'Last updated', type: 'text', format: 'date-time', expanded: true, order: 11,
+        name: 'last_updated', title: 'Last Updated', type: 'text', format: 'date-time', expanded: true, order: 11,
       }],
       coloumnSizes: [],
       query: {

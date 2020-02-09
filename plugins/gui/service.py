@@ -64,7 +64,7 @@ from axonius.consts.gui_consts import (ENCRYPTION_KEY_PATH,
                                        USERS_COLLECTION,
                                        USERS_CONFIG_COLLECTION,
                                        ChartViews,
-                                       FeatureFlagsNames, ResearchStatus,
+                                       FeatureFlagsNames, CloudComplianceNames, ResearchStatus,
                                        DASHBOARD_COLLECTION, DASHBOARD_SPACES_COLLECTION,
                                        DASHBOARD_SPACE_PERSONAL, DASHBOARD_SPACE_TYPE_CUSTOM,
                                        Signup, PROXY_DATA_PATH, DASHBOARD_LIFECYCLE_ENDPOINT,
@@ -5666,6 +5666,8 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
                             )
     def compliance(self, name, method, accounts):
         try:
+            if not self._is_compliance_visible():
+                return return_error('Cloud asset compliance is not visible')
             return jsonify(get_compliance(name, method, accounts))
         except Exception as e:
             logger.exception(f'Error in get_compliance')
@@ -5679,10 +5681,17 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
                             )
     def compliance_csv(self, name, schema_fields, accounts):
         try:
+            if not self._is_compliance_visible():
+                return return_error('Cloud asset compliance is not visible')
             return self._get_compliance_rules_csv(name, schema_fields, accounts)
         except Exception as e:
             logger.exception(f'Error in get_compliance')
             return return_error(f'Error: {str(e)}')
+
+    def _is_compliance_visible(self):
+        cloud_compliance_settings = self.feature_flags_config().get(FeatureFlagsNames.CloudCompliance) or {}
+        is_cloud_compliance_visible = cloud_compliance_settings.get(CloudComplianceNames.Visible)
+        return is_cloud_compliance_visible
 
     @staticmethod
     def _get_compliance_rules_csv(compliance_name, schema_fields, accounts):

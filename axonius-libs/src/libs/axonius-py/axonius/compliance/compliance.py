@@ -21,7 +21,7 @@ def get_default_cis_aws_compliance_report():
                 'account': '',
                 'results': {
                     'failed': 0,
-                    'checked': 3,
+                    'checked': 0,
                 },
                 'affected_entities': 0,
                 'description': 'The "root" account has unrestricted access to all resources in the AWS account. '
@@ -48,17 +48,17 @@ aws cloudwatch put-metric-alarm --alarm-name  `<root_usage_alarm>`  --metricname
                        'internet browsing, email, or similar activities.'
             },
             {
-                'status': 'Failed',
+                'status': 'Passed',
                 'section': '1.2',
                 'rule_name': 'Ensure multi-factor authentication (MFA) is enabled for all IAM users that have a '
                              'console password',
                 'category': 'Identity and Access Management',
                 'account': '',
                 'results': {
-                    'failed': 1,
-                    'checked': 3,
+                    'failed': 0,
+                    'checked': 0,
                 },
-                'affected_entities': 4,
+                'affected_entities': 0,
                 'description': 'Multi-Factor Authentication (MFA) adds an extra layer of protection on top of a user '
                                'name and password. With MFA enabled, when a user signs in to an AWS website, '
                                'they will be prompted for their user name and password as well as for an '
@@ -75,18 +75,11 @@ Perform the following to enable MFA:
 5. Follow the Manage MFA Device wizard to assign the type of device appropriate for your environment.
                     '''.strip(),
                 'entities_results': 'IAM Users which do not have multi-factor authentication (MFA):\nUser: user1',
-                'entities_results_query': {
-                    'type': 'users',
-                    'query': '((adapters_data.aws_adapter.id == ({"$exists":true,"$ne":""}))) '
-                             'and not (((adapters_data.aws_adapter.user_associated_mfa_devices == '
-                             '({"$exists":true,"$ne":[]})) and '
-                             'adapters_data.aws_adapter.user_associated_mfa_devices != []))'
-                },
                 'cis': '4.5 Use Multifactor Authentication For All Administrative Access\n'
                        'Use multi-factor authentication and encrypted channels for all administrative account access. '
             },
             {
-                'status': 'No Data',
+                'status': 'Passed',
                 'error': 'An error occurred (AuthFailure) when calling the DescribeInstances operation: AWS was not '
                          'able to validate the provided access credentials',
                 'section': '1.3',
@@ -1461,7 +1454,7 @@ def get_compliance_accounts():
         reports_db.aggregate(
             [
                 {
-                    '$sort': {'last_updated': 1}
+                    '$sort': {'account_name': -1, 'last_updated': 1}
                 },
                 {
                     '$group': {
@@ -1519,7 +1512,7 @@ def get_compliance_rules(accounts) -> List[dict]:
     all_reports = list(PluginBase.Instance._get_db_connection()[COMPLIANCE_PLUGIN_NAME]['reports'].aggregate(
         [
             {
-                '$sort': {'last_updated': 1},
+                '$sort': {'account_name': -1, 'last_updated': 1},
             },
             {
                 '$group': {

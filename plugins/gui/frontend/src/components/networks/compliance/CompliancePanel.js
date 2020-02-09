@@ -6,7 +6,7 @@ import { UPDATE_DATA_VIEW } from '@store/mutations';
 import { mapMutations } from 'vuex';
 import _capitalize from 'lodash/capitalize';
 import _isNil from 'lodash/isNil';
-import _has from 'lodash/has';
+import { formatDate } from '@constants/utils';
 
 const nonExpandablePanelFields = [{
   name: 'rule', title: 'Rule', type: 'string',
@@ -128,7 +128,7 @@ export default {
         <div slot="panelContent" class="body">
           <div class="last-updated">
             <p>
-              Last updated: {this.data.last_updated}
+              Last updated: {formatDate(this.data.last_updated)}
             </p>
           </div>
           {
