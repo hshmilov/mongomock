@@ -1,10 +1,13 @@
 import datetime
+import logging
 
 from axonius.devices.device_or_container_adapter import DeviceOrContainerAdapter
 from axonius.fields import Field, ListField, JsonStringFormat
 from axonius.smart_json_class import SmartJsonClass
 from axonius.users.user_adapter import UserAdapter
 from axonius.utils.parsing import format_ip
+
+logger = logging.getLogger(f'axonius.{__name__}')
 
 
 class AWSTagKeyValue(SmartJsonClass):
@@ -308,6 +311,10 @@ class AWSRoute53Record(SmartJsonClass):
     alias_target_evaluate_target_health = Field(bool, 'Alias Target Evaluate Target Health')
 
 
+class AWSCISRule(SmartJsonClass):
+    rule_section = Field(str, 'Rule Section')
+
+
 class AWSAdapter:
     account_tag = Field(str, 'Account Tag')
     aws_account_alias = ListField(str, 'Account Alias')
@@ -315,6 +322,15 @@ class AWSAdapter:
     aws_region = Field(str, 'Region')
     aws_source = Field(str, 'Source')  # Specify if it is from a user, a role, or what.
     aws_tags = ListField(AWSTagKeyValue, 'AWS Tags')
+
+    # AWS CIS
+    aws_cis_incompliant = ListField(AWSCISRule, 'AWS CIS Incompliant')
+
+    def add_aws_cis_incompliant_rule(self, rule_section):
+        try:
+            self.aws_cis_incompliant.append(AWSCISRule(rule_section=rule_section))
+        except Exception as e:
+            logger.debug(f'Could not add AWS CIS rule: {str(e)}')
 
 
 class AWSUserAdapter(UserAdapter, AWSAdapter):
@@ -394,6 +410,8 @@ class AWSDeviceAdapter(DeviceOrContainerAdapter, AWSAdapter):
     s3_bucket_acls = ListField(AWSS3BucketACL, 'S3 ACL')
     s3_bucket_policy = Field(AWSS3BucketPolicy, 'S3 Bucket Policy')
     s3_public_access_block_policy = Field(AWSS3PublicAccessBlockConfiguration, 'S3 Public Access Block Configuration')
+    s3_bucket_logging_target = Field(str, 'S3 Bucket Logging Target')
+    s3_bucket_used_for_cloudtrail = Field(bool, 'S3 Bucket Used for CloudTrail')
 
     def add_aws_ec2_tag(self, **kwargs):
         self.aws_tags.append(AWSTagKeyValue(**kwargs))

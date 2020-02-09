@@ -1,6 +1,9 @@
+import datetime
 import logging
+import concurrent.futures
+import time
+
 from typing import List
-from multiprocessing import Pool
 
 from axonius.consts.plugin_consts import COMPLIANCE_PLUGIN_NAME
 from axonius.plugin_base import PluginBase
@@ -75,30 +78,30 @@ class AWSCISGenerator:
 
             # client_config_accounts is all of the different connections to different accounts we have. We can
             # start sending them to the different functions
-            with Pool(processes=NUMBER_OF_PARALLEL_PROCESSES) as pool:
+
+            with concurrent.futures.ProcessPoolExecutor(max_workers=NUMBER_OF_PARALLEL_PROCESSES) as executor:
                 logger.info(f'Generating reports for {len(client_config_accounts)} accounts '
                             f'with a pool of {NUMBER_OF_PARALLEL_PROCESSES} processes')
-                results = [pool.apply_async(generate_report_for_aws_account, (client_config_account, ))
-                           for client_config_account in client_config_accounts]
-
-                # Notice that TIMEOUT_FOR_RESULT_GENERATION is acting for ALL reports (if one is slow, all of the other
-                # ones will fail).
-                # CIS_TODO: fix that.
-                for i, result in enumerate(results):
+                futures_to_data = {
+                    executor.submit(generate_report_for_aws_account, client_config_account): (time.time())
+                    for client_config_account in client_config_accounts
+                }
+                for future in concurrent.futures.as_completed(futures_to_data, timeout=TIMEOUT_FOR_RESULT_GENERATION):
+                    start_time = futures_to_data[future]
                     try:
-                        account_id, account_name, report_json = result.get(timeout=TIMEOUT_FOR_RESULT_GENERATION)
-                        PluginBase.Instance._get_db_connection()[COMPLIANCE_PLUGIN_NAME]['reports'].replace_one(
-                            {
-                                'account_id': account_id,
-                            },
+                        account_id, account_name, report_json = future.result()
+                        PluginBase.Instance._get_db_connection()[COMPLIANCE_PLUGIN_NAME]['reports'].insert_one(
                             {
                                 'account_id': account_id,
                                 'account_name': account_name,
-                                'report': report_json
-                            },
-                            upsert=True
+                                'report': report_json,
+                                'last_updated': datetime.datetime.now()
+                            }
                         )
                     except Exception:
                         logger.exception(f'Could not get results in cloud-compliance')
+
+                    logger.info(f'Finished report for "{account_name}" ({account_id} '
+                                f'in {time.time() - start_time} seconds.')
 
             logger.info(f'Done parsing client_config {client_config_id}')

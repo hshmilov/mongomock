@@ -3015,6 +3015,18 @@ class PluginBase(Configurable, Feature, ABC):
             return False
         return parse_date(feature_flags_config[FeatureFlagsNames.TrialEnd]) < parse_date(datetime.now())
 
+    def is_in_trial(self):
+        """
+        Returns True if we are in trial mode, but trial has not expired yet.
+        :return:
+        """
+        feature_flags_config = self.feature_flags_config()
+        # If there is no 'Trial End' then the system is licensed - we are not in trial.
+        if not feature_flags_config.get(FeatureFlagsNames.TrialEnd):
+            return False
+        # If the trial did not end yet - we are not in trial.
+        return parse_date(feature_flags_config[FeatureFlagsNames.TrialEnd]) > parse_date(datetime.now())
+
     @staticmethod
     def global_settings_schema():
         return {

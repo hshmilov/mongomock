@@ -21,6 +21,7 @@ from botocore.config import Config
 from botocore.credentials import RefreshableCredentials
 from botocore.session import get_session
 
+from aws_adapter.connection.aws_cis import append_aws_cis_data_to_device, append_aws_cis_data_to_user
 from aws_adapter.connection.aws_route53 import query_devices_by_client_by_source_route53, parse_raw_data_inner_route53
 from aws_adapter.connection.structures import *
 from aws_adapter.connection.utils import get_paginated_marker_api, get_paginated_next_token_api, \
@@ -30,6 +31,7 @@ from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import (AdapterException,
                                         ClientConnectionException,
                                         CredentialErrorException)
+from axonius.clients.aws.consts import GOV_REGION_NAMES, CHINA_REGION_NAMES, REGIONS_NAMES
 from axonius.clients.rest.connection import RESTConnection
 from axonius.devices.device_adapter import DeviceRunningState, ShodanVuln
 from axonius.utils.files import get_local_config_file
@@ -50,16 +52,6 @@ ROLES_TO_ASSUME_LIST = 'roles_to_assume_list'
 USE_ATTACHED_IAM_ROLE = 'use_attached_iam_role'
 PROXY = 'proxy'
 GET_ALL_REGIONS = 'get_all_regions'
-REGIONS_NAMES = [
-    'us-east-1', 'us-east-2', 'us-west-1', 'us-west-2',
-    'ap-east-1', 'ap-south-1', 'ap-northeast-3', 'ap-northeast-2', 'ap-northeast-1', 'ap-southeast-1', 'ap-southeast-2',
-    'ca-central-1',
-    'eu-central-1', 'eu-west-1', 'eu-west-2', 'eu-west-3', 'eu-north-1',
-    'me-south-1',
-    'sa-east-1'
-]
-CHINA_REGION_NAMES = ['cn-north-1', 'cn-northwest-1']
-GOV_REGION_NAMES = ['us-gov-west-1', 'us-gov-east-1']
 AWS_ENDPOINT_FOR_REACHABILITY_TEST = f'https://apigateway.us-east-2.amazonaws.com/'   # endpoint for us-east-2
 BOTO3_FILTERS_LIMIT = 100
 
@@ -498,6 +490,15 @@ class AwsAdapter(AdapterBase, Configurable):
                 clients['s3'] = c
             except Exception as e:
                 errors['s3'] = str(e)
+
+            if clients.get('s3'):
+                # This is relevant only in the context of s3, currently
+                try:
+                    c = session.client('cloudtrail', **params)
+                    c.describe_trails()
+                    clients['cloudtrail'] = c
+                except Exception as e:
+                    errors['cloudtrail'] = str(e)
 
             try:
                 c = session.client('workspaces', **params)
@@ -1648,7 +1649,26 @@ class AwsAdapter(AdapterBase, Configurable):
                         bucket_raw['access_block'] = bucket_location_status.get('PublicAccessBlockConfiguration')
                     except Exception:
                         pass
+
+                    try:
+                        bucket_logging_target = s3_client.get_bucket_logging(Bucket=bucket_raw.get('Name'))
+                        logging_enabled = bucket_logging_target.get('LoggingEnabled') or {}
+                        if logging_enabled.get('TargetBucket'):
+                            bucket_raw['logging_target_bucket'] = logging_enabled.get('TargetBucket')
+                    except Exception:
+                        pass
+
                     s3_buckets.append(bucket_raw)
+
+                if client_data.get('cloudtrail') is not None:
+                    try:
+                        cloudtrail_s3_bucket_names = set()
+                        for trail in (client_data.get('cloudtrail').describe_trails().get('trailList') or []):
+                            if trail.get('S3BucketName'):
+                                cloudtrail_s3_bucket_names.add(trail['S3BucketName'])
+                        raw_data['cloudtrail_s3_bucket_names'] = list(cloudtrail_s3_bucket_names)
+                    except Exception:
+                        logger.exception(f'Failed getting cloudtrail s3 bucket names')
 
                 raw_data['s3_buckets'] = s3_buckets
             except Exception:
@@ -1768,7 +1788,7 @@ class AwsAdapter(AdapterBase, Configurable):
             'type': 'array'
         }
 
-    def _parse_raw_data(self, devices_raw_data):
+    def __parse_raw_data(self, devices_raw_data):
         for aws_source, account_metadata, devices_raw_data_by_source, raw_data_type in devices_raw_data:
             try:
                 if raw_data_type == AwsRawDataTypes.Regular:
@@ -1806,7 +1826,7 @@ class AwsAdapter(AdapterBase, Configurable):
             except Exception:
                 logger.exception(f'Problem parsing data from source {aws_source}')
 
-    def _parse_users_raw_data(self, users_raw_data):
+    def __parse_users_raw_data(self, users_raw_data):
         for aws_source, account_metadata, users_raw_data_by_source, raw_data_type in users_raw_data:
             try:
                 if raw_data_type == AwsRawDataTypes.Users:
@@ -1936,6 +1956,22 @@ class AwsAdapter(AdapterBase, Configurable):
         entity.account_tag = account_metadata.get('account_tag')
         entity.aws_source = aws_source
 
+    def _parse_raw_data(self, *args, **kwargs):
+        for device in self.__parse_raw_data(*args, **kwargs):
+            try:
+                append_aws_cis_data_to_device(device)
+            except Exception as e:
+                logger.debug(f'Failed adding cis device to data: {str(e)}')
+            yield device
+
+    def _parse_users_raw_data(self, *args, **kwargs):
+        for user in self.__parse_users_raw_data(*args, **kwargs):
+            try:
+                append_aws_cis_data_to_user(user)
+            except Exception:
+                pass
+            yield user
+
     @staticmethod
     def __make_ip_rules_list(ip_pemissions_list):
         ip_rules = []
@@ -2026,6 +2062,7 @@ class AwsAdapter(AdapterBase, Configurable):
         rds_instances = devices_raw_data.get('rds') or []
         volumes_by_iid = devices_raw_data.get('volumes') or {}
         s3_buckets = devices_raw_data.get('s3_buckets') or []
+        cloudtrail_s3_bucket_names = devices_raw_data.get('cloudtrail_s3_bucket_names') or []
         workspaces = devices_raw_data.get('workspaces') or []
         workspace_directories = devices_raw_data.get('workspace_directories') or {}
         workspace_connection_statuses = devices_raw_data.get('workspace_connection_status') or {}
@@ -2956,6 +2993,8 @@ class AwsAdapter(AdapterBase, Configurable):
                         )
                         if acl_raw_grantee.get('URI') and 'groups/global/AllUsers' in acl_raw_grantee.get('URI'):
                             has_public_acl = True
+                        if acl_raw_grantee.get('URI') and 'groups/global/AuthenticatedUsers' in acl_raw_grantee.get('URI'):
+                            has_public_acl = True
 
                     if has_public_acl:
                         device.s3_bucket_is_public = True
@@ -2994,6 +3033,17 @@ class AwsAdapter(AdapterBase, Configurable):
                             )
                     except Exception:
                         logger.exception(f'Problem parsing public access block')
+
+                    try:
+                        if s3_bucket_raw.get('logging_target_bucket'):
+                            device.s3_bucket_logging_target = s3_bucket_raw.get('logging_target_bucket')
+                    except Exception:
+                        logger.exception(f'Problem setting bucket logging target')
+
+                    try:
+                        device.s3_bucket_used_for_cloudtrail = s3_bucket_name in cloudtrail_s3_bucket_names
+                    except Exception:
+                        logger.exception(f'Problem setting s3 cloudtrail status')
 
                     device.set_raw(s3_bucket_raw)
                     yield device

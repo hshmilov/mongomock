@@ -144,6 +144,12 @@ class SmartJsonClass(metaclass=SmartJsonClassMetaclass):
     def does_field_exist(self, field_name):
         return field_name in [field.name for field in self.fields_info]
 
+    def get_field_safe(self, attr):
+        try:
+            return self[attr]
+        except Exception:
+            return None
+
     def declare_new_field(self, field_name: str, field_value: Field):
         """
         Allows declaring new fields after the class has been already initialized.

@@ -2048,8 +2048,8 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
         client_from_db = self._get_collection('clients', plugin_unique_name).find_one({'_id': ObjectId(client_id)})
         if client_from_db:
             # this is the "client_id" - i.e. AD server or AWS Access Key
+            logger.info(f'User deleted client - Deleting entities for {plugin_unique_name} - {client_id}')
             local_client_id = client_from_db['client_id']
-            logger.info(f'client from db: {client_from_db}')
             for entity_type in EntityType:
                 res = self._entity_db_map[entity_type].update_many(
                     {

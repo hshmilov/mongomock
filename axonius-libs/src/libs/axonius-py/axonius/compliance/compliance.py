@@ -1,4 +1,7 @@
 # pylint: disable=too-many-lines,duplicate-code, protected-access
+import urllib
+import urllib.parse
+
 from typing import List
 from datetime import datetime
 
@@ -1449,9 +1452,25 @@ Security Group State
 
 
 def get_compliance_accounts():
+    # Get all latest account names. Since account_id does not change we can group by it, and this will work
+    # even if the account name changed.
     # pylint: disable=protected-access
     reports_db = PluginBase.Instance._get_db_connection()[COMPLIANCE_PLUGIN_NAME]['reports']
-    all_account_names = list(reports_db.distinct('account_name'))
+    all_account_names = [
+        report.get('account_name') for report in
+        reports_db.aggregate(
+            [
+                {
+                    '$sort': {'last_updated': 1}
+                },
+                {
+                    '$group': {
+                        '_id': '$account_id',
+                        'account_name': {'$last': '$account_name'}
+                    }
+                }
+            ]
+        ) if report.get('account_name')]
     if not all_account_names:
         return []
     return all_account_names
@@ -1474,10 +1493,10 @@ def get_compliance(compliance_name: str, method: str, accounts: list):
 
 
 def get_compliance_rules(accounts) -> List[dict]:
-    def beautify_compliance(compliance, account_name):
+    def beautify_compliance(compliance: dict, account_id: str, account_name: str, last_updated: datetime):
         compliance_results = compliance.get('results') or {}
         beautify_object = {
-            'id': f'{account_name}__{compliance["section"]}',
+            'id': urllib.parse.quote(f'{account_id}__{compliance["section"]}', safe=''),
             'status': compliance.get('status'),
             'section': compliance.get('section'),
             'category': compliance.get('category'),
@@ -1491,22 +1510,39 @@ def get_compliance_rules(accounts) -> List[dict]:
             'remediation': compliance.get('remediation'),
             'rule': compliance.get('rule_name'),
             'entities_results_query': compliance.get('entities_results_query'),
-            'last_updated': datetime.now()
+            'last_updated': last_updated or datetime.now()
         }
         return beautify_object
 
     # pylint: disable=protected-access
-    all_reports = list(PluginBase.Instance._get_db_connection()[COMPLIANCE_PLUGIN_NAME]['reports'].find({}))
+    # Sort all of the reports by the time they were last updated, group them by account id, then take the last one
+    all_reports = list(PluginBase.Instance._get_db_connection()[COMPLIANCE_PLUGIN_NAME]['reports'].aggregate(
+        [
+            {
+                '$sort': {'last_updated': 1},
+            },
+            {
+                '$group': {
+                    '_id': '$account_id',
+                    'last': {'$last': '$$ROOT'}
+                }
+            }
+        ]
+    ))
 
     all_accounts = set(accounts)
 
     if not all_reports:
         default_rules = get_default_cis_aws_compliance_report().get('rules')
+        time_now = datetime.now()
         if len(all_accounts) == 0:
-            yield from (beautify_compliance(rule, rule['account']) for rule in default_rules)
+            yield from (beautify_compliance(rule, rule['account'], rule['account'], time_now) for rule in default_rules)
         for account in all_accounts:
-            yield from (beautify_compliance(rule, account) for rule in default_rules if rule['account'] == account)
+            yield from (beautify_compliance(rule, account, account, time_now)
+                        for rule in default_rules if rule['account'] == account)
 
-    for report in all_reports:
+    for report_doc in all_reports:
+        report = report_doc['last']
         if len(all_accounts) == 0 or report['account_name'] in all_accounts:
-            yield from (beautify_compliance(rule, report['account_name']) for rule in report['report']['rules'])
+            yield from (beautify_compliance(rule, report['account_id'], report['account_name'], report['last_updated'])
+                        for rule in report['report'].get('rules') or [])

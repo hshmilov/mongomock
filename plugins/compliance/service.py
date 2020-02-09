@@ -22,11 +22,15 @@ class ComplianceService(Triggerable, PluginBase):
 
         try:
             cloud_compliance_settings = self.feature_flags_config().get(FeatureFlagsNames.CloudCompliance) or {}
-            if not cloud_compliance_settings.get(CloudComplianceNames.Enabled):
+            # If we are in trial, or if the cloud compliance feature has been enabled, run this.
+            is_cloud_compliance_enabled = cloud_compliance_settings.get(CloudComplianceNames.Enabled)
+            is_cloud_compliance_visible = cloud_compliance_settings.get(CloudComplianceNames.Visible)
+            if is_cloud_compliance_visible and (self.is_in_trial() or is_cloud_compliance_enabled):
+                logger.info(f'Running Compliance Report..')
+                self.run_compliance_report()
+            else:
                 logger.info(f'Cloud compliance is not enabled, not running')
                 return False
-            logger.info(f'Running Compliance Report..')
-            self.run_compliance_report()
         except Exception:
             logger.exception(f'Exception in running compliance report')
         return ''
