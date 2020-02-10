@@ -208,7 +208,7 @@ class SendEmailsAction(ActionTypeAlert):
             {'query_link': query_link, 'reason': reason, 'period': period, 'query': query_name}))
         if self._config.get('emailBody'):
             html_sections.append(REPORTS_TEMPLATES['custom_body'].render({
-                'body_text': self._config['emailBody']
+                'body_text': self._config['emailBody'].replace('\n', '\n<br>')
             }))
         html_sections.append(REPORTS_TEMPLATES['calc_area'].render({
             'prev': prev_result_count,

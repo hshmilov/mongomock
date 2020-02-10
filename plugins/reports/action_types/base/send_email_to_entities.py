@@ -99,7 +99,7 @@ class SendEmailToEntities(ActionTypeBase):
                     mail_content = mail_content.replace(AWS_ACCOUNT_ALIAS, str(aws_account_alias))
                 mail_list = list(mail_list)
                 email = mail_sender.new_email(self._config['mail_subject'], mail_list)
-                email.send(mail_content)
+                email.send(mail_content.replace('\n', '\n<br>'))
                 results.append(EntityResult(entry['internal_axon_id'], True, 'success'))
             except Exception as e:
                 logger.exception(f'Failed sending email to {entry}')

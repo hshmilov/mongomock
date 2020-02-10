@@ -4797,7 +4797,8 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
                         for attachment_data in attachments_data:
                             email.add_attachment(attachment_data['name'], attachment_data['content'].read(),
                                                  'text/csv')
-                        email.send(mail_properties.get('mailMessage', EXEC_REPORT_EMAIL_CONTENT))
+                        email.send(mail_properties.get('mailMessage',
+                                                       EXEC_REPORT_EMAIL_CONTENT).replace('\n', '\n<br>'))
                         self.reports_config_collection.update_one({
                             'name': report_name,
                             'archived': {

@@ -57,6 +57,7 @@ class ServiceNowAdapter(AdapterBase, Configurable):
         operational_status = Field(str, 'Operational Status')
         hardware_status = Field(str, 'Hardware Status')
         vendor = Field(str, 'Vendor')
+        u_number = Field(str, 'U Number')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -305,6 +306,7 @@ class ServiceNowAdapter(AdapterBase, Configurable):
             device.model_version_number = device_raw.get('u_model_version_number')
             device.operational_status = INSTALL_STATUS_DICT.get(device_raw.get('operational_status'))
             device.hardware_status = device_raw.get('hardware_status')
+            device.u_number = device_raw.get('u_number')
             device.set_raw(device_raw)
             if not got_serial and not got_nic and self.__exclude_no_strong_identifier:
                 return None

@@ -125,6 +125,7 @@ class QualysAgentPort(SmartJsonClass):
 
 
 class QualysScansAdapter(ScannerAdapterBase, Configurable):
+    # pylint: disable=too-many-instance-attributes
     class MyDeviceAdapter(DeviceAdapter):
         qualys_id = Field(str, 'Qualys ID')
         qualys_agent_vulns = ListField(QualysAgentVuln, 'Vulnerabilities')
@@ -132,6 +133,8 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
         qualys_tags = ListField(str, 'Qualys Tags')
         last_vuln_scan = Field(datetime.datetime, 'Last Vuln Scan')
         agent_last_seen = Field(datetime.datetime, 'Agent Last Seen')
+        qweb_host_id = Field(int, 'Qweb Host ID')
+        tracking_method = Field(str, 'Tracking Method')
 
         def add_qualys_vuln(self, **kwargs):
             self.qualys_agent_vulns.append(QualysAgentVuln(**kwargs))
@@ -454,6 +457,9 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
                 logger.exception(f'Problem with adding software to Qualys agent {device_raw}')
 
             device.adapter_properties = [AdapterProperty.Vulnerability_Assessment.name]
+            device.qweb_host_id = device_raw.get('qwebHostId') \
+                if isinstance(device_raw.get('qwebHostId'), int) else None
+            device.tracking_method = device_raw.get('trackingMethod')
             device.set_raw(device_raw)
             if not tags_ok:
                 return None

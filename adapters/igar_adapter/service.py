@@ -343,6 +343,7 @@ class IgarAdapter(AdapterBase):
                 device.panned_availability_period = device_raw.get('PannedAvailabilityPeriod')
                 device.ci_number = device_raw.get('CINumber')
                 device.server_environent_supported_by = device_raw.get('Server_Environent_Supported_By')
+                device.set_raw(device_raw)
                 yield device
             except Exception:
                 logger.exception(f'Problem adding device: {str(device_raw)}')
