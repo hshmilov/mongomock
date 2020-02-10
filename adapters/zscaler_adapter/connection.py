@@ -108,7 +108,10 @@ class ZscalerConnection(RESTConnection):
                 logger.error('Unsupported rate limit type {type_}')
                 time.sleep(DEFAULT_SLEEP)
                 return
-            time.sleep(int(time_))
+            if int(time_) != 0:
+                time.sleep(int(time_))
+            else:
+                time.sleep(DEFAULT_SLEEP)
         except Exception as e:
             logger.exception(f'Failed to sleep rate limit response {e} {response}')
             time.sleep(DEFAULT_SLEEP)
