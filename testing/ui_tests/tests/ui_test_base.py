@@ -10,6 +10,7 @@ import pytest
 from passlib.hash import bcrypt
 from retrying import retry
 from selenium import webdriver
+import selenium.common.exceptions
 from devops.scripts.backup.axonius_full_backup_restore import backup
 import conftest
 
@@ -89,9 +90,18 @@ class TestBase:
         else:
             self.local_browser = False
             self.port = 443
+
+            def should_retry(exception):
+                logger.info(f'webdriver.Remote failed with exception {exception}')
+                return isinstance(exception, selenium.common.exceptions.WebDriverException)
+
+            @retry(retry_on_exception=should_retry, stop_max_attempt_number=3, wait_fixed=1000)
+            def create_remote_driver():
+                return webdriver.Remote(command_executor=f'http://127.0.0.1:{DOCKER_PORTS["selenium-hub"]}/wd/hub',
+                                        desired_capabilities=self._get_desired_capabilities())
+
             logger.info('Before webdriver.Remote')
-            self.driver = webdriver.Remote(command_executor=f'http://127.0.0.1:{DOCKER_PORTS["selenium-hub"]}/wd/hub',
-                                           desired_capabilities=self._get_desired_capabilities())
+            self.driver = create_remote_driver()
             logger.info('After webdriver.Remote')
             self.base_url = f'https://gui.{AXONIUS_DNS_SUFFIX}'
 
