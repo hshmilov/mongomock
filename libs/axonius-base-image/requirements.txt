@@ -110,4 +110,3 @@ pyparsing==2.4.5
 ucsmsdk==0.9.8
 pem==19.3.0
 requests_ntlm==1.1.0
-sqlite3==2.6.0
