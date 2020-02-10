@@ -8,9 +8,9 @@ from test_credentials.test_gotoassist_credentials import client_details
 from ui_tests.tests.ui_test_base import TestBase
 from ui_tests.tests.ui_consts import AD_ADAPTER_NAME, JSON_ADAPTER_NAME
 
-GOTOASSIST_NAME = 'RescueAssist'
+GOTOASSIST_NAME = 'RescueAssist (GoToAssist)'
 GOTOASSIST_PLUGIN_NAME = 'gotoassist_adapter'
-GOTOASSIST_NAME = 'RescueAssist'
+GOTOASSIST_NAME = 'RescueAssist (GoToAssist)'
 ESET_NAME = 'ESET Endpoint Security'
 ESET_PLUGIN_NAME = 'eset_adapter'
 

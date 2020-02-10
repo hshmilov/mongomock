@@ -254,7 +254,7 @@ class EsxAdapter(AdapterBase, Configurable):
             'items': [
                 {
                     'name': 'fetch_only_turned_on_machines',
-                    'title': 'Fetch Only Turned On Machines',
+                    'title': 'Fetch only turned on machines',
                     'type': 'bool'
                 }
             ],

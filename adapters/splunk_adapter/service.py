@@ -381,7 +381,7 @@ class SplunkAdapter(AdapterBase, Configurable):
             "items": [
                 {
                     'name': 'splunk_macros_list',
-                    'title': 'Splunk macros list',
+                    'title': 'Splunk search macros list',
                     'type': 'string'
                 },
                 {

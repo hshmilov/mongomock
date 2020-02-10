@@ -285,7 +285,7 @@ class VcloudDirectorAdapter(AdapterBase, Configurable):
             'items': [
                 {
                     'name': 'max_async_requests',
-                    'title': 'Max Parallel Requests',
+                    'title': 'Max parallel requests',
                     'type': 'integer'
                 }
             ],

@@ -22,7 +22,7 @@ class TestGettingStarted(TestBase):
     LOGGED_IN_MARKER_PATH = '/home/ubuntu/cortex/.axonius_settings/.logged_in'
     ENFORCEMENT_NAME = 'Test Milestone Completion'
     SAVED_QUERY = 'Getting Started Query'
-    GOTOASSIST_NAME = 'RescueAssist'
+    GOTOASSIST_NAME = 'RescueAssist (GoToAssist)'
 
     log_tester = LogTester(GUI_LOG_PATH)
 

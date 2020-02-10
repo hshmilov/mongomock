@@ -6,7 +6,7 @@ from test_credentials.test_ad_credentials import ad_client1_details
 from ui_tests.tests.adapters_test_base import AdapterTestBase
 from ui_tests.tests.ui_consts import AD_ADAPTER_NAME
 
-GOTOASSIST_NAME = 'RescueAssist'
+GOTOASSIST_NAME = 'RescueAssist (GoToAssist)'
 GOTOASSIST_PLUGIN_NAME = 'gotoassist_adapter'
 
 

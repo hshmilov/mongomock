@@ -7,7 +7,7 @@ export const pluginMeta = {
     digicert_certcentral_adapter: {
         title: 'DigiCert CertCentral',
         link: 'https://docs.axonius.com/docs/digicert-certcentral',
-        description: 'CertCentral consolidates tasks for issuing, installing, inspecting, remediating, and renewing certificates.'
+        description: 'DigiCert CertCentral consolidates tasks for issuing, installing, inspecting, remediating, and renewing certificates.'
     },
     arista_eos_adapter: {
         title: 'Arista Extensible Operating System (EOS)',
@@ -103,7 +103,7 @@ export const pluginMeta = {
         description: 'PKWARE’s data protection platform finds, classifies, and protects sensitive data, allowing security managers to define data protection policies and monitor activity across the organization.'
     },
     symantec_ccs_adapter: {
-        title: 'Symantec Control Compliance Suite',
+        title: 'Symantec Control Compliance Suite (CCS)',
         link: 'https://docs.axonius.com/docs/symantec-control-compliance-suite',
         description: 'Symantec Control Compliance Suite (CCS) is a solution to help identify security gaps and vulnerabilities and automate compliance assessments for over 100 regulations, mandates, and best practice frameworks including GDPR, HIPAA, NIST, PCI and SWIFT. Symantec CCS discovers and inventories all networks and assets including managed and unmanaged devices allowing for assets to be profiled and ranked for risk potential.'
     },
@@ -160,7 +160,8 @@ export const pluginMeta = {
     },
     eclypsium_adapter: {
         title: 'Eclypsium',
-        description: 'Eclypsium protects the foundation of your computing infrastructure, controlling risks and stopping threats to enterprise firmware and hardware devices.'
+        link: 'https://docs.axonius.com/docs/eclypsium',
+        description: 'Eclypsium protects the foundation of computing infrastructure, controlling risks and stopping threats to enterprise firmware and hardware devices.'
     },
     scep_adapter: {
         title: 'Microsoft SCEP',
@@ -307,7 +308,7 @@ export const pluginMeta = {
     netskope_adapter: {
         title: 'Netskope',
         link: 'https://docs.axonius.com/docs/netskope',
-        description: 'The Netskope Security Cloud provides unrivaled visibility and real-time data and threat protection when accessing cloud services, websites, and private apps from anywhere, on any device.'
+        description: 'Netskope Security Cloud provides unrivaled visibility and real-time data and threat protection when accessing cloud services, websites, and private apps from anywhere, on any device.'
     },
     imperva_dam_adapter: {
         title: 'Imperva Data Activity Monitoring (DAM)',
@@ -365,12 +366,12 @@ export const pluginMeta = {
         description: 'Rumble Network Discovery is a cloud-based network discovery platform that identifies and monitors network-connected IT assets.'
     },
     office_scan_adapter: {
-        title: 'Trend Micro Apex One (formerly OfficeScan)',
+        title: 'Trend Micro Apex One (OfficeScan)',
         link: 'https://docs.axonius.com/docs/trend-micro-apex-one',
         description: 'Trend Micro Apex One (formerly OfficeScan) is an endpoint security solution protecting against malware, scripts, injection, ransomware, memory and browser attacks, and exploits.'
     },
     datto_rmm_adapter: {
-        title: 'Datto RMM - BETA',
+        title: 'Datto RMM (Autotask Endpoint Management) - BETA',
         link: 'https://docs.axonius.com/docs/datto-rmm',
         description: 'Datto RMM (formerly Autotask Endpoint Management) is a cloud-based Remote Monitoring and Management (RMM) platform that provides device auditing, real-time monitoring, and automatic patching.'
     },
@@ -579,9 +580,9 @@ export const pluginMeta = {
         description: 'Absolute specializes in software to manage and secure Windows computers and Android smartphones.'
     },
     landesk_adapter: {
-        title: 'Ivanti (Landesk) Unified Endpoint Manager',
+        title: 'Ivanti Unified Endpoint Manager (Landesk)',
         link: 'https://docs.axonius.com/docs/ivanti-unified-endpoint-manager',
-        description: 'Ivanti (formerly Landesk) Unified Endpoint Manager (UEM) helps IT administrators gather detailed device data, automate software and OS deployments, personalize workspace environments, and fix user issues.'
+        description: 'Ivanti Unified Endpoint Manager (formerly Landesk) helps IT administrators gather detailed device data, automate software and OS deployments, personalize workspace environments, and fix user issues.'
     },
     lansweeper_adapter: {
         title: 'Lansweeper',
@@ -714,7 +715,7 @@ export const pluginMeta = {
         description: 'G Suite is a set of cloud computing, productivity, collaboration, device, user, and data management tools developed by Google.'
     },
     tenable_security_center_adapter: {
-        title: 'Tenable.sc (formerly SecurityCenter)',
+        title: 'Tenable.sc (SecurityCenter)',
         link: 'https://docs.axonius.com/docs/tenablesc-formerly-securitycenter',
         description: 'Tenable.sc (formerly SecurityCenter)  consolidates and evaluates vulnerability data, prioritizing security risks.'
     },
@@ -729,7 +730,7 @@ export const pluginMeta = {
         description: 'Generic fields with values given by the user, that can be edited in the entity configuration page'
     },
     gotoassist_adapter: {
-        title: 'RescueAssist',
+        title: 'RescueAssist (GoToAssist)',
         link: '',
         description: 'RescueAssist (formerly GoToAssist) is a cloud-based toolset for IT and customer support teams including remote support, IT monitoring, and service desk management.'
     },
@@ -746,7 +747,7 @@ export const pluginMeta = {
     aws_adapter: {
         title: 'Amazon Web Services (AWS)',
         link: 'https://docs.axonius.com/docs/amazon-web-services-aws',
-        description: 'The Amazon Web Services (AWS) adapter includes a broad set of global cloud based products. It supports EC2, ECS, EKS, IAM, EBS, ELB, RDS, S3, VPC, Workspaces, Lambda and Route 53'
+        description: 'Amazon Web Services (AWS) includes a broad set of global cloud based products. It supports EC2, ECS, EKS, IAM, EBS, ELB, RDS, S3, VPC, Workspaces, Lambda and Route 53'
     },
     jamf_adapter: {
         title: 'Jamf Pro',
@@ -836,7 +837,7 @@ export const pluginMeta = {
     cisco_adapter: {
         title: 'Cisco',
         link: 'https://docs.axonius.com/docs/cisco',
-        description: 'The Cisco Adapter connects to Cisco switches and routers.'
+        description: 'Cisco connects to Cisco switches and routers.'
     },
     eset_adapter: {
         title: 'ESET Endpoint Security',
@@ -936,7 +937,7 @@ export const pluginMeta = {
     aruba_adapter: {
         title: 'Aruba',
         link: 'https://docs.axonius.com/docs/aruba',
-        description: 'The Aruba Adapter connects to Aruba switches and routers.'
+        description: 'Aruba connects to Aruba switches and routers.'
     },
     infoblox_adapter: {
         title: 'Infoblox DDI',
