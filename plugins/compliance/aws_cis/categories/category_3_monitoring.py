@@ -1,6 +1,7 @@
 """
 Contains all the scored rules for the "Monitoring" Category of AWS CIS
 """
+# pylint: disable=too-many-statements
 import logging
 import re
 from collections import defaultdict
@@ -21,7 +22,8 @@ class CISAWSCategory3:
         self.report = report
         self.session = session
         self.https_proxy = account_dict.get('https_proxy')
-        self.region_name = account_dict.get('region_name') or AWS_CIS_DEFAULT_REGION
+        self.region_name = AWS_CIS_DEFAULT_REGION if account_dict.get('get_all_regions') \
+            else account_dict.get('region_name')
         self.cloudtrails = cloudtrails
 
         self.__services_by_regions = defaultdict(dict)
@@ -57,116 +59,115 @@ class CISAWSCategory3:
             return
 
         data = get_api_data(self.cloudtrails)
+        did_read_one_region = False
+        first_exception = None
         for region_name, cloudtrails_per_region in data.items():
-            for cloudtrail in cloudtrails_per_region:
-                # Verify this is a valid cloudtrail (multiregion, islogging enabled, and has IncludeManagementEvents
-                # and ReadWriteType == 'All'
+            try:
+                for cloudtrail in cloudtrails_per_region:
+                    # Verify this is a valid cloudtrail (multiregion, islogging enabled, and has IncludeManagementEvents
+                    # and ReadWriteType == 'All'
 
-                if not cloudtrail.get('IsMultiRegionTrail'):
-                    continue
+                    if not cloudtrail.get('IsMultiRegionTrail'):
+                        continue
 
-                cloud_watch_logs_log_group_arn = cloudtrail.get('CloudWatchLogsLogGroupArn')
-                if not cloud_watch_logs_log_group_arn:
-                    continue
+                    cloud_watch_logs_log_group_arn = cloudtrail.get('CloudWatchLogsLogGroupArn')
+                    if not cloud_watch_logs_log_group_arn:
+                        continue
 
-                cloudtrail_client = self.__get_service_for_region('cloudtrail', region_name)
-                if not cloudtrail_client.get_trail_status(Name=cloudtrail.get('TrailARN')).get('IsLogging'):
-                    continue
+                    cloudtrail_client = self.__get_service_for_region('cloudtrail', region_name)
+                    if not cloudtrail_client.get_trail_status(Name=cloudtrail.get('TrailARN')).get('IsLogging'):
+                        continue
 
-                event_selectors_response = cloudtrail_client.get_event_selectors(TrailName=cloudtrail.get('TrailARN'))
+                    event_selectors_response = cloudtrail_client.get_event_selectors(
+                        TrailName=cloudtrail.get('TrailARN'))
 
-                is_valid_cloudtrail = False
-                for ev_sel in (event_selectors_response.get('EventSelectors') or []):
-                    if ev_sel.get('IncludeManagementEvents') and str(ev_sel.get('ReadWriteType', '')).lower() == 'all':
-                        is_valid_cloudtrail = True
-                        break
+                    is_valid_cloudtrail = False
+                    for ev_sel in (event_selectors_response.get('EventSelectors') or []):
+                        if ev_sel.get('IncludeManagementEvents') and str(
+                                ev_sel.get('ReadWriteType', '')).lower() == 'all':
+                            is_valid_cloudtrail = True
+                            break
 
-                if not is_valid_cloudtrail:
-                    continue
+                    if not is_valid_cloudtrail:
+                        continue
 
-                # Search for the metrics
-                try:
-                    group_name = re.search('log-group:(.+?):', cloud_watch_logs_log_group_arn).group(1)
-                except Exception:
-                    continue
+                    # Search for the metrics
+                    try:
+                        group_name = re.search('log-group:(.+?):', cloud_watch_logs_log_group_arn).group(1)
+                    except Exception:
+                        continue
 
-                try:
-                    logs_client = self.__get_service_for_region('logs', region_name)
-                except Exception as e:
-                    self.report.add_rule_error(
-                        rule_section,
-                        f'Could not establish connection to AWS Logs service: {str(e)}'
-                    )
-                    return
+                    try:
+                        logs_client = self.__get_service_for_region('logs', region_name)
+                    except Exception as e:
+                        raise ValueError(f'Could not establish connection to AWS Logs service: {str(e)}')
 
-                # Describe all metric filters for that group name
+                    # Describe all metric filters for that group name
 
-                try:
-                    metric_filters_response = logs_client.describe_metric_filters(
-                        logGroupName=group_name
-                    )
-                except Exception as e:
-                    self.report.add_rule_error(
-                        rule_section,
-                        f'Error using logs.describe_metric_filters: {str(e)}'
-                    )
-                    return
+                    try:
+                        metric_filters_response = logs_client.describe_metric_filters(
+                            logGroupName=group_name
+                        )
+                    except Exception as e:
+                        raise ValueError(f'Error using logs.describe_metric_filters: {str(e)}')
 
-                # in each metric filter, check if the filter pattern contains all of our requirements
-                # (passed in patterns)
+                    # in each metric filter, check if the filter pattern contains all of our requirements
+                    # (passed in patterns)
 
-                for metric_filter in (metric_filters_response.get('metricFilters') or []):
-                    if self.__verify_all_re_in_string(metric_filter.get('filterPattern', ''), patterns):
-                        try:
-                            cloudwatch_client = self.__get_service_for_region('cloudwatch', region_name)
-                        except Exception as e:
-                            self.report.add_rule_error(
-                                rule_section,
-                                f'Could not establish connection to AWS Cloudwatch service: {str(e)}'
-                            )
-                            return
+                    for metric_filter in (metric_filters_response.get('metricFilters') or []):
+                        if self.__verify_all_re_in_string(metric_filter.get('filterPattern', ''), patterns):
+                            try:
+                                cloudwatch_client = self.__get_service_for_region('cloudwatch', region_name)
+                            except Exception as e:
+                                raise ValueError(f'Could not establish connection to AWS Cloudwatch service: {str(e)}')
 
-                        try:
-                            sns_client = self.__get_service_for_region('sns', region_name)
-                        except Exception as e:
-                            self.report.add_rule_error(
-                                rule_section,
-                                f'Could not establish connection to AWS SNS service: {str(e)}'
-                            )
-                            return
+                            try:
+                                sns_client = self.__get_service_for_region('sns', region_name)
+                            except Exception as e:
+                                raise ValueError(f'Could not establish connection to AWS SNS service: {str(e)}')
 
-                        try:
-                            # For this metric filter, Search for all alarms
-                            for metric_transformation in (metric_filter.get('metricTransformations') or []):
-                                alarms_for_metric_response = cloudwatch_client.describe_alarms_for_metric(
-                                    MetricName=metric_transformation['metricName'],
-                                    Namespace=metric_transformation['metricNamespace']
-                                ).get('MetricAlarms') or []
+                            try:
+                                # For this metric filter, Search for all alarms
+                                for metric_transformation in (metric_filter.get('metricTransformations') or []):
+                                    alarms_for_metric_response = cloudwatch_client.describe_alarms_for_metric(
+                                        MetricName=metric_transformation['metricName'],
+                                        Namespace=metric_transformation['metricNamespace']
+                                    ).get('MetricAlarms') or []
 
-                                # For each alarm, go through all actions. For every sns action, get the subscribers.
-                                # If there is at least one subscriber, we are good.
+                                    # For each alarm, go through all actions. For every sns action, get the subscribers.
+                                    # If there is at least one subscriber, we are good.
 
-                                for alarm in alarms_for_metric_response:
-                                    for alarm_action in alarm.get('AlarmActions') or []:
-                                        if alarm_action.startswith('arn:aws:sns'):
-                                            if len(sns_client.list_subscriptions_by_topic(
-                                                    TopicArn=alarm_action
-                                            ).get('Subscriptions') or []) > 0:
-                                                self.report.add_rule(
-                                                    RuleStatus.Passed,
-                                                    rule_section,
-                                                    (0, 1),
-                                                    0,
-                                                    ''
-                                                )
-                                                return
-                        except Exception as e:
-                            self.report.add_rule_error(
-                                rule_section,
-                                f'Error describing cloudwatch alarms ('
-                                f'cloudwatch.describe_alarms_for_metric, sns.list_subscriptions_by_topic): {str(e)}'
-                            )
-                            return
+                                    for alarm in alarms_for_metric_response:
+                                        for alarm_action in alarm.get('AlarmActions') or []:
+                                            if alarm_action.startswith('arn:aws:sns'):
+                                                if len(sns_client.list_subscriptions_by_topic(
+                                                        TopicArn=alarm_action
+                                                ).get('Subscriptions') or []) > 0:
+                                                    self.report.add_rule(
+                                                        RuleStatus.Passed,
+                                                        rule_section,
+                                                        (0, 1),
+                                                        0,
+                                                        ''
+                                                    )
+                                                    return
+                            except Exception as e:
+                                raise ValueError(
+                                    f'Error describing cloudwatch alarms ('
+                                    f'cloudwatch.describe_alarms_for_metric, sns.list_subscriptions_by_topic): {str(e)}'
+                                )
+                did_read_one_region = True
+            except Exception as e:
+                logger.debug(f'Failed parsing for {region_name}', exc_info=True)
+                if not first_exception:
+                    first_exception = e
+
+        if not did_read_one_region:
+            self.report.add_rule_error(
+                rule_section,
+                str(first_exception)
+            )
+            return
 
         # If we have reached here, that means, that we haven't found any CloudTrail which is multi-regional,
         # has logging enabled, has the IncludeManagementEvents set to True, has the ReadWriteType set to ALL,

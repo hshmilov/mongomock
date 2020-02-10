@@ -26,7 +26,9 @@ class CISAWSCategory2:
         self.report = report
         self.session = session
         self.https_proxy = account_dict.get('https_proxy')
-        self.region_name = account_dict.get('region_name') or AWS_CIS_DEFAULT_REGION
+        self.account_id = account_dict.get('account_id_number')
+        self.region_name = AWS_CIS_DEFAULT_REGION if account_dict.get('get_all_regions') \
+            else account_dict.get('region_name')
         self.cloudtrails = cloudtrails
 
         if account_dict.get('region_name') and not account_dict.get('get_all_regions'):
@@ -194,7 +196,9 @@ class CISAWSCategory2:
                 errors_to_gui(errors),
                 {
                     'type': 'devices',
-                    'query': f'(adapters_data.aws_adapter.aws_cis_incompliant.rule_section == "{rule_section}")'
+                    'query': f'specific_data == match([plugin_name == \'aws_adapter\' and '
+                             f'(data.aws_cis_incompliant.rule_section == "{rule_section}") and '
+                             f'(data.aws_account_id == {self.account_id or 0})])'
                 }
             )
         else:
@@ -268,51 +272,64 @@ class CISAWSCategory2:
         rule_section = kwargs['rule_section']
 
         errors = []
+        num_of_read_regions = 0
+        first_exception = None
         for region_name in self.all_regions:
             try:
-                configuration_recorders_by_name = dict()
-                configuration_recorders_status_by_name = dict()
-                config_client = get_boto3_client_by_session('config', self.session, region_name, self.https_proxy)
+                try:
+                    configuration_recorders_by_name = dict()
+                    configuration_recorders_status_by_name = dict()
+                    config_client = get_boto3_client_by_session('config', self.session, region_name, self.https_proxy)
 
-                for conrec in (config_client.describe_configuration_recorders().get('ConfigurationRecorders') or []):
-                    if 'name' not in conrec:
-                        continue
-                    configuration_recorders_by_name[conrec['name']] = conrec
+                    for conrec in (config_client.describe_configuration_recorders().get(
+                            'ConfigurationRecorders') or []):
+                        if 'name' not in conrec:
+                            continue
+                        configuration_recorders_by_name[conrec['name']] = conrec
 
-                for conrec_status in (config_client.describe_configuration_recorder_status().get(
-                        'ConfigurationRecordersStatus') or []):
-                    if 'name' not in conrec_status:
-                        continue
-                    configuration_recorders_status_by_name[conrec_status['name']] = conrec_status
+                    for conrec_status in (config_client.describe_configuration_recorder_status().get(
+                            'ConfigurationRecordersStatus') or []):
+                        if 'name' not in conrec_status:
+                            continue
+                        configuration_recorders_status_by_name[conrec_status['name']] = conrec_status
 
+                except Exception as e:
+                    raise ValueError(
+                        f'Error describing configuration recorders for region {region_name} '
+                        f'(config.describe_configuration_recorders, config.describe_configuration_recorder_status): '
+                        f'{str(e)}')
+
+                did_find_valid_config_recorder = False
+                for configuration_recorder_name, configuration_recorder in configuration_recorders_by_name.items():
+                    recording_group = configuration_recorder.get('recordingGroup') or {}
+                    if recording_group.get('allSupported') and recording_group.get('includeGlobalResourceTypes'):
+                        config_recorder_status = configuration_recorders_status_by_name.get(configuration_recorder_name)
+                        if config_recorder_status.get('recording') and str(
+                                config_recorder_status.get('lastStatus', '')).lower() == 'success':
+                            did_find_valid_config_recorder = True
+                            break
+
+                if not did_find_valid_config_recorder:
+                    errors.append(f'AWS Config not enabled properly in region {region_name}: Did not '
+                                  f'find valid configuration recorder')
+                num_of_read_regions += 1
             except Exception as e:
-                self.report.add_rule_error(
-                    rule_section,
-                    f'Error describing security groups for region {region_name} '
-                    f'(config.describe_configuration_recorders, config.describe_configuration_recorder_status): '
-                    f'{str(e)}'
-                )
-                return
+                if not first_exception:
+                    first_exception = e
+                logger.debug(f'2.5 Could not parse region {region_name}', exc_info=True)
 
-            did_find_valid_config_recorder = False
-            for configuration_recorder_name, configuration_recorder in configuration_recorders_by_name.items():
-                recording_group = configuration_recorder.get('recordingGroup') or {}
-                if recording_group.get('allSupported') and recording_group.get('includeGlobalResourceTypes'):
-                    config_recorder_status = configuration_recorders_status_by_name.get(configuration_recorder_name)
-                    if config_recorder_status.get('recording') and str(
-                            config_recorder_status.get('lastStatus', '')).lower() == 'success':
-                        did_find_valid_config_recorder = True
-                        break
-
-            if not did_find_valid_config_recorder:
-                errors.append(f'AWS Config not enabled properly in region {region_name}: Did not '
-                              f'find valid configuration recorder')
+        if not num_of_read_regions:
+            self.report.add_rule_error(
+                rule_section,
+                str(first_exception)
+            )
+            return
 
         if errors:
             self.report.add_rule(
                 RuleStatus.Failed,
                 rule_section,
-                (len(errors), len(self.all_regions)),
+                (len(errors), num_of_read_regions),
                 0,
                 errors_to_gui(errors)
             )
@@ -320,7 +337,7 @@ class CISAWSCategory2:
             self.report.add_rule(
                 RuleStatus.Passed,
                 rule_section,
-                (0, len(self.all_regions)),
+                (0, num_of_read_regions),
                 0,
                 ''
             )
@@ -375,7 +392,9 @@ class CISAWSCategory2:
                 errors_to_gui(errors),
                 {
                     'type': 'devices',
-                    'query': f'(adapters_data.aws_adapter.aws_cis_incompliant.rule_section == "{rule_section}")'
+                    'query': f'specific_data == match([plugin_name == \'aws_adapter\' and '
+                             f'(data.aws_cis_incompliant.rule_section == "{rule_section}") and '
+                             f'(data.aws_account_id == {self.account_id or 0})])'
                 }
             )
         else:
@@ -435,15 +454,21 @@ class CISAWSCategory2:
         """
         rule_section = kwargs['rule_section']
         keys_by_region = defaultdict(list)
-        try:
-            for region in self.all_regions:
+        first_exception = None
+        for region in self.all_regions:
+            try:
                 kms_client = get_boto3_client_by_session('kms', self.session, region, self.https_proxy)
                 for result_page in kms_client.get_paginator('list_keys').paginate():
                     keys_by_region[region].extend(result_page.get('Keys') or [])
-        except Exception as e:
+            except Exception as e:
+                logger.debug(f'2.8 Could not parse region {region}', exc_info=True)
+                if not first_exception:
+                    first_exception = e
+
+        if not keys_by_region.keys():
             self.report.add_rule_error(
                 rule_section,
-                f'Error listing KMS keys (kms.list_keys): {str(e)}'
+                f'Error listing KMS keys (kms.list_keys): {str(first_exception)}'
             )
             return
 
@@ -480,8 +505,10 @@ class CISAWSCategory2:
         rule_section = kwargs['rule_section']
         vpcs_by_region = defaultdict(list)
         active_flow_logs_by_resource_id = defaultdict(list)
-        try:
-            for region in self.all_regions:
+        first_exception = None
+        did_one_succeed = False
+        for region in self.all_regions:
+            try:
                 ec2_client = get_boto3_client_by_session('ec2', self.session, region, self.https_proxy)
                 for result_page in ec2_client.get_paginator('describe_vpcs').paginate():
                     vpcs_by_region[region].extend(result_page.get('Vpcs') or [])
@@ -493,10 +520,17 @@ class CISAWSCategory2:
                         if str(flow_log.get('FlowLogStatus', '').lower()) != 'active':
                             continue
                         active_flow_logs_by_resource_id[flow_log['ResourceId']] = flow_log
-        except Exception as e:
+
+                did_one_succeed = True
+            except Exception as e:
+                if not first_exception:
+                    first_exception = e
+                logger.debug(f'2.9 (Ensure VPC flow loging is enabled): Could not parse region {region}')
+
+        if not did_one_succeed:
             self.report.add_rule_error(
                 rule_section,
-                f'Error checking VPC flow logs\'s (ec2.describe_vpcs, ec2.describe_flow_logs): {str(e)}'
+                f'Error checking VPC flow logs\'s (ec2.describe_vpcs, ec2.describe_flow_logs): {str(first_exception)}'
             )
             return
 

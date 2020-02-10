@@ -286,8 +286,8 @@ class SplunkAdapter(AdapterBase, Configurable):
                     device.splunk_source = device_type
                     fields = get_csv_field_names(list(device_raw.keys()))
                     if not any(id_field in fields for id_field in DEVICES_NEEDED_FIELDS):
-                        logger.error(f'Bad devices fields names {str(list(device_raw.keys()))}')
-                        raise GetDevicesError(f'Strong identifier is missing for devices')
+                        logger.debug(f'Bad devices fields names {str(list(device_raw.keys()))}')
+                        continue
                     vals = {field_name: device_raw.get(fields[field_name][0]) for field_name in fields}
 
                     macs = (vals.get('mac_address') or '').split(',')

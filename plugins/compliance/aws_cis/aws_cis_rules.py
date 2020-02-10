@@ -26,25 +26,38 @@ def generate_failed_report(report: AccountReport, error: str):
 
 
 def get_all_cloudtrails(regions: List[str], session: boto3.Session, https_proxy: str) -> Dict[str, list]:
-    try:
-        trails = defaultdict(list)
-        for region_name in regions:
+    trails = defaultdict(list)
+    first_exception = None
+    did_one_succeed = False
+    trail_arn_set = set()
+    for region_name in regions:
+        try:
             cloudtrail_client = get_boto3_client_by_session('cloudtrail', session, region_name, https_proxy)
             for cloudtrail in (cloudtrail_client.describe_trails().get('trailList') or []):
+                if cloudtrail.get('TrailARN') in trail_arn_set:
+                    # No reason to add the same trail (happens on MultiRegion trails's)
+                    continue
                 if cloudtrail.get('IsMultiRegionTrail') is True:
                     region_to_put = cloudtrail.get('HomeRegion') or region_name
                 else:
                     region_to_put = region_name
 
+                trail_arn_set.add(cloudtrail.get('TrailARN'))
                 trails[region_to_put].append(cloudtrail)
+                did_one_succeed = True
+        except Exception as e:
+            logger.debug(f'CloudTrail: Could not parse region {region_name}', exc_info=True)
+            if not first_exception:
+                first_exception = e
 
+    if did_one_succeed:
         return good_api_response(trails)
-    except Exception as e:
-        if 'An error occurred (AccessDeniedException)' not in str(e):
-            logger.exception(f'Failed getting cloudtrails')
-        return bad_api_response(
-            f'Error generating credential report (cloudtrail.describe_trails) - {str(e)}'
-        )
+
+    if 'An error occurred (AccessDeniedException)' not in str(first_exception):
+        logger.exception(f'Failed getting cloudtrails')
+    return bad_api_response(
+        f'Error generating credential report (cloudtrail.describe_trails) - {str(first_exception)}'
+    )
 
 
 # pylint: disable=too-many-statements

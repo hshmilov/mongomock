@@ -73,7 +73,8 @@ class CISAWSCategory1:
     def __init__(self, report: AccountReport, session: boto3.Session, account_dict: dict):
         self.report = report
         self.account_name = account_dict.get('name') or ''
-        self.region_name = account_dict.get('region_name') or AWS_CIS_DEFAULT_REGION
+        self.region_name = AWS_CIS_DEFAULT_REGION if account_dict.get('get_all_regions') \
+            else account_dict.get('region_name')
         self.https_proxy = account_dict.get('https_proxy')
         self.iam_client = get_boto3_client_by_session('iam', session, self.region_name, self.https_proxy)
         self.credential_report = get_credential_report(self.iam_client)
@@ -119,7 +120,7 @@ class CISAWSCategory1:
                         RuleStatus.Failed,
                         rule_section,
                         (1, 1),
-                        0,
+                        1,
                         errors_to_gui(error_messages),
                         {
                             'type': 'users',
@@ -614,7 +615,7 @@ class CISAWSCategory1:
                         RuleStatus.Failed,
                         rule_section,
                         (1, 1),
-                        0,
+                        1,
                         'Root account has active access keys',
                         {
                             'type': 'users',
@@ -652,7 +653,7 @@ class CISAWSCategory1:
                 RuleStatus.Failed,
                 rule_section,
                 (1, 1),
-                0,
+                1,
                 'MFA is not enabled for the root account',
                 {
                     'type': 'users',
@@ -687,7 +688,7 @@ class CISAWSCategory1:
                 RuleStatus.Failed,
                 rule_section,
                 (1, 1),
-                0,
+                1,
                 'No MFA (Virtual or Hardware) is enabled for the root account',
                 {
                     'type': 'users',
@@ -706,7 +707,7 @@ class CISAWSCategory1:
                         RuleStatus.Failed,
                         rule_section,
                         (1, 1),
-                        0,
+                        1,
                         'Root account is using virtual MFA',
                         {
                             'type': 'users',
@@ -745,7 +746,7 @@ class CISAWSCategory1:
                 if self.iam_client.list_attached_user_policies(
                         UserName=user['UserName'],
                         MaxItems=1
-                ).get('PolicyNames'):
+                ).get('AttachedPolicies'):
                     has_direct_policies = True
 
                 if has_inline_policies and has_direct_policies:

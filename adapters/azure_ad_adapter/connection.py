@@ -11,7 +11,9 @@ logger = logging.getLogger(f'axonius.{__name__}')
 
 AUTHORITY_HOST_URL = 'https://login.microsoftonline.com'
 GRAPH_API_URL = 'https://graph.microsoft.com'
+CHINA_GRAPH_API_URL = 'https://microsoftgraph.chinacloudapi.cn'
 AZURE_AD_GRAPH_API_URL = 'https://graph.windows.net'    # legacy api required for azure ad b2c
+CHINA_AZURE_AD_GRAPH_API_URL = 'https://graph.chinacloudapi.cn'
 TEMPLATE_AUTHZ_URL = 'https://login.windows.net/{tenant_id}/oauth2/authorize?response_type=code&client_id={client_id}' \
                      '&redirect_uri=https://localhost&state=after-auth&resource=https://graph.microsoft.com' \
                      '&prompt=admin_consent'
@@ -60,20 +62,26 @@ DEVICE_ATTRIBUTES = [
 
 # pylint: disable=logging-format-interpolation
 class AzureAdClient(RESTConnection):
-    def __init__(self, client_id, client_secret, tenant_id, *args, is_azure_ad_b2c=None, **kwargs):
+    def __init__(self, client_id, client_secret, tenant_id, *args, is_azure_ad_b2c=None, azure_region=None, **kwargs):
         self._client_id = client_id
         self._client_secret = client_secret
         self._tenant_id = tenant_id
         self._refresh_token = None
         self._is_azure_ad_b2c = is_azure_ad_b2c
         logger.info(f'Creating Azure AD with tenant {tenant_id} and client id {client_id}. '
-                    f'B2C: {bool(is_azure_ad_b2c)}')
+                    f'B2C: {bool(is_azure_ad_b2c)} azure_region: {azure_region}')
         if is_azure_ad_b2c:
-            self._api_endpoint = AZURE_AD_GRAPH_API_URL
-            super().__init__(domain=AZURE_AD_GRAPH_API_URL, url_base_prefix=f'/{self._tenant_id}', *args, **kwargs)
+            if str(azure_region).lower() == 'china':
+                self._api_endpoint = CHINA_AZURE_AD_GRAPH_API_URL
+            else:
+                self._api_endpoint = AZURE_AD_GRAPH_API_URL
+            super().__init__(domain=self._api_endpoint, url_base_prefix=f'/{self._tenant_id}', *args, **kwargs)
         else:
-            self._api_endpoint = GRAPH_API_URL
-            super().__init__(domain=GRAPH_API_URL, url_base_prefix='/v1.0', *args, **kwargs)
+            if str(azure_region).lower() == 'china':
+                self._api_endpoint = CHINA_GRAPH_API_URL
+            else:
+                self._api_endpoint = GRAPH_API_URL
+            super().__init__(domain=self._api_endpoint, url_base_prefix='/v1.0', *args, **kwargs)
 
     def set_refresh_token(self, refresh_token):
         self._refresh_token = refresh_token

@@ -32,7 +32,12 @@ def root_master_parse_entities(entity_type: EntityType, info, backup_source=None
             logger.warning(f'Weird device: {entity}')
             continue
         if backup_source:
-            entity['backup_source'] = backup_source
+            try:
+                for adapter_entity in (entity.get('adapters') or []):
+                    if adapter_entity.get('data'):
+                        adapter_entity['data']['backup_source'] = backup_source
+            except Exception:
+                pass
         bulk_replacements.append(
             ReplaceOne(
                 {'internal_axon_id': entity['internal_axon_id']},
@@ -113,7 +118,7 @@ def root_master_parse_entities_fields(entity_type: EntityType, info):
                 'raw': 'raw'
             }[schema_name]
             exist_fields = entity.get(field_name) or []
-            if field_name == 'exist' and plugin_unique_name == '*':
+            if schema_name == 'exist' and plugin_unique_name == '*':
                 # 'backup_source' is a mandatory field in root master
                 exist_fields.append('backup_source')
             if exist_fields and plugin_unique_name:

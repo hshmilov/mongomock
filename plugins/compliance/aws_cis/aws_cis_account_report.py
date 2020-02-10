@@ -13,10 +13,11 @@ logger = logging.getLogger(f'axonius.{__name__}')
 
 
 def get_session_by_account_dict(account_dict: dict):
+    sts_region_name = AWS_CIS_DEFAULT_REGION if account_dict.get('get_all_regions') else account_dict.get('region_name')
     if account_dict.get('assumed_role_arn'):
         extra_args = {
             'assumed_role_arn': account_dict['assumed_role_arn'],
-            'sts_region_name': account_dict.get('region_name') or AWS_CIS_DEFAULT_REGION
+            'sts_region_name': sts_region_name
         }
     else:
         extra_args = {}
@@ -47,7 +48,7 @@ def generate_report_for_aws_account(account_dict: dict) -> Tuple[str, str, dict]
         sts_client = get_boto3_client_by_session(
             'sts',
             session,
-            account_dict.get('region_name') or AWS_CIS_DEFAULT_REGION,
+            AWS_CIS_DEFAULT_REGION if account_dict.get('get_all_regions') else account_dict.get('region_name'),
             account_dict.get('https_proxy')
         )
 
@@ -61,7 +62,7 @@ def generate_report_for_aws_account(account_dict: dict) -> Tuple[str, str, dict]
         iam_client = get_boto3_client_by_session(
             'iam',
             session,
-            account_dict.get('region_name') or AWS_CIS_DEFAULT_REGION,
+            AWS_CIS_DEFAULT_REGION if account_dict.get('get_all_regions') else account_dict.get('region_name'),
             account_dict.get('https_proxy')
         )
 

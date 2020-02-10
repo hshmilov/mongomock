@@ -71,7 +71,8 @@ class AzureAdAdapter(AdapterBase, Configurable):
                                        tenant_id=client_config[AZURE_TENANT_ID],
                                        https_proxy=client_config.get('https_proxy'),
                                        verify_ssl=client_config.get(AZURE_VERIFY_SSL),
-                                       is_azure_ad_b2c=client_config.get('is_azure_ad_b2c')
+                                       is_azure_ad_b2c=client_config.get('is_azure_ad_b2c'),
+                                       azure_region=client_config.get('azure_region')
                                        )
             auth_code = client_config.get(AZURE_AUTHORIZATION_CODE)
             refresh_tokens_db = self._get_collection('refresh_tokens')
@@ -157,6 +158,13 @@ class AzureAdAdapter(AdapterBase, Configurable):
                     'name': 'is_azure_ad_b2c',
                     'title': 'Is Azure AD B2C',
                     'type': 'bool'
+                },
+                {
+                    'name': 'azure_region',
+                    'title': 'Azure Cloud',
+                    'type': 'string',
+                    'enum': ['Global', 'China'],
+                    'default': 'Global'
                 },
                 {
                     'name': 'https_proxy',

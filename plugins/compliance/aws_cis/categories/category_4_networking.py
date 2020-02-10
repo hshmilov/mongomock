@@ -19,18 +19,26 @@ logger = logging.getLogger(f'axonius.{__name__}')
 def get_security_groups(session: boto3.Session, regions: List[str], https_proxy: str):
     try:
         all_security_groups = []
+        first_exception = None
         for region_name in regions:
-            logger.debug(f'Getting security groups for region {region_name}..')
-            ec2_client = get_boto3_client_by_session('ec2', session, region_name, https_proxy)
+            try:
+                logger.debug(f'Getting security groups for region {region_name}..')
+                ec2_client = get_boto3_client_by_session('ec2', session, region_name, https_proxy)
 
-            for security_groups_page in ec2_client.get_paginator('describe_security_groups').paginate():
-                for security_group in (security_groups_page.get('SecurityGroups') or []):
-                    security_group['region_name'] = region_name
-                    all_security_groups.append(security_group)
+                for security_groups_page in ec2_client.get_paginator('describe_security_groups').paginate():
+                    for security_group in (security_groups_page.get('SecurityGroups') or []):
+                        security_group['region_name'] = region_name
+                        all_security_groups.append(security_group)
+            except Exception as e:
+                logger.debug(f'Exception while getting security groups for region {region_name}', exc_info=True)
+                if not first_exception:
+                    first_exception = e
 
+        if not all_security_groups:
+            raise first_exception
         return good_api_response(all_security_groups)
     except Exception as e:
-        logger.exception(f'Exception while describing security groups')
+        logger.debug(f'Exception while describing security groups', exc_info=True)
         return bad_api_response(
             f'Error describing security groups (ec2.describe_security_groups) - {str(e)}'
         )

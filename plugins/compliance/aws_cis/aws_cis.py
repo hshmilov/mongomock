@@ -13,7 +13,7 @@ logger = logging.getLogger(f'axonius.{__name__}')
 
 
 NUMBER_OF_PARALLEL_PROCESSES = 5
-TIMEOUT_FOR_RESULT_GENERATION = 60 * 60 * 3     # 3 hours
+TIMEOUT_FOR_RESULT_GENERATION = 60 * 60 * 5     # 5 hours
 
 
 # pylint: disable=protected-access
@@ -54,7 +54,8 @@ class AWSCISGenerator:
                 'aws_access_key_id': aws_client_config.get('aws_access_key_id'),
                 'aws_secret_access_key': aws_client_config.get('aws_secret_access_key'),
                 'region_name': aws_client_config.get('region_name'),
-                'https_proxy': aws_client_config.get('proxy')
+                'https_proxy': aws_client_config.get('proxy'),
+                'get_all_regions': aws_client_config.get('get_all_regions')
             }
 
             client_config_accounts = []
