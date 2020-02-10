@@ -45,8 +45,8 @@ DIR_MAP = {
 # The following line contains commands that we run before each new test. we are going to append more commands
 # to it later, hence we have ./prepare_python_env.sh (for these commands)
 FIRST_BASH_COMMANDS_BEFORE_EACH_TEST = 'set -e; source ./prepare_python_env.sh; ./clean_dockers.sh; '
-MAX_SECONDS_FOR_ONE_JOB = 60 * 120  # no job (test / bunch of jobs) should take more than that
-MAX_SECONDS_FOR_THREAD_POOL = 60 * 180  # Just an extra caution for a timeout
+MAX_SECONDS_FOR_ONE_JOB = 60 * 240  # no job (test / bunch of jobs) should take more than that
+MAX_SECONDS_FOR_THREAD_POOL = 60 * 260  # Just an extra caution for a timeout
 TC = TeamcityHelper()
 
 
@@ -324,6 +324,7 @@ class InstanceManager:
                 pass
 
             try:
+                print('Started artifacts db backup')
                 backups_tar_file = instance_to_run_on.get_folder_as_tar(
                     ARTIFACTS_DIRS_INSIDE_CONTAINER['backups']
                 )
@@ -334,6 +335,8 @@ class InstanceManager:
             except AssertionError:
                 # This is legitimate, we do not always have backups.
                 pass
+
+            print('Finished artifacts db backup')
 
             with free_instances_lock:
                 free_instances.append(instance_to_run_on)
