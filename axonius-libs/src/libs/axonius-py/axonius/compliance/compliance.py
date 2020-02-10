@@ -41,7 +41,7 @@ aws sns subscribe --topic-arn <sns_topic_arn> --protocol <protocol_for_sns> -not
 5. Create an alarm that is associated with the CloudWatch Logs Metric Filter created in step 2 and an SNS topic created in step 3
 aws cloudwatch put-metric-alarm --alarm-name  `<root_usage_alarm>`  --metricname  `<root_usage_metric>`  --statistic Sum --period 300 --threshold 1 -comparison-operator GreaterThanOrEqualToThreshold --evaluation-periods 1 -namespace 'CISBenchmark' --alarm-actions <sns_topic_arn> 
                 '''.strip(),
-                'entities_results': 'The use of the "Root" account is avoided.',
+                'entities_results': '',
                 'cis': '4.3 Ensure the Use of Dedicated Administrative Accounts.\nEnsure that all users with '
                        'administrative account access use a dedicated or secondary account for elevated activities. '
                        'This account should only be used for administrative activities and not '
@@ -74,7 +74,7 @@ Perform the following to enable MFA:
 4. Choose the Security Credentials tab, and then choose Manage MFA Device.
 5. Follow the Manage MFA Device wizard to assign the type of device appropriate for your environment.
                     '''.strip(),
-                'entities_results': 'IAM Users which do not have multi-factor authentication (MFA):\nUser: user1',
+                'entities_results': '',
                 'cis': '4.5 Use Multifactor Authentication For All Administrative Access\n'
                        'Use multi-factor authentication and encrypted channels for all administrative account access. '
             },
@@ -474,37 +474,6 @@ To remove direct association between a user and a policy:
                     '''.strip(),
                 'entities_results': '',
                 'cis': '16 Account Monitoring and Control\nAccount Monitoring and Control'
-            },
-            {
-                'status': 'Passed',
-                'section': '1.20',
-                'rule_name': 'Ensure a support role has been created to manage incidents with AWS Support',
-                'category': 'Identity and Access Management',
-                'account': '',
-                'results': {
-                    'failed': 0,
-                    'checked': 0,
-                },
-                'affected_entities': 0,
-                'description': 'AWS provides a support center that can be used for incident notification and response, '
-                               'as well as technical support and customer services. Create an IAM Role to allow '
-                               'authorized users to manage incidents with AWS Support. By implementing least privilege '
-                               'for access control, an IAM Role will require an appropriate IAM Policy to allow '
-                               'Support Center Access in order to manage Incidents with AWS Support.',
-                'remediation': '''
-Using the Amazon unified command line interface:
-1. Create an IAM role for managing incidents with AWS:
-- Create a trust relationship policy document that allows <iam_user> to
-manage AWS incidents, and save it locally as /tmp/TrustPolicy.json:
-{"Version": "2012-10-17","Statement": [{"Effect": "Allow","Principal": {"AWS": "<user>"},"Action": "sts:AssumeRole"}]}
-- Create the IAM role using the above trust policy:
-aws iam create-role --role-name <aws_support_iam_role> --assume-role-
-policy-document file:///tmp/TrustPolicy.json
-- Attach 'AWSSupportAccess' managed policy to the created IAM role:
-aws iam attach-role-policy --policy-arn <iam_policy_arn> --role-name <aws_support_iam_role>
-                        '''.strip(),
-                'entities_results': '',
-                'cis': ''
             },
             {
                 'status': 'Passed',
@@ -1485,14 +1454,14 @@ def get_compliance_accounts():
         reports_db.aggregate(
             [
                 {
-                    '$sort': {'account_name': -1, 'last_updated': 1}
-                },
-                {
                     '$group': {
                         '_id': '$account_id',
                         'account_name': {'$last': '$account_name'}
                     }
-                }
+                },
+                {
+                    '$sort': {'account_name': 1}
+                },
             ]
         ) if report.get('account_name')]
     if not all_account_names:
@@ -1540,19 +1509,19 @@ def get_compliance_rules(accounts) -> List[dict]:
 
     # pylint: disable=protected-access
     # Sort all of the reports by the time they were last updated, group them by account id, then take the last one
-    all_reports = list(PluginBase.Instance._get_db_connection()[COMPLIANCE_PLUGIN_NAME]['reports'].aggregate(
-        [
-            {
-                '$sort': {'account_name': -1, 'last_updated': 1},
-            },
-            {
-                '$group': {
-                    '_id': '$account_id',
-                    'last': {'$last': '$$ROOT'}
-                }
-            }
-        ]
-    ))
+    all_reports = list(PluginBase.Instance._get_db_connection()[COMPLIANCE_PLUGIN_NAME]['reports']
+                       .aggregate(
+                           [
+                               {
+                                   '$group': {
+                                       '_id': '$account_id',
+                                       'last': {'$last': '$$ROOT'}
+                                   }
+                               },
+                               {
+                                   '$sort': {'last.account_name': 1},
+                               }
+                           ]))
 
     all_accounts = set(accounts)
 

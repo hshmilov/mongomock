@@ -129,6 +129,11 @@ export default {
       return null;
     },
   },
+  watch: {
+    $route(to) {
+      this.currentRuleId = to.params.id;
+    },
+  },
   mounted() {
     const { id } = this.$route.params;
     if (id) {
