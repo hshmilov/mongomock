@@ -140,7 +140,7 @@ class TenableIoAdapter(ScannerAdapterBase, Configurable):
         """
         with client_data:
             logger.info('Getting all assets')
-            devices_list = client_data.get_device_list(use_cache=self.__use_cache)
+            devices_list = client_data.get_device_list(use_cache=False)
             yield devices_list, ASSET_TYPE, client_data
             logger.info('Getting all agent')
             for device_raw in client_data.get_agents():
@@ -441,11 +441,6 @@ class TenableIoAdapter(ScannerAdapterBase, Configurable):
         return {
             'items': [
                 {
-                    'name': 'use_cache',
-                    'title': 'Use cache',
-                    'type': 'bool'
-                },
-                {
                     'name': 'exclude_no_last_scan',
                     'title': 'Do not fetch devices with no \'Last Scan\'',
                     'type': 'bool'
@@ -461,12 +456,10 @@ class TenableIoAdapter(ScannerAdapterBase, Configurable):
     @classmethod
     def _db_config_default(cls):
         return {
-            'use_cache': True,
             'exclude_no_last_scan': False
         }
 
     def _on_config_update(self, config):
-        self.__use_cache = config['use_cache']
         self.__exclude_no_last_scan = config.get('exclude_no_last_scan')
 
     def outside_reason_to_live(self) -> bool:
