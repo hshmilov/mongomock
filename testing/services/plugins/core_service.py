@@ -454,7 +454,7 @@ class CoreService(PluginService, UpdatablePluginMixin):
                     client_config_new = client_config.copy()
                     # explicitly verify user_id
                     client_config_id = client_config.get('user_id')
-                    message_prefix = f'[GENERIC_FILE_MIGRATION] - {plugin_unique_name}_{client_config_id} -'
+                    message_prefix = f'[GENERIC_FILE_MIGRATION] - {plugin_unique_name} -'
                     if not client_config_id:
                         raise Exception(f'ERROR: Expected user_id, got {client_config_id} instead.')
                     # is_users
