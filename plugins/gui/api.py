@@ -123,6 +123,303 @@ def get_page_metadata(skip, limit, number_of_assets):
 
 class APIMixin:
 
+    # jim:3.0
+    ##########
+    # SYSTEM #
+    ##########
+
+    @api_add_rule(
+        'system/settings/lifecycle',
+        methods=['POST', 'GET'],
+        required_permissions={
+            Permission(PermissionType.Settings, ReadOnlyJustForGet)
+        },
+    )
+    def api_settings_lifecycle(self):
+        """Get or set System Settings > Lifecycle settings tab.
+
+        POST: Returns empty str. POST body is dict returned by GET with updated values.
+        GET: Returns dict of settings and their schema.
+
+        :return: dict or str
+        """
+        return self._plugin_configs(
+            plugin_name='system_scheduler', config_name='SystemSchedulerService'
+        )
+
+    @api_add_rule(
+        'system/settings/gui',
+        methods=['POST', 'GET'],
+        required_permissions={
+            Permission(PermissionType.Settings, ReadOnlyJustForGet)
+        },
+    )
+    def api_settings_gui(self):
+        """Get or set System Settings > GUI settings tab.
+
+        POST: Returns empty str. POST body is dict returned by GET with updated values.
+        GET: Returns dict of settings and their schema.
+
+        :return: dict or str
+        """
+        return self._plugin_configs(
+            plugin_name='gui', config_name='GuiService'
+        )
+
+    @api_add_rule(
+        'system/settings/core',
+        methods=['POST', 'GET'],
+        required_permissions={
+            Permission(PermissionType.Settings, ReadOnlyJustForGet)
+        },
+    )
+    def api_settings_core(self):
+        """Get or set System Settings > Global settings tab.
+
+        POST: Returns empty str. POST body is dict returned by GET with updated values.
+        GET: Returns dict of settings and their schema.
+
+        :return: dict or str
+        """
+        return self._plugin_configs(
+            plugin_name='core', config_name='CoreService'
+        )
+
+    @api_add_rule(
+        'system/meta/historical_sizes',
+        methods=['GET'],
+        required_permissions={
+            Permission(PermissionType.Settings, PermissionLevel.ReadOnly)
+        }
+    )
+    def api_get_historical_size_stats(self):
+        """Get disk free, disk usage, and historical data set sizes for Users and Devices.
+
+        GET: Returns dict with keys:
+            disk_free: int
+            disk_used: int
+            entity_sizes: dict with keys
+                Devices: dict
+                Users: dict
+
+        :return: dict
+        """
+        return self._get_historical_size_stats()
+
+    @api_add_rule(
+        'system/meta/about',
+        methods=['GET'],
+        required_permissions={
+            Permission(PermissionType.Settings, PermissionLevel.ReadOnly)
+        }
+    )
+    def api_get_metadata(self):
+        """Get the System Settings > About tab.
+
+        GET: Returns dict with keys:
+            Build Date: str
+            Commit Date: str
+            Commit Hash: str
+            Version: str
+
+        :return: dict
+        """
+        return jsonify(self.metadata)
+
+    @api_add_rule(
+        'system/instances',
+        methods=['GET', 'POST', 'DELETE'],
+        required_permissions={
+            Permission(PermissionType.Instances, ReadOnlyJustForGet)
+        }
+    )
+    def api_instances(self):
+        """Get, create, or delete instances.
+
+        GET: Returns dict of instances
+        POST: Returns empty str. Need more details.
+        DELETE: Returns empty str. Need more details.
+
+        :return: dict or str
+        """
+        return self._instances()
+
+    @api_add_rule(
+        'system/discover/lifecycle',
+        methods=['GET'],
+        required_permissions={
+            Permission(PermissionType.Dashboard, PermissionLevel.ReadOnly)
+        },
+    )
+    def api_get_system_lifecycle(self):
+        """Get current status of the system's lifecycle.
+
+        GET returns:
+            - All research phases names, for showing the whole picture
+            - Current research sub-phase, which is empty if system is not stable
+            - Portion of work remaining for the current sub-phase
+            - The time next cycle is scheduled to run
+
+        :return: dict
+        """
+        return jsonify(self._get_system_lifecycle())
+
+    @api_add_rule(
+        f'system/discover/start',
+        methods=['POST'],
+        required_permissions={
+            Permission(PermissionType.Dashboard, PermissionLevel.ReadWrite)
+        }
+    )
+    def api_schedule_research_phase(self):
+        """Start a discover.
+
+        POST: Returns empty str. no body required
+
+        :return: str
+        """
+        return self._schedule_research_phase()
+
+    @api_add_rule(
+        'system/discover/stop',
+        methods=['POST'],
+        required_permissions={
+            Permission(PermissionType.Dashboard, PermissionLevel.ReadWrite)
+        }
+    )
+    def api_stop_research_phase(self):
+        """Stop a discover.
+
+        POST: Returns empty str. no body required
+
+        :return: str
+        """
+        return self._stop_research_phase()
+
+    @gui_helpers.paginated()
+    @api_add_rule(
+        'system/users',
+        methods=['GET', 'PUT'],
+        required_permissions={
+            Permission(PermissionType.Settings, PermissionLevel.ReadWrite)
+        }
+    )
+    def api_system_users(self, limit, skip):
+        """Get users or add user.
+
+        POST: Returns empty str. Add a user. POST body dict keys:
+            user_name: required, str
+            password: required, str
+            first_name: optional, str
+            last_name: optional, str
+            role_name: optional, str, name of pre-existing role
+
+        GET: Returns list of dict of users.
+
+        :param limit:
+        :param skip:
+        :return: list of dict or str
+        """
+        if request.method == 'GET':
+            return self._get_user_pages(limit=limit, skip=skip)
+        role_name = g.api_request_user.get('role_name', '')
+        is_admin = g.api_request_user.get('admin', False)
+        return self._add_user_wrap(role_name=role_name, is_admin=is_admin)
+
+    @api_add_rule(
+        'system/users/<user_id>',
+        methods=['POST', 'DELETE'],
+        required_permissions={
+            Permission(PermissionType.Settings, PermissionLevel.ReadWrite)
+        }
+    )
+    def api_update_user(self, user_id):
+        """Get users or add user.
+
+        POST: Returns empty str. POST body dict keys:
+            first_name: optional, str
+            last_name: optional, str
+            password: optional, str
+
+        DELETE: Returns empty str. No body required.
+
+        :param user_id:
+        :return: str
+        """
+        return self._update_user(user_id=user_id)
+
+    @api_add_rule(
+        'system/users/<user_id>/access',
+        methods=['POST'],
+        required_permissions={
+            Permission(PermissionType.Settings, PermissionLevel.ReadWrite)
+        }
+    )
+    def api_update_user_access(self, user_id):
+        """Change permissions for a specific user, given the correct permissions.
+
+        POST: returns empty str, add new role. POST body dict keys:
+            role_name: required, str, name of role - if empty, use ad hoc custom role with permissions
+            permissions: required, dict, values must be one of ["Restricted", "ReadWrite", "ReadOnly"] for keys:
+                Adapters: required, str, valid permission name
+                Dashboard: required, str, valid permission name
+                Devices: required, str, valid permission name
+                Enforcements: required, str, valid permission name
+                Instances: required, str, valid permission name
+                Reports: required, str, valid permission name
+                Settings: required, str, valid permission name
+                Users: required, str, valid permission name
+
+        :param user_id:
+        :return:
+        """
+        return self._system_users_access(user_id=user_id)
+
+    @api_add_rule(
+        'system/roles/default',
+        methods=['POST', 'GET'],
+        required_permissions={
+            Permission(PermissionType.Settings, PermissionLevel.ReadWrite)
+        },
+    )
+    def api_roles_default(self):
+        """Get or set the default role for externally created users.
+
+        POST: Returns empty str. POST body dict keys:
+            name: required, str, name of role to set as default
+        GET: Returns str of default role name
+
+        :return: str
+        """
+        return self._roles_default()
+
+    @api_add_rule(
+        'system/roles',
+        methods=['GET', 'PUT', 'POST', 'DELETE'],
+        required_permissions={
+            Permission(PermissionType.Settings, PermissionLevel.ReadWrite)
+        }
+    )
+    def api_roles(self):
+        """Get, add, update, or delete roles.
+
+        GET: returns list of dict
+        PUT: returns empty str, add new role. PUT body dict keys:
+            name: required, str, name of role
+            permissions: required, dict, values must be one of ["Restricted", "ReadWrite", "ReadOnly"] for keys:
+                Adapters: required, str, valid permission name
+                Dashboard: required, str, valid permission name
+                Devices: required, str, valid permission name
+                Enforcements: required, str, valid permission name
+                Instances: required, str, valid permission name
+                Reports: required, str, valid permission name
+                Settings: required, str, valid permission name
+                Users: required, str, valid permission name
+
+        :return: list of dict or str
+        """
+        return self._roles()
+
     ###########
     # DEVICES #
     ###########
@@ -252,9 +549,9 @@ class APIMixin:
     def api_user_labels(self, mongo_filter):
         return self._entity_labels(self.users_db, self.users, mongo_filter)
 
-    ##########
+    ################
     # ENFORCEMENTS #
-    ##########
+    ################
 
     @gui_helpers.paginated()
     @gui_helpers.filtered()
@@ -361,6 +658,27 @@ class APIMixin:
         """
         actions = ['deploy', 'shell', 'upload_file']
         return jsonify(actions)
+
+    ############
+    # ADAPTERS #
+    ############
+
+    # jim:3.0
+    @api_add_rule(
+        'adapters/<plugin_name>/config/<config_name>',
+        methods=['POST', 'GET'],
+        required_permissions={
+            Permission(PermissionType.Settings, ReadOnlyJustForGet)
+        },
+    )
+    def api_adapter_config(self, plugin_name, config_name):
+        """Set a specific config on a specific adapter.
+
+        :return: dict or str
+        """
+        return self._plugin_configs(
+            plugin_name=plugin_name, config_name=config_name
+        )
 
     @api_add_rule(f'adapters/<adapter_name>/clients', methods=['PUT', 'POST'],
                   required_permissions={Permission(PermissionType.Adapters, PermissionLevel.ReadWrite)})

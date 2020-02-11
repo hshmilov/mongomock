@@ -2794,8 +2794,16 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
     @gui_add_rule_logged_in('plugins/configs/<plugin_name>/<config_name>', methods=['POST', 'GET'],
                             required_permissions={Permission(PermissionType.Settings, ReadOnlyJustForGet)},
                             enforce_trial=False)
+    def plugin_configs(self, plugin_name, config_name):
+        """
+        Set a specific config on a specific plugin
+        """
+        return self._plugin_configs(
+            plugin_name=plugin_name, config_name=config_name
+        )
+
     # pylint: disable=too-many-branches,too-many-locals
-    def plugins_configs_set(self, plugin_name, config_name):
+    def _plugin_configs(self, plugin_name, config_name):
         """
         Set a specific config on a specific plugin
         """
@@ -3280,15 +3288,23 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
         config_doc = self.__users_config_collection.find_one({})
         if config_doc and config_doc.get('external_default_role'):
             role_name = config_doc['external_default_role']
-        user = self.__create_user_if_doesnt_exist(username, first_name, last_name, picname, source,
-                                                  role_name=role_name,
-                                                  additional_userinfo=additional_userinfo)
+        user = self._create_user_if_doesnt_exist(
+            username,
+            first_name,
+            last_name,
+            picname,
+            source,
+            role_name=role_name,
+            additional_userinfo=additional_userinfo,
+        )
         self.__perform_login_with_user(user, remember_me)
 
-    def __create_user_if_doesnt_exist(self, username, first_name, last_name, picname=None, source='internal',
-                                      password=None, role_name=None, additional_userinfo=None):
+    def _create_user_if_doesnt_exist(self, username, first_name, last_name, picname=None, source='internal',
+                                     password=None, role_name=None, additional_userinfo=None):
         """
         Create a new user in the system if it does not exist already
+        jim - 3.0 - made private instead of protected so api.py can use
+
         :return: Created user
         """
         if source != 'internal' and password:
@@ -3608,32 +3624,57 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
         :return:
         """
         if request.method == 'GET':
-            return jsonify(beautify_user_entry(n) for n in
-                           self._users_collection.find(filter_archived(
-                               {
-                                   'user_name': {
-                                       '$ne': self.ALTERNATIVE_USER['user_name']
-                                   }
-                               })).sort([('_id', pymongo.ASCENDING)])
-                           .skip(skip)
-                           .limit(limit))
+            return self._get_user_pages(limit=limit, skip=skip)
         # Handle PUT - only option left
-        if session.get('user', {}).get('role_name', '') != PREDEFINED_ROLE_ADMIN and not is_admin_user():
+        role_name = session.get('user', {}).get('role_name', '')
+        is_admin = is_admin_user()
+        return self._add_user_wrap(role_name=role_name, is_admin=is_admin)
+
+    def _add_user_wrap(self, role_name, is_admin):
+        """Add a new user.
+
+        Returns empty str.
+
+        :return: str
+        """
+        if role_name != PREDEFINED_ROLE_ADMIN and not is_admin:
             return return_error('Only admin users are permitted to create users!', 401)
 
         post_data = self.get_request_data_as_object()
         post_data['password'] = bcrypt.hash(post_data['password'])
+
         # Make sure user is unique by combo of name and source (no two users can have same name and same source)
-        if self._users_collection.find_one(filter_archived(
-                {
-                    'user_name': post_data['user_name'],
-                    'source': 'internal'
-                })):
+        find_data = {
+            'user_name': post_data['user_name'],
+            'source': 'internal'
+        }
+
+        find_filter = filter_archived(find_data)
+
+        if self._users_collection.find_one(find_filter):
             return return_error('User already exists', 400)
-        self.__create_user_if_doesnt_exist(post_data['user_name'], post_data['first_name'], post_data['last_name'],
-                                           picname=None, source='internal', password=post_data['password'],
-                                           role_name=post_data.get('role_name'))
+
+        self._create_user_if_doesnt_exist(
+            post_data['user_name'],
+            post_data['first_name'],
+            post_data['last_name'],
+            picname=None,
+            source='internal',
+            password=post_data['password'],
+            role_name=post_data.get('role_name')
+        )
         return ''
+
+    def _get_user_pages(self, limit, skip):
+        return jsonify(beautify_user_entry(n) for n in
+                       self._users_collection.find(filter_archived(
+                           {
+                               'user_name': {
+                                   '$ne': self.ALTERNATIVE_USER['user_name']
+                               }
+                           })).sort([('_id', pymongo.ASCENDING)])
+                       .skip(skip)
+                       .limit(limit))
 
     @gui_add_rule_logged_in('system/users/<user_id>', methods=['POST', 'DELETE'],
                             required_permissions={Permission(PermissionType.Settings, PermissionLevel.ReadWrite)})
@@ -3641,6 +3682,9 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
         """
             Updates the userinfo for the current user or deleting a user
         """
+        return self._update_user(user_id)
+
+    def _update_user(self, user_id):
         if request.method == 'POST':
             update_white_list_fields = ['first_name', 'last_name', 'password']
             post_data = self.get_request_data_as_object()
@@ -3675,6 +3719,9 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
         Updates the userinfo for the current user
         :return:
         """
+        return self._system_users_additional_userinfo()
+
+    def _system_users_additional_userinfo(self):
         post_data = self.get_request_data_as_object()
 
         self._users_collection.update_one({
@@ -3716,6 +3763,16 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
         :param user_id:
         :return:
         """
+        return self._system_users_access(user_id=user_id)
+
+    def _system_users_access(self, user_id):
+        """
+        Change permissions for a specific user, given the correct permissions.
+        Post data is expected to contain the permissions object and the role, if there is one.
+
+        :param user_id:
+        :return:
+        """
         post_data = self.get_request_data_as_object()
         self._users_collection.update_one({'_id': ObjectId(user_id)},
                                           {'$set': post_data})
@@ -3731,6 +3788,9 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
 
         :return: GET list of roles with their set of permissions
         """
+        return self._roles()
+
+    def _roles(self):
         if request.method == 'GET':
             return jsonify(
                 [beautify_db_entry(entry) for entry in self.__roles_collection.find(filter_archived())])
@@ -3778,6 +3838,14 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
     @gui_add_rule_logged_in('roles/default', methods=['GET', 'POST'],
                             required_permissions={Permission(PermissionType.Settings, PermissionLevel.ReadWrite)})
     def roles_default(self):
+        """
+        Receives a name of a role that will be assigned by default to every external user created
+
+        :return:
+        """
+        return self._roles_default()
+
+    def _roles_default(self):
         """
         Receives a name of a role that will be assigned by default to every external user created
 
@@ -4328,7 +4396,11 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
          - Portion of work remaining for the current sub-phase
          - The time next cycle is scheduled to run
         """
-        return jsonify(self.__lifecycle())
+        return jsonify(self._get_system_lifecycle())
+
+    def _get_system_lifecycle(self):
+        """Added for public API support."""
+        return self.__lifecycle()
 
     @gui_add_rule_logged_in('dashboard/adapter_data/<entity_name>', methods=['GET'],
                             required_permissions={Permission(PermissionType.Dashboard, PermissionLevel.ReadOnly)},
@@ -4361,6 +4433,10 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
 
         :return: Map between each adapter and the number of devices it has, unless no devices
         """
+        return self._schedule_research_phase()
+
+    def _schedule_research_phase(self):
+        """Add for public API usage."""
         self._trigger_remote_plugin(SYSTEM_SCHEDULER_PLUGIN_NAME, blocking=False, external_thread=False)
 
         self.__lifecycle.clean_cache()
@@ -4370,6 +4446,12 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
                             required_permissions={Permission(PermissionType.Dashboard,
                                                              PermissionLevel.ReadWrite)})
     def stop_research_phase(self):
+        """
+        Stops currently running research phase.
+        """
+        return self._stop_research_phase()
+
+    def _stop_research_phase(self):
         """
         Stops currently running research phase.
         """
@@ -4947,6 +5029,9 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
                             required_permissions={Permission(PermissionType.Settings,
                                                              PermissionLevel.ReadOnly)})
     def get_historical_size_stats(self):
+        return self._get_historical_size_stats()
+
+    def _get_historical_size_stats(self):
         sizes = {}
         for entity_type in EntityType:
             try:
@@ -5206,7 +5291,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
 
         if self._mutual_tls_settings.get('enabled') and mutual_tls_is_mandatory:
             # Enable Mutual TLS.
-            # Note that we have checked before (plugins_configs_set) that the issuer is indeed part of this cert
+            # Note that we have checked before (plugin_configs) that the issuer is indeed part of this cert
             # as input validation. So input validation is not needed here.
             try:
                 ca_certificate = self._grab_file_contents(self._mutual_tls_settings.get('ca_certificate'))
