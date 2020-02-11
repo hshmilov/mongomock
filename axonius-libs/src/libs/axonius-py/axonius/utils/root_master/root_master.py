@@ -8,6 +8,7 @@ import subprocess
 import tarfile
 
 from pymongo import ReplaceOne
+from pymongo.errors import BulkWriteError
 
 from axonius.clients.aws.utils import aws_list_s3_objects, download_s3_object_to_file_obj, delete_file_from_s3
 from axonius.consts.gui_consts import RootMasterNames
@@ -46,7 +47,11 @@ def root_master_parse_entities(entity_type: EntityType, info, backup_source=None
             )
         )
 
-    db.bulk_write(bulk_replacements)
+    try:
+        db.bulk_write(bulk_replacements)
+    except BulkWriteError as bwe:
+        logger.exception(f'Error in bulk_write: {bwe.details}')
+        raise
 
 
 def root_master_parse_entities_raw(entity_type: EntityType, info):

@@ -10,6 +10,7 @@ logger = logging.getLogger(f'axonius.{__name__}')
 
 
 AUTHORITY_HOST_URL = 'https://login.microsoftonline.com'
+CHINA_AUTHORITY_HOST_URL = 'https://login.partner.microsoftonline.cn'
 GRAPH_API_URL = 'https://graph.microsoft.com'
 CHINA_GRAPH_API_URL = 'https://microsoftgraph.chinacloudapi.cn'
 AZURE_AD_GRAPH_API_URL = 'https://graph.windows.net'    # legacy api required for azure ad b2c
@@ -60,7 +61,7 @@ DEVICE_ATTRIBUTES = [
 ]
 
 
-# pylint: disable=logging-format-interpolation
+# pylint: disable=logging-format-interpolation, too-many-instance-attributes
 class AzureAdClient(RESTConnection):
     def __init__(self, client_id, client_secret, tenant_id, *args, is_azure_ad_b2c=None, azure_region=None, **kwargs):
         self._client_id = client_id
@@ -73,21 +74,25 @@ class AzureAdClient(RESTConnection):
         if is_azure_ad_b2c:
             if str(azure_region).lower() == 'china':
                 self._api_endpoint = CHINA_AZURE_AD_GRAPH_API_URL
+                self._authority_host_url = CHINA_AUTHORITY_HOST_URL
             else:
                 self._api_endpoint = AZURE_AD_GRAPH_API_URL
+                self._authority_host_url = AUTHORITY_HOST_URL
             super().__init__(domain=self._api_endpoint, url_base_prefix=f'/{self._tenant_id}', *args, **kwargs)
         else:
             if str(azure_region).lower() == 'china':
                 self._api_endpoint = CHINA_GRAPH_API_URL
+                self._authority_host_url = CHINA_AUTHORITY_HOST_URL
             else:
                 self._api_endpoint = GRAPH_API_URL
+                self._authority_host_url = AUTHORITY_HOST_URL
             super().__init__(domain=self._api_endpoint, url_base_prefix='/v1.0', *args, **kwargs)
 
     def set_refresh_token(self, refresh_token):
         self._refresh_token = refresh_token
 
     def get_refresh_token_from_authorization_code(self, authorization_code):
-        context = adal.AuthenticationContext(f'{AUTHORITY_HOST_URL}/{self._tenant_id}',
+        context = adal.AuthenticationContext(f'{self._authority_host_url}/{self._tenant_id}',
                                              proxies=self._proxies, verify_ssl=self._verify_ssl)
         answer = context.acquire_token_with_authorization_code(
             authorization_code,
@@ -104,7 +109,7 @@ class AzureAdClient(RESTConnection):
 
     def _connect(self):
         try:
-            context = adal.AuthenticationContext(f'{AUTHORITY_HOST_URL}/{self._tenant_id}',
+            context = adal.AuthenticationContext(f'{self._authority_host_url}/{self._tenant_id}',
                                                  proxies=self._proxies, verify_ssl=self._verify_ssl)
             if self._refresh_token:
                 token_answer = context.acquire_token_with_refresh_token(

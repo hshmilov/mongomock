@@ -44,7 +44,7 @@ def get_all_cloudtrails(regions: List[str], session: boto3.Session, https_proxy:
 
                 trail_arn_set.add(cloudtrail.get('TrailARN'))
                 trails[region_to_put].append(cloudtrail)
-                did_one_succeed = True
+            did_one_succeed = True
         except Exception as e:
             logger.debug(f'CloudTrail: Could not parse region {region_name}', exc_info=True)
             if not first_exception:

@@ -405,24 +405,24 @@ class StaticAnalysisService(Triggerable, PluginBase):
             llu_domain = re.escape(llu_domain)
 
         users = list(self.users.get(
-            axonius_query_language=f'specific_data.data.id == regex("^{re.escape(username)}$", "i")'))
+            axonius_query_language=f'specific_data.data.id == regex("^{re.escape(username)}$", "i")', lazy=True))
 
         if not users and llu_domain:
             # If we couldn't find by id, search by username and domain
             users = list(self.users.get(
                 axonius_query_language=f'specific_data.data.username == regex("^{llu_username}$", "i") '
-                f'and specific_data.data.domain == regex("^{llu_domain}$", "i")'
+                f'and specific_data.data.domain == regex("^{llu_domain}$", "i")', lazy=True
             ))
 
         if not users and not is_domain_required:
             # On last resort, search only by username
             users = list(self.users.get(
-                axonius_query_language=f'specific_data.data.username == regex("^{llu_username}$", "i")'
+                axonius_query_language=f'specific_data.data.username == regex("^{llu_username}$", "i")', lazy=True
             ))
 
         if not users:
             users = list(self.users.get(
-                axonius_query_language=f'specific_data.data.mail == regex("^{username}$", "i")'
+                axonius_query_language=f'specific_data.data.mail == regex("^{username}$", "i")', lazy=True
             ))
 
         return users
@@ -542,10 +542,10 @@ class StaticAnalysisService(Triggerable, PluginBase):
                 users.pop(username)
 
         # 4. Now go over all users again. for each user, associate all known devices.
+        users_dict: Dict[str, Tuple[AxoniusUser, UserAdapter]] = dict()
         for username, username_data in users.items():
             linked_devices_and_users_list = username_data['associated_devices']
             # Create the new adapterdata for that user
-            adapterdata_user = self._new_user_adapter()
             number_of_associated_devices = 0
 
             # Find that user. It should be in the view new.
@@ -562,6 +562,14 @@ class StaticAnalysisService(Triggerable, PluginBase):
 
             # at this point the user exists, go over all associated devices and add them.
             user = user[0]
+
+            if user.internal_axon_id in users_dict:
+                adapterdata_user = users_dict[user.internal_axon_id][1]
+            else:
+                adapterdata_user = self._new_user_adapter()
+                adapterdata_user.id = username
+                users_dict[user.internal_axon_id] = (user, adapterdata_user)
+
             for linked_user, device_caption in linked_devices_and_users_list:
                 if isinstance(linked_user, str):
                     linked_user = {'username': linked_user}  # an only string is considered a user with only a username
@@ -602,17 +610,26 @@ class StaticAnalysisService(Triggerable, PluginBase):
                 except Exception:
                     logger.exception(f'Cant associate user {linked_user}')
 
-            # we have a new adapterdata_user, lets add it. we do not give any specific identity
-            # since this tag isn't associated to a specific adapter.
-            # Note - no need for action_if_exists='update' - this is an action on user, not device!
-            adapterdata_user.id = username
-            user.add_adapterdata(
-                adapterdata_user.to_dict(),
-                additional_data={
-                    'hidden_for_gui': True
-                }
-            )
-            self._save_field_names_to_db(EntityType.Users)
+        # we have a new adapterdata_user, lets add it. we do not give any specific identity
+        # since this tag isn't associated to a specific adapter.
+        # Note - no need for action_if_exists='update' - this is an action on user, not device!
+        logger.info(f'Saving adapterdata to {len(users_dict.keys())} users..')
+        num_of_users = 0
+        for internal_axon_id, internal_axon_id_data in users_dict.items():
+            num_of_users += 1
+            if num_of_users % 1000 == 0:
+                logger.info(f'Already saved {num_of_users} users.')
+            try:
+                user, adapterdata_user = internal_axon_id_data
+                user.add_adapterdata(
+                    adapterdata_user.to_dict(),
+                    additional_data={
+                        'hidden_for_gui': True
+                    }
+                )
+            except Exception:
+                logger.exception(f'Error saving data for internal axon id {internal_axon_id}!')
+        self._save_field_names_to_db(EntityType.Users)
 
         logger.info('Finished associating users with devices')
 

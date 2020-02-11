@@ -7,7 +7,6 @@ from enum import Enum, EnumMeta
 
 from promise import Promise
 from dataclasses import dataclass
-from bson import ObjectId
 
 from axonius.consts.gui_consts import SPECIFIC_DATA
 from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME
@@ -78,7 +77,7 @@ class EntitiesNamespace:
         self.add_adapterdata = functools.partial(plugin_base.add_adapterdata_to_entity, entity)
         self.tag = functools.partial(plugin_base._tag, entity)
 
-    def get(self, internal_axon_id=None, axonius_query_language=None):
+    def get(self, internal_axon_id=None, axonius_query_language=None, lazy=False):
         """
         Returns a list of entities from the entity view by one of the params conditions.
         if more than one is provided, the preferred order is by the order of args.
@@ -97,8 +96,12 @@ class EntitiesNamespace:
             raise ValueError('None of the query methods were provided, can\'t query {self.entity}')
 
         # Now we have the mongo filter, lets query the entities and return the entity.
-        for entity_in_db in db.find(final_mongo_filter):
-            yield entity_object(self.plugin_base, convert_db_entity_to_view_entity(entity_in_db))
+        if lazy:
+            for entity_in_db in db.find(final_mongo_filter, projection={'internal_axon_id': 1}):
+                yield entity_object(self.plugin_base, entity_in_db, lazy=True)
+        else:
+            for entity_in_db in db.find(final_mongo_filter):
+                yield entity_object(self.plugin_base, convert_db_entity_to_view_entity(entity_in_db))
 
 
 class DevicesNamespace(EntitiesNamespace):
@@ -120,7 +123,7 @@ class AxoniusEntity:
     An axonius entity, like a device or a user.
     """
 
-    def __init__(self, plugin_base, entity: EntityType, entity_in_db: dict):
+    def __init__(self, plugin_base, entity: EntityType, entity_in_db: dict, lazy=False):
         """
 
         :param plugin_base: a plugin_base instance.
@@ -130,9 +133,11 @@ class AxoniusEntity:
         self.plugin_base = plugin_base
         self.entity = entity
         self.data = entity_in_db
+        self.lazy = lazy
 
     @property
     def specific_data(self):
+        self.flush_if_needed()
         return self.data[SPECIFIC_DATA]
 
     @property
@@ -141,12 +146,19 @@ class AxoniusEntity:
 
     @property
     def generic_data(self):
+        self.flush_if_needed()
         return self.data['generic_data']
 
     def __get_all_identities(self):
+        self.flush_if_needed()
         return [(plugin[PLUGIN_UNIQUE_NAME], plugin['data']['id'])
                 for plugin in self.specific_data
                 if plugin.get('type') == 'entitydata']
+
+    def flush_if_needed(self):
+        if self.lazy:
+            self.flush()
+            self.lazy = False
 
     def flush(self):
         """
@@ -154,10 +166,10 @@ class AxoniusEntity:
         we will have an exception here.
         :return: None
         """
-        data = self.plugin_base._entity_db_map[self.entity].find_one({'_id': ObjectId(self.data.get('_id'))})
+        data = self.plugin_base._entity_db_map[self.entity].find_one({'internal_axon_id': self.internal_axon_id})
 
         if data is None:
-            raise ValueError('Couldn\'t flush from db, _id wasn\'t found. This might happen if the document'
+            raise ValueError('Couldn\'t flush from db, internalaxonid wasn\'t found. This might happen if the document'
                              'was deleted because of a link or unlink')
 
         self.data = convert_db_entity_to_view_entity(data)
@@ -172,6 +184,7 @@ class AxoniusEntity:
                                     e.g. [('active_directory_adapter_123', 'CN=....')]
         :return: the response
         """
+        self.flush_if_needed()
 
         if identity_by_adapter is None:
             identity_by_adapter = self.__get_all_identities()
@@ -188,6 +201,7 @@ class AxoniusEntity:
                                     e.g. [('active_directory_adapter_123', 'CN=....')]
         :return: the response
         """
+        self.flush_if_needed()
 
         if identity_by_adapter is None:
             identity_by_adapter = self.__get_all_identities()
@@ -208,6 +222,7 @@ class AxoniusEntity:
         :param additional_data: See add_adapterdata_to_entity
         :return: the response
         """
+        self.flush_if_needed()
 
         if identity_by_adapter is None:
             identity_by_adapter = self.__get_all_identities()
@@ -230,6 +245,7 @@ class AxoniusEntity:
         :param plugin_unique_name: the plugin unique name. if empty selects the first.
         :return:
         """
+        self.flush_if_needed()
 
         assert len(self.specific_data) > 0, 'specific data should always have at least 1!'
         if plugin_unique_name is None:
@@ -266,6 +282,7 @@ class AxoniusEntity:
         :param name: Name of 'data' tag to search for.
         :return: The 'data' content of the found tag or None, if not found.
         """
+        self.flush_if_needed()
         for generic_data_item in self.generic_data:
             if generic_data_item.get('name') and generic_data_item['name'] == name:
                 return generic_data_item.get('data')

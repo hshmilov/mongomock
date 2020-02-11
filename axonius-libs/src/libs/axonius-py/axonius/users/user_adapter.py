@@ -84,6 +84,7 @@ class UserAdapter(SmartJsonClass):
     user_apps = ListField(UserApplication, 'Applications')
     user_factors = ListField(UserFactor, 'Authentication Factors')
     groups = ListField(str, 'Groups')
+    backup_source = Field(str, 'Backup Source')
 
     required = ['id', 'username']
 
