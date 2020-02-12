@@ -35,13 +35,25 @@ class OracleDBConnection(AbstractSQLConnection):
 
         self.connect()
 
+    def connect_new_method(self):
+        return cx_Oracle.connect(
+            self.username,
+            self.password,
+            cx_Oracle.makedsn(self.host, self.port, self.service)
+        )
+
     def connect(self):
         """ Connects to the service """
+        # First, try the old version
         try:
             self.db = cx_Oracle.connect(f'{self.username}/{self.password}@{self.host}:{self.port}/{self.service}')
         except Exception:
-            logger.exception('Connection to database failed')
-            raise
+            logger.exception('Connection to database failed (old method)')
+            try:
+                self.db = self.connect_new_method()
+            except Exception:
+                logger.exception(f'Connection to database failed (new method)')
+                raise
 
     def __del__(self):
         self.close()
