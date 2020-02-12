@@ -263,8 +263,12 @@ class GceAdapter(AdapterBase, Configurable):
                             'type': DeviceType.COMPUTE,
                             'device_data': (device_raw, project.get('projectId'), firewalls)
                         }
-                except Exception:
-                    logger.warning(f'Problem with project {project}', exc_info=True)
+                except Exception as e:
+                    message = f'Problem with project {project}: {str(e)}'
+                    if 'error may be an authentication issue' in str(e):
+                        logger.warning(message)
+                    else:
+                        logger.warning(message, exc_info=True)
         except Exception:
             logger.exception(f'exception in getting all projects. using alternative path')
             provider = self.__get_compute_provider(auth_json, None,
@@ -382,15 +386,16 @@ class GceAdapter(AdapterBase, Configurable):
                 logger.debug(f'Failed to get device project num for {device_raw}', exc_info=True)
             device.storage_class = device_raw.get('storageClass')
             device.url = device_raw.get('selfLink')
-            try:
-                iam_dict = device_raw.get('iamConfiguration') or {}
-                device.iam_config = GCPBucketIamConf(
-                    uniform_blaccess=iam_dict.get('uniformBucketLevelAccess').get('enabled'),
-                    bucket_policy_only=iam_dict.get('bucketPolicyOnly').get('enabled')
-                )
-            except Exception:
-                logger.warning(f'Failed to add iam_config for device: {device_raw}',
-                               exc_info=True)
+            iam_dict = device_raw.get('iamConfiguration') or {}
+            if iam_dict:
+                try:
+                    device.iam_config = GCPBucketIamConf(
+                        uniform_blaccess=iam_dict.get('uniformBucketLevelAccess').get('enabled'),
+                        bucket_policy_only=iam_dict.get('bucketPolicyOnly').get('enabled')
+                    )
+                except Exception:
+                    logger.warning(f'Failed to add iam configuration for device: {device_raw}',
+                                   exc_info=True)
 
             # Handle storage container objects
             if not isinstance(device_raw.get('x_objects'), list):

@@ -160,9 +160,15 @@ class GoogleCloudPlatformConnection(RESTConnection):
             project_id = project['projectId']
             try:
                 yield from self._get_buckets_list(project_id, get_objects=get_bucket_objects)
-            except Exception:
-                logger.warning(f'Failed to get buckets and info for project {project_id}.',
-                               exc_info=True)
+            except Exception as e:
+                message = f'Failed to get buckets and info for project {project_id}: {str(e)}'
+                exc_info = True
+                if 'Unknown project id: 0' in str(e):
+                    exc_info = False
+                    message = f'Failed to get buckets and info for project {project_id}. ' \
+                              f'The project may have been deleted or the user may be unauthorized ' \
+                              f'for this project.'
+                logger.warning(message, exc_info=exc_info)
                 continue
 
     def get_device_list(self):
