@@ -10,7 +10,7 @@ LAST_CYCLE_COMPLETED_AT = 'Last cycle completed at:'
 LAST_CYCLE_STARTED_AT = 'Last cycle started at:'
 
 
-class TestDiscoveryScheduleByTimeOfDay(TestBase):
+class TestDiscoverySchedule(TestBase):
 
     @staticmethod
     def set_discovery_time(minutes):
