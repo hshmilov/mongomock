@@ -33,7 +33,7 @@
     "vue-material": "1.0.0-beta-10.2",
     "vue-router": "3.0.2",
     "vue-spinner": "1.0.3",
-    "vue-worker": "^1.2.1",
+    "vue-worker": "1.2.1",
     "vuedraggable": "2.23.0",
     "vuelidate": "0.7.4",
     "vuetify": "2.1.1",
