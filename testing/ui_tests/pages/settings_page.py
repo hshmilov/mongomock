@@ -22,7 +22,7 @@ class SettingsPage(Page):
     SEND_EMAILS_LABEL = 'Send emails'
     SESSION_TIMEOUT_LABEL = 'Enable session timeout'
     GETTING_STARTED_LABEL = 'Enable Getting Started with Axonius checklist'
-    GLOBAL_SSL_LABEL = 'Override default SSL settings'
+    GLOBAL_SSL_LABEL = 'Configure custom SSL certificate'
     REMOTE_SUPPORT_LABEL_OLD = 'Remote Support - Warning: turning off this feature prevents Axonius from' \
                                '                             updating the system and can lead' \
                                ' to slower issue resolution time.                             ' \
@@ -109,7 +109,7 @@ class SettingsPage(Page):
     PERMISSION_LABEL_DASHBOARD = 'Dashboard'
     PERMISSION_LABEL_USERS = 'Users'
 
-    CA_CERTIFICATE_ENABLED = '//*[contains(text(),\'certificate\')]'
+    CA_CERTIFICATE_ENABLED = '//*[contains(text(),\'CA certificate\')]'
 
     CA_ADD_CERT_BUTTON = '#ca_files ~ .x-button.light'
     CA_ADD_CERT_BUTTON_CSS = 'div.x-array-edit > div:nth-child(2) > div > div > div:nth-child(3) > div > div > button'

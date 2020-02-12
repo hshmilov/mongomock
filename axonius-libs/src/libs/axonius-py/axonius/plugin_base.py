@@ -3045,7 +3045,7 @@ class PluginBase(Configurable, Feature, ABC):
                     'items': [
                         {
                             'name': 'enabled',
-                            'title': 'Override default SSL settings',
+                            'title': 'Configure custom SSL certificate',
                             'type': 'bool'
                         },
                         {
