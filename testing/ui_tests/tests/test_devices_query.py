@@ -1147,3 +1147,25 @@ class TestDevicesQuery(TestBase):
         finally:
             self.wait_for_adapter_down(STRESSTEST_ADAPTER)
             self.wait_for_adapter_down(STRESSTEST_SCANNER_ADAPTER)
+
+    def test_saved_query_with_empty_expression(self):
+        self.devices_page.switch_to_page()
+        self.devices_page.click_query_wizard()
+
+        expressions = self.devices_page.find_expressions()
+        self.devices_page.select_query_field(self.devices_page.FIELD_NETWORK_INTERFACES_IPS, expressions[0])
+        self.devices_page.select_query_comp_op(self.devices_page.QUERY_COMP_EQUALS, expressions[0])
+        self.devices_page.fill_query_string_value(DEVICE_THIRD_IP, expressions[0])
+        self.devices_page.click_search()
+        self.devices_page.wait_for_table_to_load()
+        query = self.devices_page.find_query_search_input().get_attribute('value')
+        self.devices_page.click_query_wizard()
+        self.devices_page.clear_query_wizard()
+
+        self.devices_page.run_filter_query(query)
+        self.devices_page.click_search()
+        self.devices_page.save_query('test')
+
+        self.devices_page.find_element_by_text('Saved Queries').click()
+        self.devices_page.find_element_by_text('test').click()
+        self.devices_page.find_element_by_text('No query defined')

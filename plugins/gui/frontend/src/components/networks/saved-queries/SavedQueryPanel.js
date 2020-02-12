@@ -21,6 +21,7 @@ import './saved-query-panel.scss';
 
 import { featchEntityTags, featchEntitySavedQueriesNames } from '@api/saved-queries';
 import { EntitiesEnum as Entities } from '@constants/entities';
+import { isEmptyExpression } from '@/logic/expression';
 import { IS_ENTITY_EDITABLE } from '@/store/modules/auth';
 
 
@@ -207,6 +208,12 @@ export default {
 
       return this.expressions.some(isFieldNotSupported);
     },
+    isQueryContainsOnlyEmptyExpression() {
+      /**
+        * The query is valid, but only contains the default empty expression.
+        */
+      return this.expressions.length === 1 && isEmptyExpression(this.expressions[0]);
+    },
     setNameField(e) {
       this.name = e.target.value;
       this.$v.name.$touch();
@@ -372,6 +379,7 @@ export default {
     // based on a givven conditions (valid, empty, not supporteds)
     const renderExpression = _cond([
       [this.isValidQueryWithoutExpression, this.genQueryExpressionMarkup('empty')],
+      [this.isQueryContainsOnlyEmptyExpression, this.genQueryExpressionMarkup('empty')],
       [this.isQueryContainsUnsupportedFields, this.genQueryExpressionMarkup('not_supported')],
       [_stubTrue, this.genQueryExpressionMarkup()],
     ]);

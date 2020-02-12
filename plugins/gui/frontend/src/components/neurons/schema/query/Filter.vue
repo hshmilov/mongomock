@@ -123,7 +123,7 @@ export default {
     },
     addEmptyExpression() {
       const logicOp = !this.expressions.length ? '' : 'and';
-      this.expressions.push({ ...expression, i: this.maxIndexת, logicOp });
+      this.expressions.push({ ...expression, i: this.maxIndex, logicOp });
       this.onExpressionsChange();
     },
     removeExpression(index) {
@@ -146,6 +146,7 @@ export default {
     },
   },
 };
+
 </script>
 
 <style lang="scss">

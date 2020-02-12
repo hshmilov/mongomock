@@ -1,7 +1,7 @@
-import _matches from 'lodash/matches'
+import _matches from 'lodash/matches';
 
-import { getExcludedAdaptersFilter } from '../constants/utils'
-import {filterOutExpression} from "../constants/filter";
+import { getExcludedAdaptersFilter } from '../constants/utils';
+import { filterOutExpression, expression as emptyExpression } from '../constants/filter';
 
 /**
  * Calculator of a single expression with a single condition or with nested conditions
@@ -11,82 +11,77 @@ import {filterOutExpression} from "../constants/filter";
  * @return {{compileExpression: function}}
  * @constructor
  */
-const Expression = function(expression, condition, isFirst) {
-
-    /**
+const Expression = function (expression, condition, isFirst) {
+  /**
      * compiles the expression into a string filter
      * @returns {{error: string}|{filter: string, bracketWeight: number}}
      */
-    const compileExpression = () => {
-        if (!expression.field || (expression.context && !childExpressionCond())) {
-            return { filter: '', bracketWeight: 0 }
-        }
-        let error = checkErrors()
-        if (error) {
-            return { error }
-        }
-
-        let filterStack = []
-
-        if (expression.logicOp && !isFirst) {
-            filterStack.push(expression.logicOp + ' ')
-        }
-
-        let bracketWeight = 0
-        if (expression.leftBracket) {
-            filterStack.push('(')
-            bracketWeight -= 1
-        }
-        if (expression.not) {
-            filterStack.push('not ')
-        }
-        if (expression.context) {
-            if (expression.context === 'OBJ') {
-                let childExpression = getMatchExpression(expression.field, childExpressionCond())
-                filterStack.push('({val})'.replace(/{val}/g, getExcludedAdaptersFilter(expression.fieldType,
-                    expression.field, expression.filteredAdapters, childExpression)))
-            } else {
-                const adapterChildExpression = `plugin_name == '${expression.field}' and ${childExpressionCond()}`
-                filterStack.push(getMatchExpression('specific_data', adapterChildExpression))
-            }
-        } else {
-            filterStack.push(condition)
-        }
-        if (expression.rightBracket) {
-            filterStack.push(')')
-            bracketWeight += 1
-        }
-
-        return { filter: filterStack.join(''), bracketWeight }
+  const compileExpression = () => {
+    if (!expression.field || (expression.context && !childExpressionCond())) {
+      return { filter: '', bracketWeight: 0 };
+    }
+    const error = checkErrors();
+    if (error) {
+      return { error };
     }
 
-    const checkErrors = () => {
-        if (!isFirst && !expression.logicOp) {
-            return 'Logical operator is needed to add expression to the filter'
-        } else if (expression.context && !expression.field) {
-            return 'Select an object to add nested conditions'
-        }
-        return ''
+    const filterStack = [];
+
+    if (expression.logicOp && !isFirst) {
+      filterStack.push(`${expression.logicOp} `);
     }
 
-    const childExpressionCond = () => {
-        return expression.children
-            .filter(item => item.condition)
-            .map(item => item.condition)
-            .join(' and ')
+    let bracketWeight = 0;
+    if (expression.leftBracket) {
+      filterStack.push('(');
+      bracketWeight -= 1;
+    }
+    if (expression.not) {
+      filterStack.push('not ');
+    }
+    if (expression.context) {
+      if (expression.context === 'OBJ') {
+        const childExpression = getMatchExpression(expression.field, childExpressionCond());
+        filterStack.push('({val})'.replace(/{val}/g, getExcludedAdaptersFilter(expression.fieldType,
+          expression.field, expression.filteredAdapters, childExpression)));
+      } else {
+        const adapterChildExpression = `plugin_name == '${expression.field}' and ${childExpressionCond()}`;
+        filterStack.push(getMatchExpression('specific_data', adapterChildExpression));
+      }
+    } else {
+      filterStack.push(condition);
+    }
+    if (expression.rightBracket) {
+      filterStack.push(')');
+      bracketWeight += 1;
     }
 
-    return {
-        compileExpression
+    return { filter: filterStack.join(''), bracketWeight };
+  };
+
+  const checkErrors = () => {
+    if (!isFirst && !expression.logicOp) {
+      return 'Logical operator is needed to add expression to the filter';
+    } if (expression.context && !expression.field) {
+      return 'Select an object to add nested conditions';
     }
-}
+    return '';
+  };
 
-const getMatchExpression = (field, condition) => {
-    return `${field} == match([${condition}])`
-}
+  const childExpressionCond = () => expression.children
+    .filter((item) => item.condition)
+    .map((item) => item.condition)
+    .join(' and ');
 
-export const isFilterOutExpression = (expression) => {
-    return _matches(filterOutExpression)(expression)
-}
+  return {
+    compileExpression,
+  };
+};
 
-export default Expression
+const getMatchExpression = (field, condition) => `${field} == match([${condition}])`;
+
+export const isFilterOutExpression = (expression) => _matches(filterOutExpression)(expression);
+
+export const isEmptyExpression = (expression) => _matches(emptyExpression)(expression);
+
+export default Expression;
