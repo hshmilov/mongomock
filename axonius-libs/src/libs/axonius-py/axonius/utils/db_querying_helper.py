@@ -92,7 +92,7 @@ def _perform_find(entity_views_db,
     :return:
     """
     find_sort = list(sort.items())
-    if not find_sort and entity_type == EntityType.Devices:
+    if not find_sort and entity_type in (EntityType.Devices, EntityType.Users):
         if default_sort:
             # Default sort by adapters list size and then Mongo id (giving order of insertion)
             find_sort.append((ADAPTERS_LIST_LENGTH, pymongo.DESCENDING))
