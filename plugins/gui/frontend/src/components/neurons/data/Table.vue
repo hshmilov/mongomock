@@ -44,6 +44,7 @@
       />
       <x-table
         slot="table"
+        ref="table"
         v-model="pageSelection"
         :data="pageData"
         :fields="viewFields"
@@ -62,14 +63,19 @@
       >
         <template #default="slotProps">
           <slot v-bind="slotProps">
-            <x-table-data v-if="!$scopedSlots.default" v-bind="slotProps" />
+            <x-table-data
+              v-if="!$scopedSlots.default"
+              v-bind="slotProps"
+            />
           </slot>
         </template>
       </x-table>
     </x-table-wrapper>
     <div class="x-pagination">
       <div class="x-sizes">
-        <div class="number-of-results-title">results per page:</div>
+        <div class="number-of-results-title">
+          results per page:
+        </div>
         <div
           v-for="size in pageSizes"
           :key="size"
@@ -114,412 +120,438 @@
 </template>
 
 <script>
-  import xSearchInput from '../../neurons/inputs/SearchInput.vue'
-  import xTableWrapper from '../../axons/tables/TableWrapper.vue'
-  import xTable from '../../axons/tables/Table.vue'
-  import xTableData from './TableData.js'
-  import xButton from '../../axons/inputs/Button.vue'
+import {
+  mapState, mapGetters, mapMutations, mapActions,
+} from 'vuex';
+import _orderBy from 'lodash/orderBy';
+import xSearchInput from '../inputs/SearchInput.vue';
+import xTableWrapper from '../../axons/tables/TableWrapper.vue';
+import xTable from '../../axons/tables/Table.vue';
+import xTableData from './TableData.js';
+import xButton from '../../axons/inputs/Button.vue';
 
-  import { GET_DATA_SCHEMA_BY_NAME } from '../../../store/getters'
-  import { UPDATE_DATA_VIEW, UPDATE_DATA_VIEW_FILTER } from '../../../store/mutations'
-  import { FETCH_DATA_CONTENT } from '../../../store/actions'
-  import { mapState, mapGetters, mapMutations, mapActions } from 'vuex'
-  import _orderBy from 'lodash/orderBy'
+import { GET_DATA_SCHEMA_BY_NAME } from '../../../store/getters';
+import { UPDATE_DATA_VIEW, UPDATE_DATA_VIEW_FILTER } from '../../../store/mutations';
+import { FETCH_DATA_CONTENT } from '../../../store/actions';
 
-  export default {
-    name: 'XDataTable',
-    components: { xTableWrapper, xTable, xTableData, xButton, xSearchInput },
-    props: {
-      module: {
-        type: String,
-        required: true
-      },
-      idField: {
-        type: String,
-        default: 'uuid'
-      },
-      endpoint: {
-        type: String,
-        default: ''
-      },
-      value: {
-        type: Object,
-        default: undefined
-      },
-      title: {
-        type: String,
-        default: ''
-      },
-      staticFields: {
-        type: Array,
-        default: null
-      },
-      staticData: {
-        type: Array,
-        default: null
-      },
-      expandable: {
-        type: Boolean,
-        default: false
-      },
-      filterable: {
-        type: Boolean,
-        default: false
-      },
-      onClickRow: {
-        type: Function,
-        default: undefined
-      },
-      staticSort: {
-        type: Boolean,
-        default: true
-      },
-      searchable: {
-        type: Boolean,
-        default: false
-      },
-      sort: {
-        type: Object,
-        default: () => {
-          return {
-              field: '', desc: true
-          }
-        }
-      },
-      multipleRowSelection: {
-        type: Boolean,
-        default: true,
-      },
-      pageSizes: {
-        type: Array,
-        default: () => [20, 50, 100],
-      },
-      rowClass: {
-        type: [Function, String],
-        default: '',
-      },
+export default {
+  name: 'XDataTable',
+  components: {
+    xTableWrapper, xTable, xTableData, xButton, xSearchInput,
+  },
+  props: {
+    module: {
+      type: String,
+      required: true,
     },
-    data () {
-      return {
-        loading: true,
-        enableSelectAll: false,
-        searchValue: ''
-      }
+    idField: {
+      type: String,
+      default: 'uuid',
     },
-    computed: {
-      ...mapState({
-        moduleState (state) {
-          return this.module.split('/').reduce((moduleState, key) => {
-            return moduleState[key]
-          }, state)
-        },
-        refresh (state) {
-          if (!state.configuration || !state.configuration.data || !state.configuration.data.system) return 0
-          return state.configuration.data.system.refreshRate
-        },
-        multiline (state) {
-          if (!state.configuration || !state.configuration.data || !state.configuration.data.system) return 0
-          return state.configuration.data.system.multiLine
-        },
-        defaultNumOfEntitiesPerPage (state) {
-          if (!state.configuration || !state.configuration.data || !state.configuration.data.system) return 20
-          return state.configuration.data.system.defaultNumOfEntitiesPerPage
-        }
+    endpoint: {
+      type: String,
+      default: '',
+    },
+    value: {
+      type: Object,
+      default: undefined,
+    },
+    title: {
+      type: String,
+      default: '',
+    },
+    staticFields: {
+      type: Array,
+      default: null,
+    },
+    staticData: {
+      type: Array,
+      default: null,
+    },
+    expandable: {
+      type: Boolean,
+      default: false,
+    },
+    filterable: {
+      type: Boolean,
+      default: false,
+    },
+    onClickRow: {
+      type: Function,
+      default: undefined,
+    },
+    staticSort: {
+      type: Boolean,
+      default: true,
+    },
+    searchable: {
+      type: Boolean,
+      default: false,
+    },
+    sort: {
+      type: Object,
+      default: () => ({
+        field: '', desc: true,
       }),
-      allSelected: {
-        get() {
-          return !this.value.include
-        },
-        set(selectAll) {
-          this.$emit('input', {ids: [], include: !selectAll})
-        }
-      },
-      ...mapGetters({
-        getFieldSchemaByName: GET_DATA_SCHEMA_BY_NAME
-      }),
-      tableTitle () {
-        if (this.title) return this.title
-        return this.module.charAt(0).toUpperCase() + this.module.slice(1).toLowerCase()
-      },
-      content () {
-        if (this.staticData && !this.moduleState.content) return { fetching: false }
-        return this.moduleState.content
-      },
-      data () {
-        if (this.staticData) return this.filteredData
-        return this.content.data
-      },
-      count () {
-        if (this.staticData) return {
-          data_to_show: this.filteredData.length
-        }
-        return this.moduleState.count
-      },
-      view () {
-        if (this.module === 'users' || this.module === 'devices') {
-          return { ...this.moduleState.view,
-            pageSize: (this.moduleState.view.pageSize || this.defaultNumOfEntitiesPerPage)
-          }
-        }
-        return this.moduleState.view
-      },
-      schemaFieldsByName () {
-        if(this.staticFields){
-            return this.staticFields.reduce((allFields, field) => {
-                allFields[field.name] = field
-                return allFields
-            }, {})
-         }
-        return this.getFieldSchemaByName(this.module)
-      },
-      viewFields () {
-        if (this.staticFields || !this.view.fields) {
-          return this.staticFields || []
-        }
-        let schemaFieldsByName = this.schemaFieldsByName
-        if (!schemaFieldsByName || !Object.keys(schemaFieldsByName).length) {
-          return []
-        }
-        return this.view.fields.map(fieldName => schemaFieldsByName[fieldName]).filter(field => field)
-      },
-      ids () {
-        return this.data.map(item => item[this.idField])
-      },
-      page () {
-        return this.view.page
-      },
-      pageSize () {
-        return this.view.pageSize
-      },
-      pageData () {
-        return this.data.slice(this.page * this.pageSize, (this.page + 1) * this.pageSize).filter(item => item)
-      },
-      pageIds () {
-        return this.pageData.map(item => item[this.idField])
-      },
-      fetching () {
-        return this.content.fetching && !this.pageIds.length
-      },
-      pageCount () {
-        let count = this.count.data || this.count.data_to_show
-        if (!count) return 0
-        return Math.ceil(count / this.pageSize) - 1
-      },
-      pageLinkNumbers () {
-        // Page numbers that can be navigated to, should include 3 before current and 3 after
-        let firstPage = this.page - 3
-        let lastPage = this.page + 3
-        if (firstPage <= 0) {
-          // For the case that current page is up to 3, page numbers should be first 7 available
-          firstPage = 0
-          lastPage = Math.min(firstPage + 6, this.pageCount)
-        } else if (lastPage > this.pageCount) {
-          // For the case that current page is up to 3 from last, page numbers should be last 7 available
-          lastPage = this.pageCount
-          firstPage = Math.max(lastPage - 6, 0)
-        }
-        return Array.from({ length: lastPage - firstPage + 1 }, (x, i) => i + firstPage)
-      },
-      pageSelection: {
-        get() {
-          if (this.value === undefined) return undefined
-          return this.pageIds.filter(id => this.allSelected ? !this.value.ids.includes(id): this.value.ids.includes(id))
-        },
-        set (selectedList) {
-          let newIds = this.value.ids.filter(id => !this.pageIds.includes(id)).concat(
-                  this.allSelected ? this.pageIds.filter(item => !selectedList.includes(item)) : selectedList)
-          if (this.allSelected && newIds.length === this.count.data) {
-            this.allSelected = false
-            newIds = []
-          }
-          this.$emit('input', {
-            ids: newIds, include: !this.allSelected
-          })
-        }
-      },
-      selectionCount () {
-        if (!this.value) return 0
-        if (this.allSelected) {
-          return this.count.data - this.value.ids.length
-        }
-        return this.value.ids.length
-      },
-      sortedData() {
-          return _orderBy(this.staticData, [(item) => {
-              if (!this.staticSort) return 1;
-              if (!this.view.sort.field) return 1;
-              let value = item[this.view.sort.field] || ''
-              if (Array.isArray(value)) {
-                  value = value.join('')
-              }
-              let dateValue = Date.parse(value)
-              if (dateValue) {
-                  value = dateValue
-              }
-              return value
-          }], [this.view.sort.desc ? 'desc' : 'asc' ])
-        },
-        searchValueLower() {
-            return this.searchValue.toLowerCase()
-        },
-        filteredData () {
-            if (!this.searchValue) return this.sortedData
-            return this.sortedData.filter(item => {
-                return Object.keys(item).find(key => {
-                    let val = item[key]
-                    if(!this.schemaFieldsByName[key]){
-                        return false
-                    }
-                    let fieldType = this.schemaFieldsByName[key].type
-                    if(fieldType === 'number' && typeof val === 'number'){
-                        val = val.toFixed(2)
-                    }
-                    if(fieldType === 'bool'){
-                        if(val === true){
-                            val = 'Yes'
-                        } else if (val === false){
-                            val = 'No'
-                        }
-                    }
-                    return val.toString().toLowerCase().includes(this.searchValueLower)
-                })
-            })
-        }
     },
-    watch: {
-      refresh (newRate) {
-        if (newRate) {
-          this.startRefreshTimeout()
-        }
-      }
+    multipleRowSelection: {
+      type: Boolean,
+      default: true,
     },
-    mounted () {
+    pageSizes: {
+      type: Array,
+      default: () => [20, 50, 100],
+    },
+    rowClass: {
+      type: [Function, String],
+      default: '',
+    },
+  },
+  data() {
+    return {
+      loading: true,
+      enableSelectAll: false,
+      searchValue: '',
+    };
+  },
+  computed: {
+    ...mapState({
+      moduleState(state) {
+        return this.module.split('/').reduce((moduleState, key) => moduleState[key], state);
+      },
+      refresh(state) {
+        if (!state.configuration
+            || !state.configuration.data
+            || !state.configuration.data.system) return 0;
+        return state.configuration.data.system.refreshRate;
+      },
+      multiline(state) {
+        if (!state.configuration
+            || !state.configuration.data
+            || !state.configuration.data.system) return 0;
+        return state.configuration.data.system.multiLine;
+      },
+      defaultNumOfEntitiesPerPage(state) {
+        if (!state.configuration
+          || !state.configuration.data
+          || !state.configuration.data.system) return 20;
+        return state.configuration.data.system.defaultNumOfEntitiesPerPage;
+      },
+    }),
+    allSelected: {
+      get() {
+        return !this.value.include;
+      },
+      set(selectAll) {
+        this.$emit('input', { ids: [], include: !selectAll });
+      },
+    },
+    ...mapGetters({
+      getFieldSchemaByName: GET_DATA_SCHEMA_BY_NAME,
+    }),
+    tableTitle() {
+      if (this.title) return this.title;
+      return this.module.charAt(0).toUpperCase() + this.module.slice(1).toLowerCase();
+    },
+    content() {
+      if (this.staticData && !this.moduleState.content) return { fetching: false };
+      return this.moduleState.content;
+    },
+    data() {
+      if (this.staticData) return this.filteredData;
+      return this.content.data;
+    },
+    count() {
       if (this.staticData) {
-          if (!this.sort.field && this.staticFields && this.staticFields.length) {
-              this.updateView({
-                  module: this.module,
-                  view: {
-                      sort: {
-                          field: this.staticFields[0].name, desc: false
-                      },
-                      schema_fields: this.staticFields
-                  }
-              })
+        return {
+          data_to_show: this.filteredData.length,
+        };
+      }
+      return this.moduleState.count;
+    },
+    view() {
+      if (this.module === 'users' || this.module === 'devices') {
+        return {
+          ...this.moduleState.view,
+          pageSize: (this.moduleState.view.pageSize || this.defaultNumOfEntitiesPerPage),
+        };
+      }
+      return this.moduleState.view;
+    },
+    schemaFieldsByName() {
+      if (this.staticFields) {
+        return this.staticFields.reduce((allFields, field) => {
+          allFields[field.name] = field;
+          return allFields;
+        }, {});
+      }
+      return this.getFieldSchemaByName(this.module);
+    },
+    viewFields() {
+      if (this.staticFields || !this.view.fields) {
+        return this.staticFields || [];
+      }
+      const { schemaFieldsByName } = this;
+      if (!schemaFieldsByName || !Object.keys(schemaFieldsByName).length) {
+        return [];
+      }
+      return this.view.fields.map((fieldName) => schemaFieldsByName[fieldName])
+        .filter((field) => field);
+    },
+    ids() {
+      return this.data.map((item) => item[this.idField]);
+    },
+    page() {
+      return this.view.page;
+    },
+    pageSize() {
+      return this.view.pageSize;
+    },
+    pageData() {
+      return this.data.slice(this.page * this.pageSize, (this.page + 1) * this.pageSize)
+        .filter((item) => item);
+    },
+    pageIds() {
+      return this.pageData.map((item) => item[this.idField]);
+    },
+    fetching() {
+      return this.content.fetching && !this.pageIds.length;
+    },
+    pageCount() {
+      const count = this.count.data || this.count.data_to_show;
+      if (!count) return 0;
+      return Math.ceil(count / this.pageSize) - 1;
+    },
+    pageLinkNumbers() {
+      // Page numbers that can be navigated to, should include 3 before current and 3 after
+      let firstPage = this.page - 3;
+      let lastPage = this.page + 3;
+      if (firstPage <= 0) {
+        // For the case that current page is up to 3, page numbers should be first 7 available
+        firstPage = 0;
+        lastPage = Math.min(firstPage + 6, this.pageCount);
+      } else if (lastPage > this.pageCount) {
+        // For the case that current page is up to 3 from last, 
+        // page numbers should be last 7 available
+        lastPage = this.pageCount;
+        firstPage = Math.max(lastPage - 6, 0);
+      }
+      return Array.from({ length: lastPage - firstPage + 1 }, (x, i) => i + firstPage);
+    },
+    pageSelection: {
+      get() {
+        if (this.value === undefined) return undefined;
+        return this.pageIds
+          .filter(
+            (id) => (this.allSelected ? !this.value.ids.includes(id) : this.value.ids.includes(id)),
+          );
+      },
+      set(selectedList) {
+        let newIds = this.value.ids
+          .filter((id) => !this.pageIds.includes(id)).concat(
+            this.allSelected ? this.pageIds.filter(
+              (item) => !selectedList.includes(item),
+            ) : selectedList,
+          );
+        if (this.allSelected && newIds.length === this.count.data) {
+          this.allSelected = false;
+          newIds = [];
+        }
+        this.$emit('input', {
+          ids: newIds, include: !this.allSelected,
+        });
+      },
+    },
+    selectionCount() {
+      if (!this.value) return 0;
+      if (this.allSelected) {
+        return this.count.data - this.value.ids.length;
+      }
+      return this.value.ids.length;
+    },
+    sortedData() {
+      return _orderBy(this.staticData, [(item) => {
+        if (!this.staticSort) return 1;
+        if (!this.view.sort.field) return 1;
+        let value = item[this.view.sort.field] || '';
+        if (Array.isArray(value)) {
+          value = value.join('');
+        }
+        const dateValue = Date.parse(value);
+        if (dateValue) {
+          value = dateValue;
+        }
+        return value;
+      }], [this.view.sort.desc ? 'desc' : 'asc']);
+    },
+    searchValueLower() {
+      return this.searchValue.toLowerCase();
+    },
+    filteredData() {
+      if (!this.searchValue) return this.sortedData;
+      return this.sortedData.filter((item) => Object.keys(item).find((key) => {
+        let val = item[key];
+        if (!this.schemaFieldsByName[key]) {
+          return false;
+        }
+        const fieldType = this.schemaFieldsByName[key].type;
+        if (fieldType === 'number' && typeof val === 'number') {
+          val = val.toFixed(2);
+        }
+        if (fieldType === 'bool') {
+          if (val === true) {
+            val = 'Yes';
+          } else if (val === false) {
+            val = 'No';
           }
-        this.loading = false
-        return
-      }
-      if (!this.$route.query.view) {
-        this.fetchContentPages()
-      }
-      if (this.refresh) {
-        this.startRefreshTimeout()
+        }
+        return val.toString().toLowerCase().includes(this.searchValueLower);
+      }));
+    },
+  },
+  watch: {
+    refresh(newRate) {
+      if (newRate) {
+        this.startRefreshTimeout();
       }
     },
-    beforeDestroy () {
-      clearTimeout(this.timer)
-    },
-    methods: {
-      ...mapMutations({
-        updateView: UPDATE_DATA_VIEW,
-        updateViewFilter: UPDATE_DATA_VIEW_FILTER
-      }),
-      ...mapActions({
-        fetchContent: FETCH_DATA_CONTENT
-      }),
-      fetchContentPages (loading, isCounted, isRefresh) {
-        if (this.staticData) {
-          this.loading = false
-          return
-        }
-        if (loading) {
-          this.loading = true
-        }
-        if (!this.pageLinkNumbers || this.pageLinkNumbers.length <= 1) {
-          // Fetch at least 5 pages - in case pageSize is 20, there will enough data to change to 100
-          return this.fetchContentSegment(0, this.pageSize * 5)
-        }
-        return this.fetchContentSegment(
-          this.pageLinkNumbers[0] * this.pageSize,
-          this.pageLinkNumbers.length * this.pageSize,
-          isCounted,
-          isRefresh
-        )
-      },
-      fetchContentSegment (skip, limit, isCounted, isRefresh) {
-        return this.fetchContent({
-          module: this.module, endpoint: this.endpoint,
-          skip, limit,
-          isCounted, isRefresh
-        }).then(() => {
-          if (!this.content.fetching) {
-            this.loading = false
-          }
-        }).catch(() => this.loading = false)
-      },
-      onClickSize (size) {
-        if (size === this.pageSize) return
-        this.updateModuleView({ pageSize: size, page: 0 })
-        this.fetchContentPages(false, true)
-      },
-      onClickPage (page) {
-        if ((page === this.page) || (page < 0 || page > this.pageCount)) {
-          return
-        }
-        this.updateModuleView({ page: page })
-        this.fetchContentPages(false, true)
-      },
-      onClickSort (fieldName) {
-        let {field, desc} = this.view.sort
-        let sort = {field: fieldName, desc: true}
-        if (field === fieldName) {
-          if (desc) {
-            sort.desc = false
-          } else {
-            sort.field = ''
-          }
-        }
-        this.updateModuleView({ sort, page: 0 })
-        this.fetchContentPages(true, true)
-      },
-      updateModuleView (view) {
-        this.updateView({ module: this.module, view })
-      },
-      startRefreshTimeout () {
-        if (this.staticData) {
-          return
-        }
-        const fetchAuto = () => {
-          this.fetchContentPages(false, false, true).then(() => {
-            if (this._isDestroyed) return
-            this.timer = setTimeout(fetchAuto, this.refresh * 1000)
-          })
-        }
-        this.timer = setTimeout(fetchAuto, this.refresh * 1000)
-      },
-      selectAllData () {
-        this.allSelected = true
-      },
-      clearAllData () {
-        this.allSelected = false
-      },
-      onClickAll (selected) {
-        this.enableSelectAll = selected
-      },
-      updateColFilters(colFilters) {
-        this.updateViewFilter({ module: this.module, view: {colFilters} })
-      },
-      onInput(value) {
-          this.searchValue = value
-          this.updateView({
-              module: this.module,
-              view: {
-                  page: 0
-              }
-          })
+  },
+  mounted() {
+    if (this.staticData) {
+      if (!this.sort.field && this.staticFields && this.staticFields.length) {
+        this.updateView({
+          module: this.module,
+          view: {
+            sort: {
+              field: this.staticFields[0].name, desc: false,
+            },
+            schema_fields: this.staticFields,
+          },
+        });
       }
+      this.loading = false;
+      return;
     }
-  }
+    if (!this.$route.query.view) {
+      this.fetchContentPages();
+    }
+    if (this.refresh) {
+      this.startRefreshTimeout();
+    }
+  },
+  beforeDestroy() {
+    clearTimeout(this.timer);
+  },
+  methods: {
+    ...mapMutations({
+      updateView: UPDATE_DATA_VIEW,
+      updateViewFilter: UPDATE_DATA_VIEW_FILTER,
+    }),
+    ...mapActions({
+      fetchContent: FETCH_DATA_CONTENT,
+    }),
+    fetchContentPages(loading, isCounted, isRefresh) {
+      if (!isRefresh) {
+        this.resetScrollPosition();
+      }
+      if (this.staticData) {
+        this.loading = false;
+        return;
+      }
+      if (loading) {
+        this.loading = true;
+      }
+      if (!this.pageLinkNumbers || this.pageLinkNumbers.length <= 1) {
+        // Fetch at least 5 pages - in case pageSize is 20, there will enough data to change to 100
+        return this.fetchContentSegment(0, this.pageSize * 5);
+      }
+      return this.fetchContentSegment(
+        this.pageLinkNumbers[0] * this.pageSize,
+        this.pageLinkNumbers.length * this.pageSize,
+        isCounted,
+        isRefresh,
+      );
+    },
+    fetchContentSegment(skip, limit, isCounted, isRefresh) {
+      return this.fetchContent({
+        module: this.module,
+        endpoint: this.endpoint,
+        skip,
+        limit,
+        isCounted,
+        isRefresh,
+      }).then(() => {
+        if (!this.content.fetching) {
+          this.loading = false;
+        }
+      }).catch(() => this.loading = false);
+    },
+    onClickSize(size) {
+      if (size === this.pageSize) return;
+      this.updateModuleView({ pageSize: size, page: 0 });
+      this.fetchContentPages(false, true);
+    },
+    onClickPage(page) {
+      if ((page === this.page) || (page < 0 || page > this.pageCount)) {
+        return;
+      }
+      this.updateModuleView({ page });
+      this.fetchContentPages(false, true);
+    },
+    onClickSort(fieldName) {
+      const { field, desc } = this.view.sort;
+      const sort = { field: fieldName, desc: true };
+      if (field === fieldName) {
+        if (desc) {
+          sort.desc = false;
+        } else {
+          sort.field = '';
+        }
+      }
+      this.updateModuleView({ sort, page: 0 });
+      this.fetchContentPages(true, true);
+    },
+    updateModuleView(view) {
+      this.updateView({ module: this.module, view });
+    },
+    startRefreshTimeout() {
+      if (this.staticData) {
+        return;
+      }
+      const fetchAuto = () => {
+        this.fetchContentPages(false, false, true).then(() => {
+          if (this._isDestroyed) return;
+          this.timer = setTimeout(fetchAuto, this.refresh * 1000);
+        });
+      };
+      this.timer = setTimeout(fetchAuto, this.refresh * 1000);
+    },
+    selectAllData() {
+      this.allSelected = true;
+    },
+    clearAllData() {
+      this.allSelected = false;
+    },
+    onClickAll(selected) {
+      this.enableSelectAll = selected;
+    },
+    updateColFilters(colFilters) {
+      this.updateViewFilter({ module: this.module, view: { colFilters } });
+    },
+    onInput(value) {
+      this.searchValue = value;
+      this.updateView({
+        module: this.module,
+        view: {
+          page: 0,
+        },
+      });
+    },
+    resetScrollPosition() {
+      this.$refs.table.$el.scrollTop = 0;
+    },
+  },
+};
 </script>
 
 <style lang="scss">

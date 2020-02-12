@@ -1251,3 +1251,9 @@ class EntitiesPage(Page):
         icon = table_row.find_elements_by_tag_name('td')[2]
         ActionChains(self.driver).move_to_element(icon).perform()
         assert self.driver.find_element_by_css_selector(self.ADAPTERS_TOOLTIP_TABLE_CSS)
+
+    def get_table_scroll_position(self):
+        return self.get_scroll_position(self.TABLE_CONTAINER_CSS)
+
+    def set_table_scroll_position(self, scroll_top: int, scroll_left: int):
+        self.set_scroll_position(self.TABLE_CONTAINER_CSS, scroll_top, scroll_left)

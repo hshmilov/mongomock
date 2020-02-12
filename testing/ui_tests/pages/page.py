@@ -126,6 +126,7 @@ class Page:
     DISABLED_BUTTON_XPATH = './/button[@class=\'x-button disabled\' and .//text()=\'{button_text}\']'
     VERTICAL_TABS_CSS = '.x-tabs.vertical .header .header-tab'
     NAMED_TAB_XPATH = '//div[@class=\'x-tabs\']/ul/li[contains(@class, "header-tab")]//div[text()=\'{tab_title}\']'
+    TABLE_CONTAINER_CSS = '.x-table'
     TABLE_ROWS_CSS = 'tbody .x-table-row.clickable'
     TABLE_NON_CLICKABLE_ROWS_CSS = 'tbody .x-table-row'
     TABLE_COUNTER = 'div.count'
@@ -978,3 +979,14 @@ class Page:
     def wait_for_table_be_responsive(self):
         self.wait_for_table_to_load()
         self.wait_for_spinner_to_end()
+
+    def set_scroll_position(self, element_css: str, scroll_left: int, scroll_top: int):
+        self.driver.execute_script(f'var element = document.querySelector("{element_css}");' +
+                                   f'element.scrollLeft = {scroll_left};' +
+                                   f'element.scrollTop = {scroll_top};')
+
+    def get_scroll_position(self, element_css: str):
+        element = self.driver.find_element_by_css_selector(element_css)
+        scroll_left = element.get_attribute('scrollLeft')
+        scroll_top = element.get_attribute('scrollTop')
+        return scroll_left, scroll_top
