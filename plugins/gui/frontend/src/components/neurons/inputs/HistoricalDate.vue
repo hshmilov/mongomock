@@ -34,6 +34,10 @@ export default {
       type: Boolean,
       default: false,
     },
+    allowedDates: {
+      type: Object,
+      default: () => ({}),
+    },
   },
   computed: {
     ...mapState({
@@ -49,9 +53,6 @@ export default {
         historicalDate.setDate(historicalDate.getDate() - 1);
         return historicalDate;
       },
-      allowedDates(state) {
-        return state.constants.allowedDates[this.module];
-      },
     }),
     currentDate() {
       return new Date();
@@ -59,6 +60,8 @@ export default {
   },
   methods: {
     isDateUnavailable(date) {
+      // return true if date is unavailable, return false if date is available
+      // if date smaller then the first day we have historical or bigger than today disable it!
       if (date < this.firstHistoricalDate || date > this.currentDate) return true;
 
       return (this.allowedDates && !this.allowedDates[date.toISOString().substring(0, 10)]);

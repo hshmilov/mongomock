@@ -22,6 +22,7 @@
         />
         <x-historical-date
           :value="chart.historical"
+          :allowed-dates="allowedDates"
           @input="(selectedDate) => confirmPickDate(chart, selectedDate)"
         />
       </div>
@@ -60,8 +61,12 @@
 </template>
 
 <script>
-import { mapActions, mapGetters, mapMutations } from 'vuex';
+import {
+  mapActions, mapGetters, mapMutations, mapState,
+} from 'vuex';
 import _debounce from 'lodash/debounce';
+import _uniq from 'lodash/uniq';
+import _merge from 'lodash/merge';
 import { IS_ENTITY_RESTRICTED } from '../../../store/modules/auth';
 import { FETCH_DASHBOARD_PANEL } from '../../../store/modules/dashboard';
 import { UPDATE_DATA_VIEW } from '../../../store/mutations';
@@ -98,6 +103,21 @@ export default {
     };
   },
   computed: {
+    ...mapState({
+      allowedDates(state) {
+        if (!this.chart.config) {
+          return {};
+        }
+        if (this.chart.metric === 'compare') {
+          const modules = this.chart.config.views.map((view) => view.entity);
+          return _uniq(modules).reduce((acc, curr) => {
+            _merge(acc, state.constants.allowedDates[curr]);
+            return acc;
+          }, {});
+        }
+        return state.constants.allowedDates[this.chart.config.entity];
+      },
+    }),
     ...mapGetters({
       isEntityRestricted: IS_ENTITY_RESTRICTED,
     }),

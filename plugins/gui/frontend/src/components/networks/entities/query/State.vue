@@ -69,6 +69,7 @@
     >Reset</x-button>
     <x-historical-date
       v-model="historical"
+      :allowed-dates="allowedDates"
       :module="module"
     />
     <x-save-modal
