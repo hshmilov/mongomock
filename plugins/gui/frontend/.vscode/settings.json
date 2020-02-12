@@ -8,5 +8,8 @@
       "language": "vue",
       "autoFix": false
     }
- ]
+ ],
+ "search.exclude": {
+   "**/dist": true
+ }
 }
