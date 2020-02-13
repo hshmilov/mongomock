@@ -70,7 +70,7 @@ class QuestKaceAdapter(AdapterBase):
             'items': [
                 {
                     'name': 'domain',
-                    'title': 'QuestKace Domain',
+                    'title': 'KACE SMA Domain',
                     'type': 'string'
                 },
                 {

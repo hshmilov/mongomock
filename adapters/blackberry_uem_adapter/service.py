@@ -80,12 +80,12 @@ class BlackberryUemAdapter(AdapterBase):
             'items': [
                 {
                     'name': 'domain',
-                    'title': 'BlackberryUem Domain',
+                    'title': 'Blackberry UEM Domain',
                     'type': 'string'
                 },
                 {
                     'name': 'tenant_guid',
-                    'title': 'TenantGuid',
+                    'title': 'Tenant ID',
                     'type': 'string'
                 },
                 {
@@ -107,18 +107,19 @@ class BlackberryUemAdapter(AdapterBase):
                     'format': 'password'
                 },
                 {
+                    'name': 'username_domain',
+                    'title': 'User Name Domain',
+                    'type': 'string'
+                },
+                {
                     'name': 'verify_ssl',
                     'title': 'Verify SSL',
                     'type': 'bool'
                 },
-                {
-                    'name': 'username_domain',
-                    'title': 'Username Domain',
-                    'type': 'string'
-                },
+
                 {
                     'name': 'https_proxy',
-                    'title': 'Https Proxy',
+                    'title': 'HTTPS Proxy',
                     'type': 'string'
                 }
             ],

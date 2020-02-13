@@ -436,7 +436,7 @@ export const pluginMeta = {
     },
     device42_adapter: {
         title: 'Device42',
-        link: '',
+        link: 'https://docs.axonius.com/docs/device42',
         description: 'Device42 is a cloud-based CMDB for physical, virtual, and cloud servers and containers, network components, software, services, applications, and their relationships and dependencies.'
     },
     cisco_ise_adapter: {
@@ -461,7 +461,7 @@ export const pluginMeta = {
     },
     redcanary_adapter: {
         title: 'Red Canary',
-        link: '',
+        link: 'https://docs.axonius.com/docs/red-canary',
         description: 'The Red Canary suite includes products that record telemetry, detect and investigate threats, and automate remediation.'
     },
     cloudpassage_adapter: {
@@ -531,7 +531,7 @@ export const pluginMeta = {
     },
     quest_kace_adapter: {
         title: 'Quest KACE Endpoint Systems Management Appliances',
-        link: '',
+        link: 'https://docs.axonius.com/docs/quest-kace-endpoint-systems-management-appliances',
         description: 'Quest KACE Endpoint Systems Management Appliances provision, manage, secure, and service network-connected devices.'
     },
     shodan_adapter: {
@@ -971,7 +971,7 @@ export const pluginMeta = {
     },
     blackberry_uem_adapter: {
         title: 'BlackBerry Unified Endpoint Management (UEM)',
-        link: '',
+        link: 'https://docs.axonius.com/docs/blackberry-unified-endpoint-management-uem',
         description: 'BlackBerry Unified Endpoint Management (UEM) delivers endpoint management and policy control for devices and apps on-premise or in the cloud.'
     },
     oracle_vm_adapter: {
