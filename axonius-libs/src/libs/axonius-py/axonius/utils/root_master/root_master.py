@@ -48,7 +48,7 @@ def root_master_parse_entities(entity_type: EntityType, info, backup_source=None
         )
 
     try:
-        db.bulk_write(bulk_replacements)
+        db.bulk_write(bulk_replacements, ordered=False)
     except BulkWriteError as bwe:
         logger.exception(f'Error in bulk_write: {bwe.details}')
         raise
@@ -71,7 +71,7 @@ def root_master_parse_entities_raw(entity_type: EntityType, info):
             )
         )
 
-    db.bulk_write(bulk_replacements)
+    db.bulk_write(bulk_replacements, ordered=False)
 
 
 def root_master_parse_entities_fields(entity_type: EntityType, info):
