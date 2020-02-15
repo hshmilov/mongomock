@@ -2014,8 +2014,12 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
         data = self.get_request_data_as_object()
         node_id = data.pop('instanceName', self.node_id)
         old_node_id = data.pop('oldInstanceName', None)
-        adapter_unique_name = self.request_remote_plugin(f'find_plugin_unique_name/nodes/{old_node_id or node_id}/'
-                                                         f'plugins/{adapter_name}').json().get(PLUGIN_UNIQUE_NAME)
+        try:
+            adapter_unique_name = self.request_remote_plugin(f'find_plugin_unique_name/nodes/{old_node_id or node_id}/'
+                                                             f'plugins/{adapter_name}').json().get(PLUGIN_UNIQUE_NAME)
+        except Exception:
+            raise ValueError(f'adapter {adapter_name} with instance_name {node_id} and old_instance_name {old_node_id}'
+                             f' not found')
         if request.method == 'DELETE':
             if request.args.get('deleteEntities', False):
                 self.delete_client_data(adapter_name, adapter_unique_name, client_id)
