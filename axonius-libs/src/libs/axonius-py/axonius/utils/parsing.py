@@ -235,6 +235,7 @@ def figure_out_os(s):
     makes_64bit = ['amd64', '64-bit', 'x64', '64 bit', 'x86_64', 'Win64']
     makes_32bit = ['32-bit', 'x86']
 
+    is_windows_server = False
     bitness = None
     if any(x in s for x in makes_64bit):
         bitness = 64
@@ -261,6 +262,8 @@ def figure_out_os(s):
     elif 'windows' in s or ('win' in s and 'darwin' not in s):
         os_type = 'Windows'
         distribution = figure_out_windows_dist(s)
+        if distribution and 'server' in distribution.lower():
+            is_windows_server = True
     elif 'android' in s:
         os_type = 'Android'
         version = mobile_version.findall(s)
@@ -342,10 +345,13 @@ def figure_out_os(s):
     elif 'check point' in s.lower():
         os_type = 'Check Point'
 
-    return {'type': os_type,
-            'distribution': distribution,
-            'bitness': bitness,
-            'os_str': s}
+    return_dict = {'type': os_type,
+                   'distribution': distribution,
+                   'bitness': bitness,
+                   'os_str': s}
+    if os_type == 'Windows':
+        return_dict['is_windows_server'] = is_windows_server
+    return return_dict
 
 
 def convert_ldap_searchpath_to_domain_name(ldap_search_path):

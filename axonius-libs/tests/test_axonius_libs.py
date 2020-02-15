@@ -4,6 +4,7 @@ from axonius.utils.parsing import figure_out_os
 def test_figure_out_os():
     assert figure_out_os('Microsoft Windows Server 2016 (64-bit)') == {'type': 'Windows', 'distribution': 'Server 2016',
                                                                        'bitness': 64,
+                                                                       'is_windows_server': True,
                                                                        'os_str':
                                                                            'Microsoft Windows '
                                                                            'Server 2016 (64-bit)'.lower()}
