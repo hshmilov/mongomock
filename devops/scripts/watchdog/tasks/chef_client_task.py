@@ -32,6 +32,8 @@ class ChefClientTask(WatchdogTask):
                 continue
             else:
 
+                # It is important to put it here otherwise the next 'continue' will cause an infinite loop
+                time.sleep(SLEEP_SECONDS)
                 try:
                     if is_endpoint_false('provision'):
                         self.report_info(f'provision was false, chef should be down')
@@ -49,7 +51,6 @@ class ChefClientTask(WatchdogTask):
                     self.report_info(f'chef-client service restart completed')
                 except Exception as e:
                     self.report_error(f'failed to restart - {e}')
-                time.sleep(SLEEP_SECONDS)
 
 
 if __name__ == '__main__':
