@@ -40,26 +40,26 @@ class DefenderAtpConnection(RESTConnection):
 
     def get_device_list(self):
         devices_raw = self._get('https://api.securitycenter.windows.com/api/machines')
-        for device_raw in devices_raw:
+        for device_raw in devices_raw.get('value') or []:
             try:
                 device_id = device_raw.get('id')
                 if not device_id:
                     continue
                 try:
                     device_raw['users_raw'] = self._get(f'https://api.securitycenter.windows.com/'
-                                                        f'api/machines/{device_id}/logonusers')
+                                                        f'api/machines/{device_id}/logonusers').get('value')
                 except Exception:
-                    logger.exception(f'Problem getting users for {device_raw}')
+                    logger.debug(f'Problem getting users for {device_raw}')
                 try:
                     device_raw['apps_raw'] = self._get(f'https://api.securitycenter.windows.com/'
-                                                       f'api/machines/{device_id}/software')
+                                                       f'api/machines/{device_id}/software').get('value')
                 except Exception:
-                    logger.exception(f'Problem getting software for {device_raw}')
+                    logger.debug(f'Problem getting software for {device_raw}')
                 try:
                     device_raw['vulns_raw'] = self._get(f'https://api.securitycenter.windows.com/'
-                                                        f'api/machines/{device_id}/vulnerabilities')
+                                                        f'api/machines/{device_id}/vulnerabilities').get('value')
                 except Exception:
-                    logger.exception(f'Problem getting vulns for {device_raw}')
+                    logger.debug(f'Problem getting vulns for {device_raw}')
             except Exception:
                 logger.exception(f'Problem getting extra data for {device_raw}')
             yield device_raw
