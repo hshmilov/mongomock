@@ -49,11 +49,11 @@ def aws_cis_rule(rule_section: str):
 
 
 def get_count_incompliant_cis_rule(
-        entity: EntityType, account_id: Optional[int], cis_rule: str) -> int:
+        entity: EntityType, account_id: Optional[str], cis_rule: str) -> int:
     if not account_id:
         return 0
     try:
-        account_id = int(account_id)
+        account_id = str(account_id)
     except Exception:
         return 0
     # pylint: disable=protected-access

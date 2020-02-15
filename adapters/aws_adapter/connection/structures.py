@@ -318,7 +318,7 @@ class AWSCISRule(SmartJsonClass):
 class AWSAdapter:
     account_tag = Field(str, 'Account Tag')
     aws_account_alias = ListField(str, 'Account Alias')
-    aws_account_id = Field(int, 'Account ID')
+    aws_account_id = Field(str, 'Account ID')
     aws_region = Field(str, 'Region')
     aws_source = Field(str, 'Source')  # Specify if it is from a user, a role, or what.
     aws_tags = ListField(AWSTagKeyValue, 'AWS Tags')

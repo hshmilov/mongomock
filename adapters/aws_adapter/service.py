@@ -2022,7 +2022,7 @@ class AwsAdapter(AdapterBase, Configurable):
         try:
             account_id = account_metadata.get('account_id')
             if account_id:
-                entity.aws_account_id = int(account_id)
+                entity.aws_account_id = str(account_id)
         except Exception:
             pass
 

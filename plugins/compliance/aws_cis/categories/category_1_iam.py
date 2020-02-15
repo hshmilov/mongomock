@@ -126,7 +126,7 @@ class CISAWSCategory1:
                             'type': 'users',
                             'query': f'specific_data == match([plugin_name == \'aws_adapter\' and '
                                      f'(data.aws_cis_incompliant.rule_section == "{rule_section}") and '
-                                     f'(data.aws_account_id == {self.account_id or 0})])'
+                                     f'(data.aws_account_id == "{self.account_id or ""}")])'
                         }
                     )
                 else:
@@ -171,7 +171,7 @@ class CISAWSCategory1:
                     'type': 'users',
                     'query': f'specific_data == match([plugin_name == \'aws_adapter\' and '
                              f'(data.aws_cis_incompliant.rule_section == "{rule_section}") and '
-                             f'(data.aws_account_id == {self.account_id or 0})])'
+                             f'(data.aws_account_id == "{self.account_id or ""}")])'
                 }
             )
         else:
@@ -248,7 +248,7 @@ class CISAWSCategory1:
                     'type': 'users',
                     'query': f'specific_data == match([plugin_name == \'aws_adapter\' and '
                              f'(data.aws_cis_incompliant.rule_section == "{rule_section}") and '
-                             f'(data.aws_account_id == {self.account_id or 0})])'
+                             f'(data.aws_account_id == "{self.account_id or ""}")])'
                 }
             )
         else:
@@ -315,7 +315,7 @@ class CISAWSCategory1:
                     'type': 'users',
                     'query': f'specific_data == match([plugin_name == \'aws_adapter\' and '
                              f'(data.aws_cis_incompliant.rule_section == "{rule_section}") and '
-                             f'(data.aws_account_id == {self.account_id or 0})])'
+                             f'(data.aws_account_id == "{self.account_id or ""}")])'
                 }
             )
         else:
@@ -621,7 +621,7 @@ class CISAWSCategory1:
                             'type': 'users',
                             'query': f'specific_data == match([plugin_name == \'aws_adapter\' and '
                                      f'(data.aws_cis_incompliant.rule_section == "{rule_section}") and '
-                                     f'(data.aws_account_id == {self.account_id or 0})])'
+                                     f'(data.aws_account_id == "{self.account_id or ""}")])'
                         }
                     )
                 else:
@@ -659,7 +659,7 @@ class CISAWSCategory1:
                     'type': 'users',
                     'query': f'specific_data == match([plugin_name == \'aws_adapter\' and '
                              f'(data.aws_cis_incompliant.rule_section == "{rule_section}") and '
-                             f'(data.aws_account_id == {self.account_id or 0})])'
+                             f'(data.aws_account_id == "{self.account_id or ""}")])'
                 }
             )
         else:
@@ -694,7 +694,7 @@ class CISAWSCategory1:
                     'type': 'users',
                     'query': f'specific_data == match([plugin_name == \'aws_adapter\' and '
                              f'(data.aws_cis_incompliant.rule_section == "{rule_section}") and '
-                             f'(data.aws_account_id == {self.account_id or 0})])'
+                             f'(data.aws_account_id == "{self.account_id or ""}")])'
                 }
             )
             return
@@ -713,7 +713,7 @@ class CISAWSCategory1:
                             'type': 'users',
                             'query': f'specific_data == match([plugin_name == \'aws_adapter\' and '
                                      f'(data.aws_cis_incompliant.rule_section == "{rule_section}") and '
-                                     f'(data.aws_account_id == {self.account_id or 0})])'
+                                     f'(data.aws_account_id == "{self.account_id or ""}")])'
                         }
                     )
                     return
@@ -768,7 +768,7 @@ class CISAWSCategory1:
                     'type': 'users',
                     'query': f'specific_data == match([plugin_name == \'aws_adapter\' and '
                              f'(data.aws_cis_incompliant.rule_section == "{rule_section}") and '
-                             f'(data.aws_account_id == {self.account_id or 0})])'
+                             f'(data.aws_account_id == "{self.account_id or ""}")])'
                 }
             )
         else:
@@ -869,7 +869,7 @@ class CISAWSCategory1:
                     'type': 'users',
                     'query': f'specific_data == match([plugin_name == \'aws_adapter\' and '
                              f'(data.aws_cis_incompliant.rule_section == "{rule_section}") and '
-                             f'(data.aws_account_id == {self.account_id or 0})])'
+                             f'(data.aws_account_id == "{self.account_id or ""}")])'
                 }
             )
         else:
