@@ -21,7 +21,8 @@ class ArsenalConnection(RESTConnection):
                          **kwargs)
 
     def _connect(self):
-        response = self._post('', body_params={'page': {'size': DEVICE_PER_PAGE}}, return_response_raw=True)
+        response = self._post('', body_params={'page': {'size': DEVICE_PER_PAGE}}, return_response_raw=True,
+                              use_json_in_response=False)
         error_header = response.headers.get('Grpc-Status-Details-Bin')
         json_data = response.json()
         if error_header is not None:
@@ -30,7 +31,8 @@ class ArsenalConnection(RESTConnection):
             raise RESTException(f'Bad response data: {json_data}')
 
     def get_device_list(self):
-        response = self._post('', body_params={'page': {'size': DEVICE_PER_PAGE}}, return_response_raw=True)
+        response = self._post('', body_params={'page': {'size': DEVICE_PER_PAGE}}, return_response_raw=True,
+                              use_json_in_response=False)
         json_data = response.json()
         error_header = response.headers.get('Grpc-Status-Details-Bin')
         if error_header is not None:
@@ -42,7 +44,7 @@ class ArsenalConnection(RESTConnection):
         while token:
             try:
                 response = self._post('', body_params={'page': {'size': DEVICE_PER_PAGE, 'token': token}},
-                                      return_response_raw=True)
+                                      return_response_raw=True, use_json_in_response=False)
                 json_data = response.json()
                 error_header = response.headers.get('Grpc-Status-Details-Bin')
                 if error_header is not None:

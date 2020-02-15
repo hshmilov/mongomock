@@ -121,15 +121,21 @@ class ArsenalAdapter(AdapterBase):
                         device.add_nic(ips=ips_values_raw.get('values'))
             except Exception:
                 logger.exception(f'Problem getting ips for {device_raw}')
+            hostname = None
             try:
-                hostnames_opinions_raw = (device_raw.get('hostNames') or {}).get('opinions')
+                hostnames_opinions_raw = (device_raw.get('hostNames') or {}).get('opinions') or {}
                 for hostname_values_raw in hostnames_opinions_raw.values():
                     if hostname_values_raw.get('values'):
-                        device.hostname = hostname_values_raw.get('values')[0]
-                        device.hostnames.append(hostname_raw for hostname_raw in hostname_values_raw.get('values')
-                                                if hostname_raw)
+                        hostname = hostname_values_raw.get('values')[0]
+                        device.hostnames.extend(
+                            [hostname_raw for hostname_raw in hostname_values_raw.get('values') if hostname_raw])
             except Exception:
                 logger.exception(f'Problem getting hostnames for {device_raw}')
+
+            if hostname:
+                device.hostname = hostname
+            else:
+                device.name = device_raw.get('serialNumber')
 
             device.last_modified_date = parse_date(device_raw.get('lastModifiedDate'))
 
