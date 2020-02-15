@@ -186,11 +186,17 @@ class AbstractSnmpClient(AbstractCiscoClient):
         return None
 
     async def _query_arp_table(self):
-        results = await self._async_next_cmd(OIDS.arp)
+        results = await self._async_next_cmd(OIDS.arp_legacy)
         if results:
             name, results = results
         else:
             results = []
+        results_new = await self._async_next_cmd(OIDS.arp)
+        if results_new:
+            name, results_new = results_new
+        else:
+            results_new = []
+        results += results_new
         return SnmpArpCiscoData(results, received_from=self._host)
 
     async def _query_basic_info(self):
@@ -260,16 +266,23 @@ class CiscoSnmpV3Client(AbstractSnmpClient):
     REQUIRED_ARGS = SNMPV3_ARGUMENTS_KEYS
     PROTOCOL = 'SNMPV3'
 
+    def __init__(self, *args, **kwargs):
+        if 'secure_level' not in kwargs:
+            kwargs['secure_level'] = 'noAuthNoPriv'
+        super().__init__(**kwargs)
+
     @staticmethod
     def test_rechability(host, port):
         raise NotImplementedError()
 
     def get_auth(self):
-        return UsmUserData(userName=self._username,
+        auth = UsmUserData(userName=self._username,
                            authKey=self._auth_passphrase or None,
                            privKey=self._priv_passphrase or None,
                            authProtocol=AUTH_PROTOCOLS._asdict().get(self._auth_protocol) or None,
                            privProtocol=PRIV_PROTOCOLS._asdict().get(self._priv_protocol) or None)
+        auth.securityLevel = self._secure_level
+        return auth
 
 
 class SnmpBasicInfoCiscoData(BasicInfoData):

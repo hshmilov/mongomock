@@ -34,10 +34,17 @@ BASIC_INFO_OID_KEYS = (
 
 )
 
-OID_KEYS = ('arp', 'cdp') + BASIC_INFO_OID_KEYS
+SNMP_OID_KEYS = (
+    'arp_legacy',
+    'arp',
+    'cdp',
+)
+
+OID_KEYS = SNMP_OID_KEYS + BASIC_INFO_OID_KEYS
 
 OIDS = namedtuple('oids', OID_KEYS)(
-    arp='1.3.6.1.2.1.3.1.1.2',
+    arp_legacy='1.3.6.1.2.1.3.1.1.2',
+    arp='1.3.6.1.2.1.4.22.1.2',
     cdp='1.3.6.1.4.1.9.9.23.1.2',
     system_description='1.3.6.1.2.1.1',
     interface='1.3.6.1.2.1.2.2.1',
@@ -90,7 +97,8 @@ SNMPV3_ARGUMENTS_KEYS = ('username',
                          'priv_protocol',
                          'auth_protocol',
                          'host',
-                         'port')
+                         'port',
+                         'secure_level')
 
 AuthProtocols = namedtuple('authprotocols', ('hmac_md5',
                                              'hmac_sha1',
@@ -122,3 +130,5 @@ PRIV_PROTOCOLS = PrivProtocols(
     aescfb192=usmAesCfb192Protocol,
     aescfb256=usmAesCfb256Protocol,
     no_priv=usmNoPrivProtocol)
+
+SECURITY_LEVELS = ('noAuthNoPriv', 'authNoPriv', 'authPriv')
