@@ -124,7 +124,8 @@ class TestBase:
     def _get_local_browser():
         if pytest.config.option.browser == conftest.CHROME:
             options = webdriver.ChromeOptions()
-            options.add_extension('ui_tests/Vue.js-devtools_v5.3.3.crx')
+            ext_path = os.path.join(os.path.abspath(os.path.dirname(__file__)), '..', 'Vue.js-devtools_v5.3.3.crx')
+            options.add_extension(ext_path)
             options.add_argument('--ignore-certificate-errors')
             return webdriver.Chrome(chrome_options=options)
         if pytest.config.option.browser == conftest.FIREFOX:
