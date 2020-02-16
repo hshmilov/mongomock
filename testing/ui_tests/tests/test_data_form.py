@@ -66,20 +66,6 @@ class TestDataForm(TestBase):
         self.adapters_page.clean_adapter_servers(ALERTLOGIC_ADAPTER_NAME)
         self.wait_for_adapter_down(ALERTLOGIC_ADAPTER)
 
-    def test_alertlogicservice_change_without_password_data(self):
-        with AlertlogicService().contextmanager(take_ownership=True):
-            self.adapters_page.create_new_adapter_connection(plugin_title=ALERTLOGIC_ADAPTER_NAME,
-                                                             adapter_input=self.ALERTLOGIC_INPUT)
-            self.sync_on_server_connection_failure(ALERTLOGIC_ADAPTER_NAME, self.ALERTLOGIC_INPUT.get('domain'))
-            self.verify_adapter_connection_and_save(self.ALERTLOGIC_INPUT)
-            self.sync_on_server_connection_failure(ALERTLOGIC_ADAPTER_NAME, self.ALERTLOGIC_INPUT.get('domain'))
-            self.update_field(plugin_title=ALERTLOGIC_ADAPTER_NAME,
-                              field='domain',
-                              value='new_domain')
-            self.adapters_page.wait_for_credentials_problem_to_server()
-        self.adapters_page.clean_adapter_servers(ALERTLOGIC_ADAPTER_NAME)
-        self.wait_for_adapter_down(ALERTLOGIC_ADAPTER)
-
     def test_aws_default_data(self):
 
         adapter_input = {

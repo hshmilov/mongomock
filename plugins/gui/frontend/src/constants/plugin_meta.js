@@ -34,6 +34,10 @@ export const pluginMeta = {
         link: 'https://docs.axonius.com/docs/riskiq-digital-footprint',
         description: 'RiskIQ Digital Footprint software provides an active, comprehensive inventory of all of the organization’s IPs, domains, and hosts.'
     },
+    toriihq_adapter: {
+        title: 'Toriihq',
+        description: 'Torii lets IT professionals discover, optimize, and control their organization’s SaaS usage and costs.'
+    },
     men_and_mice_adapter: {
         title: 'Men&Mice DNS Management',
         link: 'https://docs.axonius.com/docs/menmice-dns-management',

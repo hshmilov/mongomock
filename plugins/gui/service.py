@@ -2032,7 +2032,8 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
                 not self.validate_and_fill_unchanged_passwords_fields(adapter_unique_name,
                                                                       client_from_db['client_id'],
                                                                       data,
-                                                                      client_from_db['client_config']):
+                                                                      client_from_db['client_config']) \
+                and self.feature_flags_config().get(FeatureFlagsNames.ReenterCredentials):
             return return_error('Failed to save connection details. '
                                 'Changing connection details requires re-entering credentials', 400)
         self.request_remote_plugin('clients/' + client_id, adapter_unique_name, method='delete')

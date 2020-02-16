@@ -20,6 +20,7 @@ class BitlockerAdapter(AdapterBase, Configurable):
         tpm_version = Field(str, 'TPM Version')
         tpm_manufacturer = Field(str, 'TPM Manufacturer')
         is_compliant = Field(bool, 'Is Compliant')
+        os_drive_policy = Field(bool, 'Os Drive Policy')
 
     def __init__(self):
         super().__init__(get_local_config_file(__file__))
@@ -121,6 +122,8 @@ class BitlockerAdapter(AdapterBase, Configurable):
                 device.tpm_version = device_raw.get('TpmVersion')
                 device.tpm_manufacturer = device_raw.get('TpmMake')
                 device.add_agent_version(agent=AGENT_NAMES.bitlocker, version=device_raw.get('AgentVersion'))
+                if device_raw.get('OsDrivePolicyId') is not None:
+                    device.os_drive_policy = device_raw.get('OsDrivePolicyId') == 1
                 try:
                     compliacne_data = compliance_dict.get(device_id)
                     if compliacne_data:

@@ -18,7 +18,8 @@ logger = logging.getLogger(f'axonius.{__name__}')
 class EdgescanAdapter(ScannerAdapterBase):
     # pylint: disable=too-many-instance-attributes
     class MyDeviceAdapter(DeviceAdapter):
-        asset_id = Field(str, 'Asset ID')
+        asset_id = Field(str, 'Edgescan Asset ID')
+        asset_name = Field(str, 'Edgescan Asset Name')
         label = Field(str, 'Label')
         status = Field(str, 'Status')
 
@@ -106,7 +107,7 @@ class EdgescanAdapter(ScannerAdapterBase):
             'type': 'array'
         }
 
-    def _create_device(self, device_raw):
+    def _create_device(self, device_raw, asset_id_names_dict):
         try:
             device = self._new_device_adapter()
             device_id = device_raw.get('id')
@@ -115,7 +116,9 @@ class EdgescanAdapter(ScannerAdapterBase):
                 return None
             device.id = str(device_id) + '_' + (device_raw.get('location') or '')
             device.add_ips_and_macs(ips=device_raw.get('location'))
-            device.asset_id = device_raw.get('asset_id')
+            asset_id = device_raw.get('asset_id')
+            device.asset_id = asset_id
+            device.asset_name = asset_id_names_dict.get(asset_id)
             device.label = device_raw.get('label')
             device.status = device_raw.get('status')
             if device_raw.get('hostnames') and isinstance(device_raw.get('hostnames'), list):
@@ -131,8 +134,8 @@ class EdgescanAdapter(ScannerAdapterBase):
             return None
 
     def _parse_raw_data(self, devices_raw_data):
-        for device_raw in devices_raw_data:
-            device = self._create_device(device_raw)
+        for device_raw, asset_id_names_dict in devices_raw_data:
+            device = self._create_device(device_raw, asset_id_names_dict)
             if device:
                 yield device
 

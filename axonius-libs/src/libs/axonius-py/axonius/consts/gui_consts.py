@@ -131,6 +131,7 @@ class FeatureFlagsNames:
     TrialEnd = 'trial_end'
     LockedActions = 'locked_actions'
     CloudCompliance = 'cloud_compliance'
+    ReenterCredentials = 'reenter_credentials'
 
 
 class CloudComplianceNames:

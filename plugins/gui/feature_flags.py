@@ -27,6 +27,11 @@ class FeatureFlags(Configurable):
                     'format': 'date-time'
                 },
                 {
+                    'name': FeatureFlagsNames.ReenterCredentials,
+                    'title': 'Reenter credentials on adapter connection update',
+                    'type': 'bool'
+                },
+                {
                     'name': FeatureFlagsNames.LockedActions,
                     'title': 'Actions Locked for Client',
                     'type': 'array',
@@ -94,5 +99,6 @@ class FeatureFlags(Configurable):
             RootMasterNames.root_key: {
                 RootMasterNames.enabled: False,
                 RootMasterNames.delete_backups: False,
-            }
+            },
+            FeatureFlagsNames.ReenterCredentials: False
         }

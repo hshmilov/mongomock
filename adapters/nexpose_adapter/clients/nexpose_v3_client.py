@@ -167,6 +167,7 @@ class NexposeV3Client(NexposeClient):
             if self._token:
                 headers = {'Token': self._token}
             vulnerabilities = requests.get(f'https://{self.host}:{self.port}/api/3/assets/{device_id}/vulnerabilities',
+                                           params={'size': 500},
                                            auth=(self.username, self.password),
                                            verify=self.verify_ssl,
                                            timeout=(5, 300),

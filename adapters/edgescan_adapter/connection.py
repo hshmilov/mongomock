@@ -26,4 +26,11 @@ class EdgescanConnection(RESTConnection):
         response = self._get('hosts.json', do_basic_auth=True)
         if not isinstance(response, dict) or not response.get('hosts') or not isinstance(response['hosts'], list):
             raise RESTException(f'Bad Response: {response}')
-        yield from response['hosts']
+        asset_id_names_dict = dict()
+        try:
+            for asset_raw in self._get('assets.json', do_basic_auth=True)['assets']:
+                asset_id_names_dict[asset_raw.get('id')] = asset_raw.get('name')
+        except Exception:
+            logger.exception(f'Problem gettins asset names')
+        for device_raw in response['hosts']:
+            yield device_raw, asset_id_names_dict

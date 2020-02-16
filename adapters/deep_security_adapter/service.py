@@ -230,7 +230,9 @@ class DeepSecurityAdapter(AdapterBase):
                 logger.warning(f'Bad device with no ID {device_raw}')
                 return None
             device.id = str(device_id) + '_' + (device_raw.get('hostName') or '')
-            device.hostname = device_raw.get('displayName')
+            device.hostname = device_raw.get('displayName') or device_raw.get('hostName')
+            if device_raw.get('lastIPUsed'):
+                device.add_nic(ips=[device_raw.get('lastIPUsed')])
             device.description = device_raw.get('description')
             try:
                 if device_raw.get('hostName') and ipaddress.ip_address(device_raw.get('hostName')):
