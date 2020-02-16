@@ -152,11 +152,6 @@ export default {
           type: 'string',
         },
         {
-          name: 'description',
-          title: 'Description',
-          type: 'string',
-        },
-        {
           name: 'tags',
           title: 'Tags',
           type: 'array',
@@ -176,7 +171,7 @@ export default {
     searchFilter() {
       const queryStringParts = [];
       if (this.searchValue) {
-        queryStringParts.push(`(name == regex("${this.searchValue}", "i") or description == regex("${this.searchValue}", "i"))`);
+        queryStringParts.push(`(name == regex("${this.searchValue}", "i"))`);
       } if (this.filterTags.length) {
         queryStringParts.push(`tags in ["${this.filterTags.join('","')}"]`);
       }
@@ -188,6 +183,18 @@ export default {
     },
     filterIcon() {
       return this.filterTags.length ? mdiFilter : '';
+    },
+  },
+  watch: {
+    $route(to) {
+      const { params: { queryId } } = to;
+      if (queryId) {
+        this.isPanelOpen = true;
+        this.selection.ids = [queryId];
+      } else {
+        this.isPanelOpen = false;
+        this.selection.ids = [];
+      }
     },
   },
   mounted() {
@@ -280,6 +287,7 @@ export default {
     panelStateChanged(open) {
       if (!open) {
         this.$router.push({ name: `${this.namespace}-queries` });
+        this.fetchTagsApi();
         this.resetTableSelections();
       }
     },
@@ -334,18 +342,12 @@ export default {
     height: 100%;
 
     .table-td-name {
-      width: 450px;
+      width: 850px;
       text-overflow: ellipsis;
       overflow: hidden;
     }
-    .table-td-description {
-      max-width: 550px;
-      text-overflow: ellipsis;
-    }
-    .table-td-content-description {
-      max-width: 100%;
-      text-overflow: ellipsis;
-      overflow: hidden;
+    .table-td-tags {
+      width: 400px;
     }
   }
 

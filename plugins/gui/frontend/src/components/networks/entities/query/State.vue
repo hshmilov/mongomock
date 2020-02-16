@@ -73,7 +73,6 @@
       :module="module"
     />
     <x-save-modal
-      v-if="viewNameModal.isActive"
       v-model="viewNameModal.isActive"
       :namespace="module"
       :view="viewNameModal.view"

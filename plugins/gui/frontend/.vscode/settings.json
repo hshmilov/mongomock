@@ -1,6 +1,9 @@
 {
   "editor.tabSize": 2,
   "vetur.format.options.useTabs": true,
+  "path-intellisense.mappings": {
+    "@": "${workspaceRoot}/src"
+  },
   "eslint.validate": [
     "javascript",
     "javascriptreact",

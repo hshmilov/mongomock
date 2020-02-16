@@ -1,66 +1,73 @@
 <template>
-    <div class="x-menu-item" :class="{nested: nested, active: isActive, disabled: disabled }" @mouseover="isActive = true" tabindex="-1"
-         @mouseout="isActive = false" @click="onClick" @keyup.enter="onClick">
-        <div class="item-content">{{ title }}
-            <svg-icon
-                v-if="disabled"
-                name="symbol/info"
-                :original="true" height="16"
-                :title="disabledDescription"
-            />
-        </div>
-        <div v-show="isActive && !disabled">
-            <slot></slot>
-        </div>
+  <div
+    class="x-menu-item"
+    :class="{nested: nested, active: isActive, disabled: disabled }"
+    tabindex="-1"
+    @mouseover="isActive = true"
+    @mouseout="isActive = false"
+    @click="onClick"
+    @keyup.enter="onClick"
+  >
+    <div class="item-content">{{ title }}<svg-icon
+      v-if="disabled"
+      name="symbol/info"
+      :original="true"
+      height="16"
+      :title="disabledDescription"
+    />
     </div>
+    <div v-show="isActive && !disabled">
+      <slot />
+    </div>
+  </div>
 </template>
 
 <script>
-    export default {
-        name: 'x-menu-item',
-        props: {
-            title: {required: true},
-            selected: {default: false},
-            disabled: {
-                type: Boolean,
-                default: false
-            },
-            disabledDescription: {
-                type: String,
-                default: ''
-            }
-            },
-        computed: {
-            nested() {
-                return this.$slots !== undefined && this.$slots.default !== undefined && this.$slots.default.length
-            }
-        },
-        data() {
-            return {
-                isActive: false
-            }
-        },
-        watch: {
-            selected(newSelected) {
-                this.isActive = newSelected
-            },
-            isActive(newIsActive) {
-                if (newIsActive) {
-                    this.$el.focus()
-                }
-            }
-        },
-        created() {
-            this.isActive = this.selected
-        },
-        methods: {
-            onClick() {
-                if (!this.disabled) {
-                    this.$emit('click')
-                }
-            }
-        }
-    }
+export default {
+  name: 'XMenuItem',
+  props: {
+    title: { required: true },
+    selected: { default: false },
+    disabled: {
+      type: Boolean,
+      default: false,
+    },
+    disabledDescription: {
+      type: String,
+      default: '',
+    },
+  },
+  data() {
+    return {
+      isActive: false,
+    };
+  },
+  computed: {
+    nested() {
+      return this.$slots !== undefined && this.$slots.default !== undefined && this.$slots.default.length;
+    },
+  },
+  watch: {
+    selected(newSelected) {
+      this.isActive = newSelected;
+    },
+    isActive(newIsActive) {
+      if (newIsActive) {
+        this.$el.focus();
+      }
+    },
+  },
+  created() {
+    this.isActive = this.selected;
+  },
+  methods: {
+    onClick() {
+      if (!this.disabled) {
+        this.$emit('click');
+      }
+    },
+  },
+};
 </script>
 
 <style lang="scss">

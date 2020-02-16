@@ -10,7 +10,7 @@
     @remove-child="onRemoveChild"
   >
     <x-button
-      v-if="children.length"
+      v-if="children.length && !readOnly"
       link
       class="expression-nest"
       @click="onAddChild"

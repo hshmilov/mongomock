@@ -2,18 +2,18 @@
     "compilerOptions": {
       "target": "es2017",
       "allowSyntheticDefaultImports": false,
-      "module": "es6"
+      "module": "es6",
+      "baseUrl": ".",
+      "paths": {
+          "@": ["./src/*"],
+          "@components/*": ["./src/components/*"],
+          "@axons/*": ["./src/components/axons/*"],
+          "@networks/*": ["./src/components/networks/*"],
+          "@neurons/*": ["./src/components/neurons/*"],
+          "@pages/*": ["./src/components/pages/*"],
+          "@api/*": ["./src/api/*"],
+          "@store/*": ["./src/store/*"],
+      }
     },
     "exclude": ["node_modules"],
-    "baseUrl": "./",
-    "paths": {
-        "@": ["src/*"],
-        "@components/*": ["src/components/*"],
-        "@axons/*": ["src/components/axons/*"],
-        "@networks/*": ["src/components/networks/*"],
-        "@neurons/*": ["src/components/neurons/*"],
-        "@pages/*": ["src/components/pages/*"],
-        "@api/*": ["src/api/*"],
-        "@store/*": ["src/store/*"],
-    }
   }

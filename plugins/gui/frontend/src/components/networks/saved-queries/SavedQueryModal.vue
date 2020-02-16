@@ -1,14 +1,18 @@
 <template>
-  <v-dialog
-    :value="value"
+  <xModal
+    v-if="value"
     content-class="save-query-dialog"
     class="save-query-dialog"
-    max-width="500"
-    persistent
-    @input="dialogStateChanged"
-    @keydown.esc="onClose"
+    size="lg"
+    approve-text="Save"
+    :disabled="$v.$error"
+    @close="onClose"
+    @confirm="onConfirm"
   >
-    <v-card v-if="value">
+    <div
+      v-if="value"
+      slot="body"
+    >
       <section class="form">
         <div class="form-item">
           <label for="name">Query Name</label>
@@ -16,7 +20,10 @@
             v-if="$v.queryFormProxies.name.$error"
             class="error-input"
           >
-            {{ !$v.queryFormProxies.name.required ? 'Query Name is a required field' : 'Query Name is used by another query' }}
+            {{ !$v.queryFormProxies.name.required
+              ? 'Query Name is a required field'
+              : 'Query Name is used by another query'
+            }}
           </span>
           <input
             id="name"
@@ -27,7 +34,9 @@
         </div>
 
         <div class="form-item">
-          <label for="description">Query Description</label>
+          <label
+            for="description">Query Description <span class="form-item--optional">optional</span>
+          </label>
           <span
             v-if="$v.queryFormProxies.description.$error"
             class="error-input"
@@ -41,19 +50,8 @@
           />
         </div>
       </section>
-
-      <section class="actions">
-        <x-button
-          link
-          @click="onClose"
-        >Cancel</x-button>
-        <x-button
-          :disabled="$v.$error"
-          @click="onConfirm"
-        >Save</x-button>
-      </section>
-    </v-card>
-  </v-dialog>
+    </div>
+  </xModal>
 </template>
 
 <script>
@@ -63,7 +61,7 @@ import _get from 'lodash/get';
 import _isNull from 'lodash/isNull';
 import _isEmpty from 'lodash/isEmpty';
 
-import xButton from '@axons/inputs/Button.vue';
+import xModal from '@axons/popover/Modal.vue';
 
 import { SAVE_DATA_VIEW } from '@store/actions';
 import { SET_GETTING_STARTED_MILESTONE_COMPLETION } from '@store/modules/onboarding';
@@ -89,7 +87,7 @@ const uniqueQueryName = function uniqueQueryName(inputValue) {
 export default {
   name: 'XSaveModal',
   components: {
-    xButton,
+    xModal,
   },
   model: {
     prop: 'value',
@@ -167,6 +165,15 @@ export default {
       return _get(this.query, 'description');
     },
   },
+  watch: {
+    value(isOpen) {
+      if (isOpen && this.isEdit) {
+        const { name } = this.queryFormProxies;
+        const n = !_isNull(name) ? name : this.query.name;
+        this.queryFormProxies.name = n;
+      }
+    },
+  },
   created() {
     this.fetchQueriesNames();
   },
@@ -175,22 +182,6 @@ export default {
       saveView: SAVE_DATA_VIEW,
       milestoneCompleted: SET_GETTING_STARTED_MILESTONE_COMPLETION,
     }),
-    dialogStateChanged(isOpen) {
-      if (!isOpen) {
-        // when save modal closed, reset the queryFormProxies and the form validation state
-        this.$v.queryFormProxies.$reset();
-        this.queryFormProxies = {
-          name: null,
-          description: null,
-        };
-      } else {
-        // when the save modal opened, (if in edit mode) init the queryFormProxies so validation will work as expected
-        if (this.isEdit) {
-          this.queryFormProxies.name = this.query.name;
-          this.queryFormProxies.description = this.query.description;
-        }
-      }
-    },
     onClose() {
       this.resetForm();
       this.$emit('closed');
@@ -210,9 +201,9 @@ export default {
     },
     onConfirm() {
       // validate on submission
-      this.$v.$touch();
-      if (this.hasFormDataChanged() && this.$v.$invalid) return;
+      this.$v.queryFormProxies.$touch();
 
+      if (this.hasFormDataChanged() && this.$v.$invalid) return;
       this.saveView({
         module: this.namespace,
         name: this.name,
@@ -248,9 +239,10 @@ export default {
     z-index: 1002 !important;
   }
   .save-query-dialog {
-    .v-card {
-      min-height: 309px;
-      width: 500px;
+    .modal-container {
+      max-height: 360px;
+    }
+    .modal-body {
       padding: 20px 24px 32px 24px;
       display: flex;
       flex-direction: column;
@@ -283,6 +275,17 @@ export default {
             margin-bottom: 4px;
             color: #D0011B;
             font-size: 11px;
+          }
+
+          .name-input {
+            height: 24px;
+          }
+
+          &--optional {
+            font-size: 80%;
+            color: $grey-4;
+            display: inline-block;
+            margin-left: 4px;
           }
         }
         &.actions {

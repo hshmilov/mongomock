@@ -1,6 +1,6 @@
 <template>
   <!-- render this if not in keepOpen state -->
-  <v-combobox
+  <v-autocomplete
     v-if="!keepOpen"
     ref="combobox"
     v-model="selectedItems"
@@ -10,7 +10,7 @@
     :hide-no-data="!allowCreateNew"
     :placeholder="label"
     item-color="transparent"
-    color="black"
+    color="#1D222C"
     :height="height"
     background-color="#fff"
     hide-details
@@ -46,7 +46,7 @@
           :input-value="isSelectedItem(item)"
           :indeterminate="isIndeterminateItem(item)"
           :label="item"
-          color="black"
+          color="#1D222C"
         />
         <v-chip
           v-if="isNewItem(item)"
@@ -86,12 +86,14 @@
               text
               small
               color="secondary"
+              :class="buttonClasses"
               @click="selectAll"
             >Select All</v-btn>
             <v-btn
               text
               small
               color="secondary"
+              :class="buttonClasses"
               @click="clearSelections"
             >Clear All</v-btn>
           </v-list-item-title>
@@ -115,7 +117,7 @@
         </v-list-item-content>
       </v-list-item>
     </template>
-  </v-combobox>
+  </v-autocomplete>
 
   <!-- render this is in keepOpen -->
   <div v-else>
@@ -198,12 +200,14 @@
           text
           small
           color="secondary"
+          :class="buttonClasses"
           @click="selectAll"
         >Select All</v-btn>
         <v-btn
           text
           small
           color="secondary"
+          :class="buttonClasses"
           @click="clearSelections"
         >Clear All</v-btn>
       </v-card-actions>
@@ -299,6 +303,7 @@ export default {
       sourceData: {
         indeterminate: new Set(this.indeterminate),
       },
+      buttonClasses: ['text-capitalize', 'font-regular'],
     };
   },
   computed: {
@@ -494,6 +499,10 @@ export default {
       .accent--text {
         color: $checkbox-color;
       }
+      .v-label {
+        color: $theme-black;
+        font-size: 14px;
+      }
     }
     .v-messages{
       display: none;
@@ -582,13 +591,13 @@ export default {
 
     .v-list-item__title {
       font-size: $item-font-size;
-      color: black;
+      color: $theme-black;
       display: flex;
       flex-direction: row;
       align-items: center;
       .v-label {
         font-size: $item-font-size;
-        color: black;
+        color: $theme-black;
       }
 
       .v-chip {
@@ -618,6 +627,14 @@ export default {
     input, textarea {
         border-style: none !important;
     }
+    .v-input__control {
+      border: 1px solid #DEDEDE !important;
+    }
+    .v-input__slot {
+      &::before {
+        border-style: none !important;
+      }
+    }
 
     &__list-item-container {
       width: 95%;
@@ -633,6 +650,7 @@ export default {
 
     // fix bug that input cover the label when not in active mode
     .v-select__selections {
+      min-height: 24px !important;
       .v-chip {
         max-width: 60%;
         span {
@@ -645,6 +663,10 @@ export default {
       input {
         padding: 0 8px !important;
         background-color: transparent;
+        &::placeholder {
+          color: $grey-4;
+          font-weight: 200;
+        }
       }
     }
   }
@@ -663,6 +685,8 @@ export default {
     }
     .x-combobox_create-new-item {
       font-weight: 400 !important;
+      border-bottom-width: 0px;
+      padding: 8px 8px 0 8px !important;
     }
   }
 </style>
