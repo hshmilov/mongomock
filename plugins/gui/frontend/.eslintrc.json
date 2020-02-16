@@ -15,6 +15,9 @@
     "plugin:vue/recommended"
   ],
   "rules": {
+    "vue/component-name-in-template-casing": ["error", "PascalCase", {
+      "registeredComponentsOnly": false
+    }],
     "vue/multiline-html-element-content-newline": ["warn", {
       "ignoreWhenEmpty": true,
       "ignores": ["x-button", "v-btn", "div", "md-icon"],
