@@ -1,3 +1,4 @@
+import pytest
 # pylint: disable=unused-import
 from services.adapters.indegy_service import IndegyService, indegy_fixture
 from test_helpers.adapter_test_base import AdapterTestBase
@@ -29,3 +30,7 @@ class TestIndegyAdapter(AdapterTestBase):
     @property
     def some_user_id(self):
         raise NotImplementedError()
+
+    @pytest.mark.skip('Hangs sometimes')
+    def test_fetch_devices(self):
+        super().test_fetch_devices()
