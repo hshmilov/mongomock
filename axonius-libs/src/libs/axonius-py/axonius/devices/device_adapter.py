@@ -143,7 +143,7 @@ class DeviceAdapterOS(SmartJsonClass):
 
     type = Field(
         str, 'Type', enum=['Windows', 'Linux', 'OS X', 'iOS', 'AirOS',
-                           'Android', 'FreeBSD', 'VMWare', 'Cisco', 'Mikrotik', 'VxWorks',
+                           'Android', 'FreeBSD', 'VMWare', 'Cisco', 'Mikrotik', 'VxWorks', 'PanOS',
                            'F5 Networks Big-IP', 'Solaris', 'AIX', 'Printer', 'PlayStation', 'Check Point', "Arista"]
     )
     distribution = Field(str, 'Distribution')

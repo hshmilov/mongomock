@@ -7,7 +7,7 @@ from axonius.adapter_exceptions import ClientConnectionException
 from axonius.fields import Field
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.connection import RESTException
-from axonius.devices.device_adapter import DeviceAdapter
+from axonius.devices.device_adapter import DeviceAdapter, DeviceAdapterOS
 from axonius.utils.datetime import parse_date
 from axonius.utils.files import get_local_config_file
 from paloalto_panorama_adapter.connection import PaloaltoPanoramaConnection
@@ -142,6 +142,10 @@ class PaloaltoPanoramaAdapter(AdapterBase):
                 return None
             device.id = serial
             device.device_serial = serial
+            try:
+                device.os = DeviceAdapterOS(type='PanOS', build=device_raw_dict.get('sw-version'))
+            except Exception:
+                logger.exception(f'Problem adding os')
             device.fw_connected = device_raw_dict.get('connected')
             device.hostname = device_raw_dict.get('hostname')
             mac = device_raw_dict.get('mac-addr')
