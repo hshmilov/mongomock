@@ -172,7 +172,7 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
 
     @staticmethod
     def _get_client_id(client_config):
-        return client_config[consts.QUALYS_SCANS_DOMAIN]
+        return client_config[consts.QUALYS_SCANS_DOMAIN] + '_' + client_config[consts.USERNAME]
 
     @staticmethod
     def _test_reachability(client_config):

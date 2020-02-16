@@ -9,7 +9,7 @@ from test_helpers.adapter_test_base import AdapterTestBase
 
 
 def _get_id_from_client(client):
-    return client['Qualys_Scans_Domain']
+    return client['Qualys_Scans_Domain'] + '_' + client['username']
 
 
 class TestQualysScansAdapter(AdapterTestBase):

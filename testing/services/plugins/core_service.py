@@ -59,7 +59,10 @@ class CoreService(PluginService, UpdatablePluginMixin):
         if self.db_schema_version < 10:
             self._update_schema_version_10()
 
-        if self.db_schema_version != 10:
+        if self.db_schema_version < 11:
+            self._update_schema_version_11()
+
+        if self.db_schema_version != 11:
             print(f'Upgrade failed, db_schema_version is {self.db_schema_version}')
 
     def _update_schema_version_1(self):
@@ -550,6 +553,48 @@ class CoreService(PluginService, UpdatablePluginMixin):
             self.db_schema_version = 10
         except Exception as e:
             print(f'Exception while upgrading core db to version 10. Details: {e}')
+            traceback.print_exc()
+            raise
+
+    def _update_schema_version_11(self):
+        # Change client_id
+        print('Upgrade to schema 11 - Qualys Scans adapter schema')
+        try:
+            # Get a list of all tanium adapters in the systems (we could have a couple - each on a different node)
+            all_qualys_scans = self.db.client['core']['configs'].find(
+                {
+                    'plugin_name': 'qualys_scans_adapter'
+                })
+            for qualys_scans in all_qualys_scans:
+                plugin_unique_name = qualys_scans.get('plugin_unique_name')
+                clients = self.db.client[plugin_unique_name]['clients'].find({})
+                # These are all the clients ("connections"). Each one of them is encrypted, so we'd have to
+                # decrypt that.
+                for client in clients:
+                    new_client_config = client['client_config'].copy()
+                    self.decrypt_dict(new_client_config)
+
+                    domain = new_client_config.get('Qualys_Scans_Domain')
+                    username = new_client_config.get('username')
+
+                    if not domain or not username:
+                        continue
+
+                    new_client_id = f'{domain}_{username}'
+
+                    self.db.client[plugin_unique_name]['clients'].update(
+                        {
+                            '_id': client['_id']
+                        },
+                        {
+                            '$set':
+                                {
+                                    'client_id': new_client_id,
+                                }
+                        })
+            self.db_schema_version = 11
+        except Exception as e:
+            print(f'Exception while upgrading qualys scans schema to version 11. Details: {e}')
             traceback.print_exc()
             raise
 
