@@ -1,5 +1,5 @@
 import Promise from 'promise'
-import {REQUEST_API, FETCH_DATA_CONTENT, downloadPdfReportFile} from '../actions'
+import {REQUEST_API, FETCH_DATA_CONTENT, downloadFile} from '../actions'
 
 export const FETCH_REPORT = 'FETCH_REPORT'
 export const SET_REPORT = 'SET_REPORT'
@@ -136,7 +136,7 @@ export const reports = {
                 rule: `export_report/${reportId}`,
                 binary: true
             }).then((response) => {
-                downloadPdfReportFile(name, response)
+                downloadFile('pdf', response, name)
             })
         }
     }

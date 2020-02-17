@@ -70,7 +70,8 @@ from axonius.consts.gui_consts import (ENCRYPTION_KEY_PATH,
                                        Signup, PROXY_DATA_PATH, DASHBOARD_LIFECYCLE_ENDPOINT,
                                        UNCHANGED_MAGIC_FOR_GUI, GETTING_STARTED_CHECKLIST_SETTING,
                                        LAST_UPDATED_FIELD, UPDATED_BY_FIELD,
-                                       PREDEFINED_FIELD, CONFIG_CONFIG)
+                                       PREDEFINED_FIELD, CONFIG_CONFIG,
+                                       FILE_NAME_TIMESTAMP_FORMAT)
 from axonius.consts.metric_consts import ApiMetric, Query, SystemMetric, GettingStartedMetric
 from axonius.consts.plugin_consts import (AGGREGATOR_PLUGIN_NAME,
                                           AXONIUS_USER_NAME,
@@ -262,7 +263,7 @@ def gzipped_downloadable(filename, extension):
 
                 response.data = compressed.getbuffer()
                 if 'Content-Disposition' not in response.headers:
-                    response.headers['Content-Disposition'] = f'attachment;filename={filename}.tar.gz'
+                    response.headers['Content-Disposition'] = f'attachment; filename={filename}.tar.gz'
                 return response
 
             return f(*args, **kwargs)
@@ -1429,7 +1430,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
         """
         csv_string = entity_data_field_csv(EntityType.Devices, device_id, field_name, mongo_sort, history)
         output = make_response((codecs.BOM_UTF8 * 2) + csv_string.getvalue().encode('utf-8'))
-        timestamp = datetime.now().strftime('%d%m%Y-%H%M%S')
+        timestamp = datetime.now().strftime(FILE_NAME_TIMESTAMP_FORMAT)
         field_name = field_name.split('.')[-1]
         output.headers['Content-Disposition'] = f'attachment; filename=axonius-data_{field_name}_{timestamp}.csv'
         output.headers['Content-type'] = 'text/csv'
@@ -1460,7 +1461,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
         """
         csv_string = entity_tasks_actions_csv(device_id, schema_fields, mongo_sort)
         output = make_response(csv_string.getvalue().encode('utf-8'))
-        timestamp = datetime.now().strftime('%d%m%Y-%H%M%S')
+        timestamp = datetime.now().strftime(FILE_NAME_TIMESTAMP_FORMAT)
         output.headers['Content-Disposition'] = f'attachment; filename=axonius-data_enforcement_tasks_{timestamp}.csv'
         output.headers['Content-type'] = 'text/csv'
         return output
@@ -1644,7 +1645,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
         """
         csv_string = entity_data_field_csv(EntityType.Users, user_id, field_name, mongo_sort, history, field_filters)
         output = make_response(csv_string.getvalue().encode('utf-8'))
-        timestamp = datetime.now().strftime('%d%m%Y-%H%M%S')
+        timestamp = datetime.now().strftime(FILE_NAME_TIMESTAMP_FORMAT)
         field_name = field_name.split('.')[-1]
         output.headers['Content-Disposition'] = f'attachment; filename=axonius-data_{field_name}_{timestamp}.csv'
         output.headers['Content-type'] = 'text/csv'
@@ -1670,7 +1671,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
         """
         csv_string = entity_tasks_actions_csv(user_id, schema_fields, mongo_sort)
         output = make_response(csv_string.getvalue().encode('utf-8'))
-        timestamp = datetime.now().strftime('%d%m%Y-%H%M%S')
+        timestamp = datetime.now().strftime(FILE_NAME_TIMESTAMP_FORMAT)
         output.headers['Content-Disposition'] = f'attachment; filename=axonius-data_enforcement_tasks_{timestamp}.csv'
         output.headers['Content-type'] = 'text/csv'
         return output
@@ -3533,7 +3534,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
         if len(errors) == 0:
             resp = make_response(metadata, 200)
             resp.headers['Content-Type'] = 'text/xml'
-            resp.headers['Content-Disposition'] = 'attachment;filename=axonius_saml_metadata.xml'
+            resp.headers['Content-Disposition'] = 'attachment; filename=axonius_saml_metadata.xml'
             return resp
         else:
             return return_error(', '.join(errors))
@@ -4200,11 +4201,11 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
         dw = csv.DictWriter(string_output, [name, 'count'])
         dw.writeheader()
         dw.writerows([{name: x['name'], 'count': x['value']} for x in data])
-        outputFile = make_response(string_output.getvalue().encode('utf-8'))
-        timestamp = datetime.now().strftime('%d%m%Y-%H%M%S')
-        outputFile.headers['Content-Disposition'] = f'attachment; filename=axonius-chart_{card["name"]}_{timestamp}.csv'
-        outputFile.headers['Content-type'] = 'text/csv'
-        return outputFile
+        output_file = make_response(string_output.getvalue().encode('utf-8'))
+        timestamp = datetime.now().strftime(FILE_NAME_TIMESTAMP_FORMAT)
+        output_file.headers['Content-Disposition'] = f'attachment; filename=axonius-chart-{card["name"]}_{timestamp}.csv'
+        output_file.headers['Content-type'] = 'text/csv'
+        return output_file
 
     def __clear_dashboard_cache(self, clear_slow=False):
         """
@@ -5806,8 +5807,8 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
 
         csv_string = get_export_csv(rules, field_by_name, None)
         output = make_response(csv_string.getvalue().encode('utf-8'))
-        timestamp = datetime.now().strftime('%d%m%Y-%H%M%S')
+        timestamp = datetime.now().strftime(FILE_NAME_TIMESTAMP_FORMAT)
         output.headers[
-            'Content-Disposition'] = f'attachment; filename=axonius_cloud_{timestamp}.csv'
+            'Content-Disposition'] = f'attachment; filename=axonius-cloud_{timestamp}.csv'
         output.headers['Content-type'] = 'text/csv'
         return output

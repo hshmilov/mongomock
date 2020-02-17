@@ -6,6 +6,7 @@ from flask import Response
 
 from axonius.entities import EntityType
 from axonius.plugin_base import PluginBase
+from axonius.consts.gui_consts import FILE_NAME_TIMESTAMP_FORMAT
 from axonius.consts.plugin_consts import HEAVY_LIFTING_PLUGIN_NAME
 
 CHUNK_SIZE = 1024
@@ -18,7 +19,7 @@ def get_csv_from_heavy_lifting_plugin(mongo_filter, mongo_sort, mongo_projection
     Queries the heavy lifting plugin and asks it to process the csv request.
     All the params are documented in the respected decorators in gui/service.py
     """
-    timestamp = datetime.now().strftime('%d%m%Y-%H%M%S')
+    timestamp = datetime.now().strftime(FILE_NAME_TIMESTAMP_FORMAT)
     headers = {
         'Content-Disposition': f'attachment; filename=axonius-data_{timestamp}.csv',
         'Content-Type': 'text/csv'
@@ -47,15 +48,14 @@ def get_csv_file_from_heavy_lifting_plugin(query_name, mongo_filter, mongo_sort,
 
     :return: the generated csv file of the saved query.
     """
-    timestamp = datetime.now().strftime('%m-%d-%Y-%H:%M:%S')
     res = _get_csv_from_heavy_lifting(
         default_sort, entity_type, history, mongo_filter, mongo_projection, mongo_sort, field_filters)
 
-    temp_csv_filename = f'{query_name[0:100]}_{timestamp}.csv'
     csv_stream = io.StringIO()
     for chunk in res.iter_content(CHUNK_SIZE):
         csv_stream.write(chunk.decode('utf-8'))
-    return {'name': temp_csv_filename, 'stream': csv_stream}
+    timestamp = datetime.now().strftime(FILE_NAME_TIMESTAMP_FORMAT)
+    return {'name': f'{query_name[0:100]}_{timestamp}.csv', 'stream': csv_stream}
 
 
 def _get_csv_from_heavy_lifting(default_sort, entity_type, history, mongo_filter, mongo_projection, mongo_sort,

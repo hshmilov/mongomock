@@ -8,7 +8,7 @@ from jinja2 import Environment, FileSystemLoader
 from weasyprint import HTML, CSS
 from weasyprint.fonts import FontConfiguration
 
-from axonius.consts.gui_consts import (ChartViews, PREDEFINED_FIELD)
+from axonius.consts.gui_consts import (ChartViews, PREDEFINED_FIELD, FILE_NAME_TIMESTAMP_FORMAT)
 from axonius.entities import EntityType
 from axonius.logging.metric_helper import log_metric
 from axonius.plugin_base import PluginBase
@@ -108,9 +108,9 @@ class ReportGenerator:
         :return: The name of the generated pdf file
         """
         now = datetime.now()
-        timestamp = now.strftime('%d%m%Y-%H%M%S')
+        timestamp = now.strftime(FILE_NAME_TIMESTAMP_FORMAT)
         temp_report_filename = f'{self.output_path}axonius-report_{timestamp}.pdf'
-        logger.info(f'Report Generator: PDF generated and saved to ${temp_report_filename}')
+        logger.info(f'Report Generator: PDF generated and saved to {temp_report_filename}')
         html, attachments = self.render_html(now)
         return html.write_pdf(temp_report_filename)
 
