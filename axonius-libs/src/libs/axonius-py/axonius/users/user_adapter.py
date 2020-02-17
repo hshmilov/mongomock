@@ -29,6 +29,8 @@ class UserFactor(SmartJsonClass):
 class UserApplication(SmartJsonClass):
     app_name = Field(str, 'Application Name')
     app_links = ListField(str, 'Application URLs')
+    app_state = Field(str, 'Application State')
+    is_user_removed_from_app = Field(bool, 'Is User Removed From App')
 
 
 class UserAdapter(SmartJsonClass):

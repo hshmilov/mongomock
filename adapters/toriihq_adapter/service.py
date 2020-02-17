@@ -8,6 +8,7 @@ from axonius.users.user_adapter import UserAdapter
 from axonius.utils.datetime import parse_date
 from axonius.fields import Field
 from axonius.utils.files import get_local_config_file
+from axonius.mixins.configurable import Configurable
 from toriihq_adapter.connection import ToriihqConnection
 from toriihq_adapter.client_id import get_client_id
 from toriihq_adapter.consts import TORIIHQ_DEFAULT_DOMAIN
@@ -15,7 +16,7 @@ from toriihq_adapter.consts import TORIIHQ_DEFAULT_DOMAIN
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
-class ToriihqAdapter(AdapterBase):
+class ToriihqAdapter(AdapterBase, Configurable):
     # pylint: disable=too-many-instance-attributes
     class MyUserAdapter(UserAdapter):
         lifecycle_status = Field(str, 'Lifecycle Status')
@@ -113,7 +114,24 @@ class ToriihqAdapter(AdapterBase):
             user.role = user_raw.get('role')
             user.lifecycle_status = user_raw.get('lifecycleStatus')
             user.user_created = parse_date(user_raw.get('creationTime'))
-            user.is_external = user_raw.get('isExternal') if isinstance(user_raw.get('isExternal'), bool) else None
+            try:
+                apps_raw = user_raw.get('apps_raw')
+                if not isinstance(apps_raw, list):
+                    apps_raw = []
+                for app_raw in apps_raw:
+                    try:
+                        user.add_user_application(app_name=app_raw.get('name'),
+                                                  app_state=app_raw.get('state'),
+                                                  is_user_removed_from_app=app_raw.get('isUserRemovedFromApp')
+                                                  if isinstance(app_raw.get('isUserRemovedFromApp'), bool) else None)
+                    except Exception:
+                        logger.exception(f'Problem getting app {app_raw}')
+            except Exception:
+                logger.exception(f'Problem getting apps for {user_raw}')
+            is_external = user_raw.get('isExternal') if isinstance(user_raw.get('isExternal'), bool) else None
+            if self.__exclude_external_users and is_external is True:
+                return None
+            user.is_external = is_external
             user.set_raw(user_raw)
             return user
         except Exception:
@@ -129,3 +147,29 @@ class ToriihqAdapter(AdapterBase):
     @classmethod
     def adapter_properties(cls):
         return [AdapterProperty.UserManagement]
+
+    @classmethod
+    def _db_config_schema(cls) -> dict:
+        return {
+            'items': [
+                {
+                    'name': 'exclude_external_users',
+                    'title': 'Exclude External Users',
+                    'type': 'bool'
+                }
+            ],
+            'required': [
+                'exclude_external_users'
+            ],
+            'pretty_name': 'Toriihq Configuration',
+            'type': 'array'
+        }
+
+    @classmethod
+    def _db_config_default(cls):
+        return {
+            'exclude_external_users': False
+        }
+
+    def _on_config_update(self, config):
+        self.__exclude_external_users = config['exclude_external_users']

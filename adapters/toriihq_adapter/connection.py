@@ -25,4 +25,12 @@ class ToriihqConnection(RESTConnection):
         yield from []
 
     def get_user_list(self):
-        yield from self._get('users')['users']
+        for user_raw in self._get('users')['users']:
+            try:
+                user_id = user_raw.get('id')
+                if not user_id:
+                    continue
+                user_raw['apps_raw'] = self._get(f'users/{user_id}/apps')['apps']
+            except Exception:
+                logger.exception(f'Problem getting data for {user_raw}')
+            yield user_raw
