@@ -94,7 +94,7 @@ class EnforcementsPage(EntitiesPage):
     ACTION_RESULT_CONTAINER_CSS = '.x-action-result'
     ACTION_NAME_ID = 'action-name'
     API_KEY_ID = 'apikey'
-    ACTION_BY_NAME_XPATH = '//div[@class=\'x-text-box\' and child::div[text()=\'{action_name}\']]'
+    ACTION_BY_NAME_XPATH = '//div[contains(@class, \'x-text-box\') and child::div[text()=\'{action_name}\']]'
     SELECT_VIEW_ENTITY_CSS = '.base-query .x-select-symbol .x-select-trigger'
     SELECT_VIEW_NAME_CSS = '.base-query .query-name .x-select-trigger'
     SELECT_SAVED_VIEW_TEXT_CSS = 'div.trigger-text'

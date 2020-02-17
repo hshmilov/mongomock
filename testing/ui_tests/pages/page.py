@@ -299,9 +299,9 @@ class Page:
 
     @staticmethod
     def get_button_xpath(text, button_type=BUTTON_DEFAULT_TYPE, button_class=BUTTON_DEFAULT_CLASS, partial_class=False):
-        button_xpath_template = './/{}[@class=\'{}\' and .//text()=\'{}\']'
+        button_xpath_template = './/{}[@class=\'{}\' and .//text()[normalize-space()=\'{}\']]'
         if partial_class:
-            button_xpath_template = './/{}[contains(@class, \'{}\') and .//text()=\'{}\']'
+            button_xpath_template = './/{}[contains(@class, \'{}\') and .//text()[normalize-space()=\'{}\']]'
         xpath = button_xpath_template.format(button_type, button_class, text)
         return xpath
 

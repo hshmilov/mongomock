@@ -295,6 +295,7 @@ class TestEnforcementActions(TestBase):
         self.enforcements_page.switch_to_page()
         self.enforcements_page.wait_for_spinner_to_end()
         self.enforcements_page.edit_enforcement(ENFORCEMENT_CHANGE_NAME)
+        time.sleep(0.4)  # waiting for animation to finish
         self.enforcements_page.change_tag_entities(ENFORCEMENT_CHANGE_NAME, TAG_NEW_COMMENT)
         self.enforcements_page.select_trigger()
         self.enforcements_page.check_conditions()
@@ -435,6 +436,7 @@ class TestEnforcementActions(TestBase):
         self.enforcements_page.switch_to_page()
         self.enforcements_page.wait_for_table_to_load()
         self.enforcements_page.edit_enforcement(ENFORCEMENT_TEST_NAME_2)
+        time.sleep(0.4)  # waiting for animation to finish
         self.enforcements_page.find_element_by_text(self.enforcements_page.POST_ACTIONS_TEXT).click()
         self.driver.find_element_by_xpath(
             self.enforcements_page.ADDED_ACTION_XPATH.format(action_name=ENFORCEMENT_TEST_NAME_2)).click()

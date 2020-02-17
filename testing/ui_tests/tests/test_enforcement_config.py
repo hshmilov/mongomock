@@ -17,6 +17,7 @@ FIELD_NAME = 'Name'
 FIELD_QUERY_NAME = 'Trigger Query Name'
 
 JSON_NAME = 'JSON File'
+VIEW_TASKS_CSS = '#view_tasks'
 
 
 class TestEnforcementSanity(TestBase):
@@ -252,6 +253,7 @@ class TestEnforcementSanity(TestBase):
         self.devices_queries_page.find_query_row_by_name(ENFORCEMENT_CHANGE_NAME).click()
         self.devices_queries_page.enforce_selected_query()
 
+        self.adapters_page.wait_for_element_absent_by_css(VIEW_TASKS_CSS)
         self.enforcements_page.find_existing_trigger()
         self.enforcements_page.select_trigger()
         assert self.enforcements_page.get_saved_query_text() == ENFORCEMENT_CHANGE_NAME

@@ -18,7 +18,7 @@
         <x-button
           id="enforcement_new"
           :disabled="isReadOnly"
-          @click="navigateEnforcement('new')"
+          @click="newEnforcement('new')"
         >Add Enforcement</x-button>
         <x-button emphasize @click="navigateTasks">View Tasks</x-button>
       </template>
@@ -35,7 +35,7 @@
 
   import { mapState, mapMutations, mapActions } from 'vuex'
   import { UPDATE_DATA_VIEW } from '../../store/mutations'
-  import { REMOVE_ENFORCEMENTS, FETCH_ENFORCEMENT } from '../../store/modules/enforcements'
+  import { REMOVE_ENFORCEMENTS, FETCH_ENFORCEMENT, SET_ENFORCEMENT } from '../../store/modules/enforcements'
 
   export default {
     name: 'XEnforcements',
@@ -100,7 +100,8 @@
     },
     methods: {
       ...mapMutations({
-        updateView: UPDATE_DATA_VIEW
+        updateView: UPDATE_DATA_VIEW,
+        setEnforcement: SET_ENFORCEMENT
       }),
       ...mapActions({
         removeEnforcements: REMOVE_ENFORCEMENTS, fetchEnforcement: FETCH_ENFORCEMENT
@@ -108,6 +109,10 @@
       navigateEnforcement (enforcementId) {
         this.fetchEnforcement(enforcementId)
         this.$router.push({ path: `/${this.name}/${enforcementId}` })
+      },
+      newEnforcement(enforcementId) {
+        this.setEnforcement()
+        this.$router.push({ path: `/${this.name}/new` })
       },
       remove () {
         this.$safeguard.show({

@@ -238,7 +238,6 @@ export default {
     },
     createEnforcement(queryName) {
       this.setEnforcement({
-        uuid: 'new',
         actions: {
           main: null,
           success: [],

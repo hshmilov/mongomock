@@ -16,6 +16,7 @@
         >
           <md-list-item
             v-for="action in category.items"
+            :id="`test_${action.name}`"
             :key="action.name"
             @click="onClickAction(action)"
           >
