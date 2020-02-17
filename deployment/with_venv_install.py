@@ -32,7 +32,7 @@ from utils import (AXONIUS_DEPLOYMENT_PATH,
                    print_state,
                    current_file_system_path,
                    VENV_WRAPPER,
-                   run_as_root,
+                   run_cmd,
                    RESOURCES_PATH)
 
 CRON_D_PATH = Path('/etc/cron.d')
@@ -47,21 +47,21 @@ def copy_file(local_path, dest_path, mode=0o700, user='root', group='root'):
     shutil.chown(dest_path, user=user, group=group)
 
 
-def after_venv_activation(first_time, root_pass, no_research):
+def after_venv_activation(first_time, no_research):
     print(f'installing on top of customer_conf: {get_customer_conf_json()}')
     if not first_time:
         stop_old(keep_diag=True, keep_tunnel=True)
 
     setup_host()
     load_images()
-    set_logrotate(root_pass)
+    set_logrotate()
     if not first_time:
-        chown_folder(root_pass, TEMPORAL_PATH)
+        chown_folder(TEMPORAL_PATH)
         os.makedirs(AXONIUS_SETTINGS_PATH, exist_ok=True)
         set_booted_for_production()
-    set_special_permissions(root_pass)
+    set_special_permissions()
     # chown before start Axonius which tends to be the failure point in bad updates.
-    chown_folder(root_pass, AXONIUS_DEPLOYMENT_PATH)
+    chown_folder(AXONIUS_DEPLOYMENT_PATH)
     # This parts tends to have problems. Minimize the code after it as much as possible.
     if not first_time:
         start_axonius()
@@ -69,8 +69,8 @@ def after_venv_activation(first_time, root_pass, no_research):
             run_discovery()
 
         # Chown again after the run, to make log file which are created afterwards be also part of it
-        set_special_permissions(root_pass)
-        chown_folder(root_pass, AXONIUS_DEPLOYMENT_PATH)
+        set_special_permissions()
+        chown_folder(AXONIUS_DEPLOYMENT_PATH)
 
         shutil.rmtree(TEMPORAL_PATH, ignore_errors=True)
 
@@ -254,12 +254,12 @@ def load_images():
         raise Exception('Invalid return code from docker load command')
 
 
-def set_logrotate(root_pass):
+def set_logrotate():
     print_state('Setting logrotate on both docker logs and cortex logs')
 
     script = f'{DEPLOYMENT_FOLDER_PATH}/set_logrotate.py --cortex-path {AXONIUS_DEPLOYMENT_PATH}'
     cmd = f'{VENV_WRAPPER} {script}'
-    run_as_root(cmd.split(), root_pass)
+    run_cmd(cmd.split())
 
 
 def run_discovery():

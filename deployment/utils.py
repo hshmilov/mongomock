@@ -56,16 +56,13 @@ def print_state(text):
     print(f'{light_blue}{text}{reset}')
 
 
-def run_as_root(args, passwd):
-    sudo = f'sudo -S' if passwd != '' else 'sudo'
-    print(' '.join(sudo.split() + args))
-    proc = subprocess.Popen(sudo.split() + args, stdin=subprocess.PIPE)
-    proc.communicate(passwd.encode() + b'\n')
+def run_cmd(args):
+    subprocess.call(args)
 
 
-def chown_folder(root_pass, path):
+def chown_folder(path):
     cmd = f'chown -R ubuntu:ubuntu {path}'
-    run_as_root(cmd.split(), root_pass)
+    run_cmd(cmd.split())
 
 
 def verify_storage_requirements():

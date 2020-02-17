@@ -6,7 +6,6 @@ This script installs the system from scratch (using --first-time) or as an upgra
 """
 import argparse
 import datetime
-import getpass
 import json
 import os
 import stat
@@ -21,7 +20,7 @@ from utils import (AXONIUS_DEPLOYMENT_PATH,
                    AutoOutputFlush,
                    current_file_system_path,
                    print_state,
-                   run_as_root,
+                   run_cmd,
                    chown_folder, verify_storage_requirements)
 
 TIMESTAMP = datetime.datetime.now().strftime('%y%m%d-%H%M')
@@ -56,7 +55,6 @@ CHMOD_FILES = [
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--first-time', action='store_true', default=False, help='First Time install')
-    parser.add_argument('--root-pass', action='store_true', default='', help='Sudo password')
     parser.add_argument('--no-research', action='store_true', default=False, help='Sudo password')
     parser.add_argument('--do-not-verify-storage', action='store_true', default=False, help='Skip storage verification')
 
@@ -67,19 +65,18 @@ def main():
         sys.exit(1)
 
     start = time.time()
-    root_pass = args.root_pass
     no_research = args.no_research
     do_not_verify_storage = args.do_not_verify_storage
 
     if not do_not_verify_storage:
         verify_storage_requirements()
 
-    if root_pass == '' and os.geteuid() != 0:
+    if os.geteuid() != 0:
         # we are not root, and don't have root password :(
-        print(f'Warning - Please run as root!')
-        root_pass = getpass.getpass('sudo password: ')
+        print(f'Please run as root!')
+        return
 
-    install(args.first_time, root_pass, no_research)
+    install(args.first_time, no_research)
     print_state(f'Done, took {int(time.time() - start)} seconds')
 
 
@@ -132,13 +129,13 @@ def install_requirements():
     subprocess.check_call(args)
 
 
-def validate_old_state(root_pass):
+def validate_old_state():
     if not os.path.isdir(AXONIUS_DEPLOYMENT_PATH):
         name = os.path.basename(AXONIUS_DEPLOYMENT_PATH)
         print(f'{name} folder wasn\'t found at {AXONIUS_DEPLOYMENT_PATH} (missing --first-time ?)')
         sys.exit(-1)
     else:
-        chown_folder(root_pass, AXONIUS_DEPLOYMENT_PATH)
+        chown_folder(AXONIUS_DEPLOYMENT_PATH)
 
     if not os.path.exists(WEAVE_PATH):
         name = os.path.basename(WEAVE_PATH)
@@ -146,16 +143,16 @@ def validate_old_state(root_pass):
         raise FileNotFoundError(f'{name} binary wasn\'t found at {WEAVE_PATH}')
 
 
-def set_special_permissions(root_pass):
+def set_special_permissions():
     # Adding write permissions on .axonius_settings so node_maker can touch a new node.marker
     os.makedirs(AXONIUS_SETTINGS_PATH, exist_ok=True)
     cmd = f'chmod -R o+w {AXONIUS_SETTINGS_PATH}'
-    run_as_root(cmd.split(), root_pass)
+    run_cmd(cmd.split())
 
     # Adding write and execute permissions on all the scripts node_maker uses.
     for current_file in CHMOD_FILES:
         cmd = f'chmod +xr {current_file}'
-        run_as_root(cmd.split(), root_pass)
+        run_cmd(cmd.split())
 
 
 def create_venv():
@@ -194,9 +191,9 @@ def save_master_ip():
         print(f'master ip was present at {master_key_path}')
 
 
-def install(first_time, root_pass, no_research):
+def install(first_time, no_research):
     if not first_time:
-        validate_old_state(root_pass)
+        validate_old_state()
         save_master_ip()  # before we destroy weave net - backup the master ip. can remove after 2.5
         os.rename(AXONIUS_DEPLOYMENT_PATH, TEMPORAL_PATH)
 
@@ -212,7 +209,7 @@ def install(first_time, root_pass, no_research):
     # from this line on - we can use venv!
 
     from deployment.with_venv_install import after_venv_activation
-    after_venv_activation(first_time, root_pass, no_research)
+    after_venv_activation(first_time, no_research)
 
 
 if __name__ == '__main__':
