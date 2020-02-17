@@ -28,7 +28,7 @@ FILE_CLIENTS_SCHEMA = [
     },
     {
         'name': 'username',
-        'title': 'Username for online resource (Share/URL)',
+        'title': 'User name for online resource (Share/URL)',
         'type': 'string'
     },
     {

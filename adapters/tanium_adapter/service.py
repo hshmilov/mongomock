@@ -341,7 +341,7 @@ class TaniumAdapter(AdapterBase):
                 {
                     'name': 'sq_name',
                     'type': 'string',
-                    'title': 'Saved Question Names (comma seperated)'
+                    'title': 'Saved Question Names (comma separated)'
                 },
                 {
                     'name': 'sq_refresh',

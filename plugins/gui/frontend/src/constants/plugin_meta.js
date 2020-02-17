@@ -531,7 +531,7 @@ export const pluginMeta = {
     mssql_adapter: {
         title: 'SQL Server',
         link: 'https://docs.axonius.com/docs/sql-server',
-        description: 'The SQL Server adapter imports device information from arbitrary SQL servers: Microsoft SQL Server, MySQL and PostgreSQL.'
+        description: 'The SQL Server adapter imports device information from arbitrary SQL servers: Microsoft SQL Server, MySQL, Oracle and PostgreSQL.'
     },
     quest_kace_adapter: {
         title: 'Quest KACE Endpoint Systems Management Appliances',
