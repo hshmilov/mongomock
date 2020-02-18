@@ -121,6 +121,9 @@ export default {
       fields(state) {
         return state[this.module].view.fields;
       },
+      historicalState (state) {
+          return state[this.module].view.historical
+        },
     }),
     ...mapGetters({
       exactSearch: EXACT_SEARCH,
@@ -155,13 +158,13 @@ export default {
       this.fields.forEach((field) => {
         // Filter fields containing image data, since it is not relevant for searching
         if (field.includes('image')) return;
-        if (this.exactSearch) {
+        if (this.exactSearch && !this.historicalState) {
           patternParts.push(`${field} == "{val}"`);
         } else {
           patternParts.push(`${field} == regex("{val}", "i")`);
         }
       });
-      if (this.exactSearch) {
+      if (this.exactSearch && !this.historicalState) {
         patternParts.push('search("{val}")');
       }
       return patternParts.join(' or ');
