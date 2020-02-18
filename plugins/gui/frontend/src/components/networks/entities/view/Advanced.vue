@@ -124,7 +124,6 @@ export default {
         [this.data, this.schema])
         .then((results) => {
           this.setMergedDataById({ id: this.entityId, schema: this.schema, mergedData: results });
-        }).finally(() => {
           this.loading = false;
         });
     },
