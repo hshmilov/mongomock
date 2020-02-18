@@ -9,10 +9,12 @@ from threading import Lock
 import requests
 from pymongo.collection import Collection
 
+from active_directory_adapter.service import ActiveDirectoryAdapter
+from active_directory_adapter.consts import LDAP_FIELD_TO_EXCLUDE_CONFIG
 from axonius.consts.system_consts import WEAVE_NETWORK, DB_KEY_PATH
 from axonius.consts.plugin_consts import CONFIGURABLE_CONFIGS_COLLECTION, GUI_PLUGIN_NAME, \
-    AXONIUS_SETTINGS_DIR_NAME, GUI_SYSTEM_CONFIG_COLLECTION, NODE_ID, PLUGIN_NAME,\
-    PLUGIN_UNIQUE_NAME, CORE_UNIQUE_NAME
+    AXONIUS_SETTINGS_DIR_NAME, GUI_SYSTEM_CONFIG_COLLECTION, NODE_ID, PLUGIN_NAME, \
+    PLUGIN_UNIQUE_NAME, CORE_UNIQUE_NAME, ACTIVE_DIRECTORY_PLUGIN_NAME
 from axonius.consts.adapter_consts import ADAPTER_PLUGIN_TYPE
 from axonius.consts.core_consts import CORE_CONFIG_NAME
 from axonius.entities import EntityType
@@ -29,6 +31,19 @@ class CoreService(PluginService, UpdatablePluginMixin):
 
     def _migrate_db(self):
         super()._migrate_db()
+        if self.db_schema_version < 10:
+            self._migrate_db_10()
+
+        if self.db_schema_version < 11:
+            self._update_schema_version_11()
+
+        if self.db_schema_version < 12:
+            self._update_schema_version_12()
+
+        if self.db_schema_version != 12:
+            print(f'Upgrade failed, db_schema_version is {self.db_schema_version}')
+
+    def _migrate_db_10(self):
         if self.db_schema_version < 1:
             self._update_schema_version_1()
 
@@ -58,12 +73,6 @@ class CoreService(PluginService, UpdatablePluginMixin):
 
         if self.db_schema_version < 10:
             self._update_schema_version_10()
-
-        if self.db_schema_version < 11:
-            self._update_schema_version_11()
-
-        if self.db_schema_version != 11:
-            print(f'Upgrade failed, db_schema_version is {self.db_schema_version}')
 
     def _update_schema_version_1(self):
         print('Upgrade to schema 1')
@@ -597,6 +606,34 @@ class CoreService(PluginService, UpdatablePluginMixin):
             print(f'Exception while upgrading qualys scans schema to version 11. Details: {e}')
             traceback.print_exc()
             raise
+
+    def _update_schema_version_12(self):
+        """
+        AX-6305 Fix corrupted value for setting 'ldap_field_to_exclude'
+        """
+        print('Update to schema 12 - Active Directory valid value for config "ldap_field_to_exclude"')
+        try:
+            config_match = {
+                'config_name': ActiveDirectoryAdapter.__name__
+            }
+            all_ad_adapters = self.db.client['core']['configs'].find({
+                'plugin_name': ACTIVE_DIRECTORY_PLUGIN_NAME
+            })
+            for ad_adapter in all_ad_adapters:
+                plugin_unique_name = ad_adapter.get(PLUGIN_UNIQUE_NAME)
+                config_collection = self.db.get_collection(plugin_unique_name, CONFIGURABLE_CONFIGS_COLLECTION)
+                current_config = config_collection.find_one(config_match)
+                if current_config:
+                    ldap_exclude_config = current_config['config'].get(LDAP_FIELD_TO_EXCLUDE_CONFIG)
+                    if not isinstance(ldap_exclude_config, list):
+                        config_collection.update_one(config_match, {
+                            '$set': {
+                                f'config.{LDAP_FIELD_TO_EXCLUDE_CONFIG}': []
+                            }
+                        })
+            self.db_schema_version = 12
+        except Exception as e:
+            print(f'Exception while upgrading gui db to version 12. Details: {e}')
 
     def register(self, api_key=None, plugin_name=''):
         headers = {}

@@ -13,6 +13,7 @@ from typing import List, Tuple, Dict, Optional, Iterator
 from apscheduler.executors.pool import ThreadPoolExecutor
 from apscheduler.triggers.interval import IntervalTrigger
 
+from active_directory_adapter.consts import LDAP_FIELD_TO_EXCLUDE_CONFIG
 from active_directory_adapter.execution import ActiveDirectoryExecutionMixIn
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import (ClientConnectionException,
@@ -1861,7 +1862,7 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, ActiveDirectory
                     'type': 'number'
                 },
                 {
-                    'name': 'ldap_field_to_exclude',
+                    'name': LDAP_FIELD_TO_EXCLUDE_CONFIG,
                     'title': 'Devices to exclude by objectCategory',
                     'type': 'array',
                     'items': {

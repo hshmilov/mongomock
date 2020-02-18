@@ -129,27 +129,25 @@ class Configurable(object):
 
         assert schema_type == 'array'
 
-        returned_dict = {}
         items = new_schema['items']
         if isinstance(items, list):
             if not isinstance(old_data, dict):
                 # in the case where a field changed to a property "old_data" will not be a dict
                 old_data = {}
+            new_data = {}
             for item in items:
                 name = item['name']
                 if name not in old_data:
-                    returned_dict[name] = default_data[name]
+                    new_data[name] = default_data[name]
                 else:
-                    returned_dict[name] = Configurable.__try_automigrate_config_schema(item,
-                                                                                       old_data.get(name),
-                                                                                       default_data.get(name))
-        elif isinstance(items, dict):
-            if old_data is not None:
-                returned_dict = old_data
-            else:
-                returned_dict = default_data
-
-        return returned_dict
+                    new_data[name] = Configurable.__try_automigrate_config_schema(item,
+                                                                                  old_data.get(name),
+                                                                                  default_data.get(name))
+            return new_data
+        elif old_data is not None:
+            return old_data
+        else:
+            return default_data
 
     def _update_schema(self):
         """
