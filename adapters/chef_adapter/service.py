@@ -136,6 +136,8 @@ class ChefAdapter(AdapterBase):
         }
 
     def _parse_raw_data(self, devices_raw_data):
+        if not devices_raw_data:
+            return
         for device_raw in devices_raw_data:
             try:
                 device = self._new_device_adapter()
