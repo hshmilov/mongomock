@@ -431,6 +431,9 @@ class TestInstancesBase(TestBase):
 
             if res.exit_code != 0:
                 self.logger.error(f'Failed to run command on core container: {current_command}')
+                for instance in self._instances:
+                    rc, out = instance.ssh('cat /var/log/auth.log')
+                    self.logger.info(f'auth.log: {out}')
                 raise Exception(f'Failed to run command on core container: {current_command}')
 
         assert test_string in res.output.decode('utf-8'), 'Failed to use ssh tunnel to ssh to instance.'
