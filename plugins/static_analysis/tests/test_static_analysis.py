@@ -522,4 +522,23 @@ def test_device_adapter_removed_and_no_cves(nvd_searcher):
     # reports a cve or installed software
     assert not created_device.to_dict().get('software_cves')
 
+
+def test_device_has_virtual_host_field(nvd_searcher):
+    """
+    Check 3 different devices, one correlated with ESX, one with Hyper-V mac address and one
+    that is not virtual host, it checks each one of them if its an actually virtual host
+    :param nvd_searcher:
+    :return:
+    """
+    entries = [consts.ENTRY_WITH_VMWARE_CORRELATED_DEVICE,
+               consts.ENTRY_WITH_HYPER_V_MAC_ADDRESS,
+               consts.ENTRY_WITH_NOT_VIRUAL_HOST]
+    collection = mock_mongo(entries)
+    mock_sa = MockStaticAnalysisService(nvd_searcher, collection)
+    returned_entries = list(mock_sa._get_devices_with_virtual_host_positive())
+    assert returned_entries == []
+    assert mock_sa._is_device_virtual(entries[0])
+    assert mock_sa._is_device_virtual(entries[1])
+    assert not mock_sa._is_device_virtual(entries[2])
+
 # pylint: enable=protected-access, redefined-outer-name

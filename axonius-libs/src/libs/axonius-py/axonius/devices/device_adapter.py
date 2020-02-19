@@ -615,6 +615,7 @@ class DeviceAdapter(SmartJsonClass):
     processes = ListField(ProcessData, 'Running Processes', json_format=JsonArrayFormat.table)
     services = ListField(ServiceData, 'Services', json_format=JsonArrayFormat.table)
     shares = ListField(ShareData, 'Shares', json_format=JsonArrayFormat.table)
+    virtual_host = Field(bool, 'Is Virtual Host')
     adapter_properties = ListField(str, 'Adapter Properties', enum=AdapterProperty)
     port_security = ListField(PortSecurityInterface, 'Port Security', json_format=JsonArrayFormat.table)
     port_access = ListField(PortAccessEntity, 'Port Access', json_format=JsonArrayFormat.table)
@@ -629,6 +630,7 @@ class DeviceAdapter(SmartJsonClass):
     firewall_rules = ListField(FirewallRule, 'Firewall Rules', json_format=JsonArrayFormat.table)
     last_wmi_command_output = Field(str, 'Last WMI Command Output')
     backup_source = Field(str, 'Backup Source')
+
     required = ['name', 'hostname', 'os', 'network_interfaces']
 
     def generate_direct_connected_devices(self):

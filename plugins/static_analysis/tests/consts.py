@@ -1,7 +1,7 @@
 from bson import ObjectId
 # from dateutil.parser import parse as ISODate
 
-# pylint: disable=invalid-string-quote, line-too-long
+# pylint: disable=invalid-string-quote, line-too-long, too-many-lines
 VALID_SOFTWARE_LIST = [{'vendor_name': 'CrowdStrike, Inc.',
                         'product_name': 'CrowdStrike Device Control',
                         'product_version': '5.11.9255.0'},
@@ -1065,5 +1065,550 @@ ENTRY_WITH_ADAPTER_REMOVED_AND_DIFFERENT_CVES = {
         }
     ],
     "adapter_list_length": 1
+}
+
+ENTRY_WITH_TWO_ADAPTERS_CORRELATED = {
+    "_id": ObjectId("5d2d7c1c7d43550015e9a6b6"),
+    "internal_axon_id": "6d57a77610898b91f8da33b80d52e517",
+    "adapters": [
+        {
+            "client_used": "192.168.10.1:443",
+            "plugin_type": "Adapter",
+            "plugin_name": "fortigate_adapter",
+            "plugin_unique_name": "fortigate_adapter_0",
+            "type": "entitydata",
+            "data": {
+                "hostname": "cisco-emulator",
+                "fortigate_name": "192.168.10.1:443",
+                "id": "fortigate_192.168.10.1:443_00:50:56:91:4F:24_cisco-emulator",
+                "network_interfaces": [
+                    {
+                        "mac": "00:50:56:91:4F:24",
+                        "manufacturer": "VMware, Inc. (3401 Hillview Avenue PALO ALTO CA US 94304 )",
+                        "ips": [
+                            "192.168.20.21"
+                        ],
+                        "ips_raw": [
+                            3232240661
+                        ]
+                    }
+                ],
+                "interface": "ESX",
+                "raw": {
+                    "ip": "192.168.20.21",
+                    "mac": "00:50:56:91:4f:24",
+                    "hostname": "cisco-emulator",
+                    "expire": "Fri Jul 26 13:15:35 2019",
+                    "expire_time": 1564136135,
+                    "status": "leased",
+                    "interface": "ESX",
+                    "type": "ipv4",
+                    "reserved": True,
+                    "fortios_name": "192.168.10.1:443"
+                },
+                "software_cves": [
+                    {"cve_id": "CVE-2019-5789"},
+                    {"cve_id": "CVE-2005-2028"},
+                    {"cve_id": "CVE-2018-20014"}
+                ],
+                "connected_devices": [],
+                "adapter_properties": [
+                    "Network",
+                    "Firewall"
+                ],
+                "pretty_id": "AX-1733"
+            }
+        },
+        {
+            "client_used": "192.168.20.10",
+            "plugin_type": "Adapter",
+            "plugin_name": "nexpose_adapter",
+            "plugin_unique_name": "nexpose_adapter_0",
+            "type": "entitydata",
+            "data": {
+                "os": {
+                    "type": "Linux",
+                    "distribution": "Ubuntu"
+                },
+                "id": "18",
+                "installed_software": [
+                    {
+                        "name": "Wireshark 2.4.0 64-bit",
+                        "vendor": "The Wireshark developer community, https://www.wireshark.org",
+                        "version": "2.4.0"
+                    },
+                    {
+                        "name": "Adobe Flash Player 30 PPAPI",
+                        "vendor": "Adobe Systems Incorporated",
+                        "version": "30.0.0.113"
+                    },
+                    {
+                        "name": "Safari",
+                        "version": "11.1.2"
+                    }
+                ],
+                "network_interfaces": [
+                    {
+                        "mac": "00:50:56:91:4F:24",
+                        "manufacturer": "VMware, Inc. (3401 Hillview Avenue PALO ALTO CA US 94304 )",
+                        "ips": [
+                            "192.168.20.21"
+                        ],
+                        "ips_raw": [
+                            3232240661
+                        ]
+                    }
+                ],
+                "raw": {
+                    "addresses": [
+                        {
+                            "ip": "192.168.20.21",
+                            "mac": "00:50:56:91:4F:24"
+                        }
+                    ],
+                    "assessedForPolicies": False,
+                    "assessedForVulnerabilities": True,
+                    "id": 18,
+                    "ip": "192.168.20.21",
+                    "mac": "00:50:56:91:4F:24",
+                    "os": "Ubuntu Linux",
+                    "osFingerprint": {
+                        "description": "Ubuntu Linux",
+                        "family": "Linux",
+                        "id": 1,
+                        "product": "Linux",
+                        "systemName": "Ubuntu Linux",
+                        "type": "General",
+                        "vendor": "Ubuntu"
+                    },
+                    "rawRiskScore": 0.0,
+                    "riskScore": 0.0,
+                    "vulnerabilities": {
+                        "critical": 0,
+                        "exploits": 0,
+                        "malwareKits": 0,
+                        "moderate": 2,
+                        "severe": 0,
+                        "total": 2
+                    },
+                    "API": "3",
+                    "tags": [],
+                    "software": []
+                },
+                "connected_devices": [],
+                "scanner": True,
+                "correlates": [
+                    "fortigate_adapter_0",
+                    "fortigate_192.168.10.1:443_00:50:56:91:4F:24_cisco-emulator"
+                ],
+                "adapter_properties": [
+                    "Network",
+                    "Vulnerability_Assessment"
+                ],
+                "pretty_id": "AX-2551"
+            }
+        }
+    ],
+    "tags": [],
+    "adapter_list_length": 2
+}
+
+ENTRY_WITH_HYPER_V_MAC_ADDRESS = {
+    "_id": ObjectId("5d2d7c1c7d43550015e9a6b8"),
+    "internal_axon_id": "6d57a77610898b91f8da33b80d52e518",
+    "adapters": [
+        {
+            "client_used": "192.168.10.1:443",
+            "plugin_type": "Adapter",
+            "plugin_name": "fortigate_adapter",
+            "plugin_unique_name": "fortigate_adapter_0",
+            "type": "entitydata",
+            "data": {
+                "hostname": "cisco-emulator",
+                "fortigate_name": "192.168.10.1:443",
+                "id": "fortigate_192.168.10.1:443_00:50:56:91:4F:24_cisco-emulator",
+                "network_interfaces": [
+                    {
+                        "mac": "00:15:5D:14:18:AA",
+                        "manufacturer": "Microsoft Corp (One Microsoft Way Redmond WA 98052-8300 US)",
+                        "ips": [
+                            "192.168.20.21"
+                        ],
+                        "ips_raw": [
+                            3232240661
+                        ]
+                    }
+                ],
+                "connected_devices": [],
+                "adapter_properties": [
+                    "Network",
+                    "Firewall"
+                ],
+                "pretty_id": "AX-1733"
+            }
+        },
+        {
+            "client_used": "192.168.20.10",
+            "plugin_type": "Adapter",
+            "plugin_name": "nexpose_adapter",
+            "plugin_unique_name": "nexpose_adapter_0",
+            "type": "entitydata",
+            "data": {
+                "os": {
+                    "type": "Linux",
+                    "distribution": "Ubuntu"
+                },
+                "id": "18",
+                "installed_software": [
+                    {
+                        "name": "Wireshark 2.4.0 64-bit",
+                        "vendor": "The Wireshark developer community, https://www.wireshark.org",
+                        "version": "2.4.0"
+                    },
+                    {
+                        "name": "Adobe Flash Player 30 PPAPI",
+                        "vendor": "Adobe Systems Incorporated",
+                        "version": "30.0.0.113"
+                    },
+                    {
+                        "name": "Safari",
+                        "version": "11.1.2"
+                    }
+                ],
+                "network_interfaces": [
+                    {
+                        "mac": "00:15:5D:14:18:AA",
+                        "manufacturer": "Microsoft Corp (One Microsoft Way Redmond WA 98052-8300 US)",
+                        "ips": [
+                            "192.168.20.21"
+                        ],
+                        "ips_raw": [
+                            3232240661
+                        ]
+                    }
+                ],
+                "raw": {
+                    "addresses": [
+                        {
+                            "ip": "192.168.20.21",
+                            "mac": "00:15:5D:14:18:AA"
+                        }
+                    ],
+                    "assessedForPolicies": False,
+                    "assessedForVulnerabilities": True,
+                    "id": 18,
+                    "ip": "192.168.20.21",
+                    "mac": "00:15:5D:14:18:AA",
+                    "os": "Ubuntu Linux",
+                    "osFingerprint": {
+                        "description": "Ubuntu Linux",
+                        "family": "Linux",
+                        "id": 1,
+                        "product": "Linux",
+                        "systemName": "Ubuntu Linux",
+                        "type": "General",
+                        "vendor": "Ubuntu"
+                    },
+                    "rawRiskScore": 0.0,
+                    "riskScore": 0.0,
+                    "vulnerabilities": {
+                        "critical": 0,
+                        "exploits": 0,
+                        "malwareKits": 0,
+                        "moderate": 2,
+                        "severe": 0,
+                        "total": 2
+                    },
+                    "API": "3",
+                    "tags": [],
+                    "software": []
+                },
+                "connected_devices": [],
+                "scanner": True,
+                "correlates": [
+                    "fortigate_adapter_0"
+                ],
+                "adapter_properties": [
+                    "Network",
+                    "Vulnerability_Assessment"
+                ],
+                "pretty_id": "AX-2551"
+            }
+        }
+    ],
+    "tags": [],
+    "adapter_list_length": 2
+}
+
+ENTRY_WITH_NOT_VIRUAL_HOST = {
+    "_id": ObjectId("5d2d7c1c7d43550015e9a6b9"),
+    "internal_axon_id": "6d57a77610898b91f8da33b80d52e519",
+    "adapters": [
+        {
+            "client_used": "192.168.10.1:443",
+            "plugin_type": "Adapter",
+            "plugin_name": "fortigate_adapter",
+            "plugin_unique_name": "fortigate_adapter_0",
+            "type": "entitydata",
+            "data": {
+                "hostname": "cisco-emulator",
+                "fortigate_name": "192.168.10.1:443",
+                "id": "fortigate_192.168.10.1:443_00:50:56:91:4F:24_cisco-emulator",
+                "network_interfaces": [
+                    {
+                        "mac": "00:1B:8F:DF:DF:AA",
+                        "manufacturer": "Cisco Systems, Inc (80 West Tasman Drive San Jose CA 94568 US)",
+                        "ips": [
+                            "192.168.20.21"
+                        ],
+                        "ips_raw": [
+                            3232240661
+                        ]
+                    }
+                ],
+                "connected_devices": [],
+                "adapter_properties": [
+                    "Network",
+                    "Firewall"
+                ],
+                "pretty_id": "AX-1733"
+            }
+        },
+        {
+            "client_used": "192.168.20.10",
+            "plugin_type": "Adapter",
+            "plugin_name": "nexpose_adapter",
+            "plugin_unique_name": "nexpose_adapter_0",
+            "type": "entitydata",
+            "data": {
+                "os": {
+                    "type": "Linux",
+                    "distribution": "Ubuntu"
+                },
+                "id": "18",
+                "installed_software": [
+                    {
+                        "name": "Wireshark 2.4.0 64-bit",
+                        "vendor": "The Wireshark developer community, https://www.wireshark.org",
+                        "version": "2.4.0"
+                    },
+                    {
+                        "name": "Adobe Flash Player 30 PPAPI",
+                        "vendor": "Adobe Systems Incorporated",
+                        "version": "30.0.0.113"
+                    },
+                    {
+                        "name": "Safari",
+                        "version": "11.1.2"
+                    }
+                ],
+                "network_interfaces": [
+                    {
+                        "mac": "00:1B:8F:DF:DF:AA",
+                        "manufacturer": "Cisco Systems, Inc (80 West Tasman Drive San Jose CA 94568 US)",
+                        "ips": [
+                            "192.168.20.21"
+                        ],
+                        "ips_raw": [
+                            3232240661
+                        ]
+                    }
+                ],
+                "raw": {
+                    "addresses": [
+                        {
+                            "ip": "192.168.20.21",
+                            "mac": "00:15:5D:14:18:AA"
+                        }
+                    ],
+                    "assessedForPolicies": False,
+                    "assessedForVulnerabilities": True,
+                    "id": 18,
+                    "ip": "192.168.20.21",
+                    "mac": "00:1B:8F:DF:DF:AA",
+                    "os": "Ubuntu Linux",
+                    "osFingerprint": {
+                        "description": "Ubuntu Linux",
+                        "family": "Linux",
+                        "id": 1,
+                        "product": "Linux",
+                        "systemName": "Ubuntu Linux",
+                        "type": "General",
+                        "vendor": "Ubuntu"
+                    },
+                    "rawRiskScore": 0.0,
+                    "riskScore": 0.0,
+                    "vulnerabilities": {
+                        "critical": 0,
+                        "exploits": 0,
+                        "malwareKits": 0,
+                        "moderate": 2,
+                        "severe": 0,
+                        "total": 2
+                    },
+                    "API": "3",
+                    "tags": [],
+                    "software": []
+                },
+                "connected_devices": [],
+                "scanner": True,
+                "correlates": [
+                    "fortigate_adapter_0"
+                ],
+                "adapter_properties": [
+                    "Network",
+                    "Vulnerability_Assessment"
+                ],
+                "pretty_id": "AX-2551"
+            }
+        }
+    ],
+    "tags": [],
+    "adapter_list_length": 2
+}
+
+ENTRY_WITH_VMWARE_CORRELATED_DEVICE = {
+    "_id": ObjectId("5d2d7c1c7d43550015e9a6b5"),
+    "internal_axon_id": "6d57a77610898b91f8da33b80d52e515",
+    "adapters": [
+        {
+            "client_used": "192.168.10.1:443",
+            "plugin_type": "Adapter",
+            "plugin_name": "esx_adapter",
+            "plugin_unique_name": "esx_adapter_0",
+            "type": "entitydata",
+            "data": {
+                "hostname": "cisco-emulator",
+                "id": "esx_192.168.10.1:443_00:50:56:91:4F:24_cisco-emulator",
+                "network_interfaces": [
+                    {
+                        "mac": "00:50:56:91:4F:24",
+                        "manufacturer": "VMware, Inc. (3401 Hillview Avenue PALO ALTO CA US 94304 )",
+                        "ips": [
+                            "192.168.20.21"
+                        ],
+                        "ips_raw": [
+                            3232240661
+                        ]
+                    }
+                ],
+                "interface": "ESX",
+                "raw": {
+                    "ip": "192.168.20.21",
+                    "mac": "00:50:56:91:4f:24",
+                    "hostname": "cisco-emulator",
+                    "expire": "Fri Jul 26 13:15:35 2019",
+                    "expire_time": 1564136135,
+                    "status": "leased",
+                    "interface": "ESX",
+                    "type": "ipv4",
+                    "reserved": True,
+                    "fortios_name": "192.168.10.1:443"
+                },
+                "software_cves": [
+                    {"cve_id": "CVE-2019-5789"},
+                    {"cve_id": "CVE-2005-2028"},
+                    {"cve_id": "CVE-2018-20014"}
+                ],
+                "connected_devices": [],
+                "adapter_properties": [
+                    "Network",
+                    "Firewall"
+                ],
+                "pretty_id": "AX-1733"
+            }
+        },
+        {
+            "client_used": "192.168.20.10",
+            "plugin_type": "Adapter",
+            "plugin_name": "nexpose_adapter",
+            "plugin_unique_name": "nexpose_adapter_0",
+            "type": "entitydata",
+            "data": {
+                "os": {
+                    "type": "Linux",
+                    "distribution": "Ubuntu"
+                },
+                "id": "18",
+                "installed_software": [
+                    {
+                        "name": "Wireshark 2.4.0 64-bit",
+                        "vendor": "The Wireshark developer community, https://www.wireshark.org",
+                        "version": "2.4.0"
+                    },
+                    {
+                        "name": "Adobe Flash Player 30 PPAPI",
+                        "vendor": "Adobe Systems Incorporated",
+                        "version": "30.0.0.113"
+                    },
+                    {
+                        "name": "Safari",
+                        "version": "11.1.2"
+                    }
+                ],
+                "network_interfaces": [
+                    {
+                        "mac": "00:50:56:91:4F:24",
+                        "manufacturer": "VMware, Inc. (3401 Hillview Avenue PALO ALTO CA US 94304 )",
+                        "ips": [
+                            "192.168.20.21"
+                        ],
+                        "ips_raw": [
+                            3232240661
+                        ]
+                    }
+                ],
+                "raw": {
+                    "addresses": [
+                        {
+                            "ip": "192.168.20.21",
+                            "mac": "00:50:56:91:4F:24"
+                        }
+                    ],
+                    "assessedForPolicies": False,
+                    "assessedForVulnerabilities": True,
+                    "id": 18,
+                    "ip": "192.168.20.21",
+                    "mac": "00:50:56:91:4F:24",
+                    "os": "Ubuntu Linux",
+                    "osFingerprint": {
+                        "description": "Ubuntu Linux",
+                        "family": "Linux",
+                        "id": 1,
+                        "product": "Linux",
+                        "systemName": "Ubuntu Linux",
+                        "type": "General",
+                        "vendor": "Ubuntu"
+                    },
+                    "rawRiskScore": 0.0,
+                    "riskScore": 0.0,
+                    "vulnerabilities": {
+                        "critical": 0,
+                        "exploits": 0,
+                        "malwareKits": 0,
+                        "moderate": 2,
+                        "severe": 0,
+                        "total": 2
+                    },
+                    "API": "3",
+                    "tags": [],
+                    "software": []
+                },
+                "connected_devices": [],
+                "scanner": True,
+                "correlates": [
+                    "fortigate_adapter_0",
+                    "fortigate_192.168.10.1:443_00:50:56:91:4F:24_cisco-emulator"
+                ],
+                "adapter_properties": [
+                    "Network",
+                    "Vulnerability_Assessment"
+                ],
+                "pretty_id": "AX-2551"
+            }
+        }
+    ],
+    "tags": [],
+    "adapter_list_length": 2
 }
 # pylint: enable=invalid-string-quote, line-too-long

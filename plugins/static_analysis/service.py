@@ -76,7 +76,8 @@ class StaticAnalysisService(Triggerable, PluginBase):
 
         self.__jobs = AnalysisTypes(cve_enrichment=self.__add_enriched_cve_data,
                                     user_devices_association=self.__associate_users_with_devices,
-                                    last_used_user_association=self.__parse_devices_last_used_users_departments)
+                                    last_used_user_association=self.__parse_devices_last_used_users_departments,
+                                    virtual_host=self.__add_virtual_host)
 
     def __update_nvd_db(self):
         try:
@@ -112,6 +113,125 @@ class StaticAnalysisService(Triggerable, PluginBase):
                 logger.info(f'Static Analysis: {name} finished')
             except Exception:
                 logger.exception(f'Exception while calling job {name}')
+
+    def _is_device_virtual(self, device_test):
+        """
+        Checks a specific devices if its a virtual host or not, made specially for testing,
+        code replecated from __add_virtual_host
+        :param device_test:
+        :return: True if virtual host and False if not
+        """
+        devices_from_containers_adapter = list(self.devices_db.find(
+            parse_filter(
+                '((adapters_data.esx_adapter.id == ({"$exists":true,"$ne":""}))) or'
+                '((adapters_data.hyper_v_adapter.id == ({"$exists":true,"$ne":""}))) or'
+                '((adapters_data.proxmox_adapter.id == ({"$exists":true,"$ne":""}))) or'
+                '((adapters_data.nutanix_adapter.id == ({"$exists":true,"$ne":""})))'),
+            batch_size=10
+        ))
+        if device_test in devices_from_containers_adapter:
+            return True
+
+        devices_with_vmware_manuf = self.devices_db.find(
+            parse_filter(
+                '(specific_data.data.network_interfaces.mac == regex("^00:15:5D")) or '
+                '(specific_data.data.network_interfaces.manufacturer == regex("^Nutanix")) or '
+                '(specific_data.data.network_interfaces.manufacturer == regex("^VMware"))'),
+            batch_size=10
+        )
+        for device in devices_with_vmware_manuf:
+            if device != device_test:
+                continue
+            is_virtual = False
+            non_vmware_count = 0
+            vmware_count = 0
+            for adapter in device['adapters']:
+                nics = adapter['data'].get('network_interfaces')
+                if not isinstance(nics, list) or nics == []:
+                    continue
+                for nic in nics:
+                    if 'manufacturer' in nic and \
+                        (nic['manufacturer'].startswith('Nutanix') or
+                         nic['mac'].startswith('00:15:5D')):
+                        non_vmware_count += 1
+                        is_virtual = True
+                    elif 'manufacturer' in nic and nic['manufacturer'].startswith('VMware'):
+                        vmware_count += 1
+                    else:
+                        non_vmware_count += 1
+
+            if is_virtual or (vmware_count > 0 and non_vmware_count == 0):
+                return True
+
+        return False
+
+    def __add_virtual_host(self):
+        """
+        All devices correlated with at least one of the following adapter: ESX,Hyper-V,Proxmox or Nutanix
+        are considered as virtual hosts
+        All devices with specific MAC Vendor of a Hypervisor or container management software
+        are considered as a virtual host.
+        All the reset are not virtual hosts
+        https://axonius.atlassian.net/browse/AX-6269
+        https://github.com/proxmox/pve-common/blob/master/src/PVE/Tools.pm#L976 (No specific vendor for proxmox)
+        https://support.microsoft.com/en-us/help/2804678/windows-hyper-v-server-has-a-default-limit-of-256-dynamic-mac-addresse
+        https://portal.nutanix.com/#page/kbs/details?targetId=kA03200000099jkCAA
+        """
+        devices_from_containers_adapter = self.devices_db.find(
+            parse_filter(
+                '((adapters_data.esx_adapter.id == ({"$exists":true,"$ne":""}))) or'
+                '((adapters_data.hyper_v_adapter.id == ({"$exists":true,"$ne":""}))) or'
+                '((adapters_data.proxmox_adapter.id == ({"$exists":true,"$ne":""}))) or'
+                '((adapters_data.nutanix_adapter.id == ({"$exists":true,"$ne":""})))'),
+            batch_size=10
+        )
+        for device in devices_from_containers_adapter:
+            self._update_virtual_host_to_device(device, True)
+
+        devices_with_vmware_manuf = self.devices_db.find(
+            parse_filter(
+                '(specific_data.data.network_interfaces.mac == regex("^00:15:5D")) or '
+                '(specific_data.data.network_interfaces.manufacturer == regex("^Nutanix")) or '
+                '(specific_data.data.network_interfaces.manufacturer == regex("^VMware"))'),
+            batch_size=10
+        )
+
+        for device in devices_with_vmware_manuf:
+            is_virtual = False
+            non_vmware_count = 0
+            vmware_count = 0
+            for adapter in device['adapters']:
+                nics = adapter['data'].get('network_interfaces')
+                if not isinstance(nics, list) or nics == []:
+                    continue
+                for nic in nics:
+                    if 'manufacturer' in nic and \
+                        (nic['manufacturer'].startswith('Nutanix') or
+                         nic['mac'].startswith('00:15:5D')):
+                        non_vmware_count += 1
+                        is_virtual = True
+                    elif 'manufacturer' in nic and nic['manufacturer'].startswith('VMware'):
+                        vmware_count += 1
+                    else:
+                        non_vmware_count += 1
+
+            if is_virtual or (vmware_count > 0 and non_vmware_count == 0):
+                self._update_virtual_host_to_device(device, True)
+
+    def _update_virtual_host_to_device(self, device: dict, is_virtual: bool):
+        try:
+            device_adapter = self._new_device_adapter()
+            device_adapter.virtual_host = is_virtual
+
+            device_object = list(self.devices.get(internal_axon_id=device.get('internal_axon_id')))[0]
+
+            device_object.add_adapterdata(device_adapter.to_dict(),
+                                          action_if_exists='update',
+                                          additional_data={'hidden_for_gui': True})
+            # Update the device in mongo db
+            self._save_field_names_to_db(EntityType.Devices)
+        except Exception:
+            logger.exception(f'Exception while trying to add virtual_host for device. Continuing')
 
     # pylint: disable=too-many-branches, inconsistent-return-statements
     def __add_enriched_cve_data(self):
@@ -272,6 +392,28 @@ class StaticAnalysisService(Triggerable, PluginBase):
                 continue
             yield convert_db_entity_to_view_entity(device, ignore_errors=True)
             devices_seen.add(axon_id.get('internal_axon_id'))
+
+    def _get_devices_with_virtual_host_positive(self):
+        """
+        This queries Axonius's database for devices with virtual_host field positive
+        :return:
+        """
+        devices_with_virtual_host_positive = list(self.devices_db.find(
+            parse_filter(
+                '(specific_data.data.virtual_host == true)'),
+            projection={
+                '_id': False,
+                'internal_axon_id': True}
+        ))
+
+        for axon_id in devices_with_virtual_host_positive:
+            # Get the whole device and all its data from the database by searching with its internal axon id
+            device = self.devices_db.find_one({'internal_axon_id': axon_id['internal_axon_id']})
+            # XXX: somehow I got error where device is None
+            if not device:
+                logger.debug(f'internal_axon_id {axon_id["internal_axon_id"]} not found')
+                continue
+            yield convert_db_entity_to_view_entity(device, ignore_errors=True)
 
     def __get_cve_data_from_installed_software(self, adapter_specific_data):
         """

@@ -45,7 +45,7 @@ class PortnoxService(Triggerable, PluginBase):
         switch_ip_address = Field(str, 'Switch IP Address')
         switch_module = Field(str, 'Switch Module')
         switch_port = Field(str, 'Switch Port')
-        virtual_host = Field(str, 'Virtual Host')
+        portnox_virtual_host = Field(str, 'Virtual Host')
         virtual_switch = Field(str, 'Virtual Switch')
 
     def __init__(self, *args, **kwargs):
@@ -115,7 +115,7 @@ class PortnoxService(Triggerable, PluginBase):
             device.switch_ip_address = device_raw.get('SwitchIpAddress')
             device.switch_module = device_raw.get('SwitchModule')
             device.switch_port = device_raw.get('SwitchPort')
-            device.virtual_host = device_raw.get('VirtualHost')
+            device.portnox_virtual_host = device_raw.get('VirtualHost')
             device.virtual_switch = device_raw.get('VirtualSwitch')
             device.set_raw(device_raw)
             return device
