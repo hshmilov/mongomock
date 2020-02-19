@@ -35,8 +35,8 @@ export default {
       // Process schema to create list of items which Array components can present
       if (this.isOrderedObject) {
         // schema.items contains explicit definition for each type of contained children
-        // Filter those without a 'title' property since they are not for presentation
-        return this.schema.items.filter((item) => item.title);
+        // Filter those without a 'title' property and are not of type 'array' since they are not for presentation
+        return this.schema.items.filter((item) => item.title || item.type === 'array');
       }
       if (_isObject(this.schema.items) && this.schema.name) {
         // schema.items contains one unified definition for type of all children

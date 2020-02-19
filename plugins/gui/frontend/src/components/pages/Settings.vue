@@ -192,12 +192,15 @@ export default {
       if (!this.schedulerSettings.config) return 12;
       return this.validNumber(this.schedulerSettings.config.discovery_settings.system_research_rate);
     },
+    validResearchDate() {
+      return this.schedulerSettings.config.discovery_settings.system_research_date.system_research_date_recurrence >= 0;
+    },
     isContionalDate() {
       return (this.schedulerSettings.config.discovery_settings.conditional === 'system_research_date');
     },
     isResearchDisabled() {
       if (this.schedulerSettings.config.discovery_settings.conditional === 'system_research_date') {
-        return !this.schedulerComplete || this.isReadOnly;
+        return !this.schedulerComplete || this.isReadOnly || !this.validResearchDate;
       }
       return !this.schedulerComplete || !this.validResearchRate || this.isReadOnly;
     },

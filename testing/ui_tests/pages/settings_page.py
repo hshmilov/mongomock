@@ -121,9 +121,10 @@ class SettingsPage(Page):
 
     DISCOVERY_SCHEDULE_MODE_DDL = '.x-select .x-select-trigger'
     DISCOVERY_SCHEDULE_TIME_PICKER_INPUT_CSS = '.time-picker-text input'
+    DISCOVERY_SCHEDULE_REPEAT_INPUT = 'system_research_date_recurrence'
     DISCOVERY_SCHEDULE_INTERVAL_INPUT_CSS = '#system_research_rate'
     DISCOVERY_SCHEDULE_INTERVAL_TEXT = 'Interval'
-    DISCOVERY_SCHEDULE_DAILY_TEXT = 'Daily'
+    DISCOVERY_SCHEDULE_SCHEDULED_TEXT = 'Scheduled'
 
     @property
     def url(self):
@@ -278,6 +279,7 @@ class SettingsPage(Page):
 
     def fill_schedule_date(self, text):
         self.fill_text_field_by_css_selector(self.DISCOVERY_SCHEDULE_TIME_PICKER_INPUT_CSS, text)
+        self.fill_text_field_by_element_id(self.DISCOVERY_SCHEDULE_REPEAT_INPUT, 1)
 
     def get_schedule_rate_value(self):
         return self.driver.find_element_by_id(self.SCHEDULE_RATE_ID).get_attribute('value')
@@ -844,10 +846,10 @@ class SettingsPage(Page):
         return self.find_discovery_mode_dropdown().text
 
     def set_discovery_mode_dropdown_to_date(self):
-        if self.get_discovery_mode_selected_item() != self.DISCOVERY_SCHEDULE_DAILY_TEXT:
+        if self.get_discovery_mode_selected_item() != self.DISCOVERY_SCHEDULE_SCHEDULED_TEXT:
             self.select_option_without_search(self.DISCOVERY_SCHEDULE_MODE_DDL,
                                               self.SELECT_OPTION_CSS,
-                                              self.DISCOVERY_SCHEDULE_DAILY_TEXT)
+                                              self.DISCOVERY_SCHEDULE_SCHEDULED_TEXT)
 
     def set_discovery_mode_dropdown_to_interval(self):
         if self.get_discovery_mode_selected_item() != self.DISCOVERY_SCHEDULE_INTERVAL_TEXT:
@@ -861,7 +863,7 @@ class SettingsPage(Page):
                                               negative_flow=negative_flow)
 
     def set_discovery__to_time_of_day(self, time_of_day=0, negative_flow=False):
-        self._set_discovery_schedule_settings(mode=self.DISCOVERY_SCHEDULE_DAILY_TEXT,
+        self._set_discovery_schedule_settings(mode=self.DISCOVERY_SCHEDULE_SCHEDULED_TEXT,
                                               time_value=time_of_day,
                                               negative_flow=negative_flow)
 
@@ -872,7 +874,7 @@ class SettingsPage(Page):
             self.set_discovery_mode_dropdown_to_interval()
             self.set_discovery_mode_to_rate_value(time_value)
 
-        elif mode == self.DISCOVERY_SCHEDULE_DAILY_TEXT:
+        elif mode == self.DISCOVERY_SCHEDULE_SCHEDULED_TEXT:
             self.set_discovery_mode_dropdown_to_date()
             self.set_discovery_mode_to_date_value(time_value)
 

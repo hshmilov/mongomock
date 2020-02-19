@@ -54,7 +54,7 @@ MIN_GB_TO_SAVE_HISTORY = 15
 class SystemSchedulerResearchMode(Enum):
     '''
     Rate : is the legacy mode which start discovery per hour interval .
-    Date : a cron base , curently ony supporting time of day .
+    Date : a cron base , currently ony supporting time of day and Recurrence.
     '''
     rate = 'system_research_rate'
     date = 'system_research_date'
@@ -170,12 +170,14 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
         self.__constant_alerts = config['discovery_settings']['constant_alerts']
         self.__analyse_reimage = config['discovery_settings']['analyse_reimage']
         self.__system_research_rate = float(config['discovery_settings']['system_research_rate'])
-        self.__system_research_date = config['discovery_settings']['system_research_date']
+        self.__system_research_date_time = config['discovery_settings']['system_research_date']['system_research_date_time']
+        self.__system_research_date_recurrence = config['discovery_settings']['system_research_date']['system_research_date_recurrence']
         self.__system_research_mode = config['discovery_settings']['conditional']
 
         logger.info(f'Setting research mode to: {self.__system_research_mode}')
         logger.info(f'Setting research rate to: {self.__system_research_rate}')
-        logger.info(f'Setting research date to: {self.__system_research_date}')
+        logger.info(f'Setting research date to: {self.__system_research_date_time}')
+        logger.info(f'Setting research recurrence to: {self.__system_research_date_recurrence}')
 
         scheduler = getattr(self, '_research_phase_scheduler', None)
         self.__save_history = bool(config['discovery_settings']['save_history'])
@@ -194,10 +196,12 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
         if self.__system_research_mode == SystemSchedulerResearchMode.rate.value:
             return IntervalTrigger(hours=self.__system_research_rate, timezone=pytz.utc)
         if self.__system_research_mode == SystemSchedulerResearchMode.date.value:
-            hour, minute = self.__system_research_date.split(':')
+            hour, minute = self.__system_research_date_time.split(':')
+            recurrence = self.__system_research_date_recurrence
             return CronTrigger(hour=hour,
                                minute=minute,
-                               second='0')
+                               second='0',
+                               day=f'*/{recurrence}')
         raise Exception(f' {self.__system_research_mode } is invalid research mode ')
 
     @classmethod
@@ -215,7 +219,7 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
                             },
                                 {
                                 'name': 'system_research_date',
-                                'title': 'Daily'
+                                'title': 'Scheduled'
                             }],
                             'type': 'string'
                         },
@@ -226,9 +230,21 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
                         },
                         {
                             'name': 'system_research_date',
-                            'title': 'Daily discovery time',
-                            'type': 'string',
-                            'format': 'time'
+                            'type': 'array',
+                            'items': [
+                                {
+                                    'name': 'system_research_date_time',
+                                    'title': 'Scheduled discovery time',
+                                    'type': 'string',
+                                    'format': 'time'
+                                },
+                                {
+                                    'name': 'system_research_date_recurrence',
+                                    'title': 'Repeat scheduled discovery every (days)',
+                                    'type': 'number'
+                                }
+                            ],
+                            'required': ['system_research_date_time', 'system_research_date_recurrence']
                         },
                         {
                             'name': 'save_history',
@@ -252,7 +268,7 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
                     'name': 'discovery_settings',
                     'title': 'Discovery Settings',
                     'type': 'array',
-                    'required': ['conditional', 'system_research_rate', 'system_research_date',
+                    'required': ['conditional', 'system_research_rate',
                                  'save_history', 'constant_alerts', 'analyse_reimage']
                 }
             ],
@@ -264,7 +280,10 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
         return {
             'discovery_settings': {
                 'system_research_rate': 12,
-                'system_research_date': '13:00',
+                'system_research_date': {
+                    'system_research_date_time': '13:00',
+                    'system_research_date_recurrence': 1
+                },
                 'save_history': True,
                 'constant_alerts': False,
                 'analyse_reimage': False,
