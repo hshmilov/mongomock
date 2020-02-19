@@ -451,7 +451,7 @@ def fetch_chart_segment(chart_view: ChartViews, entity: EntityType, view, field,
     for item in aggregate_results:
         result_name = item.get('_id', {}).get('name', 'No Value')
         extra_data = item.get('extra_data', [])
-        if extra_data == ['No Value']:
+        if 'No Value' in extra_data:
             counted_results['No Value'] += 1
         elif _match_result_item_to_filters(extra_data, reduced_filters):
             counted_results[result_name] += 1
@@ -509,7 +509,7 @@ def _match_result_item_to_filters(extra_data: list, filters: dict) -> bool:
                         is_valid = False
                 except TypeError:
                     logger.error(f'segmentation data return unexpected type:{type(data)} data:{data} '
-                                 f'filter_name:{filter_name}')
+                                 f'extra data:{extra_data} filter_name:{filter_name}')
                     is_valid = False
         if is_valid:
             is_item_legit = True
