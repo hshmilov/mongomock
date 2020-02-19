@@ -53,10 +53,7 @@
         >
           <template #default="slotProps">
             <slot v-bind="slotProps">
-              <x-table-data
-                v-if="!$scopedSlots.default"
-                v-bind="slotProps"
-              />
+              <x-table-data v-if="!$scopedSlots.default" v-bind="slotProps" />
             </slot>
           </template>
         </x-table-row>
@@ -105,7 +102,9 @@ export default {
     },
     sort: {
       type: Object,
-      default: () => ({ field: '', desc: true }),
+      default: () => {
+        return { field: '', desc: true };
+      },
     },
     colFilters: {
       type: Object,
@@ -158,7 +157,7 @@ export default {
   },
   computed: {
     ids() {
-      return this.data.map((item) => item[this.idField]);
+      return this.data.map(item => item[this.idField]);
     },
     partSelected() {
       return Boolean(this.value && this.value.length && this.value.length < this.data.length);
@@ -183,12 +182,12 @@ export default {
       if (isSelected) {
         this.$emit('input', [...this.value, id]);
       } else {
-        this.$emit('input', this.value.filter((currentId) => currentId !== id));
+        this.$emit('input', this.value.filter(currentId => currentId !== id));
       }
     },
     onSelectAll(selected) {
       if (selected && (!this.value || !this.value.length)) {
-        this.$emit('input', this.ids.filter((id) => !this.readOnly.includes(id)));
+        this.$emit('input', this.ids.filter(id => !this.readOnly.includes(id)));
       } else {
         this.$emit('input', []);
       }

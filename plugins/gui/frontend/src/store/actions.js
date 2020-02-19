@@ -161,8 +161,13 @@ const createPostContentRequest = (state, payload) => {
   if (view.schema_fields && view.schema_fields.length) {
     params.schema_fields = view.schema_fields;
   }
-  if (view.query && view.query.filter) {
-    params.filter = view.query.filter;
+	if (view.query) {
+		if (view.query.filter) {
+			params.filter = view.query.filter;
+		}
+		if (view.query.search) {
+			params.search = view.query.search;
+		}
   }
   if (view.historical) {
     params.history = view.historical;

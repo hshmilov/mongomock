@@ -538,12 +538,15 @@ export default {
     updateColFilters(colFilters) {
       this.updateViewFilter({ module: this.module, view: { colFilters } });
     },
-    onInput(value) {
-      this.searchValue = value;
+    onInput(searchValue) {
+      this.searchValue = searchValue;
       this.updateView({
         module: this.module,
         view: {
           page: 0,
+          query: {
+            search: searchValue,
+          },
         },
       });
     },

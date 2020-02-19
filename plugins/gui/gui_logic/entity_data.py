@@ -190,7 +190,7 @@ def fix_raw_data(specific: dict, entity_type: EntityType, history_date: datetime
 
 
 def entity_data_field_csv(entity_type: EntityType, entity_id, field_name, mongo_sort=None,
-                          history_date: datetime = None, field_filters: dict = None):
+                          history_date: datetime = None, field_filters: dict = None, search_term: str = None):
     """
     Generate a csv file from the data of given field, with fields' pretty titles as coloumn headers
 
@@ -198,6 +198,7 @@ def entity_data_field_csv(entity_type: EntityType, entity_id, field_name, mongo_
     :param entity_id:    internal_axon_id to find the entity by
     :param field_name:   The main field to get data for
     :param mongo_sort:   The inner field to sort by
+    :param search_term:  The search term to filter by
     :param history_date: The date from which to retrieve the data
     :return:
     """
@@ -216,6 +217,17 @@ def entity_data_field_csv(entity_type: EntityType, entity_id, field_name, mongo_
     entity_field_data = merge_entities_fields(
         parse_entity_fields(entity, [field_name_full], field_filters=field_filters).get(field_name_full, []),
         field_by_name.keys())
+
+    if search_term:
+
+        def search_term_in_row_value(field_value):
+            return (search_term in field_value or
+                    isinstance(field_value, list) and any(search_term in str(s) for s in field_value))
+
+        def filter_entity_row(entity_field):
+            return any(search_term_in_row_value(field_value) for field_value in entity_field.values())
+
+        entity_field_data = list(filter(filter_entity_row, entity_field_data))
 
     return get_export_csv(entity_field_data, field_by_name, mongo_sort)
 

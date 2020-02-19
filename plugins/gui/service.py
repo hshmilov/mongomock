@@ -1414,11 +1414,12 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
             return jsonify(res)
         return res
 
+    @gui_helpers.search_filter()
     @gui_helpers.historical()
     @gui_helpers.sorted_endpoint()
     @gui_add_rule_logged_in('devices/<device_id>/<field_name>/csv', methods=['POST'],
                             required_permissions={Permission(PermissionType.Devices, PermissionLevel.ReadOnly)})
-    def device_generic_field_csv(self, device_id, field_name, mongo_sort, history: datetime):
+    def device_generic_field_csv(self, device_id, field_name, mongo_sort, history: datetime, search: str):
         """
         Create a csv file for a specific field of a specific device
 
@@ -1426,9 +1427,11 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
         :param field_name:  Field of the Device, containing table data
         :param mongo_sort:  How to sort the table data of the field
         :param history:     Fetch the Device according to this past date
+        :param search:      a string to filter the data
         :return:            Response containing csv data, that can be downloaded into a csv file
         """
-        csv_string = entity_data_field_csv(EntityType.Devices, device_id, field_name, mongo_sort, history)
+        csv_string = entity_data_field_csv(EntityType.Devices, device_id, field_name,
+                                           mongo_sort, history, search_term=search)
         output = make_response((codecs.BOM_UTF8 * 2) + csv_string.getvalue().encode('utf-8'))
         timestamp = datetime.now().strftime(FILE_NAME_TIMESTAMP_FORMAT)
         field_name = field_name.split('.')[-1]
@@ -1628,12 +1631,13 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
             return jsonify(res)
         return res
 
+    @gui_helpers.search_filter()
     @gui_helpers.historical()
     @gui_helpers.sorted_endpoint()
     @gui_helpers.filtered_fields()
     @gui_add_rule_logged_in('users/<user_id>/<field_name>/csv', methods=['POST'],
                             required_permissions={Permission(PermissionType.Devices, PermissionLevel.ReadOnly)})
-    def user_generic_field_csv(self, user_id, field_name, mongo_sort, history: datetime, field_filters):
+    def user_generic_field_csv(self, user_id, field_name, mongo_sort, history: datetime, field_filters, search: str):
         """
         Create a csv file for a specific field of a specific entity
 
@@ -1641,9 +1645,11 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
         :param field_name:  Field of the User, containing table data
         :param mongo_sort:  How to sort the table data of the field
         :param history:     Fetch the User according to this past date
+        :param search:      a string to filter the data
         :return:            Response containing csv data, that can be downloaded into a csv file
         """
-        csv_string = entity_data_field_csv(EntityType.Users, user_id, field_name, mongo_sort, history, field_filters)
+        csv_string = entity_data_field_csv(EntityType.Users, user_id, field_name,
+                                           mongo_sort, history, field_filters, search_term=search)
         output = make_response(csv_string.getvalue().encode('utf-8'))
         timestamp = datetime.now().strftime(FILE_NAME_TIMESTAMP_FORMAT)
         field_name = field_name.split('.')[-1]
