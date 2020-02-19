@@ -143,6 +143,18 @@ def compare_fqdn_or_hostname(adapter_device1, adapter_device2):
     return get_fqdn_or_hostname(adapter_device1) == get_fqdn_or_hostname(adapter_device2)
 
 
+def get_email(adapter_device):
+    return adapter_device['data'].get('email')
+
+
+def compare_emails(adapter_device1, adapter_device2):
+    email1 = get_email(adapter_device1)
+    email2 = get_email(adapter_device2)
+    if not email1 or not email2:
+        return False
+    return email1.lower() == email2.lower()
+
+
 def get_prefix_private_dns_or_hostname(adapter_device):
     private_dns = get_private_dns_name(adapter_device)
     if private_dns:
@@ -209,6 +221,10 @@ def is_aws_or_chef_adapter(adapter_device):
     return is_chef_adapter(adapter_device) or is_aws_adapter(adapter_device)
 
 
+def is_asset_ok_hostname_no_adapters(adapter_device):
+    return adapter_device.get('plugin_name') in ['aws_adapter', 'chef_adapter', 'jamf_adapter']
+
+
 def if_csv_compare_full_path(adapter_device1, adapter_device2):
     if not is_csv_adapter(adapter_device1) and not is_csv_adapter(adapter_device2):
         return True
@@ -217,7 +233,7 @@ def if_csv_compare_full_path(adapter_device1, adapter_device2):
 
 def asset_hostnames_do_not_contradict_and_no_chef(adapter_device1, adapter_device2):
     return asset_hostnames_do_not_contradict(adapter_device1, adapter_device2) \
-        or is_aws_or_chef_adapter(adapter_device1) or is_aws_or_chef_adapter(adapter_device2)
+        or is_asset_ok_hostname_no_adapters(adapter_device1) or is_asset_ok_hostname_no_adapters(adapter_device2)
 
 
 # pylint: disable=invalid-name
@@ -793,6 +809,25 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
                                       {'Reason': 'They have the same Asset name'},
                                       CorrelationReason.StaticAnalysis)
 
+    def _correlate_asset_host_email(self, adapters_to_correlate):
+        """
+        Correlating by asset first + IP
+        :param adapters_to_correlate:
+        :return:
+        """
+        logger.info('Starting to correlate on Asset-Host Email')
+        filtered_adapters_list = filter(get_asset_or_host, adapters_to_correlate)
+        return self._bucket_correlate(list(filtered_adapters_list),
+                                      [get_asset_or_host],
+                                      [compare_asset_hosts],
+                                      [get_asset_name],
+                                      [compare_emails,
+                                       not_wifi_adapters,
+                                       asset_hostnames_do_not_contradict_and_no_chef,
+                                       serials_do_not_contradict],
+                                      {'Reason': 'They have the same Asset name and EMAIL'},
+                                      CorrelationReason.StaticAnalysis)
+
     def _correlate_asset_snow_host(self, adapters_to_correlate):
         """
         Correlating by asset first + IP
@@ -904,6 +939,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
         yield from self._correlate_with_juniper(adapters_to_correlate)
 
         yield from self._correlate_asset_host(adapters_to_correlate)
+        yield from self._correlate_asset_host_email(adapters_to_correlate)
 
         yield from self._correlate_asset_snow_host(adapters_to_correlate)
 

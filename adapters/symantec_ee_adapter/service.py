@@ -100,7 +100,7 @@ class SymantecEeAdapter(AdapterBase, Configurable):
             'type': 'array'
         }
 
-    # pylint: disable=too-many-branches
+    # pylint: disable=too-many-branches,too-many-statements
     def _parse_raw_data(self, devices_raw_data):
         for device_raw in devices_raw_data:
             try:
@@ -154,7 +154,8 @@ class SymantecEeAdapter(AdapterBase, Configurable):
                 except Exception:
                     logger.exception(f'Problem getting EncryptingVolumes in {device_raw}')
                 try:
-                    device.number_of_hds = int(device_raw.get('NumberOfHardDisks'))
+                    if device_raw.get('NumberOfHardDisks') is not None:
+                        device.number_of_hds = int(device_raw.get('NumberOfHardDisks'))
                 except Exception:
                     logger.exception(f'Problem getting number of hds to {device_raw}')
                 device.set_raw(device_raw)

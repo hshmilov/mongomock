@@ -144,7 +144,7 @@ class OmnivistaAdapter(AdapterBase):
                 others_raw = {}
             device.chassis_name = others_raw.get('ChassisName')
             if others_raw.get('lastReboot'):
-                device.set_boot_time(boot_time=others_raw.get('lastReboot'))
+                device.set_boot_time(boot_time=parse_date(others_raw.get('lastReboot')))
             nics_raw = others_raw.get('IpAddressesInfo')
             if not isinstance(nics_raw, list):
                 nics_raw = []

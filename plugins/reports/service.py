@@ -514,11 +514,13 @@ class ReportsService(Triggerable, PluginBase):
             if successful_count or unsuccessful_count:
                 recipe.metadata.success_rate = successful_count / (successful_count + unsuccessful_count)
 
-            for on_success in recipe.success:
-                yield on_success, get_action_from_recipe_action(on_success, successful_entities)
+            if successful_count:
+                for on_success in recipe.success:
+                    yield on_success, get_action_from_recipe_action(on_success, successful_entities)
 
-            for on_fail in recipe.failure:
-                yield on_fail, get_action_from_recipe_action(on_fail, unsuccessful_entities)
+            if unsuccessful_count:
+                for on_fail in recipe.failure:
+                    yield on_fail, get_action_from_recipe_action(on_fail, unsuccessful_entities)
 
             for on_always in recipe.post:
                 yield on_always, get_action_from_recipe_action(on_always, current_result)

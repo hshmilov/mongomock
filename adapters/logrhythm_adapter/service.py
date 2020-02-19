@@ -1,3 +1,4 @@
+import datetime
 import logging
 
 from axonius.adapter_base import AdapterBase, AdapterProperty
@@ -22,6 +23,7 @@ class LogrhythmAdapter(AdapterBase):
         host_zone = Field(str, 'Host Zone')
         location = Field(str, 'Location')
         entity_name = Field(str, 'Entity Name')
+        updated_at = Field(datetime.datetime, 'Updated At')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)

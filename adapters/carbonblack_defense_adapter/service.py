@@ -215,6 +215,7 @@ class CarbonblackDefenseAdapter(AdapterBase, Configurable):
             device.av_status = device_raw.get('avStatus') if isinstance(device_raw.get('avStatus'), list) else None
             if device_raw.get('email'):
                 device.last_used_users = [device_raw.get('email')]
+                device.email = device_raw.get('email')
             device.add_agent_version(agent=AGENT_NAMES.carbonblack_defense,
                                      version=device_raw.get('sensorVersion'),
                                      status=device_raw.get('status'))
