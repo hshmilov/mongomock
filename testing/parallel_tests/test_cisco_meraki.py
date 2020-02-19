@@ -25,3 +25,7 @@ class TestCiscoMerakiAdapter(AdapterTestBase):
     @pytest.mark.skip("AX-1903")
     def test_fetch_devices(self):
         pass
+
+    @pytest.mark.skip("AX-1903")
+    def test_check_reachability(self):
+        pass

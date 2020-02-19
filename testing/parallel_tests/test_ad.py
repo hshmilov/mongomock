@@ -263,7 +263,7 @@ class TestAdAdapter(AdapterTestBase):
             assert action_data["product"][0]["status"] == "ok"
             assert "Hello, World" in action_data["product"][0]["data"]
 
-        try_until_not_thrown(15, 10, check_execute_binary_results)
+        try_until_not_thrown(60, 10, check_execute_binary_results)
 
     @flaky(max_runs=2)
     def test_ad_execute_shell_by_device_control(self, device_control_fixture):
