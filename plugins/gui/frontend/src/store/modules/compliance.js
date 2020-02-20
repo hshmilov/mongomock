@@ -44,9 +44,11 @@ export const compliance = {
       }, {
         name: 'entities_results', title: 'Results', type: 'text', expanded: true, order: 9,
       }, {
-        name: 'cis', title: 'CIS Controls', type: 'text', expanded: true, order: 10,
+        name: 'affected', title: 'Affected Devices/Users', type: 'integer', order: 10,
       }, {
-        name: 'last_updated', title: 'Last Updated', type: 'text', format: 'date-time', expanded: true, order: 11,
+        name: 'cis', title: 'CIS Controls', type: 'text', expanded: true, order: 11,
+      }, {
+        name: 'last_updated', title: 'Last Updated', type: 'text', format: 'date-time', expanded: true, order: 12,
       }],
       coloumnSizes: [],
       query: {
