@@ -7,9 +7,9 @@ DOCKER_PORTS = {
     'selenium-hub':                     4444,
     'mongo-slave':                      4455,
     'execution':                        4999,
-    'aggregator':                       5000,
-    'active-directory-adapter':         5001,
-    'reports':                          5002,
+    'aggregator':                       4000,   # ports 5000,5001,5002,8125 are used by datadog (some customers have)
+    'active-directory-adapter':         4001,
+    'reports':                          4002,
     'epo-adapter':                      5003,
     'jamf-adapter':                     5004,
     'system-scheduler':                 5005,

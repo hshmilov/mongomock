@@ -84,7 +84,7 @@ def generate_rules(report: AccountReport, session: boto3.Session, account_dict: 
     category_1.check_cis_aws_1_13()
     category_1.check_cis_aws_1_14()
     category_1.check_cis_aws_1_16()
-    # category_1.check_cis_aws_1_20()       # Unscored, not needed
+    category_1.check_cis_aws_1_20()
     category_1.check_cis_aws_1_22()
 
     category_2 = CISAWSCategory2(report, session, account_dict, cloudtrails)

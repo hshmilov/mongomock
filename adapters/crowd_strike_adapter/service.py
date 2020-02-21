@@ -252,6 +252,10 @@ class CrowdStrikeAdapter(AdapterBase, Configurable):
                     device.last_seen = parse_date(device_raw.get('last_seen'))
                 except Exception:
                     logger.exception(f'Problem getting last seen for {device_raw}')
+                try:
+                    device.first_seen = parse_date(device_raw.get('first_seen'))
+                except Exception:
+                    logger.exception(f'Problem getting first seen')
                 device.external_ip = device_raw.get('external_ip')
                 device.device_manufacturer = device_raw.get('bios_manufacturer')
                 try:
@@ -274,6 +278,11 @@ class CrowdStrikeAdapter(AdapterBase, Configurable):
                 except Exception:
                     logger.exception(f'Problem getting policies at {device_raw}')
                 device.system_product_name = device_raw.get('system_product_name')
+                try:
+                    if len(str(device_raw)) > (12 * (1024 ** 2)):
+                        device_raw = str(device_raw)[:(12 * (1024 ** 2))]
+                except Exception:
+                    logger.exception(f'Problem trimming device raw')
                 device.set_raw(device_raw)
                 yield device
             except Exception:

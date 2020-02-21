@@ -54,20 +54,29 @@ class SymantecDlpAdapter(AdapterBase, Configurable):
             logger.exception(message)
             raise ClientConnectionException(get_exception_string())
 
-    def _query_devices_by_client(self, client_name, client_data):
-        client_data.set_devices_paging(self.__devices_fetched_at_a_time)
+    @staticmethod
+    def _query_dlp(client_data, query_groups, query_agent):
         with client_data:
             groups_dict = dict()
             try:
-                for groups_data in client_data.query(consts.SYMANTEC_DLP_GROUPS_QUERY):
+                for groups_data in client_data.query(query_groups):
                     group_id = groups_data.get('ID')
                     if not group_id:
                         continue
                     groups_dict[group_id] = groups_data
             except Exception:
                 logger.exception(f'Problem with group data')
-            for device_raw in client_data.query(consts.SYMANTEC_DLP_QUERY):
+            for device_raw in client_data.query(query_agent):
                 yield device_raw, groups_dict
+
+    def _query_devices_by_client(self, client_name, client_data):
+        client_data.set_devices_paging(self.__devices_fetched_at_a_time)
+        try:
+            yield from self._query_dlp(client_data,
+                                       consts.SYMANTEC_DLP_GROUPS_QUERY_PROTECT, consts.SYMANTEC_DLP_QUERY_PROTECT)
+        except Exception:
+            yield from self._query_dlp(client_data,
+                                       consts.SYMANTEC_DLP_GROUPS_QUERY, consts.SYMANTEC_DLP_QUERY)
 
     def _clients_schema(self):
         return {

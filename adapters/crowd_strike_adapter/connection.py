@@ -62,11 +62,11 @@ class CrowdStrikeConnection(RESTConnection):
             try:
                 return self._get(*args, **kwargs)
             except RESTRequestException as e:
-                logger.error(f'Error getting with args {str(args)}')
                 time.sleep(consts.RETRIES_SLEEP_TIME)
                 self.refresh_access_token()
                 retries += 1
                 if retries >= consts.REQUEST_RETRIES:
+                    logger.error(f'Error getting URL after {consts.REQUEST_RETRIES} retries with args {str(args)}')
                     raise e
 
     @staticmethod

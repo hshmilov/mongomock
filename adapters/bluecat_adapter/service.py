@@ -2,14 +2,16 @@ import datetime
 import ipaddress
 import logging
 
-from axonius.adapter_base import AdapterBase, AdapterProperty
+from axonius.adapter_base import AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.connection import RESTException
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.fields import Field
 from axonius.mixins.configurable import Configurable
+from axonius.scanner_adapter_base import ScannerAdapterBase
 from axonius.utils.datetime import parse_date
+from axonius.utils.dynamic_fields import put_dynamic_field
 from axonius.utils.files import get_local_config_file
 from axonius.clients.postgres.connection import PostgresConnection
 from axonius.clients.postgres.consts import DEFAULT_POSTGRES_PORT
@@ -22,7 +24,7 @@ API_CLIENT_TYPE = 'api'
 SQL_CLIENT_TYPE = 'sql'
 
 
-class BluecatAdapter(AdapterBase, Configurable):
+class BluecatAdapter(ScannerAdapterBase, Configurable):
     # pylint: disable=too-many-instance-attributes
     class MyDeviceAdapter(DeviceAdapter):
         device_state = Field(str, 'Device State')
@@ -36,6 +38,8 @@ class BluecatAdapter(AdapterBase, Configurable):
         net_name = Field(str, 'Net Name')
         tag_id = Field(int, 'Tag ID')
         tag_near = Field(str, 'Tag Near')
+        network_id = Field(int, 'Network ID')
+        network_name = Field(str, 'Network Name')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -238,7 +242,7 @@ class BluecatAdapter(AdapterBase, Configurable):
 
         return None
 
-    # pylint: disable=R1702,R0912, too-many-statements, inconsistent-return-statements
+    # pylint: disable=R1702,R0912, too-many-statements, inconsistent-return-statements, invalid-name
     def _parse_api_raw_data(self, devices_raw_data):
         for device_raw in devices_raw_data:
             try:
@@ -284,12 +288,37 @@ class BluecatAdapter(AdapterBase, Configurable):
                     logger.exception(f'Problem getting properties for {device_raw}')
 
                 try:
-                    if not expire_time:
-                        return None
-                    expire_time = expire_time.replace(tzinfo=None)
-                    time_before_day = (datetime.datetime.now().replace(tzinfo=None) - datetime.timedelta(days=1))
-                    if expire_time < time_before_day:
-                        continue
+                    if isinstance(device_properties, str) and device_properties:
+                        all_properties = dict()
+                        for device_property in device_properties.split('|')[:-1]:
+                            device_property_split = device_property.split('=')
+                            if len(device_property_split) > 1:
+                                all_properties[device_property_split[0]] = '='.join(device_property_split[1:])
+
+                        for name, value in all_properties.items():
+                            put_dynamic_field(device, f'Bluecat_property_{name}', value, f'bluecat_property.{name}')
+                except Exception:
+                    pass
+
+                try:
+                    network_raw = device_raw.get('network') or {}
+                    device.network_id = network_raw.get('id')
+                    device.network_name = network_raw.get('name')
+                except Exception:
+                    logger.exception(f'Could not parse network information')
+
+                try:
+                    if expire_time:
+                        expire_time = expire_time.replace(tzinfo=None)
+                        time_before_day = (datetime.datetime.now().replace(tzinfo=None) - datetime.timedelta(days=1))
+                        if expire_time < time_before_day:
+                            continue
+                    else:
+                        # pylint: disable=no-else-return
+                        if str(device_state).upper() not in ['STATIC', 'GATEWAY']:
+                            continue
+                        elif self.__drop_static_or_gateway_if_not_expirytime:
+                            continue
                 except Exception:
                     logger.exception(f'Error determining expire time')
 
@@ -317,9 +346,14 @@ class BluecatAdapter(AdapterBase, Configurable):
                     'name': 'get_extra_host_data',
                     'title': 'Get extra host data',
                     'type': 'bool'
+                },
+                {
+                    'name': 'drop_static_or_gateway_if_not_expirytime',
+                    'title': 'Drop static/gateway records with no expiry time',
+                    'type': 'bool'
                 }
             ],
-            'required': ['sleep_between_requests_in_sec', 'get_extra_host_data'],
+            'required': ['get_extra_host_data', 'drop_static_or_gateway_if_not_expirytime'],
             'pretty_name': 'BlueCat Configuration',
             'type': 'array'
         }
@@ -328,9 +362,12 @@ class BluecatAdapter(AdapterBase, Configurable):
     def _db_config_default(cls):
         return {
             'sleep_between_requests_in_sec': 0,
-            'get_extra_host_data': True
+            'get_extra_host_data': True,
+            'drop_static_or_gateway_if_not_expirytime': True
         }
 
     def _on_config_update(self, config):
         self.__sleep_between_requests_in_sec = config.get('sleep_between_requests_in_sec')
         self.__get_extra_host_data = config.get('get_extra_host_data')
+        self.__drop_static_or_gateway_if_not_expirytime = config.get(
+            'drop_static_or_gateway_if_not_expirytime')

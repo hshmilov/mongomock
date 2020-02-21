@@ -2,6 +2,8 @@ import datetime
 import logging
 import time
 
+from retrying import retry
+
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.exception import RESTException
 from bluecat_adapter.consts import DEVICE_PER_PAGE
@@ -62,23 +64,63 @@ class BluecatConnection(RESTConnection):
         self._token_time = None
         self._refresh_token()
 
+    @retry(stop_max_attempt_number=3, wait_fixed=5000)
+    def _get_page(self, method: str, url_params):
+        self._refresh_token()
+        return self._get(method, url_params=url_params)
+
+    def _get_paginated(self, method: str, url_params: dict):
+        if 'start' not in url_params:
+            url_params['start'] = 0
+        if 'count' not in url_params:
+            url_params['count'] = DEVICE_PER_PAGE
+        results = self._get_page(method, url_params=url_params)
+
+        while results:
+            yield from results
+            url_params['start'] = url_params['start'] + len(results)
+            results = self._get_page(method, url_params=url_params)
+
+    def _get_entities(self, parent_id: int, object_type: str):
+        yield from self._get_paginated('getEntities', {'parentId': parent_id, 'type': object_type})
+
+    def get_blocks_recursively(self, parent_id):
+        for ip4block in self._get_entities(parent_id, 'IP4Block'):
+            if 'id' not in ip4block:
+                logger.error(f'Bad ip4block: {ip4block}')
+                continue
+
+            yield ip4block['id']
+            yield from self.get_blocks_recursively(ip4block['id'])
+
     # pylint: disable=R0912,arguments-differ
     def get_device_list(self, sleep_between_requests_in_sec, get_extra_host_data=True):
         self.sleep_between_requests_in_sec = sleep_between_requests_in_sec
+
+        ip4_blocks = set()
+
+        # 1. List all configurations
+        for configuration in self._get_entities(0, 'Configuration'):
+            if 'id' not in configuration:
+                logger.error(f'Bad configuration: {configuration}')
+                continue
+            # 2. List all blocks recursively
+            for ip4_block_id in self.get_blocks_recursively(configuration['id']):
+                ip4_blocks.add(ip4_block_id)
+
+        ip4_blocks = list(ip4_blocks)
+        logger.info(f'Got {len(ip4_blocks)} blocks')
+
         networks_ids = set()
-        for key_num in range(1, 256):
-            try:
-                logger.info(f'Key Num is {key_num}')
-                self._refresh_token()
-                response = self._get(f'searchByObjectTypes?'
-                                     f'keyword={key_num}$&types=IP4Network&start=0&'
-                                     f'count={DEVICE_PER_PAGE}')
-                for network_raw in response:
-                    if isinstance(network_raw, dict) and network_raw.get('id'):
-                        networks_ids.add(network_raw.get('id'))
-            except Exception:
-                logger.exception(f'Problem getting key num')
-        self._refresh_token()
+        networks_raw = dict()
+        for ip4_block_id in ip4_blocks:
+            for ip4network in self._get_entities(ip4_block_id, 'IP4Network'):
+                if 'id' not in ip4network:
+                    logger.error(f'Bad IP4Network: {ip4network}')
+                    continue
+                networks_ids.add(ip4network['id'])
+                networks_raw[ip4network['id']] = ip4network
+
         # pylint: disable=R1702
         networks_ids = list(networks_ids)
         logger.info(f'Got {len(networks_ids)} networks')
@@ -87,10 +129,9 @@ class BluecatConnection(RESTConnection):
                 if i % 100 == 0:
                     logger.info(f'Got networks count {i}')
                 self._refresh_token()
-                response = self._get(f'getEntities?parentId={network_id}&type=IP4Address'
-                                     f'&start=0&count={DEVICE_PER_PAGE}')
-                for device_raw in response:
+                for device_raw in self._get_entities(network_id, 'IP4Address'):
                     try:
+                        device_raw['network'] = networks_raw.get(network_id) or {}
                         host_id = device_raw.get('id')
                         if host_id and get_extra_host_data:
                             self._refresh_token()
@@ -98,6 +139,7 @@ class BluecatConnection(RESTConnection):
                                                      f'start=0&count={DEVICE_PER_PAGE}')
                             if isinstance(dns_name_raw, list) and len(dns_name_raw) > 0:
                                 device_raw['dns_name'] = dns_name_raw[0].get('name')
+                                device_raw['all_dns_names'] = dns_name_raw
                     except Exception:
                         logger.exception(f'Problem getting dns name for {device_raw}')
                     yield device_raw

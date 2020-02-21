@@ -47,7 +47,7 @@ class ChefClientTask(WatchdogTask):
                     except Exception as e:
                         self.report_error(f'failed to complete a run - {e}')
 
-                    subprocess.check_call(shlex.split(f'service chef-client restart'), timeout=60 * 10)
+                    subprocess.check_call(shlex.split(f'/usr/sbin/service restart chef-client'), timeout=60 * 10)
                     self.report_info(f'chef-client service restart completed')
                 except Exception as e:
                     self.report_error(f'failed to restart - {e}')

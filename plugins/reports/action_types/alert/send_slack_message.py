@@ -94,7 +94,7 @@ class SlackSendMessageAction(ActionTypeAlert):
                     {
                         'color': '#fd662c',
                         'text': 'Description: ' + log_message_full + '\n' + 'First 5 Results Are: \n' + entities_str,
-                        'pretext': f'An Axonius alert - "{alert_name}" was trigered '
+                        'pretext': f'An Axonius alert - "{alert_name}" was triggered '
                                    f'because of {self._get_trigger_description()}.',
                         'title': f'Query "{query_name}"',
                         'title_link': self._generate_query_link(query_name),

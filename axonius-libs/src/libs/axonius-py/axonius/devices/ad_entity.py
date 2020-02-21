@@ -129,6 +129,17 @@ class ADEntity(object):
     ad_exchange_server_serial = Field(str, "AD Exchange Server Serial")
     ad_exchange_server_product_id = Field(str, "AD Exchange Server Product ID")
 
+    # Extension Attributes
+    extension_attribute_1 = Field(str, 'Extension Attribute 1')
+    extension_attribute_2 = Field(str, 'Extension Attribute 2')
+    extension_attribute_3 = Field(str, 'Extension Attribute 3')
+    extension_attribute_4 = Field(str, 'Extension Attribute 4')
+    extension_attribute_5 = Field(str, 'Extension Attribute 5')
+    extension_attribute_6 = Field(str, 'Extension Attribute 6')
+    extension_attribute_7 = Field(str, 'Extension Attribute 7')
+    extension_attribute_8 = Field(str, 'Extension Attribute 8')
+    extension_attribute_9 = Field(str, 'Extension Attribute 9')
+
     # Other
     ad_last_dc_fetched = Field(str, 'Last DC Fetched from')
     physical_delivery_office_name = Field(str, 'Physical Delivery Office Name')

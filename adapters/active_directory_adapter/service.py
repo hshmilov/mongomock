@@ -604,6 +604,19 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, ActiveDirectory
                                                raw_data.get("msDS-AllowedToDelegateTo"))
         ad_entity.ad_last_dc_fetched = raw_data.get('AXON_CURRENT_CONNECTED_DC')
 
+        try:
+            ad_entity.extension_attribute_1 = raw_data.get('extensionAttribute1')
+            ad_entity.extension_attribute_2 = raw_data.get('extensionAttribute2')
+            ad_entity.extension_attribute_3 = raw_data.get('extensionAttribute3')
+            ad_entity.extension_attribute_4 = raw_data.get('extensionAttribute4')
+            ad_entity.extension_attribute_5 = raw_data.get('extensionAttribute5')
+            ad_entity.extension_attribute_6 = raw_data.get('extensionAttribute6')
+            ad_entity.extension_attribute_7 = raw_data.get('extensionAttribute7')
+            ad_entity.extension_attribute_8 = raw_data.get('extensionAttribute8')
+            ad_entity.extension_attribute_9 = raw_data.get('extensionAttribute9')
+        except Exception:
+            logger.exception(f'Could not parse extension attributes')
+
         ad_primary_group_dn = None
         try:
             pgid = raw_data.get('primaryGroupID')

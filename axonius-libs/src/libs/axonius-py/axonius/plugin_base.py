@@ -1827,6 +1827,10 @@ class PluginBase(Configurable, Feature, ABC):
                             time.sleep(2)
                             promises = [p for p in promises if p.is_pending or p.is_rejected]
 
+                    if inserted_data_count % 10000 == 0:
+                        logger.info(f'Saving field names to db..')
+                        self._save_field_names_to_db(entity_type)
+
             promise_all = Promise.all(promises)
             Promise.wait(promise_all, timedelta(minutes=20).total_seconds())
             if promise_all.is_rejected:
