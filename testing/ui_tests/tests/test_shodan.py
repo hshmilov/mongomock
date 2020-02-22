@@ -13,7 +13,7 @@ from axonius.utils.wait import wait_until
 ENFORCEMENT_NAME = 'lalala'
 SHODAN_ACTION_NAME = 'my shodan'
 
-ASSET_NAME = 'PROD-proxy'
+ASSET_NAME = 'diag-proxy'
 QUERY = f'(specific_data.data.name == "{ASSET_NAME}")'
 
 

@@ -1167,5 +1167,6 @@ class TestDevicesQuery(TestBase):
         self.devices_page.save_query('test')
 
         self.devices_page.find_element_by_text('Saved Queries').click()
+        self.devices_page.wait_for_table_to_load()
         self.devices_page.find_element_by_text('test').click()
         self.devices_page.find_element_by_text('No query defined')

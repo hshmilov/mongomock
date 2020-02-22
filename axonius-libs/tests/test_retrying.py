@@ -1,6 +1,7 @@
 import time
 
 import pytest
+from flaky import flaky
 
 from axonius.utils.retrying import retry_generator, RetryMaxTriesReached
 
@@ -37,6 +38,7 @@ def succeed_on_first_try(num):
         yield i
 
 
+@flaky(max_runs=2)
 def test_retry_generator_succeeds_on_third_try():
     start_time = time.time()
     list_to_check = list(succeed_only_on_third_try(5))
