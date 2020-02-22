@@ -21,7 +21,8 @@ def get_ad_upn(adapter_data):
 
 
 def get_aws_username(adapter_data):
-    if adapter_data.get('plugin_name') == 'aws_adapter' and get_username(adapter_data):
+    if adapter_data.get('plugin_name') == 'aws_adapter' and get_username(adapter_data) \
+            and 'service_account@' not in get_username(adapter_data):
         return get_username(adapter_data)
     return None
 
@@ -106,9 +107,15 @@ def get_ad_upn_mail(adapter_data):
     return None
 
 
+def is_duo_no_mail(adapter_data):
+    if get_mail_prefix(adapter_data) or adapter_data.get('plugin_name') != 'duo_adapter':
+        return False
+    return True
+
+
 def get_aws_username_mail(adapter_data):
     aws_username = get_aws_username(adapter_data)
-    if aws_username:
+    if aws_username and aws_username.lower().split('@')[0] not in ['service_account', 'administrator']:
         return aws_username
     email = adapter_data.get(NORMALIZED_MAIL)
     if email:
@@ -192,7 +199,8 @@ def normalize_mail(adapter_data):
     if not re.match(r'[^@]+@[^@]+\.[^@]+', mail):
         logger.debug(f'Unrecognized email format found: {mail}')
         return None
-
+    if mail.startswith('badgeonly@'):
+        return None
     return mail.strip().lower()
 
 
@@ -304,6 +312,17 @@ class StaticUserCorrelatorEngine(CorrelatorEngineBase):
                                           {'Reason': 'They have the same username and one is AWS'},
                                           CorrelationReason.StaticAnalysis)
 
+    def _correlate_username_due_no_mail(self, entities):
+        logger.info('Starting to correlate on duo username no mail')
+        filtered_adapters_list = filter(get_username_prefix, entities)
+        yield from self._bucket_correlate(list(filtered_adapters_list),
+                                          [get_username],
+                                          [compare_username],
+                                          [is_duo_no_mail],
+                                          [],
+                                          {'Reason': 'They have the same username and one is DUO with no mail'},
+                                          CorrelationReason.StaticAnalysis)
+
     def _correlate_ad_display_name(self, entities):
         """
         Correlate Azure AD and AD
@@ -357,5 +376,6 @@ class StaticUserCorrelatorEngine(CorrelatorEngineBase):
         yield from self._correlate_aws_username_mail(normalize_adapter_users(entities))
         yield from self._correlate_username_aws(normalize_adapter_users(entities))
         yield from self._correlate_username_domain(normalize_adapter_users(entities))
+        yield from self._correlate_username_due_no_mail(normalize_adapter_users(entities))
         if self._correlation_config and self._correlation_config.get('email_prefix_correlation') is True:
             yield from self._correlate_email_prefix(normalize_adapter_users(entities))

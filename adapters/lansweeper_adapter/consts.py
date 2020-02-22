@@ -8,6 +8,7 @@ DEFAULT_LANSWEEPER_PORT = 1433
 DEVICES_FETECHED_AT_A_TIME = 'devices_fetched_at_a_time'
 LANSWEEPER_QUERY_DEVICES = 'Select * from tblAssets'
 QUERY_SOFTWARE = 'Select * from tblSoftware'
+QUERY_LINUX_SOFTWARE = 'Select * from tblLinuxSoftware'
 QUERY_SOFTWARE_2 = 'Select * from tblSoftwareUni'
 QUERY_HOTFIX = 'Select * from tblQuickFixEngineeringHist'
 QUERY_HOTFIX_2 = 'Select * from tblQuickFixEngineeringUni'

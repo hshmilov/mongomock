@@ -212,6 +212,18 @@ class LansweeperAdapter(AdapterBase, Configurable):
             except Exception:
                 logger.exception(f'Problem getting query software')
 
+            asset_software_linux_dict = dict()
+            try:
+                for asset_soft_data in client_data.query(consts.QUERY_LINUX_SOFTWARE):
+                    asset_id = asset_soft_data.get('AssetID')
+                    if not asset_id:
+                        continue
+                    if asset_id not in asset_software_linux_dict:
+                        asset_software_linux_dict[asset_id] = []
+                    asset_software_linux_dict[asset_id].append(asset_soft_data)
+            except Exception:
+                logger.exception(f'Problem getting query software')
+
             hotfix_id_to_hotfix_data_dict = dict()
             try:
                 for hotfix_data in client_data.query(consts.QUERY_HOTFIX_2):
@@ -251,7 +263,7 @@ class LansweeperAdapter(AdapterBase, Configurable):
                        asset_reg_dict, bios_data_dict,
                        asset_autoruns_dict, autoruns_id_to_autoruns_data_dict, autoruns_id_to_autoruns_loc_dict,
                        asset_processes_dict, users_groups_dict, disks_dict, encryption_dict, errors_dict,
-                       custom_data_dict, state_name_dict)
+                       custom_data_dict, state_name_dict, asset_software_linux_dict)
 
     @staticmethod
     def _clients_schema():
@@ -301,7 +313,7 @@ class LansweeperAdapter(AdapterBase, Configurable):
                 users_groups_dict,
                 disks_dict,
                 encryption_dict,
-                errors_dict, custom_data_dict, state_name_dict
+                errors_dict, custom_data_dict, state_name_dict, asset_software_linux_dict
         ) in devices_raw_data:
             try:
                 device = self._new_device_adapter()
@@ -424,6 +436,22 @@ class LansweeperAdapter(AdapterBase, Configurable):
                                         name=software_data.get('softwareName'),
                                         vendor=software_data.get('SoftwarePublisher'),
                                         version=asset_software.get('softwareVersion'),
+                                    )
+                except Exception:
+                    logger.exception(f'Problem adding software to {device_raw}')
+                try:
+                    asset_software_list = asset_software_linux_dict.get(device_raw.get('AssetID'))
+                    if isinstance(asset_software_list, list):
+                        for asset_software in asset_software_list:
+                            if asset_software.get('SoftwareUniID'):
+                                software_data = soft_id_to_soft_data_dict.get(
+                                    asset_software.get('SoftwareUniID')
+                                )
+                                if software_data:
+                                    device.add_installed_software(
+                                        name=software_data.get('softwareName'),
+                                        vendor=software_data.get('SoftwarePublisher'),
+                                        version=asset_software.get('Version'),
                                     )
                 except Exception:
                     logger.exception(f'Problem adding software to {device_raw}')

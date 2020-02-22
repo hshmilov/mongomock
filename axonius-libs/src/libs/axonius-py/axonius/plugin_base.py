@@ -3350,7 +3350,7 @@ class PluginBase(Configurable, Feature, ABC):
                         {
                             'name': CSV_FULL_HOSTNAME,
                             'type': 'bool',
-                            'title': 'Correlate CSV adapter only if full hostnames are equal'
+                            'title': 'Correlate No MAC+IP adapters only if full hostnames are equal'
                         },
                         {
                             'name': CORRELATE_BY_SNOW_MAC,
@@ -3520,7 +3520,7 @@ class PluginBase(Configurable, Feature, ABC):
                 CORRELATE_AD_DISPLAY_NAME: True,
                 CORRELATE_BY_USERNAME_DOMAIN_ONLY: False,
                 CORRELATE_AD_SCCM: False,
-                CSV_FULL_HOSTNAME: False,
+                CSV_FULL_HOSTNAME: True,
                 CORRELATE_BY_SNOW_MAC: False,
             },
             STATIC_ANALYSIS_SETTINGS: {

@@ -33,7 +33,7 @@ class NexposeV3Client(NexposeClient):
 
             aio_req = dict()
             aio_req['method'] = 'GET'
-            aio_req['url'] = f'https://{self.host}:{self.port}/api/3/assets/{item_id}/{data_type}'
+            aio_req['url'] = f'https://{self.host}:{self.port}/api/3/assets/{item_id}/{data_type}?size=500'
             aio_req['auth'] = (self.username, self.password)
             headers = None
             if self._token:

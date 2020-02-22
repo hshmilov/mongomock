@@ -48,6 +48,12 @@ CHASIS_VALUE_FULL_DICT = {
 }
 
 
+class DriverData(SmartJsonClass):
+    driver_name = Field(str, 'Driver Name')
+    driver_description = Field(str, 'Driver Description')
+    driver_version = Field(str, 'Driver Version')
+
+
 class SccmVm(SmartJsonClass):
     vm_dns_name = Field(str, 'VM DNS Name')
     vm_ip = Field(str, 'VM IP Address')
@@ -83,6 +89,7 @@ class SccmAdapter(AdapterBase, Configurable):
         tpm_is_owned = Field(bool, 'TPM Is Owned')
         collections = ListField(str, 'Collections')
         compliance_status = Field(str, 'Compliance Status')
+        drivers_data = ListField(DriverData, 'Drivers Data')
 
         def add_sccm_vm(self, **kwargs):
             try:
@@ -337,6 +344,18 @@ class SccmAdapter(AdapterBase, Configurable):
             except Exception:
                 logger.warning(f'Problem getting query program', exc_info=True)
 
+            drivers_dict = dict()
+            try:
+                for drivers_data in client_data.query(consts.DRIVERS_QUERY):
+                    asset_id = drivers_data.get('ResourceID')
+                    if not asset_id:
+                        continue
+                    if asset_id not in drivers_dict:
+                        drivers_dict[asset_id] = []
+                    drivers_dict[asset_id].append(drivers_data)
+            except Exception:
+                logger.warning(f'Problem getting query patch', exc_info=True)
+
             asset_patch_dict = dict()
             try:
                 for asset_patch_data in client_data.query(consts.QUERY_PATCH):
@@ -373,7 +392,7 @@ class SccmAdapter(AdapterBase, Configurable):
                     asset_lenovo_dict, asset_chasis_dict, asset_encryption_dict,\
                     asset_vm_dict, owner_dict, tpm_dict, computer_dict,\
                     clients_dict, os_dict, nics_dict, collections_dict,\
-                    collections_data_dict, compliance_dict, local_admins_dict
+                    collections_data_dict, compliance_dict, local_admins_dict, drivers_dict
 
     def _clients_schema(self):
         return {
@@ -407,7 +426,9 @@ class SccmAdapter(AdapterBase, Configurable):
             tpm_dict,
             computer_dict,
             clients_dict,
-            os_dict, nics_dict, collections_dict, collections_data_dict, compliance_dict, local_admins_dict
+            os_dict,
+            nics_dict,
+            collections_dict, collections_data_dict, compliance_dict, local_admins_dict, drivers_dict
         ) in devices_raw_data:
             try:
                 device_id = device_raw.get('Distinguished_Name0')
@@ -569,6 +590,22 @@ class SccmAdapter(AdapterBase, Configurable):
                         device.top_user = top_data.get('TopConsoleUser0')
                 except Exception:
                     logger.exception(f'Problem getting top user data dor {device_raw}')
+
+                try:
+                    if isinstance(drivers_dict.get(device_raw.get('ResourceID')), list):
+                        for drivers_data in drivers_dict.get(device_raw.get('ResourceID')):
+                            try:
+                                driver_name = drivers_data.get('Name0')
+                                driver_description = drivers_data.get('Description0')
+                                driver_version = drivers_data.get('DriverVersion0')
+                                device.drivers_data.append(DriverData(driver_name=driver_name,
+                                                                      driver_description=driver_description,
+                                                                      driver_version=driver_version))
+
+                            except Exception:
+                                logger.exception(f'Problem with drivers data {drivers_data}')
+                except Exception:
+                    logger.exception(f'Problem getting drivers data dor {device_raw}')
 
                 try:
                     if isinstance(local_admins_dict.get(device_raw.get('ResourceID')), list):

@@ -819,6 +819,10 @@ def is_qualys_adapter(adapter_device):
     return adapter_device.get('plugin_name') == 'qualys_scans_adapter'
 
 
+def is_tenable_io_adapter(adapter_device):
+    return adapter_device.get('plugin_name') == 'tenable_io_adapter'
+
+
 def is_counter_act_adapter(adapter_device):
     return adapter_device.get('plugin_name') == 'counter_act_adapter'
 
@@ -854,6 +858,9 @@ def hostname_not_problematic(adapter_device):
              and 'cs' != get_normalized_hostname_str(adapter_device).split('.')[0].strip().lower()
              and 'timeclock' != get_normalized_hostname_str(adapter_device).split('.')[0].strip().lower()
              and 'ops' != get_normalized_hostname_str(adapter_device).split('.')[0].strip().lower()
+             and 'n/a' != get_normalized_hostname_str(adapter_device).split('.')[0].strip().lower()
+             and 'itadmins-macbook-pro' != get_normalized_hostname_str(adapter_device).split('.')[0].strip().lower()
+             and 'macbook pro' != get_normalized_hostname_str(adapter_device).split('.')[0].strip().lower()
              and 'macbook-pro' != get_normalized_hostname_str(adapter_device).split('.')[0].strip().lower())):
         return True
     return False
@@ -1172,7 +1179,8 @@ def compare_bios_serial_serial_no_s(adapter_device1, adapter_device2):
 
 def get_asset_name(adapter_device):
     if adapter_device['data'].get('name') and not is_qualys_adapter(adapter_device) \
-            and (not is_bluecat_adapter(adapter_device) or not adapter_device.get(NORMALIZED_MACS)):
+            and (not is_bluecat_adapter(adapter_device) or not adapter_device.get(NORMALIZED_MACS)) \
+            and not is_tenable_io_adapter(adapter_device):
         return adapter_device['data'].get('name').upper()
     return None
 

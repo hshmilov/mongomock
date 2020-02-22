@@ -171,8 +171,8 @@ def is_netbox_adapter(adapter_device):
     return adapter_device.get('plugin_name') == 'netbox_adapter'
 
 
-def is_claroty_adapter_more_mac(adapter_device):
-    if not adapter_device.get('plugin_name') == 'claroty_adapter':
+def is_claroty_ten_adapter_more_mac(adapter_device):
+    if adapter_device.get('plugin_name') not in ['claroty_adapter', 'tenable_io_adapter']:
         return False
     macs = adapter_device.get(NORMALIZED_MACS)
     if macs and len(macs) > 0:
@@ -200,9 +200,17 @@ def is_ivanti_cm_adapter(adapter_device):
     return adapter_device.get('plugin_name') == 'ivanti_sm_adapter'
 
 
+def is_service_now_and_no_other(adapter_device):
+    if adapter_device.get('plugin_name') == 'service_now_adapter' and not get_hostname(adapter_device) \
+            and not get_normalized_ip(adapter_device)\
+            and not get_serial(adapter_device) and not adapter_device.get(NORMALIZED_MACS):
+        return True
+    return False
+
+
 def is_only_asset_nams_adapter(adapter_device):
     return is_ca_cmdb_adapter(adapter_device) or is_netbox_adapter(adapter_device)\
-        or is_ivanti_cm_adapter(adapter_device)
+        or is_ivanti_cm_adapter(adapter_device) or is_service_now_and_no_other(adapter_device)
 
 
 def is_csv_adapter(adapter_device):
@@ -226,8 +234,8 @@ def is_asset_ok_hostname_no_adapters(adapter_device):
 
 
 def if_csv_compare_full_path(adapter_device1, adapter_device2):
-    if not is_csv_adapter(adapter_device1) and not is_csv_adapter(adapter_device2):
-        return True
+    # if not is_csv_adapter(adapter_device1) and not is_csv_adapter(adapter_device2):
+    #     return True
     return compare_hostname(adapter_device1, adapter_device2)
 
 
@@ -427,7 +435,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
         if not correlate_by_snow_mac:
             filtered_adapters_list = filter(lambda adap: not is_snow_adapter(adap), filtered_adapters_list)
 
-        filtered_adapters_list = filter(lambda adap: not is_claroty_adapter_more_mac(adap), filtered_adapters_list)
+        filtered_adapters_list = filter(lambda adap: not is_claroty_ten_adapter_more_mac(adap), filtered_adapters_list)
 
         allow_old_mac_list = ALLOW_OLD_MAC_LIST
 
