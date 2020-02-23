@@ -103,6 +103,8 @@ class Page:
     LOADING_SPINNER_CSS = '.v-spinner-bg'
     LOADING_SPINNER_CSS2 = '.v-spinner'
     CHECKBOX_XPATH_TEMPLATE = '//div[child::label[text()=\'{label_text}\']]/div[contains(@class, \'x-checkbox\')]'
+    CHECKBOX_XPATH_TEMPLATE_WITH_SINGLE_QUOTE = \
+        '//div[child::label[text()="{label_text}"]]/div[contains(@class, \'x-checkbox\')]'
     CHECKBOX_WITH_LABEL_XPATH = '//div[contains(@class, \'x-checkbox\') and child::label[text()=\'{label_text}\']]'
     CHECKBOX_WITH_SIBLING_LABEL_XPATH = '//div[contains(@class, \'x-checkbox\') and ' \
                                         'preceding-sibling::label[text()=\'{label_text}\']]'
@@ -826,6 +828,9 @@ class Page:
 
     def find_checkbox_by_label(self, text):
         return self.driver.find_element_by_xpath(self.CHECKBOX_XPATH_TEMPLATE.format(label_text=text))
+
+    def find_checkbox_by_label_with_single_quote(self, text):
+        return self.driver.find_element_by_xpath(self.CHECKBOX_XPATH_TEMPLATE_WITH_SINGLE_QUOTE.format(label_text=text))
 
     def find_checkbox_with_label_by_label(self, text):
         return self.driver.find_element_by_xpath(self.CHECKBOX_WITH_LABEL_XPATH.format(label_text=text))

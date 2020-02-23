@@ -1,3 +1,4 @@
+import time
 import urllib
 import pathlib
 import tempfile
@@ -6,6 +7,7 @@ import collections
 
 import docker
 import requests
+from flaky import flaky
 import netifaces
 
 from ui_tests.tests.ui_test_base import TestBase
@@ -119,12 +121,15 @@ class TestSaml(TestBase):
 
         return saml_user, internal_user
 
+    @flaky(max_runs=3)
     def test_saml_user_added(self):
         with create_saml_server(self.base_url) as saml_server:
             self._set_saml(saml_server.name, saml_server.metadata_url)
 
             self.login_page.logout()
-
+            self.login_page.wait_for_login_page_to_load()
+            # To let the get_login_option request return...
+            time.sleep(1)
             self._login_with_saml(saml_server)
 
             self.login_page.logout()
@@ -135,12 +140,16 @@ class TestSaml(TestBase):
 
             assert self._fetch_saml_user().username
 
+    @flaky(max_runs=3)
     # pylint: disable=R0915
     def test_saml_same_username(self):
         with create_saml_server(self.base_url) as saml_server:
             self._set_saml(saml_server.name, saml_server.metadata_url)
 
             self.login_page.logout()
+            self.login_page.wait_for_login_page_to_load()
+            # Let the get_login_options api call to return
+            time.sleep(1)
 
             self._login_with_saml(saml_server)
             self.account_page.switch_to_page()

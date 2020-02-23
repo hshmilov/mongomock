@@ -3199,6 +3199,9 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
             'saml': {
                 'enabled': self.__saml_login['enabled'],
                 'idp_name': self.__saml_login['idp_name']
+            },
+            'standard': {
+                'disable_remember_me': self._system_settings['timeout_settings']['disable_remember_me']
             }
         })
 
@@ -3237,6 +3240,9 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
         remember_me = log_in_data.get('remember_me', False)
         if not isinstance(remember_me, bool):
             return return_error('remember_me isn\'t boolean', 401)
+        if self._system_settings.get('timeout_settings') and self._system_settings.get('timeout_settings').get(
+                'disable_remember_me'):
+            remember_me = False
         user_from_db = self._users_collection.find_one(filter_archived({
             'user_name': user_name,
             'source': 'internal'  # this means that the user must be a local user and not one from an external service
@@ -5515,13 +5521,19 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
                                     'type': 'bool'
                                 },
                                 {
+                                    'name': 'disable_remember_me',
+                                    'title': 'Disable \'Remember me\'',
+                                    'type': 'bool',
+                                    'default': False
+                                },
+                                {
                                     'name': 'timeout',
                                     'title': 'Session idle timeout (minutes)',
                                     'type': 'number',
-                                    'default': 120
+                                    'default': 1440
                                 }
                             ],
-                            'required': ['enabled', 'timeout'],
+                            'required': ['enabled', 'timeout', 'disable_remember_me'],
                             'type': 'array'
                         },
                         {
@@ -5730,8 +5742,9 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
                 'refreshRate': 60,
                 'defaultNumOfEntitiesPerPage': 20,
                 'timeout_settings': {
+                    'disable_remember_me': False,
                     'enabled': True,
-                    'timeout': 120
+                    'timeout': 1440
                 },
                 'singleAdapter': False,
                 'multiLine': False,

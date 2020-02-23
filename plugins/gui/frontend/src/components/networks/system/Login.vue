@@ -1,19 +1,17 @@
 <template>
   <div
-    v-if="!isConnected"
     class="x-login"
   >
     <div
       class="login-container"
-      v-if="!fetchingSignup"
     >
       <div class="header">
-        <svg-icon
+        <SvgIcon
           name="logo/logo"
           height="36"
           :original="true"
         />
-        <svg-icon
+        <SvgIcon
           name="logo/axonius"
           height="20"
           :original="true"
@@ -21,12 +19,26 @@
         />
       </div>
       <div class="body">
-        <x-signup-form
-          v-if="showSignup"
-          @done="getSignup"
+        <VProgressCircular
+          v-if="showProgressBar"
+          indeterminate
+          class="center-progress-bar"
+          color="primary"
         />
-        <x-login-form v-else-if="showLoginPage" />
-        <x-login-options :login-okta="!showLoginPage"/>
+        <XSignupForm
+          v-else-if="showSignup"
+          @done="signup"
+        />
+        <div v-else>
+          <XLoginForm
+            v-if="showLoginPage && loginSettings"
+            :settings="loginSettings"
+          />
+          <XLoginOptions
+            :login-okta="!showLoginPage"
+            :settings="loginSettings"
+          />
+        </div>
       </div>
     </div>
 
@@ -34,42 +46,60 @@
 </template>
 
 <script>
-  import xSignupForm from './SignupForm.vue'
-  import xLoginForm from './LoginForm.vue'
-  import xLoginOptions from './LoginOptions.vue'
+import { mapState, mapActions } from 'vuex';
+import XSignupForm from './SignupForm.vue';
+import XLoginForm from './LoginForm.vue';
+import XLoginOptions from './LoginOptions.vue';
 
-  import { mapState, mapActions } from 'vuex'
-  import { GET_SIGNUP } from '../../../store/modules/auth'
+import { GET_SIGNUP, GET_LOGIN_OPTIONS } from '../../../store/modules/auth';
 
-  export default {
-    name: 'XLogin',
-    components: {
-      xLoginForm, xSignupForm, xLoginOptions
-    },
-    computed: mapState({
-        isConnected (state) {
-          return state.auth && state.auth.currentUser && state.auth.currentUser.data &&
-            state.auth.currentUser.data.user_name && !state.auth.currentUser.fetching
-        },
-        showLoginPage (state) {
-          return !state.staticConfiguration.medicalConfig || this.$route.hash === '#maintenance' || this.showSignup
-        },
-        showSignup (state) {
-          return !state.auth.signup.data
-        },
-        fetchingSignup(state) {
-          return state.auth.signup.data === null || state.auth.signup.fetching
-        }
+export default {
+  name: 'XLogin',
+  components: {
+    XLoginForm, XSignupForm, XLoginOptions,
+  },
+  data() {
+    return {
+      loginSettings: null,
+    };
+  },
+  computed: {
+    ...mapState({
+      showLoginPage(state) {
+        return !state.staticConfiguration.medicalConfig || this.$route.hash === '#maintenance';
+      },
+      showSignup(state) {
+        return !state.auth.signup.data;
+      },
+      fetchingSignup(state) {
+        return state.auth.signup.fetching;
+      },
+      fetchingLoginSettings(state) {
+        return state.auth.loginOptions.fetching;
+      },
     }),
-    mounted() {
-      this.getSignup()
+    showProgressBar() {
+      return this.fetchingSignup || this.fetchingLoginSettings;
     },
-    methods: {
-      ...mapActions({
-        getSignup: GET_SIGNUP
-      }),
-    }
-  }
+  },
+  mounted() {
+    this.signup();
+  },
+  methods: {
+    ...mapActions({
+      getSignup: GET_SIGNUP,
+      getLoginSettings: GET_LOGIN_OPTIONS,
+    }),
+    async signup() {
+      const { data: signupResData } = await this.getSignup();
+      if (signupResData.signup) {
+        // request login setting only when user is not in signup mode
+        const { status, data } = await this.getLoginSettings();
+        this.loginSettings = status === 200 ? data : null;
+      }
+    },
+  },
+};
 </script>
 
 <style lang="scss">
@@ -105,6 +135,11 @@
 
         .login-title, .signup-title {
           margin-top: 0;
+        }
+
+        .center-progress-bar {
+          display: block;
+          margin: 0 auto;
         }
 
         .x-form {

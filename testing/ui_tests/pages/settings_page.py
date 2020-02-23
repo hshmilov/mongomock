@@ -20,6 +20,7 @@ class SettingsPage(Page):
     FEATURE_FLAGS_CSS = 'li#feature-flags-tab'
     ABOUT_CSS = 'li#about-settings-tab'
     SEND_EMAILS_LABEL = 'Send emails'
+    DISABLE_REMEMBER_ME = 'Disable \'Remember me\''
     SESSION_TIMEOUT_LABEL = 'Enable session timeout'
     GETTING_STARTED_LABEL = 'Enable Getting Started with Axonius checklist'
     GLOBAL_SSL_LABEL = 'Configure custom SSL certificate'
@@ -286,6 +287,9 @@ class SettingsPage(Page):
 
     def find_send_emails_toggle(self):
         return self.find_checkbox_by_label(self.SEND_EMAILS_LABEL)
+
+    def find_disable_remember_me_toggle(self):
+        return self.find_checkbox_by_label_with_single_quote(self.DISABLE_REMEMBER_ME)
 
     def find_getting_started_toggle(self):
         return self.find_checkbox_by_label(self.GETTING_STARTED_LABEL)

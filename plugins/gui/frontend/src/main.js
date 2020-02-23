@@ -51,7 +51,7 @@ Vue.use(VueWorker);
 
 Vue.use(SafeguardPlugin);
 
-Vue.use(svgicon, { tagName: 'svg-icon' });
+Vue.use(svgicon, { tagName: 'SvgIcon' });
 
 Vue.use(VueAnalytics, {
   id: 'UA-123123123-0', // set in backend

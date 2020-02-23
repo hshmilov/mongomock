@@ -47,7 +47,11 @@ class LoginPage(Page):
         self.fill_text_field_by_element_id(self.LOGIN_PASSWORD_ID, password)
 
     def click_remember_me(self):
-        toggle = self.driver.find_element_by_css_selector(self.REMEMBER_ME_INPUT_CSS)
+        try:
+            toggle = self.driver.find_element_by_css_selector(self.REMEMBER_ME_INPUT_CSS)
+        # Probably remember_me is disabled in settings
+        except Exception:
+            return
         self.click_toggle_button(toggle,
                                  scroll_to_toggle=False)
 
@@ -96,6 +100,9 @@ class LoginPage(Page):
 
     def find_failed_ad_login_msg(self):
         return self.wait_for_element_present_by_text('Failed logging into AD')
+
+    def find_remember_me_toggle(self):
+        return self.driver.find_element_by_css_selector(self.REMEMBER_ME_INPUT_CSS)
 
     def find_failed_ad_login_msg_group(self, group_name):
         return self.wait_for_element_present_by_text(f'The provided user is not in the group ' + group_name)

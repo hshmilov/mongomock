@@ -1,70 +1,87 @@
 <template>
   <div class="x-login-form">
-    <h3 class="login-title">Login</h3>
-    <x-form
+    <h3 class="login-title">
+      Login
+    </h3>
+    <XForm
       v-model="credentials"
       :schema="schema"
       :error="prettyUserError"
       @validate="onValidate"
-      @submit="onLogin"/>
-    <x-button
-      :disabled="!complete"
+      @submit="onLogin"
+    />
+    <XButton
+      :disabled="invalidForm"
       @click="onLogin"
-    >Login</x-button>
+    >Login</XButton>
   </div>
 </template>
 
 <script>
-  import xForm from '../../neurons/schema/Form.vue'
-  import xButton from '../../axons/inputs/Button.vue'
-  import userErrorMixin from '../../../mixins/user_error'
-  import { GettingStartedPubSub } from '../../App.vue'
+import { mapActions } from 'vuex';
+import XForm from '../../neurons/schema/Form.vue';
+import XButton from '../../axons/inputs/Button.vue';
+import userErrorMixin from '../../../mixins/user_error';
+import { GettingStartedPubSub } from '../../App.vue';
 
-  import {mapActions} from 'vuex'
-  import {LOGIN} from '../../../store/modules/auth'
+import { LOGIN } from '../../../store/modules/auth';
 
-  export default {
-    name: 'XLoginForm',
-    components: {
-      xForm, xButton
+export default {
+  name: 'XLoginForm',
+  components: {
+    XForm, XButton,
+  },
+  mixins: [userErrorMixin],
+  props: {
+    settings: {
+      type: Object,
+      default: null,
     },
-    mixins: [userErrorMixin],
-    data() {
-      return {
-        credentials: {
-          user_name: '',
-          password: '',
-          remember_me: false
-        },
-        complete: false
-      }
-    },
-    computed: {
-      schema() {
-        return {
-          type: 'array', items: [
-            {name: 'user_name', title: 'User Name', type: 'string'},
-            {name: 'password', title: 'Password', type: 'string', format: 'password'},
-            {name: 'remember_me', title: 'Remember me', type: 'bool', default: false}
-          ], required: ['user_name', 'password']
-        }
-      }
-    },
-    methods: {
-      ...mapActions({ login: LOGIN }),
-      onValidate (valid) {
-        this.complete = valid
+  },
+  data() {
+    return {
+      credentials: {
+        user_name: '',
+        password: '',
+        remember_me: false,
       },
-      onLogin () {
-        this.login(this.credentials).then((res) => {
-          if (res.status === 200) {
-              // Set getting started panel state to open=true
-              GettingStartedPubSub.$emit('getting-started-login')
-          }
-        })
-      }
-    }
-  }
+      invalidForm: true,
+      items: [
+        { name: 'user_name', title: 'User Name', type: 'string' },
+        {
+          name: 'password', title: 'Password', type: 'string', format: 'password',
+        },
+        {
+          name: 'remember_me', title: 'Remember me', type: 'bool', default: false,
+        },
+      ],
+      requiredItems: ['user_name', 'password', 'remember_me'],
+    };
+  },
+  computed: {
+    schema() {
+      return {
+        type: 'array',
+        required: this.settings.standard.disable_remember_me ? this.requiredItems.filter((field) => field !== 'remember_me') : this.requiredItems,
+        items: this.settings.standard.disable_remember_me ? this.items.filter((item) => item.name !== 'remember_me') : this.items,
+      };
+    },
+  },
+  methods: {
+    ...mapActions({ login: LOGIN }),
+    onValidate(valid) {
+      this.invalidForm = !valid;
+    },
+    onLogin() {
+      this.login(this.credentials).then((res) => {
+        if (res.status === 200) {
+          // Set getting started panel state to open=true
+          GettingStartedPubSub.$emit('getting-started-login');
+        }
+      });
+    },
+  },
+};
 </script>
 
 <style lang="scss">

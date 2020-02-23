@@ -5,36 +5,36 @@
       class="t-center mt-12"
     >Or</div>
     <div class="options-buttons">
-      <x-button
+      <XButton
         v-if="oktaConfig.enabled"
         id="okta_login_link"
         :class="{'grid-span2': singleLoginMethod}"
         link
         @click="onOktaLogin"
-      >Login with Okta</x-button>
-      <x-button
+      >Login with Okta</XButton>
+      <XButton
         v-if="samlConfig.enabled"
         id="saml_login_link"
         :class="{'grid-span2': singleLoginMethod}"
         link
         @click="onSamlLogin"
-      >Login with {{ samlConfig.idp_name }}</x-button>
-      <x-button
+      >Login with {{ samlConfig.idp_name }}</XButton>
+      <XButton
         v-if="ldapConfig.enabled"
         id="ldap_login_link"
         :class="{'grid-span2': singleLoginMethod}"
         link
         @click="toggleLdapLogin"
-      >Login with LDAP</x-button>
+      >Login with LDAP</XButton>
     </div>
-    <x-modal
+    <XModal
       v-if="ldapData.active"
       size="md"
       @close="toggleLdapLogin"
     >
       <div slot="body">
         <h2>Login with LDAP</h2>
-        <x-form
+        <XForm
           v-model="ldapData.credentials"
           :schema="ldapSchema"
           :error="prettyUserError"
@@ -43,138 +43,139 @@
         />
       </div>
       <div slot="footer">
-        <x-button
+        <XButton
           link
           @click="toggleLdapLogin"
-        >Cancel</x-button>
-        <x-button
+        >Cancel</XButton>
+        <XButton
           :disabled="!ldapData.complete"
           @click="onLdapLogin"
-        >Login</x-button>
+        >Login</XButton>
       </div>
-    </x-modal>
+    </XModal>
   </div>
 </template>
 
 <script>
-  import xForm from '../../neurons/schema/Form.vue'
-  import xButton from '../../axons/inputs/Button.vue'
-  import xModal from '../../axons/popover/Modal.vue'
-  import userErrorMixin from '../../../mixins/user_error'
+import { mapActions } from 'vuex';
+import * as OktaAuth from '@okta/okta-auth-js';
+import XForm from '../../neurons/schema/Form.vue';
+import XButton from '../../axons/inputs/Button.vue';
+import XModal from '../../axons/popover/Modal.vue';
+import userErrorMixin from '../../../mixins/user_error';
 
-  import {mapActions} from 'vuex'
-  import { LDAP_LOGIN, GET_LOGIN_OPTIONS } from '../../../store/modules/auth'
-  import * as OktaAuth from '@okta/okta-auth-js'
+import { LDAP_LOGIN } from '../../../store/modules/auth';
 
-  export default {
-    name: 'XLoginOptions',
-    components: {
-      xForm, xButton, xModal
+export default {
+  name: 'XLoginOptions',
+  components: {
+    XForm, XButton, XModal,
+  },
+  mixins: [userErrorMixin],
+  props: {
+    loginOkta: {
+      type: Boolean,
+      default: false,
     },
-    mixins: [userErrorMixin],
-    props: {
-      loginOkta: {
-        type: Boolean,
-        default: false
-      }
+    settings: {
+      type: Object,
+      default: null,
     },
-    data() {
+  },
+  data() {
+    return {
+      ldapData: {
+        active: false,
+        credentials: {
+          user_name: '',
+          domain: '',
+          password: '',
+        },
+        complete: false,
+      },
+      oktaConfig: {
+        enabled: false,
+      },
+      samlConfig: {
+        enabled: false,
+      },
+      ldapConfig: {
+        enabled: false,
+      },
+    };
+  },
+  computed: {
+    ldapSchema() {
       return {
-        ldapData: {
-          active: false,
-          credentials: {
-            'user_name': '',
-            'domain': '',
-            'password': ''
+        type: 'array',
+        items: [
+          { name: 'user_name', title: 'User Name', type: 'string' },
+          { name: 'domain', title: 'Domain', type: 'string' },
+          {
+            name: 'password', title: 'Password', type: 'string', format: 'password',
           },
-          complete: false
-        },
-        oktaConfig: {
-          enabled: false
-        },
-        samlConfig: {
-          enabled: false
-        },
-        ldapConfig: {
-          enabled: false
-        }
+        ],
+        required: ['user_name', 'domain', 'password'],
+      };
+    },
+    singleLoginMethod() {
+      return (this.oktaConfig.enabled + this.samlConfig.enabled + this.ldapConfig.enabled) === 1;
+    },
+  },
+  watch: {
+    oktaConfig() {
+      if (this.oktaConfig.enabled === true && this.$route.query.login_type === 'okta_login') {
+        this.onOktaLogin();
       }
     },
-    computed: {
-      ldapSchema() {
-        return {
-          type: 'array',
-          items: [
-            {name: 'user_name', title: 'User Name', type: 'string'},
-            {name: 'domain', title: 'Domain', type: 'string'},
-            {
-              name: 'password', title: 'Password', type: 'string', format: 'password'
-            }
-          ], required: ['user_name', 'domain', 'password']
-        }
-      },
-      singleLoginMethod() {
-        return (this.oktaConfig.enabled + this.samlConfig.enabled + this.ldapConfig.enabled) === 1
+    settings() {
+      this.oktaConfig = this.settings.okta;
+      this.samlConfig = this.settings.saml;
+      this.ldapConfig = this.settings.ldap;
+      if (this.ldapConfig.default_domain) {
+        this.ldapData.credentials.domain = this.ldapConfig.default_domain;
       }
     },
-    watch: {
-      oktaConfig () {
-        if (this.oktaConfig.enabled === true && this.$route.query.login_type === 'okta_login') {
-          this.onOktaLogin()
-        }
+    loginOkta() {
+      if (this.loginOkta) {
+        this.onOktaLogin();
       }
     },
-    mounted() {
-      this.getLoginSettings().then(response => {
-        if (response.status === 200) {
-          this.oktaConfig = response.data.okta
-          this.samlConfig = response.data.saml
-          this.ldapConfig = response.data.ldap
-          if (this.ldapConfig.default_domain) {
-            this.ldapData.credentials.domain = this.ldapConfig.default_domain
-          }
-          if (this.loginOkta) {
-            this.onOktaLogin()
-          }
-        }
-      })
+  },
+  methods: {
+    ...mapActions({ ldapLogin: LDAP_LOGIN }),
+    onValidateLDAP(valid) {
+      this.ldapData.complete = valid;
     },
-    methods: {
-      ...mapActions({ getLoginSettings: GET_LOGIN_OPTIONS, ldapLogin: LDAP_LOGIN }),
-      onValidateLDAP (valid) {
-        this.ldapData.complete = valid
-      },
-      onLdapLogin () {
-        this.ldapLogin(this.ldapData.credentials)
-      },
-      onOktaLogin () {
-        let gui2URL = this.oktaConfig.gui2_url.endsWith('/') ?
-          this.oktaConfig.gui2_url.substr(0, this.oktaConfig.gui2_url.length - 1)
-          :
-          this.oktaConfig.gui2_url
-        let authorization_server = this.oktaConfig.authorization_server ?
-          `${this.oktaConfig.url}/oauth2/${this.oktaConfig.authorization_server}`
-          :
-          this.oktaConfig.url
-        let x = new OktaAuth({
-          url: this.oktaConfig.url,
-          issuer: authorization_server,
-          clientId: this.oktaConfig.client_id,
-          redirectUri: `${gui2URL}/api/okta-redirect`
-        })
-        x.token.getWithRedirect({
-          scopes: ['openid', 'profile', 'email', 'offline_access'],
-          responseType: 'code'
-        })
-      },
-      onSamlLogin () {
-        window.location.href = '/api/login/saml'
-      },
-      toggleLdapLogin () {
-        this.ldapData.active = !this.ldapData.active
-      }
-    }
-  }
+    onLdapLogin() {
+      this.ldapLogin(this.ldapData.credentials);
+    },
+    onOktaLogin() {
+      const gui2URL = this.oktaConfig.gui2_url.endsWith('/')
+        ? this.oktaConfig.gui2_url.substr(0, this.oktaConfig.gui2_url.length - 1)
+        : this.oktaConfig.gui2_url;
+      const authorizationServer = this.oktaConfig.authorization_server
+        ? `${this.oktaConfig.url}/oauth2/${this.oktaConfig.authorization_server}`
+        : this.oktaConfig.url;
+      const x = new OktaAuth({
+        url: this.oktaConfig.url,
+        issuer: authorizationServer,
+        clientId: this.oktaConfig.client_id,
+        redirectUri: `${gui2URL}/api/okta-redirect`,
+      });
+      x.token.getWithRedirect({
+        scopes: ['openid', 'profile', 'email', 'offline_access'],
+        responseType: 'code',
+      });
+    },
+    onSamlLogin() {
+      window.location.href = '/api/login/saml';
+    },
+    toggleLdapLogin() {
+      this.ldapData.active = !this.ldapData.active;
+    },
+  },
+};
 </script>
 
 <style lang="scss">
