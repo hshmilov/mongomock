@@ -1,4 +1,4 @@
-from adapters.json_file_adapter.service import DEVICES_DATA, USERS_DATA
+from adapters.json_file_adapter.service import FILE_NAME, DEVICES_DATA, USERS_DATA
 from test_helpers.file_mock_credentials import FileForCredentialsMock
 
 USER_NAME_UNICODE = 'אבידור'
@@ -11,14 +11,21 @@ DEVICE_FIRST_VLAN_NAME = 'vlan0'
 DEVICE_SECOND_VLAN_NAME = 'vlan1'
 DEVICE_FIRST_VLAN_TAGID = '1'
 DEVICE_SECOND_VLAN_TAGID = '2'
+DEVICE_FIRST_NAME = 'CB 1'
+DEVICE_SECOND_NAME = 'CB 2'
+DEVICE_FIRST_HOSTNAME = 'CB First'
+DEVICE_SECOND_HOSTNAME = 'CB Second'
+
+CLIENT_ID = 'Client1'
 
 client_details = {
+    FILE_NAME: CLIENT_ID,
     DEVICES_DATA: FileForCredentialsMock(DEVICES_DATA, '''
     {
         "devices" : [{
             "id": "cb_id1",
-            "name": "CB 1",
-            "hostname": "CB First",
+            "name": "''' + DEVICE_FIRST_NAME + '''",
+            "hostname": "''' + DEVICE_FIRST_HOSTNAME + '''",
             "last_used_users": ["ofri", "dean", "test 1", "test 2"],
             "network_interfaces": [{
                 "mac": "''' + DEVICE_MAC + '''",
@@ -105,6 +112,33 @@ client_details = {
             "raw_fields" : []
         }
         ''')
+}
+
+CLIENT_DETAILS_EXTRA = {
+    FILE_NAME: 'Client2',
+    DEVICES_DATA: FileForCredentialsMock(DEVICES_DATA, '''
+    {
+        "devices" : [{
+            "id": "cb_id2",
+            "name": "''' + DEVICE_SECOND_NAME + '''",
+            "hostname": "''' + DEVICE_FIRST_HOSTNAME + '''",
+            "network_interfaces": [{
+                "mac": "''' + DEVICE_MAC + '''",
+                "ips": ["''' + DEVICE_FIRST_IP + '''"]
+            }]
+        }],
+        "fields" : ["id", "network_interfaces", "last_used_users", 
+                   "av_status", "last_contact", "sensor_version", "name", "hostname", 
+                   "test_enforcement_change"],
+        "additional_schema" : [
+            {"name": "av_status", "title": "AvStatus", "type": "string"},
+            {"name": "last_contact", "title": "Last Contact", "type": "string"},
+            {"name": "sensor_version", "title": "Sensor Version", "type": "string"},
+            {"name": "test_enforcement_change", "title": "Test Enforcement Change", "type": "integer"}
+        ],
+        "raw_fields" : []
+    }
+    ''')
 }
 
 SOME_DEVICE_ID = 'cb_id1'

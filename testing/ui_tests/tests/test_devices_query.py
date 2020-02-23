@@ -26,7 +26,10 @@ from test_credentials.json_file_credentials import (DEVICE_FIRST_IP,
                                                     DEVICE_MAC,
                                                     DEVICE_SUBNET,
                                                     DEVICE_FIRST_VLAN_TAGID,
-                                                    DEVICE_SECOND_VLAN_NAME)
+                                                    DEVICE_SECOND_VLAN_NAME,
+                                                    DEVICE_FIRST_HOSTNAME,
+                                                    DEVICE_FIRST_NAME,
+                                                    DEVICE_SECOND_NAME)
 from test_credentials.test_aws_credentials import client_details as aws_client_details
 from devops.scripts.automate_dev import credentials_inputer
 
@@ -583,7 +586,7 @@ class TestDevicesQuery(TestBase):
         # Prepare OBJ query with 2 nested conditions
         self.devices_page.select_context_obj(expressions[0])
         self.devices_page.select_query_field(self.devices_page.FIELD_NETWORK_INTERFACES, expressions[0])
-        self.devices_page.add_query_obj_condition(expressions[0])
+        self.devices_page.add_query_child_condition(expressions[0])
         conditions = self.devices_page.find_conditions(expressions[0])
         assert len(conditions) == 2
 
@@ -647,7 +650,7 @@ class TestDevicesQuery(TestBase):
         assert len(expressions) == 1
         self.devices_page.select_context_obj(expressions[0])
         self.devices_page.select_query_field(self.devices_page.FIELD_NETWORK_INTERFACES, expressions[0])
-        self.devices_page.add_query_obj_condition()
+        self.devices_page.add_query_child_condition()
         conditions = self.devices_page.find_conditions(expressions[0])
         assert len(conditions) == 2
         self.devices_page.select_query_field(self.devices_page.FIELD_VLANS_VLAN_NAME, conditions[0])
@@ -659,7 +662,7 @@ class TestDevicesQuery(TestBase):
         self.devices_page.wait_for_table_be_responsive()
         assert len(self.devices_page.get_all_data())
         self.devices_page.select_query_field(self.devices_page.FIELD_NETWORK_INTERFACES_VLANS, expressions[0])
-        self.devices_page.add_query_obj_condition()
+        self.devices_page.add_query_child_condition()
         conditions = self.devices_page.find_conditions(expressions[0])
         assert len(conditions) == 2
         self.devices_page.select_query_field(self.devices_page.FIELD_VLAN_NAME, conditions[0])
@@ -677,7 +680,6 @@ class TestDevicesQuery(TestBase):
         with GeneralInfoService().contextmanager(take_ownership=True):
             self.enforcements_page.create_run_wmi_scan_on_each_cycle_enforcement()
             self.base_page.run_discovery()
-
             # Wait for WMI info
             self.devices_page.switch_to_page()
             self.devices_page.fill_filter(self.devices_page.AD_WMI_ADAPTER_FILTER)
@@ -694,7 +696,6 @@ class TestDevicesQuery(TestBase):
             self.devices_page.add_query_expression()
             expressions = self.devices_page.find_expressions()
             assert len(expressions) == 2
-
             self.devices_page.select_context_obj(expressions[0])
             self.devices_page.select_query_field(self.devices_page.FIELD_USERS, expressions[0])
             conditions = self.devices_page.find_conditions(expressions[0])
@@ -705,7 +706,6 @@ class TestDevicesQuery(TestBase):
             self.devices_page.wait_for_table_be_responsive()
 
             assert len(self.devices_page.get_all_data())
-
             self.devices_page.select_query_logic_op(self.devices_page.QUERY_LOGIC_OR)
             self.devices_page.select_context_obj(expressions[1])
             self.devices_page.select_query_field(self.devices_page.FIELD_USERS, expressions[1])
@@ -727,7 +727,6 @@ class TestDevicesQuery(TestBase):
         self.devices_page.fill_query_value('1')
         self.devices_page.wait_for_table_be_responsive()
         assert self.devices_page.is_query_error()
-
         assert len(self.devices_page.get_all_data()) == 20
         self.devices_page.fill_query_value('2')
         self.devices_page.wait_for_table_be_responsive()
@@ -746,45 +745,12 @@ class TestDevicesQuery(TestBase):
         assert len(self.devices_page.get_all_data()) == 20
         self.devices_page.clear_query_wizard()
 
-    def test_query_wizard_combos(self):
-        self.settings_page.switch_to_page()
-        self.base_page.run_discovery()
-        self.devices_page.create_saved_query(self.devices_page.FILTER_OS_WINDOWS, WINDOWS_QUERY_NAME)
-        self.devices_page.reset_query()
-        self.devices_page.wait_for_table_be_responsive()
-        self.devices_page.click_query_wizard()
-        self._test_adapters_filter_change_icon()
-        self._test_complex_obj()
-        self._test_comp_op_change()
-        self._test_and_expression()
-        self._test_last_seen_query()
-        self._test_last_seen_query_with_filter_adapters()
-        self._test_asset_name_query_with_filter_adapters()
-        self._test_query_brackets()
-        self._test_remove_query_expressions()
-        self._test_remove_query_expression_does_not_reset_values()
-        self._test_not_expression()
-        self._test_adapters_size()
-        self._test_enum_expressions()
-
     def _assert_query(self, expected_query):
         current_query = self.devices_page.find_query_search_input().get_attribute('value')
         assert current_query == expected_query
 
     def _perform_query_scenario(self, field, value, comp_op, field_type, expected_query, subfield=None, obj=False):
-        expressions = self.devices_page.find_expressions()
-        assert len(expressions) == 1
-        if obj:
-            self.devices_page.select_context_obj(expressions[0])
-        self.devices_page.select_query_field(field, expressions[0])
-        conditions = self.devices_page.find_conditions()
-        if len(conditions) == 1 and subfield:
-            self.devices_page.select_query_field(subfield, conditions[0])
-        self.devices_page.select_query_comp_op(comp_op, expressions[0])
-        if field_type == 'string':
-            self.devices_page.select_query_value(value, expressions[0])
-        elif field_type == 'integer':
-            self.devices_page.select_query_value_without_search(value, expressions[0])
+        self.devices_page.change_query_params(field, value, comp_op, field_type, subfield, obj)
         assert self.devices_page.is_query_error()
         self.devices_page.wait_for_table_be_responsive()
         self._assert_query(expected_query)
@@ -833,37 +799,93 @@ class TestDevicesQuery(TestBase):
              'field_type': 'integer',
              'expected_query': '(specific_data.data.os.bitness == 64)'}
         ]
-        try:
-            with CiscoService().contextmanager(take_ownership=True), \
-                    EsxService().contextmanager(take_ownership=True),\
-                    CylanceService().contextmanager(take_ownership=True):
-                credentials_inputer.main()
-                self.settings_page.switch_to_page()
-                self.base_page.run_discovery()
-                self.devices_page.switch_to_page()
-                for conf in combo_configs:
-                    self.devices_page.click_query_wizard()
-                    self.devices_page.clear_query_wizard()
-                    self._perform_query_scenario(**conf)
-                    self.devices_page.click_search()
+        with CiscoService().contextmanager(take_ownership=True), \
+                EsxService().contextmanager(take_ownership=True),\
+                CylanceService().contextmanager(take_ownership=True):
+            credentials_inputer.main()
+            self.settings_page.switch_to_page()
+            self.base_page.run_discovery()
+            self.devices_page.switch_to_page()
+            for conf in combo_configs:
                 self.devices_page.click_query_wizard()
                 self.devices_page.clear_query_wizard()
-                for conf in combo_configs:
-                    try:
-                        self.driver.find_element_by_css_selector('.expression-context.selected')
-                        self.devices_page.select_context_all(self.devices_page.find_expressions()[0])
-                    except NoSuchElementException:
-                        # Nothing to do
-                        pass
-                    self._perform_query_scenario(**conf)
+                self._perform_query_scenario(**conf)
                 self.devices_page.click_search()
-        finally:
-            self.adapters_page.clean_adapter_servers(self.CISCO_PRETTY_NAME)
-            self.wait_for_adapter_down(self.CISCO_PLUGIN_NAME)
-            self.adapters_page.clean_adapter_servers(self.ESX_PRETTY_NAME)
-            self.wait_for_adapter_down(self.ESX_PLUGIN_NAME)
-            self.adapters_page.clean_adapter_servers(self.CYCLANCE_PRETTY_NAME)
-            self.wait_for_adapter_down(self.CYCLANCE_PLUGIN_NAME)
+            self.devices_page.click_query_wizard()
+            self.devices_page.clear_query_wizard()
+            for conf in combo_configs:
+                try:
+                    self.driver.find_element_by_css_selector('.expression-context.selected')
+                    self.devices_page.select_context_all(self.devices_page.find_expressions()[0])
+                except NoSuchElementException:
+                    # Nothing to do
+                    pass
+                self._perform_query_scenario(**conf)
+            self.devices_page.click_search()
+        self.adapters_page.clean_adapter_servers(self.CISCO_PRETTY_NAME)
+        self.wait_for_adapter_down(self.CISCO_PLUGIN_NAME)
+        self.adapters_page.clean_adapter_servers(self.ESX_PRETTY_NAME)
+        self.wait_for_adapter_down(self.ESX_PLUGIN_NAME)
+        self.adapters_page.clean_adapter_servers(self.CYCLANCE_PRETTY_NAME)
+        self.wait_for_adapter_down(self.CYCLANCE_PLUGIN_NAME)
+
+        self.devices_page.switch_to_page()
+        self.devices_page.click_query_wizard()
+        self.devices_page.clear_query_wizard()
+
+    def _test_asset_entity_expressions(self):
+        self.devices_page.click_search()
+        self.adapters_page.add_json_extra_client()
+        self.base_page.run_discovery()
+
+        # DEVICE_FIRST_HOSTNAME and DEVICE_SECOND_NAME on single Adapter Device - expected to find one
+        self.devices_page.build_asset_entity_query(JSON_ADAPTER_NAME,
+                                                   self.devices_page.FIELD_HOSTNAME_TITLE,
+                                                   DEVICE_FIRST_HOSTNAME,
+                                                   self.devices_page.FIELD_ASSET_NAME,
+                                                   DEVICE_SECOND_NAME)
+        self.devices_page.wait_for_table_be_responsive()
+        assert len(self.devices_page.get_all_data()) == 1
+        children = self.devices_page.get_asset_entity_children_first()
+        # DEVICE_THIRD_IP and DEVICE_SECOND_NAME on single Adapter Device - expected to find none
+        self.devices_page.change_asset_entity_query(children[0],
+                                                    self.devices_page.FIELD_NETWORK_INTERFACES_IPS,
+                                                    DEVICE_THIRD_IP)
+        self.devices_page.wait_for_table_be_responsive()
+        assert not self.devices_page.get_all_data()
+        # DEVICE_THIRD_IP and DEVICE_FIRST_NAME on single Adapter Device - expected to find none
+        self.devices_page.change_asset_entity_query(children[1],
+                                                    value_string=DEVICE_FIRST_NAME)
+        self.devices_page.wait_for_table_be_responsive()
+        assert len(self.devices_page.get_all_data()) == 1
+
+        self.devices_page.click_search()
+        self.adapters_page.remove_json_extra_client()
+        self.devices_page.switch_to_page()
+        self.devices_page.click_query_wizard()
+        self.devices_page.clear_query_wizard()
+
+    def test_query_wizard_combos(self):
+        self.settings_page.switch_to_page()
+        self.base_page.run_discovery()
+        self.devices_page.create_saved_query(self.devices_page.FILTER_OS_WINDOWS, WINDOWS_QUERY_NAME)
+        self.devices_page.reset_query()
+        self.devices_page.wait_for_table_to_load()
+        self.devices_page.click_query_wizard()
+        self._test_adapters_filter_change_icon()
+        self._test_complex_obj()
+        self._test_comp_op_change()
+        self._test_and_expression()
+        self._test_last_seen_query()
+        self._test_last_seen_query_with_filter_adapters()
+        self._test_asset_name_query_with_filter_adapters()
+        self._test_query_brackets()
+        self._test_remove_query_expressions()
+        self._test_remove_query_expression_does_not_reset_values()
+        self._test_not_expression()
+        self._test_adapters_size()
+        self._test_enum_expressions()
+        self._test_asset_entity_expressions()
 
     def test_saved_query_field(self):
         self.settings_page.switch_to_page()

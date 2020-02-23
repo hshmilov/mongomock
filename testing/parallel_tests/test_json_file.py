@@ -1,7 +1,7 @@
 import pytest
 from services.adapters.json_file_service import JsonFileService, json_file_fixture
 from test_helpers.adapter_test_base import AdapterTestBase
-from test_credentials.json_file_credentials import client_details, SOME_DEVICE_ID
+from test_credentials.json_file_credentials import CLIENT_ID, client_details, SOME_DEVICE_ID
 
 pytestmark = pytest.mark.sanity
 
@@ -13,7 +13,7 @@ class TestJsonFileAdapter(AdapterTestBase):
 
     @property
     def some_client_id(self):
-        return '1'
+        return CLIENT_ID
 
     @property
     def some_client_details(self):

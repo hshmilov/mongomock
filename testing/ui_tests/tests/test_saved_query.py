@@ -7,7 +7,8 @@ from services.plugins.device_control_service import DeviceControlService
 from ui_tests.tests.ui_test_base import TestBase
 from ui_tests.tests.ui_consts import (READ_ONLY_USERNAME, NEW_PASSWORD,
                                       UPDATE_USERNAME, UPDATE_PASSWORD, UPDATE_FIRST_NAME, UPDATE_LAST_NAME,
-                                      WINDOWS_QUERY_NAME, LINUX_QUERY_NAME)
+                                      WINDOWS_QUERY_NAME, LINUX_QUERY_NAME, JSON_ADAPTER_NAME)
+from test_credentials.json_file_credentials import (DEVICE_FIRST_HOSTNAME, DEVICE_SECOND_NAME)
 
 
 class TestSavedQuery(TestBase):
@@ -20,6 +21,8 @@ class TestSavedQuery(TestBase):
     ENFORCEMENT_NAME = 'An Enforcement'
 
     ADMIN_NAME = 'administrator'
+
+    JSON_ASSET_ENTITY_QUERY_NAME = 'JSON Asset Entity Query'
 
     def test_query_state(self):
         self.dashboard_page.switch_to_page()
@@ -317,3 +320,22 @@ class TestSavedQuery(TestBase):
         self.devices_page.fill_enter_table_search('test')
         self.devices_page.save_existing_query()
         self._check_saved_query(self.CUSTOM_QUERY_SAVE_NAME_2, today_str, self.username, self.ADMIN_NAME)
+
+    def test_saved_query_with_entity_asset(self):
+        self.adapters_page.add_json_extra_client()
+        self.base_page.run_discovery()
+        self.devices_page.build_asset_entity_query(JSON_ADAPTER_NAME,
+                                                   self.devices_page.FIELD_HOSTNAME_TITLE,
+                                                   DEVICE_FIRST_HOSTNAME,
+                                                   self.devices_page.FIELD_ASSET_NAME,
+                                                   DEVICE_SECOND_NAME)
+        self.devices_page.click_search()
+        self.devices_page.save_query(self.JSON_ASSET_ENTITY_QUERY_NAME)
+        self.devices_queries_page.switch_to_page()
+        self.devices_queries_page.fill_enter_table_search(self.JSON_ASSET_ENTITY_QUERY_NAME)
+        self.devices_queries_page.find_query_row_by_name(self.JSON_ASSET_ENTITY_QUERY_NAME).click()
+        self.devices_queries_page.run_query()
+
+        self.devices_page.wait_for_table_to_load()
+        assert len(self.devices_page.get_all_data()) == 1
+        self.adapters_page.remove_json_extra_client()

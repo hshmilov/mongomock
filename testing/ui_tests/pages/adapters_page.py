@@ -10,7 +10,8 @@ from test_helpers.file_mock_credentials import FileForCredentialsMock
 
 from ui_tests.pages.entities_page import EntitiesPage
 from ui_tests.pages.page import PAGE_BODY, SLEEP_INTERVAL, RETRY_WAIT_FOR_ELEMENT
-from ui_tests.tests.ui_consts import AD_ADAPTER_NAME
+from ui_tests.tests.ui_consts import (AD_ADAPTER_NAME, JSON_ADAPTER_NAME)
+from test_credentials.json_file_credentials import (CLIENT_DETAILS_EXTRA, FILE_NAME)
 
 # NamedTuple doesn't need to be uppercase
 # pylint: disable=C0103
@@ -310,3 +311,9 @@ class AdaptersPage(EntitiesPage):
         self.add_server(ad_client=server_details, adapter_name=adapter_name)
         self.wait_for_server_green()
         self.switch_to_page()
+
+    def add_json_extra_client(self):
+        self.add_server(CLIENT_DETAILS_EXTRA, adapter_name=JSON_ADAPTER_NAME)
+
+    def remove_json_extra_client(self):
+        self.remove_server(CLIENT_DETAILS_EXTRA, JSON_ADAPTER_NAME, adapter_search_field=(FILE_NAME, 'Name'))

@@ -9,6 +9,7 @@ import json
 from axonius.utils.files import get_local_config_file
 from typing import List
 
+FILE_NAME = 'file_name'
 DEVICES_DATA = 'devices_data'
 USERS_DATA = 'users_data'
 
@@ -60,6 +61,11 @@ class JsonFileAdapter(AdapterBase):
         return {
             "items": [
                 {
+                    'name': FILE_NAME,
+                    'title': 'Name',
+                    'type': 'string'
+                },
+                {
                     "name": DEVICES_DATA,
                     "title": "Device List",
                     "description": "List of details per device to import",
@@ -73,7 +79,7 @@ class JsonFileAdapter(AdapterBase):
                 }
             ],
             "required": [
-                DEVICES_DATA, USERS_DATA
+                FILE_NAME, DEVICES_DATA, USERS_DATA
             ],
             "type": "array"
         }
@@ -99,7 +105,7 @@ class JsonFileAdapter(AdapterBase):
             yield user
 
     def _get_client_id(self, client_config):
-        return "1"
+        return client_config['file_name']
 
     def _test_reachability(self, client_config):
         raise NotImplementedError()

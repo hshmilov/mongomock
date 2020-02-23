@@ -50,6 +50,9 @@ class EntitiesPage(Page):
     QUERY_BRACKET_RIGHT_CSS = '.expression-bracket-right'
     QUERY_NOT_CSS = '.expression-not'
     QUERY_CONTEXT_CSS = '.expression-context'
+    QUERY_ASSET_ENTITY_ADAPTER_CSS = '.x-condition-asset-entity .parent-field .x-select-symbol'
+    QUERY_ASSET_ENTITY_CHILDREN_CSS = '.x-condition-asset-entity-child'
+    QUERY_ASSET_ENTITY_FIELD_CSS = '.child-field .x-select'
     QUERY_REMOVE_EXPRESSION_CSS = '.x-button.expression-remove'
     QUERY_LOGIC_DROPDOWN_CSS = 'div.x-select.x-select-logic'
     QUERY_ERROR_CSS = '.x-filter .error-text'
@@ -423,17 +426,45 @@ class EntitiesPage(Page):
             expression_element = self.driver
         expression_element.find_element_by_css_selector(self.QUERY_NOT_CSS).click()
 
+    def select_context_all(self, expression_element):
+        self.select_option_without_search(self.QUERY_CONTEXT_CSS,
+                                          self.DROPDOWN_SELECTED_OPTION_CSS,
+                                          'Aggregated Data',
+                                          parent=expression_element)
+
     def select_context_obj(self, expression_element):
         self.select_option_without_search(self.QUERY_CONTEXT_CSS,
                                           self.DROPDOWN_SELECTED_OPTION_CSS,
                                           'Complex Field',
                                           parent=expression_element)
 
-    def select_context_all(self, expression_element):
+    def select_context_ent(self, expression_element):
         self.select_option_without_search(self.QUERY_CONTEXT_CSS,
                                           self.DROPDOWN_SELECTED_OPTION_CSS,
-                                          'Aggregated Data',
+                                          'Asset Entity',
                                           parent=expression_element)
+
+    def select_asset_entity_adapter(self, expression_element, adapter_title):
+        self.select_option(self.QUERY_ASSET_ENTITY_ADAPTER_CSS,
+                           self.DROPDOWN_TEXT_BOX_CSS,
+                           self.DROPDOWN_SELECTED_OPTION_CSS,
+                           adapter_title,
+                           parent=expression_element)
+
+    def get_asset_entity_children(self, expression_element):
+        if not expression_element:
+            expression_element = self.driver
+        return expression_element.find_elements_by_css_selector(self.QUERY_ASSET_ENTITY_CHILDREN_CSS)
+
+    def get_asset_entity_children_first(self):
+        return self.get_asset_entity_children(self.find_expressions()[0])
+
+    def select_asset_entity_field(self, child_element, field_title):
+        self.select_option(self.QUERY_ASSET_ENTITY_FIELD_CSS,
+                           self.DROPDOWN_TEXT_BOX_CSS,
+                           self.DROPDOWN_SELECTED_OPTION_CSS,
+                           field_title,
+                           parent=child_element)
 
     def remove_query_expression(self, expression_element):
         expression_element.find_element_by_css_selector(self.QUERY_REMOVE_EXPRESSION_CSS).click()
@@ -456,7 +487,7 @@ class EntitiesPage(Page):
             parent = self.driver
         return parent.find_elements_by_css_selector(self.QUERY_CONDITIONS_CSS)
 
-    def add_query_obj_condition(self, parent=None):
+    def add_query_child_condition(self, parent=None):
         if not parent:
             parent = self.driver
         parent.find_element_by_css_selector(self.QUERY_NEST_EXPRESSION_CSS).click()
@@ -477,6 +508,54 @@ class EntitiesPage(Page):
         self.fill_query_string_value(field_value)
         self.wait_for_table_to_load()
         self.close_dropdown()
+
+    def build_asset_entity_query(self, adapter_name, field_name_1, value_string_1, field_name_2, value_string_2):
+        """
+        Use Query Wizard to create a query on Asset Entity context
+        Fetched data will match given given fields and values, with in given Adapters' entities (device / user)
+        """
+        self.switch_to_page()
+        self.click_query_wizard()
+        expression = self.find_expressions()[0]
+        self.select_context_ent(expression)
+        self.select_asset_entity_adapter(expression, adapter_name)
+        self.add_query_child_condition(expression)
+        children = self.get_asset_entity_children(expression)
+        self.select_asset_entity_field(children[0], field_name_1)
+        self.select_query_comp_op(self.QUERY_COMP_EQUALS, children[0])
+        self.fill_query_string_value(value_string_1, children[0])
+        self.select_asset_entity_field(children[1], field_name_2)
+        self.select_query_comp_op(self.QUERY_COMP_EQUALS, children[1])
+        self.fill_query_string_value(value_string_2, children[1])
+
+    def change_asset_entity_query(self, child_element, field_name=None, value_string=None):
+        """
+        Assumes Query Wizard is open with some Asset Entity query
+        Change the field / value of given child condition to those given
+        """
+        if field_name:
+            self.select_asset_entity_field(child_element, field_name)
+        if value_string:
+            self.fill_query_string_value(value_string, child_element)
+
+    def change_query_params(self, field, value, comp_op, field_type, subfield=None, obj=False):
+        """
+        Assumes Query Wizard is open and contains one built query
+        Change the field, operator and value to those given
+        """
+        expressions = self.find_expressions()
+        assert len(expressions) == 1
+        if obj:
+            self.select_context_obj(expressions[0])
+        self.select_query_field(field, expressions[0])
+        conditions = self.find_conditions()
+        if len(conditions) == 1 and subfield:
+            self.select_query_field(subfield, conditions[0])
+        self.select_query_comp_op(comp_op, expressions[0])
+        if field_type == 'string':
+            self.select_query_value(value, expressions[0])
+        elif field_type == 'integer':
+            self.select_query_value_without_search(value, expressions[0])
 
     def find_rows_with_data(self):
         return self.driver.find_elements_by_xpath(self.TABLE_DATA_ROWS_XPATH)
