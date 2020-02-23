@@ -111,3 +111,4 @@ ucsmsdk==0.9.8
 pem==19.3.0
 requests_ntlm==1.1.0
 dicttoxml==1.7.4
+python-gvm==1.2.0
