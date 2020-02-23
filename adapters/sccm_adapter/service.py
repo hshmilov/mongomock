@@ -149,6 +149,15 @@ class SccmAdapter(AdapterBase, Configurable):
             except Exception:
                 logger.warning(f'Problem getting local admins dict', exc_info=True)
 
+            ram_dict = dict()
+            try:
+                for ram_data in client_data.query(consts.RAM_QUERY):
+                    asset_id = ram_data.get('ResourceID')
+                    if not asset_id or not ram_data.get('Capacity0'):
+                        continue
+                    ram_dict[asset_id] = ram_data.get('Capacity0')
+            except Exception:
+                logger.warning(f'Problem getting collections data', exc_info=True)
             collections_data_dict = dict()
             try:
                 for collection_data_data in client_data.query(consts.COLLECTIONS_DATA_QUERY):
@@ -392,7 +401,7 @@ class SccmAdapter(AdapterBase, Configurable):
                     asset_lenovo_dict, asset_chasis_dict, asset_encryption_dict,\
                     asset_vm_dict, owner_dict, tpm_dict, computer_dict,\
                     clients_dict, os_dict, nics_dict, collections_dict,\
-                    collections_data_dict, compliance_dict, local_admins_dict, drivers_dict
+                    collections_data_dict, compliance_dict, local_admins_dict, drivers_dict, ram_dict
 
     def _clients_schema(self):
         return {
@@ -428,7 +437,7 @@ class SccmAdapter(AdapterBase, Configurable):
             clients_dict,
             os_dict,
             nics_dict,
-            collections_dict, collections_data_dict, compliance_dict, local_admins_dict, drivers_dict
+            collections_dict, collections_data_dict, compliance_dict, local_admins_dict, drivers_dict, ram_dict
         ) in devices_raw_data:
             try:
                 device_id = device_raw.get('Distinguished_Name0')
@@ -556,9 +565,10 @@ class SccmAdapter(AdapterBase, Configurable):
                     device.free_physical_memory = (
                         float(free_physical_memory) / (1024 ** 2) if free_physical_memory else None
                     )
-                    total_physical_memory = device_raw.get('TotalPhysicalMemory0')
+                    total_physical_memory = device_raw.get('TotalPhysicalMemory0')\
+                        or ram_dict.get(device_raw.get('ResourceID'))
                     device.total_physical_memory = (
-                        float(device_raw.get('TotalPhysicalMemory0')) / (1024 ** 2) if total_physical_memory else None
+                        float(total_physical_memory) / (1024 ** 1) if total_physical_memory else None
                     )
                     if total_physical_memory and free_physical_memory:
                         device.physical_memory_percentage = 100 * (
