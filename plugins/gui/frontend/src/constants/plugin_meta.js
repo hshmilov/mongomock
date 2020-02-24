@@ -231,9 +231,9 @@ export const pluginMeta = {
         description: 'Medigate is a medical device security platform that protects connected medical devices on health care provider networks, allowing inventory management and facilitating detection and prevention capabilities.'
     },
     guardium_adapter: {
-        title: 'IBM Guardium Vulnerability Assessment',
+        title: 'IBM Guardium',
         link: 'https://docs.axonius.com/docs/ibm-guardium-vulnerability-assessment',
-        description: 'IBM Guardium Vulnerability Assessment scans data infrastructures (databases, data warehouses and big data environments) to detect vulnerabilities and exposures such as missing patches, weak passwords, unauthorized changes, and misconfigured privileges and suggests remedial actions.'
+        description: 'IBM Guardium prevents leaks from databases, data warehouses, and Big Data environments. It ensures the integrity of information and automates compliance controls across heterogeneous environments.'
     },
     specops_adapter: {
         title: 'Specops Inventory',
