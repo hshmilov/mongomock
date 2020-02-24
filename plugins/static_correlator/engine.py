@@ -175,7 +175,16 @@ def is_claroty_ten_adapter_more_mac(adapter_device):
     if adapter_device.get('plugin_name') not in ['claroty_adapter', 'tenable_io_adapter']:
         return False
     macs = adapter_device.get(NORMALIZED_MACS)
-    if macs and len(macs) > 0:
+    if macs and len(macs) > 1:
+        return True
+    return False
+
+
+def is_esx_and_hostname_more_mac(adapter_device):
+    if adapter_device.get('plugin_name') not in ['esx_adapter']:
+        return False
+    macs = adapter_device.get(NORMALIZED_MACS)
+    if macs and len(macs) > 1 and get_hostname(adapter_device):
         return True
     return False
 
@@ -436,6 +445,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
             filtered_adapters_list = filter(lambda adap: not is_snow_adapter(adap), filtered_adapters_list)
 
         filtered_adapters_list = filter(lambda adap: not is_claroty_ten_adapter_more_mac(adap), filtered_adapters_list)
+        filtered_adapters_list = filter(lambda adap: not is_esx_and_hostname_more_mac(adap), filtered_adapters_list)
 
         allow_old_mac_list = ALLOW_OLD_MAC_LIST
 
