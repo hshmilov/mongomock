@@ -81,11 +81,15 @@ BSON_SPEC_MAX_INT = 0x7fffffffffffffff
 pair_comparator = NewType('pair_comparator', FunctionType)
 parameter_function = NewType('parameter_function', Callable)
 
-oui_data = open(os.path.join(axonius.__path__[0], 'oui.csv'), encoding='utf8').read()
+# New versions can be downloaded from the following resources:
+# https://github.com/wireshark/wireshark/raw/master/manuf
+# https://gitlab.com/wireshark/wireshark/raw/master/manuf
+# https://code.wireshark.org/review/gitweb?p=wireshark.git;a=blob_plain;f=manuf;hb=HEAD
+oui_data = open(os.path.join(axonius.__path__[0], 'manuf'), encoding='utf8').read()
 
 # dict: MAC 3 first bytes to manufacturer data
-mac_manufacturer_details = {x[0].replace(':', ''): x for x in
-                            csv.DictReader(oui_data.splitlines(), csv.Sniffer().sniff(oui_data[:1024])).reader}
+mac_manufacturer_details = {x[0].replace(':', ''): x for x in [x.split('\t') for x
+                                                               in oui_data[oui_data.find('00:00:00'):].splitlines()]}
 del oui_data
 
 
@@ -118,7 +122,7 @@ def get_manufacturer_from_mac(mac: str) -> Optional[str]:
         for index in [6, 7, 8, 9]:
             manufacturer = mac_manufacturer_details.get(formatted_mac[:index])
             if manufacturer:
-                return f'{manufacturer[2]} ({manufacturer[3]})'
+                return f'{manufacturer[1]} ({manufacturer[2]})'
         return None
 
 

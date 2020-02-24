@@ -166,7 +166,7 @@ def test_arp_data(mocks):
         'network_interfaces': [
             {
                 'mac': '90:6C:AC:FE:5B:BC',
-                'manufacturer': 'Fortinet Inc (899 Kifer Road Sunnyvale California 94086 US)',
+                'manufacturer': 'Fortinet (Fortinet, Inc.)',
                 'ips': ['192.168.10.1'],
                 'ips_raw': [3_232_238_081],
             }
@@ -1664,7 +1664,7 @@ def test_basic_info_parsed_data(mocks):
                         3232238086
                     ],
                     'mac': '00:1B:8F:DF:DF:40',
-                    'manufacturer': 'Cisco Systems, Inc (80 West Tasman Drive San Jose CA 94568 US)',
+                    'manufacturer': 'Cisco (Cisco Systems, Inc)',
                     'mtu': '1500',
                     'name': 'Vlan1',
                     'operational_status': 'Up',
@@ -1677,7 +1677,7 @@ def test_basic_info_parsed_data(mocks):
                 {
                     'admin_status': 'Up',
                     'mac': '00:1B:8F:DF:DF:01',
-                    'manufacturer': 'Cisco Systems, Inc (80 West Tasman Drive San Jose CA 94568 US)',
+                    'manufacturer': 'Cisco (Cisco Systems, Inc)',
                     'mtu': '1500',
                     'name': 'GigabitEthernet0/1',
                     'operational_status': 'Up',
@@ -1692,7 +1692,7 @@ def test_basic_info_parsed_data(mocks):
                 {
                     'admin_status': 'Up',
                     'mac': '00:1B:8F:DF:DF:02',
-                    'manufacturer': 'Cisco Systems, Inc (80 West Tasman Drive San Jose CA 94568 US)',
+                    'manufacturer': 'Cisco (Cisco Systems, Inc)',
                     'mtu': '1500',
                     'name': 'GigabitEthernet0/2',
                     'operational_status': 'Down',
@@ -1707,7 +1707,7 @@ def test_basic_info_parsed_data(mocks):
                 {
                     'admin_status': 'Up',
                     'mac': '00:1B:8F:DF:DF:03',
-                    'manufacturer': 'Cisco Systems, Inc (80 West Tasman Drive San Jose CA 94568 US)',
+                    'manufacturer': 'Cisco (Cisco Systems, Inc)',
                     'mtu': '1500',
                     'name': 'GigabitEthernet0/3',
                     'operational_status': 'Down',
@@ -1722,7 +1722,7 @@ def test_basic_info_parsed_data(mocks):
                 {
                     'admin_status': 'Up',
                     'mac': '00:1B:8F:DF:DF:04',
-                    'manufacturer': 'Cisco Systems, Inc (80 West Tasman Drive San Jose CA 94568 US)',
+                    'manufacturer': 'Cisco (Cisco Systems, Inc)',
                     'mtu': '1500',
                     'name': 'GigabitEthernet0/4',
                     'operational_status': 'Down',
@@ -1737,7 +1737,7 @@ def test_basic_info_parsed_data(mocks):
                 {
                     'admin_status': 'Up',
                     'mac': '00:1B:8F:DF:DF:05',
-                    'manufacturer': 'Cisco Systems, Inc (80 West Tasman Drive San Jose CA 94568 US)',
+                    'manufacturer': 'Cisco (Cisco Systems, Inc)',
                     'mtu': '1500',
                     'name': 'GigabitEthernet0/5',
                     'operational_status': 'Down',
@@ -1752,7 +1752,7 @@ def test_basic_info_parsed_data(mocks):
                 {
                     'admin_status': 'Up',
                     'mac': '00:1B:8F:DF:DF:06',
-                    'manufacturer': 'Cisco Systems, Inc (80 West Tasman Drive San Jose CA 94568 US)',
+                    'manufacturer': 'Cisco (Cisco Systems, Inc)',
                     'mtu': '1500',
                     'name': 'GigabitEthernet0/6',
                     'operational_status': 'Down',
@@ -1767,7 +1767,7 @@ def test_basic_info_parsed_data(mocks):
                 {
                     'admin_status': 'Up',
                     'mac': '00:1B:8F:DF:DF:07',
-                    'manufacturer': 'Cisco Systems, Inc (80 West Tasman Drive San Jose CA 94568 US)',
+                    'manufacturer': 'Cisco (Cisco Systems, Inc)',
                     'mtu': '1500',
                     'name': 'GigabitEthernet0/7',
                     'operational_status': 'Up',
@@ -1782,7 +1782,7 @@ def test_basic_info_parsed_data(mocks):
                 {
                     'admin_status': 'Up',
                     'mac': '00:1B:8F:DF:DF:08',
-                    'manufacturer': 'Cisco Systems, Inc (80 West Tasman Drive San Jose CA 94568 US)',
+                    'manufacturer': 'Cisco (Cisco Systems, Inc)',
                     'mtu': '1500',
                     'name': 'GigabitEthernet0/8',
                     'operational_status': 'Down',
@@ -1797,7 +1797,7 @@ def test_basic_info_parsed_data(mocks):
                 {
                     'admin_status': 'Up',
                     'mac': '00:1B:8F:DF:DF:09',
-                    'manufacturer': 'Cisco Systems, Inc (80 West Tasman Drive San Jose CA 94568 US)',
+                    'manufacturer': 'Cisco (Cisco Systems, Inc)',
                     'mtu': '1500',
                     'name': 'GigabitEthernet0/9',
                     'operational_status': 'Up',
@@ -1812,7 +1812,7 @@ def test_basic_info_parsed_data(mocks):
                 {
                     'admin_status': 'Up',
                     'mac': '00:1B:8F:DF:DF:0A',
-                    'manufacturer': 'Cisco Systems, Inc (80 West Tasman Drive San Jose CA 94568 US)',
+                    'manufacturer': 'Cisco (Cisco Systems, Inc)',
                     'mtu': '1500',
                     'name': 'GigabitEthernet0/10',
                     'operational_status': 'Down',
@@ -1827,7 +1827,7 @@ def test_basic_info_parsed_data(mocks):
                 {
                     'admin_status': 'Up',
                     'mac': '00:1B:8F:DF:DF:0B',
-                    'manufacturer': 'Cisco Systems, Inc (80 West Tasman Drive San Jose CA 94568 US)',
+                    'manufacturer': 'Cisco (Cisco Systems, Inc)',
                     'mtu': '1500',
                     'name': 'GigabitEthernet0/11',
                     'operational_status': 'Down',
@@ -1842,7 +1842,7 @@ def test_basic_info_parsed_data(mocks):
                 {
                     'admin_status': 'Up',
                     'mac': '00:1B:8F:DF:DF:0C',
-                    'manufacturer': 'Cisco Systems, Inc (80 West Tasman Drive San Jose CA 94568 US)',
+                    'manufacturer': 'Cisco (Cisco Systems, Inc)',
                     'mtu': '1500',
                     'name': 'GigabitEthernet0/12',
                     'operational_status': 'Down',
@@ -1857,7 +1857,7 @@ def test_basic_info_parsed_data(mocks):
                 {
                     'admin_status': 'Up',
                     'mac': '00:1B:8F:DF:DF:0D',
-                    'manufacturer': 'Cisco Systems, Inc (80 West Tasman Drive San Jose CA 94568 US)',
+                    'manufacturer': 'Cisco (Cisco Systems, Inc)',
                     'mtu': '1500',
                     'name': 'GigabitEthernet0/13',
                     'operational_status': 'Down',
@@ -1872,7 +1872,7 @@ def test_basic_info_parsed_data(mocks):
                 {
                     'admin_status': 'Up',
                     'mac': '00:1B:8F:DF:DF:0E',
-                    'manufacturer': 'Cisco Systems, Inc (80 West Tasman Drive San Jose CA 94568 US)',
+                    'manufacturer': 'Cisco (Cisco Systems, Inc)',
                     'mtu': '1500',
                     'name': 'GigabitEthernet0/14',
                     'operational_status': 'Down',
@@ -1887,7 +1887,7 @@ def test_basic_info_parsed_data(mocks):
                 {
                     'admin_status': 'Up',
                     'mac': '00:1B:8F:DF:DF:0F',
-                    'manufacturer': 'Cisco Systems, Inc (80 West Tasman Drive San Jose CA 94568 US)',
+                    'manufacturer': 'Cisco (Cisco Systems, Inc)',
                     'mtu': '1500',
                     'name': 'GigabitEthernet0/15',
                     'operational_status': 'Down',
@@ -1902,7 +1902,7 @@ def test_basic_info_parsed_data(mocks):
                 {
                     'admin_status': 'Up',
                     'mac': '00:1B:8F:DF:DF:10',
-                    'manufacturer': 'Cisco Systems, Inc (80 West Tasman Drive San Jose CA 94568 US)',
+                    'manufacturer': 'Cisco (Cisco Systems, Inc)',
                     'mtu': '1500',
                     'name': 'GigabitEthernet0/16',
                     'operational_status': 'Down',
@@ -1917,7 +1917,7 @@ def test_basic_info_parsed_data(mocks):
                 {
                     'admin_status': 'Up',
                     'mac': '00:1B:8F:DF:DF:11',
-                    'manufacturer': 'Cisco Systems, Inc (80 West Tasman Drive San Jose CA 94568 US)',
+                    'manufacturer': 'Cisco (Cisco Systems, Inc)',
                     'mtu': '1500',
                     'name': 'GigabitEthernet0/17',
                     'operational_status': 'Down',
@@ -1932,7 +1932,7 @@ def test_basic_info_parsed_data(mocks):
                 {
                     'admin_status': 'Up',
                     'mac': '00:1B:8F:DF:DF:12',
-                    'manufacturer': 'Cisco Systems, Inc (80 West Tasman Drive San Jose CA 94568 US)',
+                    'manufacturer': 'Cisco (Cisco Systems, Inc)',
                     'mtu': '1500',
                     'name': 'GigabitEthernet0/18',
                     'operational_status': 'Down',
@@ -1947,7 +1947,7 @@ def test_basic_info_parsed_data(mocks):
                 {
                     'admin_status': 'Up',
                     'mac': '00:1B:8F:DF:DF:13',
-                    'manufacturer': 'Cisco Systems, Inc (80 West Tasman Drive San Jose CA 94568 US)',
+                    'manufacturer': 'Cisco (Cisco Systems, Inc)',
                     'mtu': '1500',
                     'name': 'GigabitEthernet0/19',
                     'operational_status': 'Down',
@@ -1962,7 +1962,7 @@ def test_basic_info_parsed_data(mocks):
                 {
                     'admin_status': 'Up',
                     'mac': '00:1B:8F:DF:DF:14',
-                    'manufacturer': 'Cisco Systems, Inc (80 West Tasman Drive San Jose CA 94568 US)',
+                    'manufacturer': 'Cisco (Cisco Systems, Inc)',
                     'mtu': '1500',
                     'name': 'GigabitEthernet0/20',
                     'operational_status': 'Up',
@@ -1977,7 +1977,7 @@ def test_basic_info_parsed_data(mocks):
                 {
                     'admin_status': 'Up',
                     'mac': '00:1B:8F:DF:DF:15',
-                    'manufacturer': 'Cisco Systems, Inc (80 West Tasman Drive San Jose CA 94568 US)',
+                    'manufacturer': 'Cisco (Cisco Systems, Inc)',
                     'mtu': '1500',
                     'name': 'GigabitEthernet0/21',
                     'operational_status': 'Down',
@@ -1992,7 +1992,7 @@ def test_basic_info_parsed_data(mocks):
                 {
                     'admin_status': 'Up',
                     'mac': '00:1B:8F:DF:DF:16',
-                    'manufacturer': 'Cisco Systems, Inc (80 West Tasman Drive San Jose CA 94568 US)',
+                    'manufacturer': 'Cisco (Cisco Systems, Inc)',
                     'mtu': '1500',
                     'name': 'GigabitEthernet0/22',
                     'operational_status': 'Down',
@@ -2007,7 +2007,7 @@ def test_basic_info_parsed_data(mocks):
                 {
                     'admin_status': 'Up',
                     'mac': '00:1B:8F:DF:DF:17',
-                    'manufacturer': 'Cisco Systems, Inc (80 West Tasman Drive San Jose CA 94568 US)',
+                    'manufacturer': 'Cisco (Cisco Systems, Inc)',
                     'mtu': '1500',
                     'name': 'GigabitEthernet0/23',
                     'operational_status': 'Down',
@@ -2022,7 +2022,7 @@ def test_basic_info_parsed_data(mocks):
                 {
                     'admin_status': 'Up',
                     'mac': '00:1B:8F:DF:DF:18',
-                    'manufacturer': 'Cisco Systems, Inc (80 West Tasman Drive San Jose CA 94568 US)',
+                    'manufacturer': 'Cisco (Cisco Systems, Inc)',
                     'mtu': '1500',
                     'name': 'GigabitEthernet0/24',
                     'operational_status': 'Down',
@@ -2037,7 +2037,7 @@ def test_basic_info_parsed_data(mocks):
                 {
                     'admin_status': 'Up',
                     'mac': '00:1B:8F:DF:DF:19',
-                    'manufacturer': 'Cisco Systems, Inc (80 West Tasman Drive San Jose CA 94568 US)',
+                    'manufacturer': 'Cisco (Cisco Systems, Inc)',
                     'mtu': '1500',
                     'name': 'GigabitEthernet0/25',
                     'operational_status': 'Down',
@@ -2052,7 +2052,7 @@ def test_basic_info_parsed_data(mocks):
                 {
                     'admin_status': 'Up',
                     'mac': '00:1B:8F:DF:DF:1A',
-                    'manufacturer': 'Cisco Systems, Inc (80 West Tasman Drive San Jose CA 94568 US)',
+                    'manufacturer': 'Cisco (Cisco Systems, Inc)',
                     'mtu': '1500',
                     'name': 'GigabitEthernet0/26',
                     'operational_status': 'Up',
@@ -2067,7 +2067,7 @@ def test_basic_info_parsed_data(mocks):
                 {
                     'admin_status': 'Up',
                     'mac': '00:1B:8F:DF:DF:1B',
-                    'manufacturer': 'Cisco Systems, Inc (80 West Tasman Drive San Jose CA 94568 US)',
+                    'manufacturer': 'Cisco (Cisco Systems, Inc)',
                     'mtu': '1500',
                     'name': 'GigabitEthernet0/27',
                     'operational_status': 'Down',
@@ -2082,7 +2082,7 @@ def test_basic_info_parsed_data(mocks):
                 {
                     'admin_status': 'Up',
                     'mac': '00:1B:8F:DF:DF:1C',
-                    'manufacturer': 'Cisco Systems, Inc (80 West Tasman Drive San Jose CA 94568 US)',
+                    'manufacturer': 'Cisco (Cisco Systems, Inc)',
                     'mtu': '1500',
                     'name': 'GigabitEthernet0/28',
                     'operational_status': 'Down',
@@ -2097,7 +2097,7 @@ def test_basic_info_parsed_data(mocks):
                 {
                     'admin_status': 'Up',
                     'mac': '00:1B:8F:DF:DF:1D',
-                    'manufacturer': 'Cisco Systems, Inc (80 West Tasman Drive San Jose CA 94568 US)',
+                    'manufacturer': 'Cisco (Cisco Systems, Inc)',
                     'mtu': '1500',
                     'name': 'GigabitEthernet0/29',
                     'operational_status': 'Down',
@@ -2112,7 +2112,7 @@ def test_basic_info_parsed_data(mocks):
                 {
                     'admin_status': 'Up',
                     'mac': '00:1B:8F:DF:DF:1E',
-                    'manufacturer': 'Cisco Systems, Inc (80 West Tasman Drive San Jose CA 94568 US)',
+                    'manufacturer': 'Cisco (Cisco Systems, Inc)',
                     'mtu': '1500',
                     'name': 'GigabitEthernet0/30',
                     'operational_status': 'Down',
@@ -2127,7 +2127,7 @@ def test_basic_info_parsed_data(mocks):
                 {
                     'admin_status': 'Up',
                     'mac': '00:1B:8F:DF:DF:1F',
-                    'manufacturer': 'Cisco Systems, Inc (80 West Tasman Drive San Jose CA 94568 US)',
+                    'manufacturer': 'Cisco (Cisco Systems, Inc)',
                     'mtu': '1500',
                     'name': 'GigabitEthernet0/31',
                     'operational_status': 'Down',
@@ -2142,7 +2142,7 @@ def test_basic_info_parsed_data(mocks):
                 {
                     'admin_status': 'Up',
                     'mac': '00:1B:8F:DF:DF:20',
-                    'manufacturer': 'Cisco Systems, Inc (80 West Tasman Drive San Jose CA 94568 US)',
+                    'manufacturer': 'Cisco (Cisco Systems, Inc)',
                     'mtu': '1500',
                     'name': 'GigabitEthernet0/32',
                     'operational_status': 'Down',
@@ -2157,7 +2157,7 @@ def test_basic_info_parsed_data(mocks):
                 {
                     'admin_status': 'Up',
                     'mac': '00:1B:8F:DF:DF:21',
-                    'manufacturer': 'Cisco Systems, Inc (80 West Tasman Drive San Jose CA 94568 US)',
+                    'manufacturer': 'Cisco (Cisco Systems, Inc)',
                     'mtu': '1500',
                     'name': 'GigabitEthernet0/33',
                     'operational_status': 'Up',
@@ -2172,7 +2172,7 @@ def test_basic_info_parsed_data(mocks):
                 {
                     'admin_status': 'Up',
                     'mac': '00:1B:8F:DF:DF:22',
-                    'manufacturer': 'Cisco Systems, Inc (80 West Tasman Drive San Jose CA 94568 US)',
+                    'manufacturer': 'Cisco (Cisco Systems, Inc)',
                     'mtu': '1500',
                     'name': 'GigabitEthernet0/34',
                     'operational_status': 'Down',
@@ -2187,7 +2187,7 @@ def test_basic_info_parsed_data(mocks):
                 {
                     'admin_status': 'Up',
                     'mac': '00:1B:8F:DF:DF:23',
-                    'manufacturer': 'Cisco Systems, Inc (80 West Tasman Drive San Jose CA 94568 US)',
+                    'manufacturer': 'Cisco (Cisco Systems, Inc)',
                     'mtu': '1500',
                     'name': 'GigabitEthernet0/35',
                     'operational_status': 'Up',
@@ -2202,7 +2202,7 @@ def test_basic_info_parsed_data(mocks):
                 {
                     'admin_status': 'Up',
                     'mac': '00:1B:8F:DF:DF:24',
-                    'manufacturer': 'Cisco Systems, Inc (80 West Tasman Drive San Jose CA 94568 US)',
+                    'manufacturer': 'Cisco (Cisco Systems, Inc)',
                     'mtu': '1500',
                     'name': 'GigabitEthernet0/36',
                     'operational_status': 'Down',
@@ -2217,7 +2217,7 @@ def test_basic_info_parsed_data(mocks):
                 {
                     'admin_status': 'Up',
                     'mac': '00:1B:8F:DF:DF:25',
-                    'manufacturer': 'Cisco Systems, Inc (80 West Tasman Drive San Jose CA 94568 US)',
+                    'manufacturer': 'Cisco (Cisco Systems, Inc)',
                     'mtu': '1500',
                     'name': 'GigabitEthernet0/37',
                     'operational_status': 'Down',
@@ -2232,7 +2232,7 @@ def test_basic_info_parsed_data(mocks):
                 {
                     'admin_status': 'Up',
                     'mac': '00:1B:8F:DF:DF:26',
-                    'manufacturer': 'Cisco Systems, Inc (80 West Tasman Drive San Jose CA 94568 US)',
+                    'manufacturer': 'Cisco (Cisco Systems, Inc)',
                     'mtu': '1500',
                     'name': 'GigabitEthernet0/38',
                     'operational_status': 'Up',
@@ -2247,7 +2247,7 @@ def test_basic_info_parsed_data(mocks):
                 {
                     'admin_status': 'Up',
                     'mac': '00:1B:8F:DF:DF:27',
-                    'manufacturer': 'Cisco Systems, Inc (80 West Tasman Drive San Jose CA 94568 US)',
+                    'manufacturer': 'Cisco (Cisco Systems, Inc)',
                     'mtu': '1500',
                     'name': 'GigabitEthernet0/39',
                     'operational_status': 'Down',
@@ -2262,7 +2262,7 @@ def test_basic_info_parsed_data(mocks):
                 {
                     'admin_status': 'Down',
                     'mac': '00:1B:8F:DF:DF:28',
-                    'manufacturer': 'Cisco Systems, Inc (80 West Tasman Drive San Jose CA 94568 US)',
+                    'manufacturer': 'Cisco (Cisco Systems, Inc)',
                     'mtu': '1500',
                     'name': 'GigabitEthernet0/40',
                     'operational_status': 'Down',
@@ -2277,7 +2277,7 @@ def test_basic_info_parsed_data(mocks):
                 {
                     'admin_status': 'Up',
                     'mac': '00:1B:8F:DF:DF:29',
-                    'manufacturer': 'Cisco Systems, Inc (80 West Tasman Drive San Jose CA 94568 US)',
+                    'manufacturer': 'Cisco (Cisco Systems, Inc)',
                     'mtu': '1500',
                     'name': 'GigabitEthernet0/41',
                     'operational_status': 'Up',
@@ -2292,7 +2292,7 @@ def test_basic_info_parsed_data(mocks):
                 {
                     'admin_status': 'Up',
                     'mac': '00:1B:8F:DF:DF:2A',
-                    'manufacturer': 'Cisco Systems, Inc (80 West Tasman Drive San Jose CA 94568 US)',
+                    'manufacturer': 'Cisco (Cisco Systems, Inc)',
                     'mtu': '1500',
                     'name': 'GigabitEthernet0/42',
                     'operational_status': 'Down',
@@ -2307,7 +2307,7 @@ def test_basic_info_parsed_data(mocks):
                 {
                     'admin_status': 'Up',
                     'mac': '00:1B:8F:DF:DF:2B',
-                    'manufacturer': 'Cisco Systems, Inc (80 West Tasman Drive San Jose CA 94568 US)',
+                    'manufacturer': 'Cisco (Cisco Systems, Inc)',
                     'mtu': '1500',
                     'name': 'GigabitEthernet0/43',
                     'operational_status': 'Down',
@@ -2322,7 +2322,7 @@ def test_basic_info_parsed_data(mocks):
                 {
                     'admin_status': 'Up',
                     'mac': '00:1B:8F:DF:DF:2C',
-                    'manufacturer': 'Cisco Systems, Inc (80 West Tasman Drive San Jose CA 94568 US)',
+                    'manufacturer': 'Cisco (Cisco Systems, Inc)',
                     'mtu': '1500',
                     'name': 'GigabitEthernet0/44',
                     'operational_status': 'Down',
@@ -2337,7 +2337,7 @@ def test_basic_info_parsed_data(mocks):
                 {
                     'admin_status': 'Up',
                     'mac': '00:1B:8F:DF:DF:2D',
-                    'manufacturer': 'Cisco Systems, Inc (80 West Tasman Drive San Jose CA 94568 US)',
+                    'manufacturer': 'Cisco (Cisco Systems, Inc)',
                     'mtu': '1500',
                     'name': 'GigabitEthernet0/45',
                     'operational_status': 'Down',
@@ -2352,7 +2352,7 @@ def test_basic_info_parsed_data(mocks):
                 {
                     'admin_status': 'Up',
                     'mac': '00:1B:8F:DF:DF:2E',
-                    'manufacturer': 'Cisco Systems, Inc (80 West Tasman Drive San Jose CA 94568 US)',
+                    'manufacturer': 'Cisco (Cisco Systems, Inc)',
                     'mtu': '1500',
                     'name': 'GigabitEthernet0/46',
                     'operational_status': 'Down',
@@ -2367,7 +2367,7 @@ def test_basic_info_parsed_data(mocks):
                 {
                     'admin_status': 'Up',
                     'mac': '00:1B:8F:DF:DF:2F',
-                    'manufacturer': 'Cisco Systems, Inc (80 West Tasman Drive San Jose CA 94568 US)',
+                    'manufacturer': 'Cisco (Cisco Systems, Inc)',
                     'mtu': '1500',
                     'name': 'GigabitEthernet0/47',
                     'operational_status': 'Down',
@@ -2382,7 +2382,7 @@ def test_basic_info_parsed_data(mocks):
                 {
                     'admin_status': 'Up',
                     'mac': '00:1B:8F:DF:DF:30',
-                    'manufacturer': 'Cisco Systems, Inc (80 West Tasman Drive San Jose CA 94568 US)',
+                    'manufacturer': 'Cisco (Cisco Systems, Inc)',
                     'mtu': '1500',
                     'name': 'GigabitEthernet0/48',
                     'operational_status': 'Up',
@@ -2492,7 +2492,7 @@ def test_basic_info_devices(mocks):
                     3232238086
                 ],
                 'mac': '00:1B:8F:DF:DF:40',
-                'manufacturer': 'Cisco Systems, Inc (80 West Tasman Drive San Jose CA 94568 US)',
+                'manufacturer': 'Cisco (Cisco Systems, Inc)',
                 'mtu': '1500',
                 'name': 'Vlan1',
                 'operational_status': 'Up',
@@ -2505,7 +2505,7 @@ def test_basic_info_devices(mocks):
             {
                 'admin_status': 'Up',
                 'mac': '00:1B:8F:DF:DF:01',
-                'manufacturer': 'Cisco Systems, Inc (80 West Tasman Drive San Jose CA 94568 US)',
+                'manufacturer': 'Cisco (Cisco Systems, Inc)',
                 'mtu': '1500',
                 'name': 'GigabitEthernet0/1',
                 'operational_status': 'Up',
@@ -2520,7 +2520,7 @@ def test_basic_info_devices(mocks):
             {
                 'admin_status': 'Up',
                 'mac': '00:1B:8F:DF:DF:02',
-                'manufacturer': 'Cisco Systems, Inc (80 West Tasman Drive San Jose CA 94568 US)',
+                'manufacturer': 'Cisco (Cisco Systems, Inc)',
                 'mtu': '1500',
                 'name': 'GigabitEthernet0/2',
                 'operational_status': 'Down',
@@ -2535,7 +2535,7 @@ def test_basic_info_devices(mocks):
             {
                 'admin_status': 'Up',
                 'mac': '00:1B:8F:DF:DF:03',
-                'manufacturer': 'Cisco Systems, Inc (80 West Tasman Drive San Jose CA 94568 US)',
+                'manufacturer': 'Cisco (Cisco Systems, Inc)',
                 'mtu': '1500',
                 'name': 'GigabitEthernet0/3',
                 'operational_status': 'Down',
@@ -2550,7 +2550,7 @@ def test_basic_info_devices(mocks):
             {
                 'admin_status': 'Up',
                 'mac': '00:1B:8F:DF:DF:04',
-                'manufacturer': 'Cisco Systems, Inc (80 West Tasman Drive San Jose CA 94568 US)',
+                'manufacturer': 'Cisco (Cisco Systems, Inc)',
                 'mtu': '1500',
                 'name': 'GigabitEthernet0/4',
                 'operational_status': 'Down',
@@ -2565,7 +2565,7 @@ def test_basic_info_devices(mocks):
             {
                 'admin_status': 'Up',
                 'mac': '00:1B:8F:DF:DF:05',
-                'manufacturer': 'Cisco Systems, Inc (80 West Tasman Drive San Jose CA 94568 US)',
+                'manufacturer': 'Cisco (Cisco Systems, Inc)',
                 'mtu': '1500',
                 'name': 'GigabitEthernet0/5',
                 'operational_status': 'Down',
@@ -2580,7 +2580,7 @@ def test_basic_info_devices(mocks):
             {
                 'admin_status': 'Up',
                 'mac': '00:1B:8F:DF:DF:06',
-                'manufacturer': 'Cisco Systems, Inc (80 West Tasman Drive San Jose CA 94568 US)',
+                'manufacturer': 'Cisco (Cisco Systems, Inc)',
                 'mtu': '1500',
                 'name': 'GigabitEthernet0/6',
                 'operational_status': 'Down',
@@ -2595,7 +2595,7 @@ def test_basic_info_devices(mocks):
             {
                 'admin_status': 'Up',
                 'mac': '00:1B:8F:DF:DF:07',
-                'manufacturer': 'Cisco Systems, Inc (80 West Tasman Drive San Jose CA 94568 US)',
+                'manufacturer': 'Cisco (Cisco Systems, Inc)',
                 'mtu': '1500',
                 'name': 'GigabitEthernet0/7',
                 'operational_status': 'Up',
@@ -2610,7 +2610,7 @@ def test_basic_info_devices(mocks):
             {
                 'admin_status': 'Up',
                 'mac': '00:1B:8F:DF:DF:08',
-                'manufacturer': 'Cisco Systems, Inc (80 West Tasman Drive San Jose CA 94568 US)',
+                'manufacturer': 'Cisco (Cisco Systems, Inc)',
                 'mtu': '1500',
                 'name': 'GigabitEthernet0/8',
                 'operational_status': 'Down',
@@ -2625,7 +2625,7 @@ def test_basic_info_devices(mocks):
             {
                 'admin_status': 'Up',
                 'mac': '00:1B:8F:DF:DF:09',
-                'manufacturer': 'Cisco Systems, Inc (80 West Tasman Drive San Jose CA 94568 US)',
+                'manufacturer': 'Cisco (Cisco Systems, Inc)',
                 'mtu': '1500',
                 'name': 'GigabitEthernet0/9',
                 'operational_status': 'Up',
@@ -2640,7 +2640,7 @@ def test_basic_info_devices(mocks):
             {
                 'admin_status': 'Up',
                 'mac': '00:1B:8F:DF:DF:0A',
-                'manufacturer': 'Cisco Systems, Inc (80 West Tasman Drive San Jose CA 94568 US)',
+                'manufacturer': 'Cisco (Cisco Systems, Inc)',
                 'mtu': '1500',
                 'name': 'GigabitEthernet0/10',
                 'operational_status': 'Down',
@@ -2655,7 +2655,7 @@ def test_basic_info_devices(mocks):
             {
                 'admin_status': 'Up',
                 'mac': '00:1B:8F:DF:DF:0B',
-                'manufacturer': 'Cisco Systems, Inc (80 West Tasman Drive San Jose CA 94568 US)',
+                'manufacturer': 'Cisco (Cisco Systems, Inc)',
                 'mtu': '1500',
                 'name': 'GigabitEthernet0/11',
                 'operational_status': 'Down',
@@ -2670,7 +2670,7 @@ def test_basic_info_devices(mocks):
             {
                 'admin_status': 'Up',
                 'mac': '00:1B:8F:DF:DF:0C',
-                'manufacturer': 'Cisco Systems, Inc (80 West Tasman Drive San Jose CA 94568 US)',
+                'manufacturer': 'Cisco (Cisco Systems, Inc)',
                 'mtu': '1500',
                 'name': 'GigabitEthernet0/12',
                 'operational_status': 'Down',
@@ -2685,7 +2685,7 @@ def test_basic_info_devices(mocks):
             {
                 'admin_status': 'Up',
                 'mac': '00:1B:8F:DF:DF:0D',
-                'manufacturer': 'Cisco Systems, Inc (80 West Tasman Drive San Jose CA 94568 US)',
+                'manufacturer': 'Cisco (Cisco Systems, Inc)',
                 'mtu': '1500',
                 'name': 'GigabitEthernet0/13',
                 'operational_status': 'Down',
@@ -2700,7 +2700,7 @@ def test_basic_info_devices(mocks):
             {
                 'admin_status': 'Up',
                 'mac': '00:1B:8F:DF:DF:0E',
-                'manufacturer': 'Cisco Systems, Inc (80 West Tasman Drive San Jose CA 94568 US)',
+                'manufacturer': 'Cisco (Cisco Systems, Inc)',
                 'mtu': '1500',
                 'name': 'GigabitEthernet0/14',
                 'operational_status': 'Down',
@@ -2715,7 +2715,7 @@ def test_basic_info_devices(mocks):
             {
                 'admin_status': 'Up',
                 'mac': '00:1B:8F:DF:DF:0F',
-                'manufacturer': 'Cisco Systems, Inc (80 West Tasman Drive San Jose CA 94568 US)',
+                'manufacturer': 'Cisco (Cisco Systems, Inc)',
                 'mtu': '1500',
                 'name': 'GigabitEthernet0/15',
                 'operational_status': 'Down',
@@ -2730,7 +2730,7 @@ def test_basic_info_devices(mocks):
             {
                 'admin_status': 'Up',
                 'mac': '00:1B:8F:DF:DF:10',
-                'manufacturer': 'Cisco Systems, Inc (80 West Tasman Drive San Jose CA 94568 US)',
+                'manufacturer': 'Cisco (Cisco Systems, Inc)',
                 'mtu': '1500',
                 'name': 'GigabitEthernet0/16',
                 'operational_status': 'Down',
@@ -2745,7 +2745,7 @@ def test_basic_info_devices(mocks):
             {
                 'admin_status': 'Up',
                 'mac': '00:1B:8F:DF:DF:11',
-                'manufacturer': 'Cisco Systems, Inc (80 West Tasman Drive San Jose CA 94568 US)',
+                'manufacturer': 'Cisco (Cisco Systems, Inc)',
                 'mtu': '1500',
                 'name': 'GigabitEthernet0/17',
                 'operational_status': 'Down',
@@ -2760,7 +2760,7 @@ def test_basic_info_devices(mocks):
             {
                 'admin_status': 'Up',
                 'mac': '00:1B:8F:DF:DF:12',
-                'manufacturer': 'Cisco Systems, Inc (80 West Tasman Drive San Jose CA 94568 US)',
+                'manufacturer': 'Cisco (Cisco Systems, Inc)',
                 'mtu': '1500',
                 'name': 'GigabitEthernet0/18',
                 'operational_status': 'Down',
@@ -2775,7 +2775,7 @@ def test_basic_info_devices(mocks):
             {
                 'admin_status': 'Up',
                 'mac': '00:1B:8F:DF:DF:13',
-                'manufacturer': 'Cisco Systems, Inc (80 West Tasman Drive San Jose CA 94568 US)',
+                'manufacturer': 'Cisco (Cisco Systems, Inc)',
                 'mtu': '1500',
                 'name': 'GigabitEthernet0/19',
                 'operational_status': 'Down',
@@ -2790,7 +2790,7 @@ def test_basic_info_devices(mocks):
             {
                 'admin_status': 'Up',
                 'mac': '00:1B:8F:DF:DF:14',
-                'manufacturer': 'Cisco Systems, Inc (80 West Tasman Drive San Jose CA 94568 US)',
+                'manufacturer': 'Cisco (Cisco Systems, Inc)',
                 'mtu': '1500',
                 'name': 'GigabitEthernet0/20',
                 'operational_status': 'Up',
@@ -2805,7 +2805,7 @@ def test_basic_info_devices(mocks):
             {
                 'admin_status': 'Up',
                 'mac': '00:1B:8F:DF:DF:15',
-                'manufacturer': 'Cisco Systems, Inc (80 West Tasman Drive San Jose CA 94568 US)',
+                'manufacturer': 'Cisco (Cisco Systems, Inc)',
                 'mtu': '1500',
                 'name': 'GigabitEthernet0/21',
                 'operational_status': 'Down',
@@ -2820,7 +2820,7 @@ def test_basic_info_devices(mocks):
             {
                 'admin_status': 'Up',
                 'mac': '00:1B:8F:DF:DF:16',
-                'manufacturer': 'Cisco Systems, Inc (80 West Tasman Drive San Jose CA 94568 US)',
+                'manufacturer': 'Cisco (Cisco Systems, Inc)',
                 'mtu': '1500',
                 'name': 'GigabitEthernet0/22',
                 'operational_status': 'Down',
@@ -2835,7 +2835,7 @@ def test_basic_info_devices(mocks):
             {
                 'admin_status': 'Up',
                 'mac': '00:1B:8F:DF:DF:17',
-                'manufacturer': 'Cisco Systems, Inc (80 West Tasman Drive San Jose CA 94568 US)',
+                'manufacturer': 'Cisco (Cisco Systems, Inc)',
                 'mtu': '1500',
                 'name': 'GigabitEthernet0/23',
                 'operational_status': 'Down',
@@ -2850,7 +2850,7 @@ def test_basic_info_devices(mocks):
             {
                 'admin_status': 'Up',
                 'mac': '00:1B:8F:DF:DF:18',
-                'manufacturer': 'Cisco Systems, Inc (80 West Tasman Drive San Jose CA 94568 US)',
+                'manufacturer': 'Cisco (Cisco Systems, Inc)',
                 'mtu': '1500',
                 'name': 'GigabitEthernet0/24',
                 'operational_status': 'Down',
@@ -2865,7 +2865,7 @@ def test_basic_info_devices(mocks):
             {
                 'admin_status': 'Up',
                 'mac': '00:1B:8F:DF:DF:19',
-                'manufacturer': 'Cisco Systems, Inc (80 West Tasman Drive San Jose CA 94568 US)',
+                'manufacturer': 'Cisco (Cisco Systems, Inc)',
                 'mtu': '1500',
                 'name': 'GigabitEthernet0/25',
                 'operational_status': 'Down',
@@ -2880,7 +2880,7 @@ def test_basic_info_devices(mocks):
             {
                 'admin_status': 'Up',
                 'mac': '00:1B:8F:DF:DF:1A',
-                'manufacturer': 'Cisco Systems, Inc (80 West Tasman Drive San Jose CA 94568 US)',
+                'manufacturer': 'Cisco (Cisco Systems, Inc)',
                 'mtu': '1500',
                 'name': 'GigabitEthernet0/26',
                 'operational_status': 'Up',
@@ -2895,7 +2895,7 @@ def test_basic_info_devices(mocks):
             {
                 'admin_status': 'Up',
                 'mac': '00:1B:8F:DF:DF:1B',
-                'manufacturer': 'Cisco Systems, Inc (80 West Tasman Drive San Jose CA 94568 US)',
+                'manufacturer': 'Cisco (Cisco Systems, Inc)',
                 'mtu': '1500',
                 'name': 'GigabitEthernet0/27',
                 'operational_status': 'Down',
@@ -2910,7 +2910,7 @@ def test_basic_info_devices(mocks):
             {
                 'admin_status': 'Up',
                 'mac': '00:1B:8F:DF:DF:1C',
-                'manufacturer': 'Cisco Systems, Inc (80 West Tasman Drive San Jose CA 94568 US)',
+                'manufacturer': 'Cisco (Cisco Systems, Inc)',
                 'mtu': '1500',
                 'name': 'GigabitEthernet0/28',
                 'operational_status': 'Down',
@@ -2925,7 +2925,7 @@ def test_basic_info_devices(mocks):
             {
                 'admin_status': 'Up',
                 'mac': '00:1B:8F:DF:DF:1D',
-                'manufacturer': 'Cisco Systems, Inc (80 West Tasman Drive San Jose CA 94568 US)',
+                'manufacturer': 'Cisco (Cisco Systems, Inc)',
                 'mtu': '1500',
                 'name': 'GigabitEthernet0/29',
                 'operational_status': 'Down',
@@ -2940,7 +2940,7 @@ def test_basic_info_devices(mocks):
             {
                 'admin_status': 'Up',
                 'mac': '00:1B:8F:DF:DF:1E',
-                'manufacturer': 'Cisco Systems, Inc (80 West Tasman Drive San Jose CA 94568 US)',
+                'manufacturer': 'Cisco (Cisco Systems, Inc)',
                 'mtu': '1500',
                 'name': 'GigabitEthernet0/30',
                 'operational_status': 'Down',
@@ -2955,7 +2955,7 @@ def test_basic_info_devices(mocks):
             {
                 'admin_status': 'Up',
                 'mac': '00:1B:8F:DF:DF:1F',
-                'manufacturer': 'Cisco Systems, Inc (80 West Tasman Drive San Jose CA 94568 US)',
+                'manufacturer': 'Cisco (Cisco Systems, Inc)',
                 'mtu': '1500',
                 'name': 'GigabitEthernet0/31',
                 'operational_status': 'Down',
@@ -2970,7 +2970,7 @@ def test_basic_info_devices(mocks):
             {
                 'admin_status': 'Up',
                 'mac': '00:1B:8F:DF:DF:20',
-                'manufacturer': 'Cisco Systems, Inc (80 West Tasman Drive San Jose CA 94568 US)',
+                'manufacturer': 'Cisco (Cisco Systems, Inc)',
                 'mtu': '1500',
                 'name': 'GigabitEthernet0/32',
                 'operational_status': 'Down',
@@ -2985,7 +2985,7 @@ def test_basic_info_devices(mocks):
             {
                 'admin_status': 'Up',
                 'mac': '00:1B:8F:DF:DF:21',
-                'manufacturer': 'Cisco Systems, Inc (80 West Tasman Drive San Jose CA 94568 US)',
+                'manufacturer': 'Cisco (Cisco Systems, Inc)',
                 'mtu': '1500',
                 'name': 'GigabitEthernet0/33',
                 'operational_status': 'Up',
@@ -3000,7 +3000,7 @@ def test_basic_info_devices(mocks):
             {
                 'admin_status': 'Up',
                 'mac': '00:1B:8F:DF:DF:22',
-                'manufacturer': 'Cisco Systems, Inc (80 West Tasman Drive San Jose CA 94568 US)',
+                'manufacturer': 'Cisco (Cisco Systems, Inc)',
                 'mtu': '1500',
                 'name': 'GigabitEthernet0/34',
                 'operational_status': 'Down',
@@ -3015,7 +3015,7 @@ def test_basic_info_devices(mocks):
             {
                 'admin_status': 'Up',
                 'mac': '00:1B:8F:DF:DF:23',
-                'manufacturer': 'Cisco Systems, Inc (80 West Tasman Drive San Jose CA 94568 US)',
+                'manufacturer': 'Cisco (Cisco Systems, Inc)',
                 'mtu': '1500',
                 'name': 'GigabitEthernet0/35',
                 'operational_status': 'Up',
@@ -3030,7 +3030,7 @@ def test_basic_info_devices(mocks):
             {
                 'admin_status': 'Up',
                 'mac': '00:1B:8F:DF:DF:24',
-                'manufacturer': 'Cisco Systems, Inc (80 West Tasman Drive San Jose CA 94568 US)',
+                'manufacturer': 'Cisco (Cisco Systems, Inc)',
                 'mtu': '1500',
                 'name': 'GigabitEthernet0/36',
                 'operational_status': 'Down',
@@ -3045,7 +3045,7 @@ def test_basic_info_devices(mocks):
             {
                 'admin_status': 'Up',
                 'mac': '00:1B:8F:DF:DF:25',
-                'manufacturer': 'Cisco Systems, Inc (80 West Tasman Drive San Jose CA 94568 US)',
+                'manufacturer': 'Cisco (Cisco Systems, Inc)',
                 'mtu': '1500',
                 'name': 'GigabitEthernet0/37',
                 'operational_status': 'Down',
@@ -3060,7 +3060,7 @@ def test_basic_info_devices(mocks):
             {
                 'admin_status': 'Up',
                 'mac': '00:1B:8F:DF:DF:26',
-                'manufacturer': 'Cisco Systems, Inc (80 West Tasman Drive San Jose CA 94568 US)',
+                'manufacturer': 'Cisco (Cisco Systems, Inc)',
                 'mtu': '1500',
                 'name': 'GigabitEthernet0/38',
                 'operational_status': 'Up',
@@ -3075,7 +3075,7 @@ def test_basic_info_devices(mocks):
             {
                 'admin_status': 'Up',
                 'mac': '00:1B:8F:DF:DF:27',
-                'manufacturer': 'Cisco Systems, Inc (80 West Tasman Drive San Jose CA 94568 US)',
+                'manufacturer': 'Cisco (Cisco Systems, Inc)',
                 'mtu': '1500',
                 'name': 'GigabitEthernet0/39',
                 'operational_status': 'Down',
@@ -3090,7 +3090,7 @@ def test_basic_info_devices(mocks):
             {
                 'admin_status': 'Down',
                 'mac': '00:1B:8F:DF:DF:28',
-                'manufacturer': 'Cisco Systems, Inc (80 West Tasman Drive San Jose CA 94568 US)',
+                'manufacturer': 'Cisco (Cisco Systems, Inc)',
                 'mtu': '1500',
                 'name': 'GigabitEthernet0/40',
                 'operational_status': 'Down',
@@ -3105,7 +3105,7 @@ def test_basic_info_devices(mocks):
             {
                 'admin_status': 'Up',
                 'mac': '00:1B:8F:DF:DF:29',
-                'manufacturer': 'Cisco Systems, Inc (80 West Tasman Drive San Jose CA 94568 US)',
+                'manufacturer': 'Cisco (Cisco Systems, Inc)',
                 'mtu': '1500',
                 'name': 'GigabitEthernet0/41',
                 'operational_status': 'Up',
@@ -3120,7 +3120,7 @@ def test_basic_info_devices(mocks):
             {
                 'admin_status': 'Up',
                 'mac': '00:1B:8F:DF:DF:2A',
-                'manufacturer': 'Cisco Systems, Inc (80 West Tasman Drive San Jose CA 94568 US)',
+                'manufacturer': 'Cisco (Cisco Systems, Inc)',
                 'mtu': '1500',
                 'name': 'GigabitEthernet0/42',
                 'operational_status': 'Down',
@@ -3135,7 +3135,7 @@ def test_basic_info_devices(mocks):
             {
                 'admin_status': 'Up',
                 'mac': '00:1B:8F:DF:DF:2B',
-                'manufacturer': 'Cisco Systems, Inc (80 West Tasman Drive San Jose CA 94568 US)',
+                'manufacturer': 'Cisco (Cisco Systems, Inc)',
                 'mtu': '1500',
                 'name': 'GigabitEthernet0/43',
                 'operational_status': 'Down',
@@ -3150,7 +3150,7 @@ def test_basic_info_devices(mocks):
             {
                 'admin_status': 'Up',
                 'mac': '00:1B:8F:DF:DF:2C',
-                'manufacturer': 'Cisco Systems, Inc (80 West Tasman Drive San Jose CA 94568 US)',
+                'manufacturer': 'Cisco (Cisco Systems, Inc)',
                 'mtu': '1500',
                 'name': 'GigabitEthernet0/44',
                 'operational_status': 'Down',
@@ -3165,7 +3165,7 @@ def test_basic_info_devices(mocks):
             {
                 'admin_status': 'Up',
                 'mac': '00:1B:8F:DF:DF:2D',
-                'manufacturer': 'Cisco Systems, Inc (80 West Tasman Drive San Jose CA 94568 US)',
+                'manufacturer': 'Cisco (Cisco Systems, Inc)',
                 'mtu': '1500',
                 'name': 'GigabitEthernet0/45',
                 'operational_status': 'Down',
@@ -3180,7 +3180,7 @@ def test_basic_info_devices(mocks):
             {
                 'admin_status': 'Up',
                 'mac': '00:1B:8F:DF:DF:2E',
-                'manufacturer': 'Cisco Systems, Inc (80 West Tasman Drive San Jose CA 94568 US)',
+                'manufacturer': 'Cisco (Cisco Systems, Inc)',
                 'mtu': '1500',
                 'name': 'GigabitEthernet0/46',
                 'operational_status': 'Down',
@@ -3195,7 +3195,7 @@ def test_basic_info_devices(mocks):
             {
                 'admin_status': 'Up',
                 'mac': '00:1B:8F:DF:DF:2F',
-                'manufacturer': 'Cisco Systems, Inc (80 West Tasman Drive San Jose CA 94568 US)',
+                'manufacturer': 'Cisco (Cisco Systems, Inc)',
                 'mtu': '1500',
                 'name': 'GigabitEthernet0/47',
                 'operational_status': 'Down',
@@ -3210,7 +3210,7 @@ def test_basic_info_devices(mocks):
             {
                 'admin_status': 'Up',
                 'mac': '00:1B:8F:DF:DF:30',
-                'manufacturer': 'Cisco Systems, Inc (80 West Tasman Drive San Jose CA 94568 US)',
+                'manufacturer': 'Cisco (Cisco Systems, Inc)',
                 'mtu': '1500',
                 'name': 'GigabitEthernet0/48',
                 'operational_status': 'Up',

@@ -165,7 +165,7 @@ def test_arp(client):
                     'ips': ['192.168.20.18'],
                     'ips_raw': [3_232_240_658],
                     'mac': '00:50:56:91:A6:6B',
-                    'manufacturer': 'VMware, Inc (3401 Hillview Avenue PALO ALTO CA 94304 US)',
+                    'manufacturer': 'VMware (VMware, Inc.)',
                 }
             ],
             'os': {'os_str': 'none'},
@@ -188,7 +188,7 @@ def test_arp(client):
                     'ips': ['192.168.20.1'],
                     'ips_raw': [3_232_240_641],
                     'mac': '90:6C:AC:FE:5B:CB',
-                    'manufacturer': 'Fortinet Inc (899 Kifer Road Sunnyvale California 94086 US)',
+                    'manufacturer': 'Fortinet (Fortinet, Inc.)',
                 }
             ],
             'os': {'os_str': 'none'},
@@ -435,7 +435,7 @@ def test_instance_parser(client):
             'network_interfaces': [
                 {
                     'mac': '00:50:56:91:A6:6B',
-                    'manufacturer': 'VMware, Inc (3401 Hillview Avenue PALO ALTO CA 94304 US)',
+                    'manufacturer': 'VMware (VMware, Inc.)',
                 }
             ],
             'os': {'os_str': 'none'},
@@ -456,7 +456,7 @@ def test_instance_parser(client):
             'network_interfaces': [
                 {
                     'mac': '90:6C:AC:FE:5B:CB',
-                    'manufacturer': 'Fortinet Inc (899 Kifer Road Sunnyvale California 94086 US)',
+                    'manufacturer': 'Fortinet (Fortinet, Inc.)',
                 }
             ],
             'os': {'os_str': 'none'},
