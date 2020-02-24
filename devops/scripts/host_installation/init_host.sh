@@ -69,7 +69,6 @@ echo "127.0.0.1 $(hostname)" >> /etc/hosts
 sed -i '/PasswordAuthentication/ d' /etc/ssh/sshd_config
 sed -i -e '$a\' /etc/ssh/sshd_config
 echo "PasswordAuthentication yes" >> /etc/ssh/sshd_config
-systemctl restart sshd
 
 # Make sure ssh runs at boot
 update-rc.d ssh defaults
