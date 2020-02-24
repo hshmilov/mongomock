@@ -183,7 +183,9 @@ class DeviceAdapterNetworkInterface(SmartJsonClass):
         description='A list of subnets in ip format, that correspond the IPs',
     )
     ips_raw = ListField(
-        str, description='Number representation of the IP, useful for filtering by range', converter=format_ip_raw
+        str, description='Number representation of the IP, useful for filtering by range',
+        converter=format_ip_raw,
+        hidden=True
     )
 
     vlan_list = ListField(DeviceAdapterVlan, 'Vlans', description='A list of vlans in this interface')

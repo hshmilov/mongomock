@@ -348,6 +348,10 @@ class SmartJsonClass(metaclass=SmartJsonClassMetaclass):
                 item_dict['pattern'] = field.pattern
                 item['pattern'] = field.pattern
 
+            if field.hidden:
+                item['hidden'] = True
+                item_dict['hidden'] = True
+
             if field.enum is not None:
                 enum_values = field.enum
                 if isinstance(enum_values, type) and issubclass(enum_values, Enum):

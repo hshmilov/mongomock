@@ -28,7 +28,7 @@ SOLARWINDS_DEVICES_TYPES = [NODE_DEVICE, LAN_DEVICE, DHCP_DEVICE, WIFI_DEVICE]
 class SolarwindsOrionAdapter(AdapterBase, Configurable):
     class MyDeviceAdapter(DeviceAdapter):
         device_type = Field(str, 'Device Type', enum=SOLARWINDS_DEVICES_TYPES)
-        solarwinds_ip = Field(str)
+        solarwinds_ip = Field(str, hidden=True)
         uri = Field(str, 'URI')
         ip_address_guid = Field(str, 'IP Address GUID')
         software_hardware_makeup = Field(str, 'Node Makeup')

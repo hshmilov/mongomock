@@ -225,8 +225,9 @@ class JsonArrayFormat(JsonFormat):
 class Field:
     """ A single field class, holds information regarding python type checking and json-serialization """
 
+    # pylint: disable=too-many-arguments
     def __init__(self, field_type, title=None, description=None, converter=None, json_format: JsonFormat = None,
-                 min_value=None, max_value=None, pattern=None, enum=None):
+                 min_value=None, max_value=None, pattern=None, enum=None, hidden=False):
         """
         :param field_type: The python type of the field, must be provided.
         :param description: The description of the field (would be displayed in the GUI)
@@ -236,6 +237,7 @@ class Field:
         :param max_value: if provided, will be returned as format json-field
         :param pattern: if provided, will be returned as format json-field
         :param enum: if provided, will be checked that the values are valid and will be returned as format json-field
+        :param hidden: if provided, the field will not be displayed in the GUI
         """
         self._type = field_type
         self._title = title
@@ -265,6 +267,7 @@ class Field:
             enum = field_type
         self._enum = enum
         self._dynamic = False
+        self._hidden = hidden
 
     @property
     def name(self):
@@ -309,6 +312,10 @@ class Field:
     @property
     def dynamic(self):
         return self._dynamic
+
+    @property
+    def hidden(self):
+        return self._hidden
 
     @property
     def json_name(self):
