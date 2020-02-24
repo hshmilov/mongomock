@@ -112,7 +112,7 @@ class Saml:
 
 class Notes:
     note1_text = 'note1_text'
-    note1_device_filter = 'DCNY1'
+    note1_device_filter = 'puppet-1'
 
 
 class History:
