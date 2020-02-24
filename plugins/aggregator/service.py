@@ -31,6 +31,20 @@ get_devices_job_name = "Get device job"
 RESET_BEFORE_CLIENT_FETCH_ADAPTERS = ['cisco_adapter']
 
 
+def create_index_safe(collection, *args, **kwargs):
+    """
+    Creates an index on mongo, and only logs the exception instead of letting it propagate
+    :param collection: collection to create index on
+    :param args: args to pass to create_index function (see pymongo.collection.create_index)
+    :param kwargs:  kwargs to pass to create_index function (see pymongo.collection.create_index)
+    """
+    try:
+        logger.info(f"Creating index {args}.")
+        collection.create_index(*args, **kwargs)
+    except pymongo.errors.PyMongoError as e:
+        logger.critical(f"Exception while creating index {args}. reason: {e}")
+
+
 class AdapterStatuses(Enum):
     Pending = auto()
     Fetching = auto()
@@ -121,84 +135,86 @@ class AggregatorService(Triggerable, PluginBase):
         """
 
         def non_historic_indexes(db: Collection):
-            db.create_index(
-                [(f'adapters.{PLUGIN_UNIQUE_NAME}', pymongo.ASCENDING), ('adapters.data.id', pymongo.ASCENDING)
-                 ], unique=True, background=True)
-            db.create_index(
-                [(f'adapters.data.last_seen', pymongo.ASCENDING), ('adapters.data.id', pymongo.ASCENDING)
-                 ], background=True)
-            db.create_index([('internal_axon_id', pymongo.ASCENDING)], unique=True, background=True)
-            db.create_index([(f'adapters.quick_id', pymongo.ASCENDING)], background=True, unique=True)
+            create_index_safe(db,
+                              [(f'adapters.{PLUGIN_UNIQUE_NAME}', pymongo.ASCENDING),
+                               ('adapters.data.id', pymongo.ASCENDING)
+                               ], unique=True, background=True)
+            create_index_safe(db,
+                              [(f'adapters.data.last_seen', pymongo.ASCENDING), ('adapters.data.id', pymongo.ASCENDING)
+                               ], background=True)
+            create_index_safe(db, [('internal_axon_id', pymongo.ASCENDING)], unique=True, background=True)
+            create_index_safe(db, [(f'adapters.quick_id', pymongo.ASCENDING)], background=True, unique=True)
             # Search index
-            db.create_index([('adapters.data.hostname', pymongo.TEXT),
-                             ('adapters.data.last_used_users', pymongo.TEXT),
-                             ('adapters.data.username', pymongo.TEXT),
-                             ('adapters.data.mail', pymongo.TEXT)],
-                            background=True)
+            create_index_safe(db, [('adapters.data.hostname', pymongo.TEXT),
+                                   ('adapters.data.last_used_users', pymongo.TEXT),
+                                   ('adapters.data.username', pymongo.TEXT),
+                                   ('adapters.data.mail', pymongo.TEXT)],
+                              background=True)
 
         def historic_indexes(db: Collection):
-            db.create_index(
-                [(f'adapters.{PLUGIN_UNIQUE_NAME}', pymongo.ASCENDING), ('adapters.data.id', pymongo.ASCENDING)
-                 ], background=True)
-            db.create_index([('internal_axon_id', pymongo.ASCENDING)], background=True)
-            db.create_index([(f'adapters.quick_id', pymongo.ASCENDING)], background=True)
-            db.create_index([('short_axon_id', pymongo.ASCENDING)], background=True)
-            db.create_index([('accurate_for_datetime', pymongo.ASCENDING)], background=True)
+            create_index_safe(db,
+                              [(f'adapters.{PLUGIN_UNIQUE_NAME}', pymongo.ASCENDING),
+                               ('adapters.data.id', pymongo.ASCENDING)
+                               ], background=True)
+            create_index_safe(db, [('internal_axon_id', pymongo.ASCENDING)], background=True)
+            create_index_safe(db, [(f'adapters.quick_id', pymongo.ASCENDING)], background=True)
+            create_index_safe(db, [('short_axon_id', pymongo.ASCENDING)], background=True)
+            create_index_safe(db, [('accurate_for_datetime', pymongo.ASCENDING)], background=True)
 
         def common_db_indexes(db: Collection):
-            db.create_index([(f'adapters.{PLUGIN_NAME}', pymongo.ASCENDING)], background=True)
-            db.create_index([(f'adapters.{PLUGIN_UNIQUE_NAME}', pymongo.ASCENDING)], background=True)
-            db.create_index([(ADAPTERS_LIST_LENGTH, pymongo.DESCENDING)], background=True)
-            db.create_index([('adapters.client_used', pymongo.DESCENDING)], background=True)
+            create_index_safe(db, [(f'adapters.{PLUGIN_NAME}', pymongo.ASCENDING)], background=True)
+            create_index_safe(db, [(f'adapters.{PLUGIN_UNIQUE_NAME}', pymongo.ASCENDING)], background=True)
+            create_index_safe(db, [(ADAPTERS_LIST_LENGTH, pymongo.DESCENDING)], background=True)
+            create_index_safe(db, [('adapters.client_used', pymongo.DESCENDING)], background=True)
 
             # this is commonly filtered by the GUI
-            db.create_index([('adapters.data.id', pymongo.ASCENDING)], background=True)
-            db.create_index([('adapters.pending_delete', pymongo.ASCENDING)], background=True)
-            db.create_index([(f'adapters.data.adapter_properties', pymongo.ASCENDING)], background=True)
-            db.create_index([(f'adapters.data.os.type', pymongo.ASCENDING)], background=True)
-            db.create_index([(f'adapters.data.os.distribution', pymongo.ASCENDING)], background=True)
-            db.create_index([(f'adapters.data.last_seen', pymongo.ASCENDING)], background=True)
-            db.create_index([(f'adapters.data.hostname', pymongo.ASCENDING)], background=True)
-            db.create_index([(f'adapters.data.name', pymongo.ASCENDING)], background=True)
-            db.create_index([(f'adapters.data.network_interfaces.mac', pymongo.ASCENDING)], background=True)
-            db.create_index([(f'adapters.data.network_interfaces.ips', pymongo.ASCENDING)], background=True)
-            db.create_index([(f'adapters.data.network_interfaces.ips_raw', pymongo.ASCENDING)], background=True)
-            db.create_index([(f'adapters.data.last_used_users', pymongo.ASCENDING)], background=True)
-            db.create_index([(f'adapters.data.username', pymongo.ASCENDING)], background=True)
-            db.create_index([(f'adapters.data.domain', pymongo.ASCENDING)], background=True)
-            db.create_index([(f'adapters.data.installed_software.name', pymongo.ASCENDING)], background=True)
-            db.create_index([(f'adapters.data.fetch_time', pymongo.ASCENDING)], background=True)
-            db.create_index([(f'adapters.data.software_cves.cve_id', pymongo.ASCENDING)], background=True)
-            db.create_index([(f'adapters.data.software_cves.cvss', pymongo.ASCENDING)], background=True)
-            db.create_index([(f'adapters.data.installed_software.name', pymongo.ASCENDING)], background=True)
+            create_index_safe(db, [('adapters.data.id', pymongo.ASCENDING)], background=True)
+            create_index_safe(db, [('adapters.pending_delete', pymongo.ASCENDING)], background=True)
+            create_index_safe(db, [(f'adapters.data.adapter_properties', pymongo.ASCENDING)], background=True)
+            create_index_safe(db, [(f'adapters.data.os.type', pymongo.ASCENDING)], background=True)
+            create_index_safe(db, [(f'adapters.data.os.distribution', pymongo.ASCENDING)], background=True)
+            create_index_safe(db, [(f'adapters.data.last_seen', pymongo.ASCENDING)], background=True)
+            create_index_safe(db, [(f'adapters.data.hostname', pymongo.ASCENDING)], background=True)
+            create_index_safe(db, [(f'adapters.data.name', pymongo.ASCENDING)], background=True)
+            create_index_safe(db, [(f'adapters.data.network_interfaces.mac', pymongo.ASCENDING)], background=True)
+            create_index_safe(db, [(f'adapters.data.network_interfaces.ips', pymongo.ASCENDING)], background=True)
+            create_index_safe(db, [(f'adapters.data.network_interfaces.ips_raw', pymongo.ASCENDING)], background=True)
+            create_index_safe(db, [(f'adapters.data.last_used_users', pymongo.ASCENDING)], background=True)
+            create_index_safe(db, [(f'adapters.data.username', pymongo.ASCENDING)], background=True)
+            create_index_safe(db, [(f'adapters.data.domain', pymongo.ASCENDING)], background=True)
+            create_index_safe(db, [(f'adapters.data.installed_software.name', pymongo.ASCENDING)], background=True)
+            create_index_safe(db, [(f'adapters.data.fetch_time', pymongo.ASCENDING)], background=True)
+            create_index_safe(db, [(f'adapters.data.software_cves.cve_id', pymongo.ASCENDING)], background=True)
+            create_index_safe(db, [(f'adapters.data.software_cves.cvss', pymongo.ASCENDING)], background=True)
+            create_index_safe(db, [(f'adapters.data.installed_software.name', pymongo.ASCENDING)], background=True)
 
-            db.create_index([('tags.data.id', pymongo.ASCENDING)], background=True)
-            db.create_index([(f'tags.{PLUGIN_NAME}', pymongo.ASCENDING)], background=True)
-            db.create_index([(f'tags.{PLUGIN_UNIQUE_NAME}', pymongo.ASCENDING)], background=True)
-            db.create_index([(f'tags.type', pymongo.ASCENDING)], background=True)
-            db.create_index([(f'tags.data.adapter_properties', pymongo.ASCENDING)], background=True)
-            db.create_index([(f'tags.data.os.type', pymongo.ASCENDING)], background=True)
-            db.create_index([(f'tags.data.os.distribution', pymongo.ASCENDING)], background=True)
-            db.create_index([(f'tags.data.last_seen', pymongo.ASCENDING)], background=True)
-            db.create_index([(f'tags.data.hostname', pymongo.ASCENDING)], background=True)
-            db.create_index([(f'tags.data.name', pymongo.ASCENDING)], background=True)
-            db.create_index([(f'tags.data.network_interfaces.mac', pymongo.ASCENDING)], background=True)
-            db.create_index([(f'tags.data.network_interfaces.ips', pymongo.ASCENDING)], background=True)
-            db.create_index([(f'tags.data.network_interfaces.ips_raw', pymongo.ASCENDING)], background=True)
-            db.create_index([(f'tags.data.last_used_users', pymongo.ASCENDING)], background=True)
-            db.create_index([(f'tags.data.username', pymongo.ASCENDING)], background=True)
-            db.create_index([(f'tags.data.domain', pymongo.ASCENDING)], background=True)
-            db.create_index([(f'tags.data.fetch_time', pymongo.ASCENDING)], background=True)
-            db.create_index([(f'tags.data.software_cves.cve_id', pymongo.ASCENDING)], background=True)
-            db.create_index([(f'tags.data.software_cves.cvss', pymongo.ASCENDING)], background=True)
-            db.create_index([(f'tags.data.installed_software.name', pymongo.ASCENDING)], background=True)
+            create_index_safe(db, [('tags.data.id', pymongo.ASCENDING)], background=True)
+            create_index_safe(db, [(f'tags.{PLUGIN_NAME}', pymongo.ASCENDING)], background=True)
+            create_index_safe(db, [(f'tags.{PLUGIN_UNIQUE_NAME}', pymongo.ASCENDING)], background=True)
+            create_index_safe(db, [(f'tags.type', pymongo.ASCENDING)], background=True)
+            create_index_safe(db, [(f'tags.data.adapter_properties', pymongo.ASCENDING)], background=True)
+            create_index_safe(db, [(f'tags.data.os.type', pymongo.ASCENDING)], background=True)
+            create_index_safe(db, [(f'tags.data.os.distribution', pymongo.ASCENDING)], background=True)
+            create_index_safe(db, [(f'tags.data.last_seen', pymongo.ASCENDING)], background=True)
+            create_index_safe(db, [(f'tags.data.hostname', pymongo.ASCENDING)], background=True)
+            create_index_safe(db, [(f'tags.data.name', pymongo.ASCENDING)], background=True)
+            create_index_safe(db, [(f'tags.data.network_interfaces.mac', pymongo.ASCENDING)], background=True)
+            create_index_safe(db, [(f'tags.data.network_interfaces.ips', pymongo.ASCENDING)], background=True)
+            create_index_safe(db, [(f'tags.data.network_interfaces.ips_raw', pymongo.ASCENDING)], background=True)
+            create_index_safe(db, [(f'tags.data.last_used_users', pymongo.ASCENDING)], background=True)
+            create_index_safe(db, [(f'tags.data.username', pymongo.ASCENDING)], background=True)
+            create_index_safe(db, [(f'tags.data.domain', pymongo.ASCENDING)], background=True)
+            create_index_safe(db, [(f'tags.data.fetch_time', pymongo.ASCENDING)], background=True)
+            create_index_safe(db, [(f'tags.data.software_cves.cve_id', pymongo.ASCENDING)], background=True)
+            create_index_safe(db, [(f'tags.data.software_cves.cvss', pymongo.ASCENDING)], background=True)
+            create_index_safe(db, [(f'tags.data.installed_software.name', pymongo.ASCENDING)], background=True)
 
             # For labels
-            db.create_index([(f'tags.name', pymongo.ASCENDING)], background=True)
-            db.create_index([(f'tags.label_value', pymongo.ASCENDING)], background=True)
+            create_index_safe(db, [(f'tags.name', pymongo.ASCENDING)], background=True)
+            create_index_safe(db, [(f'tags.label_value', pymongo.ASCENDING)], background=True)
 
             # this is commonly sorted by
-            db.create_index([('adapter_list_length', pymongo.DESCENDING)], background=True)
+            create_index_safe(db, [('adapter_list_length', pymongo.DESCENDING)], background=True)
 
         def adapter_entity_raw_index(db: Collection):
             """
@@ -213,9 +229,9 @@ class AggregatorService(Triggerable, PluginBase):
             }
             :param db: Collection to add indices too
             """
-            db.create_index(
-                [(f'{PLUGIN_UNIQUE_NAME}', pymongo.ASCENDING), ('id', pymongo.ASCENDING)
-                 ], unique=True, background=True)
+            create_index_safe(db,
+                              [(f'{PLUGIN_UNIQUE_NAME}', pymongo.ASCENDING), ('id', pymongo.ASCENDING)
+                               ], unique=True, background=True)
 
         def adapter_entity_historical_raw_index(db: Collection):
             """
@@ -231,10 +247,9 @@ class AggregatorService(Triggerable, PluginBase):
             }
             :param db: Collection to add indices too
             """
-            db.create_index(
-                [(f'{PLUGIN_UNIQUE_NAME}', pymongo.ASCENDING), ('id', pymongo.ASCENDING),
-                 ('accurate_for_datetime', pymongo.ASCENDING)
-                 ], unique=True, background=True)
+            create_index_safe(db, [(f'{PLUGIN_UNIQUE_NAME}', pymongo.ASCENDING), ('id', pymongo.ASCENDING),
+                                   ('accurate_for_datetime', pymongo.ASCENDING)
+                                   ], unique=True, background=True)
 
         for entity_type in EntityType:
             common_db_indexes(self._entity_db_map[entity_type])
