@@ -1,20 +1,21 @@
-import Safeguard from './Safeguard.vue'
+/* eslint-disable no-param-reassign */
+import Safeguard from './Safeguard.vue';
 
 const SafeguardPlugin = {
-    install(Vue, options) {
-        // create communication chanel to our plugin
-        this.EventBus = new Vue()
+  install(Vue) {
+    // create communication chanel to our plugin
+    this.EventBus = new Vue();
 
-        // make the x-safeguard globally registered
-        Vue.component('x-safeguard', Safeguard)
+    // make the x-safeguard globally registered
+    Vue.component('XSafeguard', Safeguard);
 
-        // expose global interface
-        Vue.prototype.$safeguard = {
-            show(params) {
-                SafeguardPlugin.EventBus.$emit('show', params)
-            }
-        }
-    }
-}
+    // expose global interface
+    Vue.prototype.$safeguard = {
+      show(params) {
+        SafeguardPlugin.EventBus.$emit('show', params);
+      },
+    };
+  },
+};
 
-export default SafeguardPlugin
+export default SafeguardPlugin;

@@ -71,6 +71,9 @@ export const auth = {
         return user.permissions[capitalizeString(entity)] === 'ReadWrite' || user.admin;
       };
     },
+    getCurrentUserPermissions(state) {
+      return _get(state, 'currentUser.data.permissions');
+    },
   },
   mutations: {
     [SET_USER](state, payload) {

@@ -27,6 +27,7 @@ import { createVuetifyConfigObject } from './plugins/vuetify';
 import App from './components/App.vue';
 
 import SafeguardPlugin from './plugins/safeguard-modal';
+import RoleGatewayPlugin from './plugins/role-gateway';
 import router from './router/index';
 import store from './store/index';
 
@@ -50,6 +51,7 @@ Vue.use(VueCookies);
 Vue.use(VueWorker);
 
 Vue.use(SafeguardPlugin);
+Vue.use(RoleGatewayPlugin);
 
 Vue.use(svgicon, { tagName: 'SvgIcon' });
 

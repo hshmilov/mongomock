@@ -1,116 +1,117 @@
 <template>
-  <x-page title="axonius dashboard">
+  <XPage title="axonius dashboard">
     <template v-if="isEmptySystem === null" />
     <template v-else-if="isEmptySystem">
-      <x-empty-system />
+      <XEmptySystem />
     </template>
     <template v-else>
-      <x-search-insights @click="onClickInsights" />
-      <x-spaces :spaces="spaces" />
+      <XSearchInsights @click="onClickInsights" />
+      <XSpaces :spaces="spaces" />
     </template>
-  </x-page>
+  </XPage>
 </template>
 
 
 <script>
-  import xPage from '../axons/layout/Page.vue'
-  import xEmptySystem from '../networks/onboard/EmptySystem.vue'
-  import xSearchInsights from '../neurons/inputs/SearchInsights.vue'
-  import xSpaces from '../networks/dashboard/Spaces.vue'
+import {
+  mapState, mapGetters, mapActions,
+} from 'vuex';
+import XPage from '../axons/layout/Page.vue';
+import XEmptySystem from '../networks/onboard/EmptySystem.vue';
+import XSearchInsights from '../neurons/inputs/SearchInsights.vue';
+import XSpaces from '../networks/dashboard/Spaces.vue';
 
-  import viewsMixin from '../../mixins/views'
+import viewsMixin from '../../mixins/views';
 
-  import {
-    FETCH_DISCOVERY_DATA, FETCH_DASHBOARD_SPACES, FETCH_DASHBOARD_PANELS, FETCH_DASHBOARD_FIRST_USE
-  } from '../../store/modules/dashboard'
-  import { IS_EXPIRED } from '../../store/getters'
-  import { SAVE_VIEW } from '../../store/actions'
-  import { IS_ENTITY_RESTRICTED, IS_ENTITY_EDITABLE } from '../../store/modules/auth'
-  import { mapState, mapGetters, mapMutations, mapActions } from 'vuex'
+import {
+  FETCH_DISCOVERY_DATA, FETCH_DASHBOARD_SPACES, FETCH_DASHBOARD_PANELS, FETCH_DASHBOARD_FIRST_USE,
+} from '../../store/modules/dashboard';
+import { IS_EXPIRED } from '../../store/getters';
+import { SAVE_VIEW } from '../../store/actions';
 
-  export default {
-    name: 'XDashboard',
-    components: {
-      xPage, xEmptySystem, xSearchInsights, xSpaces
+export default {
+  name: 'XDashboard',
+  components: {
+    XPage, XEmptySystem, XSearchInsights, XSpaces,
+  },
+  mixins: [viewsMixin],
+  computed: {
+    ...mapState({
+      dashboard(state) {
+        return state.dashboard;
+      },
+      spaces(state) {
+        const spaceToPanels = {};
+        state.dashboard.panels.data.forEach((panel) => {
+          if (!spaceToPanels[panel.space]) {
+            spaceToPanels[panel.space] = [];
+          }
+          spaceToPanels[panel.space].push(panel);
+        });
+        return state.dashboard.spaces.data.map((space) => ({
+          ...space,
+          panels: spaceToPanels[space.uuid] || [],
+        }));
+      },
+      devicesView(state) {
+        return state.devices.view;
+      },
+      devicesViewsList(state) {
+        return state.devices.views.saved.content.data;
+      },
+      dashboardFirstUse(state) {
+        return state.dashboard.firstUse.data;
+      },
+    }),
+    ...mapGetters({
+      isExpired: IS_EXPIRED,
+    }),
+    deviceDiscovery() {
+      return this.dashboard.dataDiscovery.devices.data;
     },
-    mixins: [viewsMixin],
-    computed: {
-      ...mapState({
-        dashboard (state) {
-          return state.dashboard
-        },
-        spaces (state) {
-          let spaceToPanels = {}
-          state.dashboard.panels.data.forEach(panel => {
-            if (!spaceToPanels[panel.space]) {
-              spaceToPanels[panel.space] = []
-            }
-            spaceToPanels[panel.space].push(panel)
-          })
-          return state.dashboard.spaces.data.map(space => {
-            return { ...space,
-              'panels': spaceToPanels[space.uuid] || []
-            }
-          })
-        },
-        devicesView (state) {
-          return state.devices.view
-        },
-        devicesViewsList (state) {
-          return state.devices.views.saved.content.data
-        },
-        dashboardFirstUse (state) {
-          return state.dashboard.firstUse.data
-        }
-      }),
-      ...mapGetters({
-        isExpired: IS_EXPIRED, isEntityRestricted: IS_ENTITY_RESTRICTED, isEntityEditable: IS_ENTITY_EDITABLE
-      }),
-      deviceDiscovery () {
-        return this.dashboard.dataDiscovery.devices.data
-      },
-      seenDevices () {
-        return (this.deviceDiscovery && this.deviceDiscovery.seen)
-      },
-      isEmptySystem () {
-        if (this.deviceDiscovery.seen === undefined || this.dashboardFirstUse === null) return null
+    seenDevices() {
+      return (this.deviceDiscovery && this.deviceDiscovery.seen);
+    },
+    isEmptySystem() {
+      if (this.deviceDiscovery.seen === undefined || this.dashboardFirstUse === null) return null;
 
-        return (!this.seenDevices && this.dashboardFirstUse)
-      },
+      return (!this.seenDevices && this.dashboardFirstUse);
     },
-    created () {
-      this.fetchDashboardFirstUse()
-      if (this.isExpired) {
-        this.getDashboardData()
-      }
-    },
-    beforeDestroy () {
-      clearTimeout(this.timer)
-    },
-    methods: {
-      ...mapActions({
-        fetchDiscoveryData: FETCH_DISCOVERY_DATA,
-        fetchDashboardFirstUse: FETCH_DASHBOARD_FIRST_USE,
-        fetchSpaces: FETCH_DASHBOARD_SPACES, fetchPanels: FETCH_DASHBOARD_PANELS,
-        saveView: SAVE_VIEW
-      }),
-      onClickInsights () {
-        this.$router.push({ name: 'Insights Explorer' })
-      },
-      getDashboardData () {
-        return Promise.all([
-          this.fetchDiscoveryData({ module: 'devices' }), this.fetchDiscoveryData({ module: 'users' }),
-          this.fetchSpaces()
-        ]).then(this.fetchPanels).then(() => {
-          if (this._isDestroyed) return
-          this.timer = setTimeout(this.getDashboardData, 30000)
-        })
-      },
-      viewsCallback () {
-        this.getDashboardData()
-      }
+  },
+  created() {
+    this.fetchDashboardFirstUse();
+    if (this.isExpired) {
+      this.getDashboardData();
     }
-  }
+  },
+  beforeDestroy() {
+    clearTimeout(this.timer);
+  },
+  methods: {
+    ...mapActions({
+      fetchDiscoveryData: FETCH_DISCOVERY_DATA,
+      fetchDashboardFirstUse: FETCH_DASHBOARD_FIRST_USE,
+      fetchSpaces: FETCH_DASHBOARD_SPACES,
+      fetchPanels: FETCH_DASHBOARD_PANELS,
+      saveView: SAVE_VIEW,
+    }),
+    onClickInsights() {
+      this.$router.push({ name: 'Insights Explorer' });
+    },
+    getDashboardData() {
+      return Promise.all([
+        this.fetchDiscoveryData({ module: 'devices' }), this.fetchDiscoveryData({ module: 'users' }),
+        this.fetchSpaces(),
+      ]).then(this.fetchPanels).then(() => {
+        if (this._isDestroyed) return;
+        this.timer = setTimeout(this.getDashboardData, 30000);
+      });
+    },
+    viewsCallback() {
+      this.getDashboardData();
+    },
+  },
+};
 </script>
 
 
