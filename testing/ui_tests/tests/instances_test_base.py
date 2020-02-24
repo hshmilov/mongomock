@@ -425,15 +425,24 @@ class TestInstancesBase(TestBase):
         client = docker.from_env()
         core = client.containers.list(filters={'name': 'core'})[0]
 
-        res = None
+        retry_sentinel = Exception()
+
+        @retry(wait_fixed=60 * 1000, retry_on_exception=lambda r: r is retry_sentinel, stop_max_attempt_number=20)
+        def run_command_on_core(command):
+            result = core.exec_run(command, demux=True)
+            stdout, stderr = result.output
+            if result.exit_code != 0:
+                self.logger.error(f'Failed to run command on core container: {command} with stdout: {stdout},'
+                                  f'stderr: {stderr}')
+                if stderr is not None and 'Permission denied' in stderr.decode():
+                    raise retry_sentinel
+
+            return result
+
         for current_command in commands:
-            res = core.exec_run(current_command)
+            res = run_command_on_core(current_command)
 
             if res.exit_code != 0:
-                self.logger.error(f'Failed to run command on core container: {current_command}')
-                for instance in self._instances:
-                    rc, out = instance.ssh('cat /var/log/auth.log')
-                    self.logger.info(f'auth.log: {out}')
                 raise Exception(f'Failed to run command on core container: {current_command}')
 
-        assert test_string in res.output.decode('utf-8'), 'Failed to use ssh tunnel to ssh to instance.'
+        assert test_string in res.output[0].decode('utf-8'), 'Failed to use ssh tunnel to ssh to instance.'
