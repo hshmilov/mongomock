@@ -9,12 +9,18 @@ curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key --keyr
 sudo apt-get update
 
 sudo apt-get install -y zip
+sudo apt-get install -y qemu qemu-kvm
 sudo apt-get install -y google-cloud-sdk
 sudo apt-get install -y openjdk-8-jre
 sudo apt-get install -y python3-pip
+sudo apt-get install -y aria2
+sudo apt-get install -y libssl1.0.0 libssl-dev sshpass
 
-sudo pip3 install boto3
+sudo pip3 install -U pip
 
+sudo pip3 install boto3 redis virtualenv
+
+sudo usermod -aG kvm $(whoami)
 
 wget https://dorani-public.s3.us-east-2.amazonaws.com/VMware-ovftool-4.3.0-13981069-lin.x86_64.bundle -O vmware.bundle
 chmod +x vmware.bundle 

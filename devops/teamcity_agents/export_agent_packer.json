@@ -1,6 +1,6 @@
 {
   "variables": {
-    "image_name": "teamcity-exports-agent"
+    "image_name": "teamcity-exports-agent-v2"
   },
   "builders": [
     {
@@ -18,7 +18,7 @@
       "ssh_username": "ubuntu",
       "network": "axonius-office-vpc",
       "subnetwork": "private-subnet",
-      "ssh_timeout": "4h"
+      "image_licenses": ["projects/vm-options/global/licenses/enable-vmx"] 
     }
   ],
 "provisioners": [

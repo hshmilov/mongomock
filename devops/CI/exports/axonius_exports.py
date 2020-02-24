@@ -47,7 +47,9 @@ def main():
     s3_upload_parser.add_argument('--export-name', required=True, dest='name')
     s3_upload_parser.add_argument('--installer', type=pathlib.Path, default=None)
     s3_upload_parser.add_argument('--ova', type=pathlib.Path, default=None)
+    s3_upload_parser.add_argument('--qcow3', type=pathlib.Path, default=None)
     s3_upload_parser.add_argument('--zip', type=pathlib.Path, default=None)
+    s3_upload_parser.add_argument('--vhdx', type=pathlib.Path, default=None)
     s3_upload_parser.set_defaults(entrypoint=s3_upload)
 
     installer_parser = subparsers.add_parser('installer')
@@ -74,21 +76,26 @@ def main():
     cloud_parser.add_argument('--except', type=str, default='', dest='except_')
     cloud_parser.add_argument('--only', type=str, default='')
     cloud_parser.add_argument('--ami-regions', type=str, default='')
+    cloud_parser.add_argument('--qcow-output', type=pathlib.Path, default=None)
     cloud_parser.add_argument('--force', default=False, action='store_true')
+    cloud_parser.add_argument('--disk-size', default=500, type=int)
     cloud_parser.add_argument('--name', type=str, required=True)
     cloud_parser.set_defaults(entrypoint=cloud)
 
-    ova_parser = subparsers.add_parser('ova')
-    ova_vmdk_arguments = ova_parser.add_mutually_exclusive_group(required=True)
+    ova_vhd_parser = subparsers.add_parser('ova_vhd')
+    ova_vmdk_arguments = ova_vhd_parser.add_mutually_exclusive_group(required=True)
+    ova_vmdk_arguments.add_argument('--local-qcow3-name', type=pathlib.Path, default=None)
+    ova_vmdk_arguments.add_argument('--qcow3-s3-name', type=str, default=None)
     ova_vmdk_arguments.add_argument('--local-vmdk-name', type=pathlib.Path)
     ova_vmdk_arguments.add_argument('--remote-vmdk-name', type=str)
     ova_vmdk_arguments.add_argument('--gce-image-name', type=str,
                                     help='Full name of the gce image to create the ova from.')
     ova_vmdk_arguments.add_argument('--export-name', type=str, dest='name',
                                     help='Name of the export to generate ova from.')
-    ova_output_arguments = ova_parser.add_mutually_exclusive_group(required=True)
+    ova_output_arguments = ova_vhd_parser.add_argument_group()
     ova_output_arguments.add_argument('-o', '--output', type=str)
-    ova_parser.set_defaults(entrypoint=ova)
+    ova_output_arguments.add_argument('--vhdx-output', type=str)
+    ova_vhd_parser.set_defaults(entrypoint=ova_vhd)
 
     args = parser.parse_args()
     if args.teamcity_step:
@@ -148,11 +155,15 @@ def cloud(args, notify):
     with tempfile.TemporaryDirectory() as temporary_directory:
         manifest_path = pathlib.Path(temporary_directory).joinpath(f'manifest-{args.name}.json').absolute()
         with local_installer_path(args) as installer_path:
+            except_qemu_args = ['-except', 'qemu']
+            qemu_args = ['-var', f'qcow_output={args.qcow_output.absolute()}'] if args.qcow_output else except_qemu_args
             subprocess_arguments = ['packer', 'build', '-timestamp-ui',
                                     '-var', f'installer={installer_path}',
                                     '-var', f'name={args.name}',
                                     '-var', f'manifest_file={manifest_path}',
-                                    '-var', f'ami_regions={args.ami_regions}']
+                                    '-var', f'disk_size={args.disk_size}',
+                                    '-var', f'ami_regions={args.ami_regions}',
+                                    *qemu_args]
             print(' '.join(subprocess_arguments))
             if args.except_:
                 subprocess_arguments.append(f'-except={args.except_}')
@@ -176,20 +187,26 @@ def cloud(args, notify):
     notify({'name': args.name, 'subcommand': 'cloud', 'step': 'finished'})
 
 
-def ova(args, notify):
-    notify({'name': args.name, 'subcommand': 'ova', 'step': 'start'})
+def ova_vhd(args, notify):
+    notify({'name': args.name, 'subcommand': 'ova_vhd', 'step': 'start'})
     with local_vmdk_path(args) as vmdk:
-        with tempfile.TemporaryDirectory() as vmx_directory:
-            vmx_path = pathlib.Path(vmx_directory).joinpath('axonius.vmx')
-            _create_axonius_vmx(vmdk, vmx_path)
-            subprocess.run(['ovftool', '--targetType=ova', vmx_path, args.output], check=True)
-    notify({'name': args.name, 'subcommand': 'ova', 'step': 'finish'})
+        if args.output:
+            with tempfile.TemporaryDirectory() as vmx_directory:
+                vmx_path = pathlib.Path(vmx_directory).joinpath('axonius.vmx')
+                _create_axonius_vmx(vmdk, vmx_path)
+                subprocess.run(['ovftool', '--targetType=ova', vmx_path, args.output], check=True)
+
+        if args.vhdx_output:
+            subprocess.run(['qemu-img', 'convert', '-f', 'vmdk', '-O', 'vhdx', vmdk, args.vhdx_output])
+    notify({'name': args.name, 'subcommand': 'ova_vhd', 'step': 'finish'})
 
 
 def s3_upload(args, notify):
     notify({'name': args.name, 'subcommand': 's3_upload', 'step': 'start'})
     s3_keys = {'installer': f'{args.name}/axonius_{args.name}.py',
                'zip': f'{args.name}/axonius_{args.name}.zip',
+               'vhdx': f'{args.name}/{args.name}/{args.name}_export.vhdx',
+               'qcow3': f'{args.name}/{args.name}/{args.name}_disk.qcow3',
                'ova': f'{args.name}/{args.name}/{args.name}_export.ova'}
 
     bucket = args.s3_bucket
@@ -246,36 +263,32 @@ def local_installer_path(args):
 
 
 @contextlib.contextmanager
-def remote_vmdk_path(args):
-    if args.remote_vmdk_name:
-        yield args.remote_vmdk_name
-
+def local_qcow3_path(args):
+    if args.local_qcow3_name is not None:
+        yield args.local_qcow3_name
     else:
-        gce_image_name = args.gce_image_name or 'axonius-' + args.name
-        remote_vmdk_name = f'temp_vmdk_export_{hex(int(time.time() * 10))}' + gce_image_name + '.vmdk'
-        vmdk_export_arguments = ['gcloud', 'compute', 'images', 'export',
-                                 f'--destination-uri=gs://axonius-releases/{remote_vmdk_name}',
-                                 '--export-format=vmdk', f'--image={gce_image_name}', '--network=axonius-office-vpc',
-                                 '--subnet=private-subnet',
-                                 '--log-location=gs://axonius-releases/logs', '--zone=us-east1-b']
-        subprocess.run(vmdk_export_arguments, check=True)
-        try:
-            yield remote_vmdk_name
-        finally:
-            subprocess.run(['gsutil', 'rm', f'gs://axonius-releases/{remote_vmdk_name}'], check=True)
+        releases_bucket = args.s3_bucket
+        axonius_releases_url_for_release = f'https://{releases_bucket}.s3.us-east-2.amazonaws.com/{{0}}/{{0}}/{{0}}_disk.qcow3'.format
+        url = axonius_releases_url_for_release(args.qcow3_s3_name)
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            qcow3_name = pathlib.PosixPath(urllib.parse.urlparse(url).path).name
+            temporary_local_qcow3 = pathlib.Path(temporary_directory).joinpath(qcow3_name)
+            subprocess.run(['curl', url, '-o', temporary_local_qcow3])
+            yield temporary_local_qcow3
 
 
 @contextlib.contextmanager
 def local_vmdk_path(args):
     if args.local_vmdk_name:
         yield args.local_vmdk_name
-    with tempfile.TemporaryDirectory() as temporary_directory:
-        temporary_local_vmdk = pathlib.Path(temporary_directory).joinpath('vmdk.vmdk')
-        with remote_vmdk_path(args) as remote_vmdk:
-            subprocess.run(['gsutil', 'cp',
-                            f'gs://axonius-releases/{remote_vmdk}', temporary_local_vmdk],
-                           check=True)
-        yield temporary_local_vmdk
+    else:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            with local_qcow3_path(args) as local_qcow3:
+                temporary_local_vmdk = pathlib.Path(temporary_directory).joinpath('vmdk.vmdk')
+                subprocess.run(['qemu-img', 'convert', '-f', 'qcow2', '-O', 'vmdk',
+                                local_qcow3, temporary_local_vmdk],
+                               check=True)
+                yield temporary_local_vmdk
 
 
 def _create_axonius_vmx(vmdk_path, target_vmx_path):

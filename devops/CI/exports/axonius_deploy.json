@@ -2,6 +2,9 @@
   "variables": {
     "host_installation": "../../scripts/host_installation/",
     "image_name": "axonius-{{user `name`}}",
+    "disk_size": "500",
+    "qemu_output_directory": "output-axonius",
+    "qcow_output": "axonius.qcow3",
     "manifest_file": "manifest.json",
     "ami_regions": ""
   },
@@ -13,9 +16,10 @@
       "zone": "us-east1-b",
       "image_name": "{{user `image_name` | clean_resource_name}}",
       "omit_external_ip": true,
-      "disk_size": "500",
+      "disk_size": "{{user `disk_size`}}",
       "use_internal_ip": true,
       "project_id": "axonius-office",
+      "image_description": "Axonius",
       "machine_type": "n1-standard-8",
       "ssh_username": "ubuntu",
       "network": "axonius-office-vpc",
@@ -43,7 +47,7 @@
       "launch_block_device_mappings": [
         {
           "device_name": "/dev/sda1",
-          "volume_size": 500,
+          "volume_size": "{{user `disk_size`}}",
           "encrypted": false
         }
       ],
@@ -52,6 +56,32 @@
       "subnet_id": "subnet-843a4cff",
       "ssh_username": "ubuntu",
       "ami_regions": "{{user `ami_regions`}}"
+    },
+    {
+      "type": "qemu",
+      "iso_url": "http://cloud-images.ubuntu.com/releases/xenial/release/ubuntu-16.04-server-cloudimg-amd64-disk1.img",
+      "iso_checksum_url": "http://cloud-images.ubuntu.com/releases/xenial/release/SHA256SUMS",
+      "iso_checksum_type": "sha256",
+      "disk_image": true,
+      "disk_size": "512000",
+      "accelerator": "kvm",
+      "memory": 8192,
+      "output_directory": "{{user `qemu_output_directory`}}",
+      "disk_interface": "virtio-scsi",
+      "disk_discard": "unmap",
+      "ssh_username": "ubuntu",
+      "ssh_password": "bringorder",
+      "vm_name": "axonius",
+      "headless": true,
+      "http_directory": "ova_cloud-data",
+      "qemuargs": [
+        ["-smbios", "type=1,serial=ds=nocloud-net;instance-id=packer;seedfrom=http://{{ .HTTPIP }}:{{ .HTTPPort }}/"],
+        ["-netdev", "user,id=user.0,net=10.0.2.0/26,hostfwd=tcp::{{ .SSHHostPort }}-:22"],
+        ["-device", "virtio-net,netdev=user.0"],
+        ["-device", "virtio-scsi-pci,id=scsi0"],
+        ["-device", "scsi-hd,bus=scsi0.0,drive=drive0"],
+        ["-smp", "cpus=8"]
+      ]
     }
   ],
   "provisioners": [
@@ -65,6 +95,14 @@
       "type": "shell",
       "inline": [
         "echo ubuntu:bringorder | sudo /usr/sbin/chpasswd"
+      ]
+    },
+    {
+      "type": "shell",
+      "script": "clean_qemu_machine.sh",
+      "execute_command": "sudo -S sh -c '{{ .Vars }} {{ .Path }}'",
+      "only": [
+        "qemu"
       ]
     },
     {
@@ -164,7 +202,9 @@
     },
     {
       "type": "shell",
-      "script": "./clean_machine_after_installation.sh"
+      "script": "./clean_machine_after_installation.sh",
+      "remote_folder": "/tmp",
+      "execute_command": "sudo -S sh -c '{{ .Vars }} {{ .Path }}'"
     }
   ],
   "post-processors": [
@@ -172,6 +212,14 @@
     {
       "type": "manifest",
       "output": "{{user `manifest_file`}}"
+    },
+    {
+      "type": "shell-local",
+      "only": ["qemu"],
+      "inline": [
+        "mv {{user `qemu_output_directory`}}/axonius {{user `qcow_output`}}",
+        "rmdir {{user `qemu_output_directory`}}"
+      ]
     }
   ]
 }
