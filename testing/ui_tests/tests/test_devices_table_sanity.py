@@ -284,3 +284,17 @@ class TestDevicesTable(TestEntitiesTable):
 
             self.adapters_page.clean_adapter_servers(STRESSTEST_ADAPTER_NAME)
             self.wait_for_adapter_down(STRESSTEST_ADAPTER)
+
+    @pytest.mark.skip('Currently not working. AX-6386')
+    def test_device_network_interfaces_csv_search(self):
+        self.base_page.run_discovery()
+        self.devices_page.switch_to_page()
+        self.devices_page.wait_for_table_to_load()
+        self.devices_page.click_row()
+        self.devices_page.wait_for_spinner_to_end()
+        self.devices_page.click_general_tab()
+        self.devices_page.click_tab(self.devices_page.FIELD_NETWORK_INTERFACES)
+
+        self.devices_page.assert_csv_field_with_search('')
+        self.devices_page.assert_csv_field_with_search('06:80:99:50:D3:5E')
+        self.devices_page.assert_csv_field_with_search('search text that will definitely have no results')

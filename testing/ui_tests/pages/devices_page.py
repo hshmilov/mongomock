@@ -284,3 +284,13 @@ class DevicesPage(EntitiesPage):
         time.sleep(1)
         field_el = self.find_element_by_xpath(self.BASIC_INFO_FIELD_XPATH.format(field_title=field_title))
         return field_el.find_element_by_css_selector('.item .object')
+
+    def assert_csv_field_with_search(self, search_text):
+        self.fill_enter_table_search(search_text)
+        self.assert_csv_field_match_ui_data(self.generate_csv_field(
+            'devices',
+            self.driver.current_url.split('/')[-1],
+            self.FIELD_NETWORK_INTERFACES_NAME,
+            self.FIELD_MAC_NAME,
+            search_text=search_text
+        ))

@@ -999,13 +999,13 @@ class EntitiesPage(Page):
             'fields': fields, 'filter': filters
         })
 
-    def generate_csv_field(self, entity_type, entity_id, field_name, sort, desc=False):
+    def generate_csv_field(self, entity_type, entity_id, field_name, sort, desc=False, search_text=''):
         session = requests.Session()
         cookies = self.driver.get_cookies()
         for cookie in cookies:
             session.cookies.set(cookie['name'], cookie['value'])
         return session.post(f'https://127.0.0.1/api/{entity_type}/{entity_id}/{field_name}/csv', json={
-            'sort': sort, 'desc': ('1' if desc else '0')
+            'sort': sort, 'desc': ('1' if desc else '0'), 'search': search_text
         })
 
     def assert_csv_match_ui_data(self, result, ui_data=None, ui_headers=None, sort_columns=True):
