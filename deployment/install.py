@@ -6,13 +6,11 @@ This script installs the system from scratch (using --first-time) or as an upgra
 """
 import argparse
 import datetime
-import json
 import os
 import stat
 import subprocess
 import sys
 import time
-from pathlib import Path
 
 from utils import (AXONIUS_DEPLOYMENT_PATH,
                    AXONIUS_OLD_ARCHIVE_PATH,
@@ -72,12 +70,19 @@ def main():
         verify_storage_requirements()
 
     if os.geteuid() != 0:
-        # we are not root, and don't have root password :(
+        # we are not root
         print(f'Please run as root!')
         return
 
     install(args.first_time, no_research)
     print_state(f'Done, took {int(time.time() - start)} seconds')
+
+
+def push_old_instances_settings():
+    print_state('Copying old settings (weave encryption key, master marker and first boot marker')
+    if os.path.exists(os.path.join(TEMPORAL_PATH, INSTANCE_SETTINGS_DIR_NAME)):
+        os.rename(os.path.join(TEMPORAL_PATH, INSTANCE_SETTINGS_DIR_NAME),
+                  AXONIUS_SETTINGS_PATH)
 
 
 def load_new_source():
@@ -106,6 +111,8 @@ def load_new_source():
         if full_path.endswith('.sh') and sys.platform.startswith('linux'):
             os.chmod(full_path, stat.S_IREAD | stat.S_IWRITE | stat.S_IEXEC |
                      stat.S_IXGRP | stat.S_IXOTH | stat.S_IRGRP | stat.S_IROTH)
+
+    push_old_instances_settings()
 
 
 def install_requirements():
@@ -165,36 +172,9 @@ def create_venv():
     subprocess.check_call(['python3', create_pth])
 
 
-def save_master_ip():
-    # this is a transition code. after 2.5 we should have master ip stored everywhere
-
-    # a stupid dependency chain forces to duplicate this string because we can't import at this stage
-    # since this code can be removed after 2.5 it doesn't really matter
-    master_key_path = Path('/home/ubuntu/cortex/.axonius_settings/__master')
-    node_marker = Path('/home/ubuntu/cortex/.axonius_settings/connected_to_master.marker')
-
-    if not node_marker.is_file():
-        print(f'Not a node, skipping save master ip step')
-        return
-
-    if not master_key_path.is_file():
-        try:
-            report = subprocess.check_output('weave report'.split())
-            report = json.loads(report)
-            master_ip = report['Router']['Connections'][0]['Address'].split(':')[0]
-            master_key_path.write_text(master_ip)
-            print(f'saved master ip {master_ip} in {master_key_path}')
-
-        except Exception as e:
-            print(f'failed to save master ip {e}')
-    else:
-        print(f'master ip was present at {master_key_path}')
-
-
 def install(first_time, no_research):
     if not first_time:
         validate_old_state()
-        save_master_ip()  # before we destroy weave net - backup the master ip. can remove after 2.5
         os.rename(AXONIUS_DEPLOYMENT_PATH, TEMPORAL_PATH)
 
     load_new_source()

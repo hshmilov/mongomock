@@ -19,7 +19,6 @@ from install import (TEMPORAL_PATH,
                      INSTANCE_CONNECT_USER_PASSWORD,
                      DELETE_INSTANCES_USER_CRON_SCRIPT_PATH,
                      SYSTEM_BOOT_CRON_SCRIPT_PATH,
-                     INSTANCE_SETTINGS_DIR_NAME,
                      BOOTED_FOR_PRODUCTION_MARKER_PATH,
                      DEPLOYMENT_FOLDER_PATH,
                      chown_folder,
@@ -50,7 +49,7 @@ def copy_file(local_path, dest_path, mode=0o700, user='root', group='root'):
 def after_venv_activation(first_time, no_research):
     print(f'installing on top of customer_conf: {get_customer_conf_json()}')
     if not first_time:
-        stop_old(keep_diag=True, keep_tunnel=True)
+        stop_old()
 
     setup_host()
     load_images()
@@ -181,17 +180,7 @@ def create_system_cronjobs():
                    cronjob_timing='*/1 * * * *', keep_script_location=True)
 
 
-def push_old_instances_settings():
-    print_state('Copying old settings (weave encryption key, master marker and first boot marker')
-    if os.path.exists(os.path.join(TEMPORAL_PATH, INSTANCE_SETTINGS_DIR_NAME)):
-        os.rename(os.path.join(TEMPORAL_PATH, INSTANCE_SETTINGS_DIR_NAME),
-                  AXONIUS_SETTINGS_PATH)
-
-
 def setup_instances():
-    # Save old weave pass:
-    push_old_instances_settings()
-
     # Setup user
     setup_instances_user()
 
@@ -214,19 +203,16 @@ def setup_host():
     set_sysctl_value('net.ipv4.conf.all.secure_redirects', '0')
     set_sysctl_value('net.ipv4.conf.default.secure_redirects', '0')
     os.system('sysctl --load')
-    # restart docker service
-    print_state(f'Restarting docker service')
-    subprocess.check_call('service docker restart'.split())
 
 
 def set_booted_for_production():
     open(BOOTED_FOR_PRODUCTION_MARKER_PATH, 'a').close()
 
 
-def stop_old(keep_diag=True, keep_tunnel=True):
+def stop_old():
     print_state('Stopping old containers, and removing old <containers + images> [except diagnostics]')
     from destroy import destroy
-    destroy(keep_diag=keep_diag, keep_tunnel=keep_tunnel)
+    destroy()
 
 
 def load_images():

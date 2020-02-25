@@ -1,10 +1,9 @@
 #!/usr/bin/env python3.6
 
-import argparse
 import subprocess
-import sys
-
 import docker
+
+from utils import print_state
 
 
 def stop_weave_network():
@@ -15,24 +14,21 @@ def stop_weave_network():
         print('Failed to stop weave network.')
 
 
-def destroy(keep_diag=True, keep_tunnel=True):
+def destroy():
     """
-    - stops all running containers (can keep some, see flags)
+    - stops all running containers (can keep some)
     - remove all containers (can keep some, see flags)
     - *removes all "axonius/" images*
-    :param keep_diag: should keep diag (running container and the image)
-    :param keep_tunnel: should keep tunnler and weave containers for instance
     host connection(running container and the image)
     """
     client = docker.from_env()
     instances_dockers_container_names_substrings_to_keep = ['grid']
-    instances_docker_tag_substring_to_keep = ['weave', 'selenium']
+    instances_docker_tag_substring_to_keep = ['selenium']
+    stop_weave_network()
 
     for container in client.containers.list():
-        if (keep_diag and container.name == 'diagnostics') or (
-                keep_tunnel and [current_container_name for current_container_name in
-                                 instances_dockers_container_names_substrings_to_keep if
-                                 current_container_name in container.name]):
+        if [current_container_name for current_container_name in instances_dockers_container_names_substrings_to_keep if
+                current_container_name in container.name]:
             print(f'Skipping {container.name}')
             continue
 
@@ -60,10 +56,8 @@ def destroy(keep_diag=True, keep_tunnel=True):
                 print(f'Skipping {image}')
                 continue
 
-            # Checking if the current image tags is 'diagnostics' or if any of the tags
-            # contain any of the instances_dockers_to_keep as a substring
             cond = [x for x in instances_docker_tag_substring_to_keep if x in tags]
-            if (keep_diag and 'diagnostics' in tags) or (keep_tunnel and cond):
+            if cond:
                 print(f'Skipping {image}')
                 continue
             try:
@@ -72,21 +66,14 @@ def destroy(keep_diag=True, keep_tunnel=True):
                 print(f'Removed {image}')
             except Exception as e:
                 print(f'Error while stopping Image {image} {e}')
-    stop_weave_network()
+
+    # restart docker service
+    print_state(f'Restarting docker service')
+    subprocess.check_call('service docker restart'.split())
 
 
 def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--keep-diag', action='store_true', default=True)
-    parser.add_argument('--keep-tunnel', action='store_true', default=True)
-
-    try:
-        args = parser.parse_args()
-    except AttributeError:
-        print(parser.usage())
-        sys.exit(1)
-
-    destroy(keep_diag=args.keep_diag, keep_tunnel=args.keep_tunnel)
+    destroy()
 
 
 if __name__ == '__main__':
