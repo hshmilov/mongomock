@@ -47,13 +47,8 @@ class LoginPage(Page):
         self.fill_text_field_by_element_id(self.LOGIN_PASSWORD_ID, password)
 
     def click_remember_me(self):
-        try:
-            toggle = self.driver.find_element_by_css_selector(self.REMEMBER_ME_INPUT_CSS)
-        # Probably remember_me is disabled in settings
-        except Exception:
-            return
-        self.click_toggle_button(toggle,
-                                 scroll_to_toggle=False)
+        toggle = self.driver.find_element_by_css_selector(self.REMEMBER_ME_INPUT_CSS)
+        self.click_toggle_button(toggle, scroll_to_toggle=False)
 
     def click_login_button(self):
         self.click_button(self.LOGIN_BUTTON_TEXT)

@@ -1,13 +1,8 @@
-import time
-
-from flaky import flaky
-
 from ui_tests.tests.ui_test_base import TestBase
 from test_credentials.test_ad_credentials import ad_client1_details, GROUPS_USERS
 
 
 class TestLDAPLogin(TestBase):
-    @flaky(max_runs=3)
     def test_ldap_login(self):
         self.settings_page.switch_to_page()
         self.settings_page.click_gui_settings()
@@ -20,8 +15,6 @@ class TestLDAPLogin(TestBase):
 
         self.login_page.logout()
         self.login_page.wait_for_login_page_to_load()
-        # To let the get_login_option request return...
-        time.sleep(1)
         self.login_page.click_login_with_ldap()
         self.login_page.wait_for_spinner_to_end()
         domain, username = ad_client1_details['user'].split('\\')
@@ -43,7 +36,6 @@ class TestLDAPLogin(TestBase):
         for screen in self.get_all_screens():
             screen.assert_screen_is_restricted()
 
-    @flaky(max_runs=3)
     def test_ldap_login_with_groups(self):
         self.settings_page.switch_to_page()
         self.settings_page.click_gui_settings()
@@ -57,8 +49,6 @@ class TestLDAPLogin(TestBase):
 
         self.login_page.logout()
         self.login_page.wait_for_login_page_to_load()
-        # To let the get_login_option request return...
-        time.sleep(1)
         self.login_page.click_login_with_ldap()
         self.login_page.wait_for_spinner_to_end()
         domain, username = ad_client1_details['user'].split('\\')

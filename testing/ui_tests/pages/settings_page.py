@@ -229,6 +229,10 @@ class SettingsPage(Page):
     def get_all_users_from_users_and_roles(self):
         return (x.text for x in self.driver.find_elements_by_css_selector(self.USER_DETAILS_SELECTOR))
 
+    def change_disable_remember_me_toggle(self, make_yes):
+        self.click_toggle_button(self.find_session_timeout_toggle(), make_yes=True, window=TAB_BODY)
+        self.click_toggle_button(self.find_disable_remember_me_toggle(), make_yes=make_yes, scroll_to_toggle=True)
+
     def click_gui_settings(self):
         self.driver.find_element_by_css_selector(self.GUI_SETTINGS_CSS).click()
 

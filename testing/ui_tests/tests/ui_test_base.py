@@ -4,7 +4,6 @@ import logging.handlers
 import os
 import re
 import sys
-import time
 from datetime import datetime, timedelta
 
 import pytest
@@ -363,8 +362,6 @@ class TestBase:
 
     def login(self, remember_me=True, wait_for_getting_started=True):
         self.driver.get(self.base_url)
-        # Let the get_login_options api return...
-        time.sleep(1)
         self.fill_signup_screen()
         self.login_page.wait_for_login_page_to_load()
         self.login_page.login(username=self.username, password=self.password, remember_me=remember_me,
