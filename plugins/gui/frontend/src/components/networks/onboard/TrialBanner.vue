@@ -3,7 +3,7 @@
     v-if="inTrial"
     class="x-trial-banner"
   >
-    <template v-if="isExpired">
+    <template v-if="isExpired || trialDaysRemaining < 1">
       <x-banner severity="error">Axonius evaluation period has expired. Please reach out to your Account Manager.</x-banner>
       <div class="banner-overlay" />
     </template>

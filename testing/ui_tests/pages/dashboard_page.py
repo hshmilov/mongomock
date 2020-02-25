@@ -4,6 +4,7 @@ import datetime
 from retrying import retry
 from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.common.action_chains import ActionChains
+from selenium.webdriver.support.color import Color
 
 from ui_tests.pages.page import Page, TAB_BODY
 from services.axon_service import TimeoutException
@@ -60,6 +61,8 @@ class DashboardPage(Page):
     CARD_EXPORT_TO_CSV_BTN_CSS = '.actions > .export'
     CARD_SEARCH_INPUT_CSS = '.x-search-input > input'
     BANNER_BY_TEXT_XPATH = '//div[contains(@class, \'x-banner\') and .//text() = \'{banner_text}\']'
+    BANNER_BY_CSS = '.x-banner'
+    BANNER_NO_CONTRACT_CLASS = '.x-contract-banner'
     SPACES_XPATH = '//div[@class=\'x-spaces\']'
     ACTIVE_SPACE_HEADERS_XPATH = f'{SPACES_XPATH}//li[@class=\'header-tab active\']'
     SPACE_HEADERS_XPATH = f'{SPACES_XPATH}//li[contains(@class, \'header-tab\')]'
@@ -93,6 +96,10 @@ class DashboardPage(Page):
     CARD_SPINNER_CSS = '.chart-spinner'
     LIFECYCLE_TOOLTIP_CSS = '.cycle-wrapper .x-tooltip'
     LIFECYCLE_TABLE_CSS = '.cycle-wrapper .table'
+
+    COLOR_DANGEROUS = '#FA6400'
+    COLOR_VERYDANGEROUS = '#D0021C'
+    COLOR_INFO = '#4796E4'
 
     @property
     def root_page_css(self):
@@ -659,6 +666,9 @@ class DashboardPage(Page):
     def find_no_trial_banner(self):
         self.wait_for_element_absent_by_css('.x-trial-banner')
 
+    def find_banner_no_contract(self):
+        self.wait_for_element_absent_by_css(self.BANNER_NO_CONTRACT_CLASS)
+
     def find_trial_remainder_banner(self, remainder_count):
         msg = 'days remaining in your Axonius evaluation'
         # Expected color of the banner according UIs thresholds
@@ -674,9 +684,23 @@ class DashboardPage(Page):
         assert banner.value_of_css_property('background-color') == f'rgba({color}, 1)'
         return banner
 
+    def find_contract_remainder_banner(self, remainder_count):
+        msg = 'Access to Axonius will expire in'
+        # Expected color of the banner according UIs thresholds
+        color = self.COLOR_VERYDANGEROUS if (remainder_count < 4) else (
+            self.COLOR_DANGEROUS if remainder_count < 16 else self.COLOR_INFO)
+
+        banner = self.wait_for_element_present_by_css(self.BANNER_BY_CSS)
+        assert Color.from_string(banner.value_of_css_property('background-color')).hex.upper() == color
+        return banner
+
     def find_trial_expired_banner(self):
         return self.wait_for_element_present_by_text(
             'Axonius evaluation period has expired. Please reach out to your Account Manager.')
+
+    def find_contract_expired_banner(self):
+        return self.wait_for_element_present_by_css(self.BANNER_BY_CSS).text.\
+            startswith('Your Axonius subscription has expired')
 
     def find_active_space_header_title(self):
         return self.driver.find_element_by_xpath(self.ACTIVE_SPACE_HEADERS_XPATH).text

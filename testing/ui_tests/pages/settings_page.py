@@ -78,6 +78,8 @@ class SettingsPage(Page):
     VALUES_COUNT_PER_COLUMN_DROPDOWN_CSS = 'label[for="defaultColumnLimit"]~.x-dropdown.x-select'
     VALUES_COUNT_ENTITIES_PER_PAGE_CSS = 'label[for="defaultNumOfEntitiesPerPage"]~.x-dropdown.x-select'
     SAFEGUARD_REMOVE_BUTTON_TEXT = 'Remove Role'
+    XPATH_BY_CLASS_NAME = '//*[contains(@class, \'{name}\')]'
+    DATEPICKER_CLASS_NAME = 'x-date-edit'
     # sorry - but it's not my fault
     # https://axonius.atlassian.net/browse/AX-2991
     # those are the fully fledged css selectors for the elements
@@ -699,12 +701,24 @@ class SettingsPage(Page):
         locked_actions_el.click()
 
     def fill_trial_expiration_by_remainder(self, days_remaining=None):
+        element = self.find_elements_by_xpath(self.XPATH_BY_CLASS_NAME.format(name=self.DATEPICKER_CLASS_NAME))[0]
         try:
-            self.clear_existing_date()
+            self.clear_existing_date(context=element)
         except NoSuchElementException:
             pass
         if days_remaining is not None:
-            self.fill_datepicker_date(datetime.now() + timedelta(days_remaining))
+            self.fill_datepicker_date(datetime.now() + timedelta(days_remaining), context=element)
+            self.close_datepicker()
+
+    def fill_contract_expiration_by_remainder(self, days_remaining=None):
+        elements = self.find_elements_by_xpath(self.XPATH_BY_CLASS_NAME.format(name=self.DATEPICKER_CLASS_NAME))
+        try:
+            self.clear_existing_date(context=elements[0])
+            self.clear_existing_date(context=elements[1])
+        except NoSuchElementException:
+            pass
+        if days_remaining is not None:
+            self.fill_datepicker_date(datetime.now() + timedelta(days_remaining), context=elements[1])
             self.close_datepicker()
 
     def add_email_server(self, host, port):

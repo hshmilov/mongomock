@@ -306,6 +306,10 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
                    metric_name=SystemMetric.TRIAL_EXPIRED_STATE,
                    metric_value=self.trial_expired())
 
+        log_metric(logger,
+                   metric_name=SystemMetric.CONTRACT_EXPIRED_STATE,
+                   metric_value=self.contract_expired())
+
         if job_name != 'execute':
             logger.error(f'Got bad trigger request for non-existent job: {job_name}')
             return return_error('Got bad trigger request for non-existent job', 400)
@@ -313,6 +317,10 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
         if self.trial_expired():
             logger.error('Job not ran - system trial has expired')
             return return_error('Job not ran - system trial has expired', 400)
+
+        if self.contract_expired():
+            logger.error('Job not ran - system contract has expired')
+            return return_error('Job not ran - system contract has expired', 400)
 
         logger.info(f'Started system scheduler')
         try:

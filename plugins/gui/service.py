@@ -184,8 +184,12 @@ def session_connection(func, required_permissions: Iterable[Permission], enforce
         if user is None:
             return return_error('You are not connected', 401)
         permissions = user.get('permissions')
-        if ((not check_permissions(permissions, required_permissions, request.method) and not user.get('admin')) or
-                (enforce_trial and PluginBase.Instance.trial_expired() and user.get('user_name') != AXONIUS_USER_NAME)):
+        is_expired = enforce_trial and \
+            (PluginBase.Instance.trial_expired() or PluginBase.Instance.contract_expired()) and \
+            user.get('user_name') != AXONIUS_USER_NAME
+        is_not_permitted = not check_permissions(permissions, required_permissions, request.method) \
+            and not user.get('admin')
+        if is_not_permitted or is_expired:
             return return_error('You are lacking some permissions for this request', 401)
 
         oidc_data: OidcData = session.get('oidc_data')
@@ -3906,11 +3910,18 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
         return jsonify(constants)
 
     @gui_helpers.add_rule_unauth('system/expired')
-    def get_trial_expired(self):
+    def get_expiry_status(self):
         """
-        Whether system has currently expired it's trial. If no trial expiration date, answer will be false.
+        Whether system has currently expired it's trial or contract.
+        If no trial or contract expiration date, answer will be false.
         """
-        return jsonify(self.trial_expired())
+        feature_flags_config = self.feature_flags_config()
+        if feature_flags_config.get(FeatureFlagsNames.TrialEnd):
+            return jsonify(self.trial_expired())
+        elif feature_flags_config.get(FeatureFlagsNames.ExpiryDate):
+            return jsonify(self.contract_expired())
+        else:
+            return False
 
     def __invalidate_sessions(self, user_id: str = None):
         """
@@ -4876,6 +4887,9 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
         if self.trial_expired():
             logger.error('Report email not sent - system trial has expired')
             return
+        if self.contract_expired():
+            logger.error('Report email not sent - system contract has expired')
+            return
         report_name = report['name']
         logger.info(f'_send_report_thread for the "{report_name}" report started')
         lock = self.exec_report_locks[report_name] if self.exec_report_locks.get(report_name) else threading.RLock()
@@ -4921,6 +4935,10 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
     def _stop_temp_maintenance(self):
         if self.trial_expired():
             logger.error('Support access not stopped - system trial has expired')
+            return
+
+        if self.contract_expired():
+            logger.error('Support access not stopped - system contract has expired')
             return
 
         logger.info('Stopping Support Access')
@@ -5441,7 +5459,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
 
     @gui_helpers.add_rule_unauth('provision')
     def get_provision(self):
-        if self.trial_expired():
+        if self.trial_expired() or self.contract_expired():
             return jsonify(True)
 
         return jsonify(self._maintenance_config.get('provision', False) or
@@ -5449,7 +5467,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
 
     @gui_helpers.add_rule_unauth('analytics')
     def get_analytics(self):
-        if self.trial_expired():
+        if self.trial_expired() or self.contract_expired():
             return jsonify(True)
 
         return jsonify(self._maintenance_config.get('analytics', False) or
@@ -5457,7 +5475,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin):
 
     @gui_helpers.add_rule_unauth('troubleshooting')
     def get_troubleshooting(self):
-        if self.trial_expired():
+        if self.trial_expired() or self.contract_expired():
             return jsonify(True)
 
         return jsonify(self._maintenance_config.get('troubleshooting', False) or

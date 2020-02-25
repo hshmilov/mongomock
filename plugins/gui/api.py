@@ -47,7 +47,8 @@ def basic_authentication(func, required_permissions: Iterable[Permission]):
                 return None
             if not bcrypt.verify(password, user_from_db['password']):
                 return None
-            if PluginBase.Instance.trial_expired() and username != AXONIUS_USER_NAME:
+            if (PluginBase.Instance.trial_expired() or PluginBase.Instance.contract_expired())\
+                    and username != AXONIUS_USER_NAME:
                 return None
             if user_from_db.get('admin'):
                 return user_from_db
@@ -68,7 +69,8 @@ def basic_authentication(func, required_permissions: Iterable[Permission]):
 
             if not user_from_db:
                 return None
-            if PluginBase.Instance.trial_expired() and user_from_db['user_name'] != AXONIUS_USER_NAME:
+            if (PluginBase.Instance.trial_expired() or PluginBase.Instance.contract_expired()) \
+                    and user_from_db['user_name'] != AXONIUS_USER_NAME:
                 return None
             if user_from_db.get('admin'):
                 return user_from_db

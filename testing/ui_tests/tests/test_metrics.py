@@ -55,6 +55,7 @@ class TestMetrics(TestBase):
 
             system_scheduler_log_tester = self.axonius_system.scheduler.log_tester
             wait_until(lambda: system_scheduler_log_tester.is_metric_in_log(SystemMetric.TRIAL_EXPIRED_STATE, False))
+            wait_until(lambda: system_scheduler_log_tester.is_metric_in_log(SystemMetric.CONTRACT_EXPIRED_STATE, False))
             wait_until(lambda: system_scheduler_log_tester.is_metric_in_log(SystemMetric.CYCLE_FINISHED, r'\d+'))
 
             core_log_tester = self.axonius_system.core.log_tester

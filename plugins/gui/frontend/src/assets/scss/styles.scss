@@ -237,6 +237,12 @@ textarea {
 .indicator-bg-success {
   background-color: $indicator-success;
 }
+.indicator-bg-dangerous {
+  background-color: $indicator-dangerous;
+}
+.indicator-bg-verydangerous {
+  background-color: $indicator-verydangerous;
+}
 .indicator-bg-void {
   background-color: $grey-2;
 }

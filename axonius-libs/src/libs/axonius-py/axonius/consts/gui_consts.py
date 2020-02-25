@@ -131,6 +131,8 @@ class FeatureFlagsNames:
     TrialEnd = 'trial_end'
     LockedActions = 'locked_actions'
     CloudCompliance = 'cloud_compliance'
+    ExpiryDate = 'expiry_date'
+    LockOnExpiry = 'lock_on_expiry'
     ReenterCredentials = 'reenter_credentials'
 
 

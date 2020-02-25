@@ -41,6 +41,17 @@ class FeatureFlags(Configurable):
                     }
                 },
                 {
+                    'name': FeatureFlagsNames.ExpiryDate,
+                    'title': 'Contract Expiry Date',
+                    'type': 'string',
+                    'format': 'date-time'
+                },
+                {
+                    'name': FeatureFlagsNames.LockOnExpiry,
+                    'title': 'Lock on contract expiry',
+                    'type': 'bool'
+                },
+                {
                     'name': FeatureFlagsNames.CloudCompliance,
                     'title': 'Cloud Asset Compliance Center',
                     'type': 'array',
@@ -81,7 +92,7 @@ class FeatureFlags(Configurable):
                     ],
                 }
             ],
-            'required': ['is_trial'],
+            'required': ['is_trial', FeatureFlagsNames.LockOnExpiry],
             'name': 'feature_flags',
             'title': 'Feature Flags',
             'type': 'array'
@@ -91,6 +102,8 @@ class FeatureFlags(Configurable):
     def _db_config_default(cls):
         return {
             FeatureFlagsNames.TrialEnd: (datetime.now() + timedelta(days=30)).isoformat()[:10].replace('-', '/'),
+            FeatureFlagsNames.ExpiryDate: '',
+            FeatureFlagsNames.LockOnExpiry: False,
             FeatureFlagsNames.LockedActions: [],
             FeatureFlagsNames.CloudCompliance: {
                 CloudComplianceNames.Visible: False,

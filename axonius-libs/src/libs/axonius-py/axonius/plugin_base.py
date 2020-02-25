@@ -3029,6 +3029,18 @@ class PluginBase(Configurable, Feature, ABC):
             return False
         return parse_date(feature_flags_config[FeatureFlagsNames.TrialEnd]) < parse_date(datetime.now())
 
+    @singlethreaded()
+    @cachetools.cached(cachetools.TTLCache(maxsize=1, ttl=5), lock=threading.Lock())
+    def contract_expired(self):
+        """
+        Check whether system has a contract expiration that has passed
+        """
+        feature_flags_config = self.feature_flags_config()
+        if not feature_flags_config.get(FeatureFlagsNames.ExpiryDate):
+            return False
+        return parse_date(feature_flags_config[FeatureFlagsNames.ExpiryDate]) < parse_date(datetime.now()) and \
+            feature_flags_config.get(FeatureFlagsNames.LockOnExpiry)
+
     def is_in_trial(self):
         """
         Returns True if we are in trial mode, but trial has not expired yet.

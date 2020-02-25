@@ -97,7 +97,7 @@ class TestFeatureFlags(TestBase):
                        tolerated_exceptions_list=[NoSuchElementException], total_timeout=60 * 5,
                        check_return_value=False)
 
-    def _change_expiration_date(self, days_remaining=None, existing=True):
+    def _change_expiration_date(self, days_remaining=None, existing=True, contract=False):
         try:
             self.login_page.find_disabled_login_button()
         except NoSuchElementException:
@@ -110,7 +110,10 @@ class TestFeatureFlags(TestBase):
         self.settings_page.click_feature_flags()
         if existing:
             self.settings_page.find_existing_date()
-        self.settings_page.fill_trial_expiration_by_remainder(days_remaining)
+        if contract:
+            self.settings_page.fill_contract_expiration_by_remainder(days_remaining)
+        else:
+            self.settings_page.fill_trial_expiration_by_remainder(days_remaining)
         self.settings_page.save_and_wait_for_toaster()
         self.login_page.logout()
         time.sleep(6)
@@ -137,5 +140,26 @@ class TestFeatureFlags(TestBase):
         self._change_expiration_date(-1, existing=False)
         assert self.dashboard_page.find_trial_expired_banner()
         self.restart_browser()
-        self._change_expiration_date(3)
         self.dashboard_page.find_no_trial_banner()
+        self._change_expiration_date(3)
+
+    def test_contract_expiration(self):
+        self.dashboard_page.switch_to_page()
+        for days_remaining in [60, 15, 2]:
+            self._change_expiration_date(days_remaining, contract=True)
+            assert self.dashboard_page.find_contract_remainder_banner(days_remaining)
+
+        self._change_expiration_date(contract=True)
+        self.dashboard_page.find_banner_no_contract()
+
+        self._change_expiration_date(-1, existing=False, contract=True)
+        assert self.dashboard_page.find_contract_expired_banner()
+        self.restart_browser()
+        self._change_expiration_date(contract=True)
+        self.dashboard_page.find_banner_no_contract()
+
+        self._change_expiration_date(-1, existing=False, contract=True)
+        assert self.dashboard_page.find_contract_expired_banner()
+        self.restart_browser()
+        self.dashboard_page.find_banner_no_contract()
+        self._change_expiration_date(3, contract=True)

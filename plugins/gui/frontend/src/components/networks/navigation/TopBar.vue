@@ -7,23 +7,24 @@
       class="bar-toggle"
       @click="toggleSidebar"
     >
-      <md-icon md-src="/src/assets/icons/navigation/menu.svg" />
+      <MdIcon md-src="/src/assets/icons/navigation/menu.svg" />
     </div>
     <div
       class="bar-logo"
     >
-      <svg-icon
+      <SvgIcon
         name="logo/logo"
         height="30"
         :original="true"
       />
-      <svg-icon
+      <SvgIcon
         name="logo/axonius"
         height="16"
         :original="true"
       />
     </div>
-    <x-trial-banner />
+    <XTrialBanner />
+    <XContractBanner />
     <ul class="bar-nav">
       <li class="nav-item">
         <button
@@ -31,7 +32,7 @@
           class="item-link research-link"
           disabled
         >
-          <md-icon
+          <MdIcon
             md-src="/src/assets/icons/symbol/running.svg"
             class="rotating"
           />
@@ -43,7 +44,7 @@
           disabled
           @click="stopResearchNow"
         >
-          <md-icon
+          <MdIcon
             md-src="/src/assets/icons/symbol/running.svg"
             class="rotating"
           />
@@ -56,7 +57,7 @@
           :disabled="!isDashboardWrite"
           @click="startResearchNow"
         >
-          <md-icon md-src="/src/assets/icons/action/start.svg" />
+          <MdIcon md-src="/src/assets/icons/action/start.svg" />
           <div>Discover Now</div>
         </button>
         <button
@@ -66,18 +67,19 @@
           :disabled="!isDashboardWrite"
           @click="stopResearchNow"
         >
-          <md-icon md-src="/src/assets/icons/action/stop.svg" />
+          <MdIcon md-src="/src/assets/icons/action/stop.svg" />
           <div>Stop Discovery</div>
         </button>
       </li>
       <li class="nav-item">
         <a class="item-link">
-          <x-notification-peek v-if="!isExpired" />
-          <svg-icon
+          <XNotificationPeek v-if="!isExpired" />
+          <SvgIcon
             v-else
             name="navigation/notifications"
             :original="true"
-            height="20"></svg-icon>
+            height="20"
+          />
         </a>
       </li>
       <li
@@ -89,38 +91,38 @@
           class="item-link"
           @click="navigateSettings"
         >
-          <svg-icon
+          <SvgIcon
             name="navigation/settings"
             :original="true"
             height="20"
           />
         </a>
-        <x-tip-info
+        <XTipInfo
           v-if="isEmptySetting('mail')"
           content="In order to send alerts through mail, configure it under settings"
           @dismiss="dismissEmptySetting('mail')"
         />
-        <x-tip-info
+        <XTipInfo
           v-if="isEmptySetting('syslog')"
           content="In order to send alerts through a syslog system, configure it under settings"
           @dismiss="dismissEmptySetting('syslog')"
         />
-        <x-tip-info
+        <XTipInfo
           v-if="isEmptySetting('httpsLog')"
           content="In order to send alerts through an HTTPS log system, configure it under settings"
           @dismiss="dismissEmptySetting('httpsLog')"
         />
-        <x-tip-info
+        <XTipInfo
           v-if="isEmptySetting('serviceNow')"
           content="In order to create a ServiceNow computer or incident, configure it under settings"
           @dismiss="dismissEmptySetting('serviceNow')"
         />
-        <x-tip-info
+        <XTipInfo
           v-if="isEmptySetting('freshService')"
           content="In order to create a FreshService incident, configure it under settings"
           @dismiss="dismissEmptySetting('freshService')"
         />
-        <x-tip-info
+        <XTipInfo
           v-if="isEmptySetting('jira')"
           content="In order to create a Jira incident, configure it under settings"
           @dismiss="dismissEmptySetting('jira')"
@@ -131,140 +133,143 @@
 </template>
 
 <script>
-  import xNotificationPeek from '../NotificationsPeek.vue'
-  import xTipInfo from '../onboard/TipInfo.vue'
-  import xTrialBanner from '../onboard/TrialBanner.vue'
+import {
+  mapState, mapGetters, mapMutations, mapActions,
+} from 'vuex';
+import XNotificationPeek from '../NotificationsPeek.vue';
+import XTipInfo from '../onboard/TipInfo.vue';
+import XTrialBanner from '../onboard/TrialBanner.vue';
+import XContractBanner from '../onboard/ContractBanner.vue';
 
-  import { mapState, mapGetters, mapMutations, mapActions } from 'vuex'
-  import { FETCH_LIFECYCLE } from '../../../store/modules/dashboard'
-  import { UPDATE_EMPTY_STATE } from '../../../store/modules/onboarding'
-  import {IS_EXPIRED} from '../../../store/getters'
-  import { TOGGLE_SIDEBAR } from '../../../store/mutations'
-  import { START_RESEARCH_PHASE, STOP_RESEARCH_PHASE, FETCH_DATA_FIELDS } from '../../../store/actions'
-  import { entities } from '../../../constants/entities'
+import { FETCH_LIFECYCLE } from '../../../store/modules/dashboard';
+import { UPDATE_EMPTY_STATE } from '../../../store/modules/onboarding';
+import { IS_EXPIRED } from '../../../store/getters';
+import { TOGGLE_SIDEBAR } from '../../../store/mutations';
+import { START_RESEARCH_PHASE, STOP_RESEARCH_PHASE, FETCH_DATA_FIELDS } from '../../../store/actions';
+import { entities } from '../../../constants/entities';
 
-  export default {
-    name: 'XTopBar',
-    components: {
-      xNotificationPeek, xTipInfo, xTrialBanner
+export default {
+  name: 'XTopBar',
+  components: {
+    XNotificationPeek, XTipInfo, XTrialBanner, XContractBanner,
+  },
+  data() {
+    return {
+      isDown: false,
+      researchStatusLocal: '',
+    };
+  },
+  computed: {
+    ...mapState({
+      collapseSidebar(state) {
+        return state.interaction.collapseSidebar;
+      },
+      emptySettings(state) {
+        return state.onboarding.emptyStates.settings;
+      },
+      researchStatus(state) {
+        return state.dashboard.lifecycle.data.status;
+      },
+      isSettingsRestricted(state) {
+        const user = state.auth.currentUser.data;
+        if (!user || !user.permissions) return true;
+        return user.permissions.Settings === 'Restricted';
+      },
+      isDashboardWrite(state) {
+        const user = state.auth.currentUser.data;
+        if (!user || !user.permissions) return true;
+        return user.permissions.Dashboard === 'ReadWrite' || user.admin;
+      },
+      userPermissions(state) {
+        return state.auth.currentUser.data.permissions;
+      },
+    }),
+    ...mapGetters({
+      isExpired: IS_EXPIRED,
+    }),
+    anyEmptySettings() {
+      return Object.values(this.emptySettings).find((value) => value);
     },
-    data () {
-      return {
-        isDown: false,
-        researchStatusLocal: ''
-      }
-    },
-    computed: {
-      ...mapState({
-        collapseSidebar (state) {
-          return state.interaction.collapseSidebar
-        },
-        emptySettings (state) {
-          return state.onboarding.emptyStates.settings
-        },
-        researchStatus (state) {
-          return state.dashboard.lifecycle.data.status
-        },
-        isSettingsRestricted (state) {
-          let user = state.auth.currentUser.data
-          if (!user || !user.permissions) return true
-          return user.permissions.Settings === 'Restricted'
-        },
-        isDashboardWrite (state) {
-          let user = state.auth.currentUser.data
-          if (!user || !user.permissions) return true
-          return user.permissions.Dashboard === 'ReadWrite' || user.admin
-        },
-        userPermissions (state) {
-          return state.auth.currentUser.data.permissions
-        }
-      }),
-      ...mapGetters({
-        isExpired: IS_EXPIRED
-      }),
-      anyEmptySettings () {
-        return Object.values(this.emptySettings).find(value => value)
-      }
-    },
-    mounted () {
-      const updateLifecycle = () => {
-        this.fetchLifecycle().then(() => {
-          if (this._isDestroyed) return
-          if (this.expired) return
-          if ((this.researchStatusLocal !== '' &&
-                  this.researchStatusLocal !== 'done' &&
-                  this.researchStatus === 'done')
+  },
+  mounted() {
+    const updateLifecycle = () => {
+      this.fetchLifecycle().then(() => {
+        if (this._isDestroyed) return;
+        if (this.expired) return;
+        if ((this.researchStatusLocal !== ''
+                  && this.researchStatusLocal !== 'done'
+                  && this.researchStatus === 'done')
             || (this.researchStatusLocal === '' && this.researchStatus === 'running')) {
-            entities.forEach(entity => {
-              if (this.entityRestricted(entity.title)) return
-              this.fetchDataFields({ module: entity.name })
-            })
-          }
-          this.researchStatusLocal = this.researchStatus
-          this.timer = setTimeout(updateLifecycle, 3000)
-        })
-      }
-      updateLifecycle()
-    },
-    beforeDestroy () {
-      clearTimeout(this.timer)
-    },
-    methods: {
-      ...mapMutations({
-        toggleSidebar: TOGGLE_SIDEBAR, updateEmptyState: UPDATE_EMPTY_STATE,
-      }),
-      ...mapActions({
-        fetchLifecycle: FETCH_LIFECYCLE,
-        startResearch: START_RESEARCH_PHASE,
-        stopResearch: STOP_RESEARCH_PHASE,
-        fetchDataFields: FETCH_DATA_FIELDS
+          entities.forEach((entity) => {
+            if (this.entityRestricted(entity.title)) return;
+            this.fetchDataFields({ module: entity.name });
+          });
+        }
+        this.researchStatusLocal = this.researchStatus;
+        this.timer = setTimeout(updateLifecycle, 3000);
+      });
+    };
+    updateLifecycle();
+  },
+  beforeDestroy() {
+    clearTimeout(this.timer);
+  },
+  methods: {
+    ...mapMutations({
+      toggleSidebar: TOGGLE_SIDEBAR, updateEmptyState: UPDATE_EMPTY_STATE,
+    }),
+    ...mapActions({
+      fetchLifecycle: FETCH_LIFECYCLE,
+      startResearch: START_RESEARCH_PHASE,
+      stopResearch: STOP_RESEARCH_PHASE,
+      fetchDataFields: FETCH_DATA_FIELDS,
 
-      }),
-      startResearchNow () {
-        this.$ga.event('research', 'start-now', '', 1)
-        this.researchStatusLocal = 'starting'
-        this.startResearch().catch(() => this.researchStatusLocal = '')
-      },
-      stopResearchNow () {
-        this.$ga.event('research', 'stop-now', '', 1)
-        this.researchStatusLocal = 'stopping'
-        this.stopResearch().catch(() => this.researchStatusLocal = 'running')
-      },
-      navigateSettings () {
-        if (this.isSettingsRestricted) {
-          this.$emit('access-violation', name)
-          return
-        }
-        if (this.anyEmptySettings) {
-          this.$router.push({ path: '/settings#global-settings-tab' })
-          this.dismissAllSettings()
-        } else {
-          this.$router.push({ name: 'Settings' })
-        }
-      },
-      entityRestricted (entity) {
-        return this.userPermissions[entity] === 'Restricted'
-      },
-      isEmptySetting (name) {
-        return this.emptySettings[name]
-      },
-      dismissEmptySetting (name) {
-        this.updateEmptyState({
-          settings: {
-            [name]: false
-          }
-        })
-      },
-      dismissAllSettings () {
-        this.updateEmptyState({
-          settings: Object.keys(this.emptySettings).reduce((map, setting) => {
-            map[setting] = false
-            return map
-          }, {})
-        })
+    }),
+    startResearchNow() {
+      this.$ga.event('research', 'start-now', '', 1);
+      this.researchStatusLocal = 'starting';
+      this.startResearch().catch(() => this.researchStatusLocal = '');
+    },
+    stopResearchNow() {
+      this.$ga.event('research', 'stop-now', '', 1);
+      this.researchStatusLocal = 'stopping';
+      this.stopResearch().catch(() => this.researchStatusLocal = 'running');
+    },
+    navigateSettings() {
+      if (this.isSettingsRestricted) {
+        this.$emit('access-violation', name);
+        return;
       }
-    }
-  }
+      if (this.anyEmptySettings) {
+        this.$router.push({ path: '/settings#global-settings-tab' });
+        this.dismissAllSettings();
+      } else {
+        this.$router.push({ name: 'Settings' });
+      }
+    },
+    entityRestricted(entity) {
+      return this.userPermissions[entity] === 'Restricted';
+    },
+    isEmptySetting(name) {
+      return this.emptySettings[name];
+    },
+    dismissEmptySetting(name) {
+      this.updateEmptyState({
+        settings: {
+          [name]: false,
+        },
+      });
+    },
+    dismissAllSettings() {
+      this.updateEmptyState({
+        settings: Object.keys(this.emptySettings).reduce((map, setting) => {
+          map[setting] = false;
+          return map;
+        }, {}),
+      });
+    },
+  },
+};
 </script>
 
 <style lang="scss">

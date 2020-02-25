@@ -29,6 +29,7 @@
         align-items: center;
         justify-content: center;
         font-size: 16px;
+        font-weight: 300;
         color: $theme-white;
         border-bottom-right-radius: 24px;
         border-bottom-left-radius: 24px;

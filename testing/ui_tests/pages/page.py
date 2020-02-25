@@ -273,8 +273,8 @@ class Page:
     def fill_text_field_by_tag_name(self, tag_name, value, context=None):
         return self.fill_text_field_by(By.TAG_NAME, tag_name, value, context)
 
-    def fill_text_field_by_css_selector(self, css_selector, value, context=None):
-        return self.fill_text_field_by(By.CSS_SELECTOR, css_selector, value, context)
+    def fill_text_field_by_css_selector(self, css_selector, value, context=None, last_field=False):
+        return self.fill_text_field_by(By.CSS_SELECTOR, css_selector, value, context, last_field=last_field)
 
     def fill_text_field_by(self, by, by_value, value, context=None, last_field=False):
         try:
@@ -800,9 +800,10 @@ class Page:
     def wait_for_modal_close(self):
         self.wait_for_element_absent_by_css(self.MODAL_OVERLAY_CSS)
 
-    def fill_datepicker_date(self, date_to_fill):
+    def fill_datepicker_date(self, date_to_fill, context=None):
         self.fill_text_field_by_css_selector(self.DATEPICKER_INPUT_CSS,
-                                             normalize_timezone_date(date_to_fill.date().isoformat()))
+                                             normalize_timezone_date(date_to_fill.date().isoformat()),
+                                             context=context)
         # Sleep through the time it takes the date picker to react to the filled date
         time.sleep(0.6)
 
@@ -815,11 +816,11 @@ class Page:
             # Already closed
             pass
 
-    def click_remove_sign(self):
-        self.click_button('X', partial_class=True, should_scroll_into_view=False)
+    def click_remove_sign(self, context=None):
+        self.click_button('X', partial_class=True, should_scroll_into_view=False, context=context)
 
-    def clear_existing_date(self):
-        self.click_remove_sign()
+    def clear_existing_date(self, context=None):
+        self.click_remove_sign(context=context)
         # Make sure it is removed
         time.sleep(0.5)
 
