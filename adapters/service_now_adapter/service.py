@@ -467,7 +467,15 @@ class ServiceNowAdapter(AdapterBase, Configurable):
                     logger.warning(f'Bad user with no id {user_raw}')
                     continue
                 user.id = sys_id
-                user.mail = user_raw.get('email')
+                found_whitelist = False
+                mail = user_raw.get('email')
+                if self.__email_whitelist:
+                    for whielist_mail in self.__email_whitelist:
+                        if whielist_mail in mail:
+                            found_whitelist = True
+                    if not found_whitelist:
+                        continue
+                user.mail = mail
                 user.employee_number = user_raw.get('employee_number')
                 user.user_country = user_raw.get('country')
                 user.first_name = user_raw.get('first_name')
@@ -560,6 +568,11 @@ class ServiceNowAdapter(AdapterBase, Configurable):
                     'name': 'exclude_vm_tables',
                     'type': 'bool',
                     'title': 'Exclude VMs tables'
+                },
+                {
+                    'name': 'email_whitelist',
+                    'type': 'Users Email Whitelist',
+                    'title': 'string'
                 }
             ],
             "required": [
@@ -583,7 +596,8 @@ class ServiceNowAdapter(AdapterBase, Configurable):
             'exclude_disposed_devices': False,
             'exclude_no_strong_identifier': False,
             'use_ci_table_for_install_status': False,
-            'exclude_vm_tables': False
+            'exclude_vm_tables': False,
+            'email_whitelist': None
         }
 
     def _on_config_update(self, config):
@@ -594,6 +608,7 @@ class ServiceNowAdapter(AdapterBase, Configurable):
         self.__exclude_no_strong_identifier = config['exclude_no_strong_identifier']
         self.__use_ci_table_for_install_status = config['use_ci_table_for_install_status']
         self.__exclude_vm_tables = config['exclude_vm_tables']
+        self.__email_whitelist = config['email_whitelist'].split(',') if config.get('email_whitelist') else None
 
     def outside_reason_to_live(self) -> bool:
         """

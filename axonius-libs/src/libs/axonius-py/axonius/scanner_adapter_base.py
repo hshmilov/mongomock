@@ -33,6 +33,9 @@ def newest(devices):
     devices = list(devices)
     if not devices:
         return None
+    devices_with_last_seen = list(filter(lambda device: device['data'].get('last_seen'), devices))
+    if devices_with_last_seen:
+        return max(devices_with_last_seen, key=lambda device: device['data']['last_seen'])
     return max(devices, key=lambda device: device['accurate_for_datetime'])
 
 
@@ -246,6 +249,7 @@ class ScannerAdapterBase(AdapterBase, Feature, ABC):
             f'adapters.{PLUGIN_UNIQUE_NAME}': 1,
             'adapters.data.id': 1,
             'adapters.data.network_interfaces.ips': 1,
+            'adapters.data.os.type': 1,
         })
         scanner = self._get_scanner_correlator(devices, self.plugin_name)
         device_count = 0

@@ -400,7 +400,7 @@ def not_wifi_adapter(adapter_device):
             (adapter_device.get('plugin_name').lower() == 'cisco_prime_adapter' and
              adapter_device['data'].get('fetch_proto') == 'PRIME_WIFI_CLIENT') or\
             (adapter_device.get('plugin_name').lower() == 'tanium_adapter' and
-             adapter_device['data'].get('tanium_type') == 'Discover Device'):
+             adapter_device['data'].get('tanium_type') == 'Discover Device') or is_counter_act_adapter(adapter_device):
         return False
     return True
 
