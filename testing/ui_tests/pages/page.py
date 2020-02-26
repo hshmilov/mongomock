@@ -684,6 +684,10 @@ class Page:
         element.send_keys(Keys.ENTER)
 
     @staticmethod
+    def key_down_tab(element):
+        element.send_keys(Keys.TAB)
+
+    @staticmethod
     def key_down_arrow_down(element):
         element.send_keys(Keys.ARROW_DOWN)
 
@@ -872,6 +876,15 @@ class Page:
 
     def focus_on_element(self, elem_id):
         return self.driver.execute_script(f'document.querySelector("#{elem_id}").focus()')
+
+    def is_focused(self, element):
+        return element == self.driver.switch_to.active_element
+
+    def is_input_text_selectable(self, selector):
+        script = f'''const element = document.querySelector("{selector}");
+                     element.select()
+                     return window.getSelection().toString() === element.value;'''
+        return self.driver.execute_script(script)
 
     def blur_on_element(self, elem_id):
         return self.driver.execute_script(f'document.querySelector("#{elem_id}").blur()')

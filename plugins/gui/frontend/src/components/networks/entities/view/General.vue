@@ -34,61 +34,59 @@
 </template>
 
 <script>
-  import xTabs from '../../../axons/tabs/Tabs.vue'
-  import xTab from '../../../axons/tabs/Tab.vue'
-  import xList from '../../../neurons/schema/List.vue'
-  import xEntityAdvanced from './Advanced.vue'
+import { mapState } from 'vuex';
+import xTabs from '../../../axons/tabs/Tabs.vue';
+import xTab from '../../../axons/tabs/Tab.vue';
+import xList from '../../../neurons/schema/List.vue';
+import xEntityAdvanced from './Advanced.vue';
 
-  import {mapState} from 'vuex'
 
-  export default {
-    name: 'XEntityGeneral',
-    components: {
-      xTabs, xTab, xList, xEntityAdvanced
+export default {
+  name: 'XEntityGeneral',
+  components: {
+    xTabs, xTab, xList, xEntityAdvanced,
+  },
+  props: {
+    module: {
+      type: String,
+      required: true,
     },
-    props: {
-      module: {
-        type: String,
-        required: true
-      },
-      entityId: {
-        type: String,
-        required: true
-      },
-      basic: {
-        type: Object,
-        default: () => {
-          return {}
-        }
-      },
-      advanced: {
-        type: Array,
-        default: () => []
-      }
+    entityId: {
+      type: String,
+      required: true,
     },
-    computed: {
-      ...mapState({
-        fields (state) {
-          return state[this.module].fields.data
-        },
-        hyperlinks (state) {
-          const hyperlinks = state[this.module].hyperlinks.data
-          if (!hyperlinks || !hyperlinks['aggregator']) {
-            return {}
-          }
-          return eval(hyperlinks['aggregator'])
+    basic: {
+      type: Object,
+      default: () => ({}),
+    },
+    advanced: {
+      type: Array,
+      default: () => [],
+    },
+  },
+  computed: {
+    ...mapState({
+      fields(state) {
+        return state[this.module].fields.data;
+      },
+      hyperlinks(state) {
+        const hyperlinks = state[this.module].hyperlinks.data;
+        if (!hyperlinks || !hyperlinks.aggregator) {
+          return {};
         }
-      }),
-      basicSchema () {
-        if (!this.fields.generic) return null
-        return {
-          type: 'array',
-          items: this.fields.generic,
-          hyperlinks: this.hyperlinks
-        }
-      }
-    }
-  }
+        return eval(hyperlinks.aggregator);
+      },
+    }),
+    basicSchema() {
+      if (!this.fields.generic) return null;
+      return {
+        type: 'array',
+        items: this.fields.generic,
+        hyperlinks: this.hyperlinks,
+      };
+    },
+  },
+};
 </script>
 
 <style lang="scss">

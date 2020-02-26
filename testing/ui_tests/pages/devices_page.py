@@ -81,7 +81,8 @@ class DevicesPage(EntitiesPage):
     QUERY_FIELD_VALUE = '.x-select-typed-field .x-dropdown.x-select.field-select'
     DELETE_DIALOG_TEXT_REGEX = 'You are about to delete \\d+ devices\\.'
     BASIC_INFO_FIELD_XPATH = '//div[contains(@class, \'x-tab active\')]//div[contains(@class, \'x-tab active\')]' \
-                             '//div[preceding-sibling::label[text()=\'{field_title}\']]'
+                             '//div[preceding-sibling::label[normalize-space(text())=\'{field_title}\']]'
+    TAG_COMBOBOX_CSS = '.x-combobox_results-card--keep-open.v-card'
     PartialState = {
         'PARTIAL': 'mixed',
         'CHECKED': 'true',
@@ -185,7 +186,7 @@ class DevicesPage(EntitiesPage):
         for tag_text in tags:
             self.fill_text_field_by_css_selector(self.TAGS_TEXTBOX_CSS, tag_text)
             time.sleep(0.1)
-            self.driver.find_element_by_css_selector(self.TAG_CREATE_NEW_CSS).click()
+            self.click_create_new_tag_link_button()
             self.wait_for_element_present_by_xpath(self.TAG_NEW_ITEM_XPATH.format(tag_text=tag_text))
         self.click_tag_save_button()
         self.wait_for_success_tagging_message(number)
@@ -284,6 +285,28 @@ class DevicesPage(EntitiesPage):
         time.sleep(1)
         field_el = self.find_element_by_xpath(self.BASIC_INFO_FIELD_XPATH.format(field_title=field_title))
         return field_el.find_element_by_css_selector('.item .object')
+
+    def get_tag_combobox_exist(self):
+        return self.wait_for_element_present_by_css(self.TAG_COMBOBOX_CSS)
+
+    def get_tag_modal_info(self):
+        return self.driver.find_element_by_css_selector('.tag-modal-info')
+
+    def get_checkbox_list(self):
+        return self.driver.find_elements_by_css_selector('.v-list-item')
+
+    def get_tags_input(self):
+        return self.driver.find_element_by_css_selector(self.TAGS_TEXTBOX_CSS)
+
+    def click_create_new_tag_link_button(self):
+        return self.driver.find_element_by_css_selector(self.TAG_CREATE_NEW_CSS).click()
+
+    def is_tags_input_text_selectable(self):
+        return self.is_input_text_selectable(self.TAGS_TEXTBOX_CSS)
+
+    @staticmethod
+    def is_tag_has_status(tag, status):
+        return tag.find_element_by_css_selector('.checkbox--{}'.format(status)).is_displayed()
 
     def assert_csv_field_with_search(self, search_text):
         self.fill_enter_table_search(search_text)

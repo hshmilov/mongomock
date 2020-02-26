@@ -12,7 +12,9 @@
       >
         <div class="header">
           <div class="header__source">
-            <template v-if="item.client_used">Data From: {{ item.client_used }}</template>
+            <template v-if="item.client_used">
+              Data From: {{ item.client_used }}
+            </template>
           </div>
           <x-button
             v-if="isGuiAdapterData(item)"
@@ -58,190 +60,202 @@
       v-model="toastMessage"
     />
   </div>
-
 </template>
 
 <script>
-  import xTabs from '../../../axons/tabs/Tabs.vue'
-  import xTab from '../../../axons/tabs/Tab.vue'
-  import xList from '../../../neurons/schema/List.vue'
-  import xButton from '../../../axons/inputs/Button.vue'
-  import xModal from '../../../axons/popover/Modal.vue'
-  import xCustomFields from './CustomFields.vue'
-  import xToast from '../../../axons/popover/Toast.vue'
-  import { JSONView } from "vue-json-component"
+import { JSONView } from 'vue-json-component';
+import {
+  mapState, mapActions, mapGetters,
+} from 'vuex';
+import xTabs from '../../../axons/tabs/Tabs.vue';
+import xTab from '../../../axons/tabs/Tab.vue';
+import xList from '../../../neurons/schema/List.vue';
+import xButton from '../../../axons/inputs/Button.vue';
+import xModal from '../../../axons/popover/Modal.vue';
+import xCustomFields from './CustomFields.vue';
+import xToast from '../../../axons/popover/Toast.vue';
 
-  import {mapState, mapMutations, mapActions, mapGetters} from 'vuex'
-  import {SAVE_CUSTOM_DATA, FETCH_DATA_FIELDS} from '../../../../store/actions'
+import { SAVE_CUSTOM_DATA, FETCH_DATA_FIELDS } from '../../../../store/actions';
 
-  import {pluginMeta} from '../../../../constants/plugin_meta'
-  import {guiPluginName, initCustomData} from '../../../../constants/entities'
-  import {GET_CONNECTION_LABEL} from "../../../../store/getters"
+import { pluginMeta } from '../../../../constants/plugin_meta';
+import { guiPluginName, initCustomData } from '../../../../constants/entities';
+import { GET_CONNECTION_LABEL } from '../../../../store/getters';
 
-  const lastSeenByModule = {
-    'users': 'last_seen_in_devices',
-    'devices': 'last_seen'
-  }
+const lastSeenByModule = {
+  users: 'last_seen_in_devices',
+  devices: 'last_seen',
+};
 
-  export default {
-    name: 'XEntityAdapters',
-    components: {
-      xTabs, xTab, xList, xButton,
-      xModal, xCustomFields, xToast,
-      'json-view': JSONView
+export default {
+  name: 'XEntityAdapters',
+  components: {
+    xTabs,
+    xTab,
+    xList,
+    xButton,
+    xModal,
+    xCustomFields,
+    xToast,
+    'json-view': JSONView,
+  },
+  props: {
+    entityId: {
+      type: String,
+      required: true,
     },
-    props: {
-      entityId: {
-        type: String,
-        required: true
+    module: {
+      type: String,
+      required: true,
+    },
+    adapters: {
+      type: Array,
+      default: () => [],
+    },
+  },
+  data() {
+    return {
+      viewBasic: true,
+      fieldsEditor: { active: false },
+      toastMessage: '',
+      error: {},
+    };
+  },
+  computed: {
+    ...mapState({
+      fields(state) {
+        return state[this.module].fields.data;
       },
-      module: {
-        type: String,
-        required: true
+      hyperlinks(state) {
+        return state[this.module].hyperlinks.data;
       },
-      adapters: {
-        type: Array,
-        default: () => []
+    }),
+    ...mapGetters({
+      getConnectionLabel: GET_CONNECTION_LABEL,
+    }),
+    sortedSpecificData() {
+      const lastSeen = new Set();
+      const res = this.adapters.filter((item) => {
+        if (item.hidden_for_gui) return false;
+        return !(item.plugin_type && item.plugin_type.toLowerCase().includes('plugin'));
+      }).sort((first, second) => {
+        // GUI plugin (miscellaneous) always comes last
+        if (first.plugin_name === guiPluginName) return 1;
+        if (second.plugin_name === guiPluginName) return -1;
+
+        // Adapters with no last_seen field go first
+        const firstSeen = first.data[lastSeenByModule[this.module]];
+        const secondSeen = second.data[lastSeenByModule[this.module]];
+        if (!secondSeen) return 1;
+        if (!firstSeen) return -1;
+        // Turn strings into dates and subtract them to get a negative, positive, or zero value.
+        return new Date(secondSeen) - new Date(firstSeen);
+      }).map((item) => {
+        item.id = `${item.plugin_unique_name}_${item.data.id}`;
+        const connectionLabel = this.getConnectionLabel(item.client_used, item.plugin_name);
+        if (pluginMeta[item.plugin_name]) {
+          item.pretty_name = pluginMeta[item.plugin_name].title + connectionLabel;
+        }
+        if (lastSeen.has(item.plugin_name)) return { ...item, outdated: true };
+        lastSeen.add(item.plugin_name);
+        return item;
+      });
+      if (res.length === 0 || res[res.length - 1].plugin_name !== guiPluginName) {
+        // Add initial gui adapters data
+        res.push({
+          ...initCustomData(this.module),
+          pretty_name: pluginMeta[initCustomData(this.module).plugin_name].title,
+        });
       }
+      return res;
     },
-    data() {
+    genericFieldNames() {
+      return this.fields.generic.map((field) => field.name);
+    },
+    genericSchema() {
       return {
-        viewBasic: true,
-        fieldsEditor: {active: false},
-        toastMessage: '',
-        error: {}
-      }
+        ...this.fields.schema.generic,
+        name: 'data',
+        title: 'SEPARATOR',
+        hyperlinks: eval(this.hyperlinks.aggregator),
+      };
     },
-    computed: {
-      ...mapState({
-        fields (state) {
-          return state[this.module].fields.data
-        },
-        hyperlinks (state) {
-          return state[this.module].hyperlinks.data
-        }
-      }),
-      ...mapGetters({
-        getConnectionLabel: GET_CONNECTION_LABEL
-      }),
-      sortedSpecificData() {
-        let lastSeen = new Set()
-        let res = this.adapters.filter((item) => {
-          if (item['hidden_for_gui']) return false
-          return !(item['plugin_type'] && item['plugin_type'].toLowerCase().includes('plugin'))
-        }).sort((first, second) => {
-          // GUI plugin (miscellaneous) always comes last
-          if (first.plugin_name === guiPluginName) return 1
-          if (second.plugin_name === guiPluginName) return -1
-
-          // Adapters with no last_seen field go first
-          let firstSeen = first.data[lastSeenByModule[this.module]]
-          let secondSeen = second.data[lastSeenByModule[this.module]]
-          if (!secondSeen) return 1
-          if (!firstSeen) return -1
-          // Turn strings into dates and subtract them to get a negative, positive, or zero value.
-          return new Date(secondSeen) - new Date(firstSeen)
-        }).map((item) => {
-          item.id = `${item.plugin_unique_name}_${item.data.id}`
-          const connectionLabel = this.getConnectionLabel(item['client_used'], item['plugin_name'])
-          if (pluginMeta[item.plugin_name]) {
-            item.pretty_name = pluginMeta[item.plugin_name].title + connectionLabel
-          }
-          if (lastSeen.has(item.plugin_name)) return {...item, outdated: true}
-          lastSeen.add(item.plugin_name)
-          return item
-        })
-        if (res.length === 0 || res[res.length - 1].plugin_name !== guiPluginName) {
-          // Add initial gui adapters data
-          res.push({
-            ...initCustomData(this.module),
-            pretty_name: pluginMeta[initCustomData(this.module).plugin_name].title
-          })
-        }
-        return res
-      },
-      genericFieldNames () {
-        return this.fields.generic.map(field => field.name)
-      },
-      genericSchema () {
-        return { ...this.fields.schema.generic,
-          name: 'data', title: 'SEPARATOR',
-          hyperlinks: eval(this.hyperlinks['aggregator'])
-        }
-      },
-      genericSchemaNoId () {
-        return { ...this.genericSchema,
-          items: this.genericSchema.items.filter(item => item.name !== 'id')}
-      },
-      customFields () {
-        if (!this.fields.specific.gui) {
-          return this.fields.generic
-        }
-        return [...this.fields.generic,
-                ...this.fields.specific.gui.filter(field => !this.genericFieldNames.includes(field.name))]
-      },
-      customData () {
-        return this.sortedSpecificData[this.sortedSpecificData.length - 1].data
-      }
+    genericSchemaNoId() {
+      return {
+        ...this.genericSchema,
+        items: this.genericSchema.items.filter((item) => item.name !== 'id'),
+      };
     },
-    methods: {
-      ...mapActions({
-        saveCustomData: SAVE_CUSTOM_DATA, fetchDataFields: FETCH_DATA_FIELDS,
-      }),
-      isGuiAdapterData(data) {
-        return data.plugin_name === guiPluginName
-      },
-      adapterSchema(name) {
-        if (!this.fields || !this.fields.schema) return {}
-        return {
+    customFields() {
+      if (!this.fields.specific.gui) {
+        return this.fields.generic;
+      }
+      return [...this.fields.generic,
+        ...this.fields.specific.gui
+          .filter((field) => !this.genericFieldNames.includes(field.name))];
+    },
+    customData() {
+      return this.sortedSpecificData[this.sortedSpecificData.length - 1].data;
+    },
+  },
+  methods: {
+    ...mapActions({
+      saveCustomData: SAVE_CUSTOM_DATA, fetchDataFields: FETCH_DATA_FIELDS,
+    }),
+    isGuiAdapterData(data) {
+      return data.plugin_name === guiPluginName;
+    },
+    adapterSchema(name) {
+      if (!this.fields || !this.fields.schema) return {};
+      return {
+        type: 'array',
+        items: [(name === guiPluginName) ? this.genericSchemaNoId : this.genericSchema, {
           type: 'array',
-          items: [(name === guiPluginName) ? this.genericSchemaNoId : this.genericSchema, {
-            type: 'array', ...this.fields.schema.specific[name],
-            name: 'data', title: 'SEPARATOR',
-            hyperlinks: eval(this.hyperlinks[name])
-          }]
-        }
-      },
-      toggleView() {
-        this.viewBasic = !this.viewBasic
-      },
-      editFields() {
-        this.fieldsEditor = {
-          active: true,
-          data: Object.entries(this.customData).map(([ name, value ]) => {
-            return { name, value, predefined: true }
-          }),
-          valid: true
-        }
-      },
-      saveFieldsEditor() {
-        if (!this.fieldsEditor.valid) return
-        this.saveCustomData({
+          ...this.fields.schema.specific[name],
+          name: 'data',
+          title: 'SEPARATOR',
+          hyperlinks: eval(this.hyperlinks[name]),
+        }],
+      };
+    },
+    toggleView() {
+      this.viewBasic = !this.viewBasic;
+    },
+    editFields() {
+      this.fieldsEditor = {
+        active: true,
+        data: Object.entries(this.customData)
+          .map(([name, value]) => ({ name, value, predefined: true })),
+        valid: true,
+      };
+    },
+    saveFieldsEditor() {
+      if (!this.fieldsEditor.valid) return;
+      this.saveCustomData({
+        module: this.module,
+        selection: {
+          ids: [this.entityId],
+          include: true,
+        },
+        data: this.fieldsEditor.data,
+      }).then(() => {
+        this.toastMessage = 'Saved Custom Data';
+        this.fetchDataFields({
           module: this.module,
-          selection: {
-            ids: [this.entityId],
-            include: true
-          },
-          data: this.fieldsEditor.data
-        }).then(() => {
-          this.toastMessage = 'Saved Custom Data'
-          this.fetchDataFields({
-            module: this.module
-          })
-          this.closeFieldsEditor()
-        }).catch(error => {
-          this.error = error.response.data.message
-        })
-      },
-      closeFieldsEditor() {
-        this.fieldsEditor = {active: false}
-        this.error = {}
-      },
-      validateFieldsEditor(valid) {
-        this.fieldsEditor.valid = valid
-      },
-    }
-  }
+        });
+        this.closeFieldsEditor();
+      }).catch((error) => {
+        this.error = error.response.data.message;
+      });
+    },
+    closeFieldsEditor() {
+      this.fieldsEditor = { active: false };
+      this.error = {};
+    },
+    validateFieldsEditor(valid) {
+      this.fieldsEditor.valid = valid;
+    },
+  },
+};
 </script>
 
 <style lang="scss">
@@ -260,7 +274,6 @@
         width: calc(100% - 120px);
         text-overflow: ellipsis;
         overflow: hidden;
-        white-space: pre;
         text-transform: uppercase;
       }
     }

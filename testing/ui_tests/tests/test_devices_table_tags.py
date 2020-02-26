@@ -55,6 +55,64 @@ class TestDevicesTable(TestEntitiesTable):
         self.devices_page.run_filter_query(self.devices_page.SPECIFIC_JSON_ADAPTER_FILTER)
         assert self.ALL_TAG_TEST not in self.devices_page.get_first_row_tags()
 
+    def test_devices_action_add_tag_check_focus(self):
+        self.settings_page.switch_to_page()
+        self.base_page.run_discovery()
+        self.devices_page.switch_to_page()
+        self.devices_page.wait_for_table_to_load()
+        self.devices_page.click_row_checkbox()
+        self.devices_page.open_tag_dialog()
+
+        self.devices_page.fill_text_by_element(self.devices_page.get_tags_input(), 'save by enter key')
+        assert self.devices_page.is_tags_input_text_selectable()
+        self.devices_page.key_down_enter(self.devices_page.get_tags_input())
+        assert self.devices_page.is_focused(self.devices_page.get_tags_input())
+        self.devices_page.fill_text_by_element(self.devices_page.get_tags_input(), 'save by create new link button')
+        self.devices_page.click_create_new_tag_link_button()
+        assert self.devices_page.is_focused(self.devices_page.get_tags_input())
+
+        self.devices_page.key_down_tab(self.devices_page.get_tags_input())
+        assert self.devices_page.get_tag_combobox_exist().is_displayed()
+        self.devices_page.click_tag_save_button()
+
+    def test_devices_action_tag_modal_info(self):
+        self.settings_page.switch_to_page()
+        self.base_page.run_discovery()
+        self.devices_page.switch_to_page()
+        self.devices_page.wait_for_table_to_load()
+        self.devices_page.toggle_select_all_rows_checkbox()
+        self.devices_page.click_select_all_entities()
+        self.devices_page.open_tag_dialog()
+        assert self.devices_page.get_tag_modal_info().is_displayed()
+
+    def test_devices_action_tag_list_order(self):
+        self.settings_page.switch_to_page()
+        self.base_page.run_discovery()
+        self.devices_page.switch_to_page()
+        self.devices_page.wait_for_table_to_load()
+
+        self.devices_page.click_row_checkbox(1)
+        self.devices_page.add_new_tags(['tag2'])
+        self.devices_page.click_row_checkbox(1)  # uncheck row
+
+        self.devices_page.click_row_checkbox(2)
+        self.devices_page.add_new_tags(['tag1'])
+
+        self.devices_page.click_row_checkbox(3)
+        self.devices_page.open_tag_dialog()
+        self.devices_page.fill_text_by_element(self.devices_page.get_tags_input(), 'tag3')
+        self.devices_page.key_down_enter(self.devices_page.get_tags_input())
+
+        statuses = ['checked', 'partial', 'unchecked']
+        list_tags = self.devices_page.get_checkbox_list()
+        assert all(self.devices_page.is_tag_has_status(tag, statuses[index]) for index, tag in enumerate(list_tags))
+        self.devices_page.click_tag_save_button()
+
+        self.devices_page.wait_for_success_tagging_message(2)
+        self.devices_page.open_tag_dialog()
+        list_tags = self.devices_page.get_checkbox_list()
+        assert all(self.devices_page.is_tag_has_status(tag, statuses[index]) for index, tag in enumerate(list_tags))
+
     def test_partial_tags(self):
         self._add_partial_tags()
         self._test_partial_tag_circularity()

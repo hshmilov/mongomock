@@ -12,7 +12,7 @@
       v-show="!loading"
     >
       <x-tab
-        v-if="!this.singleAdapter"
+        v-if="!singleAdapter"
         id="specific"
         key="specific"
         title="Adapter Connections"
@@ -98,130 +98,139 @@
 </template>
 
 <script>
-  import xTabs from '../../../axons/tabs/Tabs.vue'
-  import xTab from '../../../axons/tabs/Tab.vue'
-  import xCustom from '../../../neurons/schema/Custom.vue'
-  import xEntityAdapters from './Adapters.vue'
-  import xEntityGeneral from './General.vue'
-  import xEntityNotes from './Notes.vue'
-  import xEntityTasks from './Tasks.vue'
-  import xEntityTags from './Tags.vue'
-  import PulseLoader from 'vue-spinner/src/PulseLoader.vue'
+import PulseLoader from 'vue-spinner/src/PulseLoader.vue';
+import {
+  mapState, mapGetters, mapMutations, mapActions,
+} from 'vuex';
+import xTabs from '../../../axons/tabs/Tabs.vue';
+import xTab from '../../../axons/tabs/Tab.vue';
+import xCustom from '../../../neurons/schema/Custom.vue';
+import xEntityAdapters from './Adapters.vue';
+import xEntityGeneral from './General.vue';
+import xEntityNotes from './Notes.vue';
+import xEntityTasks from './Tasks.vue';
+import xEntityTags from './Tags.vue';
 
-  import { mapState, mapGetters, mapMutations, mapActions } from 'vuex'
-  import { SINGLE_ADAPTER } from '../../../../store/getters'
-  import {SELECT_DATA_CURRENT} from '../../../../store/mutations'
-  import { FETCH_DATA_CURRENT, FETCH_DATA_CURRENT_TASKS, FETCH_DATA_HYPERLINKS } from '../../../../store/actions'
+import { SINGLE_ADAPTER } from '../../../../store/getters';
+import { SELECT_DATA_CURRENT } from '../../../../store/mutations';
+import { FETCH_DATA_CURRENT, FETCH_DATA_CURRENT_TASKS, FETCH_DATA_HYPERLINKS } from '../../../../store/actions';
 
-  export default {
-    name: 'XEntityLayout',
-    components: {
-      xTabs, xTab, xCustom, PulseLoader,
-      xEntityAdapters, xEntityGeneral, xEntityNotes, xEntityTasks, xEntityTags
+export default {
+  name: 'XEntityLayout',
+  components: {
+    xTabs,
+    xTab,
+    xCustom,
+    PulseLoader,
+    xEntityAdapters,
+    xEntityGeneral,
+    xEntityNotes,
+    xEntityTasks,
+    xEntityTags,
+  },
+  props: {
+    module: {
+      type: String,
+      required: true,
     },
-    props: {
-      module: {
-        type: String,
-        required: true
-      },
-      readOnly: {
-        type: Boolean,
-        default: false
-      }
+    readOnly: {
+      type: Boolean,
+      default: false,
     },
-    computed: {
-      ...mapState({
-        entity (state) {
-          return state[this.module].current
-        },
-        fields (state) {
-          return state[this.module].fields.data
-        },
-        fetchingData (state) {
-          return state[this.module].current.fetching
-        },
-        hyperlinks (state) {
-          return state[this.module].hyperlinks.data
-        }
-      }),
-      ...mapGetters({
-        singleAdapter: SINGLE_ADAPTER
-      }),
-      entityId () {
-        return this.$route.params.id
+  },
+  computed: {
+    ...mapState({
+      entity(state) {
+        return state[this.module].current;
       },
-      entityContent () {
-        return this.entity.data
+      fields(state) {
+        return state[this.module].fields.data;
       },
-      entityGenericData () {
-        return this.entityContent.data || []
+      fetchingData(state) {
+        return state[this.module].current.fetching;
       },
-      entityNotes () {
-        let notes = this.entityGenericData.find(item => item.name === 'Notes')
-        return notes ? notes.data : []
+      hyperlinks(state) {
+        return state[this.module].hyperlinks.data;
       },
-      entityExtended() {
-        return this.entityGenericData.filter(item => item.name !== 'Notes')
-      },
-      entityLabels () {
-        return this.entityContent.labels || []
-      },
-      entityTasks () {
-        return this.entity.tasks.data
-      },
-      history () {
-        if (this.$route.query.history === undefined) return null
-        return this.$route.query.history
-      },
-      loading () {
-        return this.fetchingData || !this.fields || !this.fields.generic || !this.fields.schema
+    }),
+    ...mapGetters({
+      singleAdapter: SINGLE_ADAPTER,
+    }),
+    entityId() {
+      return this.$route.params.id;
+    },
+    entityContent() {
+      return this.entity.data;
+    },
+    entityGenericData() {
+      return this.entityContent.data || [];
+    },
+    entityNotes() {
+      const notes = this.entityGenericData.find((item) => item.name === 'Notes');
+      return notes ? notes.data : [];
+    },
+    entityExtended() {
+      return this.entityGenericData.filter((item) => item.name !== 'Notes');
+    },
+    entityLabels() {
+      return this.entityContent.labels || [];
+    },
+    entityTasks() {
+      return this.entity.tasks.data;
+    },
+    history() {
+      if (this.$route.query.history === undefined) return null;
+      return this.$route.query.history;
+    },
+    loading() {
+      return this.fetchingData || !this.fields || !this.fields.generic || !this.fields.schema
                 || !this.entityContent || this.entity.id !== this.entityId
-                || (this.historyDate && this.entityDate !== this.historyDate)
-      },
-      entityDate () {
-        if (!this.entityContent.updated) return null
-        return new Date(this.entityContent.updated).toISOString().substring(0, 10)
-      },
-      historyDate () {
-        if (!this.history) return null
-        return this.history.substring(0, 10)
-      }
+                || (this.historyDate && this.entityDate !== this.historyDate);
     },
-    created () {
-      if (this.entity.id !== this.entityId) {
-        this.fetchDataCurrent({
-          module: this.module,
-          id: this.entityId,
-          history: this.history
-        })
-      }
-      if (!this.hyperlinks.length) {
-        this.fetchDataHyperlinks({ module: this.module })
-      }
+    entityDate() {
+      if (!this.entityContent.updated) return null;
+      return new Date(this.entityContent.updated).toISOString().substring(0, 10);
     },
-    mounted() {
-      this.fetchDataCurrentTasks({
+    historyDate() {
+      if (!this.history) return null;
+      return this.history.substring(0, 10);
+    },
+  },
+  created() {
+    if (this.entity.id !== this.entityId) {
+      this.fetchDataCurrent({
         module: this.module,
         id: this.entityId,
-        history: this.history
-      })
-    },
-    beforeDestroy() {
-      this.selectCurrentEntity({
-        module: this.module, id: ''
-      })
-    },
-    methods: {
-      ...mapMutations({
-        selectCurrentEntity: SELECT_DATA_CURRENT,
-      }),
-      ...mapActions({
-        fetchDataCurrent: FETCH_DATA_CURRENT,
-        fetchDataCurrentTasks: FETCH_DATA_CURRENT_TASKS,
-        fetchDataHyperlinks: FETCH_DATA_HYPERLINKS
-       })
+        history: this.history,
+      });
     }
-  }
+    if (!this.hyperlinks.length) {
+      this.fetchDataHyperlinks({ module: this.module });
+    }
+  },
+  mounted() {
+    this.fetchDataCurrentTasks({
+      module: this.module,
+      id: this.entityId,
+      history: this.history,
+    });
+  },
+  beforeDestroy() {
+    this.selectCurrentEntity({
+      module: this.module, id: '',
+    });
+  },
+  methods: {
+    ...mapMutations({
+      selectCurrentEntity: SELECT_DATA_CURRENT,
+    }),
+    ...mapActions({
+      fetchDataCurrent: FETCH_DATA_CURRENT,
+      fetchDataCurrentTasks: FETCH_DATA_CURRENT_TASKS,
+      fetchDataHyperlinks: FETCH_DATA_HYPERLINKS,
+    }),
+  },
+};
 </script>
 
 <style lang="scss">
@@ -297,7 +306,6 @@
 
         .specific .x-list {
           height: calc(100% - 36px);
-          white-space: pre-line;
 
           > .x-array-view > .array {
             display: block;
