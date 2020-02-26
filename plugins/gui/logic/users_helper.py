@@ -1,5 +1,5 @@
 from axonius.consts.gui_consts import UNCHANGED_MAGIC_FOR_GUI
-from gui.gui_logic.db_helpers import beautify_db_entry
+from gui.logic.db_helpers import beautify_db_entry
 
 
 def beautify_user_entry(user):

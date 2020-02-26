@@ -17,7 +17,7 @@ from axonius.utils.axonius_query_language import (convert_db_entity_to_view_enti
 from axonius.utils.gui_helpers import (find_filter_by_name, find_entity_field, get_string_from_field_value)
 from axonius.utils.revving_cache import rev_cached, rev_cached_entity_type
 from axonius.utils.threading import GLOBAL_RUN_AND_FORGET
-from gui.gui_logic.db_helpers import beautify_db_entry
+from gui.logic.db_helpers import beautify_db_entry
 
 logger = logging.getLogger(f'axonius.{__name__}')
 

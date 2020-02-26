@@ -29,7 +29,7 @@ from axonius.consts.plugin_consts import (AGGREGATOR_PLUGIN_NAME,
 from axonius.entities import EntityType
 from axonius.utils.gui_helpers import PermissionLevel, PermissionType
 from axonius.utils.mongo_retries import mongo_retry
-from gui.gui_logic.filter_utils import filter_archived
+from gui.logic.filter_utils import filter_archived
 from services.plugin_service import PluginService
 from services.updatable_service import UpdatablePluginMixin
 logger = logging.getLogger(f'axonius.{__name__}')
@@ -1096,8 +1096,12 @@ class GuiService(PluginService, UpdatablePluginMixin):
         # extend volumes by mapping specifically each python file, to be able to debug much better.
         volumes.extend([f'{self.service_dir}/{fn}:/home/axonius/app/{self.package_name}/{fn}:ro'
                         for fn in os.listdir(self.service_dir) if fn.endswith('.py')])
-        volumes.extend([f'{self.service_dir}/gui_logic/{fn}:/home/axonius/app/{self.package_name}/gui_logic/{fn}:ro'
-                        for fn in os.listdir(f'{self.service_dir}/gui_logic') if fn.endswith('.py')])
+
+        volumes.extend([f'{self.service_dir}/logic/{fn}:/home/axonius/app/{self.package_name}/logic/{fn}:ro'
+                        for fn in os.listdir(f'{self.service_dir}/logic') if fn.endswith('.py')])
+
+        # extend and share the routes folder
+        volumes.extend([f'{self.service_dir}/routes/:/home/axonius/app/{self.package_name}/routes/:ro'])
 
         # append constants dir in order to update new adapters.
         # We use constants dir instead of plugin_meta beacuse mounting a specific file won't support inode replacement

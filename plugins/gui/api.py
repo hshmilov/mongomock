@@ -9,14 +9,18 @@ from axonius.consts.metric_consts import ApiMetric
 from axonius.consts.plugin_consts import DEVICE_CONTROL_PLUGIN_NAME, AXONIUS_USER_NAME
 from axonius.logging.metric_helper import log_metric
 from axonius.plugin_base import EntityType, return_error, PluginBase
-from axonius.utils import gui_helpers
 from axonius.utils.db_querying_helper import get_entities
 from axonius.utils.gui_helpers import (Permission, PermissionLevel,
                                        PermissionType, ReadOnlyJustForGet,
                                        check_permissions,
-                                       deserialize_db_permissions)
+                                       deserialize_db_permissions,
+                                       paginated, filtered_entities,
+                                       sorted_endpoint, projected, filtered,
+                                       add_rule_custom_authentication,
+                                       get_entities_count, add_rule_unauth,
+                                       entity_fields)
 from axonius.utils.metric import remove_ids
-from gui.gui_logic.entity_data import (get_entity_data, entity_tasks)
+from gui.logic.entity_data import (get_entity_data, entity_tasks)
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -108,8 +112,7 @@ def api_add_rule(rule, *args, required_permissions: Iterable[Permission] = None,
     def basic_authentication_permissions(*args, **kwargs):
         return basic_authentication(*args, **kwargs, required_permissions=required_permissions)
 
-    return gui_helpers.add_rule_custom_authentication(f'V{API_VERSION}/{rule}', basic_authentication_permissions, *args,
-                                                      **kwargs)
+    return add_rule_custom_authentication(f'V{API_VERSION}/{rule}', basic_authentication_permissions, *args, **kwargs)
 
 
 def get_page_metadata(skip, limit, number_of_assets):
@@ -298,7 +301,7 @@ class APIMixin:
         """
         return self._stop_research_phase()
 
-    @gui_helpers.paginated()
+    @paginated()
     @api_add_rule(
         'system/users',
         methods=['GET', 'PUT'],
@@ -425,14 +428,14 @@ class APIMixin:
     ###########
     # DEVICES #
     ###########
-    @gui_helpers.add_rule_unauth(f'api')
+    @add_rule_unauth(f'api')
     def api_description(self):
         return API_VERSION
 
-    @gui_helpers.paginated()
-    @gui_helpers.filtered_entities()
-    @gui_helpers.sorted_endpoint()
-    @gui_helpers.projected()
+    @paginated()
+    @filtered_entities()
+    @sorted_endpoint()
+    @projected()
     @api_add_rule(f'devices', methods=['GET', 'POST'],
                   required_permissions={Permission(PermissionType.Devices,
                                                    PermissionLevel.ReadOnly)})
@@ -441,7 +444,7 @@ class APIMixin:
         self._save_query_to_history(EntityType.Devices, mongo_filter, skip, limit, mongo_sort, mongo_projection)
         return_doc = {
             'page': get_page_metadata(skip, limit,
-                                      gui_helpers.get_entities_count(mongo_filter, devices_collection)),
+                                      get_entities_count(mongo_filter, devices_collection)),
             'assets': list(get_entities(limit, skip, mongo_filter, mongo_sort,
                                         mongo_projection,
                                         EntityType.Devices,
@@ -450,12 +453,12 @@ class APIMixin:
 
         return jsonify(return_doc)
 
-    @gui_helpers.filtered_entities()
+    @filtered_entities()
     @api_add_rule(f'devices/count', methods=['GET', 'POST'],
                   required_permissions={Permission(PermissionType.Devices,
                                                    PermissionLevel.ReadOnly)})
     def api_devices_count(self, mongo_filter):
-        return str(gui_helpers.get_entities_count(mongo_filter, self._entity_db_map[EntityType.Devices]))
+        return str(get_entities_count(mongo_filter, self._entity_db_map[EntityType.Devices]))
 
     @api_add_rule(
         f'devices/fields',
@@ -464,14 +467,14 @@ class APIMixin:
         }
     )
     def api_devices_fields(self):
-        return jsonify(gui_helpers.entity_fields(EntityType.Devices))
+        return jsonify(entity_fields(EntityType.Devices))
 
     @api_add_rule(f'devices/<device_id>', required_permissions={Permission(PermissionType.Devices,
                                                                            PermissionLevel.ReadOnly)})
     def api_device_by_id(self, device_id):
         return self._entity_by_id(EntityType.Devices, device_id)
 
-    @gui_helpers.filtered_entities()
+    @filtered_entities()
     @api_add_rule('devices/labels', methods=['GET', 'POST', 'DELETE'],
                   required_permissions={Permission(PermissionType.Devices,
                                                    ReadOnlyJustForGet)})
@@ -482,10 +485,10 @@ class APIMixin:
     # USERS #
     #########
 
-    @gui_helpers.paginated()
-    @gui_helpers.filtered_entities()
-    @gui_helpers.sorted_endpoint()
-    @gui_helpers.projected()
+    @paginated()
+    @filtered_entities()
+    @sorted_endpoint()
+    @projected()
     @api_add_rule(f'users', methods=['GET', 'POST'],
                   required_permissions={Permission(PermissionType.Users,
                                                    PermissionLevel.ReadOnly)})
@@ -493,7 +496,7 @@ class APIMixin:
         users_collection = self._entity_db_map[EntityType.Users]
         self._save_query_to_history(EntityType.Users, mongo_filter, skip, limit, mongo_sort, mongo_projection)
         return_doc = {
-            'page': get_page_metadata(skip, limit, gui_helpers.get_entities_count(mongo_filter, users_collection)),
+            'page': get_page_metadata(skip, limit, get_entities_count(mongo_filter, users_collection)),
             'assets': list(get_entities(limit, skip, mongo_filter, mongo_sort,
                                         mongo_projection,
                                         EntityType.Users,
@@ -502,12 +505,12 @@ class APIMixin:
 
         return jsonify(return_doc)
 
-    @gui_helpers.filtered_entities()
+    @filtered_entities()
     @api_add_rule(f'users/count', methods=['GET', 'POST'],
                   required_permissions={Permission(PermissionType.Users,
                                                    PermissionLevel.ReadOnly)})
     def api_users_count(self, mongo_filter):
-        return str(gui_helpers.get_entities_count(mongo_filter, self._entity_db_map[EntityType.Users]))
+        return str(get_entities_count(mongo_filter, self._entity_db_map[EntityType.Users]))
 
     @api_add_rule(
         f'users/fields',
@@ -516,7 +519,7 @@ class APIMixin:
         }
     )
     def api_users_fields(self):
-        return jsonify(gui_helpers.entity_fields(EntityType.Users))
+        return jsonify(entity_fields(EntityType.Users))
 
     @api_add_rule(f'users/<user_id>', required_permissions={Permission(PermissionType.Users,
                                                                        PermissionLevel.ReadOnly)})
@@ -544,7 +547,7 @@ class APIMixin:
             'tasks': entity_tasks(entity_id)
         })
 
-    @gui_helpers.filtered_entities()
+    @filtered_entities()
     @api_add_rule('users/labels', methods=['GET', 'POST', 'DELETE'],
                   required_permissions={Permission(PermissionType.Users,
                                                    ReadOnlyJustForGet)})
@@ -555,9 +558,9 @@ class APIMixin:
     # ENFORCEMENTS #
     ################
 
-    @gui_helpers.paginated()
-    @gui_helpers.filtered()
-    @gui_helpers.sorted_endpoint()
+    @paginated()
+    @filtered()
+    @sorted_endpoint()
     @api_add_rule(f'alerts', methods=['GET', 'PUT', 'DELETE'],
                   required_permissions={Permission(PermissionType.Enforcements, ReadOnlyJustForGet)})
     def api_alerts(self, limit, skip, mongo_filter, mongo_sort):
@@ -599,9 +602,9 @@ class APIMixin:
 
         return jsonify(return_doc)
 
-    @gui_helpers.paginated()
-    @gui_helpers.filtered()
-    @gui_helpers.sorted_endpoint()
+    @paginated()
+    @filtered()
+    @sorted_endpoint()
     @api_add_rule(f'devices/views', methods=['GET', 'POST', 'DELETE'],
                   required_permissions={Permission(PermissionType.Devices,
                                                    ReadOnlyJustForGet)})
@@ -612,9 +615,9 @@ class APIMixin:
         """
         return self.query_views(limit, skip, mongo_filter, mongo_sort, EntityType.Devices)
 
-    @gui_helpers.paginated()
-    @gui_helpers.filtered()
-    @gui_helpers.sorted_endpoint()
+    @paginated()
+    @filtered()
+    @sorted_endpoint()
     @api_add_rule(f'users/views', methods=['GET', 'POST', 'DELETE'],
                   required_permissions={Permission(PermissionType.Users,
                                                    ReadOnlyJustForGet)})
@@ -629,7 +632,7 @@ class APIMixin:
     # ACTIONS #
     ###########
 
-    @gui_helpers.filtered()
+    @filtered()
     @api_add_rule(f'actions/<action_type>', methods=['POST'],
                   required_permissions={Permission(PermissionType.Devices,
                                                    PermissionLevel.ReadWrite)})

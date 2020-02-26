@@ -448,8 +448,9 @@ class PluginBase(Configurable, Feature, ABC):
             local_function = getattr(self, wanted_function.__name__, None)
             if local_function:
                 print(f'{rule}, {wanted_function}, {wanted_function.__name__} {local_function}, {wanted_methods}')
-                AXONIUS_REST.add_url_rule('/' + rule, rule,
-                                          local_function,
+                AXONIUS_REST.add_url_rule('/' + rule,
+                                          endpoint=f'{rule}::{"_".join([method for method in wanted_methods])}',
+                                          view_func=local_function,
                                           methods=list(wanted_methods))
             else:
                 logger.info(f'Skipped rule {rule}, {wanted_function.__qualname__}, {wanted_methods}')

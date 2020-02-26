@@ -8,8 +8,8 @@ import pymongo
 from axonius.plugin_base import PluginBase
 from axonius.entities import EntityType
 from axonius.consts.gui_consts import (LAST_UPDATED_FIELD, PREDEFINED_FIELD)
-from gui.gui_logic.fielded_plugins import get_fielded_plugins
-from gui.gui_logic.filter_utils import filter_archived
+from gui.logic.fielded_plugins import get_fielded_plugins
+from gui.logic.filter_utils import filter_archived
 
 logger = logging.getLogger(f'axonius.{__name__}')
 

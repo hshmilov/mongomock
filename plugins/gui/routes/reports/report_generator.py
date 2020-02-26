@@ -3,21 +3,24 @@ from math import pi, cos, sin, floor
 from datetime import datetime
 import logging
 
+# pylint: disable=no-name-in-module
 from cairosvg import svg2png
 from jinja2 import Environment, FileSystemLoader
 from weasyprint import HTML, CSS
 from weasyprint.fonts import FontConfiguration
 
-from axonius.consts.gui_consts import (ChartViews, PREDEFINED_FIELD, FILE_NAME_TIMESTAMP_FORMAT)
+from axonius.consts.gui_consts import (ChartViews, PREDEFINED_FIELD,
+                                       FILE_NAME_TIMESTAMP_FORMAT)
 from axonius.entities import EntityType
 from axonius.logging.metric_helper import log_metric
 from axonius.plugin_base import PluginBase
-from axonius.utils import gui_helpers
+from axonius.utils.gui_helpers import get_sort, entity_fields
 from axonius.utils.db_querying_helper import get_entities
 from axonius.utils.axonius_query_language import parse_filter
-from gui.gui_logic import filter_utils
-from gui.gui_logic.dashboard_data import adapter_data
-from gui.gui_logic.generate_csv import get_csv_file_from_heavy_lifting_plugin
+from gui.logic import filter_utils
+from gui.logic.dashboard_data import adapter_data
+from gui.logic.generate_csv import get_csv_file_from_heavy_lifting_plugin
+
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -161,7 +164,7 @@ class ReportGenerator:
         # Join all sections as the content of the report
         html_data = self.templates['report'].render(
             {'cover': report_cover, 'date': current_time.strftime('%d/%m/%Y'), 'content': '\n'.join(sections)})
-        timestamp = current_time.strftime('%d%m%Y-%H%M%S')
+        timestamp = current_time.strftime(FILE_NAME_TIMESTAMP_FORMAT)
         temp_html_filename = f'{self.output_path}axonius-report_{timestamp}.html'
         with open(temp_html_filename, 'wb') as file:
             file.write(bytes(html_data.encode('utf-8')))
@@ -706,7 +709,7 @@ class ReportGenerator:
                                                                      20 if not attach_views_csvs else 5),
                                                       skip=0,
                                                       view_filter=parse_filter(filter_query),
-                                                      sort=gui_helpers.get_sort(view),
+                                                      sort=get_sort(view),
                                                       run_over_projection=False,
                                                       projection=projection,
                                                       entity_type=entity,
@@ -716,7 +719,7 @@ class ReportGenerator:
                             'csv':
                                 get_csv_file_from_heavy_lifting_plugin(view_doc.get('name'),
                                                                        parse_filter(filter_query),
-                                                                       gui_helpers.get_sort(view),
+                                                                       get_sort(view),
                                                                        projection,
                                                                        None,
                                                                        entity,
@@ -731,7 +734,7 @@ class ReportGenerator:
 
     @staticmethod
     def _get_field_titles(entity):
-        current_entity_fields = gui_helpers.entity_fields(entity)
+        current_entity_fields = entity_fields(entity)
         name_to_title = {}
         for field in current_entity_fields['generic']:
             name_to_title[field['name']] = field['title']

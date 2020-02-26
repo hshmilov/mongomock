@@ -16,7 +16,7 @@ from axonius.consts.plugin_consts import NOTES_DATA_TAG, PLUGIN_UNIQUE_NAME
 from axonius.consts.gui_consts import PREDEFINED_ROLE_ADMIN
 from axonius.entities import AXONIUS_ENTITY_BY_CLASS, AxoniusEntity
 
-from gui.gui_logic.get_ec_historical_data_for_entity import (TaskData, get_all_task_data)
+from gui.logic.get_ec_historical_data_for_entity import (TaskData, get_all_task_data)
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
