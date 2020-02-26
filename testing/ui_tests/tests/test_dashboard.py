@@ -180,10 +180,8 @@ class TestDashboard(TestBase):
         self.dashboard_page.switch_to_page()
         self.base_page.run_discovery()
         with pytest.raises(NoSuchElementException):
-            self.dashboard_page.add_comparison_card('Devices',
-                                                    WINDOWS_QUERY_NAME,
-                                                    'Devices',
-                                                    LINUX_QUERY_NAME,
+            self.dashboard_page.add_comparison_card([{'module': 'Devices', 'query': WINDOWS_QUERY_NAME},
+                                                     {'module': 'Devices', 'query': LINUX_QUERY_NAME}],
                                                     '')
 
         assert self.dashboard_page.is_chart_save_disabled()
@@ -827,8 +825,8 @@ class TestDashboard(TestBase):
         self.devices_page.create_saved_query(self.devices_page.FILTER_OS_WINDOWS, WINDOWS_QUERY_NAME)
         self.devices_page.create_saved_query(self.OSX_OPERATING_SYSTEM_FILTER, self.OSX_OPERATING_SYSTEM_NAME)
         self.dashboard_page.switch_to_page()
-        self.dashboard_page.add_comparison_card('Devices', WINDOWS_QUERY_NAME,
-                                                'Users', 'Non-local users',
+        self.dashboard_page.add_comparison_card([{'module': 'Devices', 'query': WINDOWS_QUERY_NAME},
+                                                 {'module': 'Users', 'query': 'Non-local users'}],
                                                 self.TEST_EDIT_CHART_TITLE)
         # verify reset config
         self.dashboard_page.verify_card_config_reset_comparison_chart(self.TEST_EDIT_CHART_TITLE)
@@ -867,10 +865,8 @@ class TestDashboard(TestBase):
         self.base_page.run_discovery()
         self.devices_page.create_saved_query(self.OSX_OPERATING_SYSTEM_FILTER, self.OSX_OPERATING_SYSTEM_NAME)
         self.dashboard_page.switch_to_page()
-        self.dashboard_page.add_comparison_card(first_module='Devices',
-                                                first_query=self.OSX_OPERATING_SYSTEM_NAME,
-                                                second_module='Devices',
-                                                second_query=self.OSX_OPERATING_SYSTEM_NAME,
+        self.dashboard_page.add_comparison_card([{'module': 'Devices', 'query': self.OSX_OPERATING_SYSTEM_NAME},
+                                                 {'module': 'Devices', 'query': self.OSX_OPERATING_SYSTEM_NAME}],
                                                 title=self.TEST_EMPTY_TITLE,
                                                 chart_type='pie')
 
@@ -973,3 +969,19 @@ class TestDashboard(TestBase):
         self.dashboard_page.wait_for_element_present_by_text('Less than 1 minute', sl_card, interval=12)
 
         self.dashboard_page.wait_for_element_present_by_text('6 minutes', sl_card, interval=6)
+
+    def test_dashboard_multi_page_query_comparison(self):
+        self.dashboard_page.switch_to_page()
+        self.base_page.run_discovery()
+        module = 'Devices'
+        query = 'Managed Devices'
+        module_query_list = [{'module': module, 'query': query} for i in range(8)]
+        self.dashboard_page.add_comparison_card(
+            module_query_list, title='multi page query comparison', chart_type='histogram')
+        last_card = self.dashboard_page.get_last_card_created()
+        assert self.dashboard_page.get_card_pagination_text(last_card) == 'Top 5 of 8'
+        assert self.dashboard_page.get_count_histogram_lines_from_histogram(last_card) == 5
+        self.dashboard_page.click_to_next_page(last_card)
+        assert self.dashboard_page.get_card_pagination_text(last_card) == '6 - 8 of 8'
+        assert self.dashboard_page.get_count_histogram_lines_from_histogram(last_card) == 3
+        assert all(quantity != 0 for quantity in self.dashboard_page.find_quantity_in_card(last_card))

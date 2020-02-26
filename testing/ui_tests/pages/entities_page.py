@@ -201,6 +201,7 @@ class EntitiesPage(Page):
         raise NotImplementedError
 
     def click_query_wizard(self):
+        time.sleep(0.3)
         self.driver.find_element_by_id(self.QUERY_WIZARD_ID).click()
 
     def select_query_field(self, text, parent=None, partial_text=True):

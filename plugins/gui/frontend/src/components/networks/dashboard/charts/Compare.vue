@@ -1,11 +1,10 @@
 <template>
   <div class="x-chart-compare">
-    <h5>Select up to {{ max }} queries for comparison:</h5>
+    <h5>Select queries for comparison:</h5>
     <x-select-views
       v-model="selectedViews"
       :entities="entities"
       :views="views"
-      :max="max"
       :min="1"
     />
   </div>
@@ -23,9 +22,7 @@
     },
     mixins: [chartMixin],
     data () {
-      return {
-        max: 5
-      }
+      return {}
     },
     computed: {
       initConfig () {

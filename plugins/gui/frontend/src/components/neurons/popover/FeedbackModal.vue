@@ -119,7 +119,6 @@
 <style lang="scss">
     .feedback-modal-body {
         min-height: 120px;
-        position: relative;
     }
     .modal-footer {
         .text {

@@ -17,10 +17,10 @@ $grey-dient: linear-gradient($grey-1, $theme-white);
 
 
 /* Indicator Colours */
-$indicator-error: #D0011B;
-$indicator-warning: #F6A623;
-$indicator-info: #4796E4;
-$indicator-success: #0FBC18;
+$indicator-error: #E74C3C;
+$indicator-warning: #FFA600;
+$indicator-info: #3498DB;
+$indicator-success: #2ECC71;
 $indicator-dangerous: #FA6400;
 $indicator-verydangerous: #D0021C;
 $indicator-colours: $indicator-error, $indicator-warning, $indicator-info, $indicator-success;
@@ -36,6 +36,20 @@ $extra-mauve: #8A32BB;
 $extra-purple: #5A32BB;
 $extra-colours: $extra-cyan, $extra-turquoise, $extra-blue, $extra-pink, $extra-mauve, $extra-purple;
 
+/* Pie Colours */
+
+$pie-colours: (
+  #E5E5E5,
+  #3498DB,
+  #7893E9,
+  #B688E6,
+  #EB7AD0,
+  #FF6FAA,
+  #FF747C,
+  #FFA600,
+  #E74C3C,
+  #2ECC71,
+);
 
 /* Borders and Shadows */
 
@@ -63,10 +77,10 @@ $grey: (
 );
 
 $indicators: (
-  "indicator-error": #D0011B,
-  "indicator-warning": #F6A623,
-  "indicator-info": #4796E4,
-  "indicator-success": #0FBC18
+  "indicator-error": $indicator-error,
+  "indicator-warning": $indicator-warning,
+  "indicator-info": $indicator-info,
+  "indicator-success": $indicator-success
 );
 
 $colors: (
@@ -142,6 +156,33 @@ $colors: (
     &::-webkit-scrollbar-thumb:active {
         background: linear-gradient(left, #22ADD4, #1E98BA);
     }
+}
+
+@mixin y-scrollbar () {
+  
+  &::-webkit-scrollbar {
+    -webkit-appearance: none;
+  }
+
+  &::-webkit-scrollbar:vertical {
+    width: 6px;
+    height: 6px;
+    background-color: $grey-1;
+  }
+  &::-webkit-scrollbar-track:vertical {
+      border-radius: 3px;
+      background-color: rgba(0,0,0,0.1);
+  }
+  &::-webkit-scrollbar-thumb:vertical {
+      border-radius: 3px;
+      background-color: #7F7F7F;
+  }
+  &::-webkit-scrollbar-thumb:hover {
+      background-color: #585858;
+  }
+  &::-webkit-scrollbar-thumb:active {
+      background-color: linear-gradient(left, #22ADD4, #1E98BA);
+  }
 }
 
 

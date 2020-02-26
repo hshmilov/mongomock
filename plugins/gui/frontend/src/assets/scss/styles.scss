@@ -263,6 +263,22 @@ textarea {
   }
 }
 
+@for $i from 1 through length($pie-colours) {
+  .pie-stroke-#{$i} {
+    stroke: nth($pie-colours, $i);
+  }
+  .pie-fill-#{$i} {
+    fill: nth($pie-colours, $i);
+    background-color: nth($pie-colours, $i);
+  }
+  .pie-stroke-#{$i} {
+    stroke: nth($pie-colours, $i);
+  }
+  .pie-stop-#{$i} {
+    stop-color: nth($pie-colours, $i);
+  }
+}
+
 .grid-span2 {
   grid-column-end: span 2;
 }

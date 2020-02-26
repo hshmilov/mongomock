@@ -45,7 +45,7 @@ class SettingsPage(Page):
     SYSLOG_PORT = 'syslogPort'
     TIMEOUT_ID = 'timeout'
     SYSLOG_SSL_CSS_DROPBOX = '[for=use_ssl]+div'
-    SYSLOG_SSL_CSS_DROPBOX_OPTIONS = '[for=use_ssl]+div>.expand>div>.x-select-options>div'
+    SYSLOG_SSL_CSS_DROPBOX_OPTIONS = '[for=use_ssl]+.x-dropdown>.content .x-select-options>.x-select-option'
     FRESH_SERVICE_DOMAIN = 'domain'
     FRESH_SERVICE_API_KEY = 'api_key'
     FRESH_SERVICE_ADMIN_EMAIL = 'admin_email'

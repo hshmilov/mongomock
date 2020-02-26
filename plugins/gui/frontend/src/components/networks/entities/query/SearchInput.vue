@@ -2,6 +2,7 @@
   <x-dropdown
     class="x-query-search-input"
     @activated="$emit('activated')"
+    :overflow="false"
   >
     <!-- Trigger is an input field containing a 'freestyle' query, a logical condition on fields -->
     <x-search-input

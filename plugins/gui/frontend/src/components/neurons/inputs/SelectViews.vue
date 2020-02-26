@@ -1,35 +1,42 @@
 <template>
   <div class="x-select-views">
     <div
-      v-for="(view, index) in value"
-      :key="index"
-      class="view"
+      ref="queries"
+      class="queries"
     >
-      <x-select-symbol
-        :value="view.entity"
-        :options="entities"
-        type="icon"
-        placeholder="Module..."
-        @input="updateEntity(index, $event)"
-      />
-      <x-select
-        :value="view.name"
-        :options="views[view.entity]"
-        :searchable="true"
-        placeholder="Query..."
-        class="view-name"
-        @input="updateName(index, $event)"
-      />
-      <x-button
-        v-if="isItemDeletable(index)"
-        link
-        @click="removeView(index)"
-      >x</x-button>
       <div
-        v-else
-      />
+        v-for="(view, index) in value"
+        :key="index"
+        class="view"
+      >
+        <x-select-symbol
+          :value="view.entity"
+          :options="entities"
+          type="icon"
+          placeholder="Module..."
+          @input="updateEntity(index, $event)"
+        />
+        <x-select
+          :value="view.name"
+          :options="views[view.entity]"
+          :searchable="true"
+          placeholder="Query..."
+          class="view-name"
+          @input="updateName(index, $event)"
+        />
+        <x-button
+          v-if="isItemDeletable(index)"
+          link
+          class="add_query"
+          @click="removeView(index)"
+        >x</x-button>
+        <div
+          v-else
+        />
+      </div>
     </div>
     <x-button
+      id="add_view"
       light
       :disabled="hasMaxViews"
       :title="addBtnTitle"
@@ -110,6 +117,10 @@
       },
       addView () {
         this.selected = [...this.selected, { ...dashboardView }]
+        this.$nextTick(() => {
+          const ref = this.$refs.queries
+          ref.scrollTop = ref.scrollHeight
+        })
       },
       isItemDeletable(index) {
         return index >= this.min
@@ -120,13 +131,23 @@
 
 <style lang="scss">
     .x-select-views {
+      .queries {
+        overflow: auto;
+        max-height: 200px;
+        @include  y-scrollbar;
+      }
       .view {
         display: grid;
-        grid-template-columns: 160px auto 20px;
+        grid-template-columns: 160px auto 35px;
         grid-gap: 0 8px;
         min-width: 0;
         margin: 8px 0;
+        &:last-child{
+          margin: 0;
+        }
+      }
+      .x-button {
+        margin-top: 8px;
       }
     }
-
 </style>

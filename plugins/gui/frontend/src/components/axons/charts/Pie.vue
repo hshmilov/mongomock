@@ -10,21 +10,21 @@
       <defs>
         <linearGradient id="intersection-1-2">
           <stop
-            class="extra-stop-1"
+            class="pie-stop-1"
             offset="0%"
           />
           <template v-for="n in 9">
             <stop
-              :class="`extra-stop-${!(n % 2) ? 3 : 1}`"
+              :class="`pie-stop-${!(n % 2) ? 3 : 1}`"
               :offset="`${n}0%`"
             />
             <stop
-              :class="`extra-stop-${!(n % 2) ? 1 : 3}`"
+              :class="`pie-stop-${!(n % 2) ? 1 : 3}`"
               :offset="`${n}0%`"
             />
           </template>
           <stop
-            class="extra-stop-3"
+            class="pie-stop-3"
             offset="100%"
           />
         </linearGradient>
@@ -116,7 +116,7 @@
           if (this.data.length === 2) {
             return { class: `indicator-fill-${Math.ceil(item.value * 4)}`, ...item }
           }
-          return { class: `extra-fill-${(index % 6) || 6}`, ...item }
+          return { class: `pie-fill-${(index % 10) || 10}`, ...item }
         })
       },
       slices () {
@@ -191,8 +191,8 @@
         position: relative;
         .fill-intersection-1-2 {
             fill: url(#intersection-1-2);
-            background: repeating-linear-gradient(45deg, nth($extra-colours, 1), nth($extra-colours, 1) 4px,
-                    nth($extra-colours, 2) 4px, nth($extra-colours, 2) 8px);
+            background: repeating-linear-gradient(45deg, nth($pie-colours, 1), nth($pie-colours, 1) 4px,
+                    nth($pie-colours, 2) 4px, nth($pie-colours, 2) 8px);
         }
 
         g {

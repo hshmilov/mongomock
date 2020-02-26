@@ -325,7 +325,6 @@ export default {
             > .nav-item {
                 margin: auto 12px;
                 line-height: 60px;
-                position: relative;
 
                 .svg-stroke {
                     stroke: $theme-orange;

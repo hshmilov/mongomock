@@ -40,6 +40,7 @@ class DashboardPage(Page):
     CHART_WIZARD_CSS = '.x-chart-wizard'
     CHART_MODULE_DROP_DOWN_CSS = '.x-chart-wizard .x-select.x-select-symbol'
     SELECT_VIEWS_CSS = '.x-select-views'
+    SELECT_VIEWS_ADD_BUTTON = 'add_view'
     SELECT_VIEWS_VIEW_CSS = '.view'
     SELECT_VIEW_NAME_CSS = '.view-name'
     CHART_TIMELINE_LAST_RANGE_RADIO_CSS = '#range_relative'
@@ -79,7 +80,6 @@ class DashboardPage(Page):
     PAGINATOR_PREVIOUS_PAGE_BUTTON = f'{PAGINATOR_BUTTON}.link.previous'
     PAGINATOR_NEXT_PAGE_BUTTON = f'{PAGINATOR_BUTTON}.link.next'
     PAGINATOR_LAST_PAGE_BUTTON = f'{PAGINATOR_BUTTON}.link.last'
-    PAGINATOR_TEXT = f'{PAGINATOR_CLASS} .pagintator-text'
     HISTOGRAM_ITEMS = '.histogram-container .histogram-item'
     PAGINATOR_NUM_OF_ITEMS = f'{PAGINATOR_CLASS} {PAGINATOR_LIMIT}'
     PAGINATOR_TOTAL_NUM_OF_ITEMS = f'{PAGINATOR_CLASS} .total-num-of-items'
@@ -99,7 +99,7 @@ class DashboardPage(Page):
 
     COLOR_DANGEROUS = '#FA6400'
     COLOR_VERYDANGEROUS = '#D0021C'
-    COLOR_INFO = '#4796E4'
+    COLOR_INFO = '#3498DB'
 
     @property
     def root_page_css(self):
@@ -213,6 +213,10 @@ class DashboardPage(Page):
                            parent=parent,
                            partial_text=False)
 
+    def select_chart_view_name_by_index(self, view_name, index=0):
+        self.select_option_from_multiple(index, self.SELECT_VIEW_NAME_CSS, self.DROPDOWN_TEXT_BOX_CSS,
+                                         self.DROPDOWN_SELECTED_OPTION_CSS, view_name)
+
     def select_intersection_chart_first_query(self, query):
         self.select_option_without_search(self.INTERSECTION_CHART_FIRST_QUERY_DROP_DOWN_CSS,
                                           self.WIZARD_OPTIONS_CSS, query, parent=None)
@@ -224,6 +228,10 @@ class DashboardPage(Page):
     def select_chart_wizard_module(self, entity, parent=None):
         self.select_option_without_search(self.CHART_MODULE_DROP_DOWN_CSS, self.WIZARD_OPTIONS_CSS,
                                           entity, parent=parent)
+
+    def select_chart_wizard_module_by_index(self, entity, index=0):
+        self.select_option_without_search_from_multiple(index, self.CHART_MODULE_DROP_DOWN_CSS, self.WIZARD_OPTIONS_CSS,
+                                                        entity)
 
     def select_chart_wizard_field(self, prop, partial_text=True):
         self.select_option(self.CHART_FIELD_DROP_DOWN_CSS,
@@ -295,16 +303,21 @@ class DashboardPage(Page):
         return self.wait_for_element_present_by_css(self.SELECT_VIEWS_CSS).find_elements_by_css_selector(
             self.SELECT_VIEWS_VIEW_CSS)
 
-    def add_comparison_card(self, first_module, first_query, second_module, second_query,
-                            title, chart_type='histogram'):
+    def get_views_list_add_button(self):
+        return self.driver.find_element_by_id(self.SELECT_VIEWS_ADD_BUTTON)
+
+    def add_comparison_card(self, module_query_list, title, chart_type='histogram'):
         self.open_new_card_wizard()
         self.select_chart_metric('Query Comparison')
         views_list = self.get_views_list()
         self.driver.find_element_by_css_selector(f'#{chart_type}').click()
-        self.select_chart_wizard_module(first_module, views_list[0])
-        self.select_chart_view_name(first_query, views_list[0])
-        self.select_chart_wizard_module(second_module, views_list[1])
-        self.select_chart_view_name(second_query, views_list[1])
+
+        for index, module_query in enumerate(module_query_list):
+            if index > 1:
+                self.get_views_list_add_button().click()
+            self.select_chart_wizard_module_by_index(module_query['module'], index)
+            self.select_chart_view_name_by_index(module_query['query'], index)
+
         self.fill_text_field_by_element_id(self.CHART_TITLE_ID, title)
         self.click_card_save()
         self.wait_for_element_absent_by_css(self.MODAL_OVERLAY_CSS, interval=1)
@@ -385,6 +398,9 @@ class DashboardPage(Page):
 
     def get_all_cards(self):
         return self.driver.find_elements_by_css_selector('.x-tab.active div.x-card')
+
+    def get_last_card_created(self):
+        return self.driver.find_elements_by_css_selector('.x-card.card__item')[-1]
 
     def click_segmentation_pie_card(self, card_title):
         card = self.get_card(card_title)
@@ -480,7 +496,7 @@ class DashboardPage(Page):
 
     @staticmethod
     def get_title_from_card(card):
-        return card.find_element_by_css_selector('div.header > div.card-title').text.title()
+        return card.find_element_by_css_selector('div.header div.card-title').text.title()
 
     @staticmethod
     def get_pie_chart_from_card(card):
@@ -492,6 +508,10 @@ class DashboardPage(Page):
 
     def get_histogram_chart_by_title(self, histogram_title):
         return self.get_card(histogram_title).find_element_by_css_selector('.x-histogram')
+
+    @staticmethod
+    def get_card_pagination_text(card):
+        return card.find_element_by_css_selector('.pagintator-text').text
 
     @staticmethod
     def get_histogram_line_from_histogram(histogram, number):
@@ -672,8 +692,8 @@ class DashboardPage(Page):
     def find_trial_remainder_banner(self, remainder_count):
         msg = 'days remaining in your Axonius evaluation'
         # Expected color of the banner according UIs thresholds
-        color = '208, 1, 27' if (remainder_count <= 7) else (
-            '246, 166, 35' if remainder_count <= 14 else '71, 150, 228')
+        color = '231, 76, 60' if (remainder_count <= 7) else (
+            '255, 166, 0' if remainder_count <= 14 else '52, 152, 219')
         try:
             banner = self.wait_for_element_present_by_xpath(
                 self.BANNER_BY_TEXT_XPATH.format(banner_text=f'{remainder_count} {msg}'))
@@ -691,7 +711,7 @@ class DashboardPage(Page):
             self.COLOR_DANGEROUS if remainder_count < 16 else self.COLOR_INFO)
 
         banner = self.wait_for_element_present_by_css(self.BANNER_BY_CSS)
-        assert Color.from_string(banner.value_of_css_property('background-color')).hex.upper() == color
+        assert Color.from_string(banner.value_of_css_property('background-color')).hex.upper() == color.upper()
         return banner
 
     def find_trial_expired_banner(self):

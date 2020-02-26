@@ -1,6 +1,6 @@
 <template>
     <x-dropdown size="lg" align="right" :align-space="-4" :arrow="false" class="x-notification-peek" ref="notifications"
-                @click="clearNotifications">
+                @click.native="clearNotifications">
         <div slot="trigger">
             <svg-icon name="navigation/notifications" :original="true" height="20"/>
             <div class="notification-badge" v-if="notificationUnseenCount">{{ notificationUnseenCount }}</div>

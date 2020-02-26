@@ -1,45 +1,47 @@
 <template>
   <div class="x-card">
     <div class="header">
-      <x-button
-        v-if="reversible"
-        link
-        class="back"
-        @click="$emit('back')"
-      >&lt;</x-button>
-      <x-title
-        v-if="logo"
-        :logo="logo"
-      >{{ title }} </x-title>
-      <div
-        v-else
-        class="card-title"
-        :title="title"
-      ><md-icon v-if="draggable"
-          md-src="src/assets/icons/action/drag.svg"></md-icon>{{ title }}</div>
-    </div>
-    <div class="actions">
-      <x-button
-        v-if="exportable"
-        class="export"
-        title="Export to CSV"
-        link
-        @click="$emit('export')"
-      ><md-icon md-src="src/assets/icons/action/export.svg"></md-icon></x-button>
-      <x-button
-        v-if="editable"
-        class="edit"
-        title="Edit"
-        link
-        @click="$emit('edit')"
-      ><md-icon>edit</md-icon></x-button>
-      <x-button
-        v-if="removable"
-        class="remove"
-        title="Remove"
-        link
-        @click="$emit('remove')"
-      ><md-icon>clear</md-icon></x-button>
+      <div class="title">
+        <x-button
+          v-if="reversible"
+          link
+          class="back"
+          @click="$emit('back')"
+        >&lt;</x-button>
+        <x-title
+          v-if="logo"
+          :logo="logo"
+        >{{ title }} </x-title>
+        <div
+          v-else
+          class="card-title"
+          :title="title"
+        ><md-icon v-if="draggable"
+            md-src="src/assets/icons/action/drag.svg"></md-icon>{{ title }}</div>
+      </div>
+      <div class="actions">
+        <x-button
+          v-if="exportable"
+          class="export"
+          title="Export to CSV"
+          link
+          @click="$emit('export')"
+        ><md-icon md-src="src/assets/icons/action/export.svg"></md-icon></x-button>
+        <x-button
+          v-if="editable"
+          class="edit"
+          title="Edit"
+          link
+          @click="$emit('edit')"
+        ><md-icon>edit</md-icon></x-button>
+        <x-button
+          v-if="removable"
+          class="remove"
+          title="Remove"
+          link
+          @click="$emit('remove')"
+        ><md-icon>clear</md-icon></x-button>
+      </div>
     </div>
     <div class="body">
       <slot />
@@ -96,10 +98,9 @@
         background-color: white;
         box-shadow: 0 2px 12px 0px rgba(0, 0, 0, 0.2);
         border-radius: 2px;
-        position:relative;
         border: 2px solid transparent;
 
-        &.card__item > .header {
+        &.card__item > .title {
             border: 1px solid transparent;
             .card-title {
                 display: flex;
@@ -131,71 +132,77 @@
               }
             }
           }
-        > .header {
-            display: flex;
-            width: 100%;
-            padding: 12px;
 
-          .back {
-                font-size: 24px;
-            }
-
-            > .x-title {
-                width: calc(100% - 36px);
-
-                .md-image {
-                    height: 48px;
-                }
-
-                .text {
-                    font-size: 24px;
-                    margin-left: 24px;
-                    text-overflow: ellipsis;
-                    width: calc(100% - 84px);
-                    overflow-x: hidden;
-                    line-height: 48px;
-                }
-            }
-
-            > .card-title {
-                font-size: 16px;
-                flex: 1 0 auto;
-                text-overflow: ellipsis;
-                white-space: nowrap;
-                overflow: hidden;
-                max-width: 80%;
-            }
-        }
-        .actions {
+        .header {
           display: flex;
-          line-height: 20px;
-          position: absolute;
-          right: 4px;
-          top: 10px;
-          .x-button {
-            height: 20px;
-            padding: 0;
+          justify-content: space-between;
+          padding: 12px;
 
-            &.export .md-icon{
-              height: 18px;
-              line-height: 17px
-            }
+            > .title {
+              display: flex;
+              flex: 1;
+              overflow: hidden;
 
-            .md-icon {
-              font-size: 20px !important;
+            .back {
+                  font-size: 24px;
+              }
+
+              > .x-title {
+                  width: calc(100% - 36px);
+
+                  .md-image {
+                      height: 48px;
+                  }
+
+                  .text {
+                      font-size: 24px;
+                      margin-left: 24px;
+                      text-overflow: ellipsis;
+                      width: calc(100% - 84px);
+                      overflow-x: hidden;
+                      line-height: 48px;
+                  }
+              }
+
+              > .card-title {
+                  font-size: 16px;
+                  flex: 1 0 auto;
+                  text-overflow: ellipsis;
+                  white-space: nowrap;
+                  overflow: hidden;
+                  max-width: 100%;
+              }
+          }
+          .actions {
+            display: flex;
+            line-height: 20px;
+            .x-button {
               height: 20px;
-              line-height: 20px;
-            }
+              padding: 0;
 
-            &:hover {
-              cursor: pointer;
-              text-shadow: $text-shadow;
-            }
-            .export {
-              color: $theme-blue;
+              &.export .md-icon{
+                height: 18px;
+                line-height: 17px
+              }
+
+              .md-icon {
+                font-size: 20px !important;
+                height: 20px;
+                line-height: 20px;
+              }
+
+              &:hover {
+                cursor: pointer;
+                text-shadow: $text-shadow;
+              }
+              .export {
+                color: $theme-blue;
+              }
             }
           }
+          
         }
+
         > .body {
           padding: 12px;
           height: calc(100% - 72px);
