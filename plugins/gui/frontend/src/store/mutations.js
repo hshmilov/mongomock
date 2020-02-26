@@ -376,7 +376,8 @@ export const updateCustomData = (state, payload) => {
     if (!field.predefined) {
       canonizedName = `custom_${canonizedName}`;
     }
-    return { ...map, [canonizedName]: field.value };
+    map[canonizedName] = field.value;
+    return map;
   }, {});
   if (guiAdapter) {
     guiAdapter.data = data;
@@ -386,6 +387,47 @@ export const updateCustomData = (state, payload) => {
       data,
     });
   }
+
+  const { basic } = module.current.data;
+
+  const trimName = (name) => name.replace(/(adapters_data|specific_data)\.(gui|data)\./g, '');
+
+  const genericFieldNames = module.fields.data.generic.map((field) => field.name);
+
+
+  const customFields = () => {
+    if (!module.fields.data.specific.gui) {
+      return module.fields.data.generic;
+    }
+    return [...module.fields.data.generic,
+      ...module.fields.data.specific.gui
+        .filter((field) => !genericFieldNames.includes(field.name))];
+  };
+
+  const schemaFields = customFields().filter((field) => !genericFieldNames.includes(field.name))
+    .reduce((map, field) => {
+      map[trimName(field.name)] = field;
+      return map;
+    }, {});
+
+  payload.data.forEach((field) => {
+    if (!schemaFields[field.name]) return;
+
+    const basicField = basic[`specific_data.data.${field.name}`];
+
+    if (Array.isArray(basicField)) {
+      if (!basicField) {
+        basic[`specific_data.data.${field.name}`] = [];
+      }
+      if (field.new) {
+        basicField.push(field.value);
+      } else {
+        basicField[basicField.length - 1] = field.value;
+      }
+    } else {
+      basic[`specific_data.data.${field.name}`] = field.value;
+    }
+  });
 };
 
 export const SHOW_TOASTER_MESSAGE = 'SHOW_TOASTER_MESSAGE';

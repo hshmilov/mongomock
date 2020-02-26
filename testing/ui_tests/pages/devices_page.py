@@ -83,6 +83,7 @@ class DevicesPage(EntitiesPage):
     BASIC_INFO_FIELD_XPATH = '//div[contains(@class, \'x-tab active\')]//div[contains(@class, \'x-tab active\')]' \
                              '//div[preceding-sibling::label[normalize-space(text())=\'{field_title}\']]'
     TAG_COMBOBOX_CSS = '.x-combobox_results-card--keep-open.v-card'
+
     PartialState = {
         'PARTIAL': 'mixed',
         'CHECKED': 'true',
