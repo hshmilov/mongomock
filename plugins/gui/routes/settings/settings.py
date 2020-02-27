@@ -36,7 +36,7 @@ class Settings(Plugins, GettingStarted, Users, Roles):
             return jsonify(self.trial_expired())
         if feature_flags_config.get(FeatureFlagsNames.ExpiryDate):
             return jsonify(self.contract_expired())
-        return False
+        return jsonify(False)
 
     @gui_add_rule_logged_in('api_key', methods=['GET', 'POST'])
     def api_creds(self):
