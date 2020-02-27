@@ -7,6 +7,7 @@ from services.updatable_service import UpdatablePluginMixin
 DEAFULT_SYSTEM_RESEARCH_RATE = 12
 DEAFULT_SYSTEM_RESEARCH_RATE_ATTRIB_NAME = 'system_research_rate'
 DEAFULT_SYSTEM_RESEARCH_DATE_TIME = '13:00'
+DEFAULT_SYSTEM_RESEARCH_DATE_ATTRIB_NAME_MAIN = 'system_research_date'
 DEAFULT_SYSTEM_RESEARCH_DATE_ATTRIB_NAME = 'system_research_date_time'
 DEAFULT_SYSTEM_RESEARCH_DATE_RECURRENCE = '1'
 DEAFULT_SYSTEM_RESEARCH_DATE_RECURRENCE_ATTRIB_NAME = 'system_research_date_recurrence'
@@ -22,37 +23,37 @@ class SystemSchedulerService(PluginService, UpdatablePluginMixin):
 
     def stop_research(self):
         response = requests.post(
-            self.req_url + "/stop_all", headers={API_KEY_HEADER: self.api_key})
-        assert response.status_code == 200, f"Error in response: {str(response.status_code)}, " \
-                                            f"{str(response.content)}"
+            self.req_url + '/stop_all', headers={API_KEY_HEADER: self.api_key})
+        assert response.status_code == 200, f'Error in response: {str(response.status_code)}, ' \
+                                            f'{str(response.content)}'
         return response
 
     def start_research(self):
         response = requests.post(
-            self.req_url + "/trigger/execute?blocking=False", headers={API_KEY_HEADER: self.api_key})
-        assert response.status_code == 200, f"Error in response: {str(response.status_code)}, " \
-                                            f"{str(response.content)}"
+            self.req_url + '/trigger/execute?blocking=False', headers={API_KEY_HEADER: self.api_key})
+        assert response.status_code == 200, f'Error in response: {str(response.status_code)}, ' \
+                                            f'{str(response.content)}'
         return response
 
     def current_state(self):
         response = requests.get(
-            self.req_url + "/state", headers={API_KEY_HEADER: self.api_key})
-        assert response.status_code == 200, f"Error in response: {str(response.status_code)}, " \
-                                            f"{str(response.content)}"
+            self.req_url + '/state', headers={API_KEY_HEADER: self.api_key})
+        assert response.status_code == 200, f'Error in response: {str(response.status_code)}, ' \
+                                            f'{str(response.content)}'
         return response
 
     def trigger_s3_backup(self):
         response = requests.get(
-            self.req_url + "/trigger_s3_backup", headers={API_KEY_HEADER: self.api_key})
-        assert response.status_code == 200, f"Error in response: {str(response.status_code)}, " \
-            f"{str(response.content)}"
+            self.req_url + '/trigger_s3_backup', headers={API_KEY_HEADER: self.api_key})
+        assert response.status_code == 200, f'Error in response: {str(response.status_code)}, ' \
+            f'{str(response.content)}'
         return response
 
     def trigger_root_master_s3_restore(self):
         response = requests.get(
-            self.req_url + "/trigger_root_master_s3_restore", headers={API_KEY_HEADER: self.api_key})
-        assert response.status_code == 200, f"Error in response: {str(response.status_code)}, " \
-            f"{str(response.content)}"
+            self.req_url + '/trigger_root_master_s3_restore', headers={API_KEY_HEADER: self.api_key})
+        assert response.status_code == 200, f'Error in response: {str(response.status_code)}, ' \
+            f'{str(response.content)}'
         return response
 
     @retry(stop_max_attempt_number=300, wait_fixed=1000)
@@ -61,7 +62,7 @@ class SystemSchedulerService(PluginService, UpdatablePluginMixin):
         Waits until scheduler is running or not running or raises
         """
         if is_scheduler_at_rest:
-            requests.get(self.req_url + "/wait/execute", headers={API_KEY_HEADER: self.api_key}).raise_for_status()
+            requests.get(self.req_url + '/wait/execute', headers={API_KEY_HEADER: self.api_key}).raise_for_status()
             return
 
         scheduler_state = self.current_state().json()
@@ -73,8 +74,10 @@ class SystemSchedulerService(PluginService, UpdatablePluginMixin):
         # Do not change this to 1.
         if self.db_schema_version < 2:
             self._update_schema_version_2()
+        if self.db_schema_version < 3:
+            self._update_schema_version_3()
 
-        if self.db_schema_version != 2:
+        if self.db_schema_version != 3:
             print(f'Upgrade failed, db_schema_version is {self.db_schema_version}')
 
     def _update_schema_version_2(self):
@@ -118,3 +121,47 @@ class SystemSchedulerService(PluginService, UpdatablePluginMixin):
         finally:
             print('Upgraded system scheduler to version 2')
             self.db_schema_version = 2
+
+    def _update_schema_version_3(self):
+        print('upgrade to schema 3')
+        try:
+            config_collection = self.db.get_collection(self.plugin_name, 'configurable_configs')
+            config_match = {
+                'config_name': 'SystemSchedulerService'
+            }
+            current_config = config_collection.find_one(config_match)
+            if not current_config:
+                print('No config present - continue')
+                return
+
+            current_config = current_config.get('config')
+            if not current_config:
+                print(f'Weird config - continue ({current_config})')
+                return
+
+            current_config = current_config.get('discovery_settings')
+
+            if not current_config:
+                print(f'Weird discovery_settings - continue ({current_config})')
+                return
+
+            system_research_date_time = current_config.get(DEFAULT_SYSTEM_RESEARCH_DATE_ATTRIB_NAME_MAIN,
+                                                           DEAFULT_SYSTEM_RESEARCH_DATE_TIME)
+
+            config_collection.update_one(config_match,
+                                         {
+                                             '$set': {
+                                                 f'config.discovery_settings.{DEFAULT_SYSTEM_RESEARCH_DATE_ATTRIB_NAME_MAIN}': {
+                                                     DEAFULT_SYSTEM_RESEARCH_DATE_ATTRIB_NAME: system_research_date_time,
+                                                     DEAFULT_SYSTEM_RESEARCH_DATE_RECURRENCE_ATTRIB_NAME:
+                                                     DEAFULT_SYSTEM_RESEARCH_DATE_RECURRENCE
+                                                 }
+                                             }
+                                         }
+                                         )
+
+        except Exception as e:
+            print(f'Exception while upgrading scheduler db to version 3. Details: {e}')
+        finally:
+            print('Upgraded system scheduler to version 3')
+            self.db_schema_version = 3
