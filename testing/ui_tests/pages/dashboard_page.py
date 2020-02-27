@@ -705,7 +705,6 @@ class DashboardPage(Page):
         return banner
 
     def find_contract_remainder_banner(self, remainder_count):
-        msg = 'Access to Axonius will expire in'
         # Expected color of the banner according UIs thresholds
         color = self.COLOR_VERYDANGEROUS if (remainder_count < 4) else (
             self.COLOR_DANGEROUS if remainder_count < 16 else self.COLOR_INFO)

@@ -5,7 +5,7 @@
   >
     <template v-if="isExpired || contractDaysRemaining < 1">
       <XBanner severity="error">
-        Your Axonius subscription has expired. <a href="mailto:sales@axonius.com?subject=Axonius subscription is about to expire&amp;body=Please contact me for renewal options"><u>Contact us</u></a> for renewal option
+        Your Axonius subscription has expired. <a href="mailto:sales@axonius.com?subject=Axonius subscription is about to expire&amp;body=Please contact me for renewal options"><u style="color: white;">Contact us</u></a> for renewal option
       </XBanner>
       <div
         v-if="isExpired"
@@ -15,7 +15,7 @@
     <XBanner
       v-else
       :severity="severity"
-    >Access to Axonius will expire in {{ contractDaysRemaining }} {{ unit }}. Please <a href="mailto:sales@axonius.com?subject=Axonius subscription is about to expire&amp;body=Please contact me for renewal options"><u>contact us</u></a>{{ suffix }}</XBanner>
+    >Your Axonius subscription expires in {{ contractDaysRemaining }} {{ unit }}. Please <a href="mailto:sales@axonius.com?subject=Axonius subscription is about to expire&amp;body=Please contact me for renewal options"><u style="color: white;">contact us</u></a>{{ suffix }}</XBanner>
   </div>
 </template>
 
