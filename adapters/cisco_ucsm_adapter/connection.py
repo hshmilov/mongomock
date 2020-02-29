@@ -59,7 +59,7 @@ class CiscoUcsmConnection(RESTConnection):
     def get_device_list(self):
         devices_raw_dict = dict()
         try:
-            devices_raw = self._session.query_classids(
+            response = self._session.query_classids(
                 CLSIDS['blade'],
                 CLSIDS['switch'],
                 CLSIDS['rack'],
@@ -68,6 +68,11 @@ class CiscoUcsmConnection(RESTConnection):
             message = f'Failed to fetch devices: {str(ex)}'
             logger.exception(message)
             raise
+
+        device_lists = response.values()
+        devices_raw = list()
+        for dev_list in device_lists:
+            devices_raw.extend(dev_list)
         for device_obj in devices_raw:
             devices_raw_dict[device_obj.dn] = device_obj.__json__()
             try:

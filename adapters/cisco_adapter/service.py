@@ -110,7 +110,7 @@ class CiscoAdapter(AdapterBase):
                     'title': 'SNMPv3 Security Level (level)',
                     'type': 'string',
                     'enum': list(constants.SECURITY_LEVELS),
-                    'default': 'noAuthNoPriv',
+                    'default': 'authPriv',
                 },
 
                 {

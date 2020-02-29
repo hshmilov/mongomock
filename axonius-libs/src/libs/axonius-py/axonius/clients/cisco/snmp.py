@@ -268,7 +268,7 @@ class CiscoSnmpV3Client(AbstractSnmpClient):
 
     def __init__(self, *args, **kwargs):
         if 'secure_level' not in kwargs:
-            kwargs['secure_level'] = 'noAuthNoPriv'
+            kwargs['secure_level'] = 'authPriv'
         super().__init__(**kwargs)
 
     @staticmethod
