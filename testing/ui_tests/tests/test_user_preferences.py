@@ -6,12 +6,12 @@ class TestUserPreferences(TestBase):
 
     @staticmethod
     def _assert_fields_match(entities_page, fields_list):
-        entities_page.wait_for_table_be_responsive()
+        entities_page.wait_for_table_to_be_responsive()
         assert entities_page.get_columns_header_text() == fields_list
 
     def _test_system_default_view(self, entities_page, field_to_add):
         entities_page.switch_to_page()
-        entities_page.wait_for_table_be_responsive()
+        entities_page.wait_for_table_to_be_responsive()
         assert entities_page.get_columns_header_text() == entities_page.SYSTEM_DEFAULT_FIELDS
         entities_page.edit_columns([field_to_add])
         assert entities_page.get_columns_header_text()[-1] == field_to_add
@@ -46,7 +46,7 @@ class TestUserPreferences(TestBase):
 
     def _test_save_default_view(self, entities_page, fields_list):
         entities_page.switch_to_page()
-        entities_page.wait_for_table_be_responsive()
+        entities_page.wait_for_table_to_be_responsive()
         entities_page.open_edit_columns()
         entities_page.remove_columns(entities_page.SYSTEM_DEFAULT_FIELDS)
         entities_page.add_columns(fields_list)
