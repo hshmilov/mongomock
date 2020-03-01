@@ -65,6 +65,14 @@ def _should_retry_fetching(exception):
     return isinstance(exception, vim.fault.NoPermission)
 
 
+def _getattr_permission_safely(obj, attr_name, default=None):
+    try:
+        return getattr(obj, attr_name, default)
+    except vim.fault.NoPermission:
+        logger.warning(f'Object {obj} had no permissions for attribute "{attr_name}", returning {default}.')
+        return default
+
+
 class vCenterApi(object):
     """ vCenterApi.py: A wrapper for vCenter SOAP services """
 
@@ -142,7 +150,7 @@ class vCenterApi(object):
         Parses networking from vm state
         :return: iter(dict)
         """
-        guest = getattr(vm, 'guest', None)
+        guest = _getattr_permission_safely(vm, 'guest', None)
         if not guest:
             return
         guest_net = guest.net
@@ -158,13 +166,13 @@ class vCenterApi(object):
             yield primitives
 
     def _parse_networking_from_hardware(self, vm_root):
-        config = getattr(vm_root, 'config', None)
+        config = _getattr_permission_safely(vm_root, 'config', None)
         if not config:
             return
-        network = getattr(config, 'network', None)
+        network = _getattr_permission_safely(config, 'network', None)
         if not network:
             return
-        vnic = getattr(network, 'vnic', None)
+        vnic = _getattr_permission_safely(network, 'vnic', None)
         if not vnic:
             return
         for network_interface in vnic:
@@ -176,15 +184,18 @@ class vCenterApi(object):
         :param host: of type pyVmomi.VmomiSupport.vim.ComputeResource
         :return:
         """
-        values_to_take = ['totalCpu', 'totalMemory', 'numCpuCores', 'numCpuThreads', 'effectiveCpu', 'effectiveMemory',
-                          'numHosts', 'numEffectiveHosts', 'overallStatus']
+
+        details = None
+        summary = _getattr_permission_safely(host, 'summary', None)
+        if summary:
+            values_to_take = ['totalCpu', 'totalMemory', 'numCpuCores', 'numCpuThreads', 'effectiveCpu', 'effectiveMemory',
+                              'numHosts', 'numEffectiveHosts', 'overallStatus']
+            try:
+                details = {k: _getattr_permission_safely(summary, k, None) for k in values_to_take}
+            except Exception:
+                logger.warning(f'Problem getting details', exc_info=True)
         try:
-            details = {k: getattr(host.summary, k, None) for k in values_to_take}
-        except Exception:
-            logger.warning(f'Problem getting details', exc_info=True)
-            details = None
-        try:
-            parsed_hosts = [self._parse_vm_host(x) for x in host.host]
+            parsed_hosts = [self._parse_vm_host(x) for x in _getattr_permission_safely(host, 'host', [])]
         except Exception:
             logger.warning(f'Problem getting hosts', exc_info=True)
             parsed_hosts = []
@@ -251,33 +262,34 @@ class vCenterApi(object):
         :return:
         """
         # let's take what we can and return it
-        summary = vm_root.summary
-        attributes_from_summary = ['quickStats', 'guest', 'config', 'storage', 'runtime', 'overallStatus',
-                                   'customValue', 'config']
         details = {}
-        for k in attributes_from_summary:
-            taken = getattr(summary, k, None)
-            if taken:
-                details[k] = _take_just_primitives(taken.__dict__)
+        summary = _getattr_permission_safely(vm_root, 'summary', None)
+        if summary:
+            attributes_from_summary = ['quickStats', 'guest', 'config', 'storage', 'runtime', 'overallStatus',
+                                       'customValue']
+            for k in attributes_from_summary:
+                taken = _getattr_permission_safely(summary, k, None)
+                if taken:
+                    details[k] = _take_just_primitives(taken.__dict__)
 
-        runtime = getattr(summary, 'runtime', None)
-        if runtime:
-            esx_host = getattr(runtime, 'host', None)
-            if esx_host:
-                esx_host_name = getattr(esx_host, 'name', None)
-                if esx_host_name:
-                    details['esx_host_name'] = esx_host_name
+            runtime = _getattr_permission_safely(summary, 'runtime', None)
+            if runtime:
+                esx_host = _getattr_permission_safely(runtime, 'host', None)
+                if esx_host:
+                    esx_host_name = _getattr_permission_safely(esx_host, 'name', None)
+                    if esx_host_name:
+                        details['esx_host_name'] = esx_host_name
 
-        config = getattr(vm_root, 'config', None)
+        config = _getattr_permission_safely(vm_root, 'config', None)
         if config:
-            hardware = getattr(config, 'hardware', None)
+            hardware = _getattr_permission_safely(config, 'hardware', None)
             if hardware:
                 details['hardware'] = _take_just_primitives(hardware.__dict__)
-                devices = getattr(hardware, 'device', [])
+                devices = _getattr_permission_safely(hardware, 'device', [])
                 details['hardware']['devices'] = []
                 for device in devices:
                     device_raw = _take_just_primitives(device.__dict__)
-                    device_info = getattr(device, 'deviceInfo', None)
+                    device_info = _getattr_permission_safely(device, 'deviceInfo', None)
                     if device_info:
                         device_raw['deviceInfo'] = _take_just_primitives(device_info.__dict__)
                     details['hardware']['devices'].append(device_raw)
