@@ -203,9 +203,8 @@ export default {
          */
       const isFieldNotSupported = (expression) => {
         const { field } = expression;
-        return !this.adaptersEntityFields.has(field);
+        return field && !this.adaptersEntityFields.has(field);
       };
-
       return this.expressions.some(isFieldNotSupported);
     },
     isQueryContainsOnlyEmptyExpression() {

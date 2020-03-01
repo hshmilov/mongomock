@@ -144,7 +144,7 @@ export default {
       },
       set(context) {
         this.updateExpression({
-          context, field: '', children: [],
+          context, compOp: '', value: null, field: '', children: [],
         });
       },
     },
