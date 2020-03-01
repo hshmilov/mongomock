@@ -1,5 +1,5 @@
 import logging
-from typing import List
+from typing import List, Dict, Optional, Iterable, Generator, Union, Tuple
 
 from axonius.clients.qualys import consts, xmltodict
 from axonius.clients.rest.connection import RESTConnection
@@ -277,3 +277,266 @@ class QualysScansConnection(RESTConnection):
         except Exception as e:
             logger.debug(f'Failed with {e}')
             return False, ''
+
+    def _pagination_body_generator(self, filter_criteria_list: Optional[Iterable[dict]] = None):
+        # ignore initial empty response
+        record_count = 0
+        has_more = True
+        while has_more:
+            last_response = (yield self._prepare_service_request(filter_criteria_list=filter_criteria_list,
+                                                                 start_offset=record_count))
+            record_count += last_response.get('count', 0)
+            has_more = (last_response.get('count')
+                        and last_response.get('hasMoreRecords', '') == 'true')
+
+    def _search_tags(self, fields: Optional[List[str]] = None) -> Generator[dict, None, None]:
+        """Permissions required - Managers with full scope, other users must have
+           Access Permission “API Access”"""
+        try:
+            resp = None
+            query_params_str = f'?fields={",".join(fields)}' if fields else ''
+            body_params_gen = self._pagination_body_generator()
+            # Note: This loop ends with StopIteration exception
+            while True:
+                body_params = body_params_gen.send(resp)
+                resp = self._post(f'qps/rest/2.0/search/am/tag{query_params_str}',
+                                  do_basic_auth=True,
+                                  use_json_in_body=True,
+                                  use_json_in_response=False,
+                                  body_params=body_params,
+                                  extra_headers={'Accept': 'application/xml'})
+                resp = xmltodict.parse(resp)
+                service_response = self._handle_qualys_response(resp)
+                tags_list = service_response['data']['Tag']
+                if not isinstance(tags_list, list):
+                    tags_list = [tags_list]
+                yield from tags_list
+        except StopIteration:
+            pass
+        except Exception:
+            logger.exception(f'Failed search_tags')
+            return
+
+    def _search_hosts(self, filter_criteria_list: Optional[Iterable[dict]] = None,
+                      fields: Optional[Iterable[str]] = None) -> Generator[dict, None, None]:
+        """Permissions required - Managers with full scope, other users must have these
+           permissions: Access Permission “API Access” and Asset Management
+           Permission “Read Asset”"""
+
+        try:
+            logger.info(f'searching hosts by the following criterias: {filter_criteria_list}')
+
+            resp = None
+            query_params_str = f'?fields={",".join(fields)}' if fields else ''
+            body_params_gen = self._pagination_body_generator(filter_criteria_list=filter_criteria_list)
+            # Note: This loop ends with StopIteration exception
+            while True:
+                body_params = body_params_gen.send(resp)
+                resp = self._post(f'qps/rest/2.0/search/am/hostasset{query_params_str}',
+                                  do_basic_auth=True,
+                                  use_json_in_body=True,
+                                  use_json_in_response=False,
+                                  body_params=body_params,
+                                  extra_headers={'Accept': 'application/xml'})
+                resp = xmltodict.parse(resp)
+                service_response = self._handle_qualys_response(resp)
+
+                # determine whether multiple results returned
+                host_assets = service_response['data']['HostAsset']
+                if isinstance(host_assets, list):
+                    host_assets = [host_assets]
+                yield from host_assets
+
+        except StopIteration:
+            return
+        except Exception:
+            logger.exception(f'Failed searching hosts - body params: {body_params}')
+            return
+
+    def list_tag_ids_by_name(self) -> Dict[str, str]:
+        """ see _search_tags """
+        return {tag_dict['name']: tag_dict['id'] for tag_dict in self._search_tags(fields=['id', 'name'])}
+
+    def iter_tags_by_host_id(self, host_id_list: Optional[Iterable[str]] = None) \
+            -> Generator[Tuple[str, Iterable[dict]], None, None]:
+        """ see _search_hosts """
+
+        criteria_list = []
+        if host_id_list:
+            criteria_list.append(self._generate_filter_criteria_for_host_ids(host_id_list))
+
+        hosts = self._search_hosts(filter_criteria_list=criteria_list,
+                                   fields=['id', 'tags.list.TagSimple.id', 'tags.list.TagSimple.name'])
+        if not hosts:
+            return
+
+        for host_dict in hosts:
+            tags = host_dict.get('tags', {}).get('list', {}).get('TagSimple', [])
+            if not isinstance(tags, list):
+                tags = [tags]
+            yield host_dict['id'], tags
+
+    def add_host_existing_tags(self, host_id_list: Iterable[str], tag_ids_to_add: Iterable[str]):
+        """Permissions: see _update_hostasset"""
+        logger.info(f'Adding existing tags {tag_ids_to_add} to hosts {host_id_list}')
+        return self._update_hostasset_tags(host_id_list, 'add', tag_ids_to_add)
+
+    def remove_host_tags(self, host_id_list: Iterable[str], tag_ids_to_remove: Iterable[str]):
+        """Permissions: see _update_hostasset"""
+        logger.info(f'Removing tags {tag_ids_to_remove} from hosts {host_id_list}')
+        return self._update_hostasset_tags(host_id_list, 'remove', tag_ids_to_remove)
+
+    def _update_hostasset_tags(self, host_id_list: Iterable[str],
+                               operation_name: str, tag_id_list: Iterable[Union[str, int]]) -> dict:
+        """Permissions: see _update_hostasset"""
+        return self._update_hostasset(
+            host_id_list,
+            request_body={'data': {'HostAsset': {'tags': {operation_name: {
+                'TagSimple': [{'id': tag_id} for tag_id in tag_id_list]
+            }}}}})
+
+    def _update_hostasset(self, host_id_list: Iterable[str], request_body: dict) -> dict:
+        """Permissions required - Managers with full scope, other users must have the
+           requested assets in their scope and these permissions: Access Permission
+           “API Access” and Asset Management Permission “Update Asset”"""
+
+        logger.info(f'Updating hosts {host_id_list} with request body: {request_body}')
+
+        body_params = self._prepare_service_request(
+            request_body=request_body,
+            filter_criteria_list=[self._generate_filter_criteria_for_host_ids(host_id_list)])
+
+        try:
+            # pylint: disable=invalid-string-quote
+            resp = self._post(f'qps/rest/2.0/update/am/hostasset',
+                              do_basic_auth=True,
+                              use_json_in_body=True,
+                              use_json_in_response=False,
+                              body_params=body_params,
+                              extra_headers={'Accept': 'application/xml'})
+            resp = xmltodict.parse(resp)
+            service_response = self._handle_qualys_response(resp)
+            return service_response
+        except Exception:
+            logger.exception(f'Failed updating hosts {host_id_list}')
+            return {}
+
+    def create_tag(self, tag_name: str, parent_tag_id: Optional[str] = None):
+        """Permissions required - Managers with full scope, other users must have these
+           permissions: Access Permission “API Access”, Tag Permission “Create User
+           Tag”, Tag Permission “Modify Dynamic Tag Rules” (to create a dynamic tag)"""
+
+        logger.info(f'Creating tag {tag_name} with parent {parent_tag_id}')
+
+        # prepare request
+        additional_fields_dict = {}
+        if parent_tag_id:
+            additional_fields_dict = {'parentTagId': parent_tag_id}
+
+        body_params = self._prepare_service_request(
+            {'data': {'Tag': {'name': tag_name, **additional_fields_dict}}})
+
+        try:
+            resp = self._post(f'qps/rest/2.0/create/am/tag',
+                              do_basic_auth=True,
+                              use_json_in_body=True,
+                              use_json_in_response=False,
+                              body_params=body_params,
+                              extra_headers={'Accept': 'application/xml'})
+            resp = xmltodict.parse(resp)
+            service_response = self._handle_qualys_response(resp)
+            created_tag_dict = service_response.get('data', {}).get('Tag', {})
+            logger.debug(f'Created tag {created_tag_dict} successfully')
+            return created_tag_dict
+        except Exception:
+            logger.exception(f'Failed creating tag {tag_name}')
+            return {}
+
+    def delete_tags(self, tag_id_list: Iterable[str]):
+        """Permissions required - Managers with full scope, other users must have these
+           permissions: Access Permission “API Access” and Tag Permission “Delete User Tag”"""
+        logger.info(f'Deleting tags {tag_id_list}')
+
+        body_params = self._prepare_service_request(
+            filter_criteria_list=[self._generate_filter_criteria('id', 'IN', ','.join(tag_id_list))])
+
+        try:
+            resp = self._post(f'qps/rest/2.0/delete/am/tag',
+                              do_basic_auth=True,
+                              use_json_in_body=True,
+                              use_json_in_response=False,
+                              body_params=body_params,
+                              extra_headers={'Accept': 'application/xml'})
+            resp = xmltodict.parse(resp)
+            service_response = self._handle_qualys_response(resp)
+            return (data_dict.get('Tag') for data_dict in service_response.get('data', {})
+                    if data_dict.get('Tag'))
+        except Exception:
+            logger.exception(f'Failed deleting tags {tag_id_list}')
+            return []
+
+    def create_tags(self, names_list: Iterable[str], parent_tag_id: Optional[str] = None) \
+            -> Tuple[Dict[str, str], Optional[str]]:
+        """ see create_tag """
+
+        logger.info(f'Creating tags {names_list} with parent {parent_tag_id}')
+
+        created_tag_ids_by_name = {}  # type: Dict[str, str]
+        for tag_name in names_list:
+            created_tag_dict = self.create_tag(tag_name, parent_tag_id=parent_tag_id)
+            if not created_tag_dict:
+                logger.error(f'Tag "{tag_name}" creation failed')
+                return created_tag_ids_by_name, tag_name
+
+            created_tag_ids_by_name[tag_name] = created_tag_dict['id']
+        return created_tag_ids_by_name, None
+
+    def _prepare_service_request(self,
+                                 request_body: Optional[dict] = None,
+                                 filter_criteria_list: Optional[Iterable[dict]] = None,
+                                 start_offset: Optional[int] = None) -> dict:
+
+        params_dict = {}
+        service_request = params_dict.setdefault('ServiceRequest', request_body or {})
+
+        if start_offset:
+            service_request['preferences'] = {
+                'startFromOffset': start_offset,
+                'limitResults': self._devices_per_page
+            }
+
+        # handle filters
+        criteria_list = []
+        if filter_criteria_list:
+            criteria_list.extend(filter_criteria_list)
+
+        if self._date_filter:
+            # filter by 'last_seen' greater than
+            criteria_list.append({
+                'field': 'lastVulnScan',
+                'operator': 'GREATER',
+                'value': self._date_filter,
+            })
+
+        if criteria_list:
+            service_request.setdefault('filters', {}).setdefault('Criteria', []).extend(criteria_list)
+
+        return params_dict
+
+    @staticmethod
+    def _generate_filter_criteria(field: str, operator_name: str, value: str):
+        return {'field': field, 'operator': operator_name, 'value': value}
+
+    def _generate_filter_criteria_for_host_ids(self, host_id_list: Iterable[str]):
+        return self._generate_filter_criteria('id', 'IN', ','.join(host_id_list))
+
+    @staticmethod
+    def _handle_qualys_response(response: bytes):
+        service_response = response.get('ServiceResponse')
+        response_code = (service_response or {}).get('responseCode')
+        if not (service_response and response_code):
+            raise RESTException('Malformed response - missing ServiceResponse')
+        if response_code != 'SUCCESS':
+            raise RESTException(f'failed with code {response_code},'
+                                f' message: {(service_response.get("responseErrorDetails") or {}).get("errorMessage")}')
+        return service_response

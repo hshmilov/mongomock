@@ -2,6 +2,12 @@ export const actionsMeta = {
     run_executable_windows: {
         title: 'Deploy on Windows Device'
     },
+    qualys_add_tag: {
+        title: 'Add Tag to Host Asset in Qualys Cloud Platform'
+    },
+    qualys_remove_tag: {
+        title: 'Remove Tag From Host Asset in Qualys Cloud Platform'
+    },
     run_executable_linux: {
         title: 'Deploy on Linux Device'
     },
@@ -165,8 +171,8 @@ export const actionsMeta = {
         items: ['carbonblack_isolate', 'carbonblack_unisolate', 'cybereason_isolate', 'cybereason_unisolate', 'carbonblack_defense_change_policy', 'carbonblack_defense_quarantine', 'carbonblack_defense_unquarantine', 'sentinelone_initiate_scan_action', 'automox_install_update']
     },
     scan_va: {
-        title: 'Add Device to VA Scan',
-        items: ['qualys_create_asset', 'tenable_sc_add_ips_to_asset', 'tenable_io_add_ips_to_target_group', 'tenable_io_create_asset']
+        title: 'Update VA Coverage',
+        items: ['qualys_create_asset', 'qualys_add_tag', 'qualys_remove_tag', 'tenable_sc_add_ips_to_asset', 'tenable_io_add_ips_to_target_group', 'tenable_io_create_asset']
     },
     patch_device: {
         title: 'Patch Device',
