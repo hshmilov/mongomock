@@ -442,3 +442,8 @@ export const REMOVE_TOASTER = 'REMOVE_TOASTER';
 export const removeToaster = (state) => {
   state.toast.message = '';
 };
+
+export const UPDATE_FOOTER_MESSAGE = 'UPDATE_FOOTER_MESSAGE';
+export const updateFooterMessage = (state, payload) => {
+  state.footer.message = payload;
+};

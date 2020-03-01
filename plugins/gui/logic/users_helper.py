@@ -20,6 +20,7 @@ def beautify_user_entry(user):
                                                    'admin',
                                                    'source',
                                                    'additional_userinfo',
-                                                   'timeout']}
+                                                   'timeout',
+                                                   'environment_name']}
     user['password'] = UNCHANGED_MAGIC_FOR_GUI
     return user

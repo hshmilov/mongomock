@@ -45,6 +45,7 @@
     <template v-else>
       <XLogin />
     </template>
+    <XBottomBar />
   </VApp>
 </template>
 
@@ -55,6 +56,7 @@ import {
 } from 'vuex';
 import _get from 'lodash/get';
 import XTopBar from './networks/navigation/TopBar.vue';
+import XBottomBar from './networks/navigation/BottomBar.vue';
 import XSideBar from './networks/navigation/SideBar.vue';
 import XLogin from './networks/system/Login.vue';
 import XAccessModal from './neurons/popover/AccessModal.vue';
@@ -117,6 +119,7 @@ export default {
   components: {
     XLogin,
     XTopBar,
+    XBottomBar,
     XSideBar,
     XAccessModal,
     XToast,

@@ -1,50 +1,76 @@
 <template>
-    <div class="x-page" :class="{ collapse: collapseSidebar }">
-        <div v-if="title || breadcrumbs" class="header">
-            <template v-if="title">
-                <h4 class="page-title">{{ title }}</h4>
-                <v-chip v-if="beta">BETA</v-chip>
-            </template>
-            <h4 class="page-title" v-else>
-                <!-- Adding title for each breadcrumb, linked to the page, except last one which is the viewed page -->
-                <div v-for="(breadcrumb, i) in breadcrumbs.slice(0, breadcrumbs.length - 1)" :key="i" class="crumb">
-                    <router-link :to="breadcrumb.path" active-class="">{{ breadcrumb.title }}</router-link>
-                    <v-chip v-if="beta && !i">BETA</v-chip>
-                </div>
-                <!-- Adding currently viewed page without a link -->
-                <span>{{breadcrumbs[breadcrumbs.length - 1].title}}</span>
-            </h4>
-            <div class="action print-exclude">
-                <slot name="action"/>
-            </div>
+  <div
+    class="x-page"
+    :class="{ collapse: collapseSidebar, 'with-footer': hasFooterMessage }"
+  >
+    <div
+      v-if="title || breadcrumbs"
+      class="header"
+    >
+      <template v-if="title">
+        <h4 class="page-title">
+          {{ title }}
+        </h4>
+        <VChip v-if="beta">
+          BETA
+        </VChip>
+      </template>
+      <h4
+        v-else
+        class="page-title"
+      >
+        <!-- Adding title for each breadcrumb, linked to the page, except last one which is the viewed page -->
+        <div
+          v-for="(breadcrumb, i) in breadcrumbs.slice(0, breadcrumbs.length - 1)"
+          :key="i"
+          class="crumb"
+        >
+          <RouterLink
+            :to="breadcrumb.path"
+            active-class=""
+          >{{ breadcrumb.title }}</RouterLink>
+          <VChip v-if="beta && !i">
+            BETA
+          </VChip>
         </div>
-        <div class="body">
-            <slot/>
-        </div>
+        <!-- Adding currently viewed page without a link -->
+        <span>{{ breadcrumbs[breadcrumbs.length - 1].title }}</span>
+      </h4>
+      <div class="action print-exclude">
+        <slot name="action" />
+      </div>
     </div>
+    <div class="body">
+      <slot />
+    </div>
+  </div>
 </template>
 
 <script>
-    import {mapState} from 'vuex'
+import { mapState, mapGetters } from 'vuex';
+import { GET_FOOTER_MESSAGE } from '../../../store/getters';
 
-    export default {
-        name: 'x-page',
-        props: {
-            title: String,
-            breadcrumbs: Array,
-            beta: {
-                type: Boolean,
-                default: false
-            }
-        },
-        computed: {
-            ...mapState({
-                collapseSidebar(state) {
-                    return state.interaction.collapseSidebar
-                }
-            })
-        }
-    }
+export default {
+  name: 'XPage',
+  props: {
+    title: String,
+    breadcrumbs: Array,
+    beta: {
+      type: Boolean,
+      default: false,
+    },
+  },
+  computed: {
+    ...mapState({
+      collapseSidebar(state) {
+        return state.interaction.collapseSidebar;
+      },
+    }),
+    ...mapGetters({
+      hasFooterMessage: GET_FOOTER_MESSAGE,
+    }),
+  },
+};
 </script>
 
 <style lang="scss">
@@ -121,6 +147,10 @@
             overflow: hidden;
             overflow-y: auto;
             position: relative;
+        }
+
+        &.with-footer .body {
+            height: calc(100% - 100px);
         }
     }
 </style>

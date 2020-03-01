@@ -1,5 +1,5 @@
-import Vue from 'vue'
-import Vuex from 'vuex'
+import Vue from 'vue';
+import Vuex from 'vuex';
 
 import {
   REQUEST_API, requestApi,
@@ -28,12 +28,13 @@ import {
   STOP_RESEARCH_PHASE, stopResearch,
   FETCH_SYSTEM_CONFIG, fetchSystemConfig,
   FETCH_SYSTEM_EXPIRED, fetchSystemExpired,
-  SAVE_CUSTOM_DATA, saveCustomData
-} from './actions'
+  SAVE_CUSTOM_DATA, saveCustomData,
+  GET_ENVIRONMENT_NAME, getEnvironmentName,
+} from './actions';
 import {
   TOGGLE_SIDEBAR, toggleSidebar,
   UPDATE_DATA, updateData,
-  UPDATE_LANGUAGE , updateLanguage,
+  UPDATE_LANGUAGE, updateLanguage,
   UPDATE_BRANCH, updateBranch,
   UPDATE_WINDOW_WIDTH, updateWindowWidth,
   UPDATE_DATA_CONTENT, updateDataContent,
@@ -57,36 +58,38 @@ import {
   UPDATE_SYSTEM_EXPIRED, updateSystemExpired,
   UPDATE_CUSTOM_DATA, updateCustomData,
   SHOW_TOASTER_MESSAGE, showToasterMessage,
-  REMOVE_TOASTER, removeToaster
-} from './mutations'
+  UPDATE_FOOTER_MESSAGE, updateFooterMessage,
+  REMOVE_TOASTER, removeToaster,
+} from './mutations';
 import {
   GET_MODULE_SCHEMA, getModuleSchema,
   GET_DATA_SCHEMA_LIST, getDataSchemaList,
   GET_DATA_SCHEMA_BY_NAME, getDataSchemaByName,
   SINGLE_ADAPTER, singleAdapter,
-  AUTO_QUERY, autoQuery, 
+  AUTO_QUERY, autoQuery,
   EXACT_SEARCH, exactSearch,
   IS_EXPIRED, isExpired,
   GET_CONNECTION_LABEL, getConnectionLabel,
   getSavedQueryById,
-  configuredAdaptersFields
-} from './getters'
+  configuredAdaptersFields,
+  GET_FOOTER_MESSAGE, getFooterMessage,
+} from './getters';
 
-import { adapters } from './modules/adapters'
-import { auth } from './modules/auth'
-import { constants } from './modules/constants'
-import { dashboard } from './modules/dashboard'
-import { devices } from './modules/devices'
-import { enforcements } from './modules/enforcements'
-import { notifications } from './modules/notifications'
-import { onboarding } from './modules/onboarding'
-import { reports } from './modules/reports'
-import { settings } from './modules/settings'
-import { tasks } from './modules/tasks'
-import { users } from './modules/users'
-import { compliance } from './modules/compliance'
+import { adapters } from './modules/adapters';
+import { auth } from './modules/auth';
+import { constants } from './modules/constants';
+import { dashboard } from './modules/dashboard';
+import { devices } from './modules/devices';
+import { enforcements } from './modules/enforcements';
+import { notifications } from './modules/notifications';
+import { onboarding } from './modules/onboarding';
+import { reports } from './modules/reports';
+import { settings } from './modules/settings';
+import { tasks } from './modules/tasks';
+import { users } from './modules/users';
+import { compliance } from './modules/compliance';
 
-Vue.use(Vuex)
+Vue.use(Vuex);
 export default new Vuex.Store({
   state: {
     /*
@@ -96,12 +99,13 @@ export default new Vuex.Store({
       language: 'en',
       branch: '',
       collapseSidebar: true,
-      windowWidth: 0
+      windowWidth: 0,
     },
     configuration: { fetching: false, data: null, error: '' },
     staticConfiguration: { medicalConfig: ENV.medical },
     expired: { fetching: false, data: false, error: '' },
-    toast: { message: '', timeout: 3000 }
+    toast: { message: '', timeout: 3000 },
+    footer: { message: '' },
   },
   getters: {
     [GET_MODULE_SCHEMA]: getModuleSchema,
@@ -113,7 +117,8 @@ export default new Vuex.Store({
     [IS_EXPIRED]: isExpired,
     [GET_CONNECTION_LABEL]: getConnectionLabel,
     getSavedQueryById,
-    configuredAdaptersFields
+    configuredAdaptersFields,
+    [GET_FOOTER_MESSAGE]: getFooterMessage,
   },
   mutations: {
     [TOGGLE_SIDEBAR]: toggleSidebar,
@@ -142,7 +147,8 @@ export default new Vuex.Store({
     [UPDATE_SYSTEM_EXPIRED]: updateSystemExpired,
     [UPDATE_CUSTOM_DATA]: updateCustomData,
     [SHOW_TOASTER_MESSAGE]: showToasterMessage,
-    [REMOVE_TOASTER]: removeToaster
+    [REMOVE_TOASTER]: removeToaster,
+    [UPDATE_FOOTER_MESSAGE]: updateFooterMessage,
   },
   actions: {
     [REQUEST_API]: requestApi,
@@ -171,7 +177,8 @@ export default new Vuex.Store({
     [STOP_RESEARCH_PHASE]: stopResearch,
     [FETCH_SYSTEM_CONFIG]: fetchSystemConfig,
     [FETCH_SYSTEM_EXPIRED]: fetchSystemExpired,
-    [SAVE_CUSTOM_DATA]: saveCustomData
+    [SAVE_CUSTOM_DATA]: saveCustomData,
+    [GET_ENVIRONMENT_NAME]: getEnvironmentName,
   },
   modules: {
     /*
@@ -190,6 +197,6 @@ export default new Vuex.Store({
     settings,
     tasks,
     users,
-    compliance
-  }
-})
+    compliance,
+  },
+});

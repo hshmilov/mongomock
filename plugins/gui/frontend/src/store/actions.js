@@ -587,3 +587,11 @@ export const saveCustomData = ({ state, dispatch }, payload) => {
     payload,
   });
 };
+
+export const GET_ENVIRONMENT_NAME = 'GET_ENVIRONMENT_NAME'
+export const getEnvironmentName = ({ dispatch }) => {
+  return dispatch(REQUEST_API, {
+    rule: 'get_environment_name',
+    method: 'GET',
+  });
+};

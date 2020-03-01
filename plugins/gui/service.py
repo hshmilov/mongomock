@@ -13,6 +13,7 @@ from flask import (session)
 # pylint: disable=import-error
 from onelogin.saml2.idp_metadata_parser import OneLogin_Saml2_IdPMetadataParser
 
+from axonius.utils.revving_cache import rev_cached
 from axonius.background_scheduler import LoggedBackgroundScheduler
 from axonius.clients.ldap.ldap_group_cache import set_ldap_groups_cache, get_ldap_groups_cache_ttl
 from axonius.consts.gui_consts import (ENCRYPTION_KEY_PATH,
@@ -27,7 +28,8 @@ from axonius.consts.metric_consts import SystemMetric
 from axonius.consts.plugin_consts import (AXONIUS_USER_NAME,
                                           GUI_PLUGIN_NAME,
                                           GUI_SYSTEM_CONFIG_COLLECTION,
-                                          METADATA_PATH, PLUGIN_NAME, PLUGIN_UNIQUE_NAME, SYSTEM_SETTINGS, PROXY_VERIFY)
+                                          METADATA_PATH, PLUGIN_NAME, PLUGIN_UNIQUE_NAME, SYSTEM_SETTINGS, PROXY_VERIFY,
+                                          CORE_UNIQUE_NAME, NODE_NAME, NODE_USE_AS_ENV_NAME)
 from axonius.consts.plugin_subtype import PluginSubtype
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.logging.metric_helper import log_metric
@@ -378,6 +380,10 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin, 
     @property
     def exec_report_collection(self):
         return self._get_collection('exec_reports_settings')
+
+    @property
+    def _nodes_metadata_collection(self):
+        return self._get_collection(db_name=CORE_UNIQUE_NAME, collection_name='nodes_metadata')
 
     def get_plugin_unique_name(self, plugin_name):
         return self.get_plugin_by_name(plugin_name)[PLUGIN_UNIQUE_NAME]
@@ -812,3 +818,8 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin, 
     @property
     def saml_settings_file_path(self):
         return SAML_SETTINGS_FILE_PATH
+
+    @rev_cached(ttl=3600)
+    def _get_environment_name(self):
+        instance = self._nodes_metadata_collection.find_one({NODE_USE_AS_ENV_NAME: True})
+        return instance.get(NODE_NAME, '') if instance is not None else ''

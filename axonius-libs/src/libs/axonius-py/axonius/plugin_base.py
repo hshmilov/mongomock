@@ -1873,7 +1873,7 @@ class PluginBase(Configurable, Feature, ABC):
     # pylint: enable=too-many-statements
 
     def _get_nodes_table(self):
-        def get_single_node_data(node_id):
+        def get_single_node_data(node_id, is_master=False):
             node_metadata = db_connection['core']['nodes_metadata'].find_one({NODE_ID: node_id})
             node = {NODE_ID: node_id,
                     'last_seen': self.request_remote_plugin(f'nodes/last_seen/{node_id}').json()[
@@ -1886,6 +1886,11 @@ class PluginBase(Configurable, Feature, ABC):
                 node['hostname'] = node_metadata.get('hostname', '')
                 node['ips'] = node_metadata.get('ips', '')
                 node['status'] = node_metadata.get('status', ACTIVATED_NODE_STATUS)
+                node['is_master'] = is_master
+                node['use_as_environment_name'] = False
+
+                if is_master:
+                    node['use_as_environment_name'] = node_metadata.get('use_as_environment_name', False)
             return node
 
         db_connection = self._get_db_connection()
@@ -1897,7 +1902,7 @@ class PluginBase(Configurable, Feature, ABC):
 
         # Remove master node_id and deal with it separately to have it on the top.
         node_ids.remove(master_id)
-        nodes.append(get_single_node_data(master_id))
+        nodes.append(get_single_node_data(master_id, True))
 
         # Gather all the rest.
         for current_node in node_ids:

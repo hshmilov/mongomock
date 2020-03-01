@@ -126,3 +126,7 @@ class AppRoutes(Signup,
 
         return jsonify(self._maintenance_config.get('troubleshooting', False) or
                        self._maintenance_config.get('timeout') is not None)
+
+    @add_rule_unauth('get_environment_name')
+    def get_environment_name(self):
+        return jsonify({'environment_name': self._get_environment_name()})

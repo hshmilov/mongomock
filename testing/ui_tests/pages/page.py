@@ -4,6 +4,7 @@ import time
 from enum import Enum
 import urllib.parse
 from tempfile import NamedTemporaryFile
+import pytest
 
 from retrying import retry
 import selenium.common.exceptions
@@ -1009,3 +1010,7 @@ class Page:
         scroll_left = element.get_attribute('scrollLeft')
         scroll_top = element.get_attribute('scrollTop')
         return scroll_left, scroll_top
+
+    def verify_element_absent_by_css_selector(self, css_selector):
+        with pytest.raises(NoSuchElementException):
+            self.driver.find_element_by_css_selector(css_selector)

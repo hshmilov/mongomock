@@ -6,7 +6,8 @@ from flask import (jsonify,
 from axonius.consts import adapter_consts
 from axonius.consts.core_consts import ACTIVATED_NODE_STATUS, DEACTIVATED_NODE_STATUS
 from axonius.consts.plugin_consts import (NODE_ID, NODE_NAME, NODE_HOSTNAME,
-                                          PLUGIN_NAME, PLUGIN_UNIQUE_NAME, NODE_DATA_INSTANCE_ID, NODE_STATUS)
+                                          PLUGIN_NAME, PLUGIN_UNIQUE_NAME, NODE_DATA_INSTANCE_ID, NODE_STATUS,
+                                          NODE_USE_AS_ENV_NAME)
 from axonius.plugin_base import return_error
 from axonius.utils.gui_helpers import (Permission, PermissionLevel,
                                        PermissionType, ReadOnlyJustForGet,
@@ -31,7 +32,7 @@ class Instances:
             logger.debug(f'node id {target_node_id} is The MASTER ')
             return True
 
-        node = self._get_db_connection()['core']['nodes_metadata'].find_one({NODE_ID: target_node_id})
+        node = self._nodes_metadata_collection.find_one({NODE_ID: target_node_id})
 
         if node is None or not node.get(NODE_STATUS, ACTIVATED_NODE_STATUS) == ACTIVATED_NODE_STATUS:
             logger.error(f'node id {target_node_id} is not Activated ')
@@ -84,23 +85,26 @@ class Instances:
 
             data = self.get_request_data_as_object()
 
-            def update_instance(instance_data=None, attribute=None):
-                if instance_data.get(attribute, None):
-                    node_id = instance_data.get(NODE_DATA_INSTANCE_ID)
-                    self.request_remote_plugin(f'node/{node_id}', method='POST',
-                                               json={'key': attribute, 'value': instance_data.get(attribute)})
-                else:
-                    logger.debug(f'{attribute} is null skip update. ')
+            def update_instance(instance_data=None, attributes=None):
+                if attributes:
+                    for attribute in attributes:
+                        if instance_data.get(attribute, None) is not None:
+                            node_id = instance_data.get(NODE_DATA_INSTANCE_ID)
+                            self.request_remote_plugin(f'node/{node_id}', method='POST',
+                                                       json={'key': attribute, 'value': instance_data.get(attribute)})
+                        else:
+                            logger.debug(f'{attribute} is null skip update. ')
 
             # REACTIVATE NODE
             if NODE_DATA_INSTANCE_ID in data and NODE_STATUS in data:
-                update_instance(instance_data=data, attribute=NODE_STATUS)
+                update_instance(instance_data=data, attributes=[NODE_STATUS])
             # UPDATE NODE NAME AND HOSTNAME
             elif NODE_DATA_INSTANCE_ID in data:
-                update_instance(instance_data=data, attribute=NODE_NAME)
+                update_instance(instance_data=data, attributes=[NODE_NAME, NODE_USE_AS_ENV_NAME])
+                self._get_environment_name.update_cache()
                 if is_valid_node_hostname(data[NODE_HOSTNAME]):
                     if self._update_hostname_on_node(instance_data=data):
-                        update_instance(instance_data=data, attribute=NODE_HOSTNAME)
+                        update_instance(instance_data=data, attributes=[NODE_HOSTNAME])
                     else:
                         return return_error(f'Failed to change hostname', 500)
                 else:

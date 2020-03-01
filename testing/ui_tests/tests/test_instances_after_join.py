@@ -9,6 +9,7 @@ from axonius.utils.wait import wait_until, expect_specific_exception_to_be_raise
 from services.adapters.ad_service import AdService
 from services.adapters.json_file_service import JsonFileService
 from test_credentials.test_ad_credentials import ad_client1_details
+from test_credentials.test_gui_credentials import AXONIUS_USER
 from ui_tests.tests.instances_test_base import TestInstancesBase, NODE_NAME, NODE_HOSTNAME, NEW_NODE_NAME, \
     NEXPOSE_ADAPTER_NAME, wait_for_booted_for_production, UPDATE_HOSTNAME
 
@@ -26,6 +27,7 @@ class TestInstancesAfterNodeJoin(TestInstancesBase):
 
         self.join_node()
 
+        self.check_instance_indication()
         self.check_password_change()
         self.check_add_adapter_to_node()
         self.check_correct_ip_is_shown_in_table()
@@ -212,3 +214,44 @@ class TestInstancesAfterNodeJoin(TestInstancesBase):
         # at this point test pass,  reverting hostname to original.
         self.instances_page.change_instance_hostname(current_node_name=NEW_NODE_NAME,
                                                      new_hostname=NODE_HOSTNAME)
+
+    def check_instance_indication(self):
+        # login - default
+        self.login_page.logout()
+        self.instances_page.verify_footer_element_absent()
+        self.login_page.wait_for_login_page_to_load()
+        self.login_page.login(username=AXONIUS_USER['user_name'], password=AXONIUS_USER['password'])
+
+        # verify no footer by default
+        self.instances_page.switch_to_page()
+        self.instances_page.verify_footer_element_absent()
+
+        # verify no checkbox on non-master instance
+        self.instances_page.click_query_row_by_name('node_1')
+        self.instances_page.verify_instance_indication_element_absent()
+        self.instances_page.find_element_by_text('Cancel').click()
+
+        # change name
+        self.instances_page.change_instance_name('Master', 'Master2')
+        self.instances_page.verify_footer_element_absent()
+        self.instances_page.toggle_instance_indication('Master2')
+        assert self.instances_page.verify_footer_element_text('Master2')
+        self.instances_page.change_instance_name('Master2', 'Master')
+        assert self.instances_page.verify_footer_element_text('Master')
+
+        # toggle off
+        self.instances_page.toggle_instance_indication('Master')
+        self.instances_page.verify_footer_element_absent()
+        self.instances_page.toggle_instance_indication('Master')
+        assert self.instances_page.verify_footer_element_text('Master')
+
+        # other page
+        self.devices_page.switch_to_page()
+        assert self.instances_page.verify_footer_element_text('Master')
+
+        # login - modified
+        self.login_page.logout()
+        assert self.instances_page.verify_footer_element_text('Master')
+        self.login_page.wait_for_login_page_to_load()
+        self.login_page.login(username=AXONIUS_USER['user_name'], password=AXONIUS_USER['password'])
+        assert self.instances_page.verify_footer_element_text('Master')
