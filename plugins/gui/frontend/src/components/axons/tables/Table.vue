@@ -236,6 +236,10 @@ export default {
           }
         }
       }
+
+      .array.inline .item:first-child.v-chip {
+        margin-left: -12px;
+      }
     }
   }
 

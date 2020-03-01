@@ -20,8 +20,7 @@
       <x-button
         :disabled="!validUser"
         @click="performUserConfig"
-      >{{ editMode ? 'Update User' : 'Create User' }}
-      </x-button>
+      >{{ editMode ? 'Update User' : 'Create User' }}</x-button>
     </template>
   </x-modal>
 </template>

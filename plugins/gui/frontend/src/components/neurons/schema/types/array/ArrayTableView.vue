@@ -101,11 +101,6 @@
             border: 0;
           }
         }
-
-      }
-
-      &:first-child.v-chip {
-        margin-left: -12px;
       }
     }
   }

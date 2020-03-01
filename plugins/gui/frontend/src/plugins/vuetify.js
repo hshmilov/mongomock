@@ -3,14 +3,14 @@
 import Vue from 'vue';
 import Vuetify from 'vuetify';
 import 'vuetify/dist/vuetify.min.css';
-import EnfrocementsCustomIcon from '../components/axons/icons/axoniusIcons/enforcements.vue';
+import EnforcementsCustomIcon from '../components/axons/icons/axoniusIcons/enforcements.vue';
 import DraggableCustomIcon from '../components/axons/icons/axoniusIcons/draggable.vue';
 
 import defaultTheme from '../assets/themes/default.json';
 
 const axoniusIcons = {
   enforcements: {
-    component: EnfrocementsCustomIcon,
+    component: EnforcementsCustomIcon,
     props: {
       strokeWidth: '24px',
       strokeColor: '#fff',

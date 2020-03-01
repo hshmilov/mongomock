@@ -110,6 +110,13 @@ PREDEFINED_ROLE_READONLY = 'Read Only User'
 PREDEFINED_ROLE_RESTRICTED = 'Restricted User'
 
 ####################
+# User Preferences #
+####################
+USERS_PREFERENCES_COLLECTION = 'users_preferences'
+USERS_PREFERENCES_COLUMNS_FIELD = 'table_columns'
+USERS_PREFERENCES_DEFAULT_FIELD = 'default'
+
+####################
 # Instances consts #
 ####################
 LOGGED_IN_MARKER_PATH = AXONIUS_SETTINGS_PATH / '.logged_in'

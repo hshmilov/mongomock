@@ -22,7 +22,9 @@ from axonius.consts.gui_consts import (ENCRYPTION_KEY_PATH,
                                        TEMP_MAINTENANCE_THREAD_ID,
                                        USERS_COLLECTION,
                                        USERS_CONFIG_COLLECTION,
-                                       DASHBOARD_COLLECTION, DASHBOARD_SPACES_COLLECTION,
+                                       USERS_PREFERENCES_COLLECTION,
+                                       DASHBOARD_COLLECTION,
+                                       DASHBOARD_SPACES_COLLECTION,
                                        PROXY_DATA_PATH)
 from axonius.consts.metric_consts import SystemMetric
 from axonius.consts.plugin_consts import (AXONIUS_USER_NAME,
@@ -132,6 +134,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin, 
         self._users_collection = self._get_collection(USERS_COLLECTION)
         self._roles_collection = self._get_collection(ROLES_COLLECTION)
         self._users_config_collection = self._get_collection(USERS_CONFIG_COLLECTION)
+        self._users_preferences_collection = self._get_collection(USERS_PREFERENCES_COLLECTION)
         self._dashboard_collection = self._get_collection(DASHBOARD_COLLECTION)
         self._dashboard_spaces_collection = self._get_collection(DASHBOARD_SPACES_COLLECTION)
 

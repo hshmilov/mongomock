@@ -67,7 +67,7 @@ import { SAVE_DATA_VIEW } from '@store/actions';
 import { SET_GETTING_STARTED_MILESTONE_COMPLETION } from '@store/modules/onboarding';
 import { SAVE_QUERY } from '@constants/getting-started';
 
-import { featchEntitySavedQueriesNames } from '@api/saved-queries';
+import { fetchEntitySavedQueriesNames } from '@api/saved-queries';
 import { EntitiesEnum as Entities } from '@constants/entities';
 
 /**
@@ -219,7 +219,7 @@ export default {
     },
     async fetchQueriesNames() {
       try {
-        let names = await featchEntitySavedQueriesNames(Entities[this.namespace]);
+        let names = await fetchEntitySavedQueriesNames(Entities[this.namespace]);
         names = names.filter((q) => q.name);
         names = names.map((q) => q.name.toLocaleLowerCase());
         this.existingQueriesNamesList = new Set(names);

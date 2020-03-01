@@ -32,7 +32,7 @@
   import xSearchInsights from '../neurons/inputs/SearchInsights.vue'
   import xTable from '../neurons/data/Table.vue'
   import xButton from '../axons/inputs/Button.vue'
-  import { entities, defaultFields } from '../../constants/entities'
+  import { entities } from '../../constants/entities'
 
   import { mapMutations } from 'vuex'
   import { UPDATE_DATA_VIEW } from '../../store/mutations'
@@ -59,7 +59,7 @@
           module: entity.name, view: {
             query: {
               filter: ''
-            }, fields: defaultFields[entity.name]
+            }, fields: []
           }
         })
       })

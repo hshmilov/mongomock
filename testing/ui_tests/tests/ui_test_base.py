@@ -259,6 +259,7 @@ class TestBase:
 
         self.axonius_system.get_system_users_db().delete_many(
             {'user_name': {'$nin': [AXONIUS_USER_NAME, DEFAULT_USER['user_name']]}})
+        self.axonius_system.get_users_preferences_db().delete_many({})
         self.axonius_system.get_system_users_db().update_one(
             {'user_name': DEFAULT_USER['user_name']}, {'$set': {'password': bcrypt.hash(DEFAULT_USER['password'])}})
 

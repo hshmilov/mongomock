@@ -87,7 +87,7 @@ import { FETCH_ADAPTERS } from '../store/modules/adapters';
 
 export const GettingStartedPubSub = new Vue();
 
-// I put this locally because it has specific implementation for this use-case.
+// This is local because of specific implementation for this use-case
 const XFabTransition = {
   functional: true,
   render(createElement, context) {

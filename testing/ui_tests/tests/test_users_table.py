@@ -87,6 +87,7 @@ class TestUsersTable(TestEntitiesTable):
         self.settings_page.switch_to_page()
         self.base_page.run_discovery()
         self.users_page.switch_to_page()
+        self.users_page.wait_for_table_be_responsive()
         self.users_page.edit_columns(add_col_names=[self.MAIL_COLUMN], remove_col_names=[self.DOMAIN_COLUMN])
         assert len(self.users_page.get_column_data_slicer(self.MAIL_COLUMN))
         with pytest.raises(ValueError):

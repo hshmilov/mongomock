@@ -85,7 +85,7 @@ import { UPDATE_DATA_VIEW } from '@store/mutations';
 import { DELETE_DATA, SAVE_VIEW } from '@store/actions';
 import { SET_ENFORCEMENT, initTrigger } from '@store/modules/enforcements';
 
-import { featchEntityTags } from '@api/saved-queries';
+import { fetchEntityTags } from '@api/saved-queries';
 
 
 export default {
@@ -221,7 +221,7 @@ export default {
     async fetchTagsApi() {
       this.entityTags = [];
       try {
-        const tags = await featchEntityTags(this.namespace);
+        const tags = await fetchEntityTags(this.namespace);
         this.entityTags = tags;
       } catch (ex) {
         console.warn('featch tags failed');

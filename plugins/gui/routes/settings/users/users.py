@@ -7,8 +7,9 @@ from flask import (jsonify,
 from passlib.hash import bcrypt
 
 from axonius.consts.gui_consts import (PREDEFINED_ROLE_ADMIN,
-                                       UNCHANGED_MAGIC_FOR_GUI)
-from axonius.plugin_base import return_error
+                                       UNCHANGED_MAGIC_FOR_GUI,
+                                       USERS_PREFERENCES_COLUMNS_FIELD)
+from axonius.plugin_base import (return_error, EntityType)
 from axonius.utils.gui_helpers import (Permission, PermissionLevel,
                                        PermissionType, get_connected_user_id,
                                        is_admin_user, paginated)
@@ -190,3 +191,48 @@ class Users:
                                           {'$set': post_data})
         self._invalidate_sessions(user_id)
         return ''
+
+    @gui_add_rule_logged_in('system/users/self/preferences', methods=['GET', 'POST'])
+    def system_users_preferences(self):
+        """
+        Fetch or save the default view of devices table, for current user
+        """
+        if request.method == 'GET':
+            return self._system_users_preferences_get()
+        # Handle POST alternatively
+        return self._system_users_preferences_post()
+
+    def _system_users_preferences_get(self):
+        """
+        Search for current user's preferences and it
+
+        :return: List of saved fields or error if none found
+        """
+        user_preferences = self._users_preferences_collection.find_one({
+            'user_id': self.get_session['user']['_id']
+        })
+        if not user_preferences:
+            return jsonify({}), 200
+        return jsonify(user_preferences), 200
+
+    def _system_users_preferences_post(self):
+        """
+        Save a default view for given entity_type, in current user's preferences
+
+        :param entity_type: devices | users
+        :return: Error if could not save
+        """
+        post_data = self.get_request_data_as_object()
+        set_object = {}
+        for entity_type in EntityType:
+            entity_value = entity_type.value
+            if entity_value in post_data:
+                table_columns_preferences = post_data[entity_value].get(USERS_PREFERENCES_COLUMNS_FIELD, {})
+                for (view_type, columns) in table_columns_preferences.items():
+                    set_object[f'{entity_value}.{USERS_PREFERENCES_COLUMNS_FIELD}.{view_type}'] = columns
+        self._users_preferences_collection.update_one({
+            'user_id': self.get_session['user']['_id']
+        }, {
+            '$set': set_object
+        }, upsert=True)
+        return '', 200

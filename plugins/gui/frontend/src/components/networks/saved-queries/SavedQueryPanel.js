@@ -19,7 +19,7 @@ import { mdiPencil, mdiDelete } from '@mdi/js';
 
 import './saved-query-panel.scss';
 
-import { featchEntityTags, featchEntitySavedQueriesNames } from '@api/saved-queries';
+import { fetchEntityTags, fetchEntitySavedQueriesNames } from '@api/saved-queries';
 import { EntitiesEnum as Entities } from '@constants/entities';
 import { isEmptyExpression } from '@/logic/expression';
 import { IS_ENTITY_EDITABLE } from '@/store/modules/auth';
@@ -168,7 +168,7 @@ export default {
       this.$emit('save-changes', {
         queryData: updated,
         done: (err) => {
-          this.featchEntityTags();
+          this.fetchEntityTags();
           this.toggleEditMode();
           if (!err) {
             this.fetchQueriesNames();
@@ -178,7 +178,7 @@ export default {
     },
     async fetchQueriesNames() {
       try {
-        let names = await featchEntitySavedQueriesNames(Entities[this.namespace]);
+        let names = await fetchEntitySavedQueriesNames(Entities[this.namespace]);
         names = names.filter((q) => q.name);
         names = names.map((q) => q.name.toLocaleLowerCase());
         this.existingQueriesNamesList = new Set(names);
@@ -357,8 +357,8 @@ export default {
       }
       return actions;
     },
-    async featchEntityTags() {
-      const tags = await featchEntityTags(Entities[this.namespace]);
+    async fetchEntityTags() {
+      const tags = await fetchEntityTags(Entities[this.namespace]);
       this.entityTags = tags;
     },
   },
@@ -366,7 +366,7 @@ export default {
     async editingMode(isEditing) {
       // Whenever user enter edit mode, fetch the latest list of tags
       if (isEditing) {
-        this.featchEntityTags();
+        this.fetchEntityTags();
       }
     },
   },

@@ -18,7 +18,7 @@ const fetchUsersTags = async () => {
   return res.data;
 };
 
-export const featchEntityTags = async (entity) => {
+export const fetchEntityTags = async (entity) => {
   let res;
   if (entity === Entities.devices) {
     res = await fetchDevicesTags();
@@ -44,9 +44,9 @@ const fetchUsersSavedQueriesNames = async () => {
   const requestOptions = {};
   const res = await request(requestOptions);
   return res.data;
-}
+};
 
-export const featchEntitySavedQueriesNames = async (entity) => {
+export const fetchEntitySavedQueriesNames = async (entity) => {
   let res;
 
   if (entity === Entities.devices) {

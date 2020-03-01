@@ -66,10 +66,8 @@ class TestDevicesTable(TestEntitiesTable):
         self.devices_page.wait_for_spinner_to_end()
 
         self.devices_page.click_export_csv()
-
-        self.devices_page.wait_for_csv_loading_button_to_be_absent()
-
-        assert not self.devices_page.is_export_csv_button_disabled()
+        self.devices_page.wait_for_csv_loading_absent()
+        assert not self.devices_page.find_table_options_open()
 
     def test_device_table_field_export(self):
         self.enforcements_page.switch_to_page()

@@ -1,18 +1,23 @@
-import { defaultFields } from '../../constants/entities';
-
 export const SET_MERGED_DATA_BY_ID = 'SET_MERGED_DATA_BY_ID';
 export const RESET_DEVICES_MERGED_DATA_BY_ID = 'RESET_DEVICES_MERGED_DATA_BY_ID';
+export const RESET_DEVICES_STATE = 'RESET_DEVICES_STATE'
 
-export const devices = {
-  state: {
-    content: { data: [], fetching: false, error: '', rule: '' },
+const getDefaultState = () => {
+  return {
+    content: {
+      data: [], fetching: false, error: '', rule: '',
+    },
 
     count: { data: 0, fetching: false, error: '' },
 
     view: {
-      page: 0, fields: defaultFields.devices, coloumnSizes: [], query: {
+      page: 0,
+      fields: [],
+      coloumnSizes: [],
+      query: {
         filter: '', expressions: [], search: '',
-      }, sort: {
+      },
+      sort: {
         field: '', desc: true,
       },
       colFilters: {},
@@ -46,7 +51,9 @@ export const devices = {
         },
       },
       history: {
-        content: { data: [], fetching: false, error: '', rule: '' },
+        content: {
+          data: [], fetching: false, error: '', rule: '',
+        },
       },
     },
 
@@ -55,10 +62,14 @@ export const devices = {
     current: {
       id: '',
 
-      fetching: false, data: {}, error: '',
+      fetching: false,
+      data: {},
+      error: '',
 
       tasks: {
-        fetching: false, data: [], error: '',
+        fetching: false,
+        data: [],
+        error: '',
         view: {
           page: 0,
           pageSize: 20,
@@ -73,7 +84,11 @@ export const devices = {
       },
     },
     mergedDataById: {},
-  },
+  };
+};
+
+export const devices = {
+  state: getDefaultState(),
   getters: {
     getMergedDataById: (state) => (id, name) => state.mergedDataById[`${id}__${name}`],
   },
@@ -85,6 +100,9 @@ export const devices = {
     [RESET_DEVICES_MERGED_DATA_BY_ID](state) {
       // eslint-disable-next-line no-param-reassign
       state.mergedDataById = {};
+    },
+    [RESET_DEVICES_STATE](state) {
+      Object.assign(state, getDefaultState());
     },
   },
 };

@@ -9,13 +9,13 @@
           {{ enforcement.outcome }} results of "{{ enforcement.action }}" action
         </div>
       </template>
-      <x-button
+      <XButton
         v-else-if="selectedView && !readOnly"
         :disabled="selectedView.predefined"
         link
         class="query-title"
         @click="openEditCurrentQueryModal"
-      >{{ selectedView.name }}</x-button>
+      >{{ selectedView.name }}</XButton>
       <div
         v-else-if="selectedView"
         class="query-title"
@@ -32,47 +32,47 @@
         {{ status }}
       </div>
     </div>
-    <x-button
+    <XButton
       v-if="enforcement"
       link
       @click="navigateFilteredTask"
-    >Go to Task</x-button>
-    <x-button
+    >Go to Task</XButton>
+    <XButton
       v-else-if="!selectedView || !isEdited"
       id="query_save"
       link
       :disabled="disabled"
       @click="openSaveView"
-    >Save As</x-button>
-    <x-dropdown v-else>
-      <x-button
+    >Save As</XButton>
+    <XDropdown v-else>
+      <XButton
         slot="trigger"
         link
         :disabled="disabled || selectedView.predefined"
         @click.stop="saveSelectedView"
-      >Save</x-button>
+      >Save</XButton>
       <div slot="content">
-        <x-button
+        <XButton
           link
           :disabled="disabled"
           @click="openSaveView"
-        >Save As</x-button>
-        <x-button
+        >Save As</XButton>
+        <XButton
           link
           @click="reloadSelectedView"
-        >Discard Changes</x-button>
+        >Discard Changes</XButton>
       </div>
-    </x-dropdown>
-    <x-button
+    </XDropdown>
+    <XButton
       link
       @click="resetQuery"
-    >Reset</x-button>
-    <x-historical-date
+    >Reset</XButton>
+    <XHistoricalDate
       v-model="historical"
       :allowed-dates="allowedDates"
       :module="module"
     />
-    <x-save-modal
+    <XSaveModal
       v-model="viewNameModal.isActive"
       :namespace="module"
       :view="viewNameModal.view"
@@ -84,11 +84,10 @@
 import _isEqual from 'lodash/isEqual';
 import { mapState, mapMutations, mapActions } from 'vuex';
 import _debounce from 'lodash/debounce';
-import xButton from '../../../axons/inputs/Button.vue';
-import xDropdown from '../../../axons/popover/Dropdown.vue';
-import xHistoricalDate from '../../../neurons/inputs/HistoricalDate.vue';
-import xSaveModal from '../../saved-queries/SavedQueryModal.vue';
-import { defaultFields } from '../../../../constants/entities';
+import XButton from '../../../axons/inputs/Button.vue';
+import XDropdown from '../../../axons/popover/Dropdown.vue';
+import XHistoricalDate from '../../../neurons/inputs/HistoricalDate.vue';
+import XSaveModal from '../../saved-queries/SavedQueryModal.vue';
 
 import { UPDATE_DATA_VIEW } from '../../../../store/mutations';
 import { SAVE_DATA_VIEW } from '../../../../store/actions';
@@ -97,7 +96,7 @@ import { SAVE_DATA_VIEW } from '../../../../store/actions';
 export default {
   name: 'XQueryState',
   components: {
-    xButton, xDropdown, xHistoricalDate, xSaveModal,
+    XButton, XDropdown, XHistoricalDate, XSaveModal,
   },
   props: {
     module: {
@@ -111,6 +110,10 @@ export default {
     valid: {
       type: Boolean,
       default: true,
+    },
+    defaultFields: {
+      type: Array,
+      default: () => [],
     },
   },
   data() {
@@ -167,21 +170,29 @@ export default {
     },
     isDefaultView() {
       return this.view.query.filter === ''
-                && _isEqual(this.view.fields, defaultFields[this.module])
+                && _isEqual(this.view.fields, this.defaultFields)
                 && this.view.sort.field === ''
-                && (!Object.keys(this.view.colFilters).length || !Object.values(this.view.colFilters).find((val) => val));
+                && (!Object.keys(this.view.colFilters).length
+                      || !Object.values(this.view.colFilters).find((val) => val));
     },
     isEdited() {
-      return this.selectedView && this.selectedView.view
-                && (this.selectedView.view.query.filter !== this.view.query.filter
-                || !_isEqual(this.view.fields, this.selectedView.view.fields)
-                || this.view.sort.field !== this.selectedView.view.sort.field
-                || this.view.sort.desc !== this.selectedView.view.sort.desc
-                || !this.objsValuesMatch(this.view.colFilters, this.selectedView.view.colFilters));
+      if (!this.selectedView || !this.selectedView.view) {
+        return false;
+      }
+      const { view } = this.selectedView;
+      const {
+        query, fields, sort, colFilters,
+      } = this.view;
+      const filterDiff = query.filter !== view.query.filter;
+      const fieldsDiff = !_isEqual(fields, view.fields);
+      const sortDiff = sort.field !== view.sort.field || sort.desc !== view.sort.desc;
+      const colFiltersDiff = !this.objsValuesMatch(colFilters, view.colFilters);
+      return view && (filterDiff || fieldsDiff || sortDiff || colFiltersDiff);
     },
     status() {
       if (this.enforcement) return '';
-      return !this.selectedView ? '[Unsaved]' : (this.isEdited ? '[Edited]' : '');
+      const edited = this.isEdited ? '[Edited]' : '';
+      return !this.selectedView ? '[Unsaved]' : edited;
     },
   },
   methods: {
@@ -209,7 +220,7 @@ export default {
           sort: {
             field: '', desc: true,
           },
-          fields: defaultFields[this.module],
+          fields: this.defaultFields,
           colFilters: {},
           page: 0,
         },
@@ -251,14 +262,12 @@ export default {
     objContained(superset, subset) {
       return Object.entries(subset).every(([key, value]) => _isEqual(superset[key], value));
     },
-    objsValuesMatch(objA, objB) {
+    objsValuesMatch(objA = {}, objB = {}) {
       /*
         This is checking that any key in objA has the same value as the key in objB
         (including undefined - if it is undefined in one and non existent in the other, it passes)
          */
-      objA = objA || {};
-      objB = objB || {};
-      return this.objContained(objA, objB) && this.objContained(objB, objA);
+      return this.objContained(objA, objB) && this.objContained(objB, objB);
     },
   },
 };

@@ -1,6 +1,8 @@
 /* eslint-disable no-param-reassign */
 import _get from 'lodash/get';
 import { REQUEST_API } from '../actions';
+import { RESET_DEVICES_STATE } from './devices';
+import { RESET_USERS_STATE } from './users';
 
 export const IS_ENTITY_RESTRICTED = 'IS_ENTITY_RESTRICTED';
 export const IS_ENTITY_EDITABLE = 'IS_ENTITY_EDITABLE';
@@ -199,7 +201,7 @@ export const auth = {
         commit(SET_USER, { error: error.response.data.message });
       });
     },
-    [LOGOUT]({ dispatch, commit }, payload) {
+    [LOGOUT]({ dispatch, commit, replaceS }, payload) {
       try {
         const auth2 = window.gapi.auth2.getAuthInstance();
         auth2.signOut();
@@ -208,6 +210,8 @@ export const auth = {
       return dispatch(REQUEST_API, {
         rule: 'logout',
       }).then(() => {
+        commit(RESET_DEVICES_STATE);
+        commit(RESET_USERS_STATE);
         if (payload) {
           payload.fetching = false;
           return commit(SET_USER, payload);

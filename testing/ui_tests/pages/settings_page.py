@@ -172,7 +172,7 @@ class SettingsPage(Page):
         if last_name:
             self.fill_text_field_by_element_id('last_name', last_name)
         if role_name:
-            self.select_option_without_search('.x-users-roles .x-user-config .x-select',
+            self.select_option_without_search(f'.x-users-roles .x-user-config .x-select',
                                               self.DROPDOWN_SELECTED_OPTION_CSS,
                                               role_name)
 

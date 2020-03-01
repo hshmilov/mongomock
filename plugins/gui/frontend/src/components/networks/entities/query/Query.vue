@@ -4,6 +4,7 @@
       :module="module"
       :valid="filterValid"
       :read-only="readOnly"
+      :default-fields="defaultFields"
       @done="$emit('done')"
     />
     <div class="filter">
@@ -53,6 +54,10 @@ export default {
     readOnly: {
       type: Boolean,
       default: false,
+    },
+    defaultFields: {
+      type: Array,
+      default: () => [],
     },
   },
   data() {

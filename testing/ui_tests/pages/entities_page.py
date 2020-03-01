@@ -21,7 +21,8 @@ TABLE_COUNT_CSS = '.table-header .table-title .count'
 
 
 class EntitiesPage(Page):
-    EXPORT_CSV_LOADING_CSS = '.loading-button'
+    EXPORT_CSV_LOADING_XPATH = '//div[contains(@class, \'.v-list-item--disabled\' ' \
+                               'and .//text()[contains(., \'Exporting...\')]'
     EXPORT_CSV_BUTTON_TEXT = 'Export CSV'
 
     EDIT_COLUMNS_ADAPTER_DROPDOWN_CSS = '.x-dropdown.x-select.x-select-symbol'
@@ -121,6 +122,8 @@ class EntitiesPage(Page):
     TABLE_ACTION_ITEM_XPATH = \
         '//div[@class=\'actions\']//div[@class=\'item-content\' and contains(text(),\'{action}\')]'
 
+    TABLE_OPTIONS_ITEM_XPATH = '//div[@class=\'v-list-item__title\' and text()=\'{option_title}\']'
+
     SAVE_QUERY_ID = 'query_save'
     SAVE_QUERY_NAME_SELECTOR = '.name-input'
     SAVE_QUERY_DESCRIPTION_SELECTOR = '.save-query-dialog textarea'
@@ -190,8 +193,14 @@ class EntitiesPage(Page):
 
     FIELD_UPDATED_BY = 'Updated By'
     FIELD_LAST_UPDATED = 'Last Updated'
+    FIELD_ADAPTERS = 'Adapters'
+    FIELD_TAGS = 'Tags'
 
     QUERY_MODAL_OVERLAY = '.v-overlay'
+
+    EDIT_COLUMNS_TEXT = 'Edit Columns'
+    RESET_COLS_SYSTEM_DEFAULT_TEXT = 'Reset Columns to System Default'
+    RESET_COLS_USER_DEFAULT_TEXT = 'Reset Columns to User Default'
 
     @property
     def url(self):
@@ -773,8 +782,27 @@ class EntitiesPage(Page):
     def is_text_in_coloumn(self, col_name, text):
         return any(text in item for item in self.get_column_data_slicer(col_name))
 
+    def open_table_options(self):
+        self.driver.find_element_by_css_selector('.x-option-menu').click()
+        # Wait for animation
+        time.sleep(0.4)
+
+    def find_table_option_by_title(self, option_title):
+        return self.driver.find_element_by_xpath(self.TABLE_OPTIONS_ITEM_XPATH.format(option_title=option_title))
+
+    def select_table_option(self, option_title):
+        self.find_table_option_by_title(option_title).click()
+
+    def close_table_options(self):
+        self.driver.find_elements_by_css_selector('.v-application--wrap').click()
+
+    def find_table_options_open(self):
+        return self.driver.find_elements_by_css_selector('.x-option-menu__content .menuable__content__active')
+
     def open_edit_columns(self):
-        self.click_button('Edit Columns', partial_class=True, should_scroll_into_view=False)
+        self.open_table_options()
+        self.select_table_option(self.EDIT_COLUMNS_TEXT)
+        self.wait_for_element_present_by_css('.x-field-config')
 
     def select_column_adapter(self, adapter_title):
         self.select_option(self.EDIT_COLUMNS_ADAPTER_DROPDOWN_CSS,
@@ -784,6 +812,9 @@ class EntitiesPage(Page):
 
     def close_edit_columns(self):
         self.click_button('Done')
+
+    def close_edit_columns_save_default(self):
+        self.click_button('Save as User Default', partial_class=True)
 
     def edit_columns(self, add_col_names: list = None, remove_col_names: list = None, adapter_title: str = None):
         self.open_edit_columns()
@@ -821,6 +852,14 @@ class EntitiesPage(Page):
         self.fill_text_field_by_css_selector(f'.{col_type} .x-search-input .input-value', col_title)
         self.driver.find_element_by_xpath(
             self.EDIT_COLUMNS_SELECT_XPATH.format(list_type=col_type, col_title=col_title)).click()
+
+    def reset_columns_system_default(self):
+        self.open_table_options()
+        self.select_table_option(self.RESET_COLS_SYSTEM_DEFAULT_TEXT)
+
+    def reset_columns_user_default(self):
+        self.open_table_options()
+        self.select_table_option(self.RESET_COLS_USER_DEFAULT_TEXT)
 
     def is_query_error(self, text=None):
         if not text:
@@ -977,23 +1016,12 @@ class EntitiesPage(Page):
     def search_note(self, search_text):
         self.fill_text_field_by_css_selector(self.NOTES_SEARCH_INUPUT_CSS, search_text)
 
-    def get_export_csv_button(self):
-        return self.get_special_button(self.EXPORT_CSV_BUTTON_TEXT)
-
-    def is_export_csv_button_disabled(self):
-        return self.is_element_disabled(self.get_export_csv_button())
-
     def click_export_csv(self):
-        self.get_export_csv_button().click()
+        self.open_table_options()
+        self.select_table_option(self.EXPORT_CSV_BUTTON_TEXT)
 
-    def find_export_csv_loading(self):
-        return self.driver.find_element_by_css_selector(self.EXPORT_CSV_LOADING_CSS)
-
-    def wait_for_csv_loading_button_to_be_present(self):
-        self.wait_for_element_present_by_css(self.EXPORT_CSV_LOADING_CSS)
-
-    def wait_for_csv_loading_button_to_be_absent(self):
-        self.wait_for_element_absent_by_css(self.EXPORT_CSV_LOADING_CSS, retries=450)
+    def wait_for_csv_loading_absent(self):
+        self.wait_for_element_absent_by_css(self.EXPORT_CSV_LOADING_XPATH, retries=450)
 
     def generate_csv(self, entity_type, fields, filters):
         session = requests.Session()

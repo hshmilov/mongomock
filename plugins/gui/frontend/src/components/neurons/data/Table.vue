@@ -432,7 +432,7 @@ export default {
       this.loading = false;
       return;
     }
-    if (!this.$route.query.view) {
+    if (!this.$route.query.view && this.viewFields.length) {
       this.fetchContentPages();
     }
     if (this.refresh) {

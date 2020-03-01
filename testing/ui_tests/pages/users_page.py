@@ -2,16 +2,23 @@ from ui_tests.pages.entities_page import EntitiesPage
 
 
 class UsersPage(EntitiesPage):
+    FIELD_IMAGE_TITLE = 'Image'
     FIELD_USERNAME_NAME = 'username'
     FIELD_USERNAME_TITLE = 'User Name'
-    FIELD_LOGON_COUNT = 'Logon Count'
-    FIELD_TAGS = 'Tags'
+    FIELD_DOMAIN_TITLE = 'Domain'
+    FIELD_ADMIN_TITLE = 'Is Admin'
     FIELD_LAST_SEEN_IN_DOMAIN = 'Last Seen In Domain'
+    FIELD_LOGON_COUNT = 'Logon Count'
 
     FILTER_USERNAME = 'specific_data.data.username == regex("{filter_value}")'
     FILTER_IS_ADMIN = '(specific_data.data.is_admin == true)'
 
     ADMIN_QUERY_NAME = 'Admin Users'
+
+    SYSTEM_DEFAULT_FIELDS = [EntitiesPage.FIELD_ADAPTERS,
+                             FIELD_IMAGE_TITLE, FIELD_USERNAME_TITLE, FIELD_DOMAIN_TITLE,
+                             FIELD_ADMIN_TITLE, FIELD_LAST_SEEN_IN_DOMAIN,
+                             EntitiesPage.FIELD_TAGS]
 
     @property
     def url(self):

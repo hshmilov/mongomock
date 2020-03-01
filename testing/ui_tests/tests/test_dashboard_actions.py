@@ -204,7 +204,7 @@ class TestDashboardActions(TestBase):
         self.dashboard_page.fill_text_field_by_element_id(self.dashboard_page.CHART_TITLE_ID, self.TEST_EDIT_CARD_TITLE)
         assert self.dashboard_page.is_chart_segment_include_empty_enabled()
         self.dashboard_page.select_chart_wizard_module(DEVICES_MODULE)
-        self.dashboard_page.select_chart_wizard_field(self.dashboard_page.FIELD_NETWORK_INTERFACES_IPS)
+        self.dashboard_page.select_chart_wizard_field(self.devices_page.FIELD_NETWORK_INTERFACES_IPS)
         assert not self.dashboard_page.is_card_save_button_disabled()
         assert self.dashboard_page.is_add_chart_segment_filter_button_disabled()
         self.dashboard_page.fill_chart_segment_filter(NETWORK_IPS_OPTION_NAME, '', 1)

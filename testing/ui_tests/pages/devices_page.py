@@ -9,7 +9,8 @@ from ui_tests.pages.entities_page import EntitiesPage
 
 
 class DevicesPage(EntitiesPage):
-    FIELD_NETWORK_INTERFACES_MAC = 'Network Interfaces: Mac'
+    FIELD_NETWORK_INTERFACES_MAC = 'Network Interfaces: MAC'
+    FIELD_NETWORK_INTERFACES_IPS = 'Network Interfaces: IPs'
     FIELD_NETWORK_INTERFACES_PORT = 'Network Interfaces: Port'
     FIELD_NETWORK_INTERFACES = 'Network Interfaces'
     FIELD_NETWORK_INTERFACES_NAME = 'network_interfaces'
@@ -45,8 +46,6 @@ class DevicesPage(EntitiesPage):
     FIELD_AGENT_VERSION = 'Agent Version'
     FIELD_PORT_ACCESS_PORT_TYPE = 'Port Access: Port Type'
     FIELD_PART_OF_DOMAIN = 'Part Of Domain'
-    FIELD_TAGS = 'Tags'
-    FIELD_ADAPTERS = 'Adapters'
     FIELD_LAST_SEEN = 'Last Seen'
     FIELD_HOSTNAME_TITLE = 'Host Name'
     FIELD_HOSTNAME_NAME = 'hostname'
@@ -94,6 +93,11 @@ class DevicesPage(EntitiesPage):
         'CHECKED': 'checkbox--checked',
         'UNCHECKED': 'checkbox--unchecked'
     }
+
+    SYSTEM_DEFAULT_FIELDS = [EntitiesPage.FIELD_ADAPTERS,
+                             FIELD_ASSET_NAME, FIELD_HOSTNAME_TITLE, FIELD_LAST_SEEN,
+                             FIELD_NETWORK_INTERFACES_MAC, FIELD_NETWORK_INTERFACES_IPS,
+                             FIELD_OS_TYPE, EntitiesPage.FIELD_TAGS]
 
     @property
     def url(self):

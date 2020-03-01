@@ -180,9 +180,6 @@ class Page:
     SAFEGUARD_OVERLAY_CSS = '.v-overlay'
     SAFEGUARD_CANCEL_BUTTON_ID = 'safeguard-cancel-btn'
 
-    # global pages consts
-    FIELD_NETWORK_INTERFACES_IPS = 'Network Interfaces: IPs'
-
     def __init__(self, driver, base_url, test_base, local_browser: bool):
         self.driver = driver
         self.base_url = base_url
