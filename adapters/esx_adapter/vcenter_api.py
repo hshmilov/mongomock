@@ -1,4 +1,5 @@
 import logging
+import numbers
 from threading import Lock
 
 import cachetools
@@ -67,7 +68,13 @@ def _should_retry_fetching(exception):
 
 def _getattr_permission_safely(obj, attr_name, default=None):
     try:
-        return getattr(obj, attr_name, default)
+        value = getattr(obj, attr_name, default)
+        # We want to perform 'or default' additionally but '0' is a valid integer value, so don't do it for numbers.
+        # See: https://docs.python.org/3/library/stdtypes.html#truth-value-testing
+        #  +   https://stackoverflow.com/a/4187266
+        if not isinstance(value, numbers.Number):
+            value = value or default
+        return value
     except vim.fault.NoPermission:
         logger.warning(f'Object {obj} had no permissions for attribute "{attr_name}", returning {default}.')
         return default
@@ -293,6 +300,27 @@ class vCenterApi(object):
                     if device_info:
                         device_raw['deviceInfo'] = _take_just_primitives(device_info.__dict__)
                     details['hardware']['devices'].append(device_raw)
+
+        hardware = _getattr_permission_safely(vm_root, 'hardware', None)
+        if hardware:
+            bios_info = _getattr_permission_safely(hardware, 'biosInfo', None)
+            if bios_info:
+                details['esx_bios_info'] = _take_just_primitives(bios_info.__dict__)
+
+            system_info = _getattr_permission_safely(hardware, 'systemInfo', None)
+            if system_info:
+                details['esx_system_info'] = _take_just_primitives(system_info.__dict__)
+                other_identifying_info_list = _getattr_permission_safely(system_info, 'otherIdentifyingInfo', [])
+                if other_identifying_info_list:
+                    # https://www.vmware.com/support/developer/converter-sdk/conv55_apireference/vim.host.SystemIdentificationInfo.html
+                    other_info = details['esx_system_info']['otherIdentifyingInfo'] = []
+                    for other_identifying_info in other_identifying_info_list:
+                        id_type = _getattr_permission_safely(other_identifying_info, 'identifierType', None)
+                        if not id_type:
+                            continue
+                        id_value = _getattr_permission_safely(other_identifying_info, 'identifierValue', None)
+                        other_info.append({'key': _getattr_permission_safely(id_type, 'key', None),
+                                           'value': id_value})
 
         details['networking'] = list(self._parse_networking(vm_root))
         details['hardware_networking'] = list(self._parse_networking_from_hardware(vm_root))

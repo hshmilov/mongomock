@@ -585,6 +585,7 @@ class DeviceAdapter(SmartJsonClass):
     device_model_family = Field(str, "Device Model Family")
     device_serial = Field(str, "Device Manufacturer Serial")
 
+    bios_manufacturer = Field(str, "Bios Manufacturer")
     bios_version = Field(str, "Bios Version")
     bios_serial = Field(str, "Bios Serial")
 

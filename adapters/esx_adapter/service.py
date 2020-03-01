@@ -11,6 +11,7 @@ from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
 from axonius.devices.device_adapter import DeviceAdapter, DeviceRunningState
 from axonius.fields import Field, ListField
+from axonius.smart_json_class import SmartJsonClass
 from axonius.utils.datetime import parse_date
 from axonius.mixins.configurable import Configurable
 from axonius.utils.files import get_local_config_file
@@ -37,6 +38,11 @@ class ESXDeviceType(Enum):
     VMMachine = auto()
 
 
+class ESXIdentifyingInfo(SmartJsonClass):
+    key = Field(str, 'Type')
+    value = Field(str, 'Value')
+
+
 class EsxAdapter(AdapterBase, Configurable):
     class MyDeviceAdapter(DeviceAdapter):
         vm_tools_status = Field(str, 'VM Tools Status')
@@ -47,6 +53,7 @@ class EsxAdapter(AdapterBase, Configurable):
         vm_path_name = Field(str, 'VM Path Name')
         consolidation_needed = Field(bool, 'Consolidation Needed')
         cd_summaries = ListField(str, 'CD/DVD Summaries')
+        system_identifying_info = ListField(ESXIdentifyingInfo, 'Identifying Info')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -123,11 +130,14 @@ class EsxAdapter(AdapterBase, Configurable):
         device.name = node.get('Name', '')
         device.vm_path_name = config.get('vmPathName')
         device.figure_os(config.get('guestFullName', ''))
-        try:
-            device.id = details['config']['instanceUuid']
-            device.cloud_id = details['config']['instanceUuid']
-        except KeyError:
-            device.id = device.name  # default to name
+
+        device_id = device.name  # default to name
+        if config.get('instanceUuid'):
+            device_id = config['instanceUuid']
+        elif details.get('system_info'):
+            device_id = details.get('system_info').get('uuid') or device_id
+        device.id = device_id
+        device.cloud_id = device_id
 
         device.cloud_provider = 'VMWare'
         added_macs = []
@@ -221,8 +231,29 @@ class EsxAdapter(AdapterBase, Configurable):
                 return
             try:
                 details = node.get('Details', {})
-                if details and details.get('config'):
-                    device.hostname = details.get('config').get('name')
+                if details:
+                    if details.get('config'):
+                        device.hostname = details.get('config').get('name')
+                    if details.get('esx_bios_info'):
+                        bios_info = details.get('esx_bios_info') or {}
+                        device.bios_manufacturer = bios_info.get('vendor')
+                        device.bios_version = bios_info.get('biosVersion')
+                    if details.get('esx_system_info'):
+                        system_info = details.get('esx_system_info') or {}
+                        device.device_manufacturer = system_info.get('vendor')
+                        device.device_model = system_info.get('model')
+                        # Available from ESXi 6.7
+                        device.device_serial = system_info.get('serialNumber')
+                        other_info_list = system_info.get('otherIdentifyingInfo') or []
+                        identifying_info_list = []
+                        for other_info in other_info_list:  # type: dict
+                            key = other_info.get('key')
+                            if not key:
+                                continue
+                            value = other_info.get('value')
+                            identifying_info_list.append(ESXIdentifyingInfo(key=key, value=value))
+                        device.system_identifying_info = identifying_info_list
+
             except Exception:
                 logger.warning(f'Problem getting ESX Host name ', exc_info=True)
             device.device_type = ESXDeviceType.ESXHost
