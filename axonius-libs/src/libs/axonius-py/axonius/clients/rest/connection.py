@@ -41,7 +41,7 @@ ASYNC_ERROR_SLEEP_TIME = 3
 class RESTConnection(ABC):
     # pylint: disable=R0913
     def __init__(self, domain: str, username: str = None, password: str = None, apikey: str = None,
-                 verify_ssl: bool = False,
+                 verify_ssl=False,
                  http_proxy: str = None, https_proxy: str = None, url_base_prefix: str = '/',
                  session_timeout: Tuple[int, int] = None,
                  port: int = None, headers: dict = None, use_domain_path: bool = False, client_id: str = None):

@@ -237,6 +237,7 @@ DOCKER_PORTS = {
     'cisco-stealthwatch-adapter':       10001,
     'arista-eos-adapter':               10002,
     'men-and-mice-adapter':             10004,
+    'digicert-pki-platform-adapter':    13369,
     'github-adapter':                   13370,
     'netbrain-adapter':                 13371,
     'cscglobal-adapter':                13372,

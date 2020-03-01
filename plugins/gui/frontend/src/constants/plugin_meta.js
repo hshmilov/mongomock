@@ -1,4 +1,8 @@
 export const pluginMeta = {
+    digicert_pki_platform_adapter: {
+        title: 'DigiCert PKI Platform (Symantec Managed PKI)',
+        description: 'DigiCert PKI Platform (formerly Symantec Managed PKI) provides a cloud-based enterprise solution for issuing and managing digital certificates used to enable strong authentication and encryption.'
+    },
     json_adapter: {
         title: 'JSON',
         link: 'https://docs.axonius.com/docs/json',
