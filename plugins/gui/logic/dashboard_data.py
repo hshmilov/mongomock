@@ -93,7 +93,7 @@ def fetch_chart_compare(chart_view: ChartViews, views: List) -> List:
             data_item['value'] = PluginBase.Instance._historical_entity_views_db_map[entity].count_documents(
                 {
                     '$and': [
-                        parse_filter(view_dict['query']['filter']), {
+                        parse_filter(view_dict['query']['filter'], view['for_date']), {
                             'accurate_for_datetime': view['for_date']
                         }
                     ]
@@ -147,7 +147,7 @@ def fetch_chart_intersect(_: ChartViews, entity: EntityType, base, intersecting,
         base_view = find_filter_by_name(entity, base)
         if not base_view or not base_view.get('query'):
             return None
-        base_queries = [parse_filter(base_view['query']['filter'])]
+        base_queries = [parse_filter(base_view['query']['filter'], for_date)]
 
     if for_date:
         # If history requested, fetch from appropriate historical db
@@ -168,7 +168,7 @@ def fetch_chart_intersect(_: ChartViews, entity: EntityType, base, intersecting,
     if not child1_view or not child1_view.get('query'):
         return None
     child1_filter = child1_view['query']['filter']
-    child1_query = parse_filter(child1_filter)
+    child1_query = parse_filter(child1_filter, for_date)
     base_filter = f'({base_view["query"]["filter"]}) and ' if base_view['query']['filter'] else ''
     child2_filter = ''
     if len(intersecting) == 1:
@@ -183,7 +183,7 @@ def fetch_chart_intersect(_: ChartViews, entity: EntityType, base, intersecting,
         if not child2_view or not child2_view.get('query'):
             return None
         child2_filter = child2_view['query']['filter']
-        child2_query = parse_filter(child2_filter)
+        child2_query = parse_filter(child2_filter, for_date)
 
         # Child1 + Parent - Intersection
         child1_view['query']['filter'] = f'{base_filter}({child1_filter}) and not ({child2_filter})'
@@ -243,7 +243,7 @@ def _query_chart_segment_results(field_parent: str, view, entity: EntityType, fo
         base_view = find_filter_by_name(entity, view)
         if not base_view or not base_view.get('query'):
             return None, None
-        base_queries.append(parse_filter(base_view['query']['filter']))
+        base_queries.append(parse_filter(base_view['query']['filter'], for_date))
     # pylint: disable=protected-access
     data_collection = PluginBase.Instance._entity_db_map[entity]
     if for_date:
@@ -714,7 +714,7 @@ def _query_chart_abstract_results(field: dict, entity: EntityType, view, for_dat
             return None, None
         base_query = {
             '$and': [
-                parse_filter(base_view['query']['filter']),
+                parse_filter(base_view['query']['filter'], for_date),
                 base_query
             ]
         }
@@ -841,7 +841,7 @@ def _compare_timeline_lines(views, date_ranges):
             return
         yield {
             'title': view['name'],
-            'points': _fetch_timeline_points(entity, parse_filter(base_view['query']['filter']), date_ranges)
+            'points': _fetch_timeline_points(entity, base_view['query']['filter'], date_ranges)
         }
 
 
@@ -853,35 +853,31 @@ def _intersect_timeline_lines(views, date_ranges):
     second_entity_type = EntityType(views[1]['entity'])
 
     # first query handling
-    base_query = {}
+    base_filter = ''
     if views[0].get('name'):
         base_view = find_filter_by_name(first_entity_type, views[0]['name'])
         if not base_view or not base_view.get('query'):
             return
-        base_query = parse_filter(base_view['query']['filter'])
+        base_filter = base_view['query']['filter']
     yield {
         'title': views[0]['name'],
-        'points': _fetch_timeline_points(first_entity_type, base_query, date_ranges)
+        'points': _fetch_timeline_points(first_entity_type, base_filter, date_ranges)
     }
 
     # second query handling
     intersecting_view = find_filter_by_name(second_entity_type, views[1]['name'])
     if not intersecting_view or not intersecting_view.get('query'):
         yield {}
-    intersecting_query = parse_filter(intersecting_view['query']['filter'])
-    if base_query:
-        intersecting_query = {
-            '$and': [
-                base_query, intersecting_query
-            ]
-        }
+    intersecting_filter = intersecting_view['query']['filter']
+    if base_filter:
+        intersecting_filter = f'({base_filter}) and {intersecting_filter}'
     yield {
         'title': f'{views[0]["name"]} and {views[1]["name"]}',
-        'points': _fetch_timeline_points(second_entity_type, intersecting_query, date_ranges)
+        'points': _fetch_timeline_points(second_entity_type, intersecting_filter, date_ranges)
     }
 
 
-def _fetch_timeline_points(entity_type: EntityType, match_query, date_ranges):
+def _fetch_timeline_points(entity_type: EntityType, match_filter: str, date_ranges):
     # pylint: disable=protected-access
     def aggregate_for_date_range(args):
         range_from, range_to = args
@@ -889,7 +885,7 @@ def _fetch_timeline_points(entity_type: EntityType, match_query, date_ranges):
             {
                 '$match': {
                     '$and': [
-                        match_query, {
+                        parse_filter(match_filter, range_from), {
                             'accurate_for_datetime': {
                                 '$lte': datetime.combine(range_to, datetime.min.time()),
                                 '$gte': datetime.combine(range_from, datetime.min.time())

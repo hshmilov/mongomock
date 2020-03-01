@@ -247,15 +247,28 @@ export const dashboard = {
         }
       });
     },
-    [FETCH_DASHBOARD_PANEL]({ dispatch }, payload) {
-      let rule = `dashboards/${payload.spaceId}/panels/${payload.uuid}`
-                 + `?skip=${payload.skip}&limit=${payload.limit}`;
-      if (payload.historical) {
-        const encodedDate = encodeURIComponent(payload.historical);
+    [FETCH_DASHBOARD_PANEL]({ dispatch, commit }, payload) {
+      const {
+        spaceId, uuid, historical, skip, limit, search,
+      } = payload;
+      let rule = `dashboards/${spaceId}/panels/${uuid}?skip=${skip}&limit=${limit}`;
+      if (historical) {
+        if (!skip) {
+          commit(UPDATE_DASHBOARD_PANEL, {
+            uuid,
+            skip: 0,
+            historical,
+            data: {
+              data: [],
+            },
+            loading: true,
+          });
+        }
+        const encodedDate = encodeURIComponent(historical);
         rule = `${rule}&date_to=${encodedDate} 23:59:59&date_from=${encodedDate}`;
       }
-      if (payload.search) {
-        const searchString = encodeURIComponent(payload.search);
+      if (search) {
+        const searchString = encodeURIComponent(search);
         rule = `${rule}&search=${searchString}`;
       }
       return dispatch(REQUEST_API, {
