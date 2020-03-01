@@ -28,5 +28,4 @@ const SavedQueriesPageCreator = (props) => {
   });
 };
 
-export const xDevicesSavedQueries = SavedQueriesPageCreator({ module: 'devices', permissionLevel: 'Devices' });
-export const xUsersSavedQueries = SavedQueriesPageCreator({ module: 'users', permissionLevel: 'Users' });
+export default SavedQueriesPageCreator;

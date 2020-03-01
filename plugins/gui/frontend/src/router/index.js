@@ -20,11 +20,12 @@ const Reports = () => import('../components/pages/Reports.vue');
 const Settings = () => import('../components/pages/Settings.vue');
 const User = () => import('../components/pages/User.vue');
 const Users = () => import('../components/pages/Users.vue');
-import Report from '../components/pages/Report.vue';
+const Report = () => import('../components/pages/Report.vue');
 
 const ExternalViewComponent = () => import('../components/pages/medical/ExternalViewComponent.vue');
 const FleetViewer = () => import('../components/pages/medical/FleetViewer.vue');
-import { xDevicesSavedQueries, xUsersSavedQueries } from '../components/pages/SavedQueries';
+const xDevicesSavedQueries = () => import('../components/pages/DevicesSavedQueries');
+const xUsersSavedQueries = () => import('../components/pages/UsersSavedQueries');
 
 Vue.use(Router);
 

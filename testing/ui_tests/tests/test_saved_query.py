@@ -1,9 +1,10 @@
 from datetime import datetime
-
+import pytest
 from axonius.utils.wait import wait_until
 from axonius.utils.parsing import normalize_timezone_date
 from axonius.consts.gui_consts import PREDEFINED_PLACEHOLDER
 from services.plugins.device_control_service import DeviceControlService
+from services.axon_service import TimeoutException
 from ui_tests.tests.ui_test_base import TestBase
 from ui_tests.tests.ui_consts import (READ_ONLY_USERNAME, NEW_PASSWORD,
                                       UPDATE_USERNAME, UPDATE_PASSWORD, UPDATE_FIRST_NAME, UPDATE_LAST_NAME,
@@ -21,6 +22,8 @@ class TestSavedQuery(TestBase):
     ENFORCEMENT_NAME = 'An Enforcement'
 
     ADMIN_NAME = 'administrator'
+
+    ADMIN_DISPLAY_NAME = 'internal/admin'
 
     JSON_ASSET_ENTITY_QUERY_NAME = 'JSON Asset Entity Query'
 
@@ -254,11 +257,10 @@ class TestSavedQuery(TestBase):
         for value in self.devices_page.get_column_data_inline(self.devices_page.FIELD_OS_TYPE):
             assert 'windows' in value.lower()
 
-    def _test_predefined_queries(self, date_str):
+    def _test_predefined_queries(self):
         for value in self.devices_queries_page.get_column_data_inline(self.devices_queries_page.FIELD_UPDATED_BY):
             assert value == PREDEFINED_PLACEHOLDER
-        for value in self.devices_queries_page.get_column_data_inline(self.devices_queries_page.FIELD_LAST_UPDATED):
-            assert date_str in normalize_timezone_date(value)
+        assert self.devices_queries_page.get_column_data_inline(self.devices_queries_page.FIELD_LAST_UPDATED) == []
 
     def _test_admin_query(self, date_str):
         self.devices_page.switch_to_page()
@@ -304,8 +306,8 @@ class TestSavedQuery(TestBase):
         self.devices_queries_page.wait_for_table_to_load()
         self.devices_queries_page.wait_for_spinner_to_end()
 
-        today_str = datetime.now().isoformat()[:10]
-        self._test_predefined_queries(today_str)
+        today_str = datetime.now().strftime('%Y-%m-%d')
+        self._test_predefined_queries()
         self._test_admin_query(today_str)
         self._test_user_query(today_str)
         self.settings_page.switch_to_page()
@@ -332,6 +334,7 @@ class TestSavedQuery(TestBase):
         self.devices_page.click_search()
         self.devices_page.save_query(self.JSON_ASSET_ENTITY_QUERY_NAME)
         self.devices_queries_page.switch_to_page()
+        self.devices_queries_page.wait_for_table_to_be_responsive()
         self.devices_queries_page.fill_enter_table_search(self.JSON_ASSET_ENTITY_QUERY_NAME)
         self.devices_queries_page.find_query_row_by_name(self.JSON_ASSET_ENTITY_QUERY_NAME).click()
         self.devices_queries_page.run_query()
@@ -339,3 +342,50 @@ class TestSavedQuery(TestBase):
         self.devices_page.wait_for_table_to_load()
         assert len(self.devices_page.get_all_data()) == 1
         self.adapters_page.remove_json_extra_client()
+
+    def test_predefined_queries_not_editable(self):
+        saved_query_name = 'All installed software on devices'
+        self.devices_queries_page.switch_to_page()
+        self.devices_queries_page.wait_for_table_to_be_responsive()
+        self.devices_queries_page.click_query_row_by_name(saved_query_name)
+        with pytest.raises(TimeoutException):
+            self.devices_queries_page.get_edit_panel_action()
+
+    def test_predefined_queries_has_no_last_updated(self):
+        saved_query_name = 'All installed software on devices'
+        self.devices_queries_page.switch_to_page()
+        self.devices_queries_page.wait_for_table_to_be_responsive()
+        self.devices_queries_page.click_query_row_by_name(saved_query_name)
+        with pytest.raises(TimeoutException):
+            self.devices_queries_page.get_query_last_update_from_panel()
+
+    def test_generated_saved_query_in_table_and_panel(self):
+        self.devices_page.switch_to_page()
+        self.devices_page.create_saved_query(self.devices_page.FILTER_OS_WINDOWS, WINDOWS_QUERY_NAME)
+        self.devices_queries_page.switch_to_page()
+        self.devices_queries_page.wait_for_table_to_be_responsive()
+        # assert query name
+        assert self.devices_queries_page.get_row_cell_text(row_index=1, cell_index=2) == WINDOWS_QUERY_NAME
+        # assert query last_update is not empty
+        assert self.devices_queries_page.get_row_cell_text(row_index=1, cell_index=4)
+        # assert query updater
+        assert self.devices_queries_page.get_row_cell_text(row_index=1, cell_index=5) == self.ADMIN_DISPLAY_NAME
+
+        self.devices_queries_page.click_query_row_by_name(WINDOWS_QUERY_NAME)
+        assert self.devices_queries_page.get_query_name_from_panel() == WINDOWS_QUERY_NAME
+        assert self.devices_queries_page\
+                   .get_query_expression_eval_message() == self.devices_queries_page.NO_EXPRESSIONS_DEFINED_MSG
+        assert self.devices_queries_page.get_edit_panel_action()
+        assert self.devices_queries_page.get_enforce_panel_action()
+        assert self.devices_queries_page.get_remove_panel_action()
+
+    def test_unsupported_expression_msg(self):
+        saved_query_name = 'All installed software on devices'
+        self.devices_queries_page.switch_to_page()
+        self.devices_queries_page.wait_for_table_to_be_responsive()
+        self.devices_queries_page.fill_enter_table_search(saved_query_name)
+        self.devices_queries_page.wait_for_table_to_be_responsive()
+        self.devices_queries_page.click_query_row_by_name(query_name=saved_query_name)
+        assert self.devices_queries_page\
+                   .get_query_expression_eval_message() == self.devices_queries_page.EXPRESSION_UNSUPPORTED_MSG
+        self.devices_queries_page.close_saved_query_panel()

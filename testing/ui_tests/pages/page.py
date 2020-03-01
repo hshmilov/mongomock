@@ -995,7 +995,7 @@ class Page:
         options = self.driver.find_elements_by_css_selector('.v-select-list .v-list-item .v-list-item__content')
         return [option.text for option in options]
 
-    def wait_for_table_be_responsive(self):
+    def wait_for_table_to_be_responsive(self):
         self.wait_for_table_to_load()
         self.wait_for_spinner_to_end()
 

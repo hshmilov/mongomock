@@ -123,6 +123,7 @@ class EntitiesPage(Page):
 
     SAVE_QUERY_ID = 'query_save'
     SAVE_QUERY_NAME_SELECTOR = '.name-input'
+    SAVE_QUERY_DESCRIPTION_SELECTOR = '.save-query-dialog textarea'
     SAVE_QUERY_SAVE_BUTTON_ID = 'query_save_confirm'
     ALL_ENTITIES_CSS = 'tbody>tr'
 
@@ -839,6 +840,9 @@ class EntitiesPage(Page):
     def fill_query_name(self, name):
         self.fill_text_field_by_css_selector(self.SAVE_QUERY_NAME_SELECTOR, name)
 
+    def fill_query_description(self, description):
+        self.fill_text_field_by_css_selector(self.SAVE_QUERY_DESCRIPTION_SELECTOR, description)
+
     def click_actions_tag_button(self):
         self.driver.find_element_by_css_selector(self.TABLE_ACTIONS_TAG_CSS).click()
 
@@ -1302,13 +1306,15 @@ class EntitiesPage(Page):
     def click_task_name(self, task_name):
         self.find_element_by_xpath(self.TASKS_TAB_TASK_NAME_XPATH.format(task_name=task_name)).click()
 
-    def create_saved_query(self, data_query, query_name):
+    def create_saved_query(self, data_query, query_name, query_description=None):
         self.switch_to_page()
         self.reset_query()
         self.fill_filter(data_query)
         self.enter_search()
         self.click_save_query()
         self.fill_query_name(query_name)
+        if query_description:
+            self.fill_query_description(query_description)
         self.click_save_query_save_button()
 
     def open_filter_out_dialog(self):
