@@ -3,8 +3,6 @@ adapters/active_directory_adapter/service.py
 adapters/active_directory_adapter/deprecated/psexec/psexec.py
 adapters/active_directory_adapter/deprecated/psexec/use_ps_exec.py
 adapters/aws_adapter/service.py
-adapters/azure_adapter/client.py
-adapters/azure_adapter/service.py
 adapters/bigfix_adapter/service.py
 adapters/bomgar_adapter/client.py
 adapters/bomgar_adapter/exceptions.py

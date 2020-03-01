@@ -1,16 +1,19 @@
 import logging
-
-from axonius.clients.rest.connection import RESTConnection
-
-logger = logging.getLogger(f'axonius.{__name__}')
+from typing import Optional
 
 from azure.common.credentials import ServicePrincipalCredentials
 from azure.mgmt.compute import ComputeManagementClient
+from azure.mgmt.compute.models import VirtualMachine
 from azure.mgmt.network import NetworkManagementClient
 from msrestazure import azure_cloud as azure
 
+from axonius.clients.rest.connection import RESTConnection
+from azure_adapter.consts import RE_VM_RESOURCEGROUP_FROM_ID, RE_VM_RESOURCEGROUP_CG
 
-class AzureClient(object):
+logger = logging.getLogger(f'axonius.{__name__}')
+
+
+class AzureClient:
     DEFAULT_CLOUD = 'Azure Public Cloud'
 
     def __init__(self, subscription_id,
@@ -47,7 +50,6 @@ class AzureClient(object):
     def test_connection(self):
         for _ in self.compute.virtual_machines.list_all():
             break
-        return
 
     def get_virtual_machines(self):
         subnets = {}
@@ -57,9 +59,29 @@ class AzureClient(object):
                 vm_dict['network_profile']['network_interfaces'] = [
                     self._get_iface_dict(iface, subnets) for iface in vm.network_profile.network_interfaces
                 ]
+                vm_dict['instance_view'] = self._get_vm_instance_view(vm)
                 yield vm_dict
             except Exception:
                 logger.exception(f'Failed fetching azure vm')
+
+    def _get_vm_instance_view(self, vm_machine: VirtualMachine) -> Optional[dict]:
+        """
+        Retrieve a single vm instance_view.
+        According to https://stackoverflow.com/a/49375041 this must be retrieved using a separate API because MS
+            doesn't really fill the appropriate property in virtual_machines.list_all although documented to.
+        """
+        try:
+            resource_group_match = RE_VM_RESOURCEGROUP_FROM_ID.search(vm_machine.id)
+            if not (resource_group_match and (RE_VM_RESOURCEGROUP_CG in resource_group_match.groupdict())):
+                logger.warning(f'Failed locating InstanceView of vm {vm_machine.id} due to unexpected VM id format')
+                return None
+            resource_group_name = resource_group_match[RE_VM_RESOURCEGROUP_CG]
+            instance_view = self.compute.virtual_machines.instance_view(resource_group_name=resource_group_name,
+                                                                        vm_name=vm_machine.name)
+            return instance_view.as_dict()
+        except Exception:
+            logger.exception(f'Failed locating InstanceView of vm {vm_machine.id}')
+            return None
 
     def _get_iface_dict(self, iface_link, subnets):
         try:

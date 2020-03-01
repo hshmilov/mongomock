@@ -1,6 +1,5 @@
 import itertools
 import logging
-logger = logging.getLogger(f'axonius.{__name__}')
 
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
@@ -9,6 +8,9 @@ from axonius.fields import Field, ListField
 from axonius.smart_json_class import SmartJsonClass
 from axonius.utils.files import get_local_config_file
 from azure_adapter.client import AzureClient
+from azure_adapter.consts import POWER_STATE_MAP
+
+logger = logging.getLogger(f'axonius.{__name__}')
 
 
 AZURE_SUBSCRIPTION_ID = 'subscription_id'
@@ -43,6 +45,7 @@ class AzureNetworkSecurityGroupRule(SmartJsonClass):
 
 
 class AzureAdapter(AdapterBase):
+    # pylint: disable=too-many-instance-attributes
     class MyDeviceAdapter(DeviceAdapter):
         account_tag = Field(str, 'Account Tag')
         location = Field(str, 'Azure Location')
@@ -76,41 +79,41 @@ class AzureAdapter(AdapterBase):
                 metadata_dict['account_tag'] = client_config.get('account_tag')
             return connection, metadata_dict
         except Exception as e:
-            message = "Error connecting to azure with subscription_id {0}, reason: {1}".format(
+            message = 'Error connecting to azure with subscription_id {0}, reason: {1}'.format(
                 client_config[AZURE_SUBSCRIPTION_ID], str(e))
             logger.exception(message)
             raise ClientConnectionException(message)
 
     def _clients_schema(self):
         return {
-            "items": [
+            'items': [
                 {
-                    "name": AZURE_SUBSCRIPTION_ID,
-                    "title": "Azure Subscription ID",
-                    "type": "string"
+                    'name': AZURE_SUBSCRIPTION_ID,
+                    'title': 'Azure Subscription ID',
+                    'type': 'string'
                 },
                 {
-                    "name": AZURE_CLIENT_ID,
-                    "title": "Azure Client ID",
-                    "type": "string"
+                    'name': AZURE_CLIENT_ID,
+                    'title': 'Azure Client ID',
+                    'type': 'string'
                 },
                 {
-                    "name": AZURE_CLIENT_SECRET,
-                    "title": "Azure Client Secret",
-                    "type": "string",
-                    "format": "password"
+                    'name': AZURE_CLIENT_SECRET,
+                    'title': 'Azure Client Secret',
+                    'type': 'string',
+                    'format': 'password'
                 },
                 {
-                    "name": AZURE_TENANT_ID,
-                    "title": "Azure Tenant ID",
-                    "type": "string"
+                    'name': AZURE_TENANT_ID,
+                    'title': 'Azure Tenant ID',
+                    'type': 'string'
                 },
                 {
-                    "name": AZURE_CLOUD_ENVIRONMENT,
-                    "title": "Cloud Environment",
-                    "type": "string",
-                    "enum": list(AzureClient.get_clouds().keys()),
-                    "default": AzureClient.DEFAULT_CLOUD
+                    'name': AZURE_CLOUD_ENVIRONMENT,
+                    'title': 'Cloud Environment',
+                    'type': 'string',
+                    'enum': list(AzureClient.get_clouds().keys()),
+                    'default': AzureClient.DEFAULT_CLOUD
                 },
                 {
                     'name': 'account_tag',
@@ -130,27 +133,29 @@ class AzureAdapter(AdapterBase):
                     'default': True
                 }
             ],
-            "required": [
+            'required': [
                 AZURE_SUBSCRIPTION_ID,
                 AZURE_CLIENT_ID,
                 AZURE_CLIENT_SECRET,
                 AZURE_TENANT_ID,
                 AZURE_VERIFY_SSL
             ],
-            "type": "array"
+            'type': 'array'
         }
 
+    # pylint: disable=arguments-differ
     def _query_devices_by_client(self, client_name, client_data_all):
         client_data, metadata = client_data_all
         return client_data.get_virtual_machines(), metadata
 
+    # pylint: disable=arguments-differ,too-many-nested-blocks,too-many-branches,too-many-statements,too-many-locals
     def _parse_raw_data(self, devices_raw_data_all):
         devices_raw_data, metadata = devices_raw_data_all
         for device_raw in devices_raw_data:
             device = self._new_device_adapter()
             device.id = device_raw['id']
             device.cloud_id = device_raw['id']
-            device.cloud_provider = "Azure"
+            device.cloud_provider = 'Azure'
             device.name = device_raw['name']
             device.location = device_raw.get('location')
             device.instance_type = device_raw.get('hardware_profile', {}).get('vm_size')
@@ -302,9 +307,35 @@ class AzureAdapter(AdapterBase):
 
                 except Exception:
                     logger.exception(f'Failed to parse network security group, continuing')
+            self._fill_power_state(device, device_raw)
             device.account_tag = metadata.get('account_tag')
             device.set_raw(device_raw)
             yield device
+
+    @staticmethod
+    def _fill_power_state(device, device_raw):
+        try:
+            statuses = (device_raw.get('instance_view') or {}).get('statuses') or []
+            if statuses:
+                power_states = list(filter(lambda status: status.get('code', '').startswith('PowerState'), statuses))
+                if len(power_states) == 0:
+                    logger.warning(f'Failed locating power_state for {device.id}, statuses: {statuses}')
+                    return
+
+                if len(power_states) > 1:
+                    logger.warning(f'Multiple power states located for device {device.id},'
+                                   f' taking the first from {power_states}')
+                    # fallthrough
+
+                power_state_str = power_states[0].get('code', '')
+                power_state = POWER_STATE_MAP.get(power_state_str)
+                if not power_state:
+                    logger.error(f'Unknown power state value located "{power_state_str}" for {device.id}')
+                    return
+
+                device.power_state = power_state
+        except Exception:
+            logger.exception('Failed parsing vm power state, continue')
 
     @classmethod
     def adapter_properties(cls):
