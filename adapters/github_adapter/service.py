@@ -20,6 +20,10 @@ logger = logging.getLogger(f'axonius.{__name__}')
 #     push = Field(bool, 'Push permission')
 #     pull = Field(bool, 'Pull permission')
 
+class OrgRepoContributes(SmartJsonClass):
+    name = Field(str, 'Contributor login name')
+    contribs = Field(int, 'Contributions')
+
 
 class UserRepo(SmartJsonClass):
     id = Field(int, 'ID')
@@ -34,8 +38,8 @@ class UserRepo(SmartJsonClass):
     pushed = Field(datetime.datetime, 'Pushed at')
     git_url = Field(str, 'Git URL')
     owner = Field(str, 'Owner username')
-    # perms = Field(RepoPermissions, 'Permissions',
-    #               description='Organization owner permissions on this repository')
+    contribs = Field(int, 'Contributions by user')
+    contribs_list = ListField(OrgRepoContributes, 'Contributions in organization')
 
 
 class GithubAdapter(AdapterBase):
@@ -189,32 +193,31 @@ class GithubAdapter(AdapterBase):
                         owner = repo.get('owner').get('login')
                     else:
                         owner = None
-                    # perms_dict = repo.get('permissions')
-                    # if perms_dict and isinstance(perms_dict, dict):
-                    #     perms = RepoPermissions(
-                    #         admin=perms_dict.get('admin'),
-                    #         push=perms_dict.get('push'),
-                    #         pull=perms_dict.get('pull')
-                    #     )
-                    # else:
-                    #     perms = None
-                    user.repos.append(
-                        UserRepo(
-                            id=repo.get('id'),
-                            name=repo.get('name'),
-                            full_name=repo.get('full_name'),
-                            private=repo.get('private'),
-                            html_url=repo.get('html_url'),
-                            description=repo.get('description'),
-                            fork=repo.get('fork'),
-                            created=parse_date(repo.get('created_at')),
-                            updated=parse_date(repo.get('updated_at')),
-                            pushed=parse_date(repo.get('pushed_at')),
-                            git_url=repo.get('git_url'),
-                            owner=owner,
-                            # perms=perms
-                        )
-                    )
+                    contribs = repo.get('x_contrib_count') or None
+                    contribs_dict = repo.get('x_contribs') or {}
+                    repo_obj = UserRepo(
+                        id=repo.get('id'),
+                        name=repo.get('name'),
+                        full_name=repo.get('full_name'),
+                        private=repo.get('private'),
+                        html_url=repo.get('html_url'),
+                        description=repo.get('description'),
+                        fork=repo.get('fork'),
+                        created=parse_date(repo.get('created_at')),
+                        updated=parse_date(repo.get('updated_at')),
+                        pushed=parse_date(repo.get('pushed_at')),
+                        git_url=repo.get('git_url'),
+                        owner=owner,
+                        contribs=contribs)
+                    if contribs_dict:
+                        contribs_list = list()
+                        for contrib_name, contrib_value in contribs_dict.items():
+                            contribs_list.append(OrgRepoContributes(
+                                name=contrib_name,
+                                contribs=contrib_value or 0
+                            ))
+                        repo_obj.contribs_list = contribs_list
+                    user.repos.append(repo_obj)
                 # Readability...
             # Counts.
             user.set_raw(user_raw)
