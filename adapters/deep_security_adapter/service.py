@@ -28,6 +28,7 @@ class DeepSecurityAdapter(AdapterBase):
 
     class MyDeviceAdapter(DeviceAdapter):
         state = Field(str, 'Device running state')
+        policy_id = Field(str, 'Policy ID')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -230,6 +231,7 @@ class DeepSecurityAdapter(AdapterBase):
                 logger.warning(f'Bad device with no ID {device_raw}')
                 return None
             device.id = str(device_id) + '_' + (device_raw.get('hostName') or '')
+            device.policy_id = device_raw.get('policyID')
             device.hostname = device_raw.get('displayName') or device_raw.get('hostName')
             if device_raw.get('lastIPUsed'):
                 device.add_nic(ips=[device_raw.get('lastIPUsed')])

@@ -225,12 +225,18 @@ class TenableIoAdapter(ScannerAdapterBase, Configurable):
         fqdns = device_raw.get('fqdns', [])
         hostnames = device_raw.get('hostnames', [])
         netbios = device_raw.get('netbios_names', [])
+        hostname = None
         if len(netbios) > 0 and netbios[0] != '':
-            device.hostname = netbios[0]
+            hostname = netbios[0]
+            device.hostname = hostname
         elif len(hostnames) > 0 and hostnames[0] != '':
-            device.hostname = hostnames[0]
+            hostname = hostnames[0]
+            device.hostname = hostname
         if len(fqdns) > 0 and fqdns[0] != '':
-            device.name = fqdns[0]
+            if hostname:
+                device.name = fqdns[0]
+            else:
+                device.hostname = fqdns[0]
         plugin_and_severity = []
         vulns_info = device_raw.get('vulns_info', [])
         device.software_cves = []

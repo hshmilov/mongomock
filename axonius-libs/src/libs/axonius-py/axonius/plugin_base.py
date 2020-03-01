@@ -3538,7 +3538,7 @@ class PluginBase(Configurable, Feature, ABC):
                 CORRELATE_AD_DISPLAY_NAME: True,
                 CORRELATE_BY_USERNAME_DOMAIN_ONLY: False,
                 CORRELATE_AD_SCCM: False,
-                CSV_FULL_HOSTNAME: True,
+                CSV_FULL_HOSTNAME: False,
                 CORRELATE_BY_SNOW_MAC: False,
             },
             STATIC_ANALYSIS_SETTINGS: {

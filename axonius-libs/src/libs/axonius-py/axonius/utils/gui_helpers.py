@@ -1,3 +1,4 @@
+# pylint: disable=too-many-lines
 import codecs
 import csv
 import io
@@ -530,7 +531,8 @@ def find_entity_field(entity_data, field_path, skip_unique=False):
                           'specific_data.data.account_expires']:
             return return_field_min()
         if field_path in ['specific_data.data.part_of_domain',
-                          'specific_data.data.device_disabled']:
+                          'specific_data.data.device_disabled',
+                          'specific_data.data.os.is_windows_server']:
             return return_true_if_list()
 
     if entity_data is None:

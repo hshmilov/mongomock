@@ -76,7 +76,8 @@ class SplunkAdapter(AdapterBase, Configurable):
             yield from client_data.get_devices(f'-{self.__max_log_history}d',
                                                self.__maximum_records,
                                                self.__fetch_plugins,
-                                               splunk_macros_list=self.__splunk_macros_list)
+                                               splunk_macros_list=self.__splunk_macros_list,
+                                               splunk_sw_macros_list=self.__splunk_sw_macros_list)
 
     def _clients_schema(self):
         """
@@ -96,6 +97,13 @@ class SplunkAdapter(AdapterBase, Configurable):
                     "title": "Port",
                     "type": "integer",
                     "format": "port"
+                },
+                {
+                    'name': 'scheme',
+                    'title': 'HTTP Scheme',
+                    'type': 'string',
+                    'enum': ['http', 'https'],
+                    'default': 'https'
                 },
                 {
                     "name": "username",
@@ -127,6 +135,7 @@ class SplunkAdapter(AdapterBase, Configurable):
         vpn_ids_sets = set()
         landdesk_ids_sets = set()
         nexpose_asset_id_set = set()
+        hostname_sw_dict = dict()
 
         for device_raw, device_type in devices_raw_data:
             try:
@@ -358,10 +367,41 @@ class SplunkAdapter(AdapterBase, Configurable):
                         except Exception:
                             logger.warning(f'Could not parse column {column_name} with value {column_value}',
                                            exc_info=True)
+                elif device_type.startswith('Software Macro'):
+                    hostname_sw = device_raw.get('hostname')
+                    sw_name = device_raw.get('softwarename')
+                    sw_version = device_raw.get('softwareversion')
+                    sw_vendor = device_raw.get('softwarevendor')
+                    if (hostname_sw, device_type) not in hostname_sw_dict:
+                        hostname_sw_dict[(hostname_sw, device_type)] = set()
+                    hostname_sw_dict[(hostname_sw, device_type)].add((sw_name, sw_version, sw_vendor))
+                    continue
                 device.set_raw(device_raw)
                 yield device
             except Exception:
                 logger.exception(f'Problem getting device {device_raw}')
+        try:
+            for k, v in hostname_sw_dict.items():
+                try:
+                    hostname_sw, device_type = k
+                    sw_list = list(v)
+                    device = self._new_device_adapter()
+                    device.id = f'{device_type}_{hostname_sw}'
+                    device.hostname = hostname_sw
+                    device.splunk_source = device_type
+                    for sw_raw in sw_list:
+                        try:
+                            sw_name, sw_version, sw_vendor = sw_raw
+                            device.add_installed_software(name=sw_name,
+                                                          version=sw_version,
+                                                          vendor=sw_vendor)
+                        except Exception:
+                            logger.exception(f'Problem with sw {sw_raw}')
+                    yield device
+                except Exception:
+                    logger.exception(f'Problem with k {k}')
+        except Exception:
+            logger.exception(f'Problem getting sw macro')
 
     def _on_config_update(self, config):
         logger.info(f"Loading Splunk config: {config}")
@@ -369,6 +409,8 @@ class SplunkAdapter(AdapterBase, Configurable):
         self.__maximum_records = int(config['maximum_records'])
         self.__splunk_macros_list = config.get('splunk_macros_list').split(',') \
             if config.get('splunk_macros_list') else None
+        self.__splunk_sw_macros_list = config.get('splunk_sw_macros_list').split(',') \
+            if config.get('splunk_sw_macros_list') else None
         self.__fetch_plugins = {
             'nexpose': bool(config['fetch_nexpose']),
             'cisco': config['fetch_cisco'] if 'fetch_cisco' in config else True,
@@ -382,6 +424,11 @@ class SplunkAdapter(AdapterBase, Configurable):
                 {
                     'name': 'splunk_macros_list',
                     'title': 'Splunk search macros list',
+                    'type': 'string'
+                },
+                {
+                    'name': 'splunk_sw_macros_list',
+                    'title': 'Splunk Installed Software search macros list',
                     'type': 'string'
                 },
                 {
@@ -429,6 +476,7 @@ class SplunkAdapter(AdapterBase, Configurable):
             'fetch_nexpose': False,
             'fetch_cisco': True,
             'splunk_macros_list': None,
+            'splunk_sw_macros_list': None,
             'win_logs_fetch_hours': 3
         }
 

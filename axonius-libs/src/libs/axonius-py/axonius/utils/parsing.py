@@ -731,7 +731,8 @@ def extract_all_ips(network_ifs):
         return
     for network_if in network_ifs:
         for ip in network_if.get(IPS_FIELD) or []:
-            yield ip
+            if ip not in ['127.0.0.1']:
+                yield ip
 
 
 def normalize_mac(mac):
@@ -880,7 +881,8 @@ def is_snow_device(adapter_device):
 
 
 def is_from_twistlock_or_aws(adapter_device):
-    return adapter_device.get('plugin_name') == 'aws_adapter' or \
+    return (adapter_device.get('plugin_name') == 'aws_adapter' and
+            adapter_device['data'].get('aws_device_type') == 'EC2') or \
         adapter_device.get('plugin_name') == 'twistlock_adapter'
 
 
@@ -1348,7 +1350,7 @@ def ips_do_not_contradict(adapter_device1, adapter_device2):
 def macs_do_not_contradict(adapter_device1, adapter_device2):
     device1_macs = adapter_device1.get(NORMALIZED_MACS)
     device2_macs = adapter_device2.get(NORMALIZED_MACS)
-    return not device1_macs or not device2_macs or is_one_subset_of_the_other(device1_macs, device2_macs)
+    return not device1_macs or not device2_macs or have_mac_intersection(adapter_device1, adapter_device2)
 
 
 def not_snow_adapters(adapter_device1, adapter_device2):

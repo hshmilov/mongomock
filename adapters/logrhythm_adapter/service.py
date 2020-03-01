@@ -16,6 +16,7 @@ logger = logging.getLogger(f'axonius.{__name__}')
 
 
 class LogrhythmAdapter(AdapterBase):
+    # pylint: disable=too-many-instance-attributes
     class MyDeviceAdapter(DeviceAdapter):
         long_description = Field(str, 'Long Description')
         risk_level = Field(str, 'Risk Level')
@@ -129,6 +130,7 @@ class LogrhythmAdapter(AdapterBase):
                     logger.exception(f'Problem getting entity name for {device_raw}')
                 try:
                     device.updated_at = parse_date(device_raw.get('dateUpdated'))
+                    device.last_seen = parse_date(device_raw.get('dateUpdated'))
                 except Exception:
                     logger.exception(f'Problem getting updated at for {device_raw}')
                 try:

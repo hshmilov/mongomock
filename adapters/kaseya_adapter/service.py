@@ -113,7 +113,7 @@ class KaseyaAdapter(AdapterBase):
                     continue
                 device.id = str(device_id) + '_' + (asset_raw.get('HostName', agent_raw.get('ComputerName')) or '')
                 device.name = asset_raw.get('AssetName')
-                device.figure_os(asset_raw.get('OSName'))
+                device.figure_os((asset_raw.get('OSName') or '') + ' ' + (agent_raw.get('OSInfo') or ''))
                 device.hostname = asset_raw.get('HostName', agent_raw.get('ComputerName'))
                 try:
                     last_used_users = agent_raw.get('LastLoggedInUser')

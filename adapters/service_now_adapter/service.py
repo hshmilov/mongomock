@@ -23,6 +23,7 @@ class ServiceNowAdapter(AdapterBase, Configurable):
         snow_source = Field(str, 'ServiceNow Source')
         snow_roles = Field(str, 'Roles')
         updated_on = Field(datetime.datetime, 'Updated On')
+        active = Field(str, 'Active')
 
     class MyDeviceAdapter(DeviceAdapter):
         table_type = Field(str, 'Table Type')
@@ -479,6 +480,10 @@ class ServiceNowAdapter(AdapterBase, Configurable):
                 user.employee_number = user_raw.get('employee_number')
                 user.user_country = user_raw.get('country')
                 user.first_name = user_raw.get('first_name')
+                active = user_raw.get('active')
+                if self.__fetch_only_active_users and active != 'true':
+                    continue
+                user.active = active
                 user.last_name = user_raw.get('last_name')
                 user.username = user_raw.get('name')
                 updated_on = parse_date(user_raw.get('sys_updated_on'))
@@ -571,8 +576,13 @@ class ServiceNowAdapter(AdapterBase, Configurable):
                 },
                 {
                     'name': 'email_whitelist',
-                    'type': 'Users Email Whitelist',
-                    'title': 'string'
+                    'title': 'Users Email Whitelist',
+                    'type': 'string'
+                },
+                {
+                    'name': 'fetch_only_active_users',
+                    'type': 'bool',
+                    'title': 'Fetch Only Active Users'
                 }
             ],
             "required": [
@@ -581,7 +591,8 @@ class ServiceNowAdapter(AdapterBase, Configurable):
                 'exclude_disposed_devices',
                 'fetch_users_info_for_devices',
                 'exclude_no_strong_identifier',
-                'exclude_vm_tables'
+                'exclude_vm_tables',
+                'fetch_only_active_users'
             ],
             "pretty_name": "ServiceNow Configuration",
             "type": "array"
@@ -597,7 +608,8 @@ class ServiceNowAdapter(AdapterBase, Configurable):
             'exclude_no_strong_identifier': False,
             'use_ci_table_for_install_status': False,
             'exclude_vm_tables': False,
-            'email_whitelist': None
+            'email_whitelist': None,
+            'fetch_only_active_users': False
         }
 
     def _on_config_update(self, config):
@@ -609,6 +621,7 @@ class ServiceNowAdapter(AdapterBase, Configurable):
         self.__use_ci_table_for_install_status = config['use_ci_table_for_install_status']
         self.__exclude_vm_tables = config['exclude_vm_tables']
         self.__email_whitelist = config['email_whitelist'].split(',') if config.get('email_whitelist') else None
+        self.__fetch_only_active_users = config.get('fetch_only_active_users') or False
 
     def outside_reason_to_live(self) -> bool:
         """

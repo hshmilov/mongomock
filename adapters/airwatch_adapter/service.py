@@ -125,6 +125,7 @@ class AirwatchAdapter(AdapterBase):
         try:
             device = self._new_device_adapter()
             device.id = device_raw.get('deviceSerialNumber')
+            device.airwatch_type = NOT_ENROLLED_DEVICE
             device.device_serial = device_raw.get('deviceSerialNumber')
             device.friendly_name = device_raw.get('DeviceFriendlyName')
             device.profile_name = device_raw.get('profileName')
@@ -132,9 +133,10 @@ class AirwatchAdapter(AdapterBase):
             device.ownership = device_raw.get('deviceOwnership')
             device.device_model = device_raw.get('deviceModel')
             device.set_raw(device_raw)
-            yield device
+            return device
         except Exception:
             logger.exception(f'Problem with fetching not enrolledd Airwatch Device {device_raw}')
+            return None
 
     # pylint: disable=R0912,R0915
     # pylint: disable=too-many-locals,using-constant-test

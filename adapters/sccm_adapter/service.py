@@ -376,6 +376,18 @@ class SccmAdapter(AdapterBase, Configurable):
                     asset_patch_dict[asset_id].append(asset_patch_data)
             except Exception:
                 logger.warning(f'Problem getting query patch', exc_info=True)
+
+            try:
+                for asset_patch_data in client_data.query(consts.QUERY_PATCH_2):
+                    asset_id = asset_patch_data.get('ResourceID')
+                    if not asset_id:
+                        continue
+                    if asset_id not in asset_patch_dict:
+                        asset_patch_dict[asset_id] = []
+                    asset_patch_dict[asset_id].append(asset_patch_data)
+            except Exception:
+                logger.warning(f'Problem getting query patch', exc_info=True)
+
             compliance_dict = dict()
             try:
                 for compliance_data in client_data.query(consts.COMPLIANCE_QUERY):

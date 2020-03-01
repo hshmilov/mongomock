@@ -6,13 +6,19 @@ from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.exception import RESTException
 from axonius.devices.device_adapter import DeviceAdapter
-from axonius.fields import Field
+from axonius.fields import Field, ListField
 from axonius.mixins.configurable import Configurable
 from axonius.utils.files import get_local_config_file
 from axonius.utils.datetime import parse_date
+from axonius.smart_json_class import SmartJsonClass
 from claroty_adapter.connection import ClarotyConnection
 
 logger = logging.getLogger(f'axonius.{__name__}')
+
+
+class CustomAttribute(SmartJsonClass):
+    field_name = Field(str, 'Name')
+    field_value = Field(str, 'Value')
 
 
 class ClarotyAdapter(ScannerAdapterBase, Configurable):
@@ -29,6 +35,8 @@ class ClarotyAdapter(ScannerAdapterBase, Configurable):
         vlans = Field(str, 'Vlans')
         virtual_zone = Field(str, 'Virtual Zone')
         risk_level = Field(int, 'Risk Level')
+        class_type = Field(str, 'Class Type')
+        custom_attributes = ListField(CustomAttribute, 'Custom Attributes')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -175,6 +183,20 @@ class ClarotyAdapter(ScannerAdapterBase, Configurable):
                 device.asset_type = asset_type
                 device.vendor = device_raw.get('vendor')
                 device.site_name = device_raw.get('site_name')
+                device.class_type = device_raw.get('class_type')
+                try:
+                    custom_attributes = device_raw.get('custom_attributes')
+                    if not isinstance(custom_attributes, list):
+                        custom_attributes = []
+                    for custom_attribute in custom_attributes:
+                        if isinstance(custom_attribute, dict) \
+                                and ((custom_attribute.get('category') or {}).get('name')):
+                            field_name = custom_attribute['category']['name']
+                            field_value = custom_attribute.get('value')
+                            device.custom_attributes.append(CustomAttribute(field_name=field_name,
+                                                                            field_value=field_value))
+                except Exception:
+                    logger.exception(f'Problem getting custom attributes for {device_raw}')
                 device.device_serial = device_raw.get('serial_number')
                 device.device_model = device_raw.get('model')
                 device.firmware_version = device_raw.get('firmware')

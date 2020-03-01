@@ -116,7 +116,7 @@ class SaltstackAdapter(AdapterBase):
                     continue
                 device = self._new_device_adapter()
                 device.id = node_name + '_' + (device_raw.get('machine_id') or '')
-                device.hostname = device_raw.get('fqdn') or device_raw.get()
+                device.hostname = device_raw.get('fqdn')
                 try:
                     device.figure_os((device_raw.get('kernel') or '') + ' ' + (device_raw.get('osfullname') or ''))
                 except Exception:

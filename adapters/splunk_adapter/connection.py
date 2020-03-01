@@ -14,8 +14,10 @@ DEFAULT_MAXIMUM_RESULT_ROWS = 10000
 
 
 class SplunkConnection(object):
-    def __init__(self, host, port, username, password, token=None):
-        self.conn_details = {'host': host, 'port': port, 'username': username, 'password': password}
+    def __init__(self, host, port, username, password, token=None, scheme=None):
+        if not scheme or scheme not in ['http', 'https']:
+            scheme = 'https'
+        self.conn_details = {'host': host, 'port': port, 'username': username, 'password': password, 'scheme': scheme}
         if token:
             self.conn_details['token'] = token
         self.conn = None
@@ -331,7 +333,7 @@ class SplunkConnection(object):
         return raw_object
 
     def get_devices(self, earliest, maximum_records_per_search, fetch_plugins_dict,
-                    splunk_macros_list):
+                    splunk_macros_list, splunk_sw_macros_list):
         fetch_cisco = fetch_plugins_dict.get('fetch_plugins_dict')
         if splunk_macros_list:
             for macro_str in splunk_macros_list:
@@ -340,6 +342,14 @@ class SplunkConnection(object):
                                       earliest,
                                       maximum_records_per_search,
                                       f'General Macro {macro_str}',
+                                      send_object_to_raw=True)
+        if splunk_sw_macros_list:
+            for macro_sw_str in splunk_sw_macros_list:
+                yield from self.fetch(f'search `{macro_sw_str}`',
+                                      SplunkConnection.general_macro,
+                                      earliest,
+                                      maximum_records_per_search,
+                                      f'Software Macro {macro_sw_str}',
                                       send_object_to_raw=True)
 
         yield from self.fetch('search index=lnv_landesk',

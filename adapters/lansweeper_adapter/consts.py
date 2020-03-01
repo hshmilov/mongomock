@@ -24,6 +24,7 @@ ENCRYPTION_QUERY = 'Select * from tblEncryptableVolume'
 ERRORS_QUERY = 'Select * from tblErrors'
 STATE_NAMES_QUERY = 'Select * from tblState'
 CUSTOM_DATA_QUERY = 'Select * from tblAssetCustom'
+PROCESSOR_QUERY = 'Select * from tblProcessor'
 LANSWEEPER_TYPE_DICT = {'-1': 'Windows',
                         '0': 'Unknown',
                         '1': 'Network device',
@@ -144,3 +145,20 @@ ERRORS_TYPES = {0: 'Error',
                 26: 'Powershell stream error.',
                 27: 'Exchange errors'
                 }
+CPU_FAMILY_DICT = {4: 'x86',
+                   32: 'PowerPC',
+                   33: 'PowerPC',
+                   34: 'PowerPC',
+                   35: 'PowerPC',
+                   49: 'Alpha',
+                   50: 'Alpha',
+                   51: 'Alpha',
+                   52: 'Alpha',
+                   53: 'Alpha',
+                   54: 'Alpha',
+                   64: 'Alpha',
+                   65: 'MIPS',
+                   68: 'MIPS',
+                   69: 'MIPS',
+                   80: 'MIPS',
+                   }

@@ -96,6 +96,7 @@ class AirwatchConnection(RESTConnection):
             if device_raw.get('Imei'):
                 serials_imei_set.add(device_raw.get('Imei'))
             yield device_raw, ENROLLED_DEVICE
+        self._session_headers['Accept'] = 'application/json;version=2'
         uuid_list = []
         try:
             uuids_raw = self._get('system/groups/search', do_basic_auth=True)['OrganizationGroups']

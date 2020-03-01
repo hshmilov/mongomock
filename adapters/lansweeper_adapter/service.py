@@ -81,6 +81,18 @@ class LansweeperAdapter(AdapterBase, Configurable):
     def _query_devices_by_client(self, client_name, client_data):
         client_data.set_devices_paging(self.__devices_fetched_at_a_time)
         with client_data:
+            processor_dict = dict()
+            try:
+                for processor_data in client_data.query(consts.PROCESSOR_QUERY):
+                    asset_id = processor_data.get('AssetID')
+                    if not asset_id:
+                        continue
+                    if asset_id not in processor_dict:
+                        processor_dict[asset_id] = []
+                    processor_dict[asset_id].append(processor_data)
+            except Exception:
+                logger.exception(f'Problem getting state names')
+
             state_name_dict = dict()
             try:
                 for state_name_data in client_data.query(consts.STATE_NAMES_QUERY):
@@ -263,7 +275,7 @@ class LansweeperAdapter(AdapterBase, Configurable):
                        asset_reg_dict, bios_data_dict,
                        asset_autoruns_dict, autoruns_id_to_autoruns_data_dict, autoruns_id_to_autoruns_loc_dict,
                        asset_processes_dict, users_groups_dict, disks_dict, encryption_dict, errors_dict,
-                       custom_data_dict, state_name_dict, asset_software_linux_dict)
+                       custom_data_dict, state_name_dict, asset_software_linux_dict, processor_dict)
 
     @staticmethod
     def _clients_schema():
@@ -313,7 +325,7 @@ class LansweeperAdapter(AdapterBase, Configurable):
                 users_groups_dict,
                 disks_dict,
                 encryption_dict,
-                errors_dict, custom_data_dict, state_name_dict, asset_software_linux_dict
+                errors_dict, custom_data_dict, state_name_dict, asset_software_linux_dict, processor_dict
         ) in devices_raw_data:
             try:
                 device = self._new_device_adapter()
@@ -332,6 +344,19 @@ class LansweeperAdapter(AdapterBase, Configurable):
                         device.device_manufacturer = custom_data.get('Manufacturer')
                 except Exception:
                     logger.exception(f'Problem getting custom data')
+
+                try:
+                    processors_data = processor_dict.get(device_raw.get('AssetID'))
+                    if isinstance(processors_data, list):
+                        for processor_data in processors_data:
+                            device.add_cpu(manufacturer=processor_data.get('Manufacturer'),
+                                           name=processor_data.get('Caption'),
+                                           cores=processor_data.get('NumberOfCores')
+                                           if isinstance(processor_data.get('NumberOfCores'), int) else None,
+                                           family=consts.CPU_FAMILY_DICT.get(processor_data.get('Family')))
+                except Exception:
+                    logger.exception(f'Problem parsing bios data for {device_raw}')
+
                 try:
                     bios_data = bios_data_dict.get(device_raw.get('AssetID'))
                     if bios_data:

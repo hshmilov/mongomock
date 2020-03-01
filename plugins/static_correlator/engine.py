@@ -27,7 +27,7 @@ from axonius.utils.parsing import (NORMALIZED_MACS,
                                    get_normalized_hostname_str, is_snow_adapter,
                                    get_normalized_ip, get_serial, get_os_type,
                                    hostnames_do_not_contradict,
-                                   ips_do_not_contradict_or_mac_intersection,
+                                   ips_do_not_contradict_or_mac_intersection, macs_do_not_contradict,
                                    is_azuread_or_ad_and_have_name,
                                    hostname_not_problematic,
                                    is_different_plugin,
@@ -172,6 +172,10 @@ def is_netbox_adapter(adapter_device):
     return adapter_device.get('plugin_name') == 'netbox_adapter'
 
 
+def is_from_twistlock(adapter_device):
+    return adapter_device.get('plugin_name') == 'twistlock_adapter'
+
+
 def is_claroty_ten_adapter_more_mac(adapter_device):
     if adapter_device.get('plugin_name') not in ['claroty_adapter', 'tenable_io_adapter']:
         return False
@@ -246,7 +250,11 @@ def is_asset_ok_hostname_no_adapters(adapter_device):
 def if_csv_compare_full_path(adapter_device1, adapter_device2):
     # if not is_csv_adapter(adapter_device1) and not is_csv_adapter(adapter_device2):
     #     return True
-    return compare_hostname(adapter_device1, adapter_device2)
+    hostname1 = adapter_device1['data'].get('hostname')
+    hostname2 = adapter_device2['data'].get('hostname')
+    if not hostname1 or not hostname2:
+        return False
+    return hostname1.lower().startswith(hostname2.lower()) or hostname2.lower().startswith(hostname1.lower())
 
 
 def asset_hostnames_do_not_contradict_and_no_chef(adapter_device1, adapter_device2):
@@ -520,7 +528,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
                                       [get_fqdn_or_hostname],
                                       [compare_fqdn_or_hostname],
                                       [],
-                                      [ips_do_not_contradict_or_mac_intersection,
+                                      [ips_do_not_contradict_or_mac_intersection, macs_do_not_contradict,
                                        not_wifi_adapters,
                                        cloud_id_do_not_contradict],
                                       {'Reason': 'They have the same hostname_fqdn and IPs'},
@@ -534,7 +542,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
                                       [get_normalized_hostname_str],
                                       [compare_device_normalized_hostname],
                                       [],
-                                      [ips_do_not_contradict_or_mac_intersection,
+                                      [macs_do_not_contradict, ips_do_not_contradict_or_mac_intersection,
                                        not_wifi_adapters,
                                        cloud_id_do_not_contradict],
                                       {'Reason': 'They have the same hostname and IPs'},
@@ -591,8 +599,9 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
         filtered_adapters_list = filter(not_wifi_adapter, filtered_adapters_list)
         filtered_adapters_list = filter(lambda x: x.get('plugin_name') != 'cisco_meraki_adapter',
                                         filtered_adapters_list)
-        inner_compare = []
         if csv_full_hostname:
+            inner_compare = [compare_hostname]
+        else:
             inner_compare = [if_csv_compare_full_path]
         return self._bucket_correlate(list(filtered_adapters_list),
                                       [get_normalized_hostname_str],
@@ -718,7 +727,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
         return self._bucket_correlate(list(filtered_adapters_list),
                                       [get_hostname],
                                       [compare_hostname],
-                                      [],
+                                      [is_from_twistlock],
                                       [],
                                       {'Reason': 'They have the same hostname are twistlock'},
                                       CorrelationReason.StaticAnalysis)
@@ -822,7 +831,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
                                       [compare_asset_hosts],
                                       [get_asset_name],
                                       [ips_do_not_contradict_or_mac_intersection_or_asset_only_adapter,
-                                       not_wifi_adapters,
+                                       not_wifi_adapters, macs_do_not_contradict,
                                        asset_hostnames_do_not_contradict_and_no_chef,
                                        serials_do_not_contradict],
                                       {'Reason': 'They have the same Asset name'},
@@ -840,7 +849,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
                                       [get_asset_or_host],
                                       [compare_asset_hosts],
                                       [get_asset_name],
-                                      [compare_emails,
+                                      [compare_emails, macs_do_not_contradict,
                                        not_wifi_adapters,
                                        asset_hostnames_do_not_contradict_and_no_chef,
                                        serials_do_not_contradict],
@@ -860,7 +869,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
                                       [compare_snow_asset_hosts],
                                       [is_snow_device],
                                       [ips_do_not_contradict_or_mac_intersection,
-                                       not_wifi_adapters,
+                                       not_wifi_adapters, macs_do_not_contradict,
                                        cloud_id_do_not_contradict,
                                        asset_hostnames_do_not_contradict,
                                        serials_do_not_contradict],

@@ -18,7 +18,7 @@ class BlackberryUemConnection(RESTConnection):
         if self._username and self._password:
             auth_dict = {'username': self._username, 'password': base64.b64encode(
                 bytearray(self._password, 'utf-8')).decode('utf-8')}
-            if self._username_domain is None:
+            if not self._username_domain:
                 auth_dict['provider'] = 'LOCAL'
             else:
                 auth_dict['domain'] = self._username_domain

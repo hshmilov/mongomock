@@ -166,6 +166,8 @@ class GuardiumAdapter(ScannerAdapterBase):
 
     def _parse_raw_data(self, devices_raw_data):
         for device_raw in devices_raw_data:
+            if not isinstance(device_raw, dict):
+                continue
             device = self._create_device(device_raw)
             if device:
                 yield device
