@@ -47,24 +47,23 @@ class WebscanAdapter(WebscanExecutionMixIn, AdapterBase, Configurable):
                                              port=client_config.get('port'), ssl=False)
 
     @staticmethod
-    def get_connection(client_config, fetch_ssllabs=False):
+    def get_connection(client_config):
         connection = WebscanConnection(client_config['domain'], port=client_config['port'],
-                                       https_proxy=client_config.get('https_proxy'), fetch_ssllabs=fetch_ssllabs)
+                                       https_proxy=client_config.get('https_proxy'))
         with connection:
             pass
         return connection
 
     def _connect_client(self, client_config):
         try:
-            return self.get_connection(client_config, self._fetch_ssllabs)
+            return self.get_connection(client_config)
         except RESTException as e:
             message = 'Error connecting to client with domain {0}, reason: {1}'.format(
                 client_config['domain'], str(e))
             logger.exception(message)
             raise ClientConnectionException(message)
 
-    @staticmethod
-    def _query_devices_by_client(client_name, client_data):
+    def _query_devices_by_client(self, client_name, client_data):
         """
         Get all devices from a specific  domain
 
@@ -74,7 +73,7 @@ class WebscanAdapter(WebscanExecutionMixIn, AdapterBase, Configurable):
         :return: A json with all the attributes returned from the Server
         """
         with client_data:
-            return client_data.get_device_list()
+            return client_data.get_device_list(fetch_ssllabs=self._fetch_ssllabs)
 
     @staticmethod
     def _clients_schema():

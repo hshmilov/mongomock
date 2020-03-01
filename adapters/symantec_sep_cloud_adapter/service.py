@@ -6,6 +6,7 @@ from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.connection import RESTException
 from axonius.devices.device_adapter import DeviceAdapter
+from axonius.utils.parsing import is_domain_valid
 from axonius.utils.files import get_local_config_file
 from axonius.fields import Field
 from axonius.utils.datetime import parse_date
@@ -20,9 +21,6 @@ class SymantecSepCloudAdapter(AdapterBase):
     # pylint: disable=too-many-instance-attributes
     class MyDeviceAdapter(DeviceAdapter):
         device_status = Field(str, 'Device Status')
-        security_client_install_date = Field(datetime.datetime, 'Security Client Install Date')
-        mdm_provider = Field(str, 'MDM Provider')
-        health_attestation_status = Field(str, 'Health Attestation Status')
         modified = Field(datetime.datetime, 'Modified')
         created = Field(datetime.datetime, 'Created')
 
@@ -35,16 +33,14 @@ class SymantecSepCloudAdapter(AdapterBase):
 
     @staticmethod
     def _test_reachability(client_config):
-        return RESTConnection.test_reachability(client_config.get('domain') or DEFAULT_DOMAIN,
+        return RESTConnection.test_reachability(DEFAULT_DOMAIN,
                                                 https_proxy=client_config.get('https_proxy'))
 
     @staticmethod
     def get_connection(client_config):
-        connection = SymantecSepCloudConnection(domain=client_config.get('domain') or DEFAULT_DOMAIN,
+        connection = SymantecSepCloudConnection(domain=DEFAULT_DOMAIN,
                                                 verify_ssl=client_config['verify_ssl'],
                                                 https_proxy=client_config.get('https_proxy'),
-                                                domain_id=client_config['domain_id'],
-                                                customer_id=client_config['customer_id'],
                                                 client_id=client_config['client_id'],
                                                 client_secret=client_config['client_secret'])
         with connection:
@@ -56,7 +52,7 @@ class SymantecSepCloudAdapter(AdapterBase):
             return self.get_connection(client_config)
         except RESTException as e:
             message = 'Error connecting to client with domain {0}, reason: {1}'.format(
-                client_config['domain'], str(e))
+                DEFAULT_DOMAIN, str(e))
             logger.exception(message)
             raise ClientConnectionException(message)
 
@@ -83,22 +79,6 @@ class SymantecSepCloudAdapter(AdapterBase):
         return {
             'items': [
                 {
-                    'name': 'domain',
-                    'title': 'Symantec Endpoint Protection Cloud URL',
-                    'type': 'string',
-                    'default': DEFAULT_DOMAIN
-                },
-                {
-                    'name': 'domain_id',
-                    'title': 'Domain Id',
-                    'type': 'string'
-                },
-                {
-                    'name': 'customer_id',
-                    'title': 'Customer Id',
-                    'type': 'string'
-                },
-                {
                     'name': 'client_id',
                     'title': 'Client Id',
                     'type': 'string'
@@ -121,9 +101,6 @@ class SymantecSepCloudAdapter(AdapterBase):
                 }
             ],
             'required': [
-                'domain',
-                'domain_id',
-                'customer_id',
                 'client_id',
                 'client_secret',
                 'verify_ssl'
@@ -138,34 +115,36 @@ class SymantecSepCloudAdapter(AdapterBase):
             if device_id is None:
                 logger.warning(f'Bad device with no ID {device_raw}')
                 return None
-            device.id = device_id + '_' + (device_raw.get('name') or '')
+            device.id = str(device_id) + '_' + (device_raw.get('name') or '')
             device.name = device_raw.get('name')
-            device_hardware = device_raw.get('hardware')
-            if not isinstance(device_hardware, dict):
-                device_hardware = {}
-
-            device.uuid = device_hardware.get('uuid')
-            device.health_attestation_status = device_raw.get('health-attestation-status')
-            device.device_serial = device_hardware.get('serial-number')
-            device.device_model = device_hardware.get('model-name')
-            device.last_seen = parse_date(device_raw.get('last-enrollment-date'))
-            device.security_client_install_date = parse_date(device_raw.get('security-client-install-date'))
-            device.device_model_family = device_hardware.get('model-vendor')
-            nics = device_raw.get('network-adapters')
+            device.hostname = device_raw.get('host')
+            nics = device_raw.get('adapters')
             if not isinstance(nics, list):
                 nics = []
             for nic in nics:
                 try:
-                    device.add_nic(mac=nic.get('addr'), name=nic.get('name'))
+                    ips = []
+                    if nic.get('ipv4Address'):
+                        ips.append(nic.get('ipv4Address'))
+                    if nic.get('ipv6Address'):
+                        ips.append(nic.get('ipv6Address'))
+                    if not ips:
+                        ips = None
+                    if nic.get('addr') or ips:
+                        device.add_nic(mac=nic.get('addr'), ips=ips)
                 except Exception:
                     logger.exception(f'Problem with nic {nic}')
             try:
                 device.figure_os((device_raw.get('operating-system') or {}).get('friendlyname'))
             except Exception:
                 logger.exception(f'Problem getting os for {device_raw}')
-            device.device_status = device_raw.get('device-status')
+            device.device_status = device_raw.get('device_status')
             device.modified = parse_date(device_raw.get('modified'))
             device.created = parse_date(device_raw.get('created'))
+            device.description = device_raw.get('description')
+            domain = device_raw.get('domain')
+            if is_domain_valid(domain):
+                device.domain = domain
             device.set_raw(device_raw)
             return device
         except Exception:

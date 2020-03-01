@@ -23,19 +23,19 @@ class WebscanConnection(RESTConnection):
         - If IP is given instead of domain, we can get ptr records and try to scan them.
     """
 
-    def __init__(self, *args, fetch_ssllabs: bool, **kwargs):
+    def __init__(self, *args, **kwargs):
         """
         Init web enrichment connection.
         :param fetch_ssllabs: should we fetch data from qualys ssllabs
         """
-        self.fetch_ssllabs = fetch_ssllabs
         super().__init__(*args, **kwargs)
 
     def _connect(self):
         # its ok if we get an http error, we still want to get the server cert data.
         self._get('', use_json_in_response=False, raise_for_status=False)
 
-    def get_device_list(self) -> Tuple[List, Dict]:
+    # pylint: disable=arguments-differ
+    def get_device_list(self, fetch_ssllabs=False) -> Tuple[List, Dict]:
         """
         Get Scanners services output data
         :return: list of services, services results dict
@@ -49,7 +49,7 @@ class WebscanConnection(RESTConnection):
         services = [ServerScanner(self._url, logger, domain, https_proxy=self._https_proxy),
                     CertScanner(self._url, logger, domain, self._port),
                     CMSScanner(self._url, logger)]
-        if self.fetch_ssllabs:
+        if fetch_ssllabs:
             services.insert(1, SSLLabsScanner(self._url, logger, domain, https_proxy=self._https_proxy))
         results = {}
         # run scan on each service

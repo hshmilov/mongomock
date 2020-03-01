@@ -1,9 +1,9 @@
+import json
 import datetime
 import logging
 
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.exception import RESTException
-from symantec_sep_cloud_adapter.consts import DEVICE_PER_PAGE, MAX_NUMBER_OF_DEVICES
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -11,17 +11,14 @@ logger = logging.getLogger(f'axonius.{__name__}')
 class SymantecSepCloudConnection(RESTConnection):
     """ rest client for SymantecSepCloud adapter """
 
-    def __init__(self, *args, domain_id, customer_id, client_id, client_secret, **kwargs):
-        super().__init__(*args, url_base_prefix='/r3_epmp_i',
-                         headers={'Content-Type': 'application/json',
-                                  'Accept': 'application/json'},
+    def __init__(self, *args, client_id, client_secret, **kwargs):
+        super().__init__(*args, url_base_prefix='/v1',
+                         headers={'Accept': 'application/json',
+                                  'Content-Type': 'application/json',
+                                  'Host': 'api.sep.securitycloud.symantec.com'},
                          **kwargs)
-        self._domain_id = domain_id
-        self._customer_id = customer_id
         self._username = client_id
         self._password = client_secret
-        self._permanent_headers['x-epmp-customer-id'] = self._customer_id
-        self._permanent_headers['x-epmp-domain-id'] = self._domain_id
         self._last_refresh = None
         self._expires_in = None
 
@@ -42,26 +39,54 @@ class SymantecSepCloudConnection(RESTConnection):
         self._expires_in = int(response['expires_in'])
 
     def _connect(self):
-        if not self._domain_id or not self._customer_id or not self._username or not self._password:
+        if not self._username or not self._password:
             raise RESTException('Missing Critical Parameter')
         self._last_refresh = None
         self._refresh_token()
-        self._get('sepcloud/v1/devices',
-                  url_params={'limit': DEVICE_PER_PAGE,
-                              'offset': 0})
+        groups_raw = self._get('device-groups')
+        if not isinstance(groups_raw, dict) or not groups_raw.get('device_groups')\
+                or not isinstance(groups_raw['device_groups'], list):
+            raise RESTException(f'Bad Response: {groups_raw}')
 
+    # pylint: disable=too-many-nested-blocks, too-many-branches, too-many-statements
     def get_device_list(self):
-        offset = 0
-        while offset < MAX_NUMBER_OF_DEVICES:
+        groups_raw = self._get('device-groups')
+        if not isinstance(groups_raw, dict) or not groups_raw.get('device_groups')\
+                or not isinstance(groups_raw['device_groups'], list):
+            raise RESTException(f'Bad Response: {groups_raw}')
+        groups_ids = []
+        for group_raw in groups_raw['device_groups']:
+            if isinstance(group_raw, dict) and group_raw.get('id'):
+                groups_ids.append(group_raw.get('id'))
+        device_ids = set()
+        for group_id in groups_ids:
             try:
-                self._refresh_token()
-                response = self._get('sepcloud/v1/devices',
-                                     url_params={'limit': DEVICE_PER_PAGE,
-                                                 'offset': offset})
-                offset += DEVICE_PER_PAGE
-                if not response.get('results'):
-                    break
-                yield from response['results']
+                device_ids_raw = self._get(f'device-groups/{group_id}/devices')
+                if not isinstance(device_ids_raw, dict) or not isinstance(device_ids_raw['devices'], list):
+                    raise RESTException(f'Bad Response: {device_ids_raw}')
+                for device_id_raw in device_ids_raw['devices']:
+                    if isinstance(device_id_raw, dict) and device_id_raw.get('id'):
+                        device_id = device_id_raw.get('id')
+                        device_ids.add(device_id)
             except Exception:
-                logger.exception(f'Probelm with offset {offset}')
-                break
+                logger.exception(f'Problem with group id {group_id}')
+        device_ids_requests = []
+        for device_id in device_ids:
+            device_ids_requests.append({'name': f'devices/{device_id}', 'use_json_in_response': False})
+        for device_raw in self._async_get_only_good_response(device_ids_requests):
+            try:
+                final_lines = []
+                for line in device_raw.splitlines():
+                    try:
+                        if ':' not in line:
+                            final_lines.append(line)
+                        else:
+                            left_over = line.split(':')[-1]
+                            if left_over.strip() == ',':
+                                continue
+                            final_lines.append(line)
+                    except Exception:
+                        logger.exception(f'Problem with line')
+                yield json.loads('\n'.join(final_lines))
+            except Exception:
+                logger.exception(f'Bad json {device_raw}')
