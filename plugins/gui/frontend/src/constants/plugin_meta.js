@@ -742,6 +742,11 @@ export const pluginMeta = {
         link: '',
         description: 'Generic fields with values given by the user, that can be edited in the entity configuration page'
     },
+    cloud_health_adapter: {
+        title: 'CloudHealth',
+        link: 'https://docs.axonius.com/docs/cloud-health',
+        description: 'Cloud Health is a cloud management platform to analyze and manage cloud cost, usage, security, and governance.'
+    },
     gotoassist_adapter: {
         title: 'RescueAssist (GoToAssist)',
         link: '',

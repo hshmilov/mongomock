@@ -185,6 +185,7 @@ DOCKER_PORTS = {
     'reimage-tags-analysis':            6687,
     'heavy-lifting':                    6688,
     'instance-control':                 6689,
+    'cloud-health-adapter':             6690,
     'master-proxy':                     8888,  # reserved
     'httpd-service':                    8889,  # reserved
     'ivanti-sm-adapter':                9940,
