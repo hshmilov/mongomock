@@ -188,6 +188,7 @@ DOCKER_PORTS = {
     'master-proxy':                     8888,  # reserved
     'httpd-service':                    8889,  # reserved
     'ivanti-sm-adapter':                9940,
+    'spiceworks-adapter':               9941,
     'bitlocker-adapter':                9957,
     'ssh-socat':                        9958,
     'office-scan-adapter':              9959,

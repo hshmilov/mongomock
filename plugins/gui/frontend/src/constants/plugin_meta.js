@@ -61,6 +61,11 @@ export const pluginMeta = {
         link: 'https://docs.axonius.com/docs/nutanix-ahv',
         description: 'Nutanix AHV is a hypervisor included with the Enterprise Cloud OS. AHV delivers flexible migrations, security hardening, automated data protection and disaster recovery, and analytics.'
     },
+    spiceworks_adapter: {
+        title: 'Spiceworks',
+        link: 'https://docs.axonius.com/docs/spiceworks',
+        description: 'Spiceworks is a Network Monitoring software to capture, analyze, and monitor network traffic.'
+    },
     preempt_adapter: {
         title: 'Preempt',
         link: 'https://docs.axonius.com/docs/preempt',
