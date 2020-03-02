@@ -3368,7 +3368,7 @@ class PluginBase(Configurable, Feature, ABC):
                         {
                             'name': CSV_FULL_HOSTNAME,
                             'type': 'bool',
-                            'title': 'Correlate No MAC+IP adapters only if full hostnames are equal'
+                            'title': 'Correlate devices by exact hostnames when no MAC and no IPs'
                         },
                         {
                             'name': CORRELATE_BY_SNOW_MAC,
