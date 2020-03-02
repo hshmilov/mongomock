@@ -357,6 +357,10 @@ export const pluginMeta = {
         link:  'https://docs.axonius.com/docs/palo-alto-networks-cortex',
         description: 'Palo Alto Networks Cortex is an open and integrated, AI-based continuous security platform, allowing security operations teams to speed the analysis of massive data sets.'
     },
+    mysql_special_adapter: {
+        title: 'MySQL Special',
+        description: 'MySQL Special'
+    },
     censys_adapter: {
         title: 'Censys',
         link: 'https://docs.axonius.com/docs/censys',

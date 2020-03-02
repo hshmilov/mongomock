@@ -13,7 +13,8 @@
       "stresstest_scanner",
       "stresstest",
       "stresstest_users",
-      "infinite_sleep"
+      "infinite_sleep",
+      "mysql_special"
     ],
     "remove-from-exclude": []
   }
