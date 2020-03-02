@@ -69,6 +69,7 @@ BASE_DEFAULTS_SCHEMA = {PORT: DEFAULT_PORT,
                         PASSWORD: ''}
 
 SCAN_ACTION_SCHEMA = copy.deepcopy(BASE_SCHEMA)
+SCP_ACTION_SCHEMA = copy.deepcopy(BASE_SCHEMA)
 
 CMD_ACTION_SCHEMA = copy.deepcopy(BASE_SCHEMA)
 CMD_ITEM = {'name': COMMAND, 'title': 'Command', 'type': 'string'}
@@ -96,6 +97,13 @@ EXTRA_FILES = {
             ]
         }
 }
+
+
+SCP_ACTION_SCHEMA['items'].append(UPLOAD_PATH_ITEM)
+SCP_ACTION_SCHEMA['required'].append(UPLOAD_PATH_NAME)
+SCP_ACTION_SCHEMA['items'].insert(0, {'name': HOSTNAME, 'title': 'Host name', 'type': 'string'})
+SCP_ACTION_SCHEMA['required'].insert(0, HOSTNAME)
+
 
 CMD_ACTION_SCHEMA['items'].append(CMD_ITEM)
 CMD_ACTION_SCHEMA['items'].append(CMDNAME_ITEM)

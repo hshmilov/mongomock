@@ -22,7 +22,7 @@ from axonius.plugin_base import EntityType
 from axonius.types.correlation import CorrelationReason, CorrelationResult
 from axonius.utils.gui_helpers import find_entity_field
 from axonius.utils.memfiles import temp_memfd
-from linux_ssh_adapter.connection import LinuxSshConnection
+from axonius.clients.linux_ssh.connection import LinuxSshConnection
 
 logger = logging.getLogger(f'axonius.{__name__}')
 

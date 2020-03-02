@@ -19,8 +19,8 @@ from axonius.clients.linux_ssh.ppk import ppkraw_to_openssh
 from axonius.consts.plugin_consts import DEVICE_CONTROL_PLUGIN_NAME
 from axonius.mixins.configurable import Configurable
 from axonius.utils.files import get_local_config_file
+from axonius.clients.linux_ssh.connection import LinuxSshConnection
 from linux_ssh_adapter.client_id import get_client_id
-from linux_ssh_adapter.connection import LinuxSshConnection
 from linux_ssh_adapter.execution import LinuxSshExecutionMixIn
 
 logger = logging.getLogger(f'axonius.{__name__}')

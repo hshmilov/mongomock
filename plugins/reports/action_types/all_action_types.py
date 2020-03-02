@@ -36,6 +36,7 @@ from reports.action_types.base.tenable_sc_add_ips_to_asset import TenableScAddIP
 from reports.action_types.base.untag_all_entities import UntagAllEntitiesAction
 from reports.action_types.base.sentinelone_initiate_scan import SentineloneInitiateScanAction
 from reports.action_types.base.haveibeenpwned_enrichment import HaveibeenpwnedEnrichment
+from reports.action_types.alert.send_csv_to_scp import SendCsvToScp
 from reports.action_types.base.run_linux_command import RunLinuxCommand
 from reports.action_types.base.tenable_io_create_asset import TenableIoCreateAsset
 from reports.action_types.alert.create_zendesk_ticket import ZendeskTicketAction
@@ -99,6 +100,7 @@ AllActionTypes: Dict[str, type(ActionTypeBase)] = {
     'carbonblack_defense_quarantine': CarbonblackDefenseQuarantineAction,
     'carbonblack_defense_unquarantine': CarbonblackDefenseUnquarantineAction,
     'qualys_create_asset': QualysCreateAsset,
+    'send_csv_to_scp': SendCsvToScp,
     'qualys_add_tag': QualysAddTag,
-    'qualys_remove_tag': QualysRemoveTag,
+    'qualys_remove_tag': QualysRemoveTag
 }
