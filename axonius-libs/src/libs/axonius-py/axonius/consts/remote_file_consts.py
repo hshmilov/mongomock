@@ -87,6 +87,13 @@ FILE_CLIENTS_SCHEMA = [
         'description': 'JSON-formatted dictionary of custom HTTP headers '
                        'to add to request.',
     },
+    {
+        'name': 'suppress_netbios',
+        'title': 'Suppress NetBios Name Lookup',
+        'type': 'bool',
+        'default': False,
+        'description': 'Select this to suppress NetBios name lookup when using SMB share'
+    }
 ]
 
 FILE_SCHEMA_REQUIRED = [

@@ -7,9 +7,6 @@ from urllib.parse import urlparse
 import chardet
 import requests
 
-# pylint: disable=import-error
-from smb.SMBHandler import SMBHandler
-
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.aws.utils import get_s3_object
 from axonius.clients.rest.connection import RESTConnection
@@ -18,7 +15,7 @@ from axonius.consts.remote_file_consts import (AWS_ENDPOINT_FOR_REACHABILITY_TES
                                                RESOURCE_PATH_DESCRIPTION)
 from axonius.plugin_base import PluginBase
 from axonius.utils.json import from_json
-
+from axonius.utils.remote_file_smb_handler import get_smb_handler
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -105,6 +102,10 @@ def load_from_smb(client_config) -> bytes:
     try:
         username = client_config.get('username')
         password = client_config.get('password')
+        use_netbios = not client_config.get('suppress_netbios', False)
+        if not use_netbios:
+            logger.info(f'Using alternate smb handler for {client_config.get("user_id")}')
+        handler = get_smb_handler(use_netbios)
         # We don't actually need the double-backslash
         # We just wanted to make sure it was a valid path
         share_path = client_config.get('resource_path')[2:]
@@ -116,7 +117,7 @@ def load_from_smb(client_config) -> bytes:
             # support guest or password-less smb auth
             share_path = f'{urllib.parse.quote(username)}@{share_path}'
         final_path = f'smb://{share_path}'
-        opener = urllib.request.build_opener(SMBHandler)
+        opener = urllib.request.build_opener(handler)
         with opener.open(final_path) as file_obj:
             return file_obj.read()
     except Exception as e:
