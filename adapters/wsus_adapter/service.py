@@ -1,121 +1,138 @@
 import datetime
 import logging
+import os
 
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
-from axonius.clients.mssql.connection import MSSQLConnection
 from axonius.devices.device_adapter import DeviceAdapter, AGENT_NAMES, DeviceAdapterOS
 from axonius.fields import Field, ListField
-from axonius.mixins.configurable import Configurable
 from axonius.clients.rest.connection import RESTConnection
 from axonius.utils.parsing import get_exception_string
 from axonius.utils.datetime import parse_date
 from axonius.utils.files import get_local_config_file
-import wsus_adapter.consts as consts
+from wsus_adapter import consts
+from wsus_adapter.connection import WsusWmiConnection
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
-class WsusAdapter(AdapterBase, Configurable):
+class WsusAdapter(AdapterBase):
     # pylint: disable=too-many-instance-attributes
     class MyDeviceAdapter(DeviceAdapter):
-        wsus_server = Field(str, 'WSUS Server')
+        wsus_server = Field(str, 'WSUS Server GUID')
         last_sync_result = Field(str, 'Last Sync Result')
         last_sync_time = Field(datetime.datetime, 'Last Sync Time')
         last_reported_inventory_time = Field(datetime.datetime, 'Last Reported Inventory Time')
+        last_reported_status_time = Field(datetime.datetime, 'Last Reported Status Time')
+        role = Field(str, 'Computer Role')
         groups = ListField(str, 'Groups')
 
     def __init__(self):
         super().__init__(get_local_config_file(__file__))
 
     def _get_client_id(self, client_config):
-        return client_config[consts.WSUS_HOST]
+        return f'{client_config[consts.WSUS_HOST]}_{client_config[consts.USER]}'
 
     def _test_reachability(self, client_config):
-        return RESTConnection.test_reachability(client_config.get('server'),
-                                                port=client_config.get('port'))
+        return RESTConnection.test_reachability(client_config.get(consts.WSUS_HOST))
 
     def _connect_client(self, client_config):
         try:
-            connection = MSSQLConnection(
-                database=client_config[consts.WSUS_DATABASE],
-                server=client_config[consts.WSUS_HOST],
-                port=client_config.get(consts.WSUS_PORT) or consts.DEFAULT_WSUS_PORT,
-                devices_paging=self.__devices_fetched_at_a_time,
+            connection = WsusWmiConnection(
+                client_config[consts.WSUS_HOST],
+                client_config[consts.USER],
+                client_config[consts.PASSWORD],
+                self._use_wmi_smb_path,
+                self._python_27_path,
+                # output_file=client_config.get(consts.WMI_OUTPUT_FILE),
+                # working_dir=client_config.get(consts.WMI_WORKING_DIR)
             )
-            connection.set_credentials(username=client_config[consts.USER], password=client_config[consts.PASSWORD])
-            with connection:
-                for _ in connection.query(consts.WSUS_MAIN_QUERY):
-                    break
-            return connection
-        except Exception as err:
-            message = (
-                f'Error connecting to client host: {str(client_config[consts.WSUS_HOST])}  '
-                f'database: {str(client_config[consts.WSUS_DATABASE])}'
-            )
+        except Exception as e:
+            message = f'Error connecting to WSUS host: {str(client_config[consts.WSUS_HOST])}'
             logger.exception(message)
-            if 'permission was denied' in str(repr(err)).lower():
-                raise ClientConnectionException(f'Error connecting to WSUS: {str(err)}')
             raise ClientConnectionException(get_exception_string())
+        else:
+            return connection
 
     def _query_devices_by_client(self, client_name, client_data):
-        client_data.set_devices_paging(self.__devices_fetched_at_a_time)
-        with client_data:
+        """
+        Get all computer targets from a specific WSUS server
+        :param str client_name: The name of the client
+        :param obj client_data: The data that represent a WSUS wmi connection
 
-            target_groups_dict = dict()
-            try:
-                for target_groups_data in client_data.query(consts.TARGET_GROUPS_QUERY):
-                    asset_id = target_groups_data.get('ComputerTargetId')
-                    group_id = target_groups_data.get('ComputerTargetGroupId')
-                    if not asset_id or not group_id:
-                        continue
-                    if asset_id not in target_groups_dict:
-                        target_groups_dict[asset_id] = []
-                    target_groups_dict[asset_id].append(group_id)
-            except Exception:
-                logger.warning(f'Problem getting groups data dict', exc_info=True)
-
-            groups_id_to_data_dict = dict()
-            try:
-                for target_groups_id_data in client_data.query(consts.TARGET_GROUPS_ID_QUERY):
-                    group_id = target_groups_id_data.get('ComputerTargetGroupId')
-                    group_name = target_groups_id_data.get('Name')
-                    if not group_name or not group_id:
-                        continue
-                    groups_id_to_data_dict[group_id] = group_name
-            except Exception:
-                logger.warning(f'Problem getting groups id data dict', exc_info=True)
-
-            for device_raw in client_data.query(consts.WSUS_MAIN_QUERY):
-                yield device_raw, client_data.server, target_groups_dict, groups_id_to_data_dict
+        :return: A json with all the attributes returned from the WSUS Server
+        """
+        yield from client_data.get_devices()
 
     def _clients_schema(self):
         return {
             'items': [
-                {'name': consts.WSUS_HOST, 'title': 'MSSQL Server', 'type': 'string'},
-                {'name': consts.WSUS_PORT, 'title': 'Port', 'type': 'integer', 'default': consts.DEFAULT_WSUS_PORT},
-                {'name': consts.WSUS_DATABASE, 'title': 'Database', 'type': 'string'},
-                {'name': consts.USER, 'title': 'User Name', 'type': 'string'},
-                {'name': consts.PASSWORD, 'title': 'Password', 'type': 'string', 'format': 'password'},
+                {
+                    'name': consts.WSUS_HOST,
+                    'title': 'WSUS Server',
+                    'type': 'string'
+                },
+                {
+                    'name': consts.USER,
+                    'title': 'User Name',
+                    'type': 'string'
+                },
+                {
+                    'name': consts.PASSWORD,
+                    'title': 'Password',
+                    'type': 'string',
+                    'format': 'password'
+                },
+                # {
+                #     'name': consts.WMI_WORKING_DIR,
+                #     'title': 'Working Directory',
+                #     'type': 'string',
+                #     'default': consts.WMI_WORKING_DIR_DEFAULT
+                # },
+                # {
+                #     'name': consts.WMI_OUTPUT_FILE,
+                #     'title': 'Temporary Output File Name',
+                #     'type': 'string'
+                # }
             ],
-            'required': [consts.WSUS_HOST, consts.USER, consts.PASSWORD, consts.WSUS_DATABASE],
+            'required': [consts.WSUS_HOST, consts.USER, consts.PASSWORD],
             'type': 'array',
         }
 
+    @property
+    def _use_wmi_smb_path(self):
+        return os.path.abspath(os.path.join(os.path.dirname(__file__), self.config['paths']['wmi_smb_path']))
+
+    @property
+    def _python_27_path(self):
+        return self.config['paths']['python_27_path']
+
     # pylint: disable=too-many-branches, too-many-statements, too-many-locals, too-many-nested-blocks
     def _parse_raw_data(self, devices_raw_data):
-        for device_raw, wsus_server, target_groups_dict, groups_id_to_data_dict in devices_raw_data:
+        for device_raw in devices_raw_data:
             try:
                 device = self._new_device_adapter()
-                device.wsus_server = wsus_server
-                device_id = device_raw.get('ComputerTargetId')
+                device.wsus_server = device_raw.get('ParentServerId')
+                device_id = device_raw.get('Id')
                 if device_id is None:
                     logger.warning(f'Bad device with no ID {device_raw}')
                     continue
-                device.id = str(device_id) + '_' + (device_raw.get('Name') or '')
-                device.hostname = device_raw.get('Name')
+                device.id = str(device_id) + '_' + (device_raw.get('FullDomainName') or '')
+                device.name = device_raw.get('FullDomainName')
                 if device_raw.get('IPAddress'):
                     device.add_nic(ips=[device_raw.get('IPAddress')])
+                try:
+                    domain_parts = device_raw.get('FullDomainName', '').split('.')
+                    device.hostname = domain_parts[0]
+                    device.domain = '.'.join(domain_parts[1:])
+                except Exception:
+                    message = f'Failed to parse device domain from {device_raw.get("FullDomainName")}!'
+                    logger.exception(message)
+                device.device_model = device_raw.get('Model')
+                device.device_manufacturer = (device_raw.get('Make'))
+
+                device.role = device_raw.get('ComputerRole')
+                device.last_reported_status_time = parse_date(device_raw.get('LastReportedStatusTime'))
                 device.last_sync_result = device_raw.get('LastSyncResult')
                 last_sync_time = parse_date(device_raw.get('LastSyncTime'))
                 device.last_sync_time = last_sync_time
@@ -127,10 +144,11 @@ class WsusAdapter(AdapterBase, Configurable):
                     device.last_seen = last_sync_time or last_reported_inventory_time
                 device.add_agent_version(agent=AGENT_NAMES.wsus,
                                          version=device_raw.get('ClientVersion'))
-                device.device_manufacturer = device_raw.get('Make')
-                device.device_model = device_raw.get('Model')
                 try:
+                    bitness = device_raw.get('OSArchitecture')
                     device.os = DeviceAdapterOS()
+                    if bitness:
+                        device.os.bitness = 32 if '32' in bitness else 64
                     device.os.type = 'Windows'
                     device.os.build = device_raw.get('OSBuildNumber')
                     device.os.major = device_raw.get('OSMajorVersion')
@@ -138,17 +156,17 @@ class WsusAdapter(AdapterBase, Configurable):
                     device.os.sp = device_raw.get('OSServicePackMajorNumber')
                 except Exception:
                     logger.exception(f'Prolbem with os for {device_raw}')
-                device.bios_version = device_raw.get('BiosVersion')
+                device.bios_version = device_raw.get('BiosInfo', {}).get('Version')
+
                 try:
-                    group_ids = target_groups_dict.get(device_id)
+                    group_ids = device_raw.get('RequestedTargetGroupNames')
                     if not isinstance(group_ids, list):
                         group_ids = []
                     for group_id in group_ids:
                         try:
-                            if groups_id_to_data_dict.get(group_id):
-                                device.groups.append(groups_id_to_data_dict.get(group_id))
+                            device.groups.append(group_id)
                         except Exception:
-                            logger.exception(f'Problem with group ID')
+                            logger.exception(f'Problem with group ID {group_id}')
                 except Exception:
                     logger.exception(f'Problem getting groups')
                 device.set_raw(device_raw)
@@ -159,27 +177,3 @@ class WsusAdapter(AdapterBase, Configurable):
     @classmethod
     def adapter_properties(cls):
         return [AdapterProperty.Agent]
-
-    @classmethod
-    def _db_config_schema(cls) -> dict:
-        return {
-            'items': [
-                {
-                    'name': 'devices_fetched_at_a_time',
-                    'type': 'integer',
-                    'title': 'SQL pagination'
-                }
-            ],
-            'required': ['devices_fetched_at_a_time'],
-            'pretty_name': 'WSUS Configuration',
-            'type': 'array'
-        }
-
-    @classmethod
-    def _db_config_default(cls):
-        return {
-            'devices_fetched_at_a_time': 1000,
-        }
-
-    def _on_config_update(self, config):
-        self.__devices_fetched_at_a_time = config['devices_fetched_at_a_time']

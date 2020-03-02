@@ -246,6 +246,7 @@ DOCKER_PORTS = {
     'riskiq-adapter':                   13373,
     'digicert-certcentral-adapter':     13374,
     'json-adapter':                     13375,
+    'openvas-adapter':                  13376,
     'mongo':                            27017,
     'mockingbird-db':                   28017
 }

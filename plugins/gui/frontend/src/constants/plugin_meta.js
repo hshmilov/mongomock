@@ -13,6 +13,10 @@ export const pluginMeta = {
         link: 'https://docs.axonius.com/docs/digicert-certcentral',
         description: 'DigiCert CertCentral consolidates tasks for issuing, installing, inspecting, remediating, and renewing certificates.'
     },
+    openvas_adapter: {
+        title: 'OpenVAS',
+        description: 'OpenVAS is a full-featured vulnerability scanner. Its capabilities include unauthenticated testing, authenticated testing, various high level and low level Internet and industrial protocols, performance tuning for large-scale scans and a powerful internal programming language to implement any type of vulnerability test.'
+    },
     arista_eos_adapter: {
         title: 'Arista Extensible Operating System (EOS)',
         link:'https://docs.axonius.com/docs/arista-eos',
