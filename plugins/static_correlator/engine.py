@@ -177,7 +177,7 @@ def is_from_twistlock(adapter_device):
 
 
 def is_claroty_ten_adapter_more_mac(adapter_device):
-    if adapter_device.get('plugin_name') not in ['claroty_adapter', 'tenable_io_adapter']:
+    if adapter_device.get('plugin_name') not in ['claroty_adapter', 'tenable_io_adapter', 'office_scan_adapter']:
         return False
     macs = adapter_device.get(NORMALIZED_MACS)
     if macs and len(macs) > 1:
