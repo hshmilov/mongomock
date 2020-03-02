@@ -2258,9 +2258,9 @@ class PluginBase(Configurable, Feature, ABC):
                                                  f'Associated adapters: {correlation.associated_adapters}')
 
                     if len(entities_candidates) > MAX_LINK_AMOUNT:
-                        logger.critical('Data loss prevented: '
-                                        f'Someone tried to link more than {MAX_LINK_AMOUNT} entities at once, '
-                                        'which looks like a corrupt plugin, here are the first ten entities')
+                        logger.info('Data loss prevented: '
+                                    f'Someone tried to link more than {MAX_LINK_AMOUNT} entities at once, '
+                                    'which looks like a corrupt plugin, here are the first ten entities')
                         logger.info(entities_candidates[:MAX_LINK_AMOUNT])
                         raise CorrelateException('Way too many entities we\'re given')
 
