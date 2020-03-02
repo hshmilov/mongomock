@@ -116,7 +116,7 @@ class DesktopCentralAdapter(AdapterBase):
                 'domain',
                 'username',
                 'password',
-                'veirfy_ssl'
+                'verify_ssl'
             ],
             'type': 'array'
         }

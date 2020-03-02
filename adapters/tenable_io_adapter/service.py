@@ -453,7 +453,7 @@ class TenableIoAdapter(ScannerAdapterBase, Configurable):
                 }
             ],
             'required': [
-                'use_cache', 'exclude_no_last_scan'
+                'exclude_no_last_scan'
             ],
             'pretty_name': 'Tenable.io Configuration',
             'type': 'array'

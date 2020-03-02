@@ -448,7 +448,6 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, ActiveDirectory
             "required": [
                 "dc_name",
                 "user",
-                "domain_name",
                 "password",
                 'do_not_fetch_users',
                 'fetch_disabled_devices',

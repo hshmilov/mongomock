@@ -112,7 +112,7 @@ class BitdefenderAdapter(AdapterBase):
                 'domain',
                 'apikey',
                 'access_url_path',
-                'veirfy_ssl'
+                'verify_ssl'
             ],
             'type': 'array'
         }
