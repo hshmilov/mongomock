@@ -7,7 +7,7 @@ DOCKER_PORTS = {
     'selenium-hub':                     4444,
     'mongo-slave':                      4455,
     'execution':                        4999,
-    'aggregator':                       4000,   # ports 5000,5001,5002,8125 are used by datadog (some customers have)
+    'aggregator':                       4000,
     'active-directory-adapter':         4001,
     'reports':                          4002,
     'epo-adapter':                      5003,
@@ -246,6 +246,7 @@ DOCKER_PORTS = {
     'riskiq-adapter':                   13373,
     'digicert-certcentral-adapter':     13374,
     'json-adapter':                     13375,
+    'microfocus-sa-adapter':            13368,
     'openvas-adapter':                  13376,
     'mongo':                            27017,
     'mockingbird-db':                   28017

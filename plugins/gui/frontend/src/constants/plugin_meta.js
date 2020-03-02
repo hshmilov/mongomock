@@ -1,4 +1,9 @@
 export const pluginMeta = {
+    microfocus_sa_adapter: {
+        title: 'Microfocus Server Automation',
+        link: 'https://docs.axonius.com/docs/microfocus-sa',
+        description: 'Microfocus Server Automation provides operating system provisioning, automated patch management, and compliance control.',
+    },
     digicert_pki_platform_adapter: {
         title: 'DigiCert PKI Platform (Symantec Managed PKI)',
         description: 'DigiCert PKI Platform (formerly Symantec Managed PKI) provides a cloud-based enterprise solution for issuing and managing digital certificates used to enable strong authentication and encryption.'
