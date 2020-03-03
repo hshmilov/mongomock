@@ -65,7 +65,7 @@ class ToriihqAdapter(AdapterBase, Configurable):
             'items': [
                 {
                     'name': 'domain',
-                    'title': 'Toriihq Domain',
+                    'title': 'Torii Domain',
                     'type': 'string',
                     'default': TORIIHQ_DEFAULT_DOMAIN
                 },
