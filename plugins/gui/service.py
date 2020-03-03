@@ -518,6 +518,11 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin, 
                             'type': 'bool',
                         },
                         {
+                            'name': 'requireConnectionLabel',
+                            'title': 'Require Connection Label on each adapter connection',
+                            'type': 'bool',
+                        },
+                        {
                             'name': 'defaultColumnLimit',
                             'title': 'Number of values displayed in each column',
                             'type': 'string',
@@ -573,7 +578,8 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin, 
                         }
                     ],
                     'required': ['refreshRate', 'defaultNumOfEntitiesPerPage', 'singleAdapter', 'multiLine',
-                                 'defaultSort', 'autoQuery', 'exactSearch', 'defaultColumnLimit'],
+                                 'defaultSort', 'autoQuery', 'exactSearch', 'requireConnectionLabel',
+                                 'defaultColumnLimit'],
                     'name': SYSTEM_SETTINGS,
                     'title': 'System Settings',
                     'type': 'array'
@@ -763,6 +769,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin, 
                 'defaultSort': True,
                 'autoQuery': True,
                 'exactSearch': True,
+                'requireConnectionLabel': False,
                 ''
                 'defaultColumnLimit': 2,
                 'percentageThresholds': {

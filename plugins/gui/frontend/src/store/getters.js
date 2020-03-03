@@ -74,6 +74,12 @@ export const exactSearch = (state) => {
   return state.configuration.data.system.exactSearch;
 };
 
+export const REQUIRE_CONNECTION_LABEL = 'REQUIRE_CONNECTION_LABEL'
+export const requireConnectionLabel = (state) => {
+    if (!state.configuration || !state.configuration.data || !state.configuration.data.system) return false
+    return state.configuration.data.system.requireConnectionLabel
+}
+
 
 export const IS_EXPIRED = 'IS_EXPIRED';
 export const isExpired = (state) => state.expired.data && state.auth.currentUser.data.user_name !== '_axonius';

@@ -112,6 +112,7 @@
           v-model="serverModal.serverData"
           :schema="adapterSchema"
           :api-upload="uploadFileEndpoint"
+          :error="connectionLabelError"
           @submit="saveServer"
           @validate="validateServer"
         />
@@ -119,12 +120,15 @@
           <div>
             <label for="connectionLabel">
               Connection Label
-              <div class="hint">optional</div>
+              <div v-if="!requireConnectionLabel" class="hint">optional</div>
             </label>
             <input
               id="connectionLabel"
+              :class="{ 'error-border': showConnectionLabelBorder }"
               v-model="serverModal.connectionLabel"
               :maxlength="20"
+              @input="onConnectionLabelInput"
+              @blur="onConnectionLabelBlur"
             >
           </div>
           <x-instances-select
@@ -143,12 +147,12 @@
         >Cancel</x-button>
         <x-button
           id="test_reachability"
-          :disabled="!serverModal.valid"
+          :disabled="!serverModal.valid || !connectionLabelValid"
           @click="testServer"
         >Test Reachability</x-button>
         <x-button
           id="save_server"
-          :disabled="!serverModal.valid"
+          :disabled="!serverModal.valid || !connectionLabelValid"
           @click="saveServer"
         >Save and Connect</x-button>
       </template>
@@ -205,6 +209,7 @@ import {
   SAVE_ADAPTER_CLIENT,
   TEST_ADAPTER_SERVER,
 } from '../../store/modules/adapters';
+import { REQUIRE_CONNECTION_LABEL } from '../../store/getters';
 import { SAVE_PLUGIN_CONFIG } from '../../store/modules/settings';
 import { xInstancesSelect } from '../axons/inputs/dynamicSelects';
 
@@ -235,6 +240,8 @@ export default {
         uuid: null,
         valid: false,
       },
+      connectionLabelError: '',
+      showConnectionLabelBorder: false,
       selectedServers: [],
       message: '',
       toastTimeout: 60000,
@@ -246,7 +253,12 @@ export default {
     };
   },
   computed: {
-    ...mapGetters(['getAdapterById', 'getClientsMap', 'getInstancesMap']),
+    ...mapGetters({
+      getAdapterById: 'getAdapterById',
+      getClientsMap: 'getClientsMap',
+      getInstancesMap: 'getInstancesMap',
+      requireConnectionLabel: REQUIRE_CONNECTION_LABEL,
+    }),
     ...mapState({
       loading(state) {
         return state.adapters.adapters.fetching;
@@ -261,6 +273,9 @@ export default {
       },
       isCyberarkVault(state) {
         return _get(state, 'configuration.data.global.cyberark_vault', false);
+      },
+      connectionLabelValid() {
+        return !this.requireConnectionLabel || this.serverModal.connectionLabel;
       },
     }),
     selectedServersModel: {
@@ -414,6 +429,20 @@ export default {
     },
     validateServer(valid) {
       this.serverModal.valid = valid;
+
+      if (!valid) {
+        this.connectionLabelError = '';
+      }
+    },
+    onConnectionLabelInput() {
+      if (this.requireConnectionLabel && this.serverModal.connectionLabel) {
+        this.showConnectionLabelBorder = false;
+        this.connectionLabelError = '';
+      }
+    },
+    onConnectionLabelBlur() {
+      this.showConnectionLabelBorder = !this.connectionLabelValid;
+      this.connectionLabelError = this.connectionLabelValid ? '' : 'Connection Label is required';
     },
     saveServer() {
       this.message = 'Connecting to Server...';
@@ -679,5 +708,8 @@ export default {
       }
     }
 
+    #connectionLabel.error-border {
+      border: 1px solid $indicator-error;
+    }
   }
 </style>
