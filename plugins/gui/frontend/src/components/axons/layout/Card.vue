@@ -1,7 +1,7 @@
 <template>
   <div class="x-card">
     <div class="header">
-      <div class="title">
+      <div class="header__title">
         <x-button
           v-if="reversible"
           link
@@ -100,7 +100,7 @@
         border-radius: 2px;
         border: 2px solid transparent;
 
-        &.card__item > .title {
+        &.card__item > .header__title {
             border: 1px solid transparent;
             .card-title {
                 display: flex;
@@ -135,10 +135,9 @@
 
         .header {
           display: flex;
-          justify-content: space-between;
           padding: 12px;
 
-            > .title {
+            > .header__title {
               display: flex;
               flex: 1;
               overflow: hidden;
@@ -175,7 +174,7 @@
           }
           .actions {
             display: flex;
-            line-height: 20px;
+            align-items: center;
             .x-button {
               height: 20px;
               padding: 0;
