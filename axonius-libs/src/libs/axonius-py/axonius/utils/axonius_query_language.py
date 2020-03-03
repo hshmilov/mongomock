@@ -119,12 +119,17 @@ def fix_adapter_data(find, include_outdated: bool):
     datas = [(k, v) for k, v in find.items() if k.startswith(prefix)]
     if datas:
         for k, v in datas:
+            adapters_query_count = None
             # k will look like "adapters_data.markadapter.something"
             _, adapter_name, *field_path = k.split('.')
             field_path = 'data.' + '.'.join(field_path)
-
-            adapters_query = convert_many_queries_to_elemmatch_for_adapters([(field_path, v)], adapter_name,
-                                                                            include_outdated)
+            if field_path == 'data.adapter_count':
+                adapters_query = {'$exists': 1}
+                adapters_query_count = process_adapter_count_filter(adapter_name, v)
+                include_outdated = False
+            else:
+                adapters_query = convert_many_queries_to_elemmatch_for_adapters([(field_path, v)], adapter_name,
+                                                                                include_outdated)
             tags_query = convert_many_queries_to_elemmatch_for_adapters([(field_path, v)], adapter_name,
                                                                         include_outdated)
             tags_query['$elemMatch']['$and'].append({
@@ -141,6 +146,11 @@ def fix_adapter_data(find, include_outdated: bool):
                     }
                 ]
             }
+            if adapters_query_count is not None:
+                elem_match.get('$or')[0] = {
+                    'adapters': adapters_query,
+                    '$where': adapters_query_count,
+                }
             find.update(elem_match)
 
         for k, _ in datas:
@@ -386,6 +396,28 @@ def parse_filter(filter_str: str, history_date=None) -> dict:
     if filter_str and 'NOW' in filter_str:
         return dict(parse_filter_uncached(filter_str, history_date))
     return dict(parse_filter_cached(filter_str, history_date))
+
+
+def process_adapter_count_filter(adapter_name, condition):
+    if isinstance(condition, int):
+        condition = f'count == {condition}'
+    elif condition.get('$gt', None) is not None:
+        condition = f'count > {condition.get("$gt")}'
+    elif condition.get('$lt', None) is not None:
+        condition = f'count < {condition.get("$lt")}'
+    elif condition.get('$exists', None) is not None:
+        condition = f'count > 0'
+    elif condition.get('$in', None) is not None:
+        condition = f'{str(condition.get("$in"))}.includes(count)'
+
+    return f'''
+            function() {{
+                count = 0;
+                this.adapters.forEach(adapter => {{
+                    if (adapter.plugin_name == '{adapter_name}') count++;
+                }});
+                return {condition};
+            }}'''
 
 
 def process_filter(filter_str, history_date):

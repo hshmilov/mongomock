@@ -193,7 +193,7 @@ class EntitiesPage(Page):
 
     FIELD_UPDATED_BY = 'Updated By'
     FIELD_LAST_UPDATED = 'Last Updated'
-    FIELD_ADAPTERS = 'Adapters'
+    FIELD_ADAPTERS = 'Total Adapter Connections'
     FIELD_TAGS = 'Tags'
 
     QUERY_MODAL_OVERLAY = '.v-overlay'
@@ -397,6 +397,7 @@ class EntitiesPage(Page):
         How many entities are in the current table?
         :return:
         """
+        time.sleep(2)
         wait_until(lambda: 'loading' not in self.get_raw_count_entities(table_count_css))
         match_count = re.search(r'\((\d+)\)', self.get_raw_count_entities(table_count_css))
         assert match_count and len(match_count.groups()) == 1
@@ -726,7 +727,7 @@ class EntitiesPage(Page):
                                         data_position=col_position)))
 
     def get_column_data_adapter_names(self):
-        col_position = self.count_sort_column('Adapters')
+        col_position = self.count_sort_column('Total Adapter Connections')
         return [el.get_attribute('alt') for el in
                 self.find_elements_by_xpath(self.TABLE_DATA_IMG_XPATH.format(data_position=col_position))
                 if el.get_attribute('alt')]

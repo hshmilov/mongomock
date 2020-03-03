@@ -140,7 +140,8 @@ export default {
       }
       const fieldDisplayed = (field) => this.viewFields.includes(field.name);
       const fieldSearched = (field) => this.isFieldInSearch(field, this.search.stock);
-      return fieldSchema.fields.filter((field) => !fieldDisplayed(field) && fieldSearched(field));
+      const fieldExcluded = (field) => this.excludedFields.includes(field.name);
+      return fieldSchema.fields.filter((field) => !fieldDisplayed(field) && fieldSearched(field) && !fieldExcluded(field));
     },
     viewFieldsSchema() {
       const { schemaByName } = this;
@@ -169,6 +170,7 @@ export default {
   data() {
     return {
       viewFields: [],
+      excludedFields: ['adapter_list_length'],
       select: {
         stock: [],
         view: [],

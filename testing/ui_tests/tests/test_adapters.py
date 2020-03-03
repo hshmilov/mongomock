@@ -1,17 +1,22 @@
+import pytest
 from flaky import flaky
+from selenium.common.exceptions import NoSuchElementException
 
 from axonius.utils.parsing import normalize_adapter_device, NORMALIZED_HOSTNAME, \
     ips_do_not_contradict_or_mac_intersection
 from axonius.consts.plugin_consts import PLUGIN_NAME
+from services.adapters.carbonblack_defense_service import CarbonblackDefenseService
 from services.adapters.csv_service import CsvService
 from services.adapters.esx_service import EsxService
 from services.adapters.nexpose_service import NexposeService
 from test_credentials.test_esx_credentials import client_details as esx_client_details
+from test_credentials.test_carbonblack_defense_credentials import client_details as carbonblack_defence_client_details
 from test_credentials.test_nexpose_credentials import client_details as nexpose_client_details
 from test_credentials.test_csv_credentials import \
     client_details as csv_client_details, USERS_CLIENT_FILES
 from ui_tests.tests.ui_test_base import TestBase
 
+AD_NAME = 'Microsoft Active Directory (AD)'
 CSV_ADAPTER_QUERY = 'adapters_data.csv_adapter.id == exists(true)'
 CSV_FILE_NAME = 'file_path'  # Changed by Alex A on Jan 27 2020 - because schema changed
 CSV_INPUT_ID = 'file_path'  # Changed by Alex A on Jan 27 2020 - because schema changed
@@ -28,6 +33,8 @@ EXPECTED_ADAPTER_LIST_LABELS = [
 
 
 ESX_NAME = 'VMware ESXi'
+CARBONBLACKDEFENCE_NAME = 'Carbon Black CB Defense'
+CARBONBLACKDEFENCE_PLUGIN_NAME = 'carbonblack_defense_adapter'
 ESX_PLUGIN_NAME = 'esx_adapter'
 
 NEXPOSE_NAME = 'Rapid7 Nexpose'
@@ -212,3 +219,52 @@ class TestAdapters(TestBase):
             self.adapters_page.click_new_server()
         else:
             self.adapters_page.click_edit_server(row_position - 1)
+
+    def test_adapters_count(self):
+        self.adapters_page.switch_to_page()
+        service = CarbonblackDefenseService()
+        try:
+            with service.contextmanager(take_ownership=True):
+                self.adapters_page.wait_for_adapter(CARBONBLACKDEFENCE_NAME)
+                self.adapters_page.click_adapter(CARBONBLACKDEFENCE_NAME)
+                self.adapters_page.wait_for_spinner_to_end()
+                self.adapters_page.wait_for_table_to_load()
+                self.adapters_page.click_new_server()
+                self.adapters_page.fill_creds(**carbonblack_defence_client_details)
+                self.adapters_page.click_save()
+                self.adapters_page.wait_for_spinner_to_end()
+
+                self.base_page.run_discovery()
+
+                query = '((adapters_data.carbonblack_defense_adapter.adapter_count == ({"$exists":true,"$ne":null})))'
+                self.devices_page.switch_to_page()
+                self.devices_page.run_filter_query(query)
+                assert self.devices_page.count_entities() > 0
+                query = '(adapters_data.carbonblack_defense_adapter.adapter_count > 1)'
+                self.devices_page.run_filter_query(query)
+                assert self.devices_page.count_entities() > 0
+                query = '(adapters_data.carbonblack_defense_adapter.adapter_count > 10)'
+                self.devices_page.run_filter_query(query)
+                assert self.devices_page.count_entities() == 0
+        finally:
+            self.adapters_page.switch_to_page()
+            self.adapters_page.clean_adapter_servers(CARBONBLACKDEFENCE_NAME, True)
+
+    def test_query_wizard_dynamic_and_blacklist_fields(self):
+        self.base_page.run_discovery()
+        self.devices_page.switch_to_page()
+        self.devices_page.click_query_wizard()
+        self.devices_page.select_query_adapter(AD_NAME)
+        self.devices_page.select_query_field(self.devices_page.FIELD_DISTINCT_ADAPTERS)
+        self.devices_page.click_search()
+        self.devices_page.wait_for_table_to_load()
+        assert self.devices_page.count_entities() > 0
+        self.devices_page.reset_query()
+        self.devices_page.click_query_wizard()
+        self.devices_page.select_query_field(self.devices_page.FIELD_DISTINCT_ADAPTERS)
+        self.devices_page.click_search()
+        self.devices_page.wait_for_table_to_load()
+        assert self.devices_page.count_entities() > 0
+        with pytest.raises(NoSuchElementException) as exception_info:
+            self.devices_page.select_custom_data_field(self.devices_page.FIELD_ADAPTERS)
+        assert exception_info.match('Message: no such element:.*')

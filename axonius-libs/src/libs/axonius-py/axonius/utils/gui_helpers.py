@@ -457,18 +457,38 @@ def get_historized_filter(entities_filter, history_date: datetime):
     return entities_filter
 
 
+def is_adapter_count_query(query):
+    if '$where' in query:
+        return True
+    if isinstance(query, str):
+        return False
+    for k, v in query.items():
+        # pylint: disable=no-else-return
+        if isinstance(v, dict):
+            return is_adapter_count_query(v)
+        elif isinstance(v, list):
+            for list_item in v:
+                return is_adapter_count_query(list_item)
+    return False
+# pylint: disable=no-else-return
+
+
 def get_entities_count(entities_filter, entity_collection, history_date: datetime = None, quick: bool = False):
     """
     Count total number of devices answering given mongo_filter.
     If 'quick' is True, then will only count until 1000.
     """
     processed_filter = get_historized_filter(entities_filter, history_date)
-
-    if quick:
+    is_adapter_count = is_adapter_count_query(processed_filter)
+    if quick and is_adapter_count:
+        return entity_collection.count(processed_filter, limit=1000)
+    elif quick and not is_adapter_count:
         return entity_collection.count_documents(processed_filter, limit=1000)
 
     if not processed_filter:
         return entity_collection.estimated_document_count()
+    elif is_adapter_count:
+        return entity_collection.count(processed_filter)
     return entity_collection.count_documents(processed_filter)
 
 
@@ -871,7 +891,7 @@ def entity_fields(entity_type: EntityType):
 
     adapters_json = {
         'name': 'adapters',
-        'title': 'Adapters',
+        'title': 'Total Adapter Connections',
         'type': 'array',
         'format': 'discrete',
         'items': {
@@ -881,6 +901,13 @@ def entity_fields(entity_type: EntityType):
         },
         'sort': True,
         'unique': True
+    }
+
+    unique_adapters_json = {
+        'name': 'adapter_list_length',
+        'title': 'Distinct Adapter Connections',
+        'type': 'number',
+        'sort': True
     }
 
     axon_id_json = {
@@ -906,7 +933,7 @@ def entity_fields(entity_type: EntityType):
         }
     }
 
-    generic_in_fields = [adapters_json, axon_id_json] \
+    generic_in_fields = [adapters_json, unique_adapters_json, axon_id_json] \
         + flatten_fields(generic_fields, 'specific_data.data', ['scanner'])\
         + [tags_json]
     fields = {
@@ -958,6 +985,14 @@ def entity_fields(entity_type: EntityType):
                  in plugin_fields_record['schema'].get('items', [])
                  if x['name'] not in exclude_specific_schema]
         specific_items = flatten_fields(plugin_fields_record['schema'], f'adapters_data.{plugin_name}', ['scanner'])
+
+        # Adding adapter_count field to each adapter
+        specific_items.append({
+            'name': f'adapters_data.{plugin_name}.adapter_count',
+            'title': 'Distinct Adapter Connections',
+            'type': 'number',
+        })
+
         if items or specific_items:
             fields['schema']['specific'][plugin_name] = {
                 'type': plugin_fields_record['schema']['type'],
