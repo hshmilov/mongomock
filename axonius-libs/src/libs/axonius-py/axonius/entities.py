@@ -294,8 +294,8 @@ class AxoniusDevice(AxoniusEntity):
     An axonius device, as a db representation.
     """
 
-    def __init__(self, plugin_base, entity_in_db):
-        super().__init__(plugin_base, EntityType.Devices, entity_in_db)
+    def __init__(self, plugin_base, entity_in_db, lazy=False):
+        super().__init__(plugin_base, EntityType.Devices, entity_in_db, lazy=lazy)
 
 
 class AxoniusUser(AxoniusEntity):
@@ -303,8 +303,8 @@ class AxoniusUser(AxoniusEntity):
     An axonius user, as a db representation.
     """
 
-    def __init__(self, plugin_base, entity_in_db):
-        super().__init__(plugin_base, EntityType.Users, entity_in_db)
+    def __init__(self, plugin_base, entity_in_db, lazy=False):
+        super().__init__(plugin_base, EntityType.Users, entity_in_db, lazy=lazy)
 
 
 AXONIUS_ENTITY_BY_CLASS = {

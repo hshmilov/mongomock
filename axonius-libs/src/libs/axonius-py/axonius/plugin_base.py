@@ -2889,7 +2889,19 @@ class PluginBase(Configurable, Feature, ABC):
         self._vault_settings = config['vault_settings']
         self._aws_s3_settings = config.get('aws_s3_settings') or {}
 
+        self._socket_recv_timeout = DEFAULT_SOCKET_RECV_TIMEOUT
+        self._socket_read_timeout = DEFAULT_SOCKET_READ_TIMEOUT
+        try:
+            socket_read_timeout = int(config[AGGREGATION_SETTINGS].get(SOCKET_READ_TIMEOUT))
+            if socket_read_timeout > 0:
+                self._socket_read_timeout = socket_read_timeout
+        except Exception:
+            logger.exception(f'Could not set socket read timout')
+        self._configured_session_timeout = (self._socket_read_timeout, self._socket_recv_timeout)
+
         if self._vault_settings['enabled'] is True:
+            # Cyberark vault settings have to come after self._configured_session_timeout has been configured
+            # because it uses it
             self._cyberark_vault = CyberArkVaultConnection(self._vault_settings['domain'],
                                                            self._vault_settings['port'],
                                                            self._vault_settings['application_id'],
@@ -2904,16 +2916,6 @@ class PluginBase(Configurable, Feature, ABC):
                 self._aggregation_max_workers = max_workers
         except Exception:
             pass
-
-        self._socket_recv_timeout = DEFAULT_SOCKET_RECV_TIMEOUT
-        self._socket_read_timeout = DEFAULT_SOCKET_READ_TIMEOUT
-        try:
-            socket_read_timeout = int(config[AGGREGATION_SETTINGS].get(SOCKET_READ_TIMEOUT))
-            if socket_read_timeout > 0:
-                self._socket_read_timeout = socket_read_timeout
-        except Exception:
-            logger.exception(f'Could not set socket read timout')
-        self._configured_session_timeout = (self._socket_read_timeout, self._socket_recv_timeout)
 
         current_syslog = getattr(self, '_syslog_settings', None)
         if current_syslog != config['syslog_settings']:

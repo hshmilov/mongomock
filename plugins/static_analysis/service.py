@@ -28,6 +28,7 @@ from static_analysis.consts import AnalysisTypes, JOB_NAMES
 logger = logging.getLogger(f'axonius.{__name__}')
 
 NVD_DB_UPDATE_HOURS = 12  # amount of hours after of which we update the db, if possible
+LIST_OF_DEFAULT_USERS = ['', 'n/a', 'none', 'guest', 'administrator', 'admin', 'unknown']
 
 
 def _get_id_and_associated_adapter(adapter_device) -> Tuple[str, object]:
@@ -524,7 +525,7 @@ class StaticAnalysisService(Triggerable, PluginBase):
                     return value
         return None
 
-    def __get_users_by_identifier(self, username, is_domain_required=True) -> List[AxoniusUser]:
+    def __get_users_by_identifier(self, username, is_domain_required=False) -> List[AxoniusUser]:
         """
         Gets a username. tries to find it by id, then by username/domain if possible, then only by username.
         :param username:
@@ -532,6 +533,9 @@ class StaticAnalysisService(Triggerable, PluginBase):
                                    This is important when dealing with local users. guest@PC-1 != guest@PC-2
         :return:
         """
+
+        username = username.replace('"', '')
+
         llu_username = username
         llu_domain = None
         try:
@@ -556,15 +560,15 @@ class StaticAnalysisService(Triggerable, PluginBase):
                 f'and specific_data.data.domain == regex("^{llu_domain}$", "i")', lazy=True
             ))
 
+        if not users:
+            users = list(self.users.get(
+                axonius_query_language=f'specific_data.data.mail == regex("^{username}$", "i")', lazy=True
+            ))
+
         if not users and not is_domain_required:
             # On last resort, search only by username
             users = list(self.users.get(
                 axonius_query_language=f'specific_data.data.username == regex("^{llu_username}$", "i")', lazy=True
-            ))
-
-        if not users:
-            users = list(self.users.get(
-                axonius_query_language=f'specific_data.data.mail == regex("^{username}$", "i")', lazy=True
             ))
 
         return users
@@ -582,7 +586,8 @@ class StaticAnalysisService(Triggerable, PluginBase):
         devices_with_users_association = self.devices_db.find(
             parse_filter(
                 'specific_data.data.users == exists(true) or specific_data.data.last_used_users == exists(true) or '
-                'adapters_data.azure_ad_adapter.user_principal_name == ({"$exists":true,"$ne":""})'),
+                'adapters_data.azure_ad_adapter.user_principal_name == ({"$exists":true,"$ne":""}) or '
+                'adapters_data.data.email == ({"$exists":true,"$ne":""})'),
             batch_size=10
         )
 
@@ -644,6 +649,8 @@ class StaticAnalysisService(Triggerable, PluginBase):
             for d in all_device_data:
                 if isinstance(d['data'], dict) and isinstance(d['data'].get('user_principal_name'), str):
                     sd_last_used_users_list.append([d['data']['user_principal_name']])
+                if isinstance(d['data'], dict) and isinstance(d['data'].get('email'), str):
+                    sd_last_used_users_list.append([d['data']['email']])
 
             for sd_last_used_users in sd_last_used_users_list:
                 for sd_last_used_user in sd_last_used_users:
@@ -662,7 +669,7 @@ class StaticAnalysisService(Triggerable, PluginBase):
 
         # 2. Go over all users. whatever we don't have, and should be created, we must create first.
         for username, username_data in users.copy().items():
-            user = self.__get_users_by_identifier(username, is_domain_required=True)
+            user = self.__get_users_by_identifier(username)
             if len(user) == 0 and username_data['should_create_if_not_exists']:
                 # user does not exists, create it.
                 user_dict = self._new_user_adapter()
@@ -691,12 +698,13 @@ class StaticAnalysisService(Triggerable, PluginBase):
             number_of_associated_devices = 0
 
             # Find that user. It should be in the view new.
-            user = self.__get_users_by_identifier(username, is_domain_required=True)
+            user = self.__get_users_by_identifier(username)
 
             # Do we have it? or do we need to create it?
             if len(user) > 1:
                 # Can't be! how can we have a user with the same id? should have been correlated.
-                logger.warning(f'Found a couple of users (expected one) with same id: {username} -> {user}')
+                if str(username).lower() not in LIST_OF_DEFAULT_USERS:
+                    logger.warning(f'Found a couple of users (expected one) with same id: {username} -> {user}')
                 continue
             elif len(user) == 0:
                 logger.error(f'User {username} should have been created in the view but is not there! Continuing')
@@ -786,7 +794,8 @@ class StaticAnalysisService(Triggerable, PluginBase):
         devices_with_last_used_users = self.devices_db.find(
             parse_filter(
                 '((adapters_data.azure_ad_adapter.user_principal_name == ({"$exists":true,"$ne":""}))) '
-                'or ((specific_data.data.last_used_users == ({"$exists":true,"$ne":""})))'
+                'or ((specific_data.data.last_used_users == ({"$exists":true,"$ne":""}))) '
+                'or (adapters_data.data.email == ({"$exists":true,"$ne":""}))'
             ),
             batch_size=10
         )
@@ -812,6 +821,13 @@ class StaticAnalysisService(Triggerable, PluginBase):
                     upn_name = \
                         self.__try_convert_username_prefix_to_username_upn(user_principal_name)
                     device_last_used_users_set.add(upn_name)
+
+                device_email = (device_adapter_data.get('data') or {}).get('email')
+                if device_email:
+                    upn_name = \
+                        self.__try_convert_username_prefix_to_username_upn(device_email)
+                    device_last_used_users_set.add(upn_name)
+
                 jamf_location = (device_adapter_data.get('data') or {}).get('jamf_location')
                 if isinstance(jamf_location, dict):
                     jamf_email = jamf_location.get('email_address')
@@ -834,6 +850,9 @@ class StaticAnalysisService(Triggerable, PluginBase):
                     user = self.__get_users_by_identifier(last_used_user)
 
                     if len(user) > 0:
+                        if len(user) > 1 and str(last_used_user).lower() in LIST_OF_DEFAULT_USERS:
+                            # Ignore 'default' users as they are probably incorrect
+                            continue
                         user_department = None
                         ad_display_name = None
                         for one_user in user:
