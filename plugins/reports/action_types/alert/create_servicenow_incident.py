@@ -114,6 +114,7 @@ class ServiceNowIncidentAction(ActionTypeAlert):
             ],
             'required': [
                 'use_adapter',
+                'verify_ssl',
                 'description_default',
                 'incident_description',
                 'description_default',

@@ -100,7 +100,7 @@ class SplunkAdapter(AdapterBase, Configurable):
                 },
                 {
                     'name': 'scheme',
-                    'title': 'HTTP Scheme',
+                    'title': 'Protocol',
                     'type': 'string',
                     'enum': ['http', 'https'],
                     'default': 'https'
@@ -124,7 +124,8 @@ class SplunkAdapter(AdapterBase, Configurable):
             ],
             "required": [
                 "host",
-                "port"
+                "port",
+                'scheme'
             ],
             "type": "array"
         }
@@ -428,7 +429,7 @@ class SplunkAdapter(AdapterBase, Configurable):
                 },
                 {
                     'name': 'splunk_sw_macros_list',
-                    'title': 'Splunk Installed Software search macros list',
+                    'title': 'Splunk installed software search macros list',
                     'type': 'string'
                 },
                 {

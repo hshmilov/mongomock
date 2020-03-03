@@ -126,7 +126,7 @@ class ChefAdapter(AdapterBase):
                 {"name": CLIENT, "title": "Client", "type": "string"},
                 {  # if false, it will allow for invalid SSL certificates (but still uses HTTPS)
                     "name": SSL_VERIFY,
-                    "title": "Verify SSL Certificate",
+                    "title": "Verify SSL",
                     "type": "bool",
                     "default": False,
                 },

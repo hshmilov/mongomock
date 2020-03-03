@@ -6,6 +6,7 @@ export const pluginMeta = {
     },
     digicert_pki_platform_adapter: {
         title: 'DigiCert PKI Platform (Symantec Managed PKI)',
+        link: 'https://docs.axonius.com/docs/digicert-pki-platform',
         description: 'DigiCert PKI Platform (formerly Symantec Managed PKI) provides a cloud-based enterprise solution for issuing and managing digital certificates used to enable strong authentication and encryption.'
     },
     json_adapter: {
@@ -528,7 +529,7 @@ export const pluginMeta = {
     },
     logrhythm_adapter: {
         title: 'LogRhythm',
-        link: '',
+        link: 'https://docs.axonius.com/docs/logrhythm',
         description: 'LogRhythm combines SIEM, user and entity behavior analytics, network traffic and behavior analytics, and security automation and orchestration.'
     },
     twistlock_adapter: {
@@ -998,7 +999,7 @@ export const pluginMeta = {
     },
     observeit_adapter: {
         title: 'ObserveIT',
-        link: '',
+        link: 'https://docs.axonius.com/docs/observeit',
         description: 'ObserveIT provides insider threat security solutions, including employee monitoring, user activity monitoring, behavioral analytics, policy enforcement, and digital forensics.'
     },
     blackberry_uem_adapter: {

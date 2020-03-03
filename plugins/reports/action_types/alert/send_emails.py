@@ -104,7 +104,9 @@ class SendEmailsAction(ActionTypeAlert):
                 }
             ],
             'required': [
-                'emailList'
+                'emailList',
+                'sendDeviceCSV',
+                'sendDevicesChangesCSV'
             ],
             'type': 'array'
         }

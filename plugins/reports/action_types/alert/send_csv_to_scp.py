@@ -26,7 +26,7 @@ class SendCsvToScp(ActionTypeAlert):
                           {'name': PORT, 'title': 'SSH port',
                            'type': 'integer',
                            'description': 'Protocol port'},
-                          {'name': UPLOAD_PATH_NAME, 'title': 'CSV Target Path', 'type': 'string'}],
+                          {'name': UPLOAD_PATH_NAME, 'title': 'CSV target path', 'type': 'string'}],
                 'required': [USERNAME, PASSWORD, HOSTNAME, PORT, UPLOAD_PATH_NAME],
                 'type': 'array'}
 
