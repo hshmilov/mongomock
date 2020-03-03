@@ -1,10 +1,14 @@
 import _get from 'lodash/get';
 import _isEmpty from 'lodash/isEmpty';
-import { pluginMeta } from '../constants/plugin_meta.js';
+import { pluginMeta } from '../constants/plugin_meta';
 import { isObjectListField } from '../constants/utils';
 
+const selectFields = (schema, objectView) => (objectView
+  ? schema.filter(isObjectListField)
+  : schema);
+
 export const GET_MODULE_SCHEMA = 'GET_MODULE_SCHEMA';
-export const getModuleSchema = (state) => (module, objectView) => {
+export const getModuleSchema = (state) => (module, objectView = false, filterPlugins = false) => {
   const fields = _get(state[module], 'fields.data');
   if (_isEmpty(fields) || _isEmpty(fields.generic) || (objectView && _isEmpty(fields.schema))) {
     return [];
@@ -13,12 +17,15 @@ export const getModuleSchema = (state) => (module, objectView) => {
     const title = pluginMeta[name] ? pluginMeta[name].title : name;
     return { title, name };
   });
-  return [{
+  const aggregated = {
     name: 'axonius',
     title: 'Aggregated',
     fields: selectFields(fields.generic, objectView),
-    plugins,
-  }, ...plugins.map((plugin) => ({
+  };
+  if (filterPlugins) {
+    aggregated.plugins = plugins;
+  }
+  const sortedPluginFields = plugins.map((plugin) => ({
     ...plugin,
     fields: selectFields(fields.specific[plugin.name], objectView),
   })).sort((first, second) => {
@@ -28,12 +35,9 @@ export const getModuleSchema = (state) => (module, objectView) => {
     if (firstText < secondText) return -1;
     if (firstText > secondText) return 1;
     return 0;
-  })];
+  });
+  return [aggregated, ...sortedPluginFields];
 };
-
-const selectFields = (schema, objectView) => (objectView
-  ? schema.filter(isObjectListField)
-  : schema);
 
 export const GET_DATA_SCHEMA_LIST = 'GET_DATA_SCHEMA_LIST';
 export const getDataSchemaList = (state) => (module) => {

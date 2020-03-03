@@ -60,7 +60,7 @@ export default {
       return this.condition.children;
     },
     schema() {
-      return this.getModuleSchema(this.module, true);
+      return this.getModuleSchema(this.module, true, true);
     },
     schemaByName() {
       return this.schema.reduce((map, item) => ({

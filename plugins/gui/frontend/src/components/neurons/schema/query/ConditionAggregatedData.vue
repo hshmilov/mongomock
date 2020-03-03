@@ -60,7 +60,7 @@ export default {
       return this.condition.field;
     },
     schema() {
-      const schema = this.getModuleSchema(this.module);
+      const schema = this.getModuleSchema(this.module, false, true);
       if (_isEmpty(schema)) {
         return [];
       }
