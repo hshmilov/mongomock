@@ -111,7 +111,7 @@ class ObserveitAdapter(AdapterBase, Configurable):
                     os_type = int(device_raw.get('OSType') or device_raw.get('OperatingSystemType'))
                     device.figure_os(consts.OS_TYPES_DICT[os_type])
                 except Exception:
-                    logger.exception(f'Problem getting os of {device_raw}')
+                    logger.debug(f'Problem getting os of {device_raw}')
                 domain = device_raw.get('SrvCurrentDomainName')
                 if domain and domain.endswith('.local'):
                     domain = domain[:-len('.local')]

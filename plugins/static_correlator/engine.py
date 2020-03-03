@@ -122,6 +122,18 @@ def get_resource_id(adapter_device):
     return adapter_device['data'].get('resource_id')
 
 
+def get_agent_uuid(adapter_device):
+    if not adapter_device.get('plugin_name') == 'tenable_io_adapter':
+        return None
+    return adapter_device['data'].get('agent_uuid')
+
+
+def compare_agent_uuids(adapter_device1, adapter_device2):
+    if not get_agent_uuid(adapter_device1) or not get_agent_uuid(adapter_device2):
+        return False
+    return get_agent_uuid(adapter_device1) == get_agent_uuid(adapter_device2)
+
+
 def get_sccm_server(adapter_device):
     return adapter_device['data'].get('sccm_server')
 
@@ -911,6 +923,17 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
                                       {'Reason': 'They have the same resource ID plus SCCM SERVER'},
                                       CorrelationReason.StaticAnalysis)
 
+    def _correlate_agent_uuid(self, adapters_to_correlate):
+        logger.info('Starting to correlate Agent UUID')
+        filtered_adapters_list = filter(get_agent_uuid, adapters_to_correlate)
+        return self._bucket_correlate(list(filtered_adapters_list),
+                                      [get_agent_uuid],
+                                      [compare_agent_uuids],
+                                      [],
+                                      [],
+                                      {'Reason': 'They have the same Agent UUID'},
+                                      CorrelationReason.StaticAnalysis)
+
     def _raw_correlate(self, entities):
         # WARNING WARNING WARNING
         # Adding or changing any type of correlation here might require changing the appropriate logic
@@ -983,6 +1006,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
         yield from self._correlate_uuid(adapters_to_correlate)
         yield from self._correlate_scep_sccm(adapters_to_correlate)
         yield from self._correlate_deep_aws_id(adapters_to_correlate)
+        yield from self._correlate_agent_uuid(adapters_to_correlate)
         # Disable route53 correlation, because this usually correlates many instances of the same ELB
         # and we don't want these kind of correlations - they are not the same host.
         #

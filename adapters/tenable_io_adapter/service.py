@@ -33,6 +33,7 @@ class TenableIoAdapter(ScannerAdapterBase, Configurable):
         last_scanned = Field(datetime.datetime, 'Last Scanned')
         linked_on = Field(datetime.datetime, 'Linked On')
         last_scan_time = Field(datetime.datetime, 'Last Scan Time')
+        agent_uuid = Field(str, 'Agent UUID')
 
         def add_tenable_vuln(self, **kwargs):
             self.plugin_and_severities.append(TenableVulnerability(**kwargs))
@@ -197,6 +198,7 @@ class TenableIoAdapter(ScannerAdapterBase, Configurable):
         device.id = device_id
         device.has_agent = bool(device_raw.get('has_agent'))
         device.last_seen = parse_date(device_raw.get('last_seen'))
+        device.agent_uuid = device_raw.get('agent_uuid')
         last_scan_time = parse_date(device_raw.get('last_scan_time'))
         if self.__exclude_no_last_scan and not last_scan_time:
             return None
@@ -350,9 +352,11 @@ class TenableIoAdapter(ScannerAdapterBase, Configurable):
 
             device.has_agent = True
             device.status = agent_raw.get('status')
+            device.agent_uuid = agent_raw.get('uuid')
             device.add_agent_version(agent=AGENT_NAMES.tenable_io, version=agent_raw.get('core_version'))
             device.adapter_properties = [AdapterProperty.Agent.name,
-                                         AdapterProperty.Vulnerability_Assessment.name]
+                                         AdapterProperty.Vulnerability_Assessment.name,
+                                         AdapterProperty.Endpoint_Protection_Platform.name]
             device.set_raw(agent_raw)
             return device
         except Exception:
