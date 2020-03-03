@@ -192,6 +192,11 @@ DASHBOARD_LIFECYCLE_ENDPOINT = 'dashboard/lifecycle'
 
 LAST_UPDATED_FIELD = 'last_updated'
 UPDATED_BY_FIELD = 'updated_by'
+PREFERRED_FIELDS = ('specific_data.data.hostname_preferred',
+                    'specific_data.data.os.type_preferred',
+                    'specific_data.data.os.distribution_preferred',
+                    'specific_data.data.network_interfaces.mac_preferred',
+                    'specific_data.data.network_interfaces.ips_preferred')
 
 #########################
 # Common Values #
@@ -200,4 +205,6 @@ UPDATED_BY_FIELD = 'updated_by'
 PREDEFINED_FIELD = 'predefined'
 PREDEFINED_PLACEHOLDER = 'Predefined'
 JSONIFY_DEFAULT_TIME_FORMAT = '%a, %d %b %Y %H:%M:%S GMT'
+MAX_DAYS_SINCE_LAST_SEEN = 60
 FILE_NAME_TIMESTAMP_FORMAT = '%Y-%m-%dT%H-%M-%SUTC'
+SPECIFIC_DATA_PREFIX_LENGTH = len('specific_data.data.')

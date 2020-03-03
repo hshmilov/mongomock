@@ -296,3 +296,16 @@ class TestDevicesTable(TestEntitiesTable):
         self.devices_page.assert_csv_field_with_search('')
         self.devices_page.assert_csv_field_with_search('06:80:99:50:D3:5E')
         self.devices_page.assert_csv_field_with_search('search text that will definitely have no results')
+
+    def test_devices_preferred_fields(self):
+        self.settings_page.switch_to_page()
+        self.base_page.run_discovery()
+        self.devices_page.switch_to_page()
+        self.devices_page.wait_for_table_to_load()
+        view_data = self.devices_page.get_all_data()
+        self.devices_page.edit_columns(add_col_names=[self.devices_page.FIELD_ADAPTER_TAGS])
+        self.devices_page.wait_for_table_to_load()
+        assert self.devices_page.get_all_data() == view_data
+        self.devices_page.edit_columns(add_col_names=self.devices_page.PREFERRED_FIELDS)
+        self.devices_page.wait_for_table_to_load()
+        assert not self.devices_page.get_all_data() == view_data

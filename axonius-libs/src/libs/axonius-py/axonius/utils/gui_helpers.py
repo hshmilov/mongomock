@@ -20,7 +20,8 @@ import pymongo
 from bson import ObjectId
 from flask import request, session, g
 
-from axonius.consts.gui_consts import SPECIFIC_DATA, ADAPTERS_DATA, JSONIFY_DEFAULT_TIME_FORMAT
+from axonius.consts.gui_consts import SPECIFIC_DATA, ADAPTERS_DATA, JSONIFY_DEFAULT_TIME_FORMAT, PREFERRED_FIELDS, \
+    MAX_DAYS_SINCE_LAST_SEEN, SPECIFIC_DATA_PREFIX_LENGTH
 from axonius.entities import EntitiesNamespace
 
 from axonius.consts.plugin_consts import (ADAPTERS_LIST_LENGTH, PLUGIN_NAME,
@@ -28,7 +29,7 @@ from axonius.consts.plugin_consts import (ADAPTERS_LIST_LENGTH, PLUGIN_NAME,
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.plugin_base import EntityType, add_rule, return_error, PluginBase
 from axonius.users.user_adapter import UserAdapter
-from axonius.utils.axonius_query_language import parse_filter, parse_filter_non_entities
+from axonius.utils.axonius_query_language import parse_filter, parse_filter_non_entities, PREFERRED_SUFFIX
 from axonius.utils.revving_cache import rev_cached_entity_type
 from axonius.utils.threading import singlethreaded
 from axonius.utils.dict_utils import is_filter_in_value
@@ -492,8 +493,8 @@ def get_entities_count(entities_filter, entity_collection, history_date: datetim
     return entity_collection.count_documents(processed_filter)
 
 
-# pylint: disable=too-many-return-statements,too-many-branches
-def find_entity_field(entity_data, field_path, skip_unique=False):
+# pylint: disable=too-many-return-statements,too-many-branches,too-many-statements
+def find_entity_field(entity_data, field_path, skip_unique=False, specific_adapter=None):
     """
     Recursively expand given entity, following period separated properties of given field_path,
     until reaching the requested value
@@ -558,6 +559,16 @@ def find_entity_field(entity_data, field_path, skip_unique=False):
     if entity_data is None:
         # Return no value for this path
         return ''
+
+    if specific_adapter is not None and specific_adapter in entity_data['adapters_data']:
+        try:
+            # As far as i checked every adapter return only 1 value thats why the hard-code 0 index...
+            return entity_data['adapters_data'][specific_adapter][0][field_path], \
+                entity_data['adapters_data'][specific_adapter][0]['last_seen']
+        except Exception:
+            return None, None
+    elif specific_adapter is not None:
+        return None, None
 
     if not field_path or isinstance(entity_data, str):
         # Return value corresponding with given path
@@ -653,10 +664,13 @@ def parse_entity_fields(entity_data, fields, include_details=False, field_filter
         return None
 
     field_to_value = {}
+
     if include_details:
         adapter_datas = [item for value in sorted(set(entity_data['adapters']))
                          for item in entity_data['adapters_data'][value]]
     for field_path in fields:
+        if field_path in PREFERRED_FIELDS:
+            continue
         val = find_entity_field(entity_data, field_path)
         if val is not None and (not isinstance(val, (str, list)) or len(val)):
             if field_filters and field_filters.get(field_path):
@@ -671,6 +685,117 @@ def parse_entity_fields(entity_data, fields, include_details=False, field_filter
         generic_field = _extract_name(field_path)
         field_to_value[f'{field_path}_details'] = [find_entity_field(data, generic_field) if generic_field else ''
                                                    for data in adapter_datas]
+
+    # The next block handles columns with _preferred suffix
+    # The priority order is according to here https://axonius.atlassian.net/browse/AX-6238
+    # pylint: disable=too-many-nested-blocks
+    for preferred_field in PREFERRED_FIELDS:
+        if preferred_field not in fields:
+            continue
+        else:
+            specific_property = preferred_field[SPECIFIC_DATA_PREFIX_LENGTH:].replace(PREFERRED_SUFFIX, '')
+            if specific_property.find('.') != -1:
+                specific_property, sub_property = specific_property.split('.')
+            else:
+                sub_property = None
+            val, last_seen, sub_property_val = '', datetime(1970, 1, 1, 0, 0, 0), None
+
+        try:
+            # First priority is the latest seen Agent adapter
+            for adapter in entity_data['adapters_data']:
+                if not adapter.endswith('_adapter'):
+                    continue
+                _adapter = entity_data['adapters_data'][adapter][0]
+                if 'Agent' in _adapter['adapter_properties'] and 'last_seen' in _adapter \
+                        and _adapter['last_seen'] > last_seen:
+                    if specific_property in _adapter and \
+                            isinstance(sub_property, str) and \
+                            sub_property in _adapter[specific_property]:
+                        val = _adapter[specific_property][sub_property]
+                    elif specific_property in _adapter and not isinstance(sub_property, str):
+                        val = _adapter[specific_property]
+                    else:
+                        val = ''
+                    if val != '':
+                        last_seen = _adapter['last_seen']
+
+            # Second priority is active-directory data
+            if (val != '' and last_seen is not None and
+                    (datetime.now() - last_seen).days > MAX_DAYS_SINCE_LAST_SEEN) or \
+                    (last_seen is None and val == ''):
+                val, last_seen = find_entity_field(entity_data,
+                                                   specific_property,
+                                                   specific_adapter='active_directory_adapter')
+                if val is not None and sub_property is not None:
+                    try:
+                        sub_property_val = val[sub_property] if isinstance(val, dict) else \
+                            [x[sub_property] for x in val if sub_property in x]
+                    # Field not in result
+                    except Exception:
+                        sub_property_val = None
+                if val is not None and isinstance(sub_property, str) and \
+                   (sub_property_val is not None and sub_property_val != []):
+                    val = sub_property_val
+                elif val is None or (val is not None and isinstance(sub_property, str)) and \
+                                    (sub_property_val is None or sub_property_val == []):
+                    val = ''
+                if val == '':
+                    last_seen = datetime(1970, 1, 1, 0, 0, 0)
+
+            # Third priority is the latest seen Assets adapter
+            if (val != '' and last_seen != datetime(1970, 1, 1, 0, 0, 0) and
+                    (datetime.now() - last_seen).days > MAX_DAYS_SINCE_LAST_SEEN) or \
+                    (last_seen == datetime(1970, 1, 1, 0, 0, 0) and val == ''):
+                if last_seen is None:
+                    last_seen = datetime(1970, 1, 1, 0, 0, 0)
+                if 'Assets' in _adapter['adapter_properties'] and 'last_seen' in _adapter \
+                        and _adapter['last_seen'] > last_seen:
+                    if sub_property is not None and specific_property in _adapter:
+                        try:
+                            sub_property_val = _adapter[specific_property][sub_property] if \
+                                isinstance(_adapter[specific_property], dict) else \
+                                [x[sub_property] for x in _adapter[specific_property] if sub_property in x]
+                        # Field not in result
+                        except Exception:
+                            sub_property_val = None
+                    if specific_property in _adapter and (sub_property_val != [] and sub_property_val is not None):
+                        val = sub_property_val
+                    elif specific_property in _adapter and not isinstance(sub_property, str):
+                        val = _adapter[specific_property]
+                    else:
+                        val = ''
+                    if val != '':
+                        last_seen = _adapter['last_seen']
+
+            # Forth priority is the latest seen adapter
+            if (val != '' and last_seen != datetime(1970, 1, 1, 0, 0, 0) and
+                    (datetime.now() - last_seen).days > MAX_DAYS_SINCE_LAST_SEEN) or \
+                    (last_seen == datetime(1970, 1, 1, 0, 0, 0) and val == ''):
+                for adapter in entity_data['adapters_data']:
+                    if not adapter.endswith('_adapter'):
+                        continue
+                    _adapter = entity_data['adapters_data'][adapter][0]
+                    if 'last_seen' in _adapter and _adapter['last_seen'] > last_seen:
+                        if specific_property in _adapter and \
+                                isinstance(sub_property, str) and \
+                                sub_property in _adapter[specific_property]:
+                            val = _adapter[specific_property][sub_property]
+                        elif specific_property in _adapter and not isinstance(sub_property, str):
+                            val = _adapter[specific_property]
+                        else:
+                            val = ''
+                        if val != '':
+                            last_seen = _adapter['last_seen']
+            if isinstance(val, list) and isinstance(val[0], list):
+                field_to_value[preferred_field] = val[0]
+            elif isinstance(val, list):
+                field_to_value[preferred_field] = val
+            else:
+                field_to_value[preferred_field] = [val]
+        except Exception as e:
+            logger.error(f'Problem in merging preferred fields: {e}')
+            continue
+
     # in case the entity has meta data added like client_used
     if not include_details:
         return field_to_value
@@ -933,9 +1058,37 @@ def entity_fields(entity_type: EntityType):
         }
     }
 
+    preferred_json = [
+        {
+            'name': 'specific_data.data.hostname_preferred',
+            'title': 'Preferred Host Name',
+            'type': 'string'
+        },
+        {
+            'name': 'specific_data.data.os.type_preferred',
+            'title': 'Preferred OS Type',
+            'type': 'string'
+        },
+        {
+            'name': 'specific_data.data.os.distribution_preferred',
+            'title': 'Preferred OS Distribution',
+            'type': 'string'
+        },
+        {
+            'name': 'specific_data.data.network_interfaces.mac_preferred',
+            'title': 'Preferred MAC Address',
+            'type': 'string'
+        },
+        {
+            'name': 'specific_data.data.network_interfaces.ips_preferred',
+            'title': 'Preferred IPs',
+            'type': 'string'
+        }
+    ]
+
     generic_in_fields = [adapters_json, unique_adapters_json, axon_id_json] \
         + flatten_fields(generic_fields, 'specific_data.data', ['scanner'])\
-        + [tags_json]
+        + [tags_json] + preferred_json
     fields = {
         'schema': {
             'generic': generic_fields,

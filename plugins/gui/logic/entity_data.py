@@ -115,6 +115,35 @@ def get_entity_data(entity_type: EntityType, entity_id, history_date: datetime =
 
     # Separate simple fields and those defined to be formatted as a Table
     generic_fields = get_generic_fields(entity_type)
+    custom_fields = [
+        {
+            'name': 'hostname_preferred',
+            'title': 'Preferred Host Name',
+            'type': 'string'
+        },
+        {
+            'name': 'os.type_preferred',
+            'title': 'Preferred OS Type',
+            'type': 'string'
+        },
+        {
+            'name': 'os.distribution_preferred',
+            'title': 'Preferred OS Distribution',
+            'type': 'string'
+        },
+        {
+            'name': 'network_interfaces.mac_preferred',
+            'title': 'Preferred MAC Address',
+            'type': 'string'
+        },
+        {
+            'name': 'network_interfaces.ips_preferred',
+            'title': 'Preferred IPs',
+            'type': 'string'
+        }
+    ]
+    # pylint: disable=W0106
+    [generic_fields['items'].append(x) for x in custom_fields if x not in generic_fields['items']]
     advanced_data = []
     basic_fields = []
     for schema in generic_fields['items']:

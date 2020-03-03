@@ -67,7 +67,9 @@
         if (!this.fieldType) {
           return this.options[0].fields
         }
-        return this.options.find(item => item.name === this.fieldType).fields
+        // Filter '_preferred' fields because theyre not in the mongo but calculated dynamiclly
+        let fields = this.options.find(item => item.name === this.fieldType).fields
+        return fields.filter(item => item.name.indexOf("_preferred") === -1)
       },
       firstType () {
         if (!this.options || !this.options.length) return 'axonius'

@@ -39,6 +39,8 @@ class Devices:
         if request.method == 'DELETE':
             return self._delete_entities_by_internal_axon_id(
                 EntityType.Devices, self.get_request_data_as_object(), mongo_filter)
+        # Filter all _preferred fields because they're calculated dynamically, instead filter by original values
+        mongo_sort = {x.replace('_preferred', ''): mongo_sort[x] for x in mongo_sort}
         self._save_query_to_history(EntityType.Devices, mongo_filter, skip, limit, mongo_sort, mongo_projection)
         iterable = get_entities(limit, skip, mongo_filter, mongo_sort, mongo_projection,
                                 EntityType.Devices,

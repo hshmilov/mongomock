@@ -47,6 +47,7 @@ class DevicesPage(EntitiesPage):
     FIELD_PORT_ACCESS_PORT_TYPE = 'Port Access: Port Type'
     FIELD_PART_OF_DOMAIN = 'Part Of Domain'
     FIELD_TAGS = 'Tags'
+    FIELD_ADAPTER_TAGS = 'Adapter Tags'
     FIELD_ADAPTERS = 'Total Adapter Connections'
     FIELD_DISTINCT_ADAPTERS = 'Distinct Adapter Connections'
     FIELD_LAST_SEEN = 'Last Seen'
@@ -60,6 +61,8 @@ class DevicesPage(EntitiesPage):
     FIELD_INSTALLED_SOFTWARE_NAME = 'Name'
     FIELD_INSTALLED_SOFTWARE_VERSION = 'Version'
     FIELD_FIREWALL_RULES_FROM_PORT = 'Firewall Rules: From port'
+    PREFERRED_FIELDS = ['Preferred Host Name', 'Preferred OS Type', 'Preferred OS Distribution',
+                        'Preferred MAC Address', 'Preferred IPs']
     VALUE_OS_WINDOWS = 'Windows'
     TAG_MODAL_CSS = '.x-tag-modal'
     TAG_CHECKBOX_CSS = f'{TAG_MODAL_CSS} .v-list .v-input--checkbox'
