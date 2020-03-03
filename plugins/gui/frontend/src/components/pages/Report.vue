@@ -1,18 +1,23 @@
 <template>
-  <x-page
+  <XPage
     class="x-report"
     :breadcrumbs="[
       { title: 'reports', path: { name: 'Reports'}},
       { title: name }]"
   >
-    <x-box>
-      <div v-if="loading" class="v-spinner-bg" />
-      <pulse-loader
+    <XBox>
+      <div
+        v-if="loading"
+        class="v-spinner-bg"
+      />
+      <PulseLoader
         :loading="loading"
         color="#FF7D46"
       />
       <div class="page-content main">
-        <div class="report-title">The report will be generated as a PDF file, every Discovery Cycle<span v-if="isLatestReport">, {{ lastGenerated }}</span></div>
+        <div class="report-title">
+          The report will be generated as a PDF file, every Discovery Cycle<span v-if="isLatestReport">, {{ lastGenerated }}</span>
+        </div>
         <div class="item">
           <label class="report-name-label">Report name</label>
           <input
@@ -31,10 +36,12 @@
             class="report-name-textbox"
           >
         </div>
-        <h5 class="inner-title">Report Configuration</h5>
+        <h5 class="inner-title">
+          Report Configuration
+        </h5>
         <div>Select the data to include in the report</div>
         <div class="inner-content">
-          <x-checkbox
+          <XCheckbox
             v-model="report.include_dashboard"
             value="IncludeDashboard"
             :read-only="isReadOnly"
@@ -45,7 +52,7 @@
             v-if="report.include_dashboard"
             class="dashboard-spaces"
           >
-            <x-array-edit
+            <XArrayEdit
               ref="spaces_ref"
               v-model="report.spaces"
               :schema="spacesSchema"
@@ -53,7 +60,7 @@
               placeholder="Select spaces (or empty for all)"
             />
           </div>
-          <x-checkbox
+          <XCheckbox
             v-model="report.include_saved_views"
             value="IncludeSavedViews"
             :read-only="isReadOnly"
@@ -66,7 +73,7 @@
             class="item"
           >
             <div class="saved-queries">
-              <x-checkbox
+              <XCheckbox
                 v-if="report.add_scheduling"
                 v-model="report.send_csv_attachments"
                 value="IncludeCsv"
@@ -79,7 +86,7 @@
                 :key="i"
               >
                 <div class="saved-query">
-                  <x-select-symbol
+                  <XSelectSymbol
                     v-model="report.views[i].entity"
                     :options="entityOptions"
                     type="icon"
@@ -88,7 +95,7 @@
                     minimal
                     @input="onEntityChange($event, i)"
                   />
-                  <x-select
+                  <XSelect
                     v-model="report.views[i].name"
                     :options="viewOptions(i)"
                     searchable
@@ -97,26 +104,26 @@
                     class="query-name"
                     @input="onQueryNameChange($event, i)"
                   />
-                  <x-button
+                  <XButton
                     link
                     class="query-remove"
                     :disabled="isReadOnly"
                     @click="() => removeQuery(i)"
-                  >x</x-button>
+                  >x</XButton>
                 </div>
               </div>
-              <x-button
+              <XButton
                 light
                 class="query-add"
                 :disabled="isReadOnly"
                 @click="addQuery"
-              >+</x-button>
+              >+</XButton>
             </div>
           </div>
         </div>
         <div class="item">
           <div class="header">
-            <x-checkbox
+            <XCheckbox
               v-model="report.add_scheduling"
               :read-only="isReadOnly"
               value="AddScheduling"
@@ -130,20 +137,20 @@
           </div>
           <div class="email-description">Scheduled email with the report attached will be sent</div>
           <div class="inner-content schedule">
-            <x-array-edit
+            <XArrayEdit
               v-if="report.add_scheduling"
+              ref="mail_ref"
               v-model="report.mail_properties"
               :schema="mailSchema"
               :read-only="isReadOnly"
               @validate="onValidate"
-              ref="mail_ref"
             />
             <div
               v-if="report.add_scheduling"
               id="report_frequency"
             >
               <h4 class="email-title">Email Recurrence</h4>
-              <x-recurrence
+              <XRecurrence
                 v-model="report"
                 :read-only="readOnly"
                 @validate="validateSendTime"
@@ -158,13 +165,13 @@
           {{ error }}
         </div>
         <div>
-          <x-button
+          <XButton
             v-if="!hideTestNow"
             id="test-report"
             inverse
             @click="runNow"
-          >Send Email</x-button>
-          <x-button
+          >Send Email</XButton>
+          <XButton
             v-if="!hideDownloadNow"
             id="reports_download"
             inverse-emphasize
@@ -173,522 +180,516 @@
           >
             <template v-if="downloading">DOWNLOADING...</template>
             <template v-else>Download Report</template>
-          </x-button>
-          <x-button
+          </XButton>
+          <XButton
             id="report_save"
             :disabled="!valid"
             @click="saveExit"
-          >Save</x-button>
+          >Save</XButton>
         </div>
       </div>
-    </x-box>
-  </x-page>
+    </XBox>
+  </XPage>
 </template>
 
 <script>
-  import Vue from 'vue'
-  import xPage from '../axons/layout/Page.vue'
-  import xBox from '../axons/layout/Box.vue'
-  import xButton from '../axons/inputs/Button.vue'
-  import xCheckbox from '../axons/inputs/Checkbox.vue'
-  import xSelectSymbol from '../neurons/inputs/SelectSymbol.vue'
-  import xSelect from '../axons/inputs/select/Select.vue'
-  import xRecurrence from '../axons/inputs/Recurrence.vue'
-  import viewsMixin from '../../mixins/views'
-  import xArrayEdit from '../neurons/schema/types/array/ArrayEdit.vue'
-  import configMixin from '../../mixins/config'
-  import PulseLoader from 'vue-spinner/src/PulseLoader.vue'
-  import {SHOW_TOASTER_MESSAGE, REMOVE_TOASTER} from '../../store/mutations'
-  import {weekDays, monthDays} from '../../constants/utils'
+import Vue from 'vue';
+import PulseLoader from 'vue-spinner/src/PulseLoader.vue';
+import { mapState, mapMutations, mapActions } from 'vuex';
+import XPage from '../axons/layout/Page.vue';
+import XBox from '../axons/layout/Box.vue';
+import XButton from '../axons/inputs/Button.vue';
+import XCheckbox from '../axons/inputs/Checkbox.vue';
+import XSelectSymbol from '../neurons/inputs/SelectSymbol.vue';
+import XSelect from '../axons/inputs/select/Select.vue';
+import XRecurrence from '../axons/inputs/Recurrence.vue';
+import viewsMixin from '../../mixins/views';
+import XArrayEdit from '../neurons/schema/types/array/ArrayEdit.vue';
+import configMixin from '../../mixins/config';
+import { SHOW_TOASTER_MESSAGE, REMOVE_TOASTER } from '../../store/mutations';
+import { weekDays, monthDays } from '../../constants/utils';
 
-  import { mapState, mapMutations, mapActions } from 'vuex'
-  import {
-    FETCH_REPORT, SAVE_REPORT, RUN_REPORT, DOWNLOAD_REPORT
-  } from '../../store/modules/reports'
-  import { FETCH_DASHBOARD_SPACES } from '../../store/modules/dashboard'
-  import { SET_GETTING_STARTED_MILESTONE_COMPLETION } from '../../store/modules/onboarding';
-  import { REPORT_GENERATED } from '../../constants/getting-started'
+import {
+  FETCH_REPORT, SAVE_REPORT, RUN_REPORT, DOWNLOAD_REPORT,
+} from '../../store/modules/reports';
+import { FETCH_DASHBOARD_SPACES } from '../../store/modules/dashboard';
+import { SET_GETTING_STARTED_MILESTONE_COMPLETION } from '../../store/modules/onboarding';
+import { REPORT_GENERATED } from '../../constants/getting-started';
 
-  export default {
-    name: 'XReport',
-    components: {xPage, xBox, xButton, xSelect, xCheckbox, xSelectSymbol, xArrayEdit, PulseLoader, xRecurrence },
-    mixins: [viewsMixin, configMixin],
-    props: {
-      readOnly: Boolean
+export default {
+  name: 'XReport',
+  components: {
+    XPage, XBox, XButton, XSelect, XCheckbox, XSelectSymbol, XArrayEdit, PulseLoader, XRecurrence,
+  },
+  mixins: [viewsMixin, configMixin],
+  props: {
+    readOnly: Boolean,
+  },
+  data() {
+    return {
+      report: {
+        include_dashboard: false,
+        send_csv_attachments: true,
+        spaces: [],
+        include_saved_views: false,
+        views: [{ entity: '', name: '' }],
+        recipients: [],
+        add_scheduling: null,
+        period: 'daily',
+        period_config: {
+          week_day: 0,
+          monthly_day: 1,
+          send_time: '13:00',
+        },
+        mail_properties: {
+          mailSubject: '',
+          mailMessage: '',
+          emailList: [],
+          emailListCC: [],
+        },
+      },
+      downloading: false,
+      queryValidity: false,
+      scheduleValidity: false,
+      toastTimeout: 2500,
+      validity: {
+        fields: [], error: '',
+      },
+      lastGenerated: null,
+      canSendEmail: false,
+      isLatestReport: false,
+      loading: false,
+      timeModal: false,
+    };
+  },
+  computed: {
+
+    ...mapState({
+      reportData(state) {
+        return state.reports.current.data;
+      },
+      reportFetching(state) {
+        return state.reports.current.fetching;
+      },
+      isReadOnly(state) {
+        const user = state.auth.currentUser.data;
+        if (!user || !user.permissions) return true;
+        return user.permissions.Reports === 'ReadOnly';
+      },
+      disableDownloadReport() {
+        return this.downloading;
+      },
+      dashboardSpaces(state) {
+        const custom_spaces = state.dashboard.spaces.data.filter((space) => space.type === 'custom');
+        const default_space = state.dashboard.spaces.data.find((space) => space.type === 'default');
+        if (default_space) {
+          custom_spaces.unshift(default_space);
+        }
+        return custom_spaces.map((space) => ({ name: space.uuid, title: space.name }));
+      },
+    }),
+    id() {
+      return this.$route.params.id;
     },
-    data () {
-      return {
-        report: {
-          include_dashboard: false,
-          send_csv_attachments: true,
-          spaces: [],
-          include_saved_views: false,
-          views: [{ entity: '', name: '' }],
-          recipients: [],
-          add_scheduling: null,
-          period: 'daily',
-          period_config: {
-            week_day: 0,
-            monthly_day: 1,
-            send_time: '13:00',
-          },
-          mail_properties: {
-            mailSubject: '',
-            mailMessage: '',
-            emailList: [],
-            emailListCC: []
-          }
-        },
-        downloading: false,
-        queryValidity: false,
-        scheduleValidity: false,
-        toastTimeout: 2500,
-        validity: {
-          fields: [], error: ''
-        },
-        lastGenerated: null,
-        canSendEmail: false,
-        isLatestReport: false,
-        loading: false,
-        timeModal: false
+    name() {
+      if (!this.reportData || !this.reportData.name) return 'New Report';
+
+      return this.reportData.name;
+    },
+    disableSave() {
+      return !this.report.name || !this.trigger || !this.trigger.view || !this.trigger.view.name || !this.mainAction.name;
+    },
+    hideTestNow() {
+      if (!this.report.last_generated) {
+        return true;
+      } if (!this.canSendEmail) {
+        return true;
       }
+      return false;
     },
-    computed: {
-
-      ...mapState({
-        reportData(state) {
-          return state.reports.current.data
-        },
-        reportFetching(state) {
-          return state.reports.current.fetching
-        },
-        isReadOnly(state) {
-          let user = state.auth.currentUser.data
-          if (!user || !user.permissions) return true
-          return user.permissions.Reports === 'ReadOnly'
-        },
-        disableDownloadReport() {
-          return this.downloading
-        },
-        dashboardSpaces(state) {
-          let custom_spaces = state.dashboard.spaces.data.filter(space => space.type === 'custom')
-          let default_space = state.dashboard.spaces.data.find(space => space.type === 'default')
-          if(default_space) {
-            custom_spaces.unshift(default_space)
-          }
-          return custom_spaces.map((space) => {
-              return {name: space.uuid, title: space.name}
-          })
+    hideDownloadNow() {
+      return !this.report.last_generated;
+    },
+    valid() {
+      if (this.isReadOnly) {
+        return false;
+      }
+      if (!this.report.name) {
+        return false;
+      }
+      if (!this.report.include_dashboard && !this.report.include_saved_views) {
+        return false;
+      }
+      if (this.report.include_saved_views) {
+        if (!this.queryValidity) {
+          return false;
         }
-      }),
-      id () {
-        return this.$route.params.id
-      },
-      name () {
-        if (!this.reportData || !this.reportData.name) return 'New Report'
-
-        return this.reportData.name
-      },
-      disableSave () {
-        return !this.report.name || !this.trigger || !this.trigger.view || !this.trigger.view.name || !this.mainAction.name
-      },
-      hideTestNow () {
-        if (!this.report.last_generated) {
-          return true
+      }
+      if (this.report.add_scheduling) {
+        if (this.validity.error) {
+          return false;
         }
-        else if (!this.canSendEmail) {
-          return true
+      }
+      return !this.validity.error;
+    },
+    error() {
+      if (!this.report.name) {
+        return 'Report Name is a required field';
+      }
+      if (!this.report.include_dashboard && !this.report.include_saved_views) {
+        return 'You must include the dashboard or "Saved Views"';
+      }
+      if (this.report.include_saved_views) {
+        if (!this.queryValidity) {
+          return 'Configuration for “include Saved Queries data” is invalid';
         }
-        return false
-      },
-      hideDownloadNow () {
-        return !this.report.last_generated
-      },
-      valid () {
-        if (this.isReadOnly) {
-          return false
-        }
-        if (!this.report.name) {
-          return false
-        }
-        if (!this.report.include_dashboard && !this.report.include_saved_views) {
-          return false
-        }
-        if (this.report.include_saved_views) {
-          if (!this.queryValidity) {
-            return false
-          }
-        }
-        if (this.report.add_scheduling) {
-          if (this.validity.error) {
-            return false
-          }
-        }
-        return !this.validity.error;
-      },
-      error () {
-        if (!this.report.name) {
-          return 'Report Name is a required field'
-        }
-        if (!this.report.include_dashboard && !this.report.include_saved_views) {
-          return 'You must include the dashboard or "Saved Views"'
-        }
-        if (this.report.include_saved_views) {
-          if (!this.queryValidity) {
-            return 'Configuration for “include Saved Queries data” is invalid'
-          }
-        }
-        if (this.report.add_scheduling) {
-          return this.validity.error
-        }
+      }
+      if (this.report.add_scheduling) {
         return this.validity.error;
-      },
-      spacesSchema(){
-        return {
-          name: 'spaces_config', title: 'Dashboard spaces:',
-          items: {
-            'title': '',
-            'name': 'uuid',
-            'type': 'string',
-            'enum': this.dashboardSpaces
+      }
+      return this.validity.error;
+    },
+    spacesSchema() {
+      return {
+        name: 'spaces_config',
+        title: 'Dashboard spaces:',
+        items: {
+          title: '',
+          name: 'uuid',
+          type: 'string',
+          enum: this.dashboardSpaces,
+        },
+        type: 'array',
+      };
+    },
+    mailSchema() {
+      return {
+        name: 'mail_config',
+        title: '',
+        items: [
+          {
+            name: 'mailSubject',
+            title: 'Subject',
+            type: 'string',
+            required: true,
           },
-          'type': 'array'
-        }
-      },
-      mailSchema () {
-        return {
-          name: 'mail_config', title: '',
-          items: [
-            {
-              'name': 'mailSubject',
-              'title': 'Subject',
-              'type': 'string',
-              'required': true
-            },
-              {
-                  'name': 'mailMessage',
-                  'title': 'Custom message (up to 200 characters)',
-                  'type': 'string',
-                  'format': 'text',
-                  'limit': 200,
-                  'required': false
-              },
-            {
-              'name': 'emailList',
-              'title': 'Recipients',
-              'type': 'array',
-              'items': {
-                'type': 'string',
-                'format': 'email'
-              },
-              'required': true
-            },
-            {
-              'name': 'emailListCC',
-              'title': 'Recipients CC',
-              'type': 'array',
-              'items': {
-                'type': 'string',
-                'format': 'email'
-              },
-              'required': false
-            }
-          ],
-          'required': [
-            'mailSubject', 'emailList'
-          ],
-          'type': 'array'
-        }
-      },
-      recurrence: {
-          get() {
-              return {
-                  period: this.report.period,
-                  period_config: this.report.period_config
-              }
+          {
+            name: 'mailMessage',
+            title: 'Custom message (up to 200 characters)',
+            type: 'string',
+            format: 'text',
+            limit: 200,
+            required: false,
           },
-          set(newValue) {
-              this.report.period = newValue.period
-              this.report.period_config = newValue.period_config
-              this.$forceUpdate()
-          }
-      }
+          {
+            name: 'emailList',
+            title: 'Recipients',
+            type: 'array',
+            items: {
+              type: 'string',
+              format: 'email',
+            },
+            required: true,
+          },
+          {
+            name: 'emailListCC',
+            title: 'Recipients CC',
+            type: 'array',
+            items: {
+              type: 'string',
+              format: 'email',
+            },
+            required: false,
+          },
+        ],
+        required: [
+          'mailSubject', 'emailList',
+        ],
+        type: 'array',
+      };
     },
-    created () {
-      this.loading = true
-      this.fetchDashboard().then( () => {
-        if (!this.reportFetching && (!this.reportData.uuid || this.reportData.uuid !== this.id)) {
-          this.loading = true
-          this.fetchReport(this.id).then(() => {
-            this.initData()
-            this.loading = false
-          })
-        } else {
-          this.initData()
-          this.loading = false
-        }
-      })
-
+    recurrence: {
+      get() {
+        return {
+          period: this.report.period,
+          period_config: this.report.period_config,
+        };
+      },
+      set(newValue) {
+        this.report.period = newValue.period;
+        this.report.period_config = newValue.period_config;
+        this.$forceUpdate();
+      },
     },
-    mounted () {
-      if (this.$refs.name) {
-        this.$refs.name.focus()
+  },
+  created() {
+    this.loading = true;
+    this.fetchDashboard().then(() => {
+      if (!this.reportFetching && (!this.reportData.uuid || this.reportData.uuid !== this.id)) {
+        this.loading = true;
+        this.fetchReport(this.id).then(() => {
+          this.initData();
+          this.loading = false;
+        });
+      } else {
+        this.initData();
+        this.loading = false;
       }
-    },
-    methods: {
-      ...mapMutations({
-        showToasterMessage: SHOW_TOASTER_MESSAGE,
-        removeToaster: REMOVE_TOASTER,
-      }),
-      ...mapActions({
-        fetchReport: FETCH_REPORT, saveReport: SAVE_REPORT,
-        runReport: RUN_REPORT, downloadReport: DOWNLOAD_REPORT,
-        fetchDashboard: FETCH_DASHBOARD_SPACES,
-        milestoneCompleted: SET_GETTING_STARTED_MILESTONE_COMPLETION,
-      }),
-      initData () {
-        if (this.reportData && this.reportData.name) {
-          this.report = this.reportData ? { ...this.reportData } : {}
-          if(this.report.views === undefined){
-                this.report.views = []
-          }
-          if (this.report.views.length === 0) {
-            this.report.views.push({ entity: '', name: '' })
-          }
-          if(!this.report.spaces){
-           this.report.spaces = []
-          }
-          if(!this.report.period_config){
-              this.report.period_config = {
-                  send_time: '08:00',
-                  week_day: weekDays[0].name,
-                  monthly_day: monthDays[0].name
-              }
-          }
-
-          if(!this.report.mail_properties.mailMessage){
-              this.report.mail_properties.mailMessage = ''
-          }
-
-          if(this.report.spaces.length > 0){
-            let validDashboardSpaces = this.dashboardSpaces.reduce((map, space) => {
-              map[space.name] = space.title;
-              return map;
-            }, {})
-            this.report.spaces = this.report.spaces.filter(space => validDashboardSpaces[space])
-            if(this.report.spaces.length === 0){
-              this.report.include_dashboard = false;
-            }
-          }
-          if (this.report.last_generated == null) {
-            this.isLatestReport = false
-          } else {
-            if(this.report.add_scheduling && this.report.mail_properties.emailList.length > 0){
-              this.canSendEmail = true;
-            }
-            let dateTime = new Date(this.report.last_generated)
-            if (!isNaN(dateTime.getDate())) {
-              dateTime.setMinutes(dateTime.getMinutes() - dateTime.getTimezoneOffset())
-              let dateParts = dateTime.toISOString().split('T')
-              dateParts[1] = dateParts[1].split('.')[0]
-              this.lastGenerated = 'Last generated: ' + dateParts.join(' ')
-              this.isLatestReport = true
-            } else {
-              this.isLatestReport = false
-            }
-          }
-
-        }
-        this.validateSavedQueries()
-      },
-      startDownload () {
-        if (this.disableDownloadReport) return
-        this.downloading = true
-        this.downloadReport( {reportId: this.id, name: this.report.name}).then(() => {
-          this.downloading = false
-        }).catch((error) => {
-          this.downloading = false
-          this.showToaster(error.response.data.message, this.toastTimeout)
-        })
-      },
-      onAddScheduling () {
-        let actionName = this.settingToActions.mail[0]
-        this.checkEmptySettings(actionName)
-        if (this.anyEmptySettings) {
-          this.report.add_scheduling = false
-          return
-        }
-        setTimeout(() => {
-          if (this.report.add_scheduling) {
-            this.$refs.mail_ref.validate()
-          } else {
-            this.removeEmailValidations();
-          }
-        })
-      },
-      toggleScheduling () {
-        if(this.isReadOnly){
-          return
-        }
-        this.report.add_scheduling = !this.report.add_scheduling
-        this.onAddScheduling()
-        this.$forceUpdate()
-      },
-      removeEmailValidations() {
-        let fieldsToRemove = []
-        this.validity.fields.forEach((field, index) => {
-          if (this.mailSchema.items.find((item) => item.name === field.name)) {
-            fieldsToRemove.push(index);
-          }
-        })
-        fieldsToRemove.forEach((fieldIndex, index) => {
-          if (this.validity.fields.length > 0) {
-            this.validity.fields.splice(fieldIndex - index, 1);
-          }
-        })
-        if (this.validity.fields.length === 0) {
-          this.validity.error = '';
-        } else {
-          this.validity.fields.forEach(field => {
-            this.onValidate(field)
-          })
-        }
-      },
-      runNow() {
-        let self = this
-        self.runReport(this.report).then(() => {
-          this.showToaster('Email is being sent', this.toastTimeout)
-          setTimeout(() => {
-            this.showToaster('Email sent successfully', this.toastTimeout)
-          })
-        }).catch((error) => {
-          this.validity.error = error.response.data.message
-        })
-
-      },
-      saveExit () {
-        this.showToaster('Saving the report...', this.toastTimeout)
-        this.saveReport(this.report).then(
-                () => {
-                  this.milestoneCompleted({ milestoneName: REPORT_GENERATED })
-                  this.showToaster('Report is saved and being generated in the background', this.toastTimeout)
-                  this.exit()
-                }
-        ).catch((error) => {
-          if (error.response.status === 400)
-            this.validity.fields.push('name')
-          this.validity.error = error.response.data
-          this.removeToaster()
-        })
-      },
-      exit () {
-        this.$router.push({ name: 'Reports' })
-      },
-      onEntityChange (name, index) {
-        Vue.set(this.report.views, index, { entity: name, name: '' })
-        this.$forceUpdate()
-        this.validateSavedQueries()
-      },
-      addQuery () {
-        this.report.views.push({ entity: '', name: '' })
-        this.$forceUpdate()
-        this.validateSavedQueries()
-      },
-      removeQuery (index) {
-        this.report.views.splice(index, 1)
-        this.$forceUpdate()
-        this.validateSavedQueries()
-
-      },
-      onQueryNameChange (name, index) {
-        Vue.set(this.report.views, index, { entity: this.report.views[index].entity, name: name })
-        this.$forceUpdate()
-        this.validateSavedQueries()
-
-      },
-      viewOptions (index) {
-        if (!this.views && !this.report.views[index].entity) return
-        let views = (this.report.views && this.report.views[index]) ? this.views[this.report.views[index].entity] : []
-        if (this.report.views && this.report.views > length > 0 && this.report.views[index].name && !views.some(view => view.name === this.report.views[index].name)) {
-          views.push({
-            name: this.report.view[index].name, title: `${this.report.views[0].name} (deleted)`
-          })
-        }
-        return views
-      },
-      onNameChanged(){
-        if(this.validity.error && this.validity.fields.length === 1 && this.validity.fields[0] === 'name'){
-          this.validity.error = ''
-          this.validity.fields.pop()
-        }
-      },
-      validateSavedQueries () {
-        let result = true
-        if (!this.report.include_saved_views) {
-          this.queryValidity = result
-          return
-        }
-        if (this.report.views && this.report.views.length === 0) {
-          result = false
-        }
-        this.report.views.forEach(view => {
-          if (!view.entity || !view.name) {
-            result = false
-          }
-        })
-        this.queryValidity = result
-      },
-      onValidate (field) {
-        let validityChanged = false
-        this.validity.fields = this.validity.fields.filter(x => x.name !== field.name)
-        if (!field.valid) {
-          this.validity.fields.push(field)
-        }
-        if (field.error) {
-          if (!this.validity.error) {
-            validityChanged = true
-          }
-          this.validity.error = field.error
-        } else {
-          let nextInvalidField = this.validity.fields.find(x => x.error)
-          let nextResult = nextInvalidField ? nextInvalidField.error : ''
-          if (nextResult !== this.validity.error) {
-            validityChanged = true
-          }
-          this.validity.error = nextResult
-        }
-        if (validityChanged) {
-          this.$forceUpdate()
-        }
-      },
-      showToaster(message, timeout = 2500){
-        this.showToasterMessage({message: message, timeout: timeout})
-
-      },
-      validateSendTime(isSendTimeValid){
-          const getTimePickerError = (i => i.field === 'send_time')
-          if(!isSendTimeValid){
-              // Add error the the validity fields if the time is invalid
-              this.validity.error = 'Send time is invalid'
-              let sendTimePickerError = this.validity.fields.find(getTimePickerError)
-              if(!sendTimePickerError){
-                  this.validity.fields.push({field: 'send_time', error: this.validity.error})
-              }
-          } else {
-              // If the send time is valid and there is an error than removed it
-              let sendTimeError = this.validity.fields.find(getTimePickerError)
-              if(sendTimeError){
-                  this.validity.fields = this.validity.fields.filter(error => {
-                      return error.field !== sendTimeError.field
-                  })
-                  if(this.validity.fields.length === 0){
-                      this.validity.error = ''
-                  }
-              }
-          }
-      }
+    });
+  },
+  mounted() {
+    if (this.$refs.name) {
+      this.$refs.name.focus();
     }
-  }
+  },
+  methods: {
+    ...mapMutations({
+      showToasterMessage: SHOW_TOASTER_MESSAGE,
+      removeToaster: REMOVE_TOASTER,
+    }),
+    ...mapActions({
+      fetchReport: FETCH_REPORT,
+      saveReport: SAVE_REPORT,
+      runReport: RUN_REPORT,
+      downloadReport: DOWNLOAD_REPORT,
+      fetchDashboard: FETCH_DASHBOARD_SPACES,
+      milestoneCompleted: SET_GETTING_STARTED_MILESTONE_COMPLETION,
+    }),
+    initData() {
+      if (this.reportData && this.reportData.name) {
+        this.report = this.reportData ? { ...this.reportData } : {};
+        if (this.report.views === undefined) {
+          this.report.views = [];
+        }
+        if (this.report.views.length === 0) {
+          this.report.views.push({ entity: '', name: '' });
+        }
+        if (!this.report.spaces) {
+          this.report.spaces = [];
+        }
+        if (!this.report.period_config) {
+          this.report.period_config = {
+            send_time: '08:00',
+            week_day: weekDays[0].name,
+            monthly_day: monthDays[0].name,
+          };
+        }
+
+        if (!this.report.mail_properties.mailMessage) {
+          this.report.mail_properties.mailMessage = '';
+        }
+
+        if (this.report.spaces.length > 0) {
+          const validDashboardSpaces = this.dashboardSpaces.reduce((map, space) => {
+            map[space.name] = space.title;
+            return map;
+          }, {});
+          this.report.spaces = this.report.spaces.filter((space) => validDashboardSpaces[space]);
+          if (this.report.spaces.length === 0) {
+            this.report.include_dashboard = false;
+          }
+        }
+        if (this.report.last_generated == null) {
+          this.isLatestReport = false;
+        } else {
+          if (this.report.add_scheduling && this.report.mail_properties.emailList.length > 0) {
+            this.canSendEmail = true;
+          }
+          const dateTime = new Date(this.report.last_generated);
+          if (!isNaN(dateTime.getDate())) {
+            dateTime.setMinutes(dateTime.getMinutes() - dateTime.getTimezoneOffset());
+            const dateParts = dateTime.toISOString().split('T');
+            dateParts[1] = dateParts[1].split('.')[0];
+            this.lastGenerated = `Last generated: ${dateParts.join(' ')}`;
+            this.isLatestReport = true;
+          } else {
+            this.isLatestReport = false;
+          }
+        }
+      }
+      this.validateSavedQueries();
+    },
+    startDownload() {
+      if (this.disableDownloadReport) return;
+      this.downloading = true;
+      this.downloadReport({ reportId: this.id, name: this.report.name }).then(() => {
+        this.downloading = false;
+      }).catch((error) => {
+        this.downloading = false;
+        this.showToaster(error.response.data.message, this.toastTimeout);
+      });
+    },
+    onAddScheduling() {
+      const actionName = this.settingToActions.mail[0];
+      this.checkEmptySettings(actionName);
+      if (this.anyEmptySettings) {
+        this.report.add_scheduling = false;
+        return;
+      }
+      setTimeout(() => {
+        if (this.report.add_scheduling) {
+          this.$refs.mail_ref.validate();
+        } else {
+          this.removeEmailValidations();
+        }
+      });
+    },
+    toggleScheduling() {
+      if (this.isReadOnly) {
+        return;
+      }
+      this.report.add_scheduling = !this.report.add_scheduling;
+      this.onAddScheduling();
+      this.$forceUpdate();
+    },
+    removeEmailValidations() {
+      const fieldsToRemove = [];
+      this.validity.fields.forEach((field, index) => {
+        if (this.mailSchema.items.find((item) => item.name === field.name)) {
+          fieldsToRemove.push(index);
+        }
+      });
+      fieldsToRemove.forEach((fieldIndex, index) => {
+        if (this.validity.fields.length > 0) {
+          this.validity.fields.splice(fieldIndex - index, 1);
+        }
+      });
+      if (this.validity.fields.length === 0) {
+        this.validity.error = '';
+      } else {
+        this.validity.fields.forEach((field) => {
+          this.onValidate(field);
+        });
+      }
+    },
+    runNow() {
+      const self = this;
+      self.runReport(this.report).then(() => {
+        this.showToaster('Email is being sent', this.toastTimeout);
+        setTimeout(() => {
+          this.showToaster('Email sent successfully', this.toastTimeout);
+        });
+      }).catch((error) => {
+        this.validity.error = error.response.data.message;
+      });
+    },
+    saveExit() {
+      this.showToaster('Saving the report...', this.toastTimeout);
+      this.saveReport(this.report).then(
+        () => {
+          this.milestoneCompleted({ milestoneName: REPORT_GENERATED });
+          this.showToaster('Report is saved and being generated in the background', this.toastTimeout);
+          this.exit();
+        },
+      ).catch((error) => {
+        if (error.response.status === 400) this.validity.fields.push('name');
+        this.validity.error = error.response.data;
+        this.removeToaster();
+      });
+    },
+    exit() {
+      this.$router.push({ name: 'Reports' });
+    },
+    onEntityChange(name, index) {
+      Vue.set(this.report.views, index, { entity: name, name: '' });
+      this.$forceUpdate();
+      this.validateSavedQueries();
+    },
+    addQuery() {
+      this.report.views.push({ entity: '', name: '' });
+      this.$forceUpdate();
+      this.validateSavedQueries();
+    },
+    removeQuery(index) {
+      this.report.views.splice(index, 1);
+      this.$forceUpdate();
+      this.validateSavedQueries();
+    },
+    onQueryNameChange(name, index) {
+      Vue.set(this.report.views, index, { entity: this.report.views[index].entity, name });
+      this.$forceUpdate();
+      this.validateSavedQueries();
+    },
+    viewOptions(index) {
+      if (!this.views && !this.report.views[index].entity) return;
+      const views = (this.report.views && this.report.views[index]) ? this.views[this.report.views[index].entity] : [];
+      if (this.report.views && this.report.views > length > 0 && this.report.views[index].name && !views.some((view) => view.name === this.report.views[index].name)) {
+        views.push({
+          name: this.report.view[index].name, title: `${this.report.views[0].name} (deleted)`,
+        });
+      }
+      return views;
+    },
+    onNameChanged() {
+      if (this.validity.error && this.validity.fields.length === 1 && this.validity.fields[0] === 'name') {
+        this.validity.error = '';
+        this.validity.fields.pop();
+      }
+    },
+    validateSavedQueries() {
+      let result = true;
+      if (!this.report.include_saved_views) {
+        this.queryValidity = result;
+        return;
+      }
+      if (this.report.views && this.report.views.length === 0) {
+        result = false;
+      }
+      this.report.views.forEach((view) => {
+        if (!view.entity || !view.name) {
+          result = false;
+        }
+      });
+      this.queryValidity = result;
+    },
+    onValidate(field) {
+      let validityChanged = false;
+      this.validity.fields = this.validity.fields.filter((x) => x.name !== field.name);
+      if (!field.valid) {
+        this.validity.fields.push(field);
+      }
+      if (field.error) {
+        if (!this.validity.error) {
+          validityChanged = true;
+        }
+        this.validity.error = field.error;
+      } else {
+        const nextInvalidField = this.validity.fields.find((x) => x.error);
+        const nextResult = nextInvalidField ? nextInvalidField.error : '';
+        if (nextResult !== this.validity.error) {
+          validityChanged = true;
+        }
+        this.validity.error = nextResult;
+      }
+      if (validityChanged) {
+        this.$forceUpdate();
+      }
+    },
+    showToaster(message, timeout = 2500) {
+      this.showToasterMessage({ message, timeout });
+    },
+    validateSendTime(isSendTimeValid) {
+      const getTimePickerError = ((i) => i.field === 'send_time');
+      if (!isSendTimeValid) {
+        // Add error the the validity fields if the time is invalid
+        this.validity.error = 'Send time is invalid';
+        const sendTimePickerError = this.validity.fields.find(getTimePickerError);
+        if (!sendTimePickerError) {
+          this.validity.fields.push({ field: 'send_time', error: this.validity.error });
+        }
+      } else {
+        // If the send time is valid and there is an error than removed it
+        const sendTimeError = this.validity.fields.find(getTimePickerError);
+        if (sendTimeError) {
+          this.validity.fields = this.validity.fields.filter((error) => error.field !== sendTimeError.field);
+          if (this.validity.fields.length === 0) {
+            this.validity.error = '';
+          }
+        }
+      }
+    },
+  },
+};
 </script>
 
 <style lang="scss">

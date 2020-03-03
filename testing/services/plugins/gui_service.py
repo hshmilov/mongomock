@@ -4,6 +4,7 @@ from collections import defaultdict
 import secrets
 import logging
 import re
+
 import requests
 from funcy import chunks
 from axonius.consts.gui_consts import (CONFIG_CONFIG, ROLES_COLLECTION, USERS_COLLECTION,
@@ -25,7 +26,7 @@ from axonius.consts.plugin_consts import (AGGREGATOR_PLUGIN_NAME,
                                           MAINTENANCE_TYPE,
                                           GUI_SYSTEM_CONFIG_COLLECTION,
                                           LIBS_PATH,
-                                          AXONIUS_USER_NAME)
+                                          AXONIUS_USER_NAME, REPORTS_CONFIG_COLLECTION)
 from axonius.entities import EntityType
 from axonius.utils.gui_helpers import PermissionLevel, PermissionType
 from axonius.utils.mongo_retries import mongo_retry
@@ -118,6 +119,8 @@ class GuiService(PluginService, UpdatablePluginMixin):
             self._update_schema_version_28()
         if self.db_schema_version < 29:
             self._update_schema_version_29()
+        if self.db_schema_version < 30:
+            self._update_schema_version_30()
 
     def _update_schema_version_1(self):
         print('upgrade to schema 1')
@@ -1025,6 +1028,71 @@ class GuiService(PluginService, UpdatablePluginMixin):
                     }
                 }])
             self.db_schema_version = 29
+        except Exception as e:
+            print(f'Exception while upgrading gui db to version 29. Details: {e}')
+
+    def _update_schema_version_30(self):
+        """
+        For 3.1 - Change reports (pdf) namings containing */:?\
+        :return:
+        """
+        print('Upgrade to schema 30')
+        try:
+            report_config_collection = self.db.get_collection(GUI_PLUGIN_NAME, REPORTS_CONFIG_COLLECTION)
+            reports_to_fix = report_config_collection.find(
+                {'name': {'$regex': '[*/:?\\]'}})
+            fixed = {}
+
+            # Creating a fix map
+            for report in reports_to_fix:
+                fixed[report['uuid']] = {'new_name': re.sub(r'[^\w@.\s-]', '-', report['name']),
+                                         'old_name': report['name']}
+
+            # Creating duplicates list
+            all_new_names = [current_report['new_name'] for current_report in fixed.values()]
+
+            # list of dup names and number of appearances (Notice the set comprehension).
+            all_duplicate_new_names = {current_report_name for current_report_name in all_new_names if
+                                       all_new_names.count(current_report_name) > 1}
+
+            # If there are duplicates
+            if len(all_duplicate_new_names) != 0:
+                # New dict key usages will default to 0.
+                usage_counter = defaultdict(int)
+                for current_report in fixed.values():
+                    current_report_new_name = current_report['new_name']
+                    # If current name is a duplicate.
+                    if current_report_new_name not in all_duplicate_new_names:
+                        continue
+
+                    # pylint: disable=pointless-statement
+                    usage_counter[current_report_new_name] += 1
+                    current_report[
+                        'new_name'] = f'{current_report_new_name} ({usage_counter[current_report_new_name]})'
+
+            for uuid, names in fixed.items():
+                # Fixing name in reports_config collection
+                update_result = report_config_collection.update_one({'uuid': uuid},
+                                                                    {'$set': {'name': names['new_name']}})
+
+                if update_result.modified_count != 1:
+                    logger.error('Had a problem updating the report name to remove special characters.')
+                    continue
+
+                # Fixing name in reports collection.
+                file_name_filter = {'filename': f'most_recent_{names["old_name"]}'}
+                file_name_update = {'$set': {'filename': f'most_recent_{names["new_name"]}'}}
+                update_result = self.db.get_collection(GUI_PLUGIN_NAME, 'reports').update_one(file_name_filter,
+                                                                                              file_name_update)
+
+                if update_result.modified_count != 1:
+                    logger.error('Had a problem updating the report name to remove special characters.')
+                    continue
+
+                # Fixing gridfs file.
+                self.db.get_collection(GUI_PLUGIN_NAME, 'fs.files').update_one(file_name_filter, file_name_update)
+
+            self.db_schema_version = 30
         except Exception as e:
             print(f'Exception while upgrading gui db to version 29. Details: {e}')
 

@@ -88,6 +88,7 @@ SOCKET_READ_TIMEOUT = 'socket_read_timeout'
 
 # COLLECTIONS #
 CONFIGURABLE_CONFIGS_COLLECTION = 'configurable_configs'
+REPORTS_CONFIG_COLLECTION = 'reports_config'
 VERSION_COLLECTION = 'version'
 GUI_SYSTEM_CONFIG_COLLECTION = 'system_config'
 MAINTENANCE_TYPE = 'maintenance'

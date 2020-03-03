@@ -64,7 +64,7 @@ class TestMetrics(TestBase):
 
             report = re.escape(metric_query)
 
-            self._create_report(metric_query)
+            self._create_report('metric_query')
 
             wait_until(lambda: tester.is_metric_in_log('query.report', report))
 
@@ -75,13 +75,13 @@ class TestMetrics(TestBase):
 
             wait_until(lambda: tester.is_metric_in_log(Query.QUERY_GUI, query_text))
 
-    def _create_report(self, metric_query):
+    def _create_report(self, report_name):
         self.reports_page.switch_to_page()
         self.reports_page.wait_for_table_to_load()
         self.reports_page.click_new_report()
         self.reports_page.click_add_scheduling()
         self.reports_page.find_missing_email_server_notification()
-        self.reports_page.fill_report_name(metric_query)
+        self.reports_page.fill_report_name(report_name)
         self.reports_page.click_include_dashboard()
         self.reports_page.click_include_queries()
         self.reports_page.select_saved_view(self.TEST_METRIC_QUERY_NAME)

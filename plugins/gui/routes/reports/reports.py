@@ -1,6 +1,7 @@
 import io
 import calendar
 import logging
+import re
 import threading
 from datetime import datetime, timedelta
 from typing import Tuple, List
@@ -99,6 +100,13 @@ class Reports:
             report_to_add = request.get_json()
             reports_collection = self.reports_config_collection
             report_name = report_to_add['name'] = report_to_add['name'].strip()
+
+            if re.match(r'^[\w@.\s-]*$', report_name) is None:
+                return f'Report name can only contain letters, numbers and the characters: @,_.-', 400
+
+            if len(report_name) > 50:
+                return 'Report name cannot exceed 50 characters.', 400
+
             report = reports_collection.find_one({
                 'name': report_name
             })
