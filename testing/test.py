@@ -416,7 +416,7 @@ def main():
     parser = argparse.ArgumentParser(usage='''
     Specific examples of using this script
     test run all -> runs all tests on this host.
-    test run all -d -> runs all tests on this host, distributed. This will run as much Axonius system as possible on 
+    test run all -d -> runs all tests on this host, distributed. This will run as much Axonius system as possible on
                         this host.
     test run parallel -p test_aws.py::test_fetch_devices -> runs this specific test.
     test run ut -p axonius-libs/tests/test_async.py -> runs this specific module.

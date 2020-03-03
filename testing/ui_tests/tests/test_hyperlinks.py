@@ -4,8 +4,9 @@ from axonius.utils.wait import wait_until
 from devops.scripts.automate_dev import credentials_inputer
 from services.adapters.cisco_service import CiscoService
 from services.adapters.stresstest_service import StresstestService
+from ui_tests.tests.ui_consts import (STRESSTEST_ADAPTER,
+                                      STRESSTEST_ADAPTER_NAME)
 from ui_tests.tests.ui_test_base import TestBase
-from ui_tests.tests.ui_consts import (STRESSTEST_ADAPTER_NAME, STRESSTEST_ADAPTER)
 
 
 class TestHyperlinks(TestBase):
@@ -161,6 +162,8 @@ class TestHyperlinks(TestBase):
             link_text = link.text
             link.click()
             self.users_page.wait_for_table_to_load()
+            time.sleep(5)
             wait_until(lambda: self.users_page.get_column_data_slicer(self.users_page.FIELD_USERNAME_TITLE),
                        tolerated_exceptions_list=[ValueError], check_return_value=False)
-            assert link_text in self.users_page.get_column_data_slicer(self.users_page.FIELD_USERNAME_TITLE)
+            column_data = self.users_page.get_column_data_slicer(self.users_page.FIELD_USERNAME_TITLE)
+            assert link_text in column_data, f'link_text: {link_text}, column_data: {column_data}'

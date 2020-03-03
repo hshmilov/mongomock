@@ -349,11 +349,12 @@ class TestEnforcementActions(TestBase):
             devices_count = self.devices_page.count_entities()
             smtp_service.verify_email_send(recipient)
             mail_content = smtp_service.get_email_first_csv_content(recipient)
-
-            assert len(mail_content.splitlines()) == devices_count + 1
-
+            mail_content_decoded = mail_content.decode('utf-8')
+            mail_content_split = mail_content_decoded.split('\r\n')
+            assert len(mail_content_split) == devices_count + 2, f'mail content: {mail_content!r}'
+            hostfield = 'Aggregated: {}'.format(self.devices_page.FIELD_HOSTNAME_TITLE)
             # Testing that it is truly sorted
-            hostnames = [x[self.devices_page.FIELD_HOSTNAME_TITLE] for x in make_dict_from_csv(str(mail_content))]
+            hostnames = [x[hostfield] for x in make_dict_from_csv(str(mail_content))]
             assert hostnames == sorted(hostnames, reverse=True)
 
         self.settings_page.remove_email_server()
@@ -518,16 +519,17 @@ class TestEnforcementActions(TestBase):
                 response = s3_client.get_object(Bucket=AXONIUS_CI_TESTS_BUCKET, Key=file_name)
                 mail_content = response['Body'].read()
                 mail_content_decoded = mail_content.decode('utf-8')
+                mail_content_split = mail_content_decoded.split('\r\n')
 
                 self.devices_page.switch_to_page()
                 self.devices_page.execute_saved_query(ENFORCEMENT_CHANGE_NAME)
                 self.devices_page.assert_csv_match_ui_data_with_content(mail_content, sort_columns=False)
 
-                assert len(mail_content_decoded.splitlines()) == devices_count + 1
+                assert len(mail_content_split) == devices_count + 2, f'mail content: {mail_content!r}'
+                hostfield = 'Aggregated: {}'.format(self.devices_page.FIELD_HOSTNAME_TITLE)
 
                 # Testing that it is truly sorted
-                hostnames = [x[self.devices_page.FIELD_HOSTNAME_TITLE] for x in
-                             make_dict_from_csv(str(mail_content_decoded))]
+                hostnames = [x[hostfield] for x in make_dict_from_csv(str(mail_content_decoded))]
                 assert hostnames == sorted(hostnames, reverse=True)
         finally:
             if s3_client and file_name:

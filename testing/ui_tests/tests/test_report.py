@@ -370,7 +370,9 @@ class TestReport(TestBase):
 
     def _test_csv(self, recipient, smtp_service):
         mail_content = smtp_service.get_email_first_csv_content(recipient)
-        assert len(mail_content.splitlines()) == 11
+        mail_content_decoded = mail_content.decode('utf-8')
+        mail_content_split = mail_content_decoded.split('\r\n')
+        assert len(mail_content_split) == 12, f'mail content: {mail_content!r}'
         self.devices_page.switch_to_page()
         self.devices_page.execute_saved_query(self.TEST_REPORT_EDIT_QUERY)
         self.devices_page.assert_csv_match_ui_data_with_content(mail_content)

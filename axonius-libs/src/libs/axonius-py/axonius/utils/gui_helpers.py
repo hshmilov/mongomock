@@ -1,6 +1,4 @@
 # pylint: disable=too-many-lines
-import codecs
-import csv
 import io
 import json
 import logging
@@ -33,8 +31,12 @@ from axonius.utils.axonius_query_language import parse_filter, parse_filter_non_
 from axonius.utils.revving_cache import rev_cached_entity_type
 from axonius.utils.threading import singlethreaded
 from axonius.utils.dict_utils import is_filter_in_value
+from axonius.utils import serial_csv
 
 logger = logging.getLogger(f'axonius.{__name__}')
+
+# pylint: disable=C0302
+# too many lines in this module!
 
 # the maximal amount of data a pagination query will give
 PAGINATION_LIMIT_MAX = 2000
@@ -1209,7 +1211,10 @@ def _get_csv(mongo_filter, mongo_sort, mongo_projection, entity_type: EntityType
     The resulting list is processed into csv format and returned as a file content, to be downloaded by browser.
     :param file_obj: File obj for output.
     """
-    logger.info('Generating csv')
+    logger.info(f'Generating CSV')
+    logger.debug(f'CSV filter: {mongo_filter}')
+    logger.debug(f'CSV stream: {file_obj}')
+
     from axonius.utils.db_querying_helper import get_entities
     entities = get_entities(None, None, mongo_filter, mongo_sort,
                             mongo_projection,
@@ -1220,40 +1225,16 @@ def _get_csv(mongo_filter, mongo_sort, mongo_projection, entity_type: EntityType
                             ignore_errors=True,
                             field_filters=field_filters)
 
-    # Beautifying the resulting csv.
-    mongo_projection.pop(ADAPTERS_LIST_LENGTH, None)
-
-    # Getting pretty titles for all generic fields as well as specific
     current_entity_fields = entity_fields(entity_type)
-    for field in current_entity_fields['generic']:
-        if field['name'] in mongo_projection:
-            mongo_projection[field['name']] = field['title']
 
-    for type_ in current_entity_fields['specific']:
-        for field in current_entity_fields['specific'][type_]:
-            if field['name'] in mongo_projection:
-                name = ' '.join(type_.split('_')).capitalize()
-                mongo_projection[field['name']] = f'{name}: {field["title"]}'
-
-    file_obj.write(codecs.BOM_UTF8.decode('utf-8'))
-    yield codecs.BOM_UTF8.decode('utf-8')
-    dw = csv.DictWriter(file_obj, mongo_projection.values())
-
-    # instead of using `writeheader` so we can get the string output here as well
-    yield dw.writerow(dict(zip(dw.fieldnames, dw.fieldnames)))
-
-    for current_entity in entities:
-        if not mongo_projection.get('internal_axon_id'):
-            current_entity.pop('internal_axon_id', None)
-        current_entity.pop(ADAPTERS_LIST_LENGTH, None)
-
-        for field in mongo_projection.keys():
-            # Replace field paths with their pretty titles
-            if field in current_entity:
-                current_entity[mongo_projection[field]] = get_csv_canonized_value(current_entity[field])
-                del current_entity[field]
-
-        yield dw.writerow(current_entity)
+    yield from serial_csv.handle_entities(
+        stream=file_obj,
+        entity_fields=current_entity_fields,
+        selected=mongo_projection,
+        entities=entities,
+        excluded=[ADAPTERS_LIST_LENGTH],
+        cell_joiner=serial_csv.constants.CELL_JOIN_DEFAULT,
+    )
 
 
 # pylint: disable=too-many-return-statements
