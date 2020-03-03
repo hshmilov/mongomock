@@ -71,40 +71,35 @@ class TestAdaptersConnectivity(AdapterTestBase):
     def test_icon_color(self):
         self.adapters_page.switch_to_page()
         self.adapters_page.wait_for_spinner_to_end()
-        try:
-            self.adapters_page.clean_adapter_servers(AD_ADAPTER_NAME)
-            self.adapters_page.wait_for_data_collection_toaster_absent()
-            try:
+        self.adapters_page.clean_adapter_servers(AD_ADAPTER_NAME)
+        self.adapters_page.wait_for_data_collection_toaster_absent()
 
-                self.adapters_page.add_server(ad_client1_details)
-                self.adapters_page.wait_for_server_green()
+        self.adapters_page.add_server(ad_client1_details)
+        self.adapters_page.wait_for_server_green()
 
-                self.adapters_page.switch_to_page()
-                self.adapters_page.wait_for_spinner_to_end()
-                self.adapters_page.search(AD_ADAPTER_NAME)
-                self.adapters_page.wait_for_adapter_green()
-            finally:
-                self.adapters_page.clean_adapter_servers(AD_ADAPTER_NAME)
+        self.adapters_page.switch_to_page()
+        self.adapters_page.wait_for_spinner_to_end()
+        self.adapters_page.search(AD_ADAPTER_NAME)
+        self.adapters_page.wait_for_adapter_green()
+        self.adapters_page.clean_adapter_servers(AD_ADAPTER_NAME)
 
-            try:
-                self.adapters_page.click_new_server()
-                self.fill_ad_creds_with_junk()
-                self.adapters_page.click_save()
-                self.adapters_page.wait_for_server_red()
+        self.adapters_page.click_new_server()
+        self.fill_ad_creds_with_junk()
+        self.adapters_page.click_save()
+        self.adapters_page.wait_for_server_red()
 
-                ad_log_tester = AdService().log_tester
-                ad_log_tester.is_metric_in_log(metric_name=Adapters.CREDENTIALS_CHANGE_ERROR, value='.*')
+        ad_log_tester = AdService().log_tester
+        ad_log_tester.is_metric_in_log(metric_name=Adapters.CREDENTIALS_CHANGE_ERROR, value='.*')
 
-                self.adapters_page.switch_to_page()
+        self.adapters_page.switch_to_page()
 
-                self.adapters_page.wait_for_spinner_to_end()
-                self.adapters_page.search(AD_ADAPTER_NAME)
-                self.adapters_page.wait_for_adapter_warning()
-            finally:
-                self.adapters_page.clean_adapter_servers(AD_ADAPTER_NAME)
-        finally:
-            self.adapters_page.switch_to_page()
-            self.adapters_page.wait_for_spinner_to_end()
-            self.adapters_page.add_server(ad_client1_details)
-            self.settings_page.switch_to_page()
-            self.base_page.run_discovery()
+        self.adapters_page.wait_for_spinner_to_end()
+        self.adapters_page.search(AD_ADAPTER_NAME)
+        self.adapters_page.wait_for_adapter_warning()
+        self.adapters_page.clean_adapter_servers(AD_ADAPTER_NAME)
+
+        self.adapters_page.switch_to_page()
+        self.adapters_page.wait_for_spinner_to_end()
+        self.adapters_page.add_server(ad_client1_details)
+        self.settings_page.switch_to_page()
+        self.base_page.run_discovery()
