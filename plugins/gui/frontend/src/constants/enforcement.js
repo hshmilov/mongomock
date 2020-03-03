@@ -1,4 +1,10 @@
 export const actionsMeta = {
+    aws_ec2_start_instance: {
+        title: 'Start Amazon EC2 Instance'
+    },
+    aws_ec2_stop_instance: {
+        title: 'Stop Amazon EC2 Instance'
+    },
     run_executable_windows: {
         title: 'Deploy on Windows Device'
     },
@@ -161,6 +167,10 @@ export const actionsMeta = {
     add_custom_data: {
         title: 'Add Custom Data'
     },
+    aws_operations: {
+        title: 'Manage AWS Services',
+        items: ['aws_ec2_start_instance', 'aws_ec2_stop_instance']
+    },
     deploy_software: {
         title: 'Deploy Software',
         items: ['run_executable_windows']
@@ -221,6 +231,6 @@ export const postCondition = 'post'
 export const actionCategories = [
     'notify', 'create_incident', 'axonius',
     'enrich_device_or_user_data', 'scan_va', 'run_command', 'isolate_edr',
-    'create_cmdb_computer', 'manage_directory',
+    'create_cmdb_computer', 'manage_directory', 'aws_operations',
     'deploy_software'
 ]

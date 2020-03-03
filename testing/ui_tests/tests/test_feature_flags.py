@@ -13,7 +13,7 @@ from axonius.consts.gui_consts import FEATURE_FLAGS_CONFIG
 
 class TestFeatureFlags(TestBase):
 
-    ACTION_TO_LOCK = Action.cybereason_isolate.value
+    ACTION_TO_LOCK = Action.carbonblack_defense_quarantine.value
 
     def test_feature_flags_axonius_user(self):
         self.devices_page.switch_to_page()
