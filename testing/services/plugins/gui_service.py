@@ -55,7 +55,7 @@ class GuiService(PluginService, UpdatablePluginMixin):
             self._update_under_20()
         if self.db_schema_version < 30:
             self._update_under_30()
-        if self.db_schema_version != 29:
+        if self.db_schema_version != 30:
             print(f'Upgrade failed, db_schema_version is {self.db_schema_version}')
 
     def _update_under_10(self):
@@ -1040,7 +1040,7 @@ class GuiService(PluginService, UpdatablePluginMixin):
         try:
             report_config_collection = self.db.get_collection(GUI_PLUGIN_NAME, REPORTS_CONFIG_COLLECTION)
             reports_to_fix = report_config_collection.find(
-                {'name': {'$regex': '[*/:?\\]'}})
+                {'name': {'$regex': r'[^\w@.\s-]'}})
             fixed = {}
 
             # Creating a fix map
@@ -1094,7 +1094,7 @@ class GuiService(PluginService, UpdatablePluginMixin):
 
             self.db_schema_version = 30
         except Exception as e:
-            print(f'Exception while upgrading gui db to version 29. Details: {e}')
+            print(f'Exception while upgrading gui db to version 30. Details: {e}')
 
     def _update_default_locked_actions(self, new_actions):
         """
