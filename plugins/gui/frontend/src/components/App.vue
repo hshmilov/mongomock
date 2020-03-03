@@ -222,7 +222,10 @@ export default {
     },
     async handleExpiration() {
       const res = await this.fetchExpired();
-      if (res.data) {
+      // until https://axonius.atlassian.net/browse/AX-6369
+      // we check here if the requested page in the administration
+      // and prevent the expired redirection from this page
+      if (res.data && window.location.pathname !== '/administration') {
         this.$router.push('/');
       }
     },

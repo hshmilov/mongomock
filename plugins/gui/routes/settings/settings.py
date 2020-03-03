@@ -185,7 +185,8 @@ class Settings(Plugins, GettingStarted, Users, Roles):
                 'httpsLog': self._https_logs_settings['enabled'] if self._https_logs_settings else False,
                 'jira': self._jira_settings['enabled'] if self._jira_settings else False,
                 'gettingStartedEnabled': self._getting_started_settings['enabled'],
-                'cyberark_vault': self._vault_settings['enabled']
+                'cyberark_vault': self._vault_settings['enabled'],
+                'customerId': self.node_id
             }
         })
 

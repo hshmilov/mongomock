@@ -4,6 +4,7 @@ import os
 import socket
 import struct
 import time
+from pathlib import Path
 from typing import Dict, Iterable
 
 import requests
@@ -16,7 +17,8 @@ from flask import jsonify
 from axonius.background_scheduler import LoggedBackgroundScheduler
 from axonius.consts import instance_control_consts
 from axonius.consts.gui_consts import Signup
-from axonius.consts.instance_control_consts import InstanceControlConsts
+from axonius.consts.instance_control_consts import (InstanceControlConsts,
+                                                    UPLOAD_FILE_SCRIPTS_PATH, UPLOAD_FILE_SCRIPT_NAME)
 from axonius.consts.plugin_consts import (PLUGIN_UNIQUE_NAME,
                                           PLUGIN_NAME,
                                           NODE_ID, GUI_PLUGIN_NAME)
@@ -246,6 +248,37 @@ class InstanceControlService(Triggerable, PluginBase):
         except Exception:
             logger.exception('fatal error during hostname update ')
             return return_error(f'fatal error during hostname update   ', 500)
+
+    @add_rule(InstanceControlConsts.FileExecute, methods=['POST'], should_authenticate=False)
+    def file_execute(self):
+        data = self.get_request_data_as_object()
+        file_docker_path = data.get('path', None)
+
+        if not Path(file_docker_path).exists():
+            logger.error(f'execute_file: file not exist at:{file_docker_path}')
+            return return_error('file not exist', 404)
+
+        execution_script_path = Path(UPLOAD_FILE_SCRIPTS_PATH, UPLOAD_FILE_SCRIPT_NAME)
+        # copy execution python script aka AAAS
+        local_file_name = '/home/ubuntu/aaas.py'
+        copy_cmd = f'sudo cp {execution_script_path} {local_file_name}'
+        self.__exec_command_verbose(copy_cmd)
+        # chmod the AAAS
+        chmod_cmd = f'sudo chmod +x {local_file_name}'
+        self.__exec_command_verbose(chmod_cmd)
+        # run the AAAS
+        timestamp = datetime.datetime.utcnow().strftime('%Y_%m_%d_%H_%M_%S')
+        nohup_logs_directory = Path('/home/ubuntu/logs/axonius/offline')
+        # create directory for logging the nohup action
+        mkdir_cmd = 'mkdir -p /home/ubuntu/logs/axonius/offline'
+        self.__exec_command_verbose(mkdir_cmd)
+        nohup_log_file_name = f'{nohup_logs_directory}/axonius_aaas.{timestamp}.log'
+        logger.info(f'execute_file: got file to execute, follow up in host at '
+                    f'{nohup_log_file_name}')
+
+        cmd = f'sudo nohup {local_file_name} > {nohup_log_file_name} 2>&1 &'
+        self.__exec_command_verbose(cmd)
+        return f'file executed successfully'
 
     def __get_hostname_and_ips(self):
         logger.info('Starting Thread: Sending instance data to core.')

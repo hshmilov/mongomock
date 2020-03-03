@@ -22,6 +22,7 @@ from gui.routes.login.login import Login
 from gui.routes.login.signup import Signup
 from gui.routes.reports.reports import Reports
 from gui.routes.settings.settings import Settings
+from gui.routes.offline.configuration import Configuration
 from gui.routes.password_vault import PasswordVault
 # pylint: disable=no-member,invalid-name,no-self-use
 
@@ -39,6 +40,7 @@ class AppRoutes(Signup,
                 Reports,
                 Compliance,
                 Instances,
+                Configuration,
                 PasswordVault):
 
     @add_rule_unauth('get_constants')

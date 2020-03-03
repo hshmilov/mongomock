@@ -1,0 +1,69 @@
+#!/usr/bin/env python3
+import subprocess
+import tarfile
+from pathlib import Path
+
+# pylint: disable=too-many-branches
+
+
+def main():
+    file_name = 'configuration_script.tar'
+    working_dir = Path().home()
+    file_path = Path(working_dir, 'cortex/uploaded_files/', file_name)
+    new_file_path = Path(working_dir, file_name)
+    try:
+        # get the uploaded tar file from fix location
+        file_path.replace(new_file_path)
+        # check tar file for original content
+        all_files_valid = True
+        with tarfile.open(new_file_path, 'r') as file:
+            for filename in ['aaas_job.axonius', 'axonius.sig']:
+                try:
+                    _ = file.getmember(filename)
+                except KeyError:
+                    all_files_valid = False
+            if all_files_valid:
+                file.extract('aaas_job.axonius')
+                file.extract('axonius.sig')
+                print('axonius tar extracted')
+
+        if all_files_valid:
+            # decrypting and validate files
+            encrypted_script = Path(working_dir, 'aaas_job.axonius')
+            signature_file = Path(working_dir, 'axonius.sig')
+            verify_configuration_script = Path(working_dir, 'cortex/devops/scripts/offline/', 'verify_configuration.py')
+            verify_command = subprocess.run([str(verify_configuration_script),
+                                             '--file', str(encrypted_script),
+                                             '--signature', str(signature_file)])
+            if verify_command.returncode == 0:
+                runnable_script = Path(working_dir, 'axonius_configuration')
+                try:
+                    print('axonius script valid')
+                    runnable_script.chmod(0o755)
+                    subprocess.run(['sudo', 'bash', '-c', str(runnable_script)])
+                    print('AAAS was here')
+                except Exception as e:
+                    print(f'axonius script error:{e}')
+                finally:
+                    if runnable_script.exists():
+                        runnable_script.unlink()
+            else:
+                print('axonius script not valid')
+                if encrypted_script.exists():
+                    encrypted_script.unlink()
+                if signature_file.exists():
+                    signature_file.unlink()
+        else:
+            print('not original axonius tar')
+    finally:
+        # this script will self destruct in ..
+        # this file is copied to the host home folder, can't run from cortex folder
+        # so it'll delete itself after execution if it is not the original file and the tar file
+        if new_file_path.exists():
+            new_file_path.unlink()
+        if Path(__file__).name != 'execute_configuration_script.py':
+            Path(__file__).unlink()
+
+
+if __name__ == '__main__':
+    main()

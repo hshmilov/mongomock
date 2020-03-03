@@ -117,6 +117,7 @@ export default new Vuex.Store({
     [EXACT_SEARCH]: exactSearch,
     [REQUIRE_CONNECTION_LABEL]: requireConnectionLabel,
     [IS_EXPIRED]: isExpired,
+    isExpired,
     [GET_CONNECTION_LABEL]: getConnectionLabel,
     getSavedQueryById,
     configuredAdaptersFields,

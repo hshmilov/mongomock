@@ -5,6 +5,7 @@ import secrets
 import subprocess
 import time
 import configparser
+from pathlib import Path
 
 import pymongo
 from apscheduler.executors.pool import \
@@ -140,6 +141,10 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin, 
 
         self.reports_config_collection.create_index([('name', pymongo.HASHED)])
 
+        self.cortex_root_dir = Path().cwd().parent
+        self.upload_files_dir = Path(self.cortex_root_dir, 'uploaded_files')
+        self.upload_files_list = {}
+
         try:
             self._users_collection.create_index([('user_name', pymongo.ASCENDING),
                                                  ('source', pymongo.ASCENDING)], unique=True)
@@ -263,14 +268,19 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin, 
     def _delayed_initialization(self):
         self._init_all_dashboards()
 
-    @staticmethod
-    def load_metadata():
+    def load_metadata(self):
         try:
             metadata_bytes = ''
             if os.path.exists(METADATA_PATH):
                 with open(METADATA_PATH, 'r', encoding='UTF-8') as metadata_file:
                     metadata_bytes = metadata_file.read().strip().replace('\\', '\\\\')
-                    return json.loads(metadata_bytes)
+                    metadata_json = json.loads(metadata_bytes)
+                    if 'Commit Hash' in metadata_json:
+                        del metadata_json['Commit Hash']
+                    if 'Commit Date' in metadata_json:
+                        del metadata_json['Commit Date']
+                    metadata_json['Customer ID'] = self.node_id
+                    return metadata_json
         except Exception:
             logger.exception(f'Bad __build_metadata file {metadata_bytes}')
             return ''

@@ -14,6 +14,7 @@ PYRUN_PATH_HOST = Path(CORTEX_PATH) / 'pyrun.sh'
 LOGS_PATH_HOST = Path(CORTEX_PATH) / 'logs'
 
 METADATA_PATH = os.path.join(CORTEX_PATH, 'shared_readonly_files', '__build_metadata')
+NODE_ID_ABSOLUTE_PATH = Path(CORTEX_PATH, Path(AXONIUS_SETTINGS_DIR_NAME), '.node_id')
 SYSTEM_CONF_PATH = Path(CORTEX_PATH) / 'system_conf.json'
 CUSTOMER_CONF_RELATIVE_PATH = Path(AXONIUS_SETTINGS_DIR_NAME) / 'customer_conf.json'
 NODE_CONF_PATH = Path(CORTEX_PATH) / 'node_conf.json'
