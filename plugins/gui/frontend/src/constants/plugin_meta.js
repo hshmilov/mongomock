@@ -669,7 +669,7 @@ export const pluginMeta = {
     },
     azure_ad_adapter: {
         title: 'Microsoft Azure Active Directory (Azure AD) and Microsoft Intune',
-        link: '',
+        link: 'https://docs.axonius.com/docs/microsoft-azure-and-azure-active-directory-ad',
         description: 'Microsoft Azure Active Directory (Azure AD) is Microsoft\'s multi-tenant, cloud-based directory, and identity management service.'
     },
     divvycloud_adapter: {
