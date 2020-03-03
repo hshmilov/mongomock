@@ -111,7 +111,7 @@ def fetch_chart_compare(chart_view: ChartViews, views: List) -> List:
 
     data.sort(key=val, reverse=True)
     if chart_view == ChartViews.pie:
-        return_data = [{'name': 'ALL', 'value': 0}]
+        return_data = []
         if total:
             return_data.extend(map(lambda x: {**x, 'value': x['value'] / total}, data))
         return return_data
@@ -481,7 +481,7 @@ def fetch_chart_segment(chart_view: ChartViews, entity: EntityType, view, field,
     data = sorted(data, key=lambda x: x['value'], reverse=True)
     if chart_view == ChartViews.pie:
         total = sum([x['value'] for x in data])
-        return [{'name': view or 'ALL', 'value': 0}, *[{**x, 'value': x['value'] / total} for x in data]]
+        return [{**x, 'value': x['value'] / total} for x in data]
     return data
 
 

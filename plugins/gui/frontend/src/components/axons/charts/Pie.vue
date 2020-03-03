@@ -8,23 +8,23 @@
       @mouseout="inHover = -1"
     >
       <defs>
-        <linearGradient id="intersection-1-2">
+        <linearGradient id="intersection-2-4">
           <stop
-            class="pie-stop-1"
+            class="pie-stop-2"
             offset="0%"
           />
           <template v-for="n in 9">
             <stop
-              :class="`pie-stop-${!(n % 2) ? 3 : 1}`"
+              :class="`pie-stop-${!(n % 2) ? 4 : 2}`"
               :offset="`${n}0%`"
             />
             <stop
-              :class="`pie-stop-${!(n % 2) ? 1 : 3}`"
+              :class="`pie-stop-${!(n % 2) ? 2 : 4}`"
               :offset="`${n}0%`"
             />
           </template>
           <stop
-            class="pie-stop-3"
+            class="pie-stop-4"
             offset="100%"
           />
         </linearGradient>
@@ -45,12 +45,13 @@
           class="scaling"
           text-anchor="middle"
           :x="slice.middle.x"
-          :y="slice.middle.y">
+          :y="slice.middle.y"
+        >
           {{ Math.round(slice.value * 100) }}%
         </text>
       </g>
     </svg>
-    <x-tooltip
+    <XTooltip
       v-show="hoverDetails.title"
       ref="tooltip"
     >
@@ -75,113 +76,120 @@
             />{{ component.name }}</div>
         </div>
       </template>
-    </x-tooltip>
+    </XTooltip>
   </div>
 </template>
 
 <script>
-  import xTooltip from '../../axons/popover/Tooltip.vue'
-  export default {
-    name: 'XPie',
-    components: {
-      xTooltip
+import XTooltip from '../popover/Tooltip.vue';
+
+export default {
+  name: 'XPie',
+  components: {
+    XTooltip,
+  },
+  props: {
+    data: {
+      type: Array,
+      required: true,
     },
-    props: {
-      data: {
-        type: Array,
-        required: true
-      },
-      forceText: {
-        type: Boolean,
-        default: false
-      },
-      readOnly: {
-        type: Boolean,
-        default: false
-      }
+    forceText: {
+      type: Boolean,
+      default: false,
     },
-    data () {
-      return {
-        inHover: -1
-      }
+    readOnly: {
+      type: Boolean,
+      default: false,
     },
-    computed: {
-      processedData () {
-        return this.data.map((item, index) => {
-          if (item.remainder) {
-            return { class: 'theme-fill-gray-light', ...item }
-          } else if (item.intersection) {
-            return { class: `fill-intersection-${index - 1}-${index}`, ...item }
-          }
-          if (this.data.length === 2) {
-            return { class: `indicator-fill-${Math.ceil(item.value * 4)}`, ...item }
-          }
-          return { class: `pie-fill-${(index % 10) || 10}`, ...item }
-        })
-      },
-      slices () {
-        let cumulativePortion = 0
-        return this.processedData.map((slice) => {
-          // Starting slice at the end of previous one, and ending after percentage defined for item
-          const [startX, startY] = this.getCoordinatesForPercent(cumulativePortion)
-          cumulativePortion += slice.value / 2
-          const [middleX, middleY] = this.getCoordinatesForPercent(cumulativePortion)
-          cumulativePortion += slice.value / 2
-          const [endX, endY] = this.getCoordinatesForPercent(cumulativePortion)
-          return {
-            ...slice,
-            path: [
-              `M ${startX} ${startY}`, // Move
-              `A 1 1 0 ${slice.value > 0.5? 1 : 0} 1 ${endX} ${endY}`, // Arc
-              `L 0 0` // Line
-            ].join(' '),
-            middle: { x: middleX * 0.7, y: middleY * (middleY > 0 ? 0.8 : 0.5) }
-          }
-        })
-      },
-      hoverDetails () {
-        if (!this.data || this.data.length === 0) return {}
-        if (this.inHover === -1) return {}
-        let percentage = Math.round(this.processedData[this.inHover].value * 100)
-        if (percentage < 0) {
-          percentage = 100 + percentage
+  },
+  data() {
+    return {
+      inHover: -1,
+    };
+  },
+  computed: {
+    processedData() {
+      return this.data.map((item, index) => {
+        if (this.data.length === 2 && index === 1) {
+          return { class: `indicator-fill-${Math.ceil(item.value * 4)}`, ...item };
         }
-        let title = this.processedData[this.inHover].name
-        let components = []
-        if (this.processedData[this.inHover].intersection) {
-          title = 'Intersection'
-          components.push({ ...this.processedData[this.inHover - 1] })
-          components.push({ ...this.processedData[this.inHover + 1] })
+        const modIndex = (index % 10) + 1;
+        if (item.intersection) {
+          return { class: `fill-intersection-${modIndex - 1}-${modIndex + 1}`, ...item };
         }
-        if (this.inHover === 0) {
-          title = 'Excluding'
-          components = this.processedData.filter(data => !data.intersection && !data.remainder)
-        }
+        return { class: `pie-fill-${modIndex}`, ...item };
+      });
+    },
+    slices() {
+      let cumulativePortion = 0;
+      return this.processedData.map((slice) => {
+        // Starting slice at the end of previous one, and ending after percentage defined for item
+        const [startX, startY] = this.getCoordinatesForPercent(cumulativePortion);
+        cumulativePortion += slice.value / 2;
+        const [middleX, middleY] = this.getCoordinatesForPercent(cumulativePortion);
+        cumulativePortion += slice.value / 2;
+        const [endX, endY] = this.getCoordinatesForPercent(cumulativePortion);
         return {
-          parentTitle: this.data[0].name, title, percentage, class: this.processedData[this.inHover].class,
-          components
-        }
-      }
+          ...slice,
+          path: [
+            `M ${startX} ${startY}`, // Move
+            `A 1 1 0 ${slice.value > 0.5 ? 1 : 0} 1 ${endX} ${endY}`, // Arc
+            'L 0 0', // Line
+          ].join(' '),
+          middle: { x: middleX * 0.7, y: middleY * (middleY > 0 ? 0.8 : 0.5) },
+        };
+      });
     },
-    methods: {
-      getCoordinatesForPercent (portion) {
-        return [Math.cos(2 * Math.PI * portion), Math.sin(2 * Math.PI * portion)]
-      },
-      onHover (event, index) {
-        this.inHover = index
-        if (!this.$refs.tooltip || !this.$refs.tooltip.$el) return
-        this.$refs.tooltip.$el.style.top = event.clientY + 10 + 'px'
-        this.$refs.tooltip.$el.style.left = event.clientX + 10 + 'px'
-      },
-      showPercentageText (val) {
-        return (this.forceText && val > 0) || val > 0.04
-      },
-      onClick (index) {
-        if (this.readOnly) return
-        this.$emit('click-one', index)
+    hoverDetails() {
+      if (!this.data || this.data.length === 0 || this.inHover === -1) {
+        return {};
       }
-    }
-  }
+      const {
+        value, name, remainder, intersection, class: dataClass,
+      } = this.processedData[this.inHover];
+      let percentage = Math.round(value * 100);
+      if (percentage < 0) {
+        percentage = 100 + percentage;
+      }
+      let title = name;
+      let components = [];
+      if (intersection) {
+        title = 'Intersection';
+        components.push({ ...this.processedData[this.inHover - 1] });
+        components.push({ ...this.processedData[this.inHover + 1] });
+      }
+      if (this.inHover === 0 && remainder) {
+        title = 'Excluding';
+        components = this.processedData.filter((data) => !data.intersection && !data.remainder);
+      }
+      return {
+        parentTitle: this.data[0].name,
+        title,
+        percentage,
+        class: dataClass,
+        components,
+      };
+    },
+  },
+  methods: {
+    getCoordinatesForPercent(portion) {
+      return [Math.cos(2 * Math.PI * portion), Math.sin(2 * Math.PI * portion)];
+    },
+    onHover(event, index) {
+      this.inHover = index;
+      if (!this.$refs.tooltip || !this.$refs.tooltip.$el) return;
+      this.$refs.tooltip.$el.style.top = `${event.clientY + 10}px`;
+      this.$refs.tooltip.$el.style.left = `${event.clientX + 10}px`;
+    },
+    showPercentageText(val) {
+      return (this.forceText && val > 0) || val > 0.04;
+    },
+    onClick(index) {
+      if (this.readOnly) return;
+      this.$emit('click-one', index);
+    },
+  },
+};
 </script>
 
 <style lang="scss">
@@ -189,10 +197,10 @@
         margin: auto;
         width: 240px;
         position: relative;
-        .fill-intersection-1-2 {
-            fill: url(#intersection-1-2);
-            background: repeating-linear-gradient(45deg, nth($pie-colours, 1), nth($pie-colours, 1) 4px,
-                    nth($pie-colours, 2) 4px, nth($pie-colours, 2) 8px);
+        .fill-intersection-2-4 {
+            fill: url(#intersection-2-4);
+            background: repeating-linear-gradient(45deg, nth($pie-colours, 2),
+                    nth($pie-colours, 2) 4px, nth($pie-colours, 4) 4px, nth($pie-colours, 4) 8px);
         }
 
         g {
