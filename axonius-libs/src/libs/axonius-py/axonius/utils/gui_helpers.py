@@ -18,8 +18,9 @@ import pymongo
 from bson import ObjectId
 from flask import request, session, g
 
-from axonius.consts.gui_consts import SPECIFIC_DATA, ADAPTERS_DATA, JSONIFY_DEFAULT_TIME_FORMAT, PREFERRED_FIELDS, \
-    MAX_DAYS_SINCE_LAST_SEEN, SPECIFIC_DATA_PREFIX_LENGTH
+from axonius.consts.gui_consts import SPECIFIC_DATA, ADAPTERS_DATA, JSONIFY_DEFAULT_TIME_FORMAT, MAX_SORTED_FIELDS, \
+    MIN_SORTED_FIELDS, PREFERRED_FIELDS, MAX_DAYS_SINCE_LAST_SEEN, SPECIFIC_DATA_PREFIX_LENGTH
+
 from axonius.entities import EntitiesNamespace
 
 from axonius.consts.plugin_consts import (ADAPTERS_LIST_LENGTH, PLUGIN_NAME,
@@ -538,20 +539,9 @@ def find_entity_field(entity_data, field_path, skip_unique=False, specific_adapt
         return result
 
     if not skip_unique:
-        if field_path in ['specific_data.data.last_seen',
-                          'specific_data.data.fetch_time',
-                          'specific_data.data.last_seen_in_devices',
-                          'specific_data.data.last_lockout_time',
-                          'specific_data.data.last_bad_logon',
-                          'specific_data.data.last_password_change',
-                          'specific_data.data.last_logoff',
-                          'specific_data.data.last_logon',
-                          'specific_data.data.last_logon_timestamp']:
+        if field_path in MAX_SORTED_FIELDS:
             return return_field_max()
-        if field_path in ['specific_data.data.first_seen',
-                          'specific_data.data.first_fetch_time',
-                          'specific_data.data.password_expiration_date',
-                          'specific_data.data.account_expires']:
+        if field_path in MIN_SORTED_FIELDS:
             return return_field_min()
         if field_path in ['specific_data.data.part_of_domain',
                           'specific_data.data.device_disabled',

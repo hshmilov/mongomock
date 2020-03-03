@@ -207,4 +207,20 @@ PREDEFINED_PLACEHOLDER = 'Predefined'
 JSONIFY_DEFAULT_TIME_FORMAT = '%a, %d %b %Y %H:%M:%S GMT'
 MAX_DAYS_SINCE_LAST_SEEN = 60
 FILE_NAME_TIMESTAMP_FORMAT = '%Y-%m-%dT%H-%M-%SUTC'
+
+MAX_SORTED_FIELDS = ['specific_data.data.last_seen',
+                     'specific_data.data.fetch_time',
+                     'specific_data.data.last_seen_in_devices',
+                     'specific_data.data.last_lockout_time',
+                     'specific_data.data.last_bad_logon',
+                     'specific_data.data.last_password_change',
+                     'specific_data.data.last_logoff',
+                     'specific_data.data.last_logon',
+                     'specific_data.data.last_logon_timestamp']
+
+MIN_SORTED_FIELDS = ['specific_data.data.first_seen',
+                     'specific_data.data.first_fetch_time',
+                     'specific_data.data.password_expiration_date',
+                     'specific_data.data.account_expires']
+
 SPECIFIC_DATA_PREFIX_LENGTH = len('specific_data.data.')

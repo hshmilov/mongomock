@@ -7,6 +7,7 @@ from funcy import chunks
 import pymongo
 from pymongo.errors import PyMongoError
 
+from axonius.consts.gui_consts import MAX_SORTED_FIELDS, MIN_SORTED_FIELDS
 from axonius.utils.get_plugin_base_instance import plugin_base_instance
 from axonius.consts.plugin_consts import ADAPTERS_LIST_LENGTH
 from axonius.utils.axonius_query_language import convert_db_entity_to_view_entity, parse_filter, \
@@ -117,6 +118,24 @@ def _get_entities_raw(entity_type: EntityType,
     if db_projection:
         db_projection = dict(db_projection)
         _normalize_db_projection_for_aggregation(db_projection)
+        if bool(sort):
+            sort_path = list(sort)[0]
+            field = '.'.join(sort_path.split('.')[2:])
+            operator = None
+            if f'specific_data.data.{field}' in MAX_SORTED_FIELDS:
+                operator = '$max'
+            elif f'specific_data.data.{field}' in MIN_SORTED_FIELDS:
+                operator = '$min'
+            if operator:
+                db_projection['tempSortField'] = {
+                    operator:
+                        {
+                            '$map': {
+                                'input': '$adapters.data', 'as': 'el', 'in': f'$$el.{field}'
+                            }
+                        }
+                }
+                sort = {'tempSortField': sort[sort_path]}
 
     entity_views_db = plugin_base_instance().get_appropriate_view(history_date, entity_type)
 
