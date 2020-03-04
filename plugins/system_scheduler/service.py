@@ -4,7 +4,7 @@ import time
 from concurrent.futures import (ALL_COMPLETED, ThreadPoolExecutor,
                                 as_completed, wait)
 from contextlib import contextmanager
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta
 from enum import Enum
 from typing import Set
 
@@ -25,7 +25,6 @@ from axonius.consts.metric_consts import SystemMetric
 from axonius.consts.plugin_consts import (CONFIGURABLE_CONFIGS_COLLECTION,
                                           CORE_UNIQUE_NAME,
                                           GENERAL_INFO_PLUGIN_NAME,
-                                          HEAVY_LIFTING_PLUGIN_NAME,
                                           PLUGIN_NAME, PLUGIN_UNIQUE_NAME,
                                           REIMAGE_TAGS_ANALYSIS_PLUGIN_NAME,
                                           REPORTS_PLUGIN_NAME,
@@ -35,7 +34,7 @@ from axonius.consts.plugin_subtype import PluginSubtype
 from axonius.consts.scheduler_consts import SchedulerState
 from axonius.logging.metric_helper import log_metric
 from axonius.mixins.configurable import Configurable
-from axonius.mixins.triggerable import StoredJobStateCompletion, Triggerable
+from axonius.mixins.triggerable import StoredJobStateCompletion, Triggerable, RunIdentifier
 from axonius.plugin_base import PluginBase, add_rule, return_error
 from axonius.plugin_exceptions import PhaseExecutionException
 from axonius.thread_stopper import StopThreadException
@@ -52,14 +51,15 @@ MIN_GB_TO_SAVE_HISTORY = 15
 
 
 class SystemSchedulerResearchMode(Enum):
-    '''
+    """
     Rate : is the legacy mode which start discovery per hour interval .
     Date : a cron base , currently ony supporting time of day and Recurrence.
-    '''
+    """
     rate = 'system_research_rate'
     date = 'system_research_date'
 
 
+# pylint: disable=invalid-name, too-many-instance-attributes, too-many-branches, too-many-statements, no-member
 class SystemSchedulerService(Triggerable, PluginBase, Configurable):
     def __init__(self, *args, **kwargs):
         super().__init__(get_local_config_file(__file__),
@@ -92,7 +92,27 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
                                           max_instances=1)
         self.__realtime_scheduler.start()
 
+        self.__correlation_lock = threading.Lock()
+        self._correlation_scheduler = LoggedBackgroundScheduler(
+            executors={'default': ThreadPoolExecutorApscheduler(1)}
+        )
+        self._correlation_scheduler.start()
+        self.configure_correlation_scheduler()
+
         self.plugin_settings = self._get_collection('plugin_settings')
+
+    def run_correlations(self):
+        if self.__correlation_lock.acquire(False):
+            try:
+                logger.info(f'Running correlation')
+                self._run_plugins(self._get_plugins(PluginSubtype.Correlator))
+                logger.info(f'Done running correlation')
+                return True
+            finally:
+                self.__correlation_lock.release()
+        else:
+            logger.info(f'Other correlation is in place. Skipping')
+            return False
 
     def detect_correlation_errors(self):
         """
@@ -132,11 +152,19 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
         )
 
     @add_rule('trigger_s3_backup')
-    def trigger_s3_backup(self):
+    def trigger_s3_backup_external(self):
+        self.trigger_s3_backup()
+
+    @staticmethod
+    def trigger_s3_backup():
         return str(backup_to_s3())
 
     @add_rule('trigger_root_master_s3_restore')
-    def trigger_root_master_s3_restore(self):
+    def trigger_root_master_s3_restore_external(self):
+        self.trigger_root_master_s3_restore()
+
+    @staticmethod
+    def trigger_root_master_s3_restore():
         return str(root_master_restore_from_s3())
 
     @add_rule('state', should_authenticate=False)
@@ -170,8 +198,9 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
         self.__constant_alerts = config['discovery_settings']['constant_alerts']
         self.__analyse_reimage = config['discovery_settings']['analyse_reimage']
         self.__system_research_rate = float(config['discovery_settings']['system_research_rate'])
-        self.__system_research_date_time = config['discovery_settings']['system_research_date']['system_research_date_time']
-        self.__system_research_date_recurrence = config['discovery_settings']['system_research_date']['system_research_date_recurrence']
+        system_research_date = config['discovery_settings']['system_research_date']
+        self.__system_research_date_time = system_research_date['system_research_date_time']
+        self.__system_research_date_recurrence = system_research_date['system_research_date_recurrence']
         self.__system_research_mode = config['discovery_settings']['conditional']
 
         logger.info(f'Setting research mode to: {self.__system_research_mode}')
@@ -213,14 +242,16 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
                         {
                             'name': 'conditional',
                             'title': 'Discovery schedule',
-                            'enum': [{
-                                'name': 'system_research_rate',
-                                'title': 'Interval'
-                            },
+                            'enum': [
                                 {
-                                'name': 'system_research_date',
-                                'title': 'Scheduled'
-                            }],
+                                    'name': 'system_research_rate',
+                                    'title': 'Interval'
+                                },
+                                {
+                                    'name': 'system_research_date',
+                                    'title': 'Scheduled'
+                                }
+                            ],
                             'type': 'string'
                         },
                         {
@@ -292,7 +323,48 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
             }
         }
 
-    def _triggered(self, job_name: str, post_json: dict, *args):
+    def configure_correlation_scheduler(self):
+        scheduler = getattr(self, '_correlation_scheduler', None)
+        if scheduler:
+            job = scheduler.get_job(scheduler_consts.CORRELATION_SCHEDULER_THREAD_ID)
+            if not self._correlation_schedule_settings.get('enabled'):
+                if job:
+                    logger.info(f'Removing correlation scheduler')
+                    job.remove()
+            else:
+                hours = self._correlation_schedule_settings.get('correlation_hours_interval')
+                if not hours or hours < 1:
+                    raise ValueError(f'Error: invalid correlation scheduler hours interval: {hours}')
+
+                new_interval = IntervalTrigger(hours=hours)
+                if job:
+                    current_trigger = job.trigger
+                    if isinstance(current_trigger, IntervalTrigger)\
+                            and current_trigger.interval_length == new_interval.interval_length:
+                        # Interval not changed, go on with your life
+                        logger.debug('Correlation trigger hours stayed the same, not changing')
+                    else:
+                        job.reschedule(new_interval)
+                        logger.info(f'Rescheduling job to {hours} hours. Next run: {job.next_run_time}')
+                else:
+                    job = scheduler.add_job(
+                        func=self.run_correlations,
+                        trigger=new_interval,
+                        next_run_time=datetime.now() + timedelta(hours=hours),
+                        name=scheduler_consts.CORRELATION_SCHEDULER_THREAD_ID,
+                        id=scheduler_consts.CORRELATION_SCHEDULER_THREAD_ID,
+                        max_instances=1,
+                        coalesce=True
+                    )
+                    logger.info(f'Adding initial job. Next run: {job.next_run_time}')
+
+    def _global_config_updated(self):
+        try:
+            self.configure_correlation_scheduler()
+        except Exception:
+            logger.exception(f'Failed updating correlation scheduler settings')
+
+    def _triggered(self, job_name: str, post_json: dict, run_identifier: RunIdentifier, *args):
         """
         The function that runs jobs as part of the triggerable mixin,
         Currently supports only 'execute' which triggers a research right away.
@@ -332,6 +404,8 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
             logger.critical(f'Error - Did not finish a cycle due to an exception!', exc_info=True)
             raise
 
+        return None
+
     @contextmanager
     def _start_research(self):
         """
@@ -342,27 +416,29 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
             raise PhaseExecutionException(
                 f'{scheduler_consts.Phases.Research.name} is already executing.')
         if self.__stopping_initiated:
-            logger.info("Stopping initiated, not running")
+            logger.info('Stopping initiated, not running')
             return
-        else:
-            # Change current phase
-            self.current_phase = scheduler_consts.Phases.Research
-            if self._notify_on_adapters is True:
-                self.create_notification(f'Entered {scheduler_consts.Phases.Research.name} Phase.')
-            self.send_external_info_log(f'Entered {scheduler_consts.Phases.Research.name} Phase.')
-            logger.info(f'Entered {scheduler_consts.Phases.Research.name} Phase.')
-            try:
-                yield
-            except StopThreadException:
-                logger.info('Stopped execution')
-                raise
-            except BaseException:
-                logger.exception(f'Failed {scheduler_consts.Phases.Research.name} Phase.')
-                raise
-            finally:
-                logger.info(f'Back to {scheduler_consts.Phases.Stable} Phase.')
-                self.current_phase = scheduler_consts.Phases.Stable
-                self.state = SchedulerState()
+
+        # Change current phase
+        self.current_phase = scheduler_consts.Phases.Research
+        if self._notify_on_adapters is True:
+            self.create_notification(f'Entered {scheduler_consts.Phases.Research.name} Phase.')
+        self.send_external_info_log(f'Entered {scheduler_consts.Phases.Research.name} Phase.')
+        logger.info(f'Entered {scheduler_consts.Phases.Research.name} Phase.')
+        try:
+            yield
+        except StopThreadException:
+            logger.info('Stopped execution')
+            raise
+        except BaseException:
+            logger.exception(f'Failed {scheduler_consts.Phases.Research.name} Phase.')
+            raise
+        finally:
+            logger.info(f'Back to {scheduler_consts.Phases.Stable} Phase.')
+            self.current_phase = scheduler_consts.Phases.Stable
+            self.state = SchedulerState()
+
+        return
 
     def __start_research(self):
         """
@@ -382,6 +458,7 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
         with self._start_research():
             self.state.Phase = scheduler_consts.Phases.Research
             _change_subphase(scheduler_consts.ResearchPhases.Fetch_Devices)
+            time.sleep(5)  # for too-quick-cycles
 
             if (self.feature_flags_config().get(RootMasterNames.root_key) or {}).get(RootMasterNames.enabled):
                 try:
@@ -432,10 +509,14 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
                 _change_subphase(scheduler_consts.ResearchPhases.Clean_Devices)
                 self._request_gui_dashboard_cache_clear()
 
-                for adapter in list(self.core_configs_collection.find({
-                    'plugin_type': adapter_consts.ADAPTER_PLUGIN_TYPE,
-                    'status': 'up'
-                })):
+                for adapter in list(
+                        self.core_configs_collection.find(
+                            {
+                                'plugin_type': adapter_consts.ADAPTER_PLUGIN_TYPE,
+                                'status': 'up'
+                            }
+                        )
+                ):
                     try:
                         # this is important and is described at
                         # https://axonius.atlassian.net/wiki/spaces/AX/pages/799211552/
@@ -457,7 +538,12 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
             # Run Correlations.
             try:
                 _change_subphase(scheduler_consts.ResearchPhases.Run_Correlations)
-                self._run_plugins(self._get_plugins(PluginSubtype.Correlator))
+                if not self.run_correlations():
+                    #  If the correlation was not run because there is an existing one already running, then wait
+                    # for it to finish, only then transition to next phase.
+                    logger.info(f'Other correlation is in place. Blocking until it is finished..')
+                    with self.__correlation_lock:
+                        logger.info(f'Other correlation has finished')
                 self._request_gui_dashboard_cache_clear()
             except Exception:
                 logger.critical(f'Failed running correlation phase', exc_info=True)
@@ -513,9 +599,11 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
 
     def __get_all_realtime_adapters(self):
         db_connection = self._get_db_connection()
-        for adapter in self.core_configs_collection.find({
-            'plugin_type': adapter_consts.ADAPTER_PLUGIN_TYPE
-        }):
+        for adapter in self.core_configs_collection.find(
+                {
+                    'plugin_type': adapter_consts.ADAPTER_PLUGIN_TYPE
+                }
+        ):
             config = db_connection[adapter[PLUGIN_UNIQUE_NAME]][CONFIGURABLE_CONFIGS_COLLECTION].find_one({
                 'config_name': AdapterBase.__name__
             })

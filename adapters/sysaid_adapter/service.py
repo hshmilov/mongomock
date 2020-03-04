@@ -29,11 +29,14 @@ class SysaidAdapter(AdapterBase):
         sysaid_dict = self.get_request_data_as_object()
         success = False
         for client_id in self._clients:
-            conn = self.get_connection(self._get_client_config_by_client_id(client_id))
-            with conn:
-                success = success or conn.create_sysaid_incident(sysaid_dict)
-                if success is True:
-                    return '', 200
+            try:
+                conn = self.get_connection(self._get_client_config_by_client_id(client_id))
+                with conn:
+                    success = success or conn.create_sysaid_incident(sysaid_dict)
+                    if success is True:
+                        return '', 200
+            except Exception:
+                logger.exception(f'Could not connect to {client_id}')
         return 'Failure', 400
 
     @staticmethod

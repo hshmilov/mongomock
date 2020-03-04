@@ -468,7 +468,7 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
             # There is no such thing as scanners for users, so we always check for id here.
             parsed_user_id = parsed_user.id  # we must have an id
             if parsed_user_id in users_ids:
-                logger.error(f'Error! user with id {parsed_user_id} already yielded! skipping')
+                logger.debug(f'Error! user with id {parsed_user_id} already yielded! skipping')
                 continue
             users_ids.add(parsed_user_id)
 
@@ -504,32 +504,25 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
 
     # End of users
 
+    def _update_client_status(self, client_id, status, error_msg=None):
+        with self._clients_lock:
+            if error_msg:
+                result = self._clients_collection.update_one({'client_id': client_id},
+                                                             {'$set': {'status': status, 'error': error_msg}})
+            else:
+                result = self._clients_collection.update_one({'client_id': client_id},
+                                                             {'$set': {'status': status}})
+
+            if not result or result.matched_count != 1:
+                raise adapter_exceptions.CredentialErrorException(
+                    f'Could not update client {client_id} with status {status}')
+
     # pylint: disable=too-many-branches, too-many-statements, too-many-locals, too-many-nested-blocks
     def insert_data_to_db(self, client_name: str = None, check_fetch_time: bool = False):
         """
         Will insert entities from the given client name (or all clients if None) into DB
         :return:
         """
-
-        def _update_client_status(status, error_msg=None):
-            """
-            Update client document matching given match object with given status, to indicate method's result
-
-            :param client_id: Mongo ObjectId
-            :param status: String representing current status
-            :return:
-            """
-            with self._clients_lock:
-                if error_msg:
-                    result = self._clients_collection.update_one({'client_id': client_name},
-                                                                 {'$set': {'status': status, 'error': error_msg}})
-                else:
-                    result = self._clients_collection.update_one({'client_id': client_name},
-                                                                 {'$set': {'status': status}})
-
-                if not result or result.matched_count != 1:
-                    raise adapter_exceptions.CredentialErrorException(
-                        f'Could not update client {client_name} with status {status}')
 
         current_time = datetime.utcnow()
         # Checking that it's either the first time since a new client was added.
@@ -600,9 +593,9 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
                     log_metric(logger, metric_name=Adapters.CONNECTION_ESTABLISH_ERROR,
                                metric_value={client_name},
                                details=str(e2))
-                    _update_client_status('error', str(e2))
+                    self._update_client_status(client_name, 'error', str(e2))
                     raise
-            _update_client_status('success', '')
+            self._update_client_status(client_name, 'success')
         else:
             devices_count = sum(
                 self._save_data_from_plugin(*data, EntityType.Devices)
@@ -795,6 +788,7 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
             # Got here only if connection succeeded
             status = 'success'
         except (adapter_exceptions.ClientConnectionException, KeyError, Exception) as e:
+            self._clients[client_id] = None
             error_msg = str(e)
             id_for_log = client_id if client_id else str(object_id or '')
             logger.exception(f'Got error while handling client {id_for_log} - '
@@ -1225,10 +1219,17 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
             timeout = self.__fetching_timeout
             timeout = timeout.total_seconds() if timeout else None
 
+            try:
+                self._clients[client_id] = self.__connect_client_facade(self._get_client_config_by_client_id(client_id))
+                self._update_client_status(client_id, 'success')
+            except Exception as e:
+                self._clients[client_id] = None
+                self._update_client_status(client_id, 'error', str(e))
+                raise
             _raw_data = func_timeout.func_timeout(
                 timeout=timeout,
                 func=call_raw_as_stoppable,
-                args=(client_id, self.__connect_client_facade(self._get_client_config_by_client_id(client_id))))
+                args=(client_id, self._clients[client_id]))
             logger.info('Got raw')
 
             # maxsize=3000 means we won't hold more than 3k devices in memory

@@ -723,8 +723,8 @@ class LdapConnection(object):
         printers_count = 0
         for printer in printers_generator:
             printers_count = printers_count + 1
-            if printers_count % 100 == 0:
-                logger.info(f"Got {printers_count} printers so far")
+            if printers_count % 1000 == 0:
+                logger.debug(f"Got {printers_count} printers so far")
 
             yield dict(printer)
 

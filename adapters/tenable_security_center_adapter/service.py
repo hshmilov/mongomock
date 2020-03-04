@@ -49,12 +49,15 @@ class TenableSecurityCenterAdapter(ScannerAdapterBase, Configurable):
         success = False
         try:
             for client_id in self._clients:
-                conn = self.get_connection(self._get_client_config_by_client_id(client_id))
-                with conn:
-                    result_status = conn.add_ips_to_asset(tenable_sc_dict)
-                    success = success or result_status
-                    if success is True:
-                        return '', 200
+                try:
+                    conn = self.get_connection(self._get_client_config_by_client_id(client_id))
+                    with conn:
+                        result_status = conn.add_ips_to_asset(tenable_sc_dict)
+                        success = success or result_status
+                        if success is True:
+                            return '', 200
+                except Exception:
+                    logger.exception(f'Could not connect to {client_id}')
         except Exception as e:
             logger.exception('Got exception while adding to asset')
             return str(e), 400
@@ -68,12 +71,15 @@ class TenableSecurityCenterAdapter(ScannerAdapterBase, Configurable):
         success = False
         try:
             for client_id in self._clients:
-                conn = self.get_connection(self._get_client_config_by_client_id(client_id))
-                with conn:
-                    result_status = conn.create_asset_with_ips(tenable_sc_dict)
-                    success = success or result_status
-                    if success is True:
-                        return '', 200
+                try:
+                    conn = self.get_connection(self._get_client_config_by_client_id(client_id))
+                    with conn:
+                        result_status = conn.create_asset_with_ips(tenable_sc_dict)
+                        success = success or result_status
+                        if success is True:
+                            return '', 200
+                except Exception:
+                    logger.exception(f'Could not connect to {client_id}')
         except Exception as e:
             logger.exception(f'Got exception while creating an asset')
             return str(e), 400

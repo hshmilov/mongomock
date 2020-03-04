@@ -87,7 +87,9 @@ from axonius.consts.plugin_consts import (ADAPTERS_LIST_LENGTH,
                                           DEFAULT_SOCKET_READ_TIMEOUT, DEFAULT_SOCKET_RECV_TIMEOUT,
                                           STATIC_ANALYSIS_SETTINGS, FETCH_EMPTY_VENDOR_SOFTWARE_VULNERABILITES,
                                           FIRST_FETCH_TIME, FETCH_TIME,
-                                          KEYS_COLLECTION, DB_KEY_ENV_VAR_NAME)
+                                          KEYS_COLLECTION, DB_KEY_ENV_VAR_NAME,
+                                          CORRELATION_SCHEDULE, CORRELATION_SCHEDULE_HOURS_INTERVAL,
+                                          CORRELATION_SCHEDULE_ENABLED)
 from axonius.consts.plugin_subtype import PluginSubtype
 from axonius.devices import deep_merge_only_dict
 from axonius.devices.device_adapter import LAST_SEEN_FIELD, DeviceAdapter
@@ -2888,6 +2890,7 @@ class PluginBase(Configurable, Feature, ABC):
         self._proxy_settings = config[PROXY_SETTINGS]
         self._vault_settings = config['vault_settings']
         self._aws_s3_settings = config.get('aws_s3_settings') or {}
+        self._correlation_schedule_settings = config[CORRELATION_SCHEDULE]
 
         self._socket_recv_timeout = DEFAULT_SOCKET_RECV_TIMEOUT
         self._socket_read_timeout = DEFAULT_SOCKET_READ_TIMEOUT
@@ -3388,6 +3391,24 @@ class PluginBase(Configurable, Feature, ABC):
                 {
                     'items': [
                         {
+                            'name': CORRELATION_SCHEDULE_ENABLED,
+                            'title': 'Enable Correlation Schedule',
+                            'type': 'bool'
+                        },
+                        {
+                            'name': CORRELATION_SCHEDULE_HOURS_INTERVAL,
+                            'title': 'Number of hours between correlations',
+                            'type': 'number'
+                        }
+                    ],
+                    'name': CORRELATION_SCHEDULE,
+                    'title': 'Correlation Schedule',
+                    'type': 'array',
+                    'required': [CORRELATION_SCHEDULE_HOURS_INTERVAL, CORRELATION_SCHEDULE_ENABLED]
+                },
+                {
+                    'items': [
+                        {
                             'name': FETCH_EMPTY_VENDOR_SOFTWARE_VULNERABILITES,
                             'title': 'Fetch software vulnerabilities even when the vendor name is unknown',
                             'type': 'bool'
@@ -3542,6 +3563,10 @@ class PluginBase(Configurable, Feature, ABC):
                 CORRELATE_AD_SCCM: False,
                 CSV_FULL_HOSTNAME: False,
                 CORRELATE_BY_SNOW_MAC: False,
+            },
+            CORRELATION_SCHEDULE: {
+                CORRELATION_SCHEDULE_ENABLED: False,
+                CORRELATION_SCHEDULE_HOURS_INTERVAL: 8
             },
             STATIC_ANALYSIS_SETTINGS: {
                 FETCH_EMPTY_VENDOR_SOFTWARE_VULNERABILITES: False,

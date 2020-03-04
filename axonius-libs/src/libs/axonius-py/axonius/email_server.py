@@ -53,7 +53,7 @@ class EmailServer:
     def __enter__(self):
         assert self.smtp is None
         try:
-            server = smtplib.SMTP(self.host, self.port)
+            server = smtplib.SMTP(self.host, self.port, timeout=10)
 
             # First activate TLS if available
             if self.__ssl_state != SSLState.Unencrypted:

@@ -414,11 +414,14 @@ class ServiceNowAdapter(AdapterBase, Configurable):
         service_now_dict = self.get_request_data_as_object()
         success = False
         for client_id in self._clients:
-            conn = self.get_connection(self._get_client_config_by_client_id(client_id))
-            with conn:
-                success = success or conn.create_service_now_incident(service_now_dict)
-                if success is True:
-                    return '', 200
+            try:
+                conn = self.get_connection(self._get_client_config_by_client_id(client_id))
+                with conn:
+                    success = success or conn.create_service_now_incident(service_now_dict)
+                    if success is True:
+                        return '', 200
+            except Exception:
+                logger.exception(f'Could not connect to {client_id}')
         return 'Failure', 400
 
     @add_rule('create_computer', methods=['POST'])
@@ -429,34 +432,37 @@ class ServiceNowAdapter(AdapterBase, Configurable):
         service_now_dict = request_json.get('snow')
         success = False
         for client_id in self._clients:
-            conn = self.get_connection(self._get_client_config_by_client_id(client_id))
-            with conn:
-                result_status, device_raw = conn.create_service_now_computer(service_now_dict)
-                success = success or result_status
-                if success is True:
-                    device = self.create_snow_device(device_raw=device_raw,
-                                                     fetch_ips=self.__fetch_ips,
-                                                     table_type='cmdb_ci_computer')
-                    if device:
-                        device_id = device.id
-                        device_dict = device.to_dict()
-                        self._save_data_from_plugin(
-                            client_id,
-                            {'raw': [], 'parsed': [device_dict]},
-                            EntityType.Devices, False)
-                        self._save_field_names_to_db(EntityType.Devices)
-                        to_correlate = request_json.get('to_ccorrelate')
-                        if isinstance(to_correlate, dict):
-                            to_correlate_plugin_unique_name = to_correlate.get('to_correlate_plugin_unique_name')
-                            to_correlate_device_id = to_correlate.get('device_id')
-                            if to_correlate_plugin_unique_name and to_correlate_device_id:
-                                correlation_param = CorrelationResult(associated_adapters=[(to_correlate_plugin_unique_name,
-                                                                                            to_correlate_device_id),
-                                                                                           (self.plugin_unique_name, device_id)],
-                                                                      data={'reason': 'ServiceNow Device Creation'},
-                                                                      reason=CorrelationReason.ServiceNowCreation)
-                                self.link_adapters(EntityType.Devices, correlation_param)
-                    return '', 200
+            try:
+                conn = self.get_connection(self._get_client_config_by_client_id(client_id))
+                with conn:
+                    result_status, device_raw = conn.create_service_now_computer(service_now_dict)
+                    success = success or result_status
+                    if success is True:
+                        device = self.create_snow_device(device_raw=device_raw,
+                                                         fetch_ips=self.__fetch_ips,
+                                                         table_type='cmdb_ci_computer')
+                        if device:
+                            device_id = device.id
+                            device_dict = device.to_dict()
+                            self._save_data_from_plugin(
+                                client_id,
+                                {'raw': [], 'parsed': [device_dict]},
+                                EntityType.Devices, False)
+                            self._save_field_names_to_db(EntityType.Devices)
+                            to_correlate = request_json.get('to_ccorrelate')
+                            if isinstance(to_correlate, dict):
+                                to_correlate_plugin_unique_name = to_correlate.get('to_correlate_plugin_unique_name')
+                                to_correlate_device_id = to_correlate.get('device_id')
+                                if to_correlate_plugin_unique_name and to_correlate_device_id:
+                                    correlation_param = CorrelationResult(associated_adapters=[(to_correlate_plugin_unique_name,
+                                                                                                to_correlate_device_id),
+                                                                                               (self.plugin_unique_name, device_id)],
+                                                                          data={'reason': 'ServiceNow Device Creation'},
+                                                                          reason=CorrelationReason.ServiceNowCreation)
+                                    self.link_adapters(EntityType.Devices, correlation_param)
+                        return '', 200
+            except Exception:
+                logger.exception(f'Could not connect to {client_id}')
         return 'Failure', 400
 
     def _parse_users_raw_data(self, raw_data):
