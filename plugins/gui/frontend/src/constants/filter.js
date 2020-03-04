@@ -68,7 +68,7 @@ export const compOps = {
     date,
     time: {exists},
     ip: {
-        subnet: '{field}_raw == match({"$gte": {val}, "$lte": {val}})',
+        subnet: '{val}',
         notInSubnet: '{val}',
         contains,
         equals,

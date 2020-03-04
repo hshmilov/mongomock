@@ -6,7 +6,17 @@ import { getExcludedAdaptersFilter } from '../constants/utils';
 import { compOps, opTitleTranslation } from '../constants/filter';
 import { pluginTitlesToNames } from '../constants/plugin_meta';
 
-
+const convertSubnetToRaw = (val) => {
+  if (!val.includes('/') || val.indexOf('/') === val.length - 1) {
+    return [];
+  }
+  try {
+    const subnetInfo = IP.cidrSubnet(val);
+    return [IP.toLong(subnetInfo.networkAddress), IP.toLong(subnetInfo.broadcastAddress)];
+  } catch (err) {
+    return [];
+  }
+};
 
 /**
  * A module that calculates a single condition in an expression
@@ -24,43 +34,49 @@ const Condition = function (field, fieldSchema, adapter, compOp, value, filtered
   let processedValue = '';
 
   const formatNotInSubnet = () => {
-    let subnets = value.split(',');
-    let rawIpsArray = [];
+    const subnets = value.split(',');
+    const rawIpsArray = [];
     let result = [[0, 0xffffffff]];
     for (let i = 0; i < subnets.length; i++) {
-      let subnet = subnets[i].trim();
-      if (subnet === '') {
-        continue;
+      const subnet = subnets[i].trim();
+      if (subnet !== '') {
+        const rawIps = convertSubnetToRaw(subnet);
+        if (rawIps.length === 0) {
+          return `Invalid "${subnet}", Specify <address>/<CIDR>`;
+        }
+        rawIpsArray.push(rawIps);
       }
-      let rawIps = convertSubnetToRaw(subnet);
-      if (rawIps.length === 0) {
-        return `Invalid "${subnet}", Specify <address>/<CIDR>`;
-      }
-      rawIpsArray.push(rawIps);
-
     }
-    rawIpsArray.sort((range1, range2) => {return range1[0] - range2[0];});
-    rawIpsArray.forEach(range => {
-      let lastRange = result.pop(-1);
-      let new1 = [lastRange[0], range[0]];
-      let new2 = [range[1], lastRange[1]];
-      result.push(new1);
-      result.push(new2);
+    rawIpsArray.sort((range1, range2) => (range1[0] - range2[0]));
+    rawIpsArray.forEach((range) => {
+      const lastRange = result.pop(-1);
+      result.push([lastRange[0], range[0]]);
+      result.push([range[1], lastRange[1]]);
     });
-    result = result.map(range => {return `${field}_raw == match({"$gte": ${range[0]}, "$lte": ${range[1]}})`;}).join(' or ');
-    result = `(${result})`;
-    processedValue = result;
+    result = result
+      .map((range) => (`${field}_raw == match({"$gte": ${range[0]}, "$lte": ${range[1]}})`))
+      .join(' or ');
+    processedValue = `(${result})`;
     return '';
   };
 
   const formatInSubnet = () => {
-    let subnet = value;
-    let rawIps = convertSubnetToRaw(subnet);
-
-    if (rawIps.length === 0) {
-      return 'Specify <address>/<CIDR> to filter IP by subnet';
+    const subnets = value.split(',');
+    const rawIpsArray = [];
+    for (let i = 0; i < subnets.length; i++) {
+      const subnet = subnets[i].trim();
+      if (subnet !== '') {
+        const rawIps = convertSubnetToRaw(subnet);
+        if (rawIps.length === 0) {
+          return 'Specify <address>/<CIDR> to filter IP by subnet';
+        }
+        rawIpsArray.push(rawIps);
+      }
     }
-    processedValue = rawIps;
+    const result = rawIpsArray
+      .map((range) => (`${field}_raw == match({"$gte": ${range[0]}, "$lte": ${range[1]}})`))
+      .join(' or ');
+    processedValue = `(${result})`;
     return '';
   };
 
@@ -209,18 +225,6 @@ const convertVersionToRaw = (version) => {
     return converted;
   } catch (err) {
     return '';
-  }
-};
-
-const convertSubnetToRaw = (val) => {
-  if (!val.includes('/') || val.indexOf('/') === val.length - 1) {
-    return [];
-  }
-  try {
-    let subnetInfo = IP.cidrSubnet(val);
-    return [IP.toLong(subnetInfo.networkAddress), IP.toLong(subnetInfo.broadcastAddress)];
-  } catch (err) {
-    return [];
   }
 };
 
