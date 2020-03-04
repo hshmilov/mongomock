@@ -16,8 +16,7 @@ logger = logging.getLogger(f'axonius.{__name__}')
 class QualysRemoveTag(ActionTypeBase):
     @staticmethod
     def config_schema() -> dict:
-        schema = QualysActionUtils.GENERAL_CONFIG_SCHEMA.copy()
-        return schema
+        return QualysActionUtils.GENERAL_CONFIG_SCHEMA
 
     @staticmethod
     def default_config() -> dict:

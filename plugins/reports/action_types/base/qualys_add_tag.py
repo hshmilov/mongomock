@@ -1,4 +1,5 @@
 import contextlib
+import copy
 import functools
 import logging
 
@@ -18,7 +19,7 @@ ACTION_CONFIG_PARENT_TAG = 'parent_tag'
 class QualysAddTag(ActionTypeBase):
     @staticmethod
     def config_schema() -> dict:
-        schema = QualysActionUtils.GENERAL_CONFIG_SCHEMA.copy()
+        schema = copy.deepcopy(QualysActionUtils.GENERAL_CONFIG_SCHEMA)
         schema['items'].append({'name': ACTION_CONFIG_PARENT_TAG, 'title': 'Parent tag name', 'type': 'string'})
         return schema
 
