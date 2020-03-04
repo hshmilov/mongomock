@@ -1,4 +1,8 @@
 export const pluginMeta = {
+    contrast_security_adapter: {
+        title: 'Contrast Security',
+        description: 'Contrast Security protects software applications against cyberattacks.'
+    },
     microfocus_sa_adapter: {
         title: 'Microfocus Server Automation',
         link: 'https://docs.axonius.com/docs/microfocus-sa',
