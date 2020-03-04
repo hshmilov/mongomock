@@ -1,10 +1,11 @@
 import logging
 from typing import List
 
-from aws_adapter.connection.structures import AWSS3PolicyStatement
+from aws_adapter.connection.structures import AWSS3PolicyStatement, AWSDeviceAdapter, AWSIPRule
 
 logger = logging.getLogger(f'axonius.{__name__}')
 PAGE_NUMBER_FLOOD_PROTECTION = 9000
+BOTO3_FILTERS_LIMIT = 100
 
 
 def get_paginated_next_token_api(func):
@@ -91,3 +92,105 @@ def parse_bucket_policy_statements(bucket_policy: dict) -> List[AWSS3PolicyState
         ))
 
     return statements or None
+
+
+def make_ip_rules_list(ip_pemissions_list: list):
+    ip_rules = []
+    if not isinstance(ip_pemissions_list, list):
+        return None
+    for ip_pemission in ip_pemissions_list:
+        if not isinstance(ip_pemission, dict):
+            continue
+        from_port = int(ip_pemission.get('FromPort')) \
+            if ip_pemission.get('FromPort') is not None else None
+        to_port = int(ip_pemission.get('ToPort')) \
+            if ip_pemission.get('ToPort') is not None else None
+        ip_protocol = str(ip_pemission.get('IpProtocol')) \
+            if ip_pemission.get('IpProtocol') else None
+        if ip_protocol == '-1':
+            ip_protocol = 'Any'
+        ip_ranges_raw = ip_pemission.get('IpRanges') or []
+        ip_ranges_raw_v6 = ip_pemission.get('Ipv6Ranges') or []
+        ip_ranges_raw += ip_ranges_raw_v6
+        ip_ranges = []
+        for ip_range_raw in ip_ranges_raw:
+            ip_ranges.append((ip_range_raw.get('CidrIp') or '') +
+                             (ip_range_raw.get('CidrIpv6') or '') +
+                             '_Description:' + (ip_range_raw.get('Description') or ''))
+        ip_rules.append(AWSIPRule(from_port=from_port,
+                                  to_port=to_port,
+                                  ip_protocol=ip_protocol,
+                                  ip_ranges=ip_ranges))
+    return ip_rules
+
+
+def add_generic_firewall_rules(device: AWSDeviceAdapter, group_name: str, source: str,
+                               direction: str, rule_list: List[AWSIPRule]):
+    for rule in rule_list:
+        try:
+            from_port = rule.from_port
+        except Exception:
+            from_port = None
+
+        try:
+            to_port = rule.to_port
+        except Exception:
+            to_port = None
+
+        try:
+            protocol = rule.ip_protocol
+        except Exception:
+            protocol = None
+
+        try:
+            targets = []
+            raw_targets = rule.ip_ranges
+            for raw_target in raw_targets:
+                if '_Description:' in raw_target:
+                    cidr, desc = raw_target.split('_Description:')
+                    final_string = cidr
+                    if desc:
+                        final_string += f' ({desc})'
+
+                    targets.append(final_string)
+                else:
+                    targets.append(raw_target)
+        except Exception:
+            logger.exception('Problem parsing raw targets')
+            targets = []
+
+        for target in targets:
+            device.add_firewall_rule(
+                name=group_name,
+                source=source,
+                type='Allow',
+                direction=direction,
+                target=target,
+                protocol=protocol,
+                from_port=from_port,
+                to_port=to_port
+            )
+
+
+def describe_images_from_client_by_id(ec2_client, amis):
+    """
+    Described images (by ids) from a specific client by id
+
+    :param ec2_client:
+    :param amis: list of image ids to get
+    :return dict: image-id -> image
+    """
+
+    # the reason I use 'Filters->image-id' and not ImageIds is because if I'd use ImageIds
+    # would've raise an exception if an image is not found
+    # all images are returned at once so no progress is logged
+    described_images = dict()
+    amis = list(amis)
+
+    # Filters are limited, usually with 200. So we batch requests of 100
+    for i in range(0, len(amis), BOTO3_FILTERS_LIMIT):
+        result = ec2_client.describe_images(Filters=[{'Name': 'image-id', 'Values': amis[i:i + BOTO3_FILTERS_LIMIT]}])
+        for image in result['Images']:
+            described_images[image['ImageId']] = image
+
+    return described_images

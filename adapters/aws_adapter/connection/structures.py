@@ -1,6 +1,8 @@
 import datetime
 import logging
+from enum import Enum, auto
 
+from axonius.devices.device_adapter import DeviceRunningState
 from axonius.devices.device_or_container_adapter import DeviceOrContainerAdapter
 from axonius.fields import Field, ListField, JsonStringFormat
 from axonius.smart_json_class import SmartJsonClass
@@ -10,10 +12,61 @@ from axonius.utils.parsing import format_ip
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
+AWS_ACCESS_KEY_ID = 'aws_access_key_id'
+REGION_NAME = 'region_name'
+AWS_SECRET_ACCESS_KEY = 'aws_secret_access_key'
+AWS_SESSION_TOKEN = 'aws_session_token'
+ACCOUNT_TAG = 'account_tag'
+ROLES_TO_ASSUME_LIST = 'roles_to_assume_list'
+USE_ATTACHED_IAM_ROLE = 'use_attached_iam_role'
+PROXY = 'proxy'
+AWS_CONFIG = 'config'
+GET_ALL_REGIONS = 'get_all_regions'
+AWS_ENDPOINT_FOR_REACHABILITY_TEST = f'https://apigateway.us-east-2.amazonaws.com/'   # endpoint for us-east-2
+
+
+class AwsRawDataTypes(Enum):
+    Regular = auto()
+    SSM = auto()
+    Users = auto()
+    Lambda = auto()
+    NAT = auto()
+    Route53 = auto()
+    RDS = auto()
+    S3 = auto()
+    Workspaces = auto()
+
+
+# translation table between AWS values to parsed values
+AWS_POWER_STATE_MAP = {
+    'terminated': DeviceRunningState.TurnedOff,
+    'stopped': DeviceRunningState.TurnedOff,
+    'running': DeviceRunningState.TurnedOn,
+    'pending': DeviceRunningState.TurnedOff,
+    'shutting-down': DeviceRunningState.ShuttingDown,
+    'stopping': DeviceRunningState.ShuttingDown,
+}
+
+
 class AWSTagKeyValue(SmartJsonClass):
     """ A definition for a key value field"""
     key = Field(str, 'AWS Tag Key')
     value = Field(str, 'AWS Tag Value')
+
+
+class AwsSSMSchemas(Enum):
+    Application = 'AWS:Application'
+    ComplianceItems = 'AWS:ComplianceItem'
+    File = 'AWS:File'
+    InstanceDetailedInformation = 'AWS:InstanceDetailedInformation'
+    Network = 'AWS:Network'
+    PatchSummary = 'AWS:PatchSummary'
+    PatchCompliance = 'AWS:PatchCompliance'
+    ResourceGroup = 'AWS:ResourceGroup'
+    Service = 'AWS:Service'
+    WindowsRegistry = 'AWS:WindowsRegistry'
+    WindowsRole = 'AWS:WindowsRole'
+    WindowsUpdate = 'AWS:WindowsUpdate'
 
 
 class AWSIAMPolicy(SmartJsonClass):
@@ -363,6 +416,7 @@ class AWSDeviceAdapter(DeviceOrContainerAdapter, AWSAdapter):
     instance_type = Field(str, 'Instance Type')
     key_name = Field(str, 'Key Name')
     private_dns_name = Field(str, 'Private Dns Name')
+    public_dns_name = Field(str, 'Public Dns Name')
     monitoring_state = Field(str, 'Monitoring State')
     launch_time = Field(datetime.datetime, 'Launch Time')
     image_id = Field(str, 'AMI (Image) ID')

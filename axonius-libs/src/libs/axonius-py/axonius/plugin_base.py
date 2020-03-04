@@ -632,7 +632,20 @@ class PluginBase(Configurable, Feature, ABC):
     # pylint: enable=no-self-use
     def _request_reload_uwsgi(self, plugin_unique_name: str):
         self.request_remote_plugin('reload_uwsgi', plugin_unique_name)
-        time.sleep(5)   # time sleep as a best practice until the application is reloaded and registered
+        time_passed = 0
+        while time_passed < 280:
+            time.sleep(5)
+            time_passed += 5
+            try:
+                self.request_remote_plugin('version', plugin_unique_name, fail_on_plugin_down=True, timeout=(5, 5))
+                break
+            except Exception:
+                pass
+        else:
+            logger.exception('Adapter did not reload successfully from uwsgi')
+            raise ValueError(f'Adapter did not reload successfully from uwsgi')
+
+        time.sleep(5)
 
     @retry(stop_max_attempt_number=3,
            wait_fixed=5000)
@@ -1844,18 +1857,19 @@ class PluginBase(Configurable, Feature, ABC):
                 logger.info(f'{added_pretty_ids_count} devices had their pretty_id set')
 
             time_for_client = datetime.now() - time_before_client
-            if self._notify_on_adapters is True and (time_for_client.seconds or inserted_data_count) \
+            total_seconds = time_for_client.total_seconds()
+            if self._notify_on_adapters is True and (total_seconds or inserted_data_count) \
                     and not 'general_info' in plugin_name and not should_log_info:
                 self.create_notification(
                     f'Finished aggregating {entity_type} for client {client_name}, '
-                    f' aggregation took {time_for_client.seconds} seconds and returned {inserted_data_count}.')
+                    f' aggregation took {total_seconds} seconds and returned {inserted_data_count}.')
                 self.send_external_info_log(f'Finished aggregating {entity_type} for client {client_name}, '
-                                            f' aggregation took {time_for_client.seconds} seconds and '
+                                            f' aggregation took {total_seconds} seconds and '
                                             f'returned {inserted_data_count}.')
             if should_log_info is True:
                 logger.info(
                     f'Finished aggregating {entity_type} for client {client_name}, '
-                    f' aggregation took {time_for_client.seconds} seconds and returned {inserted_data_count}.')
+                    f' aggregation took {total_seconds} seconds and returned {inserted_data_count}.')
 
         except Exception as e:
             logger.exception(f'Thread {threading.current_thread()} encountered error: {e}')

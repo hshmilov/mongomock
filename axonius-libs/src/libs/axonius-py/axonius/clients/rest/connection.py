@@ -198,6 +198,8 @@ class RESTConnection(ABC):
             if isinstance(conn_err.args[0].args[-1], http.client.RemoteDisconnected):
                 # pylint: enable=no-member
                 return True
+            if 'bad handshake' in str(conn_err):
+                return True
             return False
 
     @abstractmethod

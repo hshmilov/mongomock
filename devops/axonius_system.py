@@ -185,6 +185,10 @@ def system_entry_point(args):
                                       env_vars=args.env, internal_service_white_list=internal_services,
                                       system_config=system_config)
         print('finished start and wait')
+        try:
+            restart_watchdogs()
+        except Exception:
+            print(f'WARNING - Could not restart watchdogs!')
 
         axonius_system.start_plugins(adapter_names=adapters_to_raise,
                                      plugin_names=args.services,
@@ -229,7 +233,6 @@ def system_entry_point(args):
                                          skip=args.skip,
                                          env_vars=args.env, system_config=system_config)
 
-        restart_watchdogs()
     elif args.mode == 'down':
         assert not args.restart and not args.rebuild and not args.skip and not args.prod
         print(f'Stopping system and {args.adapters + args.services}')

@@ -81,7 +81,7 @@ class GoogleMdmAdapter(AdapterBase):
         return auth_file['client_id']
 
     def _test_reachability(self, client_config):
-        return RESTConnection.test_reachability(client_config.get('https://developers.google.com/'))
+        return RESTConnection.test_reachability('https://developers.google.com/')
 
     def _connect_client(self, client_config) -> GSuiteAdminConnection:
         try:

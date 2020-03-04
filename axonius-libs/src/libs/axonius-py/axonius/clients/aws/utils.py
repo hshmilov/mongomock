@@ -8,6 +8,10 @@ from botocore.config import Config
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
+def get_aws_config(https_proxy):
+    return Config(proxies={'https': https_proxy}) if https_proxy else None
+
+
 def get_s3_object(
         bucket_name: str,
         object_location: str,

@@ -10,7 +10,7 @@ from botocore.credentials import RefreshableCredentials
 from botocore.session import get_session
 
 
-def __get_assumed_session(
+def get_assumed_session(
         role_arn: str,
         region_name: str,
         aws_access_key_id: str = None,
@@ -24,9 +24,9 @@ def __get_assumed_session(
     """
     session_credentials = RefreshableCredentials.create_from_metadata(
         metadata=functools.partial(
-            __boto3_role_credentials_metadata_maker, role_arn, aws_access_key_id, aws_secret_access_key, aws_config)(),
+            boto3_role_credentials_metadata_maker, role_arn, aws_access_key_id, aws_secret_access_key, aws_config)(),
         refresh_using=functools.partial(
-            __boto3_role_credentials_metadata_maker, role_arn, aws_access_key_id, aws_secret_access_key, aws_config),
+            boto3_role_credentials_metadata_maker, role_arn, aws_access_key_id, aws_secret_access_key, aws_config),
         method='sts-assume-role'
     )
     role_session = get_session()
@@ -35,7 +35,7 @@ def __get_assumed_session(
     return boto3.Session(botocore_session=role_session)
 
 
-def __boto3_role_credentials_metadata_maker(
+def boto3_role_credentials_metadata_maker(
         role_arn: str,
         aws_access_key_id: str = None,
         aws_secret_access_key: str = None,
@@ -93,7 +93,7 @@ def get_boto3_session(
     aws_config = Config(proxies={'https': https_proxy}) if https_proxy else None
 
     if assumed_role_arn:
-        session = __get_assumed_session(
+        session = get_assumed_session(
             assumed_role_arn,
             sts_region_name,
             aws_access_key_id,
