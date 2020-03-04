@@ -100,9 +100,9 @@
         border-radius: 2px;
         border: 2px solid transparent;
 
-        &.card__item > .header__title {
+        &.card__item .header {
             border: 1px solid transparent;
-            .card-title {
+            > .header__title .card-title {
                 display: flex;
 
                 .md-icon {
@@ -117,19 +117,6 @@
             &:hover {
               cursor: move;
               border: 1px solid #DEDEDE;
-              .md-icon {
-                display: flex;
-                visibility: visible;
-                fill: $theme-blue!important;
-                position: relative;
-                top: -3px;
-                left: 0px;
-                height: 24px;
-                width: 24px;
-              }
-              .md-svg-loader svg {
-                width: max-content!important;
-              }
             }
           }
 
@@ -189,17 +176,9 @@
                 height: 20px;
                 line-height: 20px;
               }
-
-              &:hover {
-                cursor: pointer;
-                text-shadow: $text-shadow;
-              }
-              .export {
-                color: $theme-blue;
-              }
             }
           }
-          
+
         }
 
         > .body {
