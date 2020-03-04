@@ -965,7 +965,22 @@ export const pluginMeta = {
     tanium_adapter: {
         title: 'Tanium',
         link: 'https://docs.axonius.com/docs/tanium',
-        description: 'Tanium discovers IT assets and gathers live endpoint data to help create an up-to-date inventory of hardware and software assets.'
+        description: 'Tanium gathers live endpoint data to help create an up-to-date inventory of hardware and software assets.'
+    },
+    tanium_sq_adapter: {
+        title: 'Tanium Saved Question',
+        link: 'https://docs.axonius.com/docs/tanium_sq',
+        description: 'Tanium Saved Questions gather live endpoint data to help create an up-to-date inventory of hardware and software assets.'
+    },
+    tanium_asset_adapter: {
+        title: 'Tanium Asset Module',
+        link: 'https://docs.axonius.com/docs/tanium_asset',
+        description: 'Tanium Asset Module provides a complete inventory of hardware and software assets including servers, laptops, and desktops for thorough insight.'
+    },
+    tanium_discover_adapter: {
+        title: 'Tanium Discover Module',
+        link: 'https://docs.axonius.com/docs/tanium_discover',
+        description: 'Tanium Discover Module scans for unmanaged assets with almost no impact on the network.'
     },
     aruba_adapter: {
         title: 'Aruba',

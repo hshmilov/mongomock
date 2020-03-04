@@ -241,6 +241,8 @@ DOCKER_PORTS = {
     'cisco-stealthwatch-adapter':       10001,
     'arista-eos-adapter':               10002,
     'men-and-mice-adapter':             10004,
+    'openvas-adapter':                  10014,
+    'microfocus-sa-adapter':            13368,
     'digicert-pki-platform-adapter':    13369,
     'github-adapter':                   13370,
     'netbrain-adapter':                 13371,
@@ -248,8 +250,9 @@ DOCKER_PORTS = {
     'riskiq-adapter':                   13373,
     'digicert-certcentral-adapter':     13374,
     'json-adapter':                     13375,
-    'microfocus-sa-adapter':            13368,
-    'openvas-adapter':                  13376,
+    'tanium-discover-adapter':          13376,
+    'tanium-asset-adapter':             13377,
+    'tanium-sq-adapter':                13378,
     'mongo':                            27017,
     'mockingbird-db':                   28017
 }

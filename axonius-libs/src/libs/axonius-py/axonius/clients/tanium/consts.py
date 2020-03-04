@@ -1,0 +1,41 @@
+VALUES_SKIP = [
+    r' file missing$',
+    r'\[no results\]',
+    r'\[no tags\]',
+    r'^\[no matches\]$',
+    r'^\[removed\]$',
+    r'^can not ',
+    r'^error:',
+    r'^file permissions scanning not enabled$',
+    r'^insufficient free disk space$',
+    r'^invalid hash type selected$',
+    r'^key/value not found$',
+    r'^n/a',
+    r'^no .* found in path$',
+    r'^no shares$',
+    r'^none$',
+    r'^not applicable$',
+    r'^not available$',
+    r'^not enough params to decryptjre',
+    r'^not found$',
+    r'^not implemented',
+    r'^not installed',
+    r'^not set$',
+    r'^tse-error:',
+    r'^uninitialized$',
+    r'^unsupported$',
+    r'^wtmp$',
+    r'file.*does not exist',
+    r'file.*not found',
+    r'must be installed to use this sensor$',
+    r'no service pack found',
+    r'package not installed$',
+    r'taniumexecwrapper',
+    r'uninitialized - waiting for login',
+    r'utilities missing:',
+]
+VALUES_EMPTY = [None, '', []]
+MAC_RE = '[0-9a-f]{2}([-:]?)[0-9a-f]{2}(\\1[0-9a-f]{2}){4}$'
+
+YES_VALS = ['true', 'yes', 1, True, '1']
+NO_VALS = ['false', 'no', 0, False, '0']

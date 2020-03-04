@@ -1,0 +1,40 @@
+PAGE_SIZE = 1000
+MAX_DEVICES_COUNT = 20000000
+METHODS = ['arp', 'connected', 'script', 'nmap', 'managed']
+HEADERS = {
+    'Content-Type': 'application/json',
+    'Accept': 'application/json, text/plain, */*',
+    'User-Agent': 'axonius/tanium_discover_adapter',
+}
+SELECT_FIELDS = [
+    'Asset.cloudTags',
+    'Asset.computerid',
+    'Asset.createdAt',
+    'Asset.hostname',
+    'Asset.ignored',
+    'Asset.imageId',
+    'Asset.instanceId',
+    'Asset.instanceState',
+    'Asset.instanceType',
+    'Asset.ipaddress',
+    'Asset.ismanaged',
+    'Asset.lastDiscoveredAt',
+    'Asset.lastManagedAt',
+    'Asset.launchTime',
+    'Asset.locations',
+    'Asset.macaddress',
+    'Asset.macorganization',
+    'Asset.method',
+    'Asset.natipaddress',
+    'Asset.networkId',
+    'Asset.os',
+    'Asset.osgeneration',
+    'Asset.ownerId',
+    'Asset.ports',
+    'Asset.profile',
+    'Asset.provider',
+    'Asset.tags',
+    'Asset.unmanageable',
+    'Asset.updatedAt',
+    'Asset.zone',
+]

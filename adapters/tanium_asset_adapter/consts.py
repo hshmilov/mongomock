@@ -1,9 +1,7 @@
-PAGE_SIZE = 1000
-CACHE_DT_FMT = '%Y-%m-%d %H:%M:%S'
-CACHE_EXPIRATION = 900
 MAX_DEVICES_COUNT = 20000000
+PAGE_SIZE = 200
 HEADERS = {
     'Content-Type': 'application/json',
     'Accept': 'application/json, text/plain, */*',
-    'User-Agent': 'axonius/tanium_adapter',
+    'User-Agent': 'axonius/tanium_asset_adapter',
 }

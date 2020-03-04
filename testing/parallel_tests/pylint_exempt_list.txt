@@ -402,7 +402,6 @@ testing/parallel_tests/test_cisco_amp.py
 testing/parallel_tests/test_cisco_meraki.py
 testing/parallel_tests/test_cisco_prime.py
 testing/parallel_tests/test_claroty.py
-testing/parallel_tests/test_tanium.py
 testing/parallel_tests/test_csv.py
 testing/parallel_tests/test_cylance.py
 testing/parallel_tests/test_desktop_central.py

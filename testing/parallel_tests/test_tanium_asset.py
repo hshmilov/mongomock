@@ -1,18 +1,18 @@
 # pylint: disable=unused-import
 import pytest
-from services.adapters.tanium_service import TaniumService, tanium_fixture
+from services.adapters.tanium_asset_service import TaniumAssetService, tanium_asset_fixture
 from test_helpers.adapter_test_base import AdapterTestBase
-from test_credentials.test_tanium_credentials import CLIENT_DETAILS, SOME_DEVICE_ID
+from test_credentials.test_tanium_asset_credentials import CLIENT_DETAILS, SOME_DEVICE_ID
 
 
-class TestTaniumAdapter(AdapterTestBase):
+class TestTaniumAssetAdapter(AdapterTestBase):
     @property
     def adapter_service(self):
-        return TaniumService()
+        return TaniumAssetService()
 
     @property
     def adapter_name(self):
-        return 'tanium_adapter'
+        return 'tanium_asset_adapter'
 
     @property
     def some_client_id(self):
