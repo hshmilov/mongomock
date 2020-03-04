@@ -1,22 +1,15 @@
 import logging
 
-
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
-from axonius.adapter_exceptions import GetDevicesError
 from axonius.clients.mssql.connection import MSSQLConnection
 from axonius.clients.mysql.connection import MySQLConnection
 from axonius.clients.oracle_db.connection import OracleDBConnection
 from axonius.clients.postgres.connection import PostgresConnection
+from axonius.clients.sql.sql_generic import _sql_parse_raw_data
 from axonius.mixins.configurable import Configurable
-from axonius.utils.parsing import normalize_var_name
-from axonius.fields import Field
-from axonius.devices.device_adapter import DeviceAdapter
-from axonius.utils.datetime import parse_date
 from axonius.utils.files import get_local_config_file
-from axonius.utils.parsing import get_exception_string
-from axonius.consts.csv_consts import get_csv_field_names
-from axonius.utils.sql import SQLServers
+from axonius.utils.sql import SQLServers, MySqlAdapter
 from mssql_adapter.client_id import get_client_id
 
 logger = logging.getLogger(f'axonius.{__name__}')
@@ -24,10 +17,8 @@ logger = logging.getLogger(f'axonius.{__name__}')
 
 class MssqlAdapter(AdapterBase, Configurable):
     # pylint: disable=too-many-instance-attributes
-    class MyDeviceAdapter(DeviceAdapter):
-        server_tag = Field(str, 'Server Tag')
-        database = Field(str, 'DB Name')
-        table = Field(str, 'Table Name')
+    class MyDeviceAdapter(MySqlAdapter):
+        pass
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -44,6 +35,7 @@ class MssqlAdapter(AdapterBase, Configurable):
         try:
             # For migration purposes, if database_type is not there, leave it as MSSQL
             db_type = client_config.get('database_type') or SQLServers.MSSQL.value
+            self.sql_type = db_type
 
             if db_type == SQLServers.MSSQL.value:
                 connection = MSSQLConnection(database=client_config.get('database'),
@@ -81,7 +73,7 @@ class MssqlAdapter(AdapterBase, Configurable):
                                        password=client_config['password'])
             with connection:
                 pass  # check that the connection credentials are valid
-            return connection, client_config
+            return connection, client_config, db_type
         except Exception as err:
             domain = client_config['domain']
             database = client_config['database']
@@ -89,7 +81,7 @@ class MssqlAdapter(AdapterBase, Configurable):
                       f'database: ' \
                       f'{database}'
             logger.exception(message)
-            raise ClientConnectionException(get_exception_string())
+            raise ClientConnectionException(f'Failed connecting to {db_type} database. {str(err)}')
 
     def _query_devices_by_client(self, client_name, client_data):
         """
@@ -100,12 +92,12 @@ class MssqlAdapter(AdapterBase, Configurable):
 
         :return: A json with all the attributes returned from the Server
         """
-        connection, client_config = client_data
+        connection, client_config, sql_type = client_data
         table = client_config['table']
         connection.set_devices_paging(self.__devices_fetched_at_a_time)
         with connection:
             for device_raw in connection.query(f'Select * from {table}'):
-                yield device_raw, client_config
+                yield device_raw, client_config, sql_type
 
     @staticmethod
     def _clients_schema():
@@ -171,96 +163,8 @@ class MssqlAdapter(AdapterBase, Configurable):
             'type': 'array'
         }
 
-    # pylint: disable=too-many-branches, too-many-statements, too-many-locals, too-many-nested-blocks
     def _parse_raw_data(self, devices_raw_data):
-        first_time = True
-        fields = {}
-        for device_raw, client_config in devices_raw_data:
-            try:
-                if first_time:
-                    fields = get_csv_field_names(device_raw.keys())
-                    first_time = False
-                if not any(id_field in fields for id_field in ['id', 'serial', 'mac_address', 'hostname']):
-                    logger.error(f'Bad devices fields names {device_raw.keys()}')
-                    raise GetDevicesError(f'Strong identifier is missing for devices')
-                device = self._new_device_adapter()
-                vals = {field_name: device_raw.get(fields[field_name][0]) for field_name in fields}
-
-                macs = (vals.get('mac_address') or '').split(',')
-                macs = [mac.strip() for mac in macs if mac.strip()]
-                mac_as_id = macs[0] if macs else None
-
-                device_id = str(vals.get('id', '')) or vals.get('serial') or mac_as_id or vals.get('hostname')
-                if not device_id:
-                    logger.error(f'can not get device id for {device_raw}, continuing')
-                    continue
-
-                device.id = device_id
-                device.server_tag = client_config.get('server_tag')
-                device.table = client_config.get('table')
-                device.database = client_config.get('database')
-                device.device_serial = vals.get('serial')
-                device.name = vals.get('name')
-                device.hostname = vals.get('hostname')
-                device.device_model = vals.get('model')
-                device.domain = vals.get('domain')
-                device.last_seen = parse_date(vals.get('last_seen'))
-
-                device.device_manufacturer = vals.get('manufacturer')
-                device.total_physical_memory = vals.get('total_physical_memory_gb')
-
-                # OS is a special case, instead of getting the first found column we take all of them and combine them
-                if 'os' in fields:
-                    try:
-                        os_raw = ''
-                        for os_column in fields['os']:
-                            if device_raw.get(os_column) and isinstance(device_raw.get(os_column), str):
-                                os_raw += device_raw.get(os_column) + ' '
-                        device.figure_os(os_raw)
-                    except Exception:
-                        logger.error(f'Can not parse os ')
-
-                try:
-                    device.os.kernel_version = vals.get('kernel')
-                except Exception:
-                    # os is probably not set
-                    device.figure_os('')
-                    device.os.kernel_version = vals.get('kernel')
-
-                try:
-                    cpu_speed = vals.get('cpu_speed')
-                    architecture = vals.get('architecture')
-                    if cpu_speed or architecture:
-                        device.add_cpu(ghz=cpu_speed / (1024 ** 3), architecture=architecture)
-                except Exception:
-                    logger.exception(f'Problem setting cpu')
-                try:
-                    ips = None
-                    if isinstance(vals.get('ip'), str):
-                        ips = (vals.get('ip') or '').split(',')
-                        ips = [ip.strip() for ip in ips if ip.strip()]
-                    device.add_ips_and_macs(macs=macs, ips=ips)
-                except Exception:
-                    logger.exception(f'Problem getting nic and ips for {device_raw}')
-
-                device.set_raw(device_raw)
-
-                for column_name, column_value in device_raw.items():
-                    try:
-                        normalized_column_name = 'mssql_' + normalize_var_name(column_name)
-                        if not device.does_field_exist(normalized_column_name):
-                            # Currently we treat all columns as str
-                            cn_capitalized = ' '.join([word.capitalize() for word in column_name.split(' ')])
-                            device.declare_new_field(normalized_column_name, Field(str, f'MSSQL {cn_capitalized}'))
-
-                        device[normalized_column_name] = column_value
-                    except Exception:
-                        logger.warning(f'Could not parse column {column_name} with value {column_value}', exc_info=True)
-
-                device.set_raw(device_raw)
-                yield device
-            except Exception:
-                logger.exception(f'Problem with fetching Mssql Device for {device_raw}')
+        yield from _sql_parse_raw_data(self._new_device_adapter, devices_raw_data)
 
     @classmethod
     def adapter_properties(cls):

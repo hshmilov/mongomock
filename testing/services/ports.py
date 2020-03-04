@@ -1,3 +1,4 @@
+
 DOCKER_PORTS = {
     'smtp':                             25,
     'maildiranasaurus':                 26,
@@ -156,6 +157,7 @@ DOCKER_PORTS = {
     'guardium-adapter':                 6070,
     'landesk-adapter':                  6076,
     'paloalto-xdr-adapter':             6123,
+    'sqlite-adapter':                   6124,
     'arsenal-adapter':                  6130,
     'defender-atp-adapter':             6131,
     'eclypsium-adapter':                6132,

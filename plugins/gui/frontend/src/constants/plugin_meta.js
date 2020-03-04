@@ -1076,6 +1076,11 @@ export const pluginMeta = {
         title: 'Alibaba Cloud',
         link: 'https://docs.axonius.com/docs/alibaba-cloud',
         description: 'Alibaba Cloud provides cloud computing services and cloud Infrastructure as a service.'
+    },
+    sqlite_adapter: {
+        title: 'SQLite',
+        link: 'https://docs.axonius.com/docs/sqlite',
+        description: 'The SQLite adapter imports device information from SQLite database.'
     }
 }
 

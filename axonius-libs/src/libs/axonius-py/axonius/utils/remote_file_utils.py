@@ -130,14 +130,14 @@ def load_local_file(client_config) -> bytes:
     return PluginBase.Instance.grab_local_file(client_config['file_path'])
 
 
-def load_remote_data(client_config, default_encoding='utf-8') -> Tuple[str, str]:
+def load_remote_binary_data(client_config) -> bytes:
     """
-    Load data from a remote file, using client config.
+    Load binary data from a remote file, using client config.
     :param client_config: Client configuration dictionary.
                           Should match ``remote_file_consts.FILE_CLIENTS_SCHEMA``.
-    :param default_encoding: Default encoding if encoding not configured. Defaults to utf-8.
-    :return: tuple(file_name, file_data)
+    :return: bytes file_data
     """
+
     if not client_config.get('user_id'):
         raise ClientConnectionException('File name is required.')
 
@@ -159,11 +159,27 @@ def load_remote_data(client_config, default_encoding='utf-8') -> Tuple[str, str]
     else:
         message = f'Error - No way to find the resource from config.'
         raise ClientConnectionException(message)
+
+    return data_bytes
+
+
+def load_remote_data(client_config, default_encoding='utf-8') -> Tuple[str, str]:
+    """
+    Load data from a remote file, using client config.
+    :param client_config: Client configuration dictionary.
+                          Should match ``remote_file_consts.FILE_CLIENTS_SCHEMA``.
+    :param default_encoding: Default encoding if encoding not configured. Defaults to utf-8.
+    :return: tuple(file_name, file_data)
+    """
+
+    data_bytes = load_remote_binary_data(client_config)
+
     if not client_config.get('encoding'):
         encoding = chardet.detect(data_bytes)['encoding']  # detect decoding automatically
         encoding = encoding or default_encoding
     else:
         encoding = client_config.get('encoding')
+
     return client_config['user_id'], data_bytes.decode(encoding)
 
 
