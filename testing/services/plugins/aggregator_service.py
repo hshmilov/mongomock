@@ -87,8 +87,10 @@ class AggregatorService(PluginService, UpdatablePluginMixin):
             self._update_schema_version_26()
         if self.db_schema_version < 27:
             self._update_schema_version_27()
+        if self.db_schema_version < 28:
+            self._update_schema_version_28()
 
-        if self.db_schema_version != 27:
+        if self.db_schema_version != 28:
             print(f'Upgrade failed, db_schema_version is {self.db_schema_version}')
 
     def __create_capped_collections(self):
@@ -1265,6 +1267,77 @@ class AggregatorService(PluginService, UpdatablePluginMixin):
             self.db_schema_version = 27
         except Exception as e:
             print(f'Exception while upgrading core db to version 27. Details: {e}')
+            traceback.print_exc()
+            raise
+
+    def _update_schema_version_28(self):
+        print('Update to schema 28 - migrate tanium devices to sub-adapters')
+        try:
+            entities_db = self._entity_db_map[EntityType.Devices]
+            to_fix = []
+            # Get all devices which have tanium adapter
+            for entity in entities_db.find({f'adapters.{PLUGIN_NAME}': 'tanium_adapter'}, projection={
+                '_id': 1,
+                f'adapters.{PLUGIN_NAME}': 1,
+                f'adapters.{PLUGIN_UNIQUE_NAME}': 1,
+                f'adapters.data.quick_id': 1,
+                f'adapters.data.id': 1,
+                f'adapters.data.tanium_type': 1,
+            }):
+                # Then go on all tanium device-adapters on each device (each device might have multiple tanium adapters)
+                all_tanium = [x for x in entity['adapters'] if x[PLUGIN_NAME] == 'tanium_adapter']
+                for tanium_adapter in all_tanium:
+                    tanium_quick_id = tanium_adapter.get('quick_id')
+                    if not tanium_quick_id:
+                        continue
+
+                    tanium_data = tanium_adapter['data']
+                    tanium_type = tanium_data.get('tanium_type')
+                    tanium_current_id = tanium_data.get('id')
+                    if not tanium_current_id:
+                        continue
+                    if not tanium_type:
+                        continue
+
+                    # Mapping
+                    tanium_type_to_adapter = {
+                        'Saved Question Device': 'tanium_sq_adapter',
+                        'Discover Device': 'tanium_discover_adapter',
+                        'Asset Device': 'tanium_asset_adapter'
+                    }
+
+                    new_plugin_name = tanium_type_to_adapter.get(tanium_type)
+                    if not new_plugin_name:
+                        continue
+
+                    # Assume the first registration of the tanium adapter. Note that this can be incorrect
+                    # in the case of complex systems (master + nodes) where tanium_X_adapter_0 will be in a different
+                    # node than the master.
+                    new_plugin_unique_name = f'{new_plugin_name}_0'
+
+                    to_fix.append(pymongo.operations.UpdateOne({
+                        '_id': entity['_id'],
+                        f'adapters.quick_id': tanium_quick_id,
+                    }, {
+                        '$set': {
+                            'adapters.$.plugin_name': new_plugin_name,
+                            'adapters.$.plugin_unique_name': new_plugin_unique_name,
+                            'adapters.$.quick_id': get_preferred_quick_adapter_id(
+                                new_plugin_unique_name, tanium_current_id
+                            )
+                        }
+                    }))
+
+            if to_fix:
+                print(f'Migrating tanium devices to tanium new sub-adapters. Found {len(to_fix)} records..')
+                for i in range(0, len(to_fix), 1000):
+                    entities_db.bulk_write(to_fix[i: i + 1000], ordered=False)
+                    print(f'Fixed Chunk of {i + 1000} records')
+            else:
+                print(f'Tanium ID upgrade: Nothing to fix. Moving on')
+            self.db_schema_version = 28
+        except Exception as e:
+            print(f'Exception while upgrading core db to version 28. Details: {e}')
             traceback.print_exc()
             raise
 

@@ -38,7 +38,10 @@ class CoreService(PluginService, UpdatablePluginMixin):
         if self.db_schema_version < 12:
             self._update_schema_version_12()
 
-        if self.db_schema_version != 12:
+        if self.db_schema_version < 13:
+            self._update_schema_version_13()
+
+        if self.db_schema_version != 13:
             print(f'Upgrade failed, db_schema_version is {self.db_schema_version}')
 
     def _migrate_db_10(self):
@@ -632,6 +635,108 @@ class CoreService(PluginService, UpdatablePluginMixin):
             self.db_schema_version = 12
         except Exception as e:
             print(f'Exception while upgrading gui db to version 12. Details: {e}')
+
+    def _update_schema_version_13(self):
+        # Change client_id
+        print('Upgrade to schema 13 - Split Tanium to sub-adapters')
+        try:
+            # Get a list of all tanium adapters in the systems (we could have a couple - each on a different node)
+            all_tanium_adapters = self.db.client['core']['configs'].find(
+                {
+                    'plugin_name': 'tanium_adapter'
+                })
+
+            tanium_asset_adapter_creds = []
+            tanium_discover_adapter_creds = []
+            tanium_sq_adapter_creds = []
+
+            for tanium_adapter in all_tanium_adapters:
+                plugin_unique_name = tanium_adapter.get('plugin_unique_name')
+                clients = self.db.client[plugin_unique_name]['clients'].find({})
+                # These are all the clients ("connections"). Each one of them is encrypted, so we'd have to
+                # decrypt that.
+                for client in clients:
+                    new_client_config = client['client_config'].copy()
+                    self.decrypt_dict(new_client_config)
+
+                    domain = new_client_config.get('domain') or ''
+                    username = new_client_config.get('username') or ''
+                    password = new_client_config.get('password') or ''
+                    verify_ssl = new_client_config.get('verify_ssl') or False
+                    https_proxy = new_client_config.get('https_proxy') or ''
+
+                    shared_new_client_config = {
+                        'domain': domain,
+                        'username': username,
+                        'password': password,
+                        'verify_ssl': verify_ssl,
+                        'https_proxy': https_proxy
+                    }
+
+                    fetch_discovery = new_client_config.get('fetch_discovery')
+
+                    if fetch_discovery:
+                        tanium_discover_adapter_creds.append({
+                            'client_config': shared_new_client_config.copy(),
+                            'status': client.get('status') or 'success',
+                            'error': client.get('error')
+                        })
+
+                    asset_dvc = new_client_config.get('asset_dvc')
+                    if asset_dvc:
+                        asset_new_client_config = shared_new_client_config.copy()
+                        asset_new_client_config['asset_dvc'] = asset_dvc
+                        tanium_asset_adapter_creds.append(
+                            {
+                                'client_config': asset_new_client_config,
+                                'status': client.get('status') or 'success',
+                                'error': client.get('error')
+                            }
+                        )
+
+                    sq_name = new_client_config.get('sq_name') or ''
+                    sq_refresh = new_client_config.get('sq_refresh')
+                    sq_max_hours = new_client_config.get('sq_max_hours')
+
+                    if sq_name:
+                        sq_new_client_config = shared_new_client_config.copy()
+                        sq_new_client_config['sq_name'] = sq_name
+                        sq_new_client_config['sq_refresh'] = sq_refresh if sq_refresh is not None else False
+                        sq_new_client_config['sq_max_hours'] = sq_max_hours if sq_max_hours is not None else 6
+                        sq_new_client_config['no_results_wait'] = True
+                        tanium_sq_adapter_creds.append(
+                            {
+                                'client_config': sq_new_client_config,
+                                'status': client.get('status') or 'success',
+                                'error': client.get('error')
+                            }
+                        )
+
+            # self.encrypt_dict(plugin_unique_name, new_client_config)
+            for i, creds in enumerate(tanium_asset_adapter_creds):
+                print(f'Migrating {i + 1} / {len(tanium_asset_adapter_creds)} Tanium asset adapter')
+                creds['client_id'] = '_'.join(
+                    [creds['client_config'].get('domain'), creds['client_config'].get('asset_dvc')])
+                self.encrypt_dict('tanium_asset_adapter_0', creds['client_config'])
+                self.db.client['tanium_asset_adapter_0']['clients'].insert_one(creds)
+
+            for i, creds in enumerate(tanium_discover_adapter_creds):
+                print(f'Migrating {i + 1} / {len(tanium_discover_adapter_creds)} Tanium discover adapter')
+                creds['client_id'] = creds['client_config'].get('domain')
+                self.encrypt_dict('tanium_discover_adapter_0', creds['client_config'])
+                self.db.client['tanium_discover_adapter_0']['clients'].insert_one(creds)
+
+            for i, creds in enumerate(tanium_sq_adapter_creds):
+                print(f'Migrating {i + 1} / {len(tanium_sq_adapter_creds)} Tanium sq adapter')
+                creds['client_id'] = creds['client_config'].get('domain')
+                self.encrypt_dict('tanium_sq_adapter_0', creds['client_config'])
+                self.db.client['tanium_sq_adapter_0']['clients'].insert_one(creds)
+
+            self.db_schema_version = 13
+        except Exception as e:
+            print(f'Exception while upgrading tanium adapter to subadapters migration - version 13. Details: {e}')
+            traceback.print_exc()
+            raise
 
     def register(self, api_key=None, plugin_name=''):
         headers = {}
