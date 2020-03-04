@@ -63,6 +63,7 @@ import {
 } from './mutations';
 import {
   GET_MODULE_SCHEMA, getModuleSchema,
+  GET_MODULE_SCHEMA_WITH_CONNECTION_LABEL, getModuleSchemaWithConnectionLabel,
   GET_DATA_SCHEMA_LIST, getDataSchemaList,
   GET_DATA_SCHEMA_BY_NAME, getDataSchemaByName,
   SINGLE_ADAPTER, singleAdapter,
@@ -119,6 +120,7 @@ export default new Vuex.Store({
     [IS_EXPIRED]: isExpired,
     isExpired,
     [GET_CONNECTION_LABEL]: getConnectionLabel,
+    [GET_MODULE_SCHEMA_WITH_CONNECTION_LABEL]: getModuleSchemaWithConnectionLabel,
     getSavedQueryById,
     configuredAdaptersFields,
     [GET_FOOTER_MESSAGE]: getFooterMessage,

@@ -1390,3 +1390,17 @@ class EntitiesPage(Page):
 
     def set_table_scroll_position(self, scroll_top: int, scroll_left: int):
         self.set_scroll_position(self.TABLE_CONTAINER_CSS, scroll_top, scroll_left)
+
+    def select_query_filter(self, attribute='',  operator='', value='', clear_filter=False):
+
+        if clear_filter:
+            self.clear_query_wizard()
+
+        expressions = self.find_expressions()
+        self.select_query_field(attribute, parent=expressions[0])
+        self.select_query_comp_op(operator, parent=expressions[0])
+        if operator == 'equals':
+            self.select_query_value_without_search(value, parent=expressions[0])
+        elif operator == 'in':
+            self.fill_query_string_value(value, parent=expressions[0])
+        self.wait_for_table_to_be_responsive()

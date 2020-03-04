@@ -50,6 +50,7 @@ from axonius.adapter_exceptions import TagDeviceError
 from axonius.background_scheduler import LoggedBackgroundScheduler
 from axonius.clients.cyberark_vault.connection import CyberArkVaultConnection
 from axonius.clients.rest.connection import RESTConnection
+from axonius.consts import adapter_consts
 from axonius.consts.adapter_consts import IGNORE_DEVICE
 from axonius.consts.core_consts import CORE_CONFIG_NAME, ACTIVATED_NODE_STATUS
 from axonius.consts.gui_consts import FEATURE_FLAGS_CONFIG, FeatureFlagsNames, GETTING_STARTED_CHECKLIST_SETTING, \
@@ -3661,3 +3662,28 @@ class PluginBase(Configurable, Feature, ABC):
         for key, val in client_config.items():
             if val:
                 client_config[key] = self.db_decrypt(val)
+
+    @rev_cached(ttl=3600 * 6)
+    def clients_labels(self):
+        clients_label = {}
+        adapters_from_db = self._get_collection('configs', CORE_UNIQUE_NAME).find({
+            'plugin_type': adapter_consts.ADAPTER_PLUGIN_TYPE,
+            'hidden': {'$ne': True}
+        }, {
+            'plugin_unique_name': 1
+        }).sort([(PLUGIN_UNIQUE_NAME, pymongo.ASCENDING)])
+
+        for adapter in adapters_from_db:
+            adapter_name = adapter[PLUGIN_UNIQUE_NAME]
+            clients = self._get_collection('clients', adapter_name).find({}, {'client_id',
+                                                                              'client_config.connection_label'})
+
+            for client in clients:
+                if client.get('client_config', None) and client.get('client_config').get('connection_label', None):
+                    con_label_decrypt = self.db_decrypt(client['client_config']['connection_label'])
+                    if con_label_decrypt not in clients_label:
+                        clients_label[con_label_decrypt] = [client['client_id']]
+                    else:
+                        clients_label[con_label_decrypt].append(client['client_id'])
+
+        return clients_label

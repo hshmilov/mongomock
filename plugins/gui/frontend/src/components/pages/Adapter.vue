@@ -152,7 +152,7 @@
         >Test Reachability</x-button>
         <x-button
           id="save_server"
-          :disabled="!serverModal.valid || !connectionLabelValid"
+          :disabled='!serverModal.valid || !connectionLabelValid'
           @click="saveServer"
         >Save and Connect</x-button>
       </template>

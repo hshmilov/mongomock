@@ -13,7 +13,7 @@
         <div class="header">
           <div class="header__source">
             <template v-if="item.client_used">
-              Data From: {{ item.client_used }}
+              <strong>Data From: </strong>{{ item.connectionLabel || item.client_used }}
             </template>
           </div>
           <x-button
@@ -151,7 +151,11 @@ export default {
         return new Date(secondSeen) - new Date(firstSeen);
       }).map((item) => {
         item.id = `${item.plugin_unique_name}_${item.data.id}`;
-        const connectionLabel = this.getConnectionLabel(item.client_used, item.plugin_name);
+        let connectionLabel = this.getConnectionLabel(item.client_used, item.plugin_name);
+        item.connectionLabel = connectionLabel || item.client_used;
+        if ( connectionLabel !== '') {
+             connectionLabel = ` - ${connectionLabel}`;
+        }
         if (pluginMeta[item.plugin_name]) {
           item.pretty_name = pluginMeta[item.plugin_name].title + connectionLabel;
         }
@@ -274,7 +278,6 @@ export default {
         width: calc(100% - 120px);
         text-overflow: ellipsis;
         overflow: hidden;
-        text-transform: uppercase;
       }
     }
     .json-view-item {

@@ -149,7 +149,9 @@ export default {
       return this.isEntityEditable(this.namespace);
     },
     adaptersEntityFields() {
-      return this.configuredAdaptersFields(this.namespace, ['saved_query']);
+      /* adding connection label attribute so we can handle save query with connection label   */
+      return this.configuredAdaptersFields(this.namespace,
+        ['saved_query', 'specific_data.connection_label']);
     },
   },
   methods: {

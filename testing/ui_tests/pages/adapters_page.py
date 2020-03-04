@@ -16,6 +16,8 @@ from test_credentials.json_file_credentials import (CLIENT_DETAILS_EXTRA, FILE_N
 # NamedTuple doesn't need to be uppercase
 # pylint: disable=C0103
 Adapter = namedtuple('Adapter', 'name description')
+CONNECTION_LABEL = 'AXON'
+CONNECTION_LABEL_UPDATED = 'AXON2'
 
 
 class AdaptersPage(EntitiesPage):
@@ -317,3 +319,12 @@ class AdaptersPage(EntitiesPage):
 
     def remove_json_extra_client(self):
         self.remove_server(CLIENT_DETAILS_EXTRA, JSON_ADAPTER_NAME, adapter_search_field=(FILE_NAME, 'Name'))
+
+    def edit_server_conn_label(self, adapter_name, connection_label):
+        self.wait_for_adapter(adapter_name)
+        self.click_adapter(adapter_name)
+        self.wait_for_spinner_to_end()
+        self.wait_for_table_to_load()
+        self.click_edit_server()
+        self.fill_creds(connectionLabel=connection_label)
+        self.click_save()

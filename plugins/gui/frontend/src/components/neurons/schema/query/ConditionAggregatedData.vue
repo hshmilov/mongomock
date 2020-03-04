@@ -25,7 +25,10 @@ import xSelectTypedField from '../../inputs/SelectTypedField.vue';
 import xConditionFunction from './ConditionFunction.vue';
 
 
-import { GET_MODULE_SCHEMA, GET_DATA_SCHEMA_BY_NAME } from '../../../../store/getters';
+import {
+  GET_DATA_SCHEMA_BY_NAME,
+  GET_MODULE_SCHEMA_WITH_CONNECTION_LABEL,
+} from '../../../../store/getters';
 import { getUpdatedValueAfterFieldChange } from '../../../../logic/condition';
 
 export default {
@@ -54,13 +57,13 @@ export default {
       },
     }),
     ...mapGetters({
-      getModuleSchema: GET_MODULE_SCHEMA, getDataSchemaByName: GET_DATA_SCHEMA_BY_NAME,
+      getModuleSchemaWithConnectionLabel: GET_MODULE_SCHEMA_WITH_CONNECTION_LABEL, getDataSchemaByName: GET_DATA_SCHEMA_BY_NAME,
     }),
     field() {
       return this.condition.field;
     },
     schema() {
-      const schema = this.getModuleSchema(this.module, false, true);
+      const schema = this.getModuleSchemaWithConnectionLabel(this.module, false, true);
       if (_isEmpty(schema)) {
         return [];
       }

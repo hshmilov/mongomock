@@ -212,7 +212,10 @@
           }],
           data: _orderBy(this.adaptersList.map((adapter, index) => {
             const clientId = this.data['meta_data.client_used'][index]
-            const connectionLabel = this.getConnectionLabel(clientId, adapter[0])
+            let connectionLabel = this.getConnectionLabel(clientId, adapter[0])
+            if (connectionLabel !== '') {
+              connectionLabel = ` - ${connectionLabel}`;
+            }
             const name = ( pluginMeta[adapter[0]] ? pluginMeta[adapter[0]].title : adapter[0] ) + connectionLabel
             return {
               [this.fieldName]: adapter,

@@ -8,8 +8,9 @@ from typing import List
 import cachetools
 from bson.json_util import default
 from frozendict import frozendict
-
-from axonius.consts.gui_consts import SPECIFIC_DATA, ADAPTERS_DATA, ADAPTERS_META
+from axonius.consts.gui_consts import SPECIFIC_DATA, ADAPTERS_DATA, \
+    ADAPTERS_META, SPECIFIC_DATA_CONNECTION_LABEL, \
+    SPECIFIC_DATA_CLIENT_USED
 from axonius.consts.plugin_consts import PLUGIN_NAME, ADAPTERS_LIST_LENGTH
 from axonius.utils.datetime import parse_date
 from axonius.utils.mongo_chunked import read_chunked
@@ -391,11 +392,58 @@ def parse_filter_cached(filter_str: str, history_date=None) -> frozendict:
     return parse_filter_uncached(filter_str, history_date)
 
 
+def translate_from_connection_labels(filter_str: str) -> str:
+
+    # This prevents some looping imports
+    from axonius.plugin_base import PluginBase
+
+    query_connection_label_equal = f'({SPECIFIC_DATA_CONNECTION_LABEL} =='
+    query_connection_label_exist = f'(({SPECIFIC_DATA_CONNECTION_LABEL} == ({{"$exists":true,"$ne":""}})))'
+    query_connection_label_in = f'({SPECIFIC_DATA_CONNECTION_LABEL} in'
+
+    client_labels = PluginBase.Instance.clients_labels()
+
+    # transform operator exists with 'in' and label with matching array of clients id
+    if query_connection_label_exist in filter_str:
+        client_labels_ids = client_labels.values()
+        client_ids = [id for ids in client_labels_ids for id in ids]
+        filter_client_ids = str(client_ids).replace('\'', '"')
+        return filter_str.replace(query_connection_label_exist, f'{SPECIFIC_DATA_CLIENT_USED} in {filter_client_ids}')
+
+    # transform array of labels with array of matching client_id for 'in' operator
+    if query_connection_label_in in filter_str:
+        matcher = re.search(f'{SPECIFIC_DATA_CONNECTION_LABEL}' + r' in \[(.+?)\]', filter_str)
+        while matcher:
+            filter_labels = matcher.group(1)
+            labels_list = [label.strip('"') for label in filter_labels.split(',')]
+            filtered_labels_ids = [clients_id for label in labels_list for clients_id in client_labels.get(label, '')]
+            ids = str(filtered_labels_ids).replace('\'', '"')
+            filter_str = filter_str.replace(f'{SPECIFIC_DATA_CONNECTION_LABEL} ',
+                                            f'{SPECIFIC_DATA_CLIENT_USED} ', 1)
+            matcher = re.search(f'{SPECIFIC_DATA_CONNECTION_LABEL}' + r' in \[(.+?)\]', filter_str)
+            filter_str = filter_str.replace(f'[{filter_labels}]', ids)
+
+    # transform operator equal with 'in' and label with matching array of clients id
+    if query_connection_label_equal in filter_str:
+        matcher = re.search(f'{SPECIFIC_DATA_CONNECTION_LABEL} == \"(.+?)\"', filter_str)
+        while matcher:
+            label = matcher.group(1)
+            ids = str(client_labels.get(label, '[]')).replace('\'', '"')
+            transform_filter_expr = filter_str.replace(f'{SPECIFIC_DATA_CONNECTION_LABEL} ==',
+                                                       f'{SPECIFIC_DATA_CLIENT_USED} {str("in")}', 1)
+            matcher = re.search(f'{SPECIFIC_DATA_CONNECTION_LABEL} == \"(.+?)\"', transform_filter_expr)
+            filter_str = transform_filter_expr.replace(f'"{label}"', ids)
+
+    return filter_str
+
+
 def parse_filter(filter_str: str, history_date=None) -> dict:
     """
     If given filter contains the keyword NOW, meaning it needs a calculation relative to current date,
     it must be recalculated, instead of using the cached result
     """
+    if filter_str and SPECIFIC_DATA_CONNECTION_LABEL in filter_str:
+        return dict(parse_filter_uncached(translate_from_connection_labels(filter_str), history_date))
     if filter_str and 'NOW' in filter_str:
         return dict(parse_filter_uncached(filter_str, history_date))
     return dict(parse_filter_cached(filter_str, history_date))

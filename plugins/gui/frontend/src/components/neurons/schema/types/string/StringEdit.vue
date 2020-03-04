@@ -59,6 +59,7 @@
     v-model="processedData"
     :schema="schema"
     :searchable="true"
+    placeholder="value…"
     :class="{'error-border': error, [`${schema.source.key}`]: true}"
     :read-only="readOnly || schema.readOnly"
     @input="input"
@@ -68,7 +69,7 @@
 
 <script>
 import xSelect from '@axons/inputs/select/Select.vue';
-import { xTagSelect, xInstancesSelect } from '@axons/inputs/dynamicSelects';
+import { xTagSelect, xInstancesSelect, xClientConnectionSelect} from '@axons/inputs/dynamicSelects';
 import xTimePicker from '@axons/inputs/TimePicker.vue';
 import { validateEmail } from '@constants/validations';
 import primitiveMixin from '../../../../../mixins/primitive';
@@ -77,7 +78,7 @@ import xDateEdit from './DateEdit.vue';
 export default {
   name: 'XStringEdit',
   components: {
-    xSelect, xDateEdit, xTagSelect, xInstancesSelect, xTimePicker
+    xSelect, xDateEdit, xTagSelect, xInstancesSelect, xTimePicker, xClientConnectionSelect
   },
   mixins: [primitiveMixin],
   props: {
@@ -135,6 +136,8 @@ export default {
           return 'xTagSelect';
         case 'all-instances':
           return 'xInstancesSelect';
+        case 'all-connection-labels':
+          return 'xClientConnectionSelect';
         default:
           return null;
       }

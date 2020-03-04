@@ -14,3 +14,8 @@ ADAPTER_SETTINGS = 'adapter_settings'
 
 # Adapter Settings
 SHOULD_NOT_REFRESH_CLIENTS = 'should_not_refresh_clients'
+
+# Adapter Client Connection Label
+CONNECTION_LABEL = 'connection_label'
+# Adapter Client Config
+CLIENT_CONFIG = 'client_config'

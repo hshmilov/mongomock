@@ -202,6 +202,7 @@ class Adapters:
         response = self.request_remote_plugin('clients', adapter_unique_name, 'put', json=clients,
                                               raise_on_network_error=True)
         self._adapters.clean_cache()
+        self.clients_labels.clean_cache()
         if response.status_code == 200:
             self._client_insertion_threadpool.submit(self._fetch_after_clients_thread, adapter_unique_name,
                                                      response.json()['client_id'], clients)
@@ -356,9 +357,11 @@ class Adapters:
                 adapter_unique_name = self.request_remote_plugin(url).json().get('plugin_unique_name')
 
             self._adapters.clean_cache()
+            self.clients_labels.clean_cache()
             return self._query_client_for_devices(adapter_unique_name, data)
 
         self._adapters.clean_cache()
+        self.clients_labels.clean_cache()
         return '', 200
 
     def delete_client_data(self, plugin_name, plugin_unique_name, client_id):

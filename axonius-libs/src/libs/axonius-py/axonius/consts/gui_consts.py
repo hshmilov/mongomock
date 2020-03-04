@@ -132,6 +132,8 @@ ADAPTERS_META = 'adapters_meta'
 PROXY_ERROR_MESSAGE = 'Bad proxy settings or no internet connection'
 
 GETTING_STARTED_CHECKLIST_SETTING = 'getting_started_checklist'
+SPECIFIC_DATA_CONNECTION_LABEL = f'{SPECIFIC_DATA}.connection_label'
+SPECIFIC_DATA_CLIENT_USED = f'{SPECIFIC_DATA}.client_used'
 
 
 class FeatureFlagsNames:

@@ -37,7 +37,7 @@ import xQuerySearchInput from './SearchInput.vue';
 import xQueryWizard from './Wizard.vue';
 import xButton from '../../../axons/inputs/Button.vue';
 
-import { AUTO_QUERY, GET_MODULE_SCHEMA } from '../../../../store/getters';
+import { AUTO_QUERY, GET_MODULE_SCHEMA_WITH_CONNECTION_LABEL } from '../../../../store/getters';
 import { UPDATE_DATA_VIEW } from '../../../../store/mutations';
 import QueryBuilder from '../../../../logic/query_builder';
 
@@ -73,7 +73,7 @@ export default {
       },
     }),
     ...mapGetters({
-      getModuleSchema: GET_MODULE_SCHEMA, autoQuery: AUTO_QUERY,
+       autoQuery: AUTO_QUERY, getModuleSchemaWithConnectionLabel: GET_MODULE_SCHEMA_WITH_CONNECTION_LABEL,
     }),
     query: {
       get() {
@@ -116,7 +116,7 @@ export default {
       },
     },
     schema() {
-      return this.getModuleSchema(this.module);
+      return this.getModuleSchemaWithConnectionLabel(this.module);
     },
   },
   methods: {

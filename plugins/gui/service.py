@@ -23,10 +23,8 @@ from axonius.consts.gui_consts import (ENCRYPTION_KEY_PATH,
                                        TEMP_MAINTENANCE_THREAD_ID,
                                        USERS_COLLECTION,
                                        USERS_CONFIG_COLLECTION,
-                                       USERS_PREFERENCES_COLLECTION,
-                                       DASHBOARD_COLLECTION,
-                                       DASHBOARD_SPACES_COLLECTION,
-                                       PROXY_DATA_PATH)
+                                       PROXY_DATA_PATH, DASHBOARD_SPACES_COLLECTION, DASHBOARD_COLLECTION,
+                                       USERS_PREFERENCES_COLLECTION)
 from axonius.consts.metric_consts import SystemMetric
 from axonius.consts.plugin_consts import (AXONIUS_USER_NAME,
                                           GUI_PLUGIN_NAME,

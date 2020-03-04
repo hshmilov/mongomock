@@ -5,8 +5,10 @@ from uuid import uuid4
 
 from pytest import raises
 from selenium.common.exceptions import NoSuchElementException
+
 from axonius.utils.hash import get_preferred_quick_adapter_id
 from axonius.utils.wait import wait_until
+from ui_tests.pages.adapters_page import CONNECTION_LABEL, CONNECTION_LABEL_UPDATED
 from ui_tests.tests.ui_test_base import TestBase
 from ui_tests.tests.ui_consts import (AWS_ADAPTER,
                                       AWS_ADAPTER_NAME,
@@ -34,6 +36,7 @@ from test_credentials.test_aws_credentials import client_details as aws_client_d
 from devops.scripts.automate_dev import credentials_inputer
 
 
+# pylint: disable=C0302
 class TestDevicesQuery(TestBase):
     SEARCH_TEXT_WINDOWS = 'Windows'
     SEARCH_TEXT_CB_FIRST = 'CB First'
@@ -1192,3 +1195,66 @@ class TestDevicesQuery(TestBase):
         self.devices_page.wait_for_table_to_load()
         self.devices_page.find_element_by_text('test').click()
         self.devices_page.find_element_by_text('No query defined')
+
+    # pylint: disable=R0915
+    def test_connection_label_query(self):
+        """
+        USE CASES :  add new AWS client with connection label
+        test operator equal,exists,in
+                      check negative with in
+        update client connection label and check with eqal
+        delete client connection lanel and check with in no match
+
+        """
+
+        with AwsService().contextmanager(take_ownership=True):
+            self.adapters_page.wait_for_adapter(AWS_ADAPTER_NAME)
+            aws_client_with_label = aws_client_details[0][0].copy()
+            aws_client_with_label.update({'connectionLabel': CONNECTION_LABEL})
+            self.adapters_page.create_new_adapter_connection(AWS_ADAPTER_NAME, aws_client_with_label)
+            self.settings_page.switch_to_page()
+            self.base_page.run_discovery()
+            self.devices_page.switch_to_page()
+            self.devices_page.click_query_wizard()
+            # check equal
+            self.adapters_page.select_query_filter(attribute=self.devices_page.FIELD_ADAPTER_CONNECTION_LABEL,
+                                                   operator='equals',
+                                                   value=CONNECTION_LABEL)
+            results_count = len(self.devices_page.get_all_data())
+            assert results_count != 0
+            # check exists
+            self.adapters_page.select_query_filter(attribute=self.devices_page.FIELD_ADAPTER_CONNECTION_LABEL,
+                                                   operator='exists',
+                                                   clear_filter=True)
+            results_count = len(self.devices_page.get_all_data())
+            assert results_count != 0
+            # check in negative value
+            self.adapters_page.select_query_filter(attribute=self.devices_page.FIELD_ADAPTER_CONNECTION_LABEL,
+                                                   operator='in',
+                                                   value='NOT_EXISTS')
+            results_count = len(self.devices_page.get_all_data())
+            assert results_count == 0
+            # chec in positve value
+            self.adapters_page.select_query_filter(attribute=self.devices_page.FIELD_ADAPTER_CONNECTION_LABEL,
+                                                   operator='in',
+                                                   value=CONNECTION_LABEL)
+            results_count = len(self.devices_page.get_all_data())
+            assert results_count != 0
+            # update adapter client connection label
+            self.adapters_page.edit_server_conn_label(AWS_ADAPTER_NAME, CONNECTION_LABEL_UPDATED)
+            self.devices_page.switch_to_page()
+            self.devices_page.click_query_wizard()
+            self.adapters_page.select_query_filter(attribute=self.devices_page.FIELD_ADAPTER_CONNECTION_LABEL,
+                                                   operator='equals',
+                                                   value=CONNECTION_LABEL_UPDATED)
+            results_count = len(self.devices_page.get_all_data())
+            assert results_count != 0
+            # delete adapter client connection label
+            self.adapters_page.edit_server_conn_label(AWS_ADAPTER_NAME, '')
+            self.devices_page.switch_to_page()
+            self.devices_page.click_query_wizard()
+            self.adapters_page.select_query_filter(attribute=self.devices_page.FIELD_ADAPTER_CONNECTION_LABEL,
+                                                   operator='exists',
+                                                   clear_filter=True)
+            results_count = len(self.devices_page.get_all_data())
+            assert results_count == 0

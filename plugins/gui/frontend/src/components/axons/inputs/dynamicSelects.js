@@ -120,7 +120,7 @@ const withDynamicData = (params) => {
             searchable={this.searchable}
             options={normalizedOptions}
             missingItemsLabel={mergedParams.missingItemsLabel}
-            placeholder={schema.title}
+            placeholder={passedProps.placeholder || schema.title}
             searchPlaceholder={schema.title}
             allowCustomOption={sourceSchema.options['allow-custom-option']}
             { ...{ on: { ...this.$listeners } } }
@@ -168,3 +168,14 @@ export const xInstancesSelect = withDynamicData({
   optionsNormalizer: (item) => ({ name: item.node_id, title: item.node_name }),
   propertyName: 'node_name',
 });
+
+export const xClientConnectionSelect = withDynamicData({
+  id: 'connectionLabelSelect',
+  action: FETCH_ADAPTERS,
+  modules: [{ name: 'adapters', dataPath: '' }],
+  moduleAttributeName: 'clients',
+  optionsNormalizer: (item) => ({ name: item.client_config.connection_label, title: item.client_config.connection_label }),
+  propertyName: 'client_config.connection_label',
+
+});
+

@@ -7,27 +7,29 @@ const selectFields = (schema, objectView) => (objectView
   ? schema.filter(isObjectListField)
   : schema);
 
-export const GET_MODULE_SCHEMA = 'GET_MODULE_SCHEMA';
-export const getModuleSchema = (state) => (module, objectView = false, filterPlugins = false) => {
-  const fields = _get(state[module], 'fields.data');
-  if (_isEmpty(fields) || _isEmpty(fields.generic) || (objectView && _isEmpty(fields.schema))) {
+function getModuleSchemaFields(fieldsSpecific, fieldsGeneric, fieldsSchema, objectView, filterPlugins) {
+  if (_isEmpty(fieldsGeneric) || (objectView && _isEmpty(fieldsSchema))) {
     return [];
   }
-  const plugins = Object.keys(fields.specific).map((name) => {
-    const title = pluginMeta[name] ? pluginMeta[name].title : name;
-    return { title, name };
-  });
+  const plugins = Object.keys(fieldsSpecific)
+    .map((name) => {
+      const title = pluginMeta[name] ? pluginMeta[name].title : name
+      return {
+        title,
+        name,
+      };
+    });
   const aggregated = {
     name: 'axonius',
     title: 'Aggregated',
-    fields: selectFields(fields.generic, objectView),
+    fields: selectFields(fieldsGeneric, objectView),
   };
   if (filterPlugins) {
     aggregated.plugins = plugins;
   }
   const sortedPluginFields = plugins.map((plugin) => ({
     ...plugin,
-    fields: selectFields(fields.specific[plugin.name], objectView),
+    fields: selectFields(fieldsSpecific[plugin.name], objectView),
   })).sort((first, second) => {
     // Sort by adapters plugin name (the one that is shown in the gui).
     const firstText = first.title.toLowerCase();
@@ -37,14 +39,40 @@ export const getModuleSchema = (state) => (module, objectView = false, filterPlu
     return 0;
   });
   return [aggregated, ...sortedPluginFields];
-};
+}
+
+export const CONNECTION_LABEL_SCHEMA = {
+  name: 'specific_data.connection_label',
+  title: 'Adapter Connection Label',
+  type: 'string',
+  enum: [],
+  source: {
+    key: 'all-connection-labels',
+    options: {
+      'allow-custom-option': false
+    }
+  }
+}
+
+export const GET_MODULE_SCHEMA = 'GET_MODULE_SCHEMA'
+export const getModuleSchema = (state) => (module, objectView = false, filterPlugins = false) => {
+  const fields = _get(state[module], 'fields.data' , {})
+  return getModuleSchemaFields(fields.specific , fields.generic, fields.schema , objectView, filterPlugins);
+}
+
+export const GET_MODULE_SCHEMA_WITH_CONNECTION_LABEL = 'GET_MODULE_SCHEMA_WITH_CONNECTION_LABEL'
+export const getModuleSchemaWithConnectionLabel = (state) => (module, objectView = false, filterPlugins = false) => {
+  const fields = _get(state[module], 'fields.data', {})
+  return getModuleSchemaFields(fields.specific , [CONNECTION_LABEL_SCHEMA,
+    ...fields.generic], fields.schema, objectView, filterPlugins);
+}
 
 export const GET_DATA_SCHEMA_LIST = 'GET_DATA_SCHEMA_LIST';
 export const getDataSchemaList = (state) => (module) => {
   const fields = state[module].fields.data;
   if (!fields.generic || !fields.generic.length) return [];
 
-  let allFieldsList = [...fields.generic];
+  let allFieldsList = [CONNECTION_LABEL_SCHEMA, ...fields.generic];
   if (fields.specific) {
     allFieldsList = Object.entries(fields.specific).reduce((aggregatedList, [specificName, currentList]) => {
       currentList.map((field) => field.logo = (singleAdapter(state) ? undefined : specificName));
@@ -88,18 +116,18 @@ export const requireConnectionLabel = (state) => {
 export const IS_EXPIRED = 'IS_EXPIRED';
 export const isExpired = (state) => state.expired.data && state.auth.currentUser.data.user_name !== '_axonius';
 
-export const GET_CONNECTION_LABEL = 'GET_CONNECTION_LABEL';
+export const GET_CONNECTION_LABEL = 'GET_CONNECTION_LABEL'
 export const getConnectionLabel = (state) => (clientId, adapterName) => {
   // extract the connection label saved in client config
   // get the clientId and adapter name to find the client config in state
-  const adaptersClients = state.adapters.clients;
-  const currentClient = adaptersClients.find((item) => item.adapter_name === adapterName
-                                                        && item.client_id === clientId);
-  if (!currentClient) return '';
-  const connectionLabel = currentClient.client_config.connection_label;
-  if (!connectionLabel) return '';
-  return ` - ${connectionLabel}`;
-};
+  const adaptersClients = state.adapters.clients
+  const currentClient = adaptersClients.find( item => item['adapter_name'] === adapterName
+    && item['client_id'] === clientId )
+  if ( !currentClient ) return ''
+  const connectionLabel = currentClient['client_config']['connection_label']
+  if ( !connectionLabel ) return ''
+  return `${connectionLabel}`;
+}
 
 const savedQueries = (state, namespace) => {
   const data = state[namespace].views.saved.content.data || [];
