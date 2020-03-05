@@ -183,7 +183,10 @@ class StaticAnalysisService(Triggerable, PluginBase):
                 '((adapters_data.esx_adapter.id == ({"$exists":true,"$ne":""}))) or'
                 '((adapters_data.hyper_v_adapter.id == ({"$exists":true,"$ne":""}))) or'
                 '((adapters_data.proxmox_adapter.id == ({"$exists":true,"$ne":""}))) or'
-                '((adapters_data.nutanix_adapter.id == ({"$exists":true,"$ne":""})))'),
+                '((adapters_data.nutanix_adapter.id == ({"$exists":true,"$ne":""}))) or'
+                '((adapters_data.azure_adapter.id == ({"$exists":true,"$ne":""}))) or '
+                '((adapters_data.gce_adapter.id == ({"$exists":true,"$ne":""}))) or '
+                '((adapters_data.aws_adapter.id == ({"$exists":true,"$ne":""})))'),
             batch_size=10
         )
         for device in devices_from_containers_adapter:
