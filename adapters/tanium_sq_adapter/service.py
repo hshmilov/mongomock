@@ -654,22 +654,22 @@ class TaniumSqAdapter(AdapterBase):
     def _clients_schema():
         return {
             'items': [
-                {'name': 'domain', 'title': 'Hostname or IP', 'type': 'string'},
+                {'name': 'domain', 'title': 'Hostname or IP Address', 'type': 'string'},
                 {'name': 'username', 'title': 'User Name', 'type': 'string'},
                 {'name': 'password', 'title': 'Password', 'type': 'string', 'format': 'password'},
-                {'name': 'sq_name', 'type': 'string', 'title': 'Fetch Saved Question Names (comma separated)'},
-                {'name': 'sq_refresh', 'title': 'Always re-ask Saved Question', 'type': 'bool', 'default': False},
-                {
-                    'name': 'no_results_wait',
-                    'title': 'Re-asking Saved Question waits until all answers are returned',
-                    'type': 'bool',
-                    'default': True,
-                },
+                {'name': 'sq_name', 'type': 'string', 'title': 'Names of Saved Questions to fetch (comma separated)'},
+                {'name': 'sq_refresh', 'title': 'Re-ask every fetch', 'type': 'bool', 'default': False},
                 {
                     'name': 'sq_max_hours',
-                    'title': 'Re-ask Saved Question if results are older than N hours',
+                    'title': 'Re-ask if results are older than N hours',
                     'type': 'integer',
                     'default': 6,
+                },
+                {
+                    'name': 'no_results_wait',
+                    'title': 'Re-asking waits until all answers are returned',
+                    'type': 'bool',
+                    'default': True,
                 },
                 {'name': 'verify_ssl', 'title': 'Verify SSL', 'type': 'bool'},
                 {'name': 'https_proxy', 'title': 'HTTPS Proxy', 'type': 'string'},

@@ -4,9 +4,9 @@ export const pluginMeta = {
         description: 'Contrast Security protects software applications against cyberattacks.'
     },
     microfocus_sa_adapter: {
-        title: 'Microfocus Server Automation',
+        title: 'Micro Focus Server Automation (HP Server Automation, Opsware)',
         link: 'https://docs.axonius.com/docs/microfocus-sa',
-        description: 'Microfocus Server Automation provides operating system provisioning, automated patch management, and compliance control.',
+        description: 'Micro Focus Server Automation (formerly known as HP Server Automation or Opsware) provides operating system provisioning, automated patch management, and compliance control.',
     },
     digicert_pki_platform_adapter: {
         title: 'DigiCert PKI Platform (Symantec Managed PKI)',
@@ -967,24 +967,24 @@ export const pluginMeta = {
         description: 'OpenStack is an open source software solution for creating private and public clouds.'
     },
     tanium_adapter: {
-        title: 'Tanium',
-        link: 'https://docs.axonius.com/docs/tanium',
-        description: 'Tanium gathers live endpoint data to help create an up-to-date inventory of hardware and software assets.'
+        title: 'Tanium System Status',
+        link: 'https://docs.axonius.com/docs/tanium-status',
+        description: 'Tanium System Status provides an inventory of all clients that have registered with the Tanium platform.'
     },
     tanium_sq_adapter: {
-        title: 'Tanium Saved Question',
-        link: 'https://docs.axonius.com/docs/tanium_sq',
-        description: 'Tanium Saved Questions gather live endpoint data to help create an up-to-date inventory of hardware and software assets.'
+        title: 'Tanium Interact',
+        link: 'https://docs.axonius.com/docs/tanium-sq',
+        description: 'Tanium Interact lets you ask questions to gather live endpoint data in order to create an up-to-date inventory of hardware and software assets.'
     },
     tanium_asset_adapter: {
-        title: 'Tanium Asset Module',
-        link: 'https://docs.axonius.com/docs/tanium_asset',
-        description: 'Tanium Asset Module provides a complete inventory of hardware and software assets including servers, laptops, and desktops for thorough insight.'
+        title: 'Tanium Asset',
+        link: 'https://docs.axonius.com/docs/tanium-asset',
+        description: 'Tanium Asset provides a complete inventory of hardware and software assets including servers, laptops, and desktops for thorough insight.'
     },
     tanium_discover_adapter: {
-        title: 'Tanium Discover Module',
-        link: 'https://docs.axonius.com/docs/tanium_discover',
-        description: 'Tanium Discover Module scans for unmanaged assets with almost no impact on the network.'
+        title: 'Tanium Discover',
+        link: 'https://docs.axonius.com/docs/tanium-discover',
+        description: 'Tanium Discover scans for unmanaged assets with almost no impact on the network.'
     },
     aruba_adapter: {
         title: 'Aruba',

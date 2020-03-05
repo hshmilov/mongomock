@@ -207,7 +207,7 @@ class MicrofocusSaAdapter(AdapterBase):
     def _clients_schema():
         return {
             'items': [
-                {'name': 'domain', 'title': 'Hostname or IP address', 'type': 'string'},
+                {'name': 'domain', 'title': 'Hostname or IP Address', 'type': 'string'},
                 {'name': 'username', 'title': 'User Name', 'type': 'string'},
                 {'name': 'password', 'title': 'Password', 'type': 'string', 'format': 'password'},
                 {'name': 'verify_ssl', 'title': 'Verify SSL', 'type': 'bool'},

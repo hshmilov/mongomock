@@ -316,10 +316,10 @@ class TaniumAssetAdapter(AdapterBase):
     def _clients_schema():
         return {
             'items': [
-                {'name': 'domain', 'title': 'Hostname or IP', 'type': 'string'},
+                {'name': 'domain', 'title': 'Hostname or IP Address', 'type': 'string'},
                 {'name': 'username', 'title': 'User Name', 'type': 'string'},
                 {'name': 'password', 'title': 'Password', 'type': 'string', 'format': 'password'},
-                {'name': 'asset_dvc', 'type': 'string', 'title': 'Asset Report Name', 'default': 'All Assets'},
+                {'name': 'asset_dvc', 'type': 'string', 'title': 'Name of report to fetch', 'default': 'All Assets'},
                 {'name': 'verify_ssl', 'title': 'Verify SSL', 'type': 'bool'},
                 {'name': 'https_proxy', 'title': 'HTTPS Proxy', 'type': 'string'},
             ],

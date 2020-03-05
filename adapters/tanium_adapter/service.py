@@ -213,13 +213,13 @@ class TaniumAdapter(AdapterBase):
     def _clients_schema():
         return {
             'items': [
-                {'name': 'domain', 'title': 'Hostname or IP', 'type': 'string'},
+                {'name': 'domain', 'title': 'Hostname or IP Address', 'type': 'string'},
                 {'name': 'username', 'title': 'User Name', 'type': 'string'},
                 {'name': 'password', 'title': 'Password', 'type': 'string', 'format': 'password'},
                 {
                     'name': 'last_reg_mins',
                     'type': 'integer',
-                    'title': 'Only Fetch Systems that have registered in past N minutes',
+                    'title': 'Only fetch clients that have registered in the past N minutes',
                     'default': 60,
                 },
                 {'name': 'verify_ssl', 'title': 'Verify SSL', 'type': 'bool'},
