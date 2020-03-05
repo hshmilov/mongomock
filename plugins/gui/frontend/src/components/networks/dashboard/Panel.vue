@@ -178,7 +178,7 @@ export default {
         module: query.module,
         view: historical ? {
           ...query.view,
-          historical: this.allowedDates[query.module][historical],
+          historical: this.allowedDates[historical],
         } : query.view,
         name: this.chart.metric === 'compare' ? query.name : undefined,
         uuid: null,
