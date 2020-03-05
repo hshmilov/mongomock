@@ -41,7 +41,10 @@ class CoreService(PluginService, UpdatablePluginMixin):
         if self.db_schema_version < 13:
             self._update_schema_version_13()
 
-        if self.db_schema_version != 13:
+        if self.db_schema_version < 14:
+            self._update_schema_version_14()
+
+        if self.db_schema_version != 14:
             print(f'Upgrade failed, db_schema_version is {self.db_schema_version}')
 
     def _migrate_db_10(self):
@@ -715,26 +718,71 @@ class CoreService(PluginService, UpdatablePluginMixin):
             # self.encrypt_dict(plugin_unique_name, new_client_config)
             for i, creds in enumerate(tanium_asset_adapter_creds):
                 print(f'Migrating {i + 1} / {len(tanium_asset_adapter_creds)} Tanium asset adapter')
-                creds['client_id'] = '_'.join(
-                    [creds['client_config'].get('domain'), creds['client_config'].get('asset_dvc')])
+                creds_client_config = creds['client_config']
+                creds['client_id'] = f'{creds_client_config.get("domain")}_' \
+                    f'{creds_client_config.get("username")}_{creds_client_config.get("asset_dvc")}'
                 self.encrypt_dict('tanium_asset_adapter_0', creds['client_config'])
                 self.db.client['tanium_asset_adapter_0']['clients'].insert_one(creds)
 
             for i, creds in enumerate(tanium_discover_adapter_creds):
                 print(f'Migrating {i + 1} / {len(tanium_discover_adapter_creds)} Tanium discover adapter')
-                creds['client_id'] = creds['client_config'].get('domain')
+                creds_client_config = creds['client_config']
+                creds['client_id'] = f'{creds_client_config.get("domain")}_{creds_client_config.get("username")}'
                 self.encrypt_dict('tanium_discover_adapter_0', creds['client_config'])
                 self.db.client['tanium_discover_adapter_0']['clients'].insert_one(creds)
 
             for i, creds in enumerate(tanium_sq_adapter_creds):
                 print(f'Migrating {i + 1} / {len(tanium_sq_adapter_creds)} Tanium sq adapter')
-                creds['client_id'] = creds['client_config'].get('domain')
+                creds_client_config = creds['client_config']
+                creds['client_id'] = f'{creds_client_config.get("domain")}_{creds_client_config.get("username")}' \
+                    f'_{creds_client_config.get("sq_name")}'
                 self.encrypt_dict('tanium_sq_adapter_0', creds['client_config'])
                 self.db.client['tanium_sq_adapter_0']['clients'].insert_one(creds)
 
             self.db_schema_version = 13
         except Exception as e:
             print(f'Exception while upgrading tanium adapter to subadapters migration - version 13. Details: {e}')
+            traceback.print_exc()
+            raise
+
+    def _update_schema_version_14(self):
+        # Change client_id + set schema fetch_system_status as True
+        print('Upgrade to schema 14 - Tanium adapter schema')
+        try:
+            # Get a list of all tanium adapters in the systems (we could have a couple - each on a different node)
+            all_tanium_plugins = self.db.client['core']['configs'].find(
+                {
+                    'plugin_name': 'tanium_adapter'
+                })
+            for tanium_plugin in all_tanium_plugins:
+                plugin_unique_name = tanium_plugin.get('plugin_unique_name')
+                clients = self.db.client[plugin_unique_name]['clients'].find({})
+                # These are all the clients ("connections"). Each one of them is encrypted, so we'd have to
+                # decrypt that.
+                for client in clients:
+                    new_client_config = client['client_config'].copy()
+                    self.decrypt_dict(new_client_config)
+
+                    # Re-build the client_id as the tanium adapter needs it.
+                    domain = new_client_config.get('domain')
+                    username = new_client_config.get('username')
+                    if not domain or not username:
+                        continue
+
+                    # Update the client
+                    self.db.client[plugin_unique_name]['clients'].update(
+                        {
+                            '_id': client['_id']
+                        },
+                        {
+                            '$set':
+                                {
+                                    'client_id': f'{domain}_{username}',
+                                }
+                        })
+            self.db_schema_version = 14
+        except Exception as e:
+            print(f'Exception while upgrading tanium schema to version 14. Details: {e}')
             traceback.print_exc()
             raise
 

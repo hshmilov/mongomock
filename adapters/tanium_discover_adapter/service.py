@@ -56,7 +56,7 @@ class TaniumDiscoverAdapter(AdapterBase):
     @staticmethod
     def _get_client_id(client_config):
         # add all of the elements of the cnx to the client id to ensure uniqueness
-        return client_config['domain']
+        return client_config['domain'] + '_' + client_config['username']
 
     @staticmethod
     def _test_reachability(client_config):

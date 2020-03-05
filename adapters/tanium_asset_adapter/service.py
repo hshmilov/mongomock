@@ -35,10 +35,10 @@ class TaniumAssetAdapter(AdapterBase):
     def _get_client_id(client_config):
         # add all of the elements of the cnx to the client id to ensure uniqueness
         domain = client_config['domain']
+        username = client_config.get('username')
         asset_dvc = client_config.get('asset_dvc')
 
-        client_id = [f'{domain}', f'{asset_dvc}']
-        return '_'.join(client_id)
+        return f'{domain}_{username}_{asset_dvc}'
 
     @staticmethod
     def _test_reachability(client_config):
