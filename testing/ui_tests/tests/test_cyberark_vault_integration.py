@@ -45,6 +45,7 @@ class TestCyberarkIntegration(TestBase):
         self.remove_cyberark_settings()
 
     def _wait_until_cyberark_is_present(self):
+        self.adapters_page.switch_to_page()
         self.adapters_page.refresh()
         self.adapters_page.click_adapter(NEXPOSE_NAME)
         self.adapters_page.wait_for_spinner_to_end()
@@ -65,28 +66,26 @@ class TestCyberarkIntegration(TestBase):
         assert class_attribute in cyberark_icon_element.get_attribute('class')
 
     def test_successful_get(self):
-        try:
-            with CyberarkVaultSimulatorService().contextmanager(take_ownership=True), NexposeService().contextmanager(
-                    take_ownership=True):
-                self.input_test_settings()
-                self.adapters_page.switch_to_page()
-                self.adapters_page.wait_for_adapter(NEXPOSE_NAME)
-                try:
 
-                    self._input_query_string()
-                    # Check successful vault fetch
-                    wait_until(self._check_fetch, check_return_value=False, tolerated_exceptions_list=[AssertionError])
-                    # Check successful device fetch.
-                    self.adapters_page.click_save()
-                    self.adapters_page.wait_for_spinner_to_end()
-                    self.base_page.run_discovery()
-                    wait_until(lambda: self._check_device_count() > 1, total_timeout=200, interval=20)
+        with CyberarkVaultSimulatorService().contextmanager(take_ownership=True), NexposeService().contextmanager(
+                take_ownership=True):
+            self.input_test_settings()
+            self.adapters_page.switch_to_page()
+            self.adapters_page.wait_for_adapter(NEXPOSE_NAME)
 
-                finally:
-                    self.adapters_page.clean_adapter_servers(NEXPOSE_NAME, delete_associated_entities=True)
-        finally:
-            self.wait_for_adapter_down(NEXPOSE_PLUGIN_NAME)
-            self.remove_cyberark_settings()
+            self._input_query_string()
+            # Check successful vault fetch
+            wait_until(self._check_fetch, check_return_value=False, tolerated_exceptions_list=[AssertionError])
+            # Check successful device fetch.
+            self.adapters_page.click_save()
+            self.adapters_page.wait_for_spinner_to_end()
+            self.base_page.run_discovery()
+            wait_until(lambda: self._check_device_count() > 1, total_timeout=200, interval=20)
+
+            self.adapters_page.clean_adapter_servers(NEXPOSE_NAME, delete_associated_entities=True)
+
+        self.wait_for_adapter_down(NEXPOSE_PLUGIN_NAME)
+        self.remove_cyberark_settings()
 
     def _input_query_string(self, query=GOOD_QUERY):
         wait_until(self._wait_until_cyberark_is_present, check_return_value=False,
@@ -100,101 +99,93 @@ class TestCyberarkIntegration(TestBase):
         self.adapters_page.click_button('Fetch')
 
     def test_regular_password_input(self):
-        try:
-            with CyberarkVaultSimulatorService().contextmanager(take_ownership=True), NexposeService().contextmanager(
-                    take_ownership=True):
-                self.input_test_settings()
-                self.adapters_page.switch_to_page()
-                self.adapters_page.wait_for_adapter(NEXPOSE_NAME)
-                try:
+        with CyberarkVaultSimulatorService().contextmanager(take_ownership=True), NexposeService().contextmanager(
+                take_ownership=True):
+            self.input_test_settings()
+            self.adapters_page.switch_to_page()
+            self.adapters_page.wait_for_adapter(NEXPOSE_NAME)
 
-                    wait_until(self._wait_until_cyberark_is_present, check_return_value=False,
-                               tolerated_exceptions_list=[AssertionError, NoSuchElementException])
-                    self.adapters_page.fill_creds(**nexpose_client_details)
+            wait_until(self._wait_until_cyberark_is_present, check_return_value=False,
+                       tolerated_exceptions_list=[AssertionError, NoSuchElementException])
+            self.adapters_page.fill_creds(**nexpose_client_details)
 
-                    # Check successful device fetch.
-                    self.adapters_page.click_save()
-                    self.adapters_page.wait_for_spinner_to_end()
-                    self.base_page.run_discovery()
-                    wait_until(lambda: self._check_device_count() > 1, total_timeout=200, interval=20)
+            # Check successful device fetch.
+            self.adapters_page.click_save()
+            self.adapters_page.wait_for_spinner_to_end()
+            self.base_page.run_discovery()
+            wait_until(lambda: self._check_device_count() > 1, total_timeout=200, interval=20)
 
-                finally:
-                    self.adapters_page.clean_adapter_servers(NEXPOSE_NAME, delete_associated_entities=True)
-        finally:
-            self.wait_for_adapter_down(NEXPOSE_PLUGIN_NAME)
-            self.remove_cyberark_settings()
+            self.adapters_page.clean_adapter_servers(NEXPOSE_NAME, delete_associated_entities=True)
+        self.wait_for_adapter_down(NEXPOSE_PLUGIN_NAME)
+        self.remove_cyberark_settings()
 
     def test_bad_query(self):
-        try:
-            with CyberarkVaultSimulatorService().contextmanager(take_ownership=True), NexposeService().contextmanager(
-                    take_ownership=True):
+        with CyberarkVaultSimulatorService().contextmanager(take_ownership=True), NexposeService().contextmanager(
+                take_ownership=True):
+            self.input_test_settings()
+            self.adapters_page.switch_to_page()
+            self.adapters_page.wait_for_adapter(NEXPOSE_NAME)
+
+            self._input_query_string(query='TestThis')
+            # Check failing vault fetch
+            wait_until(lambda: self._check_fetch(should_succeed=False), check_return_value=False,
+                       tolerated_exceptions_list=[AssertionError])
+            # Check validation fail.
+            element = self.adapters_page.find_element_by_text(self.adapters_page.SAVE_AND_CONNECT_BUTTON)
+            assert self.adapters_page.is_element_disabled(element)
+            self.adapters_page.click_cancel()
+
+        self.wait_for_adapter_down(NEXPOSE_PLUGIN_NAME)
+        self.remove_cyberark_settings()
+
+    def test_bad_appid(self):
+        with CyberarkVaultSimulatorService().contextmanager(take_ownership=True), NexposeService().contextmanager(
+                take_ownership=True):
+            self.input_test_settings(app_id='bad_app_id')
+            self.adapters_page.switch_to_page()
+            self.adapters_page.wait_for_adapter(NEXPOSE_NAME)
+
+            self._input_query_string()
+            # Check failing vault fetch
+            wait_until(lambda: self._check_fetch(should_succeed=False), check_return_value=False,
+                       tolerated_exceptions_list=[AssertionError])
+            # Check validation fail.
+            element = self.adapters_page.find_element_by_text(self.adapters_page.SAVE_AND_CONNECT_BUTTON)
+            assert self.adapters_page.is_element_disabled(element)
+            self.adapters_page.click_cancel()
+        self.wait_for_adapter_down(NEXPOSE_PLUGIN_NAME)
+        self.remove_cyberark_settings()
+
+    def test_no_connection_during_discovery(self):
+        with NexposeService().contextmanager(take_ownership=True):
+            with CyberarkVaultSimulatorService().contextmanager(take_ownership=True):
                 self.input_test_settings()
                 self.adapters_page.switch_to_page()
                 self.adapters_page.wait_for_adapter(NEXPOSE_NAME)
-
-                self._input_query_string(query='TestThis')
-                # Check failing vault fetch
-                wait_until(lambda: self._check_fetch(should_succeed=False), check_return_value=False,
-                           tolerated_exceptions_list=[AssertionError])
-                # Check validation fail.
-                element = self.adapters_page.find_element_by_text(self.adapters_page.SAVE_AND_CONNECT_BUTTON)
-                assert self.adapters_page.is_element_disabled(element)
-                self.adapters_page.click_cancel()
-        finally:
-            self.wait_for_adapter_down(NEXPOSE_PLUGIN_NAME)
-            self.remove_cyberark_settings()
-
-    def test_bad_appid(self):
-        try:
-            with CyberarkVaultSimulatorService().contextmanager(take_ownership=True), NexposeService().contextmanager(
-                    take_ownership=True):
-                self.input_test_settings(app_id='bad_app_id')
-                self.adapters_page.switch_to_page()
-                self.adapters_page.wait_for_adapter(NEXPOSE_NAME)
-
                 self._input_query_string()
-                # Check failing vault fetch
-                wait_until(lambda: self._check_fetch(should_succeed=False), check_return_value=False,
-                           tolerated_exceptions_list=[AssertionError])
-                # Check validation fail.
-                element = self.adapters_page.find_element_by_text(self.adapters_page.SAVE_AND_CONNECT_BUTTON)
-                assert self.adapters_page.is_element_disabled(element)
-                self.adapters_page.click_cancel()
-        finally:
-            self.wait_for_adapter_down(NEXPOSE_PLUGIN_NAME)
-            self.remove_cyberark_settings()
-
-    def test_no_connection_during_discovery(self):
-        try:
-            with NexposeService().contextmanager(take_ownership=True):
-                with CyberarkVaultSimulatorService().contextmanager(take_ownership=True):
-                    self.input_test_settings()
-                    self.adapters_page.switch_to_page()
-                    self.adapters_page.wait_for_adapter(NEXPOSE_NAME)
-                    self._input_query_string()
-                    # Check successful vault fetch
-                    wait_until(self._check_fetch, check_return_value=False, tolerated_exceptions_list=[AssertionError])
-                    # Check successful device fetch.
-                    self.adapters_page.click_save()
-                    self.base_page.run_discovery()
-                    wait_until(lambda: self._check_device_count() > 1, total_timeout=200, interval=20)
-
+                # Check successful vault fetch
+                wait_until(self._check_fetch, check_return_value=False, tolerated_exceptions_list=[AssertionError])
+                # Check successful device fetch.
+                self.adapters_page.click_save()
                 self.base_page.run_discovery()
-                self.adapters_page.switch_to_page()
-                self.adapters_page.wait_for_adapter(NEXPOSE_NAME)
-                self.adapters_page.refresh()
-                self.adapters_page.click_adapter(NEXPOSE_NAME)
-                self.adapters_page.wait_for_spinner_to_end()
-                self.adapters_page.wait_for_table_to_load()
-                self.adapters_page.wait_for_server_red()
-                self.adapters_page.click_row()
+                wait_until(lambda: self._check_device_count() > 1, total_timeout=200, interval=20)
 
-                # check cyberark fetch
-                self._check_fetch(should_succeed=False)
-                self.adapters_page.is_query_error()
-                assert CYBERARK_TEST_MOCK['domain'] in self.adapters_page.find_server_error()
-                self.adapters_page.click_cancel()
-        finally:
-            self.adapters_page.clean_adapter_servers(NEXPOSE_NAME, delete_associated_entities=True)
-            self.wait_for_adapter_down(NEXPOSE_PLUGIN_NAME)
-            self.remove_cyberark_settings()
+            self.base_page.run_discovery()
+            self.adapters_page.switch_to_page()
+            self.adapters_page.wait_for_adapter(NEXPOSE_NAME)
+            self.adapters_page.refresh()
+            self.adapters_page.click_adapter(NEXPOSE_NAME)
+            self.adapters_page.wait_for_spinner_to_end()
+            self.adapters_page.wait_for_table_to_load()
+            self.adapters_page.wait_for_server_red()
+            self.adapters_page.click_row()
+
+            # check cyberark fetch
+            self._check_fetch(should_succeed=False)
+            self.adapters_page.is_query_error()
+            assert CYBERARK_TEST_MOCK['domain'] in self.adapters_page.find_server_error()
+            self.adapters_page.click_cancel()
+
+        self.adapters_page.clean_adapter_servers(NEXPOSE_NAME, delete_associated_entities=True)
+        self.wait_for_adapter_down(NEXPOSE_PLUGIN_NAME)
+        self.remove_cyberark_settings()
