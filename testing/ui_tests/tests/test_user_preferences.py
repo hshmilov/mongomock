@@ -1,3 +1,4 @@
+from axonius.consts.gui_consts import ADAPTER_CONNECTIONS_FIELD
 from ui_tests.tests.ui_consts import FIRST_NAME, READ_ONLY_USERNAME, NEW_PASSWORD, LAST_NAME
 from ui_tests.tests.ui_test_base import TestBase
 
@@ -65,6 +66,6 @@ class TestUserPreferences(TestBase):
                                            FIRST_NAME, LAST_NAME, self.settings_page.READ_ONLY_ROLE)
         self.settings_page.wait_for_user_created_toaster()
         self._test_save_default_view(self.devices_page,
-                                     [self.devices_page.FIELD_ADAPTERS, self.devices_page.FIELD_HOSTNAME_TITLE])
+                                     [ADAPTER_CONNECTIONS_FIELD, self.devices_page.FIELD_HOSTNAME_TITLE])
         self._test_save_default_view(self.users_page,
-                                     [self.users_page.FIELD_ADAPTERS, self.users_page.FIELD_USERNAME_TITLE])
+                                     [ADAPTER_CONNECTIONS_FIELD, self.users_page.FIELD_USERNAME_TITLE])

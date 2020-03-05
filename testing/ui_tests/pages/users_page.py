@@ -1,3 +1,4 @@
+from axonius.consts.gui_consts import ADAPTER_CONNECTIONS_FIELD
 from ui_tests.pages.entities_page import EntitiesPage
 
 
@@ -15,7 +16,7 @@ class UsersPage(EntitiesPage):
 
     ADMIN_QUERY_NAME = 'Admin Users'
 
-    SYSTEM_DEFAULT_FIELDS = [EntitiesPage.FIELD_ADAPTERS,
+    SYSTEM_DEFAULT_FIELDS = [ADAPTER_CONNECTIONS_FIELD,
                              FIELD_IMAGE_TITLE, FIELD_USERNAME_TITLE, FIELD_DOMAIN_TITLE,
                              FIELD_ADMIN_TITLE, FIELD_LAST_SEEN_IN_DOMAIN,
                              EntitiesPage.FIELD_TAGS]

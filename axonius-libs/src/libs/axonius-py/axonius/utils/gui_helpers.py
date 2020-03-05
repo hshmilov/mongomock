@@ -19,7 +19,8 @@ from bson import ObjectId
 from flask import request, session, g
 
 from axonius.consts.gui_consts import SPECIFIC_DATA, ADAPTERS_DATA, JSONIFY_DEFAULT_TIME_FORMAT, MAX_SORTED_FIELDS, \
-    MIN_SORTED_FIELDS, PREFERRED_FIELDS, MAX_DAYS_SINCE_LAST_SEEN, SPECIFIC_DATA_PREFIX_LENGTH
+    MIN_SORTED_FIELDS, PREFERRED_FIELDS, MAX_DAYS_SINCE_LAST_SEEN, SPECIFIC_DATA_PREFIX_LENGTH, \
+    ADAPTER_CONNECTIONS_FIELD, DISTINCT_ADAPTERS_COUNT_FIELD
 
 from axonius.entities import EntitiesNamespace
 
@@ -1008,7 +1009,7 @@ def entity_fields(entity_type: EntityType):
 
     adapters_json = {
         'name': 'adapters',
-        'title': 'Total Adapter Connections',
+        'title': ADAPTER_CONNECTIONS_FIELD,
         'type': 'array',
         'format': 'discrete',
         'items': {
@@ -1022,7 +1023,7 @@ def entity_fields(entity_type: EntityType):
 
     unique_adapters_json = {
         'name': 'adapter_list_length',
-        'title': 'Distinct Adapter Connections',
+        'title': DISTINCT_ADAPTERS_COUNT_FIELD,
         'type': 'number',
         'sort': True
     }
@@ -1134,7 +1135,7 @@ def entity_fields(entity_type: EntityType):
         # Adding adapter_count field to each adapter
         specific_items.append({
             'name': f'adapters_data.{plugin_name}.adapter_count',
-            'title': 'Distinct Adapter Connections',
+            'title': DISTINCT_ADAPTERS_COUNT_FIELD,
             'type': 'number',
         })
 

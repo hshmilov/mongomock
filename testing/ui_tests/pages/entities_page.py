@@ -9,6 +9,7 @@ from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.remote.webelement import WebElement
 
+from axonius.consts.gui_consts import ADAPTER_CONNECTIONS_FIELD
 from axonius.utils.datetime import parse_date
 from axonius.utils.parsing import normalize_timezone_date
 from axonius.utils.wait import wait_until
@@ -193,7 +194,6 @@ class EntitiesPage(Page):
 
     FIELD_UPDATED_BY = 'Updated By'
     FIELD_LAST_UPDATED = 'Last Updated'
-    FIELD_ADAPTERS = 'Total Adapter Connections'
     FIELD_TAGS = 'Tags'
 
     QUERY_MODAL_OVERLAY = '.v-overlay'
@@ -727,7 +727,7 @@ class EntitiesPage(Page):
                                         data_position=col_position)))
 
     def get_column_data_adapter_names(self):
-        col_position = self.count_sort_column('Total Adapter Connections')
+        col_position = self.count_sort_column(ADAPTER_CONNECTIONS_FIELD)
         return [el.get_attribute('alt') for el in
                 self.find_elements_by_xpath(self.TABLE_DATA_IMG_XPATH.format(data_position=col_position))
                 if el.get_attribute('alt')]

@@ -3,6 +3,7 @@ import time
 import pytest
 from selenium.common.exceptions import NoSuchElementException
 
+from axonius.consts.gui_consts import ADAPTER_CONNECTIONS_FIELD
 from axonius.utils.wait import wait_until
 
 from ui_tests.pages.entities_page import EntitiesPage
@@ -48,8 +49,6 @@ class DevicesPage(EntitiesPage):
     FIELD_PART_OF_DOMAIN = 'Part Of Domain'
     FIELD_TAGS = 'Tags'
     FIELD_ADAPTER_TAGS = 'Adapter Tags'
-    FIELD_ADAPTERS = 'Total Adapter Connections'
-    FIELD_DISTINCT_ADAPTERS = 'Distinct Adapter Connections'
     FIELD_LAST_SEEN = 'Last Seen'
     FIELD_HOSTNAME_TITLE = 'Host Name'
     FIELD_HOSTNAME_NAME = 'hostname'
@@ -101,7 +100,7 @@ class DevicesPage(EntitiesPage):
         'UNCHECKED': 'checkbox--unchecked'
     }
 
-    SYSTEM_DEFAULT_FIELDS = [EntitiesPage.FIELD_ADAPTERS,
+    SYSTEM_DEFAULT_FIELDS = [ADAPTER_CONNECTIONS_FIELD,
                              FIELD_ASSET_NAME, FIELD_HOSTNAME_TITLE, FIELD_LAST_SEEN,
                              FIELD_NETWORK_INTERFACES_MAC, FIELD_NETWORK_INTERFACES_IPS,
                              FIELD_OS_TYPE, EntitiesPage.FIELD_TAGS]

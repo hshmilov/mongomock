@@ -2,6 +2,7 @@ import pytest
 from flaky import flaky
 from selenium.common.exceptions import NoSuchElementException
 
+from axonius.consts.gui_consts import DISTINCT_ADAPTERS_COUNT_FIELD, ADAPTER_CONNECTIONS_FIELD
 from axonius.utils.parsing import normalize_adapter_device, NORMALIZED_HOSTNAME, \
     ips_do_not_contradict_or_mac_intersection
 from axonius.consts.plugin_consts import PLUGIN_NAME
@@ -255,16 +256,16 @@ class TestAdapters(TestBase):
         self.devices_page.switch_to_page()
         self.devices_page.click_query_wizard()
         self.devices_page.select_query_adapter(AD_NAME)
-        self.devices_page.select_query_field(self.devices_page.FIELD_DISTINCT_ADAPTERS)
+        self.devices_page.select_query_field(DISTINCT_ADAPTERS_COUNT_FIELD)
         self.devices_page.click_search()
         self.devices_page.wait_for_table_to_load()
         assert self.devices_page.count_entities() > 0
         self.devices_page.reset_query()
         self.devices_page.click_query_wizard()
-        self.devices_page.select_query_field(self.devices_page.FIELD_DISTINCT_ADAPTERS)
+        self.devices_page.select_query_field(DISTINCT_ADAPTERS_COUNT_FIELD)
         self.devices_page.click_search()
         self.devices_page.wait_for_table_to_load()
         assert self.devices_page.count_entities() > 0
         with pytest.raises(NoSuchElementException) as exception_info:
-            self.devices_page.select_custom_data_field(self.devices_page.FIELD_ADAPTERS)
+            self.devices_page.select_custom_data_field(ADAPTER_CONNECTIONS_FIELD)
         assert exception_info.match('Message: no such element:.*')

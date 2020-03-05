@@ -199,6 +199,8 @@ PREFERRED_FIELDS = ('specific_data.data.hostname_preferred',
                     'specific_data.data.os.distribution_preferred',
                     'specific_data.data.network_interfaces.mac_preferred',
                     'specific_data.data.network_interfaces.ips_preferred')
+ADAPTER_CONNECTIONS_FIELD = 'Adapter Connections'
+DISTINCT_ADAPTERS_COUNT_FIELD = 'Distinct Adapter Connections Count'
 
 #########################
 # Common Values #

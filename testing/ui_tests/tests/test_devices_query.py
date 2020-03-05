@@ -6,6 +6,7 @@ from uuid import uuid4
 from pytest import raises
 from selenium.common.exceptions import NoSuchElementException
 
+from axonius.consts.gui_consts import ADAPTER_CONNECTIONS_FIELD
 from axonius.utils.hash import get_preferred_quick_adapter_id
 from axonius.utils.wait import wait_until
 from ui_tests.pages.adapters_page import CONNECTION_LABEL, CONNECTION_LABEL_UPDATED
@@ -107,11 +108,11 @@ class TestDevicesQuery(TestBase):
 
         self.devices_page.select_page_size(50)
 
-        all_adapters = set(self.devices_page.get_column_data_inline_with_remainder(self.devices_page.FIELD_ADAPTERS))
+        all_adapters = set(self.devices_page.get_column_data_inline_with_remainder(ADAPTER_CONNECTIONS_FIELD))
         adapters = random.sample(all_adapters, math.ceil(len(all_adapters) / 2))
 
         self.devices_page.click_query_wizard()
-        self.devices_page.select_query_field(self.devices_page.FIELD_ADAPTERS)
+        self.devices_page.select_query_field(ADAPTER_CONNECTIONS_FIELD)
         self.devices_page.select_query_comp_op(self.devices_page.QUERY_COMP_IN)
         self.devices_page.fill_query_string_value(','.join(adapters))
         self.devices_page.wait_for_table_to_be_responsive()
@@ -120,15 +121,13 @@ class TestDevicesQuery(TestBase):
 
         self.devices_page.select_page_size(50)
 
-        new_adapters = set(self.devices_page.get_column_data_inline_with_remainder(
-            self.devices_page.FIELD_ADAPTERS))
+        new_adapters = set(self.devices_page.get_column_data_inline_with_remainder(ADAPTER_CONNECTIONS_FIELD))
 
         assert len([adapter for adapter in new_adapters if adapter.strip() == '']) == 0
 
         assert set(adapters).issubset(new_adapters)
 
-        for adapters_values in self.devices_page.get_column_cells_data_inline_with_remainder(
-                self.devices_page.FIELD_ADAPTERS):
+        for adapters_values in self.devices_page.get_column_cells_data_inline_with_remainder(ADAPTER_CONNECTIONS_FIELD):
             if isinstance(adapters_values, list):
                 assert len(set(adapters_values).intersection(set(adapters))) > 0
             else:
@@ -232,7 +231,7 @@ class TestDevicesQuery(TestBase):
         """
         Testing that change of the comparison function resets the value, since its type may be different to previous
         """
-        self.devices_page.select_query_field(self.devices_page.FIELD_ADAPTERS)
+        self.devices_page.select_query_field(ADAPTER_CONNECTIONS_FIELD)
         self.devices_page.select_query_comp_op(self.devices_page.QUERY_COMP_SIZE)
         self.devices_page.fill_query_value('2')
         self.devices_page.select_query_comp_op(self.devices_page.QUERY_COMP_EQUALS)
@@ -725,7 +724,7 @@ class TestDevicesQuery(TestBase):
     def _test_adapters_size(self):
         expressions = self.devices_page.find_expressions()
         assert len(expressions) == 1
-        self.devices_page.select_query_field(self.devices_page.FIELD_ADAPTERS)
+        self.devices_page.select_query_field(ADAPTER_CONNECTIONS_FIELD)
         self.devices_page.select_query_comp_op(self.devices_page.QUERY_COMP_SIZE)
         self.devices_page.fill_query_value('1')
         self.devices_page.wait_for_table_to_be_responsive()
@@ -761,7 +760,7 @@ class TestDevicesQuery(TestBase):
     def _test_enum_expressions(self):
         combo_configs = [
             # enum of type string
-            {'field': self.devices_page.FIELD_ADAPTERS,
+            {'field': ADAPTER_CONNECTIONS_FIELD,
              'comp_op': self.devices_page.QUERY_COMP_EQUALS,
              'value': 'Cisco',
              'field_type': 'string',
