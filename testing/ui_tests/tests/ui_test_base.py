@@ -40,6 +40,7 @@ from ui_tests.pages.settings_page import SettingsPage
 from ui_tests.pages.signup_page import SignupPage
 from ui_tests.pages.users_page import UsersPage
 from ui_tests.tests.ui_consts import ROOT_DIR
+from ui_tests.components.tag_component import TagComponent
 
 SCREENSHOTS_FOLDER = os.path.join(ROOT_DIR, 'screenshots')
 LOGS_FOLDER = os.path.join(LOGS_PATH_HOST, 'ui_logger')
@@ -308,6 +309,7 @@ class TestBase:
         self.driver.implicitly_wait(0.3)
         self.driver.set_page_load_timeout(30)
         self.driver.set_script_timeout(30)
+        self.register_components()
         self.register_pages()
 
     def restart_browser(self):
@@ -343,6 +345,10 @@ class TestBase:
         self.account_page = AccountPage(**params)
         self.instances_page = InstancesPage(**params)
         self.signup_page = SignupPage(**params)
+
+    def register_components(self):
+        params = dict(driver=self.driver, base_url=self.base_url, local_browser=self.local_browser, test_base=self)
+        self.tag_component = TagComponent(**params)
 
     def get_all_screens(self):
         screens = (self.devices_page,
