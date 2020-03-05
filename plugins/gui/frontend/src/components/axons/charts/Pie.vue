@@ -110,7 +110,7 @@ export default {
   computed: {
     processedData() {
       return this.data.map((item, index) => {
-        if (this.data.length === 2 && index === 1) {
+        if (this.data.length === 2 && index === 1 && this.data[0].remainder) {
           return { class: `indicator-fill-${Math.ceil(item.value * 4)}`, ...item };
         }
         const modIndex = (index % 10) + 1;
