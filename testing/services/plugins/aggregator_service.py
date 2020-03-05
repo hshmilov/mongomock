@@ -341,10 +341,10 @@ class AggregatorService(PluginService, UpdatablePluginMixin):
                                     }
                                     for (var key in val) {
                                         if (name == null) {
-                                            recursion(key, val[key]); 
+                                            recursion(key, val[key]);
                                         }
                                         else {
-                                            recursion(name + '.' + key, val[key]); 
+                                            recursion(name + '.' + key, val[key]);
                                         }
                                     }
                                 }
@@ -1280,7 +1280,7 @@ class AggregatorService(PluginService, UpdatablePluginMixin):
                 '_id': 1,
                 f'adapters.{PLUGIN_NAME}': 1,
                 f'adapters.{PLUGIN_UNIQUE_NAME}': 1,
-                f'adapters.data.quick_id': 1,
+                f'adapters.quick_id': 1,
                 f'adapters.data.id': 1,
                 f'adapters.data.tanium_type': 1,
             }):
