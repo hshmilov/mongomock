@@ -1,7 +1,10 @@
+import logging
 from ui_tests.pages.page import Page
 
-# will be 60*20*5*0.2 seconds
-DISCOVERY_TIMEOUT = 60 * 20 * 5
+# will be 60*45*5*0.2 seconds
+DISCOVERY_TIMEOUT = 60 * 45 * 5
+
+logger = logging.getLogger(f'axonius.{__name__}')
 
 
 class BasePage(Page):
@@ -23,6 +26,7 @@ class BasePage(Page):
         self.wait_for_element_present_by_id(self.DISCOVERY_RUN_ID, retries=DISCOVERY_TIMEOUT)
 
     def run_discovery(self, wait=True):
+        logger.info(f'Running discovery with wait={wait}')
         self.driver.find_element_by_id(self.DISCOVERY_RUN_ID).click()
         if wait:
             self.wait_for_stop_research()
