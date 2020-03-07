@@ -692,7 +692,6 @@ def parse_entity_fields(entity_data, fields, include_details=False, field_filter
             else:
                 sub_property = None
             val, last_seen, sub_property_val = '', datetime(1970, 1, 1, 0, 0, 0), None
-
         try:
             # First priority is the latest seen Agent adapter
             for adapter in entity_data['adapters_data']:
@@ -701,10 +700,16 @@ def parse_entity_fields(entity_data, fields, include_details=False, field_filter
                 _adapter = entity_data['adapters_data'][adapter][0]
                 if 'Agent' in _adapter['adapter_properties'] and 'last_seen' in _adapter \
                         and _adapter['last_seen'] > last_seen:
-                    if specific_property in _adapter and \
-                            isinstance(sub_property, str) and \
-                            sub_property in _adapter[specific_property]:
-                        val = _adapter[specific_property][sub_property]
+                    if sub_property is not None and specific_property in _adapter:
+                        try:
+                            sub_property_val = _adapter[specific_property][sub_property] if \
+                                isinstance(_adapter[specific_property], dict) else \
+                                [x[sub_property] for x in _adapter[specific_property] if sub_property in x]
+                        # Field not in result
+                        except Exception:
+                            sub_property_val = None
+                    if specific_property in _adapter and (sub_property_val != [] and sub_property_val is not None):
+                        val = sub_property_val
                     elif specific_property in _adapter and not isinstance(sub_property, str):
                         val = _adapter[specific_property]
                     else:
@@ -769,10 +774,16 @@ def parse_entity_fields(entity_data, fields, include_details=False, field_filter
                         continue
                     _adapter = entity_data['adapters_data'][adapter][0]
                     if 'last_seen' in _adapter and _adapter['last_seen'] > last_seen:
-                        if specific_property in _adapter and \
-                                isinstance(sub_property, str) and \
-                                sub_property in _adapter[specific_property]:
-                            val = _adapter[specific_property][sub_property]
+                        if sub_property is not None and specific_property in _adapter:
+                            try:
+                                sub_property_val = _adapter[specific_property][sub_property] if \
+                                    isinstance(_adapter[specific_property], dict) else \
+                                    [x[sub_property] for x in _adapter[specific_property] if sub_property in x]
+                            # Field not in result
+                            except Exception:
+                                sub_property_val = None
+                        if specific_property in _adapter and (sub_property_val != [] and sub_property_val is not None):
+                            val = sub_property_val
                         elif specific_property in _adapter and not isinstance(sub_property, str):
                             val = _adapter[specific_property]
                         else:
