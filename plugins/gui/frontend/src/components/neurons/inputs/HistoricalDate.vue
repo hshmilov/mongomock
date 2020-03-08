@@ -54,16 +54,16 @@ export default {
         return historicalDate;
       },
     }),
-    currentDate() {
-      return new Date();
-    },
   },
   methods: {
     isDateUnavailable(date) {
       // return true if date is unavailable, return false if date is available
       // if date smaller then the first day we have historical or bigger than today disable it!
-      if (date < this.firstHistoricalDate || date > this.currentDate) return true;
-
+      const currentDate = new Date();
+      date.setMinutes(date.getMinutes() - date.getTimezoneOffset());
+      if (date < this.firstHistoricalDate || date > currentDate) {
+        return true;
+      }
       return (this.allowedDates && !this.allowedDates[date.toISOString().substring(0, 10)]);
     },
     onInput(historical) {
