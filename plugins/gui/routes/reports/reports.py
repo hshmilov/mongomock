@@ -326,7 +326,7 @@ class Reports:
         :return: A tuple of the report pdf path and a list of attachments paths
          """
         report_config = self.reports_config_collection.find_one({'_id': ObjectId(report_id)})
-        name = report_config.get('name', '')
+        name = report_config.get('name', '') if report_config else ''
         report = self._get_collection('reports').find_one({'filename': f'most_recent_{name}'})
         logger.info(f'exporting report "{name}"')
         if not report:

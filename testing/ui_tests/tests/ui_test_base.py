@@ -16,7 +16,7 @@ import conftest
 
 from axonius.consts.gui_consts import FEATURE_FLAGS_CONFIG, FeatureFlagsNames,\
     DASHBOARD_SPACE_TYPE_CUSTOM, CONFIG_CONFIG
-from axonius.consts.plugin_consts import AXONIUS_USER_NAME, CORE_UNIQUE_NAME, PLUGIN_NAME
+from axonius.consts.plugin_consts import AXONIUS_USER_NAME, CORE_UNIQUE_NAME, PLUGIN_NAME, AGGREGATOR_PLUGIN_NAME
 from axonius.consts.system_consts import AXONIUS_DNS_SUFFIX, LOGS_PATH_HOST
 from axonius.plugin_base import EntityType
 from axonius.utils.mongo_administration import truncate_capped_collection
@@ -254,6 +254,11 @@ class TestBase:
                 '$ne': '*'
             }
         })
+
+        for name in self.axonius_system.db.client[AGGREGATOR_PLUGIN_NAME].list_collection_names():
+            if not name.startswith('historical') or name.endswith('view'):
+                continue
+            self.axonius_system.db.client[AGGREGATOR_PLUGIN_NAME].drop_collection(name)
 
         truncate_capped_collection(self.axonius_system.db.get_historical_entity_db_view(EntityType.Users))
         truncate_capped_collection(self.axonius_system.db.get_historical_entity_db_view(EntityType.Devices))

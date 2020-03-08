@@ -137,8 +137,10 @@ def _get_entities_raw(entity_type: EntityType,
                 }
                 sort = {'tempSortField': sort[sort_path]}
 
-    entity_views_db = plugin_base_instance().get_appropriate_view(history_date, entity_type)
-
+    entity_views_db, is_date_filter_required = plugin_base_instance().get_appropriate_view(history_date, entity_type)
+    # if we defaulted to normal history collection, add historized_filter
+    if history_date and is_date_filter_required:
+        view_filter = get_historized_filter(view_filter, history_date)
     try:
         yield from _perform_find(entity_views_db, limit, skip, view_filter, sort, db_projection, entity_type,
                                  default_sort)
@@ -214,7 +216,6 @@ def get_entities(limit: int, skip: int,
         for field in FIELDS_TO_PROJECT:
             db_projection[field] = 1
 
-    view_filter = get_historized_filter(view_filter, history_date)
     logger.debug(f'Fetching data for entity {entity_type.name}')
     limit = limit or 0
     skip = skip or 0

@@ -478,12 +478,19 @@ def is_adapter_count_query(query):
 # pylint: disable=no-else-return
 
 
-def get_entities_count(entities_filter, entity_collection, history_date: datetime = None, quick: bool = False):
+def get_entities_count(
+        entities_filter,
+        entity_collection,
+        history_date: datetime = None,
+        quick: bool = False,
+        is_date_filter_required: bool = False):
     """
     Count total number of devices answering given mongo_filter.
     If 'quick' is True, then will only count until 1000.
     """
-    processed_filter = get_historized_filter(entities_filter, history_date)
+    processed_filter = entities_filter
+    if is_date_filter_required:
+        processed_filter = get_historized_filter(entities_filter, history_date)
     is_adapter_count = is_adapter_count_query(processed_filter)
     if quick and is_adapter_count:
         return entity_collection.count(processed_filter, limit=1000)

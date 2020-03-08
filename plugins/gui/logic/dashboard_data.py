@@ -1,16 +1,19 @@
 import logging
-from typing import List, Iterable, Tuple
 from collections import defaultdict, Counter
 from datetime import date, datetime, timedelta
+from functools import wraps
 from multiprocessing import cpu_count
+from threading import Semaphore
+from typing import (List, Iterable, Tuple, Optional)
+
 from bson import ObjectId
 from dateutil.parser import parse as parse_date
 
-from axonius.consts.plugin_consts import PLUGIN_NAME
 from axonius.consts.gui_consts import (ChartMetrics, ChartViews, ChartFuncs, ChartRangeTypes, ChartRangeUnits,
                                        ADAPTERS_DATA, SPECIFIC_DATA,
                                        RANGE_UNIT_DAYS,
                                        DASHBOARD_COLLECTION)
+from axonius.consts.plugin_consts import PLUGIN_NAME
 from axonius.entities import EntityType
 from axonius.plugin_base import PluginBase, return_error
 from axonius.utils.axonius_query_language import (convert_db_entity_to_view_entity, parse_filter)
@@ -20,6 +23,27 @@ from axonius.utils.threading import GLOBAL_RUN_AND_FORGET
 from gui.logic.db_helpers import beautify_db_entry
 
 logger = logging.getLogger(f'axonius.{__name__}')
+
+
+def dashboard_call_limit(limit):
+    """
+    Limits the amount of calls to dashboard creation to only Limit at a time
+    """
+
+    def limit_dec(func):
+        semaphore = Semaphore(limit)
+
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            semaphore.acquire()
+            try:
+                return func(*args, **kwargs)
+            finally:
+                semaphore.release()
+
+        return wrapper
+
+    return limit_dec
 
 
 @rev_cached_entity_type(ttl=300)
@@ -38,14 +62,8 @@ def adapter_data(entity_type: EntityType):
     # First value is net adapters count, second is gross adapters count (refers to AX-2430)
     # If an Axonius entity has 2 adapter entities from the same plugin it will be counted for each time it is there
     entities_per_adapters = defaultdict(lambda: {'value': 0, 'meta': 0})
-    for res in entity_collection.aggregate([{
-            '$group': {
-                '_id': f'$adapters.{PLUGIN_NAME}',
-                'count': {
-                    '$sum': 1
-                }
-            }
-    }]):
+    aggregate_query = [{'$group': {'_id': f'$adapters.{PLUGIN_NAME}', 'count': {'$sum': 1}}}]
+    for res in entity_collection.aggregate(aggregate_query):
         for plugin_name in set(res['_id']):
             entities_per_adapters[plugin_name]['value'] += res['count']
             adapter_entities['seen'] += res['count']
@@ -88,21 +106,17 @@ def fetch_chart_compare(chart_view: ChartViews, views: List) -> List:
             'module': entity_name,
             'value': 0
         }
-        # pylint: disable=protected-access
-        if view.get('for_date'):
-            data_item['value'] = PluginBase.Instance._historical_entity_views_db_map[entity].count_documents(
-                {
-                    '$and': [
-                        parse_filter(view_dict['query']['filter'], view['for_date']), {
-                            'accurate_for_datetime': view['for_date']
-                        }
-                    ]
-                })
-            data_item['accurate_for_datetime'] = view['for_date']
-        else:
-            data_item['value'] = PluginBase.Instance._entity_db_map[entity].count_documents(
-                parse_filter(view_dict['query']['filter']))
-        # pylint: enable=protected-access
+        # extract data_collection, and build filter
+        for_date = view.get('for_date')
+        #  if we got a date we will add the accurate for datetime to the data_item result
+        if for_date:
+            data_item['accurate_for_datetime'] = for_date
+        entity_collection, is_date_filter_required = PluginBase.Instance.get_appropriate_view(for_date, entity)
+        query_filter = [parse_filter(view_dict['query']['filter'], for_date)]
+        # if we have a date and we don't have an historical collection, count using filter on all historical_col
+        if for_date and is_date_filter_required:
+            query_filter.append({'accurate_for_datetime': for_date})
+        data_item['value'] = entity_collection.count_documents({'$and': query_filter})
         data.append(data_item)
         total += data_item['value']
 
@@ -118,7 +132,11 @@ def fetch_chart_compare(chart_view: ChartViews, views: List) -> List:
     return data
 
 
-def fetch_chart_intersect(_: ChartViews, entity: EntityType, base, intersecting, for_date=None) -> List:
+def fetch_chart_intersect(
+        _: ChartViews,
+        entity: EntityType,
+        base, intersecting,
+        for_date=None) -> Optional[List]:
     """
     This chart shows intersection of 1 or 2 'Child' views with a 'Parent' (expected not to be a subset of them).
     Module to be queried is defined by the parent query.
@@ -137,9 +155,7 @@ def fetch_chart_intersect(_: ChartViews, entity: EntityType, base, intersecting,
     if not intersecting or len(intersecting) < 1:
         raise Exception('Pie chart requires at least one views')
     # Query and data collections according to given parent's module
-    # pylint: disable=protected-access
-    data_collection = PluginBase.Instance._entity_db_map[entity]
-    # pylint: enable=protected-access
+    data_collection, is_date_filter_required = PluginBase.Instance.get_appropriate_view(for_date, entity)
 
     base_view = {'query': {'filter': '', 'expressions': []}}
     base_queries = []
@@ -149,14 +165,9 @@ def fetch_chart_intersect(_: ChartViews, entity: EntityType, base, intersecting,
             return None
         base_queries = [parse_filter(base_view['query']['filter'], for_date)]
 
-    if for_date:
-        # If history requested, fetch from appropriate historical db
-        # pylint: disable=protected-access
-        data_collection = PluginBase.Instance._historical_entity_views_db_map[entity]
-        # pylint: enable=protected-access
-        base_queries.append({
-            'accurate_for_datetime': for_date
-        })
+    # If we have a date and this isn't an historical collection add a filter
+    if for_date and is_date_filter_required:
+        base_queries.append({'accurate_for_datetime': for_date})
 
     data = []
     total = data_collection.count_documents({'$and': base_queries} if base_queries else {})
@@ -244,19 +255,11 @@ def _query_chart_segment_results(field_parent: str, view, entity: EntityType, fo
         if not base_view or not base_view.get('query'):
             return None, None
         base_queries.append(parse_filter(base_view['query']['filter'], for_date))
-    # pylint: disable=protected-access
-    data_collection = PluginBase.Instance._entity_db_map[entity]
-    if for_date:
-        # If history requested, fetch from appropriate historical db
-        data_collection = PluginBase.Instance._historical_entity_views_db_map[entity]
-        base_queries.append({
-            'accurate_for_datetime': for_date
-        })
-    # pylint: enable=protected-access
-    base_query = {
-        '$and': base_queries
-    } if base_queries else {}
+    data_collection, is_date_filter_required = PluginBase.Instance.get_appropriate_view(for_date, entity)
+    if for_date and is_date_filter_required:
+        base_queries.append({'accurate_for_datetime': for_date})
 
+    base_query = {'$and': base_queries} if base_queries else {}
     adapter_conditions = [
         {
             '$ne': ['$$i.data._old', True]
@@ -540,6 +543,8 @@ def _generate_segmented_query_filter(result_name, filters, field_parent, segment
         wrapped_query_filters = [f'({x})' for x in query_filters]
         return f'{segment_filter} and ({field_parent} == match([{" and ".join(wrapped_query_filters)}]))'
     return segment_filter
+
+
 # pylint: enable-msg=too-many-branches
 
 
@@ -726,17 +731,9 @@ def _query_chart_abstract_results(field: dict, entity: EntityType, view, for_dat
     base_view['query']['filter'] = f'{base_view["query"]["filter"]}{field["name"]} == {field_compare}'
 
     # pylint: disable=protected-access
-    data_collection = PluginBase.Instance._entity_db_map[entity]
-    if for_date:
-        # If history requested, fetch from appropriate historical db
-        data_collection = PluginBase.Instance._historical_entity_views_db_map[entity]
-        base_query = {
-            '$and': [
-                base_query, {
-                    'accurate_for_datetime': for_date
-                }
-            ]
-        }
+    data_collection, is_date_filter_required = PluginBase.Instance.get_appropriate_view(for_date, entity)
+    if for_date and is_date_filter_required:
+        base_query = {'$and': [base_query, {'accurate_for_datetime': for_date}]}
     # pylint: enable=protected-access
     return base_view, data_collection.find(base_query, projection={
         adapter_field_name: 1,
@@ -881,34 +878,40 @@ def _fetch_timeline_points(entity_type: EntityType, match_filter: str, date_rang
     # pylint: disable=protected-access
     def aggregate_for_date_range(args):
         range_from, range_to = args
-        return PluginBase.Instance._historical_entity_views_db_map[entity_type].aggregate([
-            {
-                '$match': {
-                    '$and': [
-                        parse_filter(match_filter, range_from), {
-                            'accurate_for_datetime': {
-                                '$lte': datetime.combine(range_to, datetime.min.time()),
-                                '$gte': datetime.combine(range_from, datetime.min.time())
-                            }
-                        }
-                    ]
-                }
-            }, {
-                '$group': {
-                    '_id': '$accurate_for_datetime',
-                    'count': {
-                        '$sum': 1
-                    }
+        historical_collection = PluginBase.Instance._historical_entity_views_db_map[entity_type]
+        historical_in_range = historical_collection.aggregate([{
+            '$project': {
+                'accurate_for_datetime': 1
+            }
+        }, {
+            '$match': {
+                'accurate_for_datetime': {
+                    '$lte': datetime.combine(range_to, datetime.min.time()),
+                    '$gte': datetime.combine(range_from, datetime.min.time()),
                 }
             }
-        ])
+        }, {
+            '$group': {
+                '_id': '$accurate_for_datetime'
+            }
+        }])
 
+        historical_counts = {}
+        for historical_group in historical_in_range:
+            group_date = historical_group['_id']
+            collection, is_date_filter_required = PluginBase.Instance.get_appropriate_view(group_date, entity_type)
+            base_filter = parse_filter(match_filter, group_date)
+            if is_date_filter_required:
+                historical_counts[group_date] = collection.count_documents(
+                    {'$and': [base_filter, {'accurate_for_datetime': group_date}]})
+            else:
+                historical_counts[group_date] = collection.count_documents(base_filter)
+        return historical_counts
     # pylint: enable=protected-access
     points = {}
     for results in list(GLOBAL_RUN_AND_FORGET.map(aggregate_for_date_range, date_ranges)):
-        for item in results:
-            # _id here is the grouping id, so in fact it is accurate_for_datetime
-            points[item['_id'].strftime('%m/%d/%Y')] = item.get('count', 0)
+        for accurate_for_datetime, count in results.items():
+            points[accurate_for_datetime.strftime('%m/%d/%Y')] = count
     return points
 
 
@@ -946,6 +949,7 @@ def fetch_chart_timeline(_: ChartViews, views, timeframe, intersection=False):
     ]
 
 
+@dashboard_call_limit(10)
 def generate_dashboard_uncached(dashboard_id: ObjectId):
     """
     See _get_dashboard
@@ -1067,6 +1071,7 @@ def fetch_chart_abstract_historical(card, from_given_date, to_given_date):
     return fetch_chart_abstract(ChartViews[card['view']], **config, for_date=latest_date)
 
 
+@dashboard_call_limit(5)
 def dashboard_historical_uncached(dashboard_id: ObjectId, from_date: datetime, to_date: datetime):
     # pylint: disable=protected-access
     dashboard = PluginBase.Instance._get_collection(DASHBOARD_COLLECTION).find_one({

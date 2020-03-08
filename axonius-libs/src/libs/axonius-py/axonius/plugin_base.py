@@ -1512,10 +1512,22 @@ class PluginBase(Configurable, Feature, ABC):
             db_name = self.plugin_unique_name
         return self._get_db_connection()[db_name][collection_name]
 
-    def get_appropriate_view(self, historical, entity_type: EntityType) -> Collection:
+    def get_appropriate_view(self, historical, entity_type: EntityType) -> Tuple[Collection, bool]:
+        """
+        Returns the appropriate collection given entity time and historical date, if an historical collection
+        exists for given date, then the 2nd argument will return as True
+        historical collections are snapshots of an entities collection in a given date, they allow for an easier access
+        to the entity collection on the given date.
+        """
         if historical:
-            return self._historical_entity_views_db_map[entity_type]
-        return self._entity_db_map[entity_type]
+            h_col_name = f'historical_{entity_type.value.lower()}_{historical.strftime("%Y_%m_%d")}'
+            if (datetime.now() - historical).days > 30:
+                return self._historical_entity_views_db_map[entity_type], True
+            # if for any reason the historical day collection wasn't created fall back to regular history collection
+            if h_col_name not in self.aggregator_db_connection.list_collection_names():
+                return self._historical_entity_views_db_map[entity_type], True
+            return self.aggregator_db_connection[h_col_name], False
+        return self._entity_db_map[entity_type], False
 
     def _grab_file(self, field_data, stored_locally=True, alternative_db_name=None) -> gridfs.GridOut:
         """

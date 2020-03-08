@@ -794,8 +794,13 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin, 
         }
 
     def _get_entity_count(self, entity, mongo_filter, history, quick):
-        return str(get_entities_count(mongo_filter, self.get_appropriate_view(history, entity),
-                                      history_date=history, quick=quick))
+        col, is_date_filter_required = self.get_appropriate_view(history, entity)
+        return str(get_entities_count(
+            mongo_filter,
+            col,
+            history_date=history,
+            quick=quick,
+            is_date_filter_required=is_date_filter_required))
 
     def _triggered(self, job_name: str, post_json: dict, run_identifier: RunIdentifier, *args):
         if job_name == 'clear_dashboard_cache':

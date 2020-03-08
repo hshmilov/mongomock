@@ -5,20 +5,22 @@ import time
 from datetime import datetime
 from enum import Enum, auto
 
-import pymongo
-from pymongo.collection import Collection
-from pymongo.errors import CollectionInvalid
+import dateutil
+from pymongo.errors import CollectionInvalid, PyMongoError
 
 from aggregator.exceptions import AdapterOffline, ClientsUnavailable
+from aggregator.historical import create_retrospective_historic_collections, MIN_DISK_SIZE
+from aggregator.indices import common_db_indexes, non_historic_indexes, adapter_entity_raw_index, \
+    adapter_entity_historical_raw_index, historic_indexes
 from axonius.adapter_base import is_plugin_adapter
 from axonius.consts.adapter_consts import ADAPTER_SETTINGS, SHOULD_NOT_REFRESH_CLIENTS
-from axonius.consts.plugin_consts import (ADAPTERS_LIST_LENGTH,
-                                          AGGREGATOR_PLUGIN_NAME, PLUGIN_NAME,
+from axonius.consts.plugin_consts import (AGGREGATOR_PLUGIN_NAME,
                                           PLUGIN_UNIQUE_NAME)
 from axonius.consts.plugin_subtype import PluginSubtype
 from axonius.mixins.triggerable import Triggerable, RunIdentifier
 from axonius.plugin_base import EntityType, PluginBase
 from axonius.utils.files import get_local_config_file
+from axonius.utils.host_utils import get_free_disk_space
 from axonius.utils.json import from_json
 from axonius.utils.threading import LazyMultiLocker
 
@@ -29,20 +31,6 @@ AggregatorPlugin.py: A Plugin for the devices aggregation process
 
 get_devices_job_name = "Get device job"
 RESET_BEFORE_CLIENT_FETCH_ADAPTERS = ['cisco_adapter']
-
-
-def create_index_safe(collection, *args, **kwargs):
-    """
-    Creates an index on mongo, and only logs the exception instead of letting it propagate
-    :param collection: collection to create index on
-    :param args: args to pass to create_index function (see pymongo.collection.create_index)
-    :param kwargs:  kwargs to pass to create_index function (see pymongo.collection.create_index)
-    """
-    try:
-        logger.info(f"Creating index {args}.")
-        collection.create_index(*args, **kwargs)
-    except pymongo.errors.PyMongoError as e:
-        logger.critical(f"Exception while creating index {args}. reason: {e}")
 
 
 class AdapterStatuses(Enum):
@@ -86,6 +74,9 @@ class AggregatorService(Triggerable, PluginBase):
 
         # Setting up db
         self.__insert_indexes()
+        # Setting up historical
+        logger.info(f'Creating historic collections')
+        create_retrospective_historic_collections(self.aggregator_db_connection, self._historical_entity_views_db_map)
 
         # Clean all raw data from the db and move it to the relevant db, only if they exist
         for entity_type in EntityType:
@@ -133,124 +124,6 @@ class AggregatorService(Triggerable, PluginBase):
         Insert useful indexes.
         :return: None
         """
-
-        def non_historic_indexes(db: Collection):
-            create_index_safe(db,
-                              [(f'adapters.{PLUGIN_UNIQUE_NAME}', pymongo.ASCENDING),
-                               ('adapters.data.id', pymongo.ASCENDING)
-                               ], unique=True, background=True)
-            create_index_safe(db,
-                              [(f'adapters.data.last_seen', pymongo.ASCENDING), ('adapters.data.id', pymongo.ASCENDING)
-                               ], background=True)
-            create_index_safe(db, [('internal_axon_id', pymongo.ASCENDING)], unique=True, background=True)
-            create_index_safe(db, [(f'adapters.quick_id', pymongo.ASCENDING)], background=True, unique=True)
-            # Search index
-            create_index_safe(db, [('adapters.data.hostname', pymongo.TEXT),
-                                   ('adapters.data.last_used_users', pymongo.TEXT),
-                                   ('adapters.data.username', pymongo.TEXT),
-                                   ('adapters.data.mail', pymongo.TEXT)],
-                              background=True)
-
-        def historic_indexes(db: Collection):
-            create_index_safe(db,
-                              [(f'adapters.{PLUGIN_UNIQUE_NAME}', pymongo.ASCENDING),
-                               ('adapters.data.id', pymongo.ASCENDING)
-                               ], background=True)
-            create_index_safe(db, [('internal_axon_id', pymongo.ASCENDING)], background=True)
-            create_index_safe(db, [(f'adapters.quick_id', pymongo.ASCENDING)], background=True)
-            create_index_safe(db, [('short_axon_id', pymongo.ASCENDING)], background=True)
-            create_index_safe(db, [('accurate_for_datetime', pymongo.ASCENDING)], background=True)
-
-        def common_db_indexes(db: Collection):
-            create_index_safe(db, [(f'adapters.{PLUGIN_NAME}', pymongo.ASCENDING)], background=True)
-            create_index_safe(db, [(f'adapters.{PLUGIN_UNIQUE_NAME}', pymongo.ASCENDING)], background=True)
-            create_index_safe(db, [(ADAPTERS_LIST_LENGTH, pymongo.DESCENDING)], background=True)
-            create_index_safe(db, [('adapters.client_used', pymongo.DESCENDING)], background=True)
-
-            # this is commonly filtered by the GUI
-            create_index_safe(db, [('adapters.data.id', pymongo.ASCENDING)], background=True)
-            create_index_safe(db, [('adapters.pending_delete', pymongo.ASCENDING)], background=True)
-            create_index_safe(db, [(f'adapters.data.adapter_properties', pymongo.ASCENDING)], background=True)
-            create_index_safe(db, [(f'adapters.data.os.type', pymongo.ASCENDING)], background=True)
-            create_index_safe(db, [(f'adapters.data.os.distribution', pymongo.ASCENDING)], background=True)
-            create_index_safe(db, [(f'adapters.data.last_seen', pymongo.ASCENDING)], background=True)
-            create_index_safe(db, [(f'adapters.data.hostname', pymongo.ASCENDING)], background=True)
-            create_index_safe(db, [(f'adapters.data.name', pymongo.ASCENDING)], background=True)
-            create_index_safe(db, [(f'adapters.data.network_interfaces.mac', pymongo.ASCENDING)], background=True)
-            create_index_safe(db, [(f'adapters.data.network_interfaces.ips', pymongo.ASCENDING)], background=True)
-            create_index_safe(db, [(f'adapters.data.network_interfaces.ips_raw', pymongo.ASCENDING)], background=True)
-            create_index_safe(db, [(f'adapters.data.last_used_users', pymongo.ASCENDING)], background=True)
-            create_index_safe(db, [(f'adapters.data.username', pymongo.ASCENDING)], background=True)
-            create_index_safe(db, [(f'adapters.data.domain', pymongo.ASCENDING)], background=True)
-            create_index_safe(db, [(f'adapters.data.installed_software.name', pymongo.ASCENDING)], background=True)
-            create_index_safe(db, [(f'adapters.data.fetch_time', pymongo.ASCENDING)], background=True)
-            create_index_safe(db, [(f'adapters.data.software_cves.cve_id', pymongo.ASCENDING)], background=True)
-            create_index_safe(db, [(f'adapters.data.software_cves.cvss', pymongo.ASCENDING)], background=True)
-            create_index_safe(db, [(f'adapters.data.installed_software.name', pymongo.ASCENDING)], background=True)
-
-            create_index_safe(db, [('tags.data.id', pymongo.ASCENDING)], background=True)
-            create_index_safe(db, [(f'tags.{PLUGIN_NAME}', pymongo.ASCENDING)], background=True)
-            create_index_safe(db, [(f'tags.{PLUGIN_UNIQUE_NAME}', pymongo.ASCENDING)], background=True)
-            create_index_safe(db, [(f'tags.type', pymongo.ASCENDING)], background=True)
-            create_index_safe(db, [(f'tags.data.adapter_properties', pymongo.ASCENDING)], background=True)
-            create_index_safe(db, [(f'tags.data.os.type', pymongo.ASCENDING)], background=True)
-            create_index_safe(db, [(f'tags.data.os.distribution', pymongo.ASCENDING)], background=True)
-            create_index_safe(db, [(f'tags.data.last_seen', pymongo.ASCENDING)], background=True)
-            create_index_safe(db, [(f'tags.data.hostname', pymongo.ASCENDING)], background=True)
-            create_index_safe(db, [(f'tags.data.name', pymongo.ASCENDING)], background=True)
-            create_index_safe(db, [(f'tags.data.network_interfaces.mac', pymongo.ASCENDING)], background=True)
-            create_index_safe(db, [(f'tags.data.network_interfaces.ips', pymongo.ASCENDING)], background=True)
-            create_index_safe(db, [(f'tags.data.network_interfaces.ips_raw', pymongo.ASCENDING)], background=True)
-            create_index_safe(db, [(f'tags.data.last_used_users', pymongo.ASCENDING)], background=True)
-            create_index_safe(db, [(f'tags.data.username', pymongo.ASCENDING)], background=True)
-            create_index_safe(db, [(f'tags.data.domain', pymongo.ASCENDING)], background=True)
-            create_index_safe(db, [(f'tags.data.fetch_time', pymongo.ASCENDING)], background=True)
-            create_index_safe(db, [(f'tags.data.software_cves.cve_id', pymongo.ASCENDING)], background=True)
-            create_index_safe(db, [(f'tags.data.software_cves.cvss', pymongo.ASCENDING)], background=True)
-            create_index_safe(db, [(f'tags.data.installed_software.name', pymongo.ASCENDING)], background=True)
-
-            # For labels
-            create_index_safe(db, [(f'tags.name', pymongo.ASCENDING)], background=True)
-            create_index_safe(db, [(f'tags.label_value', pymongo.ASCENDING)], background=True)
-
-            # this is commonly sorted by
-            create_index_safe(db, [('adapter_list_length', pymongo.DESCENDING)], background=True)
-
-        def adapter_entity_raw_index(db: Collection):
-            """
-            Adds indices to the raw collection.
-            A document in the raw collection looks as follows:
-            {
-                'plugin_unique_name': '',
-                'id': '',
-                'raw_data': {
-                    ...
-                }
-            }
-            :param db: Collection to add indices too
-            """
-            create_index_safe(db,
-                              [(f'{PLUGIN_UNIQUE_NAME}', pymongo.ASCENDING), ('id', pymongo.ASCENDING)
-                               ], unique=True, background=True)
-
-        def adapter_entity_historical_raw_index(db: Collection):
-            """
-            Adds indices to the historical raw collection.
-            A document in the raw collection looks as follows:
-            {
-                'plugin_unique_name': '',
-                'id': '',
-                'accurate_for_datetime': '',
-                'raw_data': {
-                    ...
-                }
-            }
-            :param db: Collection to add indices too
-            """
-            create_index_safe(db, [(f'{PLUGIN_UNIQUE_NAME}', pymongo.ASCENDING), ('id', pymongo.ASCENDING),
-                                   ('accurate_for_datetime', pymongo.ASCENDING)
-                                   ], unique=True, background=True)
-
         for entity_type in EntityType:
             common_db_indexes(self._entity_db_map[entity_type])
             non_historic_indexes(self._entity_db_map[entity_type])
@@ -323,6 +196,45 @@ class AggregatorService(Triggerable, PluginBase):
                 continue
             yield (client_name, from_json(data.content))
 
+    def _create_daily_historic_collection(self, entity_type, col, date):
+        if get_free_disk_space() < MIN_DISK_SIZE:
+            logger.warning(f'No more space left for historical collections')
+            return
+        new_col_name = f'historical_{entity_type.value.lower()}_{date.strftime("%Y_%m_%d")}'
+        try:
+            new_col = self.aggregator_db_connection.create_collection(new_col_name)
+        except CollectionInvalid:
+            logger.error(f'Collection {new_col_name} already exists')
+            return
+        logger.info(f'Created new collection {new_col_name}')
+        col.aggregate([
+            {'$match': {'accurate_for_datetime': date}},
+            {'$project': {'_id': 0}},
+            {'$out': new_col_name},
+        ])
+        logger.info(f'Finished transfer for collection {new_col_name}')
+        common_db_indexes(new_col)
+        non_historic_indexes(new_col)
+        logger.info(f'Finished index for collection {new_col_name}')
+
+    def _drop_old_historic_collections(self, entity_type):
+        for col_name in self.aggregator_db_connection.list_collection_names():
+            if not col_name.startswith(f'historical_{entity_type.value.lower()}') or col_name.endswith('view'):
+                continue
+            # extract current date
+            try:
+                current_date = datetime.strptime(col_name.lstrip(f'historical_{entity_type.value.lower()}_'),
+                                                 '%Y_%m_%d')
+            except ValueError:
+                logger.error(f'Failed to get date on collection {col_name}.')
+                continue
+            if (datetime.now() - current_date).days > 30:
+                logger.info(f'dropping collection {col_name}')
+                try:
+                    self.aggregator_db_connection.drop_collection(col_name)
+                except PyMongoError as err:
+                    logger.error(f'Failed to drop collection {col_name}. Reason: {err}')
+
     def _save_entity_views_to_historical_db(self, entity_type: EntityType, now):
         from_db = self._entity_db_map[entity_type]
         raw_from_db = self._raw_adapter_entity_db_map[entity_type]
@@ -383,6 +295,13 @@ class AggregatorService(Triggerable, PluginBase):
                 "$merge": raw_to_db.name
             }
         ])
+
+        self._drop_old_historic_collections(entity_type)
+        try:
+            self._create_daily_historic_collection(entity_type, raw_to_db, now)
+        except PyMongoError as err:
+            logger.error(f'Failed to create daily historic collections. Reason: {err}')
+
         return 'saved history'
 
     def _triggered(self, job_name: str, post_json: dict, run_identifier: RunIdentifier, *args):
