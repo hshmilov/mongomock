@@ -655,7 +655,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin, 
                         },
                         {
                             'name': 'cache_time_in_hours',
-                            'title': 'Cache time (hours)',
+                            'title': 'LDAP group hierarchy cache refresh rate (hours)',
                             'type': 'integer'
                         },
                         *COMMON_SSL_CONFIG_SCHEMA
