@@ -118,12 +118,18 @@ def parse_bool_from_raw(bool_raw_value, raise_on_exception=False):
 
 def get_manufacturer_from_mac(mac: str) -> Optional[str]:
     if mac:
-        formatted_mac = format_mac(mac).replace(':', '')
-        for index in [6, 7, 8, 9]:
-            manufacturer = mac_manufacturer_details.get(formatted_mac[:index])
-            if manufacturer:
-                return f'{manufacturer[1]} ({manufacturer[2]})'
-        return None
+        try:
+            formatted_mac = format_mac(mac).replace(':', '')
+            for index in [6, 7, 8, 9]:
+                manufacturer = mac_manufacturer_details.get(formatted_mac[:index])
+                if len(manufacturer) > 2:
+                    return f'{manufacturer[1]} ({manufacturer[2]})'
+                else:
+                    return f'{manufacturer[1]}'
+            return None
+        except Exception as e:
+            logger.log(f"Error in parsing mac vendor: {e}")
+            return None
 
 
 def normalize_var_name(name):
