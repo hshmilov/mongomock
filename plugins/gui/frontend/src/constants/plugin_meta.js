@@ -447,6 +447,11 @@ export const pluginMeta = {
         link: 'https://docs.axonius.com/docs/saltstack-enterprise',
         description: 'SaltStack Enterprise intelligent automation delivers event-driven security, cloud and configuration management.'
     },
+    vectra_adapter: {
+        title: 'Vectra AI',
+        link: 'https://docs.axonius.com/docs/vectra-ai',
+        description: 'Vectra AI is a cybersecurity platform that uses AI to detect and respond to cyberattacks.'
+    },
     opswat_adapter: {
         title: 'OPSWAT MetaAccess',
         link: '',
