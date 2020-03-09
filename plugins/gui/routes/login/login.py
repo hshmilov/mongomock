@@ -16,6 +16,7 @@ from onelogin.saml2.auth import OneLogin_Saml2_Auth
 from axonius.clients.ldap.exceptions import LdapException
 from axonius.clients.ldap.ldap_connection import LdapConnection
 from axonius.clients.rest.connection import RESTConnection
+from axonius.clients.rest.exception import RESTException
 from axonius.consts.gui_consts import (LOGGED_IN_MARKER_PATH)
 from axonius.consts.plugin_consts import (AXONIUS_USER_NAME)
 from axonius.logging.metric_helper import log_metric
@@ -243,6 +244,36 @@ class Login:
         self._add_expiration_timeout_cookie(redirect_response)
         return redirect_response
 
+    @staticmethod
+    def __get_dc(ldap_login):
+        """
+        Try to connect to all DCs in ldap_login. Return the first successful one.
+        Raises RESTException if all dcs failed to connect.
+        Note: Automatically figures out port for test_reachability based on ldap_login['use_ssl']
+        Uses port 389 if unencrypted, 636 otherwise.
+        :param ldap_login: ldap login config dict
+        :return: tuple(str dc_address, SSLState use_ssl)
+        """
+        dc_address_raw = ldap_login['dc_address']
+        dc_address = None
+        addresses = dc_address_raw.split(',')
+        ssl_state = SSLState[ldap_login['use_ssl']]
+        use_ssl = ssl_state != SSLState.Unencrypted
+        port = 636 if use_ssl else 389
+        for addr in addresses:
+            dc_addr = addr.strip()
+            can_conn = RESTConnection.test_reachability(dc_addr, port, ssl=use_ssl)
+            if not can_conn:
+                logger.warning(f'Failed to connect to DC at {dc_addr} with port {port}. '
+                               f'Trying next one.')
+            else:
+                dc_address = dc_addr
+                break
+        if dc_address is None:
+            raise RESTException(f'Connection to all DCs failed.')
+        logger.debug(f'Using DC {dc_address}')
+        return dc_address, ssl_state
+
     @add_rule_unauth('login/ldap', methods=['POST'])
     def ldap_login(self):
         try:
@@ -255,16 +286,19 @@ class Login:
             ldap_login = self._ldap_login
             if not ldap_login['enabled']:
                 return return_error('LDAP login is disabled', 400)
-
             try:
-                conn = LdapConnection(ldap_login['dc_address'], f'{domain}\\{user_name}', password,
-                                      use_ssl=SSLState[ldap_login['use_ssl']],
+                dc_address, use_ssl = self.__get_dc(ldap_login)
+                conn = LdapConnection(dc_address, f'{domain}\\{user_name}', password,
+                                      use_ssl=use_ssl,
                                       ca_file_data=self._grab_file_contents(
                                           ldap_login['private_key']) if ldap_login['private_key'] else None,
                                       cert_file=self._grab_file_contents(
                                           ldap_login['cert_file']) if ldap_login['cert_file'] else None,
                                       private_key=self._grab_file_contents(
                                           ldap_login['ca_file']) if ldap_login['ca_file'] else None)
+            except RESTException:
+                logger.exception(f'Failed to connect to any of the following DCs: {ldap_login.get("dc_address")}')
+                return return_error('Failed logging into AD: Connection to DC failed.')
             except LdapException:
                 logger.exception('Failed login')
                 return return_error('Failed logging into AD')
