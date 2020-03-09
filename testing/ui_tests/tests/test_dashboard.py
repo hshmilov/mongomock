@@ -225,17 +225,18 @@ class TestDashboard(TestBase):
         assert self.dashboard_page.get_title_from_card(dd_card) == self.dashboard_page.DEVICE_DISCOVERY
         self.dashboard_page.find_adapter_in_card(dd_card, 'active_directory_adapter')
         self.dashboard_page.find_adapter_in_card(dd_card, 'json_file_adapter')
-        quantities = self.dashboard_page.find_quantity_in_card(dd_card)
-        assert quantities[0] + quantities[1] == quantities[2]
-        assert quantities[2] >= quantities[3]
+        # list of lists [value, (value)]
+        quantities = self.dashboard_page.find_quantity_in_card_int(dd_card)
+        assert quantities[0][0] + quantities[1][0] == quantities[2][0]
+        assert quantities[2][0] >= quantities[3][0]
 
         ud_card = self.dashboard_page.find_user_discovery_card()
         assert self.dashboard_page.get_title_from_card(ud_card) == self.dashboard_page.USER_DISCOVERY
         self.dashboard_page.find_adapter_in_card(ud_card, 'active_directory_adapter')
         self.dashboard_page.find_adapter_in_card(ud_card, 'json_file_adapter')
-        quantities = self.dashboard_page.find_quantity_in_card(ud_card)
-        assert quantities[0] + quantities[1] == quantities[2]
-        assert quantities[2] >= quantities[3]
+        quantities = self.dashboard_page.find_quantity_in_card_int(ud_card)
+        assert quantities[0][0] + quantities[1][0] == quantities[2][0]
+        assert quantities[2][0] >= quantities[3][0]
 
     def test_dashboard_coverage_chart(self):
         self.dashboard_page.switch_to_page()
@@ -984,4 +985,4 @@ class TestDashboard(TestBase):
         self.dashboard_page.click_to_next_page(last_card)
         assert self.dashboard_page.get_card_pagination_text(last_card) == '6 - 8 of 8'
         assert self.dashboard_page.get_count_histogram_lines_from_histogram(last_card) == 3
-        assert all(quantity != 0 for quantity in self.dashboard_page.find_quantity_in_card(last_card))
+        assert all(quantity != '0' for quantity in self.dashboard_page.find_quantity_in_card_string(last_card))

@@ -397,7 +397,7 @@ class TestReportGeneration(TestBase):
 
             self.dashboard_page.switch_to_page()
             dd_card = self.dashboard_page.find_device_discovery_card()
-            quantities = self.dashboard_page.find_quantity_in_card(dd_card)
+            quantities = self.dashboard_page.find_quantity_in_card_string(dd_card)
 
             discovery_charts_page = doc.pages[2]
 

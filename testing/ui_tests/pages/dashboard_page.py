@@ -680,8 +680,18 @@ class DashboardPage(Page):
         return card.find_element_by_css_selector(f'div[title={adapter}]')
 
     @staticmethod
-    def find_quantity_in_card(card):
-        return [int(x.text) for x in card.find_elements_by_css_selector('div.quantity') if x.text]
+    def find_quantity_in_card_string(card):
+        return [x.text for x in card.find_elements_by_css_selector('div.quantity') if x.text]
+
+    @staticmethod
+    def find_quantity_in_card_int(card):
+        data = [x.text for x in card.find_elements_by_css_selector('div.quantity') if x.text]
+        translator = str.maketrans(dict.fromkeys('()'))
+        translated_data = [[int(s) for s in line.translate(translator).split(' ')] for line in data]
+        for item in translated_data:
+            if len(item) == 1:
+                item.append(0)
+        return translated_data
 
     def find_no_trial_banner(self):
         self.wait_for_element_absent_by_css('.x-trial-banner')

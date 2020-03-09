@@ -216,7 +216,8 @@ class TestDevicesTable(TestEntitiesTable):
         with stress.contextmanager(take_ownership=True):
             self.adapters_page.wait_for_adapter(STRESSTEST_ADAPTER_NAME)
             device_dict = {'device_count': 2500, 'name': 'testonius'}
-            stress.add_client(device_dict)
+            self.adapters_page.add_server(device_dict, STRESSTEST_ADAPTER_NAME)
+            self.adapters_page.wait_for_server_green()
             self.base_page.run_discovery()
             self.devices_page.switch_to_page()
             self.devices_page.wait_for_table_to_load()
@@ -260,7 +261,8 @@ class TestDevicesTable(TestEntitiesTable):
         with stress.contextmanager(take_ownership=True):
             self.adapters_page.wait_for_adapter(STRESSTEST_ADAPTER_NAME)
             device_dict = {'device_count': 2500, 'name': 'testonius'}
-            stress.add_client(device_dict)
+            self.adapters_page.add_server(device_dict, STRESSTEST_ADAPTER_NAME)
+            self.adapters_page.wait_for_server_green()
             self.base_page.run_discovery()
 
             self.devices_page.switch_to_page()
