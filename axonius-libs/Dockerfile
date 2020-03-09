@@ -31,4 +31,6 @@ RUN pip3 install -e /home/axonius/libs/axonius-py
 # and stderr to /dev/stderr to make the output be shown in the terminal when we use docker run.
 # Notice also that supervisord takes care of sigterm signals so if we press ctrl+c or shut down the docker
 # it all works like a charm.
+RUN rm /etc/pip.conf
+# RUN pip3 install <package>
 CMD ["supervisord"]

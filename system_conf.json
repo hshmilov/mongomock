@@ -12,6 +12,7 @@
       "json_file",
       "stresstest_scanner",
       "stresstest",
+      "vectra",
       "stresstest_users",
       "infinite_sleep",
       "mysql_special"

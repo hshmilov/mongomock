@@ -60,7 +60,6 @@ def usage():
     {name} rta - run reimage tags analysis
     {name} re [service/adapter] - restart some service/adapter
     {name} frontend-build - rebuild frontend (locally)
-    {name} frontend-install - run npm install inside gui
     {name} rel [service/adapter] - uwsgi-reload the flask server of some service/adapter (reload only the python)
     {name} migrate [service/adapter] - run db migrations on some service/adapter. e.g. `migrate aggregator`
     {name} db rf [device/user] [plugin_name] [field] - removes a field from an adapter. 
@@ -234,14 +233,6 @@ def main():
         print(f'Rebuilding frontend')
         subprocess.check_call(
             'docker exec -w /home/axonius/app/gui/frontend -t gui npm run build', shell=True, cwd=ROOT_DIR
-        )
-    elif component == 'frontend-install':
-        # In customers appliance we don't really need to install npm locally, because upgrade is doing this for us,
-        # but this shouldn't effected them.
-        # In local builds we need this.
-        print(f'Installing npm')
-        subprocess.check_call(
-            'docker exec -w /home/axonius/app/gui/frontend -t gui npm install', shell=True, cwd=ROOT_DIR
         )
     elif component == 'rel':
         if not action:
