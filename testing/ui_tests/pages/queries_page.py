@@ -14,6 +14,7 @@ class QueriesPage(EntitiesPage):
     SAFEGUARD_REMOVE_BUTTON_SINGLE = 'Remove Saved Query'
     SAFEGUARD_REMOVE_BUTTON_MULTI = 'Remove Saved Queries'
     RUN_QUERY_BUTTON_TEXT = 'Run Query'
+    QUERY_EXPRESSION_VALUE_CSS = '.v-navigation-drawer .body .expression span'
     NO_EXPRESSIONS_DEFINED_MSG = 'No query defined'
     EXPRESSION_UNSUPPORTED_MSG = 'Query not supported for the existing data'
 
@@ -67,6 +68,10 @@ class QueriesPage(EntitiesPage):
 
     def find_query_name_by_part(self, query_name_part):
         return self.find_elements_by_xpath(self.QUERY_NAME_BY_PART_XPATH.format(query_name_part=query_name_part))
+
+    def verify_no_query_defined(self):
+        expression_value = self.driver.find_element_by_css_selector(self.QUERY_EXPRESSION_VALUE_CSS).text
+        return expression_value == self.NO_EXPRESSIONS_DEFINED_MSG
 
     def _find_panel_action_by_name(self, action_name):
         return self.wait_for_element_present_by_css(self.CSS_SELECTOR_PANEL_ACTION_BY_NAME

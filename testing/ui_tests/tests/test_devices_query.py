@@ -1182,7 +1182,7 @@ class TestDevicesQuery(TestBase):
         self.devices_page.fill_query_string_value(DEVICE_THIRD_IP, expressions[0])
         self.devices_page.click_search()
         self.devices_page.wait_for_table_to_load()
-        query = self.devices_page.find_query_search_input().get_attribute('value')
+        query = self.devices_page.find_search_value()
         self.devices_page.click_query_wizard()
         self.devices_page.clear_query_wizard()
 
@@ -1190,10 +1190,11 @@ class TestDevicesQuery(TestBase):
         self.devices_page.click_search()
         self.devices_page.save_query('test')
 
-        self.devices_page.find_element_by_text('Saved Queries').click()
+        self.devices_queries_page.switch_to_page()
         self.devices_page.wait_for_table_to_load()
-        self.devices_page.find_element_by_text('test').click()
-        self.devices_page.find_element_by_text('No query defined')
+
+        self.devices_queries_page.find_query_row_by_name('test').click()
+        self.devices_queries_page.verify_no_query_defined()
 
     # pylint: disable=R0915
     def test_connection_label_query(self):
