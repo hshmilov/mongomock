@@ -52,10 +52,7 @@ class BuildsContext:
     def __init__(self):
         self.bm = BuildsManager()
         self.st = SlackNotifier()
-        self.github = Github(
-            settings.credentials['github']['data']['username'],
-            settings.credentials['github']['data']['password']
-        )
+        self.github = Github(login_or_token=settings.credentials['github']['data']['token'])
 
 
 def prepare_flask():
