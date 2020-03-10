@@ -129,7 +129,7 @@ def get_manufacturer_from_mac(mac: str) -> Optional[str]:
                         return f'{manufacturer[1]}'
             return None
         except Exception as e:
-            logger.error(f'Error in parsing mac vendor: {e}')
+            logger.exception(f'Error in parsing mac vendor: {e}')
             return None
 
 
