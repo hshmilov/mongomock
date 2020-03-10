@@ -65,7 +65,7 @@ export const requestApi = ({ commit }, payload) => {
           return;
         }
         if (error.response.status >= 500) {
-          errorMessage = 'Verify all services are up and registered';
+          errorMessage = 'An error occurred. Please contact the Axonius support team.';
         }
       }
       if (payload.type) {
