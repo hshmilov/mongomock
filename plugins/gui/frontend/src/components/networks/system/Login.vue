@@ -25,6 +25,9 @@
           class="center-progress-bar"
           color="primary"
         />
+        <div v-else-if="error">
+          {{error}}
+        </div>
         <XSignupForm
           v-else-if="showSignup"
           @done="signup"
@@ -76,6 +79,9 @@ export default {
       },
       fetchingLoginSettings(state) {
         return state.auth.loginOptions.fetching;
+      },
+      error(state) {
+        return state.auth.signup.error || state.auth.loginOptions.error;
       },
     }),
     showProgressBar() {
