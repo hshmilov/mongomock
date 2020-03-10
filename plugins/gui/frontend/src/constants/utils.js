@@ -20,7 +20,7 @@ export const formatDate = (dateString, schema) => {
 export const includesIgnoreCase = (str, substring) => str && str.toLowerCase().includes(substring);
 
 export const calcMaxIndex = (list) => (list.length > 0
-  ? Math.max(...list.map((item) => item.i)) + 1 : 0);
+  ? Math.max(...list.map((item) => item.i || 0)) + 1 : 0);
 
 export const isObjectListField = (field) => field.items !== undefined && !Array.isArray(field.items) && field.items.type === 'array';
 
