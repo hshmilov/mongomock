@@ -15,14 +15,14 @@
     >
       <section class="form">
         <div class="form-item">
-          <label for="name">Query Name</label>
+          <label for="name">Query name</label>
           <span
             v-if="$v.queryFormProxies.name.$error"
             class="error-input"
           >
             {{ !$v.queryFormProxies.name.required
-              ? 'Query Name is a required field'
-              : 'Query Name is used by another query'
+              ? 'Query name is a required field'
+              : 'Query name is used by another query'
             }}
           </span>
           <input
@@ -35,7 +35,7 @@
 
         <div class="form-item">
           <label
-            for="description">Query Description <span class="form-item--optional">optional</span>
+            for="description">Query description <span class="form-item--optional">optional</span>
           </label>
           <span
             v-if="$v.queryFormProxies.description.$error"

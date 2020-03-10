@@ -582,13 +582,13 @@ class ServiceNowAdapter(AdapterBase, Configurable):
                 },
                 {
                     'name': 'email_whitelist',
-                    'title': 'Users Email Whitelist',
+                    'title': 'Users Email whitelist',
                     'type': 'string'
                 },
                 {
                     'name': 'fetch_only_active_users',
                     'type': 'bool',
-                    'title': 'Fetch Only Active Users'
+                    'title': 'Fetch only active users'
                 }
             ],
             "required": [

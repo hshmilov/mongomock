@@ -727,7 +727,7 @@ class AwsAdapter(AdapterBase, Configurable):
                 },
                 {
                     'name': 'parallel_count',
-                    'title': 'Num of accounts to fetch in parallel',
+                    'title': 'Number of accounts to fetch in parallel',
                     'type': 'integer'
                 }
             ],

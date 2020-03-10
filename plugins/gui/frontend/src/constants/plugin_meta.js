@@ -984,7 +984,7 @@ export const pluginMeta = {
     tanium_asset_adapter: {
         title: 'Tanium Asset',
         link: 'https://docs.axonius.com/docs/tanium-asset',
-        description: 'Tanium Asset provides a complete inventory of hardware and software assets including servers, laptops, and desktops for thorough insight.'
+        description: 'Tanium Asset provides an inventory of hardware and software assets including servers, laptops, and desktops for thorough insight.'
     },
     tanium_discover_adapter: {
         title: 'Tanium Discover',

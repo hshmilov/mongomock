@@ -131,7 +131,7 @@ class ChefAdapter(AdapterBase):
                     "default": False,
                 },
             ],
-            "required": [CHEF_DOMAIN, ORGANIZATION, CLIENT_KEY, CLIENT],
+            "required": [CHEF_DOMAIN, ORGANIZATION, CLIENT_KEY, CLIENT, SSL_VERIFY],
             "type": "array",
         }
 

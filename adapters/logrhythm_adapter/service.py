@@ -76,12 +76,12 @@ class LogrhythmAdapter(AdapterBase):
             'items': [
                 {
                     'name': 'domain',
-                    'title': 'Logrhythm Domain',
+                    'title': 'LogRhythm Domain',
                     'type': 'string'
                 },
                 {
                     'name': 'apikey',
-                    'title': 'API Key',
+                    'title': 'API Token',
                     'type': 'string',
                     'format': 'password'
                 },
