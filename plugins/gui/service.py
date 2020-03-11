@@ -769,7 +769,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin, 
                 'defaultNumOfEntitiesPerPage': 20,
                 'timeout_settings': {
                     'disable_remember_me': False,
-                    'enabled': True,
+                    'enabled': False,
                     'timeout': 1440
                 },
                 'singleAdapter': False,
