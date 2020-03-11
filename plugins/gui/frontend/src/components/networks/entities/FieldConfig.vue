@@ -170,7 +170,7 @@ export default {
   data() {
     return {
       viewFields: [],
-      excludedFields: ['adapter_list_length'],
+      excludedFields: ['adapter_list_length', 'specific_data.data.correlation_reasons'],
       select: {
         stock: [],
         view: [],

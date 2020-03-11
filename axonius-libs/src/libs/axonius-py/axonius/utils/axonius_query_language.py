@@ -10,7 +10,7 @@ from bson.json_util import default
 from frozendict import frozendict
 from axonius.consts.gui_consts import SPECIFIC_DATA, ADAPTERS_DATA, \
     ADAPTERS_META, SPECIFIC_DATA_CONNECTION_LABEL, \
-    SPECIFIC_DATA_CLIENT_USED
+    SPECIFIC_DATA_CLIENT_USED, CORRELATION_REASONS
 from axonius.consts.plugin_consts import PLUGIN_NAME, ADAPTERS_LIST_LENGTH
 from axonius.utils.datetime import parse_date
 from axonius.utils.mongo_chunked import read_chunked
@@ -610,6 +610,7 @@ def convert_db_entity_to_view_entity(entity: dict, ignore_errors: bool = False) 
             SPECIFIC_DATA: specific_data,
             ADAPTERS_DATA: adapters_data,
             ADAPTERS_META: adapters_meta,
+            CORRELATION_REASONS: entity.get(CORRELATION_REASONS),
             'adapters': adapters,
             'labels': labels,
             'accurate_for_datetime': entity.get('accurate_for_datetime')

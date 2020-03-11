@@ -13,9 +13,8 @@ from axonius.utils.gui_helpers import (get_historized_filter, parse_entity_field
                                        flatten_fields, get_generic_fields, get_csv_canonized_value)
 from axonius.utils.axonius_query_language import (convert_db_entity_to_view_entity, convert_db_projection_to_view)
 from axonius.consts.plugin_consts import NOTES_DATA_TAG, PLUGIN_UNIQUE_NAME
-from axonius.consts.gui_consts import PREDEFINED_ROLE_ADMIN
+from axonius.consts.gui_consts import PREDEFINED_ROLE_ADMIN, CORRELATION_REASONS
 from axonius.entities import AXONIUS_ENTITY_BY_CLASS, AxoniusEntity
-
 from gui.logic.get_ec_historical_data_for_entity import (TaskData, get_all_task_data)
 
 logger = logging.getLogger(f'axonius.{__name__}')
@@ -140,8 +139,14 @@ def get_entity_data(entity_type: EntityType, entity_id, history_date: datetime =
             'name': 'network_interfaces.ips_preferred',
             'title': 'Preferred IPs',
             'type': 'string'
+        },
+        {
+            'name': CORRELATION_REASONS,
+            'title': 'Correlation Reasons',
+            'type': 'string'
         }
     ]
+
     # pylint: disable=W0106
     [generic_fields['items'].append(x) for x in custom_fields if x not in generic_fields['items']]
     advanced_data = []

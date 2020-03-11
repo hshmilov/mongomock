@@ -54,7 +54,7 @@ from axonius.consts import adapter_consts
 from axonius.consts.adapter_consts import IGNORE_DEVICE
 from axonius.consts.core_consts import CORE_CONFIG_NAME, ACTIVATED_NODE_STATUS
 from axonius.consts.gui_consts import FEATURE_FLAGS_CONFIG, FeatureFlagsNames, GETTING_STARTED_CHECKLIST_SETTING, \
-    CloudComplianceNames
+    CloudComplianceNames, CORRELATION_REASONS
 from axonius.consts.plugin_consts import (ADAPTERS_LIST_LENGTH,
                                           AGGREGATION_SETTINGS,
                                           AGGREGATOR_PLUGIN_NAME,
@@ -2320,6 +2320,20 @@ class PluginBase(Configurable, Feature, ABC):
                             tags_for_new_device[tag_key]['data'] = [item for tag in duplicated_tags for item in
                                                                     tag['data']]
 
+                    # Get other correlation reasons
+                    correlation_reasons = [reason for candidate in entities_candidates if CORRELATION_REASONS
+                                           in candidate for reason in candidate[CORRELATION_REASONS]]
+
+                    # Check no duplicate reasons
+                    current_correlation_reason = \
+                        f'Between adapters: ' \
+                        f'{",".join([x[0] for x in correlation.associated_adapters])}\n' \
+                        f'Device IDs: {",".join([x[1] for x in correlation.associated_adapters])}\n' \
+                        f'Reason: {correlation.data.get("Reason", None)}'
+
+                    if current_correlation_reason not in correlation_reasons:
+                        correlation_reasons.append(current_correlation_reason)
+
                     remaining_entity = max(entities_candidates, key=lambda x: len(x['adapters']))
                     internal_axon_id = remaining_entity['internal_axon_id']
 
@@ -2348,6 +2362,7 @@ class PluginBase(Configurable, Feature, ABC):
                         'accurate_for_datetime': datetime.now(),
                         'adapters': all_unique_adapter_entities_data,
                         ADAPTERS_LIST_LENGTH: len({x[PLUGIN_NAME] for x in all_unique_adapter_entities_data}),
+                        CORRELATION_REASONS: correlation_reasons,
                         'tags': list(tags_for_new_device.values())  # Turn it to a list
                     })
             except CorrelateException:

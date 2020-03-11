@@ -56,7 +56,8 @@
     },
     data () {
       return {
-        fieldType: ''
+        fieldType: '',
+        excludedFields: ['specific_data.data.correlation_reasons']
       }
     },
     computed: {
@@ -69,7 +70,7 @@
         }
         // Filter '_preferred' fields because theyre not in the mongo but calculated dynamiclly
         let fields = this.options.find(item => item.name === this.fieldType).fields
-        return fields.filter(item => item.name.indexOf("_preferred") === -1)
+        return fields.filter(item => !this.excludedFields.includes(item.name) && item.name.indexOf("_preferred") === -1)
       },
       firstType () {
         if (!this.options || !this.options.length) return 'axonius'

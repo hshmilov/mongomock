@@ -20,7 +20,7 @@ from flask import request, session, g
 
 from axonius.consts.gui_consts import SPECIFIC_DATA, ADAPTERS_DATA, JSONIFY_DEFAULT_TIME_FORMAT, MAX_SORTED_FIELDS, \
     MIN_SORTED_FIELDS, PREFERRED_FIELDS, MAX_DAYS_SINCE_LAST_SEEN, SPECIFIC_DATA_PREFIX_LENGTH, \
-    ADAPTER_CONNECTIONS_FIELD, DISTINCT_ADAPTERS_COUNT_FIELD
+    ADAPTER_CONNECTIONS_FIELD, DISTINCT_ADAPTERS_COUNT_FIELD, CORRELATION_REASONS_FIELD, CORRELATION_REASONS
 
 from axonius.entities import EntitiesNamespace
 
@@ -671,7 +671,10 @@ def parse_entity_fields(entity_data, fields, include_details=False, field_filter
     for field_path in fields:
         if field_path in PREFERRED_FIELDS:
             continue
-        val = find_entity_field(entity_data, field_path)
+        if field_path == CORRELATION_REASONS_FIELD:
+            val = find_entity_field(entity_data, CORRELATION_REASONS)
+        else:
+            val = find_entity_field(entity_data, field_path)
         if val is not None and (not isinstance(val, (str, list)) or len(val)):
             if field_filters and field_filters.get(field_path):
                 if isinstance(val, list):
@@ -1069,6 +1072,12 @@ def entity_fields(entity_type: EntityType):
         }
     }
 
+    correlation_reasons_json = [{
+        'name': CORRELATION_REASONS_FIELD,
+        'title': 'Correlation Reasons',
+        'type': 'string'
+    }]
+
     preferred_json = [
         {
             'name': 'specific_data.data.hostname_preferred',
@@ -1099,7 +1108,7 @@ def entity_fields(entity_type: EntityType):
 
     generic_in_fields = [adapters_json, unique_adapters_json, axon_id_json] \
         + flatten_fields(generic_fields, 'specific_data.data', ['scanner'])\
-        + [tags_json] + preferred_json
+        + [tags_json] + preferred_json + correlation_reasons_json
     fields = {
         'schema': {
             'generic': generic_fields,
