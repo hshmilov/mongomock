@@ -3434,7 +3434,7 @@ class PluginBase(Configurable, Feature, ABC):
                     'items': [
                         {
                             'name': CORRELATION_SCHEDULE_ENABLED,
-                            'title': 'Enable Correlation Schedule',
+                            'title': 'Enable correlation schedule',
                             'type': 'bool'
                         },
                         {
