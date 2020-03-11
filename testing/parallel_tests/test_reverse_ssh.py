@@ -8,7 +8,7 @@ from test_credentials.test_reverse_ssh_creds import (TEST_STUNNEL_CREDS, TEST_PR
 from test_helpers.log_tester import LogTester
 
 SUCCESS_LOG_1 = 'Allocated port .* for remote forward to localhost:22'
-SUCCESS_LOG_PROXY = re.escape('connect_blocking: connected 10.0.236.211:8888')
+SUCCESS_LOG_PROXY = re.escape('connect_blocking: connected 10.0.230.207:8888')
 
 
 def test_no_proxy():
