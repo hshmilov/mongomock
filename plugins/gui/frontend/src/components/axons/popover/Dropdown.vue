@@ -78,6 +78,7 @@
                     styles['max-height'] = `calc(100% - ${dropdownInputBottom}px)`;
                     styles.overflow = 'auto';
                     this.contentStyle = styles;
+                    return;
                 }
                 
                 const contentBottomPosition = dropdownInputBottom + this.$refs.content.offsetHeight;
