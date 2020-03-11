@@ -14,7 +14,6 @@ Flask==0.12.2
 idna==2.6
 itsdangerous==0.24
 JSON-log-formatter==0.2.0
-MarkupSafe==1.0
 paramiko==2.4
 pyasn1==0.3.7
 pycparser==2.18
