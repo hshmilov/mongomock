@@ -252,6 +252,8 @@ class ChefAdapter(AdapterBase):
                         device.physical_memory_percentage = round(100 * used_ram, 2)
                 except Exception as e:
                     logger.exception(f"Problem getting memory or boot time for chef device {e}")
+
+                device.network_interfaces = []
                 try:
                     for name, iface in ((device_raw_automatic.get('network') or {}).get('interfaces') or {}).items():
                         ip_addrs = []
