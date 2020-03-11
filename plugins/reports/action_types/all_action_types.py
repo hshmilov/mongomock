@@ -12,6 +12,7 @@ from reports.action_types.alert.send_https_log import SendHttpsLogAction
 from reports.action_types.alert.send_to_webhook import SendWebhookAction
 from reports.action_types.alert.send_slack_message import SlackSendMessageAction
 from reports.action_types.alert.send_syslog import NotifySyslogAction
+from reports.action_types.base.aws_ec2_add_tags import AwsEc2AddTagsAction
 from reports.action_types.base.carbonblack_defense_change_policy import CarbonblackDefenseChangePolicyAction
 from reports.action_types.base.carbonblack_isolate import CarbonblackIsolateAction
 from reports.action_types.base.carbonblack_unisolate import CarbonblackUnisolateAction
@@ -104,6 +105,7 @@ AllActionTypes: Dict[str, type(ActionTypeBase)] = {
     'qualys_create_asset': QualysCreateAsset,
     'aws_ec2_start_instance': AwsEc2StartInstanceAction,
     'aws_ec2_stop_instance': AwsEc2StopInstanceAction,
+    'aws_ec2_add_tags': AwsEc2AddTagsAction,
     'send_csv_to_scp': SendCsvToScp,
     'qualys_add_tag': QualysAddTag,
     'qualys_remove_tag': QualysRemoveTag

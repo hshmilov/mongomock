@@ -1,4 +1,7 @@
 export const actionsMeta = {
+    aws_ec2_add_tags: {
+        title: 'Add Tag to Amazon EC2 Instance'
+    },
     aws_ec2_start_instance: {
         title: 'Start Amazon EC2 Instance'
     },
@@ -169,7 +172,7 @@ export const actionsMeta = {
     },
     aws_operations: {
         title: 'Manage AWS Services',
-        items: ['aws_ec2_start_instance', 'aws_ec2_stop_instance']
+        items: ['aws_ec2_start_instance', 'aws_ec2_stop_instance', 'aws_ec2_add_tags']
     },
     deploy_software: {
         title: 'Deploy Software',

@@ -54,6 +54,7 @@ EC2InstanceGroupIndex = Tuple[str, Optional[str]]
 # Note: (PEP342) Yields EC2ActionResults and returns an optional "general error" affecting the rest action instances.
 EC2ActionCallableReturnType = Generator[EC2ActionResult, None, Optional[str]]
 EC2ActionCallable = Callable[[ServiceResource, EC2InstanceGroup], EC2ActionCallableReturnType]
+EC2ActionCfgCallable = Callable[[ServiceResource, EC2InstanceGroup, Dict], EC2ActionCallableReturnType]
 
 
 class AwsConnection():
@@ -198,6 +199,33 @@ class AWSActionUtils():
                     yield result
 
     @staticmethod
+    def perform_grouped_ec2_cfg_action(
+            current_result: Iterable[dict],
+            client_config: dict,
+            action_func: EC2ActionCfgCallable) -> Generator[EntityResult, None, None]:
+        # Test valid configuration - both or none are valid
+        if bool(client_config.get(AWS_ACCESS_KEY_ID)) ^ bool(client_config.get(AWS_SECRET_ACCESS_KEY)):
+            yield from generic_fail((entry['internal_axon_id'] for entry in current_result),
+                                    'Either both or none of "AWS Access Key ID" and "AWS Access Key Secret"'
+                                    ' must be set')
+            return
+
+        # reject invalid entries (using PEP342) and group them into (region, role_arn) groups
+        valid_entries = (yield from AWSActionUtils._reject_invalid_entries(current_result))
+        instance_group_list = AWSActionUtils._group_ec2_devices_by_role_and_region(valid_entries)
+
+        aws_connnection = AwsConnection(client_config)
+        for instance_group in instance_group_list:
+
+            action_results_iter = AWSActionUtils._connect_and_run_grouped_action_cfg_task(
+                aws_connnection, action_func, instance_group, client_config)
+            for result in AWSActionUtils._flush_results(instance_group, action_results_iter):
+                if isinstance(result, Iterable):
+                    yield from result
+                else:
+                    yield result
+
+    @staticmethod
     def _group_ec2_devices_by_role_and_region(ec2_entry_list: Iterable[dict]):
         group_by_region_and_role = {}  # type: Dict[EC2InstanceGroupIndex, EC2InstanceGroup]
 
@@ -262,6 +290,35 @@ class AWSActionUtils():
                          f'{f" using role {role_arn}" if role_arn else ""}.')
             ec2_resource = aws_connection.connect_ec2_resource(region_name=region, role_arn_inner=role_arn)
             return (yield from action_func(ec2_resource, instance_group))
+        except BotoCoreError as e:
+            logger.exception(f'Boto Error occurred during action on instances {instance_group.instance_list} ',
+                             exc_info=e)
+            return f'AWS Connection Error: {str(e)}'
+        except ClientError as e:
+            logger.exception(f'Error occurred during action on instances {instance_group.instance_list} ',
+                             exc_info=e)
+            # Return AWS Readable ErrorCode for easy error lookup
+            return f'AWS Error: {e.response["Error"]["Code"]}'
+        except Exception:
+            logger.exception(f'Unhandled exception occurred during action on {instance_group}')
+            return 'Unexpected error during action run'
+
+    @staticmethod
+    def _connect_and_run_grouped_action_cfg_task(
+            aws_connection: AwsConnection,
+            action_func: EC2ActionCfgCallable,
+            instance_group: EC2InstanceGroup,
+            client_config: dict) -> EC2ActionCallableReturnType:
+
+        region = instance_group.region
+        role_arn = instance_group.role_arn
+
+        try:
+            # pylint: disable=C4001
+            logger.debug(f'Connecting to EC2 on region "{region}"'
+                         f'{f" using role {role_arn}" if role_arn else ""}.')
+            ec2_resource = aws_connection.connect_ec2_resource(region_name=region, role_arn_inner=role_arn)
+            return (yield from action_func(ec2_resource, instance_group, client_config))
         except BotoCoreError as e:
             logger.exception(f'Boto Error occurred during action on instances {instance_group.instance_list} ',
                              exc_info=e)
