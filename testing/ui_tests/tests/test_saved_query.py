@@ -360,6 +360,12 @@ class TestSavedQuery(TestBase):
             self.devices_queries_page.get_query_last_update_from_panel()
 
     def test_generated_saved_query_in_table_and_panel(self):
+        query_name = ''
+
+        def get_actual_query_name():
+            query_name = self.devices_queries_page.get_query_name_from_panel()
+            return query_name != ''
+
         self.devices_page.switch_to_page()
         self.devices_page.create_saved_query(self.devices_page.FILTER_OS_WINDOWS, WINDOWS_QUERY_NAME)
         self.devices_queries_page.switch_to_page()
@@ -372,6 +378,9 @@ class TestSavedQuery(TestBase):
         assert self.devices_queries_page.get_row_cell_text(row_index=1, cell_index=5) == self.ADMIN_DISPLAY_NAME
 
         self.devices_queries_page.click_query_row_by_name(WINDOWS_QUERY_NAME)
+
+        wait_until(get_actual_query_name)
+
         assert self.devices_queries_page.get_query_name_from_panel() == WINDOWS_QUERY_NAME
         assert self.devices_queries_page\
                    .get_query_expression_eval_message() == self.devices_queries_page.NO_EXPRESSIONS_DEFINED_MSG
