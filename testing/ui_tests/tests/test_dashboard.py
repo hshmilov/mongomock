@@ -74,6 +74,7 @@ class TestDashboard(TestBase):
         assert self.dashboard_page.find_see_all_message()
         self.dashboard_page.assert_congratulations_message_found()
 
+    @pytest.mark.skip('AX-6582')
     def test_dashboard_read_only_user_pagination(self):
         """
         Tests pagination in dashboard with read only user

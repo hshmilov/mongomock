@@ -1,5 +1,7 @@
 import io
 
+import pytest
+
 from services.ports import DOCKER_PORTS
 from test_helpers.machines import PROXY_PORT, PROXY_IP
 from ui_tests.tests.instances_test_base import TestInstancesBase
@@ -7,6 +9,7 @@ from ui_tests.tests.instances_test_base import TestInstancesBase
 
 class TestInstancesUpgrade(TestInstancesBase):
 
+    @pytest.mark.skip('AX-6583')
     def test_instances_upgrade(self):
         self.put_customer_conf_file()
 
