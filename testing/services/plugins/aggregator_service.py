@@ -89,8 +89,10 @@ class AggregatorService(PluginService, UpdatablePluginMixin):
             self._update_schema_version_27()
         if self.db_schema_version < 28:
             self._update_schema_version_28()
+        if self.db_schema_version < 29:
+            self._update_schema_version_29()
 
-        if self.db_schema_version != 28:
+        if self.db_schema_version != 29:
             print(f'Upgrade failed, db_schema_version is {self.db_schema_version}')
 
     def __create_capped_collections(self):
@@ -1338,6 +1340,19 @@ class AggregatorService(PluginService, UpdatablePluginMixin):
             self.db_schema_version = 28
         except Exception as e:
             print(f'Exception while upgrading core db to version 28. Details: {e}')
+            traceback.print_exc()
+            raise
+
+    def _update_schema_version_29(self):
+        """
+        https://axonius.atlassian.net/browse/AX-6563
+        """
+        print('Update to schema 29 - remove old_device_archive collection')
+        try:
+            self.db.client['aggregator']['old_device_archive'].drop()
+            self.db_schema_version = 29
+        except Exception as e:
+            print(f'Exception while upgrading aggregator db to version 29. Details: {e}')
             traceback.print_exc()
             raise
 

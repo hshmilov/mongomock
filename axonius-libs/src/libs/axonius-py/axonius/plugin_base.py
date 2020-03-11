@@ -2547,11 +2547,8 @@ class PluginBase(Configurable, Feature, ABC):
             'adapters.quick_id': get_preferred_quick_adapter_id(plugin_unique_name, device_id)
         }, session=db_session)
         if axonius_device is None:
-            logger.error(f'Tried to archive nonexisting device: {plugin_unique_name}: {device_id}')
+            logger.error(f'Tried to delete nonexistent device: {plugin_unique_name}: {device_id}')
             return False
-
-        axonius_device['archived_at'] = datetime.utcnow()
-        self.aggregator_db_connection['old_device_archive'].insert_one(axonius_device, session=db_session)
         return True
 
     @mongo_retry()

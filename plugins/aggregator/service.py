@@ -52,20 +52,6 @@ class AggregatorService(Triggerable, PluginBase):
         super().__init__(get_local_config_file(__file__),
                          requested_unique_plugin_name=AGGREGATOR_PLUGIN_NAME, *args, **kwargs)
 
-        try:
-            # devices are inserted to this collection only via transactions on the 'clean devices'
-            # it's impossible to create collections (even implicitly using insert) withing a transaction
-            # https://docs.mongodb.com/manual/core/transactions/
-            # > Operations that affect the database catalog, such as creating or dropping a collection or an index,
-            # > are not allowed in multi-document transactions.
-            # > For example, a multi-document transaction cannot include an insert operation
-            # > that would result in the creation of a new collection. See Restricted Operations.
-            # for this reason, we create the collection ahead of time
-            self.aggregator_db_connection.create_collection('old_device_archive')
-        except CollectionInvalid:
-            # if the collection already exists - that's OK
-            pass
-
     def _delayed_initialization(self):
         """
         See parent docs
