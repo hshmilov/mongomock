@@ -1,8 +1,8 @@
 import logging
 from ui_tests.pages.page import Page
 
-# will be 60*45*5*0.2 seconds
-DISCOVERY_TIMEOUT = 60 * 45 * 5
+# will be 60*60*5*0.2 seconds
+DISCOVERY_TIMEOUT = 60 * 60 * 5
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -31,6 +31,7 @@ class BasePage(Page):
         if wait:
             self.wait_for_stop_research()
             self.wait_for_run_research()
+        logger.info('Done discovery cycle')
 
     def stop_discovery(self):
         stop_element = self.wait_for_element_present_by_id(self.DISCOVERY_STOP_ID, retries=DISCOVERY_TIMEOUT)
