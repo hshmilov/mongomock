@@ -52,8 +52,9 @@ import 'filepond/dist/filepond.min.css';
 import XPage from '@axons/layout/Page.vue';
 import XButton from '@axons/inputs/Button.vue';
 import executeFile from '@api/execute-configuration';
-import { mapState } from 'vuex';
+import { mapMutations, mapState } from 'vuex';
 import _get from 'lodash/get';
+import { SHOW_TOASTER_MESSAGE } from '@store/mutations';
 
 
 const FilePond = vueFilePond();
@@ -82,6 +83,9 @@ export default {
     }),
   },
   methods: {
+    ...mapMutations({
+      showToasterMessage: SHOW_TOASTER_MESSAGE,
+    }),
     handleFilePondProcess(error, file) {
       if (error) {
         this.message = `Configuration script upload failed: ${error}`;
@@ -101,6 +105,7 @@ export default {
         await executeFile(this.fileServerId);
         this.uploaded = false;
         this.$refs.pond.removeFile();
+        this.showToasterMessage({ message: 'Script execution has begun' });
       } catch (error) {
         this.message = error;
       }
