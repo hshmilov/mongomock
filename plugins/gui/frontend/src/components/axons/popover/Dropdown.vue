@@ -66,7 +66,7 @@
                 const styles = {};
                 const boundingRect = this.$el.getBoundingClientRect();
                 if (this.align === 'right') {
-                    const right = window.innerWidth - boundingRect.x - boundingRect.width;
+                    const right = window.innerWidth - boundingRect.left - boundingRect.width;
                     styles.right = `${right}px`;
                     styles.left = 'auto';
                 }
