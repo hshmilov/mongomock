@@ -129,6 +129,9 @@ class SettingsPage(Page):
     DISCOVERY_SCHEDULE_INTERVAL_TEXT = 'Interval'
     DISCOVERY_SCHEDULE_SCHEDULED_TEXT = 'Scheduled'
 
+    CONNECTION_LABEL_REQUIRED_DIV_CSS = '#requireConnectionLabel .checkbox-container'
+    CONNECTION_LABEL_REQUIRED_INPUT_CSS = '#requireConnectionLabel .checkbox-container input'
+
     @property
     def url(self):
         return f'{self.base_url}/settings'
@@ -915,3 +918,13 @@ class SettingsPage(Page):
 
     def set_discovery_mode_to_date_value(self, time_of_day_value):
         self.fill_schedule_date(time_of_day_value)
+
+    def get_connection_label_required_value(self):
+        self.switch_to_page()
+        self.click_gui_settings()
+        return self.driver.find_element_by_css_selector(self.CONNECTION_LABEL_REQUIRED_INPUT_CSS).is_selected()
+
+    def toggle_connection_label_required(self):
+        self.switch_to_page()
+        self.click_gui_settings()
+        self.driver.find_element_by_css_selector(self.CONNECTION_LABEL_REQUIRED_DIV_CSS).click()

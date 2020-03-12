@@ -1,4 +1,7 @@
+import pytest
+
 from retrying import retry
+from selenium.common.exceptions import NoSuchElementException
 
 from axonius.utils.wait import wait_until
 from scripts.instances.instances_consts import PROXY_DATA_HOST_PATH
@@ -8,6 +11,8 @@ from test_helpers.log_tester import LogTester
 from test_helpers.machines import PROXY_IP, PROXY_PORT
 from ui_tests.tests.ui_consts import GUI_LOG_PATH
 from ui_tests.tests.ui_test_base import TestBase
+
+from testing.test_credentials.test_ad_credentials import ad_client1_details
 
 INVALID_EMAIL_HOST = 'dada...$#@'
 
@@ -123,3 +128,33 @@ class TestGlobalSettings(TestBase):
         self.settings_page.fill_proxy_port('1234')
         self.settings_page.click_save_button()
         self.settings_page.wait_for_toaster(self.settings_page.BAD_PROXY_TOASTER)
+
+    def test_require_connection_label_setting(self):
+        # save without connection label
+        assert not self.settings_page.get_connection_label_required_value()
+        self.adapters_page.add_server(ad_client1_details)
+        self.adapters_page.wait_for_data_collection_toaster_start()
+        self.adapters_page.remove_server(ad_client1_details)
+
+        # make connection label required
+        self.settings_page.toggle_connection_label_required()
+        self.settings_page.click_save_button()
+        self.settings_page.wait_for_saved_successfully_toaster()
+        assert self.settings_page.get_connection_label_required_value()
+
+        # verify that save fails without connection label
+        with pytest.raises(NoSuchElementException):
+            self.adapters_page.add_server(ad_client1_details)
+        self.adapters_page.click_cancel()
+
+        # verify that save succeeds with connection label
+        ad_client1_details['connectionLabel'] = 'connection'
+        self.adapters_page.add_server(ad_client1_details)
+        self.adapters_page.wait_for_data_collection_toaster_start()
+
+        # clean up
+        self.adapters_page.remove_server(ad_client1_details)
+        self.settings_page.toggle_connection_label_required()
+        self.settings_page.click_save_button()
+        self.settings_page.wait_for_saved_successfully_toaster()
+        assert not self.settings_page.get_connection_label_required_value()
