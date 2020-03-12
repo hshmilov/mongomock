@@ -23,6 +23,7 @@ class TaniumDiscoverAdapter(AdapterBase):
         server_version = Field(field_type=str, title='Tanium Server Version', json_format=JsonStringFormat.version)
         module_version = Field(field_type=str, title='Module Version', json_format=JsonStringFormat.version)
         tags_cloud = ListField(field_type=str, title='Tags Cloud')
+        discover_hostname = Field(field_type=str, title='Discover Hostname')
         tags_discover = ListField(field_type=str, title='Tags Discover')
         computer_id = Field(field_type=int, title='Computer ID')
         created_at = Field(field_type=datetime.datetime, title='Created At')
@@ -175,7 +176,7 @@ class TaniumDiscoverAdapter(AdapterBase):
             ('computerid', 'uuid', tanium.tools.set_str),
             ('createdAt', 'created_at', tanium.tools.set_dt),
             ('createdAt', 'first_seen', tanium.tools.set_dt),
-            ('hostname', 'hostname', tanium.tools.set_str),
+            ('hostname', 'discover_hostname', tanium.tools.set_str),
             ('ignored', 'is_ignored', tanium.tools.set_bool),
             ('instanceId', 'instance_id', tanium.tools.set_str),
             ('instanceState', 'instance_state', tanium.tools.set_str),
