@@ -157,19 +157,24 @@ class TestCyberarkIntegration(TestBase):
         self.remove_cyberark_settings()
 
     def test_no_connection_during_discovery(self):
+        self.logger.info('starting test_no_connection_during_discovery')
         with NexposeService().contextmanager(take_ownership=True):
             with CyberarkVaultSimulatorService().contextmanager(take_ownership=True):
+                self.logger.info('nexpose and cyberark simulator are running')
                 self.input_test_settings()
                 self.adapters_page.switch_to_page()
                 self.adapters_page.wait_for_adapter(NEXPOSE_NAME)
                 self._input_query_string()
                 # Check successful vault fetch
+                self.logger.info('waiting for check fetch')
                 wait_until(self._check_fetch, check_return_value=False, tolerated_exceptions_list=[AssertionError])
                 # Check successful device fetch.
                 self.adapters_page.click_save()
                 self.base_page.run_discovery()
+                self.logger.info('waiting for check device count')
                 wait_until(lambda: self._check_device_count() > 1, total_timeout=200, interval=20)
 
+            self.logger.info('cyberark simulator is killed, done checking waiting for check device count')
             self.base_page.run_discovery()
             self.adapters_page.switch_to_page()
             self.adapters_page.wait_for_adapter(NEXPOSE_NAME)
@@ -181,11 +186,13 @@ class TestCyberarkIntegration(TestBase):
             self.adapters_page.click_row()
 
             # check cyberark fetch
+            self.logger.info('check fetch')
             self._check_fetch(should_succeed=False)
             self.adapters_page.is_query_error()
             assert CYBERARK_TEST_MOCK['domain'] in self.adapters_page.find_server_error()
             self.adapters_page.click_cancel()
 
+        self.logger.info('nexpose is killed')
         self.adapters_page.clean_adapter_servers(NEXPOSE_NAME, delete_associated_entities=True)
         self.wait_for_adapter_down(NEXPOSE_PLUGIN_NAME)
         self.remove_cyberark_settings()

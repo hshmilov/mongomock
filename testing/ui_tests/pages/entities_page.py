@@ -2,6 +2,7 @@ import codecs
 import re
 import time
 import typing
+import logging
 
 import requests
 from retrying import retry
@@ -17,6 +18,9 @@ from ui_tests.pages.page import Page, TableRow
 from ui_tests.tests.ui_consts import AD_ADAPTER_NAME
 
 TABLE_COUNT_CSS = '.table-header .table-title .count'
+CSV_TIMEOUT = 60 * 30
+
+logger = logging.getLogger(f'axonius.{__name__}')
 
 # pylint: disable=C0302
 
@@ -1029,21 +1033,33 @@ class EntitiesPage(Page):
         cookies = self.driver.get_cookies()
         for cookie in cookies:
             session.cookies.set(cookie['name'], cookie['value'])
-        return session.post(f'https://127.0.0.1/api/{entity_type}/csv', json={
-            'fields': fields, 'filter': filters
-        })
+        logger.info('posting for csv')
+        result = session.post(f'https://127.0.0.1/api/{entity_type}/csv',
+                              json={'fields': fields, 'filter': filters},
+                              timeout=CSV_TIMEOUT
+                              )
+        content = result.content
+        logger.info('got content for csv')
+        session.close()
+        return content
 
     def generate_csv_field(self, entity_type, entity_id, field_name, sort, desc=False, search_text=''):
         session = requests.Session()
         cookies = self.driver.get_cookies()
         for cookie in cookies:
             session.cookies.set(cookie['name'], cookie['value'])
-        return session.post(f'https://127.0.0.1/api/{entity_type}/{entity_id}/{field_name}/csv', json={
-            'sort': sort, 'desc': ('1' if desc else '0'), 'search': search_text
-        })
+        logger.info('posting for csv')
+        result = session.post(f'https://127.0.0.1/api/{entity_type}/{entity_id}/{field_name}/csv',
+                              json={'sort': sort, 'desc': ('1' if desc else '0'), 'search': search_text},
+                              timeout=CSV_TIMEOUT
+                              )
+        content = result.content
+        logger.info('got content for csv')
+        session.close()
+        return content
 
     def assert_csv_match_ui_data(self, result, ui_data=None, ui_headers=None, sort_columns=True):
-        self.assert_csv_match_ui_data_with_content(result.content, ui_data, ui_headers, sort_columns)
+        self.assert_csv_match_ui_data_with_content(result, ui_data, ui_headers, sort_columns)
 
     # pylint: disable=too-many-locals
     def assert_csv_match_ui_data_with_content(self, content, ui_data=None, ui_headers=None, sort_columns=True):

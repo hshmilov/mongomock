@@ -272,7 +272,7 @@ class ReportsPage(EntitiesPage):
 
     def wait_for_report_generation(self, report_name):
         wait_until(lambda: self.click_report_and_check_generation(report_name),
-                   total_timeout=60 * 3, interval=2)
+                   total_timeout=60 * 10, interval=2)
         self.refresh()
         self.wait_for_table_to_load()
 
