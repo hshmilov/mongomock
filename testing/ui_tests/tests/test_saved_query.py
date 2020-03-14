@@ -52,6 +52,7 @@ class TestSavedQuery(TestBase):
         assert not self.devices_page.is_query_save_disabled()
         # No sort host name field
         self.devices_page.click_sort_column(self.devices_page.FIELD_HOSTNAME_TITLE)
+        self.devices_page.wait_for_spinner_to_end()
         self.devices_page.click_sort_column(self.devices_page.FIELD_HOSTNAME_TITLE)
         assert self.devices_page.is_query_save_disabled()
         # Filter host name field

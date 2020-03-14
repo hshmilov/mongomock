@@ -12,6 +12,7 @@ class TestNotes(TestBase):
 
     def test_create_tag(self):
         self.select_device(Notes.note1_device_filter)
+        self.devices_page.wait_for_spinner_to_end()
 
         self.devices_page.toggle_select_all_rows_checkbox()
         self.devices_page.add_new_tags([Tags.tag_1])
