@@ -285,7 +285,7 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
                         },
                         {
                             'name': 'constant_alerts',
-                            'title': 'Always run alerts',
+                            'title': 'Constantly run Enforcement Sets',
                             'type': 'bool',
                             'required': True
                         },
