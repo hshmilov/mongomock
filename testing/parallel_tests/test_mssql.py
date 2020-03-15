@@ -39,3 +39,7 @@ class TestMssqlAdapter(AdapterTestBase):
     @pytest.mark.skip('Not now')
     def test_check_reachability(self):
         pass
+
+    @pytest.mark.skip('No enterprise license.')
+    def test_fetch_devices(self):
+        pass
