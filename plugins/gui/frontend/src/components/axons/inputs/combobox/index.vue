@@ -669,22 +669,24 @@ export default {
         }
       }
     }
+  }
 
-    .v-menu__content {
-      @include style-checkbox;
-      @include input-element-spacing;
-      z-index: 1004 !important;
+  .v-menu__content.v-autocomplete__content {
+    @include style-checkbox;
+    @include input-element-spacing;
+    z-index: 1004 !important;
 
-      .combobox__quick-selections {
-        padding: 0;
-        border-top: 0.5px solid rgba(0, 0, 0, 0.12);
-      }
-      .v-chip {
-        margin: 0 4px 0 0 !important;
-      }
-      .x-combobox_create-new-item {
-        font-weight: 400 !important;
-      }
+    .combobox__quick-selections {
+      padding: 0;
+      border-top: 0.5px solid rgba(0, 0, 0, 0.12);
+    }
+    .v-chip {
+      margin: 0 4px 0 0 !important;
+    }
+    .x-combobox_create-new-item {
+      font-weight: 400 !important;
+      border-bottom-width: 0;
+      padding: 8px 8px 0 8px !important;
     }
   }
 
