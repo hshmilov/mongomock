@@ -20,7 +20,7 @@ class NetbrainAdapter(AdapterBase):
     # pylint: disable=too-many-instance-attributes
     class MyDeviceAdapter(DeviceAdapter):
         mgmt_ip = Field(str, 'Management IP', converter=format_ip, json_format=JsonStringFormat.ip)
-        mgmt_ip_raw = Field(str, converter=format_ip_raw)
+        mgmt_ip_raw = Field(str, converter=format_ip_raw, hidden=True)
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)

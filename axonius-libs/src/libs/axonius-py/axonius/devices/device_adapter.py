@@ -357,7 +357,7 @@ class DeviceAdapterInstalledSoftware(SmartJsonClass):
     cve_count = Field(str, 'CVE Count')
     sw_license = Field(str, 'License')
     path = Field(str, 'Software Path')
-    version_raw = Field(str)
+    version_raw = Field(str, hidden=True)
 
 
 class DeviceAdapterAutorunData(SmartJsonClass):
@@ -518,6 +518,7 @@ class DeviceAdapter(SmartJsonClass):
         str,
         description='Number representation of the Public IP, useful for filtering by range',
         converter=format_ip_raw,
+        hidden=True
     )
     open_ports = ListField(DeviceOpenPort, 'Open Ports', json_format=JsonArrayFormat.table)
     ports_info = ListField(NmapPortInfo, 'Ports Information', json_format=JsonArrayFormat.table)
