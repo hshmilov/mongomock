@@ -12,6 +12,7 @@ class TestDevice(TestBase):
     Device page (i.e view on a single device) related tests
     """
     RUN_TAG_ENFORCEMENT_NAME = 'Run Tag Enforcement'
+    RUN_TAG_ENFORCEMENT_NAME_SECOND = 'Second Run Tag Enforcement'
 
     def test_add_predefined_fields_on_device(self):
         """
@@ -53,7 +54,7 @@ class TestDevice(TestBase):
         assert self.devices_page.find_element_by_text(self.devices_page.FIELD_ASSET_NAME) is not None
         assert self.devices_page.find_element_by_text('DeanSysman2') is not None
 
-    def test_device_enforcement_tasks_search(self):
+    def test_device_enforcement_tasks(self):
         self.devices_page.create_saved_query(self.devices_page.FILTER_OS_WINDOWS, WINDOWS_QUERY_NAME)
         self.enforcements_page.switch_to_page()
         self.base_page.run_discovery()
@@ -101,6 +102,36 @@ class TestDevice(TestBase):
         self.devices_page.click_task_name(enforcement_set_id)
         self.enforcements_page.wait_for_action_result()
         assert self.enforcements_page.get_task_name() == enforcement_set_id
+
+        # Check that sort is working as well
+        self._test_sort()
+
+    def _test_sort(self):
+        """
+        Utility method for checking the sort order in the enforcement tasks of a device
+        Creating 1 more task under the previously created enforcement set,
+        and also creating 1 more task under new enforcement set,
+        in the end, we need to have 3 tasks that are sorted in descending order
+        according to their description
+        """
+        self.enforcements_page.switch_to_page()
+        self.enforcements_page.create_tag_enforcement(self.RUN_TAG_ENFORCEMENT_NAME_SECOND, WINDOWS_QUERY_NAME,
+                                                      'second tag search test', 'second tag search test')
+        self.base_page.run_discovery()
+        self.devices_page.switch_to_page()
+        self.devices_page.execute_saved_query(WINDOWS_QUERY_NAME)
+        self.devices_page.wait_for_table_to_load()
+        self.devices_page.click_row()
+        self.devices_page.wait_for_spinner_to_end()
+        self.devices_page.click_enforcement_tasks_tab()
+        table_info = self.devices_page.get_field_table_data_with_ids()
+        assert len(table_info) == 3
+        enforcement_set_id = table_info[0][0]
+        assert enforcement_set_id == f'{self.RUN_TAG_ENFORCEMENT_NAME_SECOND} - Task 3'
+        enforcement_set_id = table_info[1][0]
+        assert enforcement_set_id == f'{self.RUN_TAG_ENFORCEMENT_NAME} - Task 2'
+        enforcement_set_id = table_info[2][0]
+        assert enforcement_set_id == f'{self.RUN_TAG_ENFORCEMENT_NAME} - Task 1'
 
     def test_add_predefined_fields_updates_general(self):
         asset_name = 'asset name 123'

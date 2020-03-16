@@ -78,7 +78,7 @@ const getDefaultState = () => {
             filter: '', expressions: [],
           },
           sort: {
-            field: '', desc: true,
+            field: 'recipe_name', desc: true,
           },
         },
       },

@@ -124,6 +124,7 @@ import {
   mapState, mapGetters, mapMutations, mapActions,
 } from 'vuex';
 import _orderBy from 'lodash/orderBy';
+import _isEmpty from 'lodash/isEmpty';
 import xSearchInput from '../inputs/SearchInput.vue';
 import xTableWrapper from '../../axons/tables/TableWrapper.vue';
 import xTable from '../../axons/tables/Table.vue';
@@ -187,12 +188,6 @@ export default {
     searchable: {
       type: Boolean,
       default: false,
-    },
-    sort: {
-      type: Object,
-      default: () => ({
-        field: '', desc: true,
-      }),
     },
     multipleRowSelection: {
       type: Boolean,
@@ -418,7 +413,7 @@ export default {
   },
   mounted() {
     if (this.staticData) {
-      if (!this.sort.field && this.staticFields && this.staticFields.length) {
+      if (!this.view.sort.field && !_isEmpty(this.staticFields)) {
         this.updateView({
           module: this.module,
           view: {
