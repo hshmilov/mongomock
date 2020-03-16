@@ -1011,3 +1011,6 @@ class Page:
     def verify_element_absent_by_css_selector(self, css_selector):
         with pytest.raises(NoSuchElementException):
             self.driver.find_element_by_css_selector(css_selector)
+
+    def wait_for_side_panel(self):
+        return self.wait_for_element_present_by_css('.x-side-panel')

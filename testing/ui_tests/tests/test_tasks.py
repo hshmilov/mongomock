@@ -11,6 +11,7 @@ from services.plugins.device_control_service import DeviceControlService
 from testing.test_credentials.test_ad_credentials import (NONEXISTEN_AD_DEVICE_IP,
                                                           WMI_QUERIES_DEVICE)
 from ui_tests.tests.ui_test_base import TestBase
+from ui_tests.tests.ui_consts import Enforcements
 
 ENFORCEMENT_NAME = 'Special enforcement name'
 ENFORCEMENT_QUERY = 'Run WMI task'
@@ -23,6 +24,8 @@ TEST_ENFORCEMENT_NAME = 'Test 1'
 SUCCESS_TAG_NAME = 'Tag Special Success'
 FAILURE_TAG_NAME = 'Tag Special Failure'
 FAILURE_ISOLATE_NAME = 'Isolate Special Failure'
+CUSTOM_TAG = 'TestTag'
+ACTION_NAME = 'TestAction'
 
 
 class TestTasks(TestBase):
@@ -211,3 +214,43 @@ class TestTasks(TestBase):
         self.enforcements_page.wait_for_table_to_load()
         assert len(self.enforcements_page.get_all_data()) == 2
         assert ENFORCEMENT_QUERY in self.enforcements_page.get_column_data_inline(self.FIELD_QUERY_NAME)[0]
+
+    def test_enforcement_task_query_change(self):
+        query_name = Enforcements.enforcement_query_1
+        enforcement_name = TEST_ENFORCEMENT_NAME
+        action_name = ACTION_NAME
+
+        self.devices_page.create_saved_query(self.devices_page.FILTER_OS_WINDOWS, query_name)
+        self.enforcements_page.switch_to_page()
+        self.enforcements_page.wait_for_table_to_load()
+
+        # create new task to add custom tag to all windows bafsed devices
+        self.enforcements_page.click_new_enforcement()
+        self.enforcements_page.fill_enforcement_name(enforcement_name)
+        self.enforcements_page.select_trigger()
+        self.enforcements_page.select_saved_view(query_name)
+        self.enforcements_page.save_trigger()
+        self.enforcements_page.add_push_system_notification(action_name)
+        self.enforcements_page.add_tag_entities(enforcement_name, CUSTOM_TAG,
+                                                self.enforcements_page.POST_ACTIONS_TEXT)
+        self.enforcements_page.click_run_button()
+        self.enforcements_page.wait_for_task_in_progress_toaster()
+
+        self.enforcements_page.switch_to_page()
+        self.enforcements_page.fill_enter_table_search(enforcement_name)
+        self.enforcements_page.wait_for_table_to_load()
+        self.enforcements_page.click_row()
+        self.enforcements_page.click_tasks_button()
+        task_name = self.enforcements_page.get_column_data_inline(self.FIELD_NAME)[0]
+        self.enforcements_page.click_row()
+        self.enforcements_page.click_result_redirect()
+
+        self.devices_page.wait_for_table_to_load()
+        assert self.devices_page.find_query_title_text() == task_name
+
+        self.devices_queries_page.switch_to_page()
+        self.devices_queries_page.wait_for_table_to_load()
+        self.devices_queries_page.click_query_row_by_name(query_name)
+        self.devices_queries_page.wait_for_side_panel()
+        self.devices_queries_page.run_query()
+        assert self.devices_page.find_query_title_text() == query_name

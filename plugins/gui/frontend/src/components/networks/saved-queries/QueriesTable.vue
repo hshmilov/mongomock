@@ -231,7 +231,7 @@ export default {
       const selectedView = this.savedQueries.find((view) => view.uuid === viewId);
       this.updateView({
         module: this.namespace,
-        view: selectedView.view,
+        view: { ...selectedView.view, enforcement: null },
         uuid: selectedView.uuid,
       });
       this.$router.push({ path: `/${this.namespace}` });

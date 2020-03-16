@@ -146,6 +146,10 @@ class EnforcementsPage(EntitiesPage):
                                  'preceding-sibling::div[@class=\'crumb\' and .//text()=\'enforcements\'] ' \
                                  'and preceding-sibling::div[@class=\'crumb\' and .//text()=\'tasks\']]'
 
+    VIEW_TASKS_ID = 'view_tasks'
+    RESULT_CSS = '.result-container'
+    QUERY_TITLE_CSS = '.query-title'
+
     @property
     def url(self):
         return f'{self.base_url}/enforcements'
@@ -875,3 +879,7 @@ class EnforcementsPage(EntitiesPage):
 
     def get_task_name(self):
         return self.find_element_by_xpath(self.BREADCRUMB_TASK_NAME_XPATH).text
+
+    def click_result_redirect(self):
+        element = self.driver.find_element_by_css_selector(self.RESULT_CSS)
+        element.click()
