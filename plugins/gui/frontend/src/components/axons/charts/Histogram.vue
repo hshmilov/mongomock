@@ -17,13 +17,15 @@
             width="30"
           >
           <div class="bar-container">
-            <div :style="{width: calculateBarHeight(item.value) + 'px'}">
+            <div :style="{width: calculateBarWidth(item.value) + 'px'}">
               <div
                 class="bar growing-x"
                 :title="item.name"
               />
             </div>
-            <div class="quantity">{{ item.title || item.value }}</div>
+            <div class="quantity">
+              {{ item.title || item.value }}
+            </div>
           </div>
         </div>
         <div
@@ -35,7 +37,7 @@
     </div>
     <template v-if="dataLength">
       <div class="separator" />
-      <x-paginator
+      <XPaginator
         :from.sync="dataFrom"
         :to.sync="dataTo"
         :limit="limit"
@@ -46,11 +48,11 @@
 </template>
 
 <script>
-import xPaginator from '../layout/Paginator.vue';
+import XPaginator from '../layout/Paginator.vue';
 
 export default {
   name: 'XHistogram',
-  components: { xPaginator },
+  components: { XPaginator },
   props: {
     data: {
       type: Array,
@@ -84,8 +86,8 @@ export default {
       if (!this.pageData.length) {
         return 0;
       }
-      let max = this.pageData[0].value;
-      this.pageData.slice(1).forEach((item) => {
+      let max = this.data[0].value;
+      this.data.slice(1).forEach((item) => {
         if (item && item.value > max) {
           max = item.value;
         }
@@ -115,7 +117,7 @@ export default {
     },
   },
   methods: {
-    calculateBarHeight(quantity) {
+    calculateBarWidth(quantity) {
       return (this.maxWidth * quantity) / this.maxQuantity;
     },
     onClick(pageIndex) {
