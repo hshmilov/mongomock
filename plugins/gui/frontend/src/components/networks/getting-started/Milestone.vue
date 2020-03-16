@@ -1,90 +1,116 @@
 <template>
   <div class="x-milestone">
-    <span v-if="interactive" class="x-milestone-status">
-      <md-icon v-if="completed" class="x-milestone-status--completed" style="color: #0FBC18;">check_circle</md-icon>
-      <md-icon v-else style="color: #efefef;">radio_button_unchecked</md-icon>
+    <span
+      v-if="interactive"
+      class="x-milestone-status"
+    >
+      <MdIcon
+        v-if="completed"
+        class="x-milestone-status--completed"
+        style="color: #0FBC18;"
+      >check_circle</MdIcon>
+      <MdIcon
+        v-else
+        style="color: #efefef;"
+      >radio_button_unchecked</MdIcon>
     </span>
     <div class="x-miestone_container">
       <section class="x-milestone_header">
-        <h5 class="x-milestone_header_title">{{title}}</h5>
+        <h5 class="x-milestone_header_title">
+          {{ title }}
+        </h5>
         <div class="x-milestone_header_actions">
-          <span v-if="description" class="x-milestone_expand" @click="toggleExpantionPanel">
-            <md-icon v-if="expand">keyboard_arrow_up</md-icon>
-            <md-icon v-else>keyboard_arrow_down</md-icon>
+          <span
+            v-if="description"
+            class="x-milestone_expand"
+            @click="toggleExpantionPanel"
+          >
+            <MdIcon v-if="expand">keyboard_arrow_up</MdIcon>
+            <MdIcon v-else>keyboard_arrow_down</MdIcon>
           </span>
-          <x-button
+          <XButton
             v-if="interactive"
+            tabindex="-1"
             class="x-milestone_action"
-            @click="goToMilestoneRelatedPage"
             :disabled="completed"
-          >{{buttonText}}</x-button>
+            @click="goToMilestoneRelatedPage"
+          >{{ buttonText }}</XButton>
         </div>
       </section>
-      <X-transition-expand>
+      <XTransitionExpand>
         <div v-if="expand">
-          <p class="x-milestone_content">{{description}}</p>
-          <x-button v-if="link" @click="goToDocsPage" link>Learn more</x-button>
+          <p class="x-milestone_content">
+            {{ description }}
+          </p>
+          <XButton
+            v-if="link"
+            tabindex="-1"
+            link
+            @click="goToDocsPage"
+          >
+            Learn more
+          </XButton>
         </div>
-      </X-transition-expand>
+      </XTransitionExpand>
     </div>
   </div>
 </template>
 
 <script>
-import XButton from '../../axons/inputs/Button.vue'
-import { GettingStartedPubSub } from '../../App.vue'
-import XTransitionExpand from '../../transitions/TransitionExpand.vue'
+import XButton from '../../axons/inputs/Button.vue';
+import { GettingStartedPubSub } from '../../App.vue';
+import XTransitionExpand from '../../transitions/TransitionExpand.vue';
 
 export default {
-    components: { XButton, XTransitionExpand },
-    props: {
-        completed: {
-            type: Boolean,
-            default: false,
-        },
-        title: {
-            type: String,
-            required: true,
-        },
-        description: {
-            type: String,
-        },
-        link: {
-            type: String,
-        },
-        path: {
-            type: String,
-            required: true
-        },
-        interactive: {
-            type: Boolean,
-            default: true
-        }
-    }, 
-    data() {
-        return {
-            expand: false
-        }
+  components: { XButton, XTransitionExpand },
+  props: {
+    completed: {
+      type: Boolean,
+      default: false,
     },
-    computed: {
-        buttonText() {
-            return this.completed ? 'Completed' : `Let's Do It`
-        }
+    title: {
+      type: String,
+      required: true,
     },
-    methods: {
-        goToDocsPage() {
-            window.open(this.link, '_blank')
-        },
-        toggleExpantionPanel() {
-            this.expand = !this.expand
-        },
-        goToMilestoneRelatedPage() {
-            // redirect in the platform to the designated page for this milestone
-            GettingStartedPubSub.$emit('getting-started-open-state')
-            this.$router.push({ path: this.path })
-        }
-    }
-}
+    description: {
+      type: String,
+    },
+    link: {
+      type: String,
+    },
+    path: {
+      type: String,
+      required: true,
+    },
+    interactive: {
+      type: Boolean,
+      default: true,
+    },
+  },
+  data() {
+    return {
+      expand: false,
+    };
+  },
+  computed: {
+    buttonText() {
+      return this.completed ? 'Completed' : 'Let\'s Do It';
+    },
+  },
+  methods: {
+    goToDocsPage() {
+      window.open(this.link, '_blank');
+    },
+    toggleExpantionPanel() {
+      this.expand = !this.expand;
+    },
+    goToMilestoneRelatedPage() {
+      // redirect in the platform to the designated page for this milestone
+      GettingStartedPubSub.$emit('getting-started-open-state');
+      this.$router.push({ path: this.path });
+    },
+  },
+};
 </script>
 
 <style lang="scss" scoped>
@@ -95,9 +121,9 @@ export default {
         align-content: flex-start;
         position: relative;
         padding: 10px 0;
-        
+
         &::after {
-            background-color: #efefef; 
+            background-color: #efefef;
             bottom: -5px;
             content: '';
             display: block;

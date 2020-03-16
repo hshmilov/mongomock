@@ -10,6 +10,7 @@ from retrying import retry
 import selenium.common.exceptions
 from selenium.common.exceptions import (ElementNotVisibleException,
                                         NoSuchElementException,
+                                        ElementClickInterceptedException,
                                         StaleElementReferenceException,
                                         WebDriverException)
 from selenium.webdriver.common.action_chains import ActionChains
@@ -900,6 +901,16 @@ class Page:
         fab.click()
         self.wait_for_element_present_by_css(self.GETTING_STARTED_PANEL_OVERLAY_CSS)
 
+    def open_milestone_expand_by_index(self, milestone_index):
+        def _open_milestone():
+            self.driver.find_element_by_css_selector(
+                f'.md-list-item:nth-child({milestone_index}) .x-milestone_expand i').click()
+            return self.driver.find_element_by_css_selector('.x-milestone_content')
+
+        # keep trying to open milestone section until successful
+        wait_until(_open_milestone,
+                   tolerated_exceptions_list=[NoSuchElementException, ElementClickInterceptedException])
+
     @staticmethod
     def get_milestone_status_completed_xpath_by_name(name):
         """
@@ -955,6 +966,9 @@ class Page:
 
     def get_current_window(self):
         return self.driver.current_window_handle
+
+    def get_body_element(self):
+        return self.driver.find_element_by_css_selector('body')
 
     def open_new_tab(self):
         self.driver.execute_script(f'window.open("{self.base_url}");')

@@ -144,3 +144,15 @@ class TestGettingStarted(TestBase):
         # assert the Getting started FAB is missing
         with pytest.raises(TimeoutException):
             self.base_page.get_getting_started_fab()
+
+    def test_getting_started_tabbing(self):
+        self.settings_page.enable_getting_started_feature()
+        self.settings_page.open_getting_started_panel()
+        self.settings_page.open_milestone_expand_by_index(1)
+
+        self.settings_page.click_getting_started_overlay()
+        body = self.base_page.get_body_element()
+
+        for i in range(100):
+            self.settings_page.key_down_tab(body)
+            assert not self.driver.find_element_by_css_selector('.x-getting-started_content').is_displayed()
