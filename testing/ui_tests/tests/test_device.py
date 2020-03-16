@@ -55,6 +55,7 @@ class TestDevice(TestBase):
         assert self.devices_page.find_element_by_text('DeanSysman2') is not None
 
     def test_device_enforcement_tasks(self):
+        self.logger.info('starting test_device_enforcement_tasks')
         self.devices_page.create_saved_query(self.devices_page.FILTER_OS_WINDOWS, WINDOWS_QUERY_NAME)
         self.enforcements_page.switch_to_page()
         self.base_page.run_discovery()
@@ -82,7 +83,9 @@ class TestDevice(TestBase):
             except Exception:
                 return False
 
+        self.logger.info('waiting for check_task_finished')
         wait_until(_check_task_finished, check_return_value=True, total_timeout=60 * 3, interval=5)
+        self.logger.info('done waiting for check_task_finished')
         self.enforcements_page.find_task_action_success(self.RUN_TAG_ENFORCEMENT_NAME).click()
         self.devices_page.wait_for_table_to_load()
         assert self.devices_page.count_entities() == entity_count
@@ -105,6 +108,8 @@ class TestDevice(TestBase):
 
         # Check that sort is working as well
         self._test_sort()
+
+        self.logger.info('finished test_device_enforcement_tasks')
 
     def _test_sort(self):
         """

@@ -27,7 +27,7 @@ BUILDS_URL = 'builds-local.axonius.lan' if 'BUILDS_HOST' not in os.environ else 
 DAILY_EXPORT_SUFFIX = '_daily_export'
 EXPORT_STATUS = 'completed'
 
-SSH_NETWORK_TIMEOUT = 60 * 120  # some commands are really long...
+SSH_NETWORK_TIMEOUT = 60 * 240  # some commands are really long...
 TIME_TO_WAIT_BETWEEN_SSH_CONNECT_TRIES = 5
 MAX_SSH_TRIES = 60
 MAX_TIMEOUT_FOR_TRANSFERS = 60 * 10
