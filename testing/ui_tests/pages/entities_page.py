@@ -18,7 +18,7 @@ from ui_tests.pages.page import Page, TableRow
 from ui_tests.tests.ui_consts import AD_ADAPTER_NAME
 
 TABLE_COUNT_CSS = '.table-header .table-title .count'
-CSV_TIMEOUT = 60 * 30
+CSV_TIMEOUT = 60 * 60
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
