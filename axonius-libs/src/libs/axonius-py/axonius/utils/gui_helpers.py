@@ -463,10 +463,10 @@ def get_historized_filter(entities_filter, history_date: datetime):
 
 
 def is_adapter_count_query(query):
+    if isinstance(query, str) or not isinstance(query, Iterable):
+        return False
     if '$where' in query:
         return True
-    if isinstance(query, str):
-        return False
     for k, v in query.items():
         # pylint: disable=no-else-return
         if isinstance(v, dict):
