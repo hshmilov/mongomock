@@ -99,6 +99,7 @@ const Condition = function (field, fieldSchema, adapter, compOp, value, filtered
     }
     if (['integer', 'number'].includes(fieldSchema.type)) {
       processedValue = values.map(value => parseFloat(value)).filter(value => !isNaN(value)).join(',');
+      if (!processedValue) return 'Only numbers allowed in this filter';
     } else {
       processedValue = '"' + values.join('","') + '"';
     }
