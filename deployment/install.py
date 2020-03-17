@@ -12,6 +12,8 @@ import subprocess
 import sys
 import time
 
+from pathlib import Path
+
 from utils import (AXONIUS_DEPLOYMENT_PATH,
                    AXONIUS_OLD_ARCHIVE_PATH,
                    SOURCES_FOLDER_NAME,
@@ -40,6 +42,7 @@ INSTANCE_IS_MASTER_MARKER_PATH = os.path.join(AXONIUS_SETTINGS_PATH, '.logged_in
 BOOTED_FOR_PRODUCTION_MARKER_PATH = os.path.join(AXONIUS_SETTINGS_PATH, '.booted_for_production')
 INSTANCE_CONNECT_USER_NAME = 'node_maker'
 INSTANCE_CONNECT_USER_PASSWORD = 'M@ke1tRain'
+PYTHON_INSTALLER_LOCK_FILE = Path('/tmp/python_installer.lock')
 
 CHMOD_FILES = [
     INSTANCES_SETUP_SCRIPT_PATH,
@@ -194,4 +197,12 @@ def install(first_time, no_research):
 
 if __name__ == '__main__':
     with AutoOutputFlush():
-        main()
+        try:
+            if PYTHON_INSTALLER_LOCK_FILE.is_file():
+                print(f'Install is already in progress')
+            else:
+                PYTHON_INSTALLER_LOCK_FILE.touch()
+                main()
+        finally:
+            if PYTHON_INSTALLER_LOCK_FILE.is_file():
+                PYTHON_INSTALLER_LOCK_FILE.unlink()
