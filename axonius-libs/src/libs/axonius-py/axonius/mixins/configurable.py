@@ -80,8 +80,8 @@ class Configurable(object):
                 'config_name': inheritor.__name__
             })
             if from_db is None:
-                logger.critical("Configs are corrupted")
-                logger.error(f"Can't find log for {inheritor.__name__}! Inserting default!")
+                logger.info("Configs are corrupted")
+                logger.info(f"Can't find log for {inheritor.__name__}! Inserting default!")
                 configs.update_one(filter={
                     'config_name': inheritor.__name__
                 },
