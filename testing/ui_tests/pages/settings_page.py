@@ -221,15 +221,17 @@ class SettingsPage(Page):
         self.click_manage_users_settings()
         self.create_new_user(username, password, first_name, last_name)
         if permission_type and permission_level:
-            all_users = self.get_users_with_permissions_from_users_and_roles()
+            self.set_permission_for_user(permission_level, permission_type, username)
 
-            # We need to get the user element in order to change its permissions.
-            maybe_created_user = [u for u in all_users if u.source == 'internal' and username in u.title]
-            assert len(maybe_created_user) == 1, 'Failed getting created user'
-            created_user = maybe_created_user[0]
-            self.select_permissions(permission_type, permission_level, created_user.selenium_user)
-            self.click_save_manage_users_settings(created_user.selenium_user)
-            self.wait_for_user_permissions_saved_toaster()
+    def set_permission_for_user(self, permission_level, permission_type, username):
+        all_users = self.get_users_with_permissions_from_users_and_roles()
+        # We need to get the user element in order to change its permissions.
+        maybe_created_user = [u for u in all_users if u.source == 'internal' and username in u.title]
+        assert len(maybe_created_user) == 1, 'Failed getting created user'
+        created_user = maybe_created_user[0]
+        self.select_permissions(permission_type, permission_level, created_user.selenium_user)
+        self.click_save_manage_users_settings(created_user.selenium_user)
+        self.wait_for_user_permissions_saved_toaster()
 
     def get_all_users_from_users_and_roles(self):
         return (x.text for x in self.driver.find_elements_by_css_selector(self.USER_DETAILS_SELECTOR))

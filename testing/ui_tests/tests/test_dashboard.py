@@ -19,6 +19,7 @@ from ui_tests.tests.ui_consts import (READ_WRITE_USERNAME, READ_ONLY_USERNAME, N
                                       OS_TYPE_OPTION_NAME)
 from ui_tests.tests.ui_test_base import TestBase
 from ui_tests.tests.ui_consts import AD_ADAPTER_NAME
+from test_credentials.test_gui_credentials import AXONIUS_USER
 
 
 class TestDashboard(TestBase):
@@ -820,6 +821,28 @@ class TestDashboard(TestBase):
         self.dashboard_page.switch_to_page()
         assert self.dashboard_page.is_missing_space(DASHBOARD_SPACE_PERSONAL)
         assert self.dashboard_page.is_missing_add_space()
+        self._test_read_only_user_with_dashboard_read_write()
+
+    def _test_read_only_user_with_dashboard_read_write(self):
+        self.login_page.logout()
+        self.login_page.wait_for_login_page_to_load()
+        # Login with Admin user and change the read only Dashboard permission
+        self.login_page.login(username=AXONIUS_USER['user_name'], password=AXONIUS_USER['password'],
+                              wait_for_getting_started=True)
+        self.settings_page.switch_to_page()
+        self.settings_page.click_manage_users_settings()
+        self.settings_page.set_permission_for_user(self.settings_page.READ_WRITE_PERMISSION, 'Dashboard',
+                                                   READ_ONLY_USERNAME)
+        self.dashboard_page.switch_to_page()
+        # Login with Read Only user and see it can see personal space and add a chart
+        self.login_page.logout()
+        self.login_page.wait_for_login_page_to_load()
+        self.login_page.login(username=READ_ONLY_USERNAME, password=NEW_PASSWORD,
+                              wait_for_getting_started=False)
+        self.dashboard_page.switch_to_page()
+        assert not self.dashboard_page.is_missing_space(DASHBOARD_SPACE_PERSONAL)
+        self.dashboard_page.click_tab(DASHBOARD_SPACE_PERSONAL)
+        assert not self.dashboard_page.is_element_disabled(self.dashboard_page.find_new_chart_card())
 
     def test_dashboard_edit_module(self):
         self.devices_page.switch_to_page()

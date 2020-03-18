@@ -1,7 +1,7 @@
 <template>
   <div class="x-spaces">
     <XRoleGateway
-      permission-type="Dashboards"
+      permission-type="Dashboard"
       permission-level="ReadWrite"
     >
       <template slot-scope="{ allowed }">
