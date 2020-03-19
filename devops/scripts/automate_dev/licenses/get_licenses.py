@@ -17,13 +17,14 @@ def get_pypi_reqs():
             reqs = parse_requirements(files, session=False)
             packs = [str(pack_list.req) for pack_list in reqs]
             b = b + packs
-        splitter = [a.split('==') for a in b]
-        for set_lower in splitter:
-            set_lower[0] = set_lower[0].lower()
-            response = requests.get('https://pypi.org/pypi/' + str(set_lower[0]) + '/json')
-            outputfille.write(set_lower[0] + ',' + re.sub(',', ' ', response.json()['info']['license']) + ',' +
-                              re.sub(',', ' ', response.json()['info']['summary'] + '\n'))
-    outputfille.close()
+        splitter = [a.split('==')[0].lower() for a in b]
+        for package_name in splitter:
+            if package_name == 'pylint':
+                continue
+            response = requests.get('https://pypi.org/pypi/' + package_name + '/json')
+            csv_line = f'{package_name}, {re.sub(",", " ", response.json()["info"]["license"])}, {re.sub(",", " ", response.json()["info"]["summary"])} {", Linking Exception" if package_name == "uwsgi" else ""}\n'
+            print(csv_line)
+            outputfille.write(csv_line)
 
 
 def get_npm_reps():
@@ -41,24 +42,11 @@ def get_npm_reps():
                     outputfille.write(lic)
                 except Exception:
                     continue
-    outputfille.close()
-
-
-def get_dock():
-    with open('./apt.csv', 'w') as outputfille:
-        client = docker.from_env()
-        client.login(username='axoniusreadonly', password='7wr7E6kfttdVgn5e', registry='https://nexus.axonius.lan')
-        client.images.build(path='./devops/scripts/automate_dev/licenses/.', rm=True, pull=True, tag='get_license:1.0')
-        apt_list = client.containers.run(image='get_license:1.0').decode()
-        client.images.remove('get_license:1.0', force=True)
-        outputfille.write(apt_list)
-    outputfille.close()
 
 
 def main():
     get_npm_reps()
     get_pypi_reqs()
-    get_dock()
 
 
 if __name__ == '__main__':
