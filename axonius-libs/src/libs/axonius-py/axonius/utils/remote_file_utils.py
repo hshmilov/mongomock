@@ -110,6 +110,7 @@ def load_from_smb(client_config) -> bytes:
         # We just wanted to make sure it was a valid path
         share_path = client_config.get('resource_path')[2:]
         share_path = share_path.replace('\\', '/')
+        username = username.replace('\\', ';')
         if username and password:
             share_path = f'{urllib.parse.quote(username)}:' \
                          f'{urllib.parse.quote(password)}@{share_path}'

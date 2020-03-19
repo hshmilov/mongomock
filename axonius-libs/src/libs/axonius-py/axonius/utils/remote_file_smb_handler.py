@@ -3,6 +3,7 @@
 # https://github.com/miketeo/pysmb/blob/master/LICENSE
 
 
+import logging
 import os
 import sys
 import socket
@@ -21,6 +22,10 @@ from io import BytesIO
 
 from smb.SMBHandler import SMBHandler
 
+from axonius.utils import dns
+
+logger = logging.getLogger(f'axonius.{__name__}')
+
 USE_NTLM = True
 MACHINE_NAME = None
 
@@ -28,8 +33,7 @@ MACHINE_NAME = None
 def get_smb_handler(use_nbns=True):
     if use_nbns:
         return SMBHandler
-    else:
-        return AlternateSMBHandler
+    return AlternateSMBHandler
 
 
 class AlternateSMBHandler(urllib.request.BaseHandler):
@@ -61,7 +65,11 @@ class AlternateSMBHandler(urllib.request.BaseHandler):
         passwd = passwd or ''
         myname = MACHINE_NAME or self.generateClientMachineName()
 
+        # server_name = host.split('.')[0]
+        logger.info(f'Querying ip for host {host}')
+        host_ip = dns.query_dns(host, 30)
         server_name = host
+        logger.info(f'Found host {server_name} with ip {host_ip}')
         path, attrs = splitattr(req.selector)
         if path.startswith('/'):
             path = path[1:]
@@ -72,7 +80,7 @@ class AlternateSMBHandler(urllib.request.BaseHandler):
         try:
             conn = SMBConnection(user, passwd, myname, server_name, domain=domain,
                                  use_ntlm_v2=USE_NTLM, is_direct_tcp=True)
-            conn.connect(host, port)
+            conn.connect(host_ip, port)
 
             headers = email.message.Message()
             if req.data:
