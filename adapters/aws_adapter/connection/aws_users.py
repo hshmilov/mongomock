@@ -60,6 +60,9 @@ def query_users_by_client_for_all_sources(client_data):
 
                 user['groups'] = groups
                 user['group_attached_policies'] = groups_attached_policies
+
+                if 'AdministratorAccess' in groups_attached_policies:
+                    user['has_administrator_access'] = True
             except Exception:
                 if 'list_groups_for_users' not in error_logs_triggered:
                     logger.exception(f'Problem with list_groups_for_user')
@@ -76,6 +79,9 @@ def query_users_by_client_for_all_sources(client_data):
                             attached_user_policies.append(policy_name)
 
                 user['attached_policies'] = attached_user_policies
+
+                if 'AdministratorAccess' in attached_user_policies:
+                    user['has_administrator_access'] = True
             except Exception:
                 if 'list_attached_user_policies' not in error_logs_triggered:
                     logger.exception(f'Problem with list_attached_user_policies')
@@ -89,6 +95,9 @@ def query_users_by_client_for_all_sources(client_data):
                     inline_policies.extend(page.get('PolicyNames') or [])
 
                 user['inline_policies'] = inline_policies
+
+                if 'AdministratorAccess' in inline_policies:
+                    user['has_administrator_access'] = True
             except Exception:
                 if 'list_user_policies' not in error_logs_triggered:
                     logger.exception(f'Problem with list_user_policies')
@@ -180,6 +189,7 @@ def parse_root_user(user: AWSUserAdapter, root_user: dict):
             user.username = root_user['arn']
             user.user_create_date = parse_date(root_user.get('user_creation_time'))
             user.user_pass_last_used = parse_date(root_user.get('password_last_used'))
+            user.has_administrator_access = True
             if root_user.get('mfa_active') == 'true':
                 user.user_associated_mfa_devices.append(
                     AWSMFADevice()
@@ -235,6 +245,7 @@ def parse_raw_data_inner_users(user: AWSUserAdapter, user_raw_data: Tuple[Dict, 
             user.user_permission_boundary_arn = (user_raw.get('PermissionsBoundary') or {}).get(
                 'PermissionsBoundaryArn'
             )
+            user.has_administrator_access = user_raw.get('has_administrator_access') or False
 
             try:
                 tags_dict = {i['Key']: i['Value'] for i in (user_raw.get('Tags') or [])}
@@ -254,6 +265,8 @@ def parse_raw_data_inner_users(user: AWSUserAdapter, user_raw_data: Tuple[Dict, 
                 policies = user_raw.get('attached_policies') or []
                 for policy in policies:
                     user.user_attached_policies.append(AWSIAMPolicy(policy_name=policy, policy_type='Managed'))
+                    if policy == 'AdministratorAccess':
+                        user.has_administrator_access = True
             except Exception:
                 logger.exception(f'Problem adding user managed policies')
 
@@ -261,6 +274,8 @@ def parse_raw_data_inner_users(user: AWSUserAdapter, user_raw_data: Tuple[Dict, 
                 policies = user_raw.get('inline_policies') or []
                 for policy in policies:
                     user.user_attached_policies.append(AWSIAMPolicy(policy_name=policy, policy_type='Inline'))
+                    if policy == 'AdministratorAccess':
+                        user.has_administrator_access = True
             except Exception:
                 logger.exception(f'Problem adding user inline policies')
 
@@ -268,6 +283,8 @@ def parse_raw_data_inner_users(user: AWSUserAdapter, user_raw_data: Tuple[Dict, 
                 policies = user_raw.get('group_attached_policies') or []
                 for policy in policies:
                     user.user_attached_policies.append(AWSIAMPolicy(policy_name=policy, policy_type='Group Managed'))
+                    if policy == 'AdministratorAccess':
+                        user.has_administrator_access = True
             except Exception:
                 logger.exception(f'Problem adding user group managed policies')
 

@@ -395,6 +395,7 @@ class AWSUserAdapter(UserAdapter, AWSAdapter):
 
     user_attached_policies = ListField(AWSIAMPolicy, 'Policies')
     user_attached_keys = ListField(AWSIAMAccessKey, 'Access Keys')
+    has_administrator_access = Field(bool, 'User Has AdministratorAccess Policy')
 
     user_associated_mfa_devices = ListField(AWSMFADevice, 'Associated MFA Devices')
     has_associated_mfa_devices = Field(bool, 'Has Associated MFA Devices')
