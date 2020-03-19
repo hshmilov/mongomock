@@ -89,7 +89,7 @@ FILE_CLIENTS_SCHEMA = [
     },
     {
         'name': 'suppress_netbios',
-        'title': 'Suppress NetBios Name Lookup',
+        'title': 'Suppress NetBIOS name lookup',
         'type': 'bool',
         'default': False,
         'description': 'Select this to suppress NetBios name lookup when using SMB share'

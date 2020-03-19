@@ -113,7 +113,7 @@ class OpenvasAdapter(AdapterBase):
             'items': [
                 {
                     'name': 'domain',
-                    'title': 'Openvas host',
+                    'title': 'OpenVAS host',
                     'type': 'string'
                 },
                 {
