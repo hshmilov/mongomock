@@ -272,7 +272,14 @@ class CsvAdapter(AdapterBase):
                     logger.debug(f'Problem adding last seen')
 
                 device.device_manufacturer = vals.get('manufacturer')
-                device.total_physical_memory = vals.get('total_physical_memory_gb')
+                mem = vals.get('total_physical_memory_gb')
+                if mem:
+                    try:
+                        device.total_physical_memory = float(mem)
+                    except Exception as e:
+                        message = f'Failed to parse  physical memory from {mem} for {device.id}! ' \
+                                  f'Exception was: {str(e)}'
+                        logger.warning(message)
 
                 # OS is a special case, instead of getting the first found column we take all of them and combine them
                 if 'os' in fields:
