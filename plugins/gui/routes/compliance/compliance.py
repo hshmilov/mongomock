@@ -29,6 +29,9 @@ class Compliance:
                                                   Permission(PermissionType.Users, PermissionLevel.ReadOnly)]
                             )
     def compliance(self, name, method, accounts):
+        return self._get_compliance(name, method, accounts)
+
+    def _get_compliance(self, name, method, accounts):
         try:
             if not self._is_compliance_visible():
                 return return_error('Cloud asset compliance is not visible')
@@ -44,6 +47,9 @@ class Compliance:
                                                   Permission(PermissionType.Users, PermissionLevel.ReadOnly)]
                             )
     def compliance_csv(self, name, schema_fields, accounts):
+        return self._post_compliance_csv(name, schema_fields, accounts)
+
+    def _post_compliance_csv(self, name, schema_fields, accounts):
         try:
             if not self._is_compliance_visible():
                 return return_error('Cloud asset compliance is not visible')

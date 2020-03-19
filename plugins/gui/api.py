@@ -12,6 +12,8 @@ from axonius.plugin_base import EntityType, return_error, PluginBase
 from axonius.utils.db_querying_helper import get_entities
 from axonius.utils.gui_helpers import (Permission, PermissionLevel,
                                        PermissionType, ReadOnlyJustForGet,
+                                       accounts as accounts_filter,
+                                       schema_fields as schema,
                                        check_permissions,
                                        deserialize_db_permissions,
                                        paginated, filtered_entities,
@@ -709,3 +711,32 @@ class APIMixin:
                   required_permissions={Permission(PermissionType.Adapters, PermissionLevel.ReadWrite)})
     def api_adapters_clients_update(self, adapter_name, client_id=None):
         return self._adapters_clients_update(adapter_name, client_id)
+
+    ##############
+    # COMPLIANCE #
+    ##############
+
+    @accounts_filter()
+    @api_add_rule(
+        'compliance/<compliance_name>/<method>',
+        methods=['GET', 'POST'],
+        required_permissions={
+            Permission(PermissionType.Devices, PermissionLevel.ReadOnly),
+            Permission(PermissionType.Users, PermissionLevel.ReadOnly)
+        }
+    )
+    def api_get_compliance(self, compliance_name, method, accounts):
+        return self._get_compliance(compliance_name, method, accounts)
+
+    @accounts_filter()
+    @schema()
+    @api_add_rule(
+        'compliance/<compliance_name>/csv',
+        methods=['POST'],
+        required_permissions={
+            Permission(PermissionType.Devices, PermissionLevel.ReadOnly),
+            Permission(PermissionType.Users, PermissionLevel.ReadOnly)
+        }
+    )
+    def api_post_compliance_csv(self, compliance_name, schema_fields, accounts):
+        return self._post_compliance_csv(compliance_name, schema_fields, accounts)
