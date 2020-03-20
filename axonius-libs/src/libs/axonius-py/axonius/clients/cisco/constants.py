@@ -25,8 +25,10 @@ BASIC_INFO_OID_KEYS = (
     'port_access',
     'device_model',
     'device_model2',
+    'device_model3',
     'device_serial',
     'device_serial2',
+    'device_serial3',
     'base_mac',
     'vlans',
     'voice_vlan',
@@ -55,8 +57,10 @@ OIDS = namedtuple('oids', OID_KEYS)(
     port_access='1.3.6.1.4.1.9.9.220.1.1',
     device_model='1.3.6.1.4.1.9.5.1.2.16.0',
     device_model2='.1.3.6.1.2.1.47.1.1.1.1.13.1',
+    device_model3='.1.3.6.1.2.1.47.1.1.1.1.13',  # table of models
     device_serial='1.3.6.1.4.1.9.5.1.2.19.0',
     device_serial2='1.3.6.1.2.1.47.1.1.1.1.11.1',
+    device_serial3='1.3.6.1.2.1.47.1.1.1.1.11',  # table of serials
     base_mac='1.3.6.1.2.1.17.1.1.0',
     vtp_vlans='1.3.6.1.4.1.9.9.46.1.3.1.1.4',
     vlans='1.3.6.1.4.1.9.9.68.1.2.2.1',  # vmMembershipTable

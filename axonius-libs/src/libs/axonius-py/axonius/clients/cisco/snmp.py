@@ -211,8 +211,10 @@ class AbstractSnmpClient(AbstractCiscoClient):
             self._async_next_cmd(OIDS.port_access),
             self._async_get_cmd(OIDS.device_model),
             self._async_get_cmd(OIDS.device_model2),
+            self._async_next_cmd(OIDS.device_model3),
             self._async_get_cmd(OIDS.device_serial),
             self._async_get_cmd(OIDS.device_serial2),
+            self._async_next_cmd(OIDS.device_serial3),
             self._async_get_cmd(OIDS.base_mac),
             self._async_next_cmd(OIDS.vtp_vlans),
             self._async_next_cmd(OIDS.vlans),
@@ -446,8 +448,46 @@ class SnmpBasicInfoCiscoData(BasicInfoData):
     def _parse_serial(self, entries):
         self.result[get_oid_name(OIDS.device_serial)] = str(entries[0][1])
 
+    def _parse_serial_table(self, entries):
+        serial_oid_name = get_oid_name(OIDS.device_serial)
+        for entry in entries:
+            try:
+                oid, value = entry[0][0], entry[0][1]
+                if str(value):
+                    if not self.result.get(serial_oid_name):
+                        self.result[serial_oid_name] = str(value)
+                    else:
+                        oid = tuple(oid)
+                        serial_index = oid[-1]
+                        self.result[f'{serial_oid_name}_{serial_index}'] = str(value)
+            except KeyError:
+                logger.debug(f'Got no serial value for {entry}')
+                continue
+            except Exception:
+                logger.warning('Exception while parsing serial info', exc_info=True)
+                continue
+
     def _parse_device_model(self, entries):
         self.result[get_oid_name(OIDS.device_model)] = str(entries[0][1])
+
+    def _parse_model_table(self, entries):
+        model_oid_name = get_oid_name(OIDS.device_model)
+        for entry in entries:
+            try:
+                oid, value = entry[0][0], entry[0][1]
+                if str(value):
+                    if not self.result.get(model_oid_name):
+                        self.result[model_oid_name] = str(value)
+                    else:
+                        oid = tuple(oid)
+                        model_index = oid[-1]
+                        self.result[f'{model_oid_name}_{model_index}'] = str(value)
+            except KeyError:
+                logger.debug(f'Got no model value for {entry}')
+                continue
+            except Exception:
+                logger.warning('Exception while parsing model info', exc_info=True)
+                continue
 
     def _parse(self):
         parse_table = namedtuple('parse_table', BASIC_INFO_OID_KEYS)(
@@ -460,8 +500,10 @@ class SnmpBasicInfoCiscoData(BasicInfoData):
             port_access=self._parse_port_access,
             device_model=self._parse_device_model,
             device_model2=self._parse_device_model,
+            device_model3=self._parse_model_table,
             device_serial=self._parse_serial,
             device_serial2=self._parse_serial,
+            device_serial3=self._parse_serial_table,
             base_mac=self._parse_base_mac,
             # VTP VLANS MUST RUN BEFORE VLANS IN ORDER TO PROVIDE VLAN ID->NAME MAPPING
             vtp_vlans=self._parse_vtp_vlans,
