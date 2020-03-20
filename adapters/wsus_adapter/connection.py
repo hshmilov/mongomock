@@ -9,7 +9,7 @@ from axonius.adapter_exceptions import GetDevicesError
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
-WMI_NAMESPACE = '\\\\.\\root\\cimv2'
+WMI_NAMESPACE = '//./root/cimv2'
 
 # Note! After this time the process will be terminated. We shouldn't ever terminate a process while it runs,
 # In case its the execution we might leave some files on the target machine which is a bad idea.

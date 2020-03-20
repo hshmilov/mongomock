@@ -1,6 +1,8 @@
 import datetime
+import ipaddress
 import logging
 import os
+import re
 
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
@@ -29,6 +31,7 @@ class WsusAdapter(AdapterBase):
 
     def __init__(self):
         super().__init__(get_local_config_file(__file__))
+        self._date_regex = re.compile('(-*\\d+)')
 
     def _get_client_id(self, client_config):
         return f'{client_config[consts.WSUS_HOST]}_{client_config[consts.USER]}'
@@ -107,6 +110,17 @@ class WsusAdapter(AdapterBase):
     def _python_27_path(self):
         return self.config['paths']['python_27_path']
 
+    def _parse_date(self, date_str):
+        try:
+            date_match = self._date_regex.findall(date_str)[0]
+            date_int = int(date_match)
+            if date_int > 0:
+                return parse_date(date_int)
+            return None
+        except Exception as e:
+            logger.warning(f'Failed to parse date {date_str}: {str(e)}')
+            return None
+
     # pylint: disable=too-many-branches, too-many-statements, too-many-locals, too-many-nested-blocks
     def _parse_raw_data(self, devices_raw_data):
         for device_raw in devices_raw_data:
@@ -119,8 +133,15 @@ class WsusAdapter(AdapterBase):
                     continue
                 device.id = str(device_id) + '_' + (device_raw.get('FullDomainName') or '')
                 device.name = device_raw.get('FullDomainName')
-                if device_raw.get('IPAddress'):
-                    device.add_nic(ips=[device_raw.get('IPAddress')])
+                try:
+                    if device_raw.get('IPAddress'):
+                        # logger.info(f'XXXX IPAddress: {device_raw.get("IPAddress")}')
+                        if device_raw.get('IPAddress').get('Address'):
+                            ip_obj = ipaddress.ip_address(device_raw.get('IPAddress').get('Address'))
+                            # logger.info(f'XXXX Got IP: {device_raw.get("IPAddress").get("Address")}')
+                            device.add_nic(ips=[str(ip_obj)])
+                except Exception as e:
+                    logger.warning(f'Failed to parse IP info: {str(e)}')
                 try:
                     domain_parts = device_raw.get('FullDomainName', '').split('.')
                     device.hostname = domain_parts[0]
@@ -132,16 +153,17 @@ class WsusAdapter(AdapterBase):
                 device.device_manufacturer = (device_raw.get('Make'))
 
                 device.role = device_raw.get('ComputerRole')
-                device.last_reported_status_time = parse_date(device_raw.get('LastReportedStatusTime'))
+                last_reported_status_time = self._parse_date(device_raw.get('LastReportedStatusTime'))
+                device.last_reported_status_time = last_reported_status_time
                 device.last_sync_result = device_raw.get('LastSyncResult')
-                last_sync_time = parse_date(device_raw.get('LastSyncTime'))
+                last_sync_time = self._parse_date(device_raw.get('LastSyncTime'))
                 device.last_sync_time = last_sync_time
-                last_reported_inventory_time = parse_date(device_raw.get('LastReportedInventoryTime'))
+                last_reported_inventory_time = self._parse_date(device_raw.get('LastReportedInventoryTime'))
                 device.last_reported_inventory_time = last_reported_inventory_time
-                if last_reported_inventory_time and last_sync_time:
-                    device.last_seen = max(last_sync_time, last_reported_inventory_time)
+                if last_reported_inventory_time and last_sync_time and last_reported_status_time:
+                    device.last_seen = max(last_sync_time, last_reported_inventory_time, last_reported_status_time)
                 else:
-                    device.last_seen = last_sync_time or last_reported_inventory_time
+                    device.last_seen = last_sync_time or last_reported_inventory_time or last_reported_status_time
                 device.add_agent_version(agent=AGENT_NAMES.wsus,
                                          version=device_raw.get('ClientVersion'))
                 try:

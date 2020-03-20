@@ -470,6 +470,10 @@ class WmiSmbRunner(object):
         #  leading character and remove the last quote character on the command line, preserving any text after
         #  the last quote character.
 
+        # We need to initialize some parameters first!
+        with self.get_smb_connection():
+            pass
+        # Now we proceed to run the command(s)...
         return self._exec_generic("cmd.exe", "/q /s /c \"cmd.exe /q /s /c \"{0}\"\"".format(shell_command),
                                   optional_output_name=optional_output_name,
                                   optional_working_directory=optional_working_directory)
