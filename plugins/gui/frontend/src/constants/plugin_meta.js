@@ -79,7 +79,7 @@ export const pluginMeta = {
     spiceworks_adapter: {
         title: 'Spiceworks',
         link: 'https://docs.axonius.com/docs/spiceworks',
-        description: 'Spiceworks is a Network Monitoring software to capture, analyze, and monitor network traffic.'
+        description: 'Spiceworks provides network monitoring to capture, analyze, and monitor network traffic.'
     },
     preempt_adapter: {
         title: 'Preempt',
@@ -89,7 +89,7 @@ export const pluginMeta = {
     orca_adapter: {
         title: 'Orca Cloud Visibility Platform',
         link: 'https://docs.axonius.com/docs/orca-cloud-visibility-platform',
-        description: 'Orca Cloud Visibility Platform delivers full-stack visibility including prioritized alerts on vulnerabilities, compromises, misconfigurations, and more across all cloud accounts.'
+        description: 'Orca Cloud Visibility Platform delivers visibility to cloud security posture, including prioritized alerts on vulnerabilities, compromises, misconfigurations, and more.'
     },
     cisco_ucsm_adapter: {
         title: 'Cisco UCS Manager',
@@ -143,7 +143,7 @@ export const pluginMeta = {
     ivanti_sm_adapter: {
         title: 'Ivanti Service Manager',
         link: 'https://docs.axonius.com/docs/ivanti-service-manager',
-        description: 'Ivanti Service Manager, powered by HEAT, is a cloud based ITSM solution that provides workflows automation, IT help desk and support ticket features, and ITIL service management processes.'
+        description: 'Ivanti Service Manager, is a cloud based ITSM solution that provides workflows automation, IT help desk and support ticket features, and ITIL service management processes.'
     },
     bigfix_inventory_adapter: {
         title: 'IBM BigFix Inventory',
@@ -164,7 +164,7 @@ export const pluginMeta = {
     paloalto_xdr_adapter: {
         title: 'Palo Alto Networks Cortex XDR',
         link: 'https://docs.axonius.com/docs/palo-alto-networks-cortex-xdr',
-        description: 'Palo Alto Networks Cortex XDR is a detection and response app that natively integrates network, endpoint, and cloud data to detect threats and stop sophisticated attacks. '
+        description: 'Palo Alto Networks Cortex XDR is a detection and response app that natively integrates network, endpoint, and cloud data to detect threats and stop sophisticated attacks.'
     },
     edgescan_adapter: {
         title: 'edgescan Fullstack Vulnerability Management',
@@ -267,7 +267,7 @@ export const pluginMeta = {
     vcloud_director_adapter: {
         title: 'VMware vCloud Director',
         link: 'https://docs.axonius.com/docs/vmware-vcloud-director',
-        description: 'VMware vCloud Director is a leading cloud service-delivery platform used by some of the world’s most popular cloud providers to operate and manage successful cloud-service businesses.'
+        description: 'VMware vCloud Director is a cloud service-delivery platform.'
     },
     indegy_adapter: {
         title: 'Indegy Industrial Cybersecurity Suite',
@@ -282,7 +282,7 @@ export const pluginMeta = {
     signalsciences_adapter: {
         title: 'Signal Sciences',
         link: 'https://docs.axonius.com/docs/signal-sciences',
-        description: 'Signal Sciences is a web protection platform that Protects on-premise, multi-cloud and hybrid-cloud apps, within containers and serverless functions.'
+        description: 'Signal Sciences is a web protection platform that protects on-premise, multi-cloud and hybrid-cloud apps, within containers and serverless functions.'
     },
     automox_adapter: {
         title: 'Automox',
@@ -336,7 +336,7 @@ export const pluginMeta = {
     netskope_adapter: {
         title: 'Netskope',
         link: 'https://docs.axonius.com/docs/netskope',
-        description: 'Netskope Security Cloud provides unrivaled visibility and real-time data and threat protection when accessing cloud services, websites, and private apps from anywhere, on any device.'
+        description: 'Netskope Security Cloud provides threat protection for cloud services, websites, and private applications.'
     },
     imperva_dam_adapter: {
         title: 'Imperva Data Activity Monitoring (DAM)',
@@ -375,7 +375,7 @@ export const pluginMeta = {
     censys_adapter: {
         title: 'Censys',
         link: 'https://docs.axonius.com/docs/censys',
-        description: 'Censys monitors infrastructure and discovers unknown assets anywhere on the Internet.'
+        description: 'Censys monitors infrastructure and discovers unknown assets across the Internet.'
     },
     endgame_adapter: {
         title: 'Endgame',
@@ -415,7 +415,7 @@ export const pluginMeta = {
     zscaler_adapter: {
         title: 'Zscaler Web Security',
         link: 'https://docs.axonius.com/docs/zscaler-web-security',
-        description: 'Zscaler Web Security, part of the Zscaler Cloud Security Platform, is a secure Internet and web gateway delivered as a service, stops malware, advanced threats, phishing, browser exploits, malicious URLs, botnets, and more.'
+        description: 'Zscaler Web Security is a secure Internet and web gateway service that stops malware, advanced threats, phishing, browser exploits, malicious URLs, botnets, and more.'
     },
     wsus_adapter: {
         title: 'Windows Server Update Services (WSUS)',
@@ -919,7 +919,7 @@ export const pluginMeta = {
     csv_adapter: {
         title: 'CSV Serials',
         link: 'https://docs.axonius.com/docs/csv',
-        description: 'The CSV Serials Adapter is able to import .csv files with inventory information including the serial number of a device and supplemental device data.'
+        description: 'The CSV Serials adapter is able to import .csv files with inventory information including the serial number of a device and supplemental device data.'
     },
     mobileiron_adapter: {
         title: 'MobileIron EMM',
