@@ -8,6 +8,7 @@ from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.connection import RESTException
 from axonius.devices.device_adapter import DeviceAdapter
+from axonius.mixins.configurable import Configurable
 from axonius.utils.files import get_local_config_file
 from axonius.fields import Field, ListField
 from axonius.utils.datetime import parse_date
@@ -45,7 +46,7 @@ class IPBlock(SmartJsonClass):
     cidr = Field(int, 'CIDR')
 
 
-class RiskiqAdapter(AdapterBase):
+class RiskiqAdapter(AdapterBase, Configurable):
     # pylint: disable=too-many-instance-attributes
     class MyDeviceAdapter(DeviceAdapter):
         cname = Field(str, 'CName')
@@ -196,8 +197,14 @@ class RiskiqAdapter(AdapterBase):
                 device.host = host_info.get('host')
                 device.full_host = host_info.get('fullHost')
                 device.workspace = device_raw.get('workspaceID')
-                device.asset_status = device_raw.get('status')
-                device.inventory_state = device_raw.get('inventoryState')
+                asset_status = device_raw.get('status')
+                if self.__asset_status_whitelist and asset_status not in self.__asset_status_whitelist:
+                    return None
+                device.asset_status = asset_status
+                inventory_state = device_raw.get('inventoryState')
+                if self.__inventory_state_whitelist and inventory_state not in self.__inventory_state_whitelist:
+                    return None
+                device.inventory_state = inventory_state
                 device.detail_state = device_raw.get('detailState')
                 device.last_changed = parse_date(device_raw.get('lastChanged'))
                 device.last_detailed = parse_date(device_raw.get('lastDetailed'))
@@ -291,3 +298,37 @@ class RiskiqAdapter(AdapterBase):
     @classmethod
     def adapter_properties(cls):
         return [AdapterProperty.Assets]
+
+    @classmethod
+    def _db_config_schema(cls) -> dict:
+        return {
+            'items': [
+                {
+                    'name': 'inventory_state_whitelist',
+                    'title': 'Inventory State Whitelist',
+                    'type': 'string'
+                },
+                {
+                    'name': 'asset_status_whitelist',
+                    'title': 'Asset Status Whitelist',
+                    'type': 'string'
+                }
+            ],
+            'required': [
+            ],
+            'pretty_name': 'RiskIQ Configuration',
+            'type': 'array'
+        }
+
+    @classmethod
+    def _db_config_default(cls):
+        return {
+            'asset_status_whitelist': None,
+            'inventory_state_whitelist': None
+        }
+
+    def _on_config_update(self, config):
+        self.__asset_status_whitelist = config.get('asset_status_whitelist').split(',') \
+            if config.get('asset_status_whitelist') else None
+        self.__inventory_state_whitelist = config.get('inventory_state_whitelist').split(',') \
+            if config.get('inventory_state_whitelist') else None

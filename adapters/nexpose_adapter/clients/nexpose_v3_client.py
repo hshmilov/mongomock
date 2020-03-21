@@ -33,7 +33,9 @@ class NexposeV3Client(NexposeClient):
 
             aio_req = dict()
             aio_req['method'] = 'GET'
-            aio_req['url'] = f'https://{self.host}:{self.port}/api/3/assets/{item_id}/{data_type}?size=500'
+            aio_req['url'] = f'https://{self.host}:{self.port}/api/3/assets/{item_id}/{data_type}'
+            if data_type == 'vulnerabilities':
+                aio_req['url'] += '?size=500'
             aio_req['auth'] = (self.username, self.password)
             headers = None
             if self._token:
@@ -224,7 +226,7 @@ class NexposeV3Client(NexposeClient):
     # pylint: disable=arguments-differ, too-many-locals, too-many-branches, too-many-statements
     @staticmethod
     def parse_raw_device(device_raw, device_class, drop_only_ip_devices=False, fetch_vulnerabilities=False):
-        last_seen = device_raw.get('history', [])[-1].get('date')
+        last_seen = device_raw.get('history', [])[-1].get('date') if device_raw.get('history', []) else None
 
         last_seen = super(NexposeV3Client, NexposeV3Client).parse_raw_device_last_seen(last_seen)
 

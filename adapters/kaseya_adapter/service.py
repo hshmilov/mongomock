@@ -132,9 +132,10 @@ class KaseyaAdapter(AdapterBase):
                     logger.exception(f'Problem getting last seend in asset: {asset_raw} and agent: {agent_raw}')
                 device.time_zone = agent_raw.get('TimeZone')
                 try:
-                    device.total_physical_memory = int(agent_raw.get('RamMBytes', 0)) / (1024 * 1.0)
+                    if agent_raw.get('RamMBytes'):
+                        device.total_physical_memory = int(agent_raw.get('RamMBytes')) / (1024 * 1.0)
                 except Exception:
-                    logger.exception(f'Problem  adding time zone to {agent_raw}')
+                    logger.exception(f'Problem  adding ram bytes to {agent_raw}')
                 device.device_manufacturer = asset_raw.get('DeviceManufacturer')
                 ip_addresses = [ip_address.strip() for ip_address in asset_raw.get('IPAddresses', '').split(',')]
                 mac_addresses = [mac_address_raw.strip() for mac_address_raw in

@@ -20,6 +20,7 @@ logger = logging.getLogger(f'axonius.{__name__}')
 class PaloaltoPanoramaAdapter(AdapterBase):
     class MyDeviceAdapter(DeviceAdapter):
         # pylint: disable=R0902
+        paloalto_device_type = Field(str, 'Paloalto Device Type', enum=[VPN_TYPE, ARP_TYPE, FIREWALL_DEVICE_TYPE])
         fw_connected = Field(str, 'Firewall Connection Status')
         fw_uptime = Field(str, 'Firewall Uptime')
         sw_version = Field(str, 'Firewall SW Version')
@@ -136,6 +137,7 @@ class PaloaltoPanoramaAdapter(AdapterBase):
     def _create_firewall_device(self, device_raw_dict):
         try:
             device = self._new_device_adapter()
+            device.paloalto_device_type = FIREWALL_DEVICE_TYPE
             serial = device_raw_dict.get('serial')
             if not serial:
                 logger.warning(f'Bad device with no Serial {device_raw_dict}')
@@ -180,6 +182,7 @@ class PaloaltoPanoramaAdapter(AdapterBase):
     def _create_vpn_device(self, device_raw, target):
         try:
             device = self._new_device_adapter()
+            device.paloalto_device_type = VPN_TYPE
             device_raw_dict = dict()
             for xml_property in device_raw:
                 device_raw_dict[xml_property.tag] = xml_property.text
@@ -221,6 +224,7 @@ class PaloaltoPanoramaAdapter(AdapterBase):
     def _create_arp_device(self, device_raw, target):
         try:
             device = self._new_device_adapter()
+            device.paloalto_device_type = ARP_TYPE
             device_raw_dict = dict()
             for xml_property in device_raw:
                 device_raw_dict[xml_property.tag] = xml_property.text

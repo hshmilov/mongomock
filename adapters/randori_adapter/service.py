@@ -127,6 +127,8 @@ class RandoriAdapter(AdapterBase):
                 for ip_id in ip_ids:
                     try:
                         ip_data = ips_data_dict.get(ip_id)
+                        if not isinstance(ip_data, dict):
+                            ip_data = {}
                         ports_data = port_info_dict.get(ip_id)
                         if not isinstance(ports_data, list):
                             ports_data = []

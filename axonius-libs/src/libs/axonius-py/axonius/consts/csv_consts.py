@@ -18,7 +18,7 @@ IDENTIFIERS = {
     'manufacturer': ['manufacturer', 'devicemanufacturer'],
     'total_physical_memory_gb': ['memorygb', 'totalmemorygb'],
     'cpu_speed': ['cpuspeedraw'],
-    'last_seen': ['lastmessagetime', 'lastdiscoveredtime', 'lastseen'],
+    'last_seen': ['lastmessagetime', 'lastdiscoveredtime', 'lastseen', 'endpointlfdt'],
     'mail': ['mail', 'email', 'usermail', 'mailaddress', 'emailaddress', 'emailprimarywork'],
     'domain': ['domain', 'domainname', 'endpointdomain'],
     'username': ['username'],

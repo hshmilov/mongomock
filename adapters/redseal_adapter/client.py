@@ -155,9 +155,9 @@ class RedSealClient:
     async def _get_devices(self, loop):
         pool = ThreadPoolExecutor(10)
         async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=120)) as session:
-            response = await self.get(session, 'data/application/*')
+            response = await self.get(session, 'data/host/all')
             if not json.is_valid(response, {'list': ['Host', ]}):
-                raise RedSealException('Invalid response for /data/host/full')
+                raise RedSealException('Invalid response for /data/host/all')
 
             response = self.reassemble_application_json(response)
 

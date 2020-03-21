@@ -19,6 +19,7 @@ class KaseyaConnection(RESTConnection):
                          **kwargs)
 
     def __generate_auth(self):
+        logger.debug('Generating auth')
         rand_number = random.randrange(100)
 
         sha256_instance = hashlib.sha256()
@@ -59,21 +60,29 @@ class KaseyaConnection(RESTConnection):
             raise RESTException(f'Got bad auth response: {response}')
         self._session_headers['Authorization'] = 'Bearer ' + response['Result']['Token']
         self._get('assetmgmt/agents',
-                  url_params={'$top': 1,
+                  url_params={'$top': DEVICES_PER_PAGE,
                               '$skip': 0})
 
     def _get_api_endpoint(self, endpoint):
         total_records = self._get(endpoint, url_params={'$top': 1})['TotalRecords']
         skip = 0
         while skip < min(total_records, MAX_DEVICES):
+            logger.debug(f'Doing {skip} out of {total_records} for {endpoint}')
             try:
                 yield from self._get(endpoint,
                                      url_params={'$top': DEVICES_PER_PAGE,
                                                  '$skip': skip})['Result']
 
             except Exception:
-                # No break because we have
-                logger.exception(f'Got problem fetching agents in offset {skip}')
+                self._session_headers['Authorization'] = 'Basic ' + self.__generate_auth()
+                response = self._get('auth')
+                if 'Result' not in response or 'Token' not in response['Result']:
+                    raise RESTException(f'Got bad auth response: {response}')
+                self._session_headers['Authorization'] = 'Bearer ' + response['Result']['Token']
+                logger.debug(f'Got problem fetching agents in offset {skip}', exc_info=True)
+                yield from self._get(endpoint,
+                                     url_params={'$top': DEVICES_PER_PAGE,
+                                                 '$skip': skip})['Result']
             skip += DEVICES_PER_PAGE
 
     def get_device_list(self):
@@ -81,8 +90,10 @@ class KaseyaConnection(RESTConnection):
         # we have to get at list all the agents list in memory and then yield only on assets list
         agents_raw = self._get_api_endpoint('assetmgmt/agents')
         agents_id_dict = dict()
-        for agent_raw in agents_raw:
+        for i, agent_raw in enumerate(agents_raw):
             try:
+                if i % 10 == 0:
+                    logger.info(f'Got to {i} agent')
                 if agent_raw.get('AgentId'):
                     agent_id = agent_raw.get('AgentId')
                     apps_raw = []

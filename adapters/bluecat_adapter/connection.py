@@ -20,6 +20,7 @@ class BluecatConnection(RESTConnection):
                                   'Accept': 'application/json'}, **kwargs)
         self.sleep_between_requests_in_sec = None
         self._token_time = None
+        self._device_per_page = DEVICE_PER_PAGE
 
     # pylint: disable=arguments-differ
     def _do_request(self, *args, **kwargs):
@@ -73,7 +74,7 @@ class BluecatConnection(RESTConnection):
         if 'start' not in url_params:
             url_params['start'] = 0
         if 'count' not in url_params:
-            url_params['count'] = DEVICE_PER_PAGE
+            url_params['count'] = self._device_per_page
         results = self._get_page(method, url_params=url_params)
 
         while results:
@@ -94,8 +95,12 @@ class BluecatConnection(RESTConnection):
             yield from self.get_blocks_recursively(ip4block['id'])
 
     # pylint: disable=R0912,arguments-differ
-    def get_device_list(self, sleep_between_requests_in_sec, get_extra_host_data=True):
+    def get_device_list(self, sleep_between_requests_in_sec, get_extra_host_data=True, device_per_page=None):
         self.sleep_between_requests_in_sec = sleep_between_requests_in_sec
+        if device_per_page:
+            self._device_per_page = device_per_page
+        else:
+            self._device_per_page = DEVICE_PER_PAGE
 
         ip4_blocks = set()
 
@@ -136,7 +141,7 @@ class BluecatConnection(RESTConnection):
                         if host_id and get_extra_host_data:
                             self._refresh_token()
                             dns_name_raw = self._get(f'getLinkedEntities?entityId={host_id}&type=HostRecord&'
-                                                     f'start=0&count={DEVICE_PER_PAGE}')
+                                                     f'start=0&count={self._device_per_page}')
                             if isinstance(dns_name_raw, list) and len(dns_name_raw) > 0:
                                 device_raw['dns_name'] = dns_name_raw[0].get('name')
                                 device_raw['all_dns_names'] = dns_name_raw

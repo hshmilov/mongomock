@@ -7,7 +7,7 @@ import re
 from axonius.adapter_base import AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
-from axonius.devices.device_adapter import DeviceAdapter, AGENT_NAMES
+from axonius.devices.device_adapter import DeviceAdapter, AGENT_NAMES, QualysAgentVuln
 from axonius.fields import Field, ListField
 from axonius.mixins.configurable import Configurable
 from axonius.scanner_adapter_base import ScannerAdapterBase
@@ -25,99 +25,6 @@ class QualysVulnerability(SmartJsonClass):
     results = Field(str, 'Results')
 
 
-QUALYS_SUB_CATEGORIES = ['Authenticated Discovery',
-                         'Malware Associated',
-                         'Unix Authenticated Discovery',
-                         'Remote Discovery',
-                         'Patch Available',
-                         'PANOS Authenticated Discovery',
-                         'MongoDB Authenticated Discovery',
-                         'MARIADB Authenticated Discovery',
-                         'Not exploitable due to configuration',
-                         'Exploit Available',
-                         'SNMP Authenticated Discovery',
-                         'Non-running services',
-                         'Windows Authenticated Discovery',
-                         'VMware Authenticated Discovery',
-                         'MySQL Authenticated Discovery',
-                         'Oracle Authenticated Discovery',
-                         'Remote DiscoveryAuthenticated Discovery',
-                         'DB2 Authenticated Discovery']
-
-QUALYS_CATEGORIES = ['Debian',
-                     'HP-UX',
-                     'Amazon Linux',
-                     'Hardware',
-                     'Fedora',
-                     'RPC',
-                     'Finger',
-                     'SUSE',
-                     'Database',
-                     'Web server',
-                     'VMware',
-                     'Firewall',
-                     'File Transfer Protocol',
-                     'News Server',
-                     'NFS',
-                     'CGI',
-                     'Solaris',
-                     'Oracle VM Server',
-                     'RedHat',
-                     'Windows',
-                     'Proxy',
-                     'Web Application Firewall',
-                     'Brute Force Attack',
-                     'General remote services',
-                     'Security Policy',
-                     'DNS and BIND',
-                     'Mail services',
-                     'Ubuntu',
-                     'Forensics',
-                     'Web Application',
-                     'SMB / NETBIOS',
-                     'X-Window',
-                     'OEL',
-                     'Cisco',
-                     'AIX',
-                     'CentOS',
-                     'Local',
-                     'Office Application',
-                     'Backdoors and trojan horses',
-                     'Internet Explorer',
-                     'E-Commerce',
-                     'SNMP',
-                     'Information gathering',
-                     'TCP/IP']
-
-QUALYS_VULN_TYPES = [
-    'Potential Vulnerability',
-    'Confirmed Vulnerability',
-    'Information Gathered'
-]
-
-
-class QualysAgentVuln(SmartJsonClass):
-    vuln_id = Field(str, 'Vuln ID')
-    first_found = Field(datetime.datetime, 'First Found')
-    last_found = Field(datetime.datetime, 'Last Found')
-    qid = Field(str, 'QID')
-    title = Field(str, 'Title')
-    category = Field(str, 'Category', enum=QUALYS_CATEGORIES)
-    sub_category = ListField(str, 'Sub Category', enum=QUALYS_SUB_CATEGORIES)
-    severity = Field(int, 'Severity')
-    vendor_reference = ListField(str, 'Vendor Reference')
-    qualys_cve_id = ListField(str, 'CVE ID')
-    cvss_base = Field(float, 'CVSS Base')
-    cvss3_base = Field(float, 'CVSS3 Base')
-    cvss_temporal_score = Field(float, 'CVSS Temporal Score')
-    cvss3_temporal_score = Field(float, 'CVSS3 Temporal Score')
-    cvss_access_vector = Field(float, 'CVSS Access Vector')
-    bugtraq_id = ListField(str, 'Bugtraq ID')
-    modified = Field(datetime.datetime, 'Modified')
-    published = Field(datetime.datetime, 'Published')
-    vuln_type = Field(str, 'Vulnerability Type', enum=QUALYS_VULN_TYPES)
-
-
 class QualysAgentPort(SmartJsonClass):
     port = Field(int, 'Port')
     protocol = Field(str, 'Protocol')
@@ -128,7 +35,6 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
     # pylint: disable=too-many-instance-attributes
     class MyDeviceAdapter(DeviceAdapter):
         qualys_id = Field(str, 'Qualys ID')
-        qualys_agent_vulns = ListField(QualysAgentVuln, 'Vulnerabilities')
         qualys_agnet_ports = ListField(QualysAgentPort, 'Qualys Open Ports')
         qualys_tags = ListField(str, 'Qualys Tags')
         last_vuln_scan = Field(datetime.datetime, 'Last Vuln Scan')
@@ -384,7 +290,10 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
             except Exception:
                 logger.exception(f'Problem with adding software to Qualys agent {device_raw}')
             try:
-                for vuln_raw in (device_raw.get('vuln') or {}).get('list') or []:
+                vulns_raw = (device_raw.get('vuln') or {}).get('list') or []
+                if self.__fetch_vulnerabilities_data is False:
+                    vulns_raw = []
+                for vuln_raw in vulns_raw:
                     try:
 
                         qid = str((vuln_raw.get('HostAssetVuln') or {}).get('qid'))
@@ -460,6 +369,8 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
             device.qweb_host_id = device_raw.get('qwebHostId') \
                 if isinstance(device_raw.get('qwebHostId'), int) else None
             device.tracking_method = device_raw.get('trackingMethod')
+            if self.__fetch_vulnerabilities_data is False:
+                device_raw.pop('vuln', None)
             device.set_raw(device_raw)
             if not tags_ok:
                 return None
@@ -501,11 +412,17 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
                     'name': 'qualys_tags_white_list',
                     'type': 'string',
                     'title': 'Qualys tags whitelist'
+                },
+                {
+                    'name': 'fetch_vulnerabilities_data',
+                    'type': 'bool',
+                    'title': 'Fetch Vulnerabilities Data'
                 }
             ],
             'required': [
                 'request_timeout',
                 'async_chunk_size',
+                'fetch_vulnerabilities_data'
             ],
             'pretty_name': 'Qualys Configuration',
             'type': 'array'
@@ -519,12 +436,15 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
             'retry_sleep_time': consts.RETRY_SLEEP_TIME,
             'max_retries': consts.MAX_RETRIES,
             'devices_per_page': consts.DEVICES_PER_PAGE,
+            'fetch_vulnerabilities_data': True,
             'qualys_tags_white_list': None
         }
 
     def _on_config_update(self, config):
         self.__request_timeout = config['request_timeout']
         self.__async_chunk_size = config['async_chunk_size']
+        self.__fetch_vulnerabilities_data = config['fetch_vulnerabilities_data']\
+            if 'fetch_vulnerabilities_data' in config else True
         self.__max_retries = config.get('max_retries', consts.MAX_RETRIES)
         self.__retry_sleep_time = config.get('max_retries', consts.RETRY_SLEEP_TIME)
         self.__devices_per_page = config.get('devices_per_page', consts.DEVICES_PER_PAGE)

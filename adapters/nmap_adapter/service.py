@@ -9,7 +9,7 @@ from axonius.consts import remote_file_consts
 from axonius.scanner_adapter_base import ScannerAdapterBase
 from axonius.utils.parsing import is_domain_valid
 from axonius.fields import Field
-from axonius.devices.device_adapter import DeviceAdapter, NmapPortInfo, ScriptInformation
+from axonius.devices.device_adapter import DeviceAdapter, NmapPortInfo, ScriptInformation, PortScriptInformation
 from axonius.utils.files import get_local_config_file
 from axonius.utils.remote_file_utils import load_remote_data, test_file_reachability
 from axonius.utils.xml2json_parser import Xml2Json
@@ -66,8 +66,10 @@ class NmapAdapter(ScannerAdapterBase):
     @staticmethod
     def _add_port_info(device, port_xml):
         port_info = NmapPortInfo()
-        port_info.protocol = port_xml.attrib.get('protocol')
-        port_info.portid = port_xml.attrib.get('portid')
+        protocol = port_xml.attrib.get('protocol')
+        port_info.protocol = protocol
+        portid = port_xml.attrib.get('portid')
+        port_info.portid = portid
         for port_xml_property in port_xml:
             try:
                 if port_xml_property.tag == 'service':
@@ -92,6 +94,10 @@ class NmapAdapter(ScannerAdapterBase):
                         if script_id and script_output:
                             port_info.script_information.append(ScriptInformation(script_id=script_id,
                                                                                   script_output=script_output))
+                            device.scripts_info.append(PortScriptInformation(script_id=script_id,
+                                                                             script_output=script_output,
+                                                                             portid=portid,
+                                                                             protocol=protocol))
                             if script_id == 'vulners':
                                 try:
                                     for inner_script_xml in port_xml_property:

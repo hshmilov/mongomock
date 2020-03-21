@@ -137,14 +137,20 @@ class AbsoluteAdapter(AdapterBase):
                 if hostname and hostname.lower().endswith('.workgroup'):
                     hostname = hostname[:-len('.workgroup')]
                 device.hostname = hostname
+                last_updated = None
                 try:
                     if device_raw.get('lastUpdatedUtc'):
-                        device.last_updated = datetime.datetime.fromtimestamp(device_raw.get('lastUpdatedUtc') / 1000)
+                        last_updated = datetime.datetime.fromtimestamp(device_raw.get('lastUpdatedUtc') / 1000)
+                        device.last_updated = last_updated
                 except Exception:
                     logger.exception(f'Problem adding last seen to {device_raw}')
                 try:
                     if device_raw.get('lastConnectedUtc'):
-                        device.last_seen = datetime.datetime.fromtimestamp(device_raw.get('lastConnectedUtc') / 1000)
+                        last_seen = datetime.datetime.fromtimestamp(device_raw.get('lastConnectedUtc') / 1000)
+                        if last_seen:
+                            device.last_seen = last_seen
+                        else:
+                            device.last_seen = last_updated
                 except Exception:
                     logger.exception(f'Problem adding last updated to {device_raw}')
                 device.device_model = device_raw.get('systemModel')

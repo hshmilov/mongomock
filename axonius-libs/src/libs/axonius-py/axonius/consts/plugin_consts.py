@@ -81,6 +81,7 @@ CORRELATE_BY_USERNAME_DOMAIN_ONLY = 'correlate_by_username_domain_only'
 CORRELATE_AD_SCCM = 'correlate_ad_sccm'
 CSV_FULL_HOSTNAME = 'csv_full_hostname'
 CORRELATE_BY_SNOW_MAC = 'correlate_by_snow_mac'
+CORRELATE_BY_AZURE_AD_NAME_ONLY = 'correlate_azure_ad_name_only'
 CORRELATION_SCHEDULE = 'correlation_schedule'
 CORRELATION_SCHEDULE_ENABLED = 'enabled'
 CORRELATION_SCHEDULE_HOURS_INTERVAL = 'correlation_hours_interval'
@@ -88,6 +89,7 @@ FETCH_EMPTY_VENDOR_SOFTWARE_VULNERABILITES = 'fetch_empty_vendor_software_vulner
 AGGREGATION_SETTINGS = 'aggregation_settings'
 MAX_WORKERS = 'max_workers'
 SOCKET_READ_TIMEOUT = 'socket_read_timeout'
+UPPERCASE_HOSTNAMES = 'uppercase_hostnames'
 
 # COLLECTIONS #
 CONFIGURABLE_CONFIGS_COLLECTION = 'configurable_configs'

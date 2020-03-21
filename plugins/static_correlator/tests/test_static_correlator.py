@@ -46,8 +46,10 @@ def get_raw_tag(associated_adapter_unique_name, associated_adapter_name, associa
     }
 
 
+# pylint: disable=too-many-arguments
 def get_raw_device(plugin_name=None, hostname=None, network_interfaces=None, os=None, serial=None,
-                   tag_data=None, last_seen=None, domain=None, device_id=None, more_params=None):
+                   tag_data=None, last_seen=None, domain=None,
+                   device_id=None, more_params=None, ad_distinguished_name=None):
     if last_seen is None:
         last_seen = datetime.datetime.now()
     last_seen = last_seen.replace(tzinfo=None)
@@ -68,7 +70,8 @@ def get_raw_device(plugin_name=None, hostname=None, network_interfaces=None, os=
                     NETWORK_INTERFACES_FIELD: network_interfaces,
                     'device_serial': serial,
                     'last_seen': last_seen,
-                    'domain': domain
+                    'domain': domain,
+                    'ad_distinguished_name': ad_distinguished_name
                 }
             }
         ],
@@ -180,7 +183,7 @@ def test_rule_ip_hostname_os_correlation():
                                  'distribution': 'Ubuntu',
                                  'type': 'Linux'},
                              network_interfaces=[{IPS_FIELD: ['1.1.1.1']}])
-    assert_success(correlate([device1, device2]), [device1, device2], 'They have the same hostname and IPs', 1)
+    assert_success(correlate([device1, device2]), [device1, device2], 'They have the same hostname and IPs or MACs', 1)
 
 
 def test_rule_ip_hostname_special_osx():
@@ -201,7 +204,7 @@ def test_rule_ip_hostname_special_osx():
                                  'distribution': 'Ubuntu',
                                  'type': 'OS X'},
                              network_interfaces=[{IPS_FIELD: ['1.1.1.1']}])
-    assert_success(correlate([device1, device2]), [device1, device2], 'They have the same hostname and IPs', 1)
+    assert_success(correlate([device1, device2]), [device1, device2], 'They have the same hostname and IPs or MACs', 1)
 
 
 def test_no_correlation_special_osx():
@@ -245,7 +248,7 @@ def test_rule_ip_no_hostame_yes_mac_correlation():
                                  'type': 'Linux'},
                              network_interfaces=[{MAC_FIELD: '11111111',
                                                   IPS_FIELD: ['1.1.1.1']}])
-    assert_success(correlate([device1, device2]), [device1, device2], 'They have the same hostname and IPs', 1)
+    assert_success(correlate([device1, device2]), [device1, device2], 'They have the same hostname and IPs or MACs', 1)
 
 
 def test_rule_ip_host_os_no_correlation_due_to_ip():
@@ -266,7 +269,7 @@ def test_rule_ip_host_os_no_correlation_due_to_ip():
                                  'type': 'Linux'},
                              network_interfaces=[{MAC_FIELD: 'mymac',
                                                   IPS_FIELD: ['1.1.1.1']}])
-    assert_success(correlate([device1, device2]), [device1, device2], 'They have the same hostname and IPs', 0)
+    assert_success(correlate([device1, device2]), [device1, device2], 'They have the same hostname and IPs or MACs', 0)
 
 
 def test_rule_ip_host_os_no_correlation_due_to_hostname():
@@ -287,7 +290,7 @@ def test_rule_ip_host_os_no_correlation_due_to_hostname():
                                  'type': 'Linux'},
                              network_interfaces=[{MAC_FIELD: 'mymac',
                                                   IPS_FIELD: ['1.1.1.1']}])
-    assert_success(correlate([device1, device2]), [device1, device2], 'They have the same hostname and IPs', 0)
+    assert_success(correlate([device1, device2]), [device1, device2], 'They have the same hostname and IPs or MACs', 0)
 
 
 def test_rule_ip_host_os_no_correlation_due_to_not_net_ifs():
@@ -307,7 +310,7 @@ def test_rule_ip_host_os_no_correlation_due_to_not_net_ifs():
                                  'distribution': 'Ubuntu',
                                  'type': 'Linux'},
                              network_interfaces=[])
-    assert_success(correlate([device1, device2]), [device1, device2], 'They have the same hostname and IPs', 0)
+    assert_success(correlate([device1, device2]), [device1, device2], 'They have the same hostname and IPs or MACs', 0)
 
 
 def test_rule_ip_mac_os_correlation():
@@ -370,7 +373,7 @@ def test_rule_ip_hostname_os_succeeds_even_with_domain():
                                  'distribution': 'Ubuntu',
                                  'type': 'Linux'},
                              network_interfaces=[{IPS_FIELD: ['1.1.1.1']}])
-    assert_success(correlate([device1, device2]), [device1, device2], 'They have the same hostname and IPs', 1)
+    assert_success(correlate([device1, device2]), [device1, device2], 'They have the same hostname and IPs or MACs', 1)
 
 
 def test_rule_ip_hostname_os_success_on_domains_not_default():
@@ -390,7 +393,7 @@ def test_rule_ip_hostname_os_success_on_domains_not_default():
                                  'distribution': 'Ubuntu',
                                  'type': 'Linux'},
                              network_interfaces=[{IPS_FIELD: ['1.1.1.1']}])
-    assert_success(correlate([device1, device2]), [device1, device2], 'They have the same hostname and IPs', 1)
+    assert_success(correlate([device1, device2]), [device1, device2], 'They have the same hostname and IPs or MACs', 1)
 
 
 def test_rule_ip_hostname_os_fails_on_domains_not_default():
@@ -411,7 +414,7 @@ def test_rule_ip_hostname_os_fails_on_domains_not_default():
                                  'type': 'Linux'},
                              network_interfaces=[{MAC_FIELD: 'mymac',
                                                   IPS_FIELD: ['1.1.1.2']}])
-    assert_success(correlate([device1, device2]), [device1, device2], 'They have the same hostname and IPs', 0)
+    assert_success(correlate([device1, device2]), [device1, device2], 'They have the same hostname and IPs or MACs', 0)
 
 
 def test_rule_ip_hostname_os_fails_hostname_even_after_domain():
@@ -432,7 +435,7 @@ def test_rule_ip_hostname_os_fails_hostname_even_after_domain():
                                  'type': 'Linux'},
                              network_interfaces=[{MAC_FIELD: 'mymac',
                                                   IPS_FIELD: ['1.1.1.1']}])
-    assert_success(correlate([device1, device2]), [device1, device2], 'They have the same hostname and IPs', 0)
+    assert_success(correlate([device1, device2]), [device1, device2], 'They have the same hostname and IPs or MACs', 0)
 
 
 def test_rule_ip_hostname_os_fails_hostname_with_dot():
@@ -453,7 +456,7 @@ def test_rule_ip_hostname_os_fails_hostname_with_dot():
                                  'type': 'Linux'},
                              network_interfaces=[{MAC_FIELD: 'mymac',
                                                   IPS_FIELD: ['1.1.1.1']}])
-    assert_success(correlate([device1, device2]), [device1, device2], 'They have the same hostname and IPs', 0)
+    assert_success(correlate([device1, device2]), [device1, device2], 'They have the same hostname and IPs or MACs', 0)
 
 
 def test_rule_ip_hostname_os_suceeds_with_default_and_nondefault_domain():
@@ -473,7 +476,7 @@ def test_rule_ip_hostname_os_suceeds_with_default_and_nondefault_domain():
                                  'distribution': 'Ubuntu',
                                  'type': 'Linux'},
                              network_interfaces=[{IPS_FIELD: ['1.1.1.1']}])
-    assert_success(correlate([device1, device2]), [device1, device2], 'They have the same hostname and IPs', 1)
+    assert_success(correlate([device1, device2]), [device1, device2], 'They have the same hostname and IPs or MACs', 1)
 
 
 def test_rule_ip_hostname_os_suceeds_with_default_domains():
@@ -493,7 +496,7 @@ def test_rule_ip_hostname_os_suceeds_with_default_domains():
                                  'distribution': 'Ubuntu',
                                  'type': 'Linux'},
                              network_interfaces=[{IPS_FIELD: ['1.1.1.1']}])
-    assert_success(correlate([device1, device2]), [device1, device2], 'They have the same hostname and IPs', 1)
+    assert_success(correlate([device1, device2]), [device1, device2], 'They have the same hostname and IPs or MACs', 1)
 
 
 def test_rule_one_is_ad_and_full_hostname():
@@ -673,8 +676,10 @@ def test_rule_correlate_cloud_instances():
 
 
 def test_rule_correlate_ad_sccm_id():
-    device1 = get_raw_device(plugin_name=ACTIVE_DIRECTORY_PLUGIN_NAME, device_id='SomeDeviceId', os={'type': 'Windows'})
-    device2 = get_raw_device(plugin_name='sccm_adapter', device_id='SomeDeviceId', os={'type': 'Windows'})
+    device1 = get_raw_device(plugin_name=ACTIVE_DIRECTORY_PLUGIN_NAME, device_id='SomeDeviceId',
+                             ad_distinguished_name='SomeDeviceId', os={'type': 'Windows'})
+    device2 = get_raw_device(plugin_name='sccm_adapter', device_id='SomeDeviceId', ad_distinguished_name='SomeDeviceId',
+                             os={'type': 'Windows'})
     assert_success(correlate([device1, device2]), [device1, device2], 'They have the same ID and one is AD and the '
                                                                       'second is SCCM', 1)
 
@@ -724,6 +729,7 @@ def test_rule_correlate_hostname_only():
 
 def test_rule_correlate_splunk_vpn_hostname():
     device1 = get_raw_device(plugin_name='splunk_adapter', device_id='SomeDeviceId', hostname='ofir',
+                             network_interfaces=[{IPS_FIELD: ['1.1.1.2']}],
                              more_params=[('splunk_source', 'VPN')])
     device2 = get_raw_device(plugin_name='splunk_adapter', device_id='SomeDeviceId2', hostname='ofir',
                              network_interfaces=[{IPS_FIELD: ['1.1.1.1']}], os={'type': 'linux'},

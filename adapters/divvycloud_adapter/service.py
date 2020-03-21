@@ -135,10 +135,24 @@ class DivvycloudAdapter(AdapterBase):
             "type": "array"
         }
 
-    def create_device(self, raw_device_data):
+    def create_device(self, raw_device_data, nics_dict):
         device = self._new_device_adapter()
 
         device.id = raw_device_data["instance_id"]
+        nics_raw = nics_dict.get(raw_device_data["instance_id"])
+        if not isinstance(nics_raw, list):
+            nics_raw = []
+        macs = []
+        found_hostname = False
+        for nic_raw in nics_raw:
+            try:
+                if nic_raw.get('mac_address'):
+                    macs.append(nic_raw.get('mac_address'))
+                if (nic_raw.get('public_dns_name') or nic_raw.get('private_dns_name')) and not found_hostname:
+                    found_hostname = True
+                    device.hostname = nic_raw.get('public_dns_name') or nic_raw.get('private_dns_name')
+            except Exception:
+                logger.exception(f'Problem with nic_raw {nic_raw}')
         device.cloud_id = raw_device_data["instance_id"]
         device.figure_os(raw_device_data.get("platform", ""))
         if raw_device_data.get('public_ip_address'):
@@ -156,9 +170,10 @@ class DivvycloudAdapter(AdapterBase):
                 ips.append(private_ip_address)
             public_ip_address = raw_device_data.get("public_ip_address")
             if public_ip_address:
+                device.add_public_ip(public_ip_address)
                 ips.append(public_ip_address)
 
-            device.add_nic(ips=ips)
+            device.add_ips_and_macs(ips=ips, macs=macs)
         except Exception:
             logger.exception(f"Problem parsing ip addresses")
 
@@ -196,9 +211,9 @@ class DivvycloudAdapter(AdapterBase):
 
     def _parse_raw_data(self, raw_data):
         try:
-            for raw_device_data in iter(raw_data):
+            for raw_device_data, nics_dict in iter(raw_data):
                 try:
-                    device = self.create_device(raw_device_data)
+                    device = self.create_device(raw_device_data, nics_dict)
                     yield device
                 except Exception:
                     logger.exception(f'Got an exception for raw_device_data: {raw_device_data}')

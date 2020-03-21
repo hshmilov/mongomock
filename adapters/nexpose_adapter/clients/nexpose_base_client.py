@@ -56,6 +56,6 @@ class NexposeClient(abc.ABC):
             # Parsing the timestamp and setting the tz to None.
             last_seen = dateutil.parser.parse(last_seen)
         except Exception as err:
-            raise
+            return None
 
         return last_seen

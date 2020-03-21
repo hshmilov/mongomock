@@ -104,6 +104,7 @@ class JuniperAdapter(AdapterBase, Configurable):
         assert isinstance(client_data, JuniperClient)
         try:
             return client_data.get_all_devices(fetch_space_only=self.__fetch_space_only,
+                                               fetch_only_client_info=self.__fetch_only_client_info,
                                                do_async=self.__do_async)
         except Exception:
             logger.exception(f'Failed to get all the devices from the client: {client_data[consts.JUNIPER_HOST]}')
@@ -143,10 +144,16 @@ class JuniperAdapter(AdapterBase, Configurable):
                     'name': 'fetch_space_only',
                     'title': 'Fetch Junos Space Juniper Devices Only',
                     'type': 'bool'
+                },
+                {
+                    'name': 'fetch_only_client_info',
+                    'type': 'bool',
+                    'title': 'Fetch Only Juniper Clients Information'
                 }
             ],
             'required': [
                 'do_async',
+                'fetch_only_client_info',
                 'fetch_space_only'
             ],
             'pretty_name': 'Junos Space Configuration',
@@ -157,9 +164,11 @@ class JuniperAdapter(AdapterBase, Configurable):
     def _db_config_default(cls):
         return {
             'do_async': True,
-            'fetch_space_only': False
+            'fetch_space_only': False,
+            'fetch_only_client_info': False
         }
 
     def _on_config_update(self, config):
         self.__do_async = config['do_async']
         self.__fetch_space_only = config['fetch_space_only']
+        self.__fetch_only_client_info = config.get('fetch_only_client_info') or False

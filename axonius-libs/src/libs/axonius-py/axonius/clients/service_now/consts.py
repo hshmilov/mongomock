@@ -17,6 +17,7 @@ DEPARTMENT_TABLE_KEY = 'department_table'
 LOCATION_TABLE_KEY = 'location_table'
 ALM_ASSET_TABLE = 'alm_hardware'
 COMPANY_TABLE = 'core_company'
+IPS_TABLE = 'u_ip_address'
 # pylint: disable=C0103
 INSTALL_STATUS_DICT = {'0': 'Retired',
                        '1': 'Deployed',

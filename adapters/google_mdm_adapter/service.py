@@ -288,6 +288,7 @@ class GoogleMdmAdapter(AdapterBase):
 
         try:
             phones = [p.get('value') for p in (raw_user_data.get('phones') or [])]
+            phones = list(set(phones))
             user.user_telephone_number = ','.join(phones)
         except Exception:
             logger.exception(f'Failed setting phones')

@@ -187,6 +187,8 @@ class CiscoMerakiAdapter(AdapterBase, Configurable):
                 device.device_manufacturer = (client_raw.get('extra_data') or {}).get('manufacturer')
                 device.ssid = (client_raw.get('extra_data') or {}).get('ssid')
                 device.first_seen = parse_date((client_raw.get('extra_data') or {}).get('firstSeen'))
+                if (client_raw.get('extra_data') or {}).get('user'):
+                    device.last_used_users.append((client_raw.get('extra_data') or {}).get('user'))
                 usage = (client_raw.get('extra_data') or {}).get('usage')
                 if isinstance(usage, dict):
                     device.bytes_recv = usage.get('recv') if isinstance(usage.get('recv'), int) else None

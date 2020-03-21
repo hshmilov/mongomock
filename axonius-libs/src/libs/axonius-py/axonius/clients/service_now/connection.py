@@ -80,6 +80,11 @@ class ServiceNowConnection(RESTConnection):
             companies_table = list(self.__get_devices_from_table(consts.COMPANY_TABLE))
         except Exception:
             logger.exception(f'Problem getting companies')
+        ips_table = []
+        try:
+            ips_table = list(self.__get_devices_from_table(consts.IPS_TABLE))
+        except Exception:
+            logger.exception(f'Problem getting ips')
         users_table_dict = dict()
         for user in users_table:
             if user.get('sys_id'):
@@ -118,6 +123,15 @@ class ServiceNowConnection(RESTConnection):
             if company.get('sys_id'):
                 companies_table_dict[company.get('sys_id')] = company
 
+        ips_table_dict = dict()
+        try:
+            for ip_data in ips_table:
+                if (ip_data.get('u_configuration_item') or {}).get('value'):
+                    if (ip_data.get('u_configuration_item') or {}).get('value') not in ips_table_dict:
+                        ips_table_dict[(ip_data.get('u_configuration_item') or {}).get('value')] = []
+                    ips_table_dict[(ip_data.get('u_configuration_item') or {}).get('value')].append(ip_data)
+        except Exception:
+            logger.exception('Problem parsing ips table')
         self.__users_table = users_table_dict
         for table_details in consts.TABLES_DETAILS:
             new_table_details = table_details.copy()
@@ -129,11 +143,13 @@ class ServiceNowConnection(RESTConnection):
             new_table_details[consts.DEPARTMENT_TABLE_KEY] = department_table_dict
             new_table_details[consts.ALM_ASSET_TABLE] = alm_asset_table_dict
             new_table_details[consts.COMPANY_TABLE] = companies_table_dict
+            new_table_details[consts.IPS_TABLE] = ips_table_dict
             tables_devices.append(new_table_details)
 
         return tables_devices
 
     def __get_devices_from_table(self, table_name, number_of_offsets=None):
+        logger.info(f'Fetching table {table_name}')
         if not number_of_offsets:
             number_of_offsets = self.__number_of_offsets
         number_of_exception = 0

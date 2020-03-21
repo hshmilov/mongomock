@@ -145,7 +145,8 @@ class DeviceAdapterOS(SmartJsonClass):
     type = Field(
         str, 'Type', enum=['Windows', 'Linux', 'OS X', 'iOS', 'AirOS',
                            'Android', 'FreeBSD', 'VMWare', 'Cisco', 'Mikrotik', 'VxWorks', 'PanOS',
-                           'F5 Networks Big-IP', 'Solaris', 'AIX', 'Printer', 'PlayStation', 'Check Point', "Arista"]
+                           'F5 Networks Big-IP', 'Solaris', 'AIX', 'Printer', 'PlayStation', 'Check Point', "Arista",
+                           'Netscaler']
     )
     distribution = Field(str, 'Distribution')
     is_windows_server = Field(bool, 'Is Windows Server')
@@ -503,6 +504,106 @@ class NmapPortInfo(SmartJsonClass):
     script_information = ListField(ScriptInformation, 'Script Information')
 
 
+class PortScriptInformation(SmartJsonClass):
+    script_id = Field(str, 'Script Id')
+    script_output = Field(str, 'Script Output')
+    protocol = Field(str, 'Protocol')
+    portid = Field(str, 'Port Id')
+
+
+QUALYS_SUB_CATEGORIES = ['Authenticated Discovery',
+                         'Malware Associated',
+                         'Unix Authenticated Discovery',
+                         'Remote Discovery',
+                         'Patch Available',
+                         'PANOS Authenticated Discovery',
+                         'MongoDB Authenticated Discovery',
+                         'MARIADB Authenticated Discovery',
+                         'Not exploitable due to configuration',
+                         'Exploit Available',
+                         'SNMP Authenticated Discovery',
+                         'Non-running services',
+                         'Windows Authenticated Discovery',
+                         'VMware Authenticated Discovery',
+                         'MySQL Authenticated Discovery',
+                         'Oracle Authenticated Discovery',
+                         'Remote DiscoveryAuthenticated Discovery',
+                         'DB2 Authenticated Discovery']
+
+QUALYS_CATEGORIES = ['Debian',
+                     'HP-UX',
+                     'Amazon Linux',
+                     'Hardware',
+                     'Fedora',
+                     'RPC',
+                     'Finger',
+                     'SUSE',
+                     'Database',
+                     'Web server',
+                     'VMware',
+                     'Firewall',
+                     'File Transfer Protocol',
+                     'News Server',
+                     'NFS',
+                     'CGI',
+                     'Solaris',
+                     'Oracle VM Server',
+                     'RedHat',
+                     'Windows',
+                     'Proxy',
+                     'Web Application Firewall',
+                     'Brute Force Attack',
+                     'General remote services',
+                     'Security Policy',
+                     'DNS and BIND',
+                     'Mail services',
+                     'Ubuntu',
+                     'Forensics',
+                     'Web Application',
+                     'SMB / NETBIOS',
+                     'X-Window',
+                     'OEL',
+                     'Cisco',
+                     'AIX',
+                     'CentOS',
+                     'Local',
+                     'Office Application',
+                     'Backdoors and trojan horses',
+                     'Internet Explorer',
+                     'E-Commerce',
+                     'SNMP',
+                     'Information gathering',
+                     'TCP/IP']
+
+QUALYS_VULN_TYPES = [
+    'Potential Vulnerability',
+    'Confirmed Vulnerability',
+    'Information Gathered'
+]
+
+
+class QualysAgentVuln(SmartJsonClass):
+    vuln_id = Field(str, 'Vuln ID')
+    first_found = Field(datetime.datetime, 'First Found')
+    last_found = Field(datetime.datetime, 'Last Found')
+    qid = Field(str, 'QID')
+    title = Field(str, 'Title')
+    category = Field(str, 'Category', enum=QUALYS_CATEGORIES)
+    sub_category = ListField(str, 'Sub Category', enum=QUALYS_SUB_CATEGORIES)
+    severity = Field(int, 'Severity')
+    vendor_reference = ListField(str, 'Vendor Reference')
+    qualys_cve_id = ListField(str, 'CVE ID')
+    cvss_base = Field(float, 'CVSS Base')
+    cvss3_base = Field(float, 'CVSS3 Base')
+    cvss_temporal_score = Field(float, 'CVSS Temporal Score')
+    cvss3_temporal_score = Field(float, 'CVSS3 Temporal Score')
+    cvss_access_vector = Field(float, 'CVSS Access Vector')
+    bugtraq_id = ListField(str, 'Bugtraq ID')
+    modified = Field(datetime.datetime, 'Modified')
+    published = Field(datetime.datetime, 'Published')
+    vuln_type = Field(str, 'Vulnerability Type', enum=QUALYS_VULN_TYPES)
+
+
 class DeviceAdapter(SmartJsonClass):
     """ A definition for the json-scheme for a Device """
     name = Field(str, 'Asset Name')
@@ -522,6 +623,7 @@ class DeviceAdapter(SmartJsonClass):
     )
     open_ports = ListField(DeviceOpenPort, 'Open Ports', json_format=JsonArrayFormat.table)
     ports_info = ListField(NmapPortInfo, 'Ports Information', json_format=JsonArrayFormat.table)
+    scripts_info = ListField(PortScriptInformation, 'Scripts Information', json_format=JsonArrayFormat.table)
     network_interfaces = ListField(
         DeviceAdapterNetworkInterface, 'Network Interfaces', json_format=JsonArrayFormat.table
     )
@@ -629,6 +731,7 @@ class DeviceAdapter(SmartJsonClass):
     uuid = Field(str, 'UUID')
     plugin_and_severities = ListField(TenableVulnerability, 'Plugins Information',
                                       json_format=JsonArrayFormat.table)
+    qualys_agent_vulns = ListField(QualysAgentVuln, 'Vulnerabilities', json_format=JsonArrayFormat.table)
     registry_information = ListField(
         RegistryInfomation, 'Registry Information', json_format=JsonArrayFormat.table
     )

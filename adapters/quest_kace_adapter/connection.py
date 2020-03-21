@@ -36,7 +36,8 @@ class QuestKaceConnection(RESTConnection):
     def get_device_list(self):
         offset = 0
         was_execption = False
-        response = self._get(f'api/inventory/machines?paging=limit {DEVICE_PER_PAGE} offset {offset}')
+        response = self._get(f'api/inventory/machines?shaping=machine all,software standard&'
+                             f'paging=limit {DEVICE_PER_PAGE} offset {offset}')
         yield from response['Machines']
         count = response['Count']
         offset += DEVICE_PER_PAGE

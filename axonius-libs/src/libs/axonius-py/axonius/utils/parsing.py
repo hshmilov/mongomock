@@ -355,6 +355,8 @@ def figure_out_os(s):
         os_type = 'PlayStation'
     elif 'check point' in s.lower():
         os_type = 'Check Point'
+    elif 'netscaler' in s.lower():
+        os_type = 'Netscaler'
 
     return_dict = {'type': os_type,
                    'distribution': distribution,
@@ -406,8 +408,8 @@ def not_wifi_adapter(adapter_device):
     if adapter_device.get('plugin_name').lower() == 'aruba_adapter' or \
             (adapter_device.get('plugin_name').lower() == 'cisco_prime_adapter' and
              adapter_device['data'].get('fetch_proto') == 'PRIME_WIFI_CLIENT') or\
-            (adapter_device.get('plugin_name').lower() == 'tanium_adapter' and
-             adapter_device['data'].get('tanium_type') == 'Discover Device') or is_counter_act_adapter(adapter_device):
+            (adapter_device.get('plugin_name').lower() == 'tanium_discover_adapter') \
+            or is_counter_act_adapter(adapter_device):
         return False
     return True
 
@@ -887,12 +889,6 @@ def is_snow_device(adapter_device):
     return adapter_device.get('plugin_name') == 'service_now_adapter'
 
 
-def is_from_twistlock_or_aws(adapter_device):
-    return (adapter_device.get('plugin_name') == 'aws_adapter' and
-            adapter_device['data'].get('aws_device_type') == 'EC2') or \
-        adapter_device.get('plugin_name') == 'twistlock_adapter'
-
-
 def is_from_deeps_or_aws(adapter_device):
     return (adapter_device.get('plugin_name') == 'aws_adapter' and
             adapter_device['data'].get('aws_device_type') == 'EC2') \
@@ -939,7 +935,10 @@ def is_from_ad(adapter_device):
 
 
 def get_azure_ad_id(adapter_device):
-    return adapter_device.get('data').get('azure_ad_id') or adapter_device.get('data').get('azure_device_id')
+    azure_ad_id = adapter_device.get('data').get('azure_ad_id') or adapter_device.get('data').get('azure_device_id')
+    if azure_ad_id != '00000000-0000-0000-0000-000000000000':
+        return azure_ad_id
+    return None
 
 
 def compare_azure_ad_id(adapter_device1, adapter_device2):

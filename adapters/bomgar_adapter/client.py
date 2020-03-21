@@ -89,6 +89,7 @@ class BomgarConnection(object):
             raise BomgarConnectionError(error)
         self.set_token(response['access_token'], response.get('token_type'))
         self.session = session
+        self.get_api_info()
 
     def _get(self, action, params=None, command=True, is_text=True):
         if not self.is_connected:

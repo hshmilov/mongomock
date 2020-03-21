@@ -184,7 +184,7 @@ class CarbonblackDefenseAdapter(AdapterBase, Configurable):
                 return None
             device.basic_device_id = device_id
             hostname = device_raw.get('name')
-            if ' (S-1-5-21' in hostname:
+            if hostname and ' (S-1-5-21' in hostname:
                 hostname = hostname[:hostname.find(' (S-1-5-21')]
             if hostname and '\\' in hostname:
                 split_hostname = hostname.split('\\')

@@ -70,6 +70,7 @@ class CrowdStrikeAdapter(AdapterBase, Configurable):
         sensor_update_policy = Field(Policy, 'Sensor Update Policy')
         cs_agent_version = Field(str, 'CrowdStrike Agent Version')
         system_product_name = Field(str, 'System Product Name')
+        full_osx_version = Field(str, 'Full OS X Version')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -246,6 +247,12 @@ class CrowdStrikeAdapter(AdapterBase, Configurable):
                     device.figure_os((device_raw.get('platform_name') or '') +
                                      (device_raw.get('os_version') or ''))
                     device.os.build = device_raw.get('build_number')
+                    try:
+                        if device.os.type == 'OS X':
+                            device.full_osx_version = device_raw.get('os_version').split(' ')[-1].strip(')').strip('(')\
+                                + '.' + device_raw.get('minor_version')
+                    except Exception:
+                        pass
                 except Exception:
                     logger.exception(f'Problem getting OS for {device_raw}')
                 try:

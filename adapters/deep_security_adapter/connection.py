@@ -24,4 +24,4 @@ class DeepSecurityConnection(RESTConnection):
             raise RESTException(f'Bad response: {response}')
 
     def get_device_list(self):
-        yield from self._get('computers', url_params={'expand': 'none'})['computers']
+        yield from self._get('computers', url_params={'expand': 'computerStatus'})['computers']

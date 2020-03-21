@@ -70,6 +70,7 @@ class MSSQLConnection(AbstractSQLConnection):
         :param sql: SQL query
         :return: Array of dictionaries
         """
+        logger.info(f'SQL query: {sql}')
         self.reconnect()    # Reconnect on every query to ensure a valid-state cursor.
         try:
             cursor = self.db.cursor()

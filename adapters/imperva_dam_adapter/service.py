@@ -22,6 +22,7 @@ class ImpervaDamAdapter(AdapterBase):
         general_status = Field(str, 'General Status')
         start_time = Field(datetime.datetime, 'Start Time')
         last_status_update = Field(datetime.datetime, 'Last Status Update')
+        last_activity = Field(datetime.datetime, 'Last Activity')
         throughput_kb = Field(int, 'Throughput Kb')
         connections_per_sec = Field(int, 'Connections Per Second')
         hits_per_sec = Field(int, 'Hits Per Second')
@@ -147,8 +148,14 @@ class ImpervaDamAdapter(AdapterBase):
                     device_status = {}
                 device.general_status = device_status.get('general-status')
                 device.start_time = parse_date(device_status.get('start-time'))
-                device.last_status_update = parse_date(device_status.get('last-status-update'))
-                device.last_seen = parse_date(device_status.get('last-activity'))
+                last_status_update = parse_date(device_status.get('last-status-update'))
+                device.last_status_update = last_status_update
+                last_activity = parse_date(device_status.get('last-activity'))
+                last_seen = None
+                if last_activity and last_status_update:
+                    last_seen = max(last_status_update, last_activity)
+                elif last_activity or last_status_update:
+                    last_seen = last_activity or last_status_update
                 try:
                     device.connections_per_sec = int(device_status.get('connections-per-sec'))
                 except Exception:
@@ -177,6 +184,9 @@ class ImpervaDamAdapter(AdapterBase):
                 if not isinstance(device_info, dict):
                     device_info = {}
                 device.creation_time = parse_date(device_info.get('creation-time'))
+                if not last_seen:
+                    last_seen = parse_date(device_info.get('creation-time'))
+                device.last_seen = last_seen
                 device.manual_settings_activation = device_info.get('manual-settings-activation')
 
             except Exception:

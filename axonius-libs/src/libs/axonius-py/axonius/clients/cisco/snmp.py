@@ -37,6 +37,7 @@ class SingletonEngine(metaclass=Singleton):
         return self.engine
 
     def close_instance(self):
+
         dispatcher = self.engine.transportDispatcher
         if dispatcher:
             dispatcher.closeDispatcher()
@@ -51,7 +52,10 @@ def run_event_loop(tasks):
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
     tasks, _ = loop.run_until_complete(asyncio.wait(tasks))
-    SingletonEngine().close_instance()
+    try:
+        SingletonEngine().close_instance()
+    except Exception:
+        pass
     return map(lambda x: x.result(), tasks)
 
 

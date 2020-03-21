@@ -146,18 +146,18 @@ class TestDashboardActions(TestBase):
         with self._edit_and_assert_chart(card, ['2'], self.HISTOGRAM_CHART_TYPE):
             self.dashboard_page.fill_chart_segment_filter(OS_SERVICE_PACK_OPTION_NAME, '1')
 
-        with self._edit_and_assert_chart(card, ['7', '1'], self.HISTOGRAM_CHART_TYPE):
+        with self._edit_and_assert_chart(card, ['13', '3'], self.HISTOGRAM_CHART_TYPE):
             self.dashboard_page.select_chart_wizard_module(USERS_MODULE)
             self.dashboard_page.select_chart_view_name(self.NON_LOCAL_USERS_QUERY_NAME)
             self.dashboard_page.select_chart_wizard_field(IS_ADMIN_OPTION_NAME)
 
-        with self._edit_and_assert_chart(card, ['3'], self.HISTOGRAM_CHART_TYPE):
+        with self._edit_and_assert_chart(card, ['5', '1'], self.HISTOGRAM_CHART_TYPE):
             self.dashboard_page.select_chart_view_name(self.AD_BAD_CONFIG_QUERY_NAME)
 
         with self._edit_and_assert_chart(card, ['6'], self.HISTOGRAM_CHART_TYPE):
             self.dashboard_page.select_chart_wizard_field(IS_LOCAL_OPTION_NAME)
 
-        with self._edit_and_assert_chart(card, ['88', '13'], self.PIE_CHART_TYPE):
+        with self._edit_and_assert_chart(card, ['81', '19'], self.PIE_CHART_TYPE):
             self.dashboard_page.select_chart_view_name(self.NON_LOCAL_USERS_QUERY_NAME)
             self.dashboard_page.select_chart_wizard_field(IS_ADMIN_OPTION_NAME)
             self.dashboard_page.change_chart_type(self.PIE_CHART_TYPE)

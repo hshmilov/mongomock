@@ -62,7 +62,7 @@ from axonius.consts.plugin_consts import (ADAPTERS_LIST_LENGTH,
                                           CORE_UNIQUE_NAME, CORRELATE_BY_USERNAME_DOMAIN_ONLY,
                                           CORRELATE_BY_EMAIL_PREFIX, CORRELATE_AD_SCCM, CORRELATE_AD_DISPLAY_NAME,
                                           CSV_FULL_HOSTNAME, CORRELATE_BY_SNOW_MAC,
-                                          CORRELATION_SETTINGS,
+                                          CORRELATION_SETTINGS, CORRELATE_BY_AZURE_AD_NAME_ONLY,
                                           GUI_PLUGIN_NAME,
                                           MAX_WORKERS,
                                           NODE_ID, NODE_INIT_NAME,
@@ -85,7 +85,7 @@ from axonius.consts.plugin_consts import (ADAPTERS_LIST_LENGTH,
                                           NODE_USER_PASSWORD, REPORTS_PLUGIN_NAME, EXECUTION_PLUGIN_NAME,
                                           NODE_ID_ENV_VAR_NAME,
                                           HEAVY_LIFTING_PLUGIN_NAME, SOCKET_READ_TIMEOUT,
-                                          DEFAULT_SOCKET_READ_TIMEOUT, DEFAULT_SOCKET_RECV_TIMEOUT,
+                                          DEFAULT_SOCKET_READ_TIMEOUT, DEFAULT_SOCKET_RECV_TIMEOUT, UPPERCASE_HOSTNAMES,
                                           STATIC_ANALYSIS_SETTINGS, FETCH_EMPTY_VENDOR_SOFTWARE_VULNERABILITES,
                                           FIRST_FETCH_TIME, FETCH_TIME,
                                           KEYS_COLLECTION, DB_KEY_ENV_VAR_NAME,
@@ -2328,7 +2328,7 @@ class PluginBase(Configurable, Feature, ABC):
                     current_correlation_reason = \
                         f'Between adapters: ' \
                         f'{",".join([x[0] for x in correlation.associated_adapters])}\n' \
-                        f'Device IDs: {",".join([x[1] for x in correlation.associated_adapters])}\n' \
+                        f'Device IDs: {"$$$$".join([x[1] for x in correlation.associated_adapters])}\n' \
                         f'Reason: {correlation.data.get("Reason", None)}'
 
                     if current_correlation_reason not in correlation_reasons:
@@ -2925,6 +2925,7 @@ class PluginBase(Configurable, Feature, ABC):
         self._correlate_ad_sccm = config[CORRELATION_SETTINGS].get(CORRELATE_AD_SCCM, True)
         self._csv_full_hostname = config[CORRELATION_SETTINGS].get(CSV_FULL_HOSTNAME, True)
         self._correlate_by_snow_mac = config[CORRELATION_SETTINGS].get(CORRELATE_BY_SNOW_MAC, False)
+        self._correlate_azure_ad_name_only = config[CORRELATION_SETTINGS].get(CORRELATE_BY_AZURE_AD_NAME_ONLY, False)
         self._jira_settings = config['jira_settings']
         self._proxy_settings = config[PROXY_SETTINGS]
         self._vault_settings = config['vault_settings']
@@ -2933,6 +2934,7 @@ class PluginBase(Configurable, Feature, ABC):
 
         self._socket_recv_timeout = DEFAULT_SOCKET_RECV_TIMEOUT
         self._socket_read_timeout = DEFAULT_SOCKET_READ_TIMEOUT
+        self._uppercase_hostnames = config[AGGREGATION_SETTINGS].get(UPPERCASE_HOSTNAMES) or False
         try:
             socket_read_timeout = int(config[AGGREGATION_SETTINGS].get(SOCKET_READ_TIMEOUT))
             if socket_read_timeout > 0:
@@ -3418,13 +3420,18 @@ class PluginBase(Configurable, Feature, ABC):
                             'name': CORRELATE_BY_SNOW_MAC,
                             'type': 'bool',
                             'title': 'Correlate ServiceNow adapter based on MAC address only'
+                        },
+                        {
+                            'name': CORRELATE_BY_AZURE_AD_NAME_ONLY,
+                            'type': 'bool',
+                            'title': 'Correlate Azure AD based on name only'
                         }
                     ],
                     'name': CORRELATION_SETTINGS,
                     'title': 'Correlation Settings',
                     'type': 'array',
                     'required': [CORRELATE_BY_EMAIL_PREFIX, CORRELATE_AD_DISPLAY_NAME,
-                                 CORRELATE_AD_SCCM, CSV_FULL_HOSTNAME,
+                                 CORRELATE_AD_SCCM, CSV_FULL_HOSTNAME, CORRELATE_BY_AZURE_AD_NAME_ONLY,
                                  CORRELATE_BY_SNOW_MAC, CORRELATE_BY_USERNAME_DOMAIN_ONLY]
                 },
                 {
@@ -3469,12 +3476,17 @@ class PluginBase(Configurable, Feature, ABC):
                             'name': SOCKET_READ_TIMEOUT,
                             'title': 'Socket read-timeout in seconds',
                             'type': 'integer'
+                        },
+                        {
+                            'name': UPPERCASE_HOSTNAMES,
+                            'title': 'Uppercase All Hostname',
+                            'type': 'bool'
                         }
                     ],
                     'name': AGGREGATION_SETTINGS,
                     'title': 'Aggregation Settings',
                     'type': 'array',
-                    'required': [MAX_WORKERS, SOCKET_READ_TIMEOUT]
+                    'required': [MAX_WORKERS, SOCKET_READ_TIMEOUT, UPPERCASE_HOSTNAMES]
                 },
                 {
                     'items': [
@@ -3612,7 +3624,8 @@ class PluginBase(Configurable, Feature, ABC):
             },
             AGGREGATION_SETTINGS: {
                 MAX_WORKERS: 20,
-                SOCKET_READ_TIMEOUT: 5
+                SOCKET_READ_TIMEOUT: 5,
+                UPPERCASE_HOSTNAMES: False
             },
             'getting_started_checklist': {
                 'enabled': False,

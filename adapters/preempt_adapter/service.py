@@ -311,7 +311,7 @@ class PreemptAdapter(AdapterBase, Configurable):
     def _db_config_default(cls):
         return {
             'drop_no_last_seen': True,
-            'drop_no_hostname': False
+            'drop_no_hostname': True
         }
 
     def _on_config_update(self, config):

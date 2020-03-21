@@ -4,7 +4,7 @@ from typing import Optional
 
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.exception import RESTException
-from infoblox_adapter.consts import MAX_NUMBER_OF_PAGES, RESULTS_PER_PAGE
+from infoblox_adapter.consts import MAX_NUMBER_OF_PAGES, RESULTS_PER_PAGE, LEASE_TYPE, A_TYPE
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -107,4 +107,11 @@ class InfobloxConnection(RESTConnection):
                             break
             except Exception:
                 pass
-            yield lease_raw
+            yield lease_raw, LEASE_TYPE
+        try:
+            for record_raw in self.__get_items_from_url('record:a',
+                                                        url_params={'_return_fields': 'discovered_data,'
+                                                                                      'ipv4addr,name'}):
+                yield record_raw, A_TYPE
+        except Exception:
+            logger.info(f'Could not get A records', exc_info=True)

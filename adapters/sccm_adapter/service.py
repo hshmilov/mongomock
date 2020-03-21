@@ -52,6 +52,8 @@ class DriverData(SmartJsonClass):
     driver_name = Field(str, 'Driver Name')
     driver_description = Field(str, 'Driver Description')
     driver_version = Field(str, 'Driver Version')
+    driver_provider = Field(str, 'Driver Provider')
+    driver_date = Field(datetime.datetime, 'Driver Date')
 
 
 class SccmVm(SmartJsonClass):
@@ -90,6 +92,7 @@ class SccmAdapter(AdapterBase, Configurable):
         collections = ListField(str, 'Collections')
         compliance_status = Field(str, 'Compliance Status')
         drivers_data = ListField(DriverData, 'Drivers Data')
+        network_drivers_data = ListField(DriverData, 'Network Drivers Data')
 
         def add_sccm_vm(self, **kwargs):
             try:
@@ -365,6 +368,18 @@ class SccmAdapter(AdapterBase, Configurable):
             except Exception:
                 logger.warning(f'Problem getting query patch', exc_info=True)
 
+            network_drivers_dict = dict()
+            try:
+                for network_drivers_data in client_data.query(consts.NETWORK_DRIVERS_QUERY):
+                    asset_id = network_drivers_data.get('ResourceID')
+                    if not asset_id:
+                        continue
+                    if asset_id not in network_drivers_dict:
+                        network_drivers_dict[asset_id] = []
+                    network_drivers_dict[asset_id].append(network_drivers_data)
+            except Exception:
+                logger.warning(f'Problem getting network query patch', exc_info=True)
+
             asset_patch_dict = dict()
             try:
                 for asset_patch_data in client_data.query(consts.QUERY_PATCH):
@@ -413,7 +428,8 @@ class SccmAdapter(AdapterBase, Configurable):
                     asset_lenovo_dict, asset_chasis_dict, asset_encryption_dict,\
                     asset_vm_dict, owner_dict, tpm_dict, computer_dict,\
                     clients_dict, os_dict, nics_dict, collections_dict,\
-                    collections_data_dict, compliance_dict, local_admins_dict, drivers_dict, ram_dict
+                    collections_data_dict, compliance_dict, local_admins_dict,\
+                    drivers_dict, ram_dict, network_drivers_dict
 
     def _clients_schema(self):
         return {
@@ -449,7 +465,8 @@ class SccmAdapter(AdapterBase, Configurable):
             clients_dict,
             os_dict,
             nics_dict,
-            collections_dict, collections_data_dict, compliance_dict, local_admins_dict, drivers_dict, ram_dict
+            collections_dict, collections_data_dict, compliance_dict,
+            local_admins_dict, drivers_dict, ram_dict, network_drivers_dict
         ) in devices_raw_data:
             try:
                 device_id = device_raw.get('Distinguished_Name0')
@@ -462,6 +479,10 @@ class SccmAdapter(AdapterBase, Configurable):
                         continue
                 device = self._new_device_adapter()
                 device.sccm_server = sccm_server
+                try:
+                    device.ad_distinguished_name = device_raw.get('Distinguished_Name0')
+                except Exception:
+                    pass
                 os_data = os_dict.get(device_raw.get('ResourceID'))
                 if not isinstance(os_data, dict):
                     os_data = {}
@@ -528,9 +549,12 @@ class SccmAdapter(AdapterBase, Configurable):
                     device_id += f'${device.hostname}'
 
                 device.id = device_id
-
-                device.figure_os((device_raw.get('operatingSystem0') or '') + ' ' +
-                                 (device_raw.get('Operating_System_Name_and0') or ''))
+                try:
+                    device.figure_os((device_raw.get('operatingSystem0') or '') + ' ' +
+                                     (device_raw.get('Operating_System_Name_and0') or ''))
+                    device.os.build = device_raw.get('BuildExt') or device_raw.get('Build01')
+                except Exception:
+                    pass
                 mac_total = []
                 ips_total = []
                 for nic in (device_raw.get('Network Interfaces') or '').split(';'):
@@ -612,6 +636,26 @@ class SccmAdapter(AdapterBase, Configurable):
                         device.top_user = top_data.get('TopConsoleUser0')
                 except Exception:
                     logger.exception(f'Problem getting top user data dor {device_raw}')
+
+                try:
+                    if isinstance(network_drivers_dict.get(device_raw.get('ResourceID')), list):
+                        for network_drivers_data in network_drivers_dict.get(device_raw.get('ResourceID')):
+                            try:
+                                driver_name = network_drivers_data.get('name0')
+                                driver_description = network_drivers_data.get('DriverDesc0')
+                                driver_version = network_drivers_data.get('DriverVersion0')
+                                driver_provider = network_drivers_data.get('ProviderName0')
+                                driver_date = parse_date(network_drivers_data.get('DriverDate0'))
+                                device.drivers_data.append(DriverData(driver_name=driver_name,
+                                                                      driver_description=driver_description,
+                                                                      driver_version=driver_version,
+                                                                      driver_provider=driver_provider,
+                                                                      drivers_date=driver_date))
+
+                            except Exception:
+                                logger.exception(f'Problem with drivers data {network_drivers_data}')
+                except Exception:
+                    logger.exception(f'Problem getting drivers data dor {device_raw}')
 
                 try:
                     if isinstance(drivers_dict.get(device_raw.get('ResourceID')), list):

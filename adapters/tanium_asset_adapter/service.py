@@ -153,7 +153,11 @@ class TaniumAssetAdapter(AdapterBase):
         name = tools.parse_str(device_raw.get('cpu_name'))
         cores = tools.parse_int(device_raw.get('cpu_core'))
         manufacturer = tools.parse_str(device_raw.get('cpu_manufacturer'))
-        ghz = tools.parse_int(tools.parse_str(device_raw.get('cpu_speed')).replace('ghz', ''))
+        ghz = None
+        try:
+            ghz = tools.parse_int(tools.parse_str(device_raw.get('cpu_speed')).replace('ghz', ''))
+        except Exception:
+            pass
 
         try:
             ghz = None if ghz is None else (ghz / 1000 / 1000 / 1000)

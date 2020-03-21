@@ -124,6 +124,8 @@ class AirwatchAdapter(AdapterBase):
     def _create_not_enrolled_device(self, device_raw):
         try:
             device = self._new_device_adapter()
+            if not device_raw.get('deviceSerialNumber'):
+                return None
             device.id = device_raw.get('deviceSerialNumber')
             device.airwatch_type = NOT_ENROLLED_DEVICE
             device.device_serial = device_raw.get('deviceSerialNumber')
@@ -161,10 +163,19 @@ class AirwatchAdapter(AdapterBase):
                 device.email = device_raw.get('UserEmailAddress')
                 try:
                     network_raw = device_raw.get('Network') or {}
+                    nics_raw = network_raw.get('DeviceNetworkInfo')
+                    if not isinstance(nics_raw, list):
+                        nics_raw = []
+                    macs = []
+                    for nic_raw in nics_raw:
+                        if isinstance(nic_raw, dict) and nic_raw.get('ConnectionType') == 'Ethernet':
+                            macs.append(nic_raw.get('MACAddress'))
                     wifi_info = network_raw.get('WifiInfo') or {}
                     mac_address = wifi_info.get('WifiMacAddress', device_raw.get('MacAddress'))
                     if not mac_address or mac_address == '0.0.0.0':
                         mac_address = None
+                    else:
+                        macs.append(mac_address)
                     ipaddresses_raw = network_raw.get('IPAddress') or []
                     ipaddresses = []
                     falsed_ips = ['0.0.0.0', '127.0.0.1', '', None]
@@ -172,7 +183,7 @@ class AirwatchAdapter(AdapterBase):
                         if ipaddresses_raw[ipaddress_raw] not in falsed_ips:
                             ipaddresses.append(ipaddresses_raw[ipaddress_raw])
                     if ipaddresses != [] or mac_address is not None:
-                        device.add_nic(mac_address, ipaddresses)
+                        device.add_ips_and_macs(macs=macs, ips=ipaddresses)
                 except Exception:
                     logger.exception('Problem adding nic to Airwatch')
                 device.device_serial = device_raw.get('SerialNumber')

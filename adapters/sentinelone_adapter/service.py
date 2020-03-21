@@ -27,6 +27,7 @@ class SentineloneAdapter(AdapterBase):
         external_ip = Field(str, 'External IP')
         site_name = Field(str, 'Site Name')
         group_name = Field(str, 'Group Name')
+        machine_type = Field(str, 'Machine Type')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -263,6 +264,7 @@ class SentineloneAdapter(AdapterBase):
                     hostname = f'{hostname}.{ad_domain}'
                 device.hostname = hostname
             device.figure_os((device_raw.get('osType') or '') + ' ' + (device_raw.get('osName') or ''))
+            device.machine_type = device_raw.get('machineType')
             interfaces = device_raw.get('networkInterfaces') or []
             if not isinstance(interfaces, list):
                 interfaces = []

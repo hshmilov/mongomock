@@ -108,9 +108,8 @@ class WebscanExecutionMixIn(Triggerable):
         """
         logger.debug(f'Scanning {hostname}:{port}')
         # create a new connection
-        connection = WebscanConnection(domain=hostname, port=port, https_proxy=https_proxy,
-                                       fetch_ssllabs=fetch_ssllabs)
-        data = connection.get_device_list()
+        connection = WebscanConnection(domain=hostname, port=port, https_proxy=https_proxy)
+        data = connection.get_device_list(fetch_ssllabs=fetch_ssllabs)
         new_device = list(self._parse_raw_data(data))[0]
         if not new_device:
             return False

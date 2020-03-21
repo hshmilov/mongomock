@@ -24,13 +24,26 @@ class DivvyCloudConnection(RESTConnection):
             raise RESTException('No username or password')
 
     def get_device_list(self):
+        nics_dict = dict()
+        try:
+            for nic_raw in self._get_resource_entities('networkinterface'):
+                if isinstance(nic_raw, dict) and nic_raw.get('instance_id'):
+                    if nic_raw.get('instance_id') not in nics_dict:
+                        nics_dict[nic_raw.get('instance_id')] = []
+                    nics_dict[nic_raw.get('instance_id')].append(nic_raw)
+        except Exception:
+            logger.exception(f'Problem getting nics')
+        for device_raw in self._get_resource_entities('instance'):
+            yield device_raw, nics_dict
+
+    def _get_resource_entities(self, resource):
         def get_instances(offset):
             # There are many types of resources (networks, storage, and more).
             # We query only instances.
 
             instances_answer = self._post('v2/public/resource/query',
                                           body_params={
-                                              'selected_resource_type': 'instance',
+                                              'selected_resource_type': resource,
                                               'scopes': [],
                                               'filters': [],
                                               'offset': offset,
@@ -41,13 +54,13 @@ class DivvyCloudConnection(RESTConnection):
 
             instances = []
             for r in (instances_answer.get('resources') or []):
-                if r.get('instance') is not None:
-                    instances.append(r.get('instance'))
+                if r.get(resource) is not None:
+                    instances.append(r.get(resource))
 
             return instances_count, instances
 
         instances_count, first_instances = get_instances(0)
-        logger.info(f'We have {instances_count} instances. Querying them by batches of {consts.INSTANCES_QUERY_RATE}')
+        logger.info(f'We have {instances_count} {resource}. Querying them by batches of {consts.INSTANCES_QUERY_RATE}')
 
         # Return the first batch of instances
         number_of_instances_queried = consts.INSTANCES_QUERY_RATE

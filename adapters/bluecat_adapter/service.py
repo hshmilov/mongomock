@@ -17,6 +17,7 @@ from axonius.clients.postgres.connection import PostgresConnection
 from axonius.clients.postgres.consts import DEFAULT_POSTGRES_PORT
 from axonius.utils.parsing import int_to_mac
 from bluecat_adapter.connection import BluecatConnection
+from bluecat_adapter.consts import DEVICE_PER_PAGE
 from bluecat_adapter.client_id import get_client_id
 
 logger = logging.getLogger(f'axonius.{__name__}')
@@ -97,7 +98,8 @@ class BluecatAdapter(ScannerAdapterBase, Configurable):
         if client_type == API_CLIENT_TYPE:
             with client_data:
                 for device in client_data.get_device_list(self.__sleep_between_requests_in_sec,
-                                                          self.__get_extra_host_data):
+                                                          self.__get_extra_host_data,
+                                                          self.__device_per_page):
                     yield device, API_CLIENT_TYPE
         elif client_type == SQL_CLIENT_TYPE:
             with client_data:
@@ -351,6 +353,11 @@ class BluecatAdapter(ScannerAdapterBase, Configurable):
                     'name': 'drop_static_or_gateway_if_not_expirytime',
                     'title': 'Drop static/gateway records with no expiry time',
                     'type': 'bool'
+                },
+                {
+                    'name': 'device_per_page',
+                    'title': 'Entities Per Page',
+                    'type': 'integer'
                 }
             ],
             'required': ['get_extra_host_data', 'drop_static_or_gateway_if_not_expirytime'],
@@ -363,7 +370,8 @@ class BluecatAdapter(ScannerAdapterBase, Configurable):
         return {
             'sleep_between_requests_in_sec': 0,
             'get_extra_host_data': True,
-            'drop_static_or_gateway_if_not_expirytime': True
+            'drop_static_or_gateway_if_not_expirytime': True,
+            'device_per_page': DEVICE_PER_PAGE
         }
 
     def _on_config_update(self, config):
@@ -371,3 +379,4 @@ class BluecatAdapter(ScannerAdapterBase, Configurable):
         self.__get_extra_host_data = config.get('get_extra_host_data')
         self.__drop_static_or_gateway_if_not_expirytime = config.get(
             'drop_static_or_gateway_if_not_expirytime')
+        self.__device_per_page = config.get('device_per_page')

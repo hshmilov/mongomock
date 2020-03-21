@@ -162,7 +162,7 @@ class JuniperClient:
                         f'Got exception with device {current_device.name}')
             yield from map(lambda x: ('Juniper Device', x), juniper_devices.items())
 
-    def get_all_devices(self, fetch_space_only, do_async):
+    def get_all_devices(self, fetch_space_only, do_async, fetch_only_client_info=False):
         devices = self.space_rest_client.device_management.devices.get()
         for current_device in devices:
             yield ('Juniper Space Device', current_device)
@@ -170,16 +170,20 @@ class JuniperClient:
             return
         up_devices = [device for device in devices if device.connectionStatus == 'up']
         logger.info(f'Number of up devices is {len(up_devices)} out of {len(devices)}')
-        actions = [
-            ('LLDP Device', '<get-lldp-neighbors-information/>'),
-            ('ARP Device', '<get-arp-table-information/>'),
-            ('FDB Device', '<get-ethernet-switching-table-information/>'),
-            ('interface list', '<get-interface-information/>'),
-            ('hardware', '<get-chassis-inventory/>'),
-            ('version', '<get-software-information/>'),
-            ('vlans', '<get-ethernet-switching-interface-information>'
-                      '<detail/>'
-                      '</get-ethernet-switching-interface-information>'),
-            ('base-mac', '<get-chassis-mac-addresses/>'),
-        ]
+        if fetch_only_client_info:
+            extra_actions = []
+        else:
+            extra_actions = [
+                ('interface list', '<get-interface-information/>'),
+                ('hardware', '<get-chassis-inventory/>'),
+                ('version', '<get-software-information/>'),
+                ('vlans', '<get-ethernet-switching-interface-information>'
+                          '<detail/>'
+                          '</get-ethernet-switching-interface-information>'),
+                ('base-mac', '<get-chassis-mac-addresses/>'),
+            ]
+        client_actions = [('LLDP Device', '<get-lldp-neighbors-information/>'),
+                          ('ARP Device', '<get-arp-table-information/>'),
+                          ('FDB Device', '<get-ethernet-switching-table-information/>')]
+        actions = extra_actions + client_actions
         yield from self._do_junus_space_command(up_devices, 'get_info_q', actions, do_async)

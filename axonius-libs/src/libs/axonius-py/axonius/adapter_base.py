@@ -1150,6 +1150,11 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
             assert isinstance(parsed_device, DeviceAdapter)
             parsed_device.generate_direct_connected_devices()
             parsed_device.fetch_time = datetime.now()
+            try:
+                if self._uppercase_hostnames and parsed_device.hostname:
+                    parsed_device.hostname = parsed_device.hostname.upper()
+            except Exception:
+                pass
 
             # All scanners should have this automatically
             if self.plugin_subtype == PluginSubtype.ScannerAdapter:

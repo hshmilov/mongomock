@@ -212,12 +212,12 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, ActiveDirectory
     def _on_config_update(self, config):
         logger.info(f"Loading AD config: {config}")
         self.__dns_query_chunk_size = config['dns_chunk_size']
-        self.__sync_resolving = config['sync_resolving']
+        self.__sync_resolving = False
         self.__resolving_enabled = config['resolving_enabled']
-        self.__report_generation_interval = config['report_generation_interval']
+        self.__report_generation_interval = 30
         self.__fetch_users_image = config.get('fetch_users_image', True)
         self.__should_get_nested_groups_for_user = config.get('should_get_nested_groups_for_user', True)
-        self.__add_ip_conflict = config.get('add_ip_conflict', True)
+        self.__add_ip_conflict = False
         self.__ldap_page_size = config.get('ldap_page_size', DEFAULT_LDAP_PAGE_SIZE)
         self.__ldap_connection_timeout = config.get('ldap_connection_timeout', DEFAULT_LDAP_CONNECTION_TIMEOUT)
         self.__ldap_recieve_timeout = config.get('ldap_recieve_timeout', DEFAULT_LDAP_RECIEVE_TIMEOUT)
@@ -594,7 +594,10 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, ActiveDirectory
         ad_entity.ad_when_changed = parse_date(raw_data.get("whenChanged"))
         ad_entity.ad_when_created = parse_date(raw_data.get("whenCreated"))
         ad_entity.ad_is_critical_system_object = parse_bool_from_raw(raw_data.get("isCriticalSystemObject"))
-        ad_entity.ad_member_of = get_member_of_list_from_memberof(raw_data.get("memberOf"))
+        try:
+            ad_entity.ad_member_of = get_member_of_list_from_memberof(raw_data.get("memberOf"))
+        except Exception:
+            pass
         ad_entity.ad_managed_by = get_first_object_from_dn(raw_data.get('managedBy'))
         ad_entity.ad_msds_allowed_to_delegate_to = raw_data.get("msDS-AllowedToDelegateTo")
         ad_entity.ad_canonical_name = raw_data.get('canonicalName')
@@ -712,11 +715,17 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, ActiveDirectory
                 user.mail = user_raw.get("mail")
                 user.organizational_unit = get_organizational_units_from_dn(user_raw.get('distinguishedName'))
                 user.ad_user_principal_name = user_raw.get("userPrincipalName")
+                ad_member_of = get_member_of_list_from_memberof(user_raw.get("memberOf"))
+                is_admin = False
+                if isinstance(ad_member_of, list):
+                    for ad_group in ad_member_of:
+                        if isinstance(ad_group, str):
+                            if ad_group.split('.')[0].lower() == 'domain admins':
+                                is_admin = True
+                user.is_admin = is_admin
                 user.is_local = False
-                is_admin = user_raw.get("adminCount")
-                if is_admin is not None:
-                    user.is_admin = parse_bool_from_raw(is_admin)
-
+                user.ad_admin_count = user_raw.get("adminCount")\
+                    if isinstance(user_raw.get("adminCount"), int) else None
                 use_timestamps = []  # Last usage times
                 user.account_expires = parse_date(user_raw.get("accountExpires"))
                 user.last_bad_logon = parse_date(user_raw.get("badPasswordTime"))
@@ -1829,19 +1838,9 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, ActiveDirectory
                     'type': 'number'
                 },
                 {
-                    "name": "sync_resolving",
-                    "title": "Wait for DNS resolving",
-                    "type": "bool"
-                },
-                {
                     'name': 'verbose_auth_notifications',
                     'title': 'Show verbose notifications about connection failures',
                     'type': 'bool'
-                },
-                {
-                    "name": "report_generation_interval",
-                    "title": "Report generation interval (minutes)",
-                    "type": "number",
                 },
                 {
                     'name': 'fetch_users_image',
@@ -1851,11 +1850,6 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, ActiveDirectory
                 {
                     'name': 'should_get_nested_groups_for_user',
                     'title': 'Get nested group membership for each user',
-                    'type': 'bool'
-                },
-                {
-                    'name': 'add_ip_conflict',
-                    'title': 'Add IP conflict tags',
                     'type': 'bool'
                 },
                 {
@@ -1889,12 +1883,9 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, ActiveDirectory
             ],
             "required": [
                 'resolving_enabled',
-                "sync_resolving",
-                "report_generation_interval",
                 'fetch_users_image',
                 'should_get_nested_groups_for_user',
                 'ldap_page_size',
-                'add_ip_conflict',
                 'ldap_connection_timeout',
                 'ldap_recieve_timeout',
                 'verbose_auth_notifications'
@@ -1908,10 +1899,7 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, ActiveDirectory
         return {
             'resolving_enabled': True,
             'dns_chunk_size': 1000,
-            "sync_resolving": False,
-            "report_generation_interval": 30,
             'verbose_auth_notifications': False,
-            'add_ip_conflict': False,
             'fetch_users_image': True,
             'should_get_nested_groups_for_user': True,
             'ldap_page_size': DEFAULT_LDAP_PAGE_SIZE,

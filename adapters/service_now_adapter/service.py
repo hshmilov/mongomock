@@ -37,6 +37,9 @@ class ServiceNowAdapter(AdapterBase, Configurable):
         assigned_to = Field(str, 'Assigned To')
         install_status = Field(str, 'Install Status')
         assigned_to_location = Field(str, 'Assigned To Location')
+        assigned_to_country = Field(str, 'Assigned To Country')
+        assigned_to_business_unit = Field(str, 'Assigned To Business Unit')
+        manager_email = Field(str, 'Manager Email')
         purchase_date = Field(datetime.datetime, 'Purchase date')
         substatus = Field(str, 'Substatus')
         u_shared = Field(str, 'Shared')
@@ -73,13 +76,16 @@ class ServiceNowAdapter(AdapterBase, Configurable):
                            users_table_dict=None,
                            snow_nics_table_dict=None,
                            snow_alm_asset_table_dict=None,
-                           companies_table_dict=None):
+                           companies_table_dict=None,
+                           ips_table_dict=None):
         got_nic = False
         got_serial = False
         if snow_location_table_dict is None:
             snow_location_table_dict = dict()
         if snow_nics_table_dict is None:
             snow_nics_table_dict = dict()
+        if ips_table_dict is None:
+            ips_table_dict = dict()
         if snow_alm_asset_table_dict is None:
             snow_alm_asset_table_dict = dict()
         if users_table_dict is None:
@@ -213,6 +219,16 @@ class ServiceNowAdapter(AdapterBase, Configurable):
                                     logger.exception(f'Problem with snow nic {snow_nic}')
                     except Exception:
                         logger.warning(f'Problem adding assigned_to to {device_raw}', exc_info=True)
+                    try:
+                        snow_ips = ips_table_dict.get(device_raw.get('sys_id'))
+                        if isinstance(snow_ips, list):
+                            for snow_ip in snow_ips:
+                                try:
+                                    device.add_nic(ips=[snow_ip.get('u_address')])
+                                except Exception:
+                                    logger.exception(f'Problem with snow ips {snow_ips}')
+                    except Exception:
+                        logger.warning(f'Problem adding assigned_to to {device_raw}', exc_info=True)
                 if not install_status or self.__use_ci_table_for_install_status:
                     install_status = INSTALL_STATUS_DICT.get(device_raw.get('install_status'))
                 if self.__exclude_disposed_devices and install_status \
@@ -222,11 +238,24 @@ class ServiceNowAdapter(AdapterBase, Configurable):
             except Exception:
                 logger.warning(f'Problem at asset table information {device_raw}', exc_info=True)
 
+            owned_by = users_table_dict.get((device_raw.get('owned_by') or {}).get('value')) or {}
+            if owned_by:
+                device.owner = owned_by.get('name')
+                if owned_by.get('email'):
+                    device.email = owned_by.get('email')
+
             try:
                 assigned_to = users_table_dict.get((device_raw.get('assigned_to') or {}).get('value'))
                 if assigned_to:
                     device.assigned_to = assigned_to.get('name')
                     device.email = assigned_to.get('email')
+                    device.assigned_to_country = assigned_to.get('country')
+                    device.assigned_to_business_unit = assigned_to.get('u_business_unit')
+                    try:
+                        manager_value = (assigned_to.get('manager') or {}).get('value')
+                        device.manager_email = (users_table_dict.get(manager_value) or {}).get('email')
+                    except Exception:
+                        logger.exception(f'Problem getting manager {device_raw}')
                     try:
                         assigned_to_location_value = (assigned_to.get('location') or {}).get('value')
                         device.assigned_to_location = (snow_location_table_dict.get(
@@ -235,11 +264,7 @@ class ServiceNowAdapter(AdapterBase, Configurable):
                         logger.exception(f'Problem getting assing to location in {device_raw}')
             except Exception:
                 logger.exception(f'Problem adding assigned_to to {device_raw}')
-            owned_by = users_table_dict.get((device_raw.get('owned_by') or {}).get('value'))
-            if owned_by:
-                device.owner = owned_by.get('name')
-                if owned_by.get('email'):
-                    device.email = owned_by.get('email')
+
             try:
                 try:
                     vendor_link = (device_raw.get('vendor') or {}).get('value')
@@ -524,6 +549,7 @@ class ServiceNowAdapter(AdapterBase, Configurable):
             snow_nics_table_dict = table_devices_data.get(NIC_TABLE_KEY)
             snow_alm_asset_table_dict = table_devices_data.get(ALM_ASSET_TABLE)
             companies_table_dict = table_devices_data.get(COMPANY_TABLE)
+            ips_table_dict = table_devices_data.get(IPS_TABLE)
             for device_raw in table_devices_data[DEVICES_KEY]:
                 device = self.create_snow_device(device_raw=device_raw,
                                                  snow_department_table_dict=snow_department_table_dict,
@@ -532,6 +558,7 @@ class ServiceNowAdapter(AdapterBase, Configurable):
                                                  snow_nics_table_dict=snow_nics_table_dict,
                                                  users_table_dict=users_table_dict,
                                                  companies_table_dict=companies_table_dict,
+                                                 ips_table_dict=ips_table_dict,
                                                  fetch_ips=self.__fetch_ips,
                                                  table_type=table_devices_data[DEVICE_TYPE_NAME_KEY])
                 if device:

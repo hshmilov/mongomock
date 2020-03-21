@@ -11,6 +11,7 @@ import aiohttp
 from axonius.utils.json import from_json
 from axonius.async.utils import async_request
 from axonius.clients.rest.connection import RESTConnection
+from axonius.clients.rest.consts import get_default_timeout
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -42,11 +43,12 @@ class OktaConnection:
             'Authorization': f'SSWS {self.__api_key}'
         }
         response = requests.get(forced_url or uritools.urijoin(self.__base_url, api), params=params,
-                                headers=headers, proxies={'https': self.__https_proxy})
+                                headers=headers, proxies={'https': self.__https_proxy}, timeout=get_default_timeout())
         if response.status_code == 429:
             time.sleep(DEFAULT_SLEEP_TIME)
             response = requests.get(forced_url or uritools.urijoin(self.__base_url, api), params=params,
-                                    headers=headers, proxies={'https': self.__https_proxy})
+                                    headers=headers, proxies={'https': self.__https_proxy},
+                                    timeout=get_default_timeout())
         response.raise_for_status()
         return response
 
