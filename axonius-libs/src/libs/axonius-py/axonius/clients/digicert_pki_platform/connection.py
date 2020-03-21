@@ -25,7 +25,7 @@ class DigicertPkiPlatformConnection(RESTConnection):
 
     def __init__(self, domain: str, cert_file_data: bytes, private_key_data: bytes, *args, **kwargs):
 
-        super().__init__(*args, domain=domain, url_base_prefix='',
+        super().__init__(*args, domain=domain, url_base_prefix='', use_domain_path=True,
                          headers={'Content-Type': 'application/json', 'Accept': 'application/json'},
                          verify_ssl=DIGICERT_WEBSERVICES_CA.name,
                          **kwargs)
@@ -45,7 +45,7 @@ class DigicertPkiPlatformConnection(RESTConnection):
             if not self.add_ssl_cert(self.__cert_file.name, self.__private_key_file.name):
                 raise ValueError('Private and Certificate do no match')
             session.cert = self._session.cert
-            self.client = Client(f'{self._domain}/{WS_CERTMGMT_SERVICE}',
+            self.client = Client(f'{self._url}{WS_CERTMGMT_SERVICE}',
                                  transport=Transport(session=session))
         except Exception as e:
             raise RESTException(f'Failed connecting to PKI Platform: {str(e)}')

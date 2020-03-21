@@ -50,9 +50,10 @@ class DigicertPkiPlatformAdapter(AdapterBase):
     @staticmethod
     def _test_reachability(client_config):
         try:
+            url_for_reachability = RESTConnection.build_url(client_config['domain'], use_domain_path=True)
             # Note: https version is not reported as reachable without sufficient certificate, so we use the http one.
-            domain_for_reachability = client_config['domain'].replace('https://', 'http://')
-            return RESTConnection.test_reachability(domain_for_reachability,
+            url_for_reachability = url_for_reachability.replace('https://', 'http://', 1)
+            return RESTConnection.test_reachability(url_for_reachability,
                                                     https_proxy=client_config.get('https_proxy'))
         except Exception:
             logger.exception('Unexpected exception occurred during test_reachability')
