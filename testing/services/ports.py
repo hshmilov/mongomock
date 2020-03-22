@@ -82,6 +82,7 @@ DOCKER_PORTS = {
     'skybox-adapter':                   5841,
     'mssql-adapter':                    5870,
     'cloudflare-adapter':               5880,
+    'flexera-adapter':                  5883,
     'selenium-vnc':                     5900,
     'lansweeper-adapter':               5907,
     'portnox':                          5908,

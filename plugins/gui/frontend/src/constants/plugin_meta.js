@@ -220,6 +220,10 @@ export const pluginMeta = {
         link: 'https://docs.axonius.com/docs/symantec-dlp',
         description: 'Symantec DLP is a data loss protection and prevention solution. Its management console, the DLP Enforce Platform, and its reporting tool, IT Analytics for DLP, allows writing and enforce policies to reduce information risks.'
     },
+    flexera_adapter: {
+        title: 'Flexera IT Asset Management - BETA',
+        description: 'Flexera lets enterprises gain visibility and control of IT assets, reduce ongoing software costs, and maintain continuous license compliance.'
+    },
     arsenal_adapter: {
         title: 'Arsenal',
         description: 'Arsenal by Uber'

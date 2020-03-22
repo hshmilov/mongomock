@@ -1,0 +1,9 @@
+PASSWORD = 'password'
+USER = 'username'
+FLEXERA_HOST = 'server'
+FLEXERA_PORT = 'port'
+FLEXERA_DATABASE = 'database'
+DRIVER = 'driver'
+DEFAULT_FLEXERA_PORT = 1433
+DEVICES_FETECHED_AT_A_TIME = 'devices_fetched_at_a_time'
+FLEXERA_QUERY = 'Select * from ComputerResourceData'
