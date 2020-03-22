@@ -27,6 +27,11 @@ export const pluginMeta = {
         title: 'OpenVAS',
         description: 'OpenVAS is a full-featured vulnerability scanner. Its capabilities include unauthenticated testing, authenticated testing, various high level and low level Internet and industrial protocols, performance tuning for large-scale scans and a powerful internal programming language to implement any type of vulnerability test.'
     },
+    jira_adapter: {
+        title: 'Atlassian Jira Asset Platform',
+        link: 'https://docs.axonius.com/docs/atlassian-jira-asset-platform',
+        description: 'Atlassian Jira Asset Platform links software with Jira to populate an asset inventory, letting users query for assets and link them to issues.'
+    },
     arista_eos_adapter: {
         title: 'Arista Extensible Operating System (EOS)',
         link:'https://docs.axonius.com/docs/arista-eos',
