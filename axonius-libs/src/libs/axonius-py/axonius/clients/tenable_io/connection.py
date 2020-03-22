@@ -123,18 +123,41 @@ class TenableIoConnection(RESTConnection):
     def _set_api_headers(self):
         self._permanent_headers['X-ApiKeys'] = f'accessKey={self._access_key}; secretKey={self._secret_key}'
 
+    @staticmethod
+    def _handle_tenable_io_response(response, just_raise_error=False):
+        if just_raise_error or response.get('errorCode') or response.get('errorMessage'):
+            error = response.get('errorCode', 'Unknown connection error')
+            message = response.get('errorMessage', '')
+            if message:
+                error = '{0}: {1}'.format(error, message)
+            raise RESTException(error)
+
     def _connect(self):
         if self._should_use_token is True:
             response = self._post('session', body_params={'username': self._username, 'password': self._password})
             if 'token' not in response:
-                error = response.get('errorCode', 'Unknown connection error')
-                message = response.get('errorMessage', '')
-                if message:
-                    error = '{0}: {1}'.format(error, message)
-                raise RESTException(error)
+                self._handle_tenable_io_response(response, just_raise_error=True)
             self._set_token_headers(response['token'])
-        else:
-            self._get('scans')
+
+        # Make sure there are sufficient permissions (Administrator Role)
+        session = self._get('session')
+        self._handle_tenable_io_response(session)
+
+        if not session.get('permissions'):
+            raise RESTException(f'Unable to retrieve permissions.'
+                                f' make sure user was granted Administrator role')
+
+        try:
+            permissions = int(session['permissions'])
+        except Exception:
+            message = f'Invalid permissions found: {session["permissions"]}'
+            logger.exception(message)
+            raise RESTException(message)
+
+        # see: https://developer.tenable.com/docs/permissions
+        if permissions < 64:  # Administrator
+            raise RESTException(f'Insufficient permissions found.'
+                                f' Did you grant the user an Administrator Role?')
 
     def _get_export_data(self, export_type, action=None, epoch=None):
         if epoch is None:
