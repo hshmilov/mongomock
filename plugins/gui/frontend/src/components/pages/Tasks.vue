@@ -96,7 +96,7 @@
       }),
       fetchEnforcementIfNotExist() {
 
-        if(!this.currentEnforcementName) {
+        if(!this.currentEnforcementName && this.enforcementDesignated) {
           this.fetchEnforcmentAPI(this.enforcementDesignated)
         }
       },
