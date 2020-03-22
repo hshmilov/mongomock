@@ -708,8 +708,8 @@ def parse_entity_fields(entity_data, fields, include_details=False, field_filter
                 if not adapter.endswith('_adapter'):
                     continue
                 _adapter = entity_data['adapters_data'][adapter][0]
-                if 'Agent' in _adapter['adapter_properties'] and 'last_seen' in _adapter \
-                        and _adapter['last_seen'] > last_seen:
+                if 'adapter_properties' in _adapter and 'Agent' in _adapter['adapter_properties'] and 'last_seen' \
+                        in _adapter and _adapter['last_seen'] > last_seen:
                     if sub_property is not None and specific_property in _adapter:
                         try:
                             sub_property_val = _adapter[specific_property][sub_property] if \
@@ -756,8 +756,8 @@ def parse_entity_fields(entity_data, fields, include_details=False, field_filter
                     (last_seen == datetime(1970, 1, 1, 0, 0, 0) and val == ''):
                 if last_seen is None:
                     last_seen = datetime(1970, 1, 1, 0, 0, 0)
-                if 'Assets' in _adapter['adapter_properties'] and 'last_seen' in _adapter \
-                        and _adapter['last_seen'] > last_seen:
+                if 'adapter_properties' in _adapter and 'Assets' in _adapter['adapter_properties'] and 'last_seen' in \
+                        _adapter and _adapter['last_seen'] > last_seen:
                     if sub_property is not None and specific_property in _adapter:
                         try:
                             sub_property_val = _adapter[specific_property][sub_property] if \

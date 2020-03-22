@@ -2,14 +2,16 @@ import codecs
 import io
 from datetime import datetime
 
+import requests
 from flask import Response
 
 from axonius.entities import EntityType
-from axonius.plugin_base import PluginBase
+from axonius.plugin_base import PluginBase, return_error
 from axonius.consts.gui_consts import FILE_NAME_TIMESTAMP_FORMAT
 from axonius.consts.plugin_consts import HEAVY_LIFTING_PLUGIN_NAME
 
 CHUNK_SIZE = 1024
+GENERATE_CSV_TIMEOUT = 60 * 5
 
 
 def get_csv_from_heavy_lifting_plugin(mongo_filter, mongo_sort, mongo_projection, history: datetime,
@@ -60,14 +62,19 @@ def get_csv_file_from_heavy_lifting_plugin(query_name, mongo_filter, mongo_sort,
 
 def _get_csv_from_heavy_lifting(default_sort, entity_type, history, mongo_filter, mongo_projection, mongo_sort,
                                 field_filters: dict = None):
-    return PluginBase.Instance.request_remote_plugin('generate_csv', HEAVY_LIFTING_PLUGIN_NAME,
-                                                     'post',
-                                                     json={
-                                                         'mongo_filter': mongo_filter,
-                                                         'mongo_sort': mongo_sort,
-                                                         'mongo_projection': mongo_projection,
-                                                         'entity_type': entity_type.value,
-                                                         'default_sort': default_sort,
-                                                         'history': history,
-                                                         'field_filters': field_filters
-                                                     }, stream=True)
+    try:
+        return PluginBase.Instance.request_remote_plugin('generate_csv', HEAVY_LIFTING_PLUGIN_NAME,
+                                                         'post',
+                                                         json={
+                                                             'mongo_filter': mongo_filter,
+                                                             'mongo_sort': mongo_sort,
+                                                             'mongo_projection': mongo_projection,
+                                                             'entity_type': entity_type.value,
+                                                             'default_sort': default_sort,
+                                                             'history': history,
+                                                             'field_filters': field_filters
+                                                         }, stream=True, timeout=GENERATE_CSV_TIMEOUT)
+    except requests.Timeout:
+        return return_error('Connection timeout on request to heavy-lifting (for generating csv)')
+    except requests.ConnectionError:
+        return return_error('Connection error on request to heavy-lifting (for generating csv)')
