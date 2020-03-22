@@ -1,8 +1,14 @@
 import os
+import socket
 from pathlib import Path
 
 from axonius.consts.plugin_consts import AXONIUS_SETTINGS_DIR_NAME
 
+try:
+    socket.gethostbyname('nexus.axonius.lan')
+    NEXURL = 'nexus.axonius.lan/'
+except Exception:
+    NEXURL = 'nexus-public.axonius.com/'
 ####################################################################################################################
 # These consts include paths that are only relevant on the host machine (outside of the docker container context). #
 ####################################################################################################################
@@ -30,6 +36,6 @@ AXONIUS_NETWORK = 'axonius'
 WEAVE_NETWORK = 'axonius-weave'
 AXONIUS_DNS_SUFFIX = 'axonius.local'
 WEAVE_PATH = '/usr/local/bin/weave'
-DOCKERHUB_USER = 'nexus.axonius.lan/axonius'
+DOCKERHUB_USER = NEXURL + 'axonius'
 WEAVE_VERSION = '2.6.0'
-DOCKERHUB_URL = 'nexus.axonius.lan/'
+DOCKERHUB_URL = NEXURL
