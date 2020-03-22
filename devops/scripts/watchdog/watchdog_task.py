@@ -1,3 +1,4 @@
+import os
 import sys
 import daemonocle
 import logging
@@ -29,14 +30,19 @@ class WatchdogTask:
     def run(self):
         pass
 
-    def report_info(self, msg):
-        self.logger.info(msg)
+    def report_info(self, msg, **kwargs):
+        extra = {'pid': os.getpid()}
+        extra = {**extra, **kwargs}
+        self.logger.info(msg, extra=extra)
 
-    def report_error(self, msg):
-        self.logger.error(msg)
+    def report_error(self, msg, **kwargs):
+        extra = {'pid': os.getpid()}
+        extra = {**extra, **kwargs}
+        self.logger.error(msg, extra=extra)
 
     def report_metric(self, metric_name, metric_value, **kwargs):
-        log_metric(self.logger, metric_name=metric_name, metric_value=metric_value, **kwargs)
+        log_metric(self.logger, metric_name=metric_name, metric_value=metric_value,
+                   pid=os.getpid(), **kwargs)
 
     def start(self):
         daemon = daemonocle.Daemon(worker=self.run, pidfile=self.pidfile)
