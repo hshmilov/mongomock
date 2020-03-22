@@ -5,10 +5,11 @@ from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.connection import RESTException
-from axonius.devices.device_adapter import DeviceAdapter, AGENT_NAMES
+from axonius.devices.device_adapter import DeviceAdapter, AGENT_NAMES, DeviceAdapterSoftwareLibraryCVE
 from axonius.fields import Field
 from axonius.utils.datetime import parse_date
 from axonius.utils.files import get_local_config_file
+from axonius.utils.parsing import parse_versions_raw
 from contrast_security_adapter.connection import ContrastSecurityConnection
 from contrast_security_adapter.client_id import get_client_id
 
@@ -107,7 +108,7 @@ class ContrastSecurityAdapter(AdapterBase):
                 },
                 {
                     'name': 'api_key',
-                    'title': 'Api Key',
+                    'title': 'API Key',
                     'type': 'string',
                     'format': 'password'
                 },
@@ -180,6 +181,27 @@ class ContrastSecurityAdapter(AdapterBase):
         device.add_agent_version(agent=AGENT_NAMES.contrast,
                                  version=device_raw.get('agent_version'),
                                  status=agent_status)
+
+        for application in (device_raw.get('applications') or []):
+
+            device.add_installed_software(name=application.get('name'),
+                                          path=application.get('path'))
+
+            for library in (application.get('libs') or []):
+                for vuln in (library.get('vulns') or []):
+                    try:
+                        device.software_library_cves.append(DeviceAdapterSoftwareLibraryCVE(
+                            software_name=application.get('name'),
+                            library_name=library.get('file_name'),
+                            library_version=library.get('file_version'),
+                            library_version_raw=parse_versions_raw(library.get('file_version')),
+                            cve_id=vuln.get('name'),
+                            cvss=vuln.get('severity_value'),
+                            cve_severity=vuln.get('severity_code'),
+                            cve_description=vuln.get('description'),
+                        ))
+                    except Exception:
+                        logger.exception(f'Failed parsing vulnerability {vuln.get("name")} of library {library}')
 
     def _create_device(self, device_raw):
         try:

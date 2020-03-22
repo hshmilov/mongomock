@@ -1,6 +1,6 @@
 import logging
 import base64
-from typing import Optional, List, Generator, Tuple
+from typing import Optional, List, Generator
 from functools import partialmethod
 
 from axonius.clients.rest.connection import RESTConnection
@@ -13,7 +13,7 @@ logger = logging.getLogger(f'axonius.{__name__}')
 class ContrastSecurityConnection(RESTConnection):
     """ rest client for ContrastSecurity adapter """
 
-    def __init__(self, domain: str, service_key: str, org_uuids: Optional[List[str]], *args, **kwargs):
+    def __init__(self, domain: str, service_key: str, *args, org_uuids: Optional[List[str]] = None, **kwargs):
         super().__init__(*args, url_base_prefix='',
                          headers={'Content-Type': 'application/json',
                                   'Accept': 'application/json'},
@@ -61,50 +61,93 @@ class ContrastSecurityConnection(RESTConnection):
         response = self._get(consts.ALLOWED_ORGANIZATIONS_ENDPOINT)
         yield from response.get('organizations', [])
 
-    def iter_servers(self, include_applications=True) -> Generator[Tuple[str, dict], None, None]:
-        for org_uuid in self._org_uuids:
-            yield from ((org_uuid, server_dict) for server_dict in
-                        self._iter_servers_for_org(org_uuid, include_applications=include_applications))
-
-    def _iter_servers_for_org(self, org_uuid: str, include_applications=True):
+    def _iter_libraries_for_org(self, org_uuid: str):
         try:
-            url_params = {}
-            if include_applications:
-                url_params['expand'] = 'applications'
-            for response in self._paginated_get(f'ng/{org_uuid}/servers',
-                                                url_params=url_params):
-                servers = response.get('servers')
-                if not (servers and isinstance(servers, list)):
-                    logger.debug(f'No Servers returned for organization {org_uuid}')
-                    return
-                yield from servers
+            yield from self._paginated_get_iteration(f'ng/{org_uuid}/libraries/filter',
+                                                     pagination_list_field='libraries',
+                                                     url_params={'expand': 'vulns,apps,skip_links'})
+        except Exception as e:
+            logger.exception(f'Failed iterating libraries for organization {org_uuid}. error: {str(e)}')
+            return
+
+    def _iter_libraries_by_app_for_org(self, org_uuid: str):
+        libraries_by_app_id = {}
+        for library in self._iter_libraries_for_org(org_uuid):
+            for application in (library.get('apps') or []):
+                if not application.get('app_id'):
+                    logger.debug(f'Skipping application missing app_id, app: {application}')
+                    continue
+                libraries_by_app_id.setdefault(application['app_id'], []).append(library)
+            del library['apps']
+        return libraries_by_app_id
+
+    def _iter_applications_for_org(self, org_uuid: str):
+        try:
+            yield from self._paginated_get_iteration(f'ng/{org_uuid}/applications',
+                                                     pagination_list_field='applications',
+                                                     url_params={'expand': 'skip_links'})
+        except Exception as e:
+            logger.exception(f'Failed iterating applications for organization {org_uuid}. error: {str(e)}')
+            return
+
+    def _list_applications_by_app_id_for_org(self, org_uuid: str, include_libraries=True):
+        applications_by_app_id = {app_dict['app_id']: app_dict
+                                  for app_dict in self._iter_applications_for_org(org_uuid)}
+        if include_libraries:
+            libraries_by_app_id = self._iter_libraries_by_app_for_org(org_uuid)
+            for app_id, libraries in libraries_by_app_id.items():
+                if app_id not in applications_by_app_id:
+                    logger.warning(f'Failed to locate app {app_id}. Ditching its libraries')
+                    continue
+                applications_by_app_id[app_id].setdefault('libs', []).extend(libraries)
+        return applications_by_app_id
+
+    def _iter_servers_for_org(self, org_uuid: str):
+        try:
+            yield from self._paginated_get_iteration(f'ng/{org_uuid}/servers',
+                                                     pagination_list_field='servers',
+                                                     url_params={'expand': 'applications,skip_links'})
         except Exception as e:
             logger.exception(f'Failed iterating servers for organization {org_uuid}. error: {str(e)}')
             return
 
-    def _paginated_request(self, *args, **kwargs) -> Generator[dict, None, None]:
+    def _paginated_request_iteration(self, *args, pagination_list_field, **kwargs) -> Generator[dict, None, None]:
         """
         Only use paginated methods if the endpoint has 'limit' and 'offset'
         """
         url_params = kwargs.setdefault('url_params', {})
         url_params.setdefault('limit', consts.DEVICE_PER_PAGE)
-        count = url_params.setdefault('offset', 0)
-        # Perform perpetual requests until returned count is 0
+        count_so_far = url_params.setdefault('offset', 0)
+        total_count = 0
         while True:
             response = self._do_request(*args, **kwargs)
-            yield response
-            curr_count = response.get('count')
-            if curr_count < 1:
-                return
-            count += curr_count
-            url_params['offset'] = count
 
-    _paginated_get = partialmethod(_paginated_request, 'GET')
-    _paginated_post = partialmethod(_paginated_request, 'POST')
+            pagination_list = response.get(pagination_list_field) or []
+            if not isinstance(pagination_list, list):
+                logger.warning(f'Unknown "{pagination_list_field}" encountered on offset {count_so_far},'
+                               f' Halting. Value: {pagination_list}')
+                return
+
+            curr_count = len(pagination_list)
+            if total_count != response.get('count'):
+                total_count = int(response.get('count') or curr_count)
+                logger.info(f'Fetching overall {total_count} "{pagination_list_field}".')
+
+            logger.debug(f'yielding {curr_count}/{total_count} "{pagination_list_field}"')
+
+            yield from pagination_list
+
+            count_so_far += curr_count
+            if (curr_count < 1) or (count_so_far >= total_count):
+                logger.debug(f'Done paginated request')
+                return
+            url_params['offset'] = count_so_far
+
+    _paginated_get_iteration = partialmethod(_paginated_request_iteration, 'GET')
+    _paginated_post_iteration = partialmethod(_paginated_request_iteration, 'POST')
 
     # pylint: disable=arguments-differ
     def _handle_response(self, response, **kwargs):
-        logger.debug(response.text)
         response = super()._handle_response(response, **kwargs)
         # if success is present, use it! otherwise, just keep on.
         if not response.get('success', True):
@@ -112,4 +155,13 @@ class ContrastSecurityConnection(RESTConnection):
         return response
 
     def get_device_list(self):
-        yield from self.iter_servers()
+        for org_uuid in self._org_uuids:
+            org_applications_by_app_id = self._list_applications_by_app_id_for_org(org_uuid, include_libraries=True)
+            for server in self._iter_servers_for_org(org_uuid):
+                if server.get('applications'):
+                    server_app_ids = [app_dict['app_id'] for app_dict in (server.get('applications') or [])
+                                      if app_dict.get('app_id')]
+                    # run over the existing applications list with a more enriched version of it
+                    server['applications'] = [org_applications_by_app_id[app_id] for app_id in server_app_ids if
+                                              app_id in org_applications_by_app_id]
+                yield (org_uuid, server)

@@ -384,6 +384,20 @@ class DeviceAdapterSoftwareCVE(SmartJsonClass):
     version_raw = Field(str)
 
 
+class DeviceAdapterSoftwareLibraryCVE(SmartJsonClass):
+    """ A definition for a CVE that is available for a software's library"""
+    cve_id = Field(str, "CVE ID")
+    software_name = Field(str, "Software Name")
+    software_version = Field(str, "Software Version", json_format=JsonStringFormat.version)
+    software_vendor = Field(str, "Software Vendor")
+    library_name = Field(str, "Library Name")
+    library_version = Field(str, "Library Version", json_format=JsonStringFormat.version)
+    library_version_raw = Field(str, hidden=True)
+    cvss = Field(float, "CVSS")
+    cve_severity = Field(str, "CVE Severity", enum=["NONE", "LOW", "MEDIUM", "HIGH", "CRITICAL"])
+    cve_description = Field(str, "CVE Description")
+
+
 class ShareData(SmartJsonClass):
     name = Field(str, 'Name')
     description = Field(str, 'Description')
@@ -642,6 +656,8 @@ class DeviceAdapter(SmartJsonClass):
     available_security_patches = ListField(
         DeviceAdapterMsrcAvailablePatch, "OS Available Security Patches", json_format=JsonArrayFormat.table
     )
+    software_library_cves = ListField(DeviceAdapterSoftwareLibraryCVE, "Vulnerable Software Library",
+                                      json_format=JsonArrayFormat.table)
     connected_hardware = ListField(
         DeviceAdapterConnectedHardware, "Connected Hardware", json_format=JsonArrayFormat.table
     )
