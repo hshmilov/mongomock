@@ -747,7 +747,7 @@ class DeviceAdapter(SmartJsonClass):
     uuid = Field(str, 'UUID')
     plugin_and_severities = ListField(TenableVulnerability, 'Plugins Information',
                                       json_format=JsonArrayFormat.table)
-    qualys_agent_vulns = ListField(QualysAgentVuln, 'Vulnerabilities', json_format=JsonArrayFormat.table)
+    qualys_agent_vulns = ListField(QualysAgentVuln, 'Qualys Vulnerabilities', json_format=JsonArrayFormat.table)
     registry_information = ListField(
         RegistryInfomation, 'Registry Information', json_format=JsonArrayFormat.table
     )

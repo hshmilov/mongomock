@@ -34,6 +34,7 @@ export const pluginMeta = {
     },
     avamar_adapter: {
         title: 'Dell EMC Avamar',
+        link: 'https://docs.axonius.com/docs/dell-emc-avamar',
         description: 'Dell EMC Avamar is a backup and recovery solution that enables daily backups of physical and virtual environments, NAS servers, enterprise applications, remote offices and desktops/laptops.'
     },
     cisco_stealthwatch_adapter: {

@@ -148,7 +148,7 @@ class JuniperAdapter(AdapterBase, Configurable):
                 {
                     'name': 'fetch_only_client_info',
                     'type': 'bool',
-                    'title': 'Fetch Only Juniper Clients Information'
+                    'title': 'Fetch only Juniper clients information'
                 }
             ],
             'required': [

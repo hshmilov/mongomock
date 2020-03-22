@@ -356,7 +356,7 @@ class BluecatAdapter(ScannerAdapterBase, Configurable):
                 },
                 {
                     'name': 'device_per_page',
-                    'title': 'Entities Per Page',
+                    'title': 'Entities per page',
                     'type': 'integer'
                 }
             ],

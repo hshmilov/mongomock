@@ -305,12 +305,12 @@ class RiskiqAdapter(AdapterBase, Configurable):
             'items': [
                 {
                     'name': 'inventory_state_whitelist',
-                    'title': 'Inventory State Whitelist',
+                    'title': 'Inventory state whitelist',
                     'type': 'string'
                 },
                 {
                     'name': 'asset_status_whitelist',
-                    'title': 'Asset Status Whitelist',
+                    'title': 'Asset status whitelist',
                     'type': 'string'
                 }
             ],

@@ -416,7 +416,7 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
                 {
                     'name': 'fetch_vulnerabilities_data',
                     'type': 'bool',
-                    'title': 'Fetch Vulnerabilities Data'
+                    'title': 'Fetch vulnerabilities data'
                 }
             ],
             'required': [

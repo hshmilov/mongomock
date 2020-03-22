@@ -3424,7 +3424,7 @@ class PluginBase(Configurable, Feature, ABC):
                         {
                             'name': CORRELATE_BY_AZURE_AD_NAME_ONLY,
                             'type': 'bool',
-                            'title': 'Correlate Azure AD based on name only'
+                            'title': 'Correlate Microsoft Azure AD based on asset name only'
                         }
                     ],
                     'name': CORRELATION_SETTINGS,
@@ -3479,7 +3479,7 @@ class PluginBase(Configurable, Feature, ABC):
                         },
                         {
                             'name': UPPERCASE_HOSTNAMES,
-                            'title': 'Uppercase All Hostname',
+                            'title': 'Convert all hostnames to uppercase',
                             'type': 'bool'
                         }
                     ],
