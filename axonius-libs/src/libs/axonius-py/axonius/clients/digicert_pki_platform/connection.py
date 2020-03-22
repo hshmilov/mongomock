@@ -56,15 +56,41 @@ class DigicertPkiPlatformConnection(RESTConnection):
         transaction_id = f'{CLIENT_TRANSACTION_ID_PREFIX}-{"".join(random.choices(string.hexdigits, k=16))}'
         logger.debug(f'Fetching devices using transaction_id "{transaction_id}"')
 
+        start_index = 0
+        count_so_far = 0
+        total_count = None
+        has_more_certs = True
+
         try:
-            response = serialize_object(self.client.service.searchCertificate(version='1.0',
-                                                                              clientTransactionID=transaction_id))
-            logger.debug(f'Retrieved {response.get("certificateCount")} certificates'
-                         f' from serverTransactionID: {response.get("serverTransactionID")}')
-            if response.get('clientTransactionID') != transaction_id:
-                logger.warning(f'Retrieved answer with different client identifier:'
-                               f' {response.get("clientTransactionID")} != {transaction_id}')
-            yield from response.get('certificateList', {}).get('certificateInformation', [])
+            while has_more_certs:
+                response = serialize_object(self.client.service.searchCertificate(version='1.0',
+                                                                                  clientTransactionID=transaction_id,
+                                                                                  startIndex=start_index))
+
+                # {'certificateList': {'certificateInformation': [ ... ]}}
+                certificate_chunk = ((response.get('certificateList') or {}).get('certificateInformation') or [])
+                curr_count = len(certificate_chunk)
+                count_so_far += curr_count
+
+                # In the case the total count was changed, update it
+                if total_count != response.get('certificateCount'):
+                    total_count = response.get('certificateCount')
+
+                logger.debug(f'Got {curr_count} certificates ({count_so_far}/{total_count})'
+                             f' from index {start_index} (serverTransactionID: {response.get("serverTransactionID")})')
+                yield from certificate_chunk
+
+                # Make sure server responded our generated transaction id
+                if response.get('clientTransactionID') != transaction_id:
+                    logger.warning(f'Retrieved answer with different client identifier:'
+                                   f' {response.get("clientTransactionID")} != {transaction_id}')
+
+                has_more_certs = response.get('moreCertificateAvailable') or False
+                start_index += curr_count
+
+            logger.info(f'Done search certificates, got {count_so_far}/{total_count}.'
+                        f' (transaction_id {transaction_id})')
         except Exception as e:
-            logger.exception(f'Failed fetching devices using transaction {transaction_id}')
+            logger.exception(f'Failed fetching devices using transaction {transaction_id}'
+                             f' after {count_so_far} / {total_count} certificates')
             raise RESTException(f'Failed fetching devices. error: {str(e)}')
