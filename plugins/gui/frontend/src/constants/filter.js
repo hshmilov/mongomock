@@ -51,6 +51,7 @@ const date = {
     '<': '{field} < date("{val}")',
     '>': '{field} > date("{val}")',
     days: '{field} >= date("NOW - {val}d")',
+    next_days: '{field} <= date("NOW + {val}d")',
     exists
 }
 export const compOps = {
@@ -122,5 +123,7 @@ export const opTitleTranslation = {
     count_below: 'count <',
     count_above: 'count >',
     notInSubnet: 'not in subnet',
-    subnet: 'in subnet'
+    subnet: 'in subnet',
+    days: 'last days',
+    next_days: 'next days'
 }

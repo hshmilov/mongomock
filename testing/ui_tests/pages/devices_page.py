@@ -268,7 +268,7 @@ class DevicesPage(EntitiesPage):
         expressions = self.find_expressions()
         self.select_query_logic_op(self.QUERY_LOGIC_AND, parent=expressions[1])
         self.select_query_field(self.FIELD_LAST_SEEN, parent=expressions[1])
-        self.select_query_comp_op('days', parent=expressions[1])
+        self.select_query_comp_op(self.QUERY_COMP_DAYS, parent=expressions[1])
         self.fill_query_value(5, parent=expressions[1])
         self.wait_for_table_to_load()
         self.close_dropdown()

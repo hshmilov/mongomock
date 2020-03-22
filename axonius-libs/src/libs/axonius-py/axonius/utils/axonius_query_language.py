@@ -479,7 +479,7 @@ def process_filter(filter_str, history_date):
         return match.group().replace('NOW', f'AXON{int(now.timestamp())}')
 
     # Replace "NOW - ##" to "number - ##" so AQL can further process it
-    filter_str = re.sub(r'(NOW)\s*-\s*(\d+)([hdw])', replace_now, filter_str)
+    filter_str = re.sub(r'(NOW)\s*[-+]\s*(\d+)([hdw])', replace_now, filter_str)
 
     matches = re.search(r'NOT\s*\[(.*)\]', filter_str)
     while matches:

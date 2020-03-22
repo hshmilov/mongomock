@@ -71,7 +71,7 @@ class EntitiesPage(Page):
     QUERY_COMP_SIZE = 'count ='
     QUERY_COMP_SIZE_ABOVE = 'count >'
     QUERY_COMP_SIZE_BELOW = 'count <'
-    QUERY_COMP_DAYS = 'days'
+    QUERY_COMP_DAYS = 'last days'
     QUERY_COMP_GREATER_THAN = '>'
     QUERY_COMP_LESS_THAN = '<'
     QUERY_COMP_STARTS = 'starts'

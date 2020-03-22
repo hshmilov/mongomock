@@ -9,6 +9,7 @@ from selenium.common.exceptions import NoSuchElementException
 from axonius.consts.gui_consts import ADAPTER_CONNECTIONS_FIELD
 from axonius.utils.hash import get_preferred_quick_adapter_id
 from axonius.utils.wait import wait_until
+from ui_tests.pages.entities_page import EntitiesPage
 from ui_tests.pages.adapters_page import CONNECTION_LABEL, CONNECTION_LABEL_UPDATED
 from ui_tests.tests.ui_test_base import TestBase
 from ui_tests.tests.ui_consts import (AWS_ADAPTER,
@@ -333,7 +334,7 @@ class TestDevicesQuery(TestBase):
         self.devices_page.wait_for_table_to_be_responsive()
         query_filter = self.devices_page.find_search_value()
         results_count = len(self.devices_page.get_all_data())
-        self.devices_page.select_query_comp_op('days', parent=expressions[0])
+        self.devices_page.select_query_comp_op(self.devices_page.QUERY_COMP_DAYS, parent=expressions[0])
         self.devices_page.wait_for_table_to_be_responsive()
         assert len(self.devices_page.get_all_data()) == results_count
         assert self.devices_page.find_search_value() == query_filter
@@ -408,13 +409,13 @@ class TestDevicesQuery(TestBase):
         expressions = self.devices_page.find_expressions()
         assert len(expressions) == 2
         self.devices_page.select_query_field(self.devices_page.FIELD_LAST_SEEN, parent=expressions[0])
-        self.devices_page.select_query_comp_op('days', parent=expressions[0])
+        self.devices_page.select_query_comp_op(EntitiesPage.QUERY_COMP_DAYS, parent=expressions[0])
         self.devices_page.fill_query_value(365, parent=expressions[0])
         self.devices_page.wait_for_table_to_be_responsive()
         results_count = len(self.devices_page.get_all_data())
         self.devices_page.select_query_logic_op(self.devices_page.QUERY_LOGIC_AND)
         self.devices_page.select_query_field(self.devices_page.FIELD_LAST_SEEN, parent=expressions[1])
-        self.devices_page.select_query_comp_op('days', parent=expressions[1])
+        self.devices_page.select_query_comp_op(EntitiesPage.QUERY_COMP_DAYS, parent=expressions[1])
         self.devices_page.fill_query_value(1, parent=expressions[1])
         self.devices_page.wait_for_table_to_be_responsive()
         assert len(self.devices_page.get_all_data()) < results_count
@@ -425,7 +426,7 @@ class TestDevicesQuery(TestBase):
         expressions = self.devices_page.find_expressions()
         assert len(expressions) == 2
         self.devices_page.select_query_field(self.devices_page.FIELD_LAST_SEEN, parent=expressions[0])
-        self.devices_page.select_query_comp_op('days', parent=expressions[0])
+        self.devices_page.select_query_comp_op(self.devices_page.QUERY_COMP_DAYS, parent=expressions[0])
         self.devices_page.fill_query_value(365, parent=expressions[0])
         self.devices_page.wait_for_table_to_be_responsive()
         results_count = len(self.devices_page.get_all_data())
@@ -433,7 +434,7 @@ class TestDevicesQuery(TestBase):
         self.devices_page.click_on_select_all_filter_adapters(parent=expressions[1])
         self.devices_page.click_on_filter_adapter(AD_ADAPTER_NAME, parent=expressions[1])
         self.devices_page.select_query_field(self.devices_page.FIELD_LAST_SEEN, parent=expressions[1])
-        self.devices_page.select_query_comp_op('days', parent=expressions[1])
+        self.devices_page.select_query_comp_op(self.devices_page.QUERY_COMP_DAYS, parent=expressions[1])
         self.devices_page.fill_query_value(1, parent=expressions[1])
         self.devices_page.wait_for_table_to_be_responsive()
         assert self.devices_page.find_search_value().count(self.devices_page.NAME_ADAPTERS_AD) == 1
@@ -475,7 +476,7 @@ class TestDevicesQuery(TestBase):
         self.devices_page.toggle_right_bracket(expressions[1])
         assert self.devices_page.is_query_error()
         self.devices_page.select_query_field(self.devices_page.FIELD_LAST_SEEN, parent=expressions[2])
-        self.devices_page.select_query_comp_op('days', parent=expressions[2])
+        self.devices_page.select_query_comp_op(EntitiesPage.QUERY_COMP_DAYS, parent=expressions[2])
         self.devices_page.fill_query_value(30, parent=expressions[2])
         self.devices_page.select_query_logic_op(self.devices_page.QUERY_LOGIC_AND, parent=expressions[2])
         self.devices_page.remove_query_expression(expressions[0])

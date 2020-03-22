@@ -19,6 +19,7 @@ currently unsupported:
 2. geospatial
 """
 import ast
+import re
 
 import astor
 import bson
@@ -31,24 +32,26 @@ from astor.source_repr import split_lines
 
 def parse_date_custom(str_date: str) -> datetime:
     """
-    Parses the "(number) - 7[d]" format used internally for supporting "NOW" in AQL
+    Parses the "(number) - 7[d]" OR "(number) + 7[d]" format used internally for supporting "NOW" in AQL
     :param str_date: the string to parse
     :return: the parsed time
     """
     str_date = str_date.replace(' ', '')
-    first, second = str_date.split('-')
+
+    delimiter_sign = re.search(r'\s*[-+]', str_date).group(0)
+    first, second = str_date.split(delimiter_sign)
 
     first_date = datetime.datetime.fromtimestamp(int(first))
-
     timedelta_indicator = second[-1]
     number_for_timedelta = int(second[:-1])
+    prefix_for_timedelta = int(delimiter_sign + '1')
 
     if timedelta_indicator == 'h':
-        first_date -= datetime.timedelta(hours=number_for_timedelta)
+        first_date += prefix_for_timedelta * datetime.timedelta(hours=number_for_timedelta)
     elif timedelta_indicator == 'd':
-        first_date -= datetime.timedelta(days=number_for_timedelta)
+        first_date += prefix_for_timedelta * datetime.timedelta(days=number_for_timedelta)
     elif timedelta_indicator == 'w':
-        first_date -= datetime.timedelta(days=number_for_timedelta)
+        first_date += prefix_for_timedelta * datetime.timedelta(weeks=number_for_timedelta)
 
     return first_date
 

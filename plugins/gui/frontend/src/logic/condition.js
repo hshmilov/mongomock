@@ -324,7 +324,7 @@ const isExpectedValueItems = (schema, compOp) => {
 };
 
 const isExpectedValueInteger = (schema, compOp) => {
-  const opsExpectingInteger = ['days'];
+  const opsExpectingInteger = ['days','next_days'];
   const isSchemaDate = schema.format && schema.format === 'date-time';
   return isSchemaDate && opsExpectingInteger.includes(compOp);
 };
