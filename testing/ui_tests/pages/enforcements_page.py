@@ -721,6 +721,7 @@ class EnforcementsPage(EntitiesPage):
                                enforcement_view,
                                name=SPECIAL_TAG_ACTION,
                                tag=DEFAULT_TAG_NAME,
+                               number_of_runs=0,
                                action_cond=MAIN_ACTION_TEXT):
         self.create_basic_enforcement(enforcement_name, enforcement_view, save=False)
         self.select_trigger()
@@ -728,9 +729,14 @@ class EnforcementsPage(EntitiesPage):
         self.select_saved_view(enforcement_view)
         self.save_trigger()
         self.add_tag_entities(name, tag, action_cond)
-        self.click_save_button()
-        self.wait_for_spinner_to_end()
-        self.wait_for_table_to_load()
+        if number_of_runs:
+            for _ in range(number_of_runs):
+                self.click_run_button()
+                self.wait_for_task_in_progress_toaster()
+        else:
+            self.click_save_button()
+            self.wait_for_spinner_to_end()
+            self.wait_for_table_to_load()
 
     def is_severity_selected(self, severity):
         return self.driver.find_element_by_css_selector(severity).is_selected()

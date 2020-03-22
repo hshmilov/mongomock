@@ -55,7 +55,9 @@ class TestDevice(TestBase):
         assert self.devices_page.find_element_by_text('DeanSysman2') is not None
 
     def test_device_enforcement_tasks(self):
+
         self.logger.info('starting test_device_enforcement_tasks')
+
         self.devices_page.create_saved_query(self.devices_page.FILTER_OS_WINDOWS, WINDOWS_QUERY_NAME)
         self.enforcements_page.switch_to_page()
         self.base_page.run_discovery()
@@ -106,23 +108,27 @@ class TestDevice(TestBase):
         self.enforcements_page.wait_for_action_result()
         assert self.enforcements_page.get_task_name() == enforcement_set_id
 
-        # Check that sort is working as well
-        self._test_sort()
-
         self.logger.info('finished test_device_enforcement_tasks')
 
-    def _test_sort(self):
+    def test_device_enforcement_task_sort(self):
         """
-        Utility method for checking the sort order in the enforcement tasks of a device
-        Creating 1 more task under the previously created enforcement set,
-        and also creating 1 more task under new enforcement set,
-        in the end, we need to have 3 tasks that are sorted in descending order
-        according to their description
+        Test for checking the sort order in the enforcement tasks of a device
+        Actions:
+            - Running discovery and finding some Windows devices (through AD adapter)
+            - Creating a saved query for finding Windows devices
+              * This saved query will be used in both enforcement sets as described below
+            - Creating 'first enforcement set' to add tag and running it twice (for Windows devices)
+            - Creating 'second enforcement set' to add tag and running it once (for Windows devices)
+            - In the enforcement tasks table of a certain windows device, check that the tasks are sorted
+            - The sort is according to the enforcement set id in a DESCENDING order
         """
-        self.enforcements_page.switch_to_page()
-        self.enforcements_page.create_tag_enforcement(self.RUN_TAG_ENFORCEMENT_NAME_SECOND, WINDOWS_QUERY_NAME,
-                                                      'second tag search test', 'second tag search test')
+        self.settings_page.switch_to_page()
         self.base_page.run_discovery()
+        self.devices_page.create_saved_query(self.devices_page.FILTER_OS_WINDOWS, WINDOWS_QUERY_NAME)
+        self.enforcements_page.create_tag_enforcement(self.RUN_TAG_ENFORCEMENT_NAME, WINDOWS_QUERY_NAME,
+                                                      'tag search test', 'tag search test', 2)
+        self.enforcements_page.create_tag_enforcement(self.RUN_TAG_ENFORCEMENT_NAME_SECOND, WINDOWS_QUERY_NAME,
+                                                      'second tag search test', 'second tag search test', 1)
         self.devices_page.switch_to_page()
         self.devices_page.execute_saved_query(WINDOWS_QUERY_NAME)
         self.devices_page.wait_for_table_to_load()
@@ -132,11 +138,11 @@ class TestDevice(TestBase):
         table_info = self.devices_page.get_field_table_data_with_ids()
         assert len(table_info) == 3
         enforcement_set_id = table_info[0][0]
-        assert enforcement_set_id == f'{self.RUN_TAG_ENFORCEMENT_NAME_SECOND} - Task 3'
+        assert enforcement_set_id[enforcement_set_id.find('Task'):] == 'Task 3'
         enforcement_set_id = table_info[1][0]
-        assert enforcement_set_id == f'{self.RUN_TAG_ENFORCEMENT_NAME} - Task 2'
+        assert enforcement_set_id[enforcement_set_id.find('Task'):] == 'Task 2'
         enforcement_set_id = table_info[2][0]
-        assert enforcement_set_id == f'{self.RUN_TAG_ENFORCEMENT_NAME} - Task 1'
+        assert enforcement_set_id[enforcement_set_id.find('Task'):] == 'Task 1'
 
     def test_add_predefined_fields_updates_general(self):
         asset_name = 'asset name 123'
