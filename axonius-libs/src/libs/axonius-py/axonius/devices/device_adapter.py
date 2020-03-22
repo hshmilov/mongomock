@@ -35,7 +35,7 @@ AGENTS = namedtuple('Agents', (
     'observeit', 'opswat', 'paloalto_cortex', 'qualys_scans', 'quest_kace', 'redcloak', 'sccm',
     'secdo', 'sentinelone', 'signalsciences', 'traps', 'eclypsium',
     'sophos', 'symantec', 'symantec_cloud_workload', 'symantec_ee', 'symantec_12', 'tanium', 'tenable_io', 'tripwire',
-    'truefort', 'guardicore', 'deep_security', 'illusive', 'bitdefender',
+    'truefort', 'guardicore', 'deep_security', 'illusive', 'bitdefender', 'avamar',
     'twistlock', 'webroot', 'aqua', 'symantec_dlp', 'bitlocker', 'wazuh', 'wsus', 'microfocus_sa', 'contrast',
 ))
 
@@ -43,7 +43,7 @@ AGENT_NAMES = AGENTS(
     alertlogic='Alert Logic Agent', bigfix='IBM BigFix Agent', carbonblack_defense='CarbonBlack Defense Sensor',
     carbonblack_protection='CarbonBlack Protection Sensor', carbonblack_response='CarbonBlack Response Sensor',
     cisco_amp='Cisco AMP Connector', cisco_firepower_management_center='Cisco FMC Agent',
-    bitlocker='Bitlocker Agent', traps='Traps Agent',
+    bitlocker='Bitlocker Agent', traps='Traps Agent', avamar='Avamar Client',
     cisco_umbrella='Cisco Umbrella Agent', cloudpassage='CloudPassage Daemon', code42='Code42 Agent',
     counter_act='CounterACT Agent', crowd_strike='CrowdStrike Agent', cylance='Cylance Agent', datadog='Datadog Agent',
     desktop_central='Desktop Central Agent', dropbox='Dropbox Client', druva='Druva Client', endgame='Endgame Sensor',

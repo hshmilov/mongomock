@@ -37,10 +37,12 @@ class SingletonEngine(metaclass=Singleton):
         return self.engine
 
     def close_instance(self):
-
-        dispatcher = self.engine.transportDispatcher
-        if dispatcher:
-            dispatcher.closeDispatcher()
+        try:
+            dispatcher = self.engine.transportDispatcher
+            if dispatcher:
+                dispatcher.closeDispatcher()
+        except Exception:
+            pass
         self.engine = None
 
 

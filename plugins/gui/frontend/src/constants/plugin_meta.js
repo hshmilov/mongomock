@@ -32,6 +32,10 @@ export const pluginMeta = {
         link:'https://docs.axonius.com/docs/arista-eos',
         description: 'Arista Extensible Operating System (EOS) is the core of Arista cloud networking solutions for next-generation data centers and cloud networks.'
     },
+    avamar_adapter: {
+        title: 'Dell EMC Avamar',
+        description: 'Dell EMC Avamar is a backup and recovery solution that enables daily backups of physical and virtual environments, NAS servers, enterprise applications, remote offices and desktops/laptops.'
+    },
     cisco_stealthwatch_adapter: {
         title: 'Cisco StealthWatch',
         link: 'https://docs.axonius.com/docs/cisco-stealthwatch',

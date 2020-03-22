@@ -192,6 +192,7 @@ DOCKER_PORTS = {
     'cloud-health-adapter':             6690,
     'master-proxy':                     8888,  # reserved
     'httpd-service':                    8889,  # reserved
+    'avamar-adapter':                   9930,
     'ivanti-sm-adapter':                9940,
     'spiceworks-adapter':               9941,
     'bitlocker-adapter':                9957,
