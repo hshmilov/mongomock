@@ -10,7 +10,7 @@ from flask import (jsonify,
 from passlib.hash import bcrypt
 from urllib3.util.url import parse_url
 from werkzeug.wrappers import Response
-# pylint: disable=import-error
+# pylint: disable=import-error,no-name-in-module
 from onelogin.saml2.auth import OneLogin_Saml2_Auth
 
 from axonius.clients.ldap.exceptions import LdapException
@@ -384,6 +384,11 @@ class Login:
         saml_settings['sp']['assertionConsumerService']['url'] = f'{self_url}/api/login/saml/?acs'
         saml_settings['sp']['singleLogoutService']['url'] = f'{self_url}/api/logout/'
 
+        # configure authentication context class
+        # Note: If not set, requestedAuthnContext defaults to SAML library implicit default (AC_PASSWORD_PROTECTED)
+        if (settings.get('configure_authncc') or {}).get('dont_send_authncc'):
+            saml_settings.setdefault('security', {})['requestedAuthnContext'] = False
+
         # Now for the identity provider path.
         # At this point we must use the metadata file we have been provided in the settings, or use
         # the raw settings we have been provided.
@@ -410,6 +415,7 @@ class Login:
                     saml_settings['idp']['entityId'] = settings['entity_id']
                     saml_settings['idp']['singleSignOnService']['url'] = settings['sso_url']
                     saml_settings['idp']['x509cert'] = certificate
+
                 except Exception:
                     logger.exception(f'Invalid SAML Settings: {saml_settings}')
                     raise ValueError(f'Invalid SAML settings, please check them!')

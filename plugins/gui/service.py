@@ -11,7 +11,7 @@ import pymongo
 from apscheduler.executors.pool import \
     ThreadPoolExecutor as ThreadPoolExecutorApscheduler
 from flask import (session)
-# pylint: disable=import-error
+# pylint: disable=import-error,no-name-in-module
 from onelogin.saml2.idp_metadata_parser import OneLogin_Saml2_IdPMetadataParser
 
 from axonius.utils.revving_cache import rev_cached
@@ -58,7 +58,6 @@ from gui.routes.app_routes import AppRoutes
 logger = logging.getLogger(f'axonius.{__name__}')
 
 SAML_SETTINGS_FILE_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), 'config', 'saml_settings.json'))
-
 
 if os.environ.get('HOT') == 'true':
     session = None
@@ -701,7 +700,20 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin, 
                             'name': 'certificate',
                             'title': 'Signing certificate (Base64 encoded)',
                             'type': 'file'
-                        }
+                        },
+                        {
+                            'name': 'configure_authncc',
+                            'type': 'array',
+                            'items': [
+                                {
+                                    'name': 'dont_send_authncc',
+                                    'title': 'Do not send AuthnContextClassRef',
+                                    'type': 'bool',
+                                    'default': False,
+                                },
+                            ],
+                            'required': ['dont_send_authncc'],
+                        },
                     ],
                     'required': ['enabled', 'idp_name'],
                     'name': 'saml_login_settings',
@@ -762,7 +774,10 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin, 
                 'axonius_external_url': None,
                 'sso_url': None,
                 'entity_id': None,
-                'certificate': None
+                'certificate': None,
+                'configure_authncc': {
+                    'dont_send_authncc': False,
+                },
             },
             SYSTEM_SETTINGS: {
                 'refreshRate': 60,
