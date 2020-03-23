@@ -156,7 +156,6 @@ class DeviceAdapterOS(SmartJsonClass):
     install_date = Field(datetime.datetime, "Install Date")
     kernel_version = Field(str, 'Kernel Version')
     codename = Field(str, 'Code name')  # for example 'xenial'
-
     major = Field(int, 'Major')
     minor = Field(int, 'Minor')
     build = Field(str, 'Build')  # aka patch level
@@ -663,6 +662,7 @@ class DeviceAdapter(SmartJsonClass):
         DeviceAdapterNetworkInterface, 'Network Interfaces', json_format=JsonArrayFormat.table
     )
     os = Field(DeviceAdapterOS, 'OS')
+    os_guess = Field(DeviceAdapterOS, 'OS Guess')
     last_used_users = ListField(str, "Last Used Users")
     last_used_users_departments_association = ListField(str, 'Last Used Users Departments')
     last_used_users_ad_display_name_association = ListField(str, 'Last Used Users AD Display Name')
@@ -1078,21 +1078,28 @@ class DeviceAdapter(SmartJsonClass):
 
         self.network_interfaces.append(nic)
 
-    def figure_os(self, os_string):
+    def figure_os(self, os_string, guess=False):
 
         os_dict = figure_out_os(str(os_string))
         if os_dict is None:
             return
 
         try:
-            old_dict = copy.copy(self.os.to_dict())
+            if guess:
+                old_dict = copy.copy(self.os_guess.to_dict())
+            else:
+                old_dict = copy.copy(self.os.to_dict())
             for key, value in os_dict.items():
                 if value:
                     old_dict[key] = value
             os_dict = old_dict
         except Exception:
             pass
-        self.os = DeviceAdapterOS(**os_dict)
+
+        if guess:
+            self.os_guess = DeviceAdapterOS(**os_dict)
+        else:
+            self.os = DeviceAdapterOS(**os_dict)
 
     def add_battery(self, **kwargs):
         self.batteries.append(DeviceAdapterBattery(**kwargs))

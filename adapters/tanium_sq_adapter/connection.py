@@ -28,23 +28,24 @@ class TaniumSqConnection(tanium.connection.TaniumConnection):
         for name in self._sq_names(sq_names=client_config['sq_name']):
             self._get_sq(name=name)
 
+    @property
+    def module_name(self):
+        return 'interact'
+
     @staticmethod
     def _sq_names(sq_names):
         return [x.strip() for x in sq_names.split(',') if x.strip()]
 
     # pylint: disable=arguments-differ
     def get_device_list(self, client_name, client_config):
-        try:
-            server_version = self._get_version()
-        except Exception as exc:
-            msg = f'Error while fetching server version: {exc}'
-            logger.exception(msg)
-            raise RESTException(msg)
+        server_version = self._get_version()
+        workbenches = self._get_workbenches_meta()
 
         metadata = {
             'server_name': client_config['domain'],
             'client_name': client_name,
             'server_version': server_version,
+            'workbenches': workbenches,
         }
 
         sqargs = {
@@ -101,8 +102,8 @@ class TaniumSqConnection(tanium.connection.TaniumConnection):
             question = saved_question['question']
             question_id = question['id']
             query = question['query_text']
-            expire_dt = tanium.tools.parse_dt(question['expiration'])
-            is_expired = tanium.tools.dt_is_past(expire_dt)
+            expire_dt = tanium.tools.parse_dt(value=question['expiration'], src=question)
+            is_expired = tanium.tools.dt_is_past(value=expire_dt, src=question)
             never_asked = False
             do_refresh = False
             is_past_max_hours = False
@@ -165,8 +166,8 @@ class TaniumSqConnection(tanium.connection.TaniumConnection):
             question = self._get_by_id(objtype='questions', value=question_id)
 
             query = question['query_text']
-            expire_dt = tanium.tools.parse_dt(question['expiration'])
-            is_expired = tanium.tools.dt_is_past(expire_dt)
+            expire_dt = tanium.tools.parse_dt(value=question['expiration'], src=question)
+            is_expired = tanium.tools.dt_is_past(value=expire_dt, src=question)
             poll_info = [
                 f'poll #{poll_count} for answers for id={question_id}',
                 f'expired={is_expired}',
@@ -197,8 +198,8 @@ class TaniumSqConnection(tanium.connection.TaniumConnection):
                 mins_left = tanium.tools.dt_calc_mins(value=expire_dt, reverse=True)
 
                 stats = [
-                    f'{poll_info}' f'answers in: {passed}/{total} ({no_results_cnt} with no results)',
-                    f'expires in: {mins_left}m' f'been waiting for: {mins_wait}m',
+                    f'{poll_info} answers in: {passed}/{total} ({no_results_cnt} with no results)',
+                    f'expires in: {mins_left}m been waiting for: {mins_wait}m',
                 ]
                 stats = ', '.join(stats)
 
@@ -207,8 +208,12 @@ class TaniumSqConnection(tanium.connection.TaniumConnection):
                     break
 
                 if answers_are_in:
-                    if no_results_cnt and no_results_wait:
-                        logger.debug(f'{pre}WAIT all answers in, but some have no results for {stats}')
+                    if no_results_cnt:
+                        if no_results_wait:
+                            logger.debug(f'{pre}WAIT all answers in, but some have no results for {stats}')
+                        else:
+                            logger.debug(f'{pre}DONE all answers in, but some have no results for {stats}')
+                            break
                     else:
                         logger.info(f'{pre}DONE all answers are in for {stats}')
                         break
@@ -220,8 +225,6 @@ class TaniumSqConnection(tanium.connection.TaniumConnection):
             except Exception:
                 logger.exception(f'{pre}ERROR during fetch result_info')
                 break
-
-        return data
 
     def _reask(self, saved_question):
         pre = 'Saved Question Re-Ask: '
@@ -323,9 +326,9 @@ class TaniumSqConnection(tanium.connection.TaniumConnection):
         pre = 'Saved Question Row Map: '
         row_map = {}
 
-        if 'cid' in row:
+        if 'cid' in row and 'Computer ID' not in columns_map:
             # this is an odd thing. I've seen cid returned, i've seen it not... shrug
-            row_map['Computer ID'] = {'values': row['cid'], 'type': 'String'}
+            row_map['Computer ID'] = {'value': row['cid'], 'type': 'String'}
 
         row_data = row['data']
 
@@ -345,9 +348,6 @@ class TaniumSqConnection(tanium.connection.TaniumConnection):
 
             first_column_idx, first_column_info = list(columns.items())[0]
             first_row_column_values = [x['text'] for x in row_data[first_column_idx]]
-
-            # if not isinstance(first_row_column_values, (tuple, list)):
-            #     first_row_column_values = [first_row_column_values]
 
             if len(columns) == 1:
                 # simple single column sensor

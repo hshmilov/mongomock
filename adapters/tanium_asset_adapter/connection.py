@@ -1,8 +1,9 @@
 import logging
+import time
 
 from axonius.clients.rest.connection import RESTException
 from axonius.clients.tanium import connection
-from tanium_asset_adapter.consts import HEADERS, MAX_DEVICES_COUNT, PAGE_SIZE
+from tanium_asset_adapter.consts import HEADERS, MAX_DEVICES_COUNT, PAGE_SIZE, PAGE_SLEEP
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -12,7 +13,12 @@ class TaniumAssetConnection(connection.TaniumConnection):
         super().__init__(*args, url_base_prefix='', headers=HEADERS, **kwargs)
 
     def advanced_connect(self, client_config):
-        self._get_report(report_name=client_config.get('asset_dvc'))
+        self._get_asset_counts()
+        self._get_assets_page(next_id=1, limit=1)
+
+    @property
+    def module_name(self):
+        return 'asset'
 
     # pylint: disable=arguments-differ
     def get_device_list(self, client_name, client_config):
@@ -25,109 +31,60 @@ class TaniumAssetConnection(connection.TaniumConnection):
             'server_version': server_version,
             'workbenches': workbenches,
         }
-        report_name = client_config['asset_dvc']
-
-        report = metadata['report'] = self._get_report(report_name=report_name)
-        total = self._get_report_count(report=report)
-
-        if not total:
-            raise RESTException(f'Report {report_name!r} returned {total} devices')
-
-        for asset in self._get_devices(report=report, total=total):
+        for asset in self._get_assets():
             yield asset, metadata
 
-    def _get_report(self, report_name):
-        pre = 'Get Report: '
-        response = self._get('plugin/products/asset/private/reports')
-        reports = response.get('data', []) or []
+    def _get_assets_page(self, next_id, limit):
+        params = {'minimumAssetId': next_id, 'limit': limit}
+        endpoint = 'plugin/products/asset/v1/assets'
+        return self._get(endpoint, url_params=params)
 
-        if not reports:
-            raise RESTException(f'{pre}no reports found!')
+    def _get_asset_counts(self):
+        endpoint = 'plugin/products/asset/v1/stats/count'
+        response = self._get(endpoint)
+        logger.debug(f'fetched asset counts: {response}')
+        return response
 
-        report_names = ', '.join([x.get('reportName') for x in reports])
-
-        try:
-            report = [x for x in reports if x.get('reportName', '').lower().strip() == report_name.lower().strip()][0]
-        except Exception:
-            raise RESTException(f'{pre}report {report_name!r} not found, found reports: {report_names}')
-
-        try:
-            report_id = report['id']
-            report = self._get(f'plugin/products/asset/private/reports/{report_id}')
-        except Exception:
-            msg = f'{pre}report {report_name!r} unable to be fetched'
-            logger.exception(msg)
-            raise RESTException(msg)
-
-        attributes = report.get('meta', {}).get('attributes', [])
-        entity_names = [x.get('entityName') for x in attributes]
-
-        if 'Computer ID' not in entity_names:
-            msg = f'{pre}report {report_name!r} does not have "Computer ID" attribute'
-            raise RESTException(msg)
-        return report
-
-    def _get_report_count(self, report):
-        pre = 'Get Report Asset Count: '
-        report_info = report.get('data', {}).get('report', {})
-        report_id = report_info['id']
-        report_name = report_info['reportName']
-        try:
-            body_params = {'id': report_id, 'columnFilter': '{"$and":[]}'}
-            response = self._post(
-                f'plugin/products/asset/private/reports/{report_id}/rowCount', body_params=body_params,
-            )
-            report_count = response['data']
-            logger.info(f'{pre}asset count={report_count}, report={report_name!r}')
-            return report_count
-        except Exception as exc:
-            raise RESTException(f'Asset Module: ERROR getting asset count for report={report_name!r}: {exc}')
-
-    def _get_devices(self, report, total):
-        report_data = report['data']
-        report_meta = report_data['report']
-        report_id = report_meta['id']
-        report_name = report_meta['reportName']
+    def _get_assets(self):
+        next_id = 1
         fetched = 0
         page = 1
-        total_check = min(total, MAX_DEVICES_COUNT)
+        page_size = PAGE_SIZE
 
-        pre = 'Get Report Assets: '
+        asset_counts = self._get_asset_counts()
+        total = asset_counts['deviceCount']
 
-        logger.info(f'{pre}started fetch of {total} assets for report {report_name!r}')
+        stop_at = min(total, MAX_DEVICES_COUNT)
 
-        while fetched <= total_check:
+        logger.info(f'START FETCH OF ASSETS')
+
+        while fetched <= stop_at:
             try:
-                body_params = {
-                    'id': report_id,
-                    'columnFilter': '{"$and":[]}',
-                    'pagination': {'limit': PAGE_SIZE, 'offset': fetched},
-                }
-                response = self._post(
-                    f'plugin/products/asset/private/reports/{report_id}/query', body_params=body_params,
-                )
-                rows = response['rows']
-                this_fetch = len(rows)
-                fetched += this_fetch
-                stats = f'page={page}, rows={this_fetch}, fetched=[{fetched}/{total}]'
+                logger.debug(f'Fetching page={page} with next_id={next_id}, limit={page_size}')
 
-                if not rows or not isinstance(rows, list):
-                    logger.error(f'{pre}DONE no rows returned {response} {stats}')
+                response = self._get_assets_page(next_id=next_id, limit=page_size)
+
+                data = response.get('data', []) or []
+                meta = response['meta']
+                fetched += len(data)
+
+                logger.debug(f'Fetched page={page}, rows={len(data)}, fetched=[{fetched}/{total}], meta={meta}')
+
+                yield from data
+
+                if not data:
+                    logger.info(f'DONE no rows returned in response: {response}')
                     break
 
-                logger.debug(f'{pre}WAIT fetched {stats}')
-                for row in rows:
-                    asset_id = row['ci_item_id']
-                    try:
-                        asset = self._get(f'plugin/products/asset/v1/assets/{asset_id}')
-                        yield asset['data']
-                    except Exception as exc:
-                        raise RESTException(f'{pre}ERROR fetching asset {asset_id} for report {report_name!r}: {exc}')
-
-                if fetched >= total_check:
-                    logger.info(f'{pre}DONE all assets fetched {stats}')
+                if meta.get('endOfReader', False):
+                    logger.info(f'DONE endOfReader=True')
                     break
+
+                next_id = meta.get('nextAssetId', next_id)
 
                 page += 1
+                time.sleep(PAGE_SLEEP)
             except Exception as exc:
-                raise RESTException(f'{pre}ERROR during fetch page={page}, fetched={fetched}: {exc}')
+                raise RESTException(f'ERROR during fetch page={page}, fetched=[{fetched}/{total}]: {exc}')
+
+        logger.info(f'FINISHED FETCH page={page}, fetched=[{fetched}/{total}]')

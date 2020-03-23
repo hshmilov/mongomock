@@ -9,7 +9,6 @@ CLIENT_DETAILS = {
     'domain': '10.0.2.32',
     'username': 'Administrator',
     'password': 'Tanium2015!',
-    'last_reg_mins': 60,
     'verify_ssl': False,
     'connection_label': '4250',
 }

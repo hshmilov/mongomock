@@ -41,9 +41,31 @@ class TaniumConnection(RESTConnection):
             logger.info(f'Platform version: {self._platform_version!r}')
         return self._platform_version
 
+    @property
+    def module_name(self):
+        return None
+
+    def _get_module_version(self):
+        if getattr(self, 'module_name', None):
+            if not hasattr(self, '_module_version'):
+                workbenches = self._get_workbenches_meta()
+                if self.module_name not in workbenches:
+                    raise RESTException(f'Module {self.module_name!r} not found in workbenches {list(workbenches)}')
+
+                module = workbenches[self.module_name]
+                if 'version' not in module:
+                    msg = f'"version" not found in workbench module {self.module_name!r} in {list(module)}'
+                    raise RESTException(msg)
+
+                self._module_version = module['version']
+                logger.info(f'Module {self.module_name!r} version: {self._module_version!r}')
+            return self._module_version
+        return None
+
     def _test_reachability(self):
         # get the tanium version, could be used as connectivity test as it's not an auth/api call
         self._get_version()
+        self._get_module_version()
 
     def _tanium_get(self, endpoint, options=None):
         url = 'api/v2/' + endpoint

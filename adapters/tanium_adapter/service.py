@@ -5,24 +5,31 @@ from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection, RESTException
 from axonius.devices.device_adapter import DeviceAdapter, AGENT_NAMES
-from axonius.fields import Field, JsonStringFormat
+from axonius.smart_json_class import SmartJsonClass
+from axonius.fields import Field, JsonStringFormat, ListField
 from axonius.utils.files import get_local_config_file
 
-from axonius.clients.tanium import tools
+from axonius.clients import tanium
 
 from tanium_adapter.connection import TaniumPlatformConnection
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
+class ModuleInfo(SmartJsonClass):
+    label = Field(field_type=str, title='Name')
+    last_install = Field(field_type=datetime.datetime, title='Last Install Date')
+    version = Field(field_type=str, title='Version', json_format=JsonStringFormat.version)
+
+
 class TaniumAdapter(AdapterBase):
     # pylint: disable=too-many-instance-attributes
     class MyDeviceAdapter(DeviceAdapter):
-        server_name = Field(field_type=str, title='Server')
-        server_version = Field(field_type=str, title='Server Version', json_format=JsonStringFormat.version)
+        server_name = Field(field_type=str, title='Tanium Server')
+        server_version = Field(field_type=str, title='Tanium Server Version', json_format=JsonStringFormat.version)
         ip_client = Field(field_type=str, title='Agent IP Address Client')
         ip_server = Field(field_type=str, title='Agent IP Address Server')
-        last_reg = Field(field_type=datetime.datetime, title='Agent Last Registration')
+        last_registration = Field(field_type=datetime.datetime, title='Agent Last Registration')
         port_number = Field(field_type=int, title='Agent Port Number')
         protocol_version = Field(field_type=str, title='Agent Protocol Version')
         public_key_valid = Field(field_type=bool, title='Agent Public Key Valid')
@@ -30,13 +37,15 @@ class TaniumAdapter(AdapterBase):
         send_state = Field(field_type=str, title='Agent Send State')
         status = Field(field_type=str, title='Agent Status')
         using_tls = Field(field_type=bool, title='Agent Using TLS')
+        computer_id = Field(field_type=int, title='Agent Computer ID')
+        installed_modules = ListField(field_type=ModuleInfo, title='Installed Modules')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
 
     @staticmethod
     def _get_client_id(client_config):
-        return client_config['domain'] + '_' + client_config['username']
+        return tanium.tools.joiner(client_config['domain'], client_config['username'], join='_',)
 
     @staticmethod
     def _test_reachability(client_config):
@@ -62,9 +71,7 @@ class TaniumAdapter(AdapterBase):
         try:
             return self.get_connection(client_config), client_config
         except RESTException as exc:
-            msg = f'Error connecting to client at {domain!r}, reason: {exc}'
-            logger.exception(msg)
-            raise ClientConnectionException(msg)
+            raise ClientConnectionException(f'Error connecting to client at {domain!r}, reason: {exc}')
 
     def _query_devices_by_client(self, client_name, client_data):
         connection, client_config = client_data
@@ -72,129 +79,109 @@ class TaniumAdapter(AdapterBase):
             yield from connection.get_device_list(client_name=client_name, client_config=client_config)
 
     @staticmethod
-    def _stat_get_hostname(device_raw):
+    def _get_hostname(device_raw):
+        value = device_raw.get('host_name')
         try:
-            hostname = device_raw.get('host_name')
-            if hostname and hostname.endswith('(none)'):
-                hostname = hostname[: -len('(none)')]
-            return hostname or ''
+            if value and value.endswith('(none)'):
+                value = value[: -len('(none)')]
+            return value or ''
         except Exception:
-            logger.exception(f'problem getting host_name from {device_raw!r}')
+            logger.exception(f'ERROR getting host_name from {value!r} from {list(device_raw)}')
         return ''
 
     @staticmethod
-    def _stat_agent(device, device_raw):
-        value = device_raw.get('full_version')
+    def _add_agent(device, device_raw, key, attr):
+        value = device_raw.get(key)
+        src = {'value': value, 'key': key, 'attr': attr}
+        value = tanium.tools.parse_str(value=value, src=src)
 
-        try:
+        if not tanium.tools.is_empty(value=value):
             device.add_agent_version(agent=AGENT_NAMES.tanium, version=value)
-        except Exception:
-            logger.exception(f'Problem adding value {value!r} from {device_raw!r}')
 
     @staticmethod
-    def _stat_last_reg(device, device_raw):
-        value = tools.parse_dt(device_raw.get('last_registration'))
+    def _add_nic(device, device_raw, key, attr):
+        value = device_raw.get(key)
+        src = {'value': value, 'key': key, 'attr': attr}
+        value = tanium.tools.parse_ip(value=value, src=src)
+        value = tanium.tools.listify(value=value, clean=True)
 
-        try:
-            device.last_seen = value
-        except Exception:
-            logger.exception(f'Problem adding value {value!r} from {device_raw!r}')
-
-        try:
-            device.last_reg = value
-        except Exception:
-            logger.exception(f'Problem adding value {value!r} from {device_raw!r}')
+        if not tanium.tools.is_empty(value=value):
+            device.add_nic(mac=None, ips=value)
 
     @staticmethod
-    def _stat_nic(device, device_raw):
-        ip_client = tools.parse_ip(device_raw.get('ipaddress_client'))
-        ip_server = tools.parse_ip(device_raw.get('ipaddress_server'))
-
+    def _set_modules(device, metadata):
         try:
-            device.add_nic(mac=None, ips=tools.listify(ip_client))
+            workbenches = metadata.get('workbenches', {})
+            skips = ['CommonUIComponents']
+
+            for workname, workmeta in workbenches.items():
+
+                label = workmeta.get('label')
+
+                if not label or label in skips:
+                    continue
+
+                version = workmeta.get('version')
+
+                last_install = workmeta.get('last_install')
+                last_install = tanium.tools.parse_str(value=last_install, src=workmeta)
+                last_install = last_install[:10] if last_install else None
+                last_install = tanium.tools.parse_dt(value=last_install, src=workmeta)
+
+                kwargs = dict(last_install=last_install, label=label, version=version)
+
+                if not tanium.tools.is_empty_vals(value=kwargs):
+                    try:
+                        device.installed_modules.append(ModuleInfo(**kwargs))
+                    except Exception:
+                        logger.exception(f'ERROR workname {workname!r} workmeta {workmeta!r} kwargs {kwargs!r}')
         except Exception:
-            logger.exception(f'Problem adding nic {ip_client!r} from {device_raw!r}')
+            logger.exception(f'ERROR metadata {metadata!r}')
 
-        try:
-            device.ip_client = ip_client
-        except Exception:
-            logger.exception(f'Problem adding ip_client {ip_client!r} from {device_raw!r}')
+    @property
+    def key_attr_map(self):
+        """Maps keys in device_raw to attributes to set on device adapter and method to use.
 
-        try:
-            device.ip_server = ip_server
-        except Exception:
-            logger.exception(f'Problem adding ip_server {ip_server!r} from {device_raw!r}')
-
-    @staticmethod
-    def _stat_maps(device, device_raw):
-        int_map = {'port_number': 'port_number'}
-
-        bool_map = {
-            'public_key_valid': 'public_key_valid',
-            'registered_with_tls': 'using_tls',
-        }
-
-        str_map = {
-            'send_state': 'send_state',
-            'receive_state': 'receive_state',
-            'status': 'status',
-            'protocol_version': 'protocol_version',
-        }
-
-        for key, attr in int_map.items():
-            if key not in device_raw:
-                logger.error(f'Missing int key {key!r} in device_raw {device_raw!r}')
-                continue
-            value = tools.parse_int(device_raw.get(key))
-            setattr(device, attr, value)
-
-        for key, attr in str_map.items():
-            if key not in device_raw:
-                logger.error(f'Missing str key {key!r} in device_raw {device_raw!r}')
-                continue
-
-            value = device_raw.get(key)
-            setattr(device, attr, value)
-
-        for key, attr in bool_map.items():
-            if key not in device_raw:
-                logger.error(f'Missing bool key {key!r} in device_raw {device_raw!r}')
-                continue
-
-            value = tools.parse_bool(device_raw.get(key))
-            setattr(device, attr, value)
+        (key in device_raw to get value from, attr to set value on device, method to use to set value on attr)
+        """
+        aggregated = [
+            ('full_version', None, self._add_agent),
+            ('ipaddress_client', None, self._add_nic),
+            ('last_registration', 'last_seen', tanium.tools.set_dt),
+        ]
+        specific = [
+            ('computer_id', 'computer_id', tanium.tools.set_int),
+            ('ipaddress_client', 'ip_client', tanium.tools.set_ip),
+            ('ipaddress_server', 'ip_server', tanium.tools.set_ip),
+            ('last_registration', 'last_registration', tanium.tools.set_dt),
+            ('port_number', 'port_number', tanium.tools.set_int),
+            ('protocol_version', 'protocol_version', tanium.tools.set_str),
+            ('public_key_valid', 'public_key_valid', tanium.tools.set_bool),
+            ('receive_state', 'receive_state', tanium.tools.set_str),
+            ('registered_with_tls', 'using_tls', tanium.tools.set_bool),
+            ('send_state', 'send_state', tanium.tools.set_str),
+            ('status', 'status', tanium.tools.set_str),
+        ]
+        return aggregated + specific
 
     def _create_stat_device(self, device_raw, metadata):
-        cid_attr = 'computer_id'
+        cid_key = 'computer_id'
+        cid = device_raw.get(cid_key)
+        cid = tanium.tools.parse_str(value=cid, src=cid_key)
 
-        if cid_attr not in device_raw:
-            msg = f'NO {cid_attr!r} ATTR DEFINED IN {device_raw!r}'
-            logger.error(msg)
-            return None
-
-        cid = device_raw.get('computer_id')
-        cid = str(cid) if cid else None
-
-        if not cid:
-            msg = f'EMPTY VALUE IN {cid_attr!r} ATTR IN {device_raw!r}'
-            logger.error(msg)
+        id_map = {cid_key: cid}
+        if tanium.tools.is_empty_vals(value=id_map):
+            logger.error(f'Bad device with empty ids {id_map} in {device_raw}')
             return None
 
         device = self._new_device_adapter()
-
-        hostname = self._stat_get_hostname(device_raw)
-        dvc_id = '_'.join([cid, hostname])
-
-        device.id = dvc_id
+        hostname = self._get_hostname(device_raw=device_raw)
+        device.id = tanium.tools.joiner(cid, hostname, join='_')
         device.uuid = cid
-        device.hostname = hostname or None
-
-        tools.set_metadata(device=device, metadata=metadata)
-        self._stat_agent(device=device, device_raw=device_raw)
-        self._stat_last_reg(device=device, device_raw=device_raw)
-        self._stat_nic(device=device, device_raw=device_raw)
-        self._stat_maps(device=device, device_raw=device_raw)
-
+        device.hostname = hostname
+        tanium.tools.handle_key_attr_map(self=self, device=device, device_raw=device_raw)
+        tanium.tools.set_metadata(device=device, metadata=metadata)
+        self._set_modules(device=device, metadata=metadata)
         device.set_raw(device_raw)
         return device
 
@@ -220,7 +207,6 @@ class TaniumAdapter(AdapterBase):
                     'name': 'last_reg_mins',
                     'type': 'integer',
                     'title': 'Only fetch clients that have registered in the past N minutes',
-                    'default': 60,
                 },
                 {'name': 'verify_ssl', 'title': 'Verify SSL', 'type': 'bool'},
                 {'name': 'https_proxy', 'title': 'HTTPS Proxy', 'type': 'string'},

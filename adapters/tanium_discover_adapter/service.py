@@ -5,11 +5,11 @@ from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection, RESTException
 from axonius.clients import tanium
-from axonius.devices.device_adapter import DeviceAdapter
+from axonius.devices.device_adapter import DeviceAdapter, DeviceAdapterOS
 from axonius.fields import Field, ListField, JsonStringFormat
-from axonius.utils.parsing import format_ip, figure_out_os
+from axonius.utils.parsing import figure_out_os
 from axonius.utils.files import get_local_config_file
-from tanium_discover_adapter.consts import METHODS
+from tanium_discover_adapter.consts import METHODS, FETCH_OPTS
 
 from tanium_discover_adapter.connection import TaniumDiscoverConnection
 
@@ -41,23 +41,21 @@ class TaniumDiscoverAdapter(AdapterBase):
         locations = ListField(field_type=str, title='Locations')
         mac_organization = Field(field_type=str, title='MAC Organization')
         methods_used = ListField(str, 'Methods Used', enum=METHODS)
-        nat_ipaddress = Field(
-            field_type=str, title='NAT IP Address', converter=format_ip, json_format=JsonStringFormat.ip
-        )
+        nat_ipaddress = Field(field_type=str, title='NAT IP Address', json_format=JsonStringFormat.ip)
         network_id = Field(field_type=str, title='Network ID')
         owner_id = Field(field_type=str, title='Owner ID')
-        profile = Field(field_type=str, title='Profile')
+        profile = ListField(field_type=str, title='Profiles Used')
         provider = Field(field_type=str, title='Provider')
         updated_at = Field(field_type=datetime.datetime, title='Updated At')
         zone = Field(field_type=str, title='Zone')
+        report_source = Field(field_type=str, title='Report Source')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
 
     @staticmethod
     def _get_client_id(client_config):
-        # add all of the elements of the cnx to the client id to ensure uniqueness
-        return client_config['domain'] + '_' + client_config['username']
+        return tanium.tools.joiner(client_config['domain'], client_config['username'], join='_',)
 
     @staticmethod
     def _test_reachability(client_config):
@@ -83,9 +81,7 @@ class TaniumDiscoverAdapter(AdapterBase):
         try:
             return self.get_connection(client_config), client_config
         except RESTException as exc:
-            msg = f'Error connecting to client at {domain!r}, reason: {exc}'
-            logger.exception(msg)
-            raise ClientConnectionException(msg)
+            raise ClientConnectionException(f'Error connecting to client at {domain!r}, reason: {exc}')
 
     def _query_devices_by_client(self, client_name, client_data):
         connection, client_config = client_data
@@ -95,15 +91,16 @@ class TaniumDiscoverAdapter(AdapterBase):
     @staticmethod
     def _add_nic(device, device_raw, key, attr):
         ips = device_raw.get('ipaddress')
+        pips = tanium.tools.parse_csv(ips)
+        pips = tanium.tools.parse_ip(pips)
+        pips = tanium.tools.listify(pips, clean=True)
+
         mac = device_raw.get('macaddress')
-        pips = tanium.tools.listify(tanium.tools.parse_ip(ips), clean=True)
         pmac = tanium.tools.parse_mac(mac)
 
-        try:
-            if pips:
-                device.add_nic(mac=pmac, ips=pips)
-        except Exception:
-            logger.exception(f'Problem in add_nic ips {ips!r} mac {mac!r} in {device_raw!r}')
+        kwargs = dict(mac=pmac, ips=pips)
+        if not tanium.tools.is_empty_vals(kwargs):
+            device.add_nic(**kwargs)
 
     @staticmethod
     def _add_adapter_tags(device, device_raw, key, attr):
@@ -113,122 +110,132 @@ class TaniumDiscoverAdapter(AdapterBase):
         for value in pvalues:
             try:
                 device.add_key_value_tag(key=value, value=None)
-
             except Exception:
-                logger.exception(f'Problem adding adapter tag {value!r} in {device_raw!r}')
+                logger.exception(f'ERROR value {value!r} in {values!r}')
 
     @staticmethod
     def _add_open_ports(device, device_raw, key, attr):
         values = device_raw.get(key)
-        pvalues = tanium.tools.parse_csv(values)
+        values = tanium.tools.parse_csv(values)
+        values = tanium.tools.parse_int(values)
+        values = [x for x in values if x > 0]
 
-        for value in pvalues:
+        for value in values:
             try:
                 device.add_open_port(port_id=value)
             except Exception:
-                logger.exception(f'Problem adding open port {value!r} in {device_raw!r}')
+                logger.exception(f'ERROR value {value!r} in {values!r}')
 
     @staticmethod
     def _figure_os(device, device_raw, key, attr):
-        value = device_raw.get(key)
-        os_type = figure_out_os(value).get('type')  # Linux
+        os_scan = tanium.tools.parse_str(device_raw.get('os'))
+        os_type = figure_out_os(os_scan).get('type')  # Linux
+
+        os_gen = tanium.tools.parse_str(device_raw.get('osgeneration'))
+
         tags = tanium.tools.parse_csv(device_raw.get('tags'))
         os_tags = tanium.tools.parse_empty([figure_out_os(x).get('type') for x in tags])  # Windows, Linux
 
+        # people add tags to discover assets to denote a different OS type, this handles that
         os_changes = [os_type]
-
         for os_tag in os_tags:
             if os_tag not in os_changes:
                 os_type = os_tag
                 os_changes.append(os_tag)
 
+        if os_gen:
+            try:
+                field = device.get_field_safe(attr='os_guess') or DeviceAdapterOS()
+                field.distribution = os_gen
+                device.os_guess = field
+            except Exception:
+                logger.exception(f'ERROR os_gen {os_gen!r} in {device_raw!r}')
+
         if os_type:
             try:
-                device.figure_os(os_type)
+                device.figure_os(os_type, guess=True)
             except Exception:
-                logger.exception(f'Problem in os_type {os_type!r} value {value!r} in {device_raw!r}')
-
-            try:
-                device.os.is_windows_server = None
-            except Exception:
-                logger.exception(f'Problem wiping out is_windows_server in {device_raw!r}')
+                logger.exception(f'ERROR {os_type!r} os_scan {os_scan!r} in {device_raw!r}')
 
     @staticmethod
     def _set_methods(device, device_raw, key, attr):
-        value = device_raw.get(key)
-        methods = tanium.tools.parse_csv(value)
+        values = device_raw.get(key)
+        values = tanium.tools.parse_csv(values)
 
-        try:
-            methods_used = dict(zip(METHODS, methods))
-            for method, enabled in methods_used.items():
+        values = dict(zip(METHODS, values))
+        for value, enabled in values.items():
+            try:
                 if str(enabled).strip() == '1':
-                    device.methods_used.append(method)
-        except Exception:
-            logger.exception(f'Problem in _set_methods {value!r} in {device_raw!r}')
+                    device.methods_used.append(value)
+            except Exception:
+                logger.exception(f'ERROR value {value!r} in {values!r}')
 
     @property
-    def _attr_map(self):
-        return [
-            # device_raw key, device attr, , set method
-            ('cloudTags', 'tags_cloud', tanium.tools.set_csv),
+    def key_attr_map(self):
+        """Maps keys in device_raw to attributes to set on device adapter and method to use.
+
+        (key in device_raw to get value from, attr to set value on device, method to use to set value on attr)
+        """
+        aggregated = [
             ('cloudTags', None, self._add_adapter_tags),
-            ('computerid', 'computer_id', tanium.tools.set_str),
-            ('computerid', 'uuid', tanium.tools.set_str),
-            ('createdAt', 'created_at', tanium.tools.set_dt),
+            ('computerid', 'uuid', tanium.tools.set_int),
             ('createdAt', 'first_seen', tanium.tools.set_dt),
+            ('ipaddress', None, self._add_nic),
+            ('lastDiscoveredAt', 'last_seen', tanium.tools.set_dt),
+            ('os', None, self._figure_os),
+            ('ports', None, self._add_open_ports),
+            ('tags', None, self._add_adapter_tags),
+        ]
+        specific = [
+            ('cloudTags', 'tags_cloud', tanium.tools.set_csv),
+            ('computerid', 'computer_id', tanium.tools.set_int),
+            ('createdAt', 'created_at', tanium.tools.set_dt),
             ('hostname', 'discover_hostname', tanium.tools.set_str),
             ('ignored', 'is_ignored', tanium.tools.set_bool),
             ('instanceId', 'instance_id', tanium.tools.set_str),
             ('instanceState', 'instance_state', tanium.tools.set_str),
             ('instanceType', 'instance_type', tanium.tools.set_str),
-            ('ipaddress', None, self._add_nic),
             ('ismanaged', 'is_managed', tanium.tools.set_bool),
             ('lastDiscoveredAt', 'last_discovered_at', tanium.tools.set_dt),
-            ('lastDiscoveredAt', 'last_seen', tanium.tools.set_dt),
             ('lastManagedAt', 'last_managed_at', tanium.tools.set_dt),
             ('launchTime', 'launch_time', tanium.tools.set_dt),
             ('locations', 'locations', tanium.tools.set_csv),
-            ('method', None, self._set_methods),
             ('macorganization', 'mac_organization', tanium.tools.set_str),
+            ('method', None, self._set_methods),
             ('natipaddress', 'nat_ipaddress', tanium.tools.set_ip),
             ('networkId', 'network_id', tanium.tools.set_str),
             ('os', 'os_scanned', tanium.tools.set_str),
-            ('os', None, self._figure_os),
             ('osgeneration', 'os_generation', tanium.tools.set_str),
             ('ownerId', 'owner_id', tanium.tools.set_str),
-            ('ports', None, self._add_open_ports),
             ('profile', 'profile', tanium.tools.set_csv),
             ('provider', 'provider', tanium.tools.set_str),
+            ('report_source', 'report_source', tanium.tools.set_str),
             ('tags', 'tags_discover', tanium.tools.set_csv),
-            ('tags', None, self._add_adapter_tags),
             ('unmanageable', 'is_unmanageable', tanium.tools.set_bool),
             ('updatedAt', 'updated_at', tanium.tools.set_dt),
             ('zone', 'zone', tanium.tools.set_str),
         ]
+        return aggregated + specific
 
     def _create_device(self, device_raw, metadata):
-        device = self._new_device_adapter()
+        cid_key = 'computerid'
+        cid = device_raw.get(cid_key)
+        cid = tanium.tools.parse_str(cid)
 
-        mac = device_raw.get('macaddress')
-        cid = str(device_raw.get('computerid'))
+        mac_key = 'macaddress'
+        mac = device_raw.get(mac_key)
+        mac = tanium.tools.parse_mac(mac)
 
-        if not any([mac, cid]):
-            logger.error(f'Bad device with empty mac {mac!r} or cid {cid!r} in {device_raw}')
+        id_map = {cid_key: cid, mac_key: mac}
+        if tanium.tools.is_empty_vals(id_map):
+            logger.error(f'Bad device with empty ids {id_map} in {device_raw}')
             return None
 
-        dvc_id = '_'.join([mac, cid])
-
-        device.id = dvc_id
-
+        device = self._new_device_adapter()
+        device.id = tanium.tools.joiner(mac, cid, join='_')
         tanium.tools.set_module_ver(device=device, metadata=metadata, module='discover')
         tanium.tools.set_metadata(device=device, metadata=metadata)
-
-        for key, attr, method in self._attr_map:
-            try:
-                method(device=device, device_raw=device_raw, key=key, attr=attr)
-            except Exception:
-                logger.exception(f'Problem in key {key!r} attr {attr!r} method {method!r} in {device_raw!r}')
-
+        tanium.tools.handle_key_attr_map(self=self, device=device, device_raw=device_raw)
         device.set_raw(device_raw)
         return device
 
@@ -249,10 +256,11 @@ class TaniumDiscoverAdapter(AdapterBase):
                 {'name': 'domain', 'title': 'Hostname or IP Address', 'type': 'string'},
                 {'name': 'username', 'title': 'User Name', 'type': 'string'},
                 {'name': 'password', 'title': 'Password', 'type': 'string', 'format': 'password'},
+                *FETCH_OPTS,
                 {'name': 'verify_ssl', 'title': 'Verify SSL', 'type': 'bool'},
                 {'name': 'https_proxy', 'title': 'HTTPS Proxy', 'type': 'string'},
             ],
-            'required': ['domain', 'username', 'password', 'verify_ssl'],
+            'required': ['domain', 'username', 'password', *[x['name'] for x in FETCH_OPTS], 'verify_ssl', ],
             'type': 'array',
         }
 
