@@ -128,6 +128,9 @@ export const actionsMeta = {
     create_zendesk_ticket: {
         title: 'Create Zendesk Ticket'
     },
+    opsgenie_create_alert: {
+        title: 'Create Atlassian Opsgenie Alert'
+    },
     create_remedy_ticket: {
         title: 'Create BMC Helix Remedy Ticket'
     },
@@ -208,7 +211,7 @@ export const actionsMeta = {
     },
     create_incident: {
         title: 'Create Incident',
-        items: ['create_service_now_incident', 'create_service_now_incident_per_entity', 'create_jira_incident', 'jira_incident_per_entity_action', 'create_sysaid_incident', 'create_zendesk_ticket', 'create_remedy_ticket', 'create_fresh_service_incident']
+        items: ['create_service_now_incident', 'create_service_now_incident_per_entity', 'create_jira_incident', 'jira_incident_per_entity_action', 'create_sysaid_incident', 'create_zendesk_ticket', 'create_remedy_ticket', 'create_fresh_service_incident', 'opsgenie_create_alert']
     },
     enrich_device_or_user_data: {
         title: 'Enrich Device or User Data',

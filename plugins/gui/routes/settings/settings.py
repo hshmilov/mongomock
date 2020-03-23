@@ -194,6 +194,7 @@ class Settings(Plugins, GettingStarted, Users, Roles):
                 'syslog': self._syslog_settings['enabled'] if self._syslog_settings else False,
                 'httpsLog': self._https_logs_settings['enabled'] if self._https_logs_settings else False,
                 'jira': self._jira_settings['enabled'] if self._jira_settings else False,
+                'opsgenie': self._opsgenie_settings['enabled'] if self._opsgenie_settings else False,
                 'gettingStartedEnabled': self._getting_started_settings['enabled'],
                 'cyberark_vault': self._vault_settings['enabled'],
                 'customerId': self.node_id

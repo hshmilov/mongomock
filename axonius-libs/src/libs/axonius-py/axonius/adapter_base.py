@@ -588,6 +588,13 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
                                                      verify=False)
                         except Exception:
                             pass
+                    try:
+                        opsgenie_connection = self.get_opsgenie_connection()
+                        if opsgenie_connection:
+                            with opsgenie_connection:
+                                opsgenie_connection.create_alert(message=error_msg)
+                    except Exception:
+                        pass
 
                     logger.exception(f'Problem establishing connection for client {client_name}. Reason: {str(e2)}')
                     log_metric(logger, metric_name=Adapters.CONNECTION_ESTABLISH_ERROR,

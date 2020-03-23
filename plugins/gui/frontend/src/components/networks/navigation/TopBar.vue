@@ -127,6 +127,11 @@
           content="In order to create a Jira incident, configure it under settings"
           @dismiss="dismissEmptySetting('jira')"
         />
+        <XTipInfo
+          v-if="isEmptySetting('opsgenie')"
+          content="In order to create an Opsgenie incident, configure it under settings"
+          @dismiss="dismissEmptySetting('opsgenie')"
+        />
       </li>
     </ul>
   </header>

@@ -28,6 +28,7 @@ from reports.action_types.base.run_linux_ssh_scan import RunLinuxSSHScan
 from reports.action_types.base.shodan_enrichment import ShodanEnrichment
 from reports.action_types.base.censys_enrichment import CensysEnrichment
 from reports.action_types.base.run_wmi_scan import RunWMIScan
+from reports.action_types.alert.create_opsgenie_alert import OpsgenieCreateAlert
 from reports.action_types.base.ldap_attributes import ChangeLdapAttribute
 from reports.action_types.base.send_email_to_entities import SendEmailToEntities
 from reports.action_types.base.tag_all_entities import TagAllEntitiesAction
@@ -108,5 +109,6 @@ AllActionTypes: Dict[str, type(ActionTypeBase)] = {
     'aws_ec2_add_tags': AwsEc2AddTagsAction,
     'send_csv_to_scp': SendCsvToScp,
     'qualys_add_tag': QualysAddTag,
-    'qualys_remove_tag': QualysRemoveTag
+    'qualys_remove_tag': QualysRemoveTag,
+    'opsgenie_create_alert': OpsgenieCreateAlert
 }

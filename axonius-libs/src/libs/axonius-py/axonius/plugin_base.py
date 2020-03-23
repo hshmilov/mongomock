@@ -54,6 +54,8 @@ from axonius.adapter_exceptions import TagDeviceError, AdapterException
 from axonius.background_scheduler import LoggedBackgroundScheduler
 from axonius.clients.cyberark_vault.connection import CyberArkVaultConnection
 from axonius.clients.rest.connection import RESTConnection
+from axonius.clients.opsgenie.connection import OpsgenieConnection
+from axonius.clients.opsgenie.consts import OPSGENIE_DEFAULT_DOMAIN
 from axonius.consts import adapter_consts
 from axonius.consts.adapter_consts import IGNORE_DEVICE
 from axonius.consts.core_consts import CORE_CONFIG_NAME, ACTIVATED_NODE_STATUS
@@ -2716,6 +2718,15 @@ class PluginBase(Configurable, Feature, ABC):
         self._global_config_updated()
         return ''
 
+    def get_opsgenie_connection(self):
+        opsgenie_settings = self._opsgenie_settings
+        if opsgenie_settings['enabled'] is not True:
+            return None
+        return OpsgenieConnection(domain=opsgenie_settings['domain'],
+                                  apikey=opsgenie_settings['apikey'],
+                                  verify_ssl=opsgenie_settings['verify_ssl'],
+                                  https_proxy=opsgenie_settings.get('https_proxy'))
+
     def get_issue_types_names(self):
         jira_settings = self._jira_settings
         if jira_settings['enabled'] is not True:
@@ -2945,6 +2956,7 @@ class PluginBase(Configurable, Feature, ABC):
         self._correlate_by_snow_mac = config[CORRELATION_SETTINGS].get(CORRELATE_BY_SNOW_MAC, False)
         self._correlate_azure_ad_name_only = config[CORRELATION_SETTINGS].get(CORRELATE_BY_AZURE_AD_NAME_ONLY, False)
         self._jira_settings = config['jira_settings']
+        self._opsgenie_settings = config.get('opsgenie_settings')
         self._proxy_settings = config[PROXY_SETTINGS]
         self._vault_settings = config['vault_settings']
         self._aws_s3_settings = config.get('aws_s3_settings') or {}
@@ -3350,6 +3362,41 @@ class PluginBase(Configurable, Feature, ABC):
                 },
                 {
                     'type': 'array',
+                    'title': 'Atlassian Opsgenie Settings',
+                    'name': 'opsgenie_settings',
+                    'required': ['enabled', 'domain',
+                                 'apikey', 'verify_ssl'],
+                    'items': [
+                        {
+                            'name': 'enabled',
+                            'title': 'Use Opsgenie',
+                            'type': 'bool'
+                        },
+                        {
+                            'name': 'domain',
+                            'title': 'Opsgenie API domain',
+                            'type': 'string'
+                        },
+                        {
+                            'name': 'apikey',
+                            'title': 'API Key',
+                            'type': 'string',
+                            'format': 'password'
+                        },
+                        {
+                            'name': 'verify_ssl',
+                            'title': 'Verify SSL',
+                            'type': 'bool'
+                        },
+                        {
+                            'name': 'https_proxy',
+                            'title': 'HTTPS proxy',
+                            'type': 'string'
+                        },
+                    ],
+                },
+                {
+                    'type': 'array',
                     'title': 'Jira Settings',
                     'name': 'jira_settings',
                     'required': ['enabled', 'domain',
@@ -3572,6 +3619,12 @@ class PluginBase(Configurable, Feature, ABC):
                 'domain': None,
                 'username': None,
                 'password': None,
+                'verify_ssl': False
+            },
+            'opsgenie_settings': {
+                'enabled': False,
+                'domain': OPSGENIE_DEFAULT_DOMAIN,
+                'apikey': None,
                 'verify_ssl': False
             },
             'email_settings': {
