@@ -16,14 +16,10 @@ from test_credentials.test_nexpose_credentials import client_details as nexpose_
 from test_credentials.test_csv_credentials import \
     client_details as csv_client_details, USERS_CLIENT_FILES
 from ui_tests.tests.ui_test_base import TestBase
+from ui_tests.tests.ui_consts import CSV_PLUGIN_NAME, CSV_NAME
 
 AD_NAME = 'Microsoft Active Directory (AD)'
-CSV_ADAPTER_QUERY = 'adapters_data.csv_adapter.id == exists(true)'
-CSV_FILE_NAME = 'file_path'  # Changed by Alex A on Jan 27 2020 - because schema changed
-CSV_INPUT_ID = 'file_path'  # Changed by Alex A on Jan 27 2020 - because schema changed
-CSV_NAME = 'CSV Serials'
 JSON_NAME = 'JSON File'
-CSV_PLUGIN_NAME = 'csv_adapter'
 QUERY_WIZARD_CSV_DATE_PICKER_VALUE = '2020-01-02 02:13:24.485Z'
 EXPECTED_ADAPTER_LIST_LABELS = [
     'CSV Serials - users_1',
@@ -31,7 +27,6 @@ EXPECTED_ADAPTER_LIST_LABELS = [
     'CSV Serials - users_3',
     'JSON File - JSON File'
 ]
-
 
 ESX_NAME = 'VMware ESXi'
 CARBONBLACKDEFENCE_NAME = 'Carbon Black CB Defense'
@@ -48,10 +43,10 @@ class TestAdapters(TestBase):
     def test_upload_csv_file(self):
         try:
             with CsvService().contextmanager(take_ownership=True):
-                self._upload_csv(CSV_FILE_NAME, csv_client_details)
+                self.adapters_page.upload_csv(self.adapters_page.CSV_FILE_NAME, csv_client_details)
                 self.base_page.run_discovery()
                 self.devices_page.switch_to_page()
-                self.devices_page.fill_filter(CSV_ADAPTER_QUERY)
+                self.devices_page.fill_filter(self.adapters_page.CSV_ADAPTER_QUERY)
                 self.devices_page.enter_search()
                 self.devices_page.wait_for_table_to_load()
                 assert self.devices_page.count_entities() > 0
@@ -66,7 +61,7 @@ class TestAdapters(TestBase):
     def test_query_wizard_include_outdated_adapter_devices(self):
         try:
             with CsvService().contextmanager(take_ownership=True):
-                self._upload_csv(CSV_FILE_NAME, csv_client_details)
+                self.adapters_page.upload_csv(self.adapters_page.CSV_FILE_NAME, csv_client_details)
                 self.base_page.run_discovery()
                 self.devices_page.switch_to_page()
                 self.devices_page.click_query_wizard()
@@ -168,10 +163,10 @@ class TestAdapters(TestBase):
         service = CsvService()
         with service.contextmanager(take_ownership=True):
             for position, client in enumerate(USERS_CLIENT_FILES, start=1):
-                self._upload_csv(list(client.keys())[0], client, True)
+                self.adapters_page.upload_csv(list(client.keys())[0], client, True)
                 self.adapters_page.wait_for_server_green(position)
             self.adapters_page.switch_to_page()
-            self._open_add_edit_server(JSON_NAME, 1)
+            self.adapters_page.open_add_edit_server(JSON_NAME, 1)
             self.adapters_page.fill_creds(connectionLabel=JSON_NAME)
             self.adapters_page.click_save()
             self.adapters_page.wait_for_server_green(1)
@@ -181,7 +176,7 @@ class TestAdapters(TestBase):
             service.stop()
             service.start_and_wait()
             self.adapters_page.switch_to_page()
-            self._open_add_edit_server(CSV_NAME, 1)
+            self.adapters_page.open_add_edit_server(CSV_NAME, 1)
             self.adapters_page.click_save()
             self.check_for_connection_labels()
             self.adapters_page.clean_adapter_servers(CSV_NAME, True)
@@ -200,24 +195,6 @@ class TestAdapters(TestBase):
                 all_is_good = False
 
         assert all_is_good
-
-    def _upload_csv(self, csv_file_name, csv_data, is_user_file=False):
-        self._open_add_edit_server(CSV_NAME)
-        self.adapters_page.upload_file_by_id(CSV_INPUT_ID, csv_data[csv_file_name].file_contents)
-        self.adapters_page.fill_creds(user_id=csv_file_name, connectionLabel=csv_file_name)
-        if is_user_file:
-            self.adapters_page.find_checkbox_by_label('File contains users information').click()
-        self.adapters_page.click_save()
-
-    def _open_add_edit_server(self, adapter_name, row_position=0):
-        self.adapters_page.wait_for_adapter(adapter_name)
-        self.adapters_page.click_adapter(adapter_name)
-        self.adapters_page.wait_for_spinner_to_end()
-        self.adapters_page.wait_for_table_to_load()
-        if row_position == 0:
-            self.adapters_page.click_new_server()
-        else:
-            self.adapters_page.click_edit_server(row_position - 1)
 
     def test_adapters_count(self):
         self.adapters_page.switch_to_page()
