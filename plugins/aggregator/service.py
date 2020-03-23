@@ -4,9 +4,10 @@ import threading
 import time
 from datetime import datetime
 from enum import Enum, auto
+from threading import Thread
 
 import dateutil
-from pymongo.errors import CollectionInvalid, PyMongoError
+from pymongo.errors import CollectionInvalid
 
 from aggregator.exceptions import AdapterOffline, ClientsUnavailable
 from aggregator.historical import create_retrospective_historic_collections, MIN_DISK_SIZE
@@ -192,16 +193,29 @@ class AggregatorService(Triggerable, PluginBase):
         except CollectionInvalid:
             logger.error(f'Collection {new_col_name} already exists')
             return
+        except Exception:
+            logger.exception(f'Exception while creating collection {new_col_name}')
+            return
         logger.info(f'Created new collection {new_col_name}')
-        col.aggregate([
-            {'$match': {'accurate_for_datetime': date}},
-            {'$project': {'_id': 0}},
-            {'$out': new_col_name},
-        ])
-        logger.info(f'Finished transfer for collection {new_col_name}')
-        common_db_indexes(new_col)
-        non_historic_indexes(new_col)
-        logger.info(f'Finished index for collection {new_col_name}')
+        try:
+            col.aggregate([
+                {'$project': {'_id': 0}},
+                {
+                    "$addFields": {
+                        "accurate_for_datetime": {
+                            "$literal": date
+                        }
+                    }
+                },
+                {'$out': new_col_name},
+            ])
+            logger.info(f'Finished transfer for collection {new_col_name}')
+            common_db_indexes(new_col)
+            non_historic_indexes(new_col)
+            logger.info(f'Finished index for collection {new_col_name}')
+        except Exception as err:
+            logger.error(f'Failed to create daily historic collections. Reason: {err}')
+            self.aggregator_db_connection.drop_collection(new_col_name)
 
     def _drop_old_historic_collections(self, entity_type):
         for col_name in self.aggregator_db_connection.list_collection_names():
@@ -218,7 +232,7 @@ class AggregatorService(Triggerable, PluginBase):
                 logger.info(f'dropping collection {col_name}')
                 try:
                     self.aggregator_db_connection.drop_collection(col_name)
-                except PyMongoError as err:
+                except Exception as err:
                     logger.error(f'Failed to drop collection {col_name}. Reason: {err}')
 
     def _save_entity_views_to_historical_db(self, entity_type: EntityType, now):
@@ -239,56 +253,61 @@ class AggregatorService(Triggerable, PluginBase):
                 logger.info(f'For {entity_type} not saving history: save only once a day - last saved at {val}')
                 return 'skipping saved history'
 
-        # Benchmarked 3k devices/second
-
-        from_db.aggregate([
-            {
-                "$project": {
-                    "_id": 0
-                }
-            },
-            {
-                "$addFields": {
-                    "accurate_for_datetime": {
-                        "$literal": now
-                    },
-                    "short_axon_id": {
-                        "$substrCP": [
-                            "$internal_axon_id", 0, 1
-                        ]
-                    }
-                }
-            },
-            {
-                "$merge": to_db.name
-            }
-        ])
-
-        raw_from_db.aggregate([
-            {
-                "$project": {
-                    "_id": 0
-                }
-            },
-            {
-                "$addFields": {
-                    "accurate_for_datetime": {
-                        "$literal": now
-                    }
-                }
-            },
-            {
-                "$merge": raw_to_db.name
-            }
-        ])
-
         self._drop_old_historic_collections(entity_type)
-        try:
-            self._create_daily_historic_collection(entity_type, raw_to_db, now)
-        except PyMongoError as err:
-            logger.error(f'Failed to create daily historic collections. Reason: {err}')
-
+        threads = [
+            Thread(target=self.call_safe_collection_transfer,
+                   args=(from_db.aggregate, [{
+                       "$project": {
+                           "_id": 0
+                       }},
+                       {
+                       "$addFields": {
+                           "accurate_for_datetime": {
+                               "$literal": now
+                           },
+                           "short_axon_id": {
+                               "$substrCP": [
+                                   "$internal_axon_id", 0, 1
+                               ]
+                           }
+                       }
+                   },
+                       {
+                       "$merge": to_db.name
+                   }
+                   ],)),
+            Thread(target=self.call_safe_collection_transfer,
+                   args=(raw_from_db.aggregate, [
+                       {
+                           "$project": {
+                               "_id": 0
+                           }
+                       },
+                       {
+                           "$addFields": {
+                               "accurate_for_datetime": {
+                                   "$literal": now
+                               }
+                           }
+                       },
+                       {
+                           "$merge": raw_to_db.name
+                       }
+                   ],)),
+            Thread(target=self._create_daily_historic_collection,
+                   args=(entity_type, from_db, now)
+                   )
+        ]
+        [t.start() for t in threads]
+        [t.join() for t in threads]
         return 'saved history'
+
+    @staticmethod
+    def call_safe_collection_transfer(aggregate_func, *args):
+        try:
+            aggregate_func(*args)
+        except Exception:
+            logger.critical(f'history transfer func {aggregate_func} failed', exc_info=True)
 
     def _triggered(self, job_name: str, post_json: dict, run_identifier: RunIdentifier, *args):
         if job_name == 'clean_db':
