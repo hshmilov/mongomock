@@ -3,10 +3,10 @@ import secrets
 import shutil
 
 from flask import (jsonify,
-                   request)
+                   request, session, Response)
 
-from axonius.consts.gui_consts import (TEMP_MAINTENANCE_THREAD_ID, FeatureFlagsNames)
-from axonius.plugin_base import EntityType, return_error
+from axonius.consts.gui_consts import (TEMP_MAINTENANCE_THREAD_ID, FeatureFlagsNames, CSRF_TOKEN_LENGTH)
+from axonius.plugin_base import EntityType, return_error, random_string
 from axonius.utils.datetime import time_from_now
 from axonius.utils.gui_helpers import (Permission, PermissionLevel,
                                        PermissionType, ReadOnlyJustForGet,
@@ -64,6 +64,16 @@ class Settings(Plugins, GettingStarted, Users, Roles):
             'api_key': api_data['api_key'],
             'api_secret': api_data['api_secret']
         })
+
+    @gui_add_rule_logged_in('csrf', methods=['GET'])
+    # pylint: disable=no-self-use
+    def csrf(self):
+        if session and 'csrf-token' in session:
+            session['csrf-token'] = random_string(CSRF_TOKEN_LENGTH)
+            resp = Response(session['csrf-token'])
+            resp.headers.add('X-CSRF-Token', session['csrf-token'])
+            return resp
+        return Response('')
 
     def _stop_temp_maintenance(self):
         if self.trial_expired():

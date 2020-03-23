@@ -210,8 +210,8 @@ DISTINCT_ADAPTERS_COUNT_FIELD = 'Distinct Adapter Connections Count'
 PREDEFINED_FIELD = 'predefined'
 PREDEFINED_PLACEHOLDER = 'Predefined'
 JSONIFY_DEFAULT_TIME_FORMAT = '%a, %d %b %Y %H:%M:%S GMT'
-MAX_DAYS_SINCE_LAST_SEEN = 60
 FILE_NAME_TIMESTAMP_FORMAT = '%Y-%m-%dT%H-%M-%SUTC'
+MAX_DAYS_SINCE_LAST_SEEN = 60
 
 MAX_SORTED_FIELDS = ['specific_data.data.last_seen',
                      'specific_data.data.fetch_time',
@@ -231,3 +231,11 @@ MIN_SORTED_FIELDS = ['specific_data.data.first_seen',
 CORRELATION_REASONS_FIELD = 'specific_data.data.correlation_reasons'
 
 SPECIFIC_DATA_PREFIX_LENGTH = len('specific_data.data.')
+# sha256 of AxoniusForTheWin!!!
+HASH_SALT = '2098f251e4f9d93cd379de4184e7eef17817fbc504e03ded3d6f09364d7725a3'
+
+#########################
+# CSRF Values #
+#########################
+CSRF_TOKEN_LENGTH = 64
+EXCLUDED_CSRF_ENDPOINTS = ('/api/login', '/api/signup', 'api/login/ldap', 'api/login/saml')

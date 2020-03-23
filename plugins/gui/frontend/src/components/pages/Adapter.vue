@@ -413,13 +413,15 @@ export default {
       if (this.isReadOnly) return;
       this.deleting = true;
     },
-    doRemoveServers() {
-      this.selectedServers.forEach((serverId) => this.archiveServer({
-        nodeId: this.adapterClients.find((client) => (client.uuid === serverId)).node_id,
-        adapterId: this.adapterId,
-        serverId,
-        deleteEntities: this.deleteEntities,
-      }));
+    async doRemoveServers() {
+      for (const serverId of this.selectedServers){
+        await this.archiveServer({
+          nodeId: this.adapterClients.find((client) => (client.uuid === serverId)).node_id,
+          adapterId: this.adapterId,
+          serverId,
+          deleteEntities: this.deleteEntities,
+        });
+      }
       this.selectedServers = [];
       this.deleting = false;
     },

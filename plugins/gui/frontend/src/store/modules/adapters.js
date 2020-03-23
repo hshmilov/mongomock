@@ -326,7 +326,7 @@ export const adapters = {
 			if (deleteEntities) {
 				param = '?deleteEntities=True'
 			}
-			dispatch(REQUEST_API, {
+			return dispatch(REQUEST_API, {
 				rule: `adapters/${adapterId}/clients/${clientId}${param}`,
 				method: 'DELETE',
 				data: { instanceName: nodeId }

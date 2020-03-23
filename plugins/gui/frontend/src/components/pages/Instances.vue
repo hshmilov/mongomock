@@ -69,7 +69,6 @@
 </template>
 
 <script>
-import axios from 'axios';
 import { mapState, mapMutations, mapActions } from 'vuex';
 import XPage from '../axons/layout/Page.vue';
 import XTableWrapper from '../axons/tables/TableWrapper.vue';

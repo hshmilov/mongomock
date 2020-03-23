@@ -1,5 +1,5 @@
-import axios from 'axios';
-import Promise from 'promise';
+import axios_client from '@api/axios.js'
+import Promise from 'promise'
 
 import { INIT_USER } from './modules/auth';
 import {
@@ -26,11 +26,6 @@ import {
     }
  */
 
-let host = '';
-if (process.env.NODE_ENV === 'development') {
-  host = 'https://127.0.0.1';
-}
-export const currentHost = host;
 export const MAX_GET_SIZE = 2000;
 export const REQUEST_API = 'REQUEST_API';
 export const requestApi = ({ commit }, payload) => {
@@ -43,11 +38,11 @@ export const requestApi = ({ commit }, payload) => {
   }
   if (!payload.method) payload.method = 'GET';
 
-  const request_config = { method: payload.method, url: `${host}/api/${payload.rule}` };
+  const request_config = { method: payload.method, url: payload.rule };
 
   if (payload.data) request_config.data = payload.data;
   if (payload.binary) request_config.responseType = 'arraybuffer';
-  return new Promise((resolve, reject) => axios(request_config)
+  return new Promise((resolve, reject) => axios_client(request_config)
     .then((response) => {
       if (payload.type) {
         commit(payload.type, {
@@ -275,7 +270,7 @@ export const SAVE_DATA_VIEW = 'SAVE_DATA_VIEW';
 export const saveDataView = ({ state, dispatch, commit }, payload) => {
   if (!getModule(state, payload)) return;
   payload.view = state[payload.module].view;
-  saveView({ dispatch, commit }, payload);
+  return saveView({ dispatch, commit }, payload);
 };
 
 export const SAVE_VIEW = 'SAVE_VIEW';
@@ -306,7 +301,7 @@ export const saveView = ({ dispatch, commit }, payload) => {
       commit(CHANGE_DATA_VIEW, payload);
     });
   }
-  dispatch(REQUEST_API, {
+  return dispatch(REQUEST_API, {
     rule: `${module}/views/saved`,
     method: 'POST',
     data,

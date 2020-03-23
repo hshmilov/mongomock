@@ -6,6 +6,7 @@ import re
 from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.remote.webelement import WebElement
 
+from axonius.utils.wait import wait_until
 from test_helpers.file_mock_credentials import FileForCredentialsMock
 
 from ui_tests.pages.entities_page import EntitiesPage
@@ -29,6 +30,8 @@ class AdaptersPage(EntitiesPage):
     TABLE_CLASS = '.table'
     TEST_CONNECTIVITY = 'Test Reachability'
     RT_CHECKBOX_CSS = '[for=realtime_adapter]+div'
+    CHECKBOX_CLASS = 'x-checkbox'
+    CHECKED_CHECKBOX_CLASS = 'x-checkbox checked'
     ADVANCED_SETTINGS_SAVE_BUTTON_CSS = '.x-tab.active .configuration>.x-button'
 
     TEST_CONNECTIVITY_CONNECTION_IS_VALID = 'Connection is valid.'
@@ -174,8 +177,22 @@ class AdaptersPage(EntitiesPage):
     def clean_adapter_servers(self, name, delete_associated_entities=False):
         self.remove_server(None, name, delete_associated_entities=delete_associated_entities)
 
+    def checkboxes_count(self):
+        table_element = self.driver.find_element_by_css_selector(self.TABLE_CLASS)
+        elements = table_element.find_elements_by_class_name(self.CHECKBOX_CLASS) + \
+            table_element.find_elements_by_class_name(self.CHECKED_CHECKBOX_CLASS)
+        return len(elements) - 1
+
+    def _check_checkboxes_count(self):
+        self.wait_for_table_to_load()
+        count = self.checkboxes_count()
+        return count
+
+    def wait_for_elements_delete(self, expected_left):
+        wait_until(lambda: self._check_checkboxes_count() == expected_left, total_timeout=60 * 5, interval=1)
+
     def remove_server(self, ad_client=None, adapter_name=AD_ADAPTER_NAME, adapter_search_field=AD_SERVER_SEARCH_FIELD,
-                      delete_associated_entities=False):
+                      delete_associated_entities=False, expected_left=0):
         self.switch_to_page()
         self.wait_for_spinner_to_end()
         self.click_adapter(adapter_name)
@@ -197,6 +214,7 @@ class AdaptersPage(EntitiesPage):
                                      make_yes=True, scroll_to_toggle=False)
 
         self.approve_remove_selected()
+        self.wait_for_elements_delete(expected_left=expected_left)
 
     def fill_creds(self, **kwargs):
         for key, value in kwargs.items():
@@ -324,7 +342,8 @@ class AdaptersPage(EntitiesPage):
         self.add_server(CLIENT_DETAILS_EXTRA, adapter_name=JSON_ADAPTER_NAME)
 
     def remove_json_extra_client(self):
-        self.remove_server(CLIENT_DETAILS_EXTRA, JSON_ADAPTER_NAME, adapter_search_field=(FILE_NAME, 'Name'))
+        self.remove_server(CLIENT_DETAILS_EXTRA, JSON_ADAPTER_NAME, adapter_search_field=(FILE_NAME, 'Name'),
+                           expected_left=1)
 
     def edit_server_conn_label(self, adapter_name, connection_label):
         self.wait_for_adapter(adapter_name)

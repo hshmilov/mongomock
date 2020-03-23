@@ -55,9 +55,9 @@ class TestAdaptersConnectivityStatus(AdapterTestBase):
             assert self.adapters_page.find_status_count(status_type=ERROR) == '2'
         finally:
             # cleanup
-            self.adapters_page.remove_server(ad_client={'dc_name': AD_SECONDARY_DC_NAME})
+            self.adapters_page.remove_server(ad_client={'dc_name': AD_SECONDARY_DC_NAME}, expected_left=2)
             self.adapters_page.wait_for_element_absent_by_text(AD_SECONDARY_DC_NAME)
-            self.adapters_page.remove_server(ad_client={'dc_name': self.AD_DC_NAME})
+            self.adapters_page.remove_server(ad_client={'dc_name': self.AD_DC_NAME}, expected_left=1)
             self.adapters_page.wait_for_element_absent_by_text(self.AD_DC_NAME)
 
     def test_adapters_filter_by_connection_status(self):

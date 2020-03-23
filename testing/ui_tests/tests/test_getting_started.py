@@ -85,8 +85,7 @@ class TestGettingStarted(TestBase):
 
         # 3) save a new query and check milestone has been completed
         self.devices_page.switch_to_page()
-        self.devices_page.run_filter_and_save(query_name=self.SAVED_QUERY,
-                                              query_filter=self.devices_page.JSON_ADAPTER_FILTER)
+        self.devices_page.create_saved_query(self.devices_page.JSON_ADAPTER_FILTER, self.SAVED_QUERY)
         self.base_page.assert_milestone_completed(page.Milestones.query_saved.name)
 
         # 4) tag a device and check milestone has been completed

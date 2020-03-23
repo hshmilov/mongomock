@@ -1,13 +1,7 @@
-import axios from 'axios';
+import axios_client from '@api/axios.js'
 import store from '@store/index';
 import _merge from 'lodash/merge';
 import { INIT_USER } from '@store/modules/auth';
-
-let host = '';
-if (process.env.NODE_ENV === 'development') {
-  host = 'https://127.0.0.1';
-}
-const baseURL = `${host}/api`;
 
 export default (uri, baseOptions = {}) => async ({
   method = 'GET',
@@ -18,7 +12,7 @@ export default (uri, baseOptions = {}) => async ({
   headers,
 }) => {
   const base = {
-    url: `${baseURL}${uri}`,
+    url: uri,
     method,
     headers: {
       'Content-Type': 'application/json',
@@ -44,7 +38,7 @@ export default (uri, baseOptions = {}) => async ({
 
   const allOptions = _merge(baseOptions, base, options);
   try {
-    return await axios(allOptions);
+    return await axios_client(allOptions);
   } catch (error) {
     if (error && error.response) {
       const errorMessage = error.response.data.message;

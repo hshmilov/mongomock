@@ -5,13 +5,17 @@ import concurrent.futures
 import configparser
 import functools
 import gc
+import hashlib
 import json
 import logging
 import logging.handlers
 import multiprocessing
 import os
+import secrets
 import socket
 import ssl
+# pylint: disable=W0402
+import string
 import subprocess
 import time
 import sys
@@ -35,7 +39,7 @@ import requests
 from apscheduler.executors.pool import ThreadPoolExecutor
 from apscheduler.triggers.interval import IntervalTrigger
 from bson import ObjectId, json_util
-from flask import Flask, has_request_context, jsonify, request, session
+from flask import Flask, has_request_context, jsonify, request, session, Response
 from funcy import chunks
 from jira import JIRA
 from namedlist import namedtuple
@@ -54,7 +58,7 @@ from axonius.consts import adapter_consts
 from axonius.consts.adapter_consts import IGNORE_DEVICE
 from axonius.consts.core_consts import CORE_CONFIG_NAME, ACTIVATED_NODE_STATUS
 from axonius.consts.gui_consts import FEATURE_FLAGS_CONFIG, FeatureFlagsNames, GETTING_STARTED_CHECKLIST_SETTING, \
-    CloudComplianceNames, CORRELATION_REASONS
+    CloudComplianceNames, HASH_SALT, CORRELATION_REASONS
 from axonius.consts.plugin_consts import (ADAPTERS_LIST_LENGTH,
                                           AGGREGATION_SETTINGS,
                                           AGGREGATOR_PLUGIN_NAME,
@@ -147,11 +151,23 @@ except AttributeError:
 # Global list of all the functions we are registering.
 ROUTED_FUNCTIONS = list()
 
+
+def random_string(length: int, source: str = string.ascii_letters + string.digits) -> str:
+    """
+        Generate a random string with length
+        Seed it time in milliseconds and salt `HASH_SALT`
+    """
+    result = ''
+    for i in range(0, length):
+        result += secrets.choice(source)
+    return hashlib.sha256(f'{HASH_SALT}{result}'.encode('utf-16')).hexdigest()
+
+
 # I know its ugly, but this way the function wont even be initialized in production
 # otherwise every request would have go thru the after_request and do nothing in there...
 if os.environ.get('HOT') == 'true':
     @AXONIUS_REST.after_request
-    def after_request(response):
+    def after_request(response) -> Response:
         response.headers.add('Access-Control-Allow-Origin', '*')
         response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
         response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')

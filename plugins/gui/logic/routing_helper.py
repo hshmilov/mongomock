@@ -2,15 +2,16 @@ import os
 import logging
 import time
 from typing import Iterable
+
 from bson import ObjectId
 
 from flask import (has_request_context, request, session)
 
-from axonius.consts.gui_consts import (DASHBOARD_LIFECYCLE_ENDPOINT)
+from axonius.consts.gui_consts import (DASHBOARD_LIFECYCLE_ENDPOINT, CSRF_TOKEN_LENGTH, EXCLUDED_CSRF_ENDPOINTS)
 from axonius.consts.metric_consts import ApiMetric, SystemMetric
 from axonius.consts.plugin_consts import (AXONIUS_USER_NAME,)
 from axonius.logging.metric_helper import log_metric
-from axonius.plugin_base import PluginBase, return_error
+from axonius.plugin_base import PluginBase, return_error, random_string
 from axonius.utils.gui_helpers import (Permission,
                                        check_permissions,
                                        add_rule_custom_authentication)
@@ -24,11 +25,16 @@ logger = logging.getLogger(f'axonius.{__name__}')
 def session_connection(func, required_permissions: Iterable[Permission], enforce_trial=True):
     """
     Decorator stating that the view requires the user to be connected
+    And also to validate the csrf token and generate
+    new one before the actual desired action of the request happens
+    The CSRF token is being validated only to POST, PUT, DELETE, PATCH requests and only.
+    Any other GET request, failed CSRF Validation or success CSRF validation will cause new token generation.
     :param func: the method to decorate
     :param required_permissions: The set (or list...) of Permission required for this api call or none
     :param enforce_trial: Restrict if system has a trial expiration date configure and it has passed
     """
 
+    # pylint: disable=too-many-return-statements, too-many-branches
     def wrapper(self, *args, **kwargs):
         if os.environ.get('HOT') == 'true':
             # pylint: disable=W0603
@@ -57,6 +63,29 @@ def session_connection(func, required_permissions: Iterable[Permission], enforce
                 # TBD: Which exception exactly are raised
                 session['user'] = None
                 return return_error('Your OIDC sessions has expired', 401)
+
+        # We handle only submitted forms with session, therefore only POST, PUT, DELETE, PATCH are in our interest
+        # Dont check CSRF during frontend debug
+        if not (request.method in ('GET', 'HEAD', 'OPTIONS', 'TRACE')
+                or not session
+                or os.environ.get('HOT') == 'true'):
+            try:
+                csrf_token_header = request.headers.get('X-CSRF-TOKEN', None)
+                if 'csrf-token' in session:
+                    csrf_token = session['csrf-token']
+                    if csrf_token is not None and request.path not in EXCLUDED_CSRF_ENDPOINTS and \
+                            csrf_token != csrf_token_header:
+                        return return_error('Bad CSRF-Token', 403)
+                    # Success token comparison or first session after login, no token twice
+                    if session['user'] is not None:
+                        session['csrf-token'] = random_string(CSRF_TOKEN_LENGTH)
+                # This should never happen to authenticated user with active session...
+                else:
+                    return return_error('No CSRF-Token in session', 403)
+            except Exception as e:
+                logger.error(e)
+                session['csrf-token'] = random_string(CSRF_TOKEN_LENGTH)
+                return return_error(e, 403)
 
         if has_request_context():
             path = request.path

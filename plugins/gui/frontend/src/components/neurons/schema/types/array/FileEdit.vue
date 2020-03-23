@@ -19,6 +19,8 @@
 
     import {currentHost} from '../../../../../store/actions'
 
+    import axios_client from '@api/axios.js'
+
     export default {
         name: 'x-array-edit',
         components: { xButton },
@@ -49,17 +51,14 @@
                 formData.append("userfile", file)
 
                 this.uploading = true
-                let request = new XMLHttpRequest()
-                request.open('POST', `${currentHost}/api/${this.apiUpload}/upload_file`)
-                request.onload = (result) => {
-                    let res = JSON.parse(result.srcElement.responseText)
+                let upload_url = `${this.apiUpload}/upload_file`
+                axios_client.post(upload_url, formData).then(response => {
                     this.uploading = false
                     this.filename = file.name
                     this.valid = true
                     this.validate(true)
-                    this.$emit('input', {"uuid": res.uuid, "filename": file.name})
-                };
-                request.send(formData)
+                    this.$emit('input', {"uuid": response.data.uuid, "filename": file.name})
+                });
             },
             validate(silent) {
                 if (!this.schema.required) return

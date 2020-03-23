@@ -29,7 +29,7 @@ class TestStopDiscoverySanity(TestBase):
         self.adapters_page.refresh()
 
         # Removing TestSecDomain, edit and save the TestDomain
-        self.adapters_page.remove_server(ad_client2_details)
+        self.adapters_page.remove_server(ad_client2_details, expected_left=1)
         time.sleep(5)
         self.adapters_page.click_row()
         self.adapters_page.click_save()
@@ -41,7 +41,7 @@ class TestStopDiscoverySanity(TestBase):
         self.adapters_page.refresh()
 
         # Remove And re-add == TestDomain
-        self.adapters_page.remove_server(ad_client1_details)
+        self.adapters_page.remove_server(ad_client1_details, expected_left=0)
         self.adapters_page.add_server(ad_client1_details)
         self.adapters_page.wait_for_server_green()
         self.adapters_page.wait_for_table_to_load()

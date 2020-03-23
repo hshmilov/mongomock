@@ -6,7 +6,7 @@ import secrets
 import ldap3
 import pymongo
 from flask import (jsonify,
-                   make_response, redirect, request)
+                   make_response, redirect, request, session)
 from passlib.hash import bcrypt
 from urllib3.util.url import parse_url
 from werkzeug.wrappers import Response
@@ -16,11 +16,11 @@ from onelogin.saml2.auth import OneLogin_Saml2_Auth
 from axonius.clients.ldap.exceptions import LdapException
 from axonius.clients.ldap.ldap_connection import LdapConnection
 from axonius.clients.rest.connection import RESTConnection
+from axonius.consts.gui_consts import (LOGGED_IN_MARKER_PATH, CSRF_TOKEN_LENGTH)
 from axonius.clients.rest.exception import RESTException
-from axonius.consts.gui_consts import (LOGGED_IN_MARKER_PATH)
 from axonius.consts.plugin_consts import (AXONIUS_USER_NAME)
 from axonius.logging.metric_helper import log_metric
-from axonius.plugin_base import return_error
+from axonius.plugin_base import return_error, random_string
 from axonius.types.ssl_state import (SSLState)
 from axonius.utils.gui_helpers import (PermissionLevel,
                                        PermissionType, deserialize_db_permissions,
@@ -135,6 +135,7 @@ class Login:
 
         user['permissions'] = deserialize_db_permissions(user['permissions'])
         self.get_session['user'] = user
+        session['csrf-token'] = random_string(CSRF_TOKEN_LENGTH)
         self.get_session.permanent = remember_me
 
     def __exteranl_login_successful(self, source: str,
@@ -521,4 +522,5 @@ class Login:
         first_name = user.get('first_name')
         logger.info(f'User {username}, {source}, {first_name} has logged out')
         self.get_session['user'] = None
+        self.get_session['csrf-token'] = None
         return redirect('/', code=302)

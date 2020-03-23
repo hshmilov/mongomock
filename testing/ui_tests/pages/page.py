@@ -196,6 +196,10 @@ class Page:
         raise NotImplementedError
 
     @property
+    def logger(self):
+        return logger
+
+    @property
     @retry(stop_max_attempt_number=5,
            wait_fixed=1000,
            retry_on_exception=lambda exc: isinstance(exc, selenium.common.exceptions.TimeoutException))

@@ -1,5 +1,5 @@
 <template>
-  <xModal
+  <XModal
     v-if="value"
     content-class="save-query-dialog"
     class="save-query-dialog"
@@ -35,7 +35,8 @@
 
         <div class="form-item">
           <label
-            for="description">Query description <span class="form-item--optional">optional</span>
+            for="description"
+          >Query description <span class="form-item--optional">optional</span>
           </label>
           <span
             v-if="$v.queryFormProxies.description.$error"
@@ -51,7 +52,7 @@
         </div>
       </section>
     </div>
-  </xModal>
+  </XModal>
 </template>
 
 <script>
@@ -61,7 +62,7 @@ import _get from 'lodash/get';
 import _isNull from 'lodash/isNull';
 import _isEmpty from 'lodash/isEmpty';
 
-import xModal from '@axons/popover/Modal.vue';
+import XModal from '@axons/popover/Modal.vue';
 
 import { SAVE_DATA_VIEW } from '@store/actions';
 import { SET_GETTING_STARTED_MILESTONE_COMPLETION } from '@store/modules/onboarding';
@@ -87,7 +88,7 @@ const uniqueQueryName = function uniqueQueryName(inputValue) {
 export default {
   name: 'XSaveModal',
   components: {
-    xModal,
+    XModal,
   },
   model: {
     prop: 'value',
@@ -199,23 +200,23 @@ export default {
 
       return namechanged || descriptionchanged;
     },
-    onConfirm() {
+    async onConfirm() {
       // validate on submission
       this.$v.queryFormProxies.$touch();
 
       if (this.hasFormDataChanged() && this.$v.$invalid) return;
-      this.saveView({
+      await this.saveView({
         module: this.namespace,
         name: this.name,
         description: this.description,
         uuid: this.isEdit ? this.view.uuid : null,
-      }).then(() => {
-        if (this.namespace === 'devices') {
-          this.milestoneCompleted({ milestoneName: SAVE_QUERY });
-        }
-        this.fetchQueriesNames();
-        this.onClose();
       });
+
+      if (this.namespace === 'devices') {
+        this.milestoneCompleted({ milestoneName: SAVE_QUERY });
+      }
+      this.fetchQueriesNames();
+      this.onClose();
     },
     async fetchQueriesNames() {
       try {

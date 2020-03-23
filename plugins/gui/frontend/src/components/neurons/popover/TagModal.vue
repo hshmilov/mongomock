@@ -1,69 +1,76 @@
 <template>
-  <x-feedback-modal
+  <XFeedbackModal
     v-model="isActive"
     :handle-save="saveTags"
     :message="`Tagged ${taggedCount} ${module}!`"
     class="x-tag-modal"
   >
-    <div v-if="!entities.include" class="tag-modal-info">
-      <svg-icon name="symbol/info" :original="true" height="16" />
-      With all {{module}} selected, you can add new tags but cannot remove existing ones.
+    <div
+      v-if="!entities.include"
+      class="tag-modal-info"
+    >
+      <SvgIcon
+        name="symbol/info"
+        :original="true"
+        height="16"
+      />
+      With all {{ module }} selected, you can add new tags but cannot remove existing ones.
     </div>
-    <v-row>
-      <v-col cols="12">
-        <x-combobox
+    <VRow>
+      <VCol cols="12">
+        <XCombobox
           v-model="selected"
           :items="labels"
           :indeterminate.sync="indeterminate"
           multiple
           keep-open
         />
-      </v-col>
-    </v-row>
-  </x-feedback-modal>
+      </VCol>
+    </VRow>
+  </XFeedbackModal>
 </template>
 
 <script>
-import xFeedbackModal from "./FeedbackModal.vue"
-import xCombobox from "../../axons/inputs/combobox/index.vue"
 
-import _flatten from 'lodash/flatten'
-import _uniq from 'lodash/uniq'
-import _intersection from 'lodash/intersection'
+import _flatten from 'lodash/flatten';
+import _uniq from 'lodash/uniq';
+import _intersection from 'lodash/intersection';
 
-import { mapState, mapActions } from "vuex";
+import { mapState, mapActions } from 'vuex';
+import XCombobox from '../../axons/inputs/combobox/index.vue';
+import XFeedbackModal from './FeedbackModal.vue';
 import {
   FETCH_DATA_LABELS,
   ADD_DATA_LABELS,
-  REMOVE_DATA_LABELS
-} from "../../../store/actions";
-import { SET_GETTING_STARTED_MILESTONE_COMPLETION } from "../../../store/modules/onboarding"
-import { TAG_DEVICE } from "../../../constants/getting-started"
+  REMOVE_DATA_LABELS,
+} from '../../../store/actions';
+import { SET_GETTING_STARTED_MILESTONE_COMPLETION } from '../../../store/modules/onboarding';
+import { TAG_DEVICE } from '../../../constants/getting-started';
 
 export default {
-  name: "XTagModal",
-  components: { xFeedbackModal, xCombobox },
+  name: 'XTagModal',
+  components: { XFeedbackModal, XCombobox },
   props: {
     module: {
       type: String,
-      required: true
+      required: true,
     },
     entities: {
       type: Object,
-      required: true
+      required: true,
     },
     entitiesMeta: {
       type: Object,
-      default: () => {}
+      default: () => {},
     },
     value: {
       type: Array,
-      default: undefined
+      default: undefined,
     },
     title: {
       type: String,
-      default: ""
-    }
+      default: '',
+    },
   },
   data() {
     return {
@@ -71,87 +78,78 @@ export default {
       selected: [],
       taggedCount: 0,
       newItems: [],
-      indeterminate: []
-    }
+      indeterminate: [],
+    };
   },
   computed: {
     ...mapState({
       labels(state) {
-        const res = state[this.module].labels.data || []
-        return res.map(i => i.name)
-      }
+        const res = state[this.module].labels.data || [];
+        return res.map((i) => i.name);
+      },
     }),
     initialSelection() {
       if (this.value) {
-        return this.value.map(i => i.name ? i.name : i)
+        return this.value.map((i) => (i.name ? i.name : i));
       }
-      return _intersection(...Object.values(this.entitiesMeta))
+      return _intersection(...Object.values(this.entitiesMeta));
     },
     initialIndeterminate() {
-      if (!this.entitiesMeta) return []
-      let labelSets = Object.values(this.entitiesMeta)
-      if (!labelSets.length) return []
-      return _uniq(_flatten(labelSets.map(labelSet => {
-        return labelSet.filter(label => !this.initialSelection.includes(label))
-      })))
-    }
+      if (!this.entitiesMeta) return [];
+      const labelSets = Object.values(this.entitiesMeta);
+      if (!labelSets.length) return [];
+      return _uniq(_flatten(labelSets.map((labelSet) => labelSet.filter((label) => !this.initialSelection.includes(label)))));
+    },
   },
   methods: {
     ...mapActions({
       fetchLabels: FETCH_DATA_LABELS,
       addLabels: ADD_DATA_LABELS,
       removeLabels: REMOVE_DATA_LABELS,
-      milestoneCompleted: SET_GETTING_STARTED_MILESTONE_COMPLETION
+      milestoneCompleted: SET_GETTING_STARTED_MILESTONE_COMPLETION,
     }),
     activate() {
       this.isActive = true;
-      this.selected = [...this.initialSelection]
-      this.indeterminate = [...this.initialIndeterminate]
+      this.selected = [...this.initialSelection];
+      this.indeterminate = [...this.initialIndeterminate];
     },
-    saveTags() {
-      /* Separate added and removed tags and create an uber promise returning after both are updated */
-      let added = this.selected.filter(tag => {
-        return !this.initialSelection.includes(tag);
+    async saveTags() {
+      /* Separate added and removed tags */
+      const added = this.selected.filter((tag) => !this.initialSelection.includes(tag));
+      const removed = this.initialSelection.filter((tag) => !this.selected.includes(tag));
+      removed.push(...this.initialIndeterminate.filter((item) => (!this.indeterminate.includes(item) && !this.selected.includes(item))));
+
+      const addResponse = await this.addLabels({
+        module: this.module,
+        data: {
+          entities: this.entities,
+          labels: added,
+        },
       });
-      let removed = this.initialSelection.filter(tag => {
-        return !this.selected.includes(tag);
+
+      const removeResponse = await this.removeLabels({
+        module: this.module,
+        data: {
+          entities: this.entities,
+          labels: removed,
+        },
       });
-      removed.push(...this.initialIndeterminate.filter(item => {
-        return (!this.indeterminate.includes(item) && !this.selected.includes(item))
-      }))
-      return Promise.all([
-        this.addLabels({
-          module: this.module,
-          data: {
-            entities: this.entities,
-            labels: added
-          }
-        }),
-        this.removeLabels({
-          module: this.module,
-          data: {
-            entities: this.entities,
-            labels: removed
-          }
-        })
-      ]).then(response => {
-        if (!response || !response.length || (!response[0] && !response[1]))
-          return;
-        this.taggedCount = response[0] ? response[0].data : response[1].data;
-        this.milestoneCompleted({ milestoneName: TAG_DEVICE });
-        this.$emit("done");
-      });
+
+      if (!addResponse && !removeResponse) return;
+      this.taggedCount = addResponse ? addResponse.data : removeResponse.data;
+      this.milestoneCompleted({ milestoneName: TAG_DEVICE });
+      this.$emit('done');
     },
     removeEntitiesLabels(labels) {
       this.removeLabels({
         module: this.module,
-        data: { entities: this.entities, labels }
+        data: { entities: this.entities, labels },
       });
-    }
+    },
   },
   created() {
     this.fetchLabels({ module: this.module });
-  }
+  },
 };
 </script>
 

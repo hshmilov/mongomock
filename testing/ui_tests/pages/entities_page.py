@@ -134,6 +134,7 @@ class EntitiesPage(Page):
     SAVE_QUERY_DESCRIPTION_SELECTOR = '.save-query-dialog textarea'
     SAVE_QUERY_SAVE_BUTTON_ID = 'query_save_confirm'
     ALL_ENTITIES_CSS = 'tbody>tr'
+    UNSAVED_QUERY_STATUS = '[Unsaved]'
 
     JSON_ADAPTER_FILTER = 'adapters == "json_file_adapter"'
     STRESSTEST_ADAPTER_FILTER = 'adapters == "stresstest_adapter"'
@@ -873,6 +874,7 @@ class EntitiesPage(Page):
         return text == self.wait_for_element_present_by_css(self.QUERY_ERROR_CSS).text
 
     def click_save_query(self):
+        wait_until(lambda: not self.is_query_save_as_disabled())
         self.driver.find_element_by_id(self.SAVE_QUERY_ID).click()
 
     def is_query_save_as_disabled(self):
@@ -896,10 +898,12 @@ class EntitiesPage(Page):
     def open_edit_tags(self):
         self.click_button('Edit Tags', partial_class=True)
 
-    def click_save_query_save_button(self):
+    def click_save_query_save_button(self, query_name=None):
         context_element = self.wait_for_element_present_by_css('.save-query-dialog')
         self.click_button(text='Save', partial_class=True, context=context_element)
         self.wait_for_element_absent_by_css(self.QUERY_MODAL_OVERLAY)
+        if query_name is not None:
+            self.wait_for_element_present_by_text(query_name)
 
     def reset_query(self):
         self.click_button('Reset', partial_class=True)
@@ -914,11 +918,13 @@ class EntitiesPage(Page):
         self.wait_for_table_to_load()
 
     def save_query(self, query_name):
+        wait_until(lambda: not self.is_query_save_as_disabled())
         self.click_save_query()
         self.fill_query_name(query_name)
-        self.click_save_query_save_button()
+        self.click_save_query_save_button(query_name=query_name)
 
     def save_query_as(self, query_name):
+        wait_until(lambda: not self.is_query_save_as_disabled())
         self.click_button(self.SAVE_AS_BUTTON, partial_class=True)
         self.fill_query_name(query_name)
         self.click_save_query_save_button()
@@ -1028,11 +1034,22 @@ class EntitiesPage(Page):
     def wait_for_csv_loading_absent(self):
         self.wait_for_element_absent_by_css(self.EXPORT_CSV_LOADING_XPATH, retries=450)
 
+    def get_csrf_token(self) -> str:
+        session = requests.Session()
+        cookies = self.driver.get_cookies()
+        for cookie in cookies:
+            session.cookies.set(cookie['name'], cookie['value'])
+        resp = session.get('https://127.0.0.1/api/csrf')
+        csrf_token = resp.text
+        resp.close()
+        return csrf_token
+
     def generate_csv(self, entity_type, fields, filters):
         session = requests.Session()
         cookies = self.driver.get_cookies()
         for cookie in cookies:
             session.cookies.set(cookie['name'], cookie['value'])
+        session.headers['X-CSRF-Token'] = self.get_csrf_token()
         logger.info('posting for csv')
         result = session.post(f'https://127.0.0.1/api/{entity_type}/csv',
                               json={'fields': fields, 'filter': filters},
@@ -1048,6 +1065,7 @@ class EntitiesPage(Page):
         cookies = self.driver.get_cookies()
         for cookie in cookies:
             session.cookies.set(cookie['name'], cookie['value'])
+        session.headers['X-CSRF-Token'] = self.get_csrf_token()
         logger.info('posting for csv')
         result = session.post(f'https://127.0.0.1/api/{entity_type}/{entity_id}/{field_name}/csv',
                               json={'sort': sort, 'desc': ('1' if desc else '0'), 'search': search_text},
@@ -1377,7 +1395,7 @@ class EntitiesPage(Page):
         self.fill_query_name(query_name)
         if query_description:
             self.fill_query_description(query_description)
-        self.click_save_query_save_button()
+        self.click_save_query_save_button(query_name=query_name)
 
     def open_filter_out_dialog(self):
         self.click_button(self.ACTIONS_BUTTON, partial_class=True)
