@@ -101,7 +101,6 @@ class VectraAdapter(AdapterBase):
             device_instance.c_score_gte = device_raw.get('c_score_gte')
             device_instance.fields = device_raw.get('fields')
             device_instance.key_asset = device_raw.get('key_asset')
-            device_instance.last_detection_timestamp = parse_date(device_raw.get('last_detection_timestamp'))
             device_instance.ordering = device_raw.get('ordering')
             device_instance.page = device_raw.get('page')
             device_instance.page_size = device_raw.get('page_size')
@@ -120,6 +119,7 @@ class VectraAdapter(AdapterBase):
                 return None
             device.id = device_id
 
+            device.last_seen = parse_date(device_raw.get('last_detection_timestamp'))
             device.add_ips_and_macs(macs=[device_raw.get('mac_address')],
                                     ips=[device_raw.get('last_source')])
 

@@ -560,6 +560,11 @@ export const pluginMeta = {
         link: '',
         description: 'Twistlock provides container and cloud native cybersecurity for teams using Docker, Kubernetes, serverless, and other cloud native technologies.'
     },
+    HP_ILO_adapter: {
+        title: 'HP Integrated Lights-Out (iLO)',
+        link: 'https://docs.axonius.com/docs/hp-ilo',
+        description: 'HP Integrated Lights-Out (iLO) is server management software that enables the configuration, monitoring, and updating of HPE servers.'
+    },
     riverbed_adapter: {
         title: 'Riverbed SteelCentral Controller (SCC) - BETA',
         link: 'https://docs.axonius.com/docs/riverbed-steelcentral-controller-scc',

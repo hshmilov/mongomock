@@ -50,6 +50,7 @@ DOCKER_PORTS = {
     'carbonblack-protection-adapter':   5212,
     'carbonblack-response-adapter':     5213,
     'aruba-adapter':                    5219,
+    'hp-ilo-adapter':                   5220,
     'puppet-adapter':                   5222,
     'chef-adapter':                     5223,
     'airwatch-adapter':                 5228,
