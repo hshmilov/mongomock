@@ -248,6 +248,7 @@ DOCKER_PORTS = {
     'arista-eos-adapter':               10002,
     'men-and-mice-adapter':             10004,
     'openvas-adapter':                  10014,
+    'kenna-adapter':                    12345,
     'microfocus-sa-adapter':            13368,
     'digicert-pki-platform-adapter':    13369,
     'github-adapter':                   13370,

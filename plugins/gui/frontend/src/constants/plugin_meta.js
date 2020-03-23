@@ -8,6 +8,11 @@ export const pluginMeta = {
         title: 'Contrast Security',
         description: 'Contrast Security protects software applications against cyberattacks.'
     },
+    kenna_adapter: {
+        title: 'Kenna Security Platform',
+        link: 'https://docs.axonius.com/docs/kenna-security-platform',
+        description: 'Kenna Security Platform is a vulnerability assessment solution that provides risk scoring, prioritization, and benchmarking.'
+    },
     microfocus_sa_adapter: {
         title: 'Micro Focus Server Automation (HP Server Automation, Opsware)',
         link: 'https://docs.axonius.com/docs/microfocus-sa',

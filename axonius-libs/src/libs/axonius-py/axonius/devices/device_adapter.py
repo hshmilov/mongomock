@@ -447,6 +447,24 @@ class DeviceOpenPort(SmartJsonClass):
     service_name = Field(str, 'Service Name')
 
 
+class DeviceOpenPortVulnerabilityAndFix(SmartJsonClass):
+    """ A definition for a CVE that regarding an open port"""
+
+    port_id = Field(int, 'Port Number')
+    cve_id = Field(str, 'CVE ID')
+    cve_description = Field(str, 'CVE Description')
+    cve_severity = Field(float, 'CVE Severity')
+    wasc_id = Field(str, 'WASC ID')
+    vuln_solution = Field(str, 'Vulnerability Solution')
+    fix_title = Field(str, 'Fix Title')
+    fix_diagnosis = Field(str, 'Fix Diagnosis')
+    fix_consequence = Field(str, 'Fix Consequence')
+    fix_solution = Field(str, 'Fix Solution')
+    fix_url = Field(str, 'Fix Url')
+    fix_updated_at = Field(datetime.datetime, 'Fix updated at')
+    patch_publication_date = Field(datetime.datetime, 'Patch publication date')
+
+
 class DeviceSwapFile(SmartJsonClass):
     """ A Definition for a key-value tag """
 
@@ -636,6 +654,9 @@ class DeviceAdapter(SmartJsonClass):
         hidden=True
     )
     open_ports = ListField(DeviceOpenPort, 'Open Ports', json_format=JsonArrayFormat.table)
+    open_ports_vulns_and_fixes = ListField(DeviceOpenPortVulnerabilityAndFix,
+                                           "Open Ports Vulnerablities And Fixes",
+                                           json_format=JsonArrayFormat.table)
     ports_info = ListField(NmapPortInfo, 'Ports Information', json_format=JsonArrayFormat.table)
     scripts_info = ListField(PortScriptInformation, 'Scripts Information', json_format=JsonArrayFormat.table)
     network_interfaces = ListField(
@@ -656,7 +677,7 @@ class DeviceAdapter(SmartJsonClass):
     available_security_patches = ListField(
         DeviceAdapterMsrcAvailablePatch, "OS Available Security Patches", json_format=JsonArrayFormat.table
     )
-    software_library_cves = ListField(DeviceAdapterSoftwareLibraryCVE, "Vulnerable Software Library",
+    software_library_cves = ListField(DeviceAdapterSoftwareLibraryCVE, "Software Libraries with Vulnerablities",
                                       json_format=JsonArrayFormat.table)
     connected_hardware = ListField(
         DeviceAdapterConnectedHardware, "Connected Hardware", json_format=JsonArrayFormat.table
