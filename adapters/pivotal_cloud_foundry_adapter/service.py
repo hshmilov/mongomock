@@ -101,7 +101,7 @@ class PivotalCloudFoundryAdapter(AdapterBase):
                 },
                 {
                     'name': 'username',
-                    'title': 'Username',
+                    'title': 'User name',
                     'type': 'string'
                 },
                 {
@@ -124,7 +124,8 @@ class PivotalCloudFoundryAdapter(AdapterBase):
             'required': [
                 'domain',
                 'username',
-                'password'
+                'password',
+                'verify_ssl'
             ],
             'type': 'array'
         }
