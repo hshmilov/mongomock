@@ -101,7 +101,7 @@ class PivotalCloudFoundryAdapter(AdapterBase):
                 },
                 {
                     'name': 'username',
-                    'title': 'User name',
+                    'title': 'User Name',
                     'type': 'string'
                 },
                 {
