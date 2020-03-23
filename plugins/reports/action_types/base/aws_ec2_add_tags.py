@@ -93,7 +93,7 @@ class AwsEc2AddTagsAction(ActionTypeBase):
         if tag_key.startswith('aws:'):
             raise ValueError('Tag key may not start with "aws:".')
         tag_value = client_config.get(TAG_VALUE, None)
-        tags = [{'Key': tag_key, 'Value': tag_value}]
+        tags = [{'Key': tag_key, 'Value': tag_value or ''}]
 
         valid_instance_collection = ec2_resource.instances
         valid_instance_obj_list = instance_group.instance_list
