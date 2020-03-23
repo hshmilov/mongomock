@@ -48,14 +48,14 @@ class AwsEc2AddTagsAction(ActionTypeBase):
                 },
                 {
                     'name': TAG_KEY,
-                    'title': 'Tag Key',
+                    'title': 'Tag key',
                     'type': 'string',
                     'description': 'Tag key must not begin with "aws:" (reserved).',
                     'default': 'Axonius'
                 },
                 {
                     'name': TAG_VALUE,
-                    'title': 'Tag Value',
+                    'title': 'Tag value',
                     'type': 'string',
                     'description': 'Value may be empty.'
                 }

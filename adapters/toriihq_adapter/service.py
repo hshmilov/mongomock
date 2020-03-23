@@ -161,7 +161,7 @@ class ToriihqAdapter(AdapterBase, Configurable):
             'required': [
                 'exclude_external_users'
             ],
-            'pretty_name': 'Toriihq Configuration',
+            'pretty_name': 'Torii Configuration',
             'type': 'array'
         }
 
