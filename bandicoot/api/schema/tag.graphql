@@ -1,0 +1,5 @@
+type Tag @generateInputs(where: "tag_bool_exp", orderBy: "tag_order_by") {
+    name: String!
+    creator: String!
+    level: String!
+}

@@ -1,0 +1,25 @@
+# name of the benchmark.
+- name: test_devices_query
+
+  # response timeout
+  timeout: 1s
+
+  # the benchmarks are first run for this duration and the results are ignored
+  warmup_duration: 5
+
+  # the duration of each benchmark
+  duration: 30
+
+  # number of open connections to the server
+  open_connections: 1000
+
+  # the servers to be benchmarked, their dir and urls
+  candidates:
+    - name: bandicoot_local
+      url: http://host.docker.internal:9091/query
+      query: DevicesQuery
+      queries_file: query.graphql
+
+  # Requests/sec
+  rps:
+    - 10000

@@ -1,0 +1,22 @@
+
+type FirewallRule  @generateInputs(where: "firewall_rule_bool_exp", orderBy: "firewall_rule_order_by")
+{
+    name: String
+    source: String
+    type: AccessType
+    direction: Direction
+    target: String
+    protocol: String
+    srcPort: Int
+    dstPort: Int
+}
+
+enum AccessType {
+    ALLOW
+    DENY
+}
+
+enum Direction {
+    INGRESS
+    EGRESS
+}

@@ -126,7 +126,7 @@ def _get_unexpected_pylint_state(is_success_expected):
         # we do this hassle because we can't pickle lambdas
         func = _is_pylint_ok_expected_true if is_success_expected else _is_pylint_ok_expected_false
         res = process_pool.map_async(func, files_to_map)  # return tuple
-        mapped_values = res.get(60 * 25)
+        mapped_values = res.get(60 * 50)
     except KeyboardInterrupt:
         process_pool.terminate()
         process_pool.join()

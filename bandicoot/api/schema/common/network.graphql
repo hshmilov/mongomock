@@ -1,0 +1,6 @@
+
+type NetworkInterface @generateInputs(where: "network_interface_bool_exp", orderBy: "networkInterface_order_by") {
+    deviceId: UUID
+    macAddr: Mac
+    ipAddrs: [IP!]
+}

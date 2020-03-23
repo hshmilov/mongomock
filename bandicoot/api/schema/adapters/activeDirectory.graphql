@@ -1,0 +1,125 @@
+type ActiveDirectoryData {
+    "AD Common Name (CN)"
+    adCn: String
+    "AD objectSid"
+    adSid: String
+    "AD objectGUID"
+    adGuid: String
+    "AD name"
+    adName: String
+    "AD SAMAccountName"
+    adSAMAccountName: String
+    "AD User Principal Name"
+    adUserPrincipalName: String
+    "AD displayName"
+    adDisplayName: String
+    "AD distinguishedName"
+    adDistinguishedName: String
+    "AD canonicalName"
+    adCanonicalName: String
+    "AD accountExpires"
+    adAccountExpires: Epoch
+    "AD objectClass"
+    adObjectClass: [String]
+    "AD objectCategory"
+    adObjectCategory: String
+    "AD Organizational Unit"
+    adOrganizationalUnit: [String]
+    "AD lastLogoff"
+    adLastLogoff: Time
+    "AD lastLogon"
+    adLastLogon: Time
+    "AD lastLogonTimestamp"
+    adLastLogonTimestamp: Time
+    "AD badPasswordTime"
+    adBadPasswordTime: Time
+    "AD badPwdCount"
+    ad_bad_pwd_count: Int
+    "AD managedBy"
+    adManagedBy: String
+    "AD pwdLastSet"
+    adPasswordLastSet: Time
+    "AD Primary group ID"
+    adPrimaryGroupId: Int
+    "AD Primary group ID"
+    adPrimaryGroupDn: String
+    "AD memberOf"
+    adMemberOf: [String]
+    "AD memberOf (nested full list)"
+    adMemberOfFull: [String]
+    "AD uSNChanged"
+    adUsnChanged: Int
+    "AD uSNCreated"
+    adUsnCreated: Int
+    "AD whenChanged"
+    adWhenChanged: Time
+    "AD whenCreated"
+    adWhenCreated: Time
+    "AD isCriticalSystemObject"
+    adIsCriticalSystemObject: Boolean
+    #  ad_dialin_policy: String "AD Dial In Policy", enum=AD_OBJECT_DIALIN_OPTIONS
+    "AD msDS-AllowedToDelegateTo"
+    adMsdsAllowedToDelegateTo: [String]
+    #  ad_delegation_policy: String "AD Delegation Policy", enum=AD_DELEGATION_POLICY
+    "AD Password Must Change"
+    adPwdMustChange: Boolean
+    "AD Resultant Password Settings Object"
+    adMsdsResultantPso: String
+    #
+    #  # User Account Control
+    #  ad_uac_logon_script = Field(bool, "AD logon script will be run (SCRIPT"
+    #  ad_uac_account_disable = Field(bool, "AD Account Disabled"
+    #  ad_uac_homedir_required = Field(bool, "AD Home Folder Required"
+    #  ad_uac_password_not_required = Field(bool, "AD Password Not Required"
+    #  ad_uac_password_cant_change = Field(bool, "AD Password Can't Change"
+    #  ad_uac_encrypted_text_password_allowed = Field(bool, "AD Encrypted Text Password Allowed (Reversible Password"
+    #  ad_uac_temp_duplicate_account = Field(bool, "AD Temp Duplicate Account"
+    #  ad_uac_normal_account = Field(bool, "AD Normal Account"
+    #  ad_uac_interdomain_trust_account = Field(bool, "AD Interdomain Trust Account"
+    #  ad_uac_workstation_trust_account = Field(bool, "AD Workstation Trust Account"
+    #  ad_uac_server_trust_account = Field(bool, "AD Server Trust Account"
+    #  ad_uac_dont_expire_password = Field(bool, "AD Password Never Expires"
+    #  ad_uac_mns_logon_account = Field(bool, "AD MNS Logon Account"
+    #  ad_uac_smartcard_required = Field(bool, "AD Smart Card Required"
+    #  ad_uac_trusted_for_delegation = Field(bool, "AD Account Trusted For Delegation"
+    #  ad_uac_not_delegated = Field(bool, "AD Account Not Delegated"
+    #  ad_uac_use_des_key_only = Field(bool, "AD Use DES Key Only"
+    #  ad_uac_dont_require_preauth = Field(bool, "AD No Pre Authentication Required"
+    #  ad_uac_password_expired = Field(bool, "AD Password Has Expired"
+    #  ad_uac_trusted_to_auth_for_delegation = Field(bool, "AD Account Trusted To Authenticate For Delegation"
+    #  ad_uac_partial_secrets_account = Field(bool, "AD Partial Secret Account (Read Only Domain Controller"
+    #
+    #  # Our own parsed things
+    #  ad_object_type: String "Object Type", enum=AD_OBJECT_TYPE_ENUM
+    #
+    #  # Special parsed vars
+    #  ad_site_name: String "AD Site Name"
+    #  ad_site_location: String "AD Site Location"
+    #  ad_subnet: String "AD Subnet"
+    #
+    #  # Values only for DC's
+    #  ad_is_dc = Field(bool, "AD Is Domain Controller (DC"
+    #  ad_dc_gc = Field(bool, "AD DC Global Catalog"
+    #  ad_dc_infra_master = Field(bool, "AD DC Infrastructure Master"
+    #  ad_dc_rid_master = Field(bool, "AD DC RID Master"
+    #  ad_dc_pdc_emulator = Field(bool, "AD DC PDC Emulator"
+    #  ad_dc_naming_master = Field(bool, "AD Naming Master"
+    #  ad_dc_schema_master = Field(bool, "AD Schema Master"
+    #  ad_dc_is_dhcp_server = Field(bool, "AD DHCP Server"
+    #  ad_dc_is_nps_server = Field(bool, "AD NPS Server"
+    #
+    #  # Values only for exhange server
+    #  ad_is_exchange_server = Field(bool, "AD Exchange Server"
+    #  ad_exchange_server_organization: String "AD Exchange Server Organization"
+    #  ad_exchange_server_admin_group: String "AD Exchange Server Admin Group"
+    #  ad_exchange_server_name: String "AD Exchange Server Name"
+    #  ad_exchange_server_roles = ListField(str, "AD Exchange Server Roles"
+    #  ad_exchange_server_serial: String "AD Exchange Server Serial"
+    #  ad_exchange_server_product_id: String "AD Exchange Server Product ID"
+    #
+    #  # Other
+    #  ad_last_dc_fetched: String 'Last DC Fetched from'
+    #  physical_delivery_office_name: String 'Physical Delivery Office Name'
+    #  delivery_office_name: String 'Delivery Office Name'
+
+}

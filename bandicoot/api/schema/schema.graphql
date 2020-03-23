@@ -1,0 +1,7 @@
+
+type Query {
+  adapterDevices: [AdapterDevice!]!
+  devices: [Device!]!
+  adapterUsers: [AdapterUser!]!
+  users: [User!]!
+}

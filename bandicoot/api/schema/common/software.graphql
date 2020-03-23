@@ -1,0 +1,15 @@
+type InstalledSoftware @generateInputs(where: "installed_software_bool_exp", orderBy: "installed_software_order_by")
+{
+    "Software Name"
+    name: String
+    "Software Version"
+    version: String
+    architecture: Architecture
+    description: String
+    "Software Vendor"
+    vendor: String
+    publisher: String
+    cveCount: Int
+    swLicense: String
+    path: String
+}

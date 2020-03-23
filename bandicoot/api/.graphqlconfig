@@ -1,0 +1,11 @@
+{
+  "name": "Bandicoot GraphQL Schema",
+  "projects": {
+    "schema": {
+      "includes": ["schema/**"]
+    },
+    "generated": {
+      "includes": ["generated/**"]
+    }
+  }
+}

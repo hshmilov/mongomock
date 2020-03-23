@@ -1,0 +1,9 @@
+# columns and relationships of "adapters"
+type Adapter @generateInputs(where: "adapter_bool_exp", orderBy: "adapter_order_by") {
+    id: AdapterType!
+    name: String
+    properties: [String]
+}
+
+union AdapterData = ActiveDirectoryData | CylanceData | CrowdStrikeData
+extend union AdapterData @generateInputs(where: "adapter_data_bool_exp", orderBy: "adapter_data_order_by")

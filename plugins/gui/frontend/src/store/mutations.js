@@ -73,6 +73,11 @@ export const updateDataCount = (state, payload) => {
   count.error = payload.error;
   count.rule = payload.rule;
 
+  if (payload.isExpermentalAPI && payload.data !== undefined) {
+        count.data = payload.data.data[`${payload.module}_aggregate`][0].count;
+        count.data_to_show = payload.data.data[`${payload.module}_aggregate`][0].count;
+        return;
+    }
   if (payload.data !== undefined) {
     count.data = payload.data;
     count.data_to_show = payload.data;
@@ -93,13 +98,17 @@ export const updateDataContent = (state, payload) => {
   if (!payload.data) {
     return;
   }
+  let payload_data = payload.data;;
+  if (payload.isExpermentalAPI) {
+    payload_data = payload.data.data[payload.module].map((item) => (item._compatibilityAPI || {}))
+	}
   if (!payload.skip) {
-    content.data = payload.data;
+    content.data = payload_data;
     if (module.count.data > content.data.length) {
       content.data[module.count.data - 1] = null;
     }
-  } else if (payload.data.length) {
-    content.data.splice(payload.skip, payload.data.length, ...payload.data);
+  } else if (payload_data.length) {
+    content.data.splice(payload.skip, payload_data.length, ...payload_data);
   }
 };
 

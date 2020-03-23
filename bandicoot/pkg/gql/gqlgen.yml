@@ -1,0 +1,35 @@
+schema:
+  - "../../api/generated/augmented_schema.graphql"
+
+# Let gqlgen know where to put the generated models (if any)
+model:
+  filename: models_gen.go
+  package: gql
+
+exec:
+  filename: gql_gen.go
+  package: gql
+
+resolver:
+  filename: resolver.go
+  type: Resolver
+  package: gql
+
+# Optional, set to true if you prefer []Thing over []*Thing
+omit_slice_element_pointers: True
+
+models:
+  RelationType:
+    model: github.com/99designs/gqlgen/graphql.String
+  Epoch:
+      model: bandicoot/pkg/gql.EpochScalar
+  UUID:
+    model: bandicoot/pkg/gql.UUIDScalar
+  IP:
+    model: bandicoot/pkg/gql.IPScalar
+  CIDR:
+    model: bandicoot/pkg/gql.CIDRScalar
+  Mac:
+    model: bandicoot/pkg/gql.MacScalar
+
+

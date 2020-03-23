@@ -241,7 +241,10 @@ class Page:
 
     def switch_to_page_allowing_failure(self):
         logger.info(f'Switching to {self.root_page_css}')
-        self.wait_for_element_present_by_css(self.root_page_css).click()
+        self.wait_for_element_present_by_css(self.root_page_css,
+                                             retries=200,
+                                             interval=0.3
+                                             ).click()
 
     def scroll_to_top(self):
         self.driver.execute_script('window.scrollTo(0, 0)')

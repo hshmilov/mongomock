@@ -1,0 +1,41 @@
+
+
+enum OsTypes {
+    WINDOWS
+    LINUX
+    OS_X
+    IOS
+    AIR_OS
+    ANDROID
+    FREE_BSD
+    VMWARE
+    CISCO
+    MIKROTIK
+    VXWORKS
+    F5_NETWORKS_BIG_IP
+    SOLARIS
+    AIX
+    PRINTER
+    PLAYSTATION
+    CHECKPOINT
+    ARISTA
+}
+
+"""
+Operating System is the system installed on an adapter device
+"""
+type OperatingSystem  @generateInputs(where: "operating_system_bool_exp", orderBy: "operating_system_order_by")
+{
+    id: UUID!
+    type: String
+    distribution: String
+    architecture: Int
+    servicePack: String
+    installDate: Epoch
+    kernelVersion: String
+    codeName: String
+    major: Int
+    minor: Int
+    build: String
+    RawName: String
+}

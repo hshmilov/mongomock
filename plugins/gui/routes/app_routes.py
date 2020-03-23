@@ -24,6 +24,7 @@ from gui.routes.reports.reports import Reports
 from gui.routes.settings.settings import Settings
 from gui.routes.offline.configuration import Configuration
 from gui.routes.password_vault import PasswordVault
+from gui.routes.graphql.api import GraphQLAPI
 # pylint: disable=no-member,invalid-name,no-self-use
 
 logger = logging.getLogger(f'axonius.{__name__}')
@@ -40,8 +41,9 @@ class AppRoutes(Signup,
                 Reports,
                 Compliance,
                 Instances,
+                PasswordVault,
                 Configuration,
-                PasswordVault):
+                GraphQLAPI):
 
     @add_rule_unauth('get_constants')
     def get_constants(self):

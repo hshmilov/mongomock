@@ -1,0 +1,13 @@
+# Google cloud adapter data schema
+
+type GceTags  @generateInputs(where: "gce_tags_bool_exp", orderBy: "gce_tags_order_by") {
+    gceKey: String
+    gceValue: String
+}
+
+type GoogleCloudData {
+    Id: String
+    Size: String
+    Image: String
+    GCETags: [GceTags]
+}

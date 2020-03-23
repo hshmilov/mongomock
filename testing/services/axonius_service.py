@@ -63,7 +63,6 @@ class AxoniusService:
         self.heavy_lifting = HeavyLiftingService()
         self.instance_control = InstanceControlService()
         self.master_proxy = MasterProxyService()
-
         self.axonius_services = [self.db,
                                  self.core,
                                  self.aggregator,
@@ -74,7 +73,8 @@ class AxoniusService:
                                  self.static_users_correlator,
                                  self.heavy_lifting,
                                  self.reports,
-                                 self.master_proxy]
+                                 self.master_proxy,
+                                 ]
 
         # No instance control on windows
         if 'linux' in sys.platform.lower():
@@ -219,7 +219,8 @@ class AxoniusService:
             expose_db=False,
             env_vars=None,
             internal_service_white_list=None,
-            system_config=None):
+            system_config=None
+    ):
         def _start_service(service_to_start):
             service_to_start.set_system_config(system_config)
             if skip and service_to_start.get_is_container_up():
@@ -464,7 +465,7 @@ class AxoniusService:
             skip=False,
             show_print=True,
             env_vars=None,
-            system_config=None
+            system_config=None,
     ):
         all_services_to_start = [self.get_adapter(name) for name in sorted(adapter_names)] + \
                                 [self.get_plugin(name) for name in sorted(plugin_names)] + \

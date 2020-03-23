@@ -201,6 +201,11 @@ export default {
       type: [Function, String],
       default: '',
     },
+    isExpermentalAPI: {
+      type: Boolean,
+      required: false,
+      default: false,
+    },
   },
   data() {
     return {
@@ -326,7 +331,7 @@ export default {
         firstPage = 0;
         lastPage = Math.min(firstPage + 6, this.pageCount);
       } else if (lastPage > this.pageCount) {
-        // For the case that current page is up to 3 from last, 
+        // For the case that current page is up to 3 from last,
         // page numbers should be last 7 available
         lastPage = this.pageCount;
         firstPage = Math.max(lastPage - 6, 0);
@@ -458,7 +463,7 @@ export default {
       }
       if (!this.pageLinkNumbers || this.pageLinkNumbers.length <= 1) {
         // Fetch at least 5 pages - in case pageSize is 20, there will enough data to change to 100
-        return this.fetchContentSegment(0, this.pageSize * 5);
+        return this.fetchContentSegment(0, this.pageSize * 5, isCounted, isRefresh);
       }
       return this.fetchContentSegment(
         this.pageLinkNumbers[0] * this.pageSize,
@@ -475,6 +480,7 @@ export default {
         limit,
         isCounted,
         isRefresh,
+        isExpermentalAPI: this.isExpermentalAPI
       }).then(() => {
         if (!this.content.fetching) {
           this.loading = false;

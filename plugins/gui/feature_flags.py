@@ -41,6 +41,11 @@ class FeatureFlags(Configurable):
                     }
                 },
                 {
+                    'name': FeatureFlagsNames.ExperimentalAPI,
+                    'title': 'Use experimental API (make sure GraphQL server is running)',
+                    'type': 'bool',
+                },
+                {
                     'name': FeatureFlagsNames.ExpiryDate,
                     'title': 'Contract Expiry Date',
                     'type': 'string',
@@ -92,7 +97,7 @@ class FeatureFlags(Configurable):
                     ],
                 }
             ],
-            'required': ['is_trial', FeatureFlagsNames.LockOnExpiry],
+            'required': ['is_trial', 'experimental_api',  FeatureFlagsNames.LockOnExpiry],
             'name': 'feature_flags',
             'title': 'Feature Flags',
             'type': 'array'
@@ -105,6 +110,7 @@ class FeatureFlags(Configurable):
             FeatureFlagsNames.ExpiryDate: '',
             FeatureFlagsNames.LockOnExpiry: False,
             FeatureFlagsNames.LockedActions: [],
+            FeatureFlagsNames.ExperimentalAPI: False,
             FeatureFlagsNames.CloudCompliance: {
                 CloudComplianceNames.Visible: False,
                 CloudComplianceNames.Enabled: False,

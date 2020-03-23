@@ -4,6 +4,7 @@ from functools import reduce
 from datetime import datetime
 
 from PyPDF2 import PdfFileReader
+from selenium.common.exceptions import StaleElementReferenceException
 
 from services.adapters import stresstest_scanner_service, stresstest_service
 from services.standalone_services.maildiranasaurus_service import MaildiranasaurusService
@@ -429,7 +430,9 @@ class TestReportGeneration(TestBase):
             self.reports_page.wait_for_spinner_to_end()
             self.reports_page.click_save()
 
-            doc = self._extract_report_pdf_doc(report_name)
+            doc = wait_until(self._extract_report_pdf_doc, check_return_value=False,
+                             tolerated_exceptions_list=[StaleElementReferenceException],
+                             report_name=report_name)
 
             self.dashboard_page.switch_to_page()
             card = self.dashboard_page.get_card(histogram_title)

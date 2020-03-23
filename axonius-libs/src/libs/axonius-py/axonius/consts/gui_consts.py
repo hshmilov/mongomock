@@ -140,6 +140,7 @@ SPECIFIC_DATA_CLIENT_USED = f'{SPECIFIC_DATA}.client_used'
 class FeatureFlagsNames:
     TrialEnd = 'trial_end'
     LockedActions = 'locked_actions'
+    ExperimentalAPI = 'experimental_api'
     CloudCompliance = 'cloud_compliance'
     ExpiryDate = 'expiry_date'
     LockOnExpiry = 'lock_on_expiry'

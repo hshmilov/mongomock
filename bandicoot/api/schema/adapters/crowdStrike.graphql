@@ -1,0 +1,44 @@
+
+type csPolicySettings @generateInputs(where: "cs_policy_settings_bool_exp", orderBy: "cs_policy_settings_order_by") {
+    enabled: Boolean
+}
+
+type csPreventionSettings @generateInputs(where: "cs_prevention_settings_bool_exp", orderBy: "cs_prevention_settings_order_by") {
+    name: String
+    settings: [csPolicySettings]
+}
+
+type csSensorUpdateSettings @generateInputs(where: "cs_sensor_update_settings_bool_exp", orderBy: "cs_sensor_update_settings_order_by") {
+    build: String
+}
+
+type csGroup @generateInputs(where: "cs_group_bool_exp", orderBy: "cs_group_order_by") {
+    id: String
+    name: String
+    createdBy: String
+    createdTimestamp: Epoch
+    description: String
+    groupType: String
+    modifiedBy: String
+    modifiedTime: Epoch
+}
+
+type csPolicy @generateInputs(where: "cs_policy_bool_exp", orderBy: "cs_policy_order_by") {
+    name: String
+    description: String
+    platformName: String
+    groups: [csGroup]
+    enabled: Boolean
+    createdBy: String
+    createdTime: Epoch
+    preventionSettings: [csPreventionSettings]
+    sensorUpdateSettings: [csSensorUpdateSettings]
+}
+
+type CrowdStrikeData {
+    externalIp: String
+    groups: [csGroup]
+    preventionPolicy: csPolicy
+    sensorUpdatePolicy: csGroup
+    csAgentVersion: String
+}

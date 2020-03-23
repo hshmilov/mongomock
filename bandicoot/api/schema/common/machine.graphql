@@ -1,0 +1,41 @@
+
+type Storage {
+    deviceId: UUID!
+    "Path"
+    path: String!
+    "Device Name"
+    name: String!
+    "Size (GB)"
+    totalSize: Float!
+    "Size (GB)"
+    freeSize: Float!
+    "Whether drive is encrypted or not"
+    isEncrypted: Boolean!
+    "Descirption of device"
+    description: String
+}
+
+enum Architecture {
+    X86
+    X64
+    MIPS
+    ALPHA
+    ARM
+    POWER_PC
+    IA64
+}
+
+type CPU {
+    id: Int!
+    name: String!
+    manfacturer: String
+    bitness: Int
+    family: String
+    "Core count of CPU"
+    cores: Int
+    coresThreads: Int
+    ghz: Float
+    # WE DON'T WANT TO SUPPORT THIS
+    # loadPercentage: Int
+
+}

@@ -1,0 +1,16 @@
+
+enum CylanceDeviceState {
+    ONLINE
+    OFFLINE
+}
+
+type CylanceData {
+    isSafe: String
+    deviceState: CylanceDeviceState
+    policyId: String
+    policyName: String
+    policiesDetails: [String]
+    tenantTag: String
+    zoneNames: [String]
+    agentVersion: String
+}

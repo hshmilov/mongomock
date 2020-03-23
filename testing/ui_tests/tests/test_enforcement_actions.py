@@ -6,7 +6,7 @@ import boto3
 import pytest
 from flaky import flaky
 from retrying import retry
-from selenium.common.exceptions import NoSuchElementException
+from selenium.common.exceptions import NoSuchElementException, StaleElementReferenceException
 
 from axonius.consts.system_consts import AXONIUS_DNS_SUFFIX
 from axonius.utils.parsing import make_dict_from_csv
@@ -544,7 +544,7 @@ class TestEnforcementActions(TestBase):
         return count == expected_completed_count
 
     def test_custom_data_action(self):
-
+        # field name is similar to how generic 'Host Name' saved on db
         enforcement_db_like = {
             'enforcement_name': 'Custom Data - db identifier name',
             'action_name': 'custom data action 1',
@@ -552,13 +552,14 @@ class TestEnforcementActions(TestBase):
             'field_value': 'axonius.hostname.db'
         }
 
+        # field name is similar to generic 'Host Name' label
         enforcement_label_like = {
             'enforcement_name': 'Custom Data - field name similar to the generic field label',
             'action_name': 'custom data action 2',
             'field_name': 'Host Name',
             'field_value': 'axonius.hostname.label'
         }
-
+        # unique field
         enforcement_unique_field = {
             'enforcement_name': 'Custom Data - unique field',
             'action_name': 'custom data action 3',
@@ -566,16 +567,12 @@ class TestEnforcementActions(TestBase):
             'field_value': 'axonius.hostname.unique'
         }
 
-        # field name is similar to how generic 'Host Name' saved on db
-        self.enforcements_page.create_new_enforcement_with_custom_data(**enforcement_db_like)
+        for kwargs in [enforcement_db_like, enforcement_label_like, enforcement_unique_field]:
+            wait_until(self.enforcements_page.create_new_enforcement_with_custom_data, check_return_value=False,
+                       tolerated_exceptions_list=[StaleElementReferenceException], **kwargs)
 
-        # field name is similar to generic 'Host Name' label
-        self.enforcements_page.create_new_enforcement_with_custom_data(**enforcement_label_like)
-
-        # unique field
-        self.enforcements_page.create_new_enforcement_with_custom_data(**enforcement_unique_field)
-
-        self.adapters_page.switch_to_page()
+        wait_until(self.adapters_page.switch_to_page, check_return_value=False,
+                   tolerated_exceptions_list=[StaleElementReferenceException])
         self.base_page.run_discovery()
 
         # go to devices page, run discovery and run all 3 enforcements on a device

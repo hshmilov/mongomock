@@ -1,0 +1,116 @@
+
+"Device aggregates one or more adapter device that were correlated"
+type Device @generateInputs(where: "device_bool_exp", orderBy: "device_order_by") {
+    "Unique ID of correlated device"
+    id: UUID!
+    "Fetch cycle this device was collected"
+    fetchCycle: Int!
+    "Count of adapters that are correlated to this device"
+    adapterCount: Int!
+    "Names of adapters that are correlated to this device"
+    adapterNames: [String!]
+    "Unique hostnames given to device by all adapters"
+    hostnames: [String!]
+    "Last time device was seen by one of the adapters"
+    lastSeen: Epoch
+    "Adapter devices that are correlated to this device"
+    adapterDevices: [AdapterDevice!] @relation(name:"adapter_devices", fkName: ["id", "fetch_cycle"], relationFkName: ["device_id", "fetch_cycle"], relType: ONE_TO_MANY)
+    "Unique set of network interfaces collected by all adapter devices"
+    interfaces: [NetworkInterface!] @viewFunction(name:"device_network_interfaces", arguments: ["id", "fetch_cycle"])
+    "Unique set tags given to all adapter devices"
+    tags: [Tag!] @viewFunction(name:"device_tags", arguments: ["id", "fetch_cycle"])
+    "Allows transformation of queried data to API v1"
+    _compatibilityAPI: Map @goField(forceResolver: true, name: "compatabilityAPI") @deprecated
+}
+
+# columns and relationships of "devices"
+type AdapterDevice @generateInputs(where: "adapter_device_bool_exp", orderBy: "adapter_device_order_by") {
+    "Unique id of adapter device"
+    id: UUID!
+    "Cycle adapter device was fetched"
+    fetchCycle: Int!
+    "Idadas of adapter that fetched this device"
+    adapterId: AdapterType!
+    adapter : Adapter @relation(name:"adapters", fkName: ["adapterId"], relationFkName: ["id"], relType: ONE_TO_ONE)
+    "Name of adapter that fetched this advice"
+    adapterName: String
+    "Correlated device id"
+    deviceId: UUID!
+    "Unique data returned by adapter on this device"
+    adapterData: AdapterData @jsonpath(name:"data", depends: ["adapterId"]) @goField(forceResolver:true, name: "adapterData")
+    "Data returned by this adapter as a json mappping"
+    data: Map
+    "Time adapter was requested to fetch device by axonius"
+    fetchTime: Epoch
+    "hostname of device"
+    hostname: String
+    "name given to device by the adapter"
+    name: String
+    "Last time device was seen by adapter in Unix time"
+    lastSeen: Epoch
+    osId: UUID!
+    "Operating system adapter device is running on"
+    os: OperatingSystem @relation(name:"operating_systems", fkName: ["osId"], relationFkName: ["id"], relType: ONE_TO_ONE)
+    "Pertty id given to adapter device when axonius created it"
+    prettyId: String
+    tags: [Tag] @relation(name:"adapter_device_tags", fkName: ["id"], relationFkName: ["adapter_device_id"],
+        relType: MANY_TO_MANY, manyToManyTableName: "tags", joinOn: ["name"])
+    interfaces: [NetworkInterface!] @relation(name:"network_interfaces", fkName: ["id", "fetch_cycle"],
+        relationFkName: ["deviceId", "fetch_cycle"], relType: ONE_TO_MANY)
+
+    "List of uses who last used the device"
+    lastUsedUsers: [String]
+    "Name of domain this adapter device belongs too"
+    domain: String
+    "Whether this adapter device is part of the domain"
+    partOfDomain: Boolean
+    "Users known by this device"
+    deviceUsers: [AdapterDeviceUser] @jsonpath(name:"deviceUsers")
+    "local admins known by this device"
+    localAdmins: [AdapterDeviceAdmin] @jsonpath(name:"localAdmins")
+    "Firewall rules defined on this adapter device"
+    firewallRules: [FirewallRule] @relation(name:"adapter_device_firewall_rules", fkName: ["id", "fetch_cycle"],
+        relationFkName: ["adapter_device_id", "fetch_cycle"], relType: MANY_TO_MANY, manyToManyTableName: "firewall_rules",
+        joinOn: ["name"])
+    "Software installed on this device"
+    installedSoftware: [InstalledSoftware] @relation(name:"adapter_device_installed_software", fkName: ["id", "fetch_cycle"],
+        relationFkName: ["adapter_device_id", "fetch_cycle"], relType: MANY_TO_MANY, manyToManyTableName: "installed_software",
+        joinOn: ["name", "version"])
+
+    agentVersion: String
+    agentStatus: String
+    agentName: String
+
+    model: String
+    manufacturer: String
+    serial: String
+    family: String
+    biosVersion: String
+    biosSerial: String
+}
+
+enum AdminType {
+    ADMIN_USER
+    GROUP_MEMBERSHIP
+}
+
+type AdapterDeviceAdmin @generateInputs(where: "adapter_device_admin_bool_exp", orderBy: "adapter_device_admin_order_by")
+{
+    name: String
+    type: AdminType
+}
+
+"User known by an adapter device"
+type AdapterDeviceUser  @generateInputs(where: "adapter_device_user_bool_exp", orderBy: "adapter_device_user_order_by")
+{
+    deviceId: UUID
+    sid: String
+    username: String
+    lastUseDate: Epoch
+    isLocal: Boolean
+    isDisabled: Boolean
+    isAdmin: Boolean
+    userDepartment: Boolean
+    passwordMaxAge: Int
+    interpreter: String
+}

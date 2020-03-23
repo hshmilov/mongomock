@@ -86,18 +86,26 @@ export const fetchDataCount = ({ state, dispatch }, payload) => {
 
   module.count.data = undefined;
 
-  // For now we support only /users and /devices 'big queries'
+	if (payload.isExpermentalAPI && ['users', 'devices'].includes(path)) {
+		return dispatch(REQUEST_API, {
+				rule: `/graphql/search/${path}?term=${view.query.search}&count=True`,
+				type: UPDATE_DATA_COUNT,
+				payload
+			});
+		}
+
+    // For now we support only /users and /devices 'big queries'
   if (view.query.filter.length > MAX_GET_SIZE && ['users', 'devices'].includes(path)) {
     dispatch(REQUEST_API, {
-      rule: `${path}/count`,
-      type: UPDATE_DATA_COUNT,
-      method: 'POST',
-      data: {
-        filter: view.query.filter,
-        history: view.historical,
-      },
-      payload,
-    });
+            rule: `${path}/count`,
+            type: UPDATE_DATA_COUNT,
+            method: 'POST',
+            data: {
+                filter: view.query.filter,
+                history: view.historical,
+            },
+            payload
+        });
 
     dispatch(REQUEST_API, {
       rule: `${path}/count`,
@@ -204,7 +212,15 @@ export const fetchDataContent = ({ state, dispatch }, payload) => {
   const { view } = module;
 
   if (!payload.skip && module.count !== undefined && !payload.isCounted) {
-    dispatch(FETCH_DATA_COUNT, { module: payload.module, endpoint: payload.endpoint });
+    dispatch(FETCH_DATA_COUNT, { module: payload.module, endpoint: payload.endpoint, isExpermentalAPI: payload.isExpermentalAPI});
+  }
+
+  if (payload.isExpermentalAPI && ['users', 'devices'].includes(path)) {
+		return dispatch(REQUEST_API, {
+			rule: `/graphql/search/${path}?term=${view.query.search}&limit=${payload.limit}&offset=${payload.skip}`,
+			type: UPDATE_DATA_CONTENT,
+			payload
+		});
   }
 
   if (!view) {

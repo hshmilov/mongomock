@@ -1,4 +1,3 @@
-
 DOCKER_PORTS = {
     'smtp':                             25,
     'maildiranasaurus':                 26,
@@ -55,6 +54,7 @@ DOCKER_PORTS = {
     'chef-adapter':                     5223,
     'airwatch-adapter':                 5228,
     'kaseya-adapter':                   5286,
+    'postgres':                         5432,
     'nessus-adapter':                   5555,
     'general-info':                     5556,
     'pm-status':                        5557,
@@ -194,6 +194,7 @@ DOCKER_PORTS = {
     'instance-control':                 6689,
     'cloud-health-adapter':             6690,
     'master-proxy':                     8888,  # reserved
+    'bandicoot':                        9090,
     'httpd-service':                    8889,  # reserved
     'avamar-adapter':                   9930,
     'ivanti-sm-adapter':                9940,

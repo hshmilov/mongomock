@@ -1,0 +1,6 @@
+vendor/*
+bin/*
+.idea/*
+*.log
+*.autogen
+coverage.txt

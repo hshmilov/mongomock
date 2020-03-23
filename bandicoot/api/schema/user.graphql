@@ -1,0 +1,61 @@
+
+type User @generateInputs(where: "user_bool_exp", orderBy: "user_order_by") {
+    id: UUID!
+    fetchCycle: Int!
+    adapterCount: Int!
+    adapterNames: [String!]
+    usernames: [String!]
+    lastSeen: Epoch
+    adapterUsers: [AdapterUser!] @relation(name:"adapter_users", fkName: ["id", "fetch_cycle"], relationFkName: ["user_id", "fetch_cycle"], relType: ONE_TO_MANY)
+    _compatibilityAPI: Map @goField(forceResolver: true, name: "compatabilityAPI")
+}
+
+
+# columns and relationships of "users"
+type AdapterUser @generateInputs(where: "adapter_user_bool_exp", orderBy: "adapter_user_order_by") {
+    "Unique id of adapter device"
+    id: UUID!
+    "Cycle adapter device was fetched"
+    fetchCycle: Int!
+    "Id of adapter that fetched this device"
+    adapterId: AdapterType!
+    adapter : Adapter @relation(name:"adapters", fkName: ["adapterId"], relationFkName: ["id"], relType: ONE_TO_ONE)
+    "Name of adapter that fetched this advice"
+    adapterName: String
+    "Correlated device id"
+    userId: UUID!
+    "Unique data returned by adapter on this device"
+    adapterData: AdapterData @jsonpath(name:"data", depends: ["adapterId"]) @goField(forceResolver:true, name: "adapterData")
+    "Data returned by this adapter as a json mappping"
+    data: Map
+    "Time adapter was requested to fetch device by axonius"
+    fetchTime: Epoch
+    "Last time device was seen by adapter in Unix time"
+    lastSeen: Epoch
+    "Username"
+    username: String
+
+    "User first name"
+    firstName: String
+    "User last name"
+    lastName: String
+    "User email account"
+    mail: String
+
+    "User account has admin privileges"
+    admin: Boolean
+    "User entity is local "
+    local: Boolean
+    "User account is a delegated admin"
+    delegated_admin: Boolean
+    "User account has multi-factor authentication enforced"
+    mfa_enforced: Boolean
+    "User account is enrollled in multi-factor authenticaton"
+    mfa_enrolled: Boolean
+    "User account is suspended"
+    suspended: Boolean
+    "User account has been locked"
+    locked: Boolean
+    "User account has been disabled"
+    disabled: Boolean
+}

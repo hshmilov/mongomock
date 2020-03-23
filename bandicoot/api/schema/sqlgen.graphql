@@ -1,0 +1,93 @@
+directive @generateInputs(where: String, orderBy: String) on OBJECT | UNION
+directive @jsonpath(name: String, depends: [String]) on INPUT_FIELD_DEFINITION | FIELD_DEFINITION
+directive @relation(
+    name: String!,
+    fkName: [String!]!,
+    relationFkName: [String!]!,
+    relType: RelationType!,
+    manyToManyTableName: String
+    joinOn: [String!]) on FIELD_DEFINITION
+
+
+directive @viewFunction(name: String, arguments: [String]) on FIELD_DEFINITION
+
+
+enum RelationType {
+    ONE_TO_ONE
+    ONE_TO_MANY
+    MANY_TO_MANY
+}
+
+
+interface Aggregate {
+    group: [String!]!
+    distinct: [String!]!
+    count: Int
+    sum: Map
+    avg: Map
+    min: Map
+    max: Map
+}
+
+enum AggregateOrdering {
+    count_ASC
+    count_DESC
+    sum_ASC
+    sum_DESC
+    avg_ASC
+    avg_DESC
+    min_ASC
+    min_DESC
+    max_ASC
+    max_DESC
+}
+
+"""
+Unix Time (also known as Epoch time) is a system for describing a point in time.
+It is the number of seconds that have elapsed since the Unix epoch, that is the time 00:00:00 UTC on 1 January 1970,
+minus leap seconds.
+"""
+scalar Epoch
+
+scalar IP
+
+scalar UUID
+
+"""
+A media access control address (MAC address) is a unique identifier assigned to a network interface controller (NIC)
+for use as a network address in communications within a network segment.
+"""
+scalar Mac
+
+"""
+IPv4 and IPv6 networks
+"""
+scalar CIDR
+
+enum IPFamily {
+    V4
+    V6
+}
+
+# ============================================== gqlgen ============================================== #
+
+directive @goModel(
+    model: String
+    models: [String!]
+) on OBJECT | INPUT_OBJECT | SCALAR | ENUM | INTERFACE | UNION
+directive @goField(
+    forceResolver: Boolean
+    name: String
+) on INPUT_FIELD_DEFINITION | FIELD_DEFINITION
+
+
+# Time
+scalar Time
+
+"""
+JavaScript Object Notation (JSON) is an open-standard file format or data interchange format
+that uses human-readable text to transmit data objects consisting of attribute–value pairs and array data types
+(or any other serializable value)
+"""
+scalar Map
+
