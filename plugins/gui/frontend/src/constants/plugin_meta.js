@@ -770,6 +770,11 @@ export const pluginMeta = {
         link: 'https://docs.axonius.com/docs/tenablesc-formerly-securitycenter',
         description: 'Tenable.sc (formerly SecurityCenter)  consolidates and evaluates vulnerability data, prioritizing security risks.'
     },
+    pivotal_cloud_foundry_adapter: {
+        title: 'Pivotal Cloud Foundry',
+        link: 'https://docs.axonius.com/docs/pivotal-cloud-foundry',
+        description: 'Pivotal Cloud is an app development and deployment platform for public and private clouds.'
+    },
     active_directory_adapter: {
         title: 'Microsoft Active Directory (AD)',
         link: 'https://docs.axonius.com/docs/microsoft-active-directory-ad',

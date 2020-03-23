@@ -1,0 +1,7 @@
+DEVICE_PER_PAGE = 200
+MAX_NUMBER_OF_DEVICES = 2000000
+
+URL_DEFAULT_API_PREFIX = 'v3'
+URL_DEFAULT_API_PATH = '{}://api.{}'
+URL_DEFAULT_UAA_PATH = '{}://uaa.{}/oauth/token'
+URL_API_APP_STAT = 'processes/{}/stats'

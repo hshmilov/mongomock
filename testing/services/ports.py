@@ -158,6 +158,7 @@ DOCKER_PORTS = {
     'netskope-adapter':                 6065,
     'guardium-adapter':                 6070,
     'landesk-adapter':                  6076,
+    'pivotal-cloud-foundry-adapter':    6078,
     'paloalto-xdr-adapter':             6123,
     'sqlite-adapter':                   6124,
     'arsenal-adapter':                  6130,
