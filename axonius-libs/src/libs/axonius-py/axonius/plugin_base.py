@@ -49,8 +49,8 @@ from retrying import retry
 from tlssyslog import TLSSysLogHandler
 
 import axonius.entities
-from axonius import adapter_exceptions, plugin_exceptions
-from axonius.adapter_exceptions import TagDeviceError
+from axonius.plugin_exceptions import SessionInvalid, PluginNotFoundException
+from axonius.adapter_exceptions import TagDeviceError, AdapterException
 from axonius.background_scheduler import LoggedBackgroundScheduler
 from axonius.clients.cyberark_vault.connection import CyberArkVaultConnection
 from axonius.clients.rest.connection import RESTConnection
@@ -209,6 +209,8 @@ def add_rule(rule, methods=('GET',), should_authenticate: bool = True):
                         if request.headers.get('x-api-key') not in self.authorized_api_keys():
                             raise RuntimeError(f'Bad api key. got {request.headers.get("x-api-key")}')
                 return func(self, *args, **kwargs)
+            except SessionInvalid:
+                return return_error('You are not connected', 401)
             except Exception as err:
                 try:
                     if logger:
@@ -1329,7 +1331,7 @@ class PluginBase(Configurable, Feature, ABC):
         if verify_single:
             if len(found_plugins) == 0:
                 if verify_exists:
-                    raise plugin_exceptions.PluginNotFoundException(
+                    raise PluginNotFoundException(
                         'There is no plugin {0} currently registered'.format(plugin_name))
                 return None
             if len(found_plugins) != 1:
@@ -1338,7 +1340,7 @@ class PluginBase(Configurable, Feature, ABC):
             return found_plugins[0]
 
         if verify_exists and (not found_plugins):
-            raise plugin_exceptions.PluginNotFoundException(
+            raise PluginNotFoundException(
                 'There is no plugin {0} currently registered'.format(plugin_name))
         return found_plugins
 
@@ -1601,7 +1603,7 @@ class PluginBase(Configurable, Feature, ABC):
             return self.__do_save_data_from_plugin(client_name, *args, **kwargs)
         except func_timeout.exceptions.FunctionTimedOut:
             logger.exception(f'Timeout for {client_name} on {self.plugin_unique_name}')
-            raise adapter_exceptions.AdapterException(f'Fetching has timed out')
+            raise AdapterException(f'Fetching has timed out')
 
     # pylint: disable=too-many-locals
     # pylint: disable=too-many-branches

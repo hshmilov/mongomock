@@ -34,6 +34,7 @@ from axonius.utils.revving_cache import rev_cached_entity_type
 from axonius.utils.threading import singlethreaded
 from axonius.utils.dict_utils import is_filter_in_value
 from axonius.utils import serial_csv
+from axonius.plugin_exceptions import SessionInvalid
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -438,7 +439,10 @@ else:
         """
         if 'api_request_user' in g:
             return g.api_request_user['_id']
-        return session['user']['_id']
+        connected_user = session.get('user')
+        if not connected_user:
+            raise SessionInvalid
+        return connected_user['_id']
 
 
 def get_historized_filter(entities_filter, history_date: datetime):
