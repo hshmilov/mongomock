@@ -169,7 +169,7 @@ if os.environ.get('HOT') == 'true':
     @AXONIUS_REST.after_request
     def after_request(response) -> Response:
         response.headers.add('Access-Control-Allow-Origin', '*')
-        response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization,x-csrf-token')
         response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
         return response
 
