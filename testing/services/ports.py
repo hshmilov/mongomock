@@ -260,6 +260,7 @@ DOCKER_PORTS = {
     'tanium-asset-adapter':             13377,
     'tanium-sq-adapter':                13378,
     'contrast-security-adapter':        13379,
+    'logicmonitor-adapter':             13385,
     'jira-adapter':                     13380,
     'mongo':                            27017,
     'mockingbird-db':                   28017

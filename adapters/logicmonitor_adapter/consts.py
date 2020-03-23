@@ -1,0 +1,3 @@
+DEVICE_PER_PAGE = 50
+MAX_NUMBER_OF_DEVICES = 2000000
+ENDPOINT = '/santaba/rest/device/devices'

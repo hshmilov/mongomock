@@ -1,4 +1,9 @@
 export const pluginMeta = {
+    logicmonitor_adapter: {
+        title: 'LogicMonitor',
+        link: 'https://docs.axonius.com/docs/logicmonitor',
+        description: 'LogicMonitor is an automated infrastructure monitoring platform for enterprise IT and managed service providers.'
+    },
     contrast_security_adapter: {
         title: 'Contrast Security',
         description: 'Contrast Security protects software applications against cyberattacks.'
