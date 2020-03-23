@@ -41,8 +41,8 @@ class DockerService(AxonService):
 
         if not (Path(self.cortex_root_dir) / 'venv').is_dir:
             raise RuntimeError(f'Cortex dir is wrong ... {self.cortex_root_dir}')
-
-        self.log_dir = str(LOGS_PATH_HOST / self.container_name)
+        relative_log_dir = LOGS_PATH_HOST / self.container_name
+        self.log_dir = str(relative_log_dir.resolve())
         self.uploaded_files_dir = os.path.abspath(os.path.join(self.cortex_root_dir, 'uploaded_files'))
         if not os.path.exists(self.uploaded_files_dir):
             os.mkdir(self.uploaded_files_dir)
