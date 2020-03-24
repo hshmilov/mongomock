@@ -1,6 +1,7 @@
 import datetime
 import time
 from typing import List
+from urllib.parse import unquote_plus
 
 import boto3
 import pytest
@@ -618,3 +619,15 @@ class TestEnforcementActions(TestBase):
                 label=enforcement_unique_field['field_name'],
                 value=enforcement_unique_field['field_value'])
         )
+
+    def test_notification_clickable_link(self):
+        notification_name = self._create_notifications(1)[0]
+        self.notification_page.wait_for_count(1)
+
+        self.notification_page.click_notification_peek()
+        self.notification_page.click_notification(notification_name)
+
+        notification_link_value = self.notification_page.get_notification_link_element_href()
+
+        self.notification_page.click_notification_link()
+        assert unquote_plus(self.notification_page.current_url) == unquote_plus(notification_link_value)

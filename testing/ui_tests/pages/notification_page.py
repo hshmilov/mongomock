@@ -18,6 +18,7 @@ class NotificationPage(Page):
     NOTIFICATION_COUNT_CSS = 'div.notification-badge'
     NOTIFICATION_VIEW_ALL_BUTTON_CLASS = 'x-button link'
     NOTIFICATION_VIEW_ALL_TEXT = 'View All'
+    NOTIFICATION_LINK_CSS = 'div.x-box div a'
 
     # The first one is the title for the whole peek,
     # the 2nd is for each notification in the peek.
@@ -119,3 +120,9 @@ class NotificationPage(Page):
         Waits until the amount of notifications is the amount specified, or fails
         """
         wait_until(lambda: len(self.get_peek_notifications()) == count, total_timeout=60 * 5)
+
+    def click_notification_link(self):
+        self.driver.find_element_by_css_selector(self.NOTIFICATION_LINK_CSS).click()
+
+    def get_notification_link_element_href(self):
+        return self.driver.find_element_by_css_selector(self.NOTIFICATION_LINK_CSS).get_attribute('href')

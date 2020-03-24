@@ -41,7 +41,7 @@ The alert was triggered because: {trigger_message}
 The number of devices returned by the query:{num_of_current_devices}
 The previous number of devices was:{old_results_num_of_devices}
 
-You can view the query and its results here:{query_link}'''
+You can view the query and its results here: {query_link}'''
 
 FRESH_SERVICE_PRIORITY = {
     'low': 1,

@@ -1296,7 +1296,16 @@ class PluginBase(Configurable, Feature, ABC):
                                         'clear_slow': clear_slow
                                     })
 
-    def create_notification(self, title, content='', severity_type='info', notification_type='basic'):
+    def create_notification(self, title, content='', severity_type='info', notification_type='basic',
+                            hooks: Dict[str, str] = None):
+        """
+        :param string title:
+        :param string content:
+        :param string severity_type:
+        :param string notification_type:
+        :param array hooks: includes all hooks to be replaced within the notification content.
+        :return:
+        """
         db = self._get_db_connection()
         return db[CORE_UNIQUE_NAME]['notifications'].insert_one(dict(who=self.plugin_unique_name,
                                                                      plugin_name=self.plugin_name,
@@ -1304,7 +1313,8 @@ class PluginBase(Configurable, Feature, ABC):
                                                                      type=notification_type,
                                                                      title=title,
                                                                      content=content,
-                                                                     seen=False)).inserted_id
+                                                                     seen=False,
+                                                                     hooks=hooks)).inserted_id
 
     @singlethreaded()
     @cachetools.cached(cachetools.TTLCache(maxsize=100, ttl=20), lock=threading.Lock())

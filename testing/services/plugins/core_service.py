@@ -3,18 +3,20 @@ import os
 import datetime
 from collections import defaultdict
 import traceback
+import re
 from multiprocessing.pool import ThreadPool
 from threading import Lock
 
 import requests
 from pymongo.collection import Collection
+from pymongo import UpdateOne
 
 from axonius.consts.system_consts import WEAVE_NETWORK, DB_KEY_PATH
 from axonius.consts.plugin_consts import CONFIGURABLE_CONFIGS_COLLECTION, GUI_PLUGIN_NAME, \
     AXONIUS_SETTINGS_DIR_NAME, GUI_SYSTEM_CONFIG_COLLECTION, NODE_ID, PLUGIN_NAME, \
-    PLUGIN_UNIQUE_NAME, CORE_UNIQUE_NAME
+    PLUGIN_UNIQUE_NAME, CORE_UNIQUE_NAME, NOTIFICATIONS_COLLECTION
 from axonius.consts.adapter_consts import ADAPTER_PLUGIN_TYPE
-from axonius.consts.core_consts import CORE_CONFIG_NAME
+from axonius.consts.core_consts import CORE_CONFIG_NAME, NotificationHookType, LINK_REGEX
 from axonius.entities import EntityType
 from axonius.utils.hash import get_preferred_quick_adapter_id
 from axonius.utils import datetime
@@ -44,7 +46,10 @@ class CoreService(PluginService, UpdatablePluginMixin):
         if self.db_schema_version < 14:
             self._update_schema_version_14()
 
-        if self.db_schema_version != 14:
+        if self.db_schema_version < 15:
+            self._update_schema_version_15()
+
+        if self.db_schema_version != 15:
             print(f'Upgrade failed, db_schema_version is {self.db_schema_version}')
 
     def _migrate_db_10(self):
@@ -786,6 +791,39 @@ class CoreService(PluginService, UpdatablePluginMixin):
             traceback.print_exc()
             raise
 
+    def _update_schema_version_15(self):
+        print('Upgrade to schema 15 - Notifications hooks Refactor')
+        try:
+            notifications_collection = self.db.get_collection(self.plugin_name, NOTIFICATIONS_COLLECTION)
+            notifications_filter = {
+                'content': {
+                    '$regex': LINK_REGEX
+                }
+            }
+            notifications = notifications_collection.find(notifications_filter)
+            db_bulk_actions = []
+
+            if notifications.count() > 0:
+                for notification_document in notifications:
+                    hooks, notification_content = replace_notification_content_with_hooks(
+                        notification_document['content'],
+                        LINK_REGEX)
+                    if len(hooks) > 0:
+                        db_bulk_actions.append(UpdateOne({'_id': notification_document['_id']},
+                                                         {'$set': {
+                                                             'hooks': hooks,
+                                                             'content': notification_content
+                                                         }}))
+
+                notifications_collection.bulk_write(db_bulk_actions)
+
+            self.db_schema_version = 15
+
+        except Exception as e:
+            print(f'Exception while upgrading schema to version 15. Details: {e}')
+            traceback.print_exc()
+            raise
+
     def register(self, api_key=None, plugin_name=''):
         headers = {}
         params = {}
@@ -850,3 +888,34 @@ class CoreService(PluginService, UpdatablePluginMixin):
                 print(f'Error writing db encryption key: {e}')
                 if DB_KEY_PATH.is_file():
                     DB_KEY_PATH.unlink()
+
+
+def replace_notification_content_with_hooks(notification_content, regex):
+    """
+    Iterate over all found links in the notification content. For each of the links, replace it
+    with hook (e.g {LINK_0}) and append a new hook item to the hooks array. Each hook item looks like
+    {type: 'link', key: {LINK_0}, value: 'the actual link'}.
+    :param notification_content: the notification string content.
+    :param regex: the regex to match.
+    :return: return hooks array and the replaced content.
+    """
+
+    hooks = []
+    found_link = set()  # This is used to keep track of already found and replaced links.
+    matches = re.findall(regex, notification_content)
+    if matches:
+        for i, link in enumerate(matches):
+            if link in found_link:
+                continue
+            found_link.add(link)
+            key = f'LINK_{i}'
+            notification_content = notification_content.replace(link, f'{{{key}}}')
+            link_type = {
+                'type': NotificationHookType.LINK.value,
+                'key': key,
+                'value': link
+            }
+            hooks.append(link_type)
+        return hooks, notification_content
+
+    return hooks, notification_content

@@ -70,6 +70,7 @@ PROXY_VERIFY = 'proxy_verify'
 PROXY_FOR_ADAPTERS = 'proxy_for_adapters'
 
 NOTIFICATIONS_SETTINGS = 'notifications_settings'
+NOTIFICATIONS_COLLECTION = 'notifications'
 NOTIFY_ADAPTERS_FETCH = 'notify_adapters_fetch'
 ADAPTERS_ERRORS_MAIL_ADDRESS = 'adapter_errors_mail_address'
 ADAPTERS_ERRORS_WEBHOOK_ADDRESS = 'adapters_webhook_address'
