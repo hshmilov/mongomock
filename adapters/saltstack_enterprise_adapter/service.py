@@ -111,6 +111,7 @@ class SaltstackEnterpriseAdapter(AdapterBase):
             'type': 'array'
         }
 
+    # pylint: disable=too-many-branches, too-many-statements, too-many-locals, too-many-nested-blocks
     def _create_device(self, device_raw):
         try:
             if 'grains' not in device_raw or isinstance(device_raw['grains'], list):
@@ -127,16 +128,18 @@ class SaltstackEnterpriseAdapter(AdapterBase):
                 logger.exception(f'Problem getting os for {device_raw}')
             macs = []
             try:
-                for mac in device_raw.get('hwaddr_interfaces').values():
-                    if mac and mac != '00:00:00:00:00:00':
-                        macs.append(mac)
+                if device_raw.get('hwaddr_interfaces'):
+                    for mac in device_raw.get('hwaddr_interfaces').values():
+                        if mac and mac != '00:00:00:00:00:00':
+                            macs.append(mac)
             except Exception:
                 logger.exception(f'Problem getting macs for {device_raw}')
             ips = []
             try:
-                for ips_list_name, ips_list in device_raw.get('ip_interfaces').items():
-                    if ips_list and ips_list_name != 'lo' and isinstance(ips_list, list):
-                        ips.extend(ips_list)
+                if device_raw.get('ip_interfaces'):
+                    for ips_list_name, ips_list in device_raw.get('ip_interfaces').items():
+                        if ips_list and ips_list_name != 'lo' and isinstance(ips_list, list):
+                            ips.extend(ips_list)
             except Exception:
                 logger.exception(f'Problem getting macs for {device_raw}')
             device.add_ips_and_macs(macs, ips)
