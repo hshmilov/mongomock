@@ -70,6 +70,9 @@ class GuiAliveTask(WatchdogTask):
                         mongo.stop(timeout=20 * 60)
                     except Exception as e:
                         self.report_error(f'Failed to stop mongo - {e}')
+                        # If mongo does not stop in such long time we suspect a real docker system error,
+                        # remove with force=True will just get stuck. It's better to reboot
+                        raise
                     mongo.remove(force=True)
                     self.report_info(f'Stopped mongo')
 

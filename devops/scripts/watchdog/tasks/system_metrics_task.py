@@ -1,13 +1,17 @@
 import time
 
 import psutil
-import netifaces
 import docker
+import netifaces
 
 from axonius.consts.metric_consts import SystemMetric
 from scripts.watchdog.watchdog_task import WatchdogTask
 
-SLEEP_SECONDS = 60 * 30
+SLEEP_SECONDS = 60 * 10
+
+
+def bytes_to_gb(in_bytes):
+    return round(in_bytes / (1024 ** 3), 2)
 
 
 class SystemMetricsTask(WatchdogTask):
@@ -15,12 +19,10 @@ class SystemMetricsTask(WatchdogTask):
         while True:
             self.report_interfaces()
             self.report_disk_space()
+            self.report_memory()
             time.sleep(SLEEP_SECONDS)
 
     def report_disk_space(self):
-
-        def bytes_to_gb(in_bytes):
-            return round(in_bytes / 1024 / 1024 / 1024, 1)
 
         try:
             client = docker.from_env()
@@ -43,6 +45,43 @@ class SystemMetricsTask(WatchdogTask):
             self.report_metric(SystemMetric.NETIFACES_COUNT, len(interfaces))
         except Exception as e:
             self.report_error(f'failed to fetch interfaces data - {e}')
+
+    def report_memory(self):
+        try:
+            virtual_memory = psutil.virtual_memory()
+            self.report_metric(SystemMetric.HOST_VIRTUAL_MEMORY_TOTAL, bytes_to_gb(virtual_memory.total))
+            self.report_metric(SystemMetric.HOST_VIRTUAL_MEMORY_AVAILABLE, bytes_to_gb(virtual_memory.available))
+            self.report_metric(SystemMetric.HOST_VIRTUAL_MEMORY_PERCENT, bytes_to_gb(virtual_memory.percent))
+        except Exception as e:
+            self.report_error(f'failed to report memory - {e}')
+
+    def report_swap(self):
+        try:
+            swap = psutil.swap_memory()
+            self.report_metric(SystemMetric.HOST_SWAP_TOTAL, swap.total)
+            self.report_metric(SystemMetric.HOST_SWAP_USED, swap.used)
+            self.report_metric(SystemMetric.HOST_SWAP_FREE, swap.free)
+            self.report_metric(SystemMetric.HOST_SWAP_PERCENT, swap.percent)
+        except Exception as e:
+            self.report_error(f'failed to swap memory - {e}')
+
+    def report_docker_stats(self):
+        try:
+            client = docker.from_env()
+            for container in client.containers.list():
+                try:
+                    if container.status != 'running':
+                        continue
+
+                    stats = container.stats(stream=False)
+                    memory_stats = stats['memory_stats']
+                    prefix = f'{SystemMetric.HOST_DOCKER_STATS_KEY}.{container.name}'
+                    self.report_metric(f'{prefix}.memory.usage', bytes_to_gb(memory_stats.get('usage') or 0))
+                    self.report_metric(f'{prefix}.memory.max_usage', bytes_to_gb(memory_stats.get('max_usage') or 0))
+                except Exception as e:
+                    self.report_error(f'Failed getting stats for {container.name} - {e}')
+        except Exception as e:
+            self.report_error(f'failed to docker stats - {e}')
 
 
 if __name__ == '__main__':

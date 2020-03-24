@@ -41,6 +41,8 @@ def has_addr_collision(domain):
             net = get_network_from_interface(iface)
 
             host_part_of_domain = parse_url(domain).host
+            if not host_part_of_domain:
+                continue
             domain_ip = socket.gethostbyname(host_part_of_domain)
             domain_ip_net = ipaddress.IPv4Network(domain_ip)
 
