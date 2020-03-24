@@ -531,7 +531,8 @@ class LdapConnection(object):
                                                      search_scope=ldap3.BASE)
 
                     # There should always be 1 here. because its the parent of an object we already found.
-                    if list(dns_hostname):
+                    dns_hostname = list(dns_hostname)
+                    if dns_hostname:
                         gc_list.append(ldap_must_get_str(list(dns_hostname)[0], 'dnsHostName'))
                 except Exception:
                     logger.exception(f"Couldn't find a gc hostname {dn}")
