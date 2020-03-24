@@ -6,6 +6,7 @@ export const pluginMeta = {
     },
     contrast_security_adapter: {
         title: 'Contrast Security',
+        link: 'https://docs.axonius.com/docs/contrast-security',
         description: 'Contrast Security protects software applications against cyberattacks.'
     },
     kenna_adapter: {
@@ -35,6 +36,7 @@ export const pluginMeta = {
     },
     openvas_adapter: {
         title: 'OpenVAS',
+        link: 'https://docs.axonius.com/docs/openvas',
         description: 'OpenVAS is a full-featured vulnerability scanner. Its capabilities include unauthenticated testing, authenticated testing, various high level and low level Internet and industrial protocols, performance tuning for large-scale scans and a powerful internal programming language to implement any type of vulnerability test.'
     },
     jira_adapter: {
@@ -483,7 +485,7 @@ export const pluginMeta = {
     },
     spacewalk_adapter: {
         title: 'Spacewalk',
-        link: '',
+        link: 'https://docs.axonius.com/docs/spacewalk',
         description: 'Spacewalk is an open-source systems management solution for system provisioning, patching and configuration.'},
     unifi_adapter: {
         title: 'Ubiquiti Networks UniFi Controller',
@@ -672,7 +674,7 @@ export const pluginMeta = {
     },
     oracle_cloud_adapter: {
         title: 'Oracle Cloud',
-        link: '',
+        link: 'https://docs.axonius.com/docs/oracle-cloud',
         description: 'Oracle Cloud is a computing service providing servers, storage, network, applications and services.'
     },
     cisco_umbrella_adapter: {
@@ -712,7 +714,7 @@ export const pluginMeta = {
     },
     divvycloud_adapter: {
         title: 'DivvyCloud',
-        link: '',
+        link: 'https://docs.axonius.com/docs/divvycloud',
         description: 'DivvyCloud offers security, compliance, and governance guardrails for public and private cloud infrastructures.'
     },
     zabbix_adapter: {
@@ -727,7 +729,7 @@ export const pluginMeta = {
     },
     claroty_adapter: {
         title: 'Claroty',
-        link: '',
+        link: 'https://docs.axonius.com/docs/claroty',
         description: 'Claroty discovers assets and monitors communication patterns for ICS networks.'
     },
     solarwinds_orion_adapter: {
@@ -752,7 +754,7 @@ export const pluginMeta = {
     },
     deep_security_adapter: {
         title: 'Trend Micro Deep Security',
-        link: '',
+        link: 'https://docs.axonius.com/docs/trend-micro-deep-security',
         description: 'Trend Micro Deep Security can automatically virtually patch server, cloud, VDI and application vulnerabilities.'
     },
     gce_adapter: {
@@ -987,7 +989,7 @@ export const pluginMeta = {
     },
     bigfix_adapter: {
         title: 'IBM BigFix',
-        link: '',
+        link: 'https://docs.axonius.com/docs/ibm-bigfix',
         description: 'IBM BigFix provides remote control, patch management, software distribution, operating system deployment, network access protection and hardware and software inventory functionality.'
     },
     ensilo_adapter: {
