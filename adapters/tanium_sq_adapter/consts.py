@@ -1,7 +1,7 @@
 DEVICE_PER_PAGE = 200
 MAX_DEVICES_COUNT = 2000000
-
-STRONG_SENSORS = [
+REQUIRED_SENSORS = [
+    'Computer ID',
     'Computer Name',
     'Network Adapters',
     'Computer Serial Number',

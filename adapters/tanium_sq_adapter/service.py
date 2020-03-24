@@ -11,7 +11,6 @@ from axonius.utils.files import get_local_config_file
 from axonius.smart_json_class import SmartJsonClass
 from axonius.utils.parsing import normalize_var_name
 from axonius.clients import tanium
-from tanium_sq_adapter.consts import STRONG_SENSORS
 from tanium_sq_adapter.connection import TaniumSqConnection
 
 logger = logging.getLogger(f'axonius.{__name__}')
@@ -604,6 +603,11 @@ class TaniumSqAdapter(AdapterBase):
     def _create_sq_device(self, device_raw, metadata):
         device_raw, sq_name, question = device_raw
 
+        missing = TaniumSqConnection.missing_sensors(name=sq_name, sensor_names=list(device_raw))
+        if missing:
+            logger.error(missing)
+            return None
+
         cid_key = 'Computer ID'
         cid = self._get_value(name=cid_key, value_map=device_raw.get(cid_key), first=True)
         cid = tanium.tools.parse_str(value=cid, src=cid_key)
@@ -611,17 +615,6 @@ class TaniumSqAdapter(AdapterBase):
         id_map = {cid_key: cid}
         if tanium.tools.is_empty_vals(value=id_map):
             logger.error(f'Bad device with empty ids {id_map} in {device_raw}')
-            return None
-
-        if not any([x in STRONG_SENSORS for x in device_raw]):
-            found_sensors = ', '.join(list(device_raw))
-            strong_sensors = ', '.join(STRONG_SENSORS)
-            msg = [
-                f'Saved Question: No strong identifier sensor found in {sq_name!r}',
-                f'Strong identifier sensors: {strong_sensors}',
-                f'Found sensors: {found_sensors}',
-            ]
-            logger.error('\n -- '.join(msg))
             return None
 
         expiration = tanium.tools.parse_dt(value=question.get('expiration'), src=question)

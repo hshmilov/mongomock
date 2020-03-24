@@ -11,7 +11,7 @@ from tanium_sq_adapter.consts import (
     SLEEP_REASK,
     SLEEP_GET_ANSWERS,
     SLEEP_POLL_ANSWERS,
-    STRONG_SENSORS,
+    REQUIRED_SENSORS,
     RETRIES_REASK,
     CACHE_EXPIRATION,
     HEADERS,
@@ -62,22 +62,33 @@ class TaniumSqConnection(tanium.connection.TaniumConnection):
         except Exception as exc:
             raise RESTException(f'Problem fetching Saved Question assets for {name!r}: {exc}')
 
+    @staticmethod
+    def missing_sensors(name, sensor_names):
+        missing_requireds = [x for x in REQUIRED_SENSORS if x not in sensor_names]
+        if missing_requireds:
+            found = ', '.join(sensor_names)
+            req = ', '.join(REQUIRED_SENSORS)
+            miss = ', '.join(missing_requireds)
+            msg = '\n -- '.join(
+                [
+                    f'Saved Question {name!r}',
+                    f'MISSING REQUIRED SENSORS: {miss}',
+                    f'SENSORS REQUIRED: {req}',
+                    f'SENSORS FOUND: {found}',
+                ]
+            )
+            return msg
+        return None
+
     def _get_sq(self, name):
         sq = self._get_by_name(objtype='saved_questions', value=name)
         question = sq.get('question', {})
         selects = question.get('selects', [])
         sensor_names = [x.get('sensor', {}).get('name') for x in selects]
-        if 'Computer ID' not in sensor_names:
-            raise RESTException(f'Saved Question: No sensor named “Computer ID” found in {name!r}')
-        if not any([x in STRONG_SENSORS for x in sensor_names]):
-            found_sensors = ', '.join(sensor_names)
-            strong_sensors = ', '.join(STRONG_SENSORS)
-            msg = [
-                f'Saved Question: No strong identifier sensor found in {name!r}',
-                f'Strong identifier sensors: {strong_sensors}',
-                f'Found sensors: {found_sensors}',
-            ]
-            raise RESTException('\n -- '.join(msg))
+
+        missing = self.missing_sensors(name=name, sensor_names=sensor_names)
+        if missing:
+            raise RESTException(missing)
         return sq
 
     def _get_sq_results(self, name, no_results_wait=True, refresh=False, max_hours=0):
