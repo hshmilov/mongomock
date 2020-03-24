@@ -28,8 +28,13 @@ echo "Setting Up Docker Service"
 sudo cp daemon.json /etc/docker/daemon.json
 sudo systemctl restart docker
 
+echo "Installing golang"
+sudo rm -f /etc/apt/sources.list.d/jonathonf-ubuntu-python-3_6-xenial.list /etc/apt/sources.list.d/jonathonf-ubuntu-python-3_6-xenial.list.save
+sudo ./go_install.sh
+
 echo "#### Creating venv"
 ./create_venv.sh &> logs/create_venv.log
+cd bandicoot && go mod vendor && cd ..
 echo "Logging to docker hub and pulling axonius-base-image"
 source testing/test_credentials/docker_login.sh
 echo "#### Creating venv done"
