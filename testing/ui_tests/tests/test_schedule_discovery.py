@@ -100,3 +100,10 @@ class TestDiscoverySchedule(TestBase):
         self.settings_page.switch_to_page()
         self.settings_page.set_discovery__to_interval_value(negative_flow=True)
         assert self.settings_page.find_schedule_rate_error()
+
+    def test_discovery_schedule_tooltips(self):
+        self.settings_page.switch_to_page()
+        self.settings_page.open_discovery_mode_options()
+        options = self.settings_page.find_discovery_mode_options()
+        for option in options:
+            assert option.text == option.get_attribute('title')

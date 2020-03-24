@@ -128,6 +128,7 @@ class SettingsPage(Page):
     DISCOVERY_SCHEDULE_INTERVAL_INPUT_CSS = '#system_research_rate'
     DISCOVERY_SCHEDULE_INTERVAL_TEXT = 'Interval'
     DISCOVERY_SCHEDULE_SCHEDULED_TEXT = 'Scheduled'
+    DISCOVERY_SCHEDULE_MODE_OPTIONS = '.x-dropdown > .content .x-select-content > .x-select-options > *'
 
     CONNECTION_LABEL_REQUIRED_DIV_CSS = '#requireConnectionLabel .checkbox-container'
     CONNECTION_LABEL_REQUIRED_INPUT_CSS = '#requireConnectionLabel .checkbox-container input'
@@ -930,3 +931,9 @@ class SettingsPage(Page):
         self.switch_to_page()
         self.click_gui_settings()
         self.driver.find_element_by_css_selector(self.CONNECTION_LABEL_REQUIRED_DIV_CSS).click()
+
+    def open_discovery_mode_options(self):
+        self.driver.find_element_by_css_selector(self.DISCOVERY_SCHEDULE_MODE_DDL).click()
+
+    def find_discovery_mode_options(self):
+        return self.driver.find_elements_by_css_selector(self.DISCOVERY_SCHEDULE_MODE_OPTIONS)

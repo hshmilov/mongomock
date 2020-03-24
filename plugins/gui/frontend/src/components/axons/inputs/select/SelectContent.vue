@@ -28,7 +28,7 @@
           class="x-select-option"
           :class="{active: index === activeOptionIndex, 'filter-adapters': currentOption.plugins}"
           :tabindex="-1"
-          :title="currentOption.name"
+          :title="currentOption.title"
           @click="() => selectOption(currentOption.name)"
           @keyup.enter.stop.prevent="selectOption(currentOption.name)"
         >
