@@ -91,8 +91,10 @@ class AggregatorService(PluginService, UpdatablePluginMixin):
             self._update_schema_version_28()
         if self.db_schema_version < 29:
             self._update_schema_version_29()
+        if self.db_schema_version < 30:
+            self._update_schema_version_30()
 
-        if self.db_schema_version != 29:
+        if self.db_schema_version != 30:
             print(f'Upgrade failed, db_schema_version is {self.db_schema_version}')
 
     def __create_capped_collections(self):
@@ -1269,6 +1271,46 @@ class AggregatorService(PluginService, UpdatablePluginMixin):
             self.db_schema_version = 27
         except Exception as e:
             print(f'Exception while upgrading core db to version 27. Details: {e}')
+            traceback.print_exc()
+            raise
+
+    def _update_schema_version_30(self):
+        print('Update to schema 30 - remove _old from all devices')
+        try:
+            res = self._entity_db_map[EntityType.Devices].update_many({
+                'adapters.data._old': True
+            }, {
+                '$set': {
+                    'adapters.$[].data._old': False
+                }
+            })
+            print(f'Updates {res.modified_count} devices from {res.matched_count} matches')
+
+            include_outdated = 'INCLUDE OUTDATED: '
+            views_collection = self._entity_views_map[EntityType.Devices]
+            saved_queries_cursor = views_collection.find({
+                'view.query.filter': {
+                    '$regex': f'^{include_outdated}'
+                }
+            }, projection={
+                '_id': True,
+                'view.query.filter': True
+            })
+            counter = 0
+            for q in saved_queries_cursor:
+                counter += 1
+                new_query = q['view']['query']['filter'][len(include_outdated):]
+                views_collection.update_one({
+                    '_id': q['_id']
+                }, {
+                    '$set': {
+                        'view.query.filter': new_query
+                    }
+                })
+            print(f'Updated {counter} saved views')
+            self.db_schema_version = 30
+        except Exception as e:
+            print(f'Exception while upgrading core db to version 30. Details: {e}')
             traceback.print_exc()
             raise
 

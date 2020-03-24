@@ -35,7 +35,7 @@
         >Clear</x-button>
       </div>
       <md-switch
-        v-if="module === 'devices'"
+        v-if="module === 'not_entities'"
         v-model="isUniqueAdapters"
         :disabled="!value.filter"
       >Include outdated Adapter {{ prettyModule }} in query</md-switch>

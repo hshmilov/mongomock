@@ -56,34 +56,6 @@ class TestAdapters(TestBase):
             self.adapters_page.clean_adapter_servers(CSV_NAME)
             self.wait_for_adapter_down(CSV_PLUGIN_NAME)
 
-    # Sometimes upload file to CSV adapter does not work
-    @flaky(max_runs=2)
-    def test_query_wizard_include_outdated_adapter_devices(self):
-        try:
-            with CsvService().contextmanager(take_ownership=True):
-                self.adapters_page.upload_csv(self.adapters_page.CSV_FILE_NAME, csv_client_details)
-                self.base_page.run_discovery()
-                self.devices_page.switch_to_page()
-                self.devices_page.click_query_wizard()
-                self.devices_page.select_query_adapter(CSV_NAME)
-                self.devices_page.select_query_field(self.devices_page.FIELD_LAST_SEEN)
-                self.devices_page.select_query_comp_op('<')
-                self.devices_page.fill_query_wizard_date_picker(QUERY_WIZARD_CSV_DATE_PICKER_VALUE)
-                self.devices_page.close_datepicker()
-                self.devices_page.click_search()
-                self.devices_page.wait_for_table_to_load()
-                assert self.devices_page.count_entities() == 1
-                self.devices_page.click_query_wizard()
-                self.devices_page.click_wizard_outdated_toggle()
-                self.devices_page.click_search()
-                self.devices_page.wait_for_table_to_load()
-                assert self.devices_page.count_entities() == 2
-                self.adapters_page.switch_to_page()
-                self.adapters_page.clean_adapter_servers(CSV_NAME, True)
-        finally:
-            self.adapters_page.clean_adapter_servers(CSV_NAME)
-            self.wait_for_adapter_down(CSV_PLUGIN_NAME)
-
     def test_esx_nexpose_correlation(self):
         esx_adapter = EsxService()
         nexpose_adapter = NexposeService()

@@ -60,7 +60,7 @@ class EntityType(Enum, metaclass=EntityTypeMeta):
     def value(self):
         return self._value.value
 
-    Devices = EntityTypeClass('devices')
+    Devices = EntityTypeClass('devices', is_old_calculated=False)
     Users = EntityTypeClass('users', is_old_calculated=False)
 
 
