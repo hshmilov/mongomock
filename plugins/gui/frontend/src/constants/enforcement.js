@@ -8,6 +8,9 @@ export const actionsMeta = {
     aws_ec2_stop_instance: {
         title: 'Stop Amazon EC2 Instance'
     },
+    azure_add_tags: {
+        title: 'Add Tag to Microsoft Azure Cloud Instance'
+    },
     run_executable_windows: {
         title: 'Deploy on Windows Device'
     },
@@ -177,6 +180,10 @@ export const actionsMeta = {
         title: 'Manage AWS Services',
         items: ['aws_ec2_start_instance', 'aws_ec2_stop_instance', 'aws_ec2_add_tags']
     },
+    azure_operations: {
+        title: 'Manage Microsoft Azure Services',
+        items: ['azure_add_tags']
+    },
     deploy_software: {
         title: 'Deploy Software',
         items: ['run_executable_windows']
@@ -237,6 +244,6 @@ export const postCondition = 'post'
 export const actionCategories = [
     'notify', 'create_incident', 'axonius',
     'enrich_device_or_user_data', 'scan_va', 'run_command', 'isolate_edr',
-    'create_cmdb_computer', 'manage_directory', 'aws_operations',
+    'create_cmdb_computer', 'manage_directory', 'aws_operations', 'azure_operations',
     'deploy_software'
 ]

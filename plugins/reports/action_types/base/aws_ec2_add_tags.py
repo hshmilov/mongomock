@@ -34,8 +34,7 @@ class AwsEc2AddTagsAction(ActionTypeBase):
                 'name': TAG_KEY,
                 'title': 'Tag key',
                 'type': 'string',
-                'description': 'Tag key must not begin with "aws:" (reserved).',
-                'default': 'Axonius'
+                'description': 'Tag key must not begin with "aws:" (reserved).'
             },
             {
                 'name': TAG_VALUE,
@@ -50,7 +49,7 @@ class AwsEc2AddTagsAction(ActionTypeBase):
     def default_config() -> dict:
         return {
             **AWSActionUtils.default_config(),
-            TAG_KEY: 'Axonius',
+            TAG_KEY: None,
             TAG_VALUE: None,
         }
 
@@ -66,7 +65,7 @@ class AwsEc2AddTagsAction(ActionTypeBase):
         :param instance_group: EC2 instance descriptor
         :param client_config: Config dict with tag_key and (optional) tag_value
         """
-        tag_key = client_config.get(TAG_KEY, 'axonius')
+        tag_key = client_config[TAG_KEY]
         if tag_key.startswith('aws:'):
             raise ValueError('Tag key may not start with "aws:".')
         tag_value = client_config.get(TAG_VALUE, None)
