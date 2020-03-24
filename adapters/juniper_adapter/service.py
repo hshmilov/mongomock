@@ -137,12 +137,12 @@ class JuniperAdapter(AdapterBase, Configurable):
             'items': [
                 {
                     'name': 'do_async',
-                    'title': 'Do Requests Async',
+                    'title': 'Do requests async',
                     'type': 'bool'
                 },
                 {
                     'name': 'fetch_space_only',
-                    'title': 'Fetch Junos Space Juniper Devices Only',
+                    'title': 'Fetch Junos Space Juniper devices only',
                     'type': 'bool'
                 },
                 {
