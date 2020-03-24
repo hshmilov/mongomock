@@ -10,6 +10,7 @@ from flask import (jsonify,
                    request)
 
 from axonius.consts import adapter_consts
+from axonius.consts.adapter_consts import CLIENT_ID, CONNECTION_LABEL
 from axonius.consts.core_consts import ACTIVATED_NODE_STATUS, DEACTIVATED_NODE_STATUS
 from axonius.consts.plugin_consts import (CORE_UNIQUE_NAME,
                                           NODE_ID, NODE_NAME, PLUGIN_NAME, PLUGIN_UNIQUE_NAME,
@@ -203,6 +204,7 @@ class Adapters:
                                               raise_on_network_error=True)
         self._adapters.clean_cache()
         self.clients_labels.clean_cache()
+
         if response.status_code == 200:
             self._client_insertion_threadpool.submit(self._fetch_after_clients_thread, adapter_unique_name,
                                                      response.json()['client_id'], clients)
@@ -362,6 +364,7 @@ class Adapters:
 
         self._adapters.clean_cache()
         self.clients_labels.clean_cache()
+
         return '', 200
 
     def delete_client_data(self, plugin_name, plugin_unique_name, client_id):
@@ -473,3 +476,25 @@ class Adapters:
                 'config': associated_config['config']
             }
         return plugin_data
+
+    @gui_add_rule_logged_in('adapters/clients/labels', methods=['GET'])
+    def adapters_client_labels(self) -> list:
+        """
+        :return: list of connection label mapping -> [{client_id,connection_label,plugin_uniq_name,node_id}} ]  instance
+        """
+        clients_label = []
+        labels_from_db = self.adapter_client_labels_db.find({})
+        for client in labels_from_db:
+            client_id = client.get(CLIENT_ID)
+            conn_label = client.get(CONNECTION_LABEL)
+            plugin_name = client.get(PLUGIN_NAME)
+            plugin_unique_name = client.get(PLUGIN_UNIQUE_NAME)
+            if client_id and conn_label and plugin_name and plugin_unique_name:
+                clients_label.append({'client_id': client_id,
+                                      'label': conn_label,
+                                      'plugin_name': plugin_name,
+                                      'plugin_unique_name': plugin_unique_name})
+            else:
+                logger.error(f'invalid connection label , missing parameter {client_id}, {conn_label}, {plugin_name}')
+
+        return jsonify(clients_label)

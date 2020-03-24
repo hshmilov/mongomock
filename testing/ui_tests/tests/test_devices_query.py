@@ -5,7 +5,6 @@ from uuid import uuid4
 
 from pytest import raises
 from selenium.common.exceptions import NoSuchElementException
-
 from axonius.consts.gui_consts import ADAPTER_CONNECTIONS_FIELD
 from axonius.utils.hash import get_preferred_quick_adapter_id
 from axonius.utils.wait import wait_until
@@ -1204,7 +1203,7 @@ class TestDevicesQuery(TestBase):
         test operator equal,exists,in
                       check negative with in
         update client connection label and check with eqal
-        delete client connection lanel and check with in no match
+        delete client connection label and check with in no match
 
         """
 
@@ -1245,9 +1244,11 @@ class TestDevicesQuery(TestBase):
             self.adapters_page.edit_server_conn_label(AWS_ADAPTER_NAME, CONNECTION_LABEL_UPDATED)
             self.devices_page.switch_to_page()
             self.devices_page.click_query_wizard()
+            self.devices_page.wait_for_table_to_load()
             self.adapters_page.select_query_filter(attribute=self.devices_page.FIELD_ADAPTER_CONNECTION_LABEL,
                                                    operator='equals',
-                                                   value=CONNECTION_LABEL_UPDATED)
+                                                   value=CONNECTION_LABEL_UPDATED,
+                                                   clear_filter=True)
             results_count = len(self.devices_page.get_all_data())
             assert results_count != 0
             # delete adapter client connection label

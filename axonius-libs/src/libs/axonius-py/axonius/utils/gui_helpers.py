@@ -668,10 +668,10 @@ def parse_entity_fields(entity_data, fields, include_details=False, field_filter
         return None
 
     field_to_value = {}
-
     if include_details:
         adapter_datas = [item for value in sorted(set(entity_data['adapters']))
                          for item in entity_data['adapters_data'][value]]
+
     for field_path in fields:
         if field_path in PREFERRED_FIELDS:
             continue

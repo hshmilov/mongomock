@@ -22,7 +22,7 @@ from apscheduler.executors.pool import ThreadPoolExecutor
 from apscheduler.triggers.interval import IntervalTrigger
 from pymongo import ReturnDocument
 
-from axonius.consts.adapter_consts import ADAPTER_SETTINGS, SHOULD_NOT_REFRESH_CLIENTS
+from axonius.consts.adapter_consts import ADAPTER_SETTINGS, SHOULD_NOT_REFRESH_CLIENTS, CONNECTION_LABEL, CLIENT_ID
 from axonius.consts.metric_consts import Adapters
 from axonius.logging.metric_helper import log_metric
 from axonius.thread_pool_executor import LoggedThreadPoolExecutor
@@ -30,7 +30,8 @@ from axonius.background_scheduler import LoggedBackgroundScheduler
 
 from axonius import adapter_exceptions
 from axonius.consts import adapter_consts
-from axonius.consts.plugin_consts import PLUGIN_NAME, PLUGIN_UNIQUE_NAME, CORE_UNIQUE_NAME, SYSTEM_SCHEDULER_PLUGIN_NAME
+from axonius.consts.plugin_consts import PLUGIN_NAME, PLUGIN_UNIQUE_NAME, CORE_UNIQUE_NAME, \
+    SYSTEM_SCHEDULER_PLUGIN_NAME, NODE_ID
 from axonius.consts.plugin_subtype import PluginSubtype
 from axonius.devices.device_adapter import LAST_SEEN_FIELD, DeviceAdapter, AdapterProperty, LAST_SEEN_FIELDS
 from axonius.mixins.configurable import Configurable
@@ -741,7 +742,9 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
             logger.info(f'Deleting client {client_unique_id}')
             client = self._clients_collection.find_one_and_delete({'_id': ObjectId(client_unique_id)})
             self._decrypt_client_config(client['client_config'])
+            self._delete_client_connection_label(client)
             self._clean_unneeded_client_config_fields(client['client_config'])
+
             if client is None:
                 return '', 204
             client_id = ''
@@ -790,10 +793,15 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
             if res.matched_count == 0 and not new_client:
                 logger.warning(f'Client {client_id} : {client_config} was deleted under our feet!')
                 return None
+            # add/update clients connection labels
+            if client_config.get(CONNECTION_LABEL):
+                self._write_client_connection_label(client_id, client_config)
+
             status = 'error'  # Default is error
             self._clients[client_id] = self.__connect_client_facade(client_config)
             # Got here only if connection succeeded
             status = 'success'
+
         except (adapter_exceptions.ClientConnectionException, KeyError, Exception) as e:
             self._clients[client_id] = None
             error_msg = str(e)
@@ -821,6 +829,43 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
             return {'id': str(object_id), 'client_id': client_id, 'status': status, 'error': error_msg}
 
         return None
+
+    def _write_client_connection_label(self, client_id: str, client_config: dict):
+        """
+           update client connection label mapping entry.
+           DB aggregator, collection: adapters_client_labels
+
+           :param client_id: adapter client ID ( a.k.a client_used )
+           :param client_config: the client connection data set , include connection label
+        """
+        resp = self.adapter_client_labels_db.replace_one({CLIENT_ID: client_id,
+                                                          NODE_ID: self.node_id,
+                                                          PLUGIN_UNIQUE_NAME: self.plugin_unique_name},
+                                                         {CLIENT_ID: client_id,
+                                                          CONNECTION_LABEL: client_config.get(CONNECTION_LABEL),
+                                                          PLUGIN_UNIQUE_NAME: self.plugin_unique_name,
+                                                          PLUGIN_NAME: self.plugin_name,
+                                                          NODE_ID: self.node_id},
+                                                         upsert=True)
+        if resp and resp.matched_count == 0:
+            logger.warning(f'failure to write connection label {client_config.get(CONNECTION_LABEL)} '
+                           f'from client {client_id}  on node {self.node_id}')
+
+    def _delete_client_connection_label(self, client_config: dict):
+        '''
+            remove client connection label mapping entry.
+            DB aggregator, collection: adapters_client_labels
+            :param client_config: the client connection data set , include connection label
+        '''
+
+        if CLIENT_ID in client_config:
+
+            resp = self.adapter_client_labels_db.find_one_and_delete({CLIENT_ID: client_config.get(CLIENT_ID),
+                                                                      NODE_ID: self.node_id})
+            if resp and resp.matched_count == 0:
+                logger.warning(f'Connection Label deletion failure for client {resp.get(CLIENT_ID)} '
+                               f'from node {resp.get(NODE_ID)} '
+                               f'with Connection Label {resp.get(CONNECTION_LABEL)}')
 
     @add_rule('correlation_cmds', methods=['GET'])
     def correlation_cmds(self):

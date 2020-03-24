@@ -56,8 +56,7 @@ from axonius.clients.cyberark_vault.connection import CyberArkVaultConnection
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.opsgenie.connection import OpsgenieConnection
 from axonius.clients.opsgenie.consts import OPSGENIE_DEFAULT_DOMAIN
-from axonius.consts import adapter_consts
-from axonius.consts.adapter_consts import IGNORE_DEVICE
+from axonius.consts.adapter_consts import IGNORE_DEVICE, CLIENT_ID, CONNECTION_LABEL
 from axonius.consts.core_consts import CORE_CONFIG_NAME, ACTIVATED_NODE_STATUS
 from axonius.consts.gui_consts import FEATURE_FLAGS_CONFIG, FeatureFlagsNames, GETTING_STARTED_CHECKLIST_SETTING, \
     CloudComplianceNames, HASH_SALT, CORRELATION_REASONS
@@ -604,6 +603,7 @@ class PluginBase(Configurable, Feature, ABC):
             self.__first_time_inserter = None
 
         self.device_id_db = self.aggregator_db_connection['current_devices_id']
+        self.adapter_client_labels_db = self.aggregator_db_connection['adapters_client_labels']
 
         # the execution monitor has its own mechanism. this thread will make exceptions if we run it in execution,
         # since it will try to reject functions and not promises.
@@ -3782,26 +3782,18 @@ class PluginBase(Configurable, Feature, ABC):
                 client_config[key] = self.db_decrypt(val)
 
     @rev_cached(ttl=3600 * 6)
-    def clients_labels(self):
-        clients_label = {}
-        adapters_from_db = self._get_collection('configs', CORE_UNIQUE_NAME).find({
-            'plugin_type': adapter_consts.ADAPTER_PLUGIN_TYPE,
-            'hidden': {'$ne': True}
-        }, {
-            'plugin_unique_name': 1
-        }).sort([(PLUGIN_UNIQUE_NAME, pymongo.ASCENDING)])
+    def clients_labels(self) -> dict:
+        """
+        :return: dictionary of connection label to tuple of client_id , plugin_unique_name
+        { connection_label  : [ (client_id,plugin_unique_name) ] }
+        """
+        clients_label = defaultdict(list)
+        labels_from_db = self.adapter_client_labels_db.find({})
+        for client in labels_from_db:
+            client_id = client.get(CLIENT_ID)
+            conn_label = client.get(CONNECTION_LABEL)
+            plugin_unique_name = client.get(PLUGIN_UNIQUE_NAME)
 
-        for adapter in adapters_from_db:
-            adapter_name = adapter[PLUGIN_UNIQUE_NAME]
-            clients = self._get_collection('clients', adapter_name).find({}, {'client_id',
-                                                                              'client_config.connection_label'})
-
-            for client in clients:
-                if client.get('client_config', None) and client.get('client_config').get('connection_label', None):
-                    con_label_decrypt = self.db_decrypt(client['client_config']['connection_label'])
-                    if con_label_decrypt not in clients_label:
-                        clients_label[con_label_decrypt] = [client['client_id']]
-                    else:
-                        clients_label[con_label_decrypt].append(client['client_id'])
-
+            if client_id and conn_label:
+                clients_label[conn_label].append((client_id, plugin_unique_name))
         return clients_label

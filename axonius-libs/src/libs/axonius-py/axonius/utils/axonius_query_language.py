@@ -10,7 +10,7 @@ from bson.json_util import default
 from frozendict import frozendict
 from axonius.consts.gui_consts import SPECIFIC_DATA, ADAPTERS_DATA, \
     ADAPTERS_META, SPECIFIC_DATA_CONNECTION_LABEL, \
-    SPECIFIC_DATA_CLIENT_USED, CORRELATION_REASONS
+    SPECIFIC_DATA_CLIENT_USED, CORRELATION_REASONS, SPECIFIC_DATA_PLUGIN_UNIQUE_NAME
 from axonius.consts.plugin_consts import PLUGIN_NAME, ADAPTERS_LIST_LENGTH
 from axonius.utils.datetime import parse_date
 from axonius.utils.mongo_chunked import read_chunked
@@ -401,38 +401,77 @@ def translate_from_connection_labels(filter_str: str) -> str:
     query_connection_label_exist = f'(({SPECIFIC_DATA_CONNECTION_LABEL} == ({{"$exists":true,"$ne":""}})))'
     query_connection_label_in = f'({SPECIFIC_DATA_CONNECTION_LABEL} in'
 
+    def create_client_id_and_plugin_name_condition(client_id, plugin_unique_name) -> str:
+        """
+
+        Transform condition base 'specific_data.connection_label' to compound condition match build from:
+         ('specific_data.client_used === <client_id> AND 'specific_data.plugin_unique_name == <plugin_unique_name>)
+
+        :param client_id:  adapter client id
+        :param plugin_unique_name: adapter unique name
+        :return: transform filter string
+        """
+
+        return f'({SPECIFIC_DATA_CLIENT_USED} == "{client_id}" ' \
+               f'and {SPECIFIC_DATA_PLUGIN_UNIQUE_NAME} == "{plugin_unique_name}" )'
+
+    def create_or_separated_condition(label_conditions: list) -> str:
+        """
+        :param label_conditions:  list of formatted AQL connection label string ;
+                            (specific_data.client_used == "http://10.0.2.149/_admin" and
+                             specific_data.plugin_unique_name == "ansible_tower_adapter_0" )
+        :return: filter str  ((A) or (B) or (C))
+                 return null if list input is empty
+        """
+        if not label_conditions:
+            return None
+        return f'({" or ".join(label_conditions)})'
+
+    def create_label_condition(label: str) -> str:
+        """
+        A Label can match multiple clients .
+        client_info  = ( <client_id> , <plugin_unique_name> )
+
+        :param label: a AQL adapter connection label
+        :return: AQL filter string compatible
+        """
+        labels_info = [create_client_id_and_plugin_name_condition(client_id, name) for (client_id, name) in
+                       client_labels.get(label, [])]
+        if labels_info:
+            return create_or_separated_condition(labels_info)
+        return f'{SPECIFIC_DATA_CLIENT_USED} == []'
+
     client_labels = PluginBase.Instance.clients_labels()
 
-    # transform operator exists with 'in' and label with matching array of clients id
+    # transform operator exists with compound condition of all labels
     if query_connection_label_exist in filter_str:
         client_labels_ids = client_labels.values()
-        client_ids = [id for ids in client_labels_ids for id in ids]
-        filter_client_ids = str(client_ids).replace('\'', '"')
-        return filter_str.replace(query_connection_label_exist, f'{SPECIFIC_DATA_CLIENT_USED} in {filter_client_ids}')
+        client_details = [create_client_id_and_plugin_name_condition(client_id, name) for ids in client_labels_ids
+                          for client_id, name in ids]
+        all_connection_labels_condition = create_or_separated_condition(client_details)
+        if all_connection_labels_condition:
+            filter_str = filter_str.replace(query_connection_label_exist, all_connection_labels_condition)
 
-    # transform array of labels with array of matching client_id for 'in' operator
+    # transform operator 'in' with new compound condition per client in OR logic
     if query_connection_label_in in filter_str:
         matcher = re.search(f'{SPECIFIC_DATA_CONNECTION_LABEL}' + r' in \[(.+?)\]', filter_str)
         while matcher:
             filter_labels = matcher.group(1)
             labels_list = [label.strip('"') for label in filter_labels.split(',')]
-            filtered_labels_ids = [clients_id for label in labels_list for clients_id in client_labels.get(label, '')]
-            ids = str(filtered_labels_ids).replace('\'', '"')
-            filter_str = filter_str.replace(f'{SPECIFIC_DATA_CONNECTION_LABEL} ',
-                                            f'{SPECIFIC_DATA_CLIENT_USED} ', 1)
-            matcher = re.search(f'{SPECIFIC_DATA_CONNECTION_LABEL}' + r' in \[(.+?)\]', filter_str)
-            filter_str = filter_str.replace(f'[{filter_labels}]', ids)
 
-    # transform operator equal with 'in' and label with matching array of clients id
+            label_attributes = [create_label_condition(label) for label in labels_list]
+            replace_str = create_or_separated_condition(label_attributes)
+            filter_str = filter_str.replace(matcher.group(0), replace_str)
+
+            # in case of complex conditions
+            matcher = re.search(f'{SPECIFIC_DATA_CONNECTION_LABEL}' + r' in \[(.+?)\]', filter_str)
+
+    # transform operator equal with compound condition to match (client_id,plugin_unique_name) tuple
     if query_connection_label_equal in filter_str:
         matcher = re.search(f'{SPECIFIC_DATA_CONNECTION_LABEL} == \"(.+?)\"', filter_str)
         while matcher:
-            label = matcher.group(1)
-            ids = str(client_labels.get(label, '[]')).replace('\'', '"')
-            transform_filter_expr = filter_str.replace(f'{SPECIFIC_DATA_CONNECTION_LABEL} ==',
-                                                       f'{SPECIFIC_DATA_CLIENT_USED} {str("in")}', 1)
-            matcher = re.search(f'{SPECIFIC_DATA_CONNECTION_LABEL} == \"(.+?)\"', transform_filter_expr)
-            filter_str = transform_filter_expr.replace(f'"{label}"', ids)
+            filter_str = filter_str.replace(matcher.group(0), create_label_condition(matcher.group(1)))
+            matcher = re.search(f'{SPECIFIC_DATA_CONNECTION_LABEL} == \"(.+?)\"', filter_str)
 
     return filter_str
 

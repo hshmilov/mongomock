@@ -108,26 +108,25 @@ export const exactSearch = (state) => {
 
 export const REQUIRE_CONNECTION_LABEL = 'REQUIRE_CONNECTION_LABEL'
 export const requireConnectionLabel = (state) => {
-    if (!state.configuration || !state.configuration.data || !state.configuration.data.system) return false
-    return state.configuration.data.system.requireConnectionLabel
+  if (!state.configuration || !state.configuration.data || !state.configuration.data.system) return false
+  return state.configuration.data.system.requireConnectionLabel
 }
-
 
 export const IS_EXPIRED = 'IS_EXPIRED';
 export const isExpired = (state) => state.expired.data && state.auth.currentUser.data.user_name !== '_axonius';
 
-export const GET_CONNECTION_LABEL = 'GET_CONNECTION_LABEL'
-export const getConnectionLabel = (state) => (clientId, adapterName) => {
-  // extract the connection label saved in client config
-  // get the clientId and adapter name to find the client config in state
-  const adaptersClients = state.adapters.clients
-  const currentClient = adaptersClients.find( item => item['adapter_name'] === adapterName
-    && item['client_id'] === clientId )
-  if ( !currentClient ) return ''
-  const connectionLabel = currentClient['client_config']['connection_label']
-  if ( !connectionLabel ) return ''
-  return `${connectionLabel}`;
-}
+export const GET_CONNECTION_LABEL = 'GET_CONNECTION_LABEL';
+export const getConnectionLabel = (state) => (clientId, plugin_name, plugin_unique_name) => {
+  if (!clientId) return '';
+  const adaptersConnectionLabels = state.adapters.connectionLabels;
+  let foundLabel = null;
+  if (plugin_unique_name) {
+    foundLabel = adaptersConnectionLabels.find((label) => label.client_id === clientId && label.plugin_unique_name === plugin_unique_name);
+  } else if (plugin_name) {
+    foundLabel = adaptersConnectionLabels.find((label) => label.client_id === clientId && label.plugin_name === plugin_name);
+  }
+  return (foundLabel ? foundLabel.label : '');
+};
 
 const savedQueries = (state, namespace) => {
   const data = state[namespace].views.saved.content.data || [];

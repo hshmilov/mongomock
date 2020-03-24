@@ -162,6 +162,12 @@ export default {
     adaptersList() {
       return this.data[this.adaptersFieldName].concat().map((adapter) => [adapter]).sort();
     },
+    adaptersDetailsWithClientIdList() {
+      return this.data[this.adaptersFieldName].concat().map((adapter, index) => ({
+        pluginName: [adapter],
+        clientId: this.data['meta_data.client_used'][index],
+      })).sort((a, b) => ((a.pluginName[0] > b.pluginName[0]) ? 1 : -1));
+    },
     details() {
       if (this.isAdaptersField) {
         return this.adaptersList;
@@ -211,16 +217,15 @@ export default {
           this.schema, {
             name: 'name', title: 'Name', type: 'string',
           }],
-        data: _orderBy(this.adaptersList.map((adapter, index) => {
-          const clientId = this.data['meta_data.client_used'][index];
-          let connectionLabel = this.getConnectionLabel(clientId, adapter[0]);
+        data: _orderBy(this.adaptersDetailsWithClientIdList.map((adapter) => {
+          let connectionLabel = this.getConnectionLabel(adapter.clientId, adapter.pluginName[0], undefined);
           if (connectionLabel !== '') {
             connectionLabel = ` - ${connectionLabel}`;
           }
-          const name = (pluginMeta[adapter[0]] ? pluginMeta[adapter[0]].title : adapter[0])
-                    + connectionLabel;
+          const name = (pluginMeta[adapter.pluginName[0]] ? pluginMeta[adapter.pluginName[0]].title :
+            adapter.pluginName[0]) + connectionLabel;
           return {
-            [this.fieldName]: adapter,
+            [this.fieldName]: adapter.pluginName,
             name,
           };
         }), [this.fieldName]),

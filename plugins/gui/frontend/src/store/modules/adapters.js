@@ -6,7 +6,8 @@ import _omit from 'lodash/omit'
 export const HINT_ADAPTER_UP = 'HINT_ADAPTER_UP'
 export const FETCH_ADAPTERS = 'FETCH_ADAPTERS'
 export const INSERT_ADAPTERS = 'INSERT_ADAPTERS'
-
+export const FETCH_ADAPTERS_CLIENT_LABELS = 'FETCH_ADAPTERS_CLIENT_LABELS'
+export const INSERT_ADAPTERS_CLIENT_LABELS = 'INSERT_ADAPTERS_CLIENT_LABELS'
 export const SAVE_ADAPTER_CLIENT = 'SAVE_ADAPTER_CLIENT'
 export const TEST_ADAPTER_SERVER = 'TEST_ADAPTER_SERVER'
 export const UPDATE_ADAPTER_CLIENT = 'UPDATE_ADAPTER_CLIENT'
@@ -29,6 +30,7 @@ export const adapters = {
 		},
 		instances: [],
 		clients: [],
+		connectionLabels: [],
 	},
 	mutations: {
 		[INSERT_ADAPTERS](state, payload) {
@@ -227,7 +229,13 @@ export const adapters = {
 					status: 'warning'
 				}
 			})
-		}
+		},
+		[INSERT_ADAPTERS_CLIENT_LABELS] (state,payload){
+			const { data } = payload
+			if (data) {
+					state.connectionLabels = data;
+			}
+		 }
 	},
 	actions: {
 		[FETCH_ADAPTERS]({ dispatch, commit }, payload) {
@@ -298,6 +306,7 @@ export const adapters = {
 						node_id: instance.node_id,
 						error: response.data.error
 					})
+					dispatch(FETCH_ADAPTERS_CLIENT_LABELS)
 					return response
 				})
 		},
@@ -339,6 +348,7 @@ export const adapters = {
 						clientId,
 						adapterId
 					})
+					dispatch(FETCH_ADAPTERS_CLIENT_LABELS);
 				})
 		},
 		[HINT_ADAPTER_UP]({ dispatch, commit }, adapterId) {
@@ -346,7 +356,13 @@ export const adapters = {
 				rule: `adapters/hint_raise/${adapterId}`,
 				method: 'POST',
 			})
-		}
+		},
+		[FETCH_ADAPTERS_CLIENT_LABELS]({ dispatch, commit}) {
+			return dispatch(REQUEST_API, {
+				rule: 'adapters/clients/labels',
+				type: INSERT_ADAPTERS_CLIENT_LABELS
+			})
+		},
 	},
 	getters: {
 		getAdaptersMap: state => {

@@ -135,6 +135,7 @@ PROXY_ERROR_MESSAGE = 'Bad proxy settings or no internet connection'
 GETTING_STARTED_CHECKLIST_SETTING = 'getting_started_checklist'
 SPECIFIC_DATA_CONNECTION_LABEL = f'{SPECIFIC_DATA}.connection_label'
 SPECIFIC_DATA_CLIENT_USED = f'{SPECIFIC_DATA}.client_used'
+SPECIFIC_DATA_PLUGIN_UNIQUE_NAME = f'{SPECIFIC_DATA}.plugin_unique_name'
 
 
 class FeatureFlagsNames:

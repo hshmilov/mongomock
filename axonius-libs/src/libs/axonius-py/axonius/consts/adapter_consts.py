@@ -19,3 +19,5 @@ SHOULD_NOT_REFRESH_CLIENTS = 'should_not_refresh_clients'
 CONNECTION_LABEL = 'connection_label'
 # Adapter Client Config
 CLIENT_CONFIG = 'client_config'
+# adapter client id attribute
+CLIENT_ID = 'client_id'

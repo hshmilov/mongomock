@@ -84,6 +84,7 @@ import XGettingStarted from './networks/getting-started/GettingStarted.vue';
 
 import './axons/icons';
 import { FETCH_ADAPTERS } from '../store/modules/adapters';
+import { FETCH_ADAPTERS_CLIENT_LABELS } from '../store/modules/adapters';
 
 export const GettingStartedPubSub = new Vue();
 
@@ -191,6 +192,7 @@ export default {
       fetchAllowedDates: FETCH_ALLOWED_DATES,
       fetchDataFields: FETCH_DATA_FIELDS,
       fetchAdapters: FETCH_ADAPTERS,
+      fetchAdaptersClientLables: FETCH_ADAPTERS_CLIENT_LABELS,
     }),
     changeChecklistOpenState() {
       this.open = !this.open;
@@ -208,6 +210,7 @@ export default {
         this.fetchConfig();
         this.fetchFirstHistoricalDate();
         this.fetchAllowedDates();
+        this.fetchAdaptersClientLables();
         if (this.$isAdmin()) {
           this.fetchGettingStartedData().then(() => {
             if (this.justLoggedIn) {

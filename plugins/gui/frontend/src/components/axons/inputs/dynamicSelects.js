@@ -6,7 +6,7 @@ import _get from 'lodash/get';
 import _property from 'lodash/property';
 import { FETCH_DATA_LABELS } from '@store/actions';
 import { IS_ENTITY_RESTRICTED } from '@store/modules/auth';
-import { FETCH_ADAPTERS } from '@store/modules/adapters';
+import { FETCH_ADAPTERS, FETCH_ADAPTERS_CLIENT_LABELS } from '@store/modules/adapters';
 import XSelect from './select/Select.vue';
 
 // eslint-disable-next-line max-len
@@ -171,11 +171,10 @@ export const xInstancesSelect = withDynamicData({
 
 export const xClientConnectionSelect = withDynamicData({
   id: 'connectionLabelSelect',
-  action: FETCH_ADAPTERS,
+  action: FETCH_ADAPTERS_CLIENT_LABELS,
   modules: [{ name: 'adapters', dataPath: '' }],
-  moduleAttributeName: 'clients',
-  optionsNormalizer: (item) => ({ name: item.client_config.connection_label, title: item.client_config.connection_label }),
-  propertyName: 'client_config.connection_label',
+  moduleAttributeName: 'connectionLabels',
+  optionsNormalizer: (item) => ({ name: item.label, title: item.label }),
+  propertyName: 'label',
 
 });
-
