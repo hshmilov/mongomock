@@ -1,4 +1,9 @@
 export const pluginMeta = {
+    sevone_adapter: {
+        title: 'SevOne',
+        description: 'SevOne Data Platform is a network and infrastructure management platform.',
+        link: 'https://docs.axonius.com/docs/sevone'
+    },
     logicmonitor_adapter: {
         title: 'LogicMonitor',
         link: 'https://docs.axonius.com/docs/logicmonitor',

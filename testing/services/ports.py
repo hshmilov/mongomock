@@ -263,6 +263,7 @@ DOCKER_PORTS = {
     'contrast-security-adapter':        13379,
     'logicmonitor-adapter':             13385,
     'jira-adapter':                     13380,
+    'sevone-adapter':                   13389,
     'mongo':                            27017,
     'mockingbird-db':                   28017
 }
