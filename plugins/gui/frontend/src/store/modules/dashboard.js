@@ -1,5 +1,5 @@
-import { REQUEST_API, downloadFile } from '../actions';
 import { RESET_DEVICES_MERGED_DATA_BY_ID } from '@store/modules/devices';
+import { REQUEST_API, downloadFile } from '../actions';
 
 export const FETCH_LIFECYCLE = 'FETCH_LIFECYCLE';
 export const UPDATE_LIFECYCLE = 'UPDATE_LIFECYCLE';
@@ -157,7 +157,9 @@ export const dashboard = {
         panel.historical = payload.historical;
       }
       if (payload.search !== panel.search) {
-        panel.data = [];
+        if (payload.search) {
+          panel.data = [];
+        }
         panel.search = payload.search;
       }
       const response = payload.data;
