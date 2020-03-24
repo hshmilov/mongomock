@@ -104,6 +104,11 @@ class ServiceNowIncidentPerEntity(ActionTypeBase):
                     'name': 'subcategory',
                     'type': 'string',
                     'title': 'Subcategory'
+                },
+                {
+                    'name': 'extra_fields',
+                    'title': 'Extra Fields',
+                    'type': 'string'
                 }
             ],
             'required': [
@@ -126,6 +131,7 @@ class ServiceNowIncidentPerEntity(ActionTypeBase):
             'https_proxy': None,
             'verify_ssl': True,
             'u_requested_for': None,
+            'extra_fields': None,
             'caller_id': None,
             'severity': 'info',
             'incident_title': None,
@@ -139,7 +145,7 @@ class ServiceNowIncidentPerEntity(ActionTypeBase):
     # pylint: disable=too-many-arguments
     def _create_service_now_incident(self, short_description, description, impact, u_incident_type,
                                      caller_id, cmdb_ci, u_symptom, assignment_group, u_requested_for,
-                                     category=None, subcategory=None):
+                                     category=None, subcategory=None, extra_fields=None):
         adapter_unique_name = self._plugin_base._get_adapter_unique_name(ADAPTER_NAME, self.action_node_id)
         service_now_dict = {'short_description': short_description,
                             'description': description,
@@ -151,7 +157,8 @@ class ServiceNowIncidentPerEntity(ActionTypeBase):
                             'assignment_group': assignment_group,
                             'u_requested_for': u_requested_for,
                             'category': category,
-                            'subcategory': subcategory}
+                            'subcategory': subcategory,
+                            'extra_fields': extra_fields}
         try:
             if self._config['use_adapter'] is True:
                 response = self._plugin_base.request_remote_plugin('create_incident', adapter_unique_name, 'post',
@@ -212,7 +219,8 @@ class ServiceNowIncidentPerEntity(ActionTypeBase):
                                                             assignment_group=self._config.get('assignment_group'),
                                                             u_requested_for=self._config.get('u_requested_for'),
                                                             category=self._config.get('category'),
-                                                            subcategory=self._config.get('subcategory'))
+                                                            subcategory=self._config.get('subcategory'),
+                                                            extra_fields=self._config.get('extra_fields'))
                 results.append(EntityResult(entry['internal_axon_id'], not message, message or 'Success'))
             except Exception:
                 logger.exception(f'Problem with entry {entry}')

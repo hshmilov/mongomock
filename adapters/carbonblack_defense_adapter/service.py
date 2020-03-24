@@ -33,6 +33,8 @@ class CarbonblackDefenseAdapter(AdapterBase, Configurable):
         quarantined = Field(bool, 'Quarantined')
         passive_mode = Field(bool, 'Passive Mode')
         target_priority_type = Field(str, 'Target Priority Type')
+        last_policy_updated_time = Field(datetime.datetime, 'Last Policy Updated Time')
+        policy_override = Field(bool, 'Policy Override')
 
     def __init__(self):
         super().__init__(get_local_config_file(__file__))
@@ -255,6 +257,7 @@ class CarbonblackDefenseAdapter(AdapterBase, Configurable):
             device.figure_os((device_raw.get('os') or '') + ' ' + (device_raw.get('os_version') or ''))
             device.add_ips_and_macs(macs=device_raw.get('mac_address'), ips=device_raw.get('last_internal_ip_address'))
             last_contact_time = parse_date(device_raw.get('last_contact_time'))
+            device.last_policy_updated_time = parse_date(device_raw.get('last_policy_updated_time'))
             device.last_contact_time = last_contact_time
             device.passive_mode = device_raw.get('passive_mode') \
                 if isinstance(device_raw.get('passive_mode'), bool) else None
@@ -276,6 +279,8 @@ class CarbonblackDefenseAdapter(AdapterBase, Configurable):
                                      status=device_raw.get('status'))
             device.policy_name = device_raw.get('policy_name')
             device.scan_status = device_raw.get('scan_status')
+            device.policy_override = device_raw.get('policy_override') \
+                if isinstance(device_raw.get('policy_override'), bool) else None
             device.quarantined = device_raw.get('quarantined') \
                 if isinstance(device_raw.get('quarantined'), bool) else None
             device.last_external_ip_address = device_raw.get('last_external_ip_address')

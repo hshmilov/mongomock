@@ -110,6 +110,11 @@ class ServiceNowIncidentAction(ActionTypeAlert):
                     'name': 'subcategory',
                     'type': 'string',
                     'title': 'Subcategory'
+                },
+                {
+                    'name': 'extra_fields',
+                    'title': 'Extra Fields',
+                    'type': 'string'
                 }
             ],
             'required': [
@@ -130,6 +135,7 @@ class ServiceNowIncidentAction(ActionTypeAlert):
         return {
             'severity': 'info',
             'description_default': False,
+            'extra_fields': None,
             'incident_description': None,
             'incident_title': None,
             'use_adapter': False,
@@ -150,8 +156,8 @@ class ServiceNowIncidentAction(ActionTypeAlert):
     # pylint: disable=too-many-arguments
     def _create_service_now_incident(self, short_description, description, impact, u_incident_type,
                                      caller_id, u_symptom, assignment_group, u_requested_for,
-                                     category=None, subcategory=None
-                                     ):
+                                     category=None, subcategory=None,
+                                     extra_fields=None):
         service_now_dict = {'short_description': short_description,
                             'description': description,
                             'impact': impact,
@@ -161,7 +167,8 @@ class ServiceNowIncidentAction(ActionTypeAlert):
                             'assignment_group': assignment_group,
                             'u_requested_for': u_requested_for,
                             'category': category,
-                            'subcategory': subcategory
+                            'subcategory': subcategory,
+                            'extra_fields': extra_fields
                             }
         try:
             if self._config['use_adapter'] is True:
@@ -210,6 +217,7 @@ class ServiceNowIncidentAction(ActionTypeAlert):
                                                     assignment_group=self._config.get('assignment_group'),
                                                     u_requested_for=self._config.get('u_requested_for'),
                                                     category=self._config.get('category'),
-                                                    subcategory=self._config.get('subcategory')
+                                                    subcategory=self._config.get('subcategory'),
+                                                    extra_fields=self._config.get('extra_fields')
                                                     )
         return AlertActionResult(not message, message or 'Success')

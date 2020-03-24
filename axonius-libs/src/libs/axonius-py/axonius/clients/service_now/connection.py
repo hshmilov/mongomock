@@ -1,3 +1,4 @@
+import json
 import logging
 
 from axonius.clients.rest.connection import RESTConnection
@@ -209,6 +210,14 @@ class ServiceNowConnection(RESTConnection):
                 final_dict['category'] = category
             if subcategory:
                 final_dict['subcategory'] = subcategory
+            try:
+                extra_fields = service_now_dict.get('extra_fields')
+                if extra_fields:
+                    extra_fields_dict = json.loads(extra_fields)
+                    if isinstance(extra_fields_dict, dict):
+                        final_dict.update(extra_fields_dict)
+            except Exception:
+                logger.exception(f'Problem getting extra fields')
             self.__add_dict_to_table('incident', final_dict)
             return True
         except Exception:
