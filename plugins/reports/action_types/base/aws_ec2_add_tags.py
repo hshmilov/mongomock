@@ -1,3 +1,4 @@
+import copy
 import logging
 
 from boto3.resources.base import ServiceResource
@@ -5,7 +6,7 @@ from boto3.resources.base import ServiceResource
 from axonius.types.enforcement_classes import EntitiesResult
 from reports.action_types.base.aws_utils import AWSActionUtils, EC2_ACTION_REQUIRED_ENTITIES, \
     EC2InstanceGroup, EC2ActionResult, EC2ActionCallableReturnType
-from reports.action_types.action_type_base import ActionTypeBase, add_node_default, add_node_selection
+from reports.action_types.action_type_base import ActionTypeBase
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -27,55 +28,31 @@ class AwsEc2AddTagsAction(ActionTypeBase):
     """
     @staticmethod
     def config_schema() -> dict:
-        schema = {
-            'items': [
-                {
-                    'name': AWS_ACCESS_KEY_ID,
-                    'title': 'AWS Access Key ID',
-                    'type': 'string',
-                    'description': 'Requires the tag:TagResources and tag:GetResources permissions in IAM policy.'
-                },
-                {
-                    'name': AWS_SECRET_ACCESS_KEY,
-                    'title': 'AWS Access Key Secret',
-                    'type': 'string',
-                    'format': 'password'
-                },
-                {
-                    'name': PROXY,
-                    'title': 'Proxy',
-                    'type': 'string'
-                },
-                {
-                    'name': TAG_KEY,
-                    'title': 'Tag key',
-                    'type': 'string',
-                    'description': 'Tag key must not begin with "aws:" (reserved).',
-                    'default': 'Axonius'
-                },
-                {
-                    'name': TAG_VALUE,
-                    'title': 'Tag value',
-                    'type': 'string',
-                    'description': 'Value may be empty.'
-                }
-            ],
-            'required': [
-                TAG_KEY,
-            ],
-            'type': 'array'
-        }
-        return add_node_selection(schema)
+        schema = copy.deepcopy(AWSActionUtils.config_schema())
+        schema['items'].extend([
+            {
+                'name': TAG_KEY,
+                'title': 'Tag key',
+                'type': 'string',
+                'description': 'Tag key must not begin with "aws:" (reserved).',
+                'default': 'Axonius'
+            },
+            {
+                'name': TAG_VALUE,
+                'title': 'Tag value',
+                'type': 'string',
+                'description': 'Value may be empty.'
+            }])
+        schema['required'].append(TAG_KEY)
+        return schema
 
     @staticmethod
     def default_config() -> dict:
-        return add_node_default({
-            AWS_ACCESS_KEY_ID: None,
-            AWS_SECRET_ACCESS_KEY: None,
-            PROXY: None,
+        return {
+            **AWSActionUtils.default_config(),
             TAG_KEY: 'Axonius',
             TAG_VALUE: None,
-        })
+        }
 
     @staticmethod
     def add_tags(

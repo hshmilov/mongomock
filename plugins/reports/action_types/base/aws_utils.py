@@ -18,6 +18,7 @@ from reports.action_types.action_type_base import add_node_selection, add_node_d
 
 PROXY = 'proxy'
 ADAPTER_NAME = 'aws_adapter'
+AWS_USE_IAM = 'aws_use_iam'
 AWS_ACCESS_KEY_ID = 'aws_access_key_id'
 AWS_SECRET_ACCESS_KEY = 'aws_secret_access_key'
 AWS_ADAPTER_REQUIRED_FIELDS = {'cloud_id', 'aws_region', 'aws_source'}
@@ -84,10 +85,13 @@ class AwsConnection():
         return session.resource('ec2', config=self._aws_config)
 
     def _generate_boto3_session(self, region_name: Optional[str] = None):
+        use_iam = self._client_config[AWS_USE_IAM]
+        access_key_id = None if use_iam else self._client_config.get(AWS_ACCESS_KEY_ID)
+        secret_access_key = None if use_iam else self._client_config.get(AWS_SECRET_ACCESS_KEY)
         return boto3.Session(
-            aws_access_key_id=self._client_config.get(AWS_ACCESS_KEY_ID) or None,
-            aws_secret_access_key=self._client_config.get(AWS_SECRET_ACCESS_KEY) or None,
-            region_name=region_name
+            region_name=region_name,
+            aws_access_key_id=access_key_id,
+            aws_secret_access_key=secret_access_key,
         )
 
     def _get_assumed_session(self, role_arn: str, region: str):
@@ -144,6 +148,12 @@ class AWSActionUtils():
         schema = {
             'items': [
                 {
+                    'name': AWS_USE_IAM,
+                    'title': 'Use attached IAM role',
+                    'type': 'bool',
+                    'default': False,
+                },
+                {
                     'name': AWS_ACCESS_KEY_ID,
                     'title': 'AWS Access Key ID',
                     'type': 'string'
@@ -160,7 +170,7 @@ class AWSActionUtils():
                     'type': 'string'
                 },
             ],
-            'required': [],
+            'required': [AWS_USE_IAM],
             'type': 'array'
         }
         return add_node_selection(schema)
@@ -168,6 +178,7 @@ class AWSActionUtils():
     @staticmethod
     def default_config() -> dict:
         return add_node_default({
+            AWS_USE_IAM: False,
             AWS_ACCESS_KEY_ID: None,
             AWS_SECRET_ACCESS_KEY: None,
             PROXY: None,
@@ -176,11 +187,13 @@ class AWSActionUtils():
     @staticmethod
     def perform_grouped_ec2_action(current_result: Iterable[dict], client_config: dict,
                                    action_func: EC2ActionCallable) -> Generator[EntityResult, None, None]:
-        # Test valid configuration - both or none are valid
-        if bool(client_config.get(AWS_ACCESS_KEY_ID)) ^ bool(client_config.get(AWS_SECRET_ACCESS_KEY)):
+        # Test valid configuration - either check use_iam boolean or use both cred fields
+        if not (bool(client_config.get(AWS_USE_IAM)) ^
+                bool(client_config.get(AWS_ACCESS_KEY_ID) and client_config.get(AWS_SECRET_ACCESS_KEY))):
+
             yield from generic_fail((entry['internal_axon_id'] for entry in current_result),
-                                    'Either both or none of "AWS Access Key ID" and "AWS Access Key Secret"'
-                                    ' must be set')
+                                    'Either check "Use attached IAM role"'
+                                    ' or fill both of "AWS Access Key ID" and "AWS Access Key Secret"')
             return
 
         # reject invalid entries (using PEP342) and group them into (region, role_arn) groups
