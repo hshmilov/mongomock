@@ -150,8 +150,16 @@ export const dashboard = {
       if (!panel) {
         return;
       }
-      panel.loading = payload.fetching;
-      if (panel.loading) return;
+
+      // Set the panel loading indicator to true if payload is loading or fetching
+      panel.loading = payload.loading || payload.fetching || false;
+
+      // In case the payload has a fetching status, it means that there is no need to continue processing the data.
+      // We exit the code and only once fetching is done, we will continue.
+      if (payload.fetching) {
+        return;
+      }
+
       if (payload.historical !== panel.historical) {
         panel.data = [];
         panel.historical = payload.historical;

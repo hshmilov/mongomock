@@ -1,9 +1,11 @@
 import time
 from contextlib import contextmanager
+import pytest
 
 from axonius.entities import EntityType
 from axonius.utils import datetime
 from services.adapters import stresstest_service
+from services.axon_service import TimeoutException
 from ui_tests.tests.ui_consts import (WINDOWS_QUERY_NAME, HOSTNAME_DC_QUERY, HOSTNAME_DC_QUERY_NAME,
                                       IPS_192_168_QUERY, IPS_192_168_QUERY_NAME, DEVICES_MODULE,
                                       MANAGED_DEVICES_QUERY_NAME, OS_SERVICE_PACK_OPTION_NAME, IS_ADMIN_OPTION_NAME,
@@ -327,3 +329,26 @@ class TestDashboardActions(TestBase):
         self.dashboard_page.switch_to_page()
         self.dashboard_page.wait_for_spinner_to_end()
         self.dashboard_page.remove_card(self.TEST_EDIT_CARD_TITLE)
+
+    def test_fetching_data_during_edit_chart(self):
+        """
+        Tests that during the edit of a dashboard chart, the loading indicator
+        would display "Fetching data..." as long as data is being loaded
+
+        - We will edit the chart two times, in each time checking that:
+          - A) The "No data" is not appearing
+          - B) The "Fetching data..." is appearing
+
+        We do it twice to make sure it behaves consistently.
+        """
+        self.base_page.run_discovery()
+        self.dashboard_page.switch_to_page()
+        self.dashboard_page.add_segmentation_card(module='Devices',
+                                                  field=OS_TYPE_OPTION_NAME,
+                                                  title=self.TEST_EDIT_CARD_TITLE)
+
+        for _ in range(2):
+            self.dashboard_page.edit_card(self.TEST_EDIT_CARD_TITLE)
+            self.dashboard_page.click_button('Save')
+            with pytest.raises(TimeoutException):
+                self.dashboard_page.wait_for_element_present_by_css(self.dashboard_page.NO_DATA_FOUND_SPINNER_CSS)

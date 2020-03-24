@@ -94,6 +94,7 @@ class DashboardPage(Page):
     COMPARISON_CARD_1ST_QUERY_CSS = 'div:nth-child(1) > div.x-dropdown.x-select.view-name'
     COMPARISON_CARD_2ND_QUERY_CSS = 'div:nth-child(2) > div.x-dropdown.x-select.view-name'
     CARD_SPINNER_CSS = '.chart-spinner'
+    NO_DATA_FOUND_SPINNER_CSS = '.no-data-found'
     LIFECYCLE_TOOLTIP_CSS = '.cycle-wrapper .x-tooltip'
     LIFECYCLE_TABLE_CSS = '.cycle-wrapper .table'
 
