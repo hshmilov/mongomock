@@ -11,6 +11,7 @@ from dataclasses import dataclass, field
 
 from axonius.entities import EntityType
 from axonius.utils.get_plugin_base_instance import plugin_base_instance
+from axonius.utils.memory_usage import memory
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -201,7 +202,8 @@ class RevCached:
             except Exception as e:
                 cache_entry.exception = e
             logger.debug(f'Calculated {self.__func.__name__}({cache_entry.args}, {cache_entry.kwargs})'
-                         f' in {(datetime.now() - started_time).total_seconds()}')
+                         f' in {(datetime.now() - started_time).total_seconds()}, '
+                         f'Current memory consumption: {memory()}')
 
             cache_entry.event.set()
 
