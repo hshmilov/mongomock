@@ -21,7 +21,7 @@ logger = logging.getLogger(f'axonius.{__name__}')
 METADATA_FIELDS_TO_PROJECT_FOR_GUI = ['client_used']
 PREFERRED_SUFFIX = '_preferred'
 ADAPTER_PROPERTIES_DB_ENTRY = 'adapters.data.adapter_properties'
-ADAPTER_LAST_SEEN_DB_ENTRY = 'specific_data.data.last_seen'
+ADAPTER_LAST_SEEN_DB_ENTRY = 'adapters.data.last_seen'
 
 
 def convert_many_queries_to_elemmatch_helper(name: str, value: object, length_of_prefix: int):
@@ -637,7 +637,7 @@ def convert_db_projection_to_view(projection):
             if splitted[-1].endswith(PREFERRED_SUFFIX):
                 if ADAPTER_PROPERTIES_DB_ENTRY not in view_projection:
                     view_projection[ADAPTER_PROPERTIES_DB_ENTRY] = 1
-                elif ADAPTER_LAST_SEEN_DB_ENTRY not in view_projection:
+                if ADAPTER_LAST_SEEN_DB_ENTRY not in view_projection:
                     view_projection[ADAPTER_LAST_SEEN_DB_ENTRY] = 1
                 save_last = splitted[-1]
                 del splitted[-1]
