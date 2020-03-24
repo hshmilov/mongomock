@@ -47,7 +47,7 @@ from axonius.utils.root_master.root_master import root_master_restore_from_s3
 logger = logging.getLogger(f'axonius.{__name__}')
 
 # Plugins that should always run async
-ALWAYS_ASYNC_PLUGINS = [STATIC_ANALYSIS_PLUGIN_NAME, GENERAL_INFO_PLUGIN_NAME]
+ALWAYS_ASYNC_PLUGINS = [STATIC_ANALYSIS_PLUGIN_NAME, GENERAL_INFO_PLUGIN_NAME, REIMAGE_TAGS_ANALYSIS_PLUGIN_NAME]
 MIN_GB_TO_SAVE_HISTORY = 15
 
 
@@ -727,7 +727,7 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
         Trigger saving history
         :return:
         """
-        self._run_blocking_request(plugin_consts.AGGREGATOR_PLUGIN_NAME, 'save_history', timeout=3600 * 3)
+        self._run_blocking_request(plugin_consts.AGGREGATOR_PLUGIN_NAME, 'save_history', timeout=3600 * 6)
 
     def _run_aggregator_phase(self, plugin_subtype: PluginSubtype):
         """

@@ -7,6 +7,7 @@ from mockingbird.commons.mock_network_entity import MockNetworkEntity, MockNetwo
 
 class MockNetworkDeviceProperties(MockNetworkEntityProperties):
     ADDevice = auto()
+    NoGeneralInfo = auto()
     AWSDevice = auto()
     AzureDevice = auto()
     ChefDevice = auto()
@@ -15,6 +16,7 @@ class MockNetworkDeviceProperties(MockNetworkEntityProperties):
     GCEDevice = auto()
     HyperVDevice = auto()
     IllusiveDevice = auto()
+    MobileironDevice = auto()
     PuppetDevice = auto()
     QualysScansDevice = auto()
     SccmDevice = auto()
@@ -22,6 +24,9 @@ class MockNetworkDeviceProperties(MockNetworkEntityProperties):
     TaniumDevice = auto()
     CarbonBlackResponseDevice = auto()
     CiscoMerakiDevice = auto()
+    CounteractDevice = auto()
+    TenableSC = auto()
+    EclypsiumDevice = auto()
 
 
 class MockNetworkDevice(DeviceAdapter, MockNetworkEntity):

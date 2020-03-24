@@ -8,6 +8,7 @@ import configparser
 from pathlib import Path
 
 import pymongo
+import requests
 from apscheduler.executors.pool import \
     ThreadPoolExecutor as ThreadPoolExecutorApscheduler
 from flask import (session)
@@ -453,6 +454,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin, 
         if metadata_url:
             try:
                 logger.info(f'Requesting metadata url for SAML Auth')
+                requests.get(metadata_url, timeout=10)  # If the metadataurl is not accessible, fail before
                 self._saml_login['idp_data_from_metadata'] = \
                     OneLogin_Saml2_IdPMetadataParser.parse_remote(metadata_url)
             except Exception:

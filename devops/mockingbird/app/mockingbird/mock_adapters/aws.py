@@ -22,6 +22,7 @@ class AwsAdapterParser(AdapterParser):
         device.id = 'i-' + ''.join(random.choices(string.hexdigits, k=16))
         device.name = network_device.name
         device.os = network_device.os
+        device.os.build = None
         device.cloud_id = device.id
         device.cloud_provider = 'AWS'
         device.network_interfaces = network_device.network_interfaces

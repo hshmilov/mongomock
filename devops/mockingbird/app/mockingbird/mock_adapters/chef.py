@@ -21,6 +21,7 @@ class ChefAdapterParser(AdapterParser):
         device.name = network_device.name
         device.hostname = network_device.hostname
         device.os = network_device.os
+        device.os.build = None
         device.network_interfaces = network_device.network_interfaces
         device.total_physical_memory = network_device.total_physical_memory
         device.free_physical_memory = network_device.free_physical_memory

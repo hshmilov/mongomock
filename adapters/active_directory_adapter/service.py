@@ -1389,7 +1389,7 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, ActiveDirectory
             err += f"failed to resolve from {dns_server} <{e}>; "
 
         try:
-            dns_server = client_config["dns_name"]
+            dns_server = client_config["dns_server_address"]
             ips.append((query_dns(full_device_name, timeout, dns_server), dns_server))
         except Exception as e:
             err += f"failed to resolve from {dns_server} <{e}>; "

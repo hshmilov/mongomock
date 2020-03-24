@@ -1905,14 +1905,14 @@ class PluginBase(Configurable, Feature, ABC):
                     and not 'general_info' in plugin_name and not should_log_info:
                 self.create_notification(
                     f'Finished aggregating {entity_type} for client {client_name}, '
-                    f' aggregation took {total_seconds} seconds and returned {inserted_data_count}.')
+                    f' aggregation took {str(total_seconds)} seconds and returned {inserted_data_count}.')
                 self.send_external_info_log(f'Finished aggregating {entity_type} for client {client_name}, '
-                                            f' aggregation took {total_seconds} seconds and '
+                                            f' aggregation took {str(total_seconds)} seconds and '
                                             f'returned {inserted_data_count}.')
             if should_log_info is True:
                 logger.info(
                     f'Finished aggregating {entity_type} for client {client_name}, '
-                    f' aggregation took {total_seconds} seconds and returned {inserted_data_count}.')
+                    f' aggregation took {str(total_seconds)} seconds and returned {inserted_data_count}.')
 
         except Exception as e:
             logger.exception(f'Thread {threading.current_thread()} encountered error: {e}')

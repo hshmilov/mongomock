@@ -400,8 +400,8 @@ export const pluginMeta = {
         description: 'Palo Alto Networks Cortex is an open and integrated, AI-based continuous security platform, allowing security operations teams to speed the analysis of massive data sets.'
     },
     mysql_special_adapter: {
-        title: 'MySQL Special',
-        description: 'MySQL Special'
+        title: 'Open Discover',
+        description: 'Open Discover'
     },
     censys_adapter: {
         title: 'Censys',

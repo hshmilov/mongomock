@@ -21,6 +21,7 @@ class AzureAdapterParser(AdapterParser):
     def _parse_device(device: AzureAdapter.MyDeviceAdapter, network_device: MockNetworkDevice):
         device.id = f'/subscriptions/vms/{network_device.name}'
         device.os = network_device.os
+        device.os.build = None
         device.cloud_id = device.id
         device.cloud_provider = 'Azure'
         device.name = network_device.name

@@ -24,7 +24,7 @@ from aws_adapter.connection.structures import AWSUserAdapter, AWSDeviceAdapter, 
     USE_ATTACHED_IAM_ROLE, ROLES_TO_ASSUME_LIST, PROXY, ACCOUNT_TAG
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
-from axonius.clients.aws.aws_clients import get_boto3_session
+from axonius.clients.aws.aws_clients import get_boto3_session, parse_roles_to_assume_file
 from axonius.clients.aws.consts import GOV_REGION_NAMES, CHINA_REGION_NAMES, REGIONS_NAMES
 from axonius.clients.aws.utils import get_aws_config
 from axonius.clients.rest.connection import RESTConnection
@@ -86,10 +86,11 @@ class AwsAdapter(AdapterBase, Configurable):
             raise ClientConnectionException(str(e)[:500])
         return client_config
 
-    def _connect_client_once(self, client_config):
+    def _connect_client_once(self, client_config, notify_assume_role_errors=False):
         """
         Generates credentials and optionally tries to test them
         :param client_config: the configuration from the adapter scheme
+        :param notify_assume_role_errors: If true, notifies on errors of assume roles
         :return:
         """
         # We are going to change client_config throughout the function so copy it first
@@ -99,32 +100,21 @@ class AwsAdapter(AdapterBase, Configurable):
         # Lets start with getting all parameters and validating them.
         if client_config.get(ROLES_TO_ASSUME_LIST):
             roles_to_assume_file = self._grab_file_contents(client_config[ROLES_TO_ASSUME_LIST]).decode('utf-8')
+            roles_to_assume_dict, failed_arns = parse_roles_to_assume_file(roles_to_assume_file)
         else:
-            roles_to_assume_file = ''
-        roles_to_assume_list = []
-
-        # Input validation
-        failed_arns = []
-        pattern = re.compile('^arn:aws:iam::[0-9]+:role\/.*')   # pylint: disable=anomalous-backslash-in-string
-        if roles_to_assume_file:
-            for role_arn in roles_to_assume_file.strip().split(','):
-                role_arn = role_arn.strip()
-                # A role must look like 'arn:aws:iam::[account_id]:role/[name_of_role]
-                # https://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html#genref-arns
-                if not pattern.match(role_arn):
-                    failed_arns.append(role_arn)
-                roles_to_assume_list.append(role_arn)
-
-        # Handle proxy settings
-        https_proxy = client_config.get(PROXY)
-        if https_proxy:
-            logger.info(f'Setting proxy {https_proxy}')
+            roles_to_assume_dict = {}
+            failed_arns = []
 
         # Check if we have some failures
         if len(failed_arns) > 0:
             raise ClientConnectionException(
                 f'Invalid role arns found. Please specify a comma-delimited list of valid role arns. '
                 f'Invalid arns: {", ".join(failed_arns)}')
+
+        # Handle proxy settings
+        https_proxy = client_config.get(PROXY)
+        if https_proxy:
+            logger.info(f'Setting proxy {https_proxy}')
 
         if (client_config.get(GET_ALL_REGIONS) or False) is False:
             if not client_config.get(REGION_NAME):
@@ -173,7 +163,9 @@ class AwsAdapter(AdapterBase, Configurable):
                 failed_connections_per_principal[aws_access_key_id].add(str(e))
             logger.debug(f'finished {current_try} after {round(time.time() - time_start, 2)} seconds')
 
-        def connect_role(region_name: str, role_arn_inner: str):
+        def connect_role(region_name: str, role_dict: dict):
+            role_arn_inner = role_dict['arn']
+            role_arn_external_id = role_dict.get('external_id')
             current_try = f'role {role_arn_inner} with region {region_name}'
             time_start = time.time()
             try:
@@ -182,7 +174,8 @@ class AwsAdapter(AdapterBase, Configurable):
                     client_config.get(AWS_SECRET_ACCESS_KEY),
                     https_proxy,
                     region_name,
-                    role_arn_inner
+                    role_arn_inner,
+                    role_arn_external_id
                 )
                 auto_refresh_session = get_boto3_session(*session_params)
                 with ec2_check_status_lock:
@@ -228,19 +221,19 @@ class AwsAdapter(AdapterBase, Configurable):
                                                     f'{aws_access_key_id_errors}')
 
             # Next, check Roles
-            logger.info(f'Checking {len(roles_to_assume_list)} roles..')
+            logger.info(f'Checking {len(roles_to_assume_dict.keys())} roles..')
             # we do the same thing for roles as with iam users. Check the first region as an optimization
             futures_to_data = []
-            for role_arn in roles_to_assume_list:
-                futures_to_data.append(executor.submit(connect_role, regions_to_pull_from[0], role_arn))
+            for role_dict in roles_to_assume_dict.values():
+                futures_to_data.append(executor.submit(connect_role, regions_to_pull_from[0], role_dict))
             for future in concurrent.futures.as_completed(futures_to_data):
                 _ = future.result()
 
             # Then, check all other regions
             futures_to_data = []
             for region in regions_to_pull_from[1:]:
-                for role_arn in roles_to_assume_list:
-                    futures_to_data.append(executor.submit(connect_role, region, role_arn))
+                for role_dict in roles_to_assume_dict.values():
+                    futures_to_data.append(executor.submit(connect_role, region, role_dict))
             for future_i, future in enumerate(concurrent.futures.as_completed(futures_to_data)):
                 _ = future.result()
                 if future_i and future_i % 10 == 0:
@@ -248,15 +241,26 @@ class AwsAdapter(AdapterBase, Configurable):
 
         logger.info(f'Instantiation ended after {round(time.time() - start, 2)} seconds')
 
-        failed_roles = set(roles_to_assume_list) ^ set(successful_roles)
+        failed_roles = set(roles_to_assume_dict.keys()) ^ set(successful_roles)
         if failed_roles:
-            logger.info(f'Failed roles ({len(failed_roles)} / {len(roles_to_assume_list)}): '
+            logger.info(f'Failed roles ({len(failed_roles)} / {len(roles_to_assume_dict.keys())}): '
                         f'{failed_connections_per_principal}')
             if self.__verify_all_roles:
                 failed_role_errors = ','.join(
                     list(failed_connections_per_principal.get(list(failed_roles)[0]) or set())
                 )
                 raise ClientConnectionException(f'Error assuming role: {list(failed_roles)[0]}: {failed_role_errors}')
+
+            # Else, show something to the user
+            if notify_assume_role_errors:
+                message = 'AWS adapter failed connecting to these principals:\n\n'
+                for failed_id, failed_set in failed_connections_per_principal.items():
+                    all_error_messages = '\n'.join(list(failed_set))
+                    message += f'{failed_id!r} - All error messages: \n{all_error_messages!r}\n\n'
+
+                self.create_notification(
+                    f'AWS Adapter: ({len(failed_roles)} / {len(roles_to_assume_dict.keys())}) failed roles',
+                    content=message, severity_type='error')
 
         return clients_dict, client_config
 
@@ -272,7 +276,7 @@ class AwsAdapter(AdapterBase, Configurable):
     def _query_devices_by_client(self, client_name, client_data_credentials):
         # we must re-create all credentials (const and temporary)
         https_proxy = client_data_credentials.get(PROXY)
-        client_data, client_config = self._connect_client_once(client_data_credentials)
+        client_data, client_config = self._connect_client_once(client_data_credentials, notify_assume_role_errors=True)
         # First, we must get clients for everything we need
 
         successful_connections = []
@@ -328,7 +332,7 @@ class AwsAdapter(AdapterBase, Configurable):
             return
 
         # we must re-create all credentials (const and temporary)
-        client_data, client_config = self._connect_client_once(client_data_credentials)
+        client_data, client_config = self._connect_client_once(client_data_credentials, notify_assume_role_errors=True)
         # First, we must get clients for everything we need
         client_data_aws_clients = dict()
         successful_connections = []

@@ -375,10 +375,10 @@ export default {
           },
           {
             name: 'mailMessage',
-            title: 'Custom message (up to 200 characters)',
+            title: 'Custom message (up to 500 characters)',
             type: 'string',
             format: 'text',
-            limit: 200,
+            limit: 500,
             required: false,
           },
           {

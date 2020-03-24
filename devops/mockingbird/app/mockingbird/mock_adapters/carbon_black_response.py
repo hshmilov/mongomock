@@ -21,6 +21,7 @@ class CarbonBlackResponseAdapterParser(AdapterParser):
         if network_device.domain:
             device.hostname += f'.{network_device.domain}'
         device.os = network_device.os
+        device.os.build = None
         device.network_interfaces = network_device.network_interfaces
         device.hard_drives = network_device.hard_drives
 

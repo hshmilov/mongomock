@@ -31,6 +31,15 @@ def load_from_s3(client_config) -> bytes:
     s3_access_key_id = client_config.get('s3_access_key_id')
     s3_secret_access_key = client_config.get('s3_secret_access_key')
 
+    if not s3_access_key_id:
+        s3_access_key_id = None
+    if not s3_secret_access_key:
+        s3_secret_access_key = None
+
+    if client_config.get('s3_use_ec2_attached_instance_profile') is True:
+        s3_access_key_id = None
+        s3_secret_access_key = None
+
     # check logical_xor(key_id, secret_key)
     # if bool(a) != bool(b) then either only one of a,b is True and the other is False
     # If this condition is true, then exactly one of the two values was specified.

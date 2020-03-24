@@ -14,7 +14,7 @@ from axonius.mixins.configurable import Configurable
 from mysql_special_adapter.client_id import get_client_id
 from mysql_special_adapter.structures import HostDevices, CrawlerDevices
 from mysql_special_adapter.consts import DEFAULT_MYSQL_SPECIAL_PORT, HOST_TABLE, CRAWLER_TABLE, \
-    MYSQL_SPECIAL_CRAWLER_QUERY, MYSQL_SPECIAL_HOST_QUERY, MYSQL_SPECIAL_VMHOST_QUERY
+    MYSQL_SPECIAL_CRAWLER_QUERY, MYSQL_SPECIAL_HOST_QUERY, MYSQL_SPECIAL_VMHOST_QUERY, MYSQL_SPECIAL_WHERE_CLAUSE
 
 logger = logging.getLogger(f'axonius.{__name__}')
 DEFAULT_PAGINATION = 1000
@@ -180,18 +180,19 @@ class MysqlSpecialAdapter(AdapterBase, Configurable):
         """
         connection, client_config = client_data
         connection.set_devices_paging(self.__devices_fetched_at_a_time)
+        mysql_special_days_ago_clause = MYSQL_SPECIAL_WHERE_CLAUSE.format(days_ago=self.__scrape_date_days_ago)
         with connection:
             vm_host_intersect = {}
             host_vm_intersect = defaultdict(list)
-            for device_raw in connection.query(MYSQL_SPECIAL_VMHOST_QUERY):
-                if device_raw.get('vmUUID') is not None and device_raw.get('hostUUID') is not None:
-                    vm_host_intersect[device_raw.get('vmUUID')] = device_raw.get('hostUUID')
-                    host_vm_intersect[device_raw.get('hostUUID')].append(device_raw.get('vmUUID'))
+            for device_raw in connection.query(MYSQL_SPECIAL_VMHOST_QUERY + mysql_special_days_ago_clause):
+                if device_raw.get('vmUUId') is not None and device_raw.get('hostUUID') is not None:
+                    vm_host_intersect[device_raw.get('vmUUId')] = device_raw.get('hostUUID')
+                    host_vm_intersect[device_raw.get('hostUUID')].append(device_raw.get('vmUUId'))
 
-            for device_raw in connection.query(MYSQL_SPECIAL_HOST_QUERY):
+            for device_raw in connection.query(MYSQL_SPECIAL_HOST_QUERY + mysql_special_days_ago_clause):
                 yield device_raw, HOST_TABLE, vm_host_intersect, host_vm_intersect
 
-            for device_raw in connection.query(MYSQL_SPECIAL_CRAWLER_QUERY):
+            for device_raw in connection.query(MYSQL_SPECIAL_CRAWLER_QUERY + mysql_special_days_ago_clause):
                 yield device_raw, CRAWLER_TABLE, vm_host_intersect, host_vm_intersect
 
     # pylint: disable=C0103
@@ -201,29 +202,33 @@ class MysqlSpecialAdapter(AdapterBase, Configurable):
                 continue
             try:
                 device = self._new_device_adapter()
-                device.name = device_raw.get('name')
-                device.total_physical_memory = device_raw.get('memory')
+                if device_raw.get('name') != 'null':
+                    device.name = device_raw.get('name')
 
                 if device_source == HOST_TABLE:
                     device.id = device_raw.get('name') + '_' + device_raw.get('UUID')
+                    device.hostname = device_raw.get('name')
+                    device.total_physical_memory = device_raw.get('memory') / (1024 ** 3)
                     device.host_devices = self._fill_host_fields(device_raw, host_vm_intersect)
 
                 elif device_source == CRAWLER_TABLE:
                     device.id = device_raw.get('name') + '_' + device_raw.get('uuid')
+                    device.total_physical_memory = device_raw.get('memory') / 1024
                     device.hostname = device_raw.get('dnsName')
                     device.total_number_of_physical_processors = device_raw.get('cpus')
 
                     ip_addresses = device_raw.get('ipAddress')
-                    if not ip_addresses:
+                    if not ip_addresses or str(ip_addresses).lower() == 'null':
                         ip_addresses = []
                     if isinstance(ip_addresses, str):
-                        ip_addresses = [ip_addresses]
+                        ip_addresses = ip_addresses.split(',')
                     if ip_addresses:
                         device.add_nic(ips=ip_addresses)
 
                     device.crawler_devices = self._fill_crawler_fields(device_raw, vm_host_intersect)
 
                 if device:
+                    device.set_raw({key: str(val) for key, val in device_raw.items()})
                     yield device
             except Exception:
                 logger.exception(f'Got exception for raw_device_data: {device_raw}')
@@ -240,9 +245,14 @@ class MysqlSpecialAdapter(AdapterBase, Configurable):
                     'name': 'devices_fetched_at_a_time',
                     'type': 'integer',
                     'title': 'SQL pagination'
+                },
+                {
+                    'name': 'scrape_date_days_ago',
+                    'type': 'integer',
+                    'title': 'Scrape Date (days ago)'
                 }
             ],
-            'required': ['devices_fetched_at_a_time'],
+            'required': ['devices_fetched_at_a_time', 'scrape_date_days_ago'],
             'pretty_name': 'MySQL Configuration',
             'type': 'array'
         }
@@ -250,8 +260,10 @@ class MysqlSpecialAdapter(AdapterBase, Configurable):
     @classmethod
     def _db_config_default(cls):
         return {
-            'devices_fetched_at_a_time': 1000
+            'devices_fetched_at_a_time': 1000,
+            'scrape_date_days_ago': 14
         }
 
     def _on_config_update(self, config):
         self.__devices_fetched_at_a_time = config['devices_fetched_at_a_time']
+        self.__scrape_date_days_ago = config['scrape_date_days_ago']

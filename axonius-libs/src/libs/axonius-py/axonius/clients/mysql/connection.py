@@ -61,6 +61,7 @@ class MySQLConnection(AbstractSQLConnection):
             pass
         self.db = None
 
+    # pylint: disable=too-many-nested-blocks
     def query(self, sql: str):
         """
         Performs a database query with connected database.
@@ -78,8 +79,21 @@ class MySQLConnection(AbstractSQLConnection):
             batch = True
             while batch:
                 batch = cursor.fetchmany(self.devices_paging)
+                if len(batch) == 1:
+                    # There is a bug in which cursor.fetchmany() returns the same 1 element over and over in an
+                    # infinite loop instead of returning []. It happens at the end, when everything was finished.
+                    # cursor.fetchone() on the otherhand raises an exception if we reached the end.
+                    # Handle it
+                    try:
+                        result = cursor.fetchone()
+                        if result:
+                            batch.append(result)
+                        else:
+                            break
+                    except Exception:
+                        break
                 total_devices += len(batch)
-                if sql_pages % 10 == 1:
+                if sql_pages % 10000 == 1:
                     logger.info(f'Got {total_devices} devices so far')
                 sql_pages += 1
                 for row in batch:

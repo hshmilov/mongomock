@@ -789,10 +789,10 @@ class EnforcementsPage(EntitiesPage):
             self.key_down_enter(elem)
         if body:
             custom_message_element = self.driver.find_element_by_xpath(
-                self.DIV_BY_LABEL_TEMPLATE.format(label_text='Custom message (up to 200 characters)')
+                self.DIV_BY_LABEL_TEMPLATE.format(label_text='Custom message (up to 500 characters)')
             )
             self.fill_text_field_by_tag_name('textarea', body, context=custom_message_element)
-            assert custom_message_element.find_element_by_tag_name('textarea').get_attribute('value') == body[:200]
+            assert custom_message_element.find_element_by_tag_name('textarea').get_attribute('value') == body[:500]
         if attach_csv:
             attach_csv_checkbox = self.driver.find_element_by_xpath(
                 self.DIV_BY_LABEL_TEMPLATE.format(label_text='Attach CSV with query results'))

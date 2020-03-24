@@ -22,6 +22,7 @@ class TaniumAdapterParser(AdapterParser):
         device.id = network_device.hostname
         device.hostname = network_device.hostname
         device.os = network_device.os
+        device.os.build = None
 
         ips = mock_utils.get_all_ips(network_device)
         if ips:

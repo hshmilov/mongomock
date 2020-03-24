@@ -50,7 +50,7 @@ class PaloaltoXdrConnection(RESTConnection):
         self._update_headers()
         self._post('endpoints/get_endpoint/', body_params={'request_data': {'filters': [{'field': 'first_seen',
                                                                                          'operator': 'gte',
-                                                                                         'value': 0}],
+                                                                                         'value': 953414004000}],
                                                                             'search_from': 0,
                                                                             'search_to': DEVICE_PER_PAGE}})
 
@@ -60,18 +60,19 @@ class PaloaltoXdrConnection(RESTConnection):
         response = self._post('endpoints/get_endpoint/',
                               body_params={'request_data': {'filters': [{'field': 'first_seen',
                                                                          'operator': 'gte',
-                                                                         'value': 0}],
+                                                                         'value': 953414004000}],
                                                             'search_from': search_from,
-                                                            'search_to': search_from + DEVICE_PER_PAGE}})['reply']
-        yield from response['endpoints']
+                                                            'search_to': search_from + DEVICE_PER_PAGE}})
+        yield from response['reply']['endpoints']
         search_from += DEVICE_PER_PAGE
-        count = response['result_count']
-        while search_from < min(count, MAX_NUMBER_OF_DEVICES):
+        while search_from < MAX_NUMBER_OF_DEVICES:
             try:
+                if len(response['reply']['endpoints']) < DEVICE_PER_PAGE:
+                    break
                 response = self._post('endpoints/get_endpoint/',
                                       body_params={'request_data': {'filters': [{'field': 'first_seen',
                                                                                  'operator': 'gte',
-                                                                                 'value': 0}],
+                                                                                 'value': 953414004000}],
                                                                     'search_from': search_from,
                                                                     'search_to': search_from + DEVICE_PER_PAGE}})
                 yield from response['reply']['endpoints']

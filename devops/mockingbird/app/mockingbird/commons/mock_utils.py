@@ -158,12 +158,7 @@ def get_random_software_list() -> List[dict]:
             'vendor': 'Microsoft Corporation',
             'name': 'Microsoft Visual C++ 2008 Redistributable - x64 9.0.30729.6161',
             'version': '9.0.30729.6161'
-        },
-        {
-            'vendor': 'Adobe Systems Incorporated',
-            'name': 'Adobe Acrobat Reader DC',
-            'version': '19.010.20069'
-        },
+        }
     ]
 
 
@@ -173,6 +168,11 @@ def get_random_software_vulnerable_list() -> List[dict]:
             'vendor': 'Adobe Systems Incorporated',
             'name': 'Adobe Flash Player 30 PPAPI',
             'version': '30.0.0.113'
+        },
+        {
+            'vendor': 'Adobe',
+            'name': 'Photoshop CC',
+            'version': '19.1.7'
         },
     ]
 

@@ -48,6 +48,11 @@ FILE_CLIENTS_SCHEMA = [
         'type': 'string',
     },
     {
+        'name': 's3_use_ec2_attached_instance_profile',
+        'title': 'Amazon S3 Use EC2 Attached Instance Profile',
+        'type': 'bool'
+    },
+    {
         'name': 's3_access_key_id',
         'title': 'Amazon S3 Access Key ID',
         'description': 'Leave blank to use the attached IAM role',
@@ -98,4 +103,5 @@ FILE_CLIENTS_SCHEMA = [
 
 FILE_SCHEMA_REQUIRED = [
     'user_id',
+    's3_use_ec2_attached_instance_profile'
 ]

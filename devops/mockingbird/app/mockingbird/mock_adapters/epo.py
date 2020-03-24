@@ -23,6 +23,7 @@ class EpoAdapterParser(AdapterParser):
         device.id = f'epo_{device.hostname}_{uuid.uuid4()}'
         device.name = device.hostname
         device.os = network_device.os
+        device.os.build = None
         device.hard_drives = network_device.hard_drives
         device.domain = network_device.domain
         device.part_of_domain = network_device.part_of_domain
@@ -34,5 +35,8 @@ class EpoAdapterParser(AdapterParser):
         device.total_physical_memory = network_device.total_physical_memory
         device.free_physical_memory = network_device.free_physical_memory
         device.total_number_of_cores = network_device.total_number_of_cores
+
+        # specific
+        device.node_name = device.name
 
         yield device

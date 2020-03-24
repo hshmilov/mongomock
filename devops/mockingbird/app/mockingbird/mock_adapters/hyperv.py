@@ -21,6 +21,7 @@ class HypervAdapterParser(AdapterParser):
         device.id = network_device.hostname
         device.name = network_device.name + '-VM'
         device.os = network_device.os
+        device.os.build = None
         device.hard_drives = network_device.hard_drives
         device.network_interfaces = network_device.network_interfaces
 

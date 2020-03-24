@@ -43,9 +43,14 @@ class SymantecDlpAdapter(AdapterBase, Configurable):
                                             )
             connection.set_credentials(username=client_config[consts.USER],
                                        password=client_config[consts.PASSWORD])
-            with connection:
-                for _ in connection.query(consts.SYMANTEC_DLP_QUERY):
-                    break
+            try:
+                with connection:
+                    for _ in connection.query(consts.SYMANTEC_DLP_QUERY_PROTECT):
+                        break
+            except Exception:
+                with connection:
+                    for _ in connection.query(consts.SYMANTEC_DLP_QUERY):
+                        break
             return connection
         except Exception as err:
             message = f'Error connecting to client host: {client_config[consts.SYMANTEC_DLP_HOST]}  ' \

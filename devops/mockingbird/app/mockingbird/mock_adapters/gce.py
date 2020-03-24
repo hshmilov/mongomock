@@ -24,6 +24,7 @@ class GceAdapterParser(AdapterParser):
         device.cloud_id = device.id
         device.hostname = network_device.hostname    # shouldn't be but is there for correlation
         device.os = network_device.os
+        device.os.build = None
         device.name = network_device.name
 
         ips = mock_utils.get_all_ips(network_device)

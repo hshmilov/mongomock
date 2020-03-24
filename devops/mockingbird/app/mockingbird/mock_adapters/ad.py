@@ -33,19 +33,25 @@ class AdAdapterParser(AdapterParser):
         device.device_managed_by = network_device.device_managed_by
         device.device_disabled = network_device.device_disabled
 
+        # AD Specific
+        device.ad_sAMAccountName = f'{device.name}$'
+        device.ad_distinguished_name = device.id
+        device.ad_object_class = ['top', 'person', 'organizationalperson', 'user', 'computer']
+
         # General info things
-        device.installed_software = network_device.installed_software
-        device.software_cves = network_device.software_cves
-        device.security_patches = network_device.security_patches
-        device.available_security_patches = network_device.available_security_patches
-        device.users = network_device.users
-        device.connected_hardware = network_device.connected_hardware
-        device.local_admins = network_device.local_admins
-        device.hard_drives = network_device.hard_drives
-        device.connected_devices = network_device.connected_devices
-        device.shares = network_device.shares
-        device.services = network_device.services
-        device.processes = network_device.processes
+        if not network_device.does_have_property(MockNetworkDeviceProperties.NoGeneralInfo):
+            device.installed_software = network_device.installed_software
+            device.software_cves = network_device.software_cves
+            device.security_patches = network_device.security_patches
+            device.available_security_patches = network_device.available_security_patches
+            device.users = network_device.users
+            device.connected_hardware = network_device.connected_hardware
+            device.local_admins = network_device.local_admins
+            device.hard_drives = network_device.hard_drives
+            device.connected_devices = network_device.connected_devices
+            device.shares = network_device.shares
+            device.services = network_device.services
+            device.processes = network_device.processes
 
         if network_device.physical_location:
             device.ad_site_location = network_device.physical_location

@@ -2,6 +2,10 @@
 returns aws boto3 clients (boto3.client or boto3.resource) based on params
 """
 import functools
+import json
+import logging
+import re
+from typing import Dict, List, Tuple
 
 import boto3
 
@@ -9,13 +13,60 @@ from botocore.config import Config
 from botocore.credentials import RefreshableCredentials
 from botocore.session import get_session
 
+logger = logging.getLogger(f'axonius.{__name__}')
+
+
+def parse_roles_to_assume_file(file_contents: str) -> Tuple[Dict[str, Dict], List]:
+    # Input validation
+    failed_arns = []
+    final_dict = dict()
+    pattern = re.compile('^arn:aws:iam::[0-9]+:role\/.*')  # pylint: disable=anomalous-backslash-in-string
+
+    if file_contents.strip().startswith('['):
+        try:
+            loaded_list = json.loads(file_contents)
+        except Exception as e:
+            raise ValueError(f'Error parsing roles file - malformed json: {str(e)}')
+        if not isinstance(loaded_list, list):
+            raise ValueError(f'Error parsing roles file - Did not find a list. '
+                             f'The file should contain a list of dictionaries')
+
+        for member in loaded_list:
+            if not isinstance(member, dict):
+                raise ValueError(f'Error parsing roles file - expecting a list of dictionaries')
+            arn = member.get('arn')
+            if not arn:
+                raise ValueError(f'Error parsing roles file - found dictionary without "arn" value')
+
+            if arn in final_dict:
+                raise ValueError(f'Error parsing roles file - arn {arn} exists multiple times')
+
+            final_dict[arn] = member
+    elif file_contents.strip().startswith('{'):
+        raise ValueError(f'Error - Did not find a list. The file should contain a list of dictionaries')
+    else:
+        for role_arn in file_contents.strip().split(','):
+            role_arn = role_arn.strip()
+            final_dict[role_arn] = {
+                'arn': role_arn
+            }
+
+    for role_arn in final_dict:
+        # A role must look like 'arn:aws:iam::[account_id]:role/[name_of_role]
+        # https://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html#genref-arns
+        if not pattern.match(role_arn):
+            failed_arns.append(role_arn)
+
+    return final_dict, failed_arns
+
 
 def get_assumed_session(
         role_arn: str,
         region_name: str,
         aws_access_key_id: str = None,
         aws_secret_access_key: str = None,
-        aws_config: Config = None
+        aws_config: Config = None,
+        external_id: str = None
 ):
     """STS Role assume a boto3.Session
 
@@ -24,9 +75,11 @@ def get_assumed_session(
     """
     session_credentials = RefreshableCredentials.create_from_metadata(
         metadata=functools.partial(
-            boto3_role_credentials_metadata_maker, role_arn, aws_access_key_id, aws_secret_access_key, aws_config)(),
+            boto3_role_credentials_metadata_maker, role_arn, aws_access_key_id, aws_secret_access_key,
+            aws_config, external_id)(),
         refresh_using=functools.partial(
-            boto3_role_credentials_metadata_maker, role_arn, aws_access_key_id, aws_secret_access_key, aws_config),
+            boto3_role_credentials_metadata_maker, role_arn, aws_access_key_id, aws_secret_access_key,
+            aws_config, external_id),
         method='sts-assume-role'
     )
     role_session = get_session()
@@ -39,7 +92,8 @@ def boto3_role_credentials_metadata_maker(
         role_arn: str,
         aws_access_key_id: str = None,
         aws_secret_access_key: str = None,
-        aws_config: Config = None
+        aws_config: Config = None,
+        external_id: str = None
 ):
     """
     Generates a "metadata" dict creator that is used to initialize auto-refreshing sessions.
@@ -53,12 +107,17 @@ def boto3_role_credentials_metadata_maker(
         aws_secret_access_key=aws_secret_access_key
     )
     sts_client = current_session.client('sts', config=aws_config)
-    assumed_role_object = sts_client.assume_role(
-        RoleArn=role_arn,
-        DurationSeconds=60 * 15,  # The minimum possible, because we want to support any customer config
-        RoleSessionName='Axonius'
-    )
 
+    params = {
+        'RoleArn': role_arn,
+        'DurationSeconds': 60 * 15,  # The minimum possible, because we want to support any customer config
+        'RoleSessionName': 'Axonius',
+    }
+
+    if external_id:
+        params['ExternalId'] = external_id
+
+    assumed_role_object = sts_client.assume_role(**params)
     response = assumed_role_object['Credentials']
 
     credentials = {
@@ -76,6 +135,7 @@ def get_boto3_session(
         https_proxy: str = None,
         sts_region_name: str = None,
         assumed_role_arn: str = None,
+        external_id: str = None
 ) -> boto3.Session:
     """
     Gets a boto3.Session object with the required parameters.
@@ -87,6 +147,7 @@ def get_boto3_session(
     :param sts_region_name: the region name to assume from. This could be us-east-1 if this is a regular account, or
                             a gov region if this is a gov account. This is only used to assume the role.
     :param assumed_role_arn: an optional assume role arn. If supplied, the session will be an assumed role session
+    :param external_id: an optional external id string
     :return:
     """
 
@@ -98,7 +159,8 @@ def get_boto3_session(
             sts_region_name,
             aws_access_key_id,
             aws_secret_access_key,
-            aws_config
+            aws_config,
+            external_id
         )
     else:
         session = boto3.Session(

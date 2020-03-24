@@ -255,15 +255,21 @@ class ChefAdapter(AdapterBase):
 
                 device.network_interfaces = []
                 try:
+                    all_ip_addrs = set()
                     for name, iface in ((device_raw_automatic.get('network') or {}).get('interfaces') or {}).items():
                         ip_addrs = []
                         mac = None
                         for addr, params in (iface.get('addresses') or {}).items():
                             if is_valid_ip(addr):
                                 ip_addrs.append(addr)
+                                all_ip_addrs.add(addr)
                             else:
                                 mac = format_mac(addr)
                         device.add_nic(mac=mac, ips=ip_addrs)
+
+                    ipaddress = device_raw_automatic.get('ipaddress')
+                    if ipaddress and ipaddress not in all_ip_addrs:
+                        device.add_nic(ips=[ipaddress])
                 except Exception as e:
                     logger.warning(f"Problem with adding nic to Chef client {e}")
 
