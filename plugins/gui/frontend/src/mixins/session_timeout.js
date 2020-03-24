@@ -49,11 +49,12 @@ export default {
           status: e.status,
         });
       });
-      this.handleActiveSession(this.timeout + 'min');
+      this.handleActiveSession(this.timeout * 60);
       window.onbeforeunload = () => {
         this.clearTimeouts();
         if (this.sessionStatus === ACTIVE_STATUS) {
-          updateSessionExpirationCookie(this.timeout + 'min');
+          // Update the cookie before the tab closes
+          updateSessionExpirationCookie(`${this.timeout}min`);
         }
       };
     },
@@ -64,19 +65,27 @@ export default {
         // Delay the first idle check in order to let the expiration cookie to expire
         this.handleIdleSession(1000);
       } else if (this.sessionStatus === HIDDEN_STATUS) {
+        // Set the cookie expiration for the whole timeout - so it won't timeout after 10 sec
+        // Fix bug AX-6565
+        updateSessionExpirationCookie(`${this.timeout}min`);
         this.handleHiddenSession(this.timeout * 60 * 1000);
       } else {
-        this.handleActiveSession(this.timeout + 'min');
+        this.handleActiveSession(this.timeout * 60);
       }
     },
-    handleActiveSession(cookieExpiration) {
+    /**
+     * When the session is Active then update the cookie a second before it expires
+     * @param sessionExpirationTimeout - the next time the cookie will expire (in seconds)
+     */
+    handleActiveSession(sessionExpirationTimeout) {
+      const cookieExpiration = `${sessionExpirationTimeout}s`;
+      const nextCookieUpdate = (sessionExpirationTimeout * 1000) - 1000;
       // Set cookie only if session is still active
       if (this.sessionStatus === ACTIVE_STATUS) {
         updateSessionExpirationCookie(cookieExpiration);
         this.activeTimeout = setTimeout(() => {
-          // Check activity every 10 sec after the initial session start
-          this.handleActiveSession('10s');
-        }, 9000); // next active check will be in 9 sec so the cookie won't expire before renewed
+          this.handleActiveSession(10);
+        }, nextCookieUpdate); // next active check and cookie update
       }
     },
     handleHiddenSession(timeout) {
