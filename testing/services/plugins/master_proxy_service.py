@@ -6,13 +6,13 @@ import requests
 from urllib3 import ProxyManager
 
 from axonius.consts import plugin_consts
+from axonius.consts.plugin_consts import MASTER_PROXY_PLUGIN_NAME
 from axonius.consts.system_consts import NODE_MARKER_PATH
 from scripts.instances.instances_consts import (AXONIUS_SETTINGS_HOST_PATH,
                                                 PROXY_DATA_HOST_PATH)
 from services.ports import DOCKER_PORTS
 from services.weave_service import WeaveService
 
-CONTAINER_NAME = 'master-proxy'
 CONF_TEMPLATE_FILE = Path('tinyproxy.conf.in')
 CONF_FILE = Path('tinyproxy.conf')
 MASTER_PROXY_LOGFILE = 'master-proxy.rawtext.log'
@@ -23,9 +23,9 @@ VERIFY = 'verify'
 
 def read_proxy_data():
     try:
-        port = DOCKER_PORTS['master-proxy']
+        port = DOCKER_PORTS[MASTER_PROXY_PLUGIN_NAME]
         if NODE_MARKER_PATH.is_file():
-            print('running on node, work with master-proxy')
+            print(f'running on node, work with {MASTER_PROXY_PLUGIN_NAME}')
             return {CREDS: f'localhost:{port}', VERIFY: False}
 
         proxy_data_file = PROXY_DATA_HOST_PATH
@@ -75,7 +75,7 @@ class MasterProxyService(WeaveService):
             if response.status_code == 200:
                 print(f'proxy started ok')
                 return True
-            print(f'ERROR - failed to start {CONTAINER_NAME} - {response}')
+            print(f'ERROR - failed to start {MASTER_PROXY_PLUGIN_NAME} - {response}')
         except Exception as e:
             print(f'ERROR - failed to start proxy - {e}')
 
@@ -83,11 +83,11 @@ class MasterProxyService(WeaveService):
         return True
 
     def __init__(self):
-        super().__init__(CONTAINER_NAME, service_dir='services/plugins/master_proxy')
+        super().__init__(MASTER_PROXY_PLUGIN_NAME, service_dir='services/plugins/master_proxy')
 
     @staticmethod
     def port():
-        return DOCKER_PORTS[CONTAINER_NAME]
+        return DOCKER_PORTS[MASTER_PROXY_PLUGIN_NAME]
 
     @property
     def exposed_ports(self):

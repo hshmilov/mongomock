@@ -153,7 +153,7 @@ def build_images(pull=False, rebuild=False, exclude=None, prod=True):
     if pull:
         rebuild = True
     images.append(axonius_system.pull_base_image(pull, show_print=False))
-    images.append(axonius_system.pull_tunnler(pull, show_print=False))
+    images.append(axonius_system.pull_tunneler(pull, show_print=False))
     images.append(axonius_system.pull_curl_image(pull, show_print=False))
     images.extend(axonius_system.pull_weave_images(pull, show_print=False))
     print_state(f'Building all images')

@@ -5,7 +5,7 @@ import json
 import pytest
 import requests
 
-from axonius.consts.plugin_consts import AGGREGATOR_PLUGIN_NAME
+from axonius.consts.plugin_consts import AGGREGATOR_PLUGIN_NAME, MASTER_PROXY_PLUGIN_NAME
 from axonius.utils.wait import wait_until
 from axonius.consts.system_consts import (CUSTOMER_CONF_PATH,
                                           NODE_CONF_PATH,
@@ -188,7 +188,7 @@ def test_exclude_config_quick():
 
 
 def test_master_proxy():
-    port = DOCKER_PORTS['master-proxy']
+    port = DOCKER_PORTS[MASTER_PROXY_PLUGIN_NAME]
     assert requests.get('https://manage.chef.io',
                         proxies={'https': f'https://localhost:{port}'},
                         timeout=(20, 90)).status_code == 200

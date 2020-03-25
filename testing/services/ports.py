@@ -200,7 +200,7 @@ DOCKER_PORTS = {
     'ivanti-sm-adapter':                9940,
     'spiceworks-adapter':               9941,
     'bitlocker-adapter':                9957,
-    'ssh-socat':                        9958,
+    'tunneler':                         9958,
     'office-scan-adapter':              9959,
     'librenms-adapter':                 9960,
     'bitsight-adapter':                 9961,

@@ -596,10 +596,10 @@ class AxoniusService:
         curl_image = f'{DOCKERHUB_URL}appropriate/curl'
         return self._pull_image(curl_image, repull, show_print)
 
-    def pull_tunnler(self, repull=False, show_print=True):
-        # Tunnler is a tunnel to host:22 for ssh and scp from master to nodes.
-        tunnler_image = f'{DOCKERHUB_URL}alpine/socat'
-        return self._pull_image(tunnler_image, repull, show_print)
+    def pull_tunneler(self, repull=False, show_print=True):
+        # tunneler is a tunnel to host:22 for ssh and scp from master to nodes.
+        tunneler_image = f'{DOCKERHUB_URL}alpine/socat'
+        return self._pull_image(tunneler_image, repull, show_print)
 
     def pull_base_image(self, repull=False, show_print=True):
         base_image = f'{DOCKERHUB_URL}axonius/axonius-base-image'

@@ -30,6 +30,7 @@ AXONIUS_DNS_SUFFIX = 'axonius.local'
 HEAVY_LIFTING_PLUGIN_NAME = 'heavy_lifting_plugin'
 STATIC_ANALYSIS_PLUGIN_NAME = 'static_analysis'
 REIMAGE_TAGS_ANALYSIS_PLUGIN_NAME = 'reimage_tags_analysis'
+MASTER_PROXY_PLUGIN_NAME = 'master-proxy'
 
 # ADAPTERS #
 ACTIVE_DIRECTORY_PLUGIN_NAME = 'active_directory_adapter'

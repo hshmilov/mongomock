@@ -10,6 +10,8 @@ from scripts.instances.instances_consts import (MASTER_ADDR_HOST_PATH,
                                                 ENCRYPTION_KEY_HOST_PATH,
                                                 AXONIUS_SETTINGS_HOST_PATH,
                                                 WEAVE_NETWORK_SUBNET_KEY)
+from services.standalone_services.tunneler_service import TunnelerService
+from services.standalone_services.node_proxy_service import NodeProxyService
 
 DEFAULT_WEAVE_SUBNET_IP_RANGE = '171.17.0.0/16'
 
@@ -38,40 +40,16 @@ def update_db_enc_key(db_encryption_key):
     print('Done update DB encryption key')
 
 
-def run_tunnler():
-    # TODO: rewrite using docker lib (and the proxy one)
-    host_ip = subprocess.check_output(shlex.split('weave dns-args')).decode('utf-8')
-    host_ip = [x for x in host_ip.split() if '--dns' in x][0]
-    host_ip = host_ip[len('--dns='):]
-    container_name = 'tunnler'
-    command = shlex.split(
-        f'docker run -d --restart=always --name {container_name} {DOCKERHUB_URL}alpine/socat ' +
-        f'tcp-listen:9958,reuseaddr,fork,forever tcp:{host_ip}:22')
-
-    my_env = os.environ.copy()
-    my_env['DOCKER_HOST'] = 'unix:///var/run/weave/weave.sock'
-
-    # Removing old container if exists (If this script is being run to reconnect an existing node).
-    subprocess.call(shlex.split(f'docker rm -f {container_name}'))
-    subprocess.check_call(command, env=my_env)
+def run_tunneler():
+    tunneler_service = TunnelerService()
+    tunneler_service.take_process_ownership()
+    tunneler_service.start(allow_restart=True, show_print=False, mode='prod')
 
 
 def run_proxy_socat():
-    container_name = 'proxy-socat'
-    proxy_dns = 'master-proxy.axonius.local'
-    proxy_port = 8888
-    command = shlex.split(
-        f'docker run -d --restart=always '
-        f'--publish 127.0.0.1:{proxy_port}:{proxy_port} '
-        f'--name {container_name} {DOCKERHUB_URL}alpine/socat '
-        f'tcp-listen:{proxy_port},reuseaddr,fork,forever tcp:{proxy_dns}:{proxy_port}')
-
-    my_env = os.environ.copy()
-    my_env['DOCKER_HOST'] = 'unix:///var/run/weave/weave.sock'
-
-    # Removing old tunnler if exists (If this script is being run to reconnect an existing node).
-    subprocess.call(shlex.split(f'docker rm -f {container_name}'))
-    subprocess.call(command, env=my_env)
+    tunneler_service = NodeProxyService()
+    tunneler_service.take_process_ownership()
+    tunneler_service.start(allow_restart=True, show_print=False, mode='prod')
 
 
 def connect_to_master(master_ip, weave_pass):
@@ -82,8 +60,8 @@ def connect_to_master(master_ip, weave_pass):
         f'weave launch --dns-domain=axonius.local --ipalloc-range {subnet_ip_range} --password {weave_pass}'))
     subprocess.check_call(shlex.split(f'weave connect {master_ip}'))
     print('Done weave connect')
-    run_tunnler()
-    print('Done run tunnler')
+    run_tunneler()
+    print('Done run tunneler')
     run_proxy_socat()
     print('Done connecting to master')
 

@@ -14,7 +14,8 @@ from axonius.consts.system_consts import NODE_MARKER_PATH, DOCKERHUB_URL
 
 
 def shut_down_system():
-    subprocess.check_call(['./axonius.sh', 'system', 'down', '--all'], cwd=CORTEX_PATH)
+    command = 'sudo /sbin/runuser -l ubuntu -c "cd /home/ubuntu/cortex && ./axonius.sh system down --all"'
+    subprocess.check_call(shlex.split(command))
     print('Done shut down system')
 
 
@@ -45,7 +46,7 @@ def change_instance_setup_user_pass():
         raise Exception('node_id not found')
 
     print(f'Password len is {len(new_password)}, "{new_password[:4]}..."')
-    subprocess.check_call(f'sudo usermod --password $(openssl passwd -1 {new_password}) node_maker',
+    subprocess.check_call(f'sudo /usr/sbin/usermod --password $(openssl passwd -1 {new_password}) node_maker',
                           shell=True)
     print('done!')
 

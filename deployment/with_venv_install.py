@@ -13,7 +13,6 @@ from axonius.utils.network.docker_network import read_weave_network_range
 from conf_tools import get_customer_conf_json
 from install import (TEMPORAL_PATH,
                      AXONIUS_SETTINGS_PATH,
-                     INSTANCE_CONNECT_USER_NAME,
                      INSTANCE_IS_MASTER_MARKER_PATH,
                      INSTANCES_SETUP_SCRIPT_PATH,
                      INSTANCE_CONNECT_USER_PASSWORD,
@@ -25,6 +24,7 @@ from install import (TEMPORAL_PATH,
                      set_special_permissions)
 from lists import OLD_CRONJOBS
 from scripts.host_installation.watchdog_cron import WATCHDOG_CRON_SCRIPT_PATH
+from scripts.instances.instances_consts import INSTANCE_CONNECT_USER_NAME
 from scripts.instances.network_utils import get_weave_subnet_ip_range
 from sysctl_editor import set_sysctl_value
 from utils import (AXONIUS_DEPLOYMENT_PATH,
@@ -118,9 +118,20 @@ def setup_instances_user():
 
             sudoers = open('/etc/sudoers', 'r').read()
             if INSTANCE_CONNECT_USER_NAME not in sudoers:
+                # To change the node_maker password after connection.
                 subprocess.check_call(
                     f'echo "{INSTANCE_CONNECT_USER_NAME} ALL=(ALL) NOPASSWD: '
                     f'/usr/sbin/usermod" | EDITOR="tee -a" visudo',
+                    shell=True)
+                # To run the system as ubuntu.
+                subprocess.check_call(
+                    f'echo "{INSTANCE_CONNECT_USER_NAME} ALL=(ALL) NOPASSWD: '
+                    f'/sbin/runuser" | EDITOR="tee -a" visudo',
+                    shell=True)
+                # For the creation of the tunneler log dir on first run.
+                subprocess.check_call(
+                    f'echo "{INSTANCE_CONNECT_USER_NAME} ALL=(ALL) NOPASSWD: '
+                    f'/bin/mkdir" | EDITOR="tee -a" visudo',
                     shell=True)
 
 
@@ -190,6 +201,7 @@ def setup_instances():
     resources_as_path = Path(RESOURCES_PATH)
     copy_file(resources_as_path / 'weave-2.6.0', '/usr/local/bin/weave', mode=0o755, user='root', group='root')
     Path('/etc/sudoers.d/90-ubuntu').write_text('ubuntu ALL=(ALL) NOPASSWD: ALL\n')
+    Path('/etc/sudoers.d/90-ubuntu').chmod(mode=440)
 
 
 def setup_host():

@@ -421,7 +421,7 @@ class TestInstancesBase(TestBase):
         # Commands to execute from a container (in-order to make use of our weave net vx-lan).
         commands = ['apt update', 'apt install sshpass',
                     f'sshpass -p{DEFAULT_IMAGE_PASSWORD} ssh -o StrictHostKeyChecking=no -p 9958 '
-                    f'{DEFAULT_IMAGE_USERNAME}@tunnler.axonius.local "cat {test_filename}"']
+                    f'{DEFAULT_IMAGE_USERNAME}@tunneler.axonius.local "cat {test_filename}"']
         client = docker.from_env()
         core = client.containers.list(filters={'name': 'core'})[0]
 

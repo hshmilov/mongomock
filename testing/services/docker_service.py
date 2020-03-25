@@ -297,7 +297,17 @@ else:
             return node_id_path.read_text().strip()
         return None
 
+    def create_log_dir(self):
+        log_path = Path(self.log_dir)
+        if not log_path.is_dir():
+            try:
+                log_path.mkdir(exist_ok=True)
+            except PermissionError as exc:
+                # Should arrive here only on node creation (on tunneler first run).
+                subprocess.check_call(shlex.split(f'sudo mkdir -p {self.log_dir}'))
+
     # pylint: disable=arguments-differ
+
     def start(self,
               mode='',
               allow_restart=False,
@@ -317,8 +327,7 @@ else:
 
         self._migrate_db()
 
-        if not os.path.exists(self.log_dir):
-            os.makedirs(self.log_dir)
+        self.create_log_dir()
 
         logsfile = os.path.join(self.log_dir, '{0}.docker.log'.format(self.service_name))
 

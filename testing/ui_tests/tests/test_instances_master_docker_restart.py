@@ -1,6 +1,8 @@
 import docker
 
 from retrying import retry
+
+from axonius.consts.plugin_consts import MASTER_PROXY_PLUGIN_NAME
 from services.ports import DOCKER_PORTS
 from ui_tests.tests.instances_test_base import TestInstancesBase
 
@@ -15,7 +17,7 @@ class TestInstanceMasterDockerRestart(TestInstancesBase):
         # restart docker service and terminate master-node conn
         environment = {'DOCKER_HOST': 'unix:///var/run/weave/weave.sock'}
         client = docker.from_env(environment=environment)
-        master_proxy = client.containers.get('master-proxy')
+        master_proxy = client.containers.get(MASTER_PROXY_PLUGIN_NAME)
         master_proxy.restart()
 
         self.check_proxy_tunnel()
@@ -29,7 +31,7 @@ class TestInstanceMasterDockerRestart(TestInstancesBase):
     def check_master_proxy(self):
         instance = self._instances[0]
         self.logger.info(f'Checking if master proxy works')
-        port = DOCKER_PORTS['master-proxy']
+        port = DOCKER_PORTS[MASTER_PROXY_PLUGIN_NAME]
         rc, out = instance.ssh(f'export https_proxy=https://localhost:{port} && curl https://manage.chef.io')
         if rc != 0:
             self.logger.info(f'proxy failed: {out}')

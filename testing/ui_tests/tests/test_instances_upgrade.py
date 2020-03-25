@@ -1,7 +1,6 @@
 import io
 
-import pytest
-
+from axonius.consts.plugin_consts import MASTER_PROXY_PLUGIN_NAME
 from services.ports import DOCKER_PORTS
 from test_helpers.machines import PROXY_PORT, PROXY_IP
 from ui_tests.tests.instances_test_base import TestInstancesBase
@@ -9,7 +8,6 @@ from ui_tests.tests.instances_test_base import TestInstancesBase
 
 class TestInstancesUpgrade(TestInstancesBase):
 
-    @pytest.mark.skip('AX-6583')
     def test_instances_upgrade(self):
         self.put_customer_conf_file()
 
@@ -44,7 +42,7 @@ class TestInstancesUpgrade(TestInstancesBase):
             self.logger.info(f'ERROR: FAILED TO UPGRADE {out}')
         assert rc == 0
 
-        port = DOCKER_PORTS['master-proxy']
+        port = DOCKER_PORTS[MASTER_PROXY_PLUGIN_NAME]
         rc, out = instance.ssh(f'export https_proxy=https://localhost:{port} && curl https://manage.chef.io')
         if rc != 0:
             self.logger.info(f'proxy failed: {out}')
