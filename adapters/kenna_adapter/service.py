@@ -85,13 +85,13 @@ class KennaAdapter(AdapterBase):
             'items': [
                 {
                     'name': 'domain',
-                    'title': 'Kenna instance url',
+                    'title': 'Kenna Security Platform URL',
                     'type': 'string',
                     'default': consts.DEFAULT_DOMAIN,
                 },
                 {
                     'name': 'api_token',
-                    'title': 'API token',
+                    'title': 'API Token',
                     'type': 'string',
                     'format': 'password',
                 },
