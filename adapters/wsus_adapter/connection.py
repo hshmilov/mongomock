@@ -5,7 +5,6 @@ import logging
 from axonius.utils.json import from_json
 
 from axonius.utils.parsing import get_exception_string
-from axonius.adapter_exceptions import GetDevicesError
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -117,21 +116,55 @@ class WsusWmiConnection:
 
         return commands_json
 
-    def get_devices(self):
-        command_text = 'powershell.exe -c ConvertTo-Json((Get-WsusServer).GetComputerTargets())'
-        commands = [self._prepare_command(command_text)]
+    def _get_wmi_output(self, commands_list):
+        if not isinstance(commands_list, list):
+            commands_list = [commands_list]
+        commands = [self._prepare_command(command_text) for command_text in commands_list]
 
-        output = self._execute_wmi_command(commands)
-        if output[0]['status'] != 'ok':
-            message = f'Failed to get devices through WMI/PowerShell: Got {output}'
-            logger.error(message)
-            raise GetDevicesError(message)
-        try:
-            result_data = from_json(output[0]['data'])
-        except Exception:
-            message = f'Failed to parse data from {output}!'
-            logger.exception(message)
-            # raise GetDevicesError(message)
-        else:
-            if result_data:
-                yield from result_data
+        outputs = self._execute_wmi_command(commands)
+        for output in outputs:
+            if output['status'] != 'ok':
+                message = f'Failed to run command through WMI/PowerShell: Got {output}'
+                logger.error(message)
+                yield {}
+            try:
+                result_data = from_json(output['data'])
+            except Exception:
+                message = f'Failed to parse data from {output}!'
+                logger.exception(message)
+                yield {}
+            else:
+                yield result_data
+
+    @staticmethod
+    def _filter_results_list(results_list, device_id):
+        for result in results_list:
+            result.pop('UpdateServer', None)  # Remove unnecessary data
+            if result.get('ComputerTargetId') == device_id:
+                yield result
+
+    def get_devices(self):
+        # get_updates_list_cmd = 'powershell.exe -c ConvertTo-Json((Get-WsusServer).' \
+        #                        'GetComputerTargets().GetUpdateInstallationInfoPerUpdate())'
+        # devices_json,  summaries_list, updates_list= self._get_wmi_output(
+        #     [get_computer_targets_cmd, get_updates_summary_cmd, get_updates_list_cmd]
+        # )
+        # if updates_list and isinstance(updates_list, dict):
+        #     updates_list = [updates_list]
+        get_computer_targets_cmd = 'powershell.exe -c ConvertTo-Json((Get-WsusServer).GetComputerTargets())'
+        get_updates_summary_cmd = 'powershell.exe -c ConvertTo-Json((Get-WsusServer).' \
+                                  'GetComputerTargets().GetUpdateInstallationSummary())'
+        devices_json, summaries_list = self._get_wmi_output(
+            [get_computer_targets_cmd, get_updates_summary_cmd]
+        )
+        if not devices_json:
+            return
+        if summaries_list and isinstance(summaries_list, dict):
+            summaries_list = [summaries_list]
+        if isinstance(devices_json, dict):
+            devices_json = [devices_json]
+        for device_raw in devices_json:
+            device_id = device_raw.get('Id')
+            device_raw['x_summary'] = list(self._filter_results_list(summaries_list, device_id))[0]
+            # device_raw['x_updates_details'] = list(self._filter_results_list(updates_list, device_id))
+            yield device_raw
