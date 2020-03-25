@@ -1,10 +1,10 @@
 import logging
 import xmltodict
 
+from urllib3.util.url import parse_url
 # pylint: disable=import-error
 from gvm.protocols.latest import Gmp
 from gvm.connections import TLSConnection, SSHConnection
-
 from openvas_adapter.consts import GvmProtocols, MAX_NUMBER_OF_DEVICES, DEVICE_PER_PAGE
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.exception import RESTException
@@ -42,9 +42,11 @@ class OpenvasConnection(RESTConnection):
             raise ConnectionError('Please supply both username and password for SSH connection.')
         self.__debug_file_assets = kwargs.pop('_debug_file_assets', None)
         self.__debug_file_scans = kwargs.pop('_debug_file_scans', None)
+        # parse host in case it's a URL and not just IP
+        host = parse_url(domain).host
         super().__init__(
             *args,
-            domain=domain,
+            domain=host,
             username=username,
             password=password,
             port=port or protocol.value,
