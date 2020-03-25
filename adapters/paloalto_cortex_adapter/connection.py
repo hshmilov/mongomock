@@ -69,7 +69,7 @@ class PaloAltoCortexConnection(RESTConnection):
 
         # Validate access token
         full_query = {
-            'query': 'SELECT * FROM tms.analytics ORDER BY generatedTime DESC LIMIT 100',
+            'query': f'SELECT * FROM `{self._instance_id}.firewall.globalprotect` limit 1',
             'startTime': int((datetime.now() - timedelta(weeks=1)).timestamp()),
             'endTime': int(datetime.now().timestamp()),
             'maxWaitTime': 0  # no logs in initial response
@@ -191,9 +191,9 @@ class PaloAltoCortexConnection(RESTConnection):
                     for log in record['esResult']['hits']['hits']:
                         try:
                             data = log['_source']
-                            if 'machinename' in data and data.get('machinename') not in agent_ids:
+                            if 'endpoint_serial_number' in data and data.get('endpoint_serial_number') not in agent_ids:
                                 yield data
-                                agent_ids.add(data['machinename'])
+                                agent_ids.add(data['endpoint_serial_number'])
                         except Exception:
                             logger.exception(f'Failed fetching device from log {log}')
                 except Exception:
