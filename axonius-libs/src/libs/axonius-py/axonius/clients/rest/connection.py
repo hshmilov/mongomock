@@ -282,7 +282,7 @@ class RESTConnection(ABC):
     def _do_request(self, method, name, url_params=None, body_params=None,
                     force_full_url=False, do_basic_auth=False, use_json_in_response=True, use_json_in_body=True,
                     do_digest_auth=False, return_response_raw=False, alternative_auth_dict=None, extra_headers=None,
-                    raise_for_status=True):
+                    raise_for_status=True, files_param=None):
         """ Serves a GET request to REST API
 
         :param str name: the name of the request
@@ -335,7 +335,7 @@ class RESTConnection(ABC):
                                              headers=headers_for_request, verify=self._verify_ssl,
                                              json=request_json, data=request_data,
                                              timeout=self._session_timeout, proxies=self._proxies,
-                                             auth=auth_dict)
+                                             auth=auth_dict, files=files_param)
         except requests.HTTPError as e:
             self._handle_http_error(e)
 

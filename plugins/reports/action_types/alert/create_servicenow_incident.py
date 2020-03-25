@@ -2,6 +2,8 @@ import logging
 
 from axonius.consts import report_consts
 from axonius.types.enforcement_classes import AlertActionResult
+from axonius.utils.axonius_query_language import parse_filter
+from axonius.utils import gui_helpers
 from axonius.clients.service_now.connection import ServiceNowConnection
 from reports.action_types.action_type_alert import ActionTypeAlert
 
@@ -115,6 +117,11 @@ class ServiceNowIncidentAction(ActionTypeAlert):
                     'name': 'extra_fields',
                     'title': 'Extra Fields',
                     'type': 'string'
+                },
+                {
+                    'name': 'send_csv_as_attachment',
+                    'title': 'Send CSV As Attachment',
+                    'type': 'bool'
                 }
             ],
             'required': [
@@ -125,7 +132,8 @@ class ServiceNowIncidentAction(ActionTypeAlert):
                 'description_default',
                 'severity',
                 'incident_title',
-                'add_link_to_title'
+                'add_link_to_title',
+                'send_csv_as_attachment'
             ],
             'type': 'array'
         }
@@ -150,14 +158,15 @@ class ServiceNowIncidentAction(ActionTypeAlert):
             'caller_id': None,
             'category': None,
             'add_link_to_title': False,
-            'subcategory': None
+            'subcategory': None,
+            'send_csv_as_attachment': False
         }
 
     # pylint: disable=too-many-arguments
     def _create_service_now_incident(self, short_description, description, impact, u_incident_type,
                                      caller_id, u_symptom, assignment_group, u_requested_for,
                                      category=None, subcategory=None,
-                                     extra_fields=None):
+                                     extra_fields=None, csv_string=None):
         service_now_dict = {'short_description': short_description,
                             'description': description,
                             'impact': impact,
@@ -168,7 +177,8 @@ class ServiceNowIncidentAction(ActionTypeAlert):
                             'u_requested_for': u_requested_for,
                             'category': category,
                             'subcategory': subcategory,
-                            'extra_fields': extra_fields
+                            'extra_fields': extra_fields,
+                            'csv_string': csv_string
                             }
         try:
             if self._config['use_adapter'] is True:
@@ -208,6 +218,33 @@ class ServiceNowIncidentAction(ActionTypeAlert):
                                                           query_link=query_link)
         impact = report_consts.SERVICE_NOW_SEVERITY.get(self._config['severity'],
                                                         report_consts.SERVICE_NOW_SEVERITY['error'])
+
+        csv_string = None
+        if self._config.get('send_csv_as_attachment'):
+            try:
+                query_name = self._run_configuration.view.name
+                query = self._plugin_base.gui_dbs.entity_query_views_db_map[self._entity_type].find_one({
+                    'name': query_name
+                })
+                if query:
+                    parsed_query_filter = parse_filter(query['view']['query']['filter'])
+                    field_list = query['view'].get('fields', [])
+                    sort = gui_helpers.get_sort(query['view'])
+                    field_filters = query['view'].get('colFilters', {})
+                else:
+                    parsed_query_filter = self._create_query(self._internal_axon_ids)
+                    field_list = ['specific_data.data.name', 'specific_data.data.hostname',
+                                  'specific_data.data.os.type', 'specific_data.data.last_used_users', 'labels']
+                    sort = {}
+                    field_filters = {}
+                csv_string = gui_helpers.get_csv(parsed_query_filter,
+                                                 sort,
+                                                 {field: 1 for field in field_list},
+                                                 self._entity_type,
+                                                 field_filters=field_filters)
+            except Exception:
+                logger.exception(f'Failed getting csv')
+
         message = self._create_service_now_incident(short_description=short_description,
                                                     description=log_message,
                                                     impact=impact,
@@ -218,6 +255,7 @@ class ServiceNowIncidentAction(ActionTypeAlert):
                                                     u_requested_for=self._config.get('u_requested_for'),
                                                     category=self._config.get('category'),
                                                     subcategory=self._config.get('subcategory'),
-                                                    extra_fields=self._config.get('extra_fields')
+                                                    extra_fields=self._config.get('extra_fields'),
+                                                    csv_string=csv_string
                                                     )
         return AlertActionResult(not message, message or 'Success')

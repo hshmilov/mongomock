@@ -1,3 +1,4 @@
+import io
 import json
 import logging
 
@@ -27,6 +28,13 @@ class ServiceNowConnection(RESTConnection):
             self._get('table/cmdb_ci_computer', url_params={'sysparm_limit': 1}, do_basic_auth=True)
         else:
             raise RESTException('No user name or password')
+
+    def _upload_csv_to_table(self, table_name, table_sys_id, csv_string):
+        csv_bytes = io.BytesIO(csv_string.getvalue().encode('utf-8'))
+        self._post('attachment/upload',
+                   body_params={'table_name': table_name,
+                                'table_sys_id': table_sys_id},
+                   files_param={'file': ('report.csv', csv_bytes)})
 
     def get_user_list(self):
         users_table = []
@@ -185,6 +193,7 @@ class ServiceNowConnection(RESTConnection):
         caller_id = service_now_dict.get('caller_id')
         category = service_now_dict.get('category')
         subcategory = service_now_dict.get('subcategory')
+        csv_string = service_now_dict.get('csv_string')
 
         self.__number_of_incidents += 1
         logger.info(f'Creating servicenow incident num {self.__number_of_incidents}: impact={impact}, '
@@ -218,6 +227,10 @@ class ServiceNowConnection(RESTConnection):
                         final_dict.update(extra_fields_dict)
             except Exception:
                 logger.exception(f'Problem getting extra fields')
+            incident_value = self.__add_dict_to_table('incident', final_dict)
+            if csv_string and (incident_value.get('result') or {}).get('sys_id'):
+                self._upload_csv_to_table(table_name='incident', table_sys_id=incident_value['result']['sys_id'],
+                                          csv_string=csv_string)
             self.__add_dict_to_table('incident', final_dict)
             return True
         except Exception:
