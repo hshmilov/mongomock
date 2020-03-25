@@ -847,7 +847,8 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
                                                           PLUGIN_NAME: self.plugin_name,
                                                           NODE_ID: self.node_id},
                                                          upsert=True)
-        if resp and resp.matched_count == 0:
+
+        if not resp.acknowledged:
             logger.warning(f'failure to write connection label {client_config.get(CONNECTION_LABEL)} '
                            f'from client {client_id}  on node {self.node_id}')
 
@@ -860,12 +861,13 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
 
         if CLIENT_ID in client_config:
 
-            resp = self.adapter_client_labels_db.find_one_and_delete({CLIENT_ID: client_config.get(CLIENT_ID),
-                                                                      NODE_ID: self.node_id})
-            if resp and resp.matched_count == 0:
-                logger.warning(f'Connection Label deletion failure for client {resp.get(CLIENT_ID)} '
-                               f'from node {resp.get(NODE_ID)} '
-                               f'with Connection Label {resp.get(CONNECTION_LABEL)}')
+            resp = self.adapter_client_labels_db.delete_one({CLIENT_ID: client_config.get(CLIENT_ID),
+                                                             NODE_ID: self.node_id})
+
+            if resp.deleted_count == 0 and not resp.acknowledged:
+                logger.warning(f'Connection Label deletion failure for client {client_config.get(CLIENT_ID)} '
+                               f'from node {client_config.get(NODE_ID)} '
+                               f'with Connection Label {client_config.get(CONNECTION_LABEL)}')
 
     @add_rule('correlation_cmds', methods=['GET'])
     def correlation_cmds(self):
