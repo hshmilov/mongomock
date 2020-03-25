@@ -304,11 +304,11 @@ class SSLLabsAssessment(object):
                 return
             else:
                 continue
-
-        logger.debug('Testing {} host(s)'.format(len(_status.get('endpoints'))))
+        if _status.get('endpoints'):
+            logger.debug('Testing {} host(s)'.format(len(_status.get('endpoints'))))
         try:
             if detail:
-                for endpoint in _status.get('endpoints'):
+                for endpoint in _status.get('endpoints', []):
                     _process = multiprocessing.Process(
                         target=self._get_detailed_endpoint_information,
                         args=(self.host, endpoint.get('ipAddress')))
