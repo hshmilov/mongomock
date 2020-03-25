@@ -167,6 +167,9 @@ class ClearpassAdapter(AdapterBase, Configurable):
                         device.last_seen = last_seen
                 except Exception:
                     logger.exception(f'Problem with last seen at {device_raw}')
+                ip_raw = extended_info.get('ip')
+                if ip_raw and isinstance(ip_raw, str):
+                    device.add_nic(ips=ip_raw.split(','))
                 device.is_online = extended_info.get('is_online')
             if self.__drop_no_last_seen is True and not last_seen:
                 return None
