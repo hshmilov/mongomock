@@ -20,7 +20,7 @@ class PkwareConnection(RESTConnection):
             raise RESTException('No username or password')
         response = self._post('su/api/v1.0/Login', url_params={'token': self._apikey})
         self._session_headers['Authorization'] = f'NTLM {response}'
-        self._get('su/api/v1.0/TDE/Agent')
+        self._get('su/api/v1.0/Archive/Device')
 
     def get_device_list(self):
-        yield from self._get('su/api/v1.0/TDE/Agent')
+        yield from self._get('su/api/v1.0/Archive/Device')
