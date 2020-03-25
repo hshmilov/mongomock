@@ -9,6 +9,11 @@ export const pluginMeta = {
         description: 'SevOne Data Platform is a network and infrastructure management platform.',
         link: 'https://docs.axonius.com/docs/sevone'
     },
+    redhat_satellite_adapter: {
+        title: 'Red Hat Satellite',
+        link: 'https://docs.axonius.com/docs/red-hat-satellite',
+        description: 'Red Hat Satellite is a system management solution used to deploy, configure, and maintain systems across physical, virtual, and cloud environments.'
+    },
     logicmonitor_adapter: {
         title: 'LogicMonitor',
         link: 'https://docs.axonius.com/docs/logicmonitor',

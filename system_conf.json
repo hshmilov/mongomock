@@ -3,6 +3,7 @@
     "add-to-exclude": [
       "google_big_query",
       "nimbul",
+      "redhat_satellite",
       "igar",
       "scep",
       "arsenal",

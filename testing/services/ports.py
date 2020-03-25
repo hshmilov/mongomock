@@ -249,6 +249,7 @@ DOCKER_PORTS = {
     'men-and-mice-adapter':             10004,
     'openvas-adapter':                  10014,
     'kenna-adapter':                    12345,
+    'redhat-satellite-adapter':         12346,
     'microfocus-sa-adapter':            13368,
     'digicert-pki-platform-adapter':    13369,
     'github-adapter':                   13370,
