@@ -145,7 +145,7 @@ class Users:
     @gui_add_rule_logged_in('users/<user_id>', methods=['GET'],
                             required_permissions={Permission(PermissionType.Users, PermissionLevel.ReadOnly)})
     def user_generic(self, user_id, history: datetime):
-        res = jsonify(get_entity_data(EntityType.Users, user_id, history))
+        res = get_entity_data(EntityType.Users, user_id, history)
         if isinstance(res, dict):
             return jsonify(res)
         return res
