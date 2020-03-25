@@ -341,8 +341,8 @@ class TestDashboardActions(TestBase):
 
         We do it twice to make sure it behaves consistently.
         """
-        self.base_page.run_discovery()
         self.dashboard_page.switch_to_page()
+        self.base_page.run_discovery()
         self.dashboard_page.add_segmentation_card(module='Devices',
                                                   field=OS_TYPE_OPTION_NAME,
                                                   title=self.TEST_EDIT_CARD_TITLE)
