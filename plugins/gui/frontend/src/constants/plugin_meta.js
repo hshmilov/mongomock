@@ -29,6 +29,11 @@ export const pluginMeta = {
         link: 'https://docs.axonius.com/docs/microfocus-sa',
         description: 'Micro Focus Server Automation (formerly known as HP Server Automation or Opsware) provides operating system provisioning, automated patch management, and compliance control.',
     },
+    ip_fabric_adapter: {
+        title: 'IP Fabric',
+        link: 'https://docs.axonius.com/docs/ip-fabric',
+        description: 'IP Fabric is a network management system that helps companies’ network engineers to discover, verify, visualize and document large scale networks.'
+    },
     digicert_pki_platform_adapter: {
         title: 'DigiCert PKI Platform (Symantec Managed PKI)',
         link: 'https://docs.axonius.com/docs/digicert-pki-platform',

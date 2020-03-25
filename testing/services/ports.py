@@ -265,6 +265,7 @@ DOCKER_PORTS = {
     'logicmonitor-adapter':             13385,
     'jira-adapter':                     13380,
     'sevone-adapter':                   13389,
+    'ip-fabric-adapter':                14285,
     'mongo':                            27017,
     'mockingbird-db':                   28017
 }
