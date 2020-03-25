@@ -1,6 +1,8 @@
 import datetime
 import logging
 
+from typing import List
+
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
@@ -61,6 +63,16 @@ class Policy(SmartJsonClass):
     sensor_update_settings = Field(SensorUpdateSettings, 'Sensor Update Settings')
 
 
+class SpotlightVulnerability(SmartJsonClass):
+    created_timestamp = Field(datetime.datetime, 'Created Time')
+    closed_timestamp = Field(datetime.datetime, 'Closed Time')
+    status = Field(str, 'Status')
+    cve_id = Field(str, 'CVE')
+    cve_score = Field(int, 'CVE Score')
+    cve_severity = Field(str, 'CVE Severity')
+    application_name = Field(str, 'Application Name')
+
+
 class CrowdStrikeAdapter(AdapterBase, Configurable):
     # pylint: disable=too-many-instance-attributes
     class MyDeviceAdapter(DeviceAdapter):
@@ -71,6 +83,7 @@ class CrowdStrikeAdapter(AdapterBase, Configurable):
         cs_agent_version = Field(str, 'CrowdStrike Agent Version')
         system_product_name = Field(str, 'System Product Name')
         full_osx_version = Field(str, 'Full OS X Version')
+        spotlight_vulnerabilities = ListField(SpotlightVulnerability, 'Device Vulnerabilities')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -112,7 +125,7 @@ class CrowdStrikeAdapter(AdapterBase, Configurable):
         :return: A json with all the attributes returned from the Server
         """
         with client_data:
-            yield from client_data.get_device_list(self._get_policies)
+            yield from client_data.get_device_list(self._get_policies, self._get_vulnerabilities)
 
     @staticmethod
     def _clients_schema():
@@ -171,6 +184,41 @@ class CrowdStrikeAdapter(AdapterBase, Configurable):
                                            modified_time=parse_date(group.get('modified_time')),
                                            name=group.get('name')))
         return parsed_groups
+
+    @staticmethod
+    def parse_vulnerabilities(vulnerabilities):
+        parsed_vulnerabilities = []
+        if isinstance(vulnerabilities, list):
+            for vulnerability in vulnerabilities:
+                vul = SpotlightVulnerability(created_timestamp=parse_date(vulnerability.get('created_timestamp')),
+                                             closed_timestamp=parse_date(vulnerability.get('closed_timestamp')),
+                                             status=vulnerability.get('status'),
+                                             cve_id=vulnerability.get('cve', {}).get('id'),
+                                             cve_score=vulnerability.get('cve', {}).get('base_score'),
+                                             cve_severity=vulnerability.get('cve', {}).get('severity'),
+                                             application_name=vulnerability.get('app', {}).get('product_name_version'),
+                                             )
+                parsed_vulnerabilities.append(vul)
+        return parsed_vulnerabilities
+
+    @staticmethod
+    def add_vulnerable_softwares(device: DeviceAdapter,
+                                 parsed_vulnerabilities: List[SpotlightVulnerability]):
+        """
+        Add vulnerable softwares to device data
+        :param device: device for adding its softwares
+        :param parsed_vulnerabilities: parsed vulnerabilities
+        :return: None
+        """
+        for vul in parsed_vulnerabilities:
+            try:
+                severity = vul.cve_severity if vul.cve_severity in ['NONE', 'LOW', 'MEDIUM', 'HIGH',
+                                                                    'CRITICAL'] else 'NONE'
+                device.add_vulnerable_software(cve_id=vul.cve_id,
+                                               software_name=vul.application_name,
+                                               cve_severity=severity)
+            except Exception:
+                logger.exception('Error adding vulnerable software')
 
     @staticmethod
     def parse_policy(policy, settings_type):
@@ -249,7 +297,8 @@ class CrowdStrikeAdapter(AdapterBase, Configurable):
                     device.os.build = device_raw.get('build_number')
                     try:
                         if device.os.type == 'OS X':
-                            device.full_osx_version = device_raw.get('os_version').split(' ')[-1].strip(')').strip('(')\
+                            device.full_osx_version = \
+                                device_raw.get('os_version').split(' ')[-1].strip(')').strip('(') \
                                 + '.' + device_raw.get('minor_version')
                     except Exception:
                         pass
@@ -285,6 +334,15 @@ class CrowdStrikeAdapter(AdapterBase, Configurable):
                 except Exception:
                     logger.exception(f'Problem getting policies at {device_raw}')
                 device.system_product_name = device_raw.get('system_product_name')
+                vulnerabilities = device_raw.get('vulnerabilities')
+                if vulnerabilities:
+                    try:
+                        parsed_vulnerabilities = self.parse_vulnerabilities(vulnerabilities)
+                        self.add_vulnerable_softwares(device, parsed_vulnerabilities)
+                        device.spotlight_vulnerabilities = parsed_vulnerabilities
+                        device_raw.pop('vulnerabilities')
+                    except Exception:
+                        logger.exception(f'Problem getting vulnerabilities for {device_raw}')
                 try:
                     if len(str(device_raw)) > (12 * (1024 ** 2)):
                         device_raw = str(device_raw)[:(12 * (1024 ** 2))]
@@ -309,13 +367,19 @@ class CrowdStrikeAdapter(AdapterBase, Configurable):
                     'type': 'bool'
                 },
                 {
+                    'name': 'get_vulnerabilities',
+                    'title': 'Get devices vulnerabilities',
+                    'type': 'bool'
+                },
+                {
                     'name': 'machine_domain_whitelist',
                     'title': 'Machine domain whitelist',
                     'type': 'string'
                 }
             ],
             'required': [
-                'get_policies'
+                'get_policies',
+                'get_vulnerabilities'
             ],
             'pretty_name': 'CrowdStrike Falcon Configuration',
             'type': 'array'
@@ -325,10 +389,12 @@ class CrowdStrikeAdapter(AdapterBase, Configurable):
     def _db_config_default(cls):
         return {
             'get_policies': False,
+            'get_vulnerabilities': False,
             'machine_domain_whitelist': None
         }
 
     def _on_config_update(self, config):
         self._get_policies = config['get_policies']
+        self._get_vulnerabilities = config['get_vulnerabilities']
         self.__machine_domain_whitelist = config.get('machine_domain_whitelist').split(',') \
             if config.get('machine_domain_whitelist') else None

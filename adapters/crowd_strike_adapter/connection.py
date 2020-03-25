@@ -173,10 +173,63 @@ class CrowdStrikeConnection(RESTConnection):
             except Exception:
                 logger.error('Error getting device groups')
 
-    def get_devices_data(self, devices_ids: List[str], should_get_policies: bool) -> List[Dict]:
+    def get_vulnerabilities_data(self, device_data: dict, vulnerabilities_ids: List[str]) -> None:
+        """
+        Get vulnerabilities data by vulnerabilities ids
+        :param device_data:
+        :param vulnerabilities_ids:
+        :return:
+        """
+        device_id = device_data.get('device_id')
+        for chunk in chunks(consts.MAX_VULS_PER_REQUEST, vulnerabilities_ids):
+            try:
+                vul_res = self.__get(f'spotlight/entities/vulnerabilities/v2',
+                                     url_params={'ids': chunk},
+                                     do_basic_auth=not self._got_token)
+                vul_data = vul_res.get('resources', [])
+                device_data.setdefault('vulnerabilities', []).extend(vul_data)
+            except Exception:
+                logger.error(f'Error getting device vulnerabilities for {device_id}')
+
+    def get_device_vulnerabilities(self, device_data: dict) -> None:
+        """
+        Get device vulnerabilities data from falcon spotlight api
+        :param device_data: device data
+        :return: None
+        """
+        device_id = device_data.get('device_id')
+        # first request for getting meta data with vulnerabilities data
+        device_vulnerabilities = self.__get(f'spotlight/queries/vulnerabilities/v1',
+                                            url_params={'filter': f'aid:\'{device_id}\'',
+                                                        'limit': consts.VULS_PER_REQUEST},
+                                            do_basic_auth=not self._got_token)
+        vulnerabilities_ids = device_vulnerabilities.get('resources', [])
+        pagination = device_vulnerabilities.get('meta', {}).get('pagination', {})
+        total_vulns = pagination.get('total')
+        next_page = pagination.get('after')
+        vulns_got = len(vulnerabilities_ids)
+        self.get_vulnerabilities_data(device_data, vulnerabilities_ids)
+        logger.debug(f'Got {vulns_got}/{total_vulns} vulnerabilities for {device_id}')
+
+        while next_page:
+            device_vulnerabilities = self.__get(f'spotlight/queries/vulnerabilities/v1',
+                                                url_params={'filter': f'aid:\'{device_id}\'',
+                                                            'after': next_page,
+                                                            'limit': consts.VULS_PER_REQUEST},
+                                                do_basic_auth=not self._got_token)
+            vulnerabilities_ids = device_vulnerabilities.get('resources', [])
+            pagination = device_vulnerabilities.get('meta', {}).get('pagination', {})
+            next_page = pagination.get('after')
+            vulns_got += len(vulnerabilities_ids)
+            self.get_vulnerabilities_data(device_data, vulnerabilities_ids)
+            logger.debug(f'Got {vulns_got}/{total_vulns} vulnerabilities for {device_id}')
+
+    def get_devices_data(self, devices_ids: List[str], should_get_policies: bool, should_get_vulnerabilities: bool) -> \
+            List[Dict]:
         """
         Get devices data from crowdstrike api endpoint: devices/entities/devices/v1
         :param should_get_policies: get policies data for devices
+        :param should_get_vulnerabilities: get vulnerabilities from spotlight api
         :param devices_ids: devices ids
         :return: list of devices
         """
@@ -191,6 +244,13 @@ class CrowdStrikeConnection(RESTConnection):
                 self.get_devices_policies(devices_data)
             except Exception:
                 logger.exception(f'Error getting devices policies')
+        if should_get_vulnerabilities:
+            for device_data in devices_data:
+                try:
+                    self.get_device_vulnerabilities(device_data)
+                except Exception:
+                    device_id = device_data.get('device_id')
+                    logger.exception(f'Error getting device vulnerabilities. device_id: {device_id}')
         try:
             self.get_devices_groups(devices_data)
         except Exception:
@@ -210,7 +270,7 @@ class CrowdStrikeConnection(RESTConnection):
                           do_basic_auth=not self._got_token)
 
     # pylint: disable=arguments-differ
-    def get_device_list(self, should_get_policies):
+    def get_device_list(self, should_get_policies, should_get_vulnerabilities):
         """
         Get devices data list from CrowdStrike Api
         """
@@ -231,12 +291,12 @@ class CrowdStrikeConnection(RESTConnection):
         if devices_per_page < consts.DEVICES_PER_PAGE:
             devices_per_page = consts.DEVICES_PER_PAGE
 
-        devices = self.get_devices_data(response['resources'], should_get_policies)
+        devices = self.get_devices_data(response['resources'], should_get_policies, should_get_vulnerabilities)
         yield from devices['resources']
         while offset < total_count and offset < consts.MAX_NUMBER_OF_DEVICES:
             try:
                 response = self.get_devices_ids(offset, devices_per_page)
-                devices = self.get_devices_data(response['resources'], should_get_policies)
+                devices = self.get_devices_data(response['resources'], should_get_policies, should_get_vulnerabilities)
                 yield from devices['resources']
                 self.requests_count += 2
                 if self._got_token and self.requests_count >= consts.REFRESH_TOKEN_REQUESTS:
