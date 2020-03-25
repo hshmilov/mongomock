@@ -3,7 +3,7 @@
     <XQuery
       :module="module"
       :read-only="isReadOnly"
-      :default-fields="defaultFields"
+      :user-fields-groups="userFieldsGroups"
       @done="updateEntities"
     />
     <XTable
@@ -26,7 +26,7 @@
         />
         <XTableOptionMenu
           :module="module"
-          :default-fields.sync="defaultFields"
+          :user-fields-groups.sync="userFieldsGroups"
           @done="updateEntities"
         />
       </template>
@@ -42,7 +42,9 @@
 
 <script>
 import { mapState, mapMutations, mapActions } from 'vuex';
-import { getDefaultTableColumns } from '@api/user-preferences';
+import { getUserTableColumnGroups } from '@api/user-preferences';
+import _get from 'lodash/get';
+import _snakeCase from 'lodash/snakeCase';
 import { defaultFields } from '../../../constants/entities';
 
 import XQuery from './query/Query.vue';
@@ -98,20 +100,24 @@ export default {
     return {
       selection: { ids: [], include: true },
       selectionLabels: {},
-      defaultFields: defaultFields[this.module],
+      userFieldsGroups: { default: defaultFields[this.module] },
     };
   },
   async created() {
     this.fetchDataHyperlinks({ module: this.module });
-    const userDefaultTableColumns = await getDefaultTableColumns(this.module);
-    if (userDefaultTableColumns.length) {
-      this.defaultFields = userDefaultTableColumns;
+    // get all saved user defined columns group
+    const userDefaultTableColumns = await getUserTableColumnGroups(this.module);
+    if (userDefaultTableColumns) {
+      this.userFieldsGroups = {
+        ...this.userFieldsGroups,
+        ...userDefaultTableColumns,
+      };
     }
     if (!this.viewFields.length) {
       this.updateView({
         module: this.module,
         view: {
-          fields: this.defaultFields,
+          fields: this.userFieldsGroups.default,
         },
       });
       this.$refs.table.fetchContentPages(true);

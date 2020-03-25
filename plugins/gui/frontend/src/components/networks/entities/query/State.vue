@@ -84,6 +84,7 @@
 import _isEqual from 'lodash/isEqual';
 import { mapState, mapMutations, mapActions } from 'vuex';
 import _debounce from 'lodash/debounce';
+import { defaultViewForReset } from '@constants/entities';
 import XButton from '../../../axons/inputs/Button.vue';
 import XDropdown from '../../../axons/popover/Dropdown.vue';
 import XHistoricalDate from '../../../neurons/inputs/HistoricalDate.vue';
@@ -111,9 +112,9 @@ export default {
       type: Boolean,
       default: true,
     },
-    defaultFields: {
-      type: Array,
-      default: () => [],
+    userFieldsGroups: {
+      type: Object,
+      default: () => ({ default: [] }),
     },
   },
   data() {
@@ -170,7 +171,7 @@ export default {
     },
     isDefaultView() {
       return this.view.query.filter === ''
-                && _isEqual(this.view.fields, this.defaultFields)
+                && _isEqual(this.view.fields, this.userFieldsGroups.default)
                 && this.view.sort.field === ''
                 && (!Object.keys(this.view.colFilters).length
                       || !Object.values(this.view.colFilters).find((val) => val));
@@ -204,28 +205,8 @@ export default {
     }),
 
     resetQuery: _debounce(function resetQuery() {
-      this.updateView({
-        module: this.module,
-        view: {
-          enforcement: null,
-          query: {
-            filter: '',
-            expressions: [],
-            search: null,
-            meta: {
-              uniqueAdapters: false,
-              enforcementFilter: null,
-            },
-          },
-          sort: {
-            field: '', desc: true,
-          },
-          fields: this.defaultFields,
-          colFilters: {},
-          page: 0,
-        },
-        uuid: null,
-      });
+      const resetView = defaultViewForReset(this.module, this.userFieldsGroups.default);
+      this.updateView(resetView);
       this.$emit('done');
     }, 400, { leading: true, trailing: false }),
     navigateFilteredTask() {

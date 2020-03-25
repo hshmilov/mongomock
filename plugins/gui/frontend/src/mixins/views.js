@@ -55,6 +55,16 @@ export default {
       });
       promises.push(this.fetchViews({ module }));
     });
+    if (this.entityList.includes('devices')) {
+      const module = 'devices/views/template';
+      this.updateDataView({
+        module,
+        view: {
+          query: { filter: '', expressions: [] },
+        },
+      });
+      promises.push(this.fetchViews({ module }));
+    }
     Promise.all(promises).then(this.viewsCallback);
   },
 };

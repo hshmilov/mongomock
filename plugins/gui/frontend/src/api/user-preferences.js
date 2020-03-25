@@ -1,7 +1,7 @@
-import createRequest from './create-request';
 import _get from 'lodash/get';
+import createRequest from './create-request';
 
-export const saveDefaultTableColumns = async (entity, fields) => {
+export const saveUserTableColumnGroup = async (entity, fields, columnGroupName = 'default') => {
   const uri = '/system/users/self/preferences';
   const request = createRequest(uri);
   const requestOptions = {
@@ -9,7 +9,7 @@ export const saveDefaultTableColumns = async (entity, fields) => {
     data: {
       [entity]: {
         table_columns: {
-          default: fields,
+          [columnGroupName]: fields,
         },
       },
     },
@@ -18,9 +18,9 @@ export const saveDefaultTableColumns = async (entity, fields) => {
   return res.data;
 };
 
-export const getDefaultTableColumns = async (entity) => {
+export const getUserTableColumnGroups = async (entity) => {
   const uri = '/system/users/self/preferences';
   const request = createRequest(uri);
   const { data } = await request({});
-  return _get(data, `${entity}.table_columns.default`, []);
+  return _get(data, `${entity}.table_columns`, {});
 };

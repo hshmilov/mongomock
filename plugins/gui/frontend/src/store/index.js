@@ -75,6 +75,7 @@ import {
   getSavedQueryById,
   configuredAdaptersFields,
   GET_FOOTER_MESSAGE, getFooterMessage,
+  FILL_USER_FIELDS_GROUPS_FROM_TEMPLATES, fillUserFieldsGroupsFromTemplates,
 } from './getters';
 
 import { adapters } from './modules/adapters';
@@ -124,6 +125,7 @@ export default new Vuex.Store({
     getSavedQueryById,
     configuredAdaptersFields,
     [GET_FOOTER_MESSAGE]: getFooterMessage,
+    [FILL_USER_FIELDS_GROUPS_FROM_TEMPLATES]: fillUserFieldsGroupsFromTemplates,
   },
   mutations: {
     [TOGGLE_SIDEBAR]: toggleSidebar,

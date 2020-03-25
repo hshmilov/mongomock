@@ -1,24 +1,26 @@
 <template>
   <div class="x-query">
-    <x-query-state
+    <XQueryState
       :module="module"
       :valid="filterValid"
       :read-only="readOnly"
-      :default-fields="defaultFields"
+      :user-fields-groups="userFieldsGroups"
       @done="$emit('done')"
     />
     <div class="filter">
-      <x-query-search-input
+      <XQuerySearchInput
         v-model="queryFilter"
         :module="module"
         :query-search.sync="query.search"
+        :user-fields-groups="userFieldsGroups"
         @validate="onValid"
+        @done="$emit('done')"
       />
-      <x-button
+      <XButton
         link
         @click="navigateSavedQueries"
-      >Saved Queries</x-button>
-      <x-query-wizard
+      >Saved Queries</XButton>
+      <XQueryWizard
         v-model="query"
         :module="module"
         :error="error"
@@ -32,19 +34,18 @@
 
 <script>
 import { mapState, mapGetters, mapMutations } from 'vuex';
-import xQueryState from './State.vue';
-import xQuerySearchInput from './SearchInput.vue';
-import xQueryWizard from './Wizard.vue';
-import xButton from '../../../axons/inputs/Button.vue';
-
-import { AUTO_QUERY, GET_MODULE_SCHEMA_WITH_CONNECTION_LABEL } from '../../../../store/getters';
-import { UPDATE_DATA_VIEW } from '../../../../store/mutations';
+import { AUTO_QUERY, GET_MODULE_SCHEMA_WITH_CONNECTION_LABEL } from '@store/getters';
+import { UPDATE_DATA_VIEW } from '@store/mutations';
+import XButton from '@axons/inputs/Button.vue';
+import XQueryState from './State.vue';
+import XQuerySearchInput from './SearchInput.vue';
+import XQueryWizard from './Wizard.vue';
 import QueryBuilder from '../../../../logic/query_builder';
 
 export default {
   name: 'XQuery',
   components: {
-    xQueryState, xQuerySearchInput, xQueryWizard, xButton,
+    XQueryState, XQuerySearchInput, XQueryWizard, XButton,
   },
   props: {
     module: {
@@ -55,9 +56,9 @@ export default {
       type: Boolean,
       default: false,
     },
-    defaultFields: {
-      type: Array,
-      default: () => [],
+    userFieldsGroups: {
+      type: Object,
+      default: () => ({}),
     },
   },
   data() {
@@ -73,7 +74,8 @@ export default {
       },
     }),
     ...mapGetters({
-       autoQuery: AUTO_QUERY, getModuleSchemaWithConnectionLabel: GET_MODULE_SCHEMA_WITH_CONNECTION_LABEL,
+      autoQuery: AUTO_QUERY,
+      getModuleSchemaWithConnectionLabel: GET_MODULE_SCHEMA_WITH_CONNECTION_LABEL,
     }),
     query: {
       get() {
@@ -140,7 +142,8 @@ export default {
         resultFilters.resultFilter = '';
       } else {
         try {
-          const queryBuilder = QueryBuilder(this.schema, query.expressions, queryMeta, query.onlyExpressionsFilter);
+          const queryBuilder = QueryBuilder(this.schema,
+            query.expressions, queryMeta, query.onlyExpressionsFilter);
           resultFilters = queryBuilder.compileQuery();
           this.error = queryBuilder.getError();
           this.filterValid = !this.error;
@@ -158,11 +161,12 @@ export default {
         ...this.query.meta,
         ...query.meta,
         enforcementFilter: this.enforcementFilter,
+        searchTemplate: undefined,
       };
-
       const filterShouldRecompile = force || this.autoQuery;
       let filter;
-      // Check if the calculation is forced (using the search button) or the autoQuery value is chosen
+      // Check if the calculation is forced
+      // (using the search button) or the autoQuery value is chosen
       let resultFilters = {};
       if (filterShouldRecompile) {
         resultFilters = this.compileFilter(query, filter, queryMeta);
@@ -181,7 +185,9 @@ export default {
         view: {
           query: {
             filter: filter || prevFilter,
-            onlyExpressionsFilter: filterShouldRecompile ? resultFilters.onlyExpressionsFilter : this.query.onlyExpressionsFilter,
+            onlyExpressionsFilter: filterShouldRecompile
+              ? resultFilters.onlyExpressionsFilter
+              : this.query.onlyExpressionsFilter,
             expressions: query.expressions,
             meta: queryMeta,
             search: null,

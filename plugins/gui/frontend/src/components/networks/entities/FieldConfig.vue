@@ -67,7 +67,7 @@
           link
           :disabled="isViewFieldsEmpty"
           @click="saveUserDefault"
-        >Save as User Default</XButton>
+        >{{ saveButtonText }}</XButton>
       </div>
       <XButton
         link
@@ -82,17 +82,22 @@
 
 <script>
 import { mapState, mapGetters, mapMutations } from 'vuex';
-import { saveDefaultTableColumns } from '@api/user-preferences';
+import { saveUserTableColumnGroup } from '@api/user-preferences';
+import _get from 'lodash/get';
 import _isEqual from 'lodash/isEqual';
 import _isEmpty from 'lodash/isEmpty';
-
+import _snakeCase from 'lodash/snakeCase';
 import XModal from '../../axons/popover/Modal.vue';
 import XSelectSymbol from '../../neurons/inputs/SelectSymbol.vue';
 import XSearchInput from '../../neurons/inputs/SearchInput.vue';
 import XCheckboxList from '../../neurons/inputs/CheckboxList.vue';
 import XTitle from '../../axons/layout/Title.vue';
 import XButton from '../../axons/inputs/Button.vue';
-import { GET_MODULE_SCHEMA, GET_DATA_SCHEMA_BY_NAME } from '../../../store/getters';
+import {
+  GET_MODULE_SCHEMA,
+  GET_DATA_SCHEMA_BY_NAME,
+  FILL_USER_FIELDS_GROUPS_FROM_TEMPLATES,
+} from '../../../store/getters';
 import { SHOW_TOASTER_MESSAGE, UPDATE_DATA_VIEW } from '../../../store/mutations';
 import { getTypeFromField } from '../../../constants/utils';
 
@@ -106,9 +111,9 @@ export default {
       type: String,
       required: true,
     },
-    defaultFields: {
-      type: Array,
-      default: () => [],
+    userFieldsGroups: {
+      type: Object,
+      default: () => ({}),
     },
   },
   computed: {
@@ -120,6 +125,7 @@ export default {
     ...mapGetters({
       getModuleSchema: GET_MODULE_SCHEMA,
       getDataSchemaByName: GET_DATA_SCHEMA_BY_NAME,
+      fillUserFieldGroups: FILL_USER_FIELDS_GROUPS_FROM_TEMPLATES,
     }),
     schemaByPlugin() {
       return this.getModuleSchema(this.module);
@@ -154,6 +160,12 @@ export default {
       if (!this.schemaByPlugin || !this.schemaByPlugin.length) return 'axonius';
       return this.schemaByPlugin[0].name;
     },
+    querySearchTemplate() {
+      return _get(this.view, 'query.meta.searchTemplate', false);
+    },
+    columnsGroupName() {
+      return !this.querySearchTemplate ? 'default' : _snakeCase(this.querySearchTemplate.name);
+    },
     isStockSelected() {
       return !_isEmpty(this.select.stock);
     },
@@ -161,10 +173,20 @@ export default {
       return !_isEmpty(this.select.view);
     },
     isDefaultViewFields() {
-      return _isEqual(this.viewFields, this.defaultFields);
+      let defaultFields = this.userFieldsGroups.default;
+      if (this.querySearchTemplate) {
+        const allFieldsGroup = this.fillUserFieldGroups(this.module, this.userFieldsGroups);
+        defaultFields = allFieldsGroup[_snakeCase(this.querySearchTemplate.name)];
+      }
+      return _isEqual(this.viewFields, defaultFields);
     },
     isViewFieldsEmpty() {
       return _isEmpty(this.viewFields);
+    },
+    saveButtonText() {
+      return !this.querySearchTemplate
+        ? 'Save as User Default'
+        : `Save as User Search Default (${this.querySearchTemplate.name})`;
     },
   },
   data() {
@@ -221,7 +243,8 @@ export default {
       this.select.view = [];
     },
     reset() {
-      this.viewFields = [...this.defaultFields];
+      this.$emit('reset-user-fields');
+      this.viewFields = [...this.view.fields];
       this.clearSelections();
     },
     updateViewFields(viewFieldsSchema) {
@@ -235,9 +258,16 @@ export default {
     },
     async saveUserDefault() {
       let message = 'Successfully saved user default view';
+      if (this.querySearchTemplate) {
+        message = `Successfully saved user search default view (${this.querySearchTemplate.name})`;
+      }
       try {
-        await saveDefaultTableColumns(this.module, this.viewFields);
-        this.$emit('update:default-fields', this.viewFields);
+        await saveUserTableColumnGroup(this.module, this.viewFields, this.columnsGroupName);
+        const updatedFieldsGroups = {
+          ...this.userFieldsGroups,
+          [this.columnsGroupName]: this.viewFields,
+        };
+        this.$emit('update:user-fields-groups', updatedFieldsGroups);
         this.onClickDone();
       } catch (error) {
         message = 'Error saving as default view';

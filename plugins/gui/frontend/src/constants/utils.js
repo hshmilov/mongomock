@@ -1,4 +1,4 @@
-import moment from 'moment';
+import moment from 'moment'
 
 export const formatDate = (dateString, schema) => {
   if (isNaN(Date.parse(dateString))) {
@@ -100,3 +100,4 @@ export const parseVaultError = (errorString) => {
 export const getParentFromField = (fieldName) => fieldName.split('.').slice(0, -1).join('.');
 
 export const validateClassName = (name) => /^([a-z_]|-[a-z_-])[a-z\d_-]*$/i.test(name);
+

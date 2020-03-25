@@ -38,7 +38,7 @@ logger = logging.getLogger(f'axonius.{__name__}')
 class Entities(Devices, Users):
 
     @staticmethod
-    def _insert_view(views_collection, name, mongo_view, description, tags):
+    def _insert_view(views_collection, name, mongo_view, description, tags, query_type='saved'):
         existed_view = views_collection.find_one({
             'name': {
                 '$regex': name,
@@ -58,7 +58,7 @@ class Entities(Devices, Users):
             'description': description,
             'tags': tags,
             'view': mongo_view,
-            'query_type': 'saved',
+            'query_type': query_type,
             'timestamp': current_time,
             'user_id': '*',
             UPDATED_BY_FIELD: '*',

@@ -1,6 +1,7 @@
-import axios_client from '@api/axios.js'
-import Promise from 'promise'
+import axios_client from '@api/axios.js';
+import Promise from 'promise';
 
+import _get from 'lodash/get';
 import { INIT_USER } from './modules/auth';
 import {
   UPDATE_DATA, UPDATE_DATA_CONTENT, UPDATE_DATA_COUNT, UPDATE_DATA_COUNT_QUICK,
@@ -8,7 +9,8 @@ import {
   UPDATE_DATA_LABELS, UPDATE_ADDED_DATA_LABELS, UPDATE_REMOVED_DATA_LABELS,
   SELECT_DATA_CURRENT, UPDATE_DATA_CURRENT,
   UPDATE_SAVED_DATA_NOTE, UPDATE_REMOVED_DATA_NOTE,
-  UPDATE_SYSTEM_CONFIG, UPDATE_SYSTEM_EXPIRED, UPDATE_DATA_HYPERLINKS, UPDATE_CUSTOM_DATA, UPDATE_DATA_VIEW,
+  UPDATE_SYSTEM_CONFIG, UPDATE_SYSTEM_EXPIRED, UPDATE_DATA_HYPERLINKS, UPDATE_CUSTOM_DATA,
+  UPDATE_DATA_VIEW,
 } from './mutations';
 
 
@@ -86,26 +88,26 @@ export const fetchDataCount = ({ state, dispatch }, payload) => {
 
   module.count.data = undefined;
 
-	if (payload.isExpermentalAPI && ['users', 'devices'].includes(path)) {
-		return dispatch(REQUEST_API, {
-				rule: `/graphql/search/${path}?term=${view.query.search}&count=True`,
-				type: UPDATE_DATA_COUNT,
-				payload
-			});
-		}
+  if (payload.isExpermentalAPI && ['users', 'devices'].includes(path)) {
+    return dispatch(REQUEST_API, {
+      rule: `/graphql/search/${path}?term=${view.query.search}&count=True`,
+      type: UPDATE_DATA_COUNT,
+      payload,
+    });
+  }
 
-    // For now we support only /users and /devices 'big queries'
+  // For now we support only /users and /devices 'big queries'
   if (view.query.filter.length > MAX_GET_SIZE && ['users', 'devices'].includes(path)) {
     dispatch(REQUEST_API, {
-            rule: `${path}/count`,
-            type: UPDATE_DATA_COUNT,
-            method: 'POST',
-            data: {
-                filter: view.query.filter,
-                history: view.historical,
-            },
-            payload
-        });
+      rule: `${path}/count`,
+      type: UPDATE_DATA_COUNT,
+      method: 'POST',
+      data: {
+        filter: view.query.filter,
+        history: view.historical,
+      },
+      payload,
+    });
 
     dispatch(REQUEST_API, {
       rule: `${path}/count`,
@@ -164,13 +166,13 @@ const createPostContentRequest = (state, payload) => {
   if (view.schema_fields && view.schema_fields.length) {
     params.schema_fields = view.schema_fields;
   }
-	if (view.query) {
-		if (view.query.filter) {
-			params.filter = view.query.filter;
-		}
-		if (view.query.search) {
-			params.search = view.query.search;
-		}
+  if (view.query) {
+    if (view.query.filter) {
+      params.filter = view.query.filter;
+    }
+    if (view.query.search) {
+      params.search = view.query.search;
+    }
   }
   if (view.historical) {
     params.history = view.historical;
@@ -212,15 +214,15 @@ export const fetchDataContent = ({ state, dispatch }, payload) => {
   const { view } = module;
 
   if (!payload.skip && module.count !== undefined && !payload.isCounted) {
-    dispatch(FETCH_DATA_COUNT, { module: payload.module, endpoint: payload.endpoint, isExpermentalAPI: payload.isExpermentalAPI});
+    dispatch(FETCH_DATA_COUNT, { module: payload.module, endpoint: payload.endpoint, isExpermentalAPI: payload.isExpermentalAPI });
   }
 
   if (payload.isExpermentalAPI && ['users', 'devices'].includes(path)) {
-		return dispatch(REQUEST_API, {
-			rule: `/graphql/search/${path}?term=${view.query.search}&limit=${payload.limit}&offset=${payload.skip}`,
-			type: UPDATE_DATA_CONTENT,
-			payload
-		});
+    return dispatch(REQUEST_API, {
+      rule: `/graphql/search/${path}?term=${view.query.search}&limit=${payload.limit}&offset=${payload.skip}`,
+      type: UPDATE_DATA_CONTENT,
+      payload,
+    });
   }
 
   if (!view) {
@@ -282,13 +284,6 @@ export const fetchDataContentCSV = ({ state, dispatch }, payload) => dispatch(RE
   downloadFile('csv', response, null, payload.source);
 });
 
-export const SAVE_DATA_VIEW = 'SAVE_DATA_VIEW';
-export const saveDataView = ({ state, dispatch, commit }, payload) => {
-  if (!getModule(state, payload)) return;
-  payload.view = state[payload.module].view;
-  return saveView({ dispatch, commit }, payload);
-};
-
 export const SAVE_VIEW = 'SAVE_VIEW';
 export const saveView = ({ dispatch, commit }, payload) => {
   const {
@@ -331,6 +326,19 @@ export const saveView = ({ dispatch, commit }, payload) => {
       }
     }
   }).catch(console.log.bind(console));
+};
+
+export const SAVE_DATA_VIEW = 'SAVE_DATA_VIEW';
+export const saveDataView = ({ state, dispatch, commit }, payload) => {
+  if (getModule(state, payload)) {
+    const newPayload = payload;
+    newPayload.view = state[payload.module].view;
+
+    if (_get(newPayload, 'view.query.meta.searchTemplate', false)) {
+      delete newPayload.view.query.meta.searchTemplate;
+    }
+    return saveView({ dispatch, commit }, newPayload);
+  }
 };
 
 export const FETCH_DATA_FIELDS = 'FETCH_DATA_FIELDS';
@@ -599,10 +607,8 @@ export const saveCustomData = ({ state, dispatch }, payload) => {
   });
 };
 
-export const GET_ENVIRONMENT_NAME = 'GET_ENVIRONMENT_NAME'
-export const getEnvironmentName = ({ dispatch }) => {
-  return dispatch(REQUEST_API, {
-    rule: 'get_environment_name',
-    method: 'GET',
-  });
-};
+export const GET_ENVIRONMENT_NAME = 'GET_ENVIRONMENT_NAME';
+export const getEnvironmentName = ({ dispatch }) => dispatch(REQUEST_API, {
+  rule: 'get_environment_name',
+  method: 'GET',
+});

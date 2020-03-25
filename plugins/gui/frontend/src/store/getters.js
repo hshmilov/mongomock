@@ -1,5 +1,6 @@
 import _get from 'lodash/get';
 import _isEmpty from 'lodash/isEmpty';
+import _snakeCase from 'lodash/snakeCase';
 import { pluginMeta } from '../constants/plugin_meta';
 import { isObjectListField } from '../constants/utils';
 
@@ -152,4 +153,16 @@ export const configuredAdaptersFields = (state) => (entity, customFieldsToInclud
   ], Object.keys(adaptersSpecificFields));
 
   return new Set([...genericFields, ...specificFields, ...customFieldsToInclude]);
+};
+
+export const FILL_USER_FIELDS_GROUPS_FROM_TEMPLATES = 'FILL_USER_FIELDS_GROUPS_FROM_TEMPLATES';
+export const fillUserFieldsGroupsFromTemplates = (state) => (module, userFieldsGroups) => {
+  const fieldGroups = state[module].views.template.content.data.reduce((acc, curr) => {
+    acc[_snakeCase(curr.name)] = curr.view.fields;
+    return acc;
+  }, {});
+  return {
+    ...fieldGroups,
+    ...userFieldsGroups,
+  };
 };

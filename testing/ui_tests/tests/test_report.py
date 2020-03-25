@@ -375,6 +375,9 @@ class TestReport(TestBase):
         assert len(mail_content_split) == 12, f'mail content: {mail_content!r}'
         self.devices_page.switch_to_page()
         self.devices_page.execute_saved_query(self.TEST_REPORT_EDIT_QUERY)
+        # this is for preventing the data collecting from the ui table
+        # to get the hover icon. if we click on the input the mouse cant hover over the table
+        self.devices_page.find_query_search_input().click()
         self.devices_page.assert_csv_match_ui_data_with_content(mail_content)
 
     def test_read_only_click_add_scheduling(self):

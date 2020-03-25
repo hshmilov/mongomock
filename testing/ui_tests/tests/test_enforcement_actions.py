@@ -524,6 +524,7 @@ class TestEnforcementActions(TestBase):
 
                 self.devices_page.switch_to_page()
                 self.devices_page.execute_saved_query(ENFORCEMENT_CHANGE_NAME)
+                self.devices_page.find_query_search_input().click()
                 self.devices_page.assert_csv_match_ui_data_with_content(mail_content, sort_columns=False)
 
                 assert len(mail_content_split) == devices_count + 2, f'mail content: {mail_content!r}'

@@ -25,10 +25,10 @@
           <VListItemTitle>Edit Columns</VListItemTitle>
         </VListItem>
         <VListItem @click="resetColumnsToUserDefault">
-          <VListItemTitle>Reset Columns to User Default</VListItemTitle>
+          <VListItemTitle>{{ resetToUserDefaultMenuTitle }}</VListItemTitle>
         </VListItem>
         <VListItem @click="resetColumnsToSystemDefault">
-          <VListItemTitle>Reset Columns to System Default</VListItemTitle>
+          <VListItemTitle>{{ resetToSystemDefaultMenuTitle }}</VListItemTitle>
         </VListItem>
         <VListItem
           :disabled="exportInProgress"
@@ -48,9 +48,10 @@
     <XFieldConfig
       v-if="showColumnEditor"
       :module="module"
-      :default-fields.sync="defaultFieldsSync"
+      :user-fields-groups.sync="userFieldsGroupsSync"
       @done="done"
       @close="closeColumnEditor"
+      @reset-user-fields="resetColumnsToUserDefault"
     />
   </div>
 </template>
@@ -58,12 +59,16 @@
 <script>
 import { mdiDotsHorizontal } from '@mdi/js';
 
-import { mapMutations, mapActions } from 'vuex';
-import { SHOW_TOASTER_MESSAGE, UPDATE_DATA_VIEW } from '../../../store/mutations';
-import { FETCH_DATA_CONTENT_CSV } from '../../../store/actions';
-
+import {
+  mapMutations, mapActions, mapState, mapGetters,
+} from 'vuex';
+import _get from 'lodash/get';
+import _snakeCase from 'lodash/snakeCase';
+import { SHOW_TOASTER_MESSAGE, UPDATE_DATA_VIEW } from '@store/mutations';
+import { FETCH_DATA_CONTENT_CSV } from '@store/actions';
+import { defaultFields } from '@constants/entities';
+import { FILL_USER_FIELDS_GROUPS_FROM_TEMPLATES } from '@store/getters';
 import XFieldConfig from './FieldConfig.vue';
-import { defaultFields } from '../../../constants/entities';
 
 export default {
   name: 'XOptionMenu',
@@ -75,9 +80,9 @@ export default {
       type: String,
       required: true,
     },
-    defaultFields: {
-      type: Array,
-      default: () => [],
+    userFieldsGroups: {
+      type: Object,
+      default: () => ({ default: defaultFields[this.module] }),
     },
   },
   data() {
@@ -87,16 +92,33 @@ export default {
     };
   },
   computed: {
+    ...mapState({
+      querySearchTemplate(state) {
+        return _get(state[this.module].view, 'query.meta.searchTemplate', false);
+      },
+      templateViews(state) {
+        return state[this.module].views.template.content.data || [];
+      },
+    }),
+    ...mapGetters({
+      fillUserFieldGroups: FILL_USER_FIELDS_GROUPS_FROM_TEMPLATES,
+    }),
     dotsIcon() {
       return mdiDotsHorizontal;
     },
-    defaultFieldsSync: {
+    userFieldsGroupsSync: {
       get() {
-        return this.defaultFields;
+        return this.userFieldsGroups;
       },
       set(value) {
-        this.$emit('update:default-fields', value);
+        this.$emit('update:user-fields-groups', value);
       },
+    },
+    resetToUserDefaultMenuTitle() {
+      return this.querySearchTemplate ? 'Reset Columns to User Search Default' : 'Reset Columns to User Default';
+    },
+    resetToSystemDefaultMenuTitle() {
+      return this.querySearchTemplate ? 'Reset Columns to System Search Default' : 'Reset Columns to System Default';
     },
   },
   methods: {
@@ -114,10 +136,21 @@ export default {
       this.showColumnEditor = false;
     },
     resetColumnsToUserDefault() {
-      this.updateTableColumns(this.defaultFields);
+      let fieldsForReset = this.userFieldsGroups.default;
+      if (this.querySearchTemplate) {
+        const allFieldsGroup = this.fillUserFieldGroups(this.module, this.userFieldsGroups);
+        fieldsForReset = allFieldsGroup[_snakeCase(this.querySearchTemplate.name)];
+      }
+      this.updateTableColumns(fieldsForReset);
     },
     resetColumnsToSystemDefault() {
-      this.updateTableColumns(defaultFields[this.module]);
+      let fieldsForReset = defaultFields[this.module];
+      if (this.querySearchTemplate) {
+        const template = this.templateViews
+          .find((item) => item.name === this.querySearchTemplate.name);
+        fieldsForReset = _get(template, 'view.fields', []);
+      }
+      this.updateTableColumns(fieldsForReset);
     },
     updateTableColumns(fields) {
       this.updateView({

@@ -5,12 +5,13 @@
     @click="focus"
   >
     <div class="input-icon">
-      <svg-icon
+      <SvgIcon
         name="action/search"
         :original="true"
         height="18"
       />
     </div>
+    <slot name="badge" />
     <input
       ref="input"
       v-model="searchValue"

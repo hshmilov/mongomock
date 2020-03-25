@@ -253,7 +253,8 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin, 
                         name,
                         json.loads(data['view']),
                         data.get('description', ''),
-                        json.loads(data.get('tags', '[]')))
+                        json.loads(data.get('tags', '[]')),
+                        data.get('type', 'saved'))
                 except Exception:
                     logger.exception(f'Error adding default view {name}')
         except Exception:
