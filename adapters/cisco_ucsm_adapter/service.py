@@ -139,11 +139,11 @@ class CiscoUcsmAdapter(AdapterBase):
         try:
             device_raw = device_raw
             device = self._new_device_adapter()
-            device_id = device_raw.get('dn')
+            device_id = device_raw.get('uuid')
             if not device_id:
                 logger.warning(f'Bad device with no ID {device_raw}')
                 return None
-            device.id = device_id + '_' + (device_raw.get('name') or 'unnamed')
+            device.id = device_id + '_' + (device_raw.get('original_uuid') or 'unnamed')
             device.device_serial = device_raw.get('serial')
             device.device_model = device_raw.get('model')
             device.classid = device_raw.get('class_id')
