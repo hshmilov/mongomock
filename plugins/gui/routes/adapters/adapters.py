@@ -192,6 +192,8 @@ class Adapters:
         # adding client to specific adapter
         response = self.request_remote_plugin('client_test', adapter_unique_name, method='post',
                                               json=client_to_test)
+        if response is None:
+            return 'Adapter is not responding', 400
         if response.status_code != 200:
             logger.error(f'Error in client adding: {response.status_code}, {response.text}')
         return response.text, response.status_code
