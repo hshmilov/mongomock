@@ -5,30 +5,23 @@ from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.connection import RESTException
-from axonius.devices.device_adapter import DeviceAdapter, AGENT_NAMES
-from axonius.fields import Field
 from axonius.mixins.configurable import Configurable
-from axonius.utils.datetime import parse_date
 from axonius.utils.files import get_local_config_file
-from paloalto_cortex_adapter import consts
 from paloalto_cortex_adapter.connection import PaloAltoCortexConnection
 from paloalto_cortex_adapter.client_id import get_client_id
 from paloalto_cortex_adapter.consts import CLOUD_URL, DEFAULT_NUMBER_OF_WEEKS_AGO_TO_FETCH
+from paloalto_cortex_adapter.structures import GlobalProtectDevice
 
 logger = logging.getLogger(f'axonius.{__name__}')
+
+# pylint: disable=logging-format-interpolation
 
 
 # pylint: disable=too-many-instance-attributes, superfluous-parens
 class PaloaltoCortexAdapter(AdapterBase, Configurable):
     # pylint: disable=too-many-instance-attributes
-    class MyDeviceAdapter(DeviceAdapter):
-        pan_source = Field(str, 'Source', enum=[dt.value for dt in consts.DeviceType])
-        agent_id = Field(str, 'Agent ID')
-        customer_id = Field(str, 'Customer ID')
-        traps_id = Field(str, 'Traps ID')
-        protection_status = Field(bool, 'Protection Status')
-        policy_tag = Field(str, 'Policy Tag')
-        is_vdi = Field(bool, 'Is VDI')
+    class MyDeviceAdapter(GlobalProtectDevice):
+        pass
 
     def __init__(self, *args, **kwargs):
         super().__init__(
@@ -100,74 +93,47 @@ class PaloaltoCortexAdapter(AdapterBase, Configurable):
             'type': 'array'
         }
 
-    def _create_traps_device(self, device_raw):
+    @staticmethod
+    def _fill_global_protect_fields(device_raw: dict, device_instance: MyDeviceAdapter):
         try:
-            device = self._new_device_adapter()
-            device_id = device_raw.get('agentId')
-            endpoint_header = device_raw.get('endPointHeader') or {}
-            if device_id is None:
-                logger.warning(f'Bad device with no ID {device_raw}')
-                return None
-            device.id = device_id + '_' + (endpoint_header.get('deviceName') or '')
-            device.pan_source = consts.DeviceType.Traps.value
-            device.agent_id = device_raw.get('agentId')
-            device.customer_id = device_raw.get('customerId')
-            device.traps_id = device_raw.get('trapsId')
-            device.last_seen = parse_date(device_raw.get('generatedTime'))
-
-            # Endpoint header fields
-            device.hostname = endpoint_header.get('deviceName')
-            device.domain = endpoint_header.get('deviceDomain')
-            agent_ip = endpoint_header.get('agentIp')
-            if not isinstance(agent_ip, list):
-                agent_ip = [agent_ip]
-            device.add_nic(ips=agent_ip)
-            device.add_agent_version(agent=AGENT_NAMES.paloalto_cortex, version=endpoint_header.get('agentVersion'))
-            device.policy_tag = endpoint_header.get('policyTag')
-            device.protection_status = not (endpoint_header.get('protectionStatus') == 0)
-            device_os_type = {
-                1: 'Windows',
-                2: 'OSX',
-                3: 'Android',
-                4: 'Linux'
-            }.get(endpoint_header.get('osType'))
-
-            device.figure_os((device_os_type or '') + ' ' + (endpoint_header.get('osVersion') or ''))
-            device.os.bitness = 64 if endpoint_header.get('is64') == 1 else 32
-            device.is_vdi = not (endpoint_header.get('isVdi') == 0)
-            device.set_raw(device_raw)
-            return device
+            device_instance.serial_number = device_raw.get('endpoint_serial_number')
+            device_instance.customer_id = device_raw.get('customer_id')
+            device_instance.connect_method = device_raw.get('connect_method')
+            device_instance.host_id = device_raw.get('host_id')
+            device_instance.event_status = device_raw.get('status')
+            device_instance.vendor_name = device_raw.get('customer_id')
         except Exception:
-            logger.exception(f'Problem with fetching Paloalto Cortex Traps Device for {device_raw}')
-            return None
+            logger.exception(f'Failed to fill Global Protect instance info for device {device_raw}')
 
-    def _create_global_protect_device(self, device_raw: dict):
+    def _create_global_protect_device(self, device_raw: dict, device: MyDeviceAdapter):
         try:
-            device = self._new_device_adapter()
-            device.pan_source = consts.DeviceType.GlobalProtect.value
-            machine_name = device_raw.get('machinename')
-            if not machine_name:
-                logger.error(f'Error - no machien name in GlobalProtect agent: {device_raw}')
+            device_id = (device_raw.get('customer_id') or '') + (device_raw.get('endpoint_serial_number') or '')
+            if not device_id:
+                logger.error(f'Bad device with no ID {device_raw}')
                 return None
-            device.id = f'global_protect_{machine_name}'
-            device.hostname = machine_name
-            for interface in (device_raw.get('interfaces') or []):
-                try:
-                    mac = interface.get('mac')
-                    ips = []
-                    if interface.get('ip'):
-                        ips.append(interface.get('ip'))
-                    if interface.get('ip6'):
-                        ips.append(interface.get('ip6'))
+            device.id = f'global_protect_{device_id}'
+            device.hostname = device_raw.get('host_id')
 
-                    device.add_nic(mac=mac, ips=ips)
-                except Exception:
-                    logger.exception(f'Failed adding interface {str(interface)}')
-            src_user = device_raw.get('srcuser')
+            ips = []
+            if device_raw.get('private_ip'):
+                ips.append(device_raw.get('private_ip'))
+            if device_raw.get('private_ipv6'):
+                ips.append(device_raw.get('private_ipv6'))
+            if device_raw.get('public_ip'):
+                ips.append(device_raw.get('public_ip'))
+            if device_raw.get('public_ipv6'):
+                ips.append(device_raw.get('public_ipv6'))
+            device.add_nic(ips=ips)
+
+            src_user = device_raw.get('source_user')
             if src_user:
                 device.last_used_users.append(src_user)
-            device.customer_id = device_raw.get('customer-id')
-            device.figure_os(device_raw.get('os'))
+
+            os_string = (device_raw.get('endpoint_os_type') or '') + ' ' + \
+                        (device_raw.get('endpoint_os_version') or '')
+            device.figure_os(os_string)
+
+            self._fill_global_protect_fields(device_raw, device)
 
             # NOTICE! 'serial' is not the serial of the device. Its the serial of the firewall!
             device.set_raw(device_raw)
@@ -177,18 +143,13 @@ class PaloaltoCortexAdapter(AdapterBase, Configurable):
             return None
 
     def _parse_raw_data(self, devices_raw_data):
-        for device_raw, device_type in devices_raw_data:
-
-            device = None
-            if device_type == consts.DeviceType.Traps:
-                device = self._create_traps_device(device_raw)
-            elif device_type == consts.DeviceType.GlobalProtect:
-                device = self._create_global_protect_device(device_raw)
-            else:
-                logger.error(f'Error - got unknown device type')
-
-            if device:
-                yield device
+        try:
+            for device_raw in devices_raw_data:
+                device = self._create_global_protect_device(device_raw, self._new_device_adapter())
+                if device:
+                    yield device
+        except Exception:
+            logger.error(f'Failed to create device for {device_raw}')
 
     @classmethod
     def _db_config_schema(cls) -> dict:

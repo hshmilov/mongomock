@@ -12,6 +12,8 @@ from paloalto_cortex_adapter import consts
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
+# pylint: disable=logging-format-interpolation
+
 
 # pylint: disable=too-many-instance-attributes, too-many-nested-blocks
 class PaloAltoCortexConnection(RESTConnection):
@@ -21,6 +23,7 @@ class PaloAltoCortexConnection(RESTConnection):
         super().__init__(*args,
                          domain=consts.CLOUD_URL,
                          **kwargs)
+        self._instance_id = None
         self.__logging_service = None
         self._permanent_headers = {'x-api-key': self._apikey}
         self.__last_token_fetch = None
@@ -30,6 +33,7 @@ class PaloAltoCortexConnection(RESTConnection):
                 (self.__last_token_fetch + timedelta(minutes=consts.REFRESH_ACCESS_TOKEN_MINUTES) < datetime.now()) \
                 or force:
             response = self._get(consts.ACCESS_TOKEN_ENDPOINT)
+
             if 'access_token' not in response:
                 logger.error(f'Authentication error: {response}')
                 if 'unauthenticated' in str(response).lower():
@@ -40,13 +44,17 @@ class PaloAltoCortexConnection(RESTConnection):
                 logger.error(f'Authentication error: {response}')
                 raise ValueError(f'Error contacting authorization server')
 
+            if 'instance_id' not in response:
+                raise ValueError(f'Please re-authorize the application in the Palo Alto Networks Cortex Hub')
+
             region = response['region']
+            self._instance_id = response['instance_id']
 
             logger.info(f'Got access token from {consts.CLOUD_URL}, continuing to contacting palo alto')
 
             # Here should be a process of getting url + credentials
             self.__logging_service = LoggingService(
-                url=f'https://api.{region}.paloaltonetworks.com',
+                url=f'https://api.{region}.cdl.paloaltonetworks.com',
                 credentials=Credentials(access_token=response['access_token']),
                 proxies=self._proxies
             )
@@ -153,15 +161,14 @@ class PaloAltoCortexConnection(RESTConnection):
 
     # pylint: disable=arguments-differ
     def get_device_list(self, weeks_ago_to_fetch):
-        for device in self.get_traps_devices(weeks_ago_to_fetch):
-            yield device, consts.DeviceType.Traps
-
         for device in self.get_global_protect_devices(weeks_ago_to_fetch):
-            yield device, consts.DeviceType.GlobalProtect
+            yield device
 
     def get_global_protect_devices(self, weeks_ago_to_fetch):
+        table = f'{self._instance_id}.firewall.globalprotect'
+        query = f'SELECT * FROM `{table}` order by time_generated DESC limit 10000000'
         full_query = {
-            'query': 'SELECT * FROM panw.dpi_hipreport order by time_generated DESC limit 10000000',
+            'query': query,
             'startTime': int((datetime.now() - timedelta(weeks=weeks_ago_to_fetch)).timestamp()),
             'endTime': int(datetime.now().timestamp()),
             'maxWaitTime': 0  # no logs in initial response
@@ -187,43 +194,6 @@ class PaloAltoCortexConnection(RESTConnection):
                             if 'machinename' in data and data.get('machinename') not in agent_ids:
                                 yield data
                                 agent_ids.add(data['machinename'])
-                        except Exception:
-                            logger.exception(f'Failed fetching device from log {log}')
-                except Exception:
-                    logger.exception(f'Failed getting results for record {record}')
-                    break
-                self.refresh_access_token()
-        except Exception:
-            logger.exception(f'Exception in xpoll process')
-
-    def get_traps_devices(self, weeks_ago_to_fetch):
-        full_query = {
-            'query': 'SELECT * FROM tms.analytics order by generatedTime DESC limit 10000000',
-            'startTime': int((datetime.now() - timedelta(weeks=weeks_ago_to_fetch)).timestamp()),
-            'endTime': int(datetime.now().timestamp()),
-            'maxWaitTime': 0  # no logs in initial response
-        }
-
-        query = self.__logging_service.query(full_query)
-        try:
-            query_id = query.json()['queryId']
-        except Exception:
-            raise ValueError(query.content)
-
-        agent_ids = set()
-        try:
-            for record in self.xpoll(
-                    query_id=query_id,
-                    sequence_no=0,
-                    params={'maxWaitTime': consts.MAX_PANCLOUD_POLL_WAIT_TIME}
-            ):
-                try:
-                    for log in record['esResult']['hits']['hits']:
-                        try:
-                            data = log['_source']
-                            if 'agentId' in data and data.get('agentId') not in agent_ids:
-                                yield data
-                                agent_ids.add(data['agentId'])
                         except Exception:
                             logger.exception(f'Failed fetching device from log {log}')
                 except Exception:
