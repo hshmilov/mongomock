@@ -253,6 +253,7 @@ DOCKER_PORTS = {
     'digicert-pki-platform-adapter':    13369,
     'github-adapter':                   13370,
     'netbrain-adapter':                 13371,
+    'azure-stack-hub-adapter':          13396,
     'cscglobal-adapter':                13372,
     'riskiq-adapter':                   13373,
     'digicert-certcentral-adapter':     13374,

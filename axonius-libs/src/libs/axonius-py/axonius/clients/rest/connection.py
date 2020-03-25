@@ -88,7 +88,7 @@ class RESTConnection(ABC):
 
         # We assumes that path starts with / and ends with /
         # Later in the code we will concat url to, and we will check that they don't start with /
-        self._url = self.build_url(domain, port, self._url_base_prefix, use_domain_path)
+        self._url = self.build_url(domain.strip(), port, self._url_base_prefix, use_domain_path)
         self._permanent_headers = headers if headers is not None else {}
         self._session_headers = {}
         self._session = None
@@ -188,8 +188,8 @@ class RESTConnection(ABC):
                 proxies['https'] = https_proxy
             if http_proxy:
                 proxies['http'] = http_proxy
-            parsed_url = RESTConnection.build_url(host, port if port else 443 if ssl else 80, url_base_prefix=path,
-                                                  use_domain_path=use_domain_path)
+            parsed_url = RESTConnection.build_url(host.strip(), port if port else 443 if ssl else 80,
+                                                  url_base_prefix=path, use_domain_path=use_domain_path)
             requests.get(parsed_url, verify=False, timeout=consts.DEFAULT_TIMEOUT, proxies=proxies)
             return True
         except requests.exceptions.ConnectionError as conn_err:

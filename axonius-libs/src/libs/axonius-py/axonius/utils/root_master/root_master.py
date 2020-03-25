@@ -143,6 +143,29 @@ def root_master_parse_entities_fields(entity_type: EntityType, info):
                 )
 
 
+def root_master_parse_adapter_client_labels(info):
+    try:
+        data = json.loads(info)
+        db = PluginBase.Instance.adapter_client_labels_db
+
+        for connection in data:
+            client_id = connection.get('client_id')
+            node_id = connection.get('node_id')
+            plugin_unique_name = connection.get('plugin_unique_name')
+
+            if not client_id or not node_id or not plugin_unique_name:
+                logger.error(f'Weird connection {connection} not putting')
+                continue
+
+            db.replace_one(
+                {'client_id': client_id, 'node_id': node_id, 'plugin_unique_name': plugin_unique_name},
+                connection,
+                upsert=True
+            )
+    except Exception:
+        logger.exception(f'Failed to parse adapter client labels')
+
+
 # pytest: disable=protected-access
 def root_master_restore_from_s3():
     """
@@ -258,6 +281,8 @@ def root_master_restore_from_s3():
                                                                   tar_file.extractfile(member).read())
                             elif member.name.startswith('fields_users_'):
                                 root_master_parse_entities_fields(EntityType.Users, tar_file.extractfile(member).read())
+                            elif member.name.startswith('adapter_client_labels_'):
+                                root_master_parse_adapter_client_labels(tar_file.extractfile(member).read())
                             else:
                                 logger.warning(f'found member {member.name} - no parsing known')
                         except Exception:

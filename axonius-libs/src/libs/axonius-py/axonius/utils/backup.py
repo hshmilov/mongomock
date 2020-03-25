@@ -86,6 +86,8 @@ def backup_to_s3():
                 tar, PluginBase.Instance._all_fields_db_map[EntityType.Devices].find({}), 'fields_devices')
             add_cursor_to_tar(
                 tar, PluginBase.Instance._all_fields_db_map[EntityType.Users].find({}), 'fields_users')
+            add_cursor_to_tar(
+                tar, PluginBase.Instance.adapter_client_labels_db.find({}), 'adapter_client_labels')
 
         # Encrypt
         subprocess.check_call([
