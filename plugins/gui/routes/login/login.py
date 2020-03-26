@@ -523,4 +523,5 @@ class Login:
         logger.info(f'User {username}, {source}, {first_name} has logged out')
         self.get_session['user'] = None
         self.get_session['csrf-token'] = None
+        self.get_session.clear()
         return redirect('/', code=302)
