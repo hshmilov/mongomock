@@ -5,6 +5,7 @@ import base64
 import binascii
 import csv
 import datetime
+import html
 import ipaddress
 import logging
 import os
@@ -161,7 +162,7 @@ def get_exception_string():
         exc_tb = exc_tb.tb_next
 
     ex_str = ex_str + f'{exc_type}:{exc_obj}'
-    return ex_str
+    return html.escape(ex_str)
 
 
 def figure_out_cloud(s):
