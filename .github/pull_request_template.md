@@ -3,6 +3,7 @@ Specify a one-line description of what this PR is doing
 
 ### R&D Checklist
 - [ ] Make sure that this PR is linked properly to a Jira ticket and that you can reach this PR from that Jira ticket.
+- [ ] Make sure that this PR has the appropriate labels on it.
 - [ ] Ask the appropriate team member to code review you - it is your responsibility to make sure they review.
 - [ ] Make sure you wrote tests for the code you changed or added. If you are in a rush, open an Automatic Test ticket and make yourself the assignee.
 - [ ] Make sure tests are passing. If some of the tests are flaky and it's not your fault, ask a team leader to merge your PR.
