@@ -17,5 +17,5 @@ class TestGlobalSSL(TestBase):
 
         # Test that the right hostname works
         self.settings_page.set_global_ssl_settings('localhost', cert_data, private_data)
-        self.settings_page.click_save_button()
+        self.settings_page.click_save_global_settings()
         self.settings_page.wait_for_saved_successfully_toaster()

@@ -126,7 +126,7 @@ import {
 import _orderBy from 'lodash/orderBy';
 import _isEmpty from 'lodash/isEmpty';
 import xSearchInput from '../inputs/SearchInput.vue';
-import xTableWrapper from '../../axons/tables/TableWrapper.vue';
+import XTableWrapper from '../../axons/tables/TableWrapper.vue';
 import xTable from '../../axons/tables/Table.vue';
 import xTableData from './TableData.js';
 import xButton from '../../axons/inputs/Button.vue';
@@ -138,7 +138,7 @@ import { FETCH_DATA_CONTENT } from '../../../store/actions';
 export default {
   name: 'XDataTable',
   components: {
-    xTableWrapper, xTable, xTableData, xButton, xSearchInput,
+    XTableWrapper, xTable, xTableData, xButton, xSearchInput,
   },
   props: {
     module: {

@@ -68,8 +68,8 @@ class TestDevice(TestBase):
         self.devices_page.create_saved_query(self.devices_page.FILTER_OS_WINDOWS, WINDOWS_QUERY_NAME)
         self.enforcements_page.switch_to_page()
         self.base_page.run_discovery()
-        self.enforcements_page.create_tag_enforcement(self.RUN_TAG_ENFORCEMENT_NAME, WINDOWS_QUERY_NAME,
-                                                      'tag search test', 'tag search test')
+        self.enforcements_page.create_tag_enforcement(
+            self.RUN_TAG_ENFORCEMENT_NAME, WINDOWS_QUERY_NAME, 'tag search test', 'tag search test')
         self.base_page.run_discovery()
         self.devices_page.switch_to_page()
         self.devices_page.execute_saved_query(WINDOWS_QUERY_NAME)

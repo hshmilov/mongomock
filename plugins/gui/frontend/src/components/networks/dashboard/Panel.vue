@@ -1,12 +1,17 @@
 <template>
-  <x-card
+  <XCard
     class="card__item"
     :title="chart.name"
-    :removable="!readOnly && hovered"
-    :editable="!readOnly && hovered && chart.user_id !== '*'"
-    :exportable="chart.metric==='segment' && hovered"
+    :removable="!readOnly"
+    :editable="!readOnly && chart.user_id !== '*'"
+    :exportable="chart.metric==='segment'"
+    :draggable="draggable"
+    :is-chart-filterable="isChartFilterable"
     v-on="$listeners"
     @edit="editPanel"
+    @refresh="(skip) => fetchMorePanel(chart.uuid, 0, chart.historical, true)"
+    @moveOrCopy="openMoveOrCopy"
+    @toggleShowSearch="toggleShowSearch"
   >
     <div
       v-if="chart.metric !== 'timeline'"
@@ -15,19 +20,20 @@
       <div
         :class="headerClass"
       >
-        <x-search-input
-          v-if="isChartFilterable"
-          v-model="dataFilter"
-          :auto-focus="false"
-        />
-        <x-historical-date
+        <XHistoricalDate
           :value="chart.historical"
           :allowed-dates="allowedDates"
           @input="(selectedDate) => confirmPickDate(chart, selectedDate)"
         />
+        <XSearchInput
+          v-if="isChartFilterable && showSearch"
+          v-model="dataFilter"
+          :auto-focus="false"
+        />
+
       </div>
     </div>
-    <component
+    <Component
       :is="`x-${chart.view}`"
       v-if="!isChartEmpty(chart)"
       :data="chart.data"
@@ -38,7 +44,7 @@
       v-else-if="chart.loading"
       class="chart-spinner"
     >
-      <md-progress-spinner
+      <MdProgressSpinner
         class="progress-spinner"
         md-mode="indeterminate"
         :md-stroke="3"
@@ -50,14 +56,14 @@
       v-else
       class="no-data-found"
     >
-      <svg-icon
+      <SvgIcon
         name="illustration/binocular"
         :original="true"
         height="50"
       />
       <div>No data found</div>
     </div>
-  </x-card>
+  </XCard>
 </template>
 
 <script>
@@ -70,18 +76,18 @@ import _merge from 'lodash/merge';
 import { IS_ENTITY_RESTRICTED } from '../../../store/modules/auth';
 import { FETCH_DASHBOARD_PANEL } from '../../../store/modules/dashboard';
 import { UPDATE_DATA_VIEW } from '../../../store/mutations';
-import xCard from '../../axons/layout/Card.vue';
-import xHistoricalDate from '../../neurons/inputs/HistoricalDate.vue';
-import xHistogram from '../../axons/charts/Histogram.vue';
+import XCard from '../../axons/layout/Card.vue';
+import XHistoricalDate from '../../neurons/inputs/HistoricalDate.vue';
+import XHistogram from '../../axons/charts/Histogram.vue';
 import xPie from '../../axons/charts/Pie.vue';
 import xSummary from '../../axons/charts/Summary.vue';
 import xLine from '../../axons/charts/Line.vue';
-import xSearchInput from '../../neurons/inputs/SearchInput.vue';
+import XSearchInput from '../../neurons/inputs/SearchInput.vue';
 
 export default {
   name: 'XPanel',
   components: {
-    xCard, xHistoricalDate, xHistogram, xPie, xSummary, xLine, xSearchInput,
+    XCard, XHistoricalDate, XHistogram, xPie, xSummary, xLine, XSearchInput,
   },
   props: {
     chart: {
@@ -92,7 +98,7 @@ export default {
       type: Boolean,
       default: false,
     },
-    hovered: {
+    draggable: {
       type: Boolean,
       default: false,
     },
@@ -100,6 +106,7 @@ export default {
   data() {
     return {
       filter: '',
+      showSearch: false,
     };
   },
   computed: {
@@ -124,11 +131,12 @@ export default {
     headerClass() {
       return {
         'x-card-header': true,
-        hidden: !this.headerVisible,
+        hidden: false,
+        // hidden: !this.headerVisible,
       };
     },
     headerVisible() {
-      return this.hovered || this.dataFilter || this.chart.historical;
+      return this.isChartFilterable() || this.dataFilter || this.chart.historical;
     },
     dataFilter: {
       get() {
@@ -149,6 +157,7 @@ export default {
   methods: {
     ...mapMutations({
       updateView: UPDATE_DATA_VIEW,
+      moveOrCopyToggle: 'moveOrCopyToggle',
     }),
     ...mapActions({
       fetchDashboardPanel: FETCH_DASHBOARD_PANEL,
@@ -191,7 +200,7 @@ export default {
               || (this.chart.data.length === 1 && this.chart.data[0].value === 0)
       );
     },
-    fetchMorePanel(uuid, skip, historical) {
+    fetchMorePanel(uuid, skip, historical, refresh) {
       this.fetchDashboardPanel({
         uuid,
         spaceId: this.currentSpace,
@@ -199,6 +208,7 @@ export default {
         limit: 100,
         historical,
         search: this.filter,
+        refresh,
       });
     },
     // eslint-disable-next-line func-names
@@ -215,6 +225,15 @@ export default {
     editPanel() {
       this.filter = '';
     },
+    openMoveOrCopy() {
+      this.moveOrCopyToggle({
+        active: true,
+        currentPanel: this.chart,
+      });
+    },
+    toggleShowSearch() {
+      this.showSearch = !this.showSearch;
+    },
   },
 };
 </script>
@@ -227,7 +246,8 @@ export default {
     }
     > div {
       height: 30px;
-      &.x-search-input {
+      width: 158px;
+      &.x-historical-date {
         margin-right: 5px;
       }
     }

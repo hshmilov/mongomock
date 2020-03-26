@@ -92,7 +92,7 @@
             color: $theme-black;
             font-size: 12px;
             font-weight: 200;
-            &.disabled {
+            &:disabled {
                 cursor: default;
             }
         }

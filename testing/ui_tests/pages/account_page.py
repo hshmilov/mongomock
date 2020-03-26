@@ -2,9 +2,9 @@ from ui_tests.pages.entities_page import EntitiesPage
 
 
 class AccountPage(EntitiesPage):
-    ACCOUNT_SET_SECRET_KEY_INVISIBLE_ICON_CSS = '.apikey-account-tab .md-icon.hide-key-icon'
-    ACCOUNT_SET_SECRET_KEY_VISIBLE_ICON_CSS = '.apikey-account-tab .md-icon.show-key-icon'
-    ACCOUNT_COPY_TO_CLIPBOARD_ICON_CSS = '.apikey-account-tab .md-icon.copy-to-clipboard-icon'
+    ACCOUNT_SET_SECRET_KEY_INVISIBLE_ICON_CSS = '.apikey-account-tab .hide-key-icon'
+    ACCOUNT_SET_SECRET_KEY_VISIBLE_ICON_CSS = '.apikey-account-tab .show-key-icon'
+    ACCOUNT_COPY_TO_CLIPBOARD_ICON_CSS = '.apikey-account-tab .copy-to-clipboard-icon'
     ACCOUNT_GET_SECRET_KEY_MASKED_CSS = '.apikey-account-tab input.invisible.secret-key'
     ACCOUNT_GET_SECRET_KEY_VISIBLE_CSS = '.apikey-account-tab input.visible.secret-key'
 

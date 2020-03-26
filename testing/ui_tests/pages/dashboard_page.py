@@ -6,7 +6,7 @@ from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.support.color import Color
 
-from ui_tests.pages.page import Page, TAB_BODY
+from ui_tests.pages.page import Page
 from services.axon_service import TimeoutException
 from axonius.utils.wait import wait_until
 
@@ -57,9 +57,7 @@ class DashboardPage(Page):
                                         ' .x-dropdown'
     SEGMENTATION_ADD_FILTER_BUTTON_CSS = '.x-filter-contains > button'
     SUMMARY_CARD_TEXT_CSS = 'div.x-summary > div.summary'
-    CARD_CLOSE_BTN_CSS = '.actions > .remove'
-    CARD_EDIT_BTN_CSS = '.actions > .edit'
-    CARD_EXPORT_TO_CSV_BTN_CSS = '.actions > .export'
+    CARD_MENU_BTN_CSS = '.card_menu'
     CARD_SEARCH_INPUT_CSS = '.x-search-input > input'
     BANNER_BY_TEXT_XPATH = '//div[contains(@class, \'x-banner\') and .//text() = \'{banner_text}\']'
     BANNER_BY_CSS = '.x-banner'
@@ -138,11 +136,6 @@ class DashboardPage(Page):
         ActionChains(self.driver).move_to_element(sl_cycle).perform()
         assert self.get_lifecycle_tooltip()
 
-    @retry(stop_max_delay=10000, wait_fixed=500)
-    def hover_over_card(self, card):
-        ActionChains(self.driver).move_to_element(card).perform()
-        assert card.find_element_by_css_selector(self.CARD_CLOSE_BTN_CSS)
-
     def get_lifecycle_tooltip_table_data(self):
         table_data = []
 
@@ -177,10 +170,10 @@ class DashboardPage(Page):
         self.key_down_enter(self.find_query_search_input())
 
     def open_view_devices(self):
-        self.click_button('View in Devices', partial_class=True, should_scroll_into_view=False)
+        self.click_button('View in Devices', should_scroll_into_view=False)
 
     def open_view_users(self):
-        self.click_button('View in Users', partial_class=True, should_scroll_into_view=False)
+        self.click_button('View in Users', should_scroll_into_view=False)
 
     def open_new_card_wizard(self):
         """
@@ -293,8 +286,9 @@ class DashboardPage(Page):
         self.driver.find_element_by_css_selector(self.SEGMENTATION_ADD_FILTER_BUTTON_CSS).click()
 
     def is_add_chart_segment_filter_button_disabled(self):
-        return 'disabled' in self.driver.find_element_by_css_selector(
-            self.SEGMENTATION_ADD_FILTER_BUTTON_CSS).get_attribute('class')
+        return self.is_element_disabled(
+            self.driver.find_element_by_css_selector(self.SEGMENTATION_ADD_FILTER_BUTTON_CSS)
+        )
 
     def remove_chart_segment_filter(self, list_position=1):
         self.driver.find_element_by_css_selector(
@@ -325,8 +319,7 @@ class DashboardPage(Page):
         self.wait_for_card_spinner_to_end()
 
     def add_comparison_card_view(self, module, query):
-        self.click_button('+', partial_class=True,
-                          context=self.driver.find_element_by_css_selector(self.CHART_WIZARD_CSS))
+        self.click_button('+', context=self.driver.find_element_by_css_selector(self.CHART_WIZARD_CSS))
         views_list = self.get_views_list()
         self.select_chart_wizard_module(module, views_list[2])
         self.select_chart_view_name(query, views_list[2])
@@ -357,12 +350,12 @@ class DashboardPage(Page):
         self.click_card_save()
 
     def click_card_save(self):
-        self.click_button('Save')
+        self.get_enabled_button('Save').click()
         self.wait_for_element_absent_by_css(self.MODAL_OVERLAY_CSS, interval=1)
         self.wait_for_card_spinner_to_end()
 
     def is_card_save_button_disabled(self):
-        return 'disabled' in self.find_element_by_text('Save').get_attribute('class')
+        return self.is_save_button_disabled()
 
     def add_segmentation_card(self, module, field, title, chart_type='histogram', view_name='', partial_text=True,
                               include_empty: bool = True, value_filter: str = ''):
@@ -384,7 +377,7 @@ class DashboardPage(Page):
             self.wait_for_card_spinner_to_end()
         except NoSuchElementException:
             self.close_dropdown()
-            self.click_button('Cancel', partial_class=True)
+            self.click_button('Cancel')
             self.wait_for_element_absent_by_css(self.MODAL_OVERLAY_CSS)
             return False
         return True
@@ -409,25 +402,47 @@ class DashboardPage(Page):
         pie.find_element_by_css_selector('svg').click()
 
     def edit_card(self, card_title):
-        card = self.get_card(card_title)
-        ActionChains(self.driver).move_to_element(card).perform()
-        card.find_element_by_css_selector(self.CARD_EDIT_BTN_CSS).click()
+        panel = self.get_card(card_title)
+        self.open_card_menu(panel)
+        self.driver.find_element_by_id('edit_chart').click()
         self.wait_for_element_present_by_css(self.MODAL_OVERLAY_CSS)
         self.wait_for_card_spinner_to_end()
 
     def remove_card(self, card_title):
-        panel = self.wait_for_element_present_by_xpath(self.PANEL_BY_NAME_XPATH.format(panel_name=card_title))
-        self.scroll_into_view(panel, window=TAB_BODY)
-        ActionChains(self.driver).move_to_element(panel).perform()
-        panel.find_element_by_css_selector(self.CARD_CLOSE_BTN_CSS).click()
+        panel = self.get_card(card_title)
+        self.open_card_menu(panel)
+        self.driver.find_element_by_id('remove_chart').click()
         self.wait_for_element_present_by_css(self.MODAL_OVERLAY_CSS)
         self.click_button('Remove Chart')
         wait_until(lambda: self.is_missing_panel(card_title))
 
     def export_card(self, card_title):
-        card = self.get_card(card_title)
-        ActionChains(self.driver).move_to_element(card).perform()
-        card.find_element_by_css_selector(self.CARD_EXPORT_TO_CSV_BTN_CSS).click()
+        panel = self.get_card(card_title)
+        self.open_card_menu(panel)
+        self.driver.find_element_by_id('export_chart').click()
+
+    def refresh_card(self, card_title):
+        panel = self.get_card(card_title)
+        self.open_card_menu(panel)
+        self.driver.find_element_by_id('refresh_chart').click()
+
+    def open_card_menu(self, panel):
+        panel.find_element_by_css_selector(self.CARD_MENU_BTN_CSS).click()
+        time.sleep(0.1)  # wait for menu to open
+
+    def open_move_or_copy_card(self, card_title, copy=True):
+        panel = self.get_card(card_title)
+        self.open_card_menu(panel)
+        self.driver.find_element_by_id('move_or_copy_chart').click()
+        self.wait_for_element_present_by_css('.ant-modal')
+
+    def select_space_for_move_or_copy(self, text_option):
+        self.driver.find_element_by_id('select_space').click()
+        dropdown = self.driver.find_element_by_css_selector('.ant-select-dropdown')
+        self.find_element_by_text(text_option, element=dropdown).click()
+
+    def toggle_move_or_copy_checkbox(self):
+        return self.driver.find_element_by_id('create_panel_copy').click()
 
     def find_query_search_input(self):
         return self.driver.find_element_by_css_selector(self.QUERY_SEARCH_INPUT_CSS)
@@ -491,7 +506,7 @@ class DashboardPage(Page):
         self.click_pie_slice(self.SYMMETRIC_DIFFERENCE_FROM_FIRST_QUERY_SLICE_CSS, card_title)
 
     def click_pie_slice(self, slice_css, card_title):
-        card = self.wait_for_element_present_by_xpath(self.PANEL_BY_NAME_XPATH.format(panel_name=card_title))
+        card = self.get_card(card_title)
         time.sleep(1.2)
         self.get_pie_chart_from_card(card).find_element_by_css_selector(slice_css).click()
 
@@ -604,10 +619,10 @@ class DashboardPage(Page):
 
     def check_paginator_buttons_state(self, histogram, first, previous, next_r, last):
         paginator_current_buttons_state = [
-            self.has_class(self.get_first_page_button_in_paginator(histogram), 'disabled'),
-            self.has_class(self.get_previous_page_button_in_paginator(histogram), 'disabled'),
-            self.has_class(self.get_next_page_button_in_paginator(histogram), 'disabled'),
-            self.has_class(self.get_last_page_button_in_paginator(histogram), 'disabled')
+            self.is_element_disabled(self.get_first_page_button_in_paginator(histogram)),
+            self.is_element_disabled(self.get_previous_page_button_in_paginator(histogram)),
+            self.is_element_disabled(self.get_next_page_button_in_paginator(histogram)),
+            self.is_element_disabled(self.get_last_page_button_in_paginator(histogram)),
         ]
         paginator_state_buttons_to_validate = [first, previous, next_r, last]
         return paginator_current_buttons_state == paginator_state_buttons_to_validate
@@ -816,7 +831,7 @@ class DashboardPage(Page):
         self.wait_for_element_absent_by_css(self.CARD_SPINNER_CSS)
 
     def click_card_cancel(self):
-        self.click_button('Cancel', partial_class=True)
+        self.click_button('Cancel')
         self.wait_for_element_absent_by_css(self.MODAL_OVERLAY_CSS, interval=1)
 
     def toggle_chart_wizard_module(self, selector_element_css=CHART_MODULE_DROP_DOWN_CSS,

@@ -99,7 +99,7 @@ class AdaptersPage(EntitiesPage):
         self.wait_for_table_to_load()
 
     def click_save(self):
-        self.click_button(self.SAVE_AND_CONNECT_BUTTON)
+        self.get_enabled_button(self.SAVE_AND_CONNECT_BUTTON).click()
 
     def click_cancel(self):
         self.click_button(self.CANCEL_BUTTON, button_class='x-button link')
@@ -120,7 +120,7 @@ class AdaptersPage(EntitiesPage):
         self.get_all_table_rows_elements()[index].click()
 
     def click_advanced_settings(self):
-        self.find_element_by_text('Advanced Settings').click()
+        self.get_button('Advanced Settings').click()
         time.sleep(1.5)
 
     def click_advanced_configuration(self):
@@ -281,7 +281,7 @@ class AdaptersPage(EntitiesPage):
 
     def find_help_link(self):
         try:
-            return self.find_element_by_text('Help')
+            return self.get_button('Help')
         except NoSuchElementException:
             return None
 

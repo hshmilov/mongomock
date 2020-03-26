@@ -28,7 +28,7 @@ class TestCyberarkIntegration(TestBase):
         self.settings_page.fill_cyberark_port(CYBERARK_TEST_MOCK['port'])
         self.settings_page.fill_cyberark_application_id(app_id)
         self.settings_page.fill_cyberark_cert_key(CYBERARK_TEST_MOCK['certificate_key'].file_contents)
-        self.settings_page.click_save_button()
+        self.settings_page.click_save_global_settings()
         self.settings_page.wait_for_saved_successfully_toaster()
 
     def remove_cyberark_settings(self):
@@ -36,7 +36,7 @@ class TestCyberarkIntegration(TestBase):
         self.settings_page.click_global_settings()
         toggle = self.settings_page.find_checkbox_by_label(self.settings_page.USE_CYBERARK_VAULT)
         self.settings_page.click_toggle_button(toggle, make_yes=False, scroll_to_toggle=False)
-        self.settings_page.click_save_button()
+        self.settings_page.click_save_global_settings()
 
     def test_input_settings(self):
         with CyberarkVaultSimulatorService().contextmanager(take_ownership=True):
@@ -131,7 +131,7 @@ class TestCyberarkIntegration(TestBase):
             wait_until(lambda: self._check_fetch(should_succeed=False), check_return_value=False,
                        tolerated_exceptions_list=[AssertionError])
             # Check validation fail.
-            element = self.adapters_page.find_element_by_text(self.adapters_page.SAVE_AND_CONNECT_BUTTON)
+            element = self.adapters_page.get_button(self.adapters_page.SAVE_AND_CONNECT_BUTTON)
             assert self.adapters_page.is_element_disabled(element)
             self.adapters_page.click_cancel()
 
@@ -150,7 +150,7 @@ class TestCyberarkIntegration(TestBase):
             wait_until(lambda: self._check_fetch(should_succeed=False), check_return_value=False,
                        tolerated_exceptions_list=[AssertionError])
             # Check validation fail.
-            element = self.adapters_page.find_element_by_text(self.adapters_page.SAVE_AND_CONNECT_BUTTON)
+            element = self.adapters_page.get_button(self.adapters_page.SAVE_AND_CONNECT_BUTTON)
             assert self.adapters_page.is_element_disabled(element)
             self.adapters_page.click_cancel()
         self.wait_for_adapter_down(NEXPOSE_PLUGIN_NAME)

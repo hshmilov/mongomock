@@ -282,9 +282,10 @@ export default {
             }
         }
         .x-button {
-            margin-bottom: 8px;
+            margin-bottom: 6px;
             padding: 4px;
             margin-right: 16px;
+            height: 28px;
         }
         .x-dropdown {
           margin-right: 16px;

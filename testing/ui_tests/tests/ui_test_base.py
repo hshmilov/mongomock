@@ -255,6 +255,12 @@ class TestBase:
             }
         })
 
+        panels_ids = [str(id) for id in self.axonius_system.get_dashboard_db().find().distinct('_id')]
+        self.axonius_system.get_dashboard_spaces_db().update_one(
+            {'name': 'Axonius Dashboard'}, {'$set': {'panels_order': panels_ids}})
+        self.axonius_system.get_dashboard_spaces_db().update_one(
+            {'name': 'My Dashboard'}, {'$set': {'panels_order': []}})
+
         for name in self.axonius_system.db.client[AGGREGATOR_PLUGIN_NAME].list_collection_names():
             if not name.startswith('historical') or name.endswith('view'):
                 continue

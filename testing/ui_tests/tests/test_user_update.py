@@ -72,4 +72,4 @@ class TestUserUpdate(TestBase):
         self.settings_page.fill_password_field('')
         with pytest.raises(TimeoutException):
             self.settings_page.click_update_user()
-        assert not self.settings_page.is_update_button_enabled()
+        assert self.settings_page.is_update_button_disabled()

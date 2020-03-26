@@ -87,7 +87,7 @@ import _get from 'lodash/get';
 import _isEqual from 'lodash/isEqual';
 import _isEmpty from 'lodash/isEmpty';
 import _snakeCase from 'lodash/snakeCase';
-import XModal from '../../axons/popover/Modal.vue';
+import XModal from '../../axons/popover/Modal/index.vue';
 import XSelectSymbol from '../../neurons/inputs/SelectSymbol.vue';
 import XSearchInput from '../../neurons/inputs/SearchInput.vue';
 import XCheckboxList from '../../neurons/inputs/CheckboxList.vue';

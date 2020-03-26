@@ -9,7 +9,7 @@
 
 <script>
     import xButton from '../../axons/inputs/Button.vue'
-    import xModal from '../../axons/popover/Modal.vue'
+    import xModal from '../../axons/popover/Modal/index.vue'
 
     export default {
         name: 'x-access-modal',

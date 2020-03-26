@@ -43,6 +43,7 @@ class TestDashboard(TestBase):
     SEGMENTATION_PIE_CARD_QUERY = 'specific_data.data.hostname == '
     LONG_TEXT_FOR_CARD_TITLE = 'a very long chart name with more than 30 characters in the chart title'
     TEST_SUMMARY_TITLE_DEVICES = 'test summary devices'
+    TEST_MOVE_PANEL = 'test move panel'
     TEST_SUMMARY_TITLE_USERS = 'test summary users'
     TEST_INTERSECTION_TITLE = 'test intersection'
     TEST_SEGMENTATION_HISTOGRAM_TITLE = 'test segmentation histogram'
@@ -1010,3 +1011,34 @@ class TestDashboard(TestBase):
         assert self.dashboard_page.get_card_pagination_text(last_card) == '6 - 8 of 8'
         assert self.dashboard_page.get_count_histogram_lines_from_histogram(last_card) == 3
         assert all(quantity != '0' for quantity in self.dashboard_page.find_quantity_in_card_string(last_card))
+
+    def test_dashboard_chart_refresh(self):
+        self.dashboard_page.switch_to_page()
+        self.base_page.run_discovery()
+        self.dashboard_page.add_summary_card('Devices', 'Host Name', 'Count', self.TEST_SUMMARY_TITLE_DEVICES)
+        self.dashboard_page.wait_for_spinner_to_end()
+        self.dashboard_page.verify_card_config_reset_summary_chart(self.TEST_SUMMARY_TITLE_DEVICES)
+        summary_chart = self.dashboard_page.get_summary_card_text(self.TEST_SUMMARY_TITLE_DEVICES)
+        result_count = int(summary_chart.text)
+        self.devices_page.switch_to_page()
+        self.devices_page.delete_devices()
+        self.dashboard_page.switch_to_page()
+        summary_chart = self.dashboard_page.get_summary_card_text(self.TEST_SUMMARY_TITLE_DEVICES)
+        assert int(summary_chart.text) == result_count
+        self.dashboard_page.refresh_card(self.TEST_SUMMARY_TITLE_DEVICES)
+        assert self.dashboard_page.find_no_data_label()
+
+    def test_dashboard_chart_move(self):
+        card_title = self.TEST_MOVE_PANEL
+        self.dashboard_page.switch_to_page()
+        self.dashboard_page.add_summary_card('Devices', 'Host Name', 'Count', card_title)
+        self.dashboard_page.wait_for_spinner_to_end()
+        self.dashboard_page.open_move_or_copy_card(card_title)
+        self.dashboard_page.select_space_for_move_or_copy(DASHBOARD_SPACE_PERSONAL)
+        self.dashboard_page.toggle_move_or_copy_checkbox()
+        self.dashboard_page.click_button('OK')
+        wait_until(lambda: self.dashboard_page.is_missing_panel(card_title))
+        self.dashboard_page.find_space_header(2).click()
+        last_card = self.dashboard_page.get_last_card_created()
+        assert self.dashboard_page.get_title_from_card(last_card) == card_title.title()
+        self.dashboard_page.remove_card(card_title)

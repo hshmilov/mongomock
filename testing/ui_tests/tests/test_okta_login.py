@@ -24,7 +24,7 @@ class TestOktaLogin(TestBase):
         okta_login_details = OKTA_LOGIN_DETAILS.copy()
         okta_login_details['gui2_url'] += f':{self.port}'
         self.settings_page.fill_okta_login_details(**okta_login_details)
-        self.settings_page.click_save_button()
+        self.settings_page.click_save_gui_settings()
         self.login_page.logout()
         # To support running with local browser
         hosts_file_modifier.HostsFileModifier.add_url_if_not_exist('127.0.0.1',

@@ -169,7 +169,7 @@ class EnforcementsPage(EntitiesPage):
         self.wait_for_element_present_by_css(self.TRIGGER_CONTAINER_CSS)
 
     def find_new_enforcement_button(self):
-        return self.get_button(self.NEW_ENFORCEMENT_BUTTON)
+        return self.get_enabled_button(self.NEW_ENFORCEMENT_BUTTON)
 
     def fill_enforcement_name(self, name):
         self.fill_text_field_by_element_id(self.ENFORCEMENT_NAME_ID, name)
@@ -384,7 +384,7 @@ class EnforcementsPage(EntitiesPage):
         self.find_element_by_text(Action.create_notification.value).click()
         self.wait_for_action_config()
         self.fill_action_name(name)
-        self.click_button(self.SAVE_BUTTON)
+        self.get_enabled_button(self.SAVE_BUTTON).click()
         self.wait_for_element_present_by_text(name)
 
     def add_run_wmi_scan(self, *regkey, name='Run WMI Scan'):
@@ -562,13 +562,13 @@ class EnforcementsPage(EntitiesPage):
         self.click_button('Save & Exit')
 
     def click_run_button(self):
-        self.click_button(self.SAVE_AND_RUN_BUTTON_TEXT, partial_class=True)
+        self.click_button(self.SAVE_AND_RUN_BUTTON_TEXT)
 
     def wait_for_task_in_progress_toaster(self):
         self.wait_for_toaster_to_end(self.TASK_IN_PROGRESS)
 
     def click_tasks_button(self):
-        self.click_button('View Tasks', partial_class=True)
+        self.click_button('View Tasks')
 
     def select_all_enforcements(self):
         self.driver.find_element_by_css_selector(self.ENFORCEMENTS_CHECKBOX).click()
@@ -797,7 +797,7 @@ class EnforcementsPage(EntitiesPage):
             attach_csv_checkbox = self.driver.find_element_by_xpath(
                 self.DIV_BY_LABEL_TEMPLATE.format(label_text='Attach CSV with query results'))
             attach_csv_checkbox.find_element_by_class_name('x-checkbox').click()
-        self.click_button(self.SAVE_BUTTON)
+        self.get_enabled_button(self.SAVE_BUTTON).click()
         self.wait_for_element_present_by_text(name)
 
     def fill_send_csv_to_s3_config(self, name, s3_bucket,

@@ -229,7 +229,7 @@ class TestInstancesAfterNodeJoin(TestInstancesBase):
         # verify no checkbox on non-master instance
         self.instances_page.click_query_row_by_name('node_1')
         self.instances_page.verify_instance_indication_element_absent()
-        self.instances_page.find_element_by_text('Cancel').click()
+        self.instances_page.click_button('Cancel')
 
         # change name
         self.instances_page.change_instance_name('Master', 'Master2')

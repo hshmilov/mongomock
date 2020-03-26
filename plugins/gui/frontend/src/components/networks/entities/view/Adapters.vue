@@ -71,7 +71,7 @@ import xTabs from '../../../axons/tabs/Tabs.vue';
 import xTab from '../../../axons/tabs/Tab.vue';
 import xList from '../../../neurons/schema/List.vue';
 import xButton from '../../../axons/inputs/Button.vue';
-import xModal from '../../../axons/popover/Modal.vue';
+import xModal from '../../../axons/popover/Modal/index.vue';
 import xCustomFields from './CustomFields.vue';
 import xToast from '../../../axons/popover/Toast.vue';
 

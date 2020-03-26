@@ -1,122 +1,74 @@
 <template>
-    <transition name="modal" @after-enter="$emit('enter')" @after-leave="$emit('leave')">
-        <div class="x-modal">
-            <div :class="`modal-container w-${size}`">
-                <div class="modal-header" v-if="title">
-                    <div class="modal-header-title">{{ title }}</div>
-                    <x-button link @click="$emit('close')" v-if="dismissable">x</x-button>
-                </div>
-                <div class="modal-body">
-                    <slot name="body" @submit="$emit('confirm')">
-                        Are you sure?
-                    </slot>
-                </div>
-                <div class="modal-footer">
-                    <slot name="footer">
-                        <x-button link @click.prevent.stop="$emit('close')">{{dismissText}}</x-button>
-                        <x-button :disabled="disabled" @click.prevent.stop="onApprove" :id="approveId">{{approveText}}</x-button>
-                    </slot>
-                </div>
-            </div>
-            <div class="modal-overlay" @click.prevent.stop="$emit('close')" @keyup.esc="$emit('close')"></div>
-        </div>
-    </transition>
+  <AModal
+    :visible="active"
+    :title="title"
+    :closable="false"
+    :width="null"
+    :class="`w-${size}`"
+    :centered="true"
+    @cancel="handleDismiss"
+  >
+    <slot />
+    <template slot="footer">
+      <XButton
+        link
+        @click="handleDismiss"
+      >
+        {{ dismissText }}
+      </XButton>
+      <XButton
+        type="primary"
+        @click="handleApprove"
+      >
+        {{ approveText }}
+      </XButton>
+    </template>
+  </AModal>
 </template>
 
 <script>
-    import xButton from '../../axons/inputs/Button.vue'
+import XButton from '../inputs/Button.vue';
 
-    export default {
-        name: 'x-modal',
-        components: { xButton },
-        props: {
-            approveText: {default: 'OK'}, approveId: {}, dismissText: {default: 'Cancel'},
-            disabled: {default: false}, size: {default: 'xl'}, title: {}, dismissable: {default: false}
-        },
-        methods: {
-            onApprove() {
-                this.$emit('confirm')
-                return false
-            }
-        },
-        mounted() {
-            if (this.$el.querySelector('input')) {
-                this.$el.querySelector('input').focus()
-            }
-        }
-    }
+export default {
+  name: 'XModal',
+  components: {
+    XButton,
+  },
+  props: {
+    approveText: { default: 'OK', type: String },
+    dismissText: { default: 'Cancel', type: String },
+    size: { default: 'xl', type: String },
+    title: { default: '', type: String },
+    active: { default: false, type: Boolean },
+  },
+  data() {
+    return {
+    };
+  },
+  methods: {
+    handleApprove() {
+      this.$emit('approve');
+    },
+    handleDismiss() {
+      this.$emit('dismiss');
+    },
+  },
+};
 </script>
 
 <style lang="scss">
-    .x-modal {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        z-index: 1001;
-        display: grid;
-
-        .modal-container {
-            position: relative;
-            margin: auto;
-            padding: 24px;
-            background-color: $theme-white;
-            border-radius: 2px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, .33);
-            z-index: 1001;
-
-            .modal-header {
-                display: flex;
-                border-bottom: 1px solid $grey-2;
-                padding: 0 24px 12px;
-                margin: 0 -24px 24px -24px;
-
-                .modal-header-title {
-                    flex: 1 0 auto;
-                    font-weight: 500;
-                    font-size: 16px;
-                }
-            }
-
-            .modal-body {
-                padding: 0;
-                margin-bottom: 24px;
-
-                .form-group:last-of-type {
-                    margin-bottom: 0;
-                }
-            }
-
-            .modal-footer {
-                border: 0;
-                padding: 0;
-                text-align: right;
-            }
+    .ant-modal {
+        &.w-xl {
+          width: 770px;
         }
-
-        .modal-overlay {
-            position: fixed;
-            z-index: 1000;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, .5);
-            transition: opacity .3s ease;
+        .ant-modal-header {
+            border-bottom: unset;
         }
-    }
-
-    .modal-enter {
-        opacity: 0;
-    }
-
-    .modal-leave-active {
-        opacity: 0;
-    }
-
-    .modal-enter .modal-container,
-    .modal-leave-active .modal-container {
-        transform: scale(1.1);
+        .ant-modal-body {
+            padding: 0 24px;
+        }
+        .ant-modal-footer {
+            border-top: unset;
+        }
     }
 </style>

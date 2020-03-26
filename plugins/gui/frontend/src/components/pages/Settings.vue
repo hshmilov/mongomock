@@ -1,19 +1,19 @@
 <template>
-  <x-page
+  <XPage
     title="Settings"
     class="x-settings"
   >
-    <x-tabs
+    <XTabs
       ref="tabs"
     >
-      <x-tab
+      <XTab
         id="research-settings-tab"
         title="Lifecycle Settings"
         :selected="true"
       >
         <div class="tab-settings">
           <template v-if="schedulerSettings && schedulerSettings.schema">
-            <x-form
+            <XForm
               v-model="schedulerSettings.config"
               :schema="schedulerSettings.schema"
               :read-only="isReadOnly"
@@ -23,23 +23,23 @@
             />
 
             <div class="place-right">
-              <x-button
+              <XButton
                 id="research-settings-save"
                 :disabled="isResearchDisabled"
                 @click="saveSchedulerSettings"
-              >Save</x-button>
+              >Save</XButton>
             </div>
           </template>
         </div>
-      </x-tab>
-      <x-tab
+      </XTab>
+      <XTab
         id="global-settings-tab"
         ref="global"
         title="Global Settings"
       >
         <div class="tab-settings">
           <template v-if="coreSettings && coreSettings.schema">
-            <x-form
+            <XForm
               v-model="coreSettings.config"
               :schema="coreSettings.schema"
               :read-only="isReadOnly"
@@ -47,26 +47,26 @@
               @validate="updateCoreValidity"
             />
             <div class="footer">
-              <x-maintenance
+              <XMaintenance
                 v-if="$refs.global && $refs.global.isActive"
                 :read-only="isReadOnly"
               />
-              <x-button
+              <XButton
                 id="global-settings-save"
                 :disabled="!coreComplete || isReadOnly"
                 @click="saveGlobalSettings"
-              >Save</x-button>
+              >Save</XButton>
             </div>
           </template>
         </div>
-      </x-tab>
-      <x-tab
+      </XTab>
+      <XTab
         id="gui-settings-tab"
         title="GUI Settings"
       >
         <div class="tab-settings">
           <template v-if="guiSettings && guiSettings.schema">
-            <x-form
+            <XForm
               v-model="guiSettings.config"
               :schema="guiSettings.schema"
               :read-only="isReadOnly"
@@ -74,70 +74,69 @@
               @validate="updateGuiValidity"
             />
             <div class="place-right">
-              <x-button
+              <XButton
                 id="gui-settings-save"
                 :disabled="!guiComplete || isReadOnly"
                 @click="saveGuiSettings"
-              >Save</x-button>
+              >Save</XButton>
             </div>
           </template>
         </div>
-      </x-tab>
-      <x-tab
+      </XTab>
+      <XTab
         v-if="isAxonius"
         id="feature-flags-tab"
         title="Feature flags"
       >
-        <x-feature-flags
+        <XFeatureFlags
           v-if="featureFlags && featureFlags.schema"
           v-model="featureFlags.config"
           :schema="featureFlags.schema"
           class="tab-settings"
           @save="saveFeatureFlags"
         />
-      </x-tab>
-      <x-tab
+      </XTab>
+      <XTab
         v-if="isAdmin"
         id="user-settings-tab"
         title="Manage Users"
       >
-        <x-users-roles
+        <XUsersRoles
           :read-only="isReadOnly"
           @toast="message = $event"
         />
-      </x-tab>
-      <x-tab
+      </XTab>
+      <XTab
         id="about-settings-tab"
         title="About"
       >
         <div class="tab-settings">
-          <x-custom
+          <XCustom
             :data="systemInfo"
             :vertical="true"
           />
         </div>
-      </x-tab>
-    </x-tabs>
-    <x-toast
+      </XTab>
+    </XTabs>
+    <XToast
       v-if="message"
       v-model="message"
     />
-  </x-page>
+  </XPage>
 </template>
 
 <script>
 import { mapState, mapActions, mapMutations } from 'vuex';
-import moment from 'moment';
-import xPage from '../axons/layout/Page.vue';
-import xTabs from '../axons/tabs/Tabs.vue';
-import xTab from '../axons/tabs/Tab.vue';
-import xButton from '../axons/inputs/Button.vue';
-import xToast from '../axons/popover/Toast.vue';
-import xForm from '../neurons/schema/Form.vue';
-import xCustom from '../neurons/schema/Custom.vue';
-import xUsersRoles from '../networks/config/UsersRoles.vue';
-import xMaintenance from '../networks/config/Maintenance.vue';
-import xFeatureFlags from '../networks/config/FeatureFlags.vue';
+import XPage from '../axons/layout/Page.vue';
+import XTabs from '../axons/tabs/Tabs.vue';
+import XTab from '../axons/tabs/Tab.vue';
+import XButton from '../axons/inputs/Button.vue';
+import XToast from '../axons/popover/Toast.vue';
+import XForm from '../neurons/schema/Form.vue';
+import XCustom from '../neurons/schema/Custom.vue';
+import XUsersRoles from '../networks/config/UsersRoles.vue';
+import XMaintenance from '../networks/config/Maintenance.vue';
+import XFeatureFlags from '../networks/config/FeatureFlags.vue';
 
 import { SAVE_PLUGIN_CONFIG, LOAD_PLUGIN_CONFIG, CHANGE_PLUGIN_CONFIG } from '../../store/modules/settings';
 import { UPDATE_SYSTEM_CONFIG } from '../../store/mutations';
@@ -147,7 +146,7 @@ import { GET_USER } from '../../store/modules/auth';
 export default {
   name: 'XSettings',
   components: {
-    xPage, xTabs, xTab, xButton, xToast, xForm, xCustom, xUsersRoles, xMaintenance, xFeatureFlags,
+    XPage, XTabs, XTab, XButton, XToast, XForm, XCustom, XUsersRoles, XMaintenance, XFeatureFlags,
   },
   computed: {
     ...mapState({

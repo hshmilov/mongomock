@@ -61,7 +61,7 @@ import { mapActions } from 'vuex';
 import * as OktaAuth from '@okta/okta-auth-js';
 import XForm from '../../neurons/schema/Form.vue';
 import XButton from '../../axons/inputs/Button.vue';
-import XModal from '../../axons/popover/Modal.vue';
+import XModal from '../../axons/popover/Modal/index.vue';
 import userErrorMixin from '../../../mixins/user_error';
 
 import { LDAP_LOGIN } from '../../../store/modules/auth';
@@ -73,10 +73,6 @@ export default {
   },
   mixins: [userErrorMixin],
   props: {
-    loginOkta: {
-      type: Boolean,
-      default: false,
-    },
     settings: {
       type: Object,
       default: null,
@@ -134,11 +130,6 @@ export default {
       this.ldapConfig = this.settings.ldap;
       if (this.ldapConfig.default_domain) {
         this.ldapData.credentials.domain = this.ldapConfig.default_domain;
-      }
-    },
-    loginOkta() {
-      if (this.loginOkta) {
-        this.onOktaLogin();
       }
     },
   },

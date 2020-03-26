@@ -52,7 +52,7 @@
 <script>
     import primitiveMixin from '../../../../../mixins/primitive.js'
     import XString from './StringEdit.vue'
-    import xModal from '../../../../axons/popover/Modal.vue'
+    import xModal from '../../../../axons/popover/Modal/index.vue'
     import {parseVaultError} from '../../../../../constants/utils'
     import axios_client from '@api/axios.js'
 

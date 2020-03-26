@@ -62,7 +62,7 @@
   import xSearchInput from '../../../neurons/inputs/SearchInput.vue'
   import xTable from '../../../axons/tables/Table.vue'
   import xButton from '../../../axons/inputs/Button.vue'
-  import xModal from '../../../axons/popover/Modal.vue'
+  import xModal from '../../../axons/popover/Modal/index.vue'
   import xToast from '../../../axons/popover/Toast.vue'
 
   import { mapState, mapActions } from 'vuex'

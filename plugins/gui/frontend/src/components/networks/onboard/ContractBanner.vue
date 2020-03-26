@@ -20,11 +20,10 @@
 </template>
 
 <script>
-import moment from 'moment';
+import dayjs from 'dayjs';
 import { mapState, mapGetters } from 'vuex';
 import XBanner from '../../axons/popover/Banner.vue';
 import featureFlagsMixin from '../../../mixins/feature_flags';
-
 import { IS_EXPIRED } from '../../../store/getters';
 
 export default {
@@ -43,10 +42,10 @@ export default {
       isExpired: IS_EXPIRED,
     }),
     contractDaysRemaining() {
-      if (this.isContractDefined){
-        const expiry_date = moment(this.featureFlags.expiry_date);
-        return Math.ceil(moment.duration(expiry_date.diff(moment())).asDays());
-      };
+      if (this.isContractDefined) {
+        const expiry_date = dayjs(this.featureFlags.expiry_date);
+        return expiry_date.diff(dayjs(), 'days');
+      }
     },
     isContractDefined() {
       return this.featureFlags && this.featureFlags.expiry_date;

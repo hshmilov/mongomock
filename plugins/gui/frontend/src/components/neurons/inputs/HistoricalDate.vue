@@ -1,6 +1,6 @@
 <template>
   <div class="x-historical-date">
-    <x-date-edit
+    <XDateEdit
       ref="date"
       :value="value"
       :check-disabled="isDateUnavailable"
@@ -14,12 +14,12 @@
 
 <script>
 import { mapState } from 'vuex';
-import xDateEdit from '../schema/types/string/DateEdit.vue';
+import XDateEdit from '../schema/types/string/DateEdit.vue';
 
 export default {
   name: 'XHistoricalDate',
   components: {
-    xDateEdit,
+    XDateEdit,
   },
   props: {
     value: {

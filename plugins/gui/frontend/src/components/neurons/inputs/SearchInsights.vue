@@ -152,7 +152,7 @@ export default {
         .x-button {
             border-radius: 0 16px 16px 0;
             background-color: $theme-orange;
-
+            border-color: $theme-orange;
         }
     }
 </style>

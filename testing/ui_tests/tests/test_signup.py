@@ -126,9 +126,7 @@ class TestSignup(TestBase):
         assert not self.check_submit_button_disabled()
 
         self.signup_page.fill_text_field_by_element_id(self.signup_page.CONTACT_EMAIL, '')
-
-        # try to save the form
-        self.signup_page.save_form()
+        self.signup_page.blur_on_element(self.signup_page.CONTACT_EMAIL)
         assert self.signup_page.get_error_msg() == self.signup_page.CONTACT_EMAIL_ERROR_MSG
 
         self.signup_page.fill_text_field_by_element_id(self.signup_page.CONTACT_EMAIL, VALID_EMAIL)

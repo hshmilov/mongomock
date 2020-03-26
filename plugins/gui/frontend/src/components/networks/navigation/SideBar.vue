@@ -5,24 +5,12 @@
   >
     <div class="x-user">
       <div
-        v-if="medicalConfig"
-        class="x-user-profile medical"
-      >
-        <svg-icon
-          :name="logoSVG"
-          :height="logoSize"
-          :original="true"
-        />
-      </div>
-      <div
-        v-else
         class="x-user-profile"
       >
         <img :src="userDetails.pic">
         <h5>{{ userDetails.name }}</h5>
       </div>
       <div
-        v-if="!medicalConfig"
         class="x-user-actions"
       >
         <a
@@ -49,42 +37,7 @@
         </router-link>
       </div>
     </div>
-    <x-nav v-if="medicalConfig">
-      <x-nav-item
-        id="fleet"
-        v-bind="navigationProps('Fleet Viewer')"
-        icon="reports"
-        :exact="true"
-      />
-      <x-nav-item
-        id="pairing"
-        v-bind="navigationProps('Infuser Programing')"
-        icon="pairing"
-      />
-      <x-nested-nav
-        name="Infuser Manager"
-        icon="settings"
-        child-root="/infuser_manager"
-      >
-        <x-nav-item
-          id="infuser_settings"
-          v-bind="navigationProps('Infuser Settings')"
-        />
-        <x-nav-item
-          id="treatments_settings"
-          v-bind="navigationProps('Treatments Settings')"
-        />
-        <x-nav-item
-          id="drug_list_settings"
-          v-bind="navigationProps('Drug List Settings')"
-        />
-        <x-nav-item
-          id="preset_programs"
-          v-bind="navigationProps('Preset Programs')"
-        />
-      </x-nested-nav>
-    </x-nav>
-    <x-nav v-else-if="isFeatureFlagsLoaded">
+    <x-nav v-if="isFeatureFlagsLoaded">
       <x-nav-item
         v-bind="navigationProps('Dashboard', 'dashboard')"
         :exact="true"
@@ -131,9 +84,6 @@ export default {
       collapseSidebar(state) {
         return state.interaction.collapseSidebar;
       },
-      medicalConfig(state) {
-        return state.staticConfiguration.medicalConfig;
-      },
     }),
     isFeatureFlagsLoaded() {
       return this.featureFlags;
@@ -145,11 +95,6 @@ export default {
     logoSize: {
       get() {
         return this.collapseSidebar ? '47' : '114';
-      },
-    },
-    logoSVG: {
-      get() {
-        return this.collapseSidebar ? 'logo/avoset-mini' : 'logo/avoset';
       },
     },
   },
@@ -308,9 +253,6 @@ export default {
                 h5 {
                     opacity: 0;
                 }
-            }
-            .medical {
-                padding-top: 18px;
             }
         }
     }

@@ -28,7 +28,7 @@
 </template>
 
 <script>
-  import xModal from '../../axons/popover/Modal.vue'
+  import xModal from '../../axons/popover/Modal/index.vue'
   import xButton from '../../axons/inputs/Button.vue'
 
   export default {

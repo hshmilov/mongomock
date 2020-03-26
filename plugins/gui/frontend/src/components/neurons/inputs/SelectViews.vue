@@ -132,9 +132,10 @@
 <style lang="scss">
     .x-select-views {
       .queries {
-        overflow: auto;
         max-height: 200px;
         @include  y-scrollbar;
+        overflow-x: hidden;
+        overflow-y: auto;
       }
       .view {
         display: grid;

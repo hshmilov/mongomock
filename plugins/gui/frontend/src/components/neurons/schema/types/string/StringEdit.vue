@@ -69,7 +69,7 @@
 
 <script>
 import xSelect from '@axons/inputs/select/Select.vue';
-import { xTagSelect, xInstancesSelect, xClientConnectionSelect} from '@axons/inputs/dynamicSelects';
+import { xTagSelect, XInstancesSelect, xClientConnectionSelect} from '@axons/inputs/dynamicSelects';
 import xTimePicker from '@axons/inputs/TimePicker.vue';
 import { validateEmail } from '@constants/validations';
 import primitiveMixin from '../../../../../mixins/primitive';
@@ -78,7 +78,7 @@ import xDateEdit from './DateEdit.vue';
 export default {
   name: 'XStringEdit',
   components: {
-    xSelect, xDateEdit, xTagSelect, xInstancesSelect, xTimePicker, xClientConnectionSelect
+    xSelect, xDateEdit, xTagSelect, XInstancesSelect, xTimePicker, xClientConnectionSelect
   },
   mixins: [primitiveMixin],
   props: {

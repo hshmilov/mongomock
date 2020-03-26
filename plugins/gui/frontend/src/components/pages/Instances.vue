@@ -74,7 +74,7 @@ import XPage from '../axons/layout/Page.vue';
 import XTableWrapper from '../axons/tables/TableWrapper.vue';
 import XTable from '../axons/tables/Table.vue';
 import XButton from '../axons/inputs/Button.vue';
-import XModal from '../axons/popover/Modal.vue';
+import XModal from '../axons/popover/Modal/index.vue';
 import XForm from '../neurons/schema/Form.vue';
 
 import { REQUEST_API } from '../../store/actions';

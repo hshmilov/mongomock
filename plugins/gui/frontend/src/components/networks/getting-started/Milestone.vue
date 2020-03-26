@@ -160,9 +160,13 @@ export default {
             }
             .x-milestone_action {
                 width: 90px;
+                padding: 0;
             }
             .x-milestone_expand {
                 cursor: pointer;
+                i {
+                  padding: 15px 0;
+                }
             }
         }
 

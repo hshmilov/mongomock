@@ -129,7 +129,7 @@ class DevicesPage(EntitiesPage):
         self.wait_for_element_absent_by_xpath(message)
 
     def open_enforce_dialog(self):
-        self.click_button('Actions', partial_class=True, should_scroll_into_view=False)
+        self.click_button('Actions', should_scroll_into_view=False)
         self.click_actions_enforce_button()
 
     def enforce_action_on_query(self, query, action):
@@ -144,7 +144,7 @@ class DevicesPage(EntitiesPage):
         time.sleep(1.5)  # wait for run to fade away
 
     def open_tag_dialog(self):
-        self.click_button('Actions', partial_class=True, should_scroll_into_view=False)
+        self.click_button('Actions', should_scroll_into_view=False)
         self.click_actions_tag_button()
 
     def add_new_tags(self, tags, number=1):

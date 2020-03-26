@@ -1,6 +1,5 @@
 <template>
-
-  <v-menu
+  <VMenu
     ref="menu"
     v-model="timeModal"
     :close-on-content-click="false"
@@ -14,37 +13,40 @@
       <div class="time-picker-wrapper">
         <div class="time-picker-text">
           <label v-if="label">{{ label }}</label>
-          <v-text-field
-                  :value="formattedTime()"
-                  :error="timePickerError"
-                  :read-only="readOnly"
-                  @change="onInput"
-                  v-on="on"
+          <VTextField
+            :value="formattedTime"
+            :error="timePickerError"
+            :read-only="readOnly"
+            @change="onInput"
+            v-on="on"
           />
         </div>
         <span class="server-time">
-          <svg-icon
-                  name="symbol/info"
-                  :original="true"
-                  height="16"
+          <SvgIcon
+            name="symbol/info"
+            :original="true"
+            height="16"
           />
-            Timezone is UTC
+          Timezone is UTC
         </span>
       </div>
     </template>
-    <v-time-picker
+    <VTimePicker
       v-if="timeModal && !readOnly"
       v-model="timeValue"
       :ampm-in-title="true"
       :landscape="true"
       @click:minute="$refs.menu.save(value)"
     />
-  </v-menu>
+  </VMenu>
 </template>
 
 <script>
-import moment from 'moment';
-import primitiveMixin from '../../../mixins/primitive.js';
+import dayjs from 'dayjs';
+import customParseFormat from 'dayjs/plugin/customParseFormat';
+import primitiveMixin from '../../../mixins/primitive';
+
+dayjs.extend(customParseFormat);
 
 export default {
   name: 'XTimePicker',
@@ -73,6 +75,9 @@ export default {
     };
   },
   computed: {
+    formattedTime() {
+      return dayjs(this.value, 'HH:mm').format('h:mma');
+    },
     timePickerActive() {
       if (!this.$refs.time) return false;
       return this.$refs.time.showDialog;
@@ -93,11 +98,8 @@ export default {
     },
   },
   methods: {
-    formattedTime() {
-      return moment(this.value, 'HH:mm').format('h:mma');
-    },
     onInput(selectedTime) {
-      const time = moment(selectedTime, 'h:mma', true);
+      const time = dayjs(selectedTime, 'h:mma');
       if (!time.isValid()) {
         this.error = '\'Daily discovery time\' has an illegal value';
         this.valid = false;

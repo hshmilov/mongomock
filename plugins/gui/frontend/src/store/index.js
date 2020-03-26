@@ -105,7 +105,6 @@ export default new Vuex.Store({
       windowWidth: 0,
     },
     configuration: { fetching: false, data: null, error: '' },
-    staticConfiguration: { medicalConfig: ENV.medical },
     expired: { fetching: false, data: false, error: '' },
     toast: { message: '', timeout: 3000 },
     footer: { message: '' },

@@ -1,4 +1,7 @@
-import moment from 'moment'
+import dayjs from 'dayjs';
+import isoWeek from 'dayjs/plugin/isoWeek';
+
+dayjs.extend(isoWeek);
 
 export const formatDate = (dateString, schema) => {
   if (isNaN(Date.parse(dateString))) {
@@ -70,7 +73,7 @@ export const formatStringTemplate = (str, data = {}) => {
 
 const createWeekDayObject = (item) => ({
   name: item,
-  title: moment().isoWeekday(item + 1).format('dddd'),
+  title: dayjs().isoWeekday(item + 1).format('dddd'),
 });
 
 const createMonthDayObject = (item) => {

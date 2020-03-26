@@ -110,7 +110,7 @@ class TestDevicesTable(TestEntitiesTable):
             self.settings_page.wait_for_spinner_to_end()
             self.settings_page.set_single_adapter_checkbox()
             self.settings_page.set_table_multi_line_checkbox()
-            self.settings_page.click_save_button()
+            self.settings_page.click_save_gui_settings()
             self.settings_page.wait_for_toaster(self.settings_page.SAVED_SUCCESSFULLY_TOASTER)
             self.devices_page.switch_to_page()
             self.devices_page.wait_for_table_to_load()
@@ -124,7 +124,7 @@ class TestDevicesTable(TestEntitiesTable):
             self.settings_page.wait_for_spinner_to_end()
             self.settings_page.set_single_adapter_checkbox(make_yes=False)
             self.settings_page.set_table_multi_line_checkbox(make_yes=False)
-            self.settings_page.click_save_button()
+            self.settings_page.click_save_gui_settings()
 
     def test_devices_advanced_basic(self):
         self.settings_page.switch_to_page()

@@ -94,7 +94,7 @@ class Dashboard:
             spaces = [{
                 'uuid': str(space['_id']),
                 'name': space['name'],
-                'panels_order': space.get('panels_order'),
+                'panels_order': space.get('panels_order', []),
                 'type': space['type']
             } for space in self._dashboard_spaces_collection.find(filter_archived())]
 
@@ -249,6 +249,11 @@ class Dashboard:
 
         panel_id = ObjectId(panel_id)
         if request.method == 'GET':
+
+            if request.args.get('refresh', False):
+                generate_dashboard.clean_cache([panel_id])
+                generate_dashboard_historical.clean_cache([panel_id, WILDCARD_ARG, WILDCARD_ARG])
+
             if from_date and to_date:
                 generated_dashboard = generate_dashboard_historical(panel_id, from_date, to_date)
             else:
@@ -291,6 +296,35 @@ class Dashboard:
         else:
             generate_dashboard.clean_cache([panel_id])
             generate_dashboard_historical.clean_cache([panel_id, WILDCARD_ARG, WILDCARD_ARG])
+        return ''
+
+    @gui_add_rule_logged_in('dashboards/<space_id>/panels/<panel_id>/move', methods=['PUT'],
+                            required_permissions={Permission(PermissionType.Dashboard, ReadOnlyJustForGet)})
+    def move_dashboard_panel(self, space_id, panel_id):
+        """
+        :param panel_id: The mongo id of the panel to handle
+        :param space_id: The mongo id of the space where the panel should be removed
+        :return: ObjectId of the Panel to delete
+        """
+
+        destination_space_id = self.get_request_data_as_object().get('destinationSpace')
+
+        self._dashboard_spaces_collection.update_one({
+            '_id': ObjectId(space_id)
+        }, {
+            '$pull': {
+                'panels_order': str(panel_id)
+            }
+        })
+
+        self._dashboard_spaces_collection.update_one({
+            '_id': ObjectId(destination_space_id)
+        }, {
+            '$push': {
+                'panels_order': str(panel_id)
+            }
+        })
+
         return ''
 
     @historical_range()
@@ -410,7 +444,6 @@ class Dashboard:
                     yield {
                         'uuid': str(dashboard['_id']),
                         'name': dashboard['name'],
-                        'space': str(dashboard['space']),
                         'data': [],
                         'loading': True
                     }

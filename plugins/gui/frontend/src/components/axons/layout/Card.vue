@@ -1,94 +1,155 @@
 <template>
-  <div class="x-card">
+  <div :class="{'x-card': true, 'custom-card': draggable}">
     <div class="header">
       <div class="header__title">
-        <x-button
+        <XButton
           v-if="reversible"
           link
           class="back"
           @click="$emit('back')"
-        >&lt;</x-button>
-        <x-title
+        >&lt;</XButton>
+        <XTitle
           v-if="logo"
           :logo="logo"
-        >{{ title }} </x-title>
+        >{{ title }} </XTitle>
         <div
           v-else
           class="card-title"
           :title="title"
-        ><md-icon v-if="draggable"
-            md-src="src/assets/icons/action/drag.svg"></md-icon>{{ title }}</div>
+        >{{ title }}</div>
       </div>
       <div class="actions">
-        <x-button
-          v-if="exportable"
-          class="export"
-          title="Export to CSV"
-          link
-          @click="$emit('export')"
-        ><md-icon md-src="src/assets/icons/action/export.svg"></md-icon></x-button>
-        <x-button
-          v-if="editable"
-          class="edit"
-          title="Edit"
-          link
-          @click="$emit('edit')"
-        ><md-icon>edit</md-icon></x-button>
-        <x-button
-          v-if="removable"
-          class="remove"
-          title="Remove"
-          link
-          @click="$emit('remove')"
-        ><md-icon>clear</md-icon></x-button>
+        <span
+          v-if="isChartFilterable"
+          class="search_icon"
+          @click="$emit('toggleShowSearch')"
+        >
+          <VIcon
+            size="15"
+            class="cardSearch-expression-handle"
+          >$vuetify.icons.cardSearch</VIcon>
+        </span>
+        <ADropdown
+          v-if="draggable"
+          :trigger="['click']"
+          placement="bottomRight"
+        >
+          <span
+            class="ant-dropdown-link card_menu"
+            href="#"
+          >
+            <VIcon
+              size="15"
+              class="verticaldots-expression-handle"
+            >$vuetify.icons.verticaldots</VIcon>
+          </span>
+          <AMenu slot="overlay">
+            <AMenuItem
+              v-if="editable"
+              id="edit_chart"
+              key="0"
+              @click="$emit('edit')"
+            >
+              Edit Chart
+            </AMenuItem>
+            <AMenuItem
+              v-if="removable"
+              id="remove_chart"
+              key="1"
+              @click="$emit('remove')"
+            >
+              Remove Chart
+            </AMenuItem>
+            <AMenuItem
+              v-if="exportable"
+              id="export_chart"
+              key="2"
+              @click="$emit('export')"
+            >
+              Export to CSV
+            </AMenuItem>
+            <AMenuItem
+              id="move_or_copy_chart"
+              key="3"
+              @click="$emit('moveOrCopy')"
+            >
+              Move or Copy
+            </AMenuItem>
+            <AMenuItem
+              id="refresh_chart"
+              key="4"
+              @click="$emit('refresh')"
+            >
+              Refresh
+            </AMenuItem>
+          </AMenu>
+        </ADropdown>
       </div>
     </div>
     <div class="body">
       <slot />
     </div>
+    <div>
+      <span
+        v-if="draggable"
+        class="drag_handler"
+      >
+        <VIcon
+          size="15"
+          class="cardDraggable-expression-handle"
+        >$vuetify.icons.cardDraggable</VIcon>
+      </span></div>
   </div>
 </template>
 
 <script>
-  import xTitle from './Title.vue'
-  import xButton from '../inputs/Button.vue'
+import XTitle from './Title.vue';
+import XButton from '../inputs/Button.vue';
 
-  export default {
-    name: 'XCard',
-    components: {
-      xTitle, xButton
+export default {
+  name: 'XCard',
+  components: {
+    XTitle, XButton,
+  },
+  props: {
+    title: {
+      type: String,
+      default: '',
     },
-    props: {
-      title: {
-        type: String,
-        default: true
-      },
-      logo: {
-        type: String,
-        default: ''
-      },
-      editable: {
-        type: Boolean,
-        default: false
-      },
-      removable: {
-        type: Boolean,
-        default: false
-      },
-      exportable: {
-        type: Boolean,
-        default: false
-      },
-      reversible: {
-        type: Boolean,
-        default: false
-      },
-      draggable: {
-        type: Boolean,
-        default: false
-      }
-    }
-  }
+    logo: {
+      type: String,
+      default: '',
+    },
+    editable: {
+      type: Boolean,
+      default: false,
+    },
+    removable: {
+      type: Boolean,
+      default: false,
+    },
+    exportable: {
+      type: Boolean,
+      default: false,
+    },
+    reversible: {
+      type: Boolean,
+      default: false,
+    },
+    draggable: {
+      type: Boolean,
+      default: false,
+    },
+    showMenu: {
+      type: Boolean,
+      default: false,
+    },
+    isChartFilterable: {
+      type: Boolean,
+      default: false,
+    },
+  },
+};
 </script>
 
 <style lang="scss">
@@ -103,7 +164,6 @@
         &.card__item .header {
             border: 1px solid transparent;
             > .header__title .card-title {
-                display: flex;
 
                 .md-icon {
                   visibility: hidden;
@@ -114,11 +174,7 @@
                   margin: 0 12px 0 -4px;
                 }
             }
-            &:hover {
-              cursor: move;
-              border: 1px solid #DEDEDE;
-            }
-          }
+        }
 
         .header {
           display: flex;
@@ -157,33 +213,31 @@
                   white-space: nowrap;
                   overflow: hidden;
                   max-width: 100%;
+                  font-weight: normal;
               }
           }
-          .actions {
-            display: flex;
-            align-items: center;
-            .x-button {
-              height: 20px;
-              padding: 0;
 
-              &.export .md-icon{
-                height: 18px;
-                line-height: 17px
-              }
+        }
 
-              .md-icon {
-                font-size: 20px !important;
-                height: 20px;
-                line-height: 20px;
-              }
-            }
-          }
-
+        .actions .search_icon {
+          cursor: pointer;
+          margin-right: 11px;
         }
 
         > .body {
           padding: 12px;
           height: calc(100% - 72px);
         }
+
+        .drag_handler {
+          width: 35px;
+          margin: 0 auto;
+          display: block;
+          padding: 0 5px;
+          :hover {
+            cursor: move;
+          }
+        }
+
     }
 </style>

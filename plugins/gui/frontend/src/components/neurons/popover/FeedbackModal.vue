@@ -57,7 +57,7 @@
 
 <script>
   import xButton from '../../axons/inputs/Button.vue'
-  import xModal from '../../axons/popover/Modal.vue'
+  import xModal from '../../axons/popover/Modal/index.vue'
   import PulseLoader from 'vue-spinner/src/PulseLoader.vue'
 
   export default {

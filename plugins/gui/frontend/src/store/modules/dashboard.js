@@ -1,5 +1,5 @@
-import { RESET_DEVICES_MERGED_DATA_BY_ID } from '@store/modules/devices';
 import { REQUEST_API, downloadFile } from '../actions';
+import { RESET_DEVICES_MERGED_DATA_BY_ID } from '@store/modules/devices';
 
 export const FETCH_LIFECYCLE = 'FETCH_LIFECYCLE';
 export const UPDATE_LIFECYCLE = 'UPDATE_LIFECYCLE';
@@ -29,12 +29,16 @@ export const UPDATE_REMOVED_PANEL = 'UPDATE_REMOVED_PANEL';
 export const SAVE_REORDERED_PANELS = 'SAVE_REORDERED_PANELS';
 export const UPDATE_DASHBOARDS_ORDER = 'UPDATE_DASHBOARDS_ORDER';
 export const ADD_NEW_PANEL = 'ADD_NEW_PANEL';
+export const CHANGE_PANEL_SPACE = 'CHANGE_PANEL_SPACE';
 
 export const FETCH_DASHBOARD_FIRST_USE = 'FETCH_DASHBOARD_FIRST_USE';
 export const UPDATE_DASHBOARD_FIRST_USE = 'UPDATE_DASHBOARD_FIRST_USE';
 export const FETCH_CHART_SEGMENTS_CSV = 'FETCH_CHART_SEGMENTS_CSV';
 
 export const SET_CURRENT_SPACE = 'SET_CURRENT_SPACE';
+export const GET_PANEL_MAP = 'GET_PANEL_MAP';
+
+export const RESET_DASHBOARD_STATE = 'RESET_DASHBOARD_STATE';
 
 export const dashboard = {
   state: {
@@ -47,6 +51,8 @@ export const dashboard = {
     panels: { data: [], fetching: false, error: '' },
     currentSpace: '',
     firstUse: { data: null, fetching: false, error: '' },
+    moveOrCopyActive: false,
+    currentPanel: null,
   },
   mutations: {
     [UPDATE_LIFECYCLE](state, payload) {
@@ -92,6 +98,10 @@ export const dashboard = {
         state.panels.data = state.panels.data.filter((panel) => !currentPanels[panel.uuid]);
       } else {
         state.panels.data = payload.data.panels;
+      }
+      if (!state.currentSpace) {
+        const defaultSpace = state.spaces.data.find((space) => space.type === 'default');
+        state.currentSpace = defaultSpace.uuid;
       }
     },
     [UPDATE_DASHBOARD_PANELS](state, payload) {
@@ -145,6 +155,13 @@ export const dashboard = {
       };
       state.panels.data.push(newPanel);
     },
+    [CHANGE_PANEL_SPACE](state, payload) {
+      const srcSpace = state.spaces.data.find((s) => s.uuid === payload.sourceSpaceUuid);
+      srcSpace.panels_order = srcSpace.panels_order.filter((uuid) => uuid !== payload.panelUuid);
+
+      const dstSpace = state.spaces.data.find((s) => s.uuid === payload.destinationSpaceUuid);
+      dstSpace.panels_order.push(payload.panelUuid);
+    },
     [UPDATE_DASHBOARD_PANEL](state, payload) {
       const panel = state.panels.data.find((item) => item.uuid === payload.uuid);
       if (!panel) {
@@ -194,8 +211,10 @@ export const dashboard = {
     [UPDATE_REMOVED_SPACE](state, spaceId) {
       state.spaces.data = state.spaces.data.filter((item) => item.uuid !== spaceId);
     },
-    [UPDATE_REMOVED_PANEL](state, dashboardId) {
-      state.panels.data = state.panels.data.filter((item) => item.uuid !== dashboardId);
+    [UPDATE_REMOVED_PANEL](state, payload) {
+      const space = state.spaces.data.find((s) => s.uuid === payload.spaceId);
+      space.panels_order = space.panels_order.filter((uuid) => uuid !== payload.panelId);
+      state.panels.data = state.panels.data.filter((item) => item.uuid !== payload.panelId);
     },
     [UPDATE_DASHBOARD_FIRST_USE](state, payload) {
       state.firstUse.fetching = payload.fetching;
@@ -210,6 +229,16 @@ export const dashboard = {
     [UPDATE_DASHBOARDS_ORDER](state, payload) {
       const space = state.spaces.data.find((item) => item.uuid === payload.spaceId);
       space.panels_order = payload.panels_order;
+    },
+    moveOrCopyToggle(state, payload) {
+      state.currentPanel = payload.currentPanel;
+      state.moveOrCopyActive = payload.active;
+    },
+    [RESET_DASHBOARD_STATE](state) {
+      const defaultSpace = state.spaces.data.find((space) => space.type === 'default');
+      if (defaultSpace) {
+        state.currentSpace = defaultSpace.uuid;
+      }
     },
   },
   actions: {
@@ -259,21 +288,23 @@ export const dashboard = {
     },
     [FETCH_DASHBOARD_PANEL]({ dispatch, commit }, payload) {
       const {
-        spaceId, uuid, historical, skip, limit, search,
+        spaceId, uuid, historical, skip, limit, search, refresh,
       } = payload;
       let rule = `dashboards/${spaceId}/panels/${uuid}?skip=${skip}&limit=${limit}`;
+
+      if (!skip) {
+        commit(UPDATE_DASHBOARD_PANEL, {
+          uuid,
+          skip: 0,
+          historical,
+          data: {
+            data: [],
+          },
+          loading: true,
+        });
+      }
+
       if (historical) {
-        if (!skip) {
-          commit(UPDATE_DASHBOARD_PANEL, {
-            uuid,
-            skip: 0,
-            historical,
-            data: {
-              data: [],
-            },
-            loading: true,
-          });
-        }
         const encodedDate = encodeURIComponent(historical);
         rule = `${rule}&date_to=${encodedDate} 23:59:59&date_from=${encodedDate}`;
       }
@@ -281,6 +312,11 @@ export const dashboard = {
         const searchString = encodeURIComponent(search);
         rule = `${rule}&search=${searchString}`;
       }
+
+      if (refresh) {
+        rule = `${rule}&refresh=true`;
+      }
+
       return dispatch(REQUEST_API, {
         rule,
         type: UPDATE_DASHBOARD_PANEL,
@@ -314,6 +350,7 @@ export const dashboard = {
             name,
             type: 'custom',
             panels: [],
+            panels_order: [],
           });
         }
         return response.data;
@@ -393,7 +430,7 @@ export const dashboard = {
         data: payload,
       }).then((response) => {
         if (response.status === 200) {
-          commit(UPDATE_REMOVED_PANEL, payload.panelId);
+          commit(UPDATE_REMOVED_PANEL, payload);
           dispatch(FETCH_DASHBOARD_SPACES);
         }
       });
@@ -415,6 +452,39 @@ export const dashboard = {
       }).then((response) => {
         downloadFile('csv', response, name);
       });
+    },
+    async moveOrCopy({ dispatch, commit, state }, payload) {
+      if (payload.copy) {
+        dispatch(SAVE_DASHBOARD_PANEL, {
+          data: {
+            ...state.currentPanel,
+            name: `Copy - ${state.currentPanel.name}`,
+          },
+          space: payload.space,
+        });
+      } else {
+        // no need to move panel to the same space
+        if (state.currentSpace === payload.space) return;
+        const currentPanelUuid = state.currentPanel.uuid;
+        await dispatch(REQUEST_API, {
+          rule: `dashboards/${state.currentSpace}/panels/${state.currentPanel.uuid}/move`,
+          method: 'PUT',
+          data: { destinationSpace: payload.space },
+        });
+        await commit(CHANGE_PANEL_SPACE, {
+          panelUuid: currentPanelUuid,
+          sourceSpaceUuid: state.currentSpace,
+          destinationSpaceUuid: payload.space,
+        });
+      }
+    },
+  },
+  getters: {
+    [GET_PANEL_MAP]: (state) => {
+      return state.panels.data.reduce((map, panel) => {
+        map[panel.uuid] = panel;
+        return map;
+      },{});
     },
   },
 };

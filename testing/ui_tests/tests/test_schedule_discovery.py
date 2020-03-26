@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta
 from axonius.utils.wait import wait_until
 from services.adapters import stresstest_service
+from services.plugins.system_scheduler_service import DEAFULT_SYSTEM_RESEARCH_RATE_ATTRIB_NAME
 from ui_tests.tests.ui_test_base import TestBase
 from ui_tests.tests.ui_consts import STRESSTEST_ADAPTER_NAME
 
@@ -16,8 +17,7 @@ class TestDiscoverySchedule(TestBase):
     def set_discovery_time(minutes):
         current_utc = datetime.utcnow()
         timepicker_input = current_utc + timedelta(minutes=minutes)
-        timepicker_input = timepicker_input.time().strftime('%I:%M%p')
-        return timepicker_input
+        return timepicker_input.time().strftime('%I:%M%p').lower()
 
     def get_lifecycle_card_info(self) -> dict:
         """
@@ -99,6 +99,7 @@ class TestDiscoverySchedule(TestBase):
     def test_negative_discovery_schedule_interval(self):
         self.settings_page.switch_to_page()
         self.settings_page.set_discovery__to_interval_value(negative_flow=True)
+        self.settings_page.blur_on_element(DEAFULT_SYSTEM_RESEARCH_RATE_ATTRIB_NAME)
         assert self.settings_page.find_schedule_rate_error()
 
     def test_discovery_schedule_tooltips(self):

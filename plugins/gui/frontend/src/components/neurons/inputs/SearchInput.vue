@@ -93,6 +93,7 @@ export default {
             border: none;
             background: transparent;
             padding: 4px 4px 4px 42px;
+            line-height: 20px;
         }
 
         .input-icon {

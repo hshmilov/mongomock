@@ -62,7 +62,7 @@ import _get from 'lodash/get';
 import _isNull from 'lodash/isNull';
 import _isEmpty from 'lodash/isEmpty';
 
-import XModal from '@axons/popover/Modal.vue';
+import XModal from '@axons/popover/Modal/index.vue';
 
 import { SAVE_DATA_VIEW } from '@store/actions';
 import { SET_GETTING_STARTED_MILESTONE_COMPLETION } from '@store/modules/onboarding';

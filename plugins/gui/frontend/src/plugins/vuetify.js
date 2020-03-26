@@ -5,6 +5,9 @@ import Vuetify from 'vuetify';
 import 'vuetify/dist/vuetify.min.css';
 import EnforcementsCustomIcon from '../components/axons/icons/axoniusIcons/enforcements.vue';
 import DraggableCustomIcon from '../components/axons/icons/axoniusIcons/draggable.vue';
+import VerticaldotsCustomIcon from '../components/axons/icons/axoniusIcons/verticaldots.vue';
+import CardDraggable from '../components/axons/icons/axoniusIcons/cardDraggable.vue';
+import CardSearch from '../components/axons/icons/axoniusIcons/cardSearch.vue';
 
 import defaultTheme from '../assets/themes/default.json';
 
@@ -19,6 +22,15 @@ const axoniusIcons = {
   },
   draggable: {
     component: DraggableCustomIcon,
+  },
+  verticaldots: {
+    component: VerticaldotsCustomIcon,
+  },
+  cardDraggable: {
+    component: CardDraggable,
+  },
+  cardSearch: {
+    component: CardSearch,
   },
 };
 

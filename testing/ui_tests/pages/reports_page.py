@@ -38,7 +38,6 @@ class ReportsPage(EntitiesPage):
     QUERY_ADD_CLASS = '.query-add'
     QUERY_REMOVE_CLASS = '.query-remove'
     ADD_SCHEDULING_CHECKBOX = 'Email Configuration'
-    SAVE_BUTTON_ID = 'report_save'
     INCLUDE_QUERIES_CHECKBOX = 'Include Saved Queries data'
     INCLUDE_DASHBOARD_CHECKBOX = 'Include dashboard charts'
     EMAIL_BOX_CSS = 'input.md-input__inner.md-chips-input__inner'
@@ -106,7 +105,7 @@ class ReportsPage(EntitiesPage):
         self.click_row_checkbox(index)
 
     def find_new_report_button(self):
-        return self.get_button(self.NEW_REPORT_BUTTON)
+        return self.get_enabled_button(self.NEW_REPORT_BUTTON)
 
     def find_remove_reports_button(self):
         return self.get_button(self.REMOVE_REPORTS_BUTTON, button_class='x-button link')
@@ -115,7 +114,7 @@ class ReportsPage(EntitiesPage):
         return self.count_entities()
 
     def is_disabled_new_report_button(self):
-        return self.is_element_disabled(self.find_element_by_text(self.NEW_REPORT_BUTTON))
+        return self.is_element_disabled(self.get_button(self.NEW_REPORT_BUTTON))
 
     def get_to_new_report_page(self):
         self.switch_to_page()
@@ -172,7 +171,7 @@ class ReportsPage(EntitiesPage):
         return [element.text for element in elements]
 
     def find_send_email_button(self):
-        return self.get_button(self.SEND_EMAIL_BUTTON_TEXT, partial_class=True)
+        return self.get_button(self.SEND_EMAIL_BUTTON_TEXT)
 
     def is_send_email_button_exists(self):
         try:
@@ -182,7 +181,7 @@ class ReportsPage(EntitiesPage):
             return False
 
     def click_send_email(self):
-        self.click_button(self.SEND_EMAIL_BUTTON_TEXT, partial_class=True)
+        self.click_button(self.SEND_EMAIL_BUTTON_TEXT)
 
     def assert_screen_is_restricted(self):
         self.switch_to_page_allowing_failure()
@@ -251,9 +250,6 @@ class ReportsPage(EntitiesPage):
         self.refresh()
         return self.driver.find_element_by_xpath(self.REPORT_GENERATED_XPATH.format(report_name=report_name)).text
 
-    def get_save_button(self):
-        return self.driver.find_element_by_id(self.SAVE_BUTTON_ID)
-
     def click_save(self):
         self.click_button(self.SAVE_BUTTON)
 
@@ -308,9 +304,6 @@ class ReportsPage(EntitiesPage):
 
     def find_email_sent_toaster(self):
         return self.wait_for_toaster('Email sent successfully')
-
-    def is_save_button_disabled(self):
-        return self.is_element_disabled(self.get_save_button())
 
     def is_report_download_shown(self):
         try:
@@ -377,18 +370,22 @@ class ReportsPage(EntitiesPage):
         self.wait_for_toaster_to_end(self.REPORT_IS_SAVED_TOASTER)
 
     def is_dashboard_checkbox_disabled(self):
-        return self.is_element_disabled(self.find_element_parent_by_text(self.INCLUDE_DASHBOARD_CHECKBOX))
+        return self.is_element_has_disabled_class(self.find_element_parent_by_text(self.INCLUDE_DASHBOARD_CHECKBOX))
 
     def is_include_saved_queries_checkbox_disabled(self):
-        return self.is_element_disabled(self.find_element_parent_by_text(self.INCLUDE_QUERIES_CHECKBOX))
+        return self.is_element_has_disabled_class(self.find_element_parent_by_text(self.INCLUDE_QUERIES_CHECKBOX))
 
     def is_saved_queries_disabled(self):
-        if not self.is_element_disabled(self.driver.find_element_by_css_selector(self.SELECT_VIEW_ENTITY_ELEMENT_CSS)):
+        if not self.is_element_has_disabled_class(
+                self.driver.find_element_by_css_selector(self.SELECT_VIEW_ENTITY_ELEMENT_CSS)
+        ):
             return False
-        return self.is_element_disabled(self.driver.find_element_by_css_selector(self.SELECT_VIEW_NAME_ELEMENT_CSS))
+        return self.is_element_has_disabled_class(
+            self.driver.find_element_by_css_selector(self.SELECT_VIEW_NAME_ELEMENT_CSS)
+        )
 
     def is_email_config_disabled(self):
-        return self.is_element_disabled(self.find_element_preceding_by_text(self.ADD_SCHEDULING_CHECKBOX))
+        return self.is_element_has_disabled_class(self.find_element_preceding_by_text(self.ADD_SCHEDULING_CHECKBOX))
 
     def is_email_subject_disabled(self):
         return not self.driver.find_element_by_id(self.EMAIL_SUBJECT_ID).is_enabled()

@@ -13,20 +13,20 @@
         @click="selectTab(tab.id)"
         @dblclick="renameTab(tab)"
       >
-        <x-title
+        <XTitle
           v-if="tab.logo"
           :logo="tab.logo"
-        >{{ tab.title }}</x-title>
+        >{{ tab.title }}</XTitle>
         <div
           v-else
           class="text"
           :title="tab.title"
         >{{ tab.title }}</div>
-        <x-button
+        <XButton
           v-if="tab.removable"
           link
           @click.stop="removeTab(tab)"
-        >x</x-button>
+        >x</XButton>
       </li>
       <li
         v-if="extendable"
@@ -37,7 +37,7 @@
     <div class="body">
       <slot />
     </div>
-    <x-modal
+    <XModal
       v-if="tabToRename.id"
       size="md"
       :disabled="disableConfirmRename"
@@ -53,8 +53,8 @@
           @keydown.enter="confirmRenameTab"
         >
       </div>
-    </x-modal>
-    <x-modal
+    </XModal>
+    <XModal
       v-if="tabToRemove"
       size="lg"
       :approve-text="removeText"
@@ -65,107 +65,107 @@
         <slot name="remove_confirm" />
         <div>Do you want to continue?</div>
       </div>
-    </x-modal>
+    </XModal>
   </div>
 </template>
 
 <script>
-import xTitle from '../layout/Title.vue'
-import xButton from '../inputs/Button.vue'
-import xModal from '../popover/Modal.vue'
+import XTitle from '../layout/Title.vue';
+import XButton from '../inputs/Button.vue';
+import XModal from '../popover/Modal/index.vue';
 
 export default {
   name: 'XTabs',
   components: {
-    xTitle,
-    xButton,
-    xModal
+    XTitle,
+    XButton,
+    XModal,
   },
   props: {
     vertical: {
       type: Boolean,
-      default: false
+      default: false,
     },
     extendable: {
       type: Boolean,
-      default: false
+      default: false,
     },
     removeText: {
       type: String,
-      default: 'Remove'
-    }
+      default: 'Remove',
+    },
   },
   data() {
     return {
       tabs: [],
       tabToRename: { id: '', name: '' },
-      tabToRemove: null
-    }
+      tabToRemove: null,
+    };
   },
   computed: {
     validTabs() {
-      return this.tabs.filter(tab => tab.id !== undefined)
+      return this.tabs.filter((tab) => tab.id !== undefined);
     },
     disableConfirmRename() {
-      return Boolean(!this.tabToRename.name)
-    }
+      return Boolean(!this.tabToRename.name);
+    },
   },
   created() {
-    this.tabs = this.$children
+    this.tabs = this.$children;
   },
   mounted() {
     if (this.$route.hash) {
-      this.selectTab(this.$route.hash.slice(1))
+      this.selectTab(this.$route.hash.slice(1));
     }
   },
   methods: {
     selectTab(selectedId) {
-      let found = false
-      this.tabs.forEach(tab => {
-        tab.isActive = tab.id === selectedId
-        if (tab.isActive) found = true
-      })
+      let found = false;
+      this.tabs.forEach((tab) => {
+        tab.isActive = tab.id === selectedId;
+        if (tab.isActive) found = true;
+      });
       if (!found) {
-        this.tabs[0].isActive = true
+        this.tabs[0].isActive = true;
       }
-      this.$emit('click', selectedId)
+      this.$emit('click', selectedId);
     },
     renameTab(tab) {
-      if (!tab.editable) return
+      if (!tab.editable) return;
       this.tabToRename = {
         id: tab.id,
-        name: tab.title
-      }
+        name: tab.title,
+      };
     },
     renameTabById(tabId) {
-      this.renameTab(this.validTabs.find(tab => tab.id === tabId))
+      this.renameTab(this.validTabs.find((tab) => tab.id === tabId));
     },
     confirmRenameTab() {
-      if (!this.tabToRename.name) return
+      if (!this.tabToRename.name) return;
       this.$emit('rename', {
         id: this.tabToRename.id,
-        name: this.tabToRename.name
-      })
-      this.cancelRenameTab()
+        name: this.tabToRename.name,
+      });
+      this.cancelRenameTab();
     },
     cancelRenameTab() {
-      this.tabToRename = { id: '', name: '' }
+      this.tabToRename = { id: '', name: '' };
     },
     removeTab(tab) {
-      this.tabToRemove = tab
+      this.tabToRemove = tab;
     },
     confirmRemoveTab() {
-      this.$emit('remove', this.tabToRemove.id)
+      this.$emit('remove', this.tabToRemove.id);
       if (this.tabToRemove.isActive && this.tabs.length) {
-        this.selectTab(this.tabs[0].id)
+        this.selectTab(this.tabs[0].id);
       }
-      this.cancelRemoveTab()
+      this.cancelRemoveTab();
     },
     cancelRemoveTab() {
-      this.tabToRemove = null
-    }
-  }
-}
+      this.tabToRemove = null;
+    },
+  },
+};
 </script>
 
 
@@ -203,6 +203,7 @@ export default {
         right: 0;
         z-index: 1000;
         cursor: pointer;
+        height: auto;
       }
       &:hover {
         .x-button {

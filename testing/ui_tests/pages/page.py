@@ -127,7 +127,10 @@ class Page:
     ACTIONS_BUTTON = 'Actions'
     CONFIRM_BUTTON = 'Confirm'
     CHART_QUERY_FIELD_DEFAULT = 'FIELD...'
-    DISABLED_BUTTON_XPATH = './/button[@class=\'x-button disabled\' and .//text()=\'{button_text}\']'
+    DISABLED_BUTTON_XPATH = './/button[contains(@class, \'x-button\') and @disabled' \
+                            ' and child::span[text()=\'{button_text}\']]'
+    ENABLED_BUTTON_XPATH = './/button[contains(@class, \'x-button\') and not(@disabled) ' \
+                           'and .//text()[normalize-space()=\'{button_text}\']]'
     VERTICAL_TABS_CSS = '.x-tabs.vertical .header .header-tab'
     NAMED_TAB_XPATH = '//div[@class=\'x-tabs\']/ul/li[contains(@class, "header-tab")]//div[text()=\'{tab_title}\']'
     TABLE_CONTAINER_CSS = '.x-table'
@@ -305,28 +308,19 @@ class Page:
     def send_keys(cls, element, val):
         element.send_keys(val)
 
+    # ['x-button', 'disabled'] to 'contains(@class, x-button) and contains(@class, disabled)'
     @staticmethod
-    def get_button_xpath(text, button_type=BUTTON_DEFAULT_TYPE, button_class=BUTTON_DEFAULT_CLASS, partial_class=False):
-        button_xpath_template = './/{}[@class=\'{}\' and .//text()[normalize-space()=\'{}\']]'
-        if partial_class:
-            button_xpath_template = './/{}[contains(@class, \'{}\') and .//text()[normalize-space()=\'{}\']]'
-        xpath = button_xpath_template.format(button_type, button_class, text)
-        return xpath
+    def class_list_to_xpath_string(classes):
+        return ' and '.join(['contains(@class, \'{}\')'.format(name) for name in classes.split(' ')])
 
-    def get_button(self, text, button_type=BUTTON_DEFAULT_TYPE, button_class=BUTTON_DEFAULT_CLASS, partial_class=False,
-                   context=None):
+    def get_button_xpath(self, text, button_type, button_class):
+        class_xpath = self.class_list_to_xpath_string(button_class)
+        return f'.//{button_type}[{class_xpath} and .//text()[normalize-space()=\'{text}\']]'
+
+    def get_button(self, text, button_type=BUTTON_DEFAULT_TYPE, button_class=BUTTON_DEFAULT_CLASS, context=None):
         base = context if context is not None else self.driver
-        xpath = self.get_button_xpath(text, button_type=button_type, button_class=button_class,
-                                      partial_class=partial_class)
+        xpath = self.get_button_xpath(text, button_type=button_type, button_class=button_class)
         return base.find_element_by_xpath(xpath)
-
-    # this is a special case where the usual get_button doesn't work, name will be changed later
-    def get_special_button(self, text):
-        elems = self.driver.find_elements_by_css_selector('button.x-button')
-        for elem in elems:
-            if elem.text == text:
-                return elem
-        return None
 
     def click_button_by_id(self,
                            button_id,
@@ -361,16 +355,17 @@ class Page:
                      text,
                      button_type=BUTTON_DEFAULT_TYPE,
                      button_class=BUTTON_DEFAULT_CLASS,
-                     partial_class=False,
                      context=None,
                      **kwargs):
         button = self.get_button(text,
                                  button_type=button_type,
                                  button_class=button_class,
-                                 partial_class=partial_class,
                                  context=context)
 
         return self.handle_button(button, **kwargs)
+
+    def get_enabled_button(self, text):
+        return self.driver.find_element_by_xpath(self.ENABLED_BUTTON_XPATH.format(button_text=text))
 
     @retry(stop_max_attempt_number=5, wait_fixed=500)
     def scroll_into_view(self, element, window=None):
@@ -490,14 +485,17 @@ class Page:
 
     def find_element_by_text(self, text, element=None):
         # Selenium using XPATH 1.0 which doesn't support escaping of string literals
-        if not element:
+        xpath = ''
+        if element:
+            xpath = '.'
+        else:
             element = self.driver
+
         try:
             if '"' in text and '\'' in text:
                 raise ValueError(f'{text} contains both \' and "')
-            if '"' in text:
-                return element.find_element_by_xpath(f'//*[contains(text(), \'{text}\')]')
-            return element.find_element_by_xpath(f'//*[contains(text(), "{text}")]')
+            text = (f'\'{text}\'' if '"' in text else f'"{text}"')
+            return element.find_element_by_xpath(f'{xpath}//*[contains(text(), {text})]')
         except ElementNotVisibleException:
             logger.info(f'Failed to find element with text {text}')
 
@@ -795,9 +793,19 @@ class Page:
         saved_queries = self.driver.find_elements_by_css_selector('button[title="Saved Queries"] > span')
         return any(elem.is_displayed() for elem in saved_queries)
 
+    def get_save_button(self, context=None):
+        return self.get_button('Save', context=context)
+
+    @staticmethod
+    def is_element_has_disabled_class(element):
+        return 'disabled' in element.get_attribute('class')
+
     @staticmethod
     def is_element_disabled(element):
-        return 'disabled' in element.get_attribute('class')
+        return element.get_attribute('disabled') == 'true'
+
+    def is_save_button_disabled(self):
+        return self.is_element_disabled(self.get_save_button())
 
     def is_element_disabled_by_id(self, single_id):
         element = self.driver.find_element_by_id(single_id)
@@ -827,7 +835,7 @@ class Page:
             pass
 
     def click_remove_sign(self, context=None):
-        self.click_button('X', partial_class=True, should_scroll_into_view=False, context=context)
+        self.click_button('X', should_scroll_into_view=False, context=context)
 
     def clear_existing_date(self, context=None):
         self.click_remove_sign(context=context)
@@ -835,7 +843,7 @@ class Page:
         time.sleep(0.5)
 
     def find_existing_date(self):
-        return self.wait_for_element_present_by_css('.md-datepicker .md-button.md-clear')
+        return self.wait_for_element_present_by_css('.md-datepicker .md-clear')
 
     def find_checkbox_by_label(self, text):
         return self.driver.find_element_by_xpath(self.CHECKBOX_XPATH_TEMPLATE.format(label_text=text))
@@ -957,7 +965,7 @@ class Page:
         self.wait_for_element_absent_by_css(self.SAFEGUARD_OVERLAY_CSS)
 
     def remove_selected_with_safeguard(self, confirmation_label=None, confirmation_label_multi=None):
-        self.click_button(self.REMOVE_BUTTON, partial_class=True)
+        self.click_button(self.REMOVE_BUTTON)
         # Opening animation
         time.sleep(0.5)
         if confirmation_label:

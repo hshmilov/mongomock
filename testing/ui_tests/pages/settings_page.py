@@ -132,6 +132,7 @@ class SettingsPage(Page):
 
     CONNECTION_LABEL_REQUIRED_DIV_CSS = '#requireConnectionLabel .checkbox-container'
     CONNECTION_LABEL_REQUIRED_INPUT_CSS = '#requireConnectionLabel .checkbox-container input'
+    ACTIVE_TAB = 'div.x-tab.active'
 
     @property
     def url(self):
@@ -192,14 +193,14 @@ class SettingsPage(Page):
         self.fill_text_field_by_element_id('password', new_password)
 
     def click_create_user(self):
-        self.get_special_button(self.CREATE_USER_BUTTON).click()
+        self.click_button(self.CREATE_USER_BUTTON)
 
     def click_update_user(self):
-        self.get_special_button(self.UPDATE_USER_BUTTON).click()
+        self.click_button(self.UPDATE_USER_BUTTON)
         self.wait_for_element_absent_by_css(self.MODAL_OVERLAY_CSS)
 
     def find_disabled_create_user(self):
-        return self.is_element_disabled(self.get_special_button(self.CREATE_USER_BUTTON))
+        return self.is_element_disabled(self.get_button(self.CREATE_USER_BUTTON))
 
     def find_password_input(self):
         return self.driver.find_element_by_id('password')
@@ -250,19 +251,12 @@ class SettingsPage(Page):
     def click_about(self):
         self.driver.find_element_by_css_selector(self.ABOUT_CSS).click()
 
-    def get_save_button(self):
-        return self.get_special_button('Save')
-
-    def is_save_button_enabled(self):
-        button = self.get_save_button()
-        return button.get_attribute('class') != 'x-button disabled'
-
-    def is_update_button_enabled(self):
-        button = self.get_special_button(self.UPDATE_USER_BUTTON)
-        return button.get_attribute('class') != 'x-button disabled'
+    def is_update_button_disabled(self):
+        return self.is_element_disabled(self.get_button(self.UPDATE_USER_BUTTON))
 
     def click_save_button(self):
-        self.get_save_button().click()
+        active_tab = self.driver.find_element_by_css_selector(self.ACTIVE_TAB)
+        self.get_save_button(active_tab).click()
 
     def click_save_global_settings(self):
         self.click_generic_save_button('global-settings-save')
@@ -324,7 +318,7 @@ class SettingsPage(Page):
         return cert, private
 
     def toggle_advanced_settings(self):
-        self.click_button('ADVANCED SETTINGS', partial_class=True, scroll_into_view_container=self.TABS_BODY_CSS)
+        self.click_button('ADVANCED SETTINGS', scroll_into_view_container=self.TABS_BODY_CSS)
         time.sleep(0.5)
         self.scroll_into_view(self.driver.find_element_by_css_selector('.x-maintenance .x-content'), self.TABS_BODY_CSS)
 
@@ -912,7 +906,7 @@ class SettingsPage(Page):
         if negative_flow:
             # click to get error message display
             self.click_save_button()
-            assert not self.is_save_button_enabled()
+            assert self.is_save_button_disabled()
         else:
             self.save_and_wait_for_toaster()
 

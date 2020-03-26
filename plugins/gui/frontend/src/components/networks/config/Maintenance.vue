@@ -1,176 +1,248 @@
 <template>
-    <md-card class="x-maintenance">
-        <md-card-expand>
-            <md-card-expand-trigger>
-                <md-button class="x-button link" :disabled="readOnly" id="maintenance_settings">ADVANCED SETTINGS</md-button>
-            </md-card-expand-trigger>
-            <md-card-expand-content>
-                <md-card-content>
-                    <x-checkbox v-model="allowProvision" label="Remote Support" ref="provision"/>
-                    <div v-if="allowProvision" class="x-content">
-                        <div class="x-section">
-                            <x-checkbox v-model="allowAnalytics" label="Anonymized Analytics" ref="analytics"/>
-                            <div v-if="allowAnalytics">
-                                <div class="message-title">Warning:</div>
-                                <div class="content">{{ disableWarnings['analytics'] }}</div>
-                            </div>
-                            <div v-else class="message-title">Turning on this feature allows Axonius to proactively detect
-                                issues and notify about errors
-                            </div>
-                        </div>
-                        <div class="x-section">
-                            <x-checkbox v-model="allowTroubleshooting" label="Remote Access" ref="troubleshooting"/>
-                            <div v-if="allowTroubleshooting">
-                                <div class="message-title">Warning:</div>
-                                <div class="content">{{ disableWarnings['troubleshooting'] }}</div>
-                            </div>
-                            <div v-else class="message-title">Turning on this feature allows Axonius to keep the system updated
-                                and speed-up issues resolution time
-                            </div>
-                        </div>
-                    </div>
-                    <div v-else class="x-content">
-                        <div class="x-section message-title">Turning on this feature allows Axonius to keep the system updated,
-                            speed-up issues resolution time and proactively detect issues and notify about errors
-                        </div>
-                        <div class="x-section">
-                            <div class="message-title">OR</div>
-                            <div class="config">
-                                <template v-if="accessEndTime">
-                                    <div class="warning mr-12">Temporary Remote Support will end at: {{ accessEndTime }}</div>
-                                    <x-button @click="stopTempAccess">Stop</x-button>
-                                </template>
-                                <template v-else>
-                                    <div class="mr-8">Give temporary Remote Support for</div>
-                                    <input type="number" v-model="accessDuration" @keypress="validateNumber"
-                                           class="mr-8" id="remote-access-timer"/>
-                                    <div class="mr-12">Hours</div>
-                                    <x-button :disabled="!enableStartAccess" @click="startTempAccess">Start</x-button>
-                                </template>
-                            </div>
-                        </div>
-                    </div>
-                </md-card-content>
-            </md-card-expand-content>
-        </md-card-expand>
-        <x-modal v-if="disableToConfirm" @confirm="approveDisable" @close="cancelDisable" approve-text="Confirm">
-            <div slot="body">
-                <div>
-                    <div class="message-title">Warning:</div>
-                    <div class="content">{{ disableWarnings[disableToConfirm] }}</div>
+  <MdCard class="x-maintenance">
+    <MdCardExpand>
+      <MdCardExpandTrigger>
+        <XButton
+          id="maintenance_settings"
+          class="x-button"
+          link
+          :disabled="readOnly"
+        >
+          ADVANCED SETTINGS
+        </XButton>
+      </MdCardExpandTrigger>
+      <MdCardExpandContent>
+        <MdCardContent>
+          <XCheckbox
+            ref="provision"
+            v-model="allowProvision"
+            label="Remote Support"
+          />
+          <div
+            v-if="allowProvision"
+            class="x-content"
+          >
+            <div class="x-section">
+              <XCheckbox
+                ref="analytics"
+                v-model="allowAnalytics"
+                label="Anonymized Analytics"
+              />
+              <div v-if="allowAnalytics">
+                <div class="message-title">
+                  Warning:
                 </div>
-                <div class="mt-12">Turn off this feature?</div>
+                <div class="content">
+                  {{ disableWarnings['analytics'] }}
+                </div>
+              </div>
+              <div
+                v-else
+                class="message-title"
+              >Turning on this feature allows Axonius to proactively detect
+                issues and notify about errors
+              </div>
             </div>
-        </x-modal>
-    </md-card>
+            <div class="x-section">
+              <XCheckbox
+                ref="troubleshooting"
+                v-model="allowTroubleshooting"
+                label="Remote Access"
+              />
+              <div v-if="allowTroubleshooting">
+                <div class="message-title">
+                  Warning:
+                </div>
+                <div class="content">
+                  {{ disableWarnings['troubleshooting'] }}
+                </div>
+              </div>
+              <div
+                v-else
+                class="message-title"
+              >Turning on this feature allows Axonius to keep the system updated
+                and speed-up issues resolution time
+              </div>
+            </div>
+          </div>
+          <div
+            v-else
+            class="x-content"
+          >
+            <div class="x-section message-title">Turning on this feature allows Axonius to keep the system updated,
+              speed-up issues resolution time and proactively detect issues and notify about errors
+            </div>
+            <div class="x-section">
+              <div class="message-title">
+                OR
+              </div>
+              <div class="config">
+                <template v-if="accessEndTime">
+                  <div class="warning mr-12">
+                    Temporary Remote Support will end at: {{ accessEndTime }}
+                  </div>
+                  <XButton @click="stopTempAccess">
+                    Stop
+                  </XButton>
+                </template>
+                <template v-else>
+                  <div class="mr-8">
+                    Give temporary Remote Support for
+                  </div>
+                  <input
+                    id="remote-access-timer"
+                    v-model="accessDuration"
+                    type="number"
+                    class="mr-8"
+                    @keypress="validateNumber"
+                  >
+                  <div class="mr-12">
+                    Hours
+                  </div>
+                  <XButton
+                    :disabled="!enableStartAccess"
+                    @click="startTempAccess"
+                  >
+                    Start
+                  </XButton>
+                </template>
+              </div>
+            </div>
+          </div>
+        </MdCardContent>
+      </MdCardExpandContent>
+    </MdCardExpand>
+    <XModal
+      v-if="disableToConfirm"
+      approve-text="Confirm"
+      @confirm="approveDisable"
+      @close="cancelDisable"
+    >
+      <div slot="body">
+        <div>
+          <div class="message-title">
+            Warning:
+          </div>
+          <div class="content">
+            {{ disableWarnings[disableToConfirm] }}
+          </div>
+        </div>
+        <div class="mt-12">
+          Turn off this feature?
+        </div>
+      </div>
+    </XModal>
+  </MdCard>
 </template>
 
 <script>
-    import xCheckbox from '../../axons/inputs/Checkbox.vue'
-    import xButton from '../../axons/inputs/Button.vue'
-    import xModal from '../../axons/popover/Modal.vue'
+import { mapState, mapActions } from 'vuex';
+import XCheckbox from '../../axons/inputs/Checkbox.vue';
+import XButton from '../../axons/inputs/Button.vue';
+import XModal from '../../axons/popover/Modal/index.vue';
 
-    import {mapState, mapActions} from 'vuex'
-    import {
-        FETCH_MAINTENANCE_CONFIG, SAVE_MAINTENANCE_CONFIG, START_MAINTENANCE_CONFIG, STOP_MAINTENANCE_CONFIG
-    } from '../../../store/modules/settings'
+import {
+  FETCH_MAINTENANCE_CONFIG, SAVE_MAINTENANCE_CONFIG, START_MAINTENANCE_CONFIG, STOP_MAINTENANCE_CONFIG,
+} from '../../../store/modules/settings';
 
-    import {validateNumber} from '../../../constants/validations'
+import { validateNumber } from '../../../constants/validations';
 
-    export default {
-        name: 'x-maintenance',
-        components: {xCheckbox, xButton, xModal},
-        props: {
-            readOnly: {
-                type: Boolean, default: false
-            }
-        },
-        computed: {
-            ...mapState({
-                maintenance(state) {
-                    return state.settings.advanced.maintenance
-                }
-            }),
-            allowProvision: {
-                get() {
-                    return this.maintenance.provision
-                },
-                set(value) {
-                    this.onMaintenanceChange('provision', value)
-                }
-            },
-            allowAnalytics: {
-                get() {
-                    return this.maintenance.analytics
-                },
-                set(value) {
-                    this.onMaintenanceChange('analytics', value)
-                }
-            },
-            allowTroubleshooting: {
-                get() {
-                    return this.maintenance.troubleshooting
-                },
-                set(value) {
-                    this.onMaintenanceChange('troubleshooting', value)
-                }
-            },
-            accessEndTime() {
-                if (!this.maintenance.timeout) return null
-                let dateTime = new Date(this.maintenance.timeout)
-                dateTime.setMinutes(dateTime.getMinutes() - dateTime.getTimezoneOffset())
-                return dateTime.toISOString().replace(/(T|Z)/g, ' ').split('.')[0]
-            },
-            disableWarnings() {
-                return {
-                    'analytics': 'Turning off this feature prevents Axonius from proactively detecting issues and notifying about errors',
-                    'troubleshooting': 'Turning off this feature prevents Axonius from updating the system and can lead to slower issue resolution time',
-                    'provision': 'Turning off this feature prevents Axonius from any remote support, including Anonymized Analytics and Remote Access'
-                }
-            },
-            enableStartAccess() {
-                return this.accessDuration > 0 && this.accessDuration < 100000000
-            }
-        },
-        data() {
-            return {
-                accessDuration: 24,
-                disableToConfirm: null
-            }
-        },
-        methods: {
-            ...mapActions({
-                saveMaintenance: SAVE_MAINTENANCE_CONFIG, fetchMaintenance: FETCH_MAINTENANCE_CONFIG,
-                startMaintenance: START_MAINTENANCE_CONFIG, stopMaintenance: STOP_MAINTENANCE_CONFIG
-            }),
-            onMaintenanceChange(type, value) {
-                if (value === this.maintenance[type]) return
-                if (value) {
-                    this.saveMaintenance({[type]: value})
-                } else {
-                    this.disableToConfirm = type
-                }
-            },
-            approveDisable() {
-                this.saveMaintenance({[this.disableToConfirm]: false})
-                this.disableToConfirm = null
-            },
-            cancelDisable() {
-                this.$refs[this.disableToConfirm].$el.click()
-                this.disableToConfirm = null
-            },
-            validateNumber,
-            startTempAccess() {
-                this.startMaintenance({duration: this.accessDuration})
-            },
-            stopTempAccess() {
-                this.stopMaintenance()
-            }
-        },
-        created() {
-            this.fetchMaintenance()
-        }
-    }
+export default {
+  name: 'XMaintenance',
+  components: { XCheckbox, XButton, XModal },
+  props: {
+    readOnly: {
+      type: Boolean, default: false,
+    },
+  },
+  computed: {
+    ...mapState({
+      maintenance(state) {
+        return state.settings.advanced.maintenance;
+      },
+    }),
+    allowProvision: {
+      get() {
+        return this.maintenance.provision;
+      },
+      set(value) {
+        this.onMaintenanceChange('provision', value);
+      },
+    },
+    allowAnalytics: {
+      get() {
+        return this.maintenance.analytics;
+      },
+      set(value) {
+        this.onMaintenanceChange('analytics', value);
+      },
+    },
+    allowTroubleshooting: {
+      get() {
+        return this.maintenance.troubleshooting;
+      },
+      set(value) {
+        this.onMaintenanceChange('troubleshooting', value);
+      },
+    },
+    accessEndTime() {
+      if (!this.maintenance.timeout) return null;
+      const dateTime = new Date(this.maintenance.timeout);
+      dateTime.setMinutes(dateTime.getMinutes() - dateTime.getTimezoneOffset());
+      return dateTime.toISOString().replace(/(T|Z)/g, ' ').split('.')[0];
+    },
+    disableWarnings() {
+      return {
+        analytics: 'Turning off this feature prevents Axonius from proactively detecting issues and notifying about errors',
+        troubleshooting: 'Turning off this feature prevents Axonius from updating the system and can lead to slower issue resolution time',
+        provision: 'Turning off this feature prevents Axonius from any remote support, including Anonymized Analytics and Remote Access',
+      };
+    },
+    enableStartAccess() {
+      return this.accessDuration > 0 && this.accessDuration < 100000000;
+    },
+  },
+  data() {
+    return {
+      accessDuration: 24,
+      disableToConfirm: null,
+    };
+  },
+  methods: {
+    ...mapActions({
+      saveMaintenance: SAVE_MAINTENANCE_CONFIG,
+      fetchMaintenance: FETCH_MAINTENANCE_CONFIG,
+      startMaintenance: START_MAINTENANCE_CONFIG,
+      stopMaintenance: STOP_MAINTENANCE_CONFIG,
+    }),
+    onMaintenanceChange(type, value) {
+      if (value === this.maintenance[type]) return;
+      if (value) {
+        this.saveMaintenance({ [type]: value });
+      } else {
+        this.disableToConfirm = type;
+      }
+    },
+    approveDisable() {
+      this.saveMaintenance({ [this.disableToConfirm]: false });
+      this.disableToConfirm = null;
+    },
+    cancelDisable() {
+      this.$refs[this.disableToConfirm].$el.click();
+      this.disableToConfirm = null;
+    },
+    validateNumber,
+    startTempAccess() {
+      this.startMaintenance({ duration: this.accessDuration });
+    },
+    stopTempAccess() {
+      this.stopMaintenance();
+    },
+  },
+  created() {
+    this.fetchMaintenance();
+  },
+};
 </script>
 
 <style lang="scss">
@@ -179,10 +251,6 @@
 
         .md-card-expand {
             min-height: 36px;
-
-            .md-button {
-                margin: 0;
-            }
         }
 
         .md-card-content {
@@ -207,5 +275,9 @@
         .warning {
             font-style: italic;
         }
+    }
+
+    #maintenance_settings {
+        z-index: 10;
     }
 </style>

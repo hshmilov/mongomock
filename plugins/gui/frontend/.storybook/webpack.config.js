@@ -34,7 +34,6 @@ module.exports = async ({ config }, env) => {
   // Add plugins:
   config.plugins.push(new webpack.DefinePlugin({
     ENV: {
-      medical: false,
       client: env ? JSON.stringify(env.client) : undefined
     }
   }));

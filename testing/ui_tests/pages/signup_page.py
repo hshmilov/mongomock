@@ -54,8 +54,8 @@ class SignupPage(Page):
     def get_error_msg(self):
         return self.driver.find_element_by_css_selector('.x-signup-form .form-error').text
 
-    def get_save_button(self):
-        return self.get_special_button('Get Started')
+    def get_save_button(self, context=None):
+        return self.get_button('Get Started', context=context)
 
     def is_signup_present(self):
         return self.get_save_button() is not None

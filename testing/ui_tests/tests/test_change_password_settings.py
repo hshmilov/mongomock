@@ -12,13 +12,13 @@ class TestChangePasswordSettings(TestBase):
         self.my_account_page.click_change_admin_password()
 
         # Fill in the current password
-        assert not self.my_account_page.is_save_button_enabled()
+        assert self.my_account_page.is_save_button_disabled()
         self.my_account_page.fill_current_password(self.password)
-        assert not self.my_account_page.is_save_button_enabled()
+        assert self.my_account_page.is_save_button_disabled()
         self.my_account_page.fill_new_password(self.password)
-        assert not self.my_account_page.is_save_button_enabled()
+        assert self.my_account_page.is_save_button_disabled()
         self.my_account_page.fill_confirm_password(self.password)
-        assert self.my_account_page.is_save_button_enabled()
+        assert not self.my_account_page.is_save_button_disabled()
         self.my_account_page.click_save_button()
         self.my_account_page.wait_for_password_changed_toaster()
 

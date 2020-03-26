@@ -1,49 +1,46 @@
 <template>
-  <draggable
+  <Draggable
     v-model="orderedPanels"
     tag="transition-group"
     :animation="1000"
     draggable=".card__item"
-    handle=".header"
+    handle=".drag_handler"
     ghost-class="ghost"
     class="x-panels"
     :move="checkMove"
   >
-    <x-panel
+    <XPanel
       v-for="(chart, chartInd) in orderedPanels"
       :id="chart.uuid"
       :key="chart.uuid"
       :chart="chart"
       :read-only="isReadOnly"
-      :hovered="hovered === chartInd"
       :draggable="true"
-      @mouseenter.native="() => enterPanel(chartInd)"
-      @mouseleave.native="leavePanel"
       @remove="() => verifyRemovePanel(chart.uuid)"
       @edit="() => editPanel(chart)"
       @export="() => exportCSV(chart.uuid, chart.name, chart.historical)"
     />
     <slot name="pre" />
     <slot name="post" />
-    <x-card
+    <XCard
       :key="9999"
       title="New Chart"
       class="chart-new print-exclude"
     >
-      <x-button
+      <XButton
         :id="newId"
         link
         :disabled="isReadOnly"
         @click="addNewPanel"
       >
         +
-      </x-button>
-    </x-card>
-    <x-toast
+      </XButton>
+    </XCard>
+    <XToast
       v-if="message"
       v-model="message"
     />
-    <x-modal
+    <XModal
       v-if="removed"
       :key="10000"
       size="lg"
@@ -56,20 +53,20 @@
         <div>Removing the chart is an irreversible action.</div>
         <div>Do you want to continue?</div>
       </div>
-    </x-modal>
-  </draggable>
+    </XModal>
+  </Draggable>
 </template>
 
 <script>
-import draggable from 'vuedraggable';
+import Draggable from 'vuedraggable';
 import {
   mapState, mapMutations, mapActions,
 } from 'vuex';
-import xCard from '../../axons/layout/Card.vue';
-import xButton from '../../axons/inputs/Button.vue';
+import XCard from '../../axons/layout/Card.vue';
+import XButton from '../../axons/inputs/Button.vue';
 import xToast from '../../axons/popover/Toast.vue';
-import xModal from '../../axons/popover/Modal.vue';
-import xPanel from './Panel.vue';
+import XModal from '../../axons/popover/Modal/index.vue';
+import XPanel from './Panel.vue';
 
 import {
   REMOVE_DASHBOARD_PANEL, FETCH_CHART_SEGMENTS_CSV, SAVE_REORDERED_PANELS,
@@ -79,7 +76,7 @@ import { UPDATE_DATA_VIEW } from '../../../store/mutations';
 export default {
   name: 'XPanels',
   components: {
-    xCard, xButton, xToast, xModal, draggable, xPanel,
+    XCard, XButton, xToast, XModal, Draggable, XPanel,
   },
   props: {
     panels: {
@@ -97,7 +94,6 @@ export default {
   },
   data() {
     return {
-      hovered: null,
       removed: null,
       message: '',
     };
@@ -163,12 +159,6 @@ export default {
     },
     addNewPanel() {
       this.$emit('add');
-    },
-    enterPanel(id) {
-      this.hovered = id;
-    },
-    leavePanel() {
-      this.hovered = null;
     },
     verifyRemovePanel(chartId) {
       this.removed = chartId;
@@ -261,8 +251,6 @@ export default {
                 color: $grey-4;
                 text-align: right;
                 margin-bottom: 8px;
-                display: flex;
-                justify-content: center;
 
                 .cov-vue-date {
                     width: auto;

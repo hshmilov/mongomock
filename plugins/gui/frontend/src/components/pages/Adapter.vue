@@ -1,55 +1,58 @@
 <template>
-  <x-page
+  <XPage
     :breadcrumbs="[
       { title: 'adapters', path: { name: 'Adapters'}},
       { title: title }
     ]"
     class="x-adapter"
   >
-    <x-table-wrapper
+    <XTableWrapper
       title="Add or Edit Connections"
       :loading="loading"
     >
       <template slot="actions">
-        <x-button
+        <XButton
           v-if="selectedServers && selectedServers.length"
           link
           @click="removeConnection"
-        >Remove</x-button>
-        <x-button
+        >Remove</XButton>
+        <XButton
           id="new_connection"
           :disabled="isReadOnly"
           @click="configConnection('new')"
-        >Add Connection</x-button>
+        >Add Connection</XButton>
       </template>
-      <x-table
+      <XTable
         slot="table"
         v-model="selectedServersModel"
         :fields="tableFields"
         :on-click-row="isReadOnly ? undefined: configConnection"
         :data="adapterClients"
       />
-    </x-table-wrapper>
+    </XTableWrapper>
 
     <div class="config-settings">
-      <x-button
+      <XButton
         link
         class="header"
         :disabled="isReadOnly"
         @click="toggleSettings"
       >
-        <svg-icon
-          name="navigation/settings"
-          :original="true"
-          height="20"
-        />Advanced Settings</x-button>
+        <AIcon
+          type="setting"
+          theme="filled"
+          class="setting_cog"
+        />
+        Advanced Settings
+      </XButton>
+
       <div class="content">
-        <x-tabs
+        <XTabs
           v-if="currentAdapter && advancedSettings"
           ref="tabs"
           class="growing-y"
         >
-          <x-tab
+          <XTab
             v-for="(config, configName, i) in currentAdapter.config"
             :id="configName"
             :key="i"
@@ -57,22 +60,22 @@
             :selected="!i"
           >
             <div class="configuration">
-              <x-form
+              <XForm
                 v-model="config.config"
                 :schema="config.schema"
                 @validate="validateConfig"
               />
-              <x-button
+              <XButton
                 tabindex="1"
                 :disabled="!configValid"
                 @click="saveConfig(configName, config.config)"
-              >Save Config</x-button>
+              >Save Config</XButton>
             </div>
-          </x-tab>
-        </x-tabs>
+          </XTab>
+        </XTabs>
       </div>
     </div>
-    <x-modal
+    <XModal
       v-if="serverModal.serverData && serverModal.uuid && serverModal.open"
       size="lg"
       class="config-server"
@@ -81,9 +84,9 @@
     >
       <div slot="body">
         <!-- Container for configuration of a single selected / added server -->
-        <x-title :logo="`adapters/${adapterId}`">
+        <XTitle :logo="`adapters/${adapterId}`">
           {{ title }}
-          <x-button
+          <XButton
             v-if="adapterLink"
             slot="actions"
             header
@@ -92,14 +95,14 @@
             title="More information about connecting this adapter"
             @click="openHelpLink"
           >
-            <md-icon>help_outline</md-icon>Help
-          </x-button>
-        </x-title>
+            <MdIcon>help_outline</MdIcon>Help
+          </XButton>
+        </XTitle>
         <div
           v-if="serverModal.error"
           class="server-error"
         >
-          <svg-icon
+          <SvgIcon
             name="symbol/error"
             :original="true"
             height="12"
@@ -108,7 +111,7 @@
             {{ serverModal.error }}
           </div>
         </div>
-        <x-form
+        <XForm
           v-model="serverModal.serverData"
           :schema="adapterSchema"
           :api-upload="uploadFileEndpoint"
@@ -120,18 +123,21 @@
           <div>
             <label for="connectionLabel">
               Connection Label
-              <div v-if="!requireConnectionLabel" class="hint">optional</div>
+              <div
+                v-if="!requireConnectionLabel"
+                class="hint"
+              >optional</div>
             </label>
             <input
               id="connectionLabel"
-              :class="{ 'error-border': showConnectionLabelBorder }"
               v-model="serverModal.connectionLabel"
+              :class="{ 'error-border': showConnectionLabelBorder }"
               :maxlength="20"
               @input="onConnectionLabelInput"
               @blur="onConnectionLabelBlur"
             >
           </div>
-          <x-instances-select
+          <XInstancesSelect
             id="serverInstance"
             v-model="serverModal.instanceName"
             :render-label="true"
@@ -141,23 +147,23 @@
         </div>
       </div>
       <template slot="footer">
-        <x-button
+        <XButton
           link
           @click="toggleServerModal"
-        >Cancel</x-button>
-        <x-button
+        >Cancel</XButton>
+        <XButton
           id="test_reachability"
           :disabled="!serverModal.valid || !connectionLabelValid"
           @click="testServer"
-        >Test Reachability</x-button>
-        <x-button
+        >Test Reachability</XButton>
+        <XButton
           id="save_server"
-          :disabled='!serverModal.valid || !connectionLabelValid'
+          :disabled="!serverModal.valid || !connectionLabelValid"
           @click="saveServer"
-        >Save and Connect</x-button>
+        >Save and Connect</XButton>
       </template>
-    </x-modal>
-    <x-modal
+    </XModal>
+    <XModal
       v-if="deleting"
       approve-text="Delete"
       @close="closeConfirmDelete"
@@ -176,31 +182,31 @@
           for="deleteEntitiesCheckbox"
         >Also delete all associated entities (devices, users)</label>
       </div>
-    </x-modal>
-    <x-toast
+    </XModal>
+    <XToast
       v-if="message"
       v-model="message"
       :timeout="toastTimeout"
     />
-  </x-page>
+  </XPage>
 </template>
 
 <script>
 import { mapActions, mapGetters, mapState } from 'vuex';
 import _get from 'lodash/get';
 import _isEmpty from 'lodash/isEmpty';
-import xPage from '@axons/layout/Page.vue';
-import xTableWrapper from '@axons/tables/TableWrapper.vue';
-import xTable from '@axons/tables/Table.vue';
-import xTabs from '@axons/tabs/Tabs.vue';
-import xTab from '@axons/tabs/Tab.vue';
-import xModal from '@axons/popover/Modal.vue';
-import xButton from '@axons/inputs/Button.vue';
-import xTitle from '@axons/layout/Title.vue';
-import xToast from '@axons/popover/Toast.vue';
+import XPage from '@axons/layout/Page.vue';
+import XTableWrapper from '@axons/tables/TableWrapper.vue';
+import XTable from '@axons/tables/Table.vue';
+import XTabs from '@axons/tabs/Tabs.vue';
+import XTab from '@axons/tabs/Tab.vue';
+import XModal from '@axons/popover/Modal/index.vue';
+import XButton from '@axons/inputs/Button.vue';
+import XTitle from '@axons/layout/Title.vue';
+import XToast from '@axons/popover/Toast.vue';
 import { parseVaultError } from '@constants/utils';
 import { FETCH_SYSTEM_CONFIG } from '@store/actions';
-import xForm from '@neurons/schema/Form.vue';
+import XForm from '@neurons/schema/Form.vue';
 
 import {
   ARCHIVE_CLIENT,
@@ -211,22 +217,22 @@ import {
 } from '../../store/modules/adapters';
 import { REQUIRE_CONNECTION_LABEL } from '../../store/getters';
 import { SAVE_PLUGIN_CONFIG } from '../../store/modules/settings';
-import { xInstancesSelect } from '../axons/inputs/dynamicSelects';
+import { XInstancesSelect } from '../axons/inputs/dynamicSelects';
 
 export default {
   name: 'XAdapter',
   components: {
-    xPage,
-    xTableWrapper,
-    xTable,
-    xTabs,
-    xTab,
-    xForm,
-    xModal,
-    xButton,
-    xTitle,
-    xToast,
-    xInstancesSelect,
+    XPage,
+    XTableWrapper,
+    XTable,
+    XTabs,
+    XTab,
+    XForm,
+    XModal,
+    XButton,
+    XTitle,
+    XToast,
+    XInstancesSelect,
   },
   data() {
     return {
@@ -576,7 +582,15 @@ export default {
         font-weight: 300;
         text-align: left;
         margin-bottom: 8px;
-
+        .setting_cog {
+          font-size: 20px;
+        }
+        &:hover .setting_cog {
+          color: $theme-orange;
+        }
+        span {
+              vertical-align: top;
+        }
         .svg-icon {
           margin-right: 8px;
         }

@@ -147,7 +147,7 @@ export default {
         display: flex;
         justify-content: center;
         color: black;
-        &:hover:not(.disabled) {
+        &:hover:not(:disabled) {
             color: black;
             box-shadow: 1px 1px 3px grey;
         }

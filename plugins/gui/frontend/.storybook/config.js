@@ -8,7 +8,9 @@ import * as svgicon from 'vue-svgicon';
 import ProgressGauge from '../src/components/axons/visuals/ProgressGauge.vue';
 import '../src/components/axons/icons';
 import {
-  MdSwitch, MdDatepicker, MdField, MdIcon, MdButton, MdDialog, MdCard, MdList, MdChips, MdCheckbox, MdMenu, MdProgress, MdDivider,MdDrawer
+  MdSwitch, MdDatepicker, MdField, MdIcon,
+  MdDialog, MdCard, MdList, MdChips,
+  MdProgress,MdDrawer
 } from 'vue-material/dist/components'
 
 Vue.use(Vuex)
@@ -17,15 +19,11 @@ Vue.use(MdSwitch)
 Vue.use(MdDatepicker)
 Vue.use(MdField)
 Vue.use(MdIcon)
-Vue.use(MdButton)
 Vue.use(MdDialog)
 Vue.use(MdCard)
 Vue.use(MdList)
 Vue.use(MdChips)
-Vue.use(MdCheckbox)
-Vue.use(MdMenu)
 Vue.use(MdProgress)
-Vue.use(MdDivider)
 Vue.use(MdDrawer)
 Vue.use(svgicon, { tagName: 'svg-icon' })
 Vue.component('x-progress-gauge', ProgressGauge);

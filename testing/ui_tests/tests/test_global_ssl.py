@@ -60,7 +60,7 @@ class TestGlobalSSL(TestBase):
 
         # Test that wrong hostname produces an error
         self.settings_page.set_global_ssl_settings('badhostname', cert_data, private_data)
-        self.settings_page.click_save_button()
+        self.settings_page.click_save_global_settings()
         self.settings_page.wait_for_toaster(
             'Hostname does not match the hostname in the certificate file, hostname in given cert is localhost')
 
@@ -86,7 +86,7 @@ class TestGlobalSSL(TestBase):
             # restore the previous setting: no SSL override
             self.settings_page.click_global_settings()
             self.settings_page.open_global_ssl_toggle(make_yes=False)
-            self.settings_page.click_save_button()
+            self.settings_page.click_save_global_settings()
             self.settings_page.wait_for_saved_successfully_toaster()
 
     @staticmethod

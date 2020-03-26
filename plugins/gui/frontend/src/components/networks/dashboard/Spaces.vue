@@ -77,6 +77,7 @@
       :panel="wizard.panel"
       @close="closeWizard"
     />
+    <MoveOrCopy v-if="moveOrCopyActive" />
   </div>
 </template>
 
@@ -87,6 +88,7 @@ import XTab from '../../axons/tabs/Tab.vue';
 import XDefaultSpace from './DefaultSpace.vue';
 import XPanels from './Panels.vue';
 import XWizard from './Wizard.vue';
+import MoveOrCopy from './MoveOrCopy.vue';
 
 import {
   SAVE_DASHBOARD_SPACE, CHANGE_DASHBOARD_SPACE, REMOVE_DASHBOARD_SPACE,
@@ -96,7 +98,7 @@ import {
 export default {
   name: 'XSpaces',
   components: {
-    XTabs, XTab, XDefaultSpace, XPanels, XWizard,
+    XTabs, XTab, XDefaultSpace, XPanels, XWizard, MoveOrCopy,
   },
   props: {
     spaces: {
@@ -112,12 +114,20 @@ export default {
       },
       processing: false,
       editCustomSpace: false,
+      moveOrCopy: {
+        active: false,
+        space: '',
+      },
+
     };
   },
   computed: {
     ...mapState({
+      moveOrCopyActive(state) {
+        return state.dashboard.moveOrCopyActive;
+      },
       currentSpace(state) {
-        return state.dashboard.currentSpace || this.defaultSpace.uuid;
+        return state.dashboard.currentSpace || (this.defaultSpace && this.defaultSpace.uuid);
       },
     }),
     defaultSpace() {

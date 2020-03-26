@@ -24,7 +24,7 @@ import XSpaces from '../networks/dashboard/Spaces.vue';
 import viewsMixin from '../../mixins/views';
 
 import {
-  FETCH_DISCOVERY_DATA, FETCH_DASHBOARD_SPACES, FETCH_DASHBOARD_PANELS, FETCH_DASHBOARD_FIRST_USE,
+  FETCH_DISCOVERY_DATA, FETCH_DASHBOARD_SPACES, FETCH_DASHBOARD_PANELS, FETCH_DASHBOARD_FIRST_USE, GET_PANEL_MAP,
 } from '../../store/modules/dashboard';
 import { IS_EXPIRED } from '../../store/getters';
 import { SAVE_VIEW } from '../../store/actions';
@@ -41,16 +41,13 @@ export default {
         return state.dashboard;
       },
       spaces(state) {
-        const spaceToPanels = {};
-        state.dashboard.panels.data.forEach((panel) => {
-          if (!spaceToPanels[panel.space]) {
-            spaceToPanels[panel.space] = [];
-          }
-          spaceToPanels[panel.space].push(panel);
-        });
+        const panelsById = this.getPanelsMap;
+        const addPanelIfExists = (existingPanelsList, panelId) => (
+          panelsById[panelId] ? [...existingPanelsList, panelsById[panelId]] : existingPanelsList);
+        const getCurrentSpacePanels = (space) => (space.panels_order.reduce(addPanelIfExists, []));
         return state.dashboard.spaces.data.map((space) => ({
           ...space,
-          panels: spaceToPanels[space.uuid] || [],
+          panels: getCurrentSpacePanels(space),
         }));
       },
       devicesView(state) {
@@ -65,6 +62,7 @@ export default {
     }),
     ...mapGetters({
       isExpired: IS_EXPIRED,
+      getPanelsMap: GET_PANEL_MAP,
     }),
     deviceDiscovery() {
       return this.dashboard.dataDiscovery.devices.data;

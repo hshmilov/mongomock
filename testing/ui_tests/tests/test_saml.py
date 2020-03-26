@@ -95,7 +95,7 @@ class TestSaml(TestBase):
         self.settings_page.fill_saml_idp(name)
         self.settings_page.fill_saml_metadata_url(metadata_url)
         self.settings_page.fill_saml_axonius_external_url(external_url=external_url)
-        self.settings_page.click_save_button()
+        self.settings_page.click_save_gui_settings()
         self.settings_page.wait_for_saved_successfully_toaster()
 
     def _login_with_saml(self, saml_server):

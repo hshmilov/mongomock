@@ -47,7 +47,7 @@ class TestGlobalSettings(TestBase):
         self.settings_page.fill_email_host(smtp_service.fqdn)
         self.settings_page.fill_email_port(smtp_service.port)
 
-        self.settings_page.click_save_button()
+        self.settings_page.click_save_global_settings()
         self.settings_page.wait_email_connection_failure_toaster(smtp_service.fqdn)
 
         with smtp_service.contextmanager():
@@ -58,7 +58,7 @@ class TestGlobalSettings(TestBase):
         self.settings_page.click_global_settings()
         toggle = self.settings_page.find_send_emails_toggle()
         self.settings_page.click_toggle_button(toggle, make_yes=False, scroll_to_toggle=False)
-        self.settings_page.click_save_button()
+        self.settings_page.click_save_global_settings()
 
     def test_maintenance_endpoints(self):
         self.settings_page.switch_to_page()
@@ -126,7 +126,7 @@ class TestGlobalSettings(TestBase):
         self.settings_page.set_proxy_settings_enabled()
         self.settings_page.fill_proxy_address('1.2.3.4')
         self.settings_page.fill_proxy_port('1234')
-        self.settings_page.click_save_button()
+        self.settings_page.click_save_global_settings()
         self.settings_page.wait_for_toaster(self.settings_page.BAD_PROXY_TOASTER)
 
     def test_require_connection_label_setting(self):

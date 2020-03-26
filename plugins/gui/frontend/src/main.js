@@ -1,23 +1,32 @@
+
 import Vue from 'vue';
 import VueWorker from 'vue-worker';
 import VueCookies from 'vue-cookies';
 import Vuelidate from 'vuelidate';
 import VueAnalytics from 'vue-analytics';
 
+import { Modal, Button, Menu, Dropdown, Checkbox, Select, Icon } from 'ant-design-vue';
+
+Vue.use(Modal);
+Vue.use(Button);
+Vue.use(Menu);
+Vue.use(Dropdown);
+Vue.use(Checkbox);
+Vue.use(Select);
+Vue.use(Icon);
+
+
 import {
   MdSwitch,
   MdDatepicker,
   MdField,
-  MdIcon,
   MdButton,
+  MdIcon,
   MdDialog,
   MdCard,
   MdList,
   MdChips,
-  MdCheckbox,
-  MdMenu,
   MdProgress,
-  MdDivider,
   MdDrawer,
 } from 'vue-material/dist/components';
 import 'vue-svgicon/dist/polyfill';
@@ -36,16 +45,13 @@ Vue.use(MdSwitch);
 Vue.use(MdDatepicker);
 Vue.use(MdField);
 Vue.use(MdIcon);
-Vue.use(MdButton);
 Vue.use(MdDialog);
 Vue.use(MdCard);
 Vue.use(MdList);
 Vue.use(MdChips);
-Vue.use(MdCheckbox);
-Vue.use(MdMenu);
 Vue.use(MdProgress);
-Vue.use(MdDivider);
 Vue.use(MdDrawer);
+Vue.use(MdButton);
 
 Vue.use(VueCookies);
 Vue.use(VueWorker);

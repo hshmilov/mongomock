@@ -3,6 +3,7 @@ import _get from 'lodash/get';
 import { REQUEST_API } from '../actions';
 import { RESET_DEVICES_STATE } from './devices';
 import { RESET_USERS_STATE } from './users';
+import { RESET_DASHBOARD_STATE } from '@store/modules/dashboard';
 
 export const IS_ENTITY_RESTRICTED = 'IS_ENTITY_RESTRICTED';
 export const IS_ENTITY_EDITABLE = 'IS_ENTITY_EDITABLE';
@@ -212,6 +213,7 @@ export const auth = {
       }).then(() => {
         commit(RESET_DEVICES_STATE);
         commit(RESET_USERS_STATE);
+        commit(RESET_DASHBOARD_STATE);
         if (payload) {
           payload.fetching = false;
           return commit(SET_USER, payload);

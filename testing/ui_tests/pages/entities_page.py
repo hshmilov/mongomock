@@ -263,18 +263,21 @@ class EntitiesPage(Page):
         actions.move_to_element(parent.find_element_by_css_selector(self.FILTER_ADAPTERS_CSS))
         actions.perform()
 
-    def click_on_filter_adapter(self, adapter, parent=None):
+    def click_on_filter_adapter(self, adapter, parent=None, button=False):
         self.open_query_adapters_list_and_open_adapter_filter(parent)
         filter_adapter_box = self.driver.find_element_by_css_selector(self.FILTER_ADAPTERS_BOX_CSS)
-        self.find_element_by_text(adapter, filter_adapter_box).click()
+        if button:
+            self.get_button(adapter, context=filter_adapter_box).click()
+        else:
+            self.find_element_by_text(adapter, filter_adapter_box).click()
         self.driver.find_element_by_css_selector(self.FILTER_ADAPTERS_CSS).click()
         time.sleep(0.5)
 
     def click_on_select_all_filter_adapters(self, parent=None):
-        self.click_on_filter_adapter('Select all', parent)
+        self.click_on_filter_adapter('Select all', parent, button=True)
 
     def click_on_clear_all_filter_adapters(self, parent=None):
-        self.click_on_filter_adapter('Clear all', parent)
+        self.click_on_filter_adapter('Clear all', parent, button=True)
 
     def is_filtered_adapter_icon_exists(self):
         try:
@@ -488,7 +491,7 @@ class EntitiesPage(Page):
         expression_element.find_element_by_css_selector(self.QUERY_REMOVE_EXPRESSION_CSS).click()
 
     def clear_query_wizard(self):
-        self.click_button('Clear', partial_class=True)
+        self.click_button('Clear')
 
     def clear_filter(self):
         # Explicit clear needed for Mac - 'fill_filter' will not replace the text
@@ -821,7 +824,7 @@ class EntitiesPage(Page):
         self.click_button('Done')
 
     def close_edit_columns_save_default(self):
-        self.click_button('Save as User Default', partial_class=True)
+        self.click_button('Save as User Default')
 
     def edit_columns(self, add_col_names: list = None, remove_col_names: list = None, adapter_title: str = None):
         self.open_edit_columns()
@@ -879,10 +882,10 @@ class EntitiesPage(Page):
         self.driver.find_element_by_id(self.SAVE_QUERY_ID).click()
 
     def is_query_save_as_disabled(self):
-        return self.is_element_disabled(self.find_element_by_text(self.SAVE_AS_BUTTON))
+        return self.is_element_disabled(self.get_button(self.SAVE_AS_BUTTON))
 
     def is_query_save_disabled(self):
-        return self.is_element_disabled(self.find_element_by_text(self.SAVE_BUTTON))
+        return self.is_element_disabled(self.get_save_button())
 
     def fill_query_name(self, name):
         self.fill_text_field_by_css_selector(self.SAVE_QUERY_NAME_SELECTOR, name)
@@ -897,17 +900,17 @@ class EntitiesPage(Page):
         self.driver.find_element_by_css_selector(self.TABLE_ACTIONS_ENFORCE_CSS).click()
 
     def open_edit_tags(self):
-        self.click_button('Edit Tags', partial_class=True)
+        self.click_button('Edit Tags')
 
     def click_save_query_save_button(self, query_name=None):
         context_element = self.wait_for_element_present_by_css('.save-query-dialog')
-        self.click_button(text='Save', partial_class=True, context=context_element)
+        self.click_button(text='Save', context=context_element)
         self.wait_for_element_absent_by_css(self.QUERY_MODAL_OVERLAY)
         if query_name is not None:
             self.wait_for_element_present_by_text(query_name)
 
     def reset_query(self):
-        self.click_button('Reset', partial_class=True)
+        self.click_button('Reset')
 
     def open_actions_query(self):
         el = self.driver.find_element_by_css_selector('.x-query-state .x-dropdown .arrow')
@@ -915,7 +918,7 @@ class EntitiesPage(Page):
 
     def discard_changes_query(self):
         self.open_actions_query()
-        self.click_button('Discard Changes', partial_class=True)
+        self.click_button('Discard Changes')
         self.wait_for_table_to_load()
 
     def save_query(self, query_name):
@@ -926,15 +929,15 @@ class EntitiesPage(Page):
 
     def save_query_as(self, query_name):
         wait_until(lambda: not self.is_query_save_as_disabled())
-        self.click_button(self.SAVE_AS_BUTTON, partial_class=True)
+        self.click_button(self.SAVE_AS_BUTTON)
         self.fill_query_name(query_name)
         self.click_save_query_save_button()
 
     def save_existing_query(self):
-        self.click_button('Save', partial_class=True)
+        self.click_button('Save')
 
     def rename_query(self, query_name, new_query_name):
-        self.click_button(query_name, partial_class=True)
+        self.click_button(query_name)
         self.fill_query_name(new_query_name)
         self.click_save_query_save_button()
 
@@ -951,7 +954,6 @@ class EntitiesPage(Page):
         if optional_sort:
             self.click_sort_column(optional_sort)
             self.wait_for_table_to_load()
-
         self.save_query(query_name)
 
     def customize_view_and_save(self, query_name, page_size, sort_field, add_columns, remove_columns, query_filter):
@@ -970,10 +972,10 @@ class EntitiesPage(Page):
         self.wait_for_table_to_load()
 
     def remove_selected(self):
-        self.find_element_by_text(self.REMOVE_BUTTON).click()
+        self.click_button(self.REMOVE_BUTTON)
 
     def approve_remove_selected(self):
-        self.find_element_by_text(self.DELETE_BUTTON).click()
+        self.click_button(self.DELETE_BUTTON)
 
     def click_enforcement_tasks_tab(self):
         self.click_tab(self.ENFORCEMENT_DATA_TAB_TITLE)
@@ -1158,18 +1160,18 @@ class EntitiesPage(Page):
         self.wait_for_spinner_to_end()
 
     def open_delete_dialog(self):
-        self.click_button(self.ACTIONS_BUTTON, partial_class=True)
+        self.click_button(self.ACTIONS_BUTTON)
         self.driver.find_element_by_css_selector(self.TABLE_ACTIONS_DELETE_CSS).click()
 
     def open_link_dialog(self):
-        self.click_button(self.ACTIONS_BUTTON, partial_class=True)
+        self.click_button(self.ACTIONS_BUTTON)
         self.driver.find_element_by_xpath(self.TABLE_ACTION_ITEM_XPATH.format(action='Link devices')).click()
 
     def confirm_link(self):
         self.driver.find_element_by_css_selector('.modal-container.w-xl>.modal-footer>div>button:nth-child(2)').click()
 
     def open_unlink_dialog(self):
-        self.click_button(self.ACTIONS_BUTTON, partial_class=True)
+        self.click_button(self.ACTIONS_BUTTON)
         self.driver.find_element_by_xpath(self.TABLE_ACTION_ITEM_XPATH.format(action='Unlink devices')).click()
 
     def read_delete_dialog(self):
@@ -1190,7 +1192,7 @@ class EntitiesPage(Page):
         self.find_advanced_view().click()
 
     def find_basic_view(self):
-        return self.get_button(self.CONFIG_BASIC_TEXT, partial_class=True)
+        return self.get_button(self.CONFIG_BASIC_TEXT)
 
     def click_basic_view(self):
         self.find_basic_view().click()
@@ -1225,15 +1227,15 @@ class EntitiesPage(Page):
         return self.find_custom_data_edit().click()
 
     def click_custom_data_add_predefined(self):
-        return self.click_button('Add Predefined field', partial_class=True)
+        return self.click_button('Add Predefined field')
 
     def click_custom_data_add_new(self):
-        return self.click_button('Add New field', partial_class=True)
+        return self.click_button('Add New field')
 
     def find_custom_data_save(self, context=None):
         if not context:
             context = self.driver.find_element_by_css_selector(self.ADAPTERS_DATA_TAB_CSS)
-        return self.get_button(self.SAVE_BUTTON, partial_class=True, context=context)
+        return self.get_button(self.SAVE_BUTTON, context=context)
 
     def find_custom_fields_items(self):
         return self.driver.find_elements_by_css_selector(self.CUSTOM_DATA_FIELD_ITEM)
@@ -1293,7 +1295,7 @@ class EntitiesPage(Page):
         return error_text == self.driver.find_element_by_css_selector(self.CUSTOM_DATA_ERROR_CSS).text
 
     def open_custom_data_bulk(self):
-        self.click_button('Actions', partial_class=True, should_scroll_into_view=False)
+        self.click_button('Actions', should_scroll_into_view=False)
         self.driver.find_element_by_xpath(self.TABLE_ACTION_ITEM_XPATH.format(action='Add custom data')).click()
 
     def is_enforcement_results_header(self, enforcement_name, action_name):
@@ -1399,7 +1401,7 @@ class EntitiesPage(Page):
         self.click_save_query_save_button(query_name=query_name)
 
     def open_filter_out_dialog(self):
-        self.click_button(self.ACTIONS_BUTTON, partial_class=True)
+        self.click_button(self.ACTIONS_BUTTON)
         self.driver.find_element_by_xpath(
             self.TABLE_ACTION_ITEM_XPATH.format(action='Filter out from query results')).click()
 

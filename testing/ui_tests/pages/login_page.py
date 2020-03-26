@@ -10,7 +10,7 @@ class LoginPage(Page):
     LOGIN_USERNAME_ID = 'user_name'
     LOGIN_PASSWORD_ID = 'password'
     LOGIN_DOMAIN_ID = 'domain'
-    LOGIN_BUTTON_TEXT = 'Login'
+    LOGIN_BUTTON = 'Login'
     REMEMBER_ME_INPUT_CSS = '[for=remember_me]+div'
     LOGOUT_CSS = 'a[title="Logout"]'
     WRONG_USERNAME_OR_PASSWORD_MESSAGE = 'Wrong user name or password'
@@ -51,7 +51,7 @@ class LoginPage(Page):
         self.click_toggle_button(toggle, scroll_to_toggle=False)
 
     def click_login_button(self):
-        self.click_button(self.LOGIN_BUTTON_TEXT)
+        return self.get_enabled_button(self.LOGIN_BUTTON).click()
 
     def logout(self):
         self.wait_for_element_present_by_css(self.LOGOUT_CSS)
@@ -64,10 +64,10 @@ class LoginPage(Page):
         return self.wait_for_element_present_by_text(self.WRONG_USERNAME_OR_PASSWORD_MESSAGE)
 
     def wait_for_login_page_to_load(self):
-        self.wait_for_element_present_by_xpath(self.DISABLED_BUTTON_XPATH.format(button_text='Login'))
+        self.wait_for_element_present_by_xpath(self.DISABLED_BUTTON_XPATH.format(button_text=self.LOGIN_BUTTON))
 
     def find_disabled_login_button(self):
-        return self.driver.find_element_by_xpath(self.DISABLED_BUTTON_XPATH.format(button_text='Login'))
+        return self.driver.find_element_by_xpath(self.DISABLED_BUTTON_XPATH.format(button_text=self.LOGIN_BUTTON))
 
     def click_login_with_ldap(self):
         self.driver.find_element_by_id('ldap_login_link').click()

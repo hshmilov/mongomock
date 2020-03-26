@@ -171,7 +171,7 @@ class TestEnforcementActions(TestBase):
             self.settings_page.fill_syslog_host(f'{syslog_server.name}.{AXONIUS_DNS_SUFFIX}')
             self.settings_page.fill_syslog_port(syslog_server.tcp_port)
             self.settings_page.select_syslog_ssl('Unencrypted')
-            self.settings_page.click_save_button()
+            self.settings_page.click_save_global_settings()
 
             # switch to enforcements page
             self.enforcements_page.create_basic_enforcement(ENFORCEMENT_NAME, MANAGED_DEVICES_QUERY_NAME)
@@ -195,7 +195,7 @@ class TestEnforcementActions(TestBase):
             self.settings_page.fill_syslog_host(syslog_server.name)
             self.settings_page.fill_syslog_port(syslog_server.tls_port)
             self.settings_page.select_syslog_ssl('Unverified')
-            self.settings_page.click_save_button()
+            self.settings_page.click_save_global_settings()
 
             # make another enforcement
             new_enforcement_name = f'{ENFORCEMENT_NAME} SSL'

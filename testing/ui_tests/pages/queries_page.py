@@ -36,7 +36,7 @@ class QueriesPage(EntitiesPage):
         self.driver.find_element_by_css_selector(self.parent_root_page_css).click()
         logger.info(f'Finished switching to {self.parent_root_page_css}')
         self.wait_for_table_to_load()
-        self.click_button('Saved Queries', partial_class=True)
+        self.click_button('Saved Queries')
 
     def run_query(self):
         self.wait_for_element_present_by_css('.saved-query-panel')

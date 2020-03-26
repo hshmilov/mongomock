@@ -160,7 +160,7 @@ export const xTagSelect = withDynamicData({
   moduleAttributeName: 'labels',
 });
 
-export const xInstancesSelect = withDynamicData({
+export const XInstancesSelect = withDynamicData({
   id: 'instanceSelect',
   action: FETCH_ADAPTERS,
   modules: [{ name: 'adapters', dataPath: '' }],

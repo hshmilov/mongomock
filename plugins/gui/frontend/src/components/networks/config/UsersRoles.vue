@@ -146,7 +146,7 @@
 
 <script>
   import xForm from '../../neurons/schema/Form.vue'
-  import xModal from '../../axons/popover/Modal.vue'
+  import xModal from '../../axons/popover/Modal/index.vue'
   import xSelect from '../../axons/inputs/select/Select.vue'
   import xButton from '../../axons/inputs/Button.vue'
   import xUserConfig from './UserConfig.vue'

@@ -34,11 +34,10 @@
         />
         <div v-else>
           <XLoginForm
-            v-if="showLoginPage && loginSettings"
+            v-if="loginSettings"
             :settings="loginSettings"
           />
           <XLoginOptions
-            :login-okta="!showLoginPage"
             :settings="loginSettings"
           />
         </div>
@@ -68,9 +67,6 @@ export default {
   },
   computed: {
     ...mapState({
-      showLoginPage(state) {
-        return !state.staticConfiguration.medicalConfig || this.$route.hash === '#maintenance';
-      },
       showSignup(state) {
         return !state.auth.signup.data;
       },

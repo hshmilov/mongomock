@@ -31,13 +31,6 @@ class MyAccountPage(Page):
     def fill_confirm_password(self, password):
         self.fill_text_field_by_element_id(self.CONFIRM_PASSWORD_ID, password)
 
-    def get_save_button(self):
-        return self.get_special_button('Save')
-
-    def is_save_button_enabled(self):
-        button = self.get_save_button()
-        return button.get_attribute('class') != 'x-button disabled'
-
     def click_save_button(self):
         self.get_save_button().click()
 
