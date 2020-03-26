@@ -581,7 +581,7 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
                 r = requests.post('https://bandicoot.axonius.local:9090/transfer',
                                   params={'fetchTime': round(time.time() * 1000)})
                 if r.status_code != 200:
-                    logger.exception(f'Failed to initiate bandicoot transfer got error code: {r.status_code}')
+                    logger.warning(f'Failed to initiate bandicoot transfer got error code: {r.status_code}')
                 else:
                     logger.info(f'Bandicoot transfer request was successfully sent')
             except Exception:
