@@ -1,26 +1,29 @@
 <template>
   <div class="x-action-library">
-    <x-search-input v-model="searchValue" />
-    <md-list
+    <XSearchInput
+      v-model="searchValue"
+      :auto-focus="false"
+    />
+    <MdList
       class="actions-container"
       :md-expand-single="true"
     >
-      <md-list-item
+      <MdListItem
         v-for="category in processedCategories"
         :key="category.name"
         :md-expand="true"
       >
-        <x-title :logo="`actions/${category.name}`">{{ category.title }}</x-title>
-        <md-list
+        <XTitle :logo="`actions/${category.name}`">{{ category.title }}</XTitle>
+        <MdList
           slot="md-expand"
         >
-          <md-list-item
+          <MdListItem
             v-for="action in category.items"
             :id="`test_${action.name}`"
             :key="action.name"
             @click="onClickAction(action)"
           >
-            <x-title
+            <XTitle
               :logo="`actions/${action.name}`"
               :disabled="!action.implemented"
             >
@@ -39,15 +42,18 @@
                   class="md-image"
                   alt="Locked Action"
                 >
-                <div v-else class="md-image"></div>
+                <div
+                  v-else
+                  class="md-image"
+                />
                 <div>{{ action.title }}</div>
               </div>
-            </x-title>
-          </md-list-item>
-        </md-list>
-      </md-list-item>
-    </md-list>
-    <x-action-library-tip
+            </XTitle>
+          </MdListItem>
+        </MdList>
+      </MdListItem>
+    </MdList>
+    <XActionLibraryTip
       :action="actionToTip"
       @close="actionToTip = null"
     />
@@ -55,70 +61,69 @@
 </template>
 
 <script>
-  import xTitle from '../../axons/layout/Title.vue'
-  import xSearchInput from '../../neurons/inputs/SearchInput.vue'
-  import xActionLibraryTip from './ActionLibraryTip.vue'
-  import actionsMixin from '../../../mixins/actions'
-  import featureFlagsMixin from '../../../mixins/feature_flags'
-  import { actionsMeta } from '../../../constants/enforcement'
+import { mapState } from 'vuex';
+import _get from 'lodash/get';
+import XTitle from '../../axons/layout/Title.vue';
+import XSearchInput from '../../neurons/inputs/SearchInput.vue';
+import XActionLibraryTip from './ActionLibraryTip.vue';
+import actionsMixin from '../../../mixins/actions';
+import { actionsMeta } from '../../../constants/enforcement';
 
-
-  export default {
-    name: 'XActionLibrary',
-    components: {
-      xTitle, xSearchInput, xActionLibraryTip
+export default {
+  name: 'XActionLibrary',
+  components: {
+    XTitle, XSearchInput, XActionLibraryTip,
+  },
+  mixins: [actionsMixin],
+  props: {
+    categories: {
+      type: Array,
+      required: true,
     },
-    mixins: [actionsMixin, featureFlagsMixin],
-    props: {
-      categories: {
-        type: Array,
-        required: true
-      }
+  },
+  data() {
+    return {
+      searchValue: '',
+      actionToTip: null,
+    };
+  },
+  computed: {
+    ...mapState({
+      featureFlags: (state) => _get(state, 'settings.configurable.gui.FeatureFlags.config', null),
+    }),
+    lockedActions() {
+      return this.featureFlags ? this.featureFlags.locked_actions : null;
     },
-    data () {
-      return {
-        searchValue: '',
-        actionToTip: null
-      }
+    processedCategories() {
+      return this.categories.map((category) => ({
+        name: category,
+        title: actionsMeta[category].title,
+        items: actionsMeta[category].items
+          .map((action) => ({
+            name: action,
+            title: actionsMeta[action].title,
+            implemented: this.actionsDef[action] !== undefined,
+            locked: this.lockedActions && this.lockedActions.includes(action),
+          }))
+          .filter((action) => action.title.toLowerCase().includes(this.searchValue.toLowerCase())),
+      })).filter((category) => category.items.length);
     },
-    computed: {
-      lockedActions() {
-        return this.featureFlags ? this.featureFlags.locked_actions : null
-      },
-      processedCategories () {
-        return this.categories.map(category => {
-          return {
-            name: category,
-            title: actionsMeta[category].title,
-            items: actionsMeta[category].items
-                    .map(action => {
-                      return {
-                        name: action,
-                        title: actionsMeta[action].title,
-                        implemented: this.actionsDef[action] !== undefined,
-                        locked: this.lockedActions && this.lockedActions.includes(action)
-                      }
-                    })
-                    .filter(action => action.title.toLowerCase().includes(this.searchValue.toLowerCase()))
-          }
-        }).filter(category => category.items.length)
-      }
+  },
+  methods: {
+    disabled(action) {
+      return !this.actionsDef[action];
     },
-    methods: {
-      disabled (action) {
-        return !this.actionsDef[action]
-      },
-      onClickAction (action) {
-        if (action.locked || !action.implemented) {
-          this.actionToTip = action
-          return
-        }
-        this.checkEmptySettings(action.name)
-        if (this.anyEmptySettings) return
-        this.$emit('select', action.name)
+    onClickAction(action) {
+      if (action.locked || !action.implemented) {
+        this.actionToTip = action;
+        return;
       }
-    }
-  }
+      this.checkEmptySettings(action.name);
+      if (this.anyEmptySettings) return;
+      this.$emit('select', action.name);
+    },
+  },
+};
 </script>
 
 <style lang="scss">
