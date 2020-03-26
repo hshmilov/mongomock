@@ -19,6 +19,8 @@ logger = logging.getLogger(f'axonius.{__name__}')
 class AvamarAdapter(AdapterBase):
     # pylint: disable=too-many-instance-attributes
     class MyDeviceAdapter(DeviceAdapter):
+        enabled = Field(bool, 'Enabled')
+        fqdn = Field(str, 'FQDN')
         activated = Field(bool, 'Activated')
         activation_time = Field(datetime.datetime, 'Activation Time')
         allow_addition_dataset = Field(bool, 'Allow Addition Dataset')
@@ -70,8 +72,8 @@ class AvamarAdapter(AdapterBase):
                                       username=client_config['username'],
                                       password=client_config['password'],
                                       https_proxy=client_config.get('https_proxy'),
-                                      client_id=client_config['client_id'],
-                                      client_secret=client_config['client_secret'])
+                                      client_id=client_config.get('client_id'),
+                                      client_secret=client_config.get('client_secret'))
         with connection:
             pass
         return connection
@@ -148,8 +150,6 @@ class AvamarAdapter(AdapterBase):
             'required': [
                 'domain',
                 'username',
-                'client_id',
-                'client_secret',
                 'password',
                 'verify_ssl'
             ],
@@ -194,8 +194,8 @@ class AvamarAdapter(AdapterBase):
             device.contact_notes = contact_raw.get('notes')
             device.set_raw(device_raw)
             domain = device_raw.get('domainFqdn')
-            device.name = device_raw.get('name')
-            device.hostname = device_raw.get('fqdn')
+            device.hostname = device_raw.get('name')
+            device.fqdn = device_raw.get('fqdn')
             device.dataset_fqdn = device_raw.get('datasetFqdn')
             device.dataset_id = device_raw.get('datasetId')
             if is_domain_valid(domain):

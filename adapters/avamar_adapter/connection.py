@@ -17,6 +17,10 @@ class AvamarConnection(RESTConnection):
                          headers={'Content-Type': 'application/json',
                                   'Accept': 'application/json'},
                          **kwargs)
+        if not client_id:
+            client_id = ''
+        if not client_secret:
+            client_secret = ''
         self._client_id = client_id
         self._client_secret = client_secret
         self._last_refresh = None
@@ -26,9 +30,11 @@ class AvamarConnection(RESTConnection):
         if self._last_refresh and self._expires_in \
                 and self._last_refresh + datetime.timedelta(seconds=self._expires_in) > datetime.datetime.now():
             return
-        grant_type = f'grant_type=password&username={self._username}&password={self._password}'
+        grant_type = {'grant_type': 'password',
+                      'username': self._username,
+                      'password': self._password}
         self._session_headers['Content-Type'] = 'application/x-www-form-urlencoded'
-        response = self._post('oauth/token', body_params=grant_type,
+        response = self._post('v1/oauth/swagger', body_params=grant_type,
                               use_json_in_body=False,
                               do_basic_auth=True,
                               alternative_auth_dict=(self._client_id, self._client_secret))
@@ -39,8 +45,10 @@ class AvamarConnection(RESTConnection):
         self._expires_in = int(response['expires_in'])
 
     def _connect(self):
-        if not self._username or not self._password or not self._client_id or not self._client_secret:
-            raise RESTException('No username or password or no client id + secret')
+        if not self._username or not self._password:
+            raise RESTException('No username or password')
+        self._last_refresh = None
+        self._expires_in = None
         self._refresh_token()
         self._get('v1/clients', url_params={'page': 0})
 
