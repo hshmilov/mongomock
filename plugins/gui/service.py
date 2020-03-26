@@ -849,7 +849,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin, 
             if not d:
                 continue
             user = d.get('user')
-            if user and (not user_id or str(d['user'].get('_id')) == user_id):
+            if user and (not user_id or str(d['user'].get('_id')) == str(user_id)):
                 d['user'] = None
 
     @property
