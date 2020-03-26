@@ -3,7 +3,7 @@
     v-model="orderedPanels"
     tag="transition-group"
     :animation="1000"
-    draggable=".card__item"
+    draggable=".card-container-outer"
     handle=".drag_handler"
     ghost-class="ghost"
     class="x-panels"
@@ -211,8 +211,15 @@ export default {
         > span {
           display: contents;
         }
-        .card__item:not(.dragging):hover {
-          border: 2px solid $grey-2;
+
+        .card-container-outer {
+          border-width: 2px;
+          border-style: solid;
+          border-color: transparent;
+
+          &:not(.dragging):hover {
+            border-color: $grey-2;
+          }
         }
         .ghost {
             border: 3px dashed rgba($theme-blue, 0.4);

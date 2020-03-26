@@ -3,90 +3,71 @@
     class="x-pie"
     :class="{disabled: readOnly}"
   >
-    <svg
-      viewBox="-1 -1 2 2"
-      @mouseout="inHover = -1"
+    <XChartTooltip
+      :header="tooltipDetails.header"
+      :body="tooltipDetails.body"
+      :additional-data="tooltipDetails.additionalData"
     >
-      <defs>
-        <linearGradient id="intersection-2-4">
-          <stop
-            class="pie-stop-2"
-            offset="0%"
-          />
-          <template v-for="n in 9">
-            <stop
-              :class="`pie-stop-${!(n % 2) ? 4 : 2}`"
-              :offset="`${n}0%`"
-            />
-            <stop
-              :class="`pie-stop-${!(n % 2) ? 2 : 4}`"
-              :offset="`${n}0%`"
-            />
-          </template>
-          <stop
-            class="pie-stop-4"
-            offset="100%"
-          />
-        </linearGradient>
-      </defs>
-      <g
-        v-for="(slice, index) in slices"
-        :key="index"
-        :class="`slice-${index}`"
-        @click="onClick(index)"
-        @mouseover="onHover($event, index)"
+      <svg
+        slot="tooltipActivator"
+        viewBox="-1 -1 2 2"
+        @mouseout="inHover = -1"
       >
-        <path
-          :d="slice.path"
-          :class="`filling ${slice.class} ${inHover === index? 'in-hover' : ''}`"
-        />
-        <text
-          v-if="showPercentageText(slice.value)"
-          class="scaling"
-          text-anchor="middle"
-          :x="slice.middle.x"
-          :y="slice.middle.y"
+        <defs>
+          <linearGradient id="intersection-2-4">
+            <stop
+              class="pie-stop-2"
+              offset="0%"
+            />
+            <template v-for="n in 9">
+              <stop
+                :class="`pie-stop-${!(n % 2) ? 4 : 2}`"
+                :offset="`${n}0%`"
+              />
+              <stop
+                :class="`pie-stop-${!(n % 2) ? 2 : 4}`"
+                :offset="`${n}0%`"
+              />
+            </template>
+            <stop
+              class="pie-stop-4"
+              offset="100%"
+            />
+          </linearGradient>
+        </defs>
+        <g
+          v-for="(slice, index) in slices"
+          :key="index"
+          :class="`slice-${index}`"
+          @click="onClick(index)"
+          @mouseover="inHover = index"
         >
-          {{ Math.round(slice.value * 100) }}%
-        </text>
-      </g>
-    </svg>
-    <XTooltip
-      v-show="hoverDetails.title"
-      ref="tooltip"
-    >
-      <template slot="body">
-        <div class="tooltip-content">
-          <div class="tooltip-legend">
-            <div
-              class="legend"
-              :class="hoverDetails.class"
-            />{{ hoverDetails.title }}</div>
-          <div>{{ hoverDetails.percentage }}%</div>
-        </div>
-        <div
-          v-for="component in hoverDetails.components"
-          :key="component.name"
-          class="tooltip-content"
-        >
-          <div class="tooltip-legend">
-            <div
-              class="legend round"
-              :class="component.class"
-            />{{ component.name }}</div>
-        </div>
-      </template>
-    </XTooltip>
+          <path
+            :d="slice.path"
+            :class="`filling ${slice.class} ${inHover === index? 'in-hover' : ''}`"
+          />
+          <text
+            v-if="showPercentageText(slice.value)"
+            class="scaling"
+            text-anchor="middle"
+            :x="slice.middle.x"
+            :y="slice.middle.y"
+          >
+            {{ Math.round(slice.value * 100) }}%
+          </text>
+        </g>
+      </svg>
+    </XChartTooltip>
   </div>
 </template>
 
 <script>
-import XTooltip from '../popover/Tooltip.vue';
+import XChartTooltip from './ChartTooltip.vue';
 
 export default {
   name: 'XPie',
   components: {
-    XTooltip,
+    XChartTooltip,
   },
   props: {
     data: {
@@ -109,16 +90,18 @@ export default {
   },
   computed: {
     processedData() {
-      return this.data.map((item, index) => {
-        if (this.data.length === 2 && index === 1 && this.data[0].remainder) {
-          return { class: `indicator-fill-${Math.ceil(item.value * 4)}`, ...item };
-        }
-        const modIndex = (index % 10) + 1;
-        if (item.intersection) {
-          return { class: `fill-intersection-${modIndex - 1}-${modIndex + 1}`, ...item };
-        }
-        return { class: `pie-fill-${modIndex}`, ...item };
+      const processData = this.data.map((item, index) => {
+        const { value, remainder } = item;
+        const modifiedItem = item;
+        modifiedItem.index = index;
+        modifiedItem.percentage = this.getPercentage(value);
+        modifiedItem.name = remainder ? 'Excluding' : modifiedItem.name;
+        modifiedItem.class = this.getItemClass(item, index);
+        return modifiedItem;
       });
+
+      this.$emit('legend-data-modified', processData);
+      return processData;
     },
     slices() {
       let cumulativePortion = 0;
@@ -140,46 +123,87 @@ export default {
         };
       });
     },
-    hoverDetails() {
+    tooltipDetails() {
       if (!this.data || this.data.length === 0 || this.inHover === -1) {
         return {};
       }
+
       const {
-        value, name, remainder, intersection, class: dataClass,
+        percentage, name, remainder, intersection,
       } = this.processedData[this.inHover];
-      let percentage = Math.round(value * 100);
-      if (percentage < 0) {
-        percentage = 100 + percentage;
-      }
-      let title = name;
-      let components = [];
+
+      const value = this.processedData[this.inHover].numericValue;
+      const colorClass = this.processedData[this.inHover].class;
+      let tooltip;
       if (intersection) {
-        title = 'Intersection';
-        components.push({ ...this.processedData[this.inHover - 1] });
-        components.push({ ...this.processedData[this.inHover + 1] });
+        tooltip = this.getIntersectionTooltip(name, value, percentage, colorClass);
+      } else if (this.inHover === 0 && remainder) {
+        tooltip = this.getExcludingTooltip(name, value, percentage, colorClass);
+      } else {
+        tooltip = this.getNormalTooltip(name, value, percentage, colorClass);
       }
-      if (this.inHover === 0 && remainder) {
-        title = 'Excluding';
-        components = this.processedData.filter((data) => !data.intersection && !data.remainder);
-      }
-      return {
-        parentTitle: this.data[0].name,
-        title,
-        percentage,
-        class: dataClass,
-        components,
-      };
+      return tooltip;
     },
   },
   methods: {
+    getItemClass(item) {
+      if (this.data.length === 2 && item.index === 1 && this.data[0].remainder) {
+        return `indicator-fill-${Math.ceil(item.value * 4)}`;
+      }
+      const modIndex = (item.index % 10) + 1;
+      if (item.intersection) {
+        return `fill-intersection-${modIndex - 1}-${modIndex + 1}`;
+      }
+      return `pie-fill-${modIndex}`;
+    },
+    getPercentage(value) {
+      let percentage = value * 100;
+      percentage = percentage % 1 ? percentage.toFixed(2) : percentage;
+      if (percentage < 0) {
+        percentage = 100 + percentage;
+      }
+      return `(${percentage}%)`;
+    },
+    getNormalTooltip(name, value, percentage, colorClass) {
+      return {
+        header: {
+          class: colorClass,
+          name,
+        },
+        body: {
+          value,
+          percentage,
+        },
+      };
+    },
+    getExcludingTooltip(name, value, percentage, colorClass) {
+      return {
+        header: {
+          class: colorClass,
+          name,
+          value,
+          percentage,
+        },
+        additionalData: this.processedData.filter((data) => !data.intersection && !data.remainder),
+      };
+    },
+    getIntersectionTooltip(name, value, percentage, colorClass) {
+      return {
+        header: {
+          class: colorClass,
+          name: 'Intersection',
+          value,
+          percentage,
+        },
+        additionalData: [{
+          ...this.processedData[this.inHover - 1],
+        }, {
+          ...this.processedData[this.inHover + 1],
+        }],
+      };
+    },
     getCoordinatesForPercent(portion) {
       return [Math.cos(2 * Math.PI * portion), Math.sin(2 * Math.PI * portion)];
-    },
-    onHover(event, index) {
-      this.inHover = index;
-      if (!this.$refs.tooltip || !this.$refs.tooltip.$el) return;
-      this.$refs.tooltip.$el.style.top = `${event.clientY + 10}px`;
-      this.$refs.tooltip.$el.style.left = `${event.clientX + 10}px`;
     },
     showPercentageText(val) {
       return (this.forceText && val > 0) || val > 0.04;
@@ -192,67 +216,47 @@ export default {
 };
 </script>
 
-<style lang="scss">
-    .x-pie {
-        margin: auto;
-        width: 240px;
-        position: relative;
-        .fill-intersection-2-4 {
-            fill: url(#intersection-2-4);
-            background: repeating-linear-gradient(45deg, nth($pie-colours, 2),
-                    nth($pie-colours, 2) 4px, nth($pie-colours, 4) 4px, nth($pie-colours, 4) 8px);
-        }
+<style lang="scss" scoped>
+  .x-pie {
+      margin: auto;
+      width: 240px;
+      position: relative;
+      .fill-intersection-2-4 {
+          fill: url(#intersection-2-4);
+          background: repeating-linear-gradient(45deg, nth($pie-colours, 2),
+                  nth($pie-colours, 2) 4px, nth($pie-colours, 4) 4px, nth($pie-colours, 4) 8px);
+      }
 
-        g {
-            cursor: pointer;
+      g {
+          cursor: pointer;
 
-            path {
-                opacity: 0.8;
-                transition: opacity ease-in 0.4s;
+          path {
+              opacity: 0.8;
+              transition: opacity ease-in 0.4s;
 
-                &.in-hover {
-                    opacity: 1;
-                }
-            }
+              &.in-hover {
+                  opacity: 1;
+              }
+          }
 
-            text {
-                font-size: 1%;
-                fill: $theme-black;
-            }
-        }
+          text {
+              font-size: 1%;
+              fill: $theme-black;
+          }
+      }
 
-        &.disabled g {
-            cursor: default;
-        }
+      &.disabled g {
+          cursor: default;
+      }
 
       .x-tooltip {
-        position: fixed;
-        .tooltip-content {
-          display: flex;
-          .tooltip-legend {
-            margin-right: 12px;
-            flex: 1 0 auto;
-            max-width: 200px;
-
-            .legend {
-              display: inline-block;
-              height: 16px;
-              width: 16px;
-              border-radius: 4px;
-              margin-right: 4px;
-              vertical-align: middle;
-
-              &.round {
-                border-radius: 100%;
-                width: 8px;
-                height: 8px;
-              }
-            }
-          }
+        &.top {
+          bottom: auto;
         }
-
       }
-    }
+  }
 
-
+  .x-paginator {
+    margin-bottom: -6px;
+  }
 </style>

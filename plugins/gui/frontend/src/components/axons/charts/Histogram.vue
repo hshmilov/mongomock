@@ -1,58 +1,75 @@
 <template>
-  <div
-    class="x-histogram"
-    :class="{disabled: readOnly, condensed}"
+  <XChartTooltip
+    :header="tooltipDetails.header"
+    :body="tooltipDetails.body"
   >
-    <div class="histogram-container">
+    <div
+      slot="tooltipActivator"
+      class="x-histogram"
+      :class="{disabled: readOnly, condensed}"
+    >
       <div
-        v-for="(item, index) in pageData"
-        :key="index"
-        class="histogram-item"
-        @click="() => onClick(index)"
+        class="histogram-container"
       >
-        <div class="item-bar">
-          <img
-            v-if="condensed"
-            :src="require(`Logos/adapters/${item.name}.png`)"
-            width="30"
+        <div
+          v-for="(item, index) in pageData"
+          :key="index"
+          class="histogram-item"
+          @click="() => onClick(index)"
+        >
+          <div
+            class="item-bar"
           >
-          <div class="bar-container">
-            <div :style="{width: calculateBarWidth(item.value) + 'px'}">
-              <div
-                class="bar growing-x"
-                :title="item.name"
-              />
-            </div>
-            <div class="quantity">
-              {{ item.title || item.value }}
+            <img
+              v-if="condensed"
+              :src="require(`Logos/adapters/${item.name}.png`)"
+              width="30"
+              @mouseover="hoveredItem = item"
+              @mouseout="hoveredItem = null"
+            >
+            <div class="bar-container">
+              <div :style="{width: calculateBarWidth(item.value) + 'px'}">
+                <div
+                  class="bar growing-x"
+                  :name="item.name"
+                  @mouseover="hoveredItem = item"
+                  @mouseout="hoveredItem = null"
+                />
+              </div>
+              <div class="quantity">
+                {{ item.title || item.value }}
+              </div>
             </div>
           </div>
+          <div
+            v-if="!condensed"
+            class="item-title"
+            @mouseover="hoveredItem = item"
+            @mouseout="hoveredItem = null"
+          >{{ item.name }}</div>
         </div>
-        <div
-          v-if="!condensed"
-          class="item-title"
-          :title="item.name"
-        >{{ item.name }}</div>
       </div>
+      <template v-if="dataLength">
+        <div class="separator" />
+        <XPaginator
+          :from.sync="dataFrom"
+          :to.sync="dataTo"
+          :limit="limit"
+          :count="dataLength"
+        />
+      </template>
     </div>
-    <template v-if="dataLength">
-      <div class="separator" />
-      <XPaginator
-        :from.sync="dataFrom"
-        :to.sync="dataTo"
-        :limit="limit"
-        :count="dataLength"
-      />
-    </template>
-  </div>
+  </XChartTooltip>
 </template>
 
 <script>
 import XPaginator from '../layout/Paginator.vue';
+import XChartTooltip from './ChartTooltip.vue';
+import { pluginMeta } from '../../../constants/plugin_meta';
 
 export default {
   name: 'XHistogram',
-  components: { XPaginator },
+  components: { XPaginator, XChartTooltip },
   props: {
     data: {
       type: Array,
@@ -75,6 +92,7 @@ export default {
     return {
       dataFrom: 1,
       dataTo: 0,
+      hoveredItem: null,
     };
   },
   computed: {
@@ -115,8 +133,43 @@ export default {
       }
       return this.data.slice(this.dataFrom - 1, this.dataTo);
     },
+    tooltipDetails() {
+      if (!this.hoveredItem) {
+        return {};
+      }
+
+      const { value } = this.hoveredItem;
+      let { name } = this.hoveredItem;
+      name = pluginMeta[name] ? pluginMeta[name].title : name;
+
+      return {
+        header: {
+          class: 'tooltip-header-content pie-fill-1',
+          name,
+        },
+        body: {
+          value,
+          percentage: this.getValuePercentage(value),
+        },
+      };
+    },
+    totalValue() {
+      return this.data.reduce((total, item) => {
+        const value = item.name === 'No Value' ? 0 : item.value;
+        return total + value;
+      }, 0);
+    },
   },
   methods: {
+    getValuePercentage(value) {
+      let percentage = (value / this.totalValue) * 100;
+      if (percentage) {
+        percentage = `(${percentage % 1 ? percentage.toFixed(2) : percentage}%)`;
+      } else {
+        percentage = '';
+      }
+      return percentage;
+    },
     calculateBarWidth(quantity) {
       return (this.maxWidth * quantity) / this.maxQuantity;
     },
@@ -135,11 +188,11 @@ export default {
       }
     }
     .x-histogram {
+        height: 100%;
         display: flex;
         flex-direction: column;
         align-items: flex-start;
         position: relative;
-        flex: 1 0 auto;
         .histogram-container {
           display: flex;
           flex-direction: column;

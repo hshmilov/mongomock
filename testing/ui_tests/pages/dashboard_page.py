@@ -388,7 +388,7 @@ class DashboardPage(Page):
                                                         self.PANEL_BY_NAME_XPATH.format(panel_name=card_title)))
 
     def get_card(self, card_title):
-        return self.wait_for_element_present_by_xpath(self.PANEL_BY_NAME_XPATH.format(panel_name=card_title))
+        return self.wait_for_element_present_by_css(f'.card-container-outer[name="{card_title}"]')
 
     def get_all_cards(self):
         return self.driver.find_elements_by_css_selector('.x-tab.active div.x-card')
@@ -543,7 +543,7 @@ class DashboardPage(Page):
         histogram_items_title = []
         histogram_items = self.get_histogram_items_on_pagination(histogram)
         for line_item in histogram_items:
-            histogram_items_title.append(line_item.find_element_by_css_selector('.item-bar~div[title]').text)
+            histogram_items_title.append(line_item.find_element_by_css_selector('.item-title').text)
         return histogram_items_title
 
     def get_histogram_items_quantities_on_pagination(self, histogram):
@@ -693,7 +693,7 @@ class DashboardPage(Page):
 
     @staticmethod
     def find_adapter_in_card(card, adapter):
-        return card.find_element_by_css_selector(f'div[title={adapter}]')
+        return card.find_element_by_css_selector(f'div[name={adapter}]')
 
     @staticmethod
     def find_quantity_in_card_string(card):

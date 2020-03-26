@@ -162,7 +162,6 @@ export default {
         border: 2px solid transparent;
 
         &.card__item .header {
-            border: 1px solid transparent;
             > .header__title .card-title {
 
                 .md-icon {
@@ -174,7 +173,7 @@ export default {
                   margin: 0 12px 0 -4px;
                 }
             }
-        }
+          }
 
         .header {
           display: flex;

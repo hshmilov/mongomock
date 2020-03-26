@@ -127,9 +127,11 @@ def fetch_chart_compare(chart_view: ChartViews, views: List) -> List:
     if chart_view == ChartViews.pie:
         return_data = []
         if total:
-            return_data.extend(map(lambda x: {**x, 'value': x['value'] / total}, data))
+            return_data.extend(map(lambda x: {**x, 'value': x['value'] / total, 'numericValue': x['value']}, data))
         return return_data
     return data
+
+# pylint: disable=R0914
 
 
 def fetch_chart_intersect(
@@ -185,10 +187,12 @@ def fetch_chart_intersect(
     if len(intersecting) == 1:
         # Fetch the only child, intersecting with parent
         child1_view['query']['filter'] = f'{base_filter}({child1_filter})'
+        numeric_value = data_collection.count_documents({
+            '$and': base_queries + [child1_query]
+        })
         data.append({'name': intersecting[0], 'view': child1_view, 'module': entity.value,
-                     'value': data_collection.count_documents({
-                         '$and': base_queries + [child1_query]
-                     }) / total})
+                     'numericValue': numeric_value,
+                     'value': numeric_value / total})
     else:
         child2_view = find_filter_by_name(entity, intersecting[1])
         if not child2_view or not child2_view.get('query'):
@@ -198,40 +202,47 @@ def fetch_chart_intersect(
 
         # Child1 + Parent - Intersection
         child1_view['query']['filter'] = f'{base_filter}({child1_filter}) and not ({child2_filter})'
-        data.append({'name': intersecting[0], 'value': data_collection.count_documents({
+        numeric_value = data_collection.count_documents({
             '$and': base_queries + [
                 child1_query,
                 {
                     '$nor': [child2_query]
                 }
             ]
-        }) / total, 'module': entity.value, 'view': child1_view})
+        })
+        data.append({'name': intersecting[0], 'numericValue': numeric_value,
+                     'value': numeric_value / total, 'module': entity.value, 'view': child1_view})
 
         # Intersection
+        numeric_value = data_collection.count_documents({
+            '$and': base_queries + [
+                child1_query, child2_query
+            ]})
         data.append(
             {'name': ' + '.join(intersecting),
              'intersection': True,
-             'value': data_collection.count_documents({
-                 '$and': base_queries + [
-                     child1_query, child2_query
-                 ]}) / total,
+             'numericValue': numeric_value,
+             'value': numeric_value / total,
              'view': {**base_view, 'query': {'filter': f'{base_filter}({child1_filter}) and ({child2_filter})'}},
              'module': entity.value})
 
         # Child2 + Parent - Intersection
         child2_view['query']['filter'] = f'{base_filter}({child2_filter}) and not ({child1_filter})'
-        data.append({'name': intersecting[1], 'value': data_collection.count_documents({
+        numeric_value = data_collection.count_documents({
             '$and': base_queries + [
                 child2_query,
                 {
                     '$nor': [child1_query]
                 }
             ]
-        }) / total, 'module': entity.value, 'view': child2_view})
+        })
+        data.append({'name': intersecting[1], 'numericValue': numeric_value,
+                     'value': numeric_value / total, 'module': entity.value, 'view': child2_view})
 
     remainder = 1 - sum([x['value'] for x in data])
+    numeric_remainder = total - sum([x['numericValue'] for x in data])
     child2_or = f' or ({child2_filter})' if child2_filter else ''
-    return [{'name': base or 'ALL', 'value': remainder, 'remainder': True, 'view': {
+    return [{'name': base or 'ALL', 'value': remainder, 'numericValue': numeric_remainder, 'remainder': True, 'view': {
         **base_view, 'query': {'filter': f'{base_filter}not (({child1_filter}){child2_or})'}
     }, 'module': entity.value}, *data]
 
@@ -484,7 +495,7 @@ def fetch_chart_segment(chart_view: ChartViews, entity: EntityType, view, field,
     data = sorted(data, key=lambda x: x['value'], reverse=True)
     if chart_view == ChartViews.pie:
         total = sum([x['value'] for x in data])
-        return [{**x, 'value': x['value'] / total} for x in data]
+        return [{**x, 'value': x['value'] / total, 'numericValue': x['value']} for x in data]
     return data
 
 

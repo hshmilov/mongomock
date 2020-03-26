@@ -21,7 +21,7 @@
       &lt;
     </x-button>
     <div class="pagintator-text">
-      <template v-if="page === 1">
+      <template v-if="showTop && page === 1">
         Top <strong class="num-of-items"> {{ to }}</strong>
       </template>
       <template v-else>
@@ -74,6 +74,10 @@ export default {
     count: {
       type: Number,
       required: true,
+    },
+    showTop: {
+      type: Boolean,
+      default: true,
     },
   },
   data() {

@@ -1,69 +1,100 @@
 <template>
-  <XCard
-    class="card__item"
-    :title="chart.name"
-    :removable="!readOnly"
-    :editable="!readOnly && chart.user_id !== '*'"
-    :exportable="chart.metric==='segment'"
-    :draggable="draggable"
-    :is-chart-filterable="isChartFilterable"
-    v-on="$listeners"
-    @edit="editPanel"
-    @refresh="(skip) => fetchMorePanel(chart.uuid, 0, chart.historical, true)"
-    @moveOrCopy="openMoveOrCopy"
-    @toggleShowSearch="toggleShowSearch"
+  <div
+    class="card-container-outer"
+    :name="chart.name"
+    :class="{ 'double-card': showLegend }"
   >
-    <div
-      v-if="chart.metric !== 'timeline'"
-      class="card-history"
-    >
-      <div
-        :class="headerClass"
+    <div class="card-container-inner">
+      <XCard
+        v-if="showLegend"
+        class="legend"
       >
-        <XHistoricalDate
-          :value="chart.historical"
-          :allowed-dates="allowedDates"
-          @input="(selectedDate) => confirmPickDate(chart, selectedDate)"
+        <XChartLegend
+          :data="legendData"
+          @on-item-click="onLegendItemClick"
         />
-        <XSearchInput
-          v-if="isChartFilterable && showSearch"
-          v-model="dataFilter"
-          :auto-focus="false"
-        />
+      </XCard>
+      <XCard
+        class="card__item"
+        :title="chart.name"
+        :removable="!readOnly"
+        :editable="!readOnly && chart.user_id !== '*'"
+        :exportable="chart.metric==='segment'"
+        :draggable="draggable"
+        :is-chart-filterable="isChartFilterable"
+        v-on="$listeners"
+        @edit="editPanel"
+        @refresh="(skip) => fetchMorePanel(chart.uuid, 0, chart.historical, true)"
+        @moveOrCopy="openMoveOrCopy"
+        @toggleShowSearch="toggleShowSearch"
+      >
+        <div
+          v-if="chart.metric !== 'timeline'"
+          class="card-history"
+        >
+          <div
+            :class="headerClass"
+          >
+            <XHistoricalDate
+              :value="chart.historical"
+              :allowed-dates="allowedDates"
+              @input="(selectedDate) => confirmPickDate(chart, selectedDate)"
+            />
+            <XSearchInput
+              v-if="isChartFilterable && showSearch"
+              v-model="dataFilter"
+              :auto-focus="false"
+            />
 
-      </div>
+          </div>
+        </div>
+        <Component
+          :is="`x-${chart.view}`"
+          v-if="!isChartEmpty(chart)"
+          :data="chart.data"
+          @click-one="(queryInd) => linkToQueryResults(queryInd, chart.historical)"
+          @fetch="(skip) => fetchMorePanel(chart.uuid, skip, chart.historical)"
+          @legend-data-modified="onlegendDataModified"
+        />
+        <div
+          v-else-if="chart.loading"
+          class="chart-spinner"
+        >
+          <MdProgressSpinner
+            class="progress-spinner"
+            md-mode="indeterminate"
+            :md-stroke="3"
+            :md-diameter="25"
+          />
+          <span>Fetching data...</span>
+        </div>
+        <div
+          v-else
+          class="no-data-found"
+        >
+          <SvgIcon
+            name="illustration/binocular"
+            :original="true"
+            height="50"
+          />
+          <div>No data found</div>
+        </div>
+        <div
+          v-if="chart.view === 'pie'"
+          class="footer"
+        >
+          <SvgIcon
+            v-if="!isChartEmpty(chart)"
+            class="toggle-legend"
+            :name="showLegend ? 'action/toggle_light_dark' : 'action/toggle_dark_light'"
+            width="16"
+            :original="true"
+            @click="showLegend = !showLegend"
+          />
+        </div>
+      </XCard>
     </div>
-    <Component
-      :is="`x-${chart.view}`"
-      v-if="!isChartEmpty(chart)"
-      :data="chart.data"
-      @click-one="(queryInd) => linkToQueryResults(queryInd, chart.historical)"
-      @fetch="(skip) => fetchMorePanel(chart.uuid, skip, chart.historical)"
-    />
-    <div
-      v-else-if="chart.loading"
-      class="chart-spinner"
-    >
-      <MdProgressSpinner
-        class="progress-spinner"
-        md-mode="indeterminate"
-        :md-stroke="3"
-        :md-diameter="25"
-      />
-      <span>Fetching data...</span>
-    </div>
-    <div
-      v-else
-      class="no-data-found"
-    >
-      <SvgIcon
-        name="illustration/binocular"
-        :original="true"
-        height="50"
-      />
-      <div>No data found</div>
-    </div>
-  </XCard>
+  </div>
 </template>
 
 <script>
@@ -79,15 +110,23 @@ import { UPDATE_DATA_VIEW } from '../../../store/mutations';
 import XCard from '../../axons/layout/Card.vue';
 import XHistoricalDate from '../../neurons/inputs/HistoricalDate.vue';
 import XHistogram from '../../axons/charts/Histogram.vue';
-import xPie from '../../axons/charts/Pie.vue';
-import xSummary from '../../axons/charts/Summary.vue';
-import xLine from '../../axons/charts/Line.vue';
+import XPie from '../../axons/charts/Pie.vue';
+import XSummary from '../../axons/charts/Summary.vue';
+import XLine from '../../axons/charts/Line.vue';
 import XSearchInput from '../../neurons/inputs/SearchInput.vue';
+import XChartLegend from '../../axons/charts/ChartLegend.vue';
 
 export default {
   name: 'XPanel',
   components: {
-    XCard, XHistoricalDate, XHistogram, xPie, xSummary, xLine, XSearchInput,
+    XCard,
+    XHistoricalDate,
+    XHistogram,
+    XPie,
+    XSummary,
+    XLine,
+    XSearchInput,
+    XChartLegend,
   },
   props: {
     chart: {
@@ -106,6 +145,7 @@ export default {
   data() {
     return {
       filter: '',
+      showLegend: false,
       showSearch: false,
     };
   },
@@ -225,6 +265,12 @@ export default {
     editPanel() {
       this.filter = '';
     },
+    onlegendDataModified(legendData) {
+      this.legendData = legendData;
+    },
+    onLegendItemClick(itemIndex) {
+      this.linkToQueryResults(itemIndex, this.chart.historical);
+    },
     openMoveOrCopy() {
       this.moveOrCopyToggle({
         active: true,
@@ -249,6 +295,53 @@ export default {
       width: 158px;
       &.x-historical-date {
         margin-right: 5px;
+      }
+    }
+  }
+
+  .footer {
+    padding: 0 12px;
+
+    .toggle-legend {
+      cursor: pointer;
+    }
+  }
+
+  .card-container-outer {
+    border: none;
+    box-shadow: 0 2px 12px 0px rgba(0, 0, 0, 0.2);
+
+    .card-container-inner {
+      height: 100%;
+
+      .x-card {
+        height: 100%;
+        box-shadow: none;
+      }
+    }
+
+    &.double-card {
+      grid-column: span 2;
+      background-color: white;
+      .card-container-inner {
+        height: 100%;
+        display: flex;
+
+        .x-card {
+          width: 50%;
+          display: flex;
+          justify-content: space-between;
+
+          .card__item .header:hover {
+            border: none;
+          }
+
+          &:not(.legend) {
+            border-width: 0 0 0 1px;
+            border-style: solid;
+            border-color: $grey-2;
+          }
+        }
       }
     }
   }
