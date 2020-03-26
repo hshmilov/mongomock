@@ -23,12 +23,13 @@ class RedhatSatelliteConnection(RESTConnection):
     def _connect(self):
         if not self._username or not self._password:
             raise RESTException('No username or password')
-        # TTOODDDDO: add permission check
+        # raises HTTPError(403) if there are no permissions
+        _ = list(self._iter_hosts(include_facts=False, limit=1))
 
     # pylint: disable=arguments-differ
     def _do_request(self, *args, **kwargs):
         # if not instructed otherwise, default to basic auth
-        kwargs.setdefault('do_digest_auth', True)
+        kwargs.setdefault('do_basic_auth', True)
         return super()._do_request(*args, **kwargs)
 
     # pylint: disable=arguments-differ
@@ -40,16 +41,16 @@ class RedhatSatelliteConnection(RESTConnection):
                 raise RESTException(f'Red Hat Satellite Error: {error_dict}')
         return response
 
-    def _paginated_request(self, *args, **kwargs):
+    def _paginated_request(self, *args, limit: int = consts.MAX_NUMBER_OF_DEVICES, **kwargs):
         pagination_params = kwargs.setdefault(
             'url_params' if (kwargs.get('method') or args[0]) == 'GET'
             else 'body_params', {})
-        pagination_params.setdefault('per_page', consts.DEVICE_PER_PAGE)
+        pagination_params.setdefault('per_page', min(consts.DEVICE_PER_PAGE, limit))
         curr_page = pagination_params.setdefault('page', 1)  # page is 1-index based
         # Note: initial value used only for initial while iteration
         total_count = count_so_far = 0
         try:
-            while count_so_far <= total_count:
+            while count_so_far <= min(total_count, limit):
                 pagination_params['page'] = curr_page
                 response = self._do_request(*args, **kwargs)
 
@@ -86,9 +87,9 @@ class RedhatSatelliteConnection(RESTConnection):
 
     paginated_get = partialmethod(_paginated_request, 'GET')
 
-    def _iter_hosts(self, include_facts=True):
+    def _iter_hosts(self, include_facts=True, limit=consts.MAX_NUMBER_OF_DEVICES):
 
-        hosts_iter = self.paginated_get('v2/hosts')
+        hosts_iter = self.paginated_get('v2/hosts', limit=limit)
         if not include_facts:
             # If facts are not included, all hosts are yielded here
             yield from hosts_iter
@@ -98,7 +99,7 @@ class RedhatSatelliteConnection(RESTConnection):
         hosts_by_hostname = {}  # type: Dict[str, List[Dict]]
         for host in hosts_iter:
             host_name = host.get('name')
-            if isinstance(host_name, str):
+            if not isinstance(host_name, str):
                 # hosts with no hostname are yielded here
                 yield host
                 continue
