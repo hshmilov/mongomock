@@ -140,6 +140,7 @@ class StaticCorrelatorService(CorrelatorBase):
             }
         }, projection={
             'internal_axon_id': True,
+            'plugin_name': True,
             'adapters.data.hostname': True,
             'adapters.data.id': True,
             f'adapters.{PLUGIN_UNIQUE_NAME}': True,
@@ -152,7 +153,7 @@ class StaticCorrelatorService(CorrelatorBase):
             hostname_to_devices_map = defaultdict(list)
             for adapter_device in axonius_device['adapters']:
                 hostname = calculate_normalized_hostname(adapter_device)
-                if hostname:
+                if hostname and not adapter_device.get('plugin_name') == 'aws_adapter':
                     hostname_to_devices_map[hostname].append(adapter_device)
 
             # if not all non-empty hostnames are the same
