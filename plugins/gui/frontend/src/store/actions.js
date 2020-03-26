@@ -336,6 +336,7 @@ export const saveDataView = ({ state, dispatch, commit }, payload) => {
 
     if (_get(newPayload, 'view.query.meta.searchTemplate', false)) {
       delete newPayload.view.query.meta.searchTemplate;
+      newPayload.view.query.search = null;
     }
     return saveView({ dispatch, commit }, newPayload);
   }

@@ -322,13 +322,12 @@ export default {
       this.closeInput();
     }, 400, { leading: true, trailing: false }),
     searchText() {
+      this.$emit('update:query-search', this.searchValue);
       // Plug the search value in the template for filtering by any of currently selected fields
       // in case of search type mode this component will handle the search value
       if (this.querySearchTemplate) {
-        this.$emit('update:query-search', null);
-        this.$emit('input', this.parseSearchTemplateQuery(this.querySearchTemplate.searchField, this.inputValue));
+        this.$emit('input', this.parseSearchTemplateQuery(this.querySearchTemplate.searchField, this.searchValue));
       } else {
-        this.$emit('update:query-search', this.searchValue);
         this.$emit('input', this.textSearchPattern.replace(/{val}/g, this.searchValue));
       }
       this.closeInput();
