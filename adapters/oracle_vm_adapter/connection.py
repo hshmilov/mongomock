@@ -15,12 +15,13 @@ class OracleVmConnection(RESTConnection):
                          **kwargs)
 
     def _connect(self):
-        if self._username and self._password:
-            response = self._get('Manager', do_basic_auth=True)
-            if not response.get('managerRunState') or response.get('managerRunState').upper() != 'RUNNING':
-                raise RESTException(f'Server not in Running mode. Response was {response}')
-        else:
+        if not self._username or not self._password:
             raise RESTException('No user name or password')
+
+        response = self._get('Manager', do_basic_auth=True)
+        if not response or not isinstance(response, list) or not isinstance(response[0], dict) or \
+                not response[0].get('managerRunState') or response[0].get('managerRunState').upper() != 'RUNNING':
+            raise RESTException(f'Server not in Running mode. Response was {response}')
 
     def __get_vms(self):
         try:
