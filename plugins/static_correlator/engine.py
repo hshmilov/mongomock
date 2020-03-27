@@ -85,6 +85,7 @@ def is_only_host_adapter(adapter_device):
                                               'signalsciences_adapter',
                                               'sysaid_adapter',
                                               'logrhythm_adapter',
+                                              'pkware_adapter',
                                               'splunk_adapter',
                                               'cloud_health_adapter',
                                               'symantec_ee_adapter',

@@ -24,4 +24,19 @@ class DeepSecurityConnection(RESTConnection):
             raise RESTException(f'Bad response: {response}')
 
     def get_device_list(self):
-        yield from self._get('computers', url_params={'expand': 'computerStatus'})['computers']
+        id_base = 0
+        while True:
+            body_params = {'maxItems': 5000, 'searchCriteria': [{'idValue': id_base, 'idTest': 'greater-than'}]}
+            url_params = {'expand': 'computerStatus'}
+            try:
+                for device_raw in self._post('computers/search',
+                                             url_params=url_params,
+                                             body_params=body_params)['computers']:
+                    if device_raw.get('ID') is None:
+                        continue
+                    if int(device_raw.get('ID')) > id_base:
+                        id_base = int(device_raw.get('ID'))
+                    yield device_raw
+            except Exception:
+                logger.exception(f'Problem with id {id_base}')
+                break
