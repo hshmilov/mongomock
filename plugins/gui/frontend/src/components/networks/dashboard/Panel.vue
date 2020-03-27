@@ -34,13 +34,11 @@
           v-if="chart.metric !== 'timeline'"
           class="card-history"
         >
-          <div
-            :class="headerClass"
-          >
+          <div class="x-card-header">
             <XHistoricalDate
-              v-if="showHistory"
               :value="chart.historical"
               :allowed-dates="allowedDates"
+              :class="{hidden: !showHistory && !chart.historical}"
               @input="(selectedDate) => confirmPickDate(chart, selectedDate)"
             />
             <XSearchInput
@@ -172,12 +170,6 @@ export default {
     ...mapGetters({
       isEntityRestricted: IS_ENTITY_RESTRICTED,
     }),
-    headerClass() {
-      return {
-        'x-card-header': true,
-        hidden: false,
-      };
-    },
     dataFilter: {
       get() {
         return this.filter;
@@ -288,7 +280,7 @@ export default {
 <style lang="scss">
   .x-card-header {
     display: flex;
-    &.hidden {
+    .hidden {
       display: none;
     }
     > div {

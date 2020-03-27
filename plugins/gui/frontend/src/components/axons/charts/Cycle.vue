@@ -176,7 +176,10 @@
         return this.currentStage.name.split('_').join(' ')
       },
       currentStageAdditionalData() {
-        const additionalData = this.currentStage.additional_data || []
+        if (!this.currentStage || !this.currentStage.additional_data) {
+          return [];
+        }
+        const additionalData = this.currentStage.additional_data
         const temp = Object.keys(additionalData).reduce((acc, current, index) => {
           const name = current.split('_').slice(0,-1).join('_')
           const title = pluginMeta[name] ? pluginMeta[name].title : name.split('_').join(' ')
