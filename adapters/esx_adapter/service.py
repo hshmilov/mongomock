@@ -45,6 +45,7 @@ class ESXIdentifyingInfo(SmartJsonClass):
 
 class EsxAdapter(AdapterBase, Configurable):
     class MyDeviceAdapter(DeviceAdapter):
+        connection_hostname = Field(str, 'ESX/VCenter UI Hostname')
         vm_tools_status = Field(str, 'VM Tools Status')
         vm_physical_path = Field(str, 'VM physical path')
         device_type = Field(ESXDeviceType, 'VM type')
@@ -76,7 +77,7 @@ class EsxAdapter(AdapterBase, Configurable):
                 password=client_config['password'],
                 verify_ssl=client_config['verify_ssl'],
                 restful_api_url=client_config.get('rest_api', f'https://{host}/api'),
-            )
+            ), host
         except vim.fault.InvalidLogin as e:
             message = 'Credentials invalid for ESX client for account {0}'.format(client_id)
             logger.warning(message, exc_info=True)
@@ -111,7 +112,8 @@ class EsxAdapter(AdapterBase, Configurable):
         }
 
     def _query_devices_by_client(self, client_name, client_data):
-        return rawify_vcenter_data(client_data.get_all_vms())
+        connection, host = client_data
+        return rawify_vcenter_data(connection.get_all_vms()), host
 
     def _parse_vm_machine(self, node, _curr_path):
         details = node.get('Details', {})
@@ -198,7 +200,7 @@ class EsxAdapter(AdapterBase, Configurable):
         device.set_raw(details)
         return device
 
-    def _parse_raw_data(self, node, _curr_path: str = ''):
+    def _parse_raw_data(self, raw_data, _curr_path: str = ''):
         """
         Parses the vms as returned from _query_devices_by_client to the format Aggregator wants
 
@@ -206,8 +208,9 @@ class EsxAdapter(AdapterBase, Configurable):
         :param _curr_path: internally used
         :return: iterator(dict)
         """
-        if node is None:
+        if raw_data is None:
             return
+        node, connection_hostname = raw_data
         node_type = node.get('Type')
         if not node_type:
             return
@@ -217,6 +220,7 @@ class EsxAdapter(AdapterBase, Configurable):
             try:
                 device = self._parse_vm_machine(node, _curr_path)
                 device.device_type = ESXDeviceType.VMMachine
+                device.connection_hostname = connection_hostname
                 yield device
             except Exception:
                 logger.warning('Problem getting machine', exc_info=True)
@@ -256,6 +260,7 @@ class EsxAdapter(AdapterBase, Configurable):
 
             except Exception:
                 logger.warning(f'Problem getting ESX Host name ', exc_info=True)
+            device.connection_hostname = connection_hostname
             device.device_type = ESXDeviceType.ESXHost
             node_hardware = node.get('Hardware')
             if node_hardware:
@@ -268,7 +273,7 @@ class EsxAdapter(AdapterBase, Configurable):
         elif node_type in ('Datacenter', 'Folder', 'Root', 'Cluster'):
             for child in node.get('Children', [{}]):
                 try:
-                    yield from self._parse_raw_data(child, _curr_path + '/' + node['Name'])
+                    yield from self._parse_raw_data((child, connection_hostname), _curr_path + '/' + node['Name'])
                 except Exception:
                     logger.warning(f'Problem getting special thing', exc_info=True)
                     continue
