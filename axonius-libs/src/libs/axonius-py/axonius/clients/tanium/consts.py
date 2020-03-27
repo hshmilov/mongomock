@@ -43,6 +43,7 @@ VALUES_SKIP = [
     re.compile(r'uninitialized - waiting for login', re.I),
     re.compile(r'utilities missing:', re.I),
     re.compile(r'^Could not get results$', re.I),
+    re.compile(r'TempLinux_\d+.*', re.I),
 ]
 VALUES_EMPTY = [None, '', []]
 MAC_RE = '[0-9a-f]{2}([-:]?)[0-9a-f]{2}(\\1[0-9a-f]{2}){4}$'
