@@ -34,6 +34,7 @@ class TenableIoAdapter(ScannerAdapterBase, Configurable):
         linked_on = Field(datetime.datetime, 'Linked On')
         last_scan_time = Field(datetime.datetime, 'Last Scan Time')
         agent_uuid = Field(str, 'Agent UUID')
+        risk_factor = Field(str, 'Risk Factor')
 
         def add_tenable_vuln(self, **kwargs):
             self.plugin_and_severities.append(TenableVulnerability(**kwargs))
@@ -207,6 +208,7 @@ class TenableIoAdapter(ScannerAdapterBase, Configurable):
         device.id = device_id
         device.has_agent = bool(device_raw.get('has_agent'))
         device.last_seen = parse_date(device_raw.get('last_seen'))
+        device.risk_factor = device_raw.get('risk_factor')
         device.agent_uuid = device_raw.get('agent_uuid')
         last_scan_time = parse_date(device_raw.get('last_scan_time'))
         if self.__exclude_no_last_scan and not last_scan_time:
