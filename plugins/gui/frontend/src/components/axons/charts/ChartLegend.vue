@@ -1,22 +1,24 @@
 <template>
-  <div
-    class="legend-grid"
-    :style="gridTemplateColumns"
-  >
+  <div class="x-chart-legend">
     <div
-      v-for="(columnValue, index) in columnValues"
-      :key="index"
-      :class="columnValue.class"
-      :title="columnValue.value"
-      @click="columnValue.onClick"
+      class="legend-grid"
+      :style="gridTemplateColumns"
     >
-      {{ columnValue.value }}
+      <div
+        v-for="(columnValue, index) in columnValues"
+        :key="index"
+        :class="columnValue.class"
+        :title="columnValue.value"
+        @click="columnValue.onClick"
+      >
+        {{ columnValue.value }}
+      </div>
     </div>
     <XPaginator
       v-if="showPaginator"
       :from.sync="legendFrom"
       :to.sync="legendTo"
-      :limit="10"
+      :limit="8"
       :count="data.length"
       :show-top="false"
     />
@@ -95,43 +97,55 @@ export default {
 
 <style lang="scss" scoped>
 
-.legend-grid {
-  display: grid;
-  grid-row-gap: 8px;
+  .x-chart-legend {
+    display: flex;
+    height: 100%;
+    flex-direction: column;
 
-  .column-color {
-    margin-top: 1px;
-    display: inline-block;
-    height: 16px;
-    width: 16px;
-    border-radius: 4px;
-    opacity: 0.8;
+    .legend-grid {
+      display: grid;
+      grid-row-gap: 8px;
 
-    &.fill-intersection-2-4 {
-        fill: url(#intersection-2-4);
-        background: repeating-linear-gradient(45deg, nth($pie-colours, 2),
-                nth($pie-colours, 2) 4px, nth($pie-colours, 4) 4px, nth($pie-colours, 4) 8px);
+      .column-color {
+        margin-top: 1px;
+        display: inline-block;
+        height: 16px;
+        width: 16px;
+        border-radius: 4px;
+        opacity: 0.8;
+
+        &.fill-intersection-2-4 {
+            fill: url(#intersection-2-4);
+            background: repeating-linear-gradient(45deg, nth($pie-colours, 2),
+                    nth($pie-colours, 2) 4px, nth($pie-colours, 4) 4px, nth($pie-colours, 4) 8px);
+        }
+      }
+
+      .column-name {
+        cursor: pointer;
+        text-overflow: ellipsis;
+        overflow: hidden;
+        margin-right: 4px;
+      }
+
+      .column-value {
+        padding-left: 4px;
+        white-space: nowrap;
+        text-align: end;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        border-left: 1px solid $grey-2;
+      }
+
+      .column-percentage {
+        text-align: end;
+      }
+    }
+
+    .x-paginator {
+      flex-grow: 1;
+      align-items: flex-end;
     }
   }
 
-  .column-name {
-    cursor: pointer;
-    text-overflow: ellipsis;
-    overflow: hidden;
-    margin-right: 4px;
-  }
-
-  .column-value {
-    padding-left: 4px;
-    white-space: nowrap;
-    text-align: end;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    border-left: 1px solid $grey-2;
-  }
-
-  .column-percentage {
-    text-align: end;
-  }
-}
 </style>

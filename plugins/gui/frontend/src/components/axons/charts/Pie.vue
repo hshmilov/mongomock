@@ -256,7 +256,4 @@ export default {
       }
   }
 
-  .x-paginator {
-    margin-bottom: -6px;
-  }
 </style>

@@ -154,10 +154,7 @@ export default {
       };
     },
     totalValue() {
-      return this.data.reduce((total, item) => {
-        const value = item.name === 'No Value' ? 0 : item.value;
-        return total + value;
-      }, 0);
+      return this.data.reduce((total, item) => (total + item.value), 0);
     },
   },
   methods: {

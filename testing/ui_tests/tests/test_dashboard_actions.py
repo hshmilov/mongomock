@@ -29,7 +29,7 @@ class TestDashboardActions(TestBase):
     AD_BAD_CONFIG_QUERY_NAME = 'AD enabled users with bad configurations'
     AD_NO_PASSWORD_EXPIRATION_OPTION = 'AD Enabled Users Whose Password Does Not Expire'
     AD_CRITICAL_USERS_OPTION_NAME = 'AD Enabled Critical Users'
-    SEARCH_ICON_CSS = '.search_icon'
+    SEARCH_ICON_CSS = '.actions__search'
 
     @contextmanager
     def _edit_and_assert_chart(self, card, assert_data, chart_type=PIE_CHART_TYPE):

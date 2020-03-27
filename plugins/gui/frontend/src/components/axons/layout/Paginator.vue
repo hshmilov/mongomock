@@ -134,27 +134,28 @@ export default {
 <style lang="scss">
   .x-paginator {
     display: flex;
-    min-width: 200px;
-    margin: auto;
+    width: 100%;
     min-height: 28px;
     align-items: center;
+    justify-content: center;
     background: $theme-white;
     border-bottom: 2px solid $theme-white;
     border-radius: 2px;
-    .pagintator-text {
-        margin: auto;
+
+    .paginator-text {
+      line-height: 30px;
     }
 
-    .x-button{
-        width: 15px;
-        background: transparent;
-        display: flex;
-        justify-content: center;
-        color: black;
-        &:hover:not(:disabled) {
-            color: black;
-            box-shadow: 1px 1px 3px grey;
-        }
+    .x-button {
+      width: 15px;
+      background: transparent;
+      display: flex;
+      justify-content: center;
+      color: black;
+      &:hover:not(:disabled) {
+          color: black;
+          box-shadow: 1px 1px 3px grey;
+      }
     }
     .active:hover {
       cursor: default;

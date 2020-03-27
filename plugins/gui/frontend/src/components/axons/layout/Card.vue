@@ -21,7 +21,7 @@
       <div class="actions">
         <span
           v-if="isChartFilterable"
-          class="search_icon"
+          class="actions__search"
           @click="$emit('toggleShowSearch')"
         >
           <VIcon
@@ -31,6 +31,7 @@
         </span>
         <ADropdown
           v-if="draggable"
+          class="actions__menu"
           :trigger="['click']"
           placement="bottomRight"
         >
@@ -218,9 +219,16 @@ export default {
 
         }
 
-        .actions .search_icon {
-          cursor: pointer;
-          margin-right: 11px;
+        .actions {
+          .actions__menu {
+            cursor: pointer;
+            padding: 8px 0;
+          }
+
+          .actions__search {
+            cursor: pointer;
+            margin-right: 8px;
+          }
         }
 
         > .body {

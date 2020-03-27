@@ -3,6 +3,8 @@
     class="card-container-outer"
     :name="chart.name"
     :class="{ 'double-card': showLegend }"
+    @mouseenter="showHistory = true"
+    @mouseleave="showHistory = false"
   >
     <div class="card-container-inner">
       <XCard
@@ -24,7 +26,7 @@
         :is-chart-filterable="isChartFilterable"
         v-on="$listeners"
         @edit="editPanel"
-        @refresh="(skip) => fetchMorePanel(chart.uuid, 0, chart.historical, true)"
+        @refresh="fetchMorePanel(chart.uuid, 0, chart.historical, true)"
         @moveOrCopy="openMoveOrCopy"
         @toggleShowSearch="toggleShowSearch"
       >
@@ -36,6 +38,7 @@
             :class="headerClass"
           >
             <XHistoricalDate
+              v-if="showHistory"
               :value="chart.historical"
               :allowed-dates="allowedDates"
               @input="(selectedDate) => confirmPickDate(chart, selectedDate)"
@@ -147,6 +150,7 @@ export default {
       filter: '',
       showLegend: false,
       showSearch: false,
+      showHistory: false,
     };
   },
   computed: {
@@ -172,11 +176,7 @@ export default {
       return {
         'x-card-header': true,
         hidden: false,
-        // hidden: !this.headerVisible,
       };
-    },
-    headerVisible() {
-      return this.isChartFilterable() || this.dataFilter || this.chart.historical;
     },
     dataFilter: {
       get() {
@@ -264,6 +264,7 @@ export default {
     }, 300),
     editPanel() {
       this.filter = '';
+      this.showLegend = false;
     },
     onlegendDataModified(legendData) {
       this.legendData = legendData;
