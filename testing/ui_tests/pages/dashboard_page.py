@@ -31,7 +31,7 @@ class DashboardPage(Page):
     INTERSECTION_PIE_INTERSECTION_SLICE_CSS = 'svg > g.slice-2 > text'
     SYMMETRIC_DIFFERENCE_FROM_BASE_QUERY_SLICE_CSS = 'svg > g.slice-0 > text'
     SYMMETRIC_DIFFERENCE_FROM_FIRST_QUERY_SLICE_CSS = 'svg > g.slice-1 > text'
-    NEW_CARD_WIZARD_CSS = '.x-tab.active .x-card.chart-new'
+    NEW_CARD_WIZARD_CSS = '.x-tab.active .x-card.chart-new .x-button'
     NEW_CARD_WIZARD_OVERLAY_CSS = '.x-modal .x-chart-wizard'
     CHART_METRIC_DROP_DOWN_CSS = '#metric > div'
     INTERSECTION_CHART_FIRST_QUERY_DROP_DOWN_CSS = '#intersectingFirst > div'
@@ -191,8 +191,8 @@ class DashboardPage(Page):
         this function designed to run in wait_until loop, witch expecting the NoSuchElementException exception
         :return: the overlay element of the desired wizard
         """
-        new_card = self.wait_for_element_present_by_css(self.NEW_CARD_WIZARD_CSS)
-        new_card.click()
+        new_chart_button = self.wait_for_element_present_by_css(self.NEW_CARD_WIZARD_CSS)
+        new_chart_button.click()
         return self.driver.find_element_by_css_selector(self.NEW_CARD_WIZARD_OVERLAY_CSS)
 
     def select_chart_metric(self, option):
@@ -527,7 +527,7 @@ class DashboardPage(Page):
 
     @staticmethod
     def get_card_pagination_text(card):
-        return card.find_element_by_css_selector('.pagintator-text').text
+        return card.find_element_by_css_selector('.paginator-text').text
 
     @staticmethod
     def get_histogram_line_from_histogram(histogram, number):

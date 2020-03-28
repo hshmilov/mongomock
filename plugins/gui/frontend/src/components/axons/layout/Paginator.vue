@@ -20,7 +20,7 @@
     >
       &lt;
     </x-button>
-    <div class="pagintator-text">
+    <div class="paginator-text">
       <template v-if="showTop && page === 1">
         Top <strong class="num-of-items"> {{ to }}</strong>
       </template>

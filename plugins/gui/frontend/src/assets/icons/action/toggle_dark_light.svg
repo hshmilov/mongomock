@@ -6,8 +6,8 @@
     <g id="Dashboard" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
         <g id="Chart-description" transform="translate(-1196.000000, -594.000000)">
             <g id="Group-2" transform="translate(1196.000000, 594.000000)">
-                <rect id="Rectangle-Copy-3" fill="#979797" x="0" y="0" width="7" height="16"></rect>
-                <rect id="Rectangle-Copy-4" stroke="#979797" stroke-width="0.4" x="7.2" y="0.2" width="6.6" height="15.6"></rect>
+                <rect id="Rectangle-Copy-3" fill="#DEDEDE" x="0" y="0" width="7" height="16"></rect>
+                <rect id="Rectangle-Copy-4" stroke="#DEDEDE" stroke-width="0.4" x="7.2" y="0.2" width="6.6" height="15.6"></rect>
             </g>
         </g>
     </g>

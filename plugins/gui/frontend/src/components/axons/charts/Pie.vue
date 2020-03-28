@@ -221,11 +221,6 @@ export default {
       margin: auto;
       width: 240px;
       position: relative;
-      .fill-intersection-2-4 {
-          fill: url(#intersection-2-4);
-          background: repeating-linear-gradient(45deg, nth($pie-colours, 2),
-                  nth($pie-colours, 2) 4px, nth($pie-colours, 4) 4px, nth($pie-colours, 4) 8px);
-      }
 
       g {
           cursor: pointer;

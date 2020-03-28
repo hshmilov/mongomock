@@ -760,6 +760,7 @@ export default {
 
                 .report-name-textbox {
                     width: 200px;
+                    line-height: 24px;
                 }
 
                 .main {

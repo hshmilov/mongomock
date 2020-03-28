@@ -80,19 +80,26 @@
           />
           <div>No data found</div>
         </div>
-        <div
-          v-if="chart.view === 'pie'"
-          class="footer"
-        >
-          <SvgIcon
-            v-if="!isChartEmpty(chart)"
+        <template #footer>
+          <div
+            v-if="chart.view === 'pie'"
             class="toggle-legend"
-            :name="showLegend ? 'action/toggle_light_dark' : 'action/toggle_dark_light'"
-            width="16"
-            :original="true"
-            @click="showLegend = !showLegend"
-          />
-        </div>
+          >
+            <SvgIcon
+              v-if="!isChartEmpty(chart)"
+              :name="showLegend ? 'action/toggle_light_dark' : 'action/toggle_dark_light'"
+              width="16"
+              :original="true"
+              @click="showLegend = !showLegend"
+            />
+          </div>
+          <div
+            v-if="draggable"
+            class="drag-handle"
+          >
+            <VIcon size="15">$vuetify.icons.cardDraggable</VIcon>
+          </div>
+        </template>
       </XCard>
     </div>
   </div>
@@ -292,17 +299,22 @@ export default {
     }
   }
 
-  .footer {
-    padding: 0 12px;
+  .drag-handle {
+    width: 36px;
+    margin: 0 auto;
+    display: block;
+    padding: 4px;
+    cursor: move;
+  }
 
-    .toggle-legend {
-      cursor: pointer;
-    }
+  .toggle-legend {
+    padding: 4px;
+    cursor: pointer;
   }
 
   .card-container-outer {
     border: none;
-    box-shadow: 0 2px 12px 0px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.2);
 
     .card-container-inner {
       height: 100%;

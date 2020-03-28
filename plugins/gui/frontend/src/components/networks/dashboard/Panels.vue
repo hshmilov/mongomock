@@ -4,7 +4,7 @@
     tag="transition-group"
     :animation="1000"
     draggable=".card-container-outer"
-    handle=".drag_handler"
+    handle=".drag-handle"
     ghost-class="ghost"
     class="x-panels"
     :move="checkMove"
@@ -274,11 +274,15 @@ export default {
             }
         }
         .chart-new {
-            .link {
+            .x-button.link {
                 font-size: 144px;
                 text-align: center;
-                line-height: 200px;
                 width: 100%;
+                height: 100%;
+                min-height: 200px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
             }
         }
       .chart-spinner {

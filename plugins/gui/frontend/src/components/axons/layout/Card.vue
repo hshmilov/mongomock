@@ -1,5 +1,5 @@
 <template>
-  <div :class="{'x-card': true, 'custom-card': draggable}">
+  <div class="x-card">
     <div class="header">
       <div class="header__title">
         <XButton
@@ -44,7 +44,9 @@
               class="verticaldots-expression-handle"
             >$vuetify.icons.verticaldots</VIcon>
           </span>
-          <AMenu slot="overlay">
+          <AMenu
+            slot="overlay"
+          >
             <AMenuItem
               v-if="editable"
               id="edit_chart"
@@ -90,16 +92,9 @@
     <div class="body">
       <slot />
     </div>
-    <div>
-      <span
-        v-if="draggable"
-        class="drag_handler"
-      >
-        <VIcon
-          size="15"
-          class="cardDraggable-expression-handle"
-        >$vuetify.icons.cardDraggable</VIcon>
-      </span></div>
+    <div class="footer">
+      <slot name="footer" />
+    </div>
   </div>
 </template>
 
@@ -139,7 +134,7 @@ export default {
     },
     draggable: {
       type: Boolean,
-      default: false,
+      default: false
     },
     showMenu: {
       type: Boolean,
@@ -174,7 +169,7 @@ export default {
                   margin: 0 12px 0 -4px;
                 }
             }
-          }
+        }
 
         .header {
           display: flex;
@@ -220,7 +215,7 @@ export default {
         }
 
         .actions {
-          .actions__menu {
+          &__menu {
             cursor: pointer;
             padding: 8px 0;
           }
@@ -236,15 +231,10 @@ export default {
           height: calc(100% - 72px);
         }
 
-        .drag_handler {
-          width: 35px;
-          margin: 0 auto;
-          display: block;
-          padding: 0 5px;
-          :hover {
-            cursor: move;
-          }
-        }
-
+      .footer {
+        width: 100%;
+        display: flex;
+        margin: -2px;
+      }
     }
 </style>

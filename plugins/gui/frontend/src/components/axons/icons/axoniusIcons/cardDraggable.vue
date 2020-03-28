@@ -6,7 +6,7 @@
     viewBox="0 0 25 11"
   >
     <g
-      fill="#E5E5E5"
+      :fill="color"
       fill-rule="evenodd"
     >
       <circle
@@ -67,7 +67,7 @@ export default {
   props: {
     color: {
       type: String,
-      default: '#FF7E46',
+      default: '#DEDEDE',
     },
   },
 };
