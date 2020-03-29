@@ -1,0 +1,9 @@
+PASSWORD = 'password'
+USER = 'username'
+JITA_HOST = 'server'
+JITA_PORT = 'port'
+JITA_DATABASE = 'database'
+DRIVER = 'driver'
+DEFAULT_JITA_PORT = 1433
+DEVICES_FETECHED_AT_A_TIME = 'devices_fetched_at_a_time'
+JITA_QUERY = 'Select * from JITAComputers'

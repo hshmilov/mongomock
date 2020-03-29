@@ -1,4 +1,5 @@
 export const pluginMeta = {
+
     azure_stack_hub_adapter: {
         title: 'Microsoft Azure Stack Hub',
         link: 'https://docs.axonius.com/docs/microsoft-azure-stack-hub',
@@ -23,6 +24,11 @@ export const pluginMeta = {
         title: 'Contrast Security',
         link: 'https://docs.axonius.com/docs/contrast-security',
         description: 'Contrast Security protects software applications against cyberattacks.'
+    },
+    jita_adapter: {
+        title: 'Remediant SecureONE (JITA)',
+        link: 'https://docs.axonius.com/docs/remediant-secureone',
+        description: 'Remediant SecureONE is a privileged access management solution that enables control and insight over the distribution, usage, and protection of privileged access across enterprise environments.'
     },
     kenna_adapter: {
         title: 'Kenna Security Platform',

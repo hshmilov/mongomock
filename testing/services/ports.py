@@ -167,6 +167,7 @@ DOCKER_PORTS = {
     'eclypsium-adapter':                6132,
     'toriihq-adapter':                  6133,
     'mysql-special-adapter':            6134,
+    'jita-adapter':                     6135,
     'diag-w':                           6665,  # reserved
     'diag-l':                           6666,  # reserved
     'code42-adapter':                   6667,
