@@ -20,6 +20,8 @@ class SystemMetricsTask(WatchdogTask):
             self.report_interfaces()
             self.report_disk_space()
             self.report_memory()
+            self.report_swap()
+            self.report_docker_stats()
             time.sleep(SLEEP_SECONDS)
 
     def report_disk_space(self):
@@ -51,16 +53,16 @@ class SystemMetricsTask(WatchdogTask):
             virtual_memory = psutil.virtual_memory()
             self.report_metric(SystemMetric.HOST_VIRTUAL_MEMORY_TOTAL, bytes_to_gb(virtual_memory.total))
             self.report_metric(SystemMetric.HOST_VIRTUAL_MEMORY_AVAILABLE, bytes_to_gb(virtual_memory.available))
-            self.report_metric(SystemMetric.HOST_VIRTUAL_MEMORY_PERCENT, bytes_to_gb(virtual_memory.percent))
+            self.report_metric(SystemMetric.HOST_VIRTUAL_MEMORY_PERCENT, virtual_memory.percent)
         except Exception as e:
             self.report_error(f'failed to report memory - {e}')
 
     def report_swap(self):
         try:
             swap = psutil.swap_memory()
-            self.report_metric(SystemMetric.HOST_SWAP_TOTAL, swap.total)
-            self.report_metric(SystemMetric.HOST_SWAP_USED, swap.used)
-            self.report_metric(SystemMetric.HOST_SWAP_FREE, swap.free)
+            self.report_metric(SystemMetric.HOST_SWAP_TOTAL, bytes_to_gb(swap.total))
+            self.report_metric(SystemMetric.HOST_SWAP_USED, bytes_to_gb(swap.used))
+            self.report_metric(SystemMetric.HOST_SWAP_FREE, bytes_to_gb(swap.free))
             self.report_metric(SystemMetric.HOST_SWAP_PERCENT, swap.percent)
         except Exception as e:
             self.report_error(f'failed to swap memory - {e}')
