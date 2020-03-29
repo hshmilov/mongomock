@@ -33,6 +33,10 @@ class Configuration:
             'name': None,
             'done': False,
         }
+        # if file exist delete it
+        file_path = Path(self.upload_files_dir, 'configuration_script.tar')
+        if file_path.exists():
+            file_path.unlink()
 
         logger.info(f'upload_file: request register id:{file_id}')
         return make_response((file_id, 200))

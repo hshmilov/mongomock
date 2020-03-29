@@ -18,16 +18,6 @@
         name="test"
         class-name="my-pond"
         :label-idle="label"
-        :server="{
-          url: '/api/upload_file',
-          process: '',
-          revert: '',
-          restore: null,
-          load: null,
-          fetch: null,
-        }"
-        :chunk-uploads="true"
-        :chunk-force="true"
         :chunk-size="100000000"
         :max-files="1"
         @processfile="handleFilePondProcess"
@@ -47,17 +37,28 @@
   </XPage>
 </template>
 <script>
-import vueFilePond from 'vue-filepond';
+import vueFilePond, { setOptions } from 'vue-filepond';
 import 'filepond/dist/filepond.min.css';
 import XPage from '@axons/layout/Page.vue';
 import XButton from '@axons/inputs/Button.vue';
-import executeFile from '@api/execute-configuration';
+import { executeFile, processFileUploadInChunks } from '@api/execute-configuration';
 import { mapMutations, mapState } from 'vuex';
 import _get from 'lodash/get';
 import { SHOW_TOASTER_MESSAGE } from '@store/mutations';
 
-
 const FilePond = vueFilePond();
+
+setOptions({
+  server: {
+    url: '/upload_file',
+    process: processFileUploadInChunks,
+    revert: '',
+    restore: null,
+    load: null,
+    fetch: null,
+  },
+});
+
 export default {
   name: 'XAdministration',
   components: { XButton, XPage, FilePond },
@@ -88,7 +89,7 @@ export default {
     }),
     handleFilePondProcess(error, file) {
       if (error) {
-        this.message = `Configuration script upload failed: ${error}`;
+        this.message = `Configuration script upload failed: ${error.body}`;
       }
       this.uploaded = true;
       this.fileServerId = file.serverId;
