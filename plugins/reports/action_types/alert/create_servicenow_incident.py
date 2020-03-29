@@ -248,7 +248,7 @@ class ServiceNowIncidentAction(ActionTypeAlert):
                                                  sort,
                                                  {field: 1 for field in field_list},
                                                  self._entity_type,
-                                                 field_filters=field_filters)
+                                                 field_filters=field_filters).getvalue()
             except Exception:
                 logger.exception(f'Failed getting csv')
 

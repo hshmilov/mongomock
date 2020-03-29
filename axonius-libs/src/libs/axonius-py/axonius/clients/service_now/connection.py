@@ -30,11 +30,13 @@ class ServiceNowConnection(RESTConnection):
             raise RESTException('No user name or password')
 
     def _upload_csv_to_table(self, table_name, table_sys_id, csv_string):
-        csv_bytes = io.BytesIO(csv_string.getvalue().encode('utf-8'))
-        self._post('attachment/upload',
-                   body_params={'table_name': table_name,
-                                'table_sys_id': table_sys_id},
-                   files_param={'file': ('report.csv', csv_bytes)})
+        csv_bytes = io.BytesIO(csv_string.encode('utf-8'))
+        self._post('attachment/file',
+                   url_params={'table_name': table_name,
+                               'table_sys_id': table_sys_id,
+                               'file_name': 'report.csv'},
+                   files_param={'file': ('report.csv', csv_bytes, 'text/csv', {'Expires': '0'})},
+                   extra_headers={'Content-Type': None})
 
     def get_user_list(self):
         users_table = []
@@ -231,7 +233,6 @@ class ServiceNowConnection(RESTConnection):
             if csv_string and (incident_value.get('result') or {}).get('sys_id'):
                 self._upload_csv_to_table(table_name='incident', table_sys_id=incident_value['result']['sys_id'],
                                           csv_string=csv_string)
-            self.__add_dict_to_table('incident', final_dict)
             return True
         except Exception:
             logger.exception(f'Exception while creating incident for num {self.__number_of_incidents}')
