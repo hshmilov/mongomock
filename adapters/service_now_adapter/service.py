@@ -80,6 +80,8 @@ class ServiceNowAdapter(AdapterBase, Configurable):
                            ips_table_dict=None):
         got_nic = False
         got_serial = False
+        if companies_table_dict is None:
+            companies_table_dict = dict()
         if snow_location_table_dict is None:
             snow_location_table_dict = dict()
         if snow_nics_table_dict is None:

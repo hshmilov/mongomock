@@ -231,6 +231,10 @@ def is_from_twistlock(adapter_device):
     return adapter_device.get('plugin_name') == 'twistlock_adapter'
 
 
+def is_from_digicert_pki(adapter_device):
+    return adapter_device.get('plugin_name') == 'digicert_pki_platform_adapter'
+
+
 def is_claroty_ten_adapter_more_mac(adapter_device):
     if adapter_device.get('plugin_name') not in ['claroty_adapter', 'tenable_io_adapter', 'office_scan_adapter']:
         return False
@@ -831,6 +835,17 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
                                       {'Reason': 'They have the same hostname are twistlock'},
                                       CorrelationReason.StaticAnalysis)
 
+    def _correlate_with_digicert_pki(self, adapters_to_correlate):
+        logger.info('Starting to correlate on Digicert pki')
+        filtered_adapters_list = filter(get_asset_or_host_full, adapters_to_correlate)
+        return self._bucket_correlate(list(filtered_adapters_list),
+                                      [get_asset_or_host_full],
+                                      [compare_asset_hosts_full],
+                                      [is_from_digicert_pki],
+                                      [],
+                                      {'Reason': 'They have the same hostname and one is digicert PKI'},
+                                      CorrelationReason.StaticAnalysis)
+
     def _correlate_with_juniper(self, adapters_to_correlate):
         """
         juniper correlation is a little more loose - we allow correlation based on asset name alone,
@@ -1080,6 +1095,8 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
         yield CorrelationMarker()
 
         yield from self._correlate_with_twistlock(adapters_to_correlate)
+
+        yield from self._correlate_with_digicert_pki(adapters_to_correlate)
 
         # Find adapters that share the same cloud type and cloud id
         yield from self._correlate_cloud_instances(adapters_to_correlate)
