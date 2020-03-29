@@ -57,6 +57,8 @@ class Roles:
         return self._roles()
 
     def _roles(self):
+        # restricted roles that cannot be edited/deleted by this endpoint.
+        restricted_roles = ['Admin']
         if request.method == 'GET':
             return jsonify(
                 [beautify_db_entry(entry) for entry in self._roles_collection.find(filter_archived())])
@@ -69,6 +71,9 @@ class Roles:
         match_role = {
             'name': role_data['name']
         }
+        if role_data['name'] in restricted_roles:
+            logger.error(f'Cannot edit {role_data["name"]} role')
+            return return_error(f'Cannot edit {role_data["name"]} role', 400)
         existing_role = self._roles_collection.find_one(filter_archived(match_role))
         if request.method != 'PUT' and not existing_role:
             logger.error(f'Role by the name {role_data["name"]} was not found')

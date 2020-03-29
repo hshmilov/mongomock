@@ -187,8 +187,10 @@ class Users:
         :return:
         """
         post_data = self.get_request_data_as_object()
+        params = ['permissions', 'role_name']
+        update_data = {param: post_data[param] for param in params}
         self._users_collection.update_one({'_id': ObjectId(user_id)},
-                                          {'$set': post_data})
+                                          {'$set': update_data})
         self._invalidate_sessions(user_id)
         return ''
 
