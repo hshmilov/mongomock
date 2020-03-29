@@ -6,8 +6,13 @@ from axonius.utils.axonius_query_language import parse_filter
 from axonius.utils import gui_helpers
 from axonius.clients.service_now.connection import ServiceNowConnection
 from reports.action_types.action_type_alert import ActionTypeAlert
+from reports.action_types.action_type_base import add_node_selection, add_node_default
 
 logger = logging.getLogger(f'axonius.{__name__}')
+
+ADAPTER_NAME = 'service_now_adapter'
+
+# pylint: disable=W0212
 
 
 class ServiceNowIncidentAction(ActionTypeAlert):
@@ -17,7 +22,7 @@ class ServiceNowIncidentAction(ActionTypeAlert):
 
     @staticmethod
     def config_schema() -> dict:
-        return {
+        schema = {
             'items': [
                 {
                     'name': 'use_adapter',
@@ -137,10 +142,11 @@ class ServiceNowIncidentAction(ActionTypeAlert):
             ],
             'type': 'array'
         }
+        return add_node_selection(schema)
 
     @staticmethod
     def default_config() -> dict:
-        return {
+        return add_node_default({
             'severity': 'info',
             'description_default': False,
             'extra_fields': None,
@@ -160,13 +166,14 @@ class ServiceNowIncidentAction(ActionTypeAlert):
             'add_link_to_title': False,
             'subcategory': None,
             'send_csv_as_attachment': False
-        }
+        })
 
     # pylint: disable=too-many-arguments
     def _create_service_now_incident(self, short_description, description, impact, u_incident_type,
                                      caller_id, u_symptom, assignment_group, u_requested_for,
                                      category=None, subcategory=None,
                                      extra_fields=None, csv_string=None):
+        adapter_unique_name = self._plugin_base._get_adapter_unique_name(ADAPTER_NAME, self.action_node_id)
         service_now_dict = {'short_description': short_description,
                             'description': description,
                             'impact': impact,
@@ -182,7 +189,7 @@ class ServiceNowIncidentAction(ActionTypeAlert):
                             }
         try:
             if self._config['use_adapter'] is True:
-                response = self._plugin_base.request_remote_plugin('create_incident', 'service_now_adapter', 'post',
+                response = self._plugin_base.request_remote_plugin('create_incident', adapter_unique_name, 'post',
                                                                    json=service_now_dict)
                 return response.text
             if not self._config.get('domain') or not self._config.get('username') or not self._config.get('password'):

@@ -4,8 +4,13 @@ from axonius.consts import report_consts
 from axonius.clients.sysaid.connection import SysaidConnection
 from axonius.types.enforcement_classes import AlertActionResult
 from reports.action_types.action_type_alert import ActionTypeAlert
+from reports.action_types.action_type_base import add_node_selection, add_node_default
 
 logger = logging.getLogger(f'axonius.{__name__}')
+
+ADAPTER_NAME = 'sysaid_adapter'
+
+# pylint: disable=W0212
 
 
 class SysaidIncidentAction(ActionTypeAlert):
@@ -15,7 +20,7 @@ class SysaidIncidentAction(ActionTypeAlert):
 
     @staticmethod
     def config_schema() -> dict:
-        return {
+        schema = {
             'items': [
                 {
                     'name': 'use_adapter',
@@ -69,10 +74,11 @@ class SysaidIncidentAction(ActionTypeAlert):
             ],
             'type': 'array'
         }
+        return add_node_selection(schema)
 
     @staticmethod
     def default_config() -> dict:
-        return {
+        return add_node_default({
             'description_default': False,
             'incident_description': None,
             'use_adapter': False,
@@ -81,13 +87,14 @@ class SysaidIncidentAction(ActionTypeAlert):
             'password': None,
             'https_proxy': None,
             'verify_ssl': True
-        }
+        })
 
     def _create_sysaid_incident(self, description):
+        adapter_unique_name = self._plugin_base._get_adapter_unique_name(ADAPTER_NAME, self.action_node_id)
         sysaid_dict = {'description': description}
         try:
             if self._config['use_adapter'] is True:
-                response = self._plugin_base.request_remote_plugin('create_incident', 'sysaid_adapter', 'post',
+                response = self._plugin_base.request_remote_plugin('create_incident', adapter_unique_name, 'post',
                                                                    json=sysaid_dict)
                 return response.text
             if not self._config.get('domain') or not self._config.get('username') or not self._config.get('password'):
