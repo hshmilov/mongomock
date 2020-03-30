@@ -707,7 +707,7 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
                 except Exception as e:
                     err_msg = 'invalid client id - Please check the credentials'
                     log_metric(logger, metric_name=Adapters.CREDENTIALS_CHANGE_ERROR,
-                               metric_value=f'{err_msg} - {e}')
+                               metric_value=f'{err_msg} - {e if os.environ.get("PROD") == "false" else ""}')
                     logger.warning(f'{err_msg}', exc_info=True)
                     return return_error(err_msg)
                 add_client_result = self._add_client(client_config)

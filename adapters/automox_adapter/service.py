@@ -1,7 +1,9 @@
 import datetime
 import logging
+import os
 
 from axonius.adapter_base import AdapterBase, AdapterProperty
+from axonius.consts.system_consts import GENERIC_ERROR_MESSAGE
 from axonius.fields import Field, ListField
 from axonius.utils.datetime import parse_date
 from axonius.adapter_exceptions import ClientConnectionException
@@ -64,7 +66,7 @@ class AutomoxAdapter(AdapterBase):
                 self._save_field_names_to_db(EntityType.Devices)
         except Exception as e:
             logger.exception(f'Problem during isolating changes')
-            return return_error(str(e), 500)
+            return return_error(str(e) if os.environ.get('PROD') == 'false' else GENERIC_ERROR_MESSAGE, 500)
         return '', 200
 
     @staticmethod

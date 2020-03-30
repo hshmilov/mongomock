@@ -269,7 +269,7 @@ else:
 
         return all_volumes
 
-    def _get_env_varaibles(self, docker_internal_env_vars):
+    def _get_env_varaibles(self, docker_internal_env_vars, mode):
         env_variables = []
         for env in self.environment:
             env_variables.extend(['--env', env])
@@ -279,6 +279,10 @@ else:
                 env_variables.extend(['--env', env])
 
         env_variables.extend(['--env', 'DOCKER=true'])
+        if mode == 'prod':
+            env_variables.extend(['--env', 'PROD=true'])
+        else:
+            env_variables.extend(['--env', 'PROD=false'])
         node_id = self.node_id
         if node_id:
             env_variables.extend(['--env', f'{NODE_ID_ENV_VAR_NAME}={node_id}'])
@@ -343,7 +347,7 @@ else:
 
         docker_up.extend(self._get_volumes())
 
-        docker_up.extend(self._get_env_varaibles(docker_internal_env_vars))
+        docker_up.extend(self._get_env_varaibles(docker_internal_env_vars, mode))
 
         docker_up.extend(extra_flags or [])
 

@@ -1,5 +1,6 @@
 import json
 import logging
+import os
 from datetime import datetime
 from multiprocessing.pool import ThreadPool
 from typing import Dict
@@ -515,7 +516,9 @@ class Entities(Devices, Users):
                                         data=action_data)
             return '', 200
         except Exception as e:
-            return return_error(f'Attempt to run action {action_type} caused exception. Reason: {repr(e)}', 400)
+            return return_error(f'Attempt to run action {action_type} caused exception. Reason: {repr(e)}'
+                                if os.environ.get('PROD') == 'false' else
+                                f'Attempt to run action {action_type} caused exception.', 400)
 
     @filtered()
     @gui_add_rule_logged_in('actions/<action_type>', methods=['POST'],

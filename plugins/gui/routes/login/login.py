@@ -94,7 +94,7 @@ class Login:
         password = log_in_data.get('password')
         remember_me = log_in_data.get('remember_me', False)
         if not isinstance(remember_me, bool):
-            return return_error('remember_me isn\'t boolean', 401)
+            return return_error('Illegal input', 401)
         if self._system_settings.get('timeout_settings') and self._system_settings.get('timeout_settings').get(
                 'disable_remember_me'):
             remember_me = False

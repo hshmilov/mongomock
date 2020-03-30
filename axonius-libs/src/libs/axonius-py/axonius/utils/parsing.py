@@ -18,6 +18,7 @@ from typing import Callable, NewType, List, Iterable, Optional
 import pytz
 
 import axonius
+from axonius.consts.system_consts import GENERIC_ERROR_MESSAGE
 from axonius.entities import EntityType
 from axonius.utils.datetime import is_date_real, parse_date, _parse_unix_timestamp
 
@@ -162,7 +163,7 @@ def get_exception_string():
         exc_tb = exc_tb.tb_next
 
     ex_str = ex_str + f'{exc_type}:{exc_obj}'
-    return html.escape(ex_str)
+    return html.escape(ex_str) if os.environ.get('PROD') == 'false' else GENERIC_ERROR_MESSAGE
 
 
 def figure_out_cloud(s):
