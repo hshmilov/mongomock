@@ -10,5 +10,11 @@ Specify a one-line description of what this PR is doing
 - [ ] If your changes are relevant in upgrade, run upgrade tests manually as well. Add a link to a passing build here.
 
 ### Product Checklist
-- [ ] Did you change something in the UI? Please make sure the product is sync'd.
-- [ ] Do you create a new adapter / change an existing adapter? please make sure you [document it](https://axonius.atlassian.net/wiki/spaces/AX/pages/988414184/Adapter+Documentation).
+- [ ] **Features** - Make sure:<br>
+        1. The development covers all listed requirements.<br>
+        2. You have successfully tested (at least) all the feature's listed use cases.<br>
+        3. Feature has been reviewed and approved by the product manager who owns the feature.
+- [ ] **New/Updated: Adapter / EC Action / System Setting** - make sure you have followed the [procedure and got product approval](https://axonius.atlassian.net/wiki/spaces/AX/pages/1256259585/SREs+Features+-+Product+Approval+Process).
+- [ ] **Other UI change** - make sure it has been reviewed and approved by product.
+
+
