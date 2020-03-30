@@ -119,9 +119,9 @@ class TestAdapters(TestBase):
 
                 assert hostname_equals or mac_equals_ip_no_contradict
 
-        self.adapters_page.switch_to_page()
-        self.adapters_page.clean_adapter_servers(ESX_NAME)
-        self.adapters_page.clean_adapter_servers(NEXPOSE_NAME)
+                self.adapters_page.switch_to_page()
+                self.adapters_page.clean_adapter_servers(ESX_NAME)
+                self.adapters_page.clean_adapter_servers(NEXPOSE_NAME)
         self.wait_for_adapter_down(ESX_PLUGIN_NAME)
         self.wait_for_adapter_down(NEXPOSE_PLUGIN_NAME)
 
