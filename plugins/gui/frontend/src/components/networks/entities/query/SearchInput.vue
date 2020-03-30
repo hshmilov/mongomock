@@ -9,7 +9,7 @@
       id="query_list"
       slot="trigger"
       ref="greatInput"
-      v-model="inputValue"
+      v-model="searchInputValue"
       :placeholder="queryPlaceholder"
       :tabindex="-1"
       @keyup.enter.native.stop="submitFilter"
@@ -146,7 +146,7 @@ export default {
   },
   data() {
     return {
-      searchValue: '',
+      searchInputValue: '',
       queryMenuIndex: -1,
       closeSvgIconPath: mdiClose,
     };
@@ -157,14 +157,14 @@ export default {
         if (!this.isSearchSimple) return state[this.module].views.saved.content.data || [];
         return state[this.module].views.saved.content.data
           .filter((item) => item && item.name.toLowerCase()
-            .includes(this.searchValue.toLowerCase()));
+            .includes(this.searchInputValue.toLowerCase()));
       },
       historyViews(state) {
         if (!this.isSearchSimple) return state[this.module].views.saved.content.data;
         return state[this.module].views.history.content.data
           .filter((item) => item && item.view.query && item.view.query.filter
                                   && item.view.query.filter.toLowerCase()
-                                    .includes(this.searchValue.toLowerCase()));
+                                    .includes(this.searchInputValue.toLowerCase()));
       },
       templateViews(state) {
         return _get(state[this.module].views, 'template.content.data', []);
@@ -176,18 +176,17 @@ export default {
     ...mapGetters({
       exactSearch: EXACT_SEARCH,
     }),
-    inputValue: {
+    searchValue: {
       get() {
-        if (this.querySearch) {
-          return this.querySearch;
-        }
         if (!this.querySearchTemplate) {
-          return this.value;
+          if (this.querySearch) {
+            return this.querySearch;
+          }
         }
-        return this.searchValue;
+        return this.searchInputValue;
       },
       set(value) {
-        this.searchValue = value;
+        this.searchInputValue = value;
       },
     },
     queryPlaceholder() {
@@ -244,7 +243,27 @@ export default {
       return _get(this.currentView, 'query.meta.searchTemplate', false);
     },
   },
+  watch: {
+    querySearchTemplate(newValue) {
+      if (!newValue) {
+        this.searchValue = this.value;
+      }
+    },
+    value(newValue) {
+      if (!this.searchValue && newValue) {
+        this.searchValue = newValue;
+      }
+      if (!this.isSearchSimple) {
+        this.searchValue = newValue;
+      }
+    },
+  },
   created() {
+    if (this.querySearch) {
+      this.searchValue = this.querySearch;
+    } else {
+      this.searchValue = this.value;
+    }
     this.fetchViewsHistory();
   },
   methods: {
@@ -254,6 +273,7 @@ export default {
     removeSearchTemplate() {
       const resetView = defaultViewForReset(this.module, this.userFieldsGroups.default);
       this.updateView(resetView);
+      this.searchValue = '';
       this.$emit('done');
     },
     viewsCallback() {
@@ -322,13 +342,17 @@ export default {
       this.closeInput();
     }, 400, { leading: true, trailing: false }),
     searchText() {
-      this.$emit('update:query-search', this.searchValue);
+      this.$emit('update:query-search', this.searchInputValue);
       // Plug the search value in the template for filtering by any of currently selected fields
       // in case of search type mode this component will handle the search value
-      if (this.querySearchTemplate) {
-        this.$emit('input', this.parseSearchTemplateQuery(this.querySearchTemplate.searchField, this.searchValue));
+      if (this.searchInputValue) {
+        if (this.querySearchTemplate) {
+          this.$emit('input', this.parseSearchTemplateQuery(this.querySearchTemplate.searchField, this.searchInputValue));
+        } else {
+          this.$emit('input', this.textSearchPattern.replace(/{val}/g, this.searchInputValue));
+        }
       } else {
-        this.$emit('input', this.textSearchPattern.replace(/{val}/g, this.searchValue));
+        this.$emit('input', '');
       }
       this.closeInput();
     },
