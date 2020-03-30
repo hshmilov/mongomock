@@ -3695,6 +3695,7 @@ class PluginBase(Configurable, Feature, ABC):
                 CORRELATE_AD_SCCM: False,
                 CSV_FULL_HOSTNAME: False,
                 CORRELATE_BY_SNOW_MAC: False,
+                CORRELATE_BY_AZURE_AD_NAME_ONLY: False
             },
             CORRELATION_SCHEDULE: {
                 CORRELATION_SCHEDULE_ENABLED: False,
