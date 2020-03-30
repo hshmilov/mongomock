@@ -95,5 +95,14 @@ cd testing
 timeout 3600 ../pyrun.sh run_upgrade_tests.py --teardown-keep-db upgrade/after_upgrade
 cd ..
 echo "#### After upgrade tests done"
+
+echo "#### Testing node_maker missing on host after upgrade"
+if [[ $(grep -q "node_maker" /etc/passwd) == 0 ]]; then
+    echo "node_maker exists after upgrade!!!"
+    exit 1
+fi
+echo "#### node_maker does NOT exist after upgrade!!!"
+
+
 ./clean_dockers.sh
 echo "#### After upgrade stop all"
