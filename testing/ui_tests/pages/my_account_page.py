@@ -10,6 +10,7 @@ class MyAccountPage(Page):
     PASSWORD_CHANGED_TOASTER = 'Password changed'
     GIVEN_PASSWORD_IS_WRONG_TOASTER = 'Given password is wrong'
     PASSWORDS_DONT_MATCH_TOASTER = 'Passwords do not match'
+    ERROR_TEXT_CSS = '.error-text'
 
     @property
     def url(self):
@@ -27,6 +28,9 @@ class MyAccountPage(Page):
 
     def fill_new_password(self, password):
         self.fill_text_field_by_element_id(self.NEW_PASSWORD_ID, password)
+
+    def get_user_dialog_error(self):
+        return self.driver.find_element_by_css_selector(self.ERROR_TEXT_CSS).text
 
     def fill_confirm_password(self, password):
         self.fill_text_field_by_element_id(self.CONFIRM_PASSWORD_ID, password)

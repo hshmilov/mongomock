@@ -95,7 +95,9 @@ from axonius.consts.plugin_consts import (ADAPTERS_LIST_LENGTH,
                                           FIRST_FETCH_TIME, FETCH_TIME,
                                           KEYS_COLLECTION, DB_KEY_ENV_VAR_NAME,
                                           CORRELATION_SCHEDULE, CORRELATION_SCHEDULE_HOURS_INTERVAL,
-                                          CORRELATION_SCHEDULE_ENABLED)
+                                          CORRELATION_SCHEDULE_ENABLED, PASSWORD_SETTINGS, PASSWORD_LENGTH_SETTING,
+                                          PASSWORD_MIN_LOWERCASE, PASSWORD_MIN_UPPERCASE, PASSWORD_MIN_NUMBERS,
+                                          PASSWORD_MIN_SPECIAL_CHARS)
 from axonius.consts.plugin_subtype import PluginSubtype
 from axonius.devices import deep_merge_only_dict
 from axonius.devices.device_adapter import LAST_SEEN_FIELD, DeviceAdapter
@@ -2968,6 +2970,7 @@ class PluginBase(Configurable, Feature, ABC):
         self._jira_settings = config['jira_settings']
         self._opsgenie_settings = config.get('opsgenie_settings')
         self._proxy_settings = config[PROXY_SETTINGS]
+        self._password_policy_settings = config[PASSWORD_SETTINGS]
         self._vault_settings = config['vault_settings']
         self._aws_s3_settings = config.get('aws_s3_settings') or {}
         self._correlation_schedule_settings = config[CORRELATION_SCHEDULE]
@@ -3233,6 +3236,46 @@ class PluginBase(Configurable, Feature, ABC):
                             'name': PROXY_VERIFY,
                             'title': 'Verify SSL',
                             'type': 'bool'
+                        }
+                    ]
+                },
+                {
+                    'name': PASSWORD_SETTINGS,
+                    'title': 'Password Policy Settings',
+                    'type': 'array',
+                    'required': ['enabled', PASSWORD_LENGTH_SETTING],
+                    'items': [
+                        {
+                            'name': 'enabled',
+                            'title': 'Enforce password complexity',
+                            'type': 'bool',
+                            'required': True
+                        },
+                        {
+                            'name': PASSWORD_LENGTH_SETTING,
+                            'title': 'Minimum password length',
+                            'type': 'number',
+                        },
+                        {
+                            'name': PASSWORD_MIN_LOWERCASE,
+                            'title': 'Minimum lowercase letters required',
+                            'type': 'number',
+                        },
+                        {
+                            'name': PASSWORD_MIN_UPPERCASE,
+                            'title': 'Minimum uppercase letters required',
+                            'type': 'number',
+                        },
+                        {
+                            'name': PASSWORD_MIN_NUMBERS,
+                            'title': 'Minimum numbers required',
+                            'type': 'number',
+                        },
+                        {
+                            'name': PASSWORD_MIN_SPECIAL_CHARS,
+                            'title': 'Minimum special characters required',
+                            'description': 'Special characters list: ~!@#$%^&*_-+=`|\\(){}[]:;"\'<>,.?/',
+                            'type': 'number',
                         }
                     ]
                 },
@@ -3675,6 +3718,14 @@ class PluginBase(Configurable, Feature, ABC):
                 PROXY_USER: '',
                 PROXY_PASSW: '',
                 PROXY_VERIFY: True
+            },
+            PASSWORD_SETTINGS: {
+                'enabled': False,
+                PASSWORD_LENGTH_SETTING: 10,
+                PASSWORD_MIN_LOWERCASE: 1,
+                PASSWORD_MIN_UPPERCASE: 1,
+                PASSWORD_MIN_NUMBERS: 1,
+                PASSWORD_MIN_SPECIAL_CHARS: 0
             },
             'vault_settings': {
                 'enabled': False,

@@ -13,6 +13,10 @@
           :schema="passwordFormSchema"
           @validate="updatePasswordValidity"
         />
+        <div
+          v-if="error"
+          class="error-text"
+        >{{ error }}</div>
         <div class="place-right">
           <XButton
             :disabled="!passwordFormComplete"
@@ -55,16 +59,16 @@
               class="hide-key-icon"
               title="Hide API Secret"
               shape="circle"
-              @click="toggleVisibility"
               icon="eye-invisible"
+              @click="toggleVisibility"
             />
             <AButton
               v-else
               class="show-key-icon"
               title="Show API Secret"
               shape="circle"
-              @click="toggleVisibility"
               icon="eye"
+              @click="toggleVisibility"
             />
             <AButton
               class="copy-to-clipboard-icon"
@@ -129,6 +133,7 @@ export default {
       apiKey: {},
       resetKeyActive: false,
       isKeyVisible: false,
+      error: '',
     };
   },
   computed: {
@@ -175,6 +180,7 @@ export default {
       showToasterMessage: SHOW_TOASTER_MESSAGE,
     }),
     updatePasswordValidity(valid) {
+      this.error = '';
       this.passwordFormComplete = valid;
     },
     openResetKeyModal() {
@@ -198,7 +204,11 @@ export default {
         this.passwordForm.confirmNewPassword = null;
         this.passwordForm = { ...this.passwordForm };
       }).catch((error) => {
-        this.message = JSON.parse(error.request.response).message;
+        if (error.response.status == 403) {
+          this.error = error.response.data.message;
+        } else {
+          this.message = JSON.parse(error.request.response).message;
+        }
       });
     },
     getApiKey() {
@@ -279,6 +289,11 @@ export default {
 
         .ant-btn-icon-only {
             margin: 0 3px;
+        }
+
+        .error-text {
+          font-size: 14px;
+          margin-top: -22px;
         }
     }
 </style>

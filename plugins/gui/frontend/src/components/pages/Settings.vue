@@ -53,7 +53,7 @@
               />
               <XButton
                 id="global-settings-save"
-                :disabled="!coreComplete || isReadOnly"
+                :disabled="!coreComplete || isReadOnly || !validPasswordPolicy"
                 @click="saveGlobalSettings"
               >Save</XButton>
             </div>
@@ -193,6 +193,26 @@ export default {
     },
     validResearchDate() {
       return this.schedulerSettings.config.discovery_settings.system_research_date.system_research_date_recurrence >= 0;
+    },
+    validPasswordPolicy() {
+      if (!this.coreSettings.config) {
+        return false;
+      }
+      if (!this.coreSettings.config.password_policy_settings.enabled) {
+        return true;
+      }
+
+      const {
+        password_min_lowercase, password_min_numbers, password_min_special_chars, password_min_uppercase, password_length,
+      } = this.coreSettings.config.password_policy_settings;
+      const sumChars = password_min_lowercase + password_min_numbers + password_min_special_chars + password_min_uppercase;
+
+      return password_length > 0
+      && password_min_lowercase >= 0
+      && password_min_numbers >= 0
+      && password_min_special_chars >= 0
+      && password_min_uppercase >= 0
+      && sumChars <= password_length;
     },
     isContionalDate() {
       return (this.schedulerSettings.config.discovery_settings.conditional === 'system_research_date');

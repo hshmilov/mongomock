@@ -93,6 +93,15 @@ MAX_WORKERS = 'max_workers'
 SOCKET_READ_TIMEOUT = 'socket_read_timeout'
 UPPERCASE_HOSTNAMES = 'uppercase_hostnames'
 
+# PASSWORD SETTINGS #
+PASSWORD_SETTINGS = 'password_policy_settings'
+PASSWORD_LENGTH_SETTING = 'password_length'
+PASSWORD_MIN_LOWERCASE = 'password_min_lowercase'
+PASSWORD_MIN_UPPERCASE = 'password_min_uppercase'
+PASSWORD_MIN_NUMBERS = 'password_min_numbers'
+PASSWORD_MIN_SPECIAL_CHARS = 'password_min_special_chars'
+PASSWORD_NO_MEET_REQUIREMENTS_MSG = 'Password does not meet the password policy requirements'
+
 # COLLECTIONS #
 CONFIGURABLE_CONFIGS_COLLECTION = 'configurable_configs'
 REPORTS_CONFIG_COLLECTION = 'reports_config'

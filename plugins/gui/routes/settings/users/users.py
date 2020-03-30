@@ -1,4 +1,5 @@
 import logging
+import re
 
 import pymongo
 from bson import ObjectId
@@ -9,6 +10,8 @@ from passlib.hash import bcrypt
 from axonius.consts.gui_consts import (PREDEFINED_ROLE_ADMIN,
                                        UNCHANGED_MAGIC_FOR_GUI,
                                        USERS_PREFERENCES_COLUMNS_FIELD)
+from axonius.consts.plugin_consts import PASSWORD_LENGTH_SETTING, PASSWORD_MIN_LOWERCASE, PASSWORD_MIN_UPPERCASE, \
+    PASSWORD_MIN_NUMBERS, PASSWORD_MIN_SPECIAL_CHARS, PASSWORD_NO_MEET_REQUIREMENTS_MSG
 from axonius.plugin_base import (return_error, EntityType)
 from axonius.utils.gui_helpers import (Permission, PermissionLevel,
                                        PermissionType, get_connected_user_id,
@@ -54,6 +57,9 @@ class Users:
             return return_error('Only admin users are permitted to create users!', 401)
 
         post_data = self.get_request_data_as_object()
+        if not self._check_password_validity(post_data['password']):
+            return return_error(PASSWORD_NO_MEET_REQUIREMENTS_MSG, 403)
+
         post_data['password'] = bcrypt.hash(post_data['password'])
 
         # Make sure user is unique by combo of name and source (no two users can have same name and same source)
@@ -77,6 +83,24 @@ class Users:
             role_name=post_data.get('role_name')
         )
         return ''
+
+    # pylint: disable=too-many-return-statements
+    def _check_password_validity(self, password):
+        password_policy = self._password_policy_settings
+        if not password_policy['enabled']:
+            return True
+        if len(password) < password_policy[PASSWORD_LENGTH_SETTING]:
+            return False
+        if len(re.findall('[a-z]', password)) < password_policy[PASSWORD_MIN_LOWERCASE]:
+            return False
+        if len(re.findall('[A-Z]', password)) < password_policy[PASSWORD_MIN_UPPERCASE]:
+            return False
+        if len(re.findall('[0-9]', password)) < password_policy[PASSWORD_MIN_NUMBERS]:
+            return False
+        if len(re.findall(r'[~!@#$%^&*_\-+=`\|\\\\()\{\}\[\]:;"\'<>,.?/]', password)) < \
+                password_policy[PASSWORD_MIN_SPECIAL_CHARS]:
+            return False
+        return True
 
     def _get_user_pages(self, limit, skip):
         return jsonify(beautify_user_entry(n) for n in
@@ -106,8 +130,10 @@ class Users:
                 if key not in update_white_list_fields:
                     continue
                 if key == 'password':
-                    if value != UNCHANGED_MAGIC_FOR_GUI:
+                    if value != UNCHANGED_MAGIC_FOR_GUI and self._check_password_validity(value):
                         user_data[key] = bcrypt.hash(value)
+                    elif value != UNCHANGED_MAGIC_FOR_GUI:
+                        return return_error(PASSWORD_NO_MEET_REQUIREMENTS_MSG, 403)
                 else:
                     user_data[key] = value
 
@@ -159,6 +185,9 @@ class Users:
         user = self.get_session['user']
         if not bcrypt.verify(post_data['old'], user['password']):
             return return_error('Given password is wrong')
+
+        if not self._check_password_validity(post_data['new']):
+            return return_error(PASSWORD_NO_MEET_REQUIREMENTS_MSG, 403)
 
         self._users_collection.update_one({'_id': user['_id']},
                                           {'$set': {'password': bcrypt.hash(post_data['new'])}})

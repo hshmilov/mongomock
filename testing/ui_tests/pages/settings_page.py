@@ -34,6 +34,7 @@ class SettingsPage(Page):
     ANALYTICS_LABEL = 'Anonymized Analytics'
     PROVISION_LABEL = 'Remote Support'
     USE_SYSLOG_LABEL = 'Use Syslog'
+    ENFORCE_PASSWORD_POLICY = 'Enforce password complexity'
     LDAP_LOGINS_LABEL = 'Allow LDAP logins'
     OKTA_LOGINS_LABEL = 'Allow Okta logins'
     EXACT_SEARCH_LABEL = 'Use exact match for assets search'
@@ -41,6 +42,7 @@ class SettingsPage(Page):
     TRIAL_MODE_FLAG_LABEL = 'Is trial mode'
     EMAIL_PORT_ID = 'smtpPort'
     EMAIL_HOST_ID = 'smtpHost'
+    ERROR_TEXT_CSS = '.error-text'
     SYSLOG_HOST = 'syslogHost'
     SYSLOG_PORT = 'syslogPort'
     TIMEOUT_ID = 'timeout'
@@ -130,6 +132,12 @@ class SettingsPage(Page):
     DISCOVERY_SCHEDULE_SCHEDULED_TEXT = 'Scheduled'
     DISCOVERY_SCHEDULE_MODE_OPTIONS = '.x-dropdown > .content .x-select-content > .x-select-options > *'
 
+    MIN_PASSWORD_LENGTH_ID = 'password_length'
+    MIN_UPPERCASE_CHARS_ID = 'password_min_uppercase'
+    MIN_LOWERCASE_CHARS_ID = 'password_min_lowercase'
+    MIN_NUMBERS_CHARS_ID = 'password_min_numbers'
+    MIN_SPECIAL_CHARS_ID = 'password_min_special_chars'
+
     CONNECTION_LABEL_REQUIRED_DIV_CSS = '#requireConnectionLabel .checkbox-container'
     CONNECTION_LABEL_REQUIRED_INPUT_CSS = '#requireConnectionLabel .checkbox-container input'
     ACTIVE_TAB = 'div.x-tab.active'
@@ -195,9 +203,10 @@ class SettingsPage(Page):
     def click_create_user(self):
         self.click_button(self.CREATE_USER_BUTTON)
 
-    def click_update_user(self):
+    def click_update_user(self, wait_for_modal=True):
         self.click_button(self.UPDATE_USER_BUTTON)
-        self.wait_for_element_absent_by_css(self.MODAL_OVERLAY_CSS)
+        if wait_for_modal:
+            self.wait_for_element_absent_by_css(self.MODAL_OVERLAY_CSS)
 
     def find_disabled_create_user(self):
         return self.is_element_disabled(self.get_button(self.CREATE_USER_BUTTON))
@@ -205,11 +214,16 @@ class SettingsPage(Page):
     def find_password_input(self):
         return self.driver.find_element_by_id('password')
 
-    def create_new_user(self, username, password, first_name=None, last_name=None, role_name=None):
+    def get_user_dialog_error(self):
+        return self.driver.find_element_by_css_selector(self.ERROR_TEXT_CSS).text
+
+    def create_new_user(self, username, password, first_name=None, last_name=None, role_name=None,
+                        wait_for_modal=True):
         self.click_new_user()
         self.fill_new_user_details(username, password, first_name=first_name, last_name=last_name, role_name=role_name)
         self.click_create_user()
-        self.wait_for_element_absent_by_css(self.MODAL_OVERLAY_CSS)
+        if wait_for_modal:
+            self.wait_for_element_absent_by_css(self.MODAL_OVERLAY_CSS)
 
     def update_new_user(self, username, password=None, first_name=None, last_name=None):
         self.click_edit_user(username)
@@ -343,6 +357,16 @@ class SettingsPage(Page):
 
     def find_syslog_toggle(self):
         return self.find_checkbox_by_label(self.USE_SYSLOG_LABEL)
+
+    def find_password_policy_toggle(self):
+        return self.find_checkbox_by_label(self.ENFORCE_PASSWORD_POLICY)
+
+    def fill_password_policy(self, password_length, min_lowercase, min_uppercase, min_numbers, min_special_chars):
+        self.fill_text_field_by_element_id(self.MIN_PASSWORD_LENGTH_ID, password_length)
+        self.fill_text_field_by_element_id(self.MIN_LOWERCASE_CHARS_ID, min_lowercase)
+        self.fill_text_field_by_element_id(self.MIN_UPPERCASE_CHARS_ID, min_uppercase)
+        self.fill_text_field_by_element_id(self.MIN_NUMBERS_CHARS_ID, min_numbers)
+        self.fill_text_field_by_element_id(self.MIN_SPECIAL_CHARS_ID, min_special_chars)
 
     def set_syslog_toggle(self, make_yes=True):
         self.click_toggle_button(self.find_syslog_toggle(), make_yes=make_yes, window=TAB_BODY)
