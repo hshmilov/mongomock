@@ -76,14 +76,6 @@ class Settings(Plugins, GettingStarted, Users, Roles):
         return Response('')
 
     def _stop_temp_maintenance(self):
-        if self.trial_expired():
-            logger.error('Support access not stopped - system trial has expired')
-            return
-
-        if self.contract_expired():
-            logger.error('Support access not stopped - system contract has expired')
-            return
-
         logger.info('Stopping Support Access')
         self._update_temp_maintenance(None)
         temp_maintenance_job = self._job_scheduler.get_job(TEMP_MAINTENANCE_THREAD_ID)
@@ -118,15 +110,18 @@ class Settings(Plugins, GettingStarted, Users, Roles):
             return jsonify(self.system_collection.find_one(match_maintenance))
 
         if request.method == 'POST':
+            # For any enable/disable config
             self.system_collection.update_one(match_maintenance, {
                 '$set': self.get_request_data_as_object()
             })
             self._stop_temp_maintenance()
 
         if request.method == 'DELETE':
+            # Not sure when this is called
             self._stop_temp_maintenance()
 
         if request.method == 'PUT':
+            # For timeout
             temp_maintenance_job = self._job_scheduler.get_job(TEMP_MAINTENANCE_THREAD_ID)
             duration_param = self.get_request_data_as_object().get('duration', 24)
             try:

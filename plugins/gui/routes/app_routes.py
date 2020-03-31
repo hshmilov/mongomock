@@ -109,26 +109,17 @@ class AppRoutes(Signup,
 
     @add_rule_unauth('provision')
     def get_provision(self):
-        if self.trial_expired() or self.contract_expired():
-            return jsonify(True)
-
-        return jsonify(self._maintenance_config.get('provision', False) or
+        return jsonify(self._maintenance_config.get('provision', True) or
                        self._maintenance_config.get('timeout') is not None)
 
     @add_rule_unauth('analytics')
     def get_analytics(self):
-        if self.trial_expired() or self.contract_expired():
-            return jsonify(True)
-
-        return jsonify(self._maintenance_config.get('analytics', False) or
+        return jsonify(self._maintenance_config.get('analytics', True) or
                        self._maintenance_config.get('timeout') is not None)
 
     @add_rule_unauth('troubleshooting')
     def get_troubleshooting(self):
-        if self.trial_expired() or self.contract_expired():
-            return jsonify(True)
-
-        return jsonify(self._maintenance_config.get('troubleshooting', False) or
+        return jsonify(self._maintenance_config.get('troubleshooting', True) or
                        self._maintenance_config.get('timeout') is not None)
 
     @add_rule_unauth('get_environment_name')
