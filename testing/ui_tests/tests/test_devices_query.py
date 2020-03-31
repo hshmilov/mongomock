@@ -1192,6 +1192,7 @@ class TestDevicesQuery(TestBase):
 
         self.devices_queries_page.switch_to_page()
         self.devices_page.wait_for_table_to_load()
+        self.devices_page.wait_for_spinner_to_end()
 
         self.devices_queries_page.find_query_row_by_name('test').click()
         self.devices_queries_page.verify_no_query_defined()
