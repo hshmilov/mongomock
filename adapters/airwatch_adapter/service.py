@@ -29,6 +29,7 @@ class AirwatchAdapter(AdapterBase):
         device_tags = ListField(str, 'Device Tags')
         profile_name = Field(str, 'Profile Name')
         ownership = Field(str, 'Ownership')
+        location_group_name = Field(str, 'Location Group Name')
 
     def __init__(self):
         super().__init__(get_local_config_file(__file__))
@@ -157,6 +158,8 @@ class AirwatchAdapter(AdapterBase):
                     device_id_value = str(device_raw.get('Id').get('Value'))
                 device.imei = device_raw.get('Imei')
                 device.airwatch_type = ENROLLED_DEVICE
+                device.device_model = device_raw.get('Model')
+                device.location_group_name = device_raw.get('LocationGroupName')
                 device.last_seen = parse_date(str(device_raw.get('LastSeen', '')))
                 device.figure_os((device_raw.get('Platform') or '') + ' ' + (device_raw.get('OperatingSystem') or ''))
                 device.phone_number = device_raw.get('PhoneNumber')
