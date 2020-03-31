@@ -44,7 +44,7 @@ DEVICES_JSON_DATA = '''[
         "OS": "Windows XP SP1",
         "MAC Address": "11:22:22:33:11:33",
         "Office": "Office",
-        "Last Seen": "2020-01-01 02:13:24.485Z",
+        "Last Seen": "2020-04-01 02:13:24.485Z",
         "IP": "127.0.0.1",
         "Packages": [
             "MS Office 365", "Solitaire", "Space Cadet Pinball"

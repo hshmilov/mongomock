@@ -57,7 +57,7 @@ client_details = {
         'csv_name',
         ','.join(CSV_FIELDS) +
         '\nJohn,Serial1,Windows,11:22:22:33:11:33,Office,2020-01-03 02:13:24.485Z, 127.0.0.2'
-        '\nJohn,Serial2,Windows,11:22:22:33:11:33,Office,2020-01-01 02:13:24.485Z, 127.0.0.2'
+        '\nJohn,Serial2,Windows,11:22:22:33:11:33,Office,2020-04-01 02:13:24.485Z, 127.0.0.2'
         '\nJames,Serial3,Linux,11:22:22:33:11:33,Office,2020-01-01 02:13:24.485Z')
 }
 

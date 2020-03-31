@@ -3,4 +3,4 @@ CLIENT_DETAILS = {
     'verify_ssl': True,
     'domain': 'https://console.jumpcloud.com'
 }
-SOME_DEVICE_ID = '5d023f1cd783d72595432b1d_WIN-76F9735PMOJ'
+SOME_DEVICE_ID = '5d023f5c191b627d20a52b75_netbox.axonius.lan'
