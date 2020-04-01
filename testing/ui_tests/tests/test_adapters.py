@@ -36,6 +36,8 @@ ESX_PLUGIN_NAME = 'esx_adapter'
 NEXPOSE_NAME = 'Rapid7 Nexpose'
 NEXPOSE_PLUGIN_NAME = 'nexpose_adapter'
 
+# pylint: disable= too-many-statements
+
 
 class TestAdapters(TestBase):
     # Sometimes upload file to CSV adapter does not work
@@ -61,7 +63,8 @@ class TestAdapters(TestBase):
         nexpose_adapter = NexposeService()
         with esx_adapter.contextmanager(take_ownership=True):
             with nexpose_adapter.contextmanager(take_ownership=True):
-                 # Raise a system with esx + nexpose
+                print('Raised esx and nexpose.')
+                # Raise a system with esx + nexpose
                 self.adapters_page.wait_for_adapter(ESX_NAME)
                 # Sometimes this page is flaky
                 self.adapters_page.click_adapter(ESX_NAME)
@@ -71,6 +74,7 @@ class TestAdapters(TestBase):
                 self.adapters_page.fill_creds(**esx_client_details[0][0])
                 self.adapters_page.click_save()
                 self.adapters_page.wait_for_spinner_to_end()
+                print('Saved esx client.')
 
                 self.adapters_page.switch_to_page()
                 self.adapters_page.wait_for_adapter(NEXPOSE_NAME)
@@ -80,9 +84,11 @@ class TestAdapters(TestBase):
                 self.adapters_page.click_new_server()
                 self.adapters_page.fill_creds(**nexpose_client_details)
                 self.adapters_page.click_save()
+                print('Saved nexpose client.')
 
                 # Activate discovery phase
                 self.base_page.run_discovery()
+                print('Finished discovery.')
 
                 # Expected result:
                 # 1. There are devices correlated between esx and nexpose
@@ -91,6 +97,7 @@ class TestAdapters(TestBase):
                 self.devices_page.switch_to_page()
                 self.devices_page.run_filter_query(query)
                 assert self.devices_page.count_entities() > 0
+                print('Filtered esx and nexpose devices.')
 
                 # Take one device that has both adapters
                 # Check if they really have the same hostname or MAC
@@ -103,6 +110,8 @@ class TestAdapters(TestBase):
                 esx_adapter_from_device = next((x for x in adapters if x[PLUGIN_NAME] == ESX_PLUGIN_NAME), None)
                 nexpose_adapter_from_device = next((x for x in adapters if x[PLUGIN_NAME] == NEXPOSE_PLUGIN_NAME),
                                                    None)
+                print('Got an esx and a nexpose device.')
+
                 assert esx_adapter_from_device
                 assert nexpose_adapter_from_device
                 normalize_adapter_device(nexpose_adapter_from_device)
@@ -117,11 +126,14 @@ class TestAdapters(TestBase):
                 mac_equals_ip_no_contradict = ips_do_not_contradict_or_mac_intersection(nexpose_adapter_from_device,
                                                                                         esx_adapter_from_device)
 
+                print('Got hostname or mac ip contradiction.')
                 assert hostname_equals or mac_equals_ip_no_contradict
 
                 self.adapters_page.switch_to_page()
                 self.adapters_page.clean_adapter_servers(ESX_NAME)
                 self.adapters_page.clean_adapter_servers(NEXPOSE_NAME)
+                print('Cleaned esx and nexpose clients.')
+
         self.wait_for_adapter_down(ESX_PLUGIN_NAME)
         self.wait_for_adapter_down(NEXPOSE_PLUGIN_NAME)
 

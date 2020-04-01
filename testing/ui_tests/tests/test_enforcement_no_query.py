@@ -174,20 +174,26 @@ class TestEnforcementNoQuery(TestBase):
             self.notification_page.verify_amount_of_notifications(1)
 
     def test_run_added_entities(self):
+        # Temporarily Using prints instead of log to pinpoint issue.
+        print('Starting test_run_added_entities.')
         self.devices_page.switch_to_page()
         self.base_page.run_discovery()
         self.devices_page.delete_devices(self.devices_page.JSON_ADAPTER_FILTER)
         self.devices_page.run_filter_and_save(ENFORCEMENT_CHANGE_NAME, ENFORCEMENT_CHANGE_FILTER)
+        print('Finished creating saved query.')
 
         self.enforcements_page.switch_to_page()
         self.enforcements_page.create_basic_enforcement(ENFORCEMENT_NAME, ENFORCEMENT_CHANGE_NAME, enforce_added=True)
         self.enforcements_page.add_tag_entities()
         self.enforcements_page.click_save_button()
         self.enforcements_page.wait_for_table_to_load()
+        print('Finished creating enforcement.')
+
         self.base_page.run_discovery()
 
         self.devices_page.switch_to_page()
         self.devices_page.run_filter_query('labels == "Special"')
+        print('Finished filtering query.')
         assert self.devices_page.count_entities() == 1
         assert 'CB 1' in self.devices_page.get_column_data_slicer(self.devices_page.FIELD_ASSET_NAME)
 
