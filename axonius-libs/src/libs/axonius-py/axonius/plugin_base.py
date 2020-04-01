@@ -32,6 +32,9 @@ import cachetools
 import func_timeout
 import gridfs
 import pymongo
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
+# pylint: disable=ungrouped-imports
 from pymongo import MongoClient, ReplaceOne
 from pymongo.collection import Collection
 from pymongo.errors import DuplicateKeyError, OperationFailure
@@ -97,7 +100,9 @@ from axonius.consts.plugin_consts import (ADAPTERS_LIST_LENGTH,
                                           CORRELATION_SCHEDULE, CORRELATION_SCHEDULE_HOURS_INTERVAL,
                                           CORRELATION_SCHEDULE_ENABLED, PASSWORD_SETTINGS, PASSWORD_LENGTH_SETTING,
                                           PASSWORD_MIN_LOWERCASE, PASSWORD_MIN_UPPERCASE, PASSWORD_MIN_NUMBERS,
-                                          PASSWORD_MIN_SPECIAL_CHARS)
+                                          PASSWORD_MIN_SPECIAL_CHARS, PASSWORD_BRUTE_FORCE_PROTECTION,
+                                          PASSWORD_PROTECTION_ALLOWED_RETRIES, PASSWORD_PROTECTION_LOCKOUT_MIN,
+                                          PASSWORD_PROTECTION_BY_IP, PASSWORD_PROTECTION_BY_USERNAME)
 from axonius.consts.plugin_subtype import PluginSubtype
 from axonius.devices import deep_merge_only_dict
 from axonius.devices.device_adapter import LAST_SEEN_FIELD, DeviceAdapter
@@ -133,6 +138,17 @@ logger = logging.getLogger(f'axonius.{__name__}')
 # Starting the Flask application
 AXONIUS_REST = Flask(__name__)
 
+# Starting the rate limiter
+# pylint: disable=invalid-name
+limiter = Limiter(
+    AXONIUS_REST,
+    key_func=get_remote_address,
+    strategy='fixed-window-elastic-expiry'
+)
+# pylint: disable=invalid-name
+limiter_settings = {}
+LIMITER_SCOPE = 'axonius'
+
 # this would be /home/axonius/logs, or c:\users\axonius\logs, etc.
 LOG_PATH = str(Path.home().joinpath('logs'))
 
@@ -166,6 +182,21 @@ def random_string(length: int, source: str = string.ascii_letters + string.digit
     return hashlib.sha256(f'{HASH_SALT}{result}'.encode('utf-16')).hexdigest()
 
 
+def ratelimiting_settings():
+    return f'{limiter_settings[PASSWORD_PROTECTION_ALLOWED_RETRIES]} per ' \
+           f'{limiter_settings[PASSWORD_PROTECTION_LOCKOUT_MIN]} minute' \
+           if 'enabled' in limiter_settings and limiter_settings['enabled'] else ''
+
+
+def get_username_from_session():
+    return session['user']['user_name'] if 'user' in session and session['user'] is not None else ''
+
+
+def route_limiter_key_func():
+    return get_username_from_session() \
+        if limiter_settings['conditional'] == PASSWORD_PROTECTION_BY_IP else get_remote_address()
+
+
 # I know its ugly, but this way the function wont even be initialized in production
 # otherwise every request would have go thru the after_request and do nothing in there...
 if os.environ.get('HOT') == 'true':
@@ -175,6 +206,11 @@ if os.environ.get('HOT') == 'true':
         response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization,x-csrf-token')
         response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
         return response
+
+
+@AXONIUS_REST.errorhandler(429)
+def ratelimit_handler(exception):
+    return return_error('Rate limit exceeded', 429)
 
 
 def add_rule(rule, methods=('GET',), should_authenticate: bool = True):
@@ -2954,6 +2990,8 @@ class PluginBase(Configurable, Feature, ABC):
     # pylint: disable=too-many-branches
     # pylint: disable=too-many-statements
     def __renew_global_settings_from_db(self):
+        # pylint: disable=global-statement,invalid-name
+        global limiter_settings
         config = self._get_db_connection()[CORE_UNIQUE_NAME][CONFIGURABLE_CONFIGS_COLLECTION].find_one(
             {'config_name': CORE_CONFIG_NAME})['config']
         # pylint: disable=invalid-name
@@ -2976,6 +3014,8 @@ class PluginBase(Configurable, Feature, ABC):
         self._opsgenie_settings = config.get('opsgenie_settings')
         self._proxy_settings = config[PROXY_SETTINGS]
         self._password_policy_settings = config[PASSWORD_SETTINGS]
+        self._password_protection_settings = config[PASSWORD_BRUTE_FORCE_PROTECTION]
+        limiter_settings = self._password_protection_settings
         self._vault_settings = config['vault_settings']
         self._aws_s3_settings = config.get('aws_s3_settings') or {}
         self._correlation_schedule_settings = config[CORRELATION_SCHEDULE]
@@ -3281,6 +3321,47 @@ class PluginBase(Configurable, Feature, ABC):
                             'title': 'Minimum special characters required',
                             'description': 'Special characters list: ~!@#$%^&*_-+=`|\\(){}[]:;"\'<>,.?/',
                             'type': 'number',
+                        }
+                    ]
+                },
+                {
+                    'name': PASSWORD_BRUTE_FORCE_PROTECTION,
+                    'title': 'Password Brute Force Settings',
+                    'type': 'array',
+                    'required': ['enabled', 'conditional',
+                                 PASSWORD_PROTECTION_ALLOWED_RETRIES, PASSWORD_PROTECTION_LOCKOUT_MIN],
+                    'items': [
+                        {
+                            'name': 'enabled',
+                            'title': 'Enable Brute force protection',
+                            'type': 'bool',
+                            'required': True
+                        },
+                        {
+                            'name': PASSWORD_PROTECTION_ALLOWED_RETRIES,
+                            'title': 'Maximum attempts',
+                            'description': 'Maximum attempts value must be greater than 4',
+                            'type': 'number',
+                        },
+                        {
+                            'name': PASSWORD_PROTECTION_LOCKOUT_MIN,
+                            'title': 'Window size in minutes',
+                            'type': 'number',
+                        },
+                        {
+                            'name': 'conditional',
+                            'title': 'Lock type',
+                            'type': 'string',
+                            'enum': [
+                                {
+                                    'name': PASSWORD_PROTECTION_BY_IP,
+                                    'title': 'IP address'
+                                },
+                                {
+                                    'name': PASSWORD_PROTECTION_BY_USERNAME,
+                                    'title': 'User name'
+                                }
+                            ]
                         }
                     ]
                 },
@@ -3732,6 +3813,12 @@ class PluginBase(Configurable, Feature, ABC):
                 PASSWORD_MIN_UPPERCASE: 1,
                 PASSWORD_MIN_NUMBERS: 1,
                 PASSWORD_MIN_SPECIAL_CHARS: 0
+            },
+            PASSWORD_BRUTE_FORCE_PROTECTION: {
+                'enabled': False,
+                PASSWORD_PROTECTION_ALLOWED_RETRIES: 20,
+                PASSWORD_PROTECTION_LOCKOUT_MIN: 5,
+                'conditional': PASSWORD_PROTECTION_BY_IP
             },
             'vault_settings': {
                 'enabled': False,

@@ -10,9 +10,11 @@ from passlib.hash import bcrypt
 from axonius.consts.gui_consts import (PREDEFINED_ROLE_ADMIN,
                                        UNCHANGED_MAGIC_FOR_GUI,
                                        USERS_PREFERENCES_COLUMNS_FIELD)
+
 from axonius.consts.plugin_consts import PASSWORD_LENGTH_SETTING, PASSWORD_MIN_LOWERCASE, PASSWORD_MIN_UPPERCASE, \
     PASSWORD_MIN_NUMBERS, PASSWORD_MIN_SPECIAL_CHARS, PASSWORD_NO_MEET_REQUIREMENTS_MSG
-from axonius.plugin_base import (return_error, EntityType)
+from axonius.plugin_base import (return_error, EntityType, limiter, ratelimiting_settings, route_limiter_key_func,
+                                 LIMITER_SCOPE)
 from axonius.utils.gui_helpers import (Permission, PermissionLevel,
                                        PermissionType, get_connected_user_id,
                                        is_admin_user, paginated)
@@ -172,6 +174,7 @@ class Users:
         })
         return '', 200
 
+    @limiter.shared_limit(ratelimiting_settings, key_func=route_limiter_key_func, scope=LIMITER_SCOPE)
     @gui_add_rule_logged_in('system/users/self/password', methods=['POST'])
     def system_users_password(self):
         """

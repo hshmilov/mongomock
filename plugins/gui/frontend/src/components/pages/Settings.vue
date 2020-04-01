@@ -53,7 +53,7 @@
               />
               <XButton
                 id="global-settings-save"
-                :disabled="!coreComplete || isReadOnly || !validPasswordPolicy"
+                :disabled="!coreComplete || isReadOnly || !validPasswordPolicy || !validPasswordProtection"
                 @click="saveGlobalSettings"
               >Save</XButton>
             </div>
@@ -213,6 +213,18 @@ export default {
       && password_min_special_chars >= 0
       && password_min_uppercase >= 0
       && sumChars <= password_length;
+    },
+    validPasswordProtection() {
+      if (!this.coreSettings.config) {
+        return false;
+      }
+      if (!this.coreSettings.config.password_brute_force_protection.enabled) {
+        return true;
+      }
+
+      const { password_max_allowed_tries, password_lockout_minutes } = this.coreSettings.config.password_brute_force_protection;
+
+      return password_max_allowed_tries >= 5 && password_lockout_minutes > 0;
     },
     isContionalDate() {
       return (this.schedulerSettings.config.discovery_settings.conditional === 'system_research_date');

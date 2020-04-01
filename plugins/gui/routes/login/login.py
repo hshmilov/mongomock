@@ -7,9 +7,10 @@ import ldap3
 import pymongo
 from flask import (jsonify,
                    make_response, redirect, request, session)
-from passlib.hash import bcrypt
-from urllib3.util.url import parse_url
 from werkzeug.wrappers import Response
+from urllib3.util.url import parse_url
+from passlib.hash import bcrypt
+from flask_limiter.util import get_remote_address
 # pylint: disable=import-error,no-name-in-module
 from onelogin.saml2.auth import OneLogin_Saml2_Auth
 
@@ -18,9 +19,9 @@ from axonius.clients.ldap.ldap_connection import LdapConnection
 from axonius.clients.rest.connection import RESTConnection
 from axonius.consts.gui_consts import (LOGGED_IN_MARKER_PATH, CSRF_TOKEN_LENGTH)
 from axonius.clients.rest.exception import RESTException
-from axonius.consts.plugin_consts import (AXONIUS_USER_NAME)
+from axonius.consts.plugin_consts import AXONIUS_USER_NAME
 from axonius.logging.metric_helper import log_metric
-from axonius.plugin_base import return_error, random_string
+from axonius.plugin_base import return_error, random_string, limiter, ratelimiting_settings, LIMITER_SCOPE
 from axonius.types.ssl_state import (SSLState)
 from axonius.utils.gui_helpers import (PermissionLevel,
                                        PermissionType, deserialize_db_permissions,
@@ -60,6 +61,7 @@ class Login:
             }
         })
 
+    @limiter.shared_limit(ratelimiting_settings, key_func=get_remote_address, scope=LIMITER_SCOPE)
     @add_rule_unauth('login', methods=['GET', 'POST'])
     def login(self):
         """

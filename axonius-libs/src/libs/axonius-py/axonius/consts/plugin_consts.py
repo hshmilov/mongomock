@@ -101,6 +101,11 @@ PASSWORD_MIN_UPPERCASE = 'password_min_uppercase'
 PASSWORD_MIN_NUMBERS = 'password_min_numbers'
 PASSWORD_MIN_SPECIAL_CHARS = 'password_min_special_chars'
 PASSWORD_NO_MEET_REQUIREMENTS_MSG = 'Password does not meet the password policy requirements'
+PASSWORD_BRUTE_FORCE_PROTECTION = 'password_brute_force_protection'
+PASSWORD_PROTECTION_ALLOWED_RETRIES = 'password_max_allowed_tries'
+PASSWORD_PROTECTION_LOCKOUT_MIN = 'password_lockout_minutes'
+PASSWORD_PROTECTION_BY_IP = 'password_protection_by_ip'
+PASSWORD_PROTECTION_BY_USERNAME = 'password_protection_by_username'
 
 # COLLECTIONS #
 CONFIGURABLE_CONFIGS_COLLECTION = 'configurable_configs'
