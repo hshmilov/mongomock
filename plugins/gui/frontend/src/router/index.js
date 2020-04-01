@@ -2,7 +2,6 @@ import Vue from 'vue';
 import Router from 'vue-router';
 import multiguard from 'vue-router-multiguard';
 import { LOGOUT } from '@store/modules/auth';
-import Administration from '../components/pages/Administration.vue';
 import store from '../store/index';
 
 const Account = () => import('../components/pages/Account.vue');
@@ -25,6 +24,7 @@ const Settings = () => import('../components/pages/Settings.vue');
 const User = () => import('../components/pages/User.vue');
 const Users = () => import('../components/pages/Users.vue');
 const Report = () => import('../components/pages/Report.vue');
+const Administration = () => import('../components/pages/Administration.vue');
 
 const xDevicesSavedQueries = () => import('../components/pages/DevicesSavedQueries');
 const xUsersSavedQueries = () => import('../components/pages/UsersSavedQueries');
