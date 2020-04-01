@@ -100,7 +100,8 @@ class OpenvasAdapter(AdapterBase):
 
         :return: A json with all the attributes returned from the Server
         """
-        yield from client_data.get_device_list()
+        with client_data:
+            yield from client_data.get_device_list()
 
     @staticmethod
     def _clients_schema():

@@ -104,7 +104,7 @@ class OpenvasConnection(RESTConnection):
         asset_host = Gmp.types.AssetType.HOST
         with self._gvm_session as session:
             session.authenticate(self._username, self._password)
-            return session.get_assets(asset_host, *args, *kwargs)
+            return session.get_assets(asset_host, *args, **kwargs)
 
     def _get_scan_results(self, *args, **kwargs):
         with self._gvm_session as session:
@@ -115,7 +115,7 @@ class OpenvasConnection(RESTConnection):
         first = 1
         filter_str = f'rows=1 {filter_terms}'
         xml_data = self._get_assets(filter=filter_str)
-        response = xmltodict.parse(xml_data).get('get_assets_response')
+        response = xml_data.get('get_assets_response', xml_data)
         try:
             total_count = int(response['asset_count']['#text'])
         except (KeyError, ValueError):
@@ -123,7 +123,7 @@ class OpenvasConnection(RESTConnection):
             raise
         remaining = min(total_count, MAX_NUMBER_OF_DEVICES)
         logger.info(f'Fetching OpenVAS info about {remaining} hosts')
-        while remaining >= 0:
+        while remaining > 0:
             rows = min(DEVICE_PER_PAGE, remaining)
             filter_str = f'first={first} rows={rows} {filter_terms}'
             logger.info(f'Fetching next {rows} assets, {remaining} left.')
@@ -155,7 +155,7 @@ class OpenvasConnection(RESTConnection):
         first = 1
         filter_str = f'rows=1 {filter_terms}'
         xml_data = self._get_scan_results(filter=filter_str)
-        response = xmltodict.parse(xml_data).get('get_results_response')
+        response = xml_data.get('get_results_response', xml_data)
         try:
             total_count = int(response['result_count']['#text'])
         except (KeyError, ValueError):
@@ -165,7 +165,7 @@ class OpenvasConnection(RESTConnection):
             return
         remaining = min(total_count, MAX_NUMBER_OF_DEVICES)
         logger.info(f'Fetching OpenVAS info about {remaining} scan results')
-        while remaining >= 0:
+        while remaining > 0:
             rows = min(DEVICE_PER_PAGE, remaining)
             filter_str = f'first={first} rows={rows} {filter_terms}'
             logger.info(f'Fetching next {rows} results, {remaining} left.')
@@ -235,9 +235,7 @@ class OpenvasConnection(RESTConnection):
     def _test_auth(self):
         with self._gvm_session as auth_test:
             result_dict = auth_test.authenticate(self._username, self._password)
-            if 'authenticate_response' in result_dict:
-                if result_dict['authenticate_response'].get('@status', None) != '200':
-                    message = f'Failed to authenticate! The response was: {result_dict}'
-                    raise RESTException(message)
-            else:
-                raise RESTException(f'Got bad response from host: {result_dict}')
+            result = result_dict.get('authenticate_response', result_dict)
+            if result.get('@status', None) != '200':
+                message = f'Failed to authenticate! The response was: {result_dict}'
+                raise RESTException(message)
