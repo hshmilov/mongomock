@@ -8,10 +8,11 @@ from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
 from axonius.devices.device_adapter import DeviceAdapter, AGENT_NAMES
+from axonius.mixins.configurable import Configurable
 from axonius.fields import Field, ListField
 from axonius.utils.datetime import parse_date
 from axonius.utils.files import get_local_config_file
-from axonius.utils.parsing import is_hostname_valid, format_mac, is_valid_ip, is_domain_valid
+from axonius.utils.parsing import is_hostname_valid, format_mac, is_valid_ip, is_domain_valid, is_valid_ipv6
 from epo_adapter.mcafee import client
 
 logger = logging.getLogger(f'axonius.{__name__}')
@@ -36,7 +37,7 @@ def get_all_linked_tables(table):
     return all_linked_tables
 
 
-def parse_network(device_raw, device):
+def parse_network(device_raw, device, exclude_ipv6=False):
     mac = ''
     ip_list = set()
 
@@ -74,10 +75,13 @@ def parse_network(device_raw, device):
     except Exception:
         logger.info(f"Failed formatting {raw_mac}")
 
-    device.add_nic(mac, list(ip_list))
+    ips = list(ip_list)
+    if exclude_ipv6:
+        ips = [ip for ip in ips if not is_valid_ipv6(ip)]
+    device.add_nic(mac, ips)
 
 
-class EpoAdapter(AdapterBase):
+class EpoAdapter(AdapterBase, Configurable):
     """
     Connects axonius to mcafee epo
     """
@@ -161,7 +165,7 @@ class EpoAdapter(AdapterBase):
             device.os.bitness = 64 if device_raw.get('EPOComputerProperties.OSBitMode', '') == 1 else 32
             # I think that we get ePO duplications also in the field
             device.id = epo_id + (hostname if hostname else '')
-            parse_network(device_raw, device)
+            parse_network(device_raw, device, exclude_ipv6=self.__exclude_ipv6)
             last_seen = parse_date(device_raw['EPOLeafNode.LastUpdate'])
             if last_seen:
                 device.last_seen = last_seen
@@ -281,3 +285,27 @@ class EpoAdapter(AdapterBase):
     @classmethod
     def adapter_properties(cls):
         return [AdapterProperty.Endpoint_Protection_Platform, AdapterProperty.Agent, AdapterProperty.Manager]
+
+    @classmethod
+    def _db_config_schema(cls) -> dict:
+        return {
+            "items": [
+                {
+                    'name': 'exclude_ipv6',
+                    'title': 'Exclude IPv6 addresses',
+                    'type': 'bool'
+                }
+            ],
+            "required": ['exclude_ipv6'],
+            "pretty_name": "McAfee ePO Configuration",
+            "type": "array"
+        }
+
+    @classmethod
+    def _db_config_default(cls):
+        return {
+            'exclude_ipv6': False,
+        }
+
+    def _on_config_update(self, config):
+        self.__exclude_ipv6 = config.get('exclude_ipv6') or False
