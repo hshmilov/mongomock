@@ -198,7 +198,10 @@ class RESTConnection(ABC):
             if isinstance(conn_err.args[0].args[-1], http.client.RemoteDisconnected):
                 # pylint: enable=no-member
                 return True
-            if 'bad handshake' in str(conn_err):
+            if 'bad handshake' in str(conn_err).lower():
+                return True
+            if 'econnreset' in str(conn_err).lower():
+                # connection succeeded, but was abrupted. This still means it is reachable.
                 return True
             return False
 

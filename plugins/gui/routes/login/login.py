@@ -265,7 +265,7 @@ class Login:
         port = 636 if use_ssl else 389
         for addr in addresses:
             dc_addr = addr.strip()
-            can_conn = RESTConnection.test_reachability(dc_addr, port, ssl=use_ssl)
+            can_conn = RESTConnection.test_reachability(dc_addr, port)
             if not can_conn:
                 logger.warning(f'Failed to connect to DC at {dc_addr} with port {port}. '
                                f'Trying next one.')
