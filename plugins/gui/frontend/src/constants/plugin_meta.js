@@ -1,5 +1,4 @@
 export const pluginMeta = {
-
     azure_stack_hub_adapter: {
         title: 'Microsoft Azure Stack Hub',
         link: 'https://docs.axonius.com/docs/microsoft-azure-stack-hub',
@@ -213,6 +212,10 @@ export const pluginMeta = {
         title: 'Palo Alto Networks Cortex XDR',
         link: 'https://docs.axonius.com/docs/palo-alto-networks-cortex-xdr',
         description: 'Palo Alto Networks Cortex XDR is a detection and response app that natively integrates network, endpoint, and cloud data to detect threats and stop sophisticated attacks.'
+    },
+    edfs_csv_adapter: {
+        title: 'EDFS',
+        description: 'External Digital Footprint Security'
     },
     edgescan_adapter: {
         title: 'edgescan Fullstack Vulnerability Management',

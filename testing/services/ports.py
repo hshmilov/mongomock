@@ -248,6 +248,7 @@ DOCKER_PORTS = {
     'cisco-stealthwatch-adapter':       10001,
     'arista-eos-adapter':               10002,
     'men-and-mice-adapter':             10004,
+    'edfs-csv-adapter':                 10005,
     'openvas-adapter':                  10014,
     'kenna-adapter':                    12345,
     'redhat-satellite-adapter':         12346,

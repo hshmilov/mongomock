@@ -4,6 +4,7 @@
       "google_big_query",
       "nimbul",
       "redhat_satellite",
+      "edfs_csv",
       "igar",
       "scep",
       "arsenal",
