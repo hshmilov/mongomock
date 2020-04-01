@@ -126,7 +126,7 @@ class Roles:
             config_doc = self._users_config_collection.find_one({})
             if not config_doc or 'external_default_role' not in config_doc:
                 return ''
-            return config_doc['external_default_role']
+            return jsonify(config_doc['external_default_role'])
 
         # Handle POST, the only option left
         default_role_data = self.get_request_data_as_object()

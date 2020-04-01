@@ -4,7 +4,7 @@ from datetime import datetime
 import pymongo
 from bson import ObjectId
 from flask import (jsonify,
-                   request)
+                   request, Response)
 
 from axonius.consts.gui_consts import (LAST_UPDATED_FIELD, UPDATED_BY_FIELD)
 from axonius.consts.plugin_consts import (REPORTS_PLUGIN_NAME)
@@ -106,7 +106,7 @@ class Enforcements(Tasks):
                                                   }, projection={'_id': 1})])
         if response is None:
             return return_error('No response whether enforcement was removed')
-        return response.text, response.status_code
+        return Response(response.text, response.status_code, mimetype='application/json')
 
     @paginated()
     @filtered()
@@ -253,7 +253,7 @@ class Enforcements(Tasks):
             if trigger_res is None or trigger_res.status_code == 500:
                 logger.error(f'Failed to save trigger {trigger["name"]}')
 
-        return response.text, response.status_code
+        return Response(response.text, response.status_code, mimetype='application/json')
 
     @gui_add_rule_logged_in('enforcements/<enforcement_id>/trigger', methods=['POST'],
                             required_permissions={Permission(PermissionType.Enforcements, PermissionLevel.ReadWrite)})
@@ -273,7 +273,7 @@ class Enforcements(Tasks):
             'configuration_name': enforcement[TRIGGERS_FIELD][0]['name'],
             'manual': True
         }, priority=True)
-        return response.text, response.status_code
+        return Response(response.text, response.status_code, mimetype='application/json')
 
     @add_rule('enforcements/<entity_type>/custom', methods=['POST'])
     def enforce_entity_custom_data(self, entity_type):
