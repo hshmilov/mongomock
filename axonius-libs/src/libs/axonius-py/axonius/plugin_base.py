@@ -3683,7 +3683,8 @@ class PluginBase(Configurable, Feature, ABC):
                 'enabled': False,
                 'domain': OPSGENIE_DEFAULT_DOMAIN,
                 'apikey': None,
-                'verify_ssl': False
+                'verify_ssl': False,
+                'https_proxy': None
             },
             'email_settings': {
                 'enabled': False,

@@ -135,14 +135,18 @@ class Configurable(object):
                 # in the case where a field changed to a property "old_data" will not be a dict
                 old_data = {}
             new_data = {}
-            for item in items:
-                name = item['name']
-                if name not in old_data:
-                    new_data[name] = default_data[name]
-                else:
-                    new_data[name] = Configurable.__try_automigrate_config_schema(item,
-                                                                                  old_data.get(name),
-                                                                                  default_data.get(name))
+            try:
+                for item in items:
+                    name = item['name']
+                    if name not in old_data:
+                        new_data[name] = default_data[name]
+                    else:
+                        new_data[name] = Configurable.__try_automigrate_config_schema(item,
+                                                                                      old_data.get(name),
+                                                                                      default_data.get(name))
+            except Exception:
+                logger.critical('An exception happened during migration', exc_info=True)
+                raise
             return new_data
         elif old_data is not None:
             return old_data
