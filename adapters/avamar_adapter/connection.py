@@ -50,18 +50,18 @@ class AvamarConnection(RESTConnection):
         self._last_refresh = None
         self._expires_in = None
         self._refresh_token()
-        self._get('v1/clients', url_params={'page': 0})
+        self._get('v1/clients', url_params={'page': 0, 'recursive': True})
 
     def get_device_list(self):
         self._refresh_token()
         page = 0
-        response = self._get('v1/clients', url_params={'page': page})
+        response = self._get('v1/clients', url_params={'page': page, 'recursive': True})
         yield from response['content']
         total_pages = response['totalPages']
         page += 1
         while page < min(total_pages, MAX_NUMBER_OF_PAGES):
             try:
-                response = self._get('v1/clients', url_params={'page': page})
+                response = self._get('v1/clients', url_params={'page': page, 'recursive': True})
                 yield from response['content']
                 page += 1
             except Exception:

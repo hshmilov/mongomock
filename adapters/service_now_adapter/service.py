@@ -27,6 +27,7 @@ class ServiceNowAdapter(AdapterBase, Configurable):
 
     class MyDeviceAdapter(DeviceAdapter):
         table_type = Field(str, 'Table Type')
+        category = Field(str, 'Category')
         class_name = Field(str, 'Class Name')
         owner = Field(str, 'Owner')
         discovery_source = Field(str, 'Discovery Source')
@@ -102,6 +103,7 @@ class ServiceNowAdapter(AdapterBase, Configurable):
                 return None
             device.id = str(device_id)
             device.table_type = table_type
+            device.category = device_raw.get('category')
             name = device_raw.get('name')
             device.name = name
             class_name = device_raw.get('sys_class_name')

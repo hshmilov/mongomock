@@ -142,7 +142,17 @@ class CiscoUmbrellaAdapter(AdapterBase):
                     logger.warning(f'Bad device with no ID {device_raw}')
                     continue
                 device.id = device_id + '_' + (device_raw.get('name') or '')
-                device.hostname = device_raw.get('name')
+                name = device_raw.get('name') or ''
+                if not any(elem in name for elem in [' ', '.']):
+                    device.hostname = name
+                else:
+                    device.name = name
+                    host_no_spaces_list = name.replace(' ', '-').split('-')
+                    host_no_spaces_list[0] = ''.join(char for char in host_no_spaces_list[0] if char.isalnum())
+                    if len(host_no_spaces_list) > 1:
+                        host_no_spaces_list[1] = ''.join(char for char in host_no_spaces_list[1] if char.isalnum())
+                    hostname = '-'.join(host_no_spaces_list).split('.')[0]
+                    device.hostname = hostname
                 device.ip_blocking = device_raw.get('hasIpBlocking')
                 try:
                     device.figure_os(device_raw.get('osVersionName'))

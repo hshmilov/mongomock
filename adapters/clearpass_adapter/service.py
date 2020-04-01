@@ -155,7 +155,8 @@ class ClearpassAdapter(AdapterBase, Configurable):
                     device.last_used_users = [extended_info.get('user')] if extended_info.get('user') else None
                     device.spt = extended_info.get('spt')
                     try:
-                        device.figure_os(extended_info.get('device_category'))
+                        device.figure_os((extended_info.get('device_category') or '') + ' ' +
+                                         (extended_info.get('device_name') or ''))
                     except Exception:
                         logger.exception(f'Problem with OS of {device_raw}')
                     device.is_conflict = extended_info.get('is_conflict')

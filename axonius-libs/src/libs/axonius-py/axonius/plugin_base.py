@@ -2790,6 +2790,11 @@ class PluginBase(Configurable, Feature, ABC):
             issue = jira.create_issue(fields=issue_dict)
             if csv_file_name and csv_bytes:
                 jira.add_attachment(issue=issue, attachment=csv_bytes, filename=csv_file_name)
+            try:
+                # In some cases only this flow works for assignee
+                jira.assign_issue(issue, assignee)
+            except Exception:
+                pass
             return ''
         except Exception as e:
             logger.exception('Error in Jira ticket')
