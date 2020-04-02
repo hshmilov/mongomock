@@ -267,6 +267,7 @@ DOCKER_PORTS = {
     'contrast-security-adapter':        13379,
     'logicmonitor-adapter':             13385,
     'jira-adapter':                     13380,
+    'sophos-cloud-optix-adapter':       13381,
     'sevone-adapter':                   13389,
     'ip-fabric-adapter':                14285,
     'mongo':                            27017,

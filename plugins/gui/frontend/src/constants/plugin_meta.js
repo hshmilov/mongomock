@@ -1,4 +1,9 @@
 export const pluginMeta = {
+    sophos_cloud_optix_adapter: {
+        title: 'Sophos Cloud Optix',
+        link: 'https://docs.axonius.com/docs/sophos-cloud-optix',
+        description: 'Sophos Cloud Optix is a public cloud visibility and threat response solution that detects, responds, and prevents cloud security and compliance gaps.'
+    },
     azure_stack_hub_adapter: {
         title: 'Microsoft Azure Stack Hub',
         link: 'https://docs.axonius.com/docs/microsoft-azure-stack-hub',
