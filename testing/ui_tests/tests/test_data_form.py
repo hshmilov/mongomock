@@ -63,7 +63,7 @@ class TestDataForm(TestBase):
             self.verify_adapter_connection_and_save(self.ALERTLOGIC_INPUT)
             self.sync_on_server_connection_failure(ALERTLOGIC_ADAPTER_NAME, self.ALERTLOGIC_INPUT.get('domain'))
             self.verify_adapter_connection_and_cancel(self.ALERTLOGIC_INPUT)
-        self.adapters_page.clean_adapter_servers(ALERTLOGIC_ADAPTER_NAME)
+            self.adapters_page.clean_adapter_servers(ALERTLOGIC_ADAPTER_NAME)
         self.wait_for_adapter_down(ALERTLOGIC_ADAPTER)
 
     def test_aws_default_data(self):
