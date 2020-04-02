@@ -27,11 +27,14 @@ class BasePage(Page):
 
     def run_discovery(self, wait=True):
         logger.info(f'Running discovery with wait={wait}')
+        print(f'Running discovery with wait={wait}')
         self.driver.find_element_by_id(self.DISCOVERY_RUN_ID).click()
         if wait:
             self.wait_for_stop_research()
+            print('Research in stop mode')
             self.wait_for_run_research()
         logger.info('Done discovery cycle')
+        print('Done discovery cycle')
 
     def stop_discovery(self):
         stop_element = self.wait_for_element_present_by_id(self.DISCOVERY_STOP_ID, retries=DISCOVERY_TIMEOUT)
