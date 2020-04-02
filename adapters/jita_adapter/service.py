@@ -118,7 +118,10 @@ class JitaAdapter(AdapterBase, Configurable):
                     device.domain = device_raw.get('domain')
                 if device_raw.get('lastIP'):
                     device.add_nic(ips=[device_raw.get('lastIP')])
-                device.is_stale = device_raw.get('isStale') if isinstance(device_raw.get('isStale'), bool) else None
+                is_stale = device_raw.get('isStale') if isinstance(device_raw.get('isStale'), bool) else None
+                device.is_stale = is_stale
+                if self.__exclude_stale_devices and is_stale:
+                    continue
                 last_logon = parse_date(device_raw.get('lastLogonTimestamp'))
                 last_seen = last_logon
                 device.last_logon = last_logon
@@ -160,6 +163,11 @@ class JitaAdapter(AdapterBase, Configurable):
                     'name': 'devices_fetched_at_a_time',
                     'type': 'integer',
                     'title': 'SQL pagination'
+                },
+                {
+                    'name': 'exclude_stale_devices',
+                    'title': 'Exclude Stale Devices',
+                    'type': 'bool'
                 }
             ],
             'required': ['devices_fetched_at_a_time'],
@@ -170,8 +178,10 @@ class JitaAdapter(AdapterBase, Configurable):
     @classmethod
     def _db_config_default(cls):
         return {
-            'devices_fetched_at_a_time': 1000
+            'devices_fetched_at_a_time': 1000,
+            'exclude_stale_devices': True
         }
 
     def _on_config_update(self, config):
         self.__devices_fetched_at_a_time = config['devices_fetched_at_a_time']
+        self.__exclude_stale_devices = config['exclude_stale_devices']
