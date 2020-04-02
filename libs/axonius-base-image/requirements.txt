@@ -116,3 +116,4 @@ dicttoxml==1.7.4
 vectra-api-tools==1.1rc0
 python-gvm==1.2.0
 python-ilorest-library==3.0.0
+boxsdk==2.7.1
