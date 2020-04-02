@@ -194,6 +194,7 @@ DOCKER_PORTS = {
     'heavy-lifting':                    6688,
     'instance-control':                 6689,
     'cloud-health-adapter':             6690,
+    'forcepoint-adapter':               6691,
     'master-proxy':                     8888,  # reserved
     'bandicoot':                        9090,
     'httpd-service':                    8889,  # reserved

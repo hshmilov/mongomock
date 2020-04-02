@@ -982,8 +982,12 @@ export const pluginMeta = {
         link: '',
         description: 'ManageEngine Desktop Central is a desktop management and mobile device management software for managing desktops in LAN and across WAN and mobile devices from a central location.'
     },
-    forcepoint_csv_adapter: {
+    forcepoint_adapter: {
         title: 'Forcepoint Web Security Endpoint',
+        description: 'Forcepoint Web Security Endpoint enables end-users to authenticate and receive policy enforcement via the Forcepoint Web Security Cloud infrastructure.'
+    },
+    forcepoint_csv_adapter: {
+        title: 'Forcepoint Web Security Endpoint CSV File',
         link: 'https://docs.axonius.com/docs/forcepoint-web-security-endpoint',
         description: 'Forcepoint Web Security Endpoint enables end-users to authenticate and receive policy enforcement via the Forcepoint Web Security Cloud infrastructure.'
     },
