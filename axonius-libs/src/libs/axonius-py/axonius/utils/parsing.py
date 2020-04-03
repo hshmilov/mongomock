@@ -1242,7 +1242,7 @@ def compare_snow_asset_hosts(adapter_device1, adapter_device2):
 def get_asset_or_host(adapter_device):
     asset = get_asset_name(adapter_device) or get_hostname(adapter_device)
     if asset:
-        if is_valid_ip(asset):
+        if is_valid_ip(asset) or ' ' in asset:
             return asset
         return asset.split('.')[0].lower().strip()
     return None

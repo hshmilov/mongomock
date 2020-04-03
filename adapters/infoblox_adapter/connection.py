@@ -1,3 +1,4 @@
+import time
 import ipaddress
 import logging
 from typing import Optional
@@ -24,12 +25,14 @@ class InfobloxConnection(RESTConnection):
             },
             **kwargs
         )
+        self._sleep_between_requests_in_sec = 0
+        self._result_per_page = RESULTS_PER_PAGE
 
     def __get_items_from_url(self, path, url_params):
         try:
             logger.info(f'Starting url path {path} with params {url_params}')
             url_params['_return_as_object'] = 1
-            url_params['_max_results'] = RESULTS_PER_PAGE
+            url_params['_max_results'] = self._result_per_page
             url_params['_paging'] = 1
 
             response = self._get(path, url_params=url_params, do_basic_auth=True)
@@ -38,6 +41,8 @@ class InfobloxConnection(RESTConnection):
             number_of_pages = 1
             while next_page_id and number_of_pages < MAX_NUMBER_OF_PAGES:
                 try:
+                    if self._sleep_between_requests_in_sec:
+                        time.sleep(self._sleep_between_requests_in_sec)
                     url_params['_page_id'] = next_page_id
                     response = self._get(path, url_params=url_params, do_basic_auth=True)
                     yield from response['result']
@@ -61,9 +66,14 @@ class InfobloxConnection(RESTConnection):
             raise
 
     # pylint: disable=too-many-branches, arguments-differ
-    def get_device_list(self, date_filter: Optional[int] = None, cidr_blacklist: Optional[str] = None):
+    def get_device_list(self, date_filter: Optional[int] = None, cidr_blacklist: Optional[str] = None,
+                        result_per_page=RESULTS_PER_PAGE, sleep_between_requests_in_sec=0):
         # First, get all networks to get additional data about the leases
         networks = dict()
+        if sleep_between_requests_in_sec:
+            self._sleep_between_requests_in_sec = sleep_between_requests_in_sec
+        if result_per_page:
+            self._result_per_page = result_per_page
         logger.info(f'Getting networks')
         try:
             for network_raw in self.__get_items_from_url(

@@ -12,7 +12,7 @@ from axonius.mixins.configurable import Configurable
 from axonius.utils.files import get_local_config_file
 from axonius.utils.parsing import normalize_var_name
 from infoblox_adapter.connection import InfobloxConnection
-from infoblox_adapter.consts import A_TYPE, LEASE_TYPE
+from infoblox_adapter.consts import A_TYPE, LEASE_TYPE, RESULTS_PER_PAGE
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -79,7 +79,9 @@ class InfobloxAdapter(AdapterBase, Configurable):
         with client_data:
             yield from client_data.get_device_list(
                 date_filter=date_filter,
-                cidr_blacklist=self.__cidr_blacklist
+                cidr_blacklist=self.__cidr_blacklist,
+                result_per_page=self.__result_per_page,
+                sleep_between_requests_in_sec=self.__sleep_between_requests_in_sec
             )
 
     @staticmethod
@@ -314,10 +316,21 @@ class InfobloxAdapter(AdapterBase, Configurable):
                     'name': 'use_discovered_data',
                     'title': 'Filter results by the Discovered Data field',
                     'type': 'bool'
+                },
+                {
+                    'name': 'result_per_page',
+                    'title': 'Results Per Page',
+                    'type': 'integer'
+                },
+                {
+                    'name': 'sleep_between_requests_in_sec',
+                    'type': 'integer',
+                    'title': 'Time in seconds to sleep between each request'
                 }
             ],
             'required': [
-                'use_discovered_data'
+                'use_discovered_data',
+                'result_per_page'
             ],
             'pretty_name': 'Infoblox Configuration',
             'type': 'array'
@@ -327,9 +340,13 @@ class InfobloxAdapter(AdapterBase, Configurable):
     def _db_config_default(cls):
         return {
             'cidr_blacklist': None,
-            'use_discovered_data': False
+            'use_discovered_data': False,
+            'result_per_page': RESULTS_PER_PAGE,
+            'sleep_between_requests_in_sec': None
         }
 
     def _on_config_update(self, config):
         self.__cidr_blacklist = config.get('cidr_blacklist')
         self.__use_discovered_data = config.get('use_discovered_data') or False
+        self.__result_per_page = config.get('result_per_page') or RESULTS_PER_PAGE
+        self.__sleep_between_requests_in_sec = config.get('sleep_between_requests_in_sec') or 0

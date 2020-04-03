@@ -4,7 +4,7 @@ from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.connection import RESTException
-from axonius.devices.device_adapter import DeviceAdapter
+from axonius.devices.device_adapter import DeviceAdapter, DeviceRunningState
 from axonius.utils.files import get_local_config_file
 from axonius.fields import Field
 from nutanix_adapter.connection import NutanixConnection
@@ -167,6 +167,11 @@ class NutanixAdapter(AdapterBase):
             device.id = str(device_id) + '_' + (device_raw.get('name') or '')
             device.uuid = device_raw.get('uuid')
             device.name = device_raw.get('name')
+            power_state = device_raw.get('power_state')
+            if power_state == 'on':
+                device.power_state = DeviceRunningState.TurnedOn
+            elif power_state == 'off':
+                device.power_state = DeviceRunningState.TurnedOff
             vm_nics = device_raw.get('vm_nics')
             if not isinstance(vm_nics, list):
                 vm_nics = []

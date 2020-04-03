@@ -30,6 +30,7 @@ class AirwatchAdapter(AdapterBase):
         profile_name = Field(str, 'Profile Name')
         ownership = Field(str, 'Ownership')
         location_group_name = Field(str, 'Location Group Name')
+        profiles = ListField(str, 'Profiles')
 
     def __init__(self):
         super().__init__(get_local_config_file(__file__))
@@ -164,6 +165,15 @@ class AirwatchAdapter(AdapterBase):
                 device.figure_os((device_raw.get('Platform') or '') + ' ' + (device_raw.get('OperatingSystem') or ''))
                 device.phone_number = device_raw.get('PhoneNumber')
                 device.email = device_raw.get('UserEmailAddress')
+                try:
+                    profiles_raw = device_raw.get('profiles_raw')
+                    if not isinstance(profiles_raw, list):
+                        profiles_raw = []
+                    for profile_raw in profiles_raw:
+                        if isinstance(profile_raw, dict) and profile_raw.get('Name'):
+                            device.profiles.append(profile_raw.get('Name'))
+                except Exception:
+                    logger.warning(f'Problem getting profiles for {device_raw}')
                 try:
                     network_raw = device_raw.get('Network') or {}
                     nics_raw = network_raw.get('DeviceNetworkInfo')

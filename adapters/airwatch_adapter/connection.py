@@ -91,6 +91,11 @@ class AirwatchConnection(RESTConnection):
                                                      do_basic_auth=True)['Tag']
             except Exception:
                 pass
+            try:
+                device_raw['profiles_raw'] = self._get(f'mdm/devices/{str(device_id)}/profiles',
+                                                       do_basic_auth=True)['DeviceProfiles']
+            except Exception:
+                pass
             if device_raw.get('SerialNumber'):
                 serials_imei_set.add(device_raw.get('SerialNumber'))
             if device_raw.get('Imei'):

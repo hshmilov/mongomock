@@ -42,7 +42,9 @@ class GuardiumConnection(RESTConnection):
         self._last_refresh = None
         self._expires_in = None
         self._refresh_token()
-        self._get('restAPI/gim_registered_clients')
+        response = self._get('restAPI/gim_registered_clients')
+        if 'User has insufficient privileges' in str(response):
+            raise RESTException(str(response))
 
     def get_device_list(self):
         self._refresh_token()

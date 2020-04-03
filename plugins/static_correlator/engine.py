@@ -1027,7 +1027,9 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
                                       [get_resource_id],
                                       [compare_resource_id],
                                       [],
-                                      [compare_sccm_server],
+                                      [compare_sccm_server,
+                                       asset_hostnames_do_not_contradict,
+                                       ips_do_not_contradict_or_mac_intersection],
                                       {'Reason': 'They have the same resource ID plus SCCM SERVER'},
                                       CorrelationReason.StaticAnalysis)
 
