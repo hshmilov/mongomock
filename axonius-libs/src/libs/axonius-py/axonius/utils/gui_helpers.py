@@ -469,19 +469,7 @@ def get_historized_filter(entities_filter, history_date: datetime):
 
 
 def is_adapter_count_query(query):
-    if isinstance(query, str) or not isinstance(query, Iterable):
-        return False
-    if '$where' in query:
-        return True
-    for k, v in query.items():
-        # pylint: disable=no-else-return
-        if isinstance(v, dict):
-            return is_adapter_count_query(v)
-        elif isinstance(v, list):
-            for list_item in v:
-                return is_adapter_count_query(list_item)
-    return False
-# pylint: disable=no-else-return
+    return '\'$where\': ' in str(query)
 
 
 def get_entities_count(
@@ -500,12 +488,12 @@ def get_entities_count(
     is_adapter_count = is_adapter_count_query(processed_filter)
     if quick and is_adapter_count:
         return entity_collection.count(processed_filter, limit=1000)
-    elif quick and not is_adapter_count:
+    if quick and not is_adapter_count:
         return entity_collection.count_documents(processed_filter, limit=1000)
 
     if not processed_filter:
         return entity_collection.estimated_document_count()
-    elif is_adapter_count:
+    if is_adapter_count:
         return entity_collection.count(processed_filter)
     return entity_collection.count_documents(processed_filter)
 
