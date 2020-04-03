@@ -556,9 +556,8 @@ def find_entity_field(entity_data, field_path, skip_unique=False, specific_adapt
 
     if specific_adapter is not None and specific_adapter in entity_data['adapters_data']:
         try:
-            # As far as i checked every adapter return only 1 value thats why the hard-code 0 index...
-            return entity_data['adapters_data'][specific_adapter][0][field_path], \
-                entity_data['adapters_data'][specific_adapter][0]['last_seen']
+            return [(entity_adapter[field_path],  entity_adapter['last_seen'])
+                    for entity_adapter in entity_data['adapters_data'][specific_adapter]]
         except Exception:
             return None, None
     elif specific_adapter is not None:
@@ -636,6 +635,7 @@ def find_entity_field(entity_data, field_path, skip_unique=False, specific_adapt
     return children
 
 
+# pylint: disable=too-many-locals
 def parse_entity_fields(entity_data, fields, include_details=False, field_filters: dict = None):
     """
     For each field in given list, if it begins with adapters_data, just fetch it from corresponding adapter.
@@ -702,6 +702,7 @@ def parse_entity_fields(entity_data, fields, include_details=False, field_filter
                 if not adapter.endswith('_adapter'):
                     continue
                 _adapter = entity_data['adapters_data'][adapter][0]
+
                 if 'adapter_properties' in _adapter and 'Agent' in _adapter['adapter_properties'] and 'last_seen' \
                         in _adapter and _adapter['last_seen'] > last_seen:
                     if sub_property is not None and specific_property in _adapter:
@@ -724,25 +725,43 @@ def parse_entity_fields(entity_data, fields, include_details=False, field_filter
             # Second priority is active-directory data
             if (val != '' and last_seen is not None and
                     (datetime.now() - last_seen).days > MAX_DAYS_SINCE_LAST_SEEN) or \
-                    (last_seen is None and val == ''):
-                val, last_seen = find_entity_field(entity_data,
-                                                   specific_property,
-                                                   specific_adapter='active_directory_adapter')
-                if val is not None and sub_property is not None:
-                    try:
-                        sub_property_val = val[sub_property] if isinstance(val, dict) else \
-                            [x[sub_property] for x in val if sub_property in x]
-                    # Field not in result
-                    except Exception:
-                        sub_property_val = None
-                if val is not None and isinstance(sub_property, str) and \
-                   (sub_property_val is not None and sub_property_val != []):
-                    val = sub_property_val
-                elif val is None or (val is not None and isinstance(sub_property, str)) and \
-                                    (sub_property_val is None or sub_property_val == []):
-                    val = ''
-                if val == '':
-                    last_seen = datetime(1970, 1, 1, 0, 0, 0)
+                    (last_seen == datetime(1970, 1, 1, 0, 0, 0) and val == ''):
+                try:
+                    val_changed_by_ad = False
+                    for tmp_val, tmp_last_seen in find_entity_field(entity_data,
+                                                                    specific_property,
+                                                                    specific_adapter='active_directory_adapter'):
+                        if tmp_val is None and tmp_last_seen is None:
+                            break
+                        if tmp_last_seen < last_seen:
+                            continue
+                        if tmp_val is not None and sub_property is not None:
+                            try:
+                                sub_property_val = tmp_val[sub_property] if isinstance(tmp_val, dict) else \
+                                    [x[sub_property] for x in tmp_val if sub_property in x]
+                            # Field not in result
+                            except Exception:
+                                sub_property_val = None
+                        if tmp_val is not None and isinstance(sub_property, str) and \
+                           (sub_property_val is not None and sub_property_val != []):
+                            val = sub_property_val
+                            last_seen = tmp_last_seen
+                            val_changed_by_ad = True
+                        elif tmp_val is None or (tmp_val is not None and isinstance(sub_property, str)) and \
+                                (sub_property_val is None or sub_property_val == []):
+                            val = ''
+                        elif tmp_val is not None and sub_property is None:
+                            val = tmp_val
+                            last_seen = tmp_last_seen
+                            val_changed_by_ad = True
+                        if val == '':
+                            last_seen = datetime(1970, 1, 1, 0, 0, 0)
+                except TypeError:
+                    val_changed_by_ad = False
+                finally:
+                    # AD overrides them all
+                    if val_changed_by_ad:
+                        last_seen = datetime.now()
 
             # Third priority is the latest seen Assets adapter
             if (val != '' and last_seen != datetime(1970, 1, 1, 0, 0, 0) and
@@ -800,6 +819,8 @@ def parse_entity_fields(entity_data, fields, include_details=False, field_filter
                 field_to_value[preferred_field] = val
             else:
                 field_to_value[preferred_field] = [val]
+            if preferred_field == 'specific_data.data.hostname_preferred' and field_to_value[preferred_field]:
+                field_to_value[preferred_field] = [x.upper().split('.')[0] for x in field_to_value[preferred_field]]
         except Exception as e:
             logger.error(f'Problem in merging preferred fields: {e}')
             continue
