@@ -1,5 +1,6 @@
 import logging
 import math
+from itertools import islice
 from typing import Iterable
 
 from flask import jsonify, request, has_request_context, g
@@ -20,7 +21,7 @@ from axonius.utils.gui_helpers import (Permission, PermissionLevel,
                                        sorted_endpoint, projected, filtered,
                                        add_rule_custom_authentication,
                                        get_entities_count, add_rule_unauth,
-                                       entity_fields)
+                                       entity_fields, PAGINATION_LIMIT_MAX)
 from axonius.utils.metric import remove_ids
 from gui.logic.entity_data import (get_entity_data, entity_tasks)
 
@@ -456,6 +457,43 @@ class APIMixin:
         return jsonify(return_doc)
 
     @filtered_entities()
+    @sorted_endpoint()
+    @projected()
+    @api_add_rule(f'devices/cached', methods=['GET', 'POST'],
+                  required_permissions={Permission(PermissionType.Devices,
+                                                   PermissionLevel.ReadOnly)})
+    def api_cached_devices(self, mongo_filter, mongo_sort, mongo_projection):
+        content = self.get_request_data_as_object() if request.method == 'POST' else request.args
+        assets_count = None
+        try:
+            limit = int(content.get('limit', PAGINATION_LIMIT_MAX))
+            if limit < 1 or limit > PAGINATION_LIMIT_MAX:
+                limit = PAGINATION_LIMIT_MAX
+        except Exception:
+            limit = PAGINATION_LIMIT_MAX
+        cursor_id = content.get('cursor')
+        # count filtered assets only on the first request.
+        if not cursor_id:
+            devices_collection = self._entity_db_map[EntityType.Devices]
+            assets_count = get_entities_count(mongo_filter, devices_collection)
+
+        data, cursor_id = get_entities(0, 0, mongo_filter, mongo_sort,
+                                       mongo_projection,
+                                       EntityType.Devices,
+                                       default_sort=self._system_settings['defaultSort'], cursor_id=cursor_id,
+                                       use_cursor=True)
+        assets = [asset for asset in islice(data, limit)]
+        return_doc = {
+            'page': {
+                'totalResources': assets_count,
+                'size': len(assets)
+            },
+            'cursor': cursor_id,
+            'assets': assets
+        }
+        return jsonify(return_doc)
+
+    @filtered_entities()
     @api_add_rule(f'devices/count', methods=['GET', 'POST'],
                   required_permissions={Permission(PermissionType.Devices,
                                                    PermissionLevel.ReadOnly)})
@@ -505,6 +543,43 @@ class APIMixin:
                                         default_sort=self._system_settings['defaultSort']))
         }
 
+        return jsonify(return_doc)
+
+    @filtered_entities()
+    @sorted_endpoint()
+    @projected()
+    @api_add_rule(f'users/cached', methods=['GET', 'POST'],
+                  required_permissions={Permission(PermissionType.Users,
+                                                   PermissionLevel.ReadOnly)})
+    def api_cached_users(self, mongo_filter, mongo_sort, mongo_projection):
+        content = self.get_request_data_as_object() if request.method == 'POST' else request.args
+        assets_count = None
+        try:
+            limit = int(content.get('limit', PAGINATION_LIMIT_MAX))
+            if limit < 1 or limit > PAGINATION_LIMIT_MAX:
+                limit = PAGINATION_LIMIT_MAX
+        except Exception:
+            limit = PAGINATION_LIMIT_MAX
+        cursor_id = content.get('cursor')
+        # count filtered assets only on the first request.
+        if not cursor_id:
+            devices_collection = self._entity_db_map[EntityType.Users]
+            assets_count = get_entities_count(mongo_filter, devices_collection)
+
+        data, cursor_id = get_entities(0, 0, mongo_filter, mongo_sort,
+                                       mongo_projection,
+                                       EntityType.Devices,
+                                       default_sort=self._system_settings['defaultSort'], cursor_id=cursor_id,
+                                       use_cursor=True)
+        assets = [asset for asset in islice(data, limit)]
+        return_doc = {
+            'page': {
+                'totalResources': assets_count,
+                'size': len(assets)
+            },
+            'cursor': cursor_id,
+            'assets': assets
+        }
         return jsonify(return_doc)
 
     @filtered_entities()

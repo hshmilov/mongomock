@@ -1,8 +1,10 @@
 import logging
+import uuid
 from collections import defaultdict
 from datetime import datetime
-from typing import Iterable, Dict, Iterator
+from typing import Iterable, Dict, Iterator, Tuple
 
+from cachetools import LRUCache
 from funcy import chunks
 import pymongo
 from pymongo.errors import PyMongoError
@@ -19,6 +21,9 @@ from axonius.entities import EntityType
 logger = logging.getLogger(f'axonius.{__name__}')
 
 ITERATE_CHUNK_SIZE = 50
+MAX_CURSORS = 100
+# pylint: disable=C0103
+cursors = LRUCache(maxsize=MAX_CURSORS)
 
 
 def _normalize_db_projection_for_aggregation(projection: Dict[str, int]):
@@ -104,6 +109,68 @@ def _perform_find(entity_views_db,
                                 skip=skip)
 
 
+def _get_all_entities_raw(entity_type: EntityType,
+                          view_filter: dict,
+                          db_projection: dict = None,
+                          cursor_id=None,
+                          sort: dict = None,
+                          default_sort: bool = False,
+                          history_date: datetime = None) -> Tuple[Iterator[dict], str]:
+    """
+    See get_entities for explanation of the parameters
+    """
+    # pylint: disable=W0603
+    global cursors
+    db_cursor = None
+    # if the cursor exists, we just want to fetch the next results.
+    if cursor_id:
+        db_cursor = cursors.get(cursor_id)
+        if not db_cursor:
+            raise ValueError(f'Cursor not found')
+    if db_cursor:
+        return db_cursor, cursor_id
+
+    if db_projection:
+        sort = get_db_projection(db_projection, sort)
+    entity_views_db, is_date_filter_required = plugin_base_instance().get_appropriate_view(history_date, entity_type)
+    # if we defaulted to normal history collection, add historized_filter
+    if history_date and is_date_filter_required:
+        view_filter = get_historized_filter(view_filter, history_date)
+    try:
+        db_cursor = _perform_find(entity_views_db, 0, 0, view_filter, sort, db_projection, entity_type,
+                                  default_sort)
+        cursor_id = str(uuid.uuid4())
+        cursors[cursor_id] = db_cursor
+        return db_cursor, cursor_id
+    except Exception:
+        logger.exception('Exception when finding cursor')
+        raise
+
+
+def get_db_projection(db_projection, sort):
+    db_projection = dict(db_projection)
+    _normalize_db_projection_for_aggregation(db_projection)
+    if bool(sort):
+        sort_path = list(sort)[0]
+        field = '.'.join(sort_path.split('.')[2:])
+        operator = None
+        if f'specific_data.data.{field}' in MAX_SORTED_FIELDS:
+            operator = '$max'
+        elif f'specific_data.data.{field}' in MIN_SORTED_FIELDS:
+            operator = '$min'
+        if operator:
+            db_projection['tempSortField'] = {
+                operator:
+                    {
+                        '$map': {
+                            'input': '$adapters.data', 'as': 'el', 'in': f'$$el.{field}'
+                        }
+                    }
+            }
+            sort = {'tempSortField': sort[sort_path]}
+    return sort
+
+
 def _get_entities_raw(entity_type: EntityType,
                       view_filter: dict,
                       db_projection: dict = None,
@@ -116,26 +183,7 @@ def _get_entities_raw(entity_type: EntityType,
     See get_entities for explanation of the parameters
     """
     if db_projection:
-        db_projection = dict(db_projection)
-        _normalize_db_projection_for_aggregation(db_projection)
-        if bool(sort):
-            sort_path = list(sort)[0]
-            field = '.'.join(sort_path.split('.')[2:])
-            operator = None
-            if f'specific_data.data.{field}' in MAX_SORTED_FIELDS:
-                operator = '$max'
-            elif f'specific_data.data.{field}' in MIN_SORTED_FIELDS:
-                operator = '$min'
-            if operator:
-                db_projection['tempSortField'] = {
-                    operator:
-                        {
-                            '$map': {
-                                'input': '$adapters.data', 'as': 'el', 'in': f'$$el.{field}'
-                            }
-                        }
-                }
-                sort = {'tempSortField': sort[sort_path]}
+        sort = get_db_projection(db_projection, sort)
 
     entity_views_db, is_date_filter_required = plugin_base_instance().get_appropriate_view(history_date, entity_type)
     # if we defaulted to normal history collection, add historized_filter
@@ -190,7 +238,7 @@ def get_entities(limit: int, skip: int,
                  history_date: datetime = None,
                  ignore_errors: bool = False,
                  include_details: bool = False,
-                 field_filters: dict = None) -> Iterator[dict]:
+                 field_filters: dict = None, cursor_id=None, use_cursor=False) -> Tuple[Iterable[dict], str]:
     """
     Get Axonius data of type <entity_type>, from the aggregator which is expected to store them.
     :param limit: the max amount of entities to return
@@ -204,6 +252,8 @@ def get_entities(limit: int, skip: int,
     :param history_date: the date for which to fetch, or None for latest
     :param ignore_errors: Passed to convert_db_entity_to_view_entity
     :param field_filters: Filter fields' values to those that are have a string including their matching filter
+    :param use_cursor: whether to use cursor based pagination
+    :param cursor_id: cursor_id for getting next results set
     :return:
     """
     if run_over_projection:
@@ -219,10 +269,16 @@ def get_entities(limit: int, skip: int,
     logger.debug(f'Fetching data for entity {entity_type.name}')
     limit = limit or 0
     skip = skip or 0
+    if use_cursor:
+        data_list, cursor_id = _get_all_entities_raw(entity_type, view_filter, db_projection, cursor_id, sort,
+                                                     default_sort, history_date)
+        return convert_entities_to_frontend_entities(data_list, projection, ignore_errors, include_details,
+                                                     field_filters), cursor_id
 
     data_list = _get_entities_raw(entity_type, view_filter, db_projection, limit, skip, sort,
                                   default_sort, history_date)
-    return convert_entities_to_frontend_entities(data_list, projection, ignore_errors, include_details, field_filters)
+    return convert_entities_to_frontend_entities(data_list, projection, ignore_errors, include_details,
+                                                 field_filters)
 
 
 def perform_axonius_query(entity: EntityType,
