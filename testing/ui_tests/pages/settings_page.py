@@ -734,7 +734,7 @@ class SettingsPage(Page):
             self.fill_datepicker_date(datetime.now() + timedelta(days_remaining), context=element)
             self.close_datepicker()
 
-    def fill_contract_expiration_by_remainder(self, days_remaining=None):
+    def fill_contract_expiration_by_remainder(self, days_remaining=None, server_time=None):
         elements = self.find_elements_by_xpath(self.XPATH_BY_CLASS_NAME.format(name=self.DATEPICKER_CLASS_NAME))
         try:
             self.clear_existing_date(context=elements[0])
@@ -742,7 +742,9 @@ class SettingsPage(Page):
         except NoSuchElementException:
             pass
         if days_remaining is not None:
-            self.fill_datepicker_date(datetime.now() + timedelta(days_remaining), context=elements[1])
+            self.fill_datepicker_date(datetime.now()
+                                      if server_time is None else server_time + timedelta(days_remaining),
+                                      context=elements[1])
             self.close_datepicker()
 
     def add_email_server(self, host, port):

@@ -1,6 +1,8 @@
 import time
 
 import pytest
+import requests
+from dateutil import parser
 from selenium.common.exceptions import NoSuchElementException, ElementNotInteractableException
 from services.adapters.cybereason_service import CybereasonService
 
@@ -97,7 +99,7 @@ class TestFeatureFlags(TestBase):
                        tolerated_exceptions_list=[NoSuchElementException], total_timeout=60 * 5,
                        check_return_value=False)
 
-    def _change_expiration_date(self, days_remaining=None, existing=True, contract=False):
+    def _change_expiration_date(self, days_remaining=None, existing=True, contract=False, server_time=None):
         try:
             self.login_page.find_disabled_login_button()
         except NoSuchElementException:
@@ -111,7 +113,7 @@ class TestFeatureFlags(TestBase):
         if existing:
             self.settings_page.find_existing_date()
         if contract:
-            self.settings_page.fill_contract_expiration_by_remainder(days_remaining)
+            self.settings_page.fill_contract_expiration_by_remainder(days_remaining, server_time=server_time)
         else:
             self.settings_page.fill_trial_expiration_by_remainder(days_remaining)
         self.settings_page.save_and_wait_for_toaster()
@@ -144,22 +146,26 @@ class TestFeatureFlags(TestBase):
         self._change_expiration_date(3)
 
     def test_contract_expiration(self):
+        req = requests.get('https://127.0.0.1/', verify=False)
+        server_date = req.headers.get('Date')
+        req.close()
+        server_date = parser.parse(server_date) if server_date is not None else None
         self.dashboard_page.switch_to_page()
         for days_remaining in [60, 15, 2]:
-            self._change_expiration_date(days_remaining, contract=True)
+            self._change_expiration_date(days_remaining, server_time=server_date, contract=True)
             assert self.dashboard_page.find_contract_remainder_banner(days_remaining)
 
-        self._change_expiration_date(contract=True)
+        self._change_expiration_date(contract=True, server_time=server_date)
         self.dashboard_page.find_banner_no_contract()
 
-        self._change_expiration_date(-1, existing=False, contract=True)
+        self._change_expiration_date(-1, existing=False, contract=True, server_time=server_date)
         assert self.dashboard_page.find_contract_expired_banner()
         self.restart_browser()
-        self._change_expiration_date(contract=True)
+        self._change_expiration_date(contract=True, server_time=server_date)
         self.dashboard_page.find_banner_no_contract()
 
-        self._change_expiration_date(-1, existing=False, contract=True)
+        self._change_expiration_date(-1, existing=False, contract=True, server_time=server_date)
         assert self.dashboard_page.find_contract_expired_banner()
         self.restart_browser()
         self.dashboard_page.find_banner_no_contract()
-        self._change_expiration_date(3, contract=True)
+        self._change_expiration_date(3, contract=True, server_time=server_date)
