@@ -57,6 +57,7 @@ class GoogleMdmAdapter(AdapterBase):
         org_unit_path = Field(str, 'Org Unit Path')
         meid = Field(str, 'MEID')
         order_number = Field(str, 'Order Number')
+        owner_full_name = Field(str, 'Owner Full Name')
 
     class MyUserAdapter(UserAdapter):
         alias_emails = ListField(str, 'Alias Emails')
@@ -197,6 +198,7 @@ class GoogleMdmAdapter(AdapterBase):
             name += f'{os} '
         if primary_email:
             name += f'{primary_email} '
+            device.email = primary_email
         device.name = name
         device.device_serial = raw_device_data.get('serialNumber')
         device.device_password_status = raw_device_data.get('devicePasswordStatus')
@@ -225,6 +227,12 @@ class GoogleMdmAdapter(AdapterBase):
             device.developer_options_status = raw_device_data.get('developerOptionsStatus')
         except Exception:
             logger.exception(f'Can not set developer options status')
+
+        name = raw_device_data.get('name')
+        if isinstance(name, list) and name:
+            device.owner_full_name = name[0]
+        elif isinstance(name, str):
+            device.owner_full_name = name
 
         device.adapter_properties = [AdapterProperty.Agent.name, AdapterProperty.MDM.name]
         return device

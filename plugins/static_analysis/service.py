@@ -590,7 +590,7 @@ class StaticAnalysisService(Triggerable, PluginBase):
             parse_filter(
                 'specific_data.data.users == exists(true) or specific_data.data.last_used_users == exists(true) or '
                 'adapters_data.azure_ad_adapter.user_principal_name == ({"$exists":true,"$ne":""}) or '
-                'adapters_data.data.email == ({"$exists":true,"$ne":""})'),
+                'specific_data.data.email == ({"$exists":true,"$ne":""})'),
             batch_size=10
         )
 
@@ -798,7 +798,7 @@ class StaticAnalysisService(Triggerable, PluginBase):
             parse_filter(
                 '((adapters_data.azure_ad_adapter.user_principal_name == ({"$exists":true,"$ne":""}))) '
                 'or ((specific_data.data.last_used_users == ({"$exists":true,"$ne":""}))) '
-                'or (adapters_data.data.email == ({"$exists":true,"$ne":""}))'
+                'or (specific_data.data.email == ({"$exists":true,"$ne":""}))'
             ),
             batch_size=10
         )
