@@ -2,9 +2,10 @@ import time
 
 import pytest
 from flaky import flaky
-from selenium.common.exceptions import ElementNotInteractableException, NoSuchElementException, TimeoutException
+from selenium.common.exceptions import ElementNotInteractableException, NoSuchElementException
 
 from axonius.utils.wait import wait_until
+from services.axon_service import TimeoutException
 from ui_tests.tests.ui_test_base import TestBase
 from ui_tests.tests import ui_consts
 
