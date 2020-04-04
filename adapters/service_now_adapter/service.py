@@ -239,6 +239,11 @@ class ServiceNowAdapter(AdapterBase, Configurable):
                         and install_status in ['Disposed', 'Decommissioned']:
                     return None
                 device.install_status = install_status
+                try:
+                    if self.__install_status_exclude_list and device_raw.get('install_status') and str(device_raw.get('install_status')) in self.__install_status_exclude_list:
+                        return None
+                except Exception:
+                    logger.warning(f'Problem with install status exclude list')
             except Exception:
                 logger.warning(f'Problem at asset table information {device_raw}', exc_info=True)
 
@@ -620,6 +625,11 @@ class ServiceNowAdapter(AdapterBase, Configurable):
                     'name': 'fetch_only_active_users',
                     'type': 'bool',
                     'title': 'Fetch only active users'
+                },
+                {
+                    'name': 'install_status_exclude_list',
+                    'title': 'Install status number exclude list',
+                    'type': 'string'
                 }
             ],
             "required": [
@@ -646,7 +656,8 @@ class ServiceNowAdapter(AdapterBase, Configurable):
             'use_ci_table_for_install_status': False,
             'exclude_vm_tables': False,
             'email_whitelist': None,
-            'fetch_only_active_users': False
+            'fetch_only_active_users': False,
+            'install_status_exclude_list': None
         }
 
     def _on_config_update(self, config):
@@ -659,6 +670,8 @@ class ServiceNowAdapter(AdapterBase, Configurable):
         self.__exclude_vm_tables = config['exclude_vm_tables']
         self.__email_whitelist = config['email_whitelist'].split(',') if config.get('email_whitelist') else None
         self.__fetch_only_active_users = config.get('fetch_only_active_users') or False
+        self.__install_status_exclude_list = config.get('install_status_exclude_list').split(',') \
+            if config.get('install_status_exclude_list') else None
 
     def outside_reason_to_live(self) -> bool:
         """

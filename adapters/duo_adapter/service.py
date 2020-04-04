@@ -109,6 +109,12 @@ class DuoAdapter(AdapterBase):
         user.username = raw_user_data.get('username')
         user.first_name = raw_user_data.get('firstname') or raw_user_data.get('realname')
         user.last_name = raw_user_data.get('lastname')
+        user_status = raw_user_data.get('status')
+        user.user_status = user_status
+        if user_status == 'disabled':
+            user.account_disabled = True
+        else:
+            user.account_disabled = False
         last_logon_raw = raw_user_data.get('last_login')
         user.user_created = parse_date(raw_user_data.get('parse_date'))
         groups_raw = raw_user_data.get('groups')

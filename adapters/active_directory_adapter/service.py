@@ -114,6 +114,7 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, ActiveDirectory
         ad_dc_source = Field(str, 'AD DC Source')
         ms_mcs_adm_pwd = Field(str, 'Mc Mcs Admin Pwd')
         ms_mcs_adm_pwd_expiration_time = Field(datetime, 'Mc Mcs Admin Pwd Expiration Time')
+        is_laps_installed = Field(bool, 'Is LAPS Installed')
         resolvable_hostname = Field(str, 'Resolvable Hostname')
 
     class MyUserAdapter(UserAdapter, ADEntity):
@@ -1149,6 +1150,7 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, ActiveDirectory
                 try:
                     device.ms_mcs_adm_pwd = device_raw.get('msMcsAdmPwd')
                     device.ms_mcs_adm_pwd_expiration_time = parse_date(device_raw.get('msMcsAdmPwdExpirationTime'))
+                    device.is_laps_installed = True if device_raw.get('ms-Mcs-AdmPwdExpirationTime') else False
                 except Exception:
                     logger.exception(f'Problem adding msmcs stuff')
                 device.description = device_raw.get('description')

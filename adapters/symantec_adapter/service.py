@@ -25,6 +25,7 @@ class SymantecAdapter(AdapterBase):
         cids_defset_year = Field(str, 'Definition Set Year')
         cids_defset_month = Field(str, 'Definition Set Month')
         cids_defset_day = Field(str, 'Definition Set Day')
+        cids_defset_date = Field(datetime.datetime, 'Definition Set Date')
         last_scan_date = Field(datetime.datetime, 'Last Scan Date')
         is_npvdi_client = Field(bool, 'Is Npvdi Client')
         install_type = Field(str, 'Install Type')
@@ -197,6 +198,12 @@ class SymantecAdapter(AdapterBase):
                         device.cids_defset_month = cids_defset_version[2:4]
                         device.cids_defset_day = cids_defset_version[4:6]
                         device.cids_defset_version = cids_defset_version[6:9]
+                        try:
+                            device.cids_defset_date = datetime.datetime(year=int('20' + cids_defset_version[0:2]),
+                                                                        month=int(cids_defset_version[2:4]),
+                                                                        day=int(cids_defset_version[4:6]))
+                        except Exception:
+                            pass
                 except Exception:
                     pass
                 if isinstance(device_raw.get('isNpvdiClient'), int):
