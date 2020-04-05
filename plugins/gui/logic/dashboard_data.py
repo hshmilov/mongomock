@@ -17,7 +17,8 @@ from axonius.consts.plugin_consts import PLUGIN_NAME
 from axonius.entities import EntityType
 from axonius.plugin_base import PluginBase, return_error
 from axonius.utils.axonius_query_language import (convert_db_entity_to_view_entity, parse_filter)
-from axonius.utils.gui_helpers import (find_filter_by_name, find_entity_field, get_string_from_field_value)
+from axonius.utils.gui_helpers import (find_filter_by_name, find_entity_field, get_string_from_field_value,
+                                       is_adapter_count_query)
 from axonius.utils.revving_cache import rev_cached, rev_cached_entity_type
 from axonius.utils.threading import GLOBAL_RUN_AND_FORGET
 from gui.logic.db_helpers import beautify_db_entry
@@ -116,7 +117,10 @@ def fetch_chart_compare(chart_view: ChartViews, views: List) -> List:
         # if we have a date and we don't have an historical collection, count using filter on all historical_col
         if for_date and is_date_filter_required:
             query_filter.append({'accurate_for_datetime': for_date})
-        data_item['value'] = entity_collection.count_documents({'$and': query_filter})
+        if is_adapter_count_query(query_filter):
+            data_item['value'] = entity_collection.count({'$and': query_filter})
+        else:
+            data_item['value'] = entity_collection.count_documents({'$and': query_filter})
         data.append(data_item)
         total += data_item['value']
 
