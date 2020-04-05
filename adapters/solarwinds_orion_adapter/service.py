@@ -6,8 +6,9 @@ from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.mixins.configurable import Configurable
-from axonius.fields import Field
+from axonius.fields import Field, ListField
 from axonius.utils.datetime import parse_date
+from axonius.smart_json_class import SmartJsonClass
 from axonius.utils.files import get_local_config_file
 from solarwinds_orion_adapter.connection import SolarwindsConnection
 
@@ -25,6 +26,18 @@ DHCP_DEVICE = 'DHCP Device'
 SOLARWINDS_DEVICES_TYPES = [NODE_DEVICE, LAN_DEVICE, DHCP_DEVICE, WIFI_DEVICE]
 
 
+class LanData(SmartJsonClass):
+    node_id = Field(str, 'Node ID')
+    lan_display_name = Field(str, 'Lan Display Name')
+    lan_name = Field(str, 'Lan Name')
+    description = Field(str, 'Description')
+    connected_to = Field(str, 'Connected To')
+    connection_type_name = Field(str, 'Connection Type Name')
+    port_number = Field(str, 'Port Number')
+    port_name = Field(str, 'Port Name')
+    solar_vlan = Field(str, 'Solarwinds VLAN')
+
+
 class SolarwindsOrionAdapter(AdapterBase, Configurable):
     class MyDeviceAdapter(DeviceAdapter):
         device_type = Field(str, 'Device Type', enum=SOLARWINDS_DEVICES_TYPES)
@@ -40,13 +53,7 @@ class SolarwindsOrionAdapter(AdapterBase, Configurable):
         instance_type = Field(str, 'Instance Type')
         wifi_name = Field(str, 'Wifi Name')
         wifi_display_name = Field(str, 'Wifi Display Name')
-        lan_name = Field(str, 'Lan Name')
-        lan_display_name = Field(str, 'Lan Display Name')
-        connected_to = Field(str, 'Connected To')
-        connection_type_name = Field(str, 'Connection Type Name')
-        port_number = Field(str, 'Port Number')
-        port_name = Field(str, 'Port Name')
-        solar_vlan = Field(str, 'Solarwinds VLAN')
+        lan_data = ListField(LanData, 'Lan Data')
 
     def __init__(self):
         super().__init__(get_local_config_file(__file__))
@@ -176,33 +183,26 @@ class SolarwindsOrionAdapter(AdapterBase, Configurable):
         device.set_raw(device_raw)
         return device
 
-    def _create_lan_device(self, device_raw):
-        device = self._new_device_adapter()
-        device.device_type = LAN_DEVICE
+    @staticmethod
+    def _create_lan_device(device_raw, lan_dict):
         if not device_raw.get('MACAddress'):
             logger.warning(f'Bad device with no ID {device_raw}')
-            return None
-        device.id = 'lan' + '_' + (str(device_raw.get('NodeID')) or '') + '_' + (device_raw.get('MACAddress') or '')
-        try:
-            mac = device_raw.get('MACAddress')
-            if not mac:
-                mac = None
-            ips = device_raw.get('IPAddress').split(',') if device_raw.get('IPAddress') else None
-            if mac or ips:
-                device.add_nic(mac, ips)
-        except Exception:
-            logger.exception(f'Problem getting nic for {device_raw}')
-        device.node_id = device_raw.get('NodeID')
-        device.lan_display_name = device_raw.get('DisplayName')
-        device.lan_name = device_raw.get('HostName')
-        device.description = device_raw.get('Description')
-        device.connected_to = device_raw.get('ConnectedTo')
-        device.connection_type_name = device_raw.get('ConnectionTypeName')
-        device.port_number = device_raw.get('PortNumber')
-        device.port_name = device_raw.get('PortName')
-        device.solar_vlan = device_raw.get('VLAN')
-        device.set_raw(device_raw)
-        return device
+            return
+        mac = device_raw.get('MACAddress')
+        ips = device_raw.get('IPAddress')
+        if (mac, ips) not in lan_dict:
+            lan_dict[(mac, ips)] = []
+        node_id = device_raw.get('NodeID')
+        lan_display_name = device_raw.get('DisplayName')
+        lan_name = device_raw.get('HostName')
+        description = device_raw.get('Description')
+        connected_to = device_raw.get('ConnectedTo')
+        connection_type_name = device_raw.get('ConnectionTypeName')
+        port_number = device_raw.get('PortNumber')
+        port_name = device_raw.get('PortName')
+        solar_vlan = device_raw.get('VLAN')
+        lan_dict[(mac, ips)].append((node_id, lan_display_name, lan_name, description,
+                                     connected_to, connection_type_name, port_number, port_name, solar_vlan))
 
     def _create_node_device(self, raw_device_data):
         try:
@@ -217,7 +217,7 @@ class SolarwindsOrionAdapter(AdapterBase, Configurable):
 
             device.id = str(id_check) + '_' + raw_device_data.get('NodeName')
             device.node_id = device.id
-            device.name = raw_device_data.get('NodeName')
+            device.hostname = raw_device_data.get('NodeName')
             device.description = raw_device_data.get('Description')
             available_memory_gb = None
             used_memory_gb = None
@@ -280,6 +280,7 @@ class SolarwindsOrionAdapter(AdapterBase, Configurable):
         :param raw_data: the list of devices that the system patrols
         :return:
         """
+        lan_dict = dict()
         for raw_device_data, device_type in iter(devices_raw_data):
             device = None
             if device_type == 'node':
@@ -287,11 +288,38 @@ class SolarwindsOrionAdapter(AdapterBase, Configurable):
             elif device_type == 'wifi':
                 device = self._create_wifi_device(raw_device_data)
             elif device_type == 'lan':
-                device = self._create_lan_device(raw_device_data)
+                self._create_lan_device(raw_device_data, lan_dict)
             elif device_type == 'dhcp':
                 device = self._create_dhcp_device(raw_device_data)
             if device:
                 yield device
+        for device_id, device_data_list in lan_dict.items():
+            try:
+                mac, ips = device_id
+                device = self._new_device_adapter()
+                device.device_type = LAN_DEVICE
+                device.id = f'{mac}_{ips}'
+                if ips:
+                    ips = ips.split(',')
+                device.add_nic(mac=mac, ips=ips)
+                for device_data in device_data_list:
+                    try:
+                        node_id, lan_display_name, lan_name, description, connected_to, \
+                            connection_type_name, port_number, port_name, solar_vlan = device_data
+                        device.lan_data.append(LanData(node_id=node_id,
+                                                       lan_display_name=lan_display_name,
+                                                       lan_name=lan_name,
+                                                       description=description,
+                                                       connected_to=connected_to,
+                                                       connection_type_name=connection_type_name,
+                                                       port_number=port_number,
+                                                       port_name=port_name,
+                                                       solar_vlan=solar_vlan))
+                    except Exception:
+                        logger.exception(f'Problem with device data {device_data}')
+                yield device
+            except Exception:
+                logger.exception(f'Problem with device id {device_id}')
 
         logger.info('Finished parsing all of the raw devices')
 
