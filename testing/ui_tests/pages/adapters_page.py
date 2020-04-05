@@ -21,6 +21,7 @@ from test_credentials.json_file_credentials import (CLIENT_DETAILS_EXTRA, FILE_N
 Adapter = namedtuple('Adapter', 'name description')
 CONNECTION_LABEL = 'AXON'
 CONNECTION_LABEL_UPDATED = 'AXON2'
+TANIUM_ADAPTERS_CONNECTION_LABEL_UPDATED = '4250'
 
 
 class AdaptersPage(EntitiesPage):

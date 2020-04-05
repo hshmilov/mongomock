@@ -61,6 +61,10 @@ AWS_ADAPTER_NAME = 'Amazon Web Services (AWS)'
 
 SHODAN_ADAPTER = 'shodan_adapter'
 
+TANIUM_SQ_ADAPTER = 'Tanium Interact'
+TANIUM_DISCOVERY_ADAPTER = 'Tanium Discover'
+TANIUM_ASSET_ADAPTER = 'Tanium Asset'
+
 WINDOWS_QUERY_NAME = 'Windows Operating System'
 LINUX_QUERY_NAME = 'Linux Operating System'
 AD_MISSING_AGENTS_QUERY_NAME = 'AD devices missing agents'

@@ -1,3 +1,4 @@
+import time
 from datetime import datetime, timedelta
 from axonius.utils.wait import wait_until
 from services.adapters import stresstest_service
@@ -68,11 +69,12 @@ class TestDiscoverySchedule(TestBase):
             self.adapters_page.add_server(device_dict, STRESSTEST_ADAPTER_NAME)
             self.adapters_page.wait_for_server_green()
             self.adapters_page.wait_for_data_collection_toaster_absent()
-
-            self.settings_page.set_discovery__to_time_of_day(self.set_discovery_time(minutes=1))
+            # CLOCK SYNC TO START ON ROUND TIME
+            time.sleep(60 - datetime.utcnow().second)
+            self.settings_page.set_discovery__to_time_of_day(self.set_discovery_time(minutes=2))
 
             # before discovery
-            wait_until(lambda: self.check_next_cycle_start_in_min(time_in_min=1),
+            wait_until(lambda: self.check_next_cycle_start_in_min(time_in_min=2),
                        total_timeout=60 * 3, interval=0.1)
             # discovery started , verify next cycle timestamp update
             wait_until(lambda: self.check_next_cycle_start_in_hours(time_in_hours=24),

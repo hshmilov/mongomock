@@ -17,12 +17,16 @@ from ui_tests.tests.ui_consts import (AWS_ADAPTER,
                                       JSON_ADAPTER_NAME,
                                       WINDOWS_QUERY_NAME,
                                       STRESSTEST_SCANNER_ADAPTER,
-                                      STRESSTEST_ADAPTER, LINUX_QUERY_NAME)
+                                      STRESSTEST_ADAPTER, LINUX_QUERY_NAME, TANIUM_SQ_ADAPTER,
+                                      TANIUM_ASSET_ADAPTER, TANIUM_DISCOVERY_ADAPTER)
 from services.plugins.general_info_service import GeneralInfoService
 from services.adapters.cisco_service import CiscoService
 from services.adapters.esx_service import EsxService
 from services.adapters.cylance_service import CylanceService
 from services.adapters.aws_service import AwsService
+from services.adapters.tanium_asset_service import TaniumAssetService
+from services.adapters.tanium_discover_service import TaniumDiscoverService
+from services.adapters.tanium_sq_service import TaniumSqService
 from services.adapters import stresstest_scanner_service, stresstest_service
 from test_credentials.json_file_credentials import (DEVICE_FIRST_IP,
                                                     DEVICE_THIRD_IP,
@@ -34,6 +38,9 @@ from test_credentials.json_file_credentials import (DEVICE_FIRST_IP,
                                                     DEVICE_FIRST_NAME,
                                                     DEVICE_SECOND_NAME)
 from test_credentials.test_aws_credentials import client_details as aws_client_details
+from test_credentials.test_tanium_asset_credentials import CLIENT_DETAILS as tanium_asset_details
+from test_credentials.test_tanium_discover_credentials import CLIENT_DETAILS as tanium_discovery_details
+from test_credentials.test_tanium_sq_credentials import CLIENT_DETAILS as tanium_sq_details
 from devops.scripts.automate_dev import credentials_inputer
 
 
@@ -1261,3 +1268,37 @@ class TestDevicesQuery(TestBase):
                                                    clear_filter=True)
             results_count = len(self.devices_page.get_all_data())
             assert results_count == 0
+
+    def test_connection_label_query_with_same_client_id(self):
+        """
+            verify connection label when adapter client have same client_id ( like tanium adapters )
+            use case : same label on multiple adapters then remove label from one adapter and compare device count
+            is lower on label query.
+        """
+
+        def set_tanium_adapter_details(name, details):
+            tanium_client_details = details.copy()
+            tanium_client_details['connectionLabel'] = tanium_client_details.pop('connection_label')
+            self.adapters_page.create_new_adapter_connection(name, tanium_client_details)
+
+        with TaniumAssetService().contextmanager(take_ownership=True), \
+                TaniumDiscoverService().contextmanager(take_ownership=True), \
+                TaniumSqService().contextmanager(take_ownership=True):
+
+            self.adapters_page.wait_for_adapter(TANIUM_SQ_ADAPTER)
+            set_tanium_adapter_details(TANIUM_ASSET_ADAPTER, tanium_asset_details)
+            set_tanium_adapter_details(TANIUM_DISCOVERY_ADAPTER, tanium_discovery_details)
+            set_tanium_adapter_details(TANIUM_SQ_ADAPTER, tanium_sq_details)
+            self.base_page.run_discovery()
+            self.devices_page.switch_to_page()
+            all_tanium_count = self.devices_page.query_tanium_connection_label(tanium_asset_details)
+            # remove label
+            self.adapters_page.edit_server_conn_label(TANIUM_DISCOVERY_ADAPTER, 'UPDATE_LABEL')
+            self.adapters_page.wait_for_data_collection_toaster_start()
+            self.adapters_page.wait_for_data_collection_toaster_absent()
+            tanium_discovery_details['connection_label'] = 'UPDATE_LABEL'
+            tanium_discovery_count = self.devices_page.query_tanium_connection_label(tanium_discovery_details)
+            # verify we have less devices now
+            self.devices_page.click_search()
+            updated_tanium_count = self.devices_page.query_tanium_connection_label(tanium_asset_details)
+            assert all_tanium_count - tanium_discovery_count == updated_tanium_count

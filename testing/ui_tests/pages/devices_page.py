@@ -328,3 +328,14 @@ class DevicesPage(EntitiesPage):
             self.FIELD_MAC_NAME,
             search_text=search_text
         ))
+
+    def query_tanium_connection_label(self, tanium_client: dict) -> int:
+        self.switch_to_page()
+        self.wait_for_table_to_load()
+        self.click_query_wizard()
+        self.select_query_filter(attribute=self.FIELD_ADAPTER_CONNECTION_LABEL,
+                                 operator='equals',
+                                 value=tanium_client['connection_label'],
+                                 clear_filter=True)
+        self.wait_for_table_to_load()
+        return self.count_entities()
