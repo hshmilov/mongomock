@@ -202,7 +202,7 @@ export default {
 }
 
     .x-panels {
-        padding: 8px;
+        padding: 8px 8px 20px 8px;
         display: grid;
         grid-template-columns: repeat(auto-fill, 344px);
         grid-gap: 12px;

@@ -191,6 +191,6 @@ export default {
 
 <style lang="scss">
     .x-spaces {
-        height: calc(100% - 42px);
+        height: calc(100% - 54px);
     }
 </style>
