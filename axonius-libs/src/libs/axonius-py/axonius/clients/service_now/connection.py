@@ -75,6 +75,11 @@ class ServiceNowConnection(RESTConnection):
             location_table = list(self.__get_devices_from_table(consts.LOCATIONS_TABLE))
         except Exception:
             logger.exception(f'Problem getting location')
+        user_groups_table = []
+        try:
+            user_groups_table = list(self.__get_devices_from_table(consts.USER_GROUPS_TABLE))
+        except Exception:
+            logger.exception(f'Problem getting users groups')
         nics_table = []
         try:
             nics_table = list(self.__get_devices_from_table(consts.NIC_TABLE_KEY))
@@ -105,8 +110,13 @@ class ServiceNowConnection(RESTConnection):
         for location in location_table:
             if location.get('sys_id'):
                 location_table_dict[location.get('sys_id')] = location
+        user_groups_dict = dict()
+        for user_group_raw in user_groups_table:
+            if user_group_raw.get('sys_id'):
+                user_groups_dict[user_group_raw.get('sys_id')] = user_group_raw
+
+        nic_table_dict = dict()
         try:
-            nic_table_dict = dict()
             for nic in nics_table:
                 if (nic.get('cmdb_ci') or {}).get('value'):
                     if (nic.get('cmdb_ci') or {}).get('value') not in nic_table_dict:
@@ -150,6 +160,7 @@ class ServiceNowConnection(RESTConnection):
             new_table_details.update(table_devices)
             new_table_details[consts.USERS_TABLE_KEY] = users_table_dict
             new_table_details[consts.LOCATION_TABLE_KEY] = location_table_dict
+            new_table_details[consts.USER_GROUPS_TABLE_KEY] = user_groups_dict
             new_table_details[consts.NIC_TABLE_KEY] = nic_table_dict
             new_table_details[consts.DEPARTMENT_TABLE_KEY] = department_table_dict
             new_table_details[consts.ALM_ASSET_TABLE] = alm_asset_table_dict

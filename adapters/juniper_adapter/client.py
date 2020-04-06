@@ -126,7 +126,7 @@ class JuniperClient:
                         continue
                     yield (action_name, (device_name, result))
                 except Exception:
-                    logger.exception(f'Something is wrong with pu {str(pu)}')
+                    logger.warning(f'Something is wrong with pu {str(pu)}', exc_info=True)
             yield from map(lambda x: ('Juniper Device', x), juniper_devices.items())
         finally:
             tm.delete()

@@ -63,6 +63,7 @@ class ServiceNowAdapter(AdapterBase, Configurable):
         hardware_status = Field(str, 'Hardware Status')
         vendor = Field(str, 'Vendor')
         u_number = Field(str, 'U Number')
+        support_group = Field(str, 'Support Group')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -77,10 +78,13 @@ class ServiceNowAdapter(AdapterBase, Configurable):
                            users_table_dict=None,
                            snow_nics_table_dict=None,
                            snow_alm_asset_table_dict=None,
+                           snow_user_groups_table_dict=None,
                            companies_table_dict=None,
                            ips_table_dict=None):
         got_nic = False
         got_serial = False
+        if snow_user_groups_table_dict is None:
+            snow_user_groups_table_dict = dict()
         if companies_table_dict is None:
             companies_table_dict = dict()
         if snow_location_table_dict is None:
@@ -127,6 +131,14 @@ class ServiceNowAdapter(AdapterBase, Configurable):
                     device.add_nic(mac_address, ip_addresses)
             except Exception:
                 logger.warning(f'Problem getting NIC at {device_raw}', exc_info=True)
+            try:
+                snow_support_group_value = snow_user_groups_table_dict.get(
+                    (device_raw.get('support_group') or {}).get('value'))
+                if snow_support_group_value:
+                    device.support_group = snow_support_group_value.get('name')
+            except Exception:
+                logger.warning(f'Problem adding support group to {device_raw}', exc_info=True)
+
             try:
                 mac_u = device_raw.get('u_mac_address')
                 if mac_u:
@@ -555,6 +567,7 @@ class ServiceNowAdapter(AdapterBase, Configurable):
             users_table_dict = table_devices_data.get(USERS_TABLE_KEY)
             snow_department_table_dict = table_devices_data.get(DEPARTMENT_TABLE_KEY)
             snow_location_table_dict = table_devices_data.get(LOCATION_TABLE_KEY)
+            snow_user_groups_table_dict = table_devices_data.get(USER_GROUPS_TABLE_KEY)
             snow_nics_table_dict = table_devices_data.get(NIC_TABLE_KEY)
             snow_alm_asset_table_dict = table_devices_data.get(ALM_ASSET_TABLE)
             companies_table_dict = table_devices_data.get(COMPANY_TABLE)
@@ -567,6 +580,7 @@ class ServiceNowAdapter(AdapterBase, Configurable):
                                                  snow_nics_table_dict=snow_nics_table_dict,
                                                  users_table_dict=users_table_dict,
                                                  companies_table_dict=companies_table_dict,
+                                                 snow_user_groups_table_dict=snow_user_groups_table_dict,
                                                  ips_table_dict=ips_table_dict,
                                                  fetch_ips=self.__fetch_ips,
                                                  table_type=table_devices_data[DEVICE_TYPE_NAME_KEY])
