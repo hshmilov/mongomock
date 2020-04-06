@@ -32,15 +32,18 @@ class AwsEc2AddTagsAction(ActionTypeBase):
         schema['items'].extend([
             {
                 'name': TAG_KEY,
-                'title': 'Tag key',
+                'title': 'Tag keys',
                 'type': 'string',
-                'description': 'Tag key must not begin with "aws:" (reserved).'
+                'description': 'Multiple keys may be specified by using ";" as a separator, e.g. a;b.'
+                               ' Each key must not begin with "aws:" (reserved).',
             },
             {
                 'name': TAG_VALUE,
-                'title': 'Tag value',
+                'title': 'Tag values',
                 'type': 'string',
-                'description': 'Value may be empty.'
+                'description': 'Multiple values may be specified by using ";" as a separator, e.g. a;b.'
+                               ' You must provide equal amount of values to fill all of the provided keys.'
+                               ' A single value may be empty.'
             }])
         schema['required'].append(TAG_KEY)
         return schema
@@ -63,13 +66,19 @@ class AwsEc2AddTagsAction(ActionTypeBase):
             Yields EC2ActionResult results during run.
         :param ec2_resource: EC2 client authorized to "ec2:create_tags" on instance
         :param instance_group: EC2 instance descriptor
-        :param client_config: Config dict with tag_key and (optional) tag_value
+        :param client_config: Config dict with tag_keys and (optional) tag_value
         """
-        tag_key = client_config[TAG_KEY]
-        if tag_key.startswith('aws:'):
-            raise ValueError('Tag key may not start with "aws:".')
-        tag_value = client_config.get(TAG_VALUE, None)
-        tags = [{'Key': tag_key, 'Value': tag_value or ''}]
+        tag_keys = list(map(str.strip, client_config[TAG_KEY].split(';')))
+        if any(tag_key.startswith('aws:') for tag_key in tag_keys):
+            return 'Tag key may not start with "aws:".'
+
+        tag_values = list(map(str.strip, (client_config.get(TAG_VALUE) or '').split(';')))
+        if len(tag_values) != len(tag_keys):
+            return (f'You must provide equal amount of keys and values,'
+                    f' {len(tag_keys)} keys and {len(tag_values)} values were given.')
+
+        tags = [{'Key': tag_key, 'Value': tag_value} for tag_key, tag_value in zip(tag_keys, tag_values)]
+        logger.debug(f'tags to be added: {tags}')
 
         valid_instance_collection = ec2_resource.instances
         valid_instance_obj_list = instance_group.instance_list
@@ -77,6 +86,7 @@ class AwsEc2AddTagsAction(ActionTypeBase):
         _ = valid_instance_collection.create_tags(Tags=tags)
         logger.debug(f'Added tags to instances successfully: {valid_instance_obj_list}')
         yield EC2ActionResult(valid_instance_obj_list, None)
+        return None
 
     def _run(self) -> EntitiesResult:
         current_result = self._get_entities_from_view({entity: 1 for entity in EC2_ACTION_REQUIRED_ENTITIES})
