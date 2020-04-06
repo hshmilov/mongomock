@@ -8,6 +8,7 @@ import DraggableCustomIcon from '../components/axons/icons/axoniusIcons/draggabl
 import VerticaldotsCustomIcon from '../components/axons/icons/axoniusIcons/verticaldots.vue';
 import CardDraggable from '../components/axons/icons/axoniusIcons/cardDraggable.vue';
 import CardSearch from '../components/axons/icons/axoniusIcons/cardSearch.vue';
+import Toggle from '../components/axons/icons/axoniusIcons/toggle.vue';
 
 import defaultTheme from '../assets/themes/default.json';
 
@@ -31,6 +32,42 @@ const axoniusIcons = {
   },
   cardSearch: {
     component: CardSearch,
+  },
+  legendOpen: {
+    component: Toggle,
+    props: {
+      leftFill: '#DEDEDE',
+      leftStroke: '#DEDEDE',
+      rightFill: 'Transparent',
+      rightStroke: '#DEDEDE',
+    },
+  },
+  legendClosed: {
+    component: Toggle,
+    props: {
+      leftFill: 'Transparent',
+      leftStroke: '#DEDEDE',
+      rightFill: '#DEDEDE',
+      rightStroke: '#DEDEDE',
+    },
+  },
+  legendOpenDarker: {
+    component: Toggle,
+    props: {
+      leftFill: '#4A4A4A',
+      leftStroke: '#4A4A4A',
+      rightFill: 'Transparent',
+      rightStroke: '#4A4A4A',
+    },
+  },
+  legendClosedDarker: {
+    component: Toggle,
+    props: {
+      leftFill: 'Transparent',
+      leftStroke: '#4A4A4A',
+      rightFill: '#4A4A4A',
+      rightStroke: '#4A4A4A',
+    },
   },
 };
 

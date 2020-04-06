@@ -82,16 +82,16 @@
         </div>
         <template #footer>
           <div
-            v-if="chart.view === 'pie'"
+            v-if="chart.view === 'pie' && !isChartEmpty(chart)"
             class="toggle-legend"
+            @click="showLegend = !showLegend"
           >
-            <SvgIcon
-              v-if="!isChartEmpty(chart)"
-              :name="showLegend ? 'action/toggle_light_dark' : 'action/toggle_dark_light'"
-              width="16"
-              :original="true"
-              @click="showLegend = !showLegend"
-            />
+            <VIcon
+              size="16"
+              @mouseover="toggleIconHover = true"
+              @mouseout="toggleIconHover = false"
+            >{{ `$vuetify.icon.${legendIcon}` }}
+            </VIcon>
           </div>
           <div
             v-if="draggable"
@@ -156,6 +156,7 @@ export default {
       showLegend: false,
       showSearch: false,
       showHistory: false,
+      toggleIconHover: false,
     };
   },
   computed: {
@@ -188,6 +189,9 @@ export default {
     },
     isChartFilterable() {
       return this.chart.view === 'histogram' && this.chart.metric === 'segment';
+    },
+    legendIcon() {
+      return `legend${this.showLegend ? 'Open' : 'Closed'}${this.toggleIconHover ? 'Darker' : ''}`;
     },
   },
   mounted() {
