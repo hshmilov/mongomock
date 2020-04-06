@@ -51,6 +51,9 @@ CHMOD_FILES = [
     os.path.join(AXONIUS_DEPLOYMENT_PATH, 'devops/scripts/discover_now.py'),
 ]
 
+WAIT_FOR_RETRY_DURATION = 60
+MAX_RETRIES = 5
+
 
 def main():
     parser = argparse.ArgumentParser()
