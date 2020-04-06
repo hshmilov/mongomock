@@ -185,35 +185,35 @@ class TestAdapters(TestBase):
     def test_adapters_count(self):
         self.adapters_page.switch_to_page()
         service = CarbonblackDefenseService()
-        try:
-            with service.contextmanager(take_ownership=True):
-                self.adapters_page.wait_for_adapter(CARBONBLACKDEFENCE_NAME)
-                self.adapters_page.click_adapter(CARBONBLACKDEFENCE_NAME)
-                self.adapters_page.wait_for_spinner_to_end()
-                self.adapters_page.wait_for_table_to_load()
-                self.adapters_page.click_new_server()
-                self.adapters_page.fill_creds(**carbonblack_defence_client_details)
-                self.adapters_page.click_save()
-                self.adapters_page.click_advanced_settings()
-                self.adapters_page.fill_last_seen_threshold_hours(LAST_SEEN_THRESHOLD_HOURS)
-                self.adapters_page.save_advanced_settings()
-                self.adapters_page.wait_for_spinner_to_end()
+        with service.contextmanager(take_ownership=True):
+            self.adapters_page.wait_for_adapter(CARBONBLACKDEFENCE_NAME)
+            self.adapters_page.click_adapter(CARBONBLACKDEFENCE_NAME)
+            self.adapters_page.wait_for_spinner_to_end()
+            self.adapters_page.wait_for_table_to_load()
+            self.adapters_page.click_new_server()
+            self.adapters_page.fill_creds(**carbonblack_defence_client_details)
+            self.adapters_page.click_save()
+            self.adapters_page.click_advanced_settings()
+            self.adapters_page.fill_last_seen_threshold_hours(LAST_SEEN_THRESHOLD_HOURS)
+            self.adapters_page.save_advanced_settings()
+            self.adapters_page.wait_for_spinner_to_end()
 
-                self.base_page.run_discovery()
+            self.base_page.run_discovery()
 
-                query = '((adapters_data.carbonblack_defense_adapter.adapter_count == ({"$exists":true,"$ne":null})))'
-                self.devices_page.switch_to_page()
-                self.devices_page.run_filter_query(query)
-                assert self.devices_page.count_entities() > 0
-                query = '(adapters_data.carbonblack_defense_adapter.adapter_count > 1)'
-                self.devices_page.run_filter_query(query)
-                assert self.devices_page.count_entities() > 0
-                query = '(adapters_data.carbonblack_defense_adapter.adapter_count > 10)'
-                self.devices_page.run_filter_query(query)
-                assert self.devices_page.count_entities() == 0
-        finally:
+            query = '((adapters_data.carbonblack_defense_adapter.adapter_count == ({"$exists":true,"$ne":null})))'
+            self.devices_page.switch_to_page()
+            self.devices_page.run_filter_query(query)
+            assert self.devices_page.count_entities() > 0
+            query = '(adapters_data.carbonblack_defense_adapter.adapter_count > 1)'
+            self.devices_page.run_filter_query(query)
+            assert self.devices_page.count_entities() > 0
+            query = '(adapters_data.carbonblack_defense_adapter.adapter_count > 10)'
+            self.devices_page.run_filter_query(query)
+            assert self.devices_page.count_entities() == 0
             self.adapters_page.switch_to_page()
             self.adapters_page.clean_adapter_servers(CARBONBLACKDEFENCE_NAME, True)
+
+        self.wait_for_adapter_down(CARBONBLACKDEFENCE_PLUGIN_NAME)
 
     def test_query_wizard_dynamic_and_blacklist_fields(self):
         self.base_page.run_discovery()
