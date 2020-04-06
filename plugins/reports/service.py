@@ -1,7 +1,6 @@
 import datetime
 import json
 import logging
-import os
 from itertools import chain
 from multiprocessing.pool import ThreadPool
 from typing import List, Iterable, Tuple
@@ -17,7 +16,6 @@ from dataclasses import dataclass
 
 from axonius.consts import plugin_consts
 from axonius.consts.plugin_subtype import PluginSubtype
-from axonius.consts.system_consts import GENERIC_ERROR_MESSAGE
 from axonius.entities import EntityType
 from axonius.mixins.triggerable import Triggerable, RunIdentifier
 from axonius.plugin_base import PluginBase, add_rule, return_error
@@ -292,8 +290,7 @@ class ReportsService(Triggerable, PluginBase):
             return jsonify({'deleted': self._remove_report(self.get_request_data_as_object()).deleted_count})
         except ValueError:
             message = 'Expected JSON, got something else...'
-            logger.exception(message)
-            return return_error(message if os.environ.get('PROD') == 'false' else GENERIC_ERROR_MESSAGE, 400)
+            return return_error(message, non_prod_error=True, http_status=400)
 
     @staticmethod
     def __default_for_trigger(obj):
@@ -344,12 +341,10 @@ class ReportsService(Triggerable, PluginBase):
             return str(insert_result.inserted_id), 201
         except ValueError as e:
             message = str(e)
-            logger.exception(message)
-            return return_error(message if os.environ.get('PROD') == 'false' else GENERIC_ERROR_MESSAGE, 400)
+            return return_error(message, non_prod_error=True, http_status=400)
         except KeyError as e:
             message = 'The query reports request is missing data. Details: {0}'.format(str(e))
-            logger.exception(message)
-            return return_error(message if os.environ.get('PROD') == 'false' else GENERIC_ERROR_MESSAGE, 400)
+            return return_error(message, non_prod_error=True, http_status=400)
 
     def _remove_report(self, reports_ids: Iterable[str]) -> DeleteResult:
         """

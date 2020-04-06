@@ -1,5 +1,4 @@
 import logging
-import os
 import urllib.parse
 
 import OpenSSL
@@ -20,7 +19,6 @@ from axonius.consts.plugin_consts import (AGGREGATOR_PLUGIN_NAME,
                                           PLUGIN_UNIQUE_NAME, PROXY_SETTINGS,
                                           SYSTEM_SCHEDULER_PLUGIN_NAME,
                                           EXECUTION_PLUGIN_NAME)
-from axonius.consts.system_consts import GENERIC_ERROR_MESSAGE
 from axonius.email_server import EmailServer
 from axonius.logging.metric_helper import log_metric
 from axonius.plugin_base import return_error
@@ -188,8 +186,7 @@ class Plugins:
                     try:
                         verify_preshared_key(preshared_key)
                     except Exception as e:
-                        return return_error(f'Error: {str(e)}'
-                                            if os.environ.get('PROD') == 'false' else GENERIC_ERROR_MESSAGE, 400)
+                        return return_error(str(e), non_prod_error=True, http_status=400)
                 bucket_name = aws_s3_settings.get('bucket_name')
                 aws_access_key_id = aws_s3_settings.get('aws_access_key_id')
                 aws_secret_access_key = aws_s3_settings.get('aws_secret_access_key')

@@ -1,12 +1,10 @@
 import datetime
 import logging
-import os
 
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.connection import RESTException
-from axonius.consts.system_consts import GENERIC_ERROR_MESSAGE
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.utils.files import get_local_config_file
 from axonius.plugin_base import EntityType, add_rule, return_error
@@ -216,7 +214,7 @@ class CybereasonAdapter(AdapterBase, Configurable):
                 self._save_field_names_to_db(EntityType.Devices)
         except Exception as e:
             logger.exception(f'Problem during isolating changes')
-            return return_error(str(e) if os.environ.get('PROD') == 'false' else GENERIC_ERROR_MESSAGE, 500)
+            return return_error(str(e), non_prod_error=True, http_status=500)
         return '', 200
 
     # pylint: disable=no-self-use

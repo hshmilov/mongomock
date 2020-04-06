@@ -7,7 +7,6 @@ from flask import (jsonify,
 from axonius.compliance.compliance import get_compliance
 
 from axonius.consts.gui_consts import (FeatureFlagsNames, CloudComplianceNames, FILE_NAME_TIMESTAMP_FORMAT)
-from axonius.consts.system_consts import GENERIC_ERROR_MESSAGE
 from axonius.plugin_base import return_error
 
 from axonius.utils.gui_helpers import (Permission, PermissionLevel,
@@ -39,7 +38,7 @@ class Compliance:
             return jsonify(get_compliance(name, method, accounts))
         except Exception as e:
             logger.exception(f'Error in get_compliance')
-            return return_error(f'Error: {str(e)}' if os.environ.get('PROD') == 'false' else GENERIC_ERROR_MESSAGE)
+            return return_error(str(e), non_prod_error=True, http_status=500)
 
     @accounts_filter()
     @schema()
@@ -57,7 +56,7 @@ class Compliance:
             return self._get_compliance_rules_csv(name, schema_fields, accounts)
         except Exception as e:
             logger.exception(f'Error in get_compliance')
-            return return_error(f'Error: {str(e)}' if os.environ.get('PROD') == 'false' else GENERIC_ERROR_MESSAGE)
+            return return_error(str(e), non_prod_error=True, http_status=500)
 
     def _is_compliance_visible(self):
         cloud_compliance_settings = self.feature_flags_config().get(FeatureFlagsNames.CloudCompliance) or {}

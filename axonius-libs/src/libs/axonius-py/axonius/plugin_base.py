@@ -21,6 +21,7 @@ import time
 import sys
 import threading
 import traceback
+import uuid
 from typing import List, Set, Dict, Tuple, Iterable, Optional, Callable, Any
 from abc import ABC
 from collections import defaultdict
@@ -52,6 +53,7 @@ from retrying import retry
 from tlssyslog import TLSSysLogHandler
 
 import axonius.entities
+from axonius.consts.system_consts import GENERIC_ERROR_MESSAGE
 from axonius.plugin_exceptions import SessionInvalid, PluginNotFoundException
 from axonius.adapter_exceptions import TagDeviceError, AdapterException
 from axonius.background_scheduler import LoggedBackgroundScheduler
@@ -278,12 +280,16 @@ def retry_if_connection_error(exception):
     return isinstance(exception, requests.exceptions.ConnectionError)
 
 
-def return_error(error_message, http_status=500, additional_data=None):
+def return_error(error_message, http_status=500, additional_data=None, non_prod_error=False):
     """ Helper function for returning errors in our format.
 
     :param str error_message: The explenation of the error
     :param int http_status: The http status to return, 500 by default
     """
+    if non_prod_error and os.environ.get('PROD') == 'True':
+        exc_id = uuid.uuid4()
+        logger.error(f'UUID {exc_id}: error: {error_message}')
+        error_message = GENERIC_ERROR_MESSAGE.format(exc_id)
     return jsonify({'status': 'error', 'message': error_message, 'additional_data': additional_data}), http_status
 
 

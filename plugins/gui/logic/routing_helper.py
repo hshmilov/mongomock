@@ -10,7 +10,6 @@ from flask import (has_request_context, request, session)
 from axonius.consts.gui_consts import (DASHBOARD_LIFECYCLE_ENDPOINT, CSRF_TOKEN_LENGTH, EXCLUDED_CSRF_ENDPOINTS)
 from axonius.consts.metric_consts import ApiMetric, SystemMetric
 from axonius.consts.plugin_consts import (AXONIUS_USER_NAME,)
-from axonius.consts.system_consts import GENERIC_ERROR_MESSAGE
 from axonius.logging.metric_helper import log_metric
 from axonius.plugin_base import PluginBase, return_error, random_string
 from axonius.utils.gui_helpers import (Permission,
@@ -86,7 +85,7 @@ def session_connection(func, required_permissions: Iterable[Permission], enforce
             except Exception as e:
                 logger.error(e)
                 session['csrf-token'] = random_string(CSRF_TOKEN_LENGTH)
-                return return_error(e if os.environ.get('PROD') == 'false' else GENERIC_ERROR_MESSAGE, 403)
+                return return_error(str(e), non_prod_error=True, http_status=403)
 
         if has_request_context():
             path = request.path

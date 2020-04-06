@@ -12,6 +12,7 @@ import os
 import re
 import string
 import sys
+import uuid
 from types import FunctionType
 from typing import Callable, NewType, List, Iterable, Optional
 
@@ -163,7 +164,9 @@ def get_exception_string():
         exc_tb = exc_tb.tb_next
 
     ex_str = ex_str + f'{exc_type}:{exc_obj}'
-    return html.escape(ex_str) if os.environ.get('PROD') == 'false' else GENERIC_ERROR_MESSAGE
+    exc_id = uuid.uuid4()
+    logger.error(f'UUID {exc_id}: error traceback: {ex_str}')
+    return html.escape(ex_str) if os.environ.get('PROD') == 'false' else GENERIC_ERROR_MESSAGE.format(exc_id)
 
 
 def figure_out_cloud(s):

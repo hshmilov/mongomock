@@ -1,11 +1,12 @@
-import os
+import logging
 
-from axonius.consts.system_consts import GENERIC_ERROR_MESSAGE
 from axonius.plugin_base import return_error
 from axonius.utils.gui_helpers import (Permission, PermissionLevel,
                                        PermissionType)
 from gui.logic.routing_helper import gui_add_rule_logged_in
 # pylint: disable=no-member,inconsistent-return-statements
+
+logger = logging.getLogger(f'axonius.{__name__}')
 
 
 class PasswordVault:
@@ -26,4 +27,4 @@ class PasswordVault:
             if self.check_password_fetch(vault_fetch_data['field'], vault_fetch_data['query']):
                 return ''
         except Exception as exc:
-            return return_error(str(exc) if os.environ.get('PROD') == 'false' else GENERIC_ERROR_MESSAGE)
+            return return_error(str(exc), non_prod_error=True, http_status=500)

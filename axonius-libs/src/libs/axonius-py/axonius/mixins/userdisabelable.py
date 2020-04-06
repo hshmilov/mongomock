@@ -1,8 +1,6 @@
 import logging
-import os
 from abc import ABC, abstractmethod
 
-from axonius.consts.system_consts import GENERIC_ERROR_MESSAGE
 from axonius.plugin_base import add_rule, return_error
 from axonius.utils.entity_finder import EntityFinder
 from axonius.utils.threading import LazyMultiLocker
@@ -46,8 +44,8 @@ class Userdisabelable(Feature, ABC):
                     except Exception as e:
                         logger.exception(f"{repr(e)}")
                         err += str(e) + "\n"
-
-        return return_error(err, 500) if err and os.environ.get('PROD') == 'false' else GENERIC_ERROR_MESSAGE
+        if err:
+            return return_error(err, non_prod_error=True, http_status=500)
 
     @add_rule('users/disable', methods=["POST"])
     def disable_user(self):
@@ -74,7 +72,8 @@ class Userdisabelable(Feature, ABC):
                         logger.exception(f"{repr(e)}")
                         err += str(e) + "\n"
 
-        return return_error(err, 500) if err and os.environ.get('PROD') == 'false' else GENERIC_ERROR_MESSAGE
+        if err:
+            return return_error(err, non_prod_error=True, http_status=500)
 
     @property
     def __entity_finder(self):
