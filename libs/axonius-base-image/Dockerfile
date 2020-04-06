@@ -25,6 +25,7 @@ RUN apt-get update && \
     ln -s /usr/bin/python3.6 /usr/local/bin/python3 && \
     apt-get install -y libpango1.0-0 && \
     apt-get install -y libcairo2 && \
+    apt-get install -y libffi-dev && \
     apt-get install -y vim && \
     apt-get install -y nano && \
     apt-get install -y net-tools && \
@@ -77,6 +78,39 @@ COPY instantclient-basiclite-linux.x64-19.3.0.0.0dbru.zip /home/axonius/temp/ins
 RUN mkdir -p /opt/oracle && cd /opt/oracle && unzip /home/axonius/temp/instantclient-basiclite-linux.x64-19.3.0.0.0dbru.zip && echo /opt/oracle/instantclient_19_3 > /etc/ld.so.conf.d/oracle-instantclient.conf && ldconfig
 
 RUN rm -rf temp
+
+RUN mkdir temp_openssl
+# Build Fips object module
+RUN cd temp_openssl && curl -O https://www.openssl.org/source/openssl-fips-2.0.16.tar.gz && \
+    tar xf openssl-fips-2.0.16.tar.gz && \
+    cd openssl-fips-2.0.16 && \
+    ./config && \
+    make && \
+    make install
+
+# Build OpenSSL with FIPS
+RUN cd temp_openssl && curl -O https://www.openssl.org/source/old/1.0.2/openssl-1.0.2u.tar.gz && \
+    tar xf openssl-1.0.2u.tar.gz && \
+    cd openssl-1.0.2u && \
+    ./config shared fips --with-fipslibdir=/usr/local/ssl/fips-2.0/lib/  && \
+    make depend && \
+    make && \
+    make install
+
+# Build cryptography with our new openssl
+# Please check that cryptography matches cryptography version on requirements.txt
+RUN export CFLAGS="-I/usr/local/share/ssl/include -DOPENSSL_FIPS=1" \
+    LDFLAGS="-L/usr/local/share/ssl/lib" \
+    cd temp_openssl \
+    && pip wheel --no-cache --no-binary :all: cryptography==2.8 \
+    && pip install -I cryptography*.whl \
+    && unset CFLAGS LDFLAGS
+
+RUN rm -rf temp_openssl
+
+# Update system openssl
+RUN cp /usr/local/ssl/lib/libcrypto.so.* /lib/x86_64-linux-gnu/ && \
+    cp /usr/local/ssl/lib/libssl.so.* /lib/x86_64-linux-gnu/
 
 # Set a label for this image.
 LABEL "com.axonius.image-type"="axonius"

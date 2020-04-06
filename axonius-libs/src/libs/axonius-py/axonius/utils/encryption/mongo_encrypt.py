@@ -1,12 +1,9 @@
 import logging
 from typing import Any
 
-import pymongo
-from pymongo.encryption import Algorithm, ClientEncryption
-from pymongo.errors import EncryptionError
 from bson import Binary
 from bson.codec_options import CodecOptions
-
+from cryptography.hazmat.backends.openssl.backend import backend
 logger = logging.getLogger(f'axonius.{__name__}')
 
 MONGO_MASTER_KEY_SIZE = 96
@@ -16,6 +13,17 @@ This module should handle data encryption for Mongo
 Using client side fields level encryption
 https://docs.mongodb.com/manual/core/security-client-side-encryption/
 '''
+
+# We need to import pymongocrypt only after enabling fips mode.
+# pylint: disable=C0413,W0212
+if backend._lib.FIPS_mode_set(1) != 1:
+    logger.warning(f'Cant enable fips, err: {backend._lib.ERR_get_error()}')
+else:
+    logger.info(f'FIPS is enabled')
+
+from pymongo.encryption import Algorithm, ClientEncryption
+import pymongo
+from pymongo.errors import EncryptionError
 
 
 def get_db_encryption(db_connection: pymongo.MongoClient, collection: str, key: bytes) -> ClientEncryption:
