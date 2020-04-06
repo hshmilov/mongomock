@@ -260,7 +260,12 @@ class StaticAnalysisService(Triggerable, PluginBase):
                         logger.error(f'Error, did not parse device {device.get("internal_axon_id")}')
                         continue
                     # Get the original device from mongo db
-                    device_object = list(self.devices.get(internal_axon_id=device.get('internal_axon_id')))[0]
+                    try:
+                        device_object = list(self.devices.get(internal_axon_id=device.get('internal_axon_id')))[0]
+                    except IndexError:
+                        logger.error(f'Error, Couldn\'t get the original device from '
+                                     f'mongo db {device.get("internal_axon_id")}')
+                        continue
                     # Add the enriched cve data from the created device to the one from mongo db
                     device_object.add_adapterdata(created_device.to_dict(),
                                                   action_if_exists='update',
