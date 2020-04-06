@@ -124,6 +124,9 @@ class AdaptersPage(EntitiesPage):
         self.get_button('Advanced Settings').click()
         time.sleep(1.5)
 
+    def fill_last_seen_threshold_hours(self, value):
+        self.fill_text_field_by_element_id('last_seen_threshold_hours', value)
+
     def click_advanced_configuration(self):
         self.find_element_by_text('Adapter Configuration').click()
         time.sleep(1.5)

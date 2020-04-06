@@ -36,6 +36,8 @@ ESX_PLUGIN_NAME = 'esx_adapter'
 NEXPOSE_NAME = 'Rapid7 Nexpose'
 NEXPOSE_PLUGIN_NAME = 'nexpose_adapter'
 
+LAST_SEEN_THRESHOLD_HOURS = '21600'
+
 # pylint: disable= too-many-statements
 
 
@@ -192,6 +194,9 @@ class TestAdapters(TestBase):
                 self.adapters_page.click_new_server()
                 self.adapters_page.fill_creds(**carbonblack_defence_client_details)
                 self.adapters_page.click_save()
+                self.adapters_page.click_advanced_settings()
+                self.adapters_page.fill_last_seen_threshold_hours(LAST_SEEN_THRESHOLD_HOURS)
+                self.adapters_page.save_advanced_settings()
                 self.adapters_page.wait_for_spinner_to_end()
 
                 self.base_page.run_discovery()
