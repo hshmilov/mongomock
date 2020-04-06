@@ -804,6 +804,9 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
         """
         response = self._wait_for_remote_plugin(plugin_name, job_name, data=data, timeout=timeout, stop_on_timeout=True)
 
+        if response is None:
+            raise PhaseExecutionException(f'Couldn\'t call remote plugin on {plugin_name}')
+
         if response.status_code == 408:
             logger.exception(f'Timeout out on {plugin_name}')
             raise PhaseExecutionException(f'Timeout out on {plugin_name}')
