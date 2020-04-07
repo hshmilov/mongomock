@@ -258,7 +258,8 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
                         {
                             'name': 'system_research_rate',
                             'title': 'Hours between discovery cycles',
-                            'type': 'number'
+                            'type': 'number',
+                            'max': 24 * 365  # Up to a year
                         },
                         {
                             'name': 'system_research_date',

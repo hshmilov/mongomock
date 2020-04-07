@@ -20,6 +20,7 @@
 				if (isNaN(this.data)) return false
                 if (!this.schema.allow_negatives && this.data < 0) return false
                 if (this.schema.format === 'port' && this.data > 65536) return false
+                if (this.schema.max && this.data > this.schema.max) return false
 				return true
 			}
         }
