@@ -61,7 +61,7 @@ class MysqlSpecialAdapter(AdapterBase, Configurable):
                       f'database: ' \
                       f'{client_config.get("database")}'
             logger.exception(message)
-            raise ClientConnectionException(get_exception_string())
+            raise ClientConnectionException(get_exception_string(client_connection_error=True))
 
     @staticmethod
     def _clients_schema():

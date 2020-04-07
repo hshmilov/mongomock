@@ -49,7 +49,7 @@ class SpecopsAdapter(AdapterBase, Configurable):
                       f'database: ' \
                       f'{client_config.get(consts.SPECOPS_DATABASE, consts.SPECOPS_DATABASE)}'
             logger.exception(message)
-            raise ClientConnectionException(get_exception_string())
+            raise ClientConnectionException(get_exception_string(client_connection_error=True))
 
     # pylint: disable=too-many-branches, too-many-statements, too-many-nested-blocks
     def _query_devices_by_client(self, client_name, client_data):

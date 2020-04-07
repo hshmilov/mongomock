@@ -57,7 +57,7 @@ class SymantecDlpAdapter(AdapterBase, Configurable):
                       f'database: ' \
                       f'{client_config.get(consts.SYMANTEC_DLP_DATABASE)}'
             logger.exception(message)
-            raise ClientConnectionException(get_exception_string())
+            raise ClientConnectionException(get_exception_string(client_connection_error=True))
 
     @staticmethod
     def _query_dlp(client_data, query_groups, query_agent):

@@ -75,7 +75,7 @@ class LansweeperAdapter(AdapterBase, Configurable):
                 f'{client_config.get(consts.LANSWEEPER_DATABASE)}'
             )
             logger.exception(message)
-            raise ClientConnectionException(get_exception_string())
+            raise ClientConnectionException(get_exception_string(client_connection_error=True))
 
     # pylint: disable=too-many-branches, too-many-statements, too-many-locals, too-many-nested-blocks
     def _query_devices_by_client(self, client_name, client_data):
