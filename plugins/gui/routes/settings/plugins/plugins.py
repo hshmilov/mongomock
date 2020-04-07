@@ -84,7 +84,8 @@ class Plugins:
         return jsonify(plugins_to_return)
 
     @gui_add_rule_logged_in('plugins/configs/<plugin_name>/<config_name>', methods=['POST', 'GET'],
-                            required_permissions={Permission(PermissionType.Settings, ReadOnlyJustForGet)},
+                            required_permissions={Permission(PermissionType.Adapters, PermissionLevel.ReadWrite),
+                                                  Permission(PermissionType.Adapters, ReadOnlyJustForGet)},
                             enforce_trial=False)
     def plugin_configs(self, plugin_name, config_name):
         """
