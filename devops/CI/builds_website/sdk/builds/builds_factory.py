@@ -130,7 +130,7 @@ class BuildsInstance(BuildsAPI):
         if not quiet:
             self.debug_print('Running ssh: {0}'.format(command))
 
-        chan = self.sshc.get_transport().open_session()
+        chan = self.sshc.get_transport().open_session(timeout=SSH_NETWORK_TIMEOUT)
         chan.set_combine_stderr(True)
         chan.setblocking(0)
         chan.makefile()
