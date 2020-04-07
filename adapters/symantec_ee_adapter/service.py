@@ -51,7 +51,7 @@ class SymantecEeAdapter(AdapterBase, Configurable):
                       f'database: ' \
                       f'{client_config.get(consts.SYMANTEC_EE_DATABASE, consts.DEFAULT_SYMANTEC_EE_DATABASE)}'
             logger.exception(message)
-            raise ClientConnectionException(get_exception_string(client_connection_error=True))
+            raise ClientConnectionException(get_exception_string(force_show_traceback=True))
 
     def _query_devices_by_client(self, client_name, client_data):
         client_data.set_devices_paging(self.__devices_fetched_at_a_time)

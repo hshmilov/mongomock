@@ -147,10 +147,10 @@ def normalize_var_name(name):
     return name
 
 
-def get_exception_string(client_connection_error=False):
+def get_exception_string(force_show_traceback=False):
     """
     when inside a catch exception flow, returns a really informative string representing it.
-    :param: client_connection_error, indicates if the trackback is for the toaster of an adapter connection error
+    :param: force_show_traceback, indicates if the trackback is for the toaster of an adapter connection error
             if in production and not this value is not set to True, a generic error message would return
     :return: a string representing the exception.
     """
@@ -168,7 +168,7 @@ def get_exception_string(client_connection_error=False):
     ex_str = ex_str + f'{exc_type}:{exc_obj}'
     exc_id = uuid.uuid4()
     logger.error(f'UUID {exc_id}: error traceback: {ex_str}')
-    return html.escape(ex_str) if os.environ.get('PROD') == 'false' or client_connection_error \
+    return html.escape(ex_str) if os.environ.get('PROD') == 'false' or force_show_traceback \
         else GENERIC_ERROR_MESSAGE.format(exc_id)
 
 
