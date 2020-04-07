@@ -150,8 +150,7 @@ def normalize_var_name(name):
 def get_exception_string(force_show_traceback=False):
     """
     when inside a catch exception flow, returns a really informative string representing it.
-    :param: force_show_traceback, indicates if the trackback is for the toaster of an adapter connection error
-            if in production and not this value is not set to True, a generic error message would return
+    :param: force_show_traceback, force returning the trackback to user even if in production mode
     :return: a string representing the exception.
     """
     exc_type, exc_obj, exc_tb = sys.exc_info()
