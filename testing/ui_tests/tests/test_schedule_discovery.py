@@ -1,5 +1,8 @@
 import time
 from datetime import datetime, timedelta
+
+from selenium.common.exceptions import ElementNotInteractableException
+
 from axonius.utils.wait import wait_until
 from services.adapters import stresstest_service
 from services.plugins.system_scheduler_service import DEAFULT_SYSTEM_RESEARCH_RATE_ATTRIB_NAME
@@ -107,6 +110,8 @@ class TestDiscoverySchedule(TestBase):
     def test_discovery_schedule_tooltips(self):
         self.settings_page.switch_to_page()
         self.settings_page.open_discovery_mode_options()
+        wait_until(lambda: self.settings_page.find_discovery_mode_options() is not None,
+                   tolerated_exceptions_list=[ElementNotInteractableException])
         options = self.settings_page.find_discovery_mode_options()
         for option in options:
             assert option.text == option.get_attribute('title')

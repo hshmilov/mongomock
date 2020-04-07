@@ -124,7 +124,7 @@ class SettingsPage(Page):
 
     CA_CERT_DELETE_BUTTON = f'{CA_CERTS_FILES} > button'
 
-    DISCOVERY_SCHEDULE_MODE_DDL = '.x-select .x-select-trigger'
+    DISCOVERY_SCHEDULE_MODE_DDL = '.x-settings .x-select .x-select-trigger'
     DISCOVERY_SCHEDULE_TIME_PICKER_INPUT_CSS = '.time-picker-text input'
     DISCOVERY_SCHEDULE_REPEAT_INPUT = 'system_research_date_recurrence'
     DISCOVERY_SCHEDULE_INTERVAL_INPUT_CSS = '#system_research_rate'
