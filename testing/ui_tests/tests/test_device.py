@@ -1,7 +1,7 @@
 import time
 from datetime import datetime
 
-from flaky import flaky
+import pytest
 from test_helpers.file_mock_credentials import FileForCredentialsMock
 
 from ui_tests.tests.ui_consts import WINDOWS_QUERY_NAME, CSV_NAME, CSV_PLUGIN_NAME
@@ -182,7 +182,7 @@ class TestDevice(TestBase):
         assert self.devices_page.find_element_by_text(host_name)
 
     # Sometimes upload file to CSV adapter does not work
-    @flaky(max_runs=2)
+    @pytest.mark.skip('AX-6927')
     def test_last_seen_expanded_cell_sort(self):
         """
         Test that the expanded details table under last seen field is sorted decreasingly by date-time
