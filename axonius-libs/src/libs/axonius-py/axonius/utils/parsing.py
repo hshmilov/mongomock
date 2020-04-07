@@ -150,6 +150,8 @@ def normalize_var_name(name):
 def get_exception_string(client_connection_error=False):
     """
     when inside a catch exception flow, returns a really informative string representing it.
+    :param: client_connection_error, indicates if the trackback is for the toaster of an adapter connection error
+            if in production and not this value is not set to True, a generic error message would return
     :return: a string representing the exception.
     """
     exc_type, exc_obj, exc_tb = sys.exc_info()
