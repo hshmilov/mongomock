@@ -422,7 +422,10 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
             'required': [
                 'request_timeout',
                 'async_chunk_size',
-                'fetch_vulnerabilities_data'
+                'fetch_vulnerabilities_data',
+                'max_retries',
+                'retry_sleep_time',
+                'devices_per_page'
             ],
             'pretty_name': 'Qualys Configuration',
             'type': 'array'

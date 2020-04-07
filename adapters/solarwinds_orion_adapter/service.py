@@ -171,11 +171,13 @@ class SolarwindsOrionAdapter(AdapterBase, Configurable):
         if not device_raw.get('MAC') and not device_raw.get('DisplayName'):
             logger.debug(f'Bad device with no mac {device_raw}')
             return None
-        if self.__fetch_mac_ipam and not device_raw.get('MAC'):
+        if self.__fetch_mac_ipam and not device_raw.get('MAC') and not device_raw.get('DhcpClientName'):
             return None
         device.id = (device_raw.get('MAC') or '') + '_' + (device_raw.get('DisplayName') or '')
         ips = [device_raw.get('IPAddress')] if device_raw.get('IPAddress') else None
         device.hostname = device_raw.get('DhcpClientName')
+        device.last_seen = parse_date(device_raw.get('LeaseExpires'))
+        device.device_manufacturer = device_raw.get('Vendor')
         device.add_nic(mac=device_raw.get('MAC'), ips=ips)
         if device_raw.get('Status') != 1:
             return None

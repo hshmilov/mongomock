@@ -542,6 +542,8 @@ class SccmAdapter(AdapterBase, Configurable):
                     continue
 
                 device_full_hostname = device_raw.get('Netbios_Name0')
+                if device_full_hostname == 'Unknown':
+                    continue
                 if device_full_hostname:
                     if domain:
                         device_full_hostname += '.' + domain

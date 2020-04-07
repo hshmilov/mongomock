@@ -47,7 +47,7 @@ class EdfsCsvAdapter(ScannerAdapterBase):
         is_live = Field(bool, 'Live Known Asset')
         is_corporate = Field(bool, 'Corporate')
         is_customer = Field(bool, 'Customer')
-        cmi = Field(bool, 'CMI')
+        cmi = Field(bool, 'Customer')
         pmi = Field(bool, 'PMI')
         edfs_cloud = Field(bool, 'Cloud (EDFS)')
         amdocsip = Field(bool, 'AmdocsIP')
@@ -101,7 +101,7 @@ class EdfsCsvAdapter(ScannerAdapterBase):
             'items': [
                 {
                     'name': 'edfs_external_status_label',
-                    'title': 'Vulnerability Status CSV file name',
+                    'title': 'External Amdocs assets CSV file name',
                     'type': 'string',
                 },
                 {
@@ -112,12 +112,12 @@ class EdfsCsvAdapter(ScannerAdapterBase):
                 },
                 {
                     'name': 'edfs_vuln_status_label',
-                    'title': 'Vulnerability status CSV file name',
+                    'title': 'External Amdocs assets CSV file name',
                     'type': 'string'
                 },
                 {
                     'name': 'edfs_vuln_status_csv',
-                    'title': 'Vulnerability status CSV file',
+                    'title': 'External Amdocs assets CSV file',
                     'type': 'file',
                     'description': 'The binary contents of the csv',
                 }

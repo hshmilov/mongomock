@@ -187,8 +187,13 @@ class SamangeAdapter(AdapterBase):
                     device.owner = (device_raw.get('owner') or {}).get('name')
                 except Exception:
                     logger.exception(f'Probelm getting owner at {device_raw}')
-                device.updated_at = parse_date(device_raw.get('updated_at'))
-                device.last_seen = parse_date(device_raw.get('detected_at'))
+                updated_at = parse_date(device_raw.get('updated_at'))
+                device.updated_at = updated_at
+                last_seen = parse_date(device_raw.get('detected_at'))
+                if last_seen:
+                    device.last_seen = last_seen
+                else:
+                    device.last_seen = updated_at
                 try:
                     device.department = (device_raw.get('department') or {}).get('name')
                 except Exception:

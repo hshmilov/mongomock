@@ -1489,6 +1489,8 @@ def compare_device_normalized_hostname(adapter_device1, adapter_device2) -> bool
     :return:
     """
     def is_in_short_names_adapters_and_long_name(adapter_device):
+        if is_linux(adapter_device):
+            return False
         if adapter_device.get('plugin_name') in ['carbonblack_protection_adapter', 'active_directory_adapter',
                                                  'lansweeper_adapter', 'sccm_adapter'] \
                 and len(get_hostname(adapter_device).split('.')[0]) == NET_BIOS_MAX_LENGTH:
