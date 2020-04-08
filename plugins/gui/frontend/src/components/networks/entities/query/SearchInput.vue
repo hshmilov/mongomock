@@ -109,6 +109,9 @@
 import { mapState, mapMutations, mapGetters } from 'vuex';
 import _debounce from 'lodash/debounce';
 import _get from 'lodash/get';
+import _find from 'lodash/find';
+import _matchesProperty from 'lodash/matchesProperty';
+
 import _snakeCase from 'lodash/snakeCase';
 import XDropdown from '@axons/popover/Dropdown.vue';
 import XSearchInput from '@neurons/inputs/SearchInput.vue';
@@ -117,7 +120,7 @@ import XMenuItem from '@axons/menus/MenuItem.vue';
 import { UPDATE_DATA_VIEW } from '@store/mutations';
 import { EXACT_SEARCH } from '@store/getters';
 import { mdiClose } from '@mdi/js';
-import { defaultViewForReset } from '@constants/entities';
+import { defaultViewForReset, entities } from '@constants/entities';
 import viewsMixin from '../../../../mixins/views';
 
 export default {
@@ -154,10 +157,13 @@ export default {
   computed: {
     ...mapState({
       savedViews(state) {
-        if (!this.isSearchSimple) return state[this.module].views.saved.content.data || [];
-        return state[this.module].views.saved.content.data
-          .filter((item) => item && item.name.toLowerCase()
-            .includes(this.searchInputValue.toLowerCase()));
+        if (this.userCanRunSavedQueries) {
+          if (!this.isSearchSimple) return state[this.module].views.saved.content.data || [];
+          return state[this.module].views.saved.content.data
+            .filter((item) => item && item.name.toLowerCase()
+              .includes(this.searchInputValue.toLowerCase()));
+        }
+        return [];
       },
       historyViews(state) {
         if (!this.isSearchSimple) return state[this.module].views.saved.content.data;
@@ -176,6 +182,11 @@ export default {
     ...mapGetters({
       exactSearch: EXACT_SEARCH,
     }),
+    userCanRunSavedQueries() {
+      const { permissionCategory } = _find(entities, _matchesProperty('name', this.module));
+      return this.$can(permissionCategory,
+        this.$permissionConsts.actions.Run, this.$permissionConsts.categories.SavedQueries);
+    },
     searchValue: {
       get() {
         if (!this.querySearchTemplate) {

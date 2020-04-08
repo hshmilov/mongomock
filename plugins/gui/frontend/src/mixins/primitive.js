@@ -28,6 +28,9 @@ export default {
 		enumOptions() {
 			if (!this.schema.enum) return undefined
 			return this.schema.enum.map((item, index) => {
+				if (item instanceof Object && 'name' in item && 'title' in item) {
+					return item;
+				}
 				if (this.schema.type === 'integer' && isNaN(item)) {
 					return {name: index+1, title:item}
 				}

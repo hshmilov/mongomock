@@ -1,17 +1,20 @@
 from flask import request
 
 from axonius.utils import gui_helpers
-from axonius.utils.gui_helpers import Permission, PermissionType, ReadOnlyJustForGet
-from gui.logic.routing_helper import gui_add_rule_logged_in
+from axonius.utils.permissions_helper import (PermissionCategory, PermissionAction,
+                                              PermissionValue)
+from gui.logic.routing_helper import gui_category_add_rules, gui_route_logged_in
 from gui.routes.graphql import graphql
+
 # pylint: disable=no-member,no-self-use
 
 
+@gui_category_add_rules('graphql')
 class GraphQLAPI:
     @gui_helpers.paginated()
-    @gui_add_rule_logged_in('graphql/search/devices', methods=['GET'],
-                            required_permissions={Permission(PermissionType.Devices,
-                                                             ReadOnlyJustForGet)})
+    @gui_route_logged_in('search/devices', methods=['GET'],
+                         required_permission_values={
+                             PermissionValue.get(PermissionAction.View, PermissionCategory.DevicesAssets)})
     def search_devices(self, limit, skip):
         response = graphql.search_devices(request.args.get('term'), limit, skip, request.args.get('count', False))
         if not response:
@@ -21,9 +24,9 @@ class GraphQLAPI:
         return response.text
 
     @gui_helpers.paginated()
-    @gui_add_rule_logged_in('graphql/search/users', methods=['GET'],
-                            required_permissions={Permission(PermissionType.Users,
-                                                             ReadOnlyJustForGet)})
+    @gui_route_logged_in('search/users', methods=['GET'],
+                         required_permission_values={
+                             PermissionValue.get(PermissionAction.View, PermissionCategory.UsersAssets)})
     def search_users(self, limit, skip):
         response = graphql.search_users(request.args.get('term'), limit, skip, request.args.get('count', False))
         if not response:

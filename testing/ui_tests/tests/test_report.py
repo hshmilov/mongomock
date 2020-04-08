@@ -403,14 +403,8 @@ class TestReport(TestBase):
             self.settings_page.create_new_user(ui_consts.READ_ONLY_USERNAME,
                                                ui_consts.NEW_PASSWORD,
                                                ui_consts.FIRST_NAME,
-                                               ui_consts.LAST_NAME)
-
-            self.settings_page.wait_for_user_created_toaster()
-
-            for label in self.settings_page.get_permission_labels():
-                self.settings_page.select_permissions(label, self.settings_page.READ_ONLY_PERMISSION)
-
-            self.settings_page.click_save_manage_users_settings()
+                                               ui_consts.LAST_NAME,
+                                               self.settings_page.VIEWER_ROLE)
             self.login_page.logout()
             self.login_page.wait_for_login_page_to_load()
             self.login_page.login(username=ui_consts.READ_ONLY_USERNAME, password=ui_consts.NEW_PASSWORD)

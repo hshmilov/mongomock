@@ -1,8 +1,17 @@
 {
   "editor.tabSize": 2,
   "vetur.format.options.useTabs": true,
+  "path-intellisense.extensionOnImport": true,
   "path-intellisense.mappings": {
-    "@": "${workspaceRoot}/src"
+    "@": "${workspaceRoot}/src",
+    "@components": "${workspaceRoot}/src",
+    "@axons": "${workspaceRoot}/src/components/axons",
+    "@networks": "${workspaceRoot}/src/components/networks",
+    "@neurons": "${workspaceRoot}/src/components/neurons",
+    "@pages": "${workspaceRoot}/src/components/pages",
+    "@api": "${workspaceRoot}/src/api",
+    "@store": "${workspaceRoot}/src/store",
+    "@constants": "${workspaceRoot}/src/constants"
   },
   "eslint.validate": [
     "javascript",

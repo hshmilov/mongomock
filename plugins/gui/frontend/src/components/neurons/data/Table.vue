@@ -59,6 +59,7 @@
         :on-click-all="onClickAll"
         :multiple-row-selection="multipleRowSelection"
         :row-class="rowClass"
+        :read-only="readOnly"
         @filter="updateColFilters"
       >
         <template #default="slotProps">
@@ -200,6 +201,10 @@ export default {
     rowClass: {
       type: [Function, String],
       default: '',
+    },
+    readOnly: {
+      type: Array,
+      default: () => [],
     },
     isExpermentalAPI: {
       type: Boolean,
@@ -480,7 +485,7 @@ export default {
         limit,
         isCounted,
         isRefresh,
-        isExpermentalAPI: this.isExpermentalAPI
+        isExpermentalAPI: this.isExpermentalAPI,
       }).then(() => {
         if (!this.content.fetching) {
           this.loading = false;

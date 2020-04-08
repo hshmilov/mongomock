@@ -30,6 +30,7 @@
           v-model="value.period_config.week_day"
           class="weekly-day"
           :options="weekDays"
+          :read-only="readOnly"
         />
       </div>
     </div>
@@ -52,6 +53,7 @@
           v-model="value.period_config.monthly_day"
           class="monthly-day"
           :options="monthDays"
+          :read-only="readOnly"
         />
       </div>
     </div>

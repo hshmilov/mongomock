@@ -1,6 +1,6 @@
 import re
 from axonius.utils.wait import wait_until
-from test_credentials.test_gui_credentials import AXONIUS_USER
+from test_credentials.test_gui_credentials import AXONIUS_USER, AXONIUS_RO_USER
 from ui_tests.tests.ui_test_base import TestBase
 
 
@@ -16,6 +16,16 @@ class TestAxoniusUserLogin(TestBase):
         wait_until(lambda: tester.is_pattern_in_log(re.escape('"metric_name": "LOGIN_MARKER"'), 30))
         wait_until(lambda: tester.is_pattern_in_log(re.escape('"ui_user": "admin", "ui_user_source": "internal"'), 30))
         wait_until(lambda: tester.is_metric_in_log(metric_name='LOGIN_MARKER', value=0, lines_lookback=30))
+
+        # So we can see that we're in
+        self.settings_page.switch_to_page()
+
+    def test_axoniususer_ro_login(self):
+        self.settings_page.switch_to_page()
+        self.login_page.logout()
+        self.login_page.wait_for_login_page_to_load()
+
+        self.login_page.login(username=AXONIUS_RO_USER['user_name'], password=AXONIUS_RO_USER['password'])
 
         # So we can see that we're in
         self.settings_page.switch_to_page()

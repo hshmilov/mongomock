@@ -7,14 +7,16 @@ import re
 
 import requests
 from funcy import chunks
-from axonius.consts.gui_consts import (CONFIG_CONFIG, ROLES_COLLECTION, USERS_COLLECTION,
+from bson import ObjectId
+
+from axonius.consts.gui_consts import (CONFIG_CONFIG, ROLES_COLLECTION, USERS_COLLECTION, USERS_CONFIG_COLLECTION,
                                        DASHBOARD_COLLECTION, DASHBOARD_SPACES_COLLECTION,
                                        DASHBOARD_SPACE_DEFAULT, DASHBOARD_SPACE_PERSONAL,
                                        DASHBOARD_SPACE_TYPE_DEFAULT, DASHBOARD_SPACE_TYPE_PERSONAL,
                                        PREDEFINED_ROLE_ADMIN, PREDEFINED_ROLE_RESTRICTED, PREDEFINED_ROLE_READONLY,
-                                       FEATURE_FLAGS_CONFIG, Signup, EXEC_REPORT_TITLE,
-                                       LAST_UPDATED_FIELD, UPDATED_BY_FIELD,
-                                       PREDEFINED_FIELD)
+                                       PREDEFINED_ROLE_VIEWER, PREDEFINED_ROLE_OWNER, FEATURE_FLAGS_CONFIG, Signup,
+                                       EXEC_REPORT_TITLE, LAST_UPDATED_FIELD, UPDATED_BY_FIELD,
+                                       PREDEFINED_FIELD, IS_AXONIUS_ROLE)
 from axonius.consts.plugin_consts import (AGGREGATOR_PLUGIN_NAME,
                                           AXONIUS_SETTINGS_DIR_NAME,
                                           CONFIGURABLE_CONFIGS_COLLECTION,
@@ -25,11 +27,16 @@ from axonius.consts.plugin_consts import (AGGREGATOR_PLUGIN_NAME,
                                           PLUGIN_UNIQUE_NAME,
                                           MAINTENANCE_TYPE,
                                           GUI_SYSTEM_CONFIG_COLLECTION,
-                                          LIBS_PATH,
+                                          LIBS_PATH, ADMIN_USER_NAME,
                                           AXONIUS_USER_NAME, REPORTS_CONFIG_COLLECTION)
 from axonius.entities import EntityType
-from axonius.utils.gui_helpers import PermissionLevel, PermissionType
+from axonius.utils.gui_helpers import (PermissionLevel, PermissionType,
+                                       deserialize_db_permissions as old_deserialize_db_permissions)
 from axonius.utils.mongo_retries import mongo_retry
+from axonius.utils.permissions_helper import (PermissionCategory, PermissionAction,
+                                              get_admin_permissions, get_permissions_structure,
+                                              get_viewer_permissions, get_restricted_permissions,
+                                              serialize_db_permissions)
 from gui.logic.filter_utils import filter_archived
 from services.plugin_service import PluginService
 from services.updatable_service import UpdatablePluginMixin
@@ -55,7 +62,9 @@ class GuiService(PluginService, UpdatablePluginMixin):
             self._update_under_20()
         if self.db_schema_version < 30:
             self._update_under_30()
-        if self.db_schema_version != 30:
+        if self.db_schema_version < 40:
+            self._update_under_40()
+        if self.db_schema_version != 31:
             print(f'Upgrade failed, db_schema_version is {self.db_schema_version}')
 
     def _update_under_10(self):
@@ -121,6 +130,10 @@ class GuiService(PluginService, UpdatablePluginMixin):
             self._update_schema_version_29()
         if self.db_schema_version < 30:
             self._update_schema_version_30()
+
+    def _update_under_40(self):
+        if self.db_schema_version < 31:
+            self._update_schema_version_31()
 
     def _update_schema_version_1(self):
         print('upgrade to schema 1')
@@ -1096,6 +1109,18 @@ class GuiService(PluginService, UpdatablePluginMixin):
         except Exception as e:
             print(f'Exception while upgrading gui db to version 30. Details: {e}')
 
+    def _update_schema_version_31(self):
+        """
+        For 3.3 - Migrate users and roles to the new permissions structure
+        :return:
+        """
+        print('Upgrade to schema 31')
+        try:
+            self._migrate_old_users_and_roles()
+            self.db_schema_version = 31
+        except Exception as e:
+            print(f'Exception while upgrading gui db to version 30. Details: {e}')
+
     def _update_default_locked_actions(self, new_actions):
         """
         Update the config record that holds the FeatureFlags setting, adding received new_actions to it's list of
@@ -1333,7 +1358,7 @@ RUN cd /home/axonius && mkdir axonius-libs && mkdir axonius-libs/src && cd axoni
         return self.db.client[self.plugin_name][Signup.SignupCollection]
 
     def get_report_pdf(self, report_id, *vargs, **kwargs):
-        return self.get(f'export_report/{report_id}', session=self._session, *vargs, **kwargs)
+        return self.get(f'reports/{report_id}/pdf', session=self._session, *vargs, **kwargs)
 
     def get_saved_views(self):
 
@@ -1423,3 +1448,188 @@ RUN cd /home/axonius && mkdir axonius-libs && mkdir axonius-libs/src && cd axoni
         if not hidden_user:
             return None
         return hidden_user['_id']
+
+    def _migrate_old_users_and_roles(self):
+        users_collection = self.db.get_collection(GUI_PLUGIN_NAME, USERS_COLLECTION)
+        roles_collection = self.db.get_collection(GUI_PLUGIN_NAME, ROLES_COLLECTION)
+
+        with users_collection.start_session() as users_session:
+            with users_session.start_transaction():
+                with roles_collection.start_session() as roles_session:
+                    with roles_session.start_transaction():
+                        users = list(users_session.find({}))
+                        old_roles = list(roles_session.find({}))
+                        number_of_custom_roles = 1
+                        for user in users:
+                            self._migrate_user(number_of_custom_roles, old_roles, user, users_session)
+                        for role in old_roles:
+                            self._migrate_role(role, roles_session, old_roles)
+            users_config_collection = self.db.get_collection(GUI_PLUGIN_NAME, USERS_CONFIG_COLLECTION)
+            config_doc = users_config_collection.find_one({})
+            if config_doc:
+                default_role = roles_collection.find_one({
+                    'name': config_doc['external_default_role']
+                })
+                users_config_collection.update_one({
+                    '_id': config_doc.get('_id')
+                }, {
+                    '$set': {'external_default_role': default_role.get('_id')}
+                })
+
+    @staticmethod
+    def _is_role_name_exists(old_roles, name):
+        for role in old_roles:
+            if role['name'] == name:
+                return True
+        return False
+
+    def _migrate_role(self, role, roles_session, old_roles):
+        if role.get('name') in [PREDEFINED_ROLE_ADMIN, PREDEFINED_ROLE_OWNER] and role.get(PREDEFINED_FIELD):
+            role['permissions'] = get_admin_permissions()
+        elif role.get('name') == PREDEFINED_ROLE_READONLY:
+            permissions = old_deserialize_db_permissions(role.get('permissions'))
+            if all([permission == PermissionLevel.ReadOnly for permission in permissions.values()]):
+                if not self._is_role_name_exists(old_roles, PREDEFINED_ROLE_VIEWER):
+                    role['name'] = PREDEFINED_ROLE_VIEWER
+                role['permissions'] = get_viewer_permissions()
+            else:
+                role['permissions'] = self._map_old_permissions_to_new_permissions(permissions)
+        elif role.get('name') == PREDEFINED_ROLE_RESTRICTED:
+            permissions = old_deserialize_db_permissions(role.get('permissions'))
+            if all([level == PermissionLevel.Restricted or (
+                    level == PermissionLevel.ReadOnly and t == PermissionType.Dashboard) for t, level in
+                    permissions.items()]):
+                role['permissions'] = get_restricted_permissions()
+            else:
+                role['permissions'] = self._map_old_permissions_to_new_permissions(permissions)
+        else:
+            permissions = old_deserialize_db_permissions(role.get('permissions'))
+            role['permissions'] = self._map_old_permissions_to_new_permissions(permissions)
+        role_to_set = {
+            'name': role['name'],
+            'permissions': role['permissions']
+        }
+        if role.get(PREDEFINED_FIELD):
+            role_to_set[PREDEFINED_FIELD] = role[PREDEFINED_FIELD]
+        roles_session.update_one(
+            {'_id': role['_id']}, {'$set': role_to_set}, upsert=True)
+
+    def _migrate_user(self, number_of_custom_roles, old_roles, user, users_session):
+        if user.get('user_name') == AXONIUS_USER_NAME:
+            user_role = {
+                '_id': ObjectId(),
+                'name': PREDEFINED_ROLE_OWNER,
+                'permissions': user.get('permissions'),
+                PREDEFINED_FIELD: True,
+                IS_AXONIUS_ROLE: True
+            }
+            old_roles.append(user_role)
+        elif user.get('admin') or user.get('user_name') == ADMIN_USER_NAME:
+            user_role = next((x for x in old_roles if x.get('name') == PREDEFINED_ROLE_ADMIN), None)
+        else:
+            user_role = self._get_matched_role(user, old_roles)
+        if not user_role:
+            new_role_name = f'custom role {number_of_custom_roles}'
+            while self._is_role_name_exists(old_roles, new_role_name):
+                number_of_custom_roles += 1
+                new_role_name = f'custom role {number_of_custom_roles}'
+            user_role = {
+                '_id': ObjectId(),
+                'name': new_role_name,
+                'permissions': user.get('permissions'),
+            }
+            number_of_custom_roles += 1
+            old_roles.append(user_role)
+        user['role_id'] = user_role.get('_id')
+        users_session.update_one({'_id': user['_id']},
+                                 {'$unset': {'permissions': 1, 'admin': 1, 'role_name': 1}})
+        users_session.update_one({'_id': user['_id']},
+                                 {'$set': {'role_id': user_role.get('_id')}})
+
+    @staticmethod
+    def _get_matched_role(user, roles) -> dict:
+        if not user.get('permissions'):
+            return None
+        user_permissions = old_deserialize_db_permissions(user.get('permissions'))
+        for role in roles:
+            if role.get('name') != PREDEFINED_ROLE_ADMIN:
+                role_permissions = old_deserialize_db_permissions(role.get('permissions'))
+                if user_permissions == role_permissions:
+                    return role
+        return None
+
+    # pylint: disable=too-many-statements
+    def _map_old_permissions_to_new_permissions(self, old_permissions: dict):
+        new_permissions = get_permissions_structure(False)
+        for permission_type in old_permissions.keys():
+            old_permission = old_permissions[permission_type]
+            if permission_type == PermissionType.Dashboard:
+                if PermissionLevel.ReadOnly == old_permission:
+                    new_permissions[PermissionCategory.Settings][
+                        PermissionAction.ResetApiKey] = True
+                    new_permissions[PermissionCategory.Dashboard][
+                        PermissionAction.View] = True
+                if PermissionLevel.ReadWrite == old_permission:
+                    new_permissions[PermissionCategory.Settings][
+                        PermissionAction.RunManualDiscovery] = True
+                    self._enable_all_category_permissions(new_permissions, PermissionCategory.Dashboard)
+            if permission_type == PermissionType.Devices:
+                if PermissionLevel.ReadOnly == old_permission:
+                    new_permissions[PermissionCategory.DevicesAssets][
+                        PermissionAction.View] = True
+                    new_permissions[PermissionCategory.DevicesAssets][PermissionCategory.SavedQueries][
+                        PermissionAction.Run] = True
+                if PermissionLevel.ReadWrite == old_permission:
+                    self._enable_all_category_permissions(new_permissions, PermissionCategory.DevicesAssets)
+            if permission_type == PermissionType.Users:
+                if PermissionLevel.ReadOnly == old_permission:
+                    new_permissions[PermissionCategory.UsersAssets][
+                        PermissionAction.View] = True
+                    new_permissions[PermissionCategory.UsersAssets][PermissionCategory.SavedQueries][
+                        PermissionAction.Run] = True
+                if PermissionLevel.ReadWrite == old_permission:
+                    self._enable_all_category_permissions(new_permissions, PermissionCategory.UsersAssets)
+            if permission_type == PermissionType.Adapters:
+                if PermissionLevel.ReadOnly == old_permission:
+                    new_permissions[PermissionCategory.Adapters][
+                        PermissionAction.View] = True
+                if PermissionLevel.ReadWrite == old_permission:
+                    self._enable_all_category_permissions(new_permissions, PermissionCategory.Adapters)
+            if permission_type == PermissionType.Enforcements:
+                if PermissionLevel.ReadOnly == old_permission:
+                    new_permissions[PermissionCategory.Enforcements][
+                        PermissionAction.View] = True
+                    new_permissions[PermissionCategory.Enforcements][PermissionCategory.Tasks][
+                        PermissionAction.View] = True
+                if PermissionLevel.ReadWrite == old_permission:
+                    self._enable_all_category_permissions(new_permissions, PermissionCategory.Enforcements)
+            if permission_type == PermissionType.Reports:
+                if PermissionLevel.ReadOnly == old_permission:
+                    new_permissions[PermissionCategory.Reports][
+                        PermissionAction.View] = True
+                if PermissionLevel.ReadWrite == old_permission:
+                    self._enable_all_category_permissions(new_permissions, PermissionCategory.Reports)
+            if permission_type == PermissionType.Settings:
+                if PermissionLevel.ReadOnly == old_permission:
+                    new_permissions[PermissionCategory.Settings][
+                        PermissionAction.View] = True
+                    new_permissions[PermissionCategory.Dashboard][
+                        PermissionAction.GetUsersAndRoles] = True
+                if PermissionLevel.ReadWrite == old_permission:
+                    self._enable_all_category_permissions(new_permissions, PermissionCategory.Settings)
+                    new_permissions[PermissionCategory.Settings][PermissionAction.ResetApiKey] = False
+                    new_permissions[PermissionCategory.Settings][PermissionCategory.Audit][
+                        PermissionAction.View] = False
+            if permission_type == PermissionType.Instances:
+                if PermissionLevel.ReadOnly == old_permission:
+                    new_permissions[PermissionCategory.Instances][PermissionAction.View] = True
+                if PermissionLevel.ReadWrite == old_permission:
+                    self._enable_all_category_permissions(new_permissions, PermissionCategory.Instances)
+        return serialize_db_permissions(new_permissions)
+
+    def _enable_all_category_permissions(self, permissions, category):
+        for permission_name in permissions[category].keys():
+            if permission_name in PermissionCategory:
+                self._enable_all_category_permissions(permissions[category], permission_name)
+            else:
+                permissions[category][permission_name] = True

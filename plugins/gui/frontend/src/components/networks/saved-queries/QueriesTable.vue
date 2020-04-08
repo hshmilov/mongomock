@@ -61,7 +61,7 @@
         <x-button
           v-if="hasSelection"
           id="remove-queries-btn"
-          :disabled="readOnly"
+          :disabled="userCannotDeleteSavedQueries"
           link
           @click="handleSelectedQueriesDeletion"
         >Remove</x-button>
@@ -80,12 +80,15 @@ import xTable from '@neurons/data/Table.vue';
 import xButton from '@axons/inputs/Button.vue';
 import xSavedQueriesPanel from '@networks/saved-queries/SavedQueryPanel';
 import xCombobox from '@axons/inputs/combobox/index.vue';
+import _find from 'lodash/find';
+import _matchesProperty from 'lodash/matchesProperty';
 
 import { UPDATE_DATA_VIEW } from '@store/mutations';
 import { DELETE_DATA, SAVE_VIEW } from '@store/actions';
 import { SET_ENFORCEMENT, initTrigger } from '@store/modules/enforcements';
 
 import { fetchEntityTags } from '@api/saved-queries';
+import { getEntityPermissionCategory } from '@constants/entities';
 
 
 export default {
@@ -97,10 +100,6 @@ export default {
     namespace: {
       type: String,
       required: true,
-    },
-    readOnly: {
-      type: Boolean,
-      default: false,
     },
   },
   data() {
@@ -126,10 +125,17 @@ export default {
 
         return userEnforcementsPermissionsLevel === 'ReadWrite' || noUserOrPermissionsDefined || isUserAdminRole;
       },
+      permissionCategory() {
+        return getEntityPermissionCategory(this.namespace);
+      },
+      userCannotDeleteSavedQueries() {
+        return this.$cannot(this.permissionCategory,
+          this.$permissionConsts.actions.Delete, this.$permissionConsts.categories.SavedQueries);
+      },
     }),
     queriesRowsSelections: {
       get() {
-        return this.readOnly ? undefined : this.selection;
+        return this.userCannotDeleteSavedQueries ? undefined : this.selection;
       },
       set(newSelections) {
         this.selection = newSelections;

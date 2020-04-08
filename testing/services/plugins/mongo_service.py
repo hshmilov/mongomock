@@ -246,6 +246,9 @@ class MongoService(WeaveService):
     def gui_users_collection(self):
         return self.client[GUI_PLUGIN_NAME]['users']
 
+    def gui_roles_collection(self):
+        return self.client[GUI_PLUGIN_NAME]['roles']
+
     def gui_users_preferences_collection(self):
         return self.client[GUI_PLUGIN_NAME][USERS_PREFERENCES_COLLECTION]
 

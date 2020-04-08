@@ -1,19 +1,19 @@
 import logging
 import os
 from datetime import datetime
+
 from flask import (jsonify,
                    make_response)
 
 from axonius.compliance.compliance import get_compliance
-
 from axonius.consts.gui_consts import (FeatureFlagsNames, CloudComplianceNames, FILE_NAME_TIMESTAMP_FORMAT)
+from axonius.utils.permissions_helper import PermissionCategory, PermissionAction, PermissionValue
 from axonius.plugin_base import return_error
-
-from axonius.utils.gui_helpers import (Permission, PermissionLevel,
-                                       PermissionType, accounts as accounts_filter,
+from axonius.utils.gui_helpers import (accounts as accounts_filter,
                                        schema_fields as schema)
 from gui.logic.entity_data import (get_export_csv)
-from gui.logic.routing_helper import gui_add_rule_logged_in
+from gui.logic.routing_helper import gui_category_add_rules, gui_route_logged_in
+
 # pylint: disable=no-member
 
 logger = logging.getLogger(f'axonius.{__name__}')
@@ -21,13 +21,13 @@ logger = logging.getLogger(f'axonius.{__name__}')
 SAML_SETTINGS_FILE_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), 'config', 'saml_settings.json'))
 
 
+@gui_category_add_rules('compliance')
 class Compliance:
 
     @accounts_filter()
-    @gui_add_rule_logged_in('compliance/<name>/<method>', methods=['GET', 'POST'],
-                            required_permissions=[Permission(PermissionType.Devices, PermissionLevel.ReadOnly),
-                                                  Permission(PermissionType.Users, PermissionLevel.ReadOnly)]
-                            )
+    @gui_route_logged_in('<name>/<method>', methods=['GET', 'POST'],
+                         required_permission_values={PermissionValue.get(PermissionAction.View,
+                                                                         PermissionCategory.Compliance)})
     def compliance(self, name, method, accounts):
         return self._get_compliance(name, method, accounts)
 
@@ -42,10 +42,9 @@ class Compliance:
 
     @accounts_filter()
     @schema()
-    @gui_add_rule_logged_in('compliance/<name>/csv', methods=['POST'],
-                            required_permissions=[Permission(PermissionType.Devices, PermissionLevel.ReadOnly),
-                                                  Permission(PermissionType.Users, PermissionLevel.ReadOnly)]
-                            )
+    @gui_route_logged_in('<name>/csv', methods=['POST'],
+                         required_permission_values={PermissionValue.get(PermissionAction.View,
+                                                                         PermissionCategory.Compliance)})
     def compliance_csv(self, name, schema_fields, accounts):
         return self._post_compliance_csv(name, schema_fields, accounts)
 

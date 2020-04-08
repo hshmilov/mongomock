@@ -21,6 +21,8 @@ from ui_tests.tests.ui_test_base import TestBase
 from ui_tests.tests.ui_consts import AD_ADAPTER_NAME
 from test_credentials.test_gui_credentials import AXONIUS_USER
 
+# pylint: disable=no-member
+
 
 class TestDashboard(TestBase):
     UNCOVERED_QUERY = 'not (((specific_data.data.adapter_properties == "Agent") or ' \
@@ -96,7 +98,7 @@ class TestDashboard(TestBase):
                                            role_name=self.settings_page.ADMIN_ROLE)
         self.settings_page.create_new_user(READ_ONLY_USERNAME, NEW_PASSWORD,
                                            FIRST_NAME, LAST_NAME,
-                                           role_name=self.settings_page.READ_ONLY_ROLE)
+                                           role_name=self.settings_page.VIEWER_ROLE)
         self.login_page.logout()
         self.login_page.wait_for_login_page_to_load()
         self.login_page.login(username=READ_WRITE_USERNAME, password=NEW_PASSWORD)
@@ -408,6 +410,7 @@ class TestDashboard(TestBase):
     def grab_all_host_names_from_devices(self):
         self.devices_page.switch_to_page()
         self.devices_page.select_page_size(50)
+        self.devices_page.wait_for_table_to_load()
         return self.devices_page.get_column_data_slicer(self.devices_page.FIELD_HOSTNAME_TITLE)
 
     @staticmethod
@@ -421,7 +424,7 @@ class TestDashboard(TestBase):
         cookies = self.driver.get_cookies()
         for cookie in cookies:
             session.cookies.set(cookie['name'], cookie['value'])
-        return session.get(f'https://127.0.0.1/api/dashboards/panels/{panel_id}/csv')
+        return session.get(f'https://127.0.0.1/api/dashboard/panels/{panel_id}/csv')
 
     def grab_all_host_names_from_csv(self, panel_id):
         result = self.generate_csv_from_segmentation_graph(panel_id)
@@ -793,9 +796,9 @@ class TestDashboard(TestBase):
         self.settings_page.create_new_user(READ_WRITE_USERNAME, NEW_PASSWORD,
                                            FIRST_NAME, LAST_NAME,
                                            role_name=self.settings_page.ADMIN_ROLE)
-        self.settings_page.create_new_user(READ_ONLY_USERNAME, NEW_PASSWORD,
-                                           FIRST_NAME, LAST_NAME,
-                                           role_name=self.settings_page.READ_ONLY_ROLE)
+        self.settings_page.add_user_with_duplicated_role(READ_ONLY_USERNAME, NEW_PASSWORD,
+                                                         FIRST_NAME, LAST_NAME,
+                                                         role_to_duplicate=self.settings_page.VIEWER_ROLE)
         self.login_page.logout()
         self.login_page.wait_for_login_page_to_load()
         self.login_page.login(username=READ_WRITE_USERNAME, password=NEW_PASSWORD)
@@ -832,8 +835,20 @@ class TestDashboard(TestBase):
                               wait_for_getting_started=True)
         self.settings_page.switch_to_page()
         self.settings_page.click_manage_users_settings()
-        self.settings_page.set_permission_for_user(self.settings_page.READ_WRITE_PERMISSION, 'Dashboard',
-                                                   READ_ONLY_USERNAME)
+        self.settings_page.wait_for_table_to_load()
+        user = self.settings_page.get_user_object_by_user_name(READ_ONLY_USERNAME)
+        self.settings_page.click_manage_roles_settings()
+        self.settings_page.wait_for_table_to_load()
+        self.settings_page.click_role_by_name(user.role)
+        self.settings_page.wait_for_side_panel()
+        self.settings_page.get_role_edit_panel_action().click()
+        self.settings_page.select_permissions({
+            'dashboard': 'all'
+        })
+        self.settings_page.click_save_button()
+        self.settings_page.safeguard_click_confirm('Yes')
+        self.settings_page.wait_for_role_successfully_saved_toaster()
+
         self.dashboard_page.switch_to_page()
         # Login with Read Only user and see it can see personal space and add a chart
         self.login_page.logout()

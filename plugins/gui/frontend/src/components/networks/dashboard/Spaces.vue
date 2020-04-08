@@ -1,14 +1,14 @@
 <template>
   <div class="x-spaces">
     <XRoleGateway
-      permission-type="Dashboard"
-      permission-level="ReadWrite"
+      :permission-category="$permissionConsts.categories.Dashboard"
+      :permission-section="$permissionConsts.categories.Spaces"
     >
-      <template slot-scope="{ allowed }">
+      <template slot-scope="{ canView, canAdd, canDelete }">
         <XTabs
           v-if="spaces.length"
           ref="tabs"
-          :extendable="allowed"
+          :extendable="canAdd"
           remove-text="Remove Space"
           @add="addNewSpace"
           @rename="renameSpace"
@@ -19,7 +19,7 @@
             :id="defaultSpace.uuid"
             :title="defaultSpace.name"
             :selected="currentSpace === defaultSpace.uuid"
-            :editable="allowed"
+            :editable="canAdd"
           >
             <XDefaultSpace
               v-if="active"
@@ -31,7 +31,9 @@
             />
           </XTab>
           <XTab
-            v-if="allowed"
+            v-if="$can($permissionConsts.categories.Dashboard,
+                       $permissionConsts.actions.Add,
+                       $permissionConsts.categories.Charts)"
             :id="personalSpace.uuid"
             :title="personalSpace.name"
             :selected="currentSpace === personalSpace.uuid"
@@ -51,8 +53,8 @@
             :key="space.uuid"
             :title="space.name"
             :selected="currentSpace === space.uuid"
-            :editable="allowed"
-            :removable="allowed"
+            :editable="canAdd"
+            :removable="canDelete"
           >
             <XPanels
               v-if="active"

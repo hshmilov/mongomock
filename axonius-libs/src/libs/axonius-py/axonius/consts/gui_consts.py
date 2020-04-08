@@ -106,8 +106,12 @@ TEMP_MAINTENANCE_THREAD_ID = 'support_access_thread'
 USERS_COLLECTION = 'users'
 ROLES_COLLECTION = 'roles'
 PREDEFINED_ROLE_ADMIN = 'Admin'
+PREDEFINED_ROLE_OWNER = 'Owner'
+PREDEFINED_ROLE_OWNER_RO = 'OwnerReadOnly'
+PREDEFINED_ROLE_VIEWER = 'Viewer'
 PREDEFINED_ROLE_READONLY = 'Read Only User'
 PREDEFINED_ROLE_RESTRICTED = 'Restricted User'
+IS_AXONIUS_ROLE = 'is_axonius_role'
 
 ####################
 # User Preferences #
@@ -189,7 +193,7 @@ DASHBOARD_SPACE_PERSONAL = 'My Dashboard'
 DASHBOARD_SPACE_TYPE_DEFAULT = 'default'
 DASHBOARD_SPACE_TYPE_PERSONAL = 'personal'
 DASHBOARD_SPACE_TYPE_CUSTOM = 'custom'
-DASHBOARD_LIFECYCLE_ENDPOINT = 'dashboard/lifecycle'
+DASHBOARD_LIFECYCLE_ENDPOINT = 'lifecycle'
 
 #########################
 # Field names #

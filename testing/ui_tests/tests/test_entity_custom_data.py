@@ -50,7 +50,8 @@ class TestEntityCustomData(TestBase):
         entities_page.click_tab(JSON_ADAPTER_NAME)
         entities_page.click_advanced_view()
         entities_page.click_custom_data_tab()
-        assert not entities_page.find_element_by_text(entities_page.ADVANCED_VIEW_RAW_FIELD).is_displayed()
+        advanced_raw_field_elements = entities_page.find_elements_by_text(entities_page.ADVANCED_VIEW_RAW_FIELD)
+        assert len(advanced_raw_field_elements) == 0 or not advanced_raw_field_elements[0].is_displayed()
 
     def _test_first_data(self, entities_page, field_name):
         entities_page.click_custom_data_edit()

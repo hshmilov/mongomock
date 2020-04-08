@@ -12,8 +12,9 @@ from axonius.plugin_base import EntityType, return_error, PluginBase
 from axonius.utils.gui_helpers import (get_historized_filter, parse_entity_fields, merge_entities_fields,
                                        flatten_fields, get_generic_fields, get_csv_canonized_value)
 from axonius.utils.axonius_query_language import (convert_db_entity_to_view_entity, convert_db_projection_to_view)
+from axonius.utils.permissions_helper import is_role_admin
 from axonius.consts.plugin_consts import NOTES_DATA_TAG, PLUGIN_UNIQUE_NAME
-from axonius.consts.gui_consts import PREDEFINED_ROLE_ADMIN, CORRELATION_REASONS
+from axonius.consts.gui_consts import CORRELATION_REASONS
 from axonius.entities import AXONIUS_ENTITY_BY_CLASS, AxoniusEntity
 from gui.logic.get_ec_historical_data_for_entity import (TaskData, get_all_task_data)
 
@@ -434,7 +435,7 @@ def _entity_notes_delete(note_ids_list, notes_list, entity_obj: AxoniusEntity):
     :param entity_obj:      To remove note from
     """
     current_user = session['user']
-    if not current_user.get('admin') and current_user.get('role_name') != PREDEFINED_ROLE_ADMIN:
+    if not is_role_admin(current_user):
         # Validate all notes requested to be removed belong to user
         for note in notes_list:
             if note['uuid'] in note_ids_list and note['user_id'] != current_user['_id']:
@@ -471,8 +472,7 @@ def entity_notes_update(entity_type: EntityType, entity_id, note_id, note_obj):
         return return_error('Selected Note cannot be found for the Entity', 400)
 
     current_user = session['user']
-    if current_user['_id'] != note_doc['user_id'] and not current_user.get('admin') and \
-            current_user.get('role_name') != PREDEFINED_ROLE_ADMIN:
+    if current_user['_id'] != note_doc['user_id'] and not is_role_admin(current_user):
         return return_error('Only Administrator can edit another user\'s Note', 400)
 
     note_doc['note'] = note_obj

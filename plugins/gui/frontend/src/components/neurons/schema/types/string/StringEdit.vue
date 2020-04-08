@@ -20,6 +20,7 @@
     v-else-if="isText"
     v-model="data"
     :maxlength="schema.limit"
+    :disabled="readOnly || schema.readOnly"
     rows="3"
     @input="input"
   />
@@ -69,7 +70,12 @@
 
 <script>
 import xSelect from '@axons/inputs/select/Select.vue';
-import { xTagSelect, XInstancesSelect, xClientConnectionSelect} from '@axons/inputs/dynamicSelects';
+import {
+  xTagSelect,
+  XInstancesSelect,
+  xClientConnectionSelect,
+  xRolesSelect,
+} from '@axons/inputs/dynamicSelects';
 import xTimePicker from '@axons/inputs/TimePicker.vue';
 import { validateEmail } from '@constants/validations';
 import primitiveMixin from '../../../../../mixins/primitive';
@@ -78,7 +84,13 @@ import xDateEdit from './DateEdit.vue';
 export default {
   name: 'XStringEdit',
   components: {
-    xSelect, xDateEdit, xTagSelect, XInstancesSelect, xTimePicker, xClientConnectionSelect
+    xSelect,
+    xDateEdit,
+    xTagSelect,
+    XInstancesSelect,
+    xTimePicker,
+    xClientConnectionSelect,
+    xRolesSelect,
   },
   mixins: [primitiveMixin],
   props: {
@@ -135,9 +147,11 @@ export default {
         case 'all-tags':
           return 'xTagSelect';
         case 'all-instances':
-          return 'xInstancesSelect';
+          return 'XInstancesSelect';
         case 'all-connection-labels':
           return 'xClientConnectionSelect';
+        case 'all-roles':
+          return 'xRolesSelect';
         default:
           return null;
       }

@@ -60,6 +60,7 @@ module.exports = (env) => ({
       '@api': path.resolve(__dirname, 'src/api'),
       '@store': path.resolve(__dirname, 'src/store'),
       '@constants': path.resolve(__dirname, 'src/constants'),
+      '@plugins': path.resolve(__dirname, 'src/plugins'),
       vue$: 'vue/dist/vue.esm.js',
       Logos: path.resolve(__dirname, '../../../axonius-libs/src/libs/axonius-py/axonius/assets/logos/'),
     },

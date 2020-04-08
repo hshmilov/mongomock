@@ -16,13 +16,18 @@ class TestPrepareUsers(TestBase):
         self.settings_page.switch_to_page()
         self.settings_page.wait_for_spinner_to_end()
         self.settings_page.click_manage_users_settings()
-        self.settings_page.create_new_user(ui_consts.RESTRICTED_USERNAME,
-                                           ui_consts.NEW_PASSWORD,
-                                           ui_consts.FIRST_NAME,
-                                           ui_consts.LAST_NAME)
+        new_role = self.settings_page.add_user_with_duplicated_role(ui_consts.RESTRICTED_USERNAME,
+                                                                    ui_consts.NEW_PASSWORD,
+                                                                    ui_consts.FIRST_NAME,
+                                                                    ui_consts.LAST_NAME,
+                                                                    self.settings_page.RESTRICTED_ROLE)
 
         self.settings_page.wait_for_user_created_toaster()
 
-        self.settings_page.select_permissions('Adapters', self.settings_page.READ_ONLY_PERMISSION)
-        self.settings_page.click_save_manage_users_settings()
-        self.settings_page.wait_for_user_permissions_saved_toaster()
+        new_permissions = {
+            'adapters': [
+                'View adapters',
+            ]
+        }
+
+        self.settings_page.update_role(new_role, new_permissions, True)

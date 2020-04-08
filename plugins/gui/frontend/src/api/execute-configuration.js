@@ -1,8 +1,8 @@
-import axios_client from '@api/axios';
+import axiosClient from '@api/axios';
 import createRequest from './create-request';
 
 export const executeFile = async (fileServerId) => {
-  const uri = `/upload_file/execute/${fileServerId}`;
+  const uri = `/settings/configurations/execute/${fileServerId}`;
   const request = createRequest(uri);
 
   const requestOptions = {
@@ -23,9 +23,9 @@ export const processFileUploadInChunks = (
   const totalChunks = Math.ceil(fileSize / chunkSize);
   let currentChunk = 0;
   let shouldAbort = false;
-  axios_client({
+  axiosClient({
     method: 'post',
-    url: '/upload_file',
+    url: '/settings/configuration/upload_file',
     data: file.name,
     headers: {
       'Upload-Length': file.size,
@@ -44,7 +44,7 @@ export const processFileUploadInChunks = (
         const offset = currentChunk * chunkSize;
         const chunk = file.slice(offset, offset + chunkSize, 'application/offset+octet-stream');
         // eslint-disable-next-line no-await-in-loop
-        const result = await axios_client({
+        const result = await axiosClient({
           method: 'patch',
           url: `/upload_file?patch=${fileId}`,
           data: chunk,

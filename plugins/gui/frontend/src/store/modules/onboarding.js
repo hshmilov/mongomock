@@ -76,7 +76,7 @@ export const onboarding = {
 		async [GET_GETTING_STARTED_DATA]({ commit, dispatch }) {
 			try {
 				await dispatch(REQUEST_API, {
-					rule: `getting_started`,
+					rule: 'settings/getting_started',
 					type: SET_GETTING_STARTED_DATA
 				})
 			} catch (error) {
@@ -106,7 +106,7 @@ export const onboarding = {
 				})
 
 				await dispatch(REQUEST_API, {
-					rule: `getting_started/completion`,
+					rule: 'settings/getting_started/completion',
 					method: 'POST',
 					data: { milestoneName: payload.milestoneName }
 				})
@@ -123,7 +123,7 @@ export const onboarding = {
 
 			try {
 				await dispatch(REQUEST_API, {
-					rule: 'getting_started/settings',
+					rule: 'settings/getting_started',
 					data: { settings: payload },
 					method: 'POST'
 				})

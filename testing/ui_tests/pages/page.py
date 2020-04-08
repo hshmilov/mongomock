@@ -152,6 +152,7 @@ class Page:
     TABLE_ALL_CHECKBOX_CSS = 'thead tr th:nth-child(1) .x-checkbox'
     TABLE_ROW_CHECKBOX_CSS = 'tbody .x-table-row.clickable:nth-child({child_index}) td:nth-child(1) .x-checkbox'
     TABLE_ROW_TEXT_CELL_CSS = 'tbody .x-table-row.clickable:nth-child({row_index}) td:nth-child({cell_index}) div'
+    TABLE_ROW_TEXT_CSS = 'tbody .x-table-row.clickable:nth-child({row_index})'
 
     FIELD_WITH_LABEL_XPATH = '//div[child::label[text()=\'{label_text}\']]' \
                              '/div[contains(@class, \'md-field\') or contains(@class, \'v-text-field\')]'
@@ -182,7 +183,21 @@ class Page:
 
     # safeguard consts:
     SAFEGUARD_OVERLAY_CSS = '.v-overlay'
+    SAFEGUARD_APPROVE_BUTTON_ID = 'safeguard-save-btn'
     SAFEGUARD_CANCEL_BUTTON_ID = 'safeguard-cancel-btn'
+
+    # panel consts:
+    CSS_SELECTOR_CLOSE_PANEL_ACTION = '.actions .action-close'
+
+    # table consts:
+    TABLE_DATA_XPATH = '//tr[@id]/td[position()={data_position}]'
+    TABLE_DATA_SLICER_XPATH = f'{TABLE_DATA_XPATH}//div[@class=\'x-data\']/div'
+    TABLE_DATA_INLINE_XPATH = f'{TABLE_DATA_XPATH}/div'
+    TABLE_HEADER_CELLS_CSS = 'th'
+    TABLE_DATA_ROWS_XPATH = '//tr[@id]'
+    TABLE_FIELD_ROWS_XPATH = '//div[contains(@class, \'x-tabs\')]//div[contains(@class, \'x-tab active\')]' \
+                             '//div[@class=\'x-table\']//tr[@class=\'x-table-row\']'
+    TABLE_HEADER_XPATH = '//div[@class=\'x-table\']/table/thead/tr'
 
     def __init__(self, driver, base_url, test_base, local_browser: bool):
         self.driver = driver
@@ -367,10 +382,21 @@ class Page:
     def get_enabled_button(self, text):
         return self.driver.find_element_by_xpath(self.ENABLED_BUTTON_XPATH.format(button_text=text))
 
+    def is_button_absent(self, text):
+        buttons = self.driver.find_elements_by_xpath(self.ENABLED_BUTTON_XPATH.format(button_text=text))
+        if len(buttons) == 0:
+            return True
+        for button in buttons:
+            if button.is_displayed():
+                return False
+        return True
+
     @retry(stop_max_attempt_number=5, wait_fixed=500)
-    def scroll_into_view(self, element, window=None):
+    def scroll_into_view(self, element, window=None, check_if_clickable=False):
         try:
             self.scroll_into_view_no_retry(element, window)
+            if check_if_clickable and (not element.is_enabled() or not element.is_displayed()):
+                self.scroll_into_view(element, window, check_if_clickable)
         except StaleElementReferenceException:
             logger.exception(f'Failed to scroll down into element {element}')
             raise
@@ -433,11 +459,12 @@ class Page:
                                 value,
                                 element=None,
                                 retries=RETRY_WAIT_FOR_ELEMENT,
-                                interval=SLEEP_INTERVAL):
+                                interval=SLEEP_INTERVAL,
+                                is_displayed=False):
         for _ in range(retries):
             try:
                 absent_element = self.find_element(by, value, element)
-                if not absent_element:
+                if not absent_element or (is_displayed and not absent_element.is_displayed()):
                     return
                 if 'none' in absent_element.get_attribute('style'):
                     return
@@ -498,6 +525,9 @@ class Page:
             return element.find_element_by_xpath(f'{xpath}//*[contains(text(), {text})]')
         except ElementNotVisibleException:
             logger.info(f'Failed to find element with text {text}')
+
+    def find_elements_by_text(self, text, element=None):
+        return self.find_elements_by_xpath(f'//*[contains(text(), \'{text}\')]', element)
 
     def find_element_parent_by_text(self, text, element=None):
         # Selenium using XPATH 1.0 which doesn't support escaping of string literals
@@ -593,7 +623,7 @@ class Page:
         if (make_yes and not is_selected) or (not make_yes and is_selected):
             try:
                 if scroll_to_toggle:
-                    self.scroll_into_view(toggle, window)
+                    self.scroll_into_view(toggle, window, check_if_clickable=True)
                 toggle.click()
                 return True
             except WebDriverException:
@@ -682,6 +712,17 @@ class Page:
                 option.click()
                 return option
         raise AssertionError(f'Could not find option {text}')
+
+    def assert_select_option_is_empty(self,
+                                      index,
+                                      dropdown_css_selector,
+                                      selected_options_css_selector,
+                                      parent=None):
+        if not parent:
+            parent = self.driver
+        parent.find_elements_by_css_selector(dropdown_css_selector)[index].click()
+        options = self.driver.find_elements_by_css_selector(selected_options_css_selector)
+        assert len(options) == 0
 
     @staticmethod
     def key_down_enter(element):
@@ -796,6 +837,9 @@ class Page:
     def get_save_button(self, context=None):
         return self.get_button('Save', context=context)
 
+    def get_cancel_button(self, context=None):
+        return self.get_button('Cancel', context=context)
+
     @staticmethod
     def is_element_has_disabled_class(element):
         return 'disabled' in element.get_attribute('class')
@@ -845,14 +889,18 @@ class Page:
     def find_existing_date(self):
         return self.wait_for_element_present_by_css('.md-datepicker .md-clear')
 
-    def find_checkbox_by_label(self, text):
-        return self.driver.find_element_by_xpath(self.CHECKBOX_XPATH_TEMPLATE.format(label_text=text))
+    def find_checkbox_by_label(self, text, element=None):
+        if not element:
+            element = self.driver
+        return element.find_element_by_xpath(self.CHECKBOX_XPATH_TEMPLATE.format(label_text=text))
 
     def find_checkbox_by_label_with_single_quote(self, text):
         return self.driver.find_element_by_xpath(self.CHECKBOX_XPATH_TEMPLATE_WITH_SINGLE_QUOTE.format(label_text=text))
 
-    def find_checkbox_with_label_by_label(self, text):
-        return self.driver.find_element_by_xpath(self.CHECKBOX_WITH_LABEL_XPATH.format(label_text=text))
+    def find_checkbox_with_label_by_label(self, text, element=None):
+        if not element:
+            element = self.driver
+        return element.find_element_by_xpath(self.CHECKBOX_WITH_LABEL_XPATH.format(label_text=text))
 
     def find_field_by_label(self, text):
         return self.driver.find_element_by_xpath(self.FIELD_WITH_LABEL_XPATH.format(label_text=text))
@@ -863,18 +911,23 @@ class Page:
     def find_active_page_size(self):
         return self.driver.find_element_by_xpath(self.TABLE_PAGE_SIZE_ACTIVE_XPATH).text
 
-    def click_row_checkbox(self, index=1, window='.x-table'):
+    def click_row_checkbox(self, index=1, window='.x-table', make_yes=False):
         try:
-            self.get_row_checkbox(index).click()
+            if not (make_yes and self.is_toggle_selected(self.get_row_checkbox(index))):
+                self.get_row_checkbox(index).click()
         except Exception:
             toggle = self.get_row_checkbox(index)
             self.click_toggle_button(
                 toggle,
-                make_yes=not self.is_toggle_selected(toggle),
+                make_yes=not self.is_toggle_selected(toggle) or make_yes,
                 window=window)
 
     def get_row_checkbox(self, index=1):
         return self.driver.find_element_by_css_selector(self.TABLE_ROW_CHECKBOX_CSS.format(child_index=index))
+
+    def is_row_checkbox_absent(self, index=1):
+        return len(self.driver.find_elements_by_css_selector(
+            self.TABLE_ROW_CHECKBOX_CSS.format(child_index=index))) == 0
 
     def click_table_checkbox(self):
         self.driver.find_element_by_css_selector(self.TABLE_ALL_CHECKBOX_CSS).click()
@@ -882,6 +935,16 @@ class Page:
     def get_row_cell_text(self, row_index=1, cell_index=1):
         return self.driver.find_element_by_css_selector(
             self.TABLE_ROW_TEXT_CELL_CSS.format(row_index=row_index, cell_index=cell_index)).text
+
+    def get_row(self, row_index=1):
+        return self.driver.find_element_by_css_selector(
+            self.TABLE_ROW_TEXT_CSS.format(row_index=row_index)
+        )
+
+    def get_row_text(self, row_index=1):
+        return self.driver.find_element_by_css_selector(
+            self.TABLE_ROW_TEXT_CSS.format(row_index=row_index)
+        ).text
 
     def fill_enter_table_search(self, text):
         self.fill_text_field_by_css_selector(self.SEARCH_INPUT_CSS, text)
@@ -957,6 +1020,7 @@ class Page:
         return self.wait_for_element_present_by_css('.completion_info')
 
     def safeguard_click_confirm(self, button_text):
+        self.wait_for_element_present(By.ID, self.SAFEGUARD_APPROVE_BUTTON_ID)
         self.click_button(button_text)
         self.wait_for_element_absent_by_css(self.SAFEGUARD_OVERLAY_CSS)
 
@@ -1037,9 +1101,89 @@ class Page:
         scroll_top = element.get_attribute('scrollTop')
         return scroll_left, scroll_top
 
-    def verify_element_absent_by_css_selector(self, css_selector):
+    def assert_element_absent_by_css_selector(self, css_selector):
         with pytest.raises(NoSuchElementException):
             self.driver.find_element_by_css_selector(css_selector)
 
     def wait_for_side_panel(self):
         return self.wait_for_element_present_by_css('.x-side-panel')
+
+    @staticmethod
+    def _get_column_title(head):
+        return head.text.strip().split('\n')[0]
+
+    def count_sort_column(self, col_name, parent=None):
+        # Return the position of given col_name in list of column headers, 1-based
+        if not parent:
+            parent = self.driver
+        return [self._get_column_title(element) for element
+                in parent.find_elements_by_css_selector(self.TABLE_HEADER_CELLS_CSS)].index(col_name) + 1
+
+    def count_specific_column(self, col_name, parent=None):
+        # Return the position of given col_name in list of column headers, 1-based
+        if not parent:
+            parent = self.driver
+        elements = parent.find_elements_by_css_selector(self.TABLE_HEADER_CELLS_CSS)
+        for index, element in enumerate(elements, start=1):
+            try:
+                element.find_element_by_tag_name('img')
+            except NoSuchElementException:
+                if self._get_column_title(element) == col_name:
+                    return index
+        # This column title was not found
+        raise ValueError
+
+    def get_column_data(self, data_section_xpath, col_name, parent=None, generic_col=True):
+        if not parent:
+            parent = self.driver
+        col_position = self.count_sort_column(col_name, parent)\
+            if generic_col else self.count_specific_column(col_name, parent)
+        return [el.text.strip()
+                for el in parent.find_elements_by_xpath(data_section_xpath.format(data_position=col_position))
+                if el.text.strip()]
+
+    def get_column_data_inline(self, col_name, parent=None):
+        return self.get_column_data(self.TABLE_DATA_INLINE_XPATH, col_name, parent)
+
+    def get_specific_row_text_by_field_value(self, field_name, field_value):
+        values = self.get_column_data_inline(field_name)
+        row_num = values.index(field_value)
+        return self.get_row_text(row_num + 1)
+
+    def get_specific_row_by_field_value(self, field_name, field_value):
+        values = self.get_column_data_inline(field_name)
+        row_num = values.index(field_value)
+        return self.get_row(row_num + 1)
+
+    def click_specific_row_checkbox(self, field_name, field_value):
+        values = self.get_column_data_inline(field_name)
+        row_num = values.index(field_value)
+        self.click_row_checkbox(row_num + 1, make_yes=True)
+
+    def click_specific_row_by_field_value(self, field_name, field_value):
+        values = self.get_column_data_inline(field_name)
+        row_num = values.index(field_value)
+        self.get_row(row_num + 1).click()
+
+    def get_all_data(self):
+        return [data_row.text for data_row in self.find_elements_by_xpath(self.TABLE_DATA_ROWS_XPATH)]
+
+    @staticmethod
+    def get_row_cells(row):
+        return [cell.text for cell in row.find_elements_by_css_selector('td[class^="table-td"')]
+
+    def get_all_data_cells(self):
+        return [self.get_row_cells(data_row) for data_row
+                in self.find_elements_by_xpath(self.TABLE_DATA_ROWS_XPATH)]
+
+    def get_field_data(self):
+        return [data_row.text for data_row in self.find_elements_by_xpath(self.TABLE_FIELD_ROWS_XPATH)]
+
+    def get_field_table_data(self):
+        return [[data_cell.text for data_cell in data_row.find_elements_by_tag_name('td')]
+                for data_row in self.find_elements_by_xpath(self.TABLE_FIELD_ROWS_XPATH)]
+
+    def get_columns_header_text(self):
+        headers = self.driver.find_element_by_xpath(self.TABLE_HEADER_XPATH)
+        header_columns = headers.find_elements_by_css_selector(self.TABLE_HEADER_CELLS_CSS)
+        return [self._get_column_title(head) for head in header_columns if self._get_column_title(head)]

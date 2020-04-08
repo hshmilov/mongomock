@@ -7,55 +7,23 @@ from flask import (jsonify)
 from axonius.consts.report_consts import (ACTIONS_FAILURE_FIELD, ACTIONS_POST_FIELD,
                                           ACTIONS_SUCCESS_FIELD,
                                           NOT_RAN_STATE)
-from axonius.mixins.triggerable import (StoredJobStateCompletion)
-from axonius.plugin_base import return_error
 from axonius.consts.report_consts import (ACTIONS_MAIN_FIELD)
-from axonius.utils.gui_helpers import (Permission, PermissionLevel,
-                                       PermissionType, paginated,
-                                       filtered, sorted_endpoint)
+from axonius.utils.gui_helpers import (paginated, filtered,
+                                       sorted_endpoint)
+from axonius.mixins.triggerable import (StoredJobStateCompletion)
 from axonius.utils.mongo_chunked import get_chunks_length
 from gui.logic.db_helpers import beautify_db_entry
 from gui.logic.entity_data import (get_task_full_name)
 from gui.logic.login_helper import clear_passwords_fields
-from gui.logic.routing_helper import gui_add_rule_logged_in
+from gui.logic.routing_helper import gui_section_add_rules, gui_route_logged_in
+
 # pylint: disable=no-member
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
+@gui_section_add_rules('tasks')
 class Tasks:
-    @paginated()
-    @filtered()
-    @sorted_endpoint()
-    @gui_add_rule_logged_in('enforcements/<enforcement_id>/tasks', methods=['GET'],
-                            required_permissions={Permission(PermissionType.Enforcements, PermissionLevel.ReadOnly)})
-    def tasks_by_enforcement_id(self, enforcement_id, limit, skip, mongo_filter, mongo_sort):
-        enforcement = self.enforcements_collection.find_one({
-            '_id': ObjectId(enforcement_id)
-        })
-        if not enforcement:
-            return return_error(f'Enforcement with id {enforcement_id} was not found', 400)
-
-        if mongo_sort.get('status'):
-            mongo_sort['job_completed_state'] = -1 * mongo_sort['status']
-            del mongo_sort['status']
-        sort = [('finished_at', pymongo.DESCENDING)] if not mongo_sort else list(mongo_sort.items())
-        return jsonify([self.beautify_task_entry(x) for x in self.enforcement_tasks_runs_collection.find(
-            self._tasks_query(mongo_filter, enforcement['name'])).sort(sort).skip(skip).limit(limit)])
-
-    @filtered()
-    @gui_add_rule_logged_in('enforcements/<enforcement_id>/tasks/count', methods=['GET'],
-                            required_permissions={Permission(PermissionType.Enforcements, PermissionLevel.ReadOnly)})
-    def tasks_by_enforcement_id_count(self, enforcement_id, mongo_filter):
-        enforcement = self.enforcements_collection.find_one({
-            '_id': ObjectId(enforcement_id)
-        })
-        if not enforcement:
-            return return_error(f'Enforcement with id {enforcement_id} was not found', 400)
-
-        return jsonify(self.enforcement_tasks_runs_collection.count_documents(
-            self._tasks_query(mongo_filter, enforcement['name'])
-        ))
 
     @staticmethod
     def _tasks_query(mongo_filter, enforcement_name=None):
@@ -88,8 +56,7 @@ class Tasks:
     @paginated()
     @filtered()
     @sorted_endpoint()
-    @gui_add_rule_logged_in('tasks', required_permissions={Permission(PermissionType.Enforcements,
-                                                                      PermissionLevel.ReadOnly)})
+    @gui_route_logged_in()
     def enforcement_tasks(self, limit, skip, mongo_filter, mongo_sort):
 
         if mongo_sort.get('status'):
@@ -100,16 +67,14 @@ class Tasks:
             self._tasks_query(mongo_filter)).sort(sort).skip(skip).limit(limit)])
 
     @filtered()
-    @gui_add_rule_logged_in('tasks/count', required_permissions={Permission(PermissionType.Enforcements,
-                                                                            PermissionLevel.ReadOnly)})
+    @gui_route_logged_in('count')
     def enforcement_tasks_count(self, mongo_filter):
         """
         Counts how many 'run' tasks are documented in the trigger history of reports plugin
         """
         return jsonify(self.enforcement_tasks_runs_collection.count_documents(self._tasks_query(mongo_filter)))
 
-    @gui_add_rule_logged_in('tasks/<task_id>', required_permissions={Permission(PermissionType.Enforcements,
-                                                                                PermissionLevel.ReadOnly)})
+    @gui_route_logged_in('<task_id>')
     def enforcement_task_by_id(self, task_id):
         """
         Fetch an entire 'run' record with all its results, according to given task_id

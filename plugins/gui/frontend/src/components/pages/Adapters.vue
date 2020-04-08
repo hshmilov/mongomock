@@ -78,7 +78,7 @@
     import xTitle from '../axons/layout/Title.vue'
     import xSearchInput from '../neurons/inputs/SearchInput.vue'
 
-    import {mapState, mapMutations, mapActions} from 'vuex'
+    import {mapState, mapActions} from 'vuex'
     import {FETCH_ADAPTERS} from '../../store/modules/adapters'
     import { CONNECT_ADAPTERS } from '../../constants/getting-started'
     import { SET_GETTING_STARTED_MILESTONE_COMPLETION } from '../../store/modules/onboarding';

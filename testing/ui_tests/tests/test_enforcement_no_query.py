@@ -124,7 +124,7 @@ class TestEnforcementNoQuery(TestBase):
         time.sleep(1)
         self.notification_page.verify_amount_of_notifications(0)
         assert '0' in self.enforcements_page.get_column_data_inline(FIELD_TIMES_TRIGGERED)
-        self.enforcements_page.edit_enforcement(ENFORCEMENT_CHANGE_NAME)
+        self.enforcements_page.click_enforcement(ENFORCEMENT_CHANGE_NAME)
         self.enforcements_page.click_run_button()
         # Save and Run does not exit the Enforcement Configuration Page
         self.enforcements_page.switch_to_page()
@@ -165,7 +165,7 @@ class TestEnforcementNoQuery(TestBase):
                                                                                  FAILURE_ISOLATE_NAME),
                        tolerated_exceptions_list=[NoSuchElementException], total_timeout=60 * 5,
                        check_return_value=False)
-            self.enforcements_page.edit_enforcement(ENFORCEMENT_NAME)
+            self.enforcements_page.click_enforcement(ENFORCEMENT_NAME)
             self.enforcements_page.add_push_notification(POST_PUSH_NAME, self.enforcements_page.POST_ACTIONS_TEXT)
             self.enforcements_page.click_save_button()
             self.enforcements_page.wait_for_table_to_load()

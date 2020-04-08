@@ -6,19 +6,18 @@ from flask import (jsonify)
 
 from axonius.consts.metric_consts import GettingStartedMetric
 from axonius.logging.metric_helper import log_metric
-from axonius.utils.gui_helpers import (Permission, PermissionLevel,
-                                       PermissionType, get_connected_user_id)
-from gui.logic.routing_helper import gui_add_rule_logged_in
+from axonius.utils.gui_helpers import get_connected_user_id
+from gui.logic.routing_helper import gui_section_add_rules, gui_route_logged_in
+
 # pylint: disable=no-member
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
+@gui_section_add_rules('getting_started')
 class GettingStarted:
 
-    @gui_add_rule_logged_in('getting_started', methods=['GET'],
-                            required_permissions={Permission(PermissionType.Settings,
-                                                             PermissionLevel.ReadWrite)})
+    @gui_route_logged_in(methods=['GET'])
     def get_getting_started_data(self):
         """
         Fetch the Getting Started checklist state from db
@@ -26,7 +25,7 @@ class GettingStarted:
         data = self._get_collection('getting_started').find_one({})
         return jsonify(data)
 
-    @gui_add_rule_logged_in('getting_started/completion', methods=['POST'])
+    @gui_route_logged_in('completion', methods=['POST'])
     def getting_started_set_milestone_completion(self):
         """
         Check an item in the Getting Started checklist as done.
@@ -54,9 +53,7 @@ class GettingStarted:
                    progress=progress_formatted_str)
         return ''
 
-    @gui_add_rule_logged_in('getting_started/settings', methods=['POST'],
-                            required_permissions={Permission(PermissionType.Settings,
-                                                             PermissionLevel.ReadWrite)})
+    @gui_route_logged_in(methods=['POST'])
     def getting_started_update_settings(self):
         """
         Update the value of the checklist autoOpen setting.

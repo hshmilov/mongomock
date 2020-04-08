@@ -55,7 +55,6 @@
     import xCycle from '../../axons/charts/Cycle.vue'
 
     import {mapState, mapGetters, mapMutations, mapActions} from 'vuex'
-    import {IS_ENTITY_RESTRICTED} from '../../../store/modules/auth'
     import {UPDATE_DATA_VIEW} from '../../../store/mutations'
     import {formatDate} from '../../../constants/utils'
 
@@ -81,9 +80,6 @@
         lifecycle (state) {
           return state.dashboard.lifecycle.data || {}
         }
-      }),
-      ...mapGetters({
-        isEntityRestricted: IS_ENTITY_RESTRICTED
       }),
       nextRunTime () {
         let leftToRun = this.lifecycle.nextRunTime;
@@ -117,7 +113,7 @@
         updateView: UPDATE_DATA_VIEW
       }),
       runFilter (filter, module) {
-        if (this.isEntityRestricted(module)) return
+        if (!this.$canViewEntity(module)) return
         this.updateView({
           module,
           view: {

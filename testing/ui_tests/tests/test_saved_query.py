@@ -1,5 +1,8 @@
 from datetime import datetime
+import copy
+from uuid import uuid4
 import pytest
+from selenium.common.exceptions import TimeoutException as SeleniumTimeoutException
 from axonius.utils.wait import wait_until
 from axonius.utils.parsing import normalize_timezone_date
 from axonius.consts.gui_consts import PREDEFINED_PLACEHOLDER
@@ -152,9 +155,15 @@ class TestSavedQuery(TestBase):
         wait_until(lambda: self.devices_page.find_query_title_text() != self.NEW_QUERY_TITLE)
         self.devices_page.reset_query()
         self.settings_page.switch_to_page()
+        self.settings_page.click_manage_roles_settings()
+        new_viewer_role = f'{uuid4().hex[:15]} viewer'
+        new_viewer_permissions = copy.deepcopy(self.settings_page.VIEWER_PERMISSIONS)
+        new_viewer_permissions['devices_assets'].append('Run saved queries')
+
+        self.settings_page.create_new_role(new_viewer_role, new_viewer_permissions)
         self.settings_page.click_manage_users_settings()
         self.settings_page.create_new_user(READ_ONLY_USERNAME, NEW_PASSWORD,
-                                           role_name=self.settings_page.READ_ONLY_ROLE)
+                                           role_name=new_viewer_role)
         self.login_page.logout()
         self.login_page.wait_for_login_page_to_load()
         self.login_page.login(username=READ_ONLY_USERNAME, password=NEW_PASSWORD)
@@ -285,9 +294,18 @@ class TestSavedQuery(TestBase):
         assert username_cell.get_attribute('title') == expected_title
 
     def _test_user_query(self, date_str):
-        self.settings_page.add_user_with_permission(UPDATE_USERNAME, UPDATE_PASSWORD,
-                                                    UPDATE_FIRST_NAME, UPDATE_LAST_NAME,
-                                                    'Devices', self.settings_page.READ_WRITE_PERMISSION)
+        self.settings_page.create_new_user_with_new_permission(UPDATE_USERNAME, UPDATE_PASSWORD,
+                                                               UPDATE_FIRST_NAME, UPDATE_LAST_NAME,
+                                                               {
+                                                                   'devices_assets': [
+                                                                       'View devices',
+                                                                       'Edit devices',
+                                                                       'Run saved queries',
+                                                                       'Edit saved queries',
+                                                                       'Delete saved query',
+                                                                       'Create saved query',
+                                                                   ]
+                                                               })
         self.login_page.switch_user(UPDATE_USERNAME, UPDATE_PASSWORD)
         self._check_saved_query(self.CUSTOM_QUERY_SAVE_NAME_1, date_str, self.username, self.ADMIN_NAME)
         self.devices_page.switch_to_page()
@@ -314,7 +332,7 @@ class TestSavedQuery(TestBase):
         self.settings_page.switch_to_page()
         self.settings_page.click_manage_users_settings()
         self.settings_page.click_edit_user(UPDATE_USERNAME)
-        self.settings_page.fill_text_field_by_element_id('first_name', '')
+        self.settings_page.fill_first_name('')
         self.settings_page.click_update_user()
         self._check_saved_query(self.CUSTOM_QUERY_SAVE_NAME_2, today_str, UPDATE_USERNAME, '', UPDATE_LAST_NAME)
         self.devices_queries_page.find_query_row_by_name(self.CUSTOM_QUERY_SAVE_NAME_2).click()
@@ -349,7 +367,7 @@ class TestSavedQuery(TestBase):
         self.devices_queries_page.switch_to_page()
         self.devices_queries_page.wait_for_table_to_be_responsive()
         self.devices_queries_page.click_query_row_by_name(saved_query_name)
-        with pytest.raises(TimeoutException):
+        with pytest.raises(SeleniumTimeoutException):
             self.devices_queries_page.get_edit_panel_action()
 
     def test_predefined_queries_has_no_last_updated(self):

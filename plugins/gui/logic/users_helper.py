@@ -1,4 +1,5 @@
-from axonius.consts.gui_consts import UNCHANGED_MAGIC_FOR_GUI
+from axonius.consts.gui_consts import UNCHANGED_MAGIC_FOR_GUI, PREDEFINED_FIELD, IS_AXONIUS_ROLE
+from axonius.utils.permissions_helper import serialize_db_permissions
 from gui.logic.db_helpers import beautify_db_entry
 
 
@@ -15,12 +16,21 @@ def beautify_user_entry(user):
                                                    'first_name',
                                                    'last_name',
                                                    'pic_name',
-                                                   'permissions',
-                                                   'role_name',
                                                    'admin',
                                                    'source',
-                                                   'additional_userinfo',
                                                    'timeout',
-                                                   'environment_name']}
+                                                   'role_id',
+                                                   'permissions',
+                                                   'role_name',
+                                                   'environment_name',
+                                                   'email',
+                                                   'last_login',
+                                                   'last_updated',
+                                                   PREDEFINED_FIELD,
+                                                   IS_AXONIUS_ROLE,
+                                                   ]}
+    user['role_id'] = str(user.get('role_id'))
+    if user.get('permissions'):
+        user['permissions'] = serialize_db_permissions(user.get('permissions'))
     user['password'] = UNCHANGED_MAGIC_FOR_GUI
     return user

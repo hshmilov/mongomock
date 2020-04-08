@@ -3,7 +3,7 @@
     <div class="tag-edit">
       <x-button
         link
-        :disabled="readOnly"
+        :disabled="userCannotEditDevices"
         @click="activateTag"
       >Edit Tags</x-button>
     </div>
@@ -15,7 +15,7 @@
         <x-button
           :key="tag"
           link
-          :disabled="readOnly"
+          :disabled="userCannotEditDevices"
           @click="removeTag(tag)"
         >Remove</x-button>
       </template>
@@ -32,6 +32,7 @@
 <script>
   import xButton from '../../../axons/inputs/Button.vue'
   import xTagModal from '../../../neurons/popover/TagModal.vue'
+  import { getEntityPermissionCategory } from '@constants/entities';
 
   export default {
     name: 'XEntityTags',
@@ -51,10 +52,6 @@
         type: Array,
         required: true
       },
-      readOnly: {
-        type: Boolean,
-        default: false
-      }
     },
     computed: {
       entitySelection () {
@@ -62,7 +59,11 @@
           ids: [this.entityId],
           include: true
         }
-      }
+      },
+      userCannotEditDevices() {
+        return this.$cannot(getEntityPermissionCategory(this.module),
+          this.$permissionConsts.actions.Update);
+      },
     },
     methods: {
       removeTag (tag) {

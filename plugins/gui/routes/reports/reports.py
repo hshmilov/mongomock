@@ -1,5 +1,5 @@
-import io
 import calendar
+import io
 import logging
 import re
 import threading
@@ -30,24 +30,24 @@ from axonius.consts.report_consts import (ACTIONS_FAILURE_FIELD, ACTIONS_MAIN_FI
 from axonius.plugin_base import EntityType, return_error
 from axonius.utils.axonius_query_language import parse_filter
 from axonius.utils.datetime import next_weekday
-from axonius.utils.gui_helpers import (Permission, PermissionLevel,
-                                       PermissionType, ReadOnlyJustForGet,
-                                       get_connected_user_id,
+from axonius.utils.gui_helpers import (get_connected_user_id,
                                        find_filter_by_name, paginated,
                                        filtered, sorted_endpoint)
 from axonius.utils.threading import run_and_forget
 from gui.logic.db_helpers import beautify_db_entry
 from gui.logic.filter_utils import filter_archived
-from gui.logic.routing_helper import gui_add_rule_logged_in
+from gui.logic.routing_helper import gui_category_add_rules, gui_route_logged_in
 from gui.routes.reports.report_generator import ReportGenerator
+
 # pylint: disable=import-error,no-member,no-self-use,too-many-branches,too-many-statements,invalid-name
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
+@gui_category_add_rules('reports')
 class Reports:
 
-    def get_reports(self, limit, mongo_filter, mongo_sort, skip):
+    def _get_reports(self, limit, mongo_filter, mongo_sort, skip):
         sort = []
         for field, direction in mongo_sort.items():
             if field in [ACTIONS_MAIN_FIELD, ACTIONS_SUCCESS_FIELD, ACTIONS_FAILURE_FIELD, ACTIONS_POST_FIELD]:
@@ -83,80 +83,82 @@ class Reports:
     @paginated()
     @filtered()
     @sorted_endpoint()
-    @gui_add_rule_logged_in('reports', methods=['GET', 'PUT', 'DELETE'],
-                            required_permissions={Permission(PermissionType.Reports,
-                                                             ReadOnlyJustForGet)})
-    def reports(self, limit, skip, mongo_filter, mongo_sort):
+    @gui_route_logged_in(methods=['GET'])
+    def get_reports(self, limit, skip, mongo_filter, mongo_sort):
         """
         GET results in list of all currently configured enforcements, with their query id they were created with
+
+        :return:
+        """
+        return jsonify(self._get_reports(limit, mongo_filter, mongo_sort, skip))
+
+    @gui_route_logged_in(methods=['PUT'])
+    def add_reports(self):
+        """
         PUT Send report_service a new enforcement to be configured
 
         :return:
         """
-        if request.method == 'GET':
-            return jsonify(self.get_reports(limit, mongo_filter, mongo_sort, skip))
 
-        if request.method == 'PUT':
-            report_to_add = request.get_json()
-            reports_collection = self.reports_config_collection
-            report_name = report_to_add['name'] = report_to_add['name'].strip()
+        report_to_add = request.get_json()
+        reports_collection = self.reports_config_collection
+        report_name = report_to_add['name'] = report_to_add['name'].strip()
 
-            if re.match(r'^[\w@.\s-]*$', report_name) is None:
-                return f'Report name can only contain letters, numbers and the characters: @,_.-', 400
+        if re.match(r'^[\w@.\s-]*$', report_name) is None:
+            return f'Report name can only contain letters, numbers and the characters: @,_.-', 400
 
-            if len(report_name) > 50:
-                return 'Report name cannot exceed 50 characters.', 400
+        if len(report_name) > 50:
+            return 'Report name cannot exceed 50 characters.', 400
 
-            report = reports_collection.find_one({
-                'name': report_name
-            })
-            if report:
-                return 'Report name already taken by another report', 400
+        report = reports_collection.find_one({
+            'name': report_name
+        })
+        if report:
+            return 'Report name already taken by another report', 400
 
-            if not self._is_hidden_user():
-                report_to_add['user_id'] = get_connected_user_id()
-                report_to_add[LAST_UPDATED_FIELD] = datetime.now()
-                report_to_add[UPDATED_BY_FIELD] = get_connected_user_id()
-            upsert_result = self._upsert_report_config(report_to_add['name'], report_to_add, False)
-            report_to_add['uuid'] = str(upsert_result)
-            self._generate_and_schedule_report(report_to_add)
-            return jsonify(report_to_add), 201
+        if not self.is_axonius_user():
+            report_to_add['user_id'] = get_connected_user_id()
+            report_to_add[LAST_UPDATED_FIELD] = datetime.now()
+            report_to_add[UPDATED_BY_FIELD] = get_connected_user_id()
+        upsert_result = self._upsert_report_config(report_to_add['name'], report_to_add, False)
+        report_to_add['uuid'] = str(upsert_result)
+        self._generate_and_schedule_report(report_to_add)
+        return jsonify(report_to_add), 201
 
-        # Handle remaining method - DELETE
+    @gui_route_logged_in(methods=['DELETE'])
+    def delete_reports(self):
         return self._delete_report_configs(self.get_request_data_as_object()), 200
 
     @filtered()
-    @gui_add_rule_logged_in('reports/count', required_permissions={Permission(PermissionType.Reports,
-                                                                              PermissionLevel.ReadOnly)})
+    @gui_route_logged_in('count')
     def reports_count(self, mongo_filter):
         reports_collection = self.reports_config_collection
         return jsonify(reports_collection.count_documents(mongo_filter))
 
-    @gui_add_rule_logged_in('reports/<report_id>', methods=['GET', 'POST'],
-                            required_permissions={Permission(PermissionType.Reports,
-                                                             ReadOnlyJustForGet)})
-    def report_by_id(self, report_id):
+    @gui_route_logged_in('<report_id>', methods=['GET'])
+    def get_report_by_id(self, report_id):
         """
         :param report_id:
         :return:
         """
         reports_collection = self.reports_config_collection
-        if request.method == 'GET':
-            report = reports_collection.find_one({
-                '_id': ObjectId(report_id)
-            }, {
-                LAST_UPDATED_FIELD: 0,
-                UPDATED_BY_FIELD: 0,
-                'user_id': 0
-            })
-            if not report:
-                return return_error(f'Report with id {report_id} was not found', 400)
+        report = reports_collection.find_one({
+            '_id': ObjectId(report_id)
+        }, {
+            LAST_UPDATED_FIELD: 0,
+            UPDATED_BY_FIELD: 0,
+            'user_id': 0
+        })
+        if not report:
+            return return_error(f'Report with id {report_id} was not found', 400)
 
-            return jsonify(beautify_db_entry(report))
+        return jsonify(beautify_db_entry(report))
 
-        # Handle remaining request - POST
+    @gui_route_logged_in('<report_id>', methods=['POST'])
+    def update_report_by_id(self, report_id):
+
         report_to_update = request.get_json(silent=True)
-        if not self._is_hidden_user():
+        if not self.is_axonius_user():
             report_to_update[LAST_UPDATED_FIELD] = datetime.now()
             report_to_update[UPDATED_BY_FIELD] = get_connected_user_id()
 
@@ -301,8 +303,7 @@ class Reports:
                 logger.info(f'DELETE: {uuid}')
                 fs.delete(ObjectId(uuid))
 
-    @gui_add_rule_logged_in('export_report/<report_id>', required_permissions={Permission(PermissionType.Dashboard,
-                                                                                          PermissionLevel.ReadOnly)})
+    @gui_route_logged_in('<report_id>/pdf')
     def export_report(self, report_id):
         """
         Gets definition of report from DB for the dynamic content.
@@ -427,9 +428,7 @@ class Reports:
 
         return list(get_adapters_data())
 
-    @gui_add_rule_logged_in('test_exec_report', methods=['POST'],
-                            required_permissions={Permission(PermissionType.Reports,
-                                                             PermissionLevel.ReadWrite)})
+    @gui_route_logged_in('send_email', methods=['POST'])
     def test_exec_report(self):
         try:
             report = self.get_request_data_as_object()

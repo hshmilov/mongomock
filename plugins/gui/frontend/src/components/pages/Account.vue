@@ -31,7 +31,10 @@
         title="API Key"
         :selected="true"
       >
-        <XButton @click="openResetKeyModal">
+        <XButton
+          v-if="$can($permissionConsts.categories.Settings, $permissionConsts.actions.ResetApiKey)"
+          @click="openResetKeyModal"
+        >
           Reset Key
         </XButton>
         <div class="x-grid">

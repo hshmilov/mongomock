@@ -42,23 +42,37 @@
         v-bind="navigationProps('Dashboard', 'dashboard')"
         :exact="true"
       />
-      <x-nav-item v-bind="navigationProps('Devices', 'devices')" />
-      <x-nav-item v-bind="navigationProps('Users', 'users')" />
+      <x-nav-item
+        v-bind="navigationProps('Devices', 'devices', null,
+                                $permissionConsts.categories.DevicesAssets)"
+      />
+      <x-nav-item
+        v-bind="navigationProps('Users', 'users', null,
+                                $permissionConsts.categories.UsersAssets)"
+      />
       <x-nav-item
         v-if="isComplianceVisible"
         v-bind="navigationProps('Cloud Asset Compliance', 'compliance', 'Cloud Compliance')"
       />
-      <x-nav-item v-bind="navigationProps('Enforcements', 'enforcements', 'Enforcement Center')" />
-      <x-nav-item v-bind="navigationProps('Adapters', 'adapters')" />
-      <x-nav-item v-bind="navigationProps('Reports', 'reports')" />
-      <x-nav-item v-bind="navigationProps('Instances', 'instances')" />
+      <x-nav-item
+        v-bind="navigationProps('Enforcements', 'enforcements', 'Enforcement Center')"
+      />
+      <x-nav-item
+        v-bind="navigationProps('Adapters', 'adapters')"
+      />
+      <x-nav-item
+        v-bind="navigationProps('Reports', 'reports')"
+      />
+      <x-nav-item
+        v-bind="navigationProps('Instances', 'instances')"
+      />
     </x-nav>
   </aside>
 </template>
 
 <script>
 import { mapState, mapActions } from 'vuex';
-import _find from 'lodash/find';
+import _invert from  'lodash/invert';
 import xNav from '../../axons/menus/Nav.vue';
 import xNavItem from '../../axons/menus/NavItem.vue';
 import xNestedNav from '../../axons/menus/NestedNav.vue';
@@ -85,11 +99,16 @@ export default {
         return state.interaction.collapseSidebar;
       },
     }),
+    permissionCategoriesMap() {
+      return _invert(this.$permissionConsts.categories);
+    },
     isFeatureFlagsLoaded() {
       return this.featureFlags;
     },
     isComplianceVisible() {
       return this.featureFlags && this.featureFlags.cloud_compliance
+        && this.$can(this.$permissionConsts.categories.Compliance,
+          this.$permissionConsts.actions.View)
         ? this.featureFlags.cloud_compliance.enabled : false;
     },
     logoSize: {
@@ -102,8 +121,13 @@ export default {
     ...mapActions({
       logout: LOGOUT,
     }),
-    navigationProps(name, id, title) {
-      const restricted = this.isRestricted(name);
+    navigationProps(name, id, title, permissionCategory) {
+      let currentPermissionCategory = permissionCategory;
+      if (!currentPermissionCategory && this.permissionCategoriesMap[id]) {
+        currentPermissionCategory = id;
+      }
+      const restricted = this.$cannot(currentPermissionCategory,
+        this.$permissionConsts.actions.View);
       return {
         id,
         name,
@@ -112,17 +136,6 @@ export default {
         disabled: restricted,
         clickHandler: restricted ? this.notifyAccess : undefined,
       };
-    },
-    isRestricted(name) {
-      // If the user doesn't have permissions to the Users and Devices
-      // than he can't access the Cloud Compliance too
-      if (name === 'Cloud Asset Compliance' && this.isUsersOrDevicesRestricted()) {
-        return true;
-      }
-      return this.userPermissions && this.userPermissions[name] === 'Restricted';
-    },
-    isUsersOrDevicesRestricted() {
-      return this.isRestricted('Users') || this.isRestricted('Devices');
     },
     notifyAccess(name) {
       this.$emit('access-violation', name);

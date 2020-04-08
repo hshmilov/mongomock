@@ -1,29 +1,40 @@
 <template>
-  <x-page title="Enforcement Center" class="x-enforcements" :class="{disabled: isReadOnly}">
-    <x-search
-      v-model="searchValue"
-      placeholder="Search Enforcement Sets..."
-      @keyup.enter.native="onSearchConfirm"
-    />
-    <x-table
-      ref="table"
-      v-model="isReadOnly? undefined: selection"
-      module="enforcements"
-      title="Enforcement Sets"
-      :static-fields="fields"
-      :on-click-row="navigateEnforcement"
-    >
-      <template slot="actions">
-        <x-button v-if="hasSelection" link @click="remove">Remove</x-button>
-        <x-button
-          id="enforcement_new"
-          :disabled="isReadOnly"
-          @click="newEnforcement('new')"
-        >Add Enforcement</x-button>
-        <x-button emphasize @click="navigateTasks">View Tasks</x-button>
-      </template>
-    </x-table>
-  </x-page>
+  <XRoleGateway
+    :permission-category="$permissionConsts.categories.Enforcements"
+  >
+    <template slot-scope="{ canAdd, canUpdate, canDelete }">
+      <x-page title="Enforcement Center" class="x-enforcements" :class="{disabled: !canUpdate}">
+        <x-search
+          v-model="searchValue"
+          placeholder="Search Enforcement Sets..."
+          @keyup.enter.native="onSearchConfirm"
+        />
+        <x-table
+          ref="table"
+          v-model="selection"
+          module="enforcements"
+          title="Enforcement Sets"
+          :static-fields="fields"
+          :on-click-row="navigateEnforcement"
+          :multiple-row-selection="canDelete"
+        >
+          <template slot="actions">
+            <x-button v-if="hasSelection && canDelete" link @click="remove">Remove</x-button>
+            <x-button
+              id="enforcement_new"
+              :disabled="!canAdd"
+              @click="newEnforcement('new')"
+            >Add Enforcement</x-button>
+            <x-button
+              emphasize
+              :disabled="userCannotViewEnforcementsTasks"
+              @click="navigateTasks"
+            >View Tasks</x-button>
+          </template>
+        </x-table>
+      </x-page>
+    </template>
+  </XRoleGateway>
 </template>
 
 
@@ -91,7 +102,11 @@
           patternParts.push(field.name + ` == regex("${this.searchValue}", "i")`)
         })
         return patternParts.join(' or ')
-      }
+      },
+      userCannotViewEnforcementsTasks() {
+        return this.$cannot(this.$permissionConsts.categories.Enforcements,
+          this.$permissionConsts.actions.View, this.$permissionConsts.categories.Tasks);
+      },
     },
     created () {
       if (this.query) {

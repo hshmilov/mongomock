@@ -20,9 +20,10 @@
     }],
     "vue/multiline-html-element-content-newline": ["warn", {
       "ignoreWhenEmpty": true,
-      "ignores": ["x-button", "v-btn", "div", "md-icon"],
+      "ignores": ["x-button", "v-btn", "div", "md-icon", "span", "XButton"],
       "allowEmptyLines": false
-    }]
+    }],
+    "no-plusplus": ["error", { "allowForLoopAfterthoughts": true }]
   },
   "overrides": [
     {

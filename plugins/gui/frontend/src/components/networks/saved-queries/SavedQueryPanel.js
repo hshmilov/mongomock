@@ -6,6 +6,8 @@ import _isNull from 'lodash/isNull';
 import _stubTrue from 'lodash/stubTrue';
 import _cond from 'lodash/cond';
 import _isEmpty from 'lodash/isEmpty';
+import _find from 'lodash/find';
+import _matchesProperty from 'lodash/matchesProperty';
 
 import xFilter from '@neurons/schema/query/Filter.vue';
 import xStringView from '@neurons/schema/types/string/StringView.vue';
@@ -20,10 +22,8 @@ import { mdiPencil, mdiDelete } from '@mdi/js';
 import './saved-query-panel.scss';
 
 import { fetchEntityTags, fetchEntitySavedQueriesNames } from '@api/saved-queries';
-import { EntitiesEnum as Entities } from '@constants/entities';
+import { getEntityPermissionCategory, EntitiesEnum as Entities } from '@constants/entities';
 import { isEmptyExpression } from '@/logic/expression';
-import { IS_ENTITY_EDITABLE } from '@/store/modules/auth';
-
 
 /**
  * @param {any} value - the input value to validate against
@@ -86,7 +86,7 @@ export default {
     };
   },
   computed: {
-    ...mapGetters({ getSavedQueryById: 'getSavedQueryById', configuredAdaptersFields: 'configuredAdaptersFields', isEntityEditable: IS_ENTITY_EDITABLE }),
+    ...mapGetters({ getSavedQueryById: 'getSavedQueryById', configuredAdaptersFields: 'configuredAdaptersFields' }),
     queryId() {
       return this.$route.params.queryId;
     },
@@ -95,6 +95,21 @@ export default {
     },
     expressions() {
       return _get(this.query, 'view.query.expressions', []);
+    },
+    permissionCategory() {
+      return getEntityPermissionCategory(this.namespace);
+    },
+    userCannotRunSavedQueries() {
+      return this.$cannot(this.permissionCategory,
+        this.$permissionConsts.actions.Run, this.$permissionConsts.categories.SavedQueries);
+    },
+    userCannotEditSavedQueries() {
+      return this.$cannot(this.permissionCategory,
+        this.$permissionConsts.actions.Update, this.$permissionConsts.categories.SavedQueries);
+    },
+    userCanDeleteSavedQueries() {
+      return this.$can(this.permissionCategory,
+        this.$permissionConsts.actions.Delete, this.$permissionConsts.categories.SavedQueries);
     },
     name: {
       get() {
@@ -144,9 +159,6 @@ export default {
     },
     isEditable() {
       return !this.isPredefined;
-    },
-    userHasPermissionToEntity() {
-      return this.isEntityEditable(this.namespace);
     },
     adaptersEntityFields() {
       /* adding connection label attribute so we can handle save query with connection label   */
@@ -324,7 +336,8 @@ export default {
       let actions = [];
 
       if (!this.editingMode) {
-        if (this.isEntityEditable('Enforcements')) {
+        if (this.$can(this.$permissionConsts.categories.Enforcements,
+          this.$permissionConsts.actions.Add)) {
           actions.push(<x-action-item
             class="action-enforce"
             title="New Enforcement"
@@ -334,18 +347,19 @@ export default {
             icon="$vuetify.icons.enforcements"
         />);
         }
-
-        actions.push(<x-action-item
-                    class="action-remove"
-                    title="Remove"
-                    onClick={this.removeQuery}
-                    size="20"
-                    color="#fff"
-                    icon={mdiDelete}
-                />);
+        if (this.userCanDeleteSavedQueries) {
+          actions.push(<x-action-item
+            class="action-remove"
+            title="Remove"
+            onClick={this.removeQuery}
+            size="20"
+            color="#fff"
+            icon={mdiDelete}
+          />);
+        }
       }
 
-      if (this.isEditable && !this.editingMode) {
+      if (this.isEditable && !this.editingMode && !this.userCannotEditSavedQueries) {
         actions = [(
           (<x-action-item
                     class="action-edit"
@@ -392,8 +406,8 @@ export default {
             title={this.name}
             onInput={this.onPanelStateChange}
         >
-            { this.userHasPermissionToEntity
-                && <x-actions-group slot="panelHeader">
+            {
+                <x-actions-group slot="panelHeader">
                     {this.genActionsButtonsMarkup()}
                 </x-actions-group>
 
@@ -438,9 +452,14 @@ export default {
                         this.editingMode
                           ? [
                                 <x-button link onClick={this.discardChanges}>Discard Changes</x-button>,
-                                <x-button onClick={this.saveChanges} disabled={this.$v.$error}>Save Changes</x-button>,
+                                <x-button
+                                  onClick={this.saveChanges}
+                                  disabled={this.$v.$error
+                                  || this.userCannotEditSavedQueries}>Save Changes</x-button>,
                           ]
-                          : <x-button onClick={this.runQuery} disabled={this.isQueryContainsUnsupportedFields()}>Run Query</x-button>
+                          : <x-button onClick={this.runQuery}
+                                      disabled={this.isQueryContainsUnsupportedFields()
+                          || this.userCannotRunSavedQueries}>Run Query</x-button>
                     }
                 </div>
             </div>

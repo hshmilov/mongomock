@@ -1,51 +1,56 @@
 <template>
   <div class="x-entity-table">
-    <XQuery
-      :module="module"
-      :read-only="isReadOnly"
-      :user-fields-groups="userFieldsGroups"
-      @done="updateEntities"
-    />
-    <XTable
-      ref="table"
-      v-model="isReadOnly? undefined: selection"
-      :module="module"
-      id-field="internal_axon_id"
-      :expandable="true"
-      :filterable="true"
-      :on-click-row="configEntity"
-      @input="updateSelection"
+    <XRoleGateway
+      :permission-category="permissionCategory"
     >
-      <template #actions>
-        <XActionMenu
-          v-show="hasSelection"
+      <template slot-scope="{ canView, canUpdate }">
+        <XQuery
           :module="module"
-          :entities="selection"
-          :entities-meta="selectionLabels"
+          :read-only="!canView"
+          :user-fields-groups="userFieldsGroups"
           @done="updateEntities"
         />
-        <XTableOptionMenu
+        <XTable
+          ref="table"
+          v-model="!canUpdate? undefined: selection"
           :module="module"
-          :user-fields-groups.sync="userFieldsGroups"
-          @done="updateEntities"
-        />
+          id-field="internal_axon_id"
+          :expandable="true"
+          :filterable="true"
+          :on-click-row="configEntity"
+          @input="updateSelection"
+        >
+          <template #actions>
+            <XActionMenu
+              v-show="hasSelection"
+              :module="module"
+              :entities="selection"
+              :entities-meta="selectionLabels"
+              @done="updateEntities"
+            />
+            <XTableOptionMenu
+              :module="module"
+              :user-fields-groups.sync="userFieldsGroups"
+              :disable-export-csv="!canView"
+              @done="updateEntities"
+            />
+          </template>
+          <template #default="slotProps">
+            <XTableData
+              v-bind="slotProps"
+              :module="module"
+            />
+          </template>
+        </XTable>
       </template>
-      <template #default="slotProps">
-        <XTableData
-          v-bind="slotProps"
-          :module="module"
-        />
-      </template>
-    </XTable>
+    </XRoleGateway>
   </div>
 </template>
 
 <script>
 import { mapState, mapMutations, mapActions } from 'vuex';
 import { getUserTableColumnGroups } from '@api/user-preferences';
-import _get from 'lodash/get';
-import _snakeCase from 'lodash/snakeCase';
-import { defaultFields } from '../../../constants/entities';
+import { defaultFields, getEntityPermissionCategory } from '@constants/entities';
 
 import XQuery from './query/Query.vue';
 import XTable from '../../neurons/data/Table.vue';
@@ -69,13 +74,15 @@ export default {
       required: true,
     },
   },
+  data() {
+    return {
+      selection: { ids: [], include: true },
+      selectionLabels: {},
+      userFieldsGroups: { default: defaultFields[this.module] },
+    };
+  },
   computed: {
     ...mapState({
-      isReadOnly(state) {
-        const user = state.auth.currentUser.data;
-        if (!user || !user.permissions) return true;
-        return user.permissions[this.module.charAt(0).toUpperCase() + this.module.slice(1)] === 'ReadOnly';
-      },
       historicalState(state) {
         return state[this.module].view.historical;
       },
@@ -92,16 +99,12 @@ export default {
         return state[this.module].view.fields;
       },
     }),
+    permissionCategory() {
+      return getEntityPermissionCategory(this.module);
+    },
     hasSelection() {
       return (this.selection.ids && this.selection.ids.length) || this.selection.include === false;
     },
-  },
-  data() {
-    return {
-      selection: { ids: [], include: true },
-      selectionLabels: {},
-      userFieldsGroups: { default: defaultFields[this.module] },
-    };
   },
   async created() {
     this.fetchDataHyperlinks({ module: this.module });

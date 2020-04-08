@@ -233,12 +233,6 @@ export default {
 </script>
 
 <style lang="scss">
-  .v-overlay--active {
-    z-index: 1001 !important;
-  }
-  .v-dialog__content--active {
-    z-index: 1002 !important;
-  }
   .save-query-dialog {
     .modal-container {
       max-height: 360px;

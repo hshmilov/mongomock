@@ -218,22 +218,22 @@ class TestInstancesAfterNodeJoin(TestInstancesBase):
     def check_instance_indication(self):
         # login - default
         self.login_page.logout()
-        self.instances_page.verify_footer_element_absent()
+        self.instances_page.assert_footer_element_absent()
         self.login_page.wait_for_login_page_to_load()
         self.login_page.login(username=AXONIUS_USER['user_name'], password=AXONIUS_USER['password'])
 
         # verify no footer by default
         self.instances_page.switch_to_page()
-        self.instances_page.verify_footer_element_absent()
+        self.instances_page.assert_footer_element_absent()
 
         # verify no checkbox on non-master instance
         self.instances_page.click_query_row_by_name('node_1')
-        self.instances_page.verify_instance_indication_element_absent()
+        self.instances_page.assert_instance_indication_element_absent()
         self.instances_page.click_button('Cancel')
 
         # change name
         self.instances_page.change_instance_name('Master', 'Master2')
-        self.instances_page.verify_footer_element_absent()
+        self.instances_page.assert_footer_element_absent()
         self.instances_page.toggle_instance_indication('Master2')
         assert self.instances_page.verify_footer_element_text('Master2')
         self.instances_page.change_instance_name('Master2', 'Master')
@@ -241,7 +241,7 @@ class TestInstancesAfterNodeJoin(TestInstancesBase):
 
         # toggle off
         self.instances_page.toggle_instance_indication('Master')
-        self.instances_page.verify_footer_element_absent()
+        self.instances_page.assert_footer_element_absent()
         self.instances_page.toggle_instance_indication('Master')
         assert self.instances_page.verify_footer_element_text('Master')
 

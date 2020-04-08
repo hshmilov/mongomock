@@ -6,17 +6,16 @@ from pathlib import Path
 from flask import request, make_response
 from werkzeug.utils import secure_filename
 
-from axonius.utils.gui_helpers import Permission, PermissionLevel, PermissionType
-from gui.logic.routing_helper import gui_add_rule_logged_in
+from axonius.utils.permissions_helper import PermissionCategory, PermissionAction, PermissionValue
+from gui.logic.routing_helper import gui_section_add_rules, gui_route_logged_in
 # pylint: disable=no-member,too-many-boolean-expressions,inconsistent-return-statements,no-else-return,too-many-branches
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
+@gui_section_add_rules('configuration')
 class Configuration:
-    @gui_add_rule_logged_in('upload_file', methods=['POST'], enforce_trial=False,
-                            required_permissions={Permission(PermissionType.Settings,
-                                                             PermissionLevel.ReadWrite)})
+    @gui_route_logged_in('upload_file', methods=['POST'], enforce_trial=False)
     def create_file_upload(self):
         total, used, free = shutil.disk_usage(self.upload_files_dir)
         # make sure system will have at least 200M disk space
@@ -41,9 +40,9 @@ class Configuration:
         logger.info(f'upload_file: request register id:{file_id}')
         return make_response((file_id, 200))
 
-    @gui_add_rule_logged_in('upload_file', methods=['PATCH'], enforce_trial=False,
-                            required_permissions={Permission(PermissionType.Settings,
-                                                             PermissionLevel.ReadWrite)})
+    @gui_route_logged_in('upload_file', methods=['PATCH'], enforce_trial=False,
+                         required_permission_values={PermissionValue.get(PermissionAction.Update,
+                                                                         PermissionCategory.Settings)})
     def upload_file(self):
         """
         Fetch the Getting Started checklist state from db
@@ -74,9 +73,9 @@ class Configuration:
         logger.debug(f'upload_file :{file_name} chunk from:{file_offset} length:{content_length}')
         return make_response((file_id, 200))
 
-    @gui_add_rule_logged_in('upload_file', methods=['DELETE'], enforce_trial=False,
-                            required_permissions={Permission(PermissionType.Settings,
-                                                             PermissionLevel.ReadWrite)})
+    @gui_route_logged_in('upload_file', methods=['DELETE'], enforce_trial=False,
+                         required_permission_values={PermissionValue.get(PermissionAction.Update,
+                                                                         PermissionCategory.Settings)})
     def delete_uploaded_file(self):
         file_id = request.data.decode()
         if not file_id:
@@ -91,9 +90,7 @@ class Configuration:
         del self.upload_files_list[file_id]
         return make_response((f'file {file_id} deleted', 200))
 
-    @gui_add_rule_logged_in('upload_file/execute/<file_id>', methods=['POST'], enforce_trial=False,
-                            required_permissions={Permission(PermissionType.Settings,
-                                                             PermissionLevel.ReadWrite)})
+    @gui_route_logged_in('/execute/<file_id>', methods=['POST'], enforce_trial=False)
     def execute_file(self, file_id):
         if file_id in self.upload_files_list:
             file_name = 'configuration_script.tar'

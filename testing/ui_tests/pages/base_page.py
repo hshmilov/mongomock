@@ -25,6 +25,10 @@ class BasePage(Page):
     def wait_for_run_research(self):
         self.wait_for_element_present_by_id(self.DISCOVERY_RUN_ID, retries=DISCOVERY_TIMEOUT)
 
+    def is_run_research_disabled(self):
+        self.wait_for_run_research()
+        return self.driver.find_element_by_id(self.DISCOVERY_RUN_ID).get_attribute('disabled') == 'true'
+
     def run_discovery(self, wait=True):
         logger.info(f'Running discovery with wait={wait}')
         print(f'Running discovery with wait={wait}')

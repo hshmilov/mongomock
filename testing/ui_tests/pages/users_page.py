@@ -21,6 +21,8 @@ class UsersPage(EntitiesPage):
                              FIELD_ADMIN_TITLE, FIELD_LAST_SEEN_IN_DOMAIN,
                              EntitiesPage.FIELD_TAGS]
 
+    TAGGING_X_USER_MESSAGE = 'Tagged {number} users!'
+
     @property
     def url(self):
         return f'{self.base_url}/users'
@@ -36,3 +38,6 @@ class UsersPage(EntitiesPage):
 
     def query_user_name_contains(self, string):
         self.run_filter_query(self.FILTER_USERNAME.format(filter_value=string))
+
+    def wait_for_success_tagging_message(self, number=1):
+        self.wait_for_success_tagging_message_for_entities(number, self.TAGGING_X_USER_MESSAGE)

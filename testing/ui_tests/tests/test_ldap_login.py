@@ -31,7 +31,7 @@ class TestLDAPLogin(TestBase):
         self.login_page.click_login_button()
 
         # Making sure we are indeed logged in
-        self.settings_page.switch_to_page()
+        self.account_page.switch_to_page()
 
         for screen in self.get_all_screens():
             screen.assert_screen_is_restricted()
@@ -66,7 +66,7 @@ class TestLDAPLogin(TestBase):
         self.login_page.click_login_button()
 
         # Making sure we are indeed logged in
-        self.settings_page.switch_to_page()
+        self.account_page.switch_to_page()
 
         for screen in self.get_all_screens():
             screen.assert_screen_is_restricted()

@@ -31,7 +31,7 @@
           <VListItemTitle>{{ resetToSystemDefaultMenuTitle }}</VListItemTitle>
         </VListItem>
         <VListItem
-          :disabled="exportInProgress"
+          :disabled="disableExportCsv || exportInProgress"
           @click.stop.prevent="exportTableToCSV"
         >
           <VListItemTitle v-if="exportInProgress">
@@ -83,6 +83,10 @@ export default {
     userFieldsGroups: {
       type: Object,
       default: () => ({ default: defaultFields[this.module] }),
+    },
+    disableExportCsv: {
+      type: Boolean,
+      default: false,
     },
   },
   data() {

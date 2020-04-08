@@ -27,6 +27,9 @@ class AccountPage(EntitiesPage):
         self.click_button_by_id('approve-reset-api-key', should_scroll_into_view=False)
         self.wait_for_toaster('a new secret key has been generated, the old one is no longer valid')
 
+    def is_reset_key_displayed(self):
+        return not self.is_button_absent('Reset Key')
+
     def is_key_secret_displayed(self):
         return self.driver.find_element_by_css_selector(self.ACCOUNT_GET_SECRET_KEY_VISIBLE_CSS).is_displayed()
 

@@ -14,7 +14,6 @@
       :id="chart.uuid"
       :key="chart.uuid"
       :chart="chart"
-      :read-only="isReadOnly"
       :draggable="true"
       @remove="() => verifyRemovePanel(chart.uuid)"
       @edit="() => editPanel(chart)"
@@ -23,6 +22,9 @@
     <slot name="pre" />
     <slot name="post" />
     <XCard
+      v-if="$can($permissionConsts.categories.Dashboard,
+                 $permissionConsts.actions.Add,
+                 $permissionConsts.categories.Charts)"
       :key="9999"
       title="New Chart"
       class="chart-new print-exclude"
@@ -30,7 +32,6 @@
       <XButton
         :id="newId"
         link
-        :disabled="isReadOnly"
         @click="addNewPanel"
       >
         +

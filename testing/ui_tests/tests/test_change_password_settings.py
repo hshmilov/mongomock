@@ -85,25 +85,24 @@ class TestChangePasswordSettings(TestBase):
                                            ui_consts.NEW_PASSWORD,
                                            ui_consts.FIRST_NAME,
                                            ui_consts.LAST_NAME,
-                                           wait_for_modal=False)
+                                           self.settings_page.RESTRICTED_ROLE,
+                                           wait_for_toaster=False)
 
-        assert wait_until(self.settings_page.get_user_dialog_error,
-                          tolerated_exceptions_list=[NoSuchElementException]) == PASSWORD_POLICY_ERROR_MSG
+        self.settings_page.wait_for_toaster(PASSWORD_POLICY_ERROR_MSG)
+
         self.settings_page.safe_refresh()
         self.settings_page.click_manage_users_settings()
         self.settings_page.create_new_user(ui_consts.RESTRICTED_USERNAME,
                                            'aaaBBB!123123',
                                            ui_consts.FIRST_NAME,
-                                           ui_consts.LAST_NAME)
-
-        with pytest.raises(NoSuchElementException):
-            self.settings_page.get_user_dialog_error()
+                                           ui_consts.LAST_NAME,
+                                           self.settings_page.RESTRICTED_ROLE)
 
         self.settings_page.click_edit_user(ui_consts.RESTRICTED_USERNAME)
         self.settings_page.fill_password_field('kjfsk8978')
-        self.settings_page.click_update_user(wait_for_modal=False)
-        assert wait_until(self.settings_page.get_user_dialog_error,
-                          tolerated_exceptions_list=[NoSuchElementException]) == PASSWORD_POLICY_ERROR_MSG
+        self.settings_page.click_update_user(wait_for_toaster=False)
+        self.settings_page.wait_for_toaster(PASSWORD_POLICY_ERROR_MSG)
+
         self.settings_page.safe_refresh()
         self.settings_page.click_manage_users_settings()
 
@@ -124,9 +123,9 @@ class TestChangePasswordSettings(TestBase):
         self.settings_page.click_save_global_settings()
         self.settings_page.click_manage_users_settings()
         try:
-            self.settings_page.remove_user()
+            self.settings_page.remove_user_by_user_name_with_selection(ui_consts.RESTRICTED_USERNAME)
         except TimeoutException:
-            assert ui_consts.RESTRICTED_USERNAME not in list(self.settings_page.get_all_users_from_users_and_roles())
+            assert ui_consts.RESTRICTED_USERNAME not in list(self.settings_page.get_all_user_names())
 
     @flaky(max_runs=2)
     def test_gui_restart_keeps_password(self):

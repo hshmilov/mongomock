@@ -64,18 +64,6 @@ class DevicesPage(EntitiesPage):
     PREFERRED_FIELDS = ['Preferred Host Name', 'Preferred OS Type', 'Preferred OS Distribution',
                         'Preferred MAC Address', 'Preferred IPs']
     VALUE_OS_WINDOWS = 'Windows'
-    TAG_MODAL_CSS = '.x-tag-modal'
-    TAG_CHECKBOX_CSS = f'{TAG_MODAL_CSS} .v-list .v-input--checkbox'
-    TAGS_TEXTBOX_CSS = f'{TAG_MODAL_CSS} .x-combobox_text-field--keep-open input'
-    TAG_CREATE_NEW_CSS = f'{TAG_MODAL_CSS} .x-combobox_create-new-item'
-    TAG_CHECKBOX_XPATH = '//div[contains(@class, \'x-tag-modal\')]//div[contains(@class, \'v-list\')]//' \
-                         'div[contains(@class, \'v-list-item__title\') and text()=\'{tag_text}\']'
-    TAG_PARTIAL_BASE_CSS = TAG_CHECKBOX_XPATH + '/../preceding-sibling::div' \
-                                                '[contains(@class, \'v-list-item__action\')]' \
-                                                '//div[contains(@class, \'v-input--checkbox\')]'
-    TAG_PARTIAL_INPUT_CSS = TAG_PARTIAL_BASE_CSS + '//input'
-    TAG_PARTIAL_INPUT_ICON = TAG_PARTIAL_BASE_CSS
-    TAG_NEW_ITEM_XPATH = TAG_CHECKBOX_XPATH
     TAGGING_X_DEVICE_MESSAGE = 'Tagged {number} devices!'
     MULTI_LINE_CSS = 'div.x-data-table.multiline'
     FILTER_HOSTNAME = 'specific_data.data.hostname == regex("{filter_value}", "i")'
@@ -87,7 +75,6 @@ class DevicesPage(EntitiesPage):
     DELETE_DIALOG_TEXT_REGEX = 'You are about to delete \\d+ devices\\.'
     BASIC_INFO_FIELD_XPATH = '//div[contains(@class, \'x-tab active\')]//div[contains(@class, \'x-tab active\')]' \
                              '//div[preceding-sibling::label[normalize-space(text())=\'{field_title}\']]'
-    TAG_COMBOBOX_CSS = '.x-combobox_results-card--keep-open.v-card'
 
     PartialState = {
         'PARTIAL': 'mixed',
@@ -113,20 +100,12 @@ class DevicesPage(EntitiesPage):
     def root_page_css(self):
         return 'li#devices.x-nav-item'
 
-    def click_tag_save_button(self):
-        self.click_button(self.SAVE_BUTTON, context=self.driver.find_element_by_css_selector(self.TAG_MODAL_CSS))
-
     def check_if_table_is_multi_line(self):
         self.wait_for_element_present_by_css(self.MULTI_LINE_CSS)
 
     def check_if_adapter_tab_not_exist(self):
         with pytest.raises(NoSuchElementException):
             self.driver.find_element_by_css_selector('#specific')
-
-    def wait_for_success_tagging_message(self, number=1):
-        message = self.FEEDBACK_MODAL_MESSAGE_XPATH.format(message=self.TAGGING_X_DEVICE_MESSAGE.format(number=number))
-        self.wait_for_element_present_by_xpath(message)
-        self.wait_for_element_absent_by_xpath(message)
 
     def open_enforce_dialog(self):
         self.click_button('Actions', should_scroll_into_view=False)
@@ -142,85 +121,6 @@ class DevicesPage(EntitiesPage):
         )
         self.click_button('Run')
         time.sleep(1.5)  # wait for run to fade away
-
-    def open_tag_dialog(self):
-        self.click_button('Actions', should_scroll_into_view=False)
-        self.click_actions_tag_button()
-
-    def add_new_tags(self, tags, number=1):
-        self.open_tag_dialog()
-        self.create_save_tags(tags, number)
-        self.wait_for_table_to_load()
-
-    def toggle_partial_tag(self, tag_text):
-        partial_tag_elem = self.driver.find_element_by_xpath(self.TAG_CHECKBOX_XPATH.format(tag_text=tag_text))
-        partial_tag_icon_ele = self.driver.find_element_by_xpath(self.TAG_PARTIAL_INPUT_ICON.format(tag_text=tag_text))
-        partial_tag_input_elem = self.driver.find_element_by_xpath(self.TAG_PARTIAL_INPUT_CSS.format(tag_text=tag_text))
-        partial_tag_elem.click()
-        return {
-            'tag_icon_ele': partial_tag_icon_ele,
-            'tag_input_ele': partial_tag_input_elem
-        }
-
-    def set_partial_tag_to_state(self, tag):
-        partial_tag_elem = self.driver.find_element_by_xpath(self.TAG_CHECKBOX_XPATH.format(tag_text=tag['name']))
-        partial_tag_icon_ele = self.driver.find_element_by_xpath(self.TAG_PARTIAL_INPUT_ICON.
-                                                                 format(tag_text=tag['name']))
-        if tag['state'] == self.PartialState['CHECKED']:
-            # set the partial tag to be checked
-            partial_tag_elem.click()
-        elif tag['state'] == self.PartialState['UNCHECKED']:
-            # set the partial tag to be checked
-            partial_tag_elem.click()
-            # set the partial tag to be unchecked
-            partial_tag_elem.click()
-        return partial_tag_icon_ele
-
-    def remove_all_tags(self, tags):
-        self.toggle_select_all_rows_checkbox()
-        self.click_select_all_entities()
-        self.open_tag_dialog()
-        for tag in tags:
-            partial_tag_elem = self.driver.find_element_by_xpath(self.TAG_CHECKBOX_XPATH.format(tag_text=tag))
-            partial_tag_icon_ele = self.driver.find_element_by_xpath(self.TAG_PARTIAL_INPUT_ICON.
-                                                                     format(tag_text=tag))
-            if self.has_class(partial_tag_icon_ele, self.PartialIcon['CHECKED']):
-                partial_tag_elem.click()
-            elif self.has_class(partial_tag_icon_ele, self.PartialIcon['PARTIAL']):
-                # set to chekced
-                partial_tag_elem.click()
-                # set to unchecked
-                partial_tag_elem.click()
-        self.click_tag_save_button()
-
-    def create_save_tags(self, tags, number=1):
-        for tag_text in tags:
-            self.fill_text_field_by_css_selector(self.TAGS_TEXTBOX_CSS, tag_text)
-            time.sleep(0.1)
-            self.click_create_new_tag_link_button()
-            self.wait_for_element_present_by_xpath(self.TAG_NEW_ITEM_XPATH.format(tag_text=tag_text))
-        self.click_tag_save_button()
-        self.wait_for_success_tagging_message(number)
-        self.wait_for_spinner_to_end()
-
-    def remove_first_tag(self):
-        self.open_tag_dialog()
-        self.wait_for_element_present_by_css(self.TAG_CHECKBOX_CSS).click()
-        self.click_tag_save_button()
-        self.wait_for_success_tagging_message()
-        self.wait_for_table_to_load()
-
-    def remove_tag(self, text):
-        self.open_tag_dialog()
-        self.find_element_by_text(text).click()
-        self.click_tag_save_button()
-        self.wait_for_success_tagging_message()
-
-    def get_first_tag_text(self):
-        return self.get_first_row_tags().splitlines()[0]
-
-    def get_first_row_tags(self):
-        return self.driver.find_elements_by_css_selector(self.TABLE_FIRST_ROW_TAG_CSS)[0].text
 
     def assert_screen_is_restricted(self):
         self.switch_to_page_allowing_failure()
@@ -297,24 +197,6 @@ class DevicesPage(EntitiesPage):
         field_el = self.find_element_by_xpath(self.BASIC_INFO_FIELD_XPATH.format(field_title=field_title))
         return field_el.find_element_by_css_selector('.item .object')
 
-    def get_tag_combobox_exist(self):
-        return self.wait_for_element_present_by_css(self.TAG_COMBOBOX_CSS)
-
-    def get_tag_modal_info(self):
-        return self.driver.find_element_by_css_selector('.tag-modal-info')
-
-    def get_checkbox_list(self):
-        return self.driver.find_elements_by_css_selector('.v-list-item')
-
-    def get_tags_input(self):
-        return self.driver.find_element_by_css_selector(self.TAGS_TEXTBOX_CSS)
-
-    def click_create_new_tag_link_button(self):
-        return self.driver.find_element_by_css_selector(self.TAG_CREATE_NEW_CSS).click()
-
-    def is_tags_input_text_selectable(self):
-        return self.is_input_text_selectable(self.TAGS_TEXTBOX_CSS)
-
     @staticmethod
     def is_tag_has_status(tag, status):
         return tag.find_element_by_css_selector('.checkbox--{}'.format(status)).is_displayed()
@@ -328,6 +210,9 @@ class DevicesPage(EntitiesPage):
             self.FIELD_MAC_NAME,
             search_text=search_text
         ))
+
+    def wait_for_success_tagging_message(self, number=1):
+        self.wait_for_success_tagging_message_for_entities(number, self.TAGGING_X_DEVICE_MESSAGE)
 
     def query_tanium_connection_label(self, tanium_client: dict) -> int:
         self.switch_to_page()

@@ -24,20 +24,19 @@ from axonius.logging.metric_helper import log_metric
 from axonius.plugin_base import return_error
 from axonius.types.ssl_state import (SSLState)
 from axonius.utils.backup import verify_preshared_key
-from axonius.utils.gui_helpers import (Permission, PermissionLevel,
-                                       PermissionType, ReadOnlyJustForGet)
 from axonius.utils.proxy_utils import to_proxy_string
 from axonius.utils.ssl import check_associate_cert_with_private_key, validate_cert_with_ca
 from gui.feature_flags import FeatureFlags
 from gui.logic.login_helper import clear_passwords_fields, refill_passwords_fields
-from gui.logic.routing_helper import gui_add_rule_logged_in
-# pylint: disable=too-many-statements,too-many-return-statements,fixme,no-member
+from gui.logic.routing_helper import gui_section_add_rules, gui_route_logged_in
+# pylint: disable=too-many-statements,too-many-return-statements,fixme,no-member,too-many-locals,too-many-branches
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
+@gui_section_add_rules('plugins')
 class Plugins:
-    @gui_add_rule_logged_in('plugins')
+    @gui_route_logged_in()
     def plugins(self):
         """
         Get all plugins configured in core and update each one's status.
@@ -83,34 +82,29 @@ class Plugins:
 
         return jsonify(plugins_to_return)
 
-    @gui_add_rule_logged_in('plugins/configs/<plugin_name>/<config_name>', methods=['POST', 'GET'],
-                            required_permissions={Permission(PermissionType.Adapters, PermissionLevel.ReadWrite),
-                                                  Permission(PermissionType.Adapters, ReadOnlyJustForGet)},
-                            enforce_trial=False)
-    def plugin_configs(self, plugin_name, config_name):
+    @gui_route_logged_in('<plugin_name>/<config_name>', methods=['GET'], enforce_trial=False)
+    def get_plugin_configs(self, plugin_name, config_name):
         """
-        Set a specific config on a specific plugin
+        Get a specific config on a specific plugin
         """
-        return self._plugin_configs(
-            plugin_name=plugin_name, config_name=config_name
-        )
+        db_connection = self._get_db_connection()
+        config_collection = db_connection[plugin_name][CONFIGURABLE_CONFIGS_COLLECTION]
+        schema_collection = db_connection[plugin_name]['config_schemas']
+        schema = schema_collection.find_one({'config_name': config_name})['schema']
+        config = clear_passwords_fields(config_collection.find_one({'config_name': config_name})['config'],
+                                        schema)
+        return jsonify({
+            'config': config,
+            'schema': schema
+        })
 
-    # pylint: disable=too-many-branches,too-many-locals
-    def _plugin_configs(self, plugin_name, config_name):
+    @gui_route_logged_in('<plugin_name>/<config_name>', methods=['POST'], enforce_trial=False)
+    def update_plugin_configs(self, plugin_name, config_name):
         """
         Set a specific config on a specific plugin
         """
         db_connection = self._get_db_connection()
         config_collection = db_connection[plugin_name][CONFIGURABLE_CONFIGS_COLLECTION]
-        if request.method == 'GET':
-            schema_collection = db_connection[plugin_name]['config_schemas']
-            schema = schema_collection.find_one({'config_name': config_name})['schema']
-            config = clear_passwords_fields(config_collection.find_one({'config_name': config_name})['config'],
-                                            schema)
-            return jsonify({
-                'config': config,
-                'schema': schema
-            })
 
         # Otherwise, handle POST
         config_to_set = request.get_json(silent=True)
@@ -270,22 +264,24 @@ class Plugins:
             logger.exception(f'proxy test failed')
             return False
 
-    @gui_add_rule_logged_in('plugins/configs/gui/FeatureFlags', methods=['POST', 'GET'], enforce_trial=False)
-    def plugins_configs_feature_flags(self):
+    @gui_route_logged_in('gui/FeatureFlags', methods=['GET'], enforce_trial=False, enforce_permissions=False)
+    def get_feature_flags(self):
+        plugin_name = GUI_PLUGIN_NAME
+        config_name = FeatureFlags.__name__
+        db_connection = self._get_db_connection()
+        config_collection = db_connection[plugin_name][CONFIGURABLE_CONFIGS_COLLECTION]
+        schema_collection = db_connection[plugin_name]['config_schemas']
+        return jsonify({
+            'config': config_collection.find_one({'config_name': config_name})['config'],
+            'schema': schema_collection.find_one({'config_name': config_name})['schema']
+        })
+
+    @gui_route_logged_in('gui/FeatureFlags', methods=['POST'], enforce_trial=False)
+    def update_feature_flags(self):
         plugin_name = GUI_PLUGIN_NAME
         config_name = FeatureFlags.__name__
 
-        if request.method == 'GET':
-            db_connection = self._get_db_connection()
-            config_collection = db_connection[plugin_name][CONFIGURABLE_CONFIGS_COLLECTION]
-            schema_collection = db_connection[plugin_name]['config_schemas']
-            return jsonify({
-                'config': config_collection.find_one({'config_name': config_name})['config'],
-                'schema': schema_collection.find_one({'config_name': config_name})['schema']
-            })
-
-        # Otherwise, handle POST
-        if not self._is_hidden_user():
+        if not self.is_axonius_user():
             logger.error(f'Request to modify {FeatureFlags.__name__} from a regular user!')
             return return_error('Illegal Operation', 400)  # keep gui happy, but don't show/change the flags
 
@@ -318,9 +314,7 @@ class Plugins:
                 'config_name': config_name, 'config': config_to_set})
             self.request_remote_plugin('update_config', current_unique_plugin, method='POST')
 
-    @gui_add_rule_logged_in('plugins/<plugin_unique_name>/<command>', methods=['POST'],
-                            required_permissions={Permission(PermissionType.Adapters,
-                                                             PermissionLevel.ReadOnly)})
+    @gui_route_logged_in('<plugin_unique_name>/<command>', methods=['POST'])
     def run_plugin(self, plugin_unique_name, command):
         """
         Calls endpoint of given plugin_unique_name, according to given command
@@ -335,14 +329,6 @@ class Plugins:
             return ''
         return response.json(), response.status_code
 
-    @gui_add_rule_logged_in('plugins/gui/upload_file', methods=['POST'],
-                            required_permissions={Permission(PermissionType.Settings,
-                                                             PermissionLevel.ReadWrite)})
-    def gui_upload_file(self):
-        return self._upload_file(GUI_PLUGIN_NAME)
-
-    @gui_add_rule_logged_in('plugins/<plugin_name>/upload_file', methods=['POST'],
-                            required_permissions={Permission(PermissionType.Adapters,
-                                                             PermissionLevel.ReadWrite)})
+    @gui_route_logged_in('<plugin_name>/upload_file', methods=['POST'])
     def plugins_upload_file(self, plugin_name):
         return self._upload_file(plugin_name)

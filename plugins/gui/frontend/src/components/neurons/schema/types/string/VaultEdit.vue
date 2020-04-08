@@ -54,7 +54,7 @@
     import XString from './StringEdit.vue'
     import xModal from '../../../../axons/popover/Modal/index.vue'
     import {parseVaultError} from '../../../../../constants/utils'
-    import axios_client from '@api/axios.js'
+    import axiosClient from '@api/axios.js'
 
     import XTitle from "../../../../axons/layout/Title.vue";
 
@@ -102,7 +102,7 @@
                 this.error = ''
                 this.loading = true
                 this.validate()
-                axios_client.post('password_vault', {
+                axiosClient.post('password_vault', {
                         query: this.queryModal.current_query,
                         field: this.schema.name,
                         vault_type: 'cyberark_vault'

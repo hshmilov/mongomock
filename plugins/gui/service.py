@@ -19,19 +19,28 @@ from axonius.utils.revving_cache import rev_cached
 from axonius.background_scheduler import LoggedBackgroundScheduler
 from axonius.clients.ldap.ldap_group_cache import set_ldap_groups_cache, get_ldap_groups_cache_ttl
 from axonius.consts.gui_consts import (ENCRYPTION_KEY_PATH,
-                                       PREDEFINED_ROLE_RESTRICTED,
                                        ROLES_COLLECTION,
                                        TEMP_MAINTENANCE_THREAD_ID,
                                        USERS_COLLECTION,
                                        USERS_CONFIG_COLLECTION,
-                                       PROXY_DATA_PATH, DASHBOARD_SPACES_COLLECTION, DASHBOARD_COLLECTION,
-                                       USERS_PREFERENCES_COLLECTION)
+                                       PROXY_DATA_PATH,
+                                       DASHBOARD_SPACES_COLLECTION,
+                                       DASHBOARD_COLLECTION,
+                                       USERS_PREFERENCES_COLLECTION,
+                                       PREDEFINED_ROLE_ADMIN,
+                                       PREDEFINED_ROLE_OWNER,
+                                       PREDEFINED_ROLE_VIEWER,
+                                       PREDEFINED_ROLE_RESTRICTED,
+                                       PREDEFINED_FIELD,
+                                       PREDEFINED_ROLE_OWNER_RO,
+                                       IS_AXONIUS_ROLE)
 from axonius.consts.metric_consts import SystemMetric
 from axonius.consts.plugin_consts import (AXONIUS_USER_NAME,
+                                          ADMIN_USER_NAME,
                                           GUI_PLUGIN_NAME,
                                           GUI_SYSTEM_CONFIG_COLLECTION,
                                           METADATA_PATH, PLUGIN_NAME, PLUGIN_UNIQUE_NAME, SYSTEM_SETTINGS, PROXY_VERIFY,
-                                          CORE_UNIQUE_NAME, NODE_NAME, NODE_USE_AS_ENV_NAME)
+                                          CORE_UNIQUE_NAME, NODE_NAME, NODE_USE_AS_ENV_NAME, AXONIUS_RO_USER_NAME)
 from axonius.consts.plugin_subtype import PluginSubtype
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.logging.metric_helper import log_metric
@@ -44,7 +53,10 @@ from axonius.types.ssl_state import (COMMON_SSL_CONFIG_SCHEMA,
                                      COMMON_SSL_CONFIG_SCHEMA_DEFAULTS)
 from axonius.users.user_adapter import UserAdapter
 from axonius.utils.files import get_local_config_file
-from axonius.utils.gui_helpers import (deserialize_db_permissions, get_entities_count)
+from axonius.utils.gui_helpers import (get_entities_count)
+from axonius.utils.permissions_helper import (get_admin_permissions, get_viewer_permissions, deserialize_db_permissions,
+                                              get_restricted_permissions, is_role_admin, is_axonius_role,
+                                              PermissionCategory, PermissionAction)
 from axonius.utils.proxy_utils import to_proxy_string
 from axonius.utils.ssl import MUTUAL_TLS_CA_PATH, \
     MUTUAL_TLS_CONFIG_FILE
@@ -60,9 +72,6 @@ logger = logging.getLogger(f'axonius.{__name__}')
 
 SAML_SETTINGS_FILE_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), 'config', 'saml_settings.json'))
 
-if os.environ.get('HOT') == 'true':
-    session = None
-
 
 class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin, AppRoutes):
     class MyDeviceAdapter(DeviceAdapter):
@@ -73,13 +82,11 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin, 
 
     DEFAULT_AVATAR_PIC = '/src/assets/images/users/avatar.png'
     ALT_AVATAR_PIC = '/src/assets/images/users/alt_avatar.png'
-    DEFAULT_USER = {'user_name': 'admin',
+    DEFAULT_USER = {'user_name': ADMIN_USER_NAME,
                     'password':
                         '$2b$12$SjT4qshlg.uUpsgE3vHwp.7A0UtkGEoWfUR0wFet3WZuXTnMgOCIK',
                     'first_name': 'administrator', 'last_name': '',
                     'pic_name': DEFAULT_AVATAR_PIC,
-                    'permissions': {},
-                    'admin': True,
                     'source': 'internal',
                     'api_key': secrets.token_urlsafe(),
                     'api_secret': secrets.token_urlsafe()
@@ -90,28 +97,60 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin, 
                             '$2b$12$HQTyeTlepuCDC.5ZJ0TFo.U9ZUBARAEFU5pjhcnY.GfWaQWydcn8G',
                         'first_name': 'axonius', 'last_name': '',
                         'pic_name': ALT_AVATAR_PIC,
-                        'permissions': {},
-                        'admin': True,
                         'source': 'internal',
                         'api_key': secrets.token_urlsafe(),
                         'api_secret': secrets.token_urlsafe()
                         }
 
+    ALTERNATIVE_RO_USER = {'user_name': AXONIUS_RO_USER_NAME,
+                           'password':
+                               '$2b$12$qZqtPeZWYp/mMathAxc7QOHn5yQd0U8NdA.wCneUfvmcUAVej.rAy',
+                           'first_name': 'axonius_ro', 'last_name': '',
+                           'pic_name': ALT_AVATAR_PIC,
+                           'source': 'internal',
+                           'api_key': secrets.token_urlsafe(),
+                           'api_secret': secrets.token_urlsafe()
+                           }
+
     def __add_defaults(self):
         self._add_default_roles()
         if self._users_config_collection.find_one({}) is None:
+            restricted_role = self._roles_collection.find_one({
+                'name': PREDEFINED_ROLE_RESTRICTED
+            })
             self._users_config_collection.insert_one({
-                'external_default_role': PREDEFINED_ROLE_RESTRICTED
+                'external_default_role': restricted_role.get('_id')
             })
 
         current_user = self._users_collection.find_one({'user_name': 'admin'})
         if current_user is None:
+            owner_role = self._roles_collection.find_one({
+                'name': PREDEFINED_ROLE_ADMIN
+            })
             # User doesn't exist, this must be the installation process
-            self._users_collection.update({'user_name': 'admin'}, self.DEFAULT_USER, upsert=True)
+            default_user = self.DEFAULT_USER
+            default_user['role_id'] = owner_role.get('_id')
+            self._users_collection.update({'user_name': 'admin'}, default_user, upsert=True)
 
         alt_user = self._users_collection.find_one({'user_name': AXONIUS_USER_NAME})
         if alt_user is None:
-            self._users_collection.update({'user_name': AXONIUS_USER_NAME}, self.ALTERNATIVE_USER, upsert=True)
+            owner_role = self._roles_collection.find_one({
+                'name': PREDEFINED_ROLE_OWNER
+            })
+            alternatice_user = self.ALTERNATIVE_USER
+            alternatice_user['role_id'] = owner_role.get('_id')
+            self._users_collection.update({'user_name': AXONIUS_USER_NAME},
+                                          alternatice_user, upsert=True)
+
+        alt_user = self._users_collection.find_one({'user_name': AXONIUS_RO_USER_NAME})
+        if alt_user is None:
+            owner_ro_role = self._roles_collection.find_one({
+                'name': PREDEFINED_ROLE_OWNER_RO
+            })
+            alternative_user_ro = self.ALTERNATIVE_RO_USER
+            alternative_user_ro['role_id'] = owner_ro_role.get('_id')
+            self._users_collection.update({'user_name': AXONIUS_RO_USER_NAME},
+                                          alternative_user_ro, upsert=True)
 
         self.add_default_views(EntityType.Devices, 'default_views_devices.ini')
         self.add_default_views(EntityType.Users, 'default_views_users.ini')
@@ -178,12 +217,50 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin, 
 
         self._trigger('clear_dashboard_cache', blocking=False)
 
-        if os.environ.get('HOT') == 'true':
-            # pylint: disable=W0603
-            global session
-            user_db = self._users_collection.find_one({'user_name': 'admin'})
-            user_db['permissions'] = deserialize_db_permissions(user_db['permissions'])
-            session = {'user': user_db}
+    def _add_default_roles(self):
+        if self._roles_collection.find_one({'name': PREDEFINED_ROLE_OWNER}) is None:
+
+            # Axonius Owner role doesn't exists - let's create it
+            self._roles_collection.insert_one({
+                'name': PREDEFINED_ROLE_OWNER,
+                PREDEFINED_FIELD: True,
+                'permissions': get_admin_permissions(),
+                IS_AXONIUS_ROLE: True
+            })
+        if self._roles_collection.find_one({'name': PREDEFINED_ROLE_OWNER_RO}) is None:
+
+            # Axonius Read Only role doesn't exists - let's create it
+            axonius_ro_permissions = get_viewer_permissions()
+            axonius_ro_permissions[PermissionCategory.Settings.value][PermissionAction.View.value] = True
+            axonius_ro_permissions[PermissionCategory.Settings.value][PermissionAction.Update.value] = True
+            self._roles_collection.insert_one({
+                'name': PREDEFINED_ROLE_OWNER_RO,
+                PREDEFINED_FIELD: True,
+                'permissions': axonius_ro_permissions,
+                IS_AXONIUS_ROLE: True
+            })
+        if self._roles_collection.find_one({'name': PREDEFINED_ROLE_ADMIN}) is None:
+            # Admin role doesn't exists - let's create it
+            self._roles_collection.insert_one({
+                'name': PREDEFINED_ROLE_ADMIN,
+                PREDEFINED_FIELD: True,
+                'permissions': get_admin_permissions()
+
+            })
+        if self._roles_collection.find_one({'name': PREDEFINED_ROLE_VIEWER}) is None:
+
+            # Viewer role doesn't exists - let's create it
+            self._roles_collection.insert_one({
+                'name': PREDEFINED_ROLE_VIEWER, PREDEFINED_FIELD: True, 'permissions': get_viewer_permissions()
+            })
+        if self._roles_collection.find_one({'name': PREDEFINED_ROLE_RESTRICTED}) is None:
+            # Restricted role doesn't exists - let's create it. Everything restricted except the Dashboard.
+            self._roles_collection.insert_one({
+                'name': PREDEFINED_ROLE_RESTRICTED, PREDEFINED_FIELD: True, 'permissions': get_restricted_permissions()
+            })
+
+    def _delayed_initialization(self):
+        self._init_all_dashboards()
 
     def add_default_dashboard_charts(self, default_dashboard_charts_ini_path):
         try:
@@ -259,13 +336,6 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin, 
                     logger.exception(f'Error adding default view {name}')
         except Exception:
             logger.exception(f'Error adding default views')
-
-    @staticmethod
-    def _is_hidden_user():
-        return (session.get('user') or {}).get('user_name') == AXONIUS_USER_NAME
-
-    def _delayed_initialization(self):
-        self._init_all_dashboards()
 
     def load_metadata(self):
         try:
@@ -350,10 +420,10 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin, 
             log_metric(logger, SystemMetric.USERS_SEEN, adapter_users['seen'])
             log_metric(logger, SystemMetric.USERS_UNIQUE, adapter_users['unique'])
 
-            enforcements = self.get_enforcements(limit=0,
-                                                 mongo_filter={},
-                                                 mongo_sort={},
-                                                 skip=0)
+            enforcements = self._get_enforcements(limit=0,
+                                                  mongo_filter={},
+                                                  mongo_sort={},
+                                                  skip=0)
             for enforcement in enforcements:
                 log_metric(logger, SystemMetric.ENFORCEMENT_RAW, str(enforcement))
 
@@ -621,6 +691,18 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin, 
                             'name': 'gui2_url',
                             'title': 'Axonius GUI URL',
                             'type': 'string'
+                        },
+                        {
+                            'name': 'default_role_id',
+                            'title': 'Choose a default role for Okta login',
+                            'type': 'string',
+                            'enum': [],
+                            'source': {
+                                'key': 'all-roles',
+                                'options': {
+                                    'allow-custom-option': False
+                                }
+                            }
                         }
                     ],
                     'required': ['enabled', 'client_id', 'client_secret', 'url', 'gui2_url'],
@@ -659,6 +741,18 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin, 
                             'name': 'cache_time_in_hours',
                             'title': 'LDAP group hierarchy cache refresh rate (hours)',
                             'type': 'integer'
+                        },
+                        {
+                            'name': 'default_role_id',
+                            'title': 'Choose a default role for LDAP login',
+                            'type': 'string',
+                            'enum': [],
+                            'source': {
+                                'key': 'all-roles',
+                                'options': {
+                                    'allow-custom-option': False
+                                }
+                            }
                         },
                         *COMMON_SSL_CONFIG_SCHEMA
                     ],
@@ -717,6 +811,18 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin, 
                             ],
                             'required': ['dont_send_authncc'],
                         },
+                        {
+                            'name': 'default_role_id',
+                            'title': 'Choose a default role for SAML login',
+                            'type': 'string',
+                            'enum': [],
+                            'source': {
+                                'key': 'all-roles',
+                                'options': {
+                                    'allow-custom-option': False
+                                }
+                            }
+                        },
                     ],
                     'required': ['enabled', 'idp_name'],
                     'name': 'saml_login_settings',
@@ -759,7 +865,8 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin, 
                 'client_id': '',
                 'client_secret': '',
                 'url': 'https://yourname.okta.com',
-                'gui2_url': 'https://127.0.0.1'
+                'gui2_url': 'https://127.0.0.1',
+                'default_role_id': None
             },
             'ldap_login_settings': {
                 'enabled': False,
@@ -768,6 +875,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin, 
                 'group_cn': '',
                 'use_group_dn': False,
                 'cache_time_in_hours': 720,
+                'default_role_id': None,
                 **COMMON_SSL_CONFIG_SCHEMA_DEFAULTS
             },
             'saml_login_settings': {
@@ -781,6 +889,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin, 
                 'configure_authncc': {
                     'dont_send_authncc': False,
                 },
+                'default_role_id': None,
             },
             SYSTEM_SETTINGS: {
                 'refreshRate': 60,
@@ -852,9 +961,42 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin, 
             if user and (not user_id or str(d['user'].get('_id')) == str(user_id)):
                 d['user'] = None
 
+    def update_sessions_permissions(self):
+        for k, v in self.__all_sessions.items():
+            if k == session.sid:
+                continue
+            d = v.get('d')
+            if not d:
+                continue
+            user = d.get('user')
+            if not user:
+                continue
+            user_id = user['_id']
+            user_from_db = self._users_collection.find_one({
+                '_id': user_id
+            })
+            if not user_from_db:
+                d['user'] = None
+            else:
+                user_role = self._roles_collection.find_one({
+                    '_id': user_from_db['role_id']
+                })
+                user['permissions'] = deserialize_db_permissions(user_role['permissions'])
+                user['role_name'] = user_role['name']
+                d['user'] = user
+
     @property
     def get_session(self):
         return session
+
+    def is_admin_user(self):
+        return is_role_admin(self.get_session.get('user', {}))
+
+    def is_axonius_user(self):
+        return is_axonius_role(self.get_session.get('user', {}))
+
+    def get_user_permissions(self):
+        return self.get_session.get('user', {}).get('permissions', {})
 
     @property
     def saml_settings_file_path(self):

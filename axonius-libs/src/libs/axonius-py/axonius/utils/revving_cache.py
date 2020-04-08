@@ -12,6 +12,7 @@ from dataclasses import dataclass, field
 from axonius.entities import EntityType
 from axonius.utils.get_plugin_base_instance import plugin_base_instance
 from axonius.utils.memory_usage import memory
+# pylint: disable=no-member,raising-bad-type
 
 logger = logging.getLogger(f'axonius.{__name__}')
 

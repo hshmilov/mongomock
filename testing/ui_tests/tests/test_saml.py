@@ -3,6 +3,7 @@ import pathlib
 import tempfile
 import contextlib
 import collections
+from uuid import uuid4
 
 import docker
 import requests
@@ -88,13 +89,15 @@ class TestSaml(TestBase):
         self.base_page.fill_text_field_by_element_id('password', saml_server.test_user_password)
         self.base_page.find_element_by_text('Login').click()
 
-    def _set_saml(self, name, metadata_url, external_url=''):
+    def _set_saml(self, name, metadata_url, external_url='', default_role_name=None):
         self.settings_page.switch_to_page()
         self.settings_page.click_gui_settings()
         self.settings_page.set_allow_saml_based_login()
         self.settings_page.fill_saml_idp(name)
         self.settings_page.fill_saml_metadata_url(metadata_url)
         self.settings_page.fill_saml_axonius_external_url(external_url=external_url)
+        if default_role_name:
+            self.settings_page.set_default_role_id(default_role_name)
         self.settings_page.click_save_gui_settings()
         self.settings_page.wait_for_saved_successfully_toaster()
 
@@ -104,18 +107,18 @@ class TestSaml(TestBase):
         self._simple_samlserver_page_login(saml_server)
 
     def _fetch_saml_user(self):
-        all_users = self.settings_page.get_users_with_permissions_from_users_and_roles()
-        valid_users = [u for u in all_users if u.source == 'saml']
+        all_users = self.settings_page.get_all_users_data()
+        valid_users = [u for u in all_users if u.source.lower() == 'saml']
         assert len(valid_users) == 1, 'Got more or less than expected valid saml usernames'
         return valid_users[0]
 
     @staticmethod
     def _extract_saml_and_internal_user_with_name(all_users, username):
-        relevant_users = [u for u in all_users if username in u.title]
+        relevant_users = [u for u in all_users if username in u.user_name]
         assert len(relevant_users) == 2, f'Expected two users with name: {username}'
 
-        saml_user = [u for u in relevant_users if u.source == 'saml'][0]
-        internal_user = [u for u in relevant_users if u.source == 'internal'][0]
+        saml_user = [u for u in relevant_users if u.source.lower() == 'saml'][0]
+        internal_user = [u for u in relevant_users if u.source.lower() == 'internal'][0]
 
         return saml_user, internal_user
 
@@ -133,12 +136,46 @@ class TestSaml(TestBase):
             self.settings_page.switch_to_page()
             self.settings_page.click_manage_users_settings()
 
-            assert self._fetch_saml_user().username
+            assert self._fetch_saml_user().user_name
 
     # pylint: disable=R0915
     def test_saml_same_username(self):
+        saml_devices_permissions = {
+            'settings': [
+                'Reset API Key',
+            ],
+            'devices_assets': [
+                'View devices',
+                'Edit devices',
+                'Run saved queries',
+                'Edit saved queries',
+                'Delete saved query',
+                'Create saved query',
+            ]
+        }
+
+        saml_users_permissions = {
+            'settings': [
+                'Reset API Key',
+            ],
+            'devices_assets': [
+                'View devices',
+                'Edit devices',
+                'Run saved queries',
+                'Edit saved queries',
+                'Delete saved query',
+                'Create saved query',
+            ]
+        }
+
         with create_saml_server(self.base_url) as saml_server:
-            self._set_saml(saml_server.name, saml_server.metadata_url)
+            self.settings_page.switch_to_page()
+            self.settings_page.click_manage_roles_settings()
+            saml_users_role_name = f'{uuid4().hex[:15]} role'
+            self.settings_page.wait_for_table_to_load()
+            self.settings_page.create_new_role(saml_users_role_name, saml_users_permissions)
+
+            self._set_saml(saml_server.name, saml_server.metadata_url, default_role_name=saml_users_role_name)
 
             self.login_page.logout()
             self.login_page.wait_for_login_page_to_load()
@@ -155,20 +192,14 @@ class TestSaml(TestBase):
             self.settings_page.click_manage_users_settings()
 
             saml_user_initial_snapshot = self._fetch_saml_user()
-            saml_username = saml_user_initial_snapshot.username
+            saml_username = saml_user_initial_snapshot.user_name
 
             initial_internal_user_password = 'PASSWORD1'
             new_internal_user_password = 'password2'
 
-            self.settings_page.add_user_with_permission(saml_username, initial_internal_user_password,
-                                                        saml_server.test_givenname, saml_server.test_surname,
-                                                        self.settings_page.PERMISSION_LABEL_DEVICES,
-                                                        self.settings_page.READ_WRITE_PERMISSION)
-
-            self.settings_page.select_permissions(self.settings_page.PERMISSION_LABEL_USERS,
-                                                  self.settings_page.READ_WRITE_PERMISSION,
-                                                  parent_user_selenium=saml_user_initial_snapshot.selenium_user)
-            self.settings_page.click_save_manage_users_settings(selenium_user=saml_user_initial_snapshot.selenium_user)
+            self.settings_page.create_new_user_with_new_permission(saml_username, initial_internal_user_password,
+                                                                   saml_server.test_givenname, saml_server.test_surname,
+                                                                   saml_devices_permissions)
 
             self.login_page.logout()
             self.login_page.wait_for_login_page_to_load()
@@ -202,23 +233,15 @@ class TestSaml(TestBase):
             self.settings_page.switch_to_page()
             self.settings_page.click_manage_users_settings()
 
-            all_users = self.settings_page.get_users_with_permissions_from_users_and_roles()
+            all_users = self.settings_page.get_all_users_data()
 
             saml_user, internal_user = self._extract_saml_and_internal_user_with_name(all_users, saml_username)
 
-            saml_user_permissions = dict(saml_user.permissions)
+            self.settings_page.click_manage_roles_settings()
 
-            # Aliasing to make consts shorter in validation
-            sp = self.settings_page
+            self.settings_page.match_role_permissions(saml_user.role, saml_users_permissions)
 
-            assert saml_user_permissions.pop(sp.PERMISSION_LABEL_DASHBOARD) == sp.READ_ONLY_PERMISSION
-            assert saml_user_permissions.pop(sp.PERMISSION_LABEL_USERS) == sp.READ_WRITE_PERMISSION
-            assert set(saml_user_permissions.values()) == {sp.RESTRICTED_PERMISSION}
-
-            internal_user_permissions = dict(internal_user.permissions)
-            assert internal_user_permissions.pop(sp.PERMISSION_LABEL_DEVICES) == sp.READ_WRITE_PERMISSION
-            assert internal_user_permissions.pop(sp.PERMISSION_LABEL_DASHBOARD) == sp.READ_ONLY_PERMISSION
-            assert set(internal_user_permissions.values()) == {sp.RESTRICTED_PERMISSION}
+            self.settings_page.match_role_permissions(saml_user.role, saml_devices_permissions)
 
             assert created_user_new_api_key_and_secret != actual_saml_user_initial_api_key_and_secret
             assert created_user_new_api_key_and_secret != created_user_initial_api_key_and_secret

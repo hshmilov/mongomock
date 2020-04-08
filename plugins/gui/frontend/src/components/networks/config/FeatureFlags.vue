@@ -3,7 +3,7 @@
     <x-form
       :value="value"
       :schema="processedSchema"
-      api-upload="plugins/gui"
+      api-upload="settings/plugins/gui"
       @input="$emit('input', $event)"
       @validate="updateValidity"
     ></x-form>

@@ -64,6 +64,11 @@ export default {
       default: () => [],
     },
   },
+  data() {
+    return {
+      excludedFields: ['specific_data.data.correlation_reasons'],
+    };
+  },
   computed: {
     ...mapState({
       fields(state) {
@@ -76,24 +81,21 @@ export default {
         }
         return eval(hyperlinks.aggregator);
       },
-      isAxonius(state) {
-        return state.auth.currentUser.data.user_name === '_axonius';
-      },
     }),
+    schemaGenericFields() {
+      return this.fields.generic.filter(
+        (item) => !this.excludedFields.includes(item.name),
+      );
+    },
     basicSchema() {
       if (!this.fields.generic) return null;
-      if (!this.isAxonius) this.fields.generic = this.fields.generic.filter(item => !this.excludedFields.includes(item.name))
+      const items = !this.$isAxoniusUser() ? this.fields.generic : this.schemaGenericFields;
       return {
         type: 'array',
-        items: this.fields.generic,
+        items,
         hyperlinks: this.hyperlinks,
       };
     },
-  },
-  data() {
-    return {
-      excludedFields: ['specific_data.data.correlation_reasons']
-    }
   },
 };
 </script>

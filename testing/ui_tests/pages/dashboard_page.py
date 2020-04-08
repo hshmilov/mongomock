@@ -1,5 +1,6 @@
 import time
 import datetime
+import pytest
 
 from retrying import retry
 from selenium.common.exceptions import NoSuchElementException
@@ -58,6 +59,11 @@ class DashboardPage(Page):
     SEGMENTATION_ADD_FILTER_BUTTON_CSS = '.x-filter-contains > button'
     SUMMARY_CARD_TEXT_CSS = 'div.x-summary > div.summary'
     CARD_MENU_BTN_CSS = '.card_menu'
+    CARD_CLOSE_BTN_ID = 'remove_chart'
+    CARD_CLOSE_BTN_TEXT = 'Remove Chart'
+    CARD_EDIT_BTN_ID = 'edit_chart'
+    CARD_EDIT_BTN_TEXT = 'Edit Chart'
+    CARD_EXPORT_TO_CSV_BTN_CSS = '.actions > .export'
     CARD_SEARCH_INPUT_CSS = '.x-search-input > input'
     BANNER_BY_TEXT_XPATH = '//div[contains(@class, \'x-banner\') and .//text() = \'{banner_text}\']'
     BANNER_BY_CSS = '.x-banner'
@@ -99,6 +105,8 @@ class DashboardPage(Page):
     COLOR_DANGEROUS = '#FA6400'
     COLOR_VERYDANGEROUS = '#D0021C'
     COLOR_INFO = '#3498DB'
+
+    NEW_CARD_CHART_CSS = '.x-tab.active .x-card.chart-new'
 
     @property
     def root_page_css(self):
@@ -155,7 +163,10 @@ class DashboardPage(Page):
         return self.driver.find_element_by_css_selector('div.x-card.chart-lifecycle.print-exclude')
 
     def find_new_chart_card(self):
-        return self.driver.find_element_by_css_selector('.x-tab.active div.x-card.chart-new.print-exclude')
+        return self.driver.find_element_by_css_selector(self.NEW_CARD_CHART_CSS)
+
+    def is_new_chart_card_missing(self):
+        return len(self.driver.find_elements_by_css_selector(self.NEW_CARD_CHART_CSS)) == 0
 
     def find_device_discovery_card(self):
         return self.driver.find_elements_by_css_selector('div.x-card.x-discovery-card')[0]
@@ -401,38 +412,68 @@ class DashboardPage(Page):
         pie = self.get_pie_chart_from_card(card)
         pie.find_element_by_css_selector('svg').click()
 
+    def is_edit_card_button_present(self, card_title):
+        panel = self.wait_for_element_present_by_xpath(self.PANEL_BY_NAME_XPATH.format(panel_name=card_title))
+        if len(panel.find_elements_by_css_selector(self.CARD_MENU_BTN_CSS)) == 0:
+            return False
+        self.open_close_card_menu(panel)
+        edit_buttons = self.driver.find_elements_by_id(self.CARD_EDIT_BTN_ID)
+        result = False
+        for button in edit_buttons:
+            if button.is_displayed():
+                result = True
+        self.open_close_card_menu(panel)
+        return result
+
     def edit_card(self, card_title):
         panel = self.get_card(card_title)
-        self.open_card_menu(panel)
-        self.driver.find_element_by_id('edit_chart').click()
+        self.open_close_card_menu(panel)
+        self.driver.find_element_by_id(self.CARD_EDIT_BTN_ID).click()
         self.wait_for_element_present_by_css(self.MODAL_OVERLAY_CSS)
         self.wait_for_card_spinner_to_end()
 
+    def is_remove_card_button_present(self, card_title):
+        panel = self.wait_for_element_present_by_xpath(self.PANEL_BY_NAME_XPATH.format(panel_name=card_title))
+        if len(panel.find_elements_by_css_selector(self.CARD_MENU_BTN_CSS)) == 0:
+            return False
+        self.open_close_card_menu(panel)
+        remove_buttons = self.driver.find_elements_by_id(self.CARD_CLOSE_BTN_ID)
+        result = False
+        for button in remove_buttons:
+            if button.is_displayed():
+                result = True
+        self.open_close_card_menu(panel)
+        return result
+
     def remove_card(self, card_title):
         panel = self.get_card(card_title)
-        self.open_card_menu(panel)
-        self.driver.find_element_by_id('remove_chart').click()
+        self.open_close_card_menu(panel)
+        self.driver.find_element_by_id(self.CARD_CLOSE_BTN_ID).click()
         self.wait_for_element_present_by_css(self.MODAL_OVERLAY_CSS)
-        self.click_button('Remove Chart')
+        self.click_button(self.CARD_CLOSE_BTN_TEXT)
         wait_until(lambda: self.is_missing_panel(card_title))
 
     def export_card(self, card_title):
         panel = self.get_card(card_title)
-        self.open_card_menu(panel)
+        self.open_close_card_menu(panel)
         self.driver.find_element_by_id('export_chart').click()
 
     def refresh_card(self, card_title):
         panel = self.get_card(card_title)
-        self.open_card_menu(panel)
+        self.open_close_card_menu(panel)
         self.driver.find_element_by_id('refresh_chart').click()
 
-    def open_card_menu(self, panel):
+    def open_close_card_menu(self, panel):
         panel.find_element_by_css_selector(self.CARD_MENU_BTN_CSS).click()
         time.sleep(0.1)  # wait for menu to open
 
+    def close_card_menu(self, panel):
+        el = panel.find_element_by_css_selector(self.CARD_MENU_BTN_CSS)
+        ActionChains(self.driver).move_to_element_with_offset(el, 50, 100).click().perform()
+
     def open_move_or_copy_card(self, card_title, copy=True):
         panel = self.get_card(card_title)
-        self.open_card_menu(panel)
+        self.open_close_card_menu(panel)
         self.driver.find_element_by_id('move_or_copy_chart').click()
         self.wait_for_element_present_by_css('.ant-modal')
 
@@ -784,6 +825,17 @@ class DashboardPage(Page):
         # Default 2 since 1 is not renamable
         ActionChains(self.driver).double_click(self.find_space_header(index)).perform()
         self.save_space_name(space_name)
+
+    def assert_disabled_rename_space(self, index=3):
+        # Default 4 since 1 and 2 are not renamable
+        ActionChains(self.driver).double_click(self.find_space_header(index)).perform()
+        with pytest.raises(TimeoutException):
+            self.wait_for_element_present_by_id(self.RENAME_TAB_INPUT_ID)
+
+    def is_missing_remove_space(self, index=3):
+        # Default 3 since 1 and 2 are note removable
+        space_header = self.find_space_header(index)
+        return len(space_header.find_elements_by_css_selector('.x-button.link')) == 0
 
     def remove_space(self, index=3):
         # Default 3 since 1 and 2 are note removable

@@ -3,7 +3,7 @@
     :class="['x-side-panel', panelClass]"
     :value="value"
     absolute
-    temporary
+    :temporary="temporary"
     right
     :width="width"
     @input="stateChanged"
@@ -58,6 +58,10 @@ export default {
     title: {
       type: String,
       default: '',
+    },
+    temporary: {
+      type: Boolean,
+      default: true,
     },
   },
   data() {
@@ -118,7 +122,7 @@ export default {
     }
 
     &__content {
-        padding: 28px;
+        padding: 28px 28px 84px 28px;
         position: relative;
         top: 64px;
     }

@@ -19,10 +19,12 @@
       <XCard
         class="card__item"
         :title="chart.name"
-        :removable="!readOnly"
-        :editable="!readOnly && chart.user_id !== '*'"
+        :removable="$can($permissionConsts.categories.Dashboard,
+                         $permissionConsts.actions.Delete,
+                         $permissionConsts.categories.Charts)"
+        :editable="canUserUpdatePanels && chart.user_id !== '*'"
         :exportable="chart.metric==='segment'"
-        :draggable="draggable"
+        :draggable="draggable && canUserUpdatePanels"
         :is-chart-filterable="isChartFilterable"
         v-on="$listeners"
         @edit="editPanel"
@@ -107,12 +109,11 @@
 
 <script>
 import {
-  mapActions, mapGetters, mapMutations, mapState,
+  mapActions, mapMutations, mapState,
 } from 'vuex';
 import _debounce from 'lodash/debounce';
 import _uniq from 'lodash/uniq';
 import _merge from 'lodash/merge';
-import { IS_ENTITY_RESTRICTED } from '../../../store/modules/auth';
 import { FETCH_DASHBOARD_PANEL } from '../../../store/modules/dashboard';
 import { UPDATE_DATA_VIEW } from '../../../store/mutations';
 import XCard from '../../axons/layout/Card.vue';
@@ -140,10 +141,6 @@ export default {
     chart: {
       type: Object,
       default: () => {},
-    },
-    readOnly: {
-      type: Boolean,
-      default: false,
     },
     draggable: {
       type: Boolean,
@@ -175,9 +172,21 @@ export default {
         return state.constants.allowedDates[this.chart.config.entity];
       },
     }),
-    ...mapGetters({
-      isEntityRestricted: IS_ENTITY_RESTRICTED,
-    }),
+    canUserUpdatePanels() {
+      return this.$can(this.$permissionConsts.categories.Dashboard,
+        this.$permissionConsts.actions.Update,
+        this.$permissionConsts.categories.Charts);
+    },
+    headerClass() {
+      return {
+        'x-card-header': true,
+        hidden: false,
+        // hidden: !this.headerVisible,
+      };
+    },
+    headerVisible() {
+      return this.isChartFilterable() || this.dataFilter || this.chart.historical;
+    },
     dataFilter: {
       get() {
         return this.filter;
@@ -220,7 +229,7 @@ export default {
     },
     linkToQueryResults(queryInd, historical) {
       const query = this.chart.data[queryInd];
-      if (this.isEntityRestricted(query.module)
+      if (!this.$canViewEntity(query.module)
               || query.view === undefined
               || query.view === null
       ) {

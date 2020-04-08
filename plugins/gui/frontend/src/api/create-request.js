@@ -1,4 +1,4 @@
-import axios_client from '@api/axios.js'
+import axiosClient from '@api/axios';
 import store from '@store/index';
 import _merge from 'lodash/merge';
 import { INIT_USER } from '@store/modules/auth';
@@ -19,6 +19,10 @@ export default (uri, baseOptions = {}) => async ({
     },
   };
 
+  if (process.env.NODE_ENV === 'development') {
+    base.withCredentials = true;
+  }
+
   if (data) {
     base.data = data;
   }
@@ -38,7 +42,7 @@ export default (uri, baseOptions = {}) => async ({
 
   const allOptions = _merge(baseOptions, base, options);
   try {
-    return await axios_client(allOptions);
+    return await axiosClient(allOptions);
   } catch (error) {
     if (error && error.response) {
       const errorMessage = error.response.data.message;

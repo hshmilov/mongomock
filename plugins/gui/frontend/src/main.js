@@ -37,6 +37,7 @@ import App from './components/App.vue';
 
 import SafeguardPlugin from './plugins/safeguard-modal';
 import RoleGatewayPlugin from './plugins/role-gateway';
+import MessageModalPlugin from '@/plugins/message-modal';
 import router from './router/index';
 import store from './store/index';
 
@@ -57,6 +58,7 @@ Vue.use(VueCookies);
 Vue.use(VueWorker);
 
 Vue.use(SafeguardPlugin);
+Vue.use(MessageModalPlugin);
 Vue.use(RoleGatewayPlugin);
 
 Vue.use(svgicon, { tagName: 'SvgIcon' });

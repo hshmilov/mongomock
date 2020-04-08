@@ -10,14 +10,15 @@ from axonius.consts.plugin_consts import (CONFIGURABLE_CONFIGS_COLLECTION,
                                           CORE_UNIQUE_NAME,
                                           GUI_PLUGIN_NAME)
 from axonius.plugin_base import return_error
-from axonius.utils.gui_helpers import add_rule_unauth
+from gui.logic.routing_helper import gui_category_add_rules, gui_route_logged_in
 from gui.feature_flags import FeatureFlags
 from gui.logic.login_helper import has_customer_login_happened
 # pylint: disable=no-member
 
 
+@gui_category_add_rules(gui_consts.Signup.SignupEndpoint)
 class Signup:
-    @add_rule_unauth(gui_consts.Signup.SignupEndpoint, methods=['POST', 'GET'])
+    @gui_route_logged_in(methods=['POST', 'GET'], enforce_session=False)
     def process_signup(self):
         signup_collection = self._get_collection(gui_consts.Signup.SignupCollection)
         signup = signup_collection.find_one({})

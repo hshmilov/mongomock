@@ -9,6 +9,7 @@ from axonius.clients.qualys.connection import QualysScansConnection
 from axonius.types.enforcement_classes import EntitiesResult, EntityResult
 from reports.action_types.action_type_base import ActionTypeBase, generic_fail, generic_success
 from reports.action_types.base.qualys_utils import QualysActionUtils, ACTION_CONFIG_TAGS
+#pylint: disable=too-many-locals
 
 logger = logging.getLogger(f'axonius.{__name__}')
 

@@ -1,11 +1,11 @@
 import Vue from 'vue';
-import { mapActions, mapGetters, mapState } from 'vuex';
+import { mapActions, mapState } from 'vuex';
 import _uniqBy from 'lodash/uniqBy';
 import _merge from 'lodash/merge';
 import _get from 'lodash/get';
 import _property from 'lodash/property';
 import { FETCH_DATA_LABELS } from '@store/actions';
-import { IS_ENTITY_RESTRICTED } from '@store/modules/auth';
+import { GET_ALL_ROLES } from '@store/modules/auth';
 import { FETCH_ADAPTERS, FETCH_ADAPTERS_CLIENT_LABELS } from '@store/modules/adapters';
 import XSelect from './select/Select.vue';
 
@@ -65,6 +65,10 @@ const withDynamicData = (params) => {
         type: Boolean,
         default: false,
       },
+      readOnly: {
+        type: Boolean,
+        default: false,
+      },
     },
     computed: {
       ...mapState({
@@ -87,16 +91,14 @@ const withDynamicData = (params) => {
           return false;
         },
       }),
-      ...mapGetters({
-        isEntityRestricted: IS_ENTITY_RESTRICTED,
-      }),
       currentModules() {
         return mergedParams.modules
-          .filter((moduleName) => !this.isEntityRestricted(moduleName.name));
+          .filter((moduleName) => this.$canViewEntity(moduleName.name));
       },
     },
     created() {
-      if (!this[mergedParams.moduleAttributeName]) {
+      if (!this[mergedParams.moduleAttributeName]
+        || this[mergedParams.moduleAttributeName].length === 0) {
         this.currentModules.map((usedModule) => {
           this.fetchData({ module: usedModule.name });
           return true;
@@ -123,6 +125,7 @@ const withDynamicData = (params) => {
             placeholder={passedProps.placeholder || schema.title}
             searchPlaceholder={schema.title}
             allowCustomOption={sourceSchema.options['allow-custom-option']}
+            readOnly={this.readOnly}
             { ...{ on: { ...this.$listeners } } }
           />
         );
@@ -176,5 +179,13 @@ export const xClientConnectionSelect = withDynamicData({
   moduleAttributeName: 'connectionLabels',
   optionsNormalizer: (item) => ({ name: item.label, title: item.label }),
   propertyName: 'label',
+});
 
+export const xRolesSelect = withDynamicData({
+  id: 'rolesSelect',
+  action: GET_ALL_ROLES,
+  modules: [{ name: 'auth', dataPath: '.data' }],
+  moduleAttributeName: 'allRoles',
+  optionsNormalizer: (item) => ({ name: item.uuid, title: item.name }),
+  propertyName: 'name',
 });

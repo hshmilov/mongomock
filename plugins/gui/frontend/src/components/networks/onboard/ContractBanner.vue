@@ -21,7 +21,7 @@
 
 <script>
 import dayjs from 'dayjs';
-import { mapState, mapGetters } from 'vuex';
+import { mapGetters } from 'vuex';
 import XBanner from '../../axons/popover/Banner.vue';
 import featureFlagsMixin from '../../../mixins/feature_flags';
 import { IS_EXPIRED } from '../../../store/getters';
@@ -33,11 +33,6 @@ export default {
   },
   mixins: [featureFlagsMixin],
   computed: {
-    ...mapState({
-      isAxonius(state) {
-        return state.auth.currentUser.data.user_name === '_axonius';
-      },
-    }),
     ...mapGetters({
       isExpired: IS_EXPIRED,
     }),
@@ -51,7 +46,7 @@ export default {
       return this.featureFlags && this.featureFlags.expiry_date;
     },
     inContract() {
-      return this.isContractDefined && !this.isAxonius && this.contractDaysRemaining <= 60;
+      return this.isContractDefined && !this.$isAxoniusUser() && this.contractDaysRemaining <= 60;
     },
     severity() {
       if (this.contractDaysRemaining < 4) return 'verydangerous';

@@ -1,6 +1,6 @@
 <template>
   <XPage title="axonius dashboard">
-    <template v-if="isEmptySystem === null" />
+    <template v-if="isEmptySystem === null && canViewDevicesAndUsers" />
     <template v-else-if="isEmptySystem">
       <XEmptySystem />
     </template>
@@ -74,6 +74,12 @@ export default {
       if (this.deviceDiscovery.seen === undefined || this.dashboardFirstUse === null) return null;
 
       return (!this.seenDevices && this.dashboardFirstUse);
+    },
+    canViewDevicesAndUsers() {
+      return this.$can(this.$permissionConsts.categories.DevicesAssets,
+        this.$permissionConsts.actions.View)
+        && this.$can(this.$permissionConsts.categories.UsersAssets,
+          this.$permissionConsts.actions.View);
     },
   },
   created() {

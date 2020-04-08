@@ -7,6 +7,7 @@ import { mapMutations } from 'vuex';
 import _capitalize from 'lodash/capitalize';
 import _isNil from 'lodash/isNil';
 import { formatDate } from '@constants/utils';
+import { entities } from '@constants/entities';
 
 const nonExpandablePanelFields = [{
   name: 'rule', title: 'Rule', type: 'string',
@@ -46,6 +47,15 @@ export default {
     return {
       expandedValues: [],
     };
+  },
+  computed: {
+    canViewEntities() {
+      if (!this.data.entities_results_query) {
+        return false;
+      }
+      return this.$can(entities[this.data.entities_results_query.type].permissionCategory,
+        this.$permissionConsts.actions.View);
+    },
   },
   mounted() {
     this.updateActivePanels();
@@ -162,7 +172,10 @@ export default {
               // conditionally render action button in footer
               this.data.status !== 'No data' && this.data.entities_results_query
                 ? [
-                  <x-button onClick={this.runQueryOnAffectedEntities}>
+                  <x-button
+                    disabled={this.canViewEntities}
+                    onClick={this.runQueryOnAffectedEntities}
+                  >
                     Show Affected {
                     _capitalize(this.data.entities_results_query.type)
                   }

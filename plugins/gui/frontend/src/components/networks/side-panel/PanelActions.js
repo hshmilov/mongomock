@@ -22,7 +22,7 @@ export const xActionItem = {
         },
         icon: {
             required: true
-        }
+        },
     },
     render(h) {
         return (

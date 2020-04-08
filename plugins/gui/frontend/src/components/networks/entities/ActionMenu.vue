@@ -108,11 +108,6 @@
             }
           })
         },
-        enforcementRestricted(state) {
-          let user = state.auth.currentUser.data
-          if (!user || !user.permissions) return true
-          return user.permissions.Enforcements === 'Restricted'
-        },
         view (state) {
             return state[this.module].view
         }
@@ -120,6 +115,10 @@
       ...mapGetters({
           getModuleSchema: GET_MODULE_SCHEMA
       }),
+      enforcementRestricted() {
+        return this.$cannot(this.$permissionConsts.categories.Enforcements,
+          this.$permissionConsts.actions.View);
+      },
       isAllSelected(){
         return this.entities.include !== undefined && !this.entities.include
       },

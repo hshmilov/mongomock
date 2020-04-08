@@ -22,7 +22,7 @@ CSV_TIMEOUT = 60 * 60
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
-# pylint: disable=C0302
+# pylint: disable=C0302,no-member,no-self-use
 
 
 class EntitiesPage(Page):
@@ -91,35 +91,27 @@ class EntitiesPage(Page):
     TABLE_CELL_EXPAND_CSS = 'tbody .x-table-row.clickable:nth-child({row_index}) td:nth-child({cell_index}) .md-icon'
     TABLE_CELL_HOVER_REMAINDER_CSS = 'tbody .x-table-row.clickable:nth-child({row_index}) td:nth-child({cell_index}) ' \
                                      '.x-data .x-slice .remainder'
-    TABLE_DATA_ROWS_XPATH = '//tr[@id]'
     TABLE_DATA_ROWS_TEXT_CSS = '.x-data > div'
     TABLE_SCHEMA_CUSTOM = '//div[contains(@class, \'x-schema-custom\')]'
-    TABLE_FIELD_ROWS_XPATH = '//div[contains(@class, \'x-tabs\')]//div[contains(@class, \'x-tab active\')]' \
-                             '//div[@class=\'x-table\']//tr[@class=\'x-table-row\']'
     TABLE_FIELD_ROWS_XPATH_WITH_IDS = '//div[contains(@class, \'x-tabs\')]//div[contains(@class, \'x-tab active\')]'\
                                       '//div[@class=\'x-table\']//tr[@class=\'x-table-row\' and @id]'
     TABLE_PAGE_SIZE_XPATH = '//div[@class=\'x-pagination\']/div[@class=\'x-sizes\']/div[text()=\'{page_size_text}\']'
     TABLE_PAGE_SELECT_XPATH = '//div[@class=\'x-pagination\']/div[@class=\'x-pages\']/div'
     TABLE_PAGE_ACTIVE_XPATH = '//div[@class=\'x-pagination\']/div[@class=\'x-pages\']/div[@class=\'x-link active\']'
-    TABLE_HEADER_XPATH = '//div[@class=\'x-table\']/table/thead/tr'
     TABLE_HEADER_FIELD_XPATH = '//div[contains(@class, \'x-entity-general\')]//div[contains(@class, \'x-tab active\')]'\
                                '//div[@class=\'x-table\']//thead/tr'
     NAME_ADAPTERS_JSON = 'json_file_adapter'
     NAME_ADAPTERS_AD = 'active_directory_adapter'
     VALUE_ADAPTERS_GENERAL = 'Aggregated'
-    TABLE_HEADER_CELLS_CSS = 'th'
     TABLE_HEADER_CELLS_XPATH = '//th[child::img[contains(@class, \'logo\')]]'
     TABLE_HEADER_SORT_XPATH = '//th[contains(@class, \'sortable\') and contains(text(), \'{col_name_text}\')]'
 
-    TABLE_DATA_XPATH = '//tr[@id]/td[position()={data_position}]'
-    TABLE_DATA_SLICER_XPATH = f'{TABLE_DATA_XPATH}//div[@class=\'x-data\']/div'
-    TABLE_DATA_SLICER_TYPE_XPATH = f'{TABLE_DATA_XPATH}//div[@class=\'x-slice\']/div'
-    TABLE_DATA_EXPAND_ROW_XPATH = f'{TABLE_DATA_XPATH}//div[@class=\'details-list-container\']'
-    TABLE_DATA_EXPAND_CELL_XPATH = f'{TABLE_DATA_XPATH}//div[@class=\'details-table-container\']' \
+    TABLE_DATA_SLICER_TYPE_XPATH = f'{Page.TABLE_DATA_XPATH}//div[@class=\'x-slice\']/div'
+    TABLE_DATA_EXPAND_ROW_XPATH = f'{Page.TABLE_DATA_XPATH}//div[@class=\'details-list-container\']'
+    TABLE_DATA_EXPAND_CELL_XPATH = f'{Page.TABLE_DATA_XPATH}//div[@class=\'details-table-container\']' \
                                    f'/div[contains(@class, \'popup\')]//*[@class=\'table\']'
     TABLE_DATA_EXPAND_CELL_BODY_XPATH = f'{TABLE_DATA_EXPAND_CELL_XPATH}/tbody'
-    TABLE_DATA_IMG_XPATH = f'{TABLE_DATA_XPATH}//div[@class=\'x-data\' or @class=\'list\']//img'
-    TABLE_DATA_INLINE_XPATH = f'{TABLE_DATA_XPATH}/div'
+    TABLE_DATA_IMG_XPATH = f'{Page.TABLE_DATA_XPATH}//div[@class=\'x-data\' or @class=\'list\']//img'
 
     TABLE_COLUMNS_MENU_CSS = '.x-field-menu-filter'
     TABLE_ACTIONS_TAG_CSS = 'div.content.w-sm > div > div:nth-child(1) > div.item-content'
@@ -207,6 +199,24 @@ class EntitiesPage(Page):
     EDIT_COLUMNS_TEXT = 'Edit Columns'
     RESET_COLS_SYSTEM_DEFAULT_TEXT = 'Reset Columns to System Default'
     RESET_COLS_USER_DEFAULT_TEXT = 'Reset Columns to User Default'
+    ADD_NOTES_BUTTON_TEXT = 'Add Note'
+    EDIT_NOTES_TEXTBOX_CSS = '.text-input'
+
+    TAG_MODAL_CSS = '.x-tag-modal'
+    TAG_CHECKBOX_CSS = f'{TAG_MODAL_CSS} .v-list .v-input--checkbox'
+    TAGS_TEXTBOX_CSS = f'{TAG_MODAL_CSS} .x-combobox_text-field--keep-open input'
+    TAG_CREATE_NEW_CSS = f'{TAG_MODAL_CSS} .x-combobox_create-new-item'
+    TAG_CHECKBOX_XPATH = '//div[contains(@class, \'x-tag-modal\')]//div[contains(@class, \'v-list\')]//' \
+                         'div[contains(@class, \'v-list-item__title\') and text()=\'{tag_text}\']'
+    TAG_PARTIAL_BASE_CSS = TAG_CHECKBOX_XPATH + '/../preceding-sibling::div' \
+                                                '[contains(@class, \'v-list-item__action\')]' \
+                                                '//div[contains(@class, \'v-input--checkbox\')]'
+    TAG_PARTIAL_INPUT_CSS = TAG_PARTIAL_BASE_CSS + '//input'
+    TAG_PARTIAL_INPUT_ICON = TAG_PARTIAL_BASE_CSS
+    TAG_NEW_ITEM_XPATH = TAG_CHECKBOX_XPATH
+    TAG_COMBOBOX_CSS = '.x-combobox_results-card--keep-open.v-card'
+
+    EDIT_TAGS_BUTTON_TEXT = 'Edit Tags'
 
     @property
     def url(self):
@@ -361,11 +371,6 @@ class EntitiesPage(Page):
         self.wait_for_spinner_to_end()
         return self.driver.current_url.split('/')[-1]
 
-    def click_specific_row_checkbox(self, field_name, field_value):
-        values = self.get_column_data_inline(field_name)
-        row_num = values.index(field_value)
-        self.click_row_checkbox(row_num + 1)
-
     def find_query_search_input(self):
         return self.driver.find_element_by_css_selector(self.QUERY_SEARCH_INPUT_CSS)
 
@@ -383,6 +388,13 @@ class EntitiesPage(Page):
         self.open_search_list()
         for name in query_names:
             assert self.driver.find_element_by_xpath(self.QUERY_SEARCH_DROPDOWN_XPATH.format(query_name_text=name))
+        self.close_dropdown()
+
+    def check_search_list_for_absent_names(self, query_names):
+        self.open_search_list()
+        for name in query_names:
+            assert len(self.driver.find_elements_by_xpath(
+                self.QUERY_SEARCH_DROPDOWN_XPATH.format(query_name_text=name))) == 0
         self.close_dropdown()
 
     @retry(wait_fixed=500, stop_max_attempt_number=30)
@@ -607,40 +619,10 @@ class EntitiesPage(Page):
         self.fill_text_by_element(filter_search, filter_str)
         self.key_down_enter(filter_search)
 
-    @staticmethod
-    def _get_column_title(head):
-        return head.text.strip().split('\n')[0]
-
-    def get_columns_header_text(self):
-        headers = self.driver.find_element_by_xpath(self.TABLE_HEADER_XPATH)
-        header_columns = headers.find_elements_by_css_selector(self.TABLE_HEADER_CELLS_CSS)
-        return [self._get_column_title(head) for head in header_columns if self._get_column_title(head)]
-
     def get_field_columns_header_text(self):
         headers = self.driver.find_element_by_xpath(self.TABLE_HEADER_FIELD_XPATH)
         header_columns = headers.find_elements_by_css_selector(self.TABLE_HEADER_CELLS_CSS)
         return [self._get_column_title(head) for head in header_columns if self._get_column_title(head)]
-
-    def count_sort_column(self, col_name, parent=None):
-        # Return the position of given col_name in list of column headers, 1-based
-        if not parent:
-            parent = self.driver
-        return [self._get_column_title(element) for element
-                in parent.find_elements_by_css_selector(self.TABLE_HEADER_CELLS_CSS)].index(col_name) + 1
-
-    def count_specific_column(self, col_name, parent=None):
-        # Return the position of given col_name in list of column headers, 1-based
-        if not parent:
-            parent = self.driver
-        elements = parent.find_elements_by_css_selector(self.TABLE_HEADER_CELLS_CSS)
-        for index, element in enumerate(elements, start=1):
-            try:
-                element.find_element_by_tag_name('img')
-            except NoSuchElementException:
-                if self._get_column_title(element) == col_name:
-                    return index
-        # This coloumn title was not found
-        raise ValueError
 
     def get_note_by_text(self, note_text):
         return self.driver.find_element_by_xpath(self.NOTES_SEARCH_BY_TEXT_XPATH.format(note_text=note_text))
@@ -648,15 +630,6 @@ class EntitiesPage(Page):
     def get_notes_column_data(self, col_name):
         parent = self.driver.find_element_by_css_selector(self.NOTES_CONTENT_CSS)
         return self.get_column_data_inline(col_name, parent)
-
-    def get_column_data(self, data_section_xpath, col_name, parent=None, generic_col=True):
-        if not parent:
-            parent = self.driver
-        col_position = self.count_sort_column(col_name, parent)\
-            if generic_col else self.count_specific_column(col_name, parent)
-        return [el.text.strip()
-                for el in parent.find_elements_by_xpath(data_section_xpath.format(data_position=col_position))
-                if el.text.strip()]
 
     def get_column_data_with_remainder(self, data_section_xpath, col_name, parent=None, generic_col=True,
                                        merge_cells=True):
@@ -707,9 +680,6 @@ class EntitiesPage(Page):
                             in enumerate(element.find_elements_by_css_selector('.item'))]
         return field_values
 
-    def get_column_data_inline(self, col_name, parent=None):
-        return self.get_column_data(self.TABLE_DATA_INLINE_XPATH, col_name, parent)
-
     def get_column_data_inline_with_remainder(self, col_name, parent=None):
         return self.get_column_data_with_remainder(self.TABLE_DATA_INLINE_XPATH, col_name, parent)
 
@@ -740,16 +710,6 @@ class EntitiesPage(Page):
         return [el.get_attribute('alt') for el in
                 self.find_elements_by_xpath(self.TABLE_DATA_IMG_XPATH.format(data_position=col_position))
                 if el.get_attribute('alt')]
-
-    def get_all_data(self):
-        return [data_row.text for data_row in self.find_elements_by_xpath(self.TABLE_DATA_ROWS_XPATH)]
-
-    def get_field_data(self):
-        return [data_row.text for data_row in self.find_elements_by_xpath(self.TABLE_FIELD_ROWS_XPATH)]
-
-    def get_field_table_data(self):
-        return [[data_cell.text for data_cell in data_row.find_elements_by_tag_name('td')]
-                for data_row in self.find_elements_by_xpath(self.TABLE_FIELD_ROWS_XPATH)]
 
     def get_field_table_data_with_ids(self):
         return [[data_cell.text for data_cell in data_row.find_elements_by_tag_name('td')]
@@ -900,7 +860,21 @@ class EntitiesPage(Page):
         self.driver.find_element_by_css_selector(self.TABLE_ACTIONS_ENFORCE_CSS).click()
 
     def open_edit_tags(self):
-        self.click_button('Edit Tags')
+        self.click_button(self.EDIT_TAGS_BUTTON_TEXT)
+
+    def get_edit_tags_button(self):
+        return self.get_enabled_button(self.EDIT_TAGS_BUTTON_TEXT)
+
+    def get_remove_tags_button(self):
+        return self.get_enabled_button(self.REMOVE_BUTTON)
+
+    def assert_edit_tags_disabled(self):
+        self.wait_for_element_present_by_xpath(
+            self.DISABLED_BUTTON_XPATH.format(button_text=self.EDIT_TAGS_BUTTON_TEXT))
+
+    def assert_remove_tags_disabled(self):
+        self.wait_for_element_present_by_xpath(
+            self.DISABLED_BUTTON_XPATH.format(button_text=self.REMOVE_BUTTON))
 
     def click_save_query_save_button(self, query_name=None):
         context_element = self.wait_for_element_present_by_css('.save-query-dialog')
@@ -940,6 +914,9 @@ class EntitiesPage(Page):
         self.click_button(query_name)
         self.fill_query_name(new_query_name)
         self.click_save_query_save_button()
+
+    def can_rename_query(self, query_name):
+        return not self.is_button_absent(query_name)
 
     def run_filter_and_save(self,
                             query_name,
@@ -999,24 +976,34 @@ class EntitiesPage(Page):
         self.driver.find_element_by_css_selector(self.CUSTOM_DATA_TAB_CSS).click()
 
     def fill_save_note(self, note_text, toast_text):
-        self.fill_text_field_by_css_selector('.text-input', note_text)
+        self.fill_text_field_by_css_selector(self.EDIT_NOTES_TEXTBOX_CSS, note_text)
         self.click_button(self.SAVE_BUTTON)
         self.wait_for_element_absent_by_css(self.MODAL_OVERLAY_CSS)
         self.wait_for_toaster(toast_text)
 
     def create_note(self, note_text):
-        self.click_button('Add Note')
+        self.click_button(self.ADD_NOTES_BUTTON_TEXT)
         self.fill_save_note(note_text, self.NOTES_CREATED_TOASTER)
+
+    def get_add_note_button(self):
+        return self.get_enabled_button(self.ADD_NOTES_BUTTON_TEXT)
+
+    def assert_add_note_disabled(self):
+        self.wait_for_element_present_by_xpath(
+            self.DISABLED_BUTTON_XPATH.format(button_text=self.ADD_NOTES_BUTTON_TEXT))
 
     def edit_note(self, note_text):
         self.click_row()
         self.fill_save_note(note_text, self.NOTES_EDITED_TOASTER)
 
+    def can_edit_notes(self):
+        return len(self.driver.find_elements_by_css_selector(self.TABLE_FIRST_ROW_DATA_CSS)) > 0
+
     def remove_note(self):
         self.click_row_checkbox()
         self.remove_selected()
         self.approve_remove_selected()
-        self.wait_for_element_absent_by_css(self.MODAL_OVERLAY_CSS)
+        self.wait_for_element_absent_by_id(self.SAFEGUARD_APPROVE_BUTTON_ID)
 
     def find_notes_row_readonly(self):
         parent = self.driver.find_element_by_css_selector(self.NOTES_CONTENT_CSS)
@@ -1159,6 +1146,12 @@ class EntitiesPage(Page):
         self.wait_for_table_to_load()
         self.wait_for_spinner_to_end()
 
+    def is_actions_button_absent(self):
+        return self.is_button_absent(self.ACTIONS_BUTTON)
+
+    def is_actions_button_disable(self):
+        return self.is_element_disabled(self.get_button(self.ACTIONS_BUTTON))
+
     def open_delete_dialog(self):
         self.click_button(self.ACTIONS_BUTTON)
         self.driver.find_element_by_css_selector(self.TABLE_ACTIONS_DELETE_CSS).click()
@@ -1218,13 +1211,20 @@ class EntitiesPage(Page):
         self.click_custom_data_tab()
 
     def get_entity_id(self):
+        if len(self.find_elements_by_text(self.ID_FIELD)) == 0:
+            return None
         return self.find_element_by_text(self.ID_FIELD).text
 
     def find_custom_data_edit(self):
-        return self.get_button(self.CUSTOM_DATA_EDIT_BTN)
+        return self.get_enabled_button(self.CUSTOM_DATA_EDIT_BTN)
 
     def click_custom_data_edit(self):
         return self.find_custom_data_edit().click()
+
+    def is_custom_data_edit_disabled(self):
+        self.wait_for_element_present_by_xpath(
+            self.DISABLED_BUTTON_XPATH.format(button_text=self.CUSTOM_DATA_EDIT_BTN))
+        return True
 
     def click_custom_data_add_predefined(self):
         return self.click_button('Add Predefined field')
@@ -1441,3 +1441,111 @@ class EntitiesPage(Page):
         elif operator == 'in':
             self.fill_query_string_value(value, parent=expressions[0])
         self.wait_for_table_to_be_responsive()
+
+    def click_tag_save_button(self):
+        self.click_button(self.SAVE_BUTTON, context=self.driver.find_element_by_css_selector(self.TAG_MODAL_CSS))
+
+    def open_tag_dialog(self):
+        self.click_button('Actions', should_scroll_into_view=False)
+        self.click_actions_tag_button()
+
+    def add_new_tags(self, tags, number=1):
+        self.open_tag_dialog()
+        self.create_save_tags(tags, number)
+        self.wait_for_table_to_load()
+
+    def toggle_partial_tag(self, tag_text):
+        partial_tag_elem = self.driver.find_element_by_xpath(self.TAG_CHECKBOX_XPATH.format(tag_text=tag_text))
+        partial_tag_icon_ele = self.driver.find_element_by_xpath(self.TAG_PARTIAL_INPUT_ICON.format(tag_text=tag_text))
+        partial_tag_input_elem = self.driver.find_element_by_xpath(self.TAG_PARTIAL_INPUT_CSS.format(tag_text=tag_text))
+        partial_tag_elem.click()
+        return {
+            'tag_icon_ele': partial_tag_icon_ele,
+            'tag_input_ele': partial_tag_input_elem
+        }
+
+    def set_partial_tag_to_state(self, tag):
+        partial_tag_elem = self.driver.find_element_by_xpath(self.TAG_CHECKBOX_XPATH.format(tag_text=tag['name']))
+        partial_tag_icon_ele = self.driver.find_element_by_xpath(self.TAG_PARTIAL_INPUT_ICON.
+                                                                 format(tag_text=tag['name']))
+        if tag['state'] == self.PartialState['CHECKED']:
+            # set the partial tag to be checked
+            partial_tag_elem.click()
+        elif tag['state'] == self.PartialState['UNCHECKED']:
+            # set the partial tag to be checked
+            partial_tag_elem.click()
+            # set the partial tag to be unchecked
+            partial_tag_elem.click()
+        return partial_tag_icon_ele
+
+    def remove_all_tags(self, tags):
+        self.toggle_select_all_rows_checkbox()
+        self.click_select_all_entities()
+        self.open_tag_dialog()
+        for tag in tags:
+            partial_tag_elem = self.driver.find_element_by_xpath(self.TAG_CHECKBOX_XPATH.format(tag_text=tag))
+            partial_tag_icon_ele = self.driver.find_element_by_xpath(self.TAG_PARTIAL_INPUT_ICON.
+                                                                     format(tag_text=tag))
+            if self.has_class(partial_tag_icon_ele, self.PartialIcon['CHECKED']):
+                partial_tag_elem.click()
+            elif self.has_class(partial_tag_icon_ele, self.PartialIcon['PARTIAL']):
+                # set to chekced
+                partial_tag_elem.click()
+                # set to unchecked
+                partial_tag_elem.click()
+        self.click_tag_save_button()
+
+    def create_save_tags(self, tags, number=1):
+        for tag_text in tags:
+            self.fill_text_field_by_css_selector(self.TAGS_TEXTBOX_CSS, tag_text)
+            time.sleep(0.1)
+            self.click_create_new_tag_link_button()
+            self.wait_for_element_present_by_xpath(self.TAG_NEW_ITEM_XPATH.format(tag_text=tag_text))
+        self.click_tag_save_button()
+        self.wait_for_success_tagging_message(number)
+        self.wait_for_spinner_to_end()
+
+    def remove_first_tag(self):
+        self.open_tag_dialog()
+        self.wait_for_element_present_by_css(self.TAG_CHECKBOX_CSS).click()
+        self.click_tag_save_button()
+        self.wait_for_success_tagging_message()
+        self.wait_for_table_to_load()
+
+    def remove_tag(self, text):
+        self.open_tag_dialog()
+        self.find_element_by_text(text).click()
+        self.click_tag_save_button()
+        self.wait_for_success_tagging_message()
+
+    def get_first_tag_text(self):
+        return self.get_first_row_tags().splitlines()[0]
+
+    def get_first_row_tags(self):
+        return self.driver.find_elements_by_css_selector(self.TABLE_FIRST_ROW_TAG_CSS)[0].text
+
+    def wait_for_success_tagging_message(self, number=1):
+        return NotImplementedError()
+
+    def wait_for_success_tagging_message_for_entities(self, number=1, success_message='{}'):
+        message = self.FEEDBACK_MODAL_MESSAGE_XPATH.format(message=success_message.format(number=number))
+        self.wait_for_element_present_by_xpath(message)
+        self.wait_for_element_absent_by_xpath(message)
+
+    def get_tag_combobox_exist(self):
+        return self.wait_for_element_present_by_css(self.TAG_COMBOBOX_CSS)
+
+    def get_tag_modal_info(self):
+        return self.driver.find_element_by_css_selector('.tag-modal-info')
+
+    def get_checkbox_list(self):
+        return self.driver.find_elements_by_css_selector('.v-list-item')
+
+    def get_tags_input(self):
+        return self.driver.find_element_by_css_selector(self.TAGS_TEXTBOX_CSS)
+
+    def click_create_new_tag_link_button(self):
+        return self.driver.find_element_by_css_selector(self.TAG_CREATE_NEW_CSS).click()
+
+    def is_tags_input_text_selectable(self):
+        return self.is_input_text_selectable(self.TAGS_TEXTBOX_CSS)

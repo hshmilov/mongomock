@@ -1,10 +1,10 @@
 import json
 import logging
 import os
-import secrets
 
+from datetime import datetime
+from bson import ObjectId
 import ldap3
-import pymongo
 from flask import (jsonify,
                    make_response, redirect, request, session)
 from werkzeug.wrappers import Response
@@ -14,22 +14,22 @@ from flask_limiter.util import get_remote_address
 # pylint: disable=import-error,no-name-in-module
 from onelogin.saml2.auth import OneLogin_Saml2_Auth
 
+
 from axonius.clients.ldap.exceptions import LdapException
 from axonius.clients.ldap.ldap_connection import LdapConnection
 from axonius.clients.rest.connection import RESTConnection
-from axonius.consts.gui_consts import (LOGGED_IN_MARKER_PATH, CSRF_TOKEN_LENGTH)
+from axonius.consts.gui_consts import (CSRF_TOKEN_LENGTH, LOGGED_IN_MARKER_PATH, PREDEFINED_FIELD, IS_AXONIUS_ROLE)
 from axonius.clients.rest.exception import RESTException
-from axonius.consts.plugin_consts import AXONIUS_USER_NAME
+from axonius.consts.plugin_consts import (CONFIGURABLE_CONFIGS_COLLECTION,
+                                          GUI_PLUGIN_NAME)
 from axonius.logging.metric_helper import log_metric
-from axonius.plugin_base import return_error, random_string, limiter, ratelimiting_settings, LIMITER_SCOPE
+from axonius.plugin_base import return_error, random_string, LIMITER_SCOPE
 from axonius.types.ssl_state import (SSLState)
-from axonius.utils.gui_helpers import (PermissionLevel,
-                                       PermissionType, deserialize_db_permissions,
-                                       add_rule_unauth)
 from axonius.utils.parsing import bytes_image_to_base64
+from axonius.utils.permissions_helper import deserialize_db_permissions, is_axonius_role
 from gui.logic.filter_utils import filter_archived
 from gui.logic.login_helper import has_customer_login_happened
-from gui.logic.routing_helper import gui_add_rule_logged_in
+from gui.logic.routing_helper import gui_category_add_rules, gui_route_logged_in
 from gui.logic.users_helper import beautify_user_entry
 from gui.okta_login import try_connecting_using_okta
 # pylint: disable=no-member,too-many-boolean-expressions,too-many-return-statements,no-self-use,no-else-return,too-many-branches
@@ -37,9 +37,10 @@ from gui.okta_login import try_connecting_using_okta
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
+@gui_category_add_rules('')
 class Login:
 
-    @add_rule_unauth('get_login_options')
+    @gui_route_logged_in('get_login_options', enforce_session=False)
     def get_login_options(self):
         return jsonify({
             'okta': {
@@ -61,34 +62,36 @@ class Login:
             }
         })
 
-    @limiter.shared_limit(ratelimiting_settings, key_func=get_remote_address, scope=LIMITER_SCOPE)
-    @add_rule_unauth('login', methods=['GET', 'POST'])
-    def login(self):
+    @gui_route_logged_in('login', methods=['GET'], enforce_permissions=False)
+    def get_current_user(self):
         """
         Get current user or login
         :return:
         """
-        if request.method == 'GET':
-            user = self.get_session.get('user')
-            if user is None:
-                return return_error('Not logged in', 401)
-            if 'pic_name' not in user:
-                user['pic_name'] = self.DEFAULT_AVATAR_PIC
-            user = dict(user)
-            user['permissions'] = {
-                k.name: v.name for k, v in user['permissions'].items()
-            }
-            log_metric(logger, 'LOGIN_MARKER', 0)
-            user_name = user.get('user_name')
-            source = user.get('source')
-            if user_name != AXONIUS_USER_NAME:
-                self.send_external_info_log(f'UI Login with user: {user_name} of source {source}')
-            if self._system_settings.get('timeout_settings') and self._system_settings.get('timeout_settings').get(
-                    'enabled'):
-                user['timeout'] = self._system_settings.get('timeout_settings').get('timeout') \
-                    if not (os.environ.get('HOT') == 'true' or self.get_session.permanent) else 0
-            return jsonify(beautify_user_entry(user)), 200
+        user = self.get_session.get('user')
+        if user is None:
+            return return_error('Not logged in', 401)
+        if 'pic_name' not in user:
+            user['pic_name'] = self.DEFAULT_AVATAR_PIC
+        user = dict(user)
+        log_metric(logger, 'LOGIN_MARKER', 0)
+        user_name = user.get('user_name')
+        source = user.get('source')
+        if self.is_axonius_user():
+            self.send_external_info_log(f'UI Login with user: {user_name} of source {source}')
+        if self._system_settings.get('timeout_settings') and self._system_settings.get('timeout_settings').get(
+                'enabled'):
+            user['timeout'] = self._system_settings.get('timeout_settings').get('timeout') \
+                if not (os.environ.get('HOT') == 'true' or self.get_session.permanent) else 0
+        return jsonify(beautify_user_entry(user)), 200
 
+    @gui_route_logged_in('login', methods=['POST'], enforce_session=False,
+                         limiter_key_func=get_remote_address, shared_limit_scope=LIMITER_SCOPE)
+    def login(self):
+        """
+        do login
+        :return:
+        """
         log_in_data = self.get_request_data_as_object()
         if log_in_data is None:
             return return_error('No login data provided', 400)
@@ -113,29 +116,44 @@ class Login:
             self.send_external_info_log(f'User {user_name} tried logging in with wrong password')
             logger.info(f'User {user_name} tried logging in with wrong password')
             return return_error('Wrong user name or password', 401)
+        role = self._roles_collection.find_one({'_id': user_from_db.get('role_id')})
         if request and request.referrer and 'localhost' not in request.referrer \
                 and '127.0.0.1' not in request.referrer \
                 and 'diag-l.axonius.com' not in request.referrer \
-                and user_name != AXONIUS_USER_NAME:
+                and is_axonius_role(role):
             self.system_collection.replace_one({'type': 'server'},
                                                {'type': 'server', 'server_name': parse_url(request.referrer).host},
                                                upsert=True)
+
         self.__perform_login_with_user(user_from_db, remember_me)
+        self._update_user_last_login(user_from_db)
         response = Response('')
         self._add_expiration_timeout_cookie(response)
         return response
+
+    def _update_user_last_login(self, user):
+        user_id = user.get('_id')
+        self._users_collection.find_one_and_update({
+            '_id': ObjectId(user_id)
+        }, {
+            '$set': {'last_login': datetime.now()}
+        })
 
     def __perform_login_with_user(self, user, remember_me=False):
         """
         Given a user, mark the current session as associated with it
         """
         user = dict(user)
-        user_name = user.get('user_name')
-        if not has_customer_login_happened() and user_name != AXONIUS_USER_NAME:
+        role_id = user.get('role_id')
+        role_from_db = self._roles_collection.find_one({'_id': role_id})
+        if not has_customer_login_happened() and not is_axonius_role(role_from_db):
             logger.info('First customer login occurred.')
             LOGGED_IN_MARKER_PATH.touch()
-
-        user['permissions'] = deserialize_db_permissions(user['permissions'])
+        logger.info(f'permission: {role_from_db["name"]}')
+        user['permissions'] = deserialize_db_permissions(role_from_db['permissions'])
+        user['role_name'] = role_from_db['name']
+        user[PREDEFINED_FIELD] = role_from_db.get(PREDEFINED_FIELD)
+        user[IS_AXONIUS_ROLE] = role_from_db.get(IS_AXONIUS_ROLE)
         self.get_session['user'] = user
         session['csrf-token'] = random_string(CSRF_TOKEN_LENGTH)
         self.get_session.permanent = remember_me
@@ -144,9 +162,9 @@ class Login:
                                     username: str,
                                     first_name: str = None,
                                     last_name: str = None,
+                                    email: str = None,
                                     picname: str = None,
-                                    remember_me: bool = False,
-                                    additional_userinfo: dict = None):
+                                    remember_me: bool = False):
         """
         Our system supports external login systems, such as LDAP, and Okta.
         To generically support such systems with our permission model we must normalize the login mechanism.
@@ -156,76 +174,34 @@ class Login:
         :param username: the username from the service, could also be an email
         :param first_name: the first name of the user (optional)
         :param last_name: the last name of the user (optional)
+        :param email: the email of the user (optional)
         :param picname: the URL of the avatar of the user (optional)
         :param remember_me: whether or not to remember the session after the browser has been closed
         :return: None
         """
         role_name = None
         config_doc = self._users_config_collection.find_one({})
-        if config_doc and config_doc.get('external_default_role'):
-            role_name = config_doc['external_default_role']
+        db_connection = self._get_db_connection()
+        config_collection = db_connection[GUI_PLUGIN_NAME][CONFIGURABLE_CONFIGS_COLLECTION]
+        config_name = f'{source}_login_settings'
+        config = config_collection.find_one({'config_name': f'GuiService'}, {f'config.{config_name}': 1})['config']
+        default_role_id = None
+        if config and config.get(config_name):
+            default_role_id = config.get(config_name).get('default_role_id')
+        if not default_role_id and config_doc and config_doc.get('external_default_role'):
+            default_role_id = config_doc['external_default_role']
         user = self._create_user_if_doesnt_exist(
             username,
             first_name,
             last_name,
-            picname,
-            source,
-            role_name=role_name,
-            additional_userinfo=additional_userinfo,
+            email=email,
+            picname=picname,
+            source=source,
+            role_id=default_role_id
         )
         self.__perform_login_with_user(user, remember_me)
 
-    def _create_user_if_doesnt_exist(self, username, first_name, last_name, picname=None, source='internal',
-                                     password=None, role_name=None, additional_userinfo=None):
-        """
-        Create a new user in the system if it does not exist already
-        jim - 3.0 - made private instead of protected so api.py can use
-
-        :return: Created user
-        """
-        if source != 'internal' and password:
-            password = bcrypt.hash(password)
-
-        match_user = {
-            'user_name': username,
-            'source': source
-        }
-        user = self._users_collection.find_one(filter_archived(match_user))
-        if not user:
-            user = {
-                'user_name': username,
-                'first_name': first_name,
-                'last_name': last_name,
-                'pic_name': picname or self.DEFAULT_AVATAR_PIC,
-                'source': source,
-                'password': password,
-                'api_key': secrets.token_urlsafe(),
-                'api_secret': secrets.token_urlsafe(),
-                'additional_userinfo': additional_userinfo or {}
-            }
-            if role_name:
-                # Take the permissions set from the defined role
-                role_doc = self._roles_collection.find_one(filter_archived({
-                    'name': role_name
-                }))
-                if not role_doc or 'permissions' not in role_doc:
-                    logger.error(f'The role {role_name} was not found and default permissions will be used.')
-                else:
-                    user['permissions'] = role_doc['permissions']
-                    user['role_name'] = role_name
-            if 'permissions' not in user:
-                user['permissions'] = {
-                    p.name: PermissionLevel.Restricted.name for p in PermissionType
-                }
-                user['permissions'][PermissionType.Dashboard.name] = PermissionLevel.ReadOnly.name
-            try:
-                self._users_collection.replace_one(match_user, user, upsert=True)
-            except pymongo.errors.DuplicateKeyError:
-                logger.warning(f'Duplicate key error on {username}:{source}', exc_info=True)
-            user = self._users_collection.find_one(filter_archived(match_user))
-        return user
-
-    @add_rule_unauth('okta-redirect')
+    @gui_route_logged_in('okta-redirect', enforce_session=False)
     def okta_redirect(self):
         okta_settings = self._okta
         if not okta_settings['enabled']:
@@ -240,7 +216,8 @@ class Login:
                 'okta',  # Look at the comment above
                 oidc.claims['email'],
                 oidc.claims.get('given_name', ''),
-                oidc.claims.get('family_name', '')
+                oidc.claims.get('family_name', ''),
+                oidc.claims['email']
             )
 
         redirect_response = redirect('/', code=302)
@@ -277,7 +254,7 @@ class Login:
         logger.debug(f'Using DC {dc_address}')
         return dc_address, ssl_state
 
-    @add_rule_unauth('login/ldap', methods=['POST'])
+    @gui_route_logged_in('login/ldap', methods=['POST'], enforce_session=False)
     def ldap_login(self):
         try:
             log_in_data = self.get_request_data_as_object()
@@ -345,6 +322,7 @@ class Login:
                                              user.get('displayName') or user_name,
                                              user.get('givenName') or '',
                                              user.get('sn') or '',
+                                             '',
                                              image or self.DEFAULT_AVATAR_PIC)
             response = Response('')
             self._add_expiration_timeout_cookie(response)
@@ -430,7 +408,7 @@ class Login:
             logger.exception(f'Failed to create Saml2_Auth object, saml_settings: {saml_settings}')
             raise
 
-    @add_rule_unauth('login/saml/metadata/', methods=['GET', 'POST'])
+    @gui_route_logged_in('login/saml/metadata/', methods=['GET', 'POST'], enforce_session=False)
     def saml_login_metadata(self):
         saml_settings = self._saml_login
         # Metadata can always exist, no need to check if SAML has been activated.
@@ -448,7 +426,7 @@ class Login:
         else:
             return return_error(', '.join(errors))
 
-    @add_rule_unauth('login/saml/', methods=['GET', 'POST'])
+    @gui_route_logged_in('login/saml/', methods=['GET', 'POST'], enforce_session=False)
     def saml_login(self):
         self_url, req = self.__get_flask_request_for_saml(request)
         saml_settings = self._saml_login
@@ -473,6 +451,7 @@ class Login:
 
                 given_name = attributes.get('http://schemas.xmlsoap.org/ws/2005/05/identity/claims/givenname')
                 surname = attributes.get('http://schemas.xmlsoap.org/ws/2005/05/identity/claims/surname')
+                email = attributes.get('http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress')
                 picture = None
 
                 if not name_id:
@@ -486,6 +465,8 @@ class Login:
                     given_name = given_name[0]
                 if isinstance(surname, list) and len(surname) == 1:
                     surname = surname[0]
+                if isinstance(email, list) and len(email) == 1:
+                    email = email[0]
 
                 # Notice! If you change the first parameter, then our CURRENT customers will have their
                 # users re-created next time they log in. This is bad! If you change this, please change
@@ -494,6 +475,7 @@ class Login:
                                                  name_id,
                                                  given_name or name_id,
                                                  surname or '',
+                                                 email,
                                                  picture or self.DEFAULT_AVATAR_PIC)
 
                 logger.info(f'SAML Login success with name id {name_id}')
@@ -512,7 +494,7 @@ class Login:
     def _add_expiration_timeout_cookie(response):
         response.set_cookie('session_expiration', 'session_expiration')
 
-    @gui_add_rule_logged_in('logout', methods=['GET'])
+    @gui_route_logged_in('logout', methods=['GET'], enforce_permissions=False)
     def logout(self):
         """
         Clears session, logs out

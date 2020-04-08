@@ -17,6 +17,8 @@ from tanium_sq_adapter.consts import (
     HEADERS,
 )
 
+# pylint: disable=too-many-locals
+
 logger = logging.getLogger(f'axonius.{__name__}')
 
 

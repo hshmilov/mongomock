@@ -1,20 +1,22 @@
 import logging
-
+import secrets
 import requests
-from flask import (has_request_context, jsonify,
-                   request, session)
 
+from flask import (has_request_context, jsonify,
+                   request, session, Response)
+
+from axonius.plugin_base import random_string
 from axonius.consts import gui_consts
-from axonius.consts.gui_consts import (SIGNUP_TEST_COMPANY_NAME,
-                                       SIGNUP_TEST_CREDS)
-from axonius.consts.plugin_consts import (AXONIUS_USER_NAME)
+from axonius.consts.gui_consts import (SIGNUP_TEST_COMPANY_NAME, CSRF_TOKEN_LENGTH,
+                                       SIGNUP_TEST_CREDS, FeatureFlagsNames)
 from axonius.types.enforcement_classes import TriggerPeriod
-from axonius.utils.gui_helpers import (PermissionLevel,
-                                       PermissionType, add_rule_unauth)
+from axonius.utils.gui_helpers import (get_connected_user_id,
+                                       add_rule_unauth)
+from axonius.utils.permissions_helper import is_axonius_role
+from gui.logic.routing_helper import gui_category_add_rules, gui_route_logged_in
 from gui.routes.adapters.adapters import Adapters
 from gui.routes.compliance.compliance import Compliance
 from gui.routes.dashboard.dashboard import Dashboard
-from gui.routes.dashboard.notifications import Notifications
 from gui.routes.enforcements.enforcements import Enforcements
 from gui.routes.entities.entities import Entities
 from gui.routes.instances.instances import Instances
@@ -22,30 +24,30 @@ from gui.routes.login.login import Login
 from gui.routes.login.signup import Signup
 from gui.routes.reports.reports import Reports
 from gui.routes.settings.settings import Settings
-from gui.routes.offline.configuration import Configuration
 from gui.routes.password_vault import PasswordVault
+from gui.routes.labels.labels import Labels
 from gui.routes.graphql.api import GraphQLAPI
 # pylint: disable=no-member,invalid-name,no-self-use
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
+@gui_category_add_rules()
 class AppRoutes(Signup,
                 Login,
                 Settings,
                 Dashboard,
                 Entities,
                 Adapters,
-                Notifications,
                 Enforcements,
                 Reports,
                 Compliance,
                 Instances,
                 PasswordVault,
-                Configuration,
+                Labels,
                 GraphQLAPI):
 
-    @add_rule_unauth('get_constants')
+    @gui_route_logged_in('get_constants', enforce_permissions=False)
     def get_constants(self):
         """
         Returns a dictionary between all string names and string values in the system.
@@ -56,18 +58,56 @@ class AppRoutes(Signup,
             return {r.name: r.value for r in e}
 
         constants = dict()
-        constants['permission_levels'] = dictify_enum(PermissionLevel)
-        constants['permission_types'] = dictify_enum(PermissionType)
         order = [TriggerPeriod.all, TriggerPeriod.daily, TriggerPeriod.weekly, TriggerPeriod.monthly]
         constants['trigger_periods'] = [{x.name: x.value} for x in order]
         return jsonify(constants)
 
-    @add_rule_unauth('google_analytics/collect', methods=['GET', 'POST'])
+    @gui_route_logged_in('system/expired', enforce_session=False)
+    def get_expiry_status(self):
+        """
+        Whether system has currently expired it's trial or contract.
+        If no trial or contract expiration date, answer will be false.
+        """
+        feature_flags_config = self.feature_flags_config()
+        if feature_flags_config.get(FeatureFlagsNames.TrialEnd):
+            return jsonify(self.trial_expired())
+        if feature_flags_config.get(FeatureFlagsNames.ExpiryDate):
+            return jsonify(self.contract_expired())
+        return jsonify(False)
+
+    @gui_route_logged_in('api_key', methods=['GET', 'POST'], enforce_permissions=False)
+    def api_creds(self):
+        """
+        Get or change the API key
+        """
+        if request.method == 'POST':
+            new_token = secrets.token_urlsafe()
+            new_api_key = secrets.token_urlsafe()
+            self._users_collection.update_one(
+                {
+                    '_id': get_connected_user_id(),
+                },
+                {
+                    '$set': {
+                        'api_key': new_api_key,
+                        'api_secret': new_token
+                    }
+                }
+            )
+        api_data = self._users_collection.find_one({
+            '_id': get_connected_user_id()
+        })
+        return jsonify({
+            'api_key': api_data['api_key'],
+            'api_secret': api_data['api_secret']
+        })
+
+    @gui_route_logged_in('google_analytics/collect', methods=['GET', 'POST'], enforce_permissions=False)
     def google_analytics_proxy(self):
         self.handle_ga_request('https://www.google-analytics.com/collect')
         return ''
 
-    @add_rule_unauth('google_analytics/r/collect', methods=['GET', 'POST'])
+    @gui_route_logged_in('google_analytics/r/collect', methods=['GET', 'POST'], enforce_permissions=False)
     def google_analytics_r_proxy(self):
         self.handle_ga_request('https://www.google-analytics.com/r/collect')
         return ''
@@ -87,10 +127,7 @@ class AppRoutes(Signup,
                 if user is None:
                     return
                 user = dict(user)
-                user_name = user.get('user_name')
-                source = user.get('source')
-
-                if user_name == AXONIUS_USER_NAME and source == 'internal':
+                if is_axonius_role(user):
                     return
 
             # referrer
@@ -121,6 +158,16 @@ class AppRoutes(Signup,
     def get_troubleshooting(self):
         return jsonify(self._maintenance_config.get('troubleshooting', True) or
                        self._maintenance_config.get('timeout') is not None)
+
+    @gui_route_logged_in('csrf', methods=['GET'], enforce_permissions=False)
+    # pylint: disable=no-self-use
+    def csrf(self):
+        if session and 'csrf-token' in session:
+            session['csrf-token'] = random_string(CSRF_TOKEN_LENGTH)
+            resp = Response(session['csrf-token'])
+            resp.headers.add('X-CSRF-Token', session['csrf-token'])
+            return resp
+        return Response('')
 
     @add_rule_unauth('get_environment_name')
     def get_environment_name(self):

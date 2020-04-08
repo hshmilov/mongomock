@@ -78,7 +78,7 @@
           :module="module"
           :entity-id="entityId"
           :notes="entityNotes"
-          :read-only="readOnly || history !== null"
+          :read-only="history !== null"
         />
       </x-tab>
       <x-tab
@@ -90,7 +90,6 @@
           :module="module"
           :entity-id="entityId"
           :tags="entityLabels"
-          :read-only="readOnly"
         />
       </x-tab>
     </x-tabs>
@@ -102,6 +101,7 @@ import PulseLoader from 'vue-spinner/src/PulseLoader.vue';
 import {
   mapState, mapGetters, mapMutations, mapActions,
 } from 'vuex';
+import { getEntityPermissionCategory } from '@constants/entities';
 import xTabs from '../../../axons/tabs/Tabs.vue';
 import xTab from '../../../axons/tabs/Tab.vue';
 import xCustom from '../../../neurons/schema/Custom.vue';
@@ -156,6 +156,9 @@ export default {
     ...mapGetters({
       singleAdapter: SINGLE_ADAPTER,
     }),
+    permissionCategory() {
+      return getEntityPermissionCategory(this.module);
+    },
     entityId() {
       return this.$route.params.id;
     },

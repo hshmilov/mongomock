@@ -19,19 +19,21 @@ from axonius.consts.plugin_consts import (CORE_UNIQUE_NAME,
                                           CONFIGURABLE_CONFIGS_COLLECTION)
 from axonius.consts.gui_consts import (FeatureFlagsNames)
 from axonius.plugin_base import EntityType, return_error
-from axonius.utils.gui_helpers import (Permission, PermissionLevel,
-                                       PermissionType, entity_fields)
+from axonius.utils.gui_helpers import (entity_fields)
+from axonius.utils.permissions_helper import PermissionCategory, PermissionAction, PermissionValue
+
 from axonius.utils.revving_cache import rev_cached
 from axonius.utils.threading import run_and_forget
 from gui.logic.db_helpers import beautify_db_entry
 from gui.logic.login_helper import clear_passwords_fields, \
     refill_passwords_fields, has_unchanged_password_value
-from gui.logic.routing_helper import gui_add_rule_logged_in
+from gui.logic.routing_helper import gui_category_add_rules, gui_route_logged_in
 # pylint: disable=no-member,cell-var-from-loop,access-member-before-definition,logging-not-lazy
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
+@gui_category_add_rules('adapters')
 class Adapters:
     @staticmethod
     def _get_plugin_schemas(db_connection, plugin_unique_name):
@@ -48,15 +50,14 @@ class Adapters:
             return {}
         return {'clients': clients_value.get('schema')}
 
-    @gui_add_rule_logged_in('adapters', required_permissions={Permission(PermissionType.Adapters,
-                                                                         PermissionLevel.ReadOnly)})
+    @gui_route_logged_in()
     def adapters(self):
         return jsonify(self._adapters())
 
-    @gui_add_rule_logged_in('adapters/hint_raise/<plugin_name>',
-                            required_permissions={Permission(PermissionType.Adapters,
-                                                             PermissionLevel.ReadOnly)},
-                            methods=['POST'])
+    @gui_route_logged_in('hint_raise/<plugin_name>',
+                         required_permission_values={PermissionValue.get(PermissionAction.View,
+                                                                         PermissionCategory.Adapters)},
+                         methods=['POST'])
     def hint_raise_adapter(self, plugin_name: str):
         """
         Raises all instances of the given plugin name
@@ -156,7 +157,7 @@ class Adapters:
 
         return adapters
 
-    @gui_add_rule_logged_in('adapter_features')
+    @gui_route_logged_in('adapter_features')
     def adapter_features(self):
         """
         Getting the features of each registered adapter, as they are saved in core's "configs" db.
@@ -264,9 +265,9 @@ class Adapters:
             # if there's no aggregator, there's nothing we can do
             logger.exception(f'Error fetching devices from {adapter_unique_name} for client {client_to_add}')
 
-    @gui_add_rule_logged_in('adapters/<adapter_name>/<node_id>/upload_file', methods=['POST'],
-                            required_permissions={Permission(PermissionType.Adapters,
-                                                             PermissionLevel.ReadWrite)})
+    @gui_route_logged_in('<adapter_name>/<node_id>/upload_file', methods=['POST'],
+                         required_permission_values={PermissionValue.get(PermissionAction.View,
+                                                                         PermissionCategory.Adapters)})
     def adapter_upload_file(self, adapter_name, node_id):
         adapter_unique_name = self.request_remote_plugin(
             f'find_plugin_unique_name/nodes/{node_id}/plugins/{adapter_name}').json().get('plugin_unique_name')
@@ -286,9 +287,10 @@ class Adapters:
         written_file = fs.put(file, filename=filename)
         return jsonify({'uuid': str(written_file)})
 
-    @gui_add_rule_logged_in('adapters/<adapter_name>/clients', methods=['PUT', 'POST'],
-                            required_permissions={Permission(PermissionType.Adapters,
-                                                             PermissionLevel.ReadWrite)})
+    @gui_route_logged_in('<adapter_name>/clients', methods=['PUT', 'POST'],
+                         required_permission_values={PermissionValue.get(None,
+                                                                         PermissionCategory.Adapters,
+                                                                         PermissionCategory.Connections)})
     def adapters_clients(self, adapter_name):
         return self._adapters_clients(adapter_name)
 
@@ -316,9 +318,10 @@ class Adapters:
             return self._query_client_for_devices(adapter_unique_name, clients)
         return self._test_client_connectivity(adapter_unique_name)
 
-    @gui_add_rule_logged_in('adapters/<adapter_name>/clients/<client_id>',
-                            methods=['PUT', 'DELETE'], required_permissions={Permission(PermissionType.Adapters,
-                                                                                        PermissionLevel.ReadWrite)})
+    @gui_route_logged_in('<adapter_name>/clients/<client_id>', methods=['PUT', 'DELETE'],
+                         required_permission_values={PermissionValue.get(None,
+                                                                         PermissionCategory.Adapters,
+                                                                         PermissionCategory.Connections)})
     def adapters_clients_update(self, adapter_name, client_id=None):
         return self._adapters_clients_update(adapter_name, client_id)
 
@@ -479,7 +482,7 @@ class Adapters:
             }
         return plugin_data
 
-    @gui_add_rule_logged_in('adapters/clients/labels', methods=['GET'])
+    @gui_route_logged_in('clients/labels', methods=['GET'], enforce_permissions=False)
     def adapters_client_labels(self) -> list:
         """
         :return: list of connection label mapping -> [{client_id,connection_label,plugin_uniq_name,node_id}} ]  instance

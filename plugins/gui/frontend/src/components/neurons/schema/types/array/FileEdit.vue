@@ -19,7 +19,7 @@
 
     import {currentHost} from '../../../../../store/actions'
 
-    import axios_client from '@api/axios.js'
+    import axiosClient from '@api/axios.js'
 
     export default {
         name: 'x-array-edit',
@@ -52,7 +52,7 @@
 
                 this.uploading = true
                 let upload_url = `${this.apiUpload}/upload_file`
-                axios_client.post(upload_url, formData).then(response => {
+                axiosClient.post(upload_url, formData).then(response => {
                     this.uploading = false
                     this.filename = file.name
                     this.valid = true

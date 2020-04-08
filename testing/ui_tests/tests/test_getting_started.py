@@ -134,7 +134,7 @@ class TestGettingStarted(TestBase):
                                            NEW_PASSWORD,
                                            FIRST_NAME,
                                            LAST_NAME,
-                                           self.settings_page.READ_ONLY_ROLE)
+                                           self.settings_page.VIEWER_ROLE)
 
         # logout from admin account and login to the new user account
         self.login_page.logout()

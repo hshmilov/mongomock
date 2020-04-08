@@ -1,9 +1,5 @@
-import pytest
-
 from ui_tests.tests import ui_consts
 from ui_tests.tests.ui_test_base import TestBase
-
-from services.axon_service import TimeoutException
 
 
 class TestUserUpdate(TestBase):
@@ -15,19 +11,20 @@ class TestUserUpdate(TestBase):
                                            ui_consts.NEW_PASSWORD,
                                            ui_consts.FIRST_NAME,
                                            ui_consts.LAST_NAME,
-                                           self.settings_page.READ_ONLY_ROLE)
+                                           self.settings_page.VIEWER_ROLE)
 
         self.settings_page.update_new_user(username=ui_consts.UPDATE_USERNAME,
                                            password=ui_consts.UPDATE_PASSWORD,
                                            first_name=ui_consts.UPDATE_FIRST_NAME,
                                            last_name=ui_consts.UPDATE_LAST_NAME)
 
-        self.settings_page.wait_for_toaster('User updated.')
-        self.settings_page.wait_for_toaster_to_end('User updated.')
+        self.settings_page.wait_for_user_updated_toaster()
 
-        all_users = list(self.settings_page.get_all_users_from_users_and_roles())
-        user_full_name = f'{ui_consts.UPDATE_FIRST_NAME} {ui_consts.UPDATE_LAST_NAME}'
-        update_user_list = list(filter(lambda user: user_full_name in user, all_users))
+        all_users = self.settings_page.get_all_users_data()
+        update_user_list = list(filter(lambda user:
+                                       user.first_name == ui_consts.UPDATE_FIRST_NAME
+                                       and user.last_name == ui_consts.UPDATE_LAST_NAME,
+                                       all_users))
         assert len(update_user_list) == 1
 
         self.login_page.logout()
@@ -44,13 +41,13 @@ class TestUserUpdate(TestBase):
                                            ui_consts.NEW_PASSWORD,
                                            ui_consts.FIRST_NAME,
                                            ui_consts.LAST_NAME,
-                                           self.settings_page.READ_ONLY_ROLE)
+                                           self.settings_page.VIEWER_ROLE)
 
         self.settings_page.update_new_user(username=ui_consts.UPDATE_USERNAME,
                                            first_name=ui_consts.UPDATE_FIRST_NAME,
                                            last_name=ui_consts.UPDATE_LAST_NAME)
-        self.settings_page.wait_for_toaster('User updated.')
-        self.settings_page.wait_for_toaster_to_end('User updated.')
+        self.settings_page.wait_for_user_updated_toaster()
+        self.settings_page.wait_for_user_updated_toaster_to_end()
 
         self.login_page.logout()
         self.login_page.wait_for_login_page_to_load()
@@ -65,11 +62,10 @@ class TestUserUpdate(TestBase):
         self.settings_page.create_new_user(ui_consts.UPDATE_USERNAME,
                                            ui_consts.NEW_PASSWORD,
                                            ui_consts.FIRST_NAME,
-                                           ui_consts.LAST_NAME)
+                                           ui_consts.LAST_NAME,
+                                           self.settings_page.RESTRICTED_ROLE)
 
         self.settings_page.wait_for_user_created_toaster()
         self.settings_page.click_edit_user(ui_consts.UPDATE_USERNAME)
         self.settings_page.fill_password_field('')
-        with pytest.raises(TimeoutException):
-            self.settings_page.click_update_user()
-        assert self.settings_page.is_update_button_disabled()
+        assert self.settings_page.is_save_button_disabled()

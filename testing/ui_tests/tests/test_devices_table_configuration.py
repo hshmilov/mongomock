@@ -67,7 +67,7 @@ class TestDevicesTable(TestEntitiesTable):
             self.devices_page.click_general_tab()
             assert self.devices_page.find_vertical_tabs() == ['Basic Info', 'Network Interfaces']
             assert self.devices_page.find_element_by_text(self.devices_page.FIELD_ASSET_NAME)
-            assert not self.devices_page.find_element_by_text(self.devices_page.FIELD_AVSTATUS).is_displayed()
+            assert len(self.devices_page.find_elements_by_text(self.devices_page.FIELD_AVSTATUS)) == 0
             self.devices_page.click_tab(self.devices_page.FIELD_TAGS)
             self.devices_page.open_edit_tags()
             self.devices_page.create_save_tags([TAG_NAME])

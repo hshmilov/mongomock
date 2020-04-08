@@ -1,18 +1,29 @@
 <template>
-  <x-page :class="{disabled: isReadOnly}" class="x-reports" title="Reports">
-    <x-table
-      v-model="isReadOnly? undefined: selection"
-      :static-fields="fields"
-      :on-click-row="navigateReport"
-      module="reports"
-      title="Reports"
-    >
-      <template slot="actions">
-        <x-button v-if="hasSelection" link @click="remove">Remove</x-button>
-        <x-button id="report_new" :disabled="isReadOnly" @click="navigateReport('new')">Add Report</x-button>
-      </template>
-    </x-table>
-  </x-page>
+  <XRoleGateway
+    :permission-category="$permissionConsts.categories.Reports"
+  >
+    <template slot-scope="{ canAdd, canDelete }">
+      <x-page class="x-reports" title="Reports">
+        <x-table
+          v-model="selection"
+          :static-fields="fields"
+          :on-click-row="navigateReport"
+          module="reports"
+          title="Reports"
+          :multiple-row-selection="canDelete"
+        >
+          <template slot="actions">
+            <x-button v-if="hasSelection" link @click="remove">Remove</x-button>
+            <x-button
+              id="report_new"
+              :disabled="!canAdd"
+              @click="navigateReport('new')"
+            >Add Report</x-button>
+          </template>
+        </x-table>
+      </x-page>
+    </template>
+  </XRoleGateway>
 </template>
 <script>
     import xPage from '../axons/layout/Page.vue'

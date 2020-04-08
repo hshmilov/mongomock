@@ -202,10 +202,14 @@ def route_limiter_key_func():
 # I know its ugly, but this way the function wont even be initialized in production
 # otherwise every request would have go thru the after_request and do nothing in there...
 if os.environ.get('HOT') == 'true':
+    import urllib3
+    urllib3.disable_warnings()
+
     @AXONIUS_REST.after_request
     def after_request(response) -> Response:
-        response.headers.add('Access-Control-Allow-Origin', '*')
-        response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization,x-csrf-token')
+        response.headers.add('Access-Control-Allow-Origin', 'http://127.0.0.1:8080')
+        response.headers.add('Access-Control-Allow-Credentials', 'true')
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization,Set-Cookie,x-csrf-token')
         response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
         return response
 

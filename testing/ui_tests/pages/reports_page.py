@@ -289,15 +289,24 @@ class ReportsPage(EntitiesPage):
             .get_attribute('id')
 
     def select_saved_view(self, text, entity='Devices'):
-        self.select_option_without_search(self.SELECT_VIEW_ENTITY_CSS, self.DROPDOWN_SELECTED_OPTION_CSS, entity)
+        selected_option = self.select_option_without_search(self.SELECT_VIEW_ENTITY_CSS,
+                                                            self.DROPDOWN_SELECTED_OPTION_CSS, entity)
+        if not selected_option:
+            self.close_dropdown()
+            return None
         self.select_option(self.SELECT_VIEW_NAME_CSS, self.DROPDOWN_TEXT_BOX_CSS, self.DROPDOWN_SELECTED_OPTION_CSS,
                            text)
+        return selected_option
 
     def select_saved_view_from_multiple(self, index, text, entity='Devices'):
         self.select_option_without_search_from_multiple(index, self.SELECT_VIEW_ENTITY_CSS,
                                                         self.DROPDOWN_SELECTED_OPTION_CSS, entity)
         self.select_option_from_multiple(index, self.SELECT_VIEW_NAME_CSS, self.DROPDOWN_TEXT_BOX_CSS,
                                          self.DROPDOWN_SELECTED_OPTION_CSS, text)
+
+    def assert_select_saved_views_is_empty(self, index):
+        self.assert_select_option_is_empty(index, self.SELECT_VIEW_ENTITY_CSS, self.DROPDOWN_SELECTED_OPTION_CSS)
+        self.close_dropdown()
 
     def get_saved_view(self):
         return self.driver.find_element_by_css_selector(self.SELECT_VIEW_NAME_ELEMENT_CSS).text
@@ -340,15 +349,18 @@ class ReportsPage(EntitiesPage):
                     self.find_element_by_text(space).click()
         if report_config.queries:
             self.click_include_queries()
-            for index, query in enumerate(report_config.queries):
-                self.select_saved_view_from_multiple(index, query['name'], query['entity'])
-                if index < len(report_config.queries) - 1:
-                    self.click_add_query()
+            self.select_saved_views(report_config.queries)
         if report_config.add_scheduling:
             self.config_scheduling(report_config)
         self.click_save()
         if wait_for_toaster:
             self.wait_for_report_is_saved_toaster()
+
+    def select_saved_views(self, queries):
+        for index, query in enumerate(queries):
+            self.select_saved_view_from_multiple(index, query['name'], query['entity'])
+            if index < len(queries) - 1:
+                self.click_add_query()
 
     def config_scheduling(self, report_config):
         self.click_add_scheduling()
@@ -376,13 +388,18 @@ class ReportsPage(EntitiesPage):
         return self.is_element_has_disabled_class(self.find_element_parent_by_text(self.INCLUDE_QUERIES_CHECKBOX))
 
     def is_saved_queries_disabled(self):
-        if not self.is_element_has_disabled_class(
-                self.driver.find_element_by_css_selector(self.SELECT_VIEW_ENTITY_ELEMENT_CSS)
-        ):
+        if not self.is_include_saved_queries_checkbox_disabled():
             return False
-        return self.is_element_has_disabled_class(
-            self.driver.find_element_by_css_selector(self.SELECT_VIEW_NAME_ELEMENT_CSS)
-        )
+        if 'checked' in self.find_element_parent_by_text(self.INCLUDE_QUERIES_CHECKBOX).get_attribute('class'):
+            if not self.is_element_has_disabled_class(
+                    self.driver.find_element_by_css_selector(self.SELECT_VIEW_ENTITY_ELEMENT_CSS)
+            ):
+                return False
+            if not self.is_element_has_disabled_class(
+                    self.driver.find_element_by_css_selector(self.SELECT_VIEW_NAME_ELEMENT_CSS)
+            ):
+                return False
+        return True
 
     def is_email_config_disabled(self):
         return self.is_element_has_disabled_class(self.find_element_preceding_by_text(self.ADD_SCHEDULING_CHECKBOX))
@@ -395,8 +412,9 @@ class ReportsPage(EntitiesPage):
                          self.is_include_saved_queries_checkbox_disabled(),
                          self.is_saved_queries_disabled(),
                          self.is_email_config_disabled(),
-                         self.is_email_subject_disabled(),
                          self.is_save_button_disabled()]
+        if 'checked' in self.find_element_preceding_by_text(self.ADD_SCHEDULING_CHECKBOX).get_attribute('class'):
+            disabled_list.append(self.is_email_subject_disabled())
         return all(disabled_list)
 
     def is_report_error(self, error_text=None):

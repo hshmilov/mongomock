@@ -16,8 +16,8 @@
             <XForm
               v-model="schedulerSettings.config"
               :schema="schedulerSettings.schema"
-              :read-only="isReadOnly"
-              api-upload="plugins/system_scheduler"
+              :read-only="!canUpdateSettings"
+              api-upload="settings/plugins/system_scheduler"
               @validate="updateSchedulerValidity"
               @select=""
             />
@@ -42,18 +42,18 @@
             <XForm
               v-model="coreSettings.config"
               :schema="coreSettings.schema"
-              :read-only="isReadOnly"
-              api-upload="plugins/core"
+              :read-only="!canUpdateSettings"
+              api-upload="settings/plugins/core"
               @validate="updateCoreValidity"
             />
             <div class="footer">
               <XMaintenance
                 v-if="$refs.global && $refs.global.isActive"
-                :read-only="isReadOnly"
+                :read-only="!canUpdateSettings"
               />
               <XButton
                 id="global-settings-save"
-                :disabled="!coreComplete || isReadOnly || !validPasswordPolicy || !validPasswordProtection"
+                :disabled="!coreComplete || !canUpdateSettings || !validPasswordPolicy || !validPasswordProtection"
                 @click="saveGlobalSettings"
               >Save</XButton>
             </div>
@@ -69,14 +69,14 @@
             <XForm
               v-model="guiSettings.config"
               :schema="guiSettings.schema"
-              :read-only="isReadOnly"
-              api-upload="plugins/gui"
+              :read-only="!canUpdateSettings"
+              api-upload="settings/plugins/gui"
               @validate="updateGuiValidity"
             />
             <div class="place-right">
               <XButton
                 id="gui-settings-save"
-                :disabled="!guiComplete || isReadOnly"
+                :disabled="!guiComplete || !canUpdateSettings"
                 @click="saveGuiSettings"
               >Save</XButton>
             </div>
@@ -84,7 +84,7 @@
         </div>
       </XTab>
       <XTab
-        v-if="isAxonius"
+        v-if="$isAxoniusUser()"
         id="feature-flags-tab"
         title="Feature flags"
       >
@@ -97,14 +97,18 @@
         />
       </XTab>
       <XTab
-        v-if="isAdmin"
+        v-if="canViewUsersAndRoles"
         id="user-settings-tab"
         title="Manage Users"
       >
-        <XUsersRoles
-          :read-only="isReadOnly"
-          @toast="message = $event"
-        />
+        <XUsersManagement />
+      </XTab>
+      <XTab
+        v-if="canViewUsersAndRoles"
+        id="roles-settings-tab"
+        title="Manage Roles"
+      >
+        <XRolesTable />
       </XTab>
       <XTab
         id="about-settings-tab"
@@ -127,6 +131,14 @@
 
 <script>
 import { mapState, mapActions, mapMutations } from 'vuex';
+
+import { SAVE_PLUGIN_CONFIG, LOAD_PLUGIN_CONFIG, CHANGE_PLUGIN_CONFIG } from '@store/modules/settings';
+import { UPDATE_SYSTEM_CONFIG, SHOW_TOASTER_MESSAGE } from '@store/mutations';
+import { REQUEST_API, START_RESEARCH_PHASE, STOP_RESEARCH_PHASE } from '@store/actions';
+import { GET_USER } from '@store/modules/auth';
+
+import XUsersManagement from '@networks/settings-tabs/users-management/index.vue';
+import XRolesTable from '../networks/settings-tabs/roles-management/index.vue';
 import XPage from '../axons/layout/Page.vue';
 import XTabs from '../axons/tabs/Tabs.vue';
 import XTab from '../axons/tabs/Tab.vue';
@@ -134,32 +146,26 @@ import XButton from '../axons/inputs/Button.vue';
 import XToast from '../axons/popover/Toast.vue';
 import XForm from '../neurons/schema/Form.vue';
 import XCustom from '../neurons/schema/Custom.vue';
-import XUsersRoles from '../networks/config/UsersRoles.vue';
 import XMaintenance from '../networks/config/Maintenance.vue';
 import XFeatureFlags from '../networks/config/FeatureFlags.vue';
-
-import { SAVE_PLUGIN_CONFIG, LOAD_PLUGIN_CONFIG, CHANGE_PLUGIN_CONFIG } from '../../store/modules/settings';
-import { UPDATE_SYSTEM_CONFIG } from '../../store/mutations';
-import { REQUEST_API, START_RESEARCH_PHASE, STOP_RESEARCH_PHASE } from '../../store/actions';
-import { GET_USER } from '../../store/modules/auth';
 
 export default {
   name: 'XSettings',
   components: {
-    XPage, XTabs, XTab, XButton, XToast, XForm, XCustom, XUsersRoles, XMaintenance, XFeatureFlags,
+    XPage,
+    XTabs,
+    XTab,
+    XButton,
+    XToast,
+    XForm,
+    XCustom,
+    XMaintenance,
+    XFeatureFlags,
+    XUsersManagement,
+    XRolesTable,
   },
   computed: {
     ...mapState({
-      isReadOnly(state) {
-        const user = state.auth.currentUser.data;
-        if (!user || !user.permissions) return true;
-        return user.permissions.Settings === 'ReadOnly';
-      },
-      isS(state) {
-        const user = state.auth.currentUser.data;
-        if (!user || !user.permissions) return true;
-        return user.permissions.Settings === 'ReadOnly';
-      },
       schedulerSettings(state) {
         if (!state.settings.configurable.system_scheduler) return undefined;
         return state.settings.configurable.system_scheduler.SystemSchedulerService;
@@ -179,14 +185,11 @@ export default {
       users(state) {
         return state.auth.allUsers.data;
       },
-      isAdmin(state) {
-        return state.auth.currentUser.data
-            && (state.auth.currentUser.data.admin || state.auth.currentUser.data.role_name === 'Admin');
-      },
-      isAxonius(state) {
-        return state.auth.currentUser.data.user_name === '_axonius';
-      },
     }),
+    canUpdateSettings() {
+      return this.$can(this.$permissionConsts.categories.Settings,
+        this.$permissionConsts.actions.Update);
+    },
     validResearchRate() {
       if (!this.schedulerSettings.config) return 12;
       return this.validNumber(this.schedulerSettings.config.discovery_settings.system_research_rate);
@@ -231,9 +234,13 @@ export default {
     },
     isResearchDisabled() {
       if (this.schedulerSettings.config.discovery_settings.conditional === 'system_research_date') {
-        return !this.schedulerComplete || this.isReadOnly || !this.validResearchDate;
+        return !this.schedulerComplete || !this.canUpdateSettings || !this.validResearchDate;
       }
-      return !this.schedulerComplete || !this.validResearchRate || this.isReadOnly;
+      return !this.schedulerComplete || !this.canUpdateSettings || !this.validResearchRate;
+    },
+    canViewUsersAndRoles() {
+      return this.$can(this.$permissionConsts.categories.Settings,
+        this.$permissionConsts.actions.GetUsersAndRoles);
     },
   },
   data() {
@@ -267,7 +274,7 @@ export default {
       configName: 'SystemSchedulerService',
     });
     this.fetchData({
-      rule: 'metadata',
+      rule: 'settings/metadata',
     }).then((response) => {
       if (response.status === 200) {
         this.systemInfo = response.data;
@@ -278,6 +285,7 @@ export default {
     ...mapMutations({
       changePluginConfig: CHANGE_PLUGIN_CONFIG,
       updateSystemConfig: UPDATE_SYSTEM_CONFIG,
+      showToasterMessage: SHOW_TOASTER_MESSAGE,
     }),
     ...mapActions({
       fetchData: REQUEST_API,
@@ -412,8 +420,14 @@ export default {
 
   .x-settings {
     .x-tabs {
-      max-width: 840px;
-
+      .research-settings-tab,
+      .global-settings-tab,
+      .gui-settings-tab,
+      .about-settings-tab {
+        .x-form {
+          max-width: 30%;
+        }
+      }
       ul {
         padding-left: 0;
       }

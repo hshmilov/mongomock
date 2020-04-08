@@ -1,0 +1,93 @@
+.role-panel {
+    .v-navigation-drawer__content {
+        overflow-y: unset;
+        .x-side-panel__content {
+            height: calc(100% - 150px);
+            padding-bottom: 30px;
+            overflow-y: auto;
+            bottom: 0;
+        }
+        .body {
+            h5 {
+                display: inline;
+                font-size: 16px;
+                font-weight: 400;
+                color: $theme-black;
+                margin: 0 0 3px 0;
+            }
+            input {
+                display: block;
+                height: 30px;
+                padding: 4px;
+
+            }
+            .item {
+                margin: 0 0 16px 0;
+            }
+
+            .collapse-expand-buttons {
+                text-align: right;
+                margin-bottom: 10px;
+                .x-button.link {
+                    font-size: 12px;
+                }
+            }
+
+            .v-expansion-panels {
+                z-index: unset;
+                margin-bottom: 20px;
+                .v-expansion-panel {
+                    display: flex;
+                    flex-wrap: wrap;
+                    margin-bottom: 10px;
+                    .v-expansion-panel-header {
+                        padding: 8px 8px 8px 8px;
+                        cursor: default;
+                        .theme--light.v-label {
+                            color: unset;
+                        }
+                        .v-input--selection-controls {
+                            margin-top: 8px;
+                            .v-messages {
+                                min-height: 0px;
+                            }
+                        }
+                    }
+
+                    .v-expansion-panel-content {
+                        width: 245px;
+
+                        .v-expansion-panel-content__wrap {
+                            padding-left: 10px;
+                            padding-right: 5px;
+                        }
+                    }
+                }
+            }
+
+            & > div {
+                h5 {
+                    margin-bottom: 8px;
+                }
+            }
+        }
+
+        .x-side-panel__footer {
+            > div {
+                display: flex;
+
+                .left-buttons {
+                    flex: 50%;
+                }
+
+                .buttons {
+                    display: flex;
+                    flex: 50%;
+                    justify-content: flex-end;
+                }
+            }
+        }
+    }
+
+    
+  }

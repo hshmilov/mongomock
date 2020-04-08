@@ -54,7 +54,7 @@
           v-else-if="researchStatusLocal !== 'running'"
           id="run_research"
           class="item-link research-link"
-          :disabled="!isDashboardWrite"
+          :disabled="cannotRunDiscovert"
           @click="startResearchNow"
         >
           <MdIcon md-src="/src/assets/icons/action/start.svg" />
@@ -64,7 +64,7 @@
           v-else-if="researchStatusLocal === 'running'"
           id="stop_research"
           class="item-link research-link"
-          :disabled="!isDashboardWrite"
+          :disabled="cannotRunDiscovert"
           @click="stopResearchNow"
         >
           <MdIcon md-src="/src/assets/icons/action/stop.svg" />
@@ -84,7 +84,7 @@
       </li>
       <li
         class="nav-item"
-        :class="{ disabled: isSettingsRestricted}"
+        :class="{ disabled: cannotViewSettings}"
       >
         <a
           id="settings"
@@ -180,11 +180,6 @@ export default {
         if (!user || !user.permissions) return true;
         return user.permissions.Settings === 'Restricted';
       },
-      isDashboardWrite(state) {
-        const user = state.auth.currentUser.data;
-        if (!user || !user.permissions) return true;
-        return user.permissions.Dashboard === 'ReadWrite' || user.admin;
-      },
       userPermissions(state) {
         return state.auth.currentUser.data.permissions;
       },
@@ -192,6 +187,16 @@ export default {
     ...mapGetters({
       isExpired: IS_EXPIRED,
     }),
+    cannotViewSettings() {
+      return this.$cannot(
+        this.$permissionConsts.categories.Settings,
+        this.$permissionConsts.actions.View
+      );
+    },
+    cannotRunDiscovert() {
+      return this.$cannot(this.$permissionConsts.categories.Settings,
+        this.$permissionConsts.actions.RunManualDiscovery);
+    },
     anyEmptySettings() {
       return Object.values(this.emptySettings).find((value) => value);
     },
@@ -206,7 +211,7 @@ export default {
                   && this.researchStatus === 'done')
             || (this.researchStatusLocal === '' && this.researchStatus === 'running')) {
           entities.forEach((entity) => {
-            if (this.entityRestricted(entity.title)) return;
+            if (!this.$canViewEntity(entity.name)) return;
             this.fetchDataFields({ module: entity.name });
           });
         }
@@ -241,8 +246,8 @@ export default {
       this.stopResearch().catch(() => this.researchStatusLocal = 'running');
     },
     navigateSettings() {
-      if (this.isSettingsRestricted) {
-        this.$emit('access-violation', name);
+      if (this.cannotViewSettings) {
+        this.$emit('access-violation', 'settings');
         return;
       }
       if (this.anyEmptySettings) {
@@ -251,9 +256,6 @@ export default {
       } else {
         this.$router.push({ name: 'Settings' });
       }
-    },
-    entityRestricted(entity) {
-      return this.userPermissions[entity] === 'Restricted';
     },
     isEmptySetting(name) {
       return this.emptySettings[name];

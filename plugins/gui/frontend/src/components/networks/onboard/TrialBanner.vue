@@ -18,7 +18,7 @@
 </template>
 
 <script>
-import { mapState, mapGetters } from 'vuex';
+import { mapGetters } from 'vuex';
 import XBanner from '../../axons/popover/Banner.vue';
 import featureFlagsMixin from '../../../mixins/feature_flags';
 
@@ -31,11 +31,6 @@ export default {
   },
   mixins: [featureFlagsMixin],
   computed: {
-    ...mapState({
-      isAxonius(state) {
-        return state.auth.currentUser.data.user_name === '_axonius';
-      },
-    }),
     ...mapGetters({
       isExpired: IS_EXPIRED,
     }),
@@ -53,7 +48,7 @@ export default {
       return Math.ceil((expirationDate - new Date()) / 1000 / 60 / 60 / 24);
     },
     inTrial() {
-      return this.trialDaysRemaining !== null && !this.isAxonius;
+      return this.trialDaysRemaining !== null && !this.$isAxoniusUser();
     },
     severity() {
       if (this.trialDaysRemaining <= 7) return 'error';

@@ -6,188 +6,195 @@
     ]"
     class="x-adapter"
   >
-    <XTableWrapper
-      title="Add or Edit Connections"
-      :loading="loading"
+    <XRoleGateway
+      :permission-category="$permissionConsts.categories.Adapters"
+      :permission-section="$permissionConsts.categories.Connections"
     >
-      <template slot="actions">
-        <XButton
-          v-if="selectedServers && selectedServers.length"
-          link
-          @click="removeConnection"
-        >Remove</XButton>
-        <XButton
-          id="new_connection"
-          :disabled="isReadOnly"
-          @click="configConnection('new')"
-        >Add Connection</XButton>
-      </template>
-      <XTable
-        slot="table"
-        v-model="selectedServersModel"
-        :fields="tableFields"
-        :on-click-row="isReadOnly ? undefined: configConnection"
-        :data="adapterClients"
-      />
-    </XTableWrapper>
-
-    <div class="config-settings">
-      <XButton
-        link
-        class="header"
-        :disabled="isReadOnly"
-        @click="toggleSettings"
-      >
-        <AIcon
-          type="setting"
-          theme="filled"
-          class="setting_cog"
-        />
-        Advanced Settings
-      </XButton>
-
-      <div class="content">
-        <XTabs
-          v-if="currentAdapter && advancedSettings"
-          ref="tabs"
-          class="growing-y"
+      <template slot-scope="{ canAdd, canUpdate, canDelete }">
+        <XTableWrapper
+          title="Add or Edit Connections"
+          :loading="loading"
         >
-          <XTab
-            v-for="(config, configName, i) in currentAdapter.config"
-            :id="configName"
-            :key="i"
-            :title="config.schema.pretty_name || configName"
-            :selected="!i"
-          >
-            <div class="configuration">
-              <XForm
-                v-model="config.config"
-                :schema="config.schema"
-                @validate="validateConfig"
-              />
-              <XButton
-                tabindex="1"
-                :disabled="!configValid"
-                @click="saveConfig(configName, config.config)"
-              >Save Config</XButton>
-            </div>
-          </XTab>
-        </XTabs>
-      </div>
-    </div>
-    <XModal
-      v-if="serverModal.serverData && serverModal.uuid && serverModal.open"
-      size="lg"
-      class="config-server"
-      @close="toggleServerModal"
-      @confirm="saveServer"
-    >
-      <div slot="body">
-        <!-- Container for configuration of a single selected / added server -->
-        <XTitle :logo="`adapters/${adapterId}`">
-          {{ title }}
+          <template slot="actions">
+            <XButton
+              v-if="canDelete && selectedServers && selectedServers.length"
+              link
+              @click="removeConnection"
+            >Remove</XButton>
+            <XButton
+              id="new_connection"
+              :disabled="!canAdd"
+              @click="configConnection('new')"
+            >Add Connection</XButton>
+          </template>
+          <XTable
+            slot="table"
+            v-model="selectedServersModel"
+            :fields="tableFields"
+            :on-click-row="canUpdate ? configConnection : undefined"
+            :data="adapterClients"
+            :multiple-row-selection="canDelete"
+          />
+        </XTableWrapper>
+        <div class="config-settings">
           <XButton
-            v-if="adapterLink"
-            slot="actions"
-            header
             link
-            class="help-link"
-            title="More information about connecting this adapter"
-            @click="openHelpLink"
+            class="header"
+            :disabled="cannotOpenAdvancesSettings"
+            @click="toggleSettings"
           >
-            <MdIcon>help_outline</MdIcon>Help
+            <AIcon
+              type="setting"
+              theme="filled"
+              class="setting_cog"
+            />
+            Advanced Settings
           </XButton>
-        </XTitle>
-        <div
-          v-if="serverModal.error"
-          class="server-error"
-        >
-          <SvgIcon
-            name="symbol/error"
-            :original="true"
-            height="12"
-          />
-          <div class="error-text">
-            {{ serverModal.error }}
-          </div>
-        </div>
-        <XForm
-          v-model="serverModal.serverData"
-          :schema="adapterSchema"
-          :api-upload="uploadFileEndpoint"
-          :error="connectionLabelError"
-          @submit="saveServer"
-          @validate="validateServer"
-        />
-        <div class="double-column">
-          <div>
-            <label for="connectionLabel">
-              Connection Label
-              <div
-                v-if="!requireConnectionLabel"
-                class="hint"
-              >optional</div>
-            </label>
-            <input
-              id="connectionLabel"
-              v-model="serverModal.connectionLabel"
-              :class="{ 'error-border': showConnectionLabelBorder }"
-              :maxlength="20"
-              @input="onConnectionLabelInput"
-              @blur="onConnectionLabelBlur"
+          <div class="content">
+            <XTabs
+              v-if="currentAdapter && advancedSettings"
+              ref="tabs"
+              class="growing-y"
             >
+              <XTab
+                v-for="(config, configName, i) in currentAdapter.config"
+                :id="configName"
+                :key="i"
+                :title="config.schema.pretty_name || configName"
+                :selected="!i"
+              >
+                <div class="configuration">
+                  <XForm
+                    v-model="config.config"
+                    :schema="config.schema"
+                    @validate="validateConfig"
+                  />
+                  <XButton
+                    tabindex="1"
+                    :disabled="!configValid"
+                    @click="saveConfig(configName, config.config)"
+                  >Save Config</XButton>
+                </div>
+              </XTab>
+            </XTabs>
           </div>
-          <XInstancesSelect
-            id="serverInstance"
-            v-model="serverModal.instanceName"
-            :render-label="true"
-            render-label-text="Choose Instance"
-            :hide-in-one-option="true"
-          />
         </div>
-      </div>
-      <template slot="footer">
-        <XButton
-          link
-          @click="toggleServerModal"
-        >Cancel</XButton>
-        <XButton
-          id="test_reachability"
-          :disabled="!serverModal.valid || !connectionLabelValid"
-          @click="testServer"
-        >Test Reachability</XButton>
-        <XButton
-          id="save_server"
-          :disabled="!serverModal.valid || !connectionLabelValid"
-          @click="saveServer"
-        >Save and Connect</XButton>
-      </template>
-    </XModal>
-    <XModal
-      v-if="deleting"
-      approve-text="Delete"
-      @close="closeConfirmDelete"
-      @confirm="doRemoveServers"
-    >
-      <div slot="body">
-        Are you sure you want to delete this server?
-        <br>
-        <br>
-        <input
-          id="deleteEntitiesCheckbox"
-          v-model="deleteEntities"
-          type="checkbox"
+        <XModal
+          v-if="(canUpdate || canAdd)
+            && serverModal.serverData && serverModal.uuid && serverModal.open"
+          size="lg"
+          class="config-server"
+          @close="toggleServerModal"
+          @confirm="saveServer"
         >
-        <label
-          for="deleteEntitiesCheckbox"
-        >Also delete all associated entities (devices, users)</label>
-      </div>
-    </XModal>
-    <XToast
-      v-if="message"
-      v-model="message"
-      :timeout="toastTimeout"
-    />
+          <div slot="body">
+            <!-- Container for configuration of a single selected / added server -->
+            <XTitle :logo="`adapters/${adapterId}`">
+              {{ title }}
+              <XButton
+                v-if="adapterLink"
+                slot="actions"
+                header
+                link
+                class="help-link"
+                title="More information about connecting this adapter"
+                @click="openHelpLink"
+              >
+                <MdIcon>help_outline</MdIcon>Help
+              </XButton>
+            </XTitle>
+            <div
+              v-if="serverModal.error"
+              class="server-error"
+            >
+              <SvgIcon
+                name="symbol/error"
+                :original="true"
+                height="12"
+              />
+              <div class="error-text">
+                {{ serverModal.error }}
+              </div>
+            </div>
+            <XForm
+              v-model="serverModal.serverData"
+              :schema="adapterSchema"
+              :api-upload="uploadFileEndpoint"
+              :error="connectionLabelError"
+              @submit="saveServer"
+              @validate="validateServer"
+            />
+            <div class="double-column">
+              <div>
+                <label for="connectionLabel">
+                  Connection Label
+                  <div
+                    v-if="!requireConnectionLabel"
+                    class="hint"
+                  >optional</div>
+                </label>
+                <input
+                  id="connectionLabel"
+                  v-model="serverModal.connectionLabel"
+                  :class="{ 'error-border': showConnectionLabelBorder }"
+                  :maxlength="20"
+                  @input="onConnectionLabelInput"
+                  @blur="onConnectionLabelBlur"
+                >
+              </div>
+              <XInstancesSelect
+                id="serverInstance"
+                v-model="serverModal.instanceName"
+                :render-label="true"
+                render-label-text="Choose Instance"
+                :hide-in-one-option="true"
+              />
+            </div>
+          </div>
+          <template slot="footer">
+            <XButton
+              link
+              @click="toggleServerModal"
+            >Cancel</XButton>
+            <XButton
+              id="test_reachability"
+              :disabled="!serverModal.valid || !connectionLabelValid"
+              @click="testServer"
+            >Test Reachability</XButton>
+            <XButton
+              id="save_server"
+              :disabled="!serverModal.valid || !connectionLabelValid"
+              @click="saveServer"
+            >Save and Connect</XButton>
+          </template>
+        </XModal>
+        <XModal
+          v-if="deleting"
+          approve-text="Delete"
+          @close="closeConfirmDelete"
+          @confirm="doRemoveServers"
+        >
+          <div slot="body">
+            Are you sure you want to delete this server?
+            <br>
+            <br>
+            <input
+              id="deleteEntitiesCheckbox"
+              v-model="deleteEntities"
+              type="checkbox"
+            >
+            <label
+              for="deleteEntitiesCheckbox"
+            >Also delete all associated entities (devices, users)</label>
+          </div>
+        </XModal>
+        <XToast
+          v-if="message"
+          v-model="message"
+          :timeout="toastTimeout"
+        />
+      </template>
+    </XRoleGateway>
   </XPage>
 </template>
 
@@ -269,11 +276,6 @@ export default {
       loading(state) {
         return state.adapters.adapters.fetching;
       },
-      isReadOnly(state) {
-        const user = state.auth.currentUser.data;
-        if (!user || !user.permissions) return true;
-        return user.permissions.Adapters === 'ReadOnly';
-      },
       allClients(state) {
         return state.adapters.clients;
       },
@@ -284,9 +286,13 @@ export default {
         return !this.requireConnectionLabel || this.serverModal.connectionLabel;
       },
     }),
+    cannotOpenAdvancesSettings() {
+      return this.$cannot(this.$permissionConsts.categories.Adapters,
+        this.$permissionConsts.actions.Update);
+    },
     selectedServersModel: {
       get() {
-        return this.isReadOnly ? undefined : this.selectedServers;
+        return this.selectedServers;
       },
       set(value) {
         this.selectedServers = value;
@@ -416,7 +422,6 @@ export default {
       this.toggleServerModal();
     },
     removeConnection() {
-      if (this.isReadOnly) return;
       this.deleting = true;
     },
     async doRemoveServers() {
@@ -465,7 +470,7 @@ export default {
         uuid: this.serverModal.uuid,
       }).then((updateRes) => {
         if (this.selectedServers.includes('')) {
-          if (!this.isReadOnly) this.selectedServers.push(updateRes.data.id);
+          this.selectedServers.push(updateRes.data.id);
           this.selectedServers = this.selectedServers.filter((selected) => selected !== '');
         }
         if (updateRes.data.status === 'error') {

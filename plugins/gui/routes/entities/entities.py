@@ -20,23 +20,24 @@ from axonius.logging.metric_helper import log_metric
 from axonius.plugin_base import EntityType, return_error
 from axonius.types.correlation import (MAX_LINK_AMOUNT, CorrelationReason,
                                        CorrelationResult)
-from axonius.utils.gui_helpers import (Permission, PermissionLevel,
-                                       PermissionType, add_labels_to_entities,
+from axonius.utils.permissions_helper import PermissionCategory, PermissionAction, PermissionValue
+from axonius.utils.gui_helpers import (add_labels_to_entities,
                                        get_entity_labels, entity_fields, get_connected_user_id,
                                        filtered)
 from axonius.utils.mongo_escaping import escape_dict
 from gui.logic.db_helpers import beautify_db_entry
 from gui.logic.filter_utils import filter_archived
-from gui.logic.routing_helper import gui_add_rule_logged_in
+from gui.logic.routing_helper import gui_category_add_rules, gui_route_logged_in
 from gui.logic.views_data import get_views
-from gui.routes.entities.devices.devices import Devices
-from gui.routes.entities.users.users import Users
+from gui.routes.entities.entity_generator import entity_generator
 # pylint: disable=no-member,inconsistent-return-statements
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
-class Entities(Devices, Users):
+@gui_category_add_rules('')
+class Entities(entity_generator('devices', PermissionCategory.DevicesAssets),
+               entity_generator('users', PermissionCategory.UsersAssets)):
 
     @staticmethod
     def _insert_view(views_collection, name, mongo_view, description, tags, query_type='saved'):
@@ -144,62 +145,68 @@ class Entities(Devices, Users):
         })
         return '', 200
 
-    def _entity_views(self, method, entity_type: EntityType, limit, skip, mongo_filter, mongo_sort, query_type='saved'):
+    @staticmethod
+    def _get_entity_views(entity_type: EntityType, limit, skip, mongo_filter, mongo_sort, query_type='saved'):
+        """
+        get entity views
+        :return:
+        """
+        mongo_filter['query_type'] = query_type
+        return [beautify_db_entry(entry)
+                for entry
+                in get_views(entity_type, limit, skip, mongo_filter, mongo_sort)]
+
+    def _update_entity_views(self, entity_type: EntityType, query_type='saved'):
         """
         Save or fetch views over the entities db
         :return:
         """
         entity_views_collection = self.gui_dbs.entity_query_views_db_map[entity_type]
-        if method == 'GET':
-            mongo_filter['query_type'] = query_type
-            return [beautify_db_entry(entry)
-                    for entry
-                    in get_views(entity_type, limit, skip, mongo_filter, mongo_sort)]
+        view_data = self.get_request_data_as_object()
+        tags = view_data.get('tags', [])
 
-        if method == 'POST':
-            view_data = self.get_request_data_as_object()
-            tags = view_data.get('tags', [])
+        if not view_data.get('name'):
+            return return_error(f'Name is required in order to save a view', 400)
+        if not view_data.get('view'):
+            return return_error(f'View data is required in order to save one', 400)
+        view_to_update = {
+            'name': view_data['name'],
+            'description': view_data.get('description', ''),
+            'view': view_data['view'],
+            'query_type': query_type,
+            'tags': tags,
+            'archived': False,
+        }
+        if view_data.get(PREDEFINED_FIELD):
+            view_to_update[PREDEFINED_FIELD] = view_data[PREDEFINED_FIELD]
+        if not self.is_axonius_user():
+            view_to_update[LAST_UPDATED_FIELD] = datetime.now()
+            view_to_update[UPDATED_BY_FIELD] = get_connected_user_id()
+            view_to_update['user_id'] = get_connected_user_id()
+        update_result = entity_views_collection.find_one_and_update({
+            'name': view_data['name']
+        }, {
+            '$set': view_to_update
+        }, upsert=True, return_document=pymongo.ReturnDocument.AFTER)
 
-            if not view_data.get('name'):
-                return return_error(f'Name is required in order to save a view', 400)
-            if not view_data.get('view'):
-                return return_error(f'View data is required in order to save one', 400)
-            view_to_update = {
-                'name': view_data['name'],
-                'description': view_data.get('description', ''),
-                'view': view_data['view'],
-                'query_type': query_type,
-                'tags': tags,
-                'archived': False,
+        return str(update_result['_id'])
+
+    def _delete_entity_views(self, entity_type: EntityType, mongo_filter):
+        entity_views_collection = self.gui_dbs.entity_query_views_db_map[entity_type]
+
+        selection = self.get_request_data_as_object()
+        selection['ids'] = [ObjectId(i) for i in selection['ids']]
+        query_ids = self.get_selected_ids(entity_views_collection, selection, mongo_filter)
+        entity_views_collection.update_many({
+            '_id': {
+                '$in': query_ids
             }
-            if view_data.get(PREDEFINED_FIELD):
-                view_to_update[PREDEFINED_FIELD] = view_data[PREDEFINED_FIELD]
-            if not self._is_hidden_user():
-                view_to_update[LAST_UPDATED_FIELD] = datetime.now()
-                view_to_update[UPDATED_BY_FIELD] = get_connected_user_id()
-                view_to_update['user_id'] = get_connected_user_id()
-            update_result = entity_views_collection.find_one_and_update({
-                'name': view_data['name']
-            }, {
-                '$set': view_to_update
-            }, upsert=True, return_document=pymongo.ReturnDocument.AFTER)
-
-            return str(update_result['_id'])
-
-        if method == 'DELETE':
-            selection = self.get_request_data_as_object()
-            selection['ids'] = [ObjectId(i) for i in selection['ids']]
-            query_ids = self.get_selected_ids(entity_views_collection, selection, mongo_filter)
-            entity_views_collection.update_many({
-                '_id': {
-                    '$in': query_ids
-                }
-            }, {
-                '$set': {
-                    'archived': True
-                }
-            })
-            return ''
+        }, {
+            '$set': {
+                'archived': True
+            }
+        })
+        return ''
 
     def _entity_views_update(self, entity_type: EntityType, query_id):
         view_data = self.get_request_data_as_object()
@@ -211,7 +218,7 @@ class Entities(Devices, Users):
             'description': view_data.get('description', ''),
             'tags': view_data.get('tags', []),
         }
-        if not self._is_hidden_user():
+        if not self.is_axonius_user():
             view_set_data[LAST_UPDATED_FIELD] = datetime.now()
             view_set_data[UPDATED_BY_FIELD] = get_connected_user_id()
         self.gui_dbs.entity_query_views_db_map[entity_type].update_one({
@@ -316,7 +323,7 @@ class Entities(Devices, Users):
         :param projection: the "mongo_projection" from @projected()
         :return: None
         """
-        if self._is_hidden_user():
+        if self.is_axonius_user():
             return
 
         view_filter = request.args.get('filter')
@@ -521,16 +528,10 @@ class Entities(Devices, Users):
                                 f'Attempt to run action {action_type} caused exception.', 400)
 
     @filtered()
-    @gui_add_rule_logged_in('actions/<action_type>', methods=['POST'],
-                            required_permissions={Permission(PermissionType.Devices,
-                                                             PermissionLevel.ReadWrite)})
+    @gui_route_logged_in('actions/<action_type>', methods=['POST'],
+                         required_permission_values={PermissionValue.get(PermissionAction.Update,
+                                                                         PermissionCategory.DevicesAssets)})
     def actions_run(self, action_type, mongo_filter):
         action_data = self.get_request_data_as_object()
         action_data['action_type'] = action_type
         return self.run_actions(action_data, mongo_filter)
-
-    @gui_add_rule_logged_in('actions/upload_file', methods=['POST'],
-                            required_permissions={Permission(PermissionType.Adapters,
-                                                             PermissionLevel.ReadWrite)})
-    def actions_upload_file(self):
-        return self._upload_file(DEVICE_CONTROL_PLUGIN_NAME)

@@ -13,17 +13,17 @@
           @click="confirmRemoveNotes"
         >Remove</x-button>
         <x-button
-          :disabled="readOnly"
+          :disabled="userCannotEditDevices"
           @click="createNote"
         >Add Note</x-button>
       </div>
     </div>
     <x-table
-      v-model="readOnly? undefined : selectedNotes"
+      v-model="userCannotEditDevices? undefined : selectedNotes"
       :data="noteData"
       :fields="noteFields"
       :sort="sort"
-      :on-click-row="readOnly? undefined : editNote"
+      :on-click-row="userCannotEditDevices? undefined : editNote"
       :on-click-col="sortNotes"
       :read-only="readOnlyNotes"
     />
@@ -67,6 +67,7 @@
 
   import { mapState, mapActions } from 'vuex'
   import { SAVE_DATA_NOTE, REMOVE_DATA_NOTE } from '../../../../store/actions'
+  import { getEntityPermissionCategory } from '@constants/entities';
 
   export default {
     name: 'XEntityNotes',
@@ -87,7 +88,7 @@
       readOnly: {
         type: Boolean,
         default: false
-      }
+      },
     },
     computed: {
       ...mapState({
@@ -96,7 +97,11 @@
             uuid: state.auth.currentUser.data.uuid,
             admin: state.auth.currentUser.data.admin || state.auth.currentUser.data.role_name === 'Admin'
           }
-        }
+        },
+        userCannotEditDevices() {
+          return this.readOnly || this.$cannot(getEntityPermissionCategory(this.module),
+            this.$permissionConsts.actions.Update);
+        },
       }),
       noteData () {
         return this.notes.filter(item => {
@@ -143,7 +148,7 @@
         }
       },
       readOnlyNotes () {
-        if (this.currentUser.admin) return []
+        if (this.$isAdmin()) return []
         return this.noteData
           .filter(note => note['user_id'] !== this.currentUser.uuid)
           .map(note => note.uuid)

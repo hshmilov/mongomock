@@ -41,7 +41,7 @@ export const tasks = {
         Ask server for a complete, specific task, with all details of the run
       */
       return dispatch(REQUEST_API, {
-        rule: `tasks/${taskId}`,
+        rule: `enforcements/tasks/${taskId}`,
         type: UPDATE_TASK,
       });
     },

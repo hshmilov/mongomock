@@ -15,15 +15,12 @@ class TestEntityNotes(TestBase):
     def _create_notes_user(self):
         self.settings_page.switch_to_page()
         self.settings_page.click_manage_users_settings()
-        self.settings_page.create_new_user(ui_consts.NOTES_USERNAME, ui_consts.NEW_PASSWORD,
-                                           ui_consts.FIRST_NAME, ui_consts.LAST_NAME)
+        self.settings_page.add_user_with_duplicated_role(ui_consts.NOTES_USERNAME, ui_consts.NEW_PASSWORD,
+                                                         ui_consts.FIRST_NAME, ui_consts.LAST_NAME,
+                                                         self.settings_page.ADMIN_ROLE)
         self.settings_page.wait_for_user_created_toaster()
-        for entity_type in EntityType:
-            self.settings_page.select_permissions(entity_type.name, self.settings_page.READ_WRITE_PERMISSION)
-        self.settings_page.click_save_manage_users_settings()
-        self.settings_page.wait_for_user_permissions_saved_toaster()
         assert self.axonius_system.gui.log_tester.is_metric_in_log(metric_name=ApiMetric.REQUEST_PATH,
-                                                                   value='/api/system/users/_id_/access')
+                                                                   value='/api/settings/users')
         self.axonius_system.gui.log_tester.is_str_in_log('"method": "PUT"')
 
     def _execute_notes_basic_operations(self, entities_page):

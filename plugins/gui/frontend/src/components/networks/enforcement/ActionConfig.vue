@@ -20,7 +20,7 @@
           ref="form"
           v-model="config"
           :schema="actionSchema"
-          api-upload="actions"
+          api-upload="enforcements/actions"
           :read-only="readOnly"
           silent
           @validate="validateForm"

@@ -79,6 +79,9 @@ class ActionCategory:
 
 class EnforcementsPage(EntitiesPage):
     SAVE_AND_RUN_BUTTON_TEXT = 'Save & Run'
+    SAVE_AND_EXIT_BUTTON_TEXT = 'Save & Exit'
+    EXIT_BUTTON_TEXT = 'Exit'
+    VIEW_TASKS_BUTTON_TEXT = 'View Tasks'
     TASK_IN_PROGRESS = 'Enforcement Task is in progress'
     NEW_ENFORCEMENT_BUTTON = 'Add Enforcement'
     ENFORCEMENT_NAME_ID = 'enforcement_name'
@@ -170,6 +173,9 @@ class EnforcementsPage(EntitiesPage):
 
     def find_new_enforcement_button(self):
         return self.get_enabled_button(self.NEW_ENFORCEMENT_BUTTON)
+
+    def is_disabled_new_enforcement_button(self):
+        return self.is_element_disabled(self.get_button(self.NEW_ENFORCEMENT_BUTTON))
 
     def fill_enforcement_name(self, name):
         self.fill_text_field_by_element_id(self.ENFORCEMENT_NAME_ID, name)
@@ -559,16 +565,31 @@ class EnforcementsPage(EntitiesPage):
         )
 
     def click_save_button(self):
-        self.click_button('Save & Exit')
+        self.click_button(self.SAVE_AND_EXIT_BUTTON_TEXT)
+
+    def click_exit_button(self):
+        self.click_button(self.EXIT_BUTTON_TEXT)
 
     def click_run_button(self):
         self.click_button(self.SAVE_AND_RUN_BUTTON_TEXT)
+
+    def get_save_button(self, context=None):
+        return self.get_button(self.SAVE_AND_RUN_BUTTON_TEXT, context=context)
 
     def wait_for_task_in_progress_toaster(self):
         self.wait_for_toaster_to_end(self.TASK_IN_PROGRESS)
 
     def click_tasks_button(self):
-        self.click_button('View Tasks')
+        self.click_button(self.VIEW_TASKS_BUTTON_TEXT)
+
+    def get_view_tasks_button(self, context=None):
+        return self.get_button(self.VIEW_TASKS_BUTTON_TEXT, context=context)
+
+    def is_view_tasks_button_disabled(self):
+        return self.is_element_disabled(self.get_view_tasks_button())
+
+    def click_select_enforcement(self, index):
+        self.click_row_checkbox(index)
 
     def select_all_enforcements(self):
         self.driver.find_element_by_css_selector(self.ENFORCEMENTS_CHECKBOX).click()
@@ -594,8 +615,9 @@ class EnforcementsPage(EntitiesPage):
     def fill_below_value(self, value):
         self.fill_text_field_by_css_selector(self.BELOW_INPUT_CSS, value)
 
-    def edit_enforcement(self, enforcement_name):
+    def click_enforcement(self, enforcement_name):
         self.driver.find_element_by_xpath(self.EDIT_ENFORCEMENT_XPATH.format(enforcement_name=enforcement_name)).click()
+        self.wait_for_action_config()
 
     def get_saved_query_text(self):
         return self.driver.find_element_by_css_selector(self.SELECT_SAVED_VIEW_TEXT_CSS).get_attribute('title')
@@ -705,7 +727,7 @@ class EnforcementsPage(EntitiesPage):
         self.switch_to_page()
         self.refresh()
         self.wait_for_table_to_load()
-        self.edit_enforcement(enforcement_name)
+        self.click_enforcement(enforcement_name)
         self.wait_for_action_config()
         self.add_tag_entities(name=success_tag_name, tag='Specially Deployed', action_cond=self.SUCCESS_ACTIONS_TEXT)
         self.add_cb_isolate(name=failure_isolate_name, action_cond=self.FAILURE_ACTIONS_TEXT)

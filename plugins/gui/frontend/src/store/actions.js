@@ -1,4 +1,4 @@
-import axios_client from '@api/axios.js';
+import axiosClient from '@api/axios.js';
 import Promise from 'promise';
 
 import _get from 'lodash/get';
@@ -44,7 +44,7 @@ export const requestApi = ({ commit }, payload) => {
 
   if (payload.data) request_config.data = payload.data;
   if (payload.binary) request_config.responseType = 'arraybuffer';
-  return new Promise((resolve, reject) => axios_client(request_config)
+  return new Promise((resolve, reject) => axiosClient(request_config)
     .then((response) => {
       if (payload.type) {
         commit(payload.type, {
@@ -314,7 +314,7 @@ export const saveView = ({ dispatch, commit }, payload) => {
   }
   return dispatch(REQUEST_API, {
     rule: `${module}/views/saved`,
-    method: 'POST',
+    method: 'PUT',
     data,
   }).then((response) => {
     if (response.status === 200) {
@@ -364,7 +364,7 @@ export const fetchDataHyperlinks = ({ state, dispatch }, payload) => {
 
 export const START_RESEARCH_PHASE = 'START_RESEARCH_PHASE';
 export const startResearch = ({ dispatch }) => dispatch(REQUEST_API, {
-  rule: 'research_phase',
+  rule: 'settings/research_phase',
   method: 'POST',
 });
 
@@ -570,13 +570,13 @@ export const runAction = ({ state, dispatch }, payload) => {
 
 export const STOP_RESEARCH_PHASE = 'STOP_RESEARCH_PHASE';
 export const stopResearch = ({ dispatch }) => dispatch(REQUEST_API, {
-  rule: 'stop_research_phase',
+  rule: 'settings/stop_research_phase',
   method: 'POST',
 });
 
 export const FETCH_SYSTEM_CONFIG = 'FETCH_SYSTEM_CONFIG';
 export const fetchSystemConfig = ({ dispatch }) => dispatch(REQUEST_API, {
-  rule: 'configuration',
+  rule: 'settings',
   type: UPDATE_SYSTEM_CONFIG,
 });
 

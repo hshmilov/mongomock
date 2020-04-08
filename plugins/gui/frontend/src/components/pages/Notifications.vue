@@ -1,6 +1,12 @@
 <template>
     <x-page title="notifications">
-        <x-table module="notifications" title="Notifications" :on-click-row="navigateNotification" ref="table"/>
+        <x-table
+          module="notifications"
+          endpoint="dashboard/notifications"
+          title="Notifications"
+          :on-click-row="navigateNotification"
+          ref="table"
+        />
     </x-page>
 </template>
 

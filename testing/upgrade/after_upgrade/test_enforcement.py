@@ -9,7 +9,7 @@ class TestEnforcement(TestBase):
     def test_create_enforcement(self):
         self.enforcements_page.switch_to_page()
         self.enforcements_page.wait_for_table_to_load()
-        self.enforcements_page.edit_enforcement(Enforcements.enforcement_name_1)
+        self.enforcements_page.click_enforcement(Enforcements.enforcement_name_1)
 
         # AX-3772
         time.sleep(2)

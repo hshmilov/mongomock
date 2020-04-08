@@ -202,7 +202,7 @@ class TestTasks(TestBase):
         self.enforcements_page.create_notifying_enforcement('Test 2', ENFORCEMENT_QUERY,
                                                             added=False, subtracted=False)
         self.base_page.run_discovery()
-        self.enforcements_page.edit_enforcement('Test 1')
+        self.enforcements_page.click_enforcement('Test 1')
         self.enforcements_page.click_tasks_button()
         self.enforcements_page.wait_for_spinner_to_end()
         self.enforcements_page.wait_for_table_to_load()

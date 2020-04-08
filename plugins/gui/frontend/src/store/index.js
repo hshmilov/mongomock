@@ -91,6 +91,7 @@ import { settings } from './modules/settings';
 import { tasks } from './modules/tasks';
 import { users } from './modules/users';
 import { compliance } from './modules/compliance';
+import { labels } from './modules/labels';
 
 Vue.use(Vuex);
 export default new Vuex.Store({
@@ -204,5 +205,6 @@ export default new Vuex.Store({
     tasks,
     users,
     compliance,
+    labels,
   },
 });

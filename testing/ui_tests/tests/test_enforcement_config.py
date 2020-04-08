@@ -45,7 +45,7 @@ class TestEnforcementSanity(TestBase):
         assert self.notification_page.is_text_in_peek_notifications(ENFORCEMENT_CHANGE_NAME)
 
         self.enforcements_page.wait_for_table_to_load()
-        self.enforcements_page.edit_enforcement(ENFORCEMENT_CHANGE_NAME)
+        self.enforcements_page.click_enforcement(ENFORCEMENT_CHANGE_NAME)
         self.enforcements_page.select_trigger()
         self.enforcements_page.check_conditions()
         self.enforcements_page.check_below()
@@ -136,7 +136,7 @@ class TestEnforcementSanity(TestBase):
 
         self.enforcements_page.switch_to_page()
         self.enforcements_page.wait_for_table_to_load()
-        self.enforcements_page.edit_enforcement(ENFORCEMENT_CHANGE_NAME)
+        self.enforcements_page.click_enforcement(ENFORCEMENT_CHANGE_NAME)
         self.enforcements_page.select_trigger()
         text = self.enforcements_page.get_saved_query_text()
         formatted = f'{ENFORCEMENT_CHANGE_NAME} (deleted)'
@@ -163,7 +163,7 @@ class TestEnforcementSanity(TestBase):
         self.notification_page.verify_amount_of_notifications(0)
 
         self.enforcements_page.wait_for_table_to_load()
-        self.enforcements_page.edit_enforcement(ENFORCEMENT_CHANGE_NAME)
+        self.enforcements_page.click_enforcement(ENFORCEMENT_CHANGE_NAME)
         self.enforcements_page.select_trigger()
         # uncheck Below
         self.enforcements_page.check_condition_subracted()
@@ -207,7 +207,7 @@ class TestEnforcementSanity(TestBase):
 
         # Default sort is according to update time
         for name in sorted(enforcement_names):
-            self.enforcements_page.edit_enforcement(name)
+            self.enforcements_page.click_enforcement(name)
             self.enforcements_page.click_save_button()
             self.enforcements_page.wait_for_table_to_load()
             # Make a distinct difference between each save

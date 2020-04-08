@@ -10,7 +10,7 @@
       <template slot="actions">
         <XButton
           id="get-connection-string"
-          :disabled="isReadOnly"
+          :disabled="!canEditInstances"
           @click="connecting= !connecting"
         >Connect Node</XButton>
         <XButton
@@ -27,16 +27,18 @@
       <XTable
         v-if="instances"
         slot="table"
-        v-model="isReadOnly ? undefined : selectedInstance"
+        v-model="selectedInstance"
         id-field="node_id"
         :data="instances"
         :fields="fields"
-        :on-click-row="isReadOnly ? undefined : showNameChangeModal"
+        :on-click-row="showNameChangeModal"
+        :multiple-row-selection="canEditInstances"
       />
     </XTableWrapper>
     <XModal
       v-if="instanceDetails.nodeIds"
       approve-text="Save"
+      :disabled="!canEditInstances"
       @close="closeNameChange"
       @confirm="instanceNameChange"
     >
@@ -44,11 +46,12 @@
         <XForm
           v-model="instanceDetails"
           :schema="instanceDetailsSchema"
+          :read-only="!canEditInstances"
         />
       </div>
     </XModal>
     <XModal
-      v-if="connecting && !isReadOnly"
+      v-if="connecting && canEditInstances"
       @close="connecting= !connecting"
       @confirm="connecting= !connecting"
     >
@@ -101,13 +104,10 @@ export default {
     XPage, XTableWrapper, XTable, XButton, XModal, XForm,
   },
   computed: {
-    ...mapState({
-      isReadOnly(state) {
-        const user = state.auth.currentUser.data;
-        if (!user || !user.permissions) return true;
-        return user.permissions.Instances === 'ReadOnly';
-      },
-    }),
+    canEditInstances() {
+        return this.$can(this.$permissionConsts.categories.Instances,
+        this.$permissionConsts.actions.Update);
+    },
     fields() {
       return [
         { name: 'node_name', title: 'Name', type: 'string' },
@@ -197,7 +197,7 @@ export default {
       this.instanceDetails.isMaster = currentInstance.is_master;
     },
     deactivateServers() {
-      if (this.isReadOnly) return;
+      if (!this.canEditInstances) return;
       this.$safeguard.show({
         text: `
                   Are you sure you want to deactivate this instance?<br/><br/>
@@ -210,7 +210,7 @@ export default {
       });
     },
     reactivateServers() {
-      if (this.isReadOnly) return;
+      if (!this.canEditInstances) return;
       this.$safeguard.show({
         text: `
                   Are you sure you want to reactivate this instance?<br/>

@@ -8,6 +8,7 @@
     id="app"
   >
     <XSafeguard />
+    <XMessageModal />
     <!--Link for downloading files-->
     <a id="file-auto-download-link" />
     <!-- Nested navigation linking to routes defined in router/index.js -->
@@ -200,11 +201,12 @@ export default {
     fetchGlobalData() {
       this.fetchConstants();
       if (!this.isExpired) {
-        if (this.$can('Adapters', 'ReadOnly')) {
+        if (this.$can(this.$permissionConsts.categories.Adapters,
+          this.$permissionConsts.actions.View)) {
           this.fetchAdapters();
         }
         entities.forEach((entity) => {
-          if (this.$cannot(entity.title, 'ReadOnly')) return;
+          if (this.$cannot(entity.permissionCategory, this.$permissionConsts.actions.View)) return;
           this.fetchDataFields({ module: entity.name });
         });
         this.fetchConfig();

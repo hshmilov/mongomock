@@ -20,7 +20,7 @@ class TestEnforcementNavigation(TestBase):
                                                             enforcement_view=MANAGED_DEVICES_QUERY_NAME)
         self.enforcements_page.create_notifying_enforcement(enforcement_name=ENFORCEMENT_NAME_EXCLUDE,
                                                             enforcement_view=MANAGED_DEVICES_QUERY_NAME)
-        self.enforcements_page.edit_enforcement(ENFORCEMENT_NAME_INCLUDE)
+        self.enforcements_page.click_enforcement(ENFORCEMENT_NAME_INCLUDE)
 
         # Run enforcement & wait to end
 
@@ -47,7 +47,7 @@ class TestEnforcementNavigation(TestBase):
         # Add new enforcement (1)
         self.enforcements_page.create_notifying_enforcement(enforcement_name='long_running',
                                                             enforcement_view=MANAGED_DEVICES_QUERY_NAME)
-        self.enforcements_page.edit_enforcement('long_running')
+        self.enforcements_page.click_enforcement('long_running')
         self.enforcements_page.click_run_button()
         self.enforcements_page.wait_for_toaster_to_end(TOASTER_TEXT)
 
@@ -69,7 +69,7 @@ class TestEnforcementNavigation(TestBase):
         #
         self.enforcements_page.switch_to_page()
         self.enforcements_page.wait_for_table_to_load()
-        self.enforcements_page.edit_enforcement('long_running')
+        self.enforcements_page.click_enforcement('long_running')
         self.enforcements_page.click_tasks_button()
         # test if gui show 'in progress' task
         assert self.enforcements_page.get_task_status(1) == 'In Progress'

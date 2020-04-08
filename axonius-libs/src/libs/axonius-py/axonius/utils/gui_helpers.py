@@ -1,10 +1,11 @@
 # pylint: disable=too-many-lines
 import io
+import os
 import json
 import logging
 import itertools
-import os
 import re
+import functools
 from collections import defaultdict
 from datetime import datetime
 from enum import Enum
@@ -36,6 +37,8 @@ from axonius.utils.dict_utils import is_filter_in_value
 from axonius.utils import serial_csv
 from axonius.plugin_exceptions import SessionInvalid
 
+# pylint: disable=keyword-arg-before-vararg
+
 logger = logging.getLogger(f'axonius.{__name__}')
 
 # pylint: disable=C0302
@@ -54,34 +57,6 @@ FIELDS_TO_PROJECT_FOR_GUI = ['internal_axon_id', 'adapters', 'unique_adapter_nam
 SUBSTRING_FIELDS = ['hostname']
 
 
-def check_permissions(user_permissions, required_permissions, request_action: str) -> bool:
-    """
-    Checks whether user_permissions has all required_permissions
-    :param request_action: POST, GET, ...
-    :return: whether or not it has all permissions
-    """
-    if required_permissions:
-        for required_perm in required_permissions:
-            curr_level = user_permissions.get(required_perm.Type, PermissionLevel.Restricted)
-            required_perm_level = required_perm.Level
-            if curr_level == PermissionLevel.ReadWrite:
-                continue
-            elif curr_level == PermissionLevel.ReadOnly:
-                if required_perm_level == ReadOnlyJustForGet:
-                    if request_action != 'GET':
-                        return False
-                    continue
-                elif required_perm_level == PermissionLevel.ReadOnly:
-                    continue
-                elif required_perm_level == PermissionLevel.ReadWrite:
-                    return False
-
-            else:
-                # implied that curr_level == PermissionLevel.Restricted
-                return False
-    return True
-
-
 def deserialize_db_permissions(permissions):
     """
     Converts DB-like permissions to pythonic types
@@ -89,14 +64,6 @@ def deserialize_db_permissions(permissions):
     return {
         PermissionType[k]: PermissionLevel[v] for k, v in permissions.items()
     }
-
-
-def is_admin_user():
-    return session.get('user', {}).get('admin', False)
-
-
-def get_user_permissions():
-    return session.get('user', {}).get('permissions', {})
 
 
 # This is sort of an extension for the enum below, this can be used instead of PermissionLevel.* for
@@ -133,15 +100,19 @@ class Permission(NamedTuple):
 
 
 # Caution! These decorators must come BEFORE @add_rule
-def add_rule_custom_authentication(rule, auth_method, *args, **kwargs):
+def add_rule_custom_authentication(rule,
+                                   auth_method,
+                                   api_key_authentication=False,
+                                   *args, **kwargs):
     """
     A URL mapping for methods that are exposed to external services, i.e. browser or applications
     :param rule: rule name
     :param auth_method: An auth method
+    :param api_key_authentication: should authenticate with the api-key
     """
     # the should_authenticate=False means that we're not checking API-Key,
     # because those are APIs exposed to either the browser or external applications
-    add_rule_res = add_rule(rule, should_authenticate=False, *args, **kwargs)
+    add_rule_res = add_rule(rule, should_authenticate=api_key_authentication, *args, **kwargs)
     if auth_method is not None:
         return lambda func: auth_method(add_rule_res(func))
     return add_rule_res
@@ -162,6 +133,7 @@ def filtered():
     """
 
     def wrap(func):
+        @functools.wraps(func)
         def actual_wrapper(self, *args, **kwargs):
             filter_expr = None
             try:
@@ -185,6 +157,7 @@ def filtered_entities():
     """
 
     def wrap(func):
+        @functools.wraps(func)
         def actual_wrapper(self, *args, **kwargs):
             filter_expr = None
             try:
@@ -211,6 +184,7 @@ def sorted_endpoint():
     """
 
     def wrap(func):
+        @functools.wraps(func)
         def actual_wrapper(self, *args, **kwargs):
             sort_obj = {}
             try:
@@ -249,6 +223,7 @@ def projected():
     """
 
     def wrap(func):
+        @functools.wraps(func)
         def actual_wrapper(self, *args, **kwargs):
             mongo_projection = None
             content = self.get_request_data_as_object() if request.method == 'POST' else request.args
@@ -274,6 +249,7 @@ def schema_fields():
     """
 
     def wrap(func):
+        @functools.wraps(func)
         def actual_wrapper(self, *args, **kwargs):
             fields = []
             if request.method == 'POST':
@@ -292,6 +268,7 @@ def filtered_fields():
     """
 
     def wrap(func):
+        @functools.wraps(func)
         def actual_wrapper(self, *args, **kwargs):
             field_filters = self.get_request_data_as_object().get('field_filters', {})
             return func(self, field_filters=field_filters, *args, **kwargs)
@@ -307,6 +284,7 @@ def accounts():
     Decorator stating that the accounts array=['account_1', 'account_2'...]
     """
     def wrap(func):
+        @functools.wraps(func)
         def actual_wrapper(self, *args, **kwargs):
             accounts_list = []
             if request.method == 'POST':
@@ -321,8 +299,8 @@ def paginated(limit_max=PAGINATION_LIMIT_MAX):
     """
     Decorator stating that the view supports '?limit=X&start=Y' for pagination
     """
-
     def wrap(func):
+        @functools.wraps(func)
         def actual_wrapper(self, *args, **kwargs):
             # it's fine to raise here - an exception will be nicely JSONly displayed by add_rule
             content = self.get_request_data_as_object() if request.method == 'POST' else request.args
@@ -353,6 +331,7 @@ def search_filter():
     Decorator stating that the view supports '?search=X' for filtering chart data by name
     """
     def wrap(func):
+        @functools.wraps(func)
         def actual_wrapper(self, *args, **kwargs):
             # it's fine to raise here - an exception will be nicely JSONly displayed by add_rule
             content = request.args if request.method == 'GET' else self.get_request_data_as_object()
@@ -389,6 +368,7 @@ def historical_range(force: bool = False):
                 raise ValueError('Dates are invalid')
             return from_given_date, to_given_date
 
+        @functools.wraps(func)
         def actual_wrapper(self, *args, **kwargs):
             got_date = try_get_date()
             from_date, to_date = None, None
@@ -407,6 +387,7 @@ def historical():
     """
 
     def wrap(func):
+        @functools.wraps(func)
         def actual_wrapper(self, *args, **kwargs):
             content = self.get_request_data_as_object() if request.method == 'POST' else request.args
             history = content.get('history')
@@ -423,28 +404,16 @@ def historical():
     return wrap
 
 
-# This is here to support HOT=true for testing
-if os.environ.get('HOT') == 'true':
-    def get_connected_user_id() -> ObjectId:
-        """
-        Returns the current connected user's id
-        """
-        # pylint: disable=no-member
-        # pylint: disable=protected-access
-        return PluginBase.Instance._users_collection.find_one({'user_name': 'admin'})['_id']
-        # pylint: enable=no-member
-        # pylint: disable=protected-access
-else:
-    def get_connected_user_id() -> ObjectId:
-        """
-        Returns the current connected user's id
-        """
-        if 'api_request_user' in g:
-            return g.api_request_user['_id']
-        connected_user = session.get('user')
-        if not connected_user:
-            raise SessionInvalid
-        return connected_user['_id']
+def get_connected_user_id() -> ObjectId:
+    """
+    Returns the current connected user's id
+    """
+    if 'api_request_user' in g:
+        return g.api_request_user['_id']
+    connected_user = session.get('user')
+    if not connected_user:
+        raise SessionInvalid
+    return connected_user['_id']
 
 
 def get_historized_filter(entities_filter, history_date: datetime):

@@ -18,6 +18,7 @@
           </div>
           <x-button
             v-if="isGuiAdapterData(item)"
+            :disabled="userCannotEditDevices"
             @click="editFields"
           >Edit Fields</x-button>
           <x-button
@@ -78,7 +79,7 @@ import xToast from '../../../axons/popover/Toast.vue';
 import { SAVE_CUSTOM_DATA, FETCH_DATA_FIELDS } from '../../../../store/actions';
 
 import { pluginMeta } from '../../../../constants/plugin_meta';
-import { guiPluginName, initCustomData } from '../../../../constants/entities';
+import { guiPluginName, initCustomData, getEntityPermissionCategory } from '../../../../constants/entities';
 import { GET_CONNECTION_LABEL } from '../../../../store/getters';
 
 const lastSeenByModule = {
@@ -132,6 +133,10 @@ export default {
     ...mapGetters({
       getConnectionLabel: GET_CONNECTION_LABEL,
     }),
+    userCannotEditDevices() {
+      return this.$cannot(getEntityPermissionCategory(this.module),
+        this.$permissionConsts.actions.Update);
+    },
     sortedSpecificData() {
       const lastSeen = new Set();
       const res = this.adapters.filter((item) => {

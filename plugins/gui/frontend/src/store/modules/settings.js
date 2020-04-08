@@ -3,6 +3,7 @@ import _get from 'lodash/get';
 import { REQUEST_API } from '../actions';
 
 export const IN_TRIAL = 'IN_TRIAL';
+export const SHOULD_SHOW_CLOUD_COMPLIANCE = 'SHOULD_SHOW_CLOUD_COMPLIANCE';
 
 export const SAVE_PLUGIN_CONFIG = 'SAVE_PLUGIN_CONFIG';
 export const LOAD_PLUGIN_CONFIG = 'LOAD_PLUGIN_CONFIG';
@@ -28,10 +29,10 @@ export const settings = {
   },
   getters: {
     featureFlags: (state) => {
-      if (!state.settings.configurable.gui || !state.settings.configurable.gui.FeatureFlags) {
+      if (!state.configurable.gui || !state.configurable.gui.FeatureFlags) {
         return null;
       }
-      return state.settings.configurable.gui.FeatureFlags.config;
+      return state.configurable.gui.FeatureFlags.config;
     },
     [IN_TRIAL]: (state) => {
       if (!state.configurable.gui || !state.configurable.gui.FeatureFlags) {
@@ -44,6 +45,13 @@ export const settings = {
       expirationDate.setMinutes(expirationDate.getMinutes() - expirationDate.getTimezoneOffset());
       const trialDaysRemaining = Math.ceil((expirationDate - new Date()) / 1000 / 60 / 60 / 24);
       return trialDaysRemaining !== null;
+    },
+    [SHOULD_SHOW_CLOUD_COMPLIANCE]: (state, getters) => {
+      const cloudComplianceSettings = _get(getters, 'featureFlags.cloud_compliance', {});
+      // If we are in trial, or if the cloud compliance feature has been enabled, run this.
+      const isCloudComplianceEnabled = cloudComplianceSettings.cis_enabled;
+      const isCloudComplianceVisible = cloudComplianceSettings.enabled;
+      return isCloudComplianceVisible && (getters.IN_TRIAL || isCloudComplianceEnabled);
     },
   },
   mutations: {
@@ -85,7 +93,7 @@ export const settings = {
       if (!payload || !payload.pluginId || !payload.configName) {
         return null;
       }
-      const rule = `plugins/configs/${payload.pluginId}/${payload.configName}`;
+      const rule = `settings/plugins/${payload.pluginId}/${payload.configName}`;
       return dispatch(REQUEST_API, {
         rule,
         method: 'POST',
@@ -107,7 +115,7 @@ export const settings = {
        */
       if (!payload || !payload.pluginId || !payload.configName) return null;
 
-      const rule = `plugins/configs/${payload.pluginId}/${payload.configName}`;
+      const rule = `settings/plugins/${payload.pluginId}/${payload.configName}`;
       return dispatch(REQUEST_API, {
         rule,
         type: CHANGE_PLUGIN_CONFIG,
@@ -116,7 +124,7 @@ export const settings = {
     },
     [FETCH_MAINTENANCE_CONFIG]({ dispatch }) {
       return dispatch(REQUEST_API, {
-        rule: 'config/maintenance',
+        rule: 'settings/maintenance',
         type: UPDATE_MAINTENANCE_CONFIG,
       });
     },
@@ -130,7 +138,7 @@ export const settings = {
         };
       }
       return dispatch(REQUEST_API, {
-        rule: 'config/maintenance',
+        rule: 'settings/maintenance',
         method: 'POST',
         data: payload,
       }).then((response) => {
@@ -143,7 +151,7 @@ export const settings = {
     },
     [START_MAINTENANCE_CONFIG]({ dispatch, commit }, payload) {
       return dispatch(REQUEST_API, {
-        rule: 'config/maintenance',
+        rule: 'settings/maintenance',
         method: 'PUT',
         data: payload,
       }).then((response) => {
@@ -156,7 +164,7 @@ export const settings = {
     },
     [STOP_MAINTENANCE_CONFIG]({ dispatch, commit }) {
       return dispatch(REQUEST_API, {
-        rule: 'config/maintenance',
+        rule: 'settings/maintenance',
         method: 'DELETE',
       }).then((response) => {
         if (response.status === 200) {

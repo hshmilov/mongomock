@@ -41,13 +41,13 @@ export const constants = {
 		},
 		[ FETCH_FIRST_HISTORICAL_DATE ] ({dispatch}) {
 			return dispatch(REQUEST_API, {
-				rule: 'first_historical_date',
+				rule: 'dashboard/first_historical_date',
 				type: SET_FIRST_HISTORICAL_DATE
 			})
 		},
 		[ FETCH_ALLOWED_DATES ] ({dispatch}) {
 			return dispatch(REQUEST_API, {
-				rule: 'get_allowed_dates',
+				rule: 'dashboard/get_allowed_dates',
 				type: SET_ALLOWED_DATES
 			})
 		},

@@ -5,23 +5,24 @@ from bson import ObjectId
 from flask import (jsonify,
                    request)
 
-from axonius.utils.gui_helpers import (Permission, PermissionLevel,
-                                       PermissionType, ReadOnlyJustForGet,
-                                       paginated, filtered, sorted_endpoint)
+from axonius.utils.gui_helpers import (paginated, filtered, sorted_endpoint)
+from axonius.utils.permissions_helper import PermissionCategory, PermissionAction, PermissionValue
 from gui.logic.db_helpers import beautify_db_entry
-from gui.logic.routing_helper import gui_add_rule_logged_in
+from gui.logic.routing_helper import gui_section_add_rules, gui_route_logged_in
 # pylint: disable=no-member,no-else-return,inconsistent-return-statements
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
+@gui_section_add_rules('notifications')
 class Notifications:
 
     @paginated()
     @filtered()
     @sorted_endpoint()
-    @gui_add_rule_logged_in('notifications', methods=['POST', 'GET'],
-                            required_permissions={Permission(PermissionType.Dashboard, ReadOnlyJustForGet)})
+    @gui_route_logged_in(methods=['POST', 'GET'],
+                         required_permission_values={PermissionValue.get(PermissionAction.View,
+                                                                         PermissionCategory.Dashboard)})
     def notifications(self, limit, skip, mongo_filter, mongo_sort):
         """
         Get all notifications
@@ -68,8 +69,7 @@ class Notifications:
             return str(update_result.modified_count), 200
 
     @filtered()
-    @gui_add_rule_logged_in('notifications/count', methods=['GET'],
-                            required_permissions={Permission(PermissionType.Dashboard, PermissionLevel.ReadOnly)})
+    @gui_route_logged_in('count', methods=['GET'])
     def notifications_count(self, mongo_filter):
         """
         Fetches from core's notification collection, according to given mongo_filter,
@@ -81,9 +81,7 @@ class Notifications:
         notification_collection = db['core']['notifications']
         return str(notification_collection.count_documents(mongo_filter))
 
-    @gui_add_rule_logged_in('notifications/<notification_id>', methods=['GET'],
-                            required_permissions={Permission(PermissionType.Dashboard,
-                                                             PermissionLevel.ReadOnly)})
+    @gui_route_logged_in('<notification_id>', methods=['GET'])
     def notifications_by_id(self, notification_id):
         """
         Get all notification data

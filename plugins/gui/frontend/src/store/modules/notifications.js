@@ -79,14 +79,14 @@ export const notifications = {
 				If limit is not given, returned amount is still limited by PAGINATION_LIMIT_MAX defined in backend
 			 */
 			return dispatch(REQUEST_API, {
-				rule: 'notifications?aggregate=true',
+				rule: 'dashboard/notifications?aggregate=true',
 				type: UPDATE_AGGREGATE_NOTIFICATIONS
 			})
 		},
 		[ FETCH_NOTIFICATION ] ({dispatch}, notificationId) {
 			if (!notificationId) { return }
 			dispatch(REQUEST_API, {
-				rule: `notifications/${notificationId}`,
+				rule: `dashboard/notifications/${notificationId}`,
 				type: SET_NOTIFICATION
 			})
 		},
@@ -96,7 +96,7 @@ export const notifications = {
 			 */
 			if (!notificationIds) { return }
 			dispatch(REQUEST_API, {
-				rule: 'notifications',
+				rule: 'dashboard/notifications',
 				method: 'POST',
                 type: SAVE_NOTIFICATIONS_SEEN,
 				data: { 'notification_ids': notificationIds },
@@ -114,7 +114,7 @@ export const notifications = {
             } else {
                 payload.filter = `(${payload.filter}) and seen == false`
             }
-            let rule = `notifications/count?filter=${payload.filter}`
+            let rule = `dashboard/notifications/count?filter=${payload.filter}`
             return dispatch(REQUEST_API, {
                 rule: rule,
                 type: SET_NOTIFICATIONS_UNSEEN_COUNT

@@ -42,7 +42,7 @@
         return this.$route.params.id || false
       },
       endpointForDesignatedTasks(){
-        return this.enforcementDesignated ? `enforcements/${this.enforcementDesignated}/tasks` : ''
+        return this.enforcementDesignated ? `enforcements/${this.enforcementDesignated}/tasks` : 'enforcements/tasks'
       },
       breadcrumbs() {
         return [
@@ -95,7 +95,6 @@
         fetchEnforcmentAPI: FETCH_ENFORCEMENT,
       }),
       fetchEnforcementIfNotExist() {
-
         if(!this.currentEnforcementName && this.enforcementDesignated) {
           this.fetchEnforcmentAPI(this.enforcementDesignated)
         }

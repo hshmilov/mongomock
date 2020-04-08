@@ -292,6 +292,9 @@ class AxoniusService:
     def get_users_preferences_db(self):
         return self.db.gui_users_preferences_collection()
 
+    def get_roles_db(self):
+        return self.db.gui_roles_collection()
+
     def get_reports_config_db(self):
         return self.db.gui_reports_config_collection()
 

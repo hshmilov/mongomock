@@ -1,11 +1,20 @@
+import _find from 'lodash/find';
+import _matchesProperty from 'lodash/matchesProperty';
+import { PermissionCategory } from '@constants/permissions';
+
 
 export const entities = [
   {
-    name: 'devices', title: 'Devices',
+    name: 'devices', title: 'Devices', permissionCategory: PermissionCategory.DevicesAssets,
   }, {
-    name: 'users', title: 'Users',
+    name: 'users', title: 'Users', permissionCategory: PermissionCategory.UsersAssets,
   },
 ];
+
+export const getEntityPermissionCategory = (entity) => {
+  const { permissionCategory } = _find(entities, _matchesProperty('name', entity));
+  return permissionCategory;
+};
 
 export const EntitiesEnum = {
   devices: 'devices',

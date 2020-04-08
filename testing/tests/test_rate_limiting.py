@@ -35,7 +35,7 @@ def test_rate_limiting():
     assert resp.status_code == 200
     csrf_token = resp.content
     resp.close()
-    resp = requests.post('https://127.0.0.1/api/plugins/configs/core/CoreService', data=json.dumps(NEW_SETTINGS),
+    resp = requests.post('https://127.0.0.1/api/settings/plugins/core/CoreService', data=json.dumps(NEW_SETTINGS),
                          headers={'Cookie': 'session=' + session, 'X-CSRF-TOKEN': csrf_token,
                                   'content-type': 'application/json;charset=UTF-8'}, verify=False)
     assert resp.status_code == 200
@@ -66,7 +66,7 @@ def test_rate_limiting():
     csrf_token = resp.content
     resp.close()
 
-    resp = requests.post('https://127.0.0.1/api/plugins/configs/core/CoreService', data=json.dumps(OLD_SETTINGS),
+    resp = requests.post('https://127.0.0.1/api/settings/plugins/core/CoreService', data=json.dumps(OLD_SETTINGS),
                          headers={'Cookie': 'session=' + session, 'X-CSRF-TOKEN': csrf_token,
                                   'content-type': 'application/json;charset=UTF-8'}, verify=False)
     assert resp.status_code == 200

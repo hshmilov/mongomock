@@ -14,7 +14,7 @@
             id="enforcement_name"
             ref="name"
             v-model="enforcement.name"
-            :disabled="isReadOnly"
+            :disabled="userCannotChangeThisEnforcement"
           >
           <input
             v-else
@@ -27,6 +27,7 @@
             <x-action
               id="main_action"
               v-bind="mainAction"
+              :read-only="userCannotChangeThisEnforcement"
               @click="selectActionMain"
               @remove="removeActionMain"
             />
@@ -34,6 +35,7 @@
               v-for="item in successiveActions"
               :key="item.condition"
               v-bind="item"
+              :read-only="userCannotChangeThisEnforcement"
               @select="selectAction"
               @remove="removeAction"
             />
@@ -41,6 +43,7 @@
               id="trigger"
               :title="trigger.name"
               :selected="trigger.selected"
+              :read-only="userCannotChangeThisEnforcement"
               @click="selectTrigger(0)"
             />
           </div>
@@ -54,12 +57,13 @@
               v-if="saved"
               id="view_tasks"
               emphasize
+              :disabled="userCannotViewEnforcementsTasks"
               @click="viewTasks"
             >
               View Tasks
             </x-button>
             <x-button
-              v-if="isReadOnly"
+              v-if="userCannotChangeThisEnforcement"
               @click="exit"
             >
               Exit
@@ -92,7 +96,7 @@
       >
         <x-trigger-config
           v-model="triggerInProcess.definition"
-          :read-only="isReadOnly"
+          :read-only="userCannotChangeThisEnforcement"
           @confirm="saveTrigger"
         />
       </x-card>
@@ -109,7 +113,7 @@
           v-model="actionInProcess.definition"
           :exclude="excludedNames"
           :include="allowedActionNames"
-          :read-only="isReadOnly"
+          :read-only="userCannotChangeThisEnforcement"
           @confirm="saveAction"
         />
       </x-card>
@@ -195,11 +199,6 @@ export default {
       enforcementFetching(state) {
         return state.enforcements.current.fetching;
       },
-      isReadOnly(state) {
-        const user = state.auth.currentUser.data;
-        if (!user || !user.permissions) return true;
-        return user.permissions.Enforcements === 'ReadOnly';
-      },
       enforcementNames(state) {
         return state.enforcements.savedEnforcements.data;
       },
@@ -211,6 +210,24 @@ export default {
       if (!this.enforcementData || !this.enforcementData.name) return 'New Enforcement Set';
 
       return this.enforcementData.name;
+    },
+    userCannotChangeThisEnforcement() {
+      if (this.id === 'new') {
+        return this.userCannotAddEnforcements;
+      }
+      return this.userCannotEditEnforcements;
+    },
+    userCannotAddEnforcements() {
+      return this.$cannot(this.$permissionConsts.categories.Enforcements,
+        this.$permissionConsts.actions.Add);
+    },
+    userCannotEditEnforcements() {
+      return this.$cannot(this.$permissionConsts.categories.Enforcements,
+        this.$permissionConsts.actions.Update);
+    },
+    userCannotViewEnforcementsTasks() {
+      return this.$cannot(this.$permissionConsts.categories.Enforcements,
+        this.$permissionConsts.actions.View, this.$permissionConsts.categories.Tasks);
     },
     error() {
       if (!this.enforcement.name) {
@@ -241,7 +258,7 @@ export default {
         condition: mainCondition,
         key: mainCondition,
         selected: this.mainActionSelected,
-        readOnly: this.isReadOnly,
+        readOnly: this.userCannotChangeThisEnforcement,
         titlePrefix: 'action',
       };
       if (!main || !main.name) return mainAction;
@@ -261,7 +278,7 @@ export default {
         id: `${condition}_action`,
         selected: this.selectedAction(condition),
         items: this.actions[condition],
-        readOnly: this.isReadOnly,
+        readOnly: this.userCannotChangeThisEnforcement,
       }));
     },
     actionConfTitle() {

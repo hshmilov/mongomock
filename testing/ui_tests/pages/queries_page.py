@@ -1,5 +1,10 @@
 import logging
 import time
+
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+
 from services.axon_service import TimeoutException
 
 from ui_tests.pages.entities_page import EntitiesPage
@@ -10,13 +15,13 @@ class QueriesPage(EntitiesPage):
     QUERY_ROW_BY_NAME_XPATH = '//tr[child::td[.//text()=\'{query_name}\']]'
     QUERY_NAME_BY_PART_XPATH = '//div[contains(text(), \'{query_name_part}\')]'
     CSS_SELECTOR_PANEL_ACTION_BY_NAME = '.saved-query-panel .actions .action-{action_name}'
-    CSS_SELECTOR_CLOSE_PANEL_ACTION = '.actions .action-close'
     SAFEGUARD_REMOVE_BUTTON_SINGLE = 'Remove Saved Query'
     SAFEGUARD_REMOVE_BUTTON_MULTI = 'Remove Saved Queries'
     RUN_QUERY_BUTTON_TEXT = 'Run Query'
     QUERY_EXPRESSION_VALUE_CSS = '.v-navigation-drawer .body .expression span'
     NO_EXPRESSIONS_DEFINED_MSG = 'No query defined'
     EXPRESSION_UNSUPPORTED_MSG = 'Query not supported for the existing data'
+    SAVE_CHANGES_BUTTON_TEXT = 'Save Changes'
 
     @property
     def url(self):
@@ -38,11 +43,19 @@ class QueriesPage(EntitiesPage):
         self.wait_for_table_to_load()
         self.click_button('Saved Queries')
 
-    def run_query(self):
+    def wait_for_save_query_panel(self):
         self.wait_for_element_present_by_css('.saved-query-panel')
         # wait for drawer animation end
         time.sleep(2)
+
+    def run_query(self):
+        self.wait_for_save_query_panel()
         self.click_button(text=self.RUN_QUERY_BUTTON_TEXT)
+
+    def assert_run_query_disabled(self):
+        self.wait_for_save_query_panel()
+        self.wait_for_element_present_by_xpath(
+            self.DISABLED_BUTTON_XPATH.format(button_text=self.RUN_QUERY_BUTTON_TEXT))
 
     def find_query_row_by_name(self, query_name):
         return self.driver.find_element_by_xpath(self.QUERY_ROW_BY_NAME_XPATH.format(query_name=query_name))
@@ -61,9 +74,7 @@ class QueriesPage(EntitiesPage):
             self.remove_selected_with_safeguard()
 
     def enforce_selected_query(self):
-        self.wait_for_element_present_by_css('.saved-query-panel')
-        # wait for drawer animation end
-        time.sleep(2)
+        self.wait_for_save_query_panel()
         self.get_enforce_panel_action().click()
 
     def find_query_name_by_part(self, query_name_part):
@@ -74,8 +85,10 @@ class QueriesPage(EntitiesPage):
         return expression_value == self.NO_EXPRESSIONS_DEFINED_MSG
 
     def _find_panel_action_by_name(self, action_name):
-        return self.wait_for_element_present_by_css(self.CSS_SELECTOR_PANEL_ACTION_BY_NAME
-                                                    .format(action_name=action_name))
+        selector = self.CSS_SELECTOR_PANEL_ACTION_BY_NAME.format(action_name=action_name)
+        return WebDriverWait(self.driver, 2).until(
+            EC.element_to_be_clickable((By.CSS_SELECTOR, selector))
+        )
 
     def get_enforce_panel_action(self):
         return self._find_panel_action_by_name(action_name='enforce')
@@ -120,3 +133,7 @@ class QueriesPage(EntitiesPage):
             evaluation_result = self.wait_for_element_present_by_css('.x-side-panel .expression span').text
 
         return evaluation_result
+
+    def click_save_changes(self):
+        self.wait_for_element_present_by_text(self.SAVE_CHANGES_BUTTON_TEXT)
+        self.get_enabled_button(self.SAVE_CHANGES_BUTTON_TEXT).click()

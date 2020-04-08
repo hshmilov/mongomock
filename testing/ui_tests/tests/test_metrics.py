@@ -37,10 +37,10 @@ class TestMetrics(TestBase):
 
             tester = LogTester(GUI_LOG_PATH)
             # do not modify anything relate to metrics!
-            wait_until(lambda: tester.is_metric_in_log(SystemMetric.GUI_USERS, 2))
-            wait_until(lambda: tester.is_metric_in_log(SystemMetric.DEVICES_SEEN, r'\d+'))  # TBD
+            wait_until(lambda: tester.is_metric_in_log(SystemMetric.GUI_USERS, r'\d+'))
+            wait_until(lambda: tester.is_metric_in_log(SystemMetric.DEVICES_SEEN, r'\d+'))
             wait_until(lambda: tester.is_metric_in_log(SystemMetric.DEVICES_UNIQUE, devices_unique))
-            wait_until(lambda: tester.is_metric_in_log(SystemMetric.USERS_SEEN, r'\d+'))  # TBD
+            wait_until(lambda: tester.is_metric_in_log(SystemMetric.USERS_SEEN, r'\d+'))
             wait_until(lambda: tester.is_metric_in_log(SystemMetric.USERS_UNIQUE, users_unique))
 
             wait_until(lambda: tester.is_metric_in_log('adapter.devices.stresstest_adapter.entities', 10))

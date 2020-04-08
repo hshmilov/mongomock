@@ -34,6 +34,7 @@ class AdaptersPage(EntitiesPage):
     CHECKBOX_CLASS = 'x-checkbox'
     CHECKED_CHECKBOX_CLASS = 'x-checkbox checked'
     ADVANCED_SETTINGS_SAVE_BUTTON_CSS = '.x-tab.active .configuration>.x-button'
+    ADVANCED_SETTINGS_BUTTON_TEXT = 'Advanced Settings'
 
     TEST_CONNECTIVITY_CONNECTION_IS_VALID = 'Connection is valid.'
     TEST_CONNECTIVITY_NOT_SUPPORTED = 'Test reachability is not supported for this adapter.'
@@ -102,14 +103,29 @@ class AdaptersPage(EntitiesPage):
     def click_save(self):
         self.get_enabled_button(self.SAVE_AND_CONNECT_BUTTON).click()
 
+    def is_save_button_disabled(self):
+        self.is_element_disabled(self.get_button(self.SAVE_AND_CONNECT_BUTTON))
+
     def click_cancel(self):
         self.click_button(self.CANCEL_BUTTON, button_class='x-button link')
 
     def click_test_connectivity(self):
         self.click_button(self.TEST_CONNECTIVITY)
 
+    def assert_new_server_button_is_enabled(self):
+        assert not self.is_element_disabled_by_id(self.NEW_CONNECTION_BUTTON_ID)
+
     def assert_new_server_button_is_disabled(self):
         assert self.is_element_disabled_by_id(self.NEW_CONNECTION_BUTTON_ID)
+
+    def assert_servers_cant_be_opened(self):
+        assert len(self.get_all_table_rows_elements()) == 0
+
+    def assert_advanced_settings_is_enabled(self):
+        assert self.get_enabled_button(self.ADVANCED_SETTINGS_BUTTON_TEXT)
+
+    def assert_advanced_settings_is_disabled(self):
+        assert self.is_element_disabled(self.get_button(self.ADVANCED_SETTINGS_BUTTON_TEXT))
 
     def click_new_server(self):
         self.click_button_by_id(self.NEW_CONNECTION_BUTTON_ID,
@@ -120,8 +136,11 @@ class AdaptersPage(EntitiesPage):
     def click_edit_server(self, index=0):
         self.get_all_table_rows_elements()[index].click()
 
+    def click_edit_server_by_name(self, name):
+        self.click_specific_row_by_field_value('Name', name)
+
     def click_advanced_settings(self):
-        self.get_button('Advanced Settings').click()
+        self.get_button(self.ADVANCED_SETTINGS_BUTTON_TEXT).click()
         time.sleep(1.5)
 
     def fill_last_seen_threshold_hours(self, value):

@@ -25,7 +25,7 @@
             id="report_name"
             ref="name"
             v-model="report.name"
-            :disabled="isReadOnly"
+            :disabled="cannotEditReport"
             class="report-name-textbox"
             @keyup="onNameChanged"
           >
@@ -44,7 +44,7 @@
           <XCheckbox
             v-model="report.include_dashboard"
             value="IncludeDashboard"
-            :read-only="isReadOnly"
+            :read-only="cannotEditReport"
             label="Include dashboard charts"
             class="item"
           />
@@ -56,14 +56,14 @@
               ref="spaces_ref"
               v-model="report.spaces"
               :schema="spacesSchema"
-              :read-only="isReadOnly"
+              :read-only="cannotEditReport"
               placeholder="Select spaces (or empty for all)"
             />
           </div>
           <XCheckbox
             v-model="report.include_saved_views"
             value="IncludeSavedViews"
-            :read-only="isReadOnly"
+            :read-only="cannotEditReport"
             label="Include Saved Queries data"
             class="item"
             @change="validateSavedQueries"
@@ -77,7 +77,7 @@
                 v-if="report.add_scheduling"
                 v-model="report.send_csv_attachments"
                 value="IncludeCsv"
-                :read-only="isReadOnly"
+                :read-only="cannotEditReport"
                 label=" Attach CSV with queries results to email"
                 class="item"
               />
@@ -91,7 +91,7 @@
                     :options="entityOptions"
                     type="icon"
                     placeholder="mod"
-                    :read-only="isReadOnly"
+                    :read-only="cannotEditReport"
                     minimal
                     @input="onEntityChange($event, i)"
                   />
@@ -100,14 +100,14 @@
                     :options="viewOptions(i)"
                     searchable
                     placeholder="query name"
-                    :read-only="isReadOnly"
+                    :read-only="cannotEditReport"
                     class="query-name"
                     @input="onQueryNameChange($event, i)"
                   />
                   <XButton
                     link
                     class="query-remove"
-                    :disabled="isReadOnly"
+                    :disabled="cannotEditReport"
                     @click="() => removeQuery(i)"
                   >x</XButton>
                 </div>
@@ -115,7 +115,7 @@
               <XButton
                 light
                 class="query-add"
-                :disabled="isReadOnly"
+                :disabled="cannotEditReport"
                 @click="addQuery"
               >+</XButton>
             </div>
@@ -125,7 +125,7 @@
           <div class="header">
             <XCheckbox
               v-model="report.add_scheduling"
-              :read-only="isReadOnly"
+              :read-only="cannotEditReport"
               value="AddScheduling"
               @change="onAddScheduling"
             />
@@ -142,7 +142,7 @@
               ref="mail_ref"
               v-model="report.mail_properties"
               :schema="mailSchema"
-              :read-only="isReadOnly"
+              :read-only="cannotEditReport"
               @validate="onValidate"
             />
             <div
@@ -152,7 +152,7 @@
               <h4 class="email-title">Email Recurrence</h4>
               <XRecurrence
                 v-model="report"
-                :read-only="readOnly"
+                :read-only="cannotEditReport"
                 @validate="validateSendTime"
               />
             </div>
@@ -222,9 +222,6 @@ export default {
     XPage, XBox, XButton, XSelect, XCheckbox, XSelectSymbol, XArrayEdit, PulseLoader, XRecurrence,
   },
   mixins: [viewsMixin, configMixin],
-  props: {
-    readOnly: Boolean,
-  },
   data() {
     return {
       report: {
@@ -263,21 +260,12 @@ export default {
     };
   },
   computed: {
-
     ...mapState({
       reportData(state) {
         return state.reports.current.data;
       },
       reportFetching(state) {
         return state.reports.current.fetching;
-      },
-      isReadOnly(state) {
-        const user = state.auth.currentUser.data;
-        if (!user || !user.permissions) return true;
-        return user.permissions.Reports === 'ReadOnly';
-      },
-      disableDownloadReport() {
-        return this.downloading;
       },
       dashboardSpaces(state) {
         const custom_spaces = state.dashboard.spaces.data.filter((space) => space.type === 'custom');
@@ -288,6 +276,13 @@ export default {
         return custom_spaces.map((space) => ({ name: space.uuid, title: space.name }));
       },
     }),
+    cannotEditReport() {
+      return this.$cannot(this.$permissionConsts.categories.Reports,
+        this.$permissionConsts.actions.Update) && this.id !== 'new';
+    },
+    disableDownloadReport() {
+      return this.downloading;
+    },
     id() {
       return this.$route.params.id;
     },
@@ -297,21 +292,23 @@ export default {
       return this.reportData.name;
     },
     disableSave() {
-      return !this.report.name || !this.trigger || !this.trigger.view || !this.trigger.view.name || !this.mainAction.name;
+      return !this.report.name
+        || !this.trigger
+        || !this.trigger.view
+        || !this.trigger.view.name
+        || !this.mainAction.name;
     },
     hideTestNow() {
       if (!this.report.last_generated) {
         return true;
-      } if (!this.canSendEmail) {
-        return true;
       }
-      return false;
+      return !this.canSendEmail;
     },
     hideDownloadNow() {
       return !this.report.last_generated;
     },
     valid() {
-      if (this.isReadOnly) {
+      if (this.cannotEditReport) {
         return false;
       }
       if (!this.report.name) {
@@ -535,7 +532,7 @@ export default {
       });
     },
     toggleScheduling() {
-      if (this.isReadOnly) {
+      if (this.cannotEditReport) {
         return;
       }
       this.report.add_scheduling = !this.report.add_scheduling;

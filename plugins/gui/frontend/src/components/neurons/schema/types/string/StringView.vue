@@ -1,40 +1,40 @@
-<template functional>
+<template>
   <img
-    v-if="props.schema.format && props.schema.format === 'image'"
-    :src="props.value"
+    v-if="schema.format && schema.format === 'image'"
+    :src="value"
     height="24"
     :style="{borderRadius: '50%'}"
     class="md-image"
     alt=""
   >
   <img
-    v-else-if="props.schema.format && props.schema.format === 'logo'"
-    :key="props.value"
-    :src="require(`Logos/adapters/${props.value}.png`)"
-    :alt="props.value"
+    v-else-if="schema.format && schema.format === 'logo'"
+    :key="value"
+    :src="require(`Logos/adapters/${value}.png`)"
+    :alt="value"
     height="24"
     class="logo md-image"
   >
   <md-icon
-    v-else-if="props.schema.format && props.schema.format === 'icon'"
-    :md-src="`/src/assets/icons/symbol/${props.value}.svg`"
-    :class="`icon-${props.value}`"
+    v-else-if="schema.format && schema.format === 'icon'"
+    :md-src="`/src/assets/icons/symbol/${value}.svg`"
+    :class="`icon-${value}`"
   />
   <div
-    v-else-if="props.schema.format && props.schema.format === 'status'"
-    :title="$options.methods.formatDetails(props.value, props.schema, props.title)"
-    :class="`status ${$options.methods.format(props.value, props.schema).
+    v-else-if="schema.format && schema.format === 'status'"
+    :title="$options.methods.formatDetails(value, schema, title)"
+    :class="`status ${$options.methods.format(value, schema).
       toLowerCase().replace(' ', '-')}`"
   >
     &nbsp;
   </div>
   <div
-    v-else-if="props.value"
-    :class="`table-td-content-${props.schema.name}`"
-    :title="$options.methods.formatDetails(props.value, props.schema, props.title)"
-  >{{ $options.methods.format(props.value, props.schema) }}</div>
+    v-else-if="value"
+    :class="`table-td-content-${schema.name}`"
+    :title="$options.methods.formatDetails(value, schema, title)"
+  >{{ $options.methods.format(value, schema) }}</div>
   <div v-else>
-&nbsp;
+    &nbsp;
   </div>
 </template>
 
@@ -45,6 +45,11 @@ const UPDATED_BY_FIELD = 'updated_by';
 
 export default {
   name: 'XStringView',
+  data() {
+    return {
+      foo: 'bac',
+    };
+  },
   props: {
     schema: {
       type: Object,
@@ -83,6 +88,9 @@ export default {
       return `${username}${deleted}`;
     },
     format(value, schema) {
+      if (schema.cellRenderer) {
+        return schema.cellRenderer(value);
+      }
       if (schema.name === UPDATED_BY_FIELD) {
         return this.formatUsername(JSON.parse(value));
       }
@@ -93,6 +101,7 @@ export default {
       if (schema.format === 'password') {
         return '********';
       }
+
       return value;
     },
   },

@@ -16,7 +16,7 @@ logger = logging.getLogger(f'axonius.{__name__}')
 
 SOLARWINDS_PORT = 17778
 
-# pylint: disable=too-many-instance-attributes,too-many-branches,too-many-statements
+# pylint: disable=too-many-instance-attributes,too-many-branches,too-many-statements,too-many-locals
 
 
 NODE_DEVICE = 'Node Device'

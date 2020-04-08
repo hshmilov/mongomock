@@ -166,7 +166,7 @@ export const enforcements = {
        */
       const handleSuccess = (id) => {
         dispatch(FETCH_DATA_CONTENT, { module: 'enforcements', skip: 0 });
-        dispatch(FETCH_DATA_CONTENT, { module: 'tasks', skip: 0 });
+        dispatch(FETCH_DATA_CONTENT, { module: 'enforcements/tasks', skip: 0 });
         dispatch(FETCH_ENFORCEMENT, id);
       };
 

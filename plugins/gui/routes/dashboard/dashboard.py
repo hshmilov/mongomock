@@ -19,10 +19,9 @@ from axonius.consts.scheduler_consts import (Phases, ResearchPhases,
                                              SchedulerState)
 from axonius.mixins.triggerable import (TriggerStates)
 from axonius.plugin_base import EntityType, return_error
-from axonius.utils.gui_helpers import (Permission, PermissionLevel,
-                                       PermissionType, ReadOnlyJustForGet,
-                                       entity_fields, get_connected_user_id,
+from axonius.utils.gui_helpers import (entity_fields, get_connected_user_id,
                                        paginated, historical_range, search_filter)
+from axonius.utils.permissions_helper import PermissionCategory, PermissionAction, PermissionValue
 from axonius.utils.revving_cache import rev_cached, WILDCARD_ARG
 from gui.logic.dashboard_data import (adapter_data, fetch_chart_segment, fetch_chart_segment_historical,
                                       generate_dashboard, generate_dashboard_uncached,
@@ -30,14 +29,16 @@ from gui.logic.dashboard_data import (adapter_data, fetch_chart_segment, fetch_c
 from gui.logic.fielded_plugins import get_fielded_plugins
 from gui.logic.filter_utils import filter_archived
 from gui.logic.historical_dates import (all_historical_dates, first_historical_date)
-from gui.logic.routing_helper import gui_add_rule_logged_in
+from gui.logic.routing_helper import gui_category_add_rules, gui_route_logged_in
+from gui.routes.dashboard.notifications import Notifications
 
 # pylint: disable=no-member,invalid-name,inconsistent-return-statements,no-self-use
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
-class Dashboard:
+@gui_category_add_rules('dashboard')
+class Dashboard(Notifications):
 
     def _insert_dashboard_chart(self, dashboard_name, dashboard_metric, dashboard_view, dashboard_data,
                                 hide_empty=False, space_id=None):
@@ -59,7 +60,7 @@ class Dashboard:
         }, upsert=True)
         return result.upserted_id
 
-    @gui_add_rule_logged_in('dashboard/first_use', methods=['GET'], enforce_trial=False)
+    @gui_route_logged_in('first_use', methods=['GET'], enforce_trial=False)
     def dashboard_first(self):
         """
         __is_first_time_use maintains whether any adapter was connected with a client.
@@ -69,42 +70,44 @@ class Dashboard:
         """
         return jsonify(self._is_system_first_use)
 
-    @gui_add_rule_logged_in('first_historical_date', methods=['GET'], required_permissions={
-        Permission(PermissionType.Dashboard, PermissionLevel.ReadOnly)})
+    @gui_route_logged_in('first_historical_date', methods=['GET'])
     def get_first_historical_date(self):
         return jsonify(first_historical_date())
 
-    @gui_add_rule_logged_in('get_allowed_dates', required_permissions={
-        Permission(PermissionType.Dashboard, PermissionLevel.ReadOnly)})
+    @gui_route_logged_in('get_allowed_dates')
     def all_historical_dates(self):
         return jsonify(all_historical_dates())
 
-    @gui_add_rule_logged_in('dashboards', methods=['POST', 'GET'],
-                            required_permissions={Permission(PermissionType.Dashboard, ReadOnlyJustForGet)},
-                            enforce_trial=False)
+    @gui_route_logged_in(methods=['GET'], enforce_trial=False)
     def get_dashboards(self):
         """
         GET all the saved spaces.
 
+        :return:
+        """
+        spaces = [{
+            'uuid': str(space['_id']),
+            'name': space['name'],
+            'panels_order': space.get('panels_order', []),
+            'type': space['type']
+        } for space in self._dashboard_spaces_collection.find(filter_archived())]
+
+        panels = self._get_dashboard(generate_data=False)
+        return jsonify({
+            'spaces': spaces,
+            'panels': panels
+        })
+
+    @gui_route_logged_in(methods=['POST'], enforce_trial=False,
+                         required_permission_values={PermissionValue.get(PermissionAction.Add,
+                                                                         PermissionCategory.Dashboard,
+                                                                         PermissionCategory.Spaces)})
+    def update_dashboards(self):
+        """
         POST a new space that will have the type 'custom'
 
         :return:
         """
-        if request.method == 'GET':
-            spaces = [{
-                'uuid': str(space['_id']),
-                'name': space['name'],
-                'panels_order': space.get('panels_order', []),
-                'type': space['type']
-            } for space in self._dashboard_spaces_collection.find(filter_archived())]
-
-            panels = self._get_dashboard(generate_data=False)
-            return jsonify({
-                'spaces': spaces,
-                'panels': panels
-            })
-
-        # Handle 'POST' request method - save new custom dashboard space
         space_data = dict(self.get_request_data_as_object())
         space_data['type'] = DASHBOARD_SPACE_TYPE_CUSTOM
         insert_result = self._dashboard_spaces_collection.insert_one(space_data)
@@ -112,37 +115,48 @@ class Dashboard:
             return return_error(f'Could not create a new space named {space_data["name"]}')
         return str(insert_result.inserted_id)
 
-    @gui_add_rule_logged_in('dashboards/<space_id>', methods=['PUT', 'DELETE'],
-                            required_permissions={Permission(PermissionType.Dashboard, PermissionLevel.ReadWrite)},
-                            enforce_trial=False)
+    @gui_route_logged_in('<space_id>', methods=['PUT'], enforce_trial=False,
+                         required_permission_values={PermissionValue.get(PermissionAction.Add,
+                                                                         PermissionCategory.Dashboard,
+                                                                         PermissionCategory.Spaces)})
     def update_dashboard_space(self, space_id):
         """
         PUT an updated name for an existing Dashboard Space
+
+        :param space_id: The ObjectId of the existing space
+        :return:         An error with 400 status code if failed, or empty response with 200 status code, otherwise
+        """
+        space_data = dict(self.get_request_data_as_object())
+        self._dashboard_spaces_collection.update_one({
+            '_id': ObjectId(space_id)
+        }, {
+            '$set': space_data
+        })
+        return ''
+
+    @gui_route_logged_in('<space_id>', methods=['DELETE'], enforce_trial=False,
+                         required_permission_values={PermissionValue.get(PermissionAction.Delete,
+                                                                         PermissionCategory.Dashboard,
+                                                                         PermissionCategory.Spaces)})
+    def delete_dashboard_space(self, space_id):
+        """
         DELETE an existing Dashboard Space
 
         :param space_id: The ObjectId of the existing space
         :return:         An error with 400 status code if failed, or empty response with 200 status code, otherwise
         """
-        if request.method == 'PUT':
-            space_data = dict(self.get_request_data_as_object())
-            self._dashboard_spaces_collection.update_one({
-                '_id': ObjectId(space_id)
-            }, {
-                '$set': space_data
-            })
-            return ''
+        delete_result = self._dashboard_spaces_collection.delete_one({
+            '_id': ObjectId(space_id)
+        })
+        if not delete_result or delete_result.deleted_count == 0:
+            return return_error('Could not remove the requested Dashboard Space', 400)
+        return ''
 
-        if request.method == 'DELETE':
-            delete_result = self._dashboard_spaces_collection.delete_one({
-                '_id': ObjectId(space_id)
-            })
-            if not delete_result or delete_result.deleted_count == 0:
-                return return_error('Could not remove the requested Dashboard Space', 400)
-            return ''
-
-    @gui_add_rule_logged_in('dashboards/<space_id>/panels', methods=['POST'],
-                            required_permissions={Permission(PermissionType.Dashboard, PermissionLevel.ReadWrite)},
-                            enforce_trial=False)
+    @gui_route_logged_in('<space_id>/panels', methods=['POST'], enforce_trial=False,
+                         required_permission_values={PermissionValue.get(PermissionAction.Add,
+                                                                         PermissionCategory.Dashboard,
+                                                                         PermissionCategory.Charts)}
+                         )
     def add_dashboard_space_panel(self, space_id):
         """
         POST a new Dashboard Panel configuration, attached to requested space
@@ -171,28 +185,29 @@ class Dashboard:
         })
         return str(insert_result.inserted_id)
 
-    @gui_add_rule_logged_in('dashboards/<space_id>/panels/reorder', methods=['POST', 'GET'],
-                            required_permissions={Permission(PermissionType.Dashboard, PermissionLevel.ReadWrite)},
-                            enforce_trial=False)
+    @gui_route_logged_in('<space_id>/panels/reorder', methods=['POST'], enforce_trial=False,
+                         required_permission_values={PermissionValue.get(PermissionAction.Update,
+                                                                         PermissionCategory.Dashboard,
+                                                                         PermissionCategory.Charts)})
     def reorder_dashboard_space_panels(self, space_id):
-        if request.method == 'POST':
-            panels_order = self.get_request_data_as_object().get('panels_order')
-            self._dashboard_spaces_collection.update_one({
-                '_id': ObjectId(space_id)
-            }, {
-                '$set': {
-                    'panels_order': panels_order
-                }
-            })
-            return ''
+        panels_order = self.get_request_data_as_object().get('panels_order')
+        self._dashboard_spaces_collection.update_one({
+            '_id': ObjectId(space_id)
+        }, {
+            '$set': {
+                'panels_order': panels_order
+            }
+        })
+        return ''
+
+    @gui_route_logged_in('<space_id>/panels/reorder', methods=['GET'], enforce_trial=False)
+    def get_dashboard_order_space_panels(self, space_id):
         return jsonify(self._dashboard_spaces_collection.find_one({
             '_id': ObjectId(space_id)
         }))
 
     @paginated()
-    @gui_add_rule_logged_in('dashboards/panels', methods=['GET'],
-                            required_permissions={Permission(PermissionType.Dashboard, PermissionLevel.ReadOnly)},
-                            enforce_trial=False)
+    @gui_route_logged_in('panels', methods=['GET'], enforce_trial=False)
     def get_dashboard_data(self, skip, limit):
         """
         Return charts data for the requested page.
@@ -219,18 +234,19 @@ class Dashboard:
             'count': data_length
         }
 
+    @staticmethod
+    def get_string_value(base_value):
+        if isinstance(base_value, datetime):
+            return base_value.strftime('%a, %d %b %Y %H:%M:%S GMT')
+        return str(base_value)
+
     @paginated()
     @historical_range()
     @search_filter()
-    @gui_add_rule_logged_in('dashboards/<space_id>/panels/<panel_id>', methods=['GET', 'DELETE', 'POST'],
-                            required_permissions={Permission(PermissionType.Dashboard, ReadOnlyJustForGet)})
-    def update_dashboard_panel(self, space_id, panel_id, skip, limit, from_date: datetime, to_date: datetime,
-                               search: str):
+    @gui_route_logged_in('<space_id>/panels/<panel_id>', methods=['GET'])
+    def get_dashboard_panel(self, space_id, panel_id, skip, limit, from_date: datetime, to_date: datetime, search: str):
         """
-        DELETE an existing Dashboard Panel and DELETE its panelId from the
-        "panels_order" in the "dashboard_space" collection
         GET partial data of the Dashboard Panel
-        POST an update of the configuration for an existing Dashboard Panel
 
         :param panel_id: The mongo id of the panel to handle
         :param space_id: The mongo id of the space where the panel should be removed
@@ -242,33 +258,41 @@ class Dashboard:
         :param from_date: the earlier date to start get the data
         """
 
-        def get_string_value(base_value):
-            if isinstance(base_value, datetime):
-                return base_value.strftime('%a, %d %b %Y %H:%M:%S GMT')
-            return str(base_value)
-
         panel_id = ObjectId(panel_id)
-        if request.method == 'GET':
+        if request.args.get('refresh', False):
+            generate_dashboard.clean_cache([panel_id])
+            generate_dashboard_historical.clean_cache([panel_id, WILDCARD_ARG, WILDCARD_ARG])
 
-            if request.args.get('refresh', False):
-                generate_dashboard.clean_cache([panel_id])
-                generate_dashboard_historical.clean_cache([panel_id, WILDCARD_ARG, WILDCARD_ARG])
+        if from_date and to_date:
+            generated_dashboard = generate_dashboard_historical(panel_id, from_date, to_date)
+        else:
+            generated_dashboard = generate_dashboard(panel_id)
+        dashboard_data = generated_dashboard.get('data', [])
+        if search:
+            dashboard_data = [data for data in dashboard_data
+                              if search.lower() in self.get_string_value(data['name']).lower()]
+        if not skip:
+            return jsonify(self._process_initial_dashboard_data(dashboard_data))
+        return jsonify({
+            'data': dashboard_data[skip: skip + limit],
+            'count': len(dashboard_data)
+        })
 
-            if from_date and to_date:
-                generated_dashboard = generate_dashboard_historical(panel_id, from_date, to_date)
-            else:
-                generated_dashboard = generate_dashboard(panel_id)
-            dashboard_data = generated_dashboard.get('data', [])
-            if search:
-                dashboard_data = [data for data in dashboard_data
-                                  if search.lower() in get_string_value(data['name']).lower()]
-            if not skip:
-                return jsonify(self._process_initial_dashboard_data(dashboard_data))
-            return jsonify({
-                'data': dashboard_data[skip: skip + limit],
-                'count': len(dashboard_data)
-            })
+    @gui_route_logged_in('<space_id>/panels/<panel_id>', methods=['DELETE', 'POST'],
+                         required_permission_values={PermissionValue.get(None,
+                                                                         PermissionCategory.Dashboard,
+                                                                         PermissionCategory.Charts)})
+    def update_dashboard_panel(self, space_id, panel_id):
+        """
+        DELETE an existing Dashboard Panel and DELETE its panelId from the
+        "panels_order" in the "dashboard_space" collection
+        POST an update of the configuration for an existing Dashboard Panel
 
+        :param panel_id: The mongo id of the panel to handle
+        :param space_id: The mongo id of the space where the panel should be removed
+        :return: ObjectId of the Panel to delete
+        """
+        panel_id = ObjectId(panel_id)
         if request.method == 'DELETE':
             self._dashboard_spaces_collection.update_one({
                 '_id': ObjectId(space_id)
@@ -298,8 +322,10 @@ class Dashboard:
             generate_dashboard_historical.clean_cache([panel_id, WILDCARD_ARG, WILDCARD_ARG])
         return ''
 
-    @gui_add_rule_logged_in('dashboards/<space_id>/panels/<panel_id>/move', methods=['PUT'],
-                            required_permissions={Permission(PermissionType.Dashboard, ReadOnlyJustForGet)})
+    @gui_route_logged_in('<space_id>/panels/<panel_id>/move', methods=['PUT'],
+                         required_permission_values={PermissionValue.get(PermissionAction.Update,
+                                                                         PermissionCategory.Dashboard,
+                                                                         PermissionCategory.Charts)})
     def move_dashboard_panel(self, space_id, panel_id):
         """
         :param panel_id: The mongo id of the panel to handle
@@ -328,8 +354,7 @@ class Dashboard:
         return ''
 
     @historical_range()
-    @gui_add_rule_logged_in('dashboards/panels/<panel_id>/csv', methods=['GET'],
-                            required_permissions={Permission(PermissionType.Dashboard, PermissionLevel.ReadOnly)})
+    @gui_route_logged_in('panels/<panel_id>/csv', methods=['GET'])
     def chart_segment_csv(self, panel_id, from_date: datetime, to_date: datetime):
         card = self._dashboard_collection.find_one({
             '_id': ObjectId(panel_id)
@@ -451,6 +476,17 @@ class Dashboard:
                 # Since there is no data, not adding this chart to the list
                 logger.exception(f'Error fetching data for chart ({dashboard["_id"]})')
 
+    @gui_route_logged_in('adapter_data/<entity_name>', methods=['GET'], enforce_trial=False)
+    def get_adapter_data(self, entity_name):
+        try:
+            return jsonify(adapter_data(EntityType(entity_name)))
+        except KeyError:
+            error = f'No such entity {entity_name}'
+        except Exception:
+            error = f'Could not get adapter data for entity {entity_name}'
+            logger.exception(error)
+        return return_error(error, 400)
+
     def _get_lifecycle_phase_info(self, doc_id: ObjectId) -> dict:
         """
         :param  doc_id: the id of the triggerable_history job to get the result from
@@ -536,9 +572,7 @@ class Dashboard:
             'status': nice_state.name
         }
 
-    @gui_add_rule_logged_in(DASHBOARD_LIFECYCLE_ENDPOINT, methods=['GET'],
-                            required_permissions={Permission(PermissionType.Dashboard, PermissionLevel.ReadOnly)},
-                            enforce_trial=False)
+    @gui_route_logged_in(DASHBOARD_LIFECYCLE_ENDPOINT, methods=['GET'], enforce_trial=False)
     def get_system_lifecycle(self):
         """
         Fetches and build data needed for presenting current status of the system's lifecycle in a graph
@@ -554,59 +588,3 @@ class Dashboard:
     def _get_system_lifecycle(self):
         """Added for public API support."""
         return self._lifecycle()
-
-    @gui_add_rule_logged_in('dashboard/adapter_data/<entity_name>', methods=['GET'],
-                            required_permissions={Permission(PermissionType.Dashboard, PermissionLevel.ReadOnly)},
-                            enforce_trial=False)
-    def get_adapter_data(self, entity_name):
-        try:
-            return jsonify(adapter_data(EntityType(entity_name)))
-        except KeyError:
-            error = f'No such entity {entity_name}'
-        except Exception:
-            error = f'Could not get adapter data for entity {entity_name}'
-            logger.exception(error)
-        return return_error(error, 400)
-
-    @gui_add_rule_logged_in('research_phase', methods=['POST'],
-                            required_permissions={Permission(PermissionType.Dashboard,
-                                                             PermissionLevel.ReadWrite)})
-    def schedule_research_phase(self):
-        """
-        Schedules or initiates research phase.
-
-        :return: Map between each adapter and the number of devices it has, unless no devices
-        """
-        return self._schedule_research_phase()
-
-    def _schedule_research_phase(self):
-        """Add for public API usage."""
-        self._trigger_remote_plugin(SYSTEM_SCHEDULER_PLUGIN_NAME, blocking=False, external_thread=False)
-
-        self._lifecycle.clean_cache()
-        return ''
-
-    @gui_add_rule_logged_in('stop_research_phase', methods=['POST'],
-                            required_permissions={Permission(PermissionType.Dashboard,
-                                                             PermissionLevel.ReadWrite)})
-    def stop_research_phase(self):
-        """
-        Stops currently running research phase.
-        """
-        return self._stop_research_phase()
-
-    def _stop_research_phase(self):
-        """
-        Stops currently running research phase.
-        """
-        logger.info('Stopping research phase')
-        response = self.request_remote_plugin('stop_all', SYSTEM_SCHEDULER_PLUGIN_NAME, 'POST')
-
-        if response.status_code != 200:
-            logger.error(
-                f'Could not stop research phase. returned code: {response.status_code}, '
-                f'reason: {str(response.content)}')
-            return return_error(f'Could not stop research phase {str(response.content)}', response.status_code)
-
-        self._lifecycle.clean_cache()
-        return ''

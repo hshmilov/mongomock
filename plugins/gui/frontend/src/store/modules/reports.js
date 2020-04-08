@@ -121,7 +121,7 @@ export const reports = {
             }
 
                 return dispatch(REQUEST_API, {
-                    rule: `test_exec_report`,
+                    rule: 'reports/send_email',
                     method: 'POST',
                     data: report
                 }).then((response) => {
@@ -133,7 +133,7 @@ export const reports = {
         },
         [ DOWNLOAD_REPORT ] ({dispatch}, { reportId, name } ) {
             return dispatch(REQUEST_API, {
-                rule: `export_report/${reportId}`,
+                rule:  `reports/${reportId}/pdf`,
                 binary: true
             }).then((response) => {
                 downloadFile('pdf', response, name)

@@ -11,6 +11,7 @@ export default {
     ...mapState({
       views(state) {
         return this.entityList.reduce((map, module) => {
+          // eslint-disable-next-line no-param-reassign
           map[module] = state[module].views.saved.content.data
             .filter((view) => view)
             .map((view) => ({ name: view.name, title: view.name, predefined: view.predefined }));
@@ -18,7 +19,7 @@ export default {
         }, {});
       },
       entityOptions() {
-        return entities.filter((entity) => this.$can(entity.title, 'ReadOnly'));
+        return entities.filter((entity) => this.$canViewEntity(entity.name));
       },
     }),
     ...mapGetters({

@@ -265,7 +265,7 @@ export const dashboard = {
     },
     [FETCH_DASHBOARD_SPACES]({ dispatch }, payload) {
       return dispatch(REQUEST_API, {
-        rule: 'dashboards',
+        rule: 'dashboard',
         type: UPDATE_DASHBOARD_SPACES,
         payload,
       });
@@ -273,7 +273,7 @@ export const dashboard = {
     [FETCH_DASHBOARD_PANELS]({ dispatch }, payload) {
       const { skip = 0, limit = 2 } = payload || {};
       return dispatch(REQUEST_API, {
-        rule: `dashboards/panels?skip=${skip}&limit=${limit}`,
+        rule: `dashboard/panels?skip=${skip}&limit=${limit}`,
         type: UPDATE_DASHBOARD_PANELS,
         payload: { ...payload, skip, limit },
       }).then((response) => {
@@ -290,7 +290,7 @@ export const dashboard = {
       const {
         spaceId, uuid, historical, skip, limit, search, refresh,
       } = payload;
-      let rule = `dashboards/${spaceId}/panels/${uuid}?skip=${skip}&limit=${limit}`;
+      let rule = `dashboard/${spaceId}/panels/${uuid}?skip=${skip}&limit=${limit}`;
 
       if (!skip) {
         commit(UPDATE_DASHBOARD_PANEL, {
@@ -326,7 +326,7 @@ export const dashboard = {
     [SAVE_REORDERED_PANELS]({ dispatch, commit }, payload) {
       commit(UPDATE_DASHBOARDS_ORDER, payload);
       return dispatch(REQUEST_API, {
-        rule: `dashboards/${payload.spaceId}/panels/reorder`,
+        rule: `dashboard/${payload.spaceId}/panels/reorder`,
         method: 'POST',
         data: payload,
       }).then((response) => {
@@ -338,7 +338,7 @@ export const dashboard = {
     },
     [SAVE_DASHBOARD_SPACE]({ dispatch, commit }, name) {
       return dispatch(REQUEST_API, {
-        rule: 'dashboards',
+        rule: 'dashboard',
         method: 'POST',
         data: {
           name,
@@ -358,7 +358,7 @@ export const dashboard = {
     },
     [CHANGE_DASHBOARD_SPACE]({ dispatch, commit }, payload) {
       return dispatch(REQUEST_API, {
-        rule: `dashboards/${payload.id}`,
+        rule: `dashboard/${payload.id}`,
         method: 'PUT',
         data: {
           name: payload.name,
@@ -371,7 +371,7 @@ export const dashboard = {
     },
     [REMOVE_DASHBOARD_SPACE]({ dispatch, commit }, spaceId) {
       return dispatch(REQUEST_API, {
-        rule: `dashboards/${spaceId}`,
+        rule: `dashboard/${spaceId}`,
         method: 'DELETE',
       }).then((response) => {
         if (response.status === 200) {
@@ -382,7 +382,7 @@ export const dashboard = {
     },
     [SAVE_DASHBOARD_PANEL]({ dispatch, commit }, payload) {
       return dispatch(REQUEST_API, {
-        rule: `dashboards/${payload.space}/panels`,
+        rule: `dashboard/${payload.space}/panels`,
         method: 'POST',
         data: payload.data,
       }).then((response) => {
@@ -401,7 +401,7 @@ export const dashboard = {
     },
     [CHANGE_DASHBOARD_PANEL]({ dispatch, commit }, payload) {
       return dispatch(REQUEST_API, {
-        rule: `dashboards/${payload.spaceId}/panels/${payload.panelId}`,
+        rule: `dashboard/${payload.spaceId}/panels/${payload.panelId}`,
         method: 'POST',
         data: payload.data,
       }).then((response) => {
@@ -425,7 +425,7 @@ export const dashboard = {
         return false;
       }
       return dispatch(REQUEST_API, {
-        rule: `dashboards/${payload.spaceId}/panels/${payload.panelId}`,
+        rule: `dashboard/${payload.spaceId}/panels/${payload.panelId}`,
         method: 'DELETE',
         data: payload,
       }).then((response) => {
@@ -442,7 +442,7 @@ export const dashboard = {
       });
     },
     [FETCH_CHART_SEGMENTS_CSV]({ dispatch }, { uuid, name, historical }) {
-      let rule = `dashboards/panels/${uuid}/csv`;
+      let rule = `dashboard/panels/${uuid}/csv`;
       if (historical) {
         const encodedDate = encodeURI(historical);
         rule = `${rule}?date_to=${encodedDate} 23:59:59&date_from=${encodedDate}`;
@@ -467,7 +467,7 @@ export const dashboard = {
         if (state.currentSpace === payload.space) return;
         const currentPanelUuid = state.currentPanel.uuid;
         await dispatch(REQUEST_API, {
-          rule: `dashboards/${state.currentSpace}/panels/${state.currentPanel.uuid}/move`,
+          rule: `dashboard/${state.currentSpace}/panels/${state.currentPanel.uuid}/move`,
           method: 'PUT',
           data: { destinationSpace: payload.space },
         });

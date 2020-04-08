@@ -16,7 +16,9 @@ import conftest
 
 from axonius.consts.gui_consts import FEATURE_FLAGS_CONFIG, FeatureFlagsNames,\
     DASHBOARD_SPACE_TYPE_CUSTOM, CONFIG_CONFIG
-from axonius.consts.plugin_consts import AXONIUS_USER_NAME, CORE_UNIQUE_NAME, PLUGIN_NAME, AGGREGATOR_PLUGIN_NAME
+from axonius.consts.plugin_consts import (AXONIUS_USERS_LIST, CORE_UNIQUE_NAME,
+                                          PLUGIN_NAME, AGGREGATOR_PLUGIN_NAME,
+                                          PASSWORD_SETTINGS)
 from axonius.consts.system_consts import AXONIUS_DNS_SUFFIX, LOGS_PATH_HOST
 from axonius.plugin_base import EntityType
 from axonius.utils.mongo_administration import truncate_capped_collection
@@ -240,6 +242,7 @@ class TestBase:
 
         self.axonius_system.get_devices_db().delete_many({})
         self.axonius_system.get_users_db().delete_many({})
+        self.axonius_system.get_roles_db().delete_many({'predefined': {'$exists': False}})
         self.axonius_system.get_enforcements_db().delete_many({})
         self.axonius_system.get_actions_db().delete_many({})
         self.axonius_system.get_tasks_db().delete_many({})
@@ -270,7 +273,7 @@ class TestBase:
         truncate_capped_collection(self.axonius_system.db.get_historical_entity_db_view(EntityType.Devices))
 
         self.axonius_system.get_system_users_db().delete_many(
-            {'user_name': {'$nin': [AXONIUS_USER_NAME, DEFAULT_USER['user_name']]}})
+            {'user_name': {'$nin': AXONIUS_USERS_LIST + [DEFAULT_USER['user_name']]}})
         self.axonius_system.get_users_preferences_db().delete_many({})
         self.axonius_system.get_system_users_db().update_one(
             {'user_name': DEFAULT_USER['user_name']}, {'$set': {'password': bcrypt.hash(DEFAULT_USER['password'])}})
@@ -287,6 +290,13 @@ class TestBase:
             '$set': {
                 f'config.{FeatureFlagsNames.TrialEnd}':
                     (datetime.now() + timedelta(days=30)).isoformat()[:10].replace('-', '/')
+            }
+        })
+        self.axonius_system.db.core_configurable_config_collection().update_one({
+            'config_name': 'CoreService'
+        }, {
+            '$set': {
+                f'config.{PASSWORD_SETTINGS}.enabled': False
             }
         })
 

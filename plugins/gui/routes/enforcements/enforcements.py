@@ -7,7 +7,7 @@ from flask import (jsonify,
                    request, Response)
 
 from axonius.consts.gui_consts import (LAST_UPDATED_FIELD, UPDATED_BY_FIELD)
-from axonius.consts.plugin_consts import (REPORTS_PLUGIN_NAME)
+from axonius.consts.plugin_consts import (REPORTS_PLUGIN_NAME, DEVICE_CONTROL_PLUGIN_NAME)
 from axonius.consts.report_consts import (ACTIONS_FAILURE_FIELD, ACTIONS_FIELD,
                                           ACTIONS_MAIN_FIELD,
                                           ACTIONS_POST_FIELD,
@@ -15,10 +15,8 @@ from axonius.consts.report_consts import (ACTIONS_FAILURE_FIELD, ACTIONS_FIELD,
                                           LAST_TRIGGERED_FIELD,
                                           TIMES_TRIGGERED_FIELD,
                                           TRIGGERS_FIELD, ACTION_CONFIG_FIELD, ACTION_FIELD)
-from axonius.plugin_base import EntityType, return_error, add_rule
-from axonius.utils.gui_helpers import (Permission, PermissionLevel,
-                                       PermissionType, ReadOnlyJustForGet,
-                                       get_connected_user_id, paginated,
+from axonius.plugin_base import EntityType, return_error
+from axonius.utils.gui_helpers import (get_connected_user_id, paginated,
                                        filtered, sorted_endpoint)
 from axonius.utils.mongo_retries import mongo_retry
 from axonius.utils.revving_cache import rev_cached
@@ -26,16 +24,18 @@ from gui.logic.db_helpers import beautify_db_entry
 from gui.logic.ec_helpers import extract_actions_from_ec
 from gui.logic.login_helper import clear_passwords_fields, \
     refill_passwords_fields
-from gui.logic.routing_helper import gui_add_rule_logged_in
+from gui.logic.routing_helper import gui_category_add_rules, gui_route_logged_in
 from gui.routes.enforcements.tasks.tasks import Tasks
+
 # pylint: disable=no-member
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
+@gui_category_add_rules('enforcements')
 class Enforcements(Tasks):
 
-    def get_enforcements(self, limit, mongo_filter, mongo_sort, skip):
+    def _get_enforcements(self, limit, mongo_filter, mongo_sort, skip):
         sort = [(LAST_UPDATED_FIELD, pymongo.DESCENDING)] if not mongo_sort else list(mongo_sort.items())
 
         def beautify_enforcement(enforcement):
@@ -78,7 +78,7 @@ class Enforcements(Tasks):
 
     def put_enforcement(self, enforcement_to_add):
         self.__process_enforcement_actions(enforcement_to_add[ACTIONS_FIELD])
-        if not self._is_hidden_user():
+        if not self.is_axonius_user():
             enforcement_to_add['user_id'] = str(get_connected_user_id())
             enforcement_to_add[LAST_UPDATED_FIELD] = datetime.now()
             enforcement_to_add[UPDATED_BY_FIELD] = get_connected_user_id()
@@ -111,38 +111,44 @@ class Enforcements(Tasks):
     @paginated()
     @filtered()
     @sorted_endpoint()
-    @gui_add_rule_logged_in('enforcements', methods=['GET', 'PUT', 'DELETE'],
-                            required_permissions={Permission(PermissionType.Enforcements,
-                                                             ReadOnlyJustForGet)})
-    def enforcements(self, limit, skip, mongo_filter, mongo_sort):
+    @gui_route_logged_in(methods=['GET'])
+    def get_enforcements(self, limit, skip, mongo_filter, mongo_sort):
         """
         GET results in list of all currently configured enforcements, with their query id they were created with
+
+        :return:
+        """
+        return jsonify(self._get_enforcements(limit, mongo_filter, mongo_sort, skip))
+
+    @gui_route_logged_in(methods=['PUT'])
+    def add_enforcements(self):
+        """
         PUT Send report_service a new enforcement to be configured
 
         :return:
         """
-        if request.method == 'GET':
-            return jsonify(self.get_enforcements(limit, mongo_filter, mongo_sort, skip))
+        enforcement_to_add = request.get_json(silent=True)
+        return self.put_enforcement({
+            'name': enforcement_to_add['name'],
+            ACTIONS_FIELD: enforcement_to_add[ACTIONS_FIELD],
+            TRIGGERS_FIELD: enforcement_to_add[TRIGGERS_FIELD]
+        })
 
-        if request.method == 'PUT':
-            enforcement_to_add = request.get_json(silent=True)
-            return self.put_enforcement({
-                'name': enforcement_to_add['name'],
-                ACTIONS_FIELD: enforcement_to_add[ACTIONS_FIELD],
-                TRIGGERS_FIELD: enforcement_to_add[TRIGGERS_FIELD]
-            })
+    @gui_route_logged_in(methods=['DELETE'])
+    def delete_enforcements(self):
+        """
+        DELETE delete an enforcement
 
-        # Handle remaining method - DELETE
+        :return:
+        """
         return self.delete_enforcement(self.get_request_data_as_object())
 
     @filtered()
-    @gui_add_rule_logged_in('enforcements/count', required_permissions={Permission(PermissionType.Enforcements,
-                                                                                   PermissionLevel.ReadOnly)})
+    @gui_route_logged_in('count')
     def enforcements_count(self, mongo_filter):
         return jsonify(self.enforcements_collection.count_documents(mongo_filter))
 
-    @gui_add_rule_logged_in('enforcements/saved', required_permissions={Permission(PermissionType.Enforcements,
-                                                                                   PermissionLevel.ReadOnly)})
+    @gui_route_logged_in('saved')
     def saved_enforcements(self):
         """
         Returns a list of all existing Saved Enforcement names, in order to check duplicates
@@ -151,54 +157,52 @@ class Enforcements(Tasks):
             'name': 1
         })])
 
-    @gui_add_rule_logged_in('enforcements/<enforcement_id>', methods=['GET', 'POST'],
-                            required_permissions={Permission(PermissionType.Enforcements,
-                                                             ReadOnlyJustForGet)})
-    def enforcement_by_id(self, enforcement_id):
-        if request.method == 'GET':
-            def get_saved_action(name):
-                if not name:
-                    return {}
-                saved_action = self.enforcements_saved_actions_collection.find_one({
-                    'name': name
-                })
-                if not saved_action:
-                    return {}
-                self._decrypt_client_config(saved_action.get(ACTION_FIELD, {}).get(ACTION_CONFIG_FIELD, {}))
-                # fixing password to be 'unchanged'
-                action_type = saved_action['action']['action_name']
-                schema = self._get_actions_from_reports_plugin()[action_type]['schema']
-                saved_action['action']['config'] = clear_passwords_fields(saved_action['action']['config'], schema)
-                return beautify_db_entry(saved_action)
-
-            enforcement = self.enforcements_collection.find_one({
-                '_id': ObjectId(enforcement_id)
-            }, {
-                'name': 1,
-                ACTIONS_FIELD: 1,
-                TRIGGERS_FIELD: 1
+    @gui_route_logged_in('<enforcement_id>', methods=['GET'])
+    def get_enforcement_by_id(self, enforcement_id):
+        def get_saved_action(name):
+            if not name:
+                return {}
+            saved_action = self.enforcements_saved_actions_collection.find_one({
+                'name': name
             })
-            if not enforcement:
-                return return_error(f'Enforcement with id {enforcement_id} was not found', 400)
+            if not saved_action:
+                return {}
+            self._decrypt_client_config(saved_action.get(ACTION_FIELD, {}).get(ACTION_CONFIG_FIELD, {}))
+            # fixing password to be 'unchanged'
+            action_type = saved_action['action']['action_name']
+            schema = self._get_actions_from_reports_plugin()[action_type]['schema']
+            saved_action['action']['config'] = clear_passwords_fields(saved_action['action']['config'], schema)
+            return beautify_db_entry(saved_action)
 
-            actions = enforcement[ACTIONS_FIELD]
-            actions[ACTIONS_MAIN_FIELD] = get_saved_action(actions[ACTIONS_MAIN_FIELD])
-            actions[ACTIONS_SUCCESS_FIELD] = [get_saved_action(x) for x in actions.get(ACTIONS_SUCCESS_FIELD) or []]
-            actions[ACTIONS_FAILURE_FIELD] = [get_saved_action(x) for x in actions.get(ACTIONS_FAILURE_FIELD) or []]
-            actions[ACTIONS_POST_FIELD] = [get_saved_action(x) for x in actions.get(ACTIONS_POST_FIELD) or []]
+        enforcement = self.enforcements_collection.find_one({
+            '_id': ObjectId(enforcement_id)
+        }, {
+            'name': 1,
+            ACTIONS_FIELD: 1,
+            TRIGGERS_FIELD: 1
+        })
+        if not enforcement:
+            return return_error(f'Enforcement with id {enforcement_id} was not found', 400)
 
-            for trigger in enforcement[TRIGGERS_FIELD]:
-                trigger['id'] = trigger['name']
-            return jsonify(beautify_db_entry(enforcement))
+        actions = enforcement[ACTIONS_FIELD]
+        actions[ACTIONS_MAIN_FIELD] = get_saved_action(actions[ACTIONS_MAIN_FIELD])
+        actions[ACTIONS_SUCCESS_FIELD] = [get_saved_action(x) for x in actions.get(ACTIONS_SUCCESS_FIELD) or []]
+        actions[ACTIONS_FAILURE_FIELD] = [get_saved_action(x) for x in actions.get(ACTIONS_FAILURE_FIELD) or []]
+        actions[ACTIONS_POST_FIELD] = [get_saved_action(x) for x in actions.get(ACTIONS_POST_FIELD) or []]
 
-        # Handle remaining request - POST
+        for trigger in enforcement[TRIGGERS_FIELD]:
+            trigger['id'] = trigger['name']
+        return jsonify(beautify_db_entry(enforcement))
+
+    @gui_route_logged_in('<enforcement_id>', methods=['POST'])
+    def update_enforcement_by_id(self, enforcement_id):
         enforcement_data = request.get_json(silent=True)
         enforcement_to_update = {
             'name': enforcement_data['name'],
             ACTIONS_FIELD: enforcement_data[ACTIONS_FIELD],
             TRIGGERS_FIELD: enforcement_data[TRIGGERS_FIELD]
         }
-        if not self._is_hidden_user():
+        if not self.is_axonius_user():
             enforcement_to_update[LAST_UPDATED_FIELD] = datetime.now()
             enforcement_to_update[UPDATED_BY_FIELD] = get_connected_user_id()
 
@@ -255,8 +259,7 @@ class Enforcements(Tasks):
 
         return Response(response.text, response.status_code, mimetype='application/json')
 
-    @gui_add_rule_logged_in('enforcements/<enforcement_id>/trigger', methods=['POST'],
-                            required_permissions={Permission(PermissionType.Enforcements, PermissionLevel.ReadWrite)})
+    @gui_route_logged_in('<enforcement_id>/trigger', methods=['POST'])
     def trigger_enforcement_by_id(self, enforcement_id):
         """
         Triggers a job for the requested enforcement with its first trigger
@@ -275,7 +278,7 @@ class Enforcements(Tasks):
         }, priority=True)
         return Response(response.text, response.status_code, mimetype='application/json')
 
-    @add_rule('enforcements/<entity_type>/custom', methods=['POST'])
+    @gui_route_logged_in('<entity_type>/custom', methods=['POST'], enforce_permissions=False, enforce_api_key=True)
     def enforce_entity_custom_data(self, entity_type):
         """
         See self._entity_custom_data
@@ -289,7 +292,7 @@ class Enforcements(Tasks):
         response.raise_for_status()
         return response.json()
 
-    @gui_add_rule_logged_in('cache/<cache_name>/delete')
+    @gui_route_logged_in('cache/<cache_name>/delete')
     def _clean_cache(self, cache_name):
         if cache_name == 'reports_actions':
             logger.info('Cleaning _get_actions_from_reports_plugin cache async...')
@@ -302,8 +305,7 @@ class Enforcements(Tasks):
 
         return jsonify({'status': False})
 
-    @gui_add_rule_logged_in('enforcements/actions', required_permissions={Permission(PermissionType.Enforcements,
-                                                                                     PermissionLevel.ReadOnly)})
+    @gui_route_logged_in('actions')
     def actions(self):
         """
         Returns all action names and their schema, as defined by the author of the class
@@ -312,8 +314,7 @@ class Enforcements(Tasks):
 
         return jsonify(response)
 
-    @gui_add_rule_logged_in('enforcements/actions/saved', required_permissions={Permission(PermissionType.Enforcements,
-                                                                                           PermissionLevel.ReadOnly)})
+    @gui_route_logged_in('actions/saved')
     def saved_actions(self):
         """
         Returns a list of all existing Saved Action names, in order to check duplicates
@@ -321,3 +322,38 @@ class Enforcements(Tasks):
         return jsonify([x['name'] for x in self.enforcements_saved_actions_collection.find({}, {
             'name': 1
         })])
+
+    @paginated()
+    @filtered()
+    @sorted_endpoint()
+    @gui_route_logged_in('<enforcement_id>/tasks', methods=['GET'])
+    def tasks_by_enforcement_id(self, enforcement_id, limit, skip, mongo_filter, mongo_sort):
+        enforcement = self.enforcements_collection.find_one({
+            '_id': ObjectId(enforcement_id)
+        })
+        if not enforcement:
+            return return_error(f'Enforcement with id {enforcement_id} was not found', 400)
+
+        if mongo_sort.get('status'):
+            mongo_sort['job_completed_state'] = -1 * mongo_sort['status']
+            del mongo_sort['status']
+        sort = [('finished_at', pymongo.DESCENDING)] if not mongo_sort else list(mongo_sort.items())
+        return jsonify([self.beautify_task_entry(x) for x in self.enforcement_tasks_runs_collection.find(
+            self._tasks_query(mongo_filter, enforcement['name'])).sort(sort).skip(skip).limit(limit)])
+
+    @filtered()
+    @gui_route_logged_in('<enforcement_id>/tasks/count', methods=['GET'])
+    def tasks_by_enforcement_id_count(self, enforcement_id, mongo_filter):
+        enforcement = self.enforcements_collection.find_one({
+            '_id': ObjectId(enforcement_id)
+        })
+        if not enforcement:
+            return return_error(f'Enforcement with id {enforcement_id} was not found', 400)
+
+        return jsonify(self.enforcement_tasks_runs_collection.count_documents(
+            self._tasks_query(mongo_filter, enforcement['name'])
+        ))
+
+    @gui_route_logged_in('actions/upload_file', methods=['POST'])
+    def actions_upload_file(self):
+        return self._upload_file(DEVICE_CONTROL_PLUGIN_NAME)

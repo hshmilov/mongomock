@@ -4,6 +4,7 @@ from selenium.common.exceptions import NoSuchElementException
 
 from ui_tests.pages.page import Page
 from axonius.consts.system_consts import AXONIUS_DNS_SUFFIX
+from test_credentials.test_gui_credentials import AXONIUS_USER
 
 
 class LoginPage(Page):
@@ -56,6 +57,16 @@ class LoginPage(Page):
     def logout(self):
         self.wait_for_element_present_by_css(self.LOGOUT_CSS)
         self.driver.find_element_by_css_selector(self.LOGOUT_CSS).click()
+
+    def logout_and_login_with_admin(self):
+        self.logout()
+        self.wait_for_login_page_to_load()
+        self.login(username=AXONIUS_USER['user_name'], password=AXONIUS_USER['password'])
+
+    def logout_and_login_with_user(self, user_name, password):
+        self.logout()
+        self.wait_for_login_page_to_load()
+        self.login(user_name, password)
 
     def find_invalid_login_message(self):
         return self.find_element_by_text(self.WRONG_USERNAME_OR_PASSWORD_MESSAGE)

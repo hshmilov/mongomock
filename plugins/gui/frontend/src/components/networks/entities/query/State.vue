@@ -1,82 +1,89 @@
 <template>
   <div class="x-query-state">
-    <div class="header">
-      <template v-if="enforcement">
-        <div class="query-title">
-          {{ enforcement.name }}
+    <XRoleGateway
+      :permission-category="permissionCategory"
+      :permission-section="$permissionConsts.categories.SavedQueries"
+    >
+      <template slot-scope="{ canAdd, canUpdate }">
+        <div class="header">
+          <template v-if="enforcement">
+            <div class="query-title">
+              {{ enforcement.name }}
+            </div>
+            <div class="subtitle">
+              {{ enforcement.outcome }} results of "{{ enforcement.action }}" action
+            </div>
+          </template>
+          <XButton
+            v-else-if="selectedView && canUpdate"
+            :disabled="selectedView.predefined"
+            link
+            class="query-title"
+            @click="openEditCurrentQueryModal"
+          >{{ selectedView.name }}</XButton>
+          <div
+            v-else-if="selectedView"
+            class="query-title"
+          >
+            {{ selectedView.name }}
+          </div>
+          <div
+            v-else
+            class="query-title"
+          >
+            New Query
+          </div>
+          <div class="status">
+            {{ status }}
+          </div>
         </div>
-        <div class="subtitle">
-          {{ enforcement.outcome }} results of "{{ enforcement.action }}" action
-        </div>
-      </template>
-      <XButton
-        v-else-if="selectedView && !readOnly"
-        :disabled="selectedView.predefined"
-        link
-        class="query-title"
-        @click="openEditCurrentQueryModal"
-      >{{ selectedView.name }}</XButton>
-      <div
-        v-else-if="selectedView"
-        class="query-title"
-      >
-        {{ selectedView.name }}
-      </div>
-      <div
-        v-else
-        class="query-title"
-      >
-        New Query
-      </div>
-      <div class="status">
-        {{ status }}
-      </div>
-    </div>
-    <XButton
-      v-if="enforcement"
-      link
-      @click="navigateFilteredTask"
-    >Go to Task</XButton>
-    <XButton
-      v-else-if="!selectedView || !isEdited"
-      id="query_save"
-      link
-      :disabled="disabled"
-      @click="openSaveView"
-    >Save As</XButton>
-    <XDropdown v-else>
-      <XButton
-        slot="trigger"
-        link
-        :disabled="disabled || selectedView.predefined"
-        @click.stop="saveSelectedView"
-      >Save</XButton>
-      <div slot="content">
         <XButton
+          v-if="enforcement"
           link
-          :disabled="disabled"
+          @click="navigateFilteredTask"
+        >Go to Task</XButton>
+        <XButton
+          v-else-if="!selectedView || !isEdited"
+          id="query_save"
+          link
+          :disabled="disabled || !canAdd"
           @click="openSaveView"
         >Save As</XButton>
+        <XDropdown v-else>
+          <XButton
+            slot="trigger"
+            link
+            :disabled="disabled || selectedView.predefined || !canUpdate"
+            @click.stop="saveSelectedView"
+          >Save</XButton>
+          <div slot="content">
+            <XButton
+              link
+              :disabled="disabled || !canAdd"
+              @click="openSaveView"
+            >Save As</XButton>
+            <XButton
+              link
+              @click="reloadSelectedView"
+            >Discard Changes</XButton>
+          </div>
+        </XDropdown>
         <XButton
           link
-          @click="reloadSelectedView"
-        >Discard Changes</XButton>
-      </div>
-    </XDropdown>
-    <XButton
-      link
-      @click="resetQuery"
-    >Reset</XButton>
-    <XHistoricalDate
-      v-model="historical"
-      :allowed-dates="allowedDates"
-      :module="module"
-    />
-    <XSaveModal
-      v-model="viewNameModal.isActive"
-      :namespace="module"
-      :view="viewNameModal.view"
-    />
+          @click="resetQuery"
+        >Reset</XButton>
+        <XHistoricalDate
+          v-model="historical"
+          :allowed-dates="allowedDates"
+          :module="module"
+        />
+        <XSaveModal
+          v-model="viewNameModal.isActive"
+          :namespace="module"
+          :view="viewNameModal.view"
+        />
+      </template>
+    </XRoleGateway>
   </div>
 </template>
 
@@ -84,10 +91,10 @@
 import _isEqual from 'lodash/isEqual';
 import { mapState, mapMutations, mapActions } from 'vuex';
 import _debounce from 'lodash/debounce';
-import { defaultViewForReset } from '@constants/entities';
-import XButton from '../../../axons/inputs/Button.vue';
-import XDropdown from '../../../axons/popover/Dropdown.vue';
-import XHistoricalDate from '../../../neurons/inputs/HistoricalDate.vue';
+import { defaultViewForReset, getEntityPermissionCategory } from '@constants/entities';
+import XButton from '@axons/inputs/Button.vue';
+import XDropdown from '@axons/popover/Dropdown.vue';
+import XHistoricalDate from '@neurons/inputs/HistoricalDate.vue';
 import XSaveModal from '../../saved-queries/SavedQueryModal.vue';
 
 import { UPDATE_DATA_VIEW } from '../../../../store/mutations';
@@ -103,10 +110,6 @@ export default {
     module: {
       type: String,
       required: true,
-    },
-    readOnly: {
-      type: Boolean,
-      default: false,
     },
     valid: {
       type: Boolean,
@@ -139,11 +142,14 @@ export default {
         return state[this.module].views.saved.content.data.find((view) => view.uuid === uuid);
       },
     }),
+    permissionCategory() {
+      return getEntityPermissionCategory(this.module);
+    },
     enforcement() {
       return this.view.enforcement;
     },
     disabled() {
-      return !this.valid || this.readOnly || this.isDefaultView;
+      return !this.valid || this.isDefaultView;
     },
     historical: {
       get() {
@@ -210,7 +216,7 @@ export default {
       this.$emit('done');
     }, 400, { leading: true, trailing: false }),
     navigateFilteredTask() {
-      this.$router.push({ path: `/tasks/${this.enforcement.id}` });
+      this.$router.push({ path: `/enforcements/tasks/${this.enforcement.id}` });
     },
     openSaveView() {
       this.viewNameModal.view = null;
@@ -255,54 +261,67 @@ export default {
 </script>
 
 <style lang="scss">
-    .x-query-state {
+  .x-query-state {
+    .role-gateway {
+      display: flex;
+      width: 100%;
+      align-items: center;
+
+      .header {
         display: flex;
-        width: 100%;
-        align-items: center;
-        .header {
-            display: flex;
-            line-height: 28px;
-            margin-bottom: 8px;
-            margin-right: 16px;
-            .query-title {
-                font-size: 16px;
-                font-weight: 400;
-                color: $theme-black;
-                margin-right: 8px;
-                &.x-button {
-                  padding: 0;
-                  margin-bottom: 0;
-                }
-            }
-            .subtitle {
-              font-size: 14px;
-            }
-            .status {
-                color: $grey-3;
-            }
-        }
-        .x-button {
-            margin-bottom: 6px;
-            padding: 4px;
-            margin-right: 16px;
-            height: 28px;
-        }
-        .x-dropdown {
-          margin-right: 16px;
-          .trigger {
-            padding-right: 8px;
-            &:after {
-              margin-top: -6px;
-            }
-          }
-          .content {
-            &.expand {
-              min-width: max-content;
-            }
-            .x-button {
-              display: block;
-            }
+        line-height: 28px;
+        margin-bottom: 8px;
+        margin-right: 16px;
+
+        .query-title {
+          font-size: 16px;
+          font-weight: 400;
+          color: $theme-black;
+          margin-right: 8px;
+
+          &.x-button {
+            padding: 0;
+            margin-bottom: 0;
           }
         }
+
+        .subtitle {
+          font-size: 14px;
+        }
+
+        .status {
+          color: $grey-3;
+        }
+      }
+
+      .x-button {
+        margin-bottom: 8px;
+        padding: 4px;
+        margin-right: 16px;
+        height: 28px;
+      }
+
+      .x-dropdown {
+        margin-right: 16px;
+
+        .trigger {
+          padding-right: 8px;
+
+          &:after {
+            margin-top: -6px;
+          }
+        }
+
+        .content {
+          &.expand {
+            min-width: max-content;
+          }
+
+          .x-button {
+            display: block;
+          }
+        }
+      }
     }
+  }
 </style>

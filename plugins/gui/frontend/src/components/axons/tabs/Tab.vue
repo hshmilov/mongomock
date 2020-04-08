@@ -1,6 +1,6 @@
 <template>
   <div
-    v-show="isActive"
+    v-if="isActive"
     :class="{'active': isActive, [ id ]: true}"
     class="x-tab"
     role="tabpanel"

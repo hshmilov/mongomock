@@ -22,6 +22,9 @@ class InstancesPage(EntitiesPage):
     FOOTER_CONTENT_CSS = '.footer-content'
     INSTANCE_INDICATION_CHECKBOX_CXX = '#use_as_environment_name .checkbox-container input'
 
+    INSTANCE_NAME_TEXTBOX_ID = 'node_name'
+    INSTANCE_HOSTNAME_TEXTBOX_ID = 'hostname'
+
     @property
     def url(self):
         return f'{self.base_url}/instances'
@@ -99,7 +102,7 @@ class InstancesPage(EntitiesPage):
         self.wait_for_table_to_load()
         instances_row = self.find_query_row_by_name(current_node_name)
         instances_row.click()
-        self.fill_text_field_by_element_id('node_name', new_node_name)
+        self.fill_text_field_by_element_id(self.INSTANCE_NAME_TEXTBOX_ID, new_node_name)
         self.click_button('Save')
         self.wait_for_element_absent_by_css(self.MODAL_OVERLAY_CSS)
 
@@ -109,7 +112,7 @@ class InstancesPage(EntitiesPage):
         self.wait_for_table_to_load()
         instances_row = self.find_query_row_by_name(current_node_name)
         instances_row.click()
-        self.fill_text_field_by_element_id('hostname', new_hostname)
+        self.fill_text_field_by_element_id(self.INSTANCE_HOSTNAME_TEXTBOX_ID, new_hostname)
         self.click_button('Save')
         if negative_test:
             self.wait_for_toaster(text=self.TOASTER_FOR_FAILED_NODE_HOSTNAME_VALIDATION)
@@ -153,8 +156,16 @@ class InstancesPage(EntitiesPage):
     def verify_footer_element_text(self, text):
         return self.driver.find_element_by_css_selector(self.FOOTER_CONTENT_CSS).text == text
 
-    def verify_footer_element_absent(self):
-        self.verify_element_absent_by_css_selector(self.FOOTER_CONTENT_CSS)
+    def assert_footer_element_absent(self):
+        self.assert_element_absent_by_css_selector(self.FOOTER_CONTENT_CSS)
 
-    def verify_instance_indication_element_absent(self):
-        self.verify_element_absent_by_css_selector(self.INSTANCE_INDICATION_CHECKBOX_CXX)
+    def assert_instance_indication_element_absent(self):
+        self.assert_element_absent_by_css_selector(self.INSTANCE_INDICATION_CHECKBOX_CXX)
+
+    def find_instance_name_textbox(self):
+        self.wait_for_element_present_by_css(self.MODAL_OVERLAY_CSS)
+        return self.driver.find_element_by_id(self.INSTANCE_NAME_TEXTBOX_ID)
+
+    def find_instance_hostname_textbox(self):
+        self.wait_for_element_present_by_css(self.MODAL_OVERLAY_CSS)
+        return self.driver.find_element_by_id(self.INSTANCE_HOSTNAME_TEXTBOX_ID)
