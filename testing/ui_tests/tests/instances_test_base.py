@@ -38,7 +38,7 @@ RESTART_LOG_PATH = Path(f'/var/log/{os.path.basename(SYSTEM_BOOT_CRON_SCRIPT_PAT
 
 DEFAULT_LIMIT = 10
 MAX_CHARS = 10 ** 9
-SSH_CHANNEL_TIMEOUT = 60 * 35
+SSH_NETWORK_TIMEOUT = 60 * 240
 NODE_NAME = 'node_1'
 NEW_NODE_NAME = 'Changed_node'
 NODE_HOSTNAME = 'node-test-hostname'
@@ -336,8 +336,7 @@ def connect_to_linux_user(instance, password, username):
     client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     client.connect(instance.ip, username=username, password=password, timeout=60,
                    auth_timeout=60, look_for_keys=False, allow_agent=False)
-    chan: paramiko.Channel = client.get_transport().open_session()
-    chan.settimeout(SSH_CHANNEL_TIMEOUT)
+    chan: paramiko.Channel = client.get_transport().open_session(timeout=SSH_NETWORK_TIMEOUT)
     chan.invoke_shell()
     return chan
 
