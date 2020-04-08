@@ -9,6 +9,7 @@ import sys
 import os
 import subprocess
 import argparse
+import traceback
 import concurrent.futures
 import threading
 import tarfile
@@ -275,6 +276,7 @@ class InstanceManager:
             try:
                 current_output = self.__ssh_execute(instance_to_run_on, command_job_name, command)
             except Exception as e:
+                print(f'An exception calling __ssh_execute: {str(e)}')
                 current_output = e
 
             # Create the test artifacts folder
@@ -553,7 +555,13 @@ def main():
                 jobs[job_name] = f'cd cortex; {bash_commands_before_each_test} {jobs[job_name]}'
             instance_manager.execute_jobs(jobs)
 
+        except Exception:
+            print('Exception will executing all tests:')
+            print(traceback.format_exc())
+            raise
+
         finally:
+            print('Done executing all tests, calling terminate_all')
             instance_manager.terminate_all()
     elif args.action == 'delete':
         group_name = os.environ.get(BUILDS_GROUP_NAME_ENV)
