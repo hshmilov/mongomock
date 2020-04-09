@@ -177,7 +177,7 @@ class ServiceNowConnection(RESTConnection):
         number_of_exception = 0
         for sysparam_offset in range(0, number_of_offsets):
             try:
-                table_results_paged = self._get(f'table/{str(table_name)}',
+                table_results_paged = self._get(f'table/{str(table_name)}', do_basic_auth=True,
                                                 url_params={'sysparm_limit': self.__offset_size,
                                                             'sysparm_offset': sysparam_offset * self.__offset_size})
                 if len(table_results_paged.get('result', [])) == 0:
