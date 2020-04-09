@@ -64,6 +64,11 @@ class JiraIncidentPerEntityAction(ActionTypeBase):
                     'name': 'components',
                     'title': 'Components',
                     'type': 'string'
+                },
+                {
+                    'name': 'extra_fields',
+                    'title': 'Extra Fields',
+                    'type': 'string'
                 }
             ],
             'required': [
@@ -89,6 +94,7 @@ class JiraIncidentPerEntityAction(ActionTypeBase):
             'issue_type': None,
             'incident_description': None,
             'project_key': None,
+            'extra_fields': None,
             'incident_title': None,
             'assignee': None,
             'add_full_device_content': False,
@@ -156,6 +162,7 @@ class JiraIncidentPerEntityAction(ActionTypeBase):
                                                                log_message_full, self._config['issue_type'],
                                                                assignee=self._config.get('assignee'),
                                                                labels=self._config.get('labels'),
+                                                               extra_fields=self._config.get('extra_fields'),
                                                                components=self._config.get('components'))
                 results.append(EntityResult(entry['internal_axon_id'], not message, message or 'Success'))
             except Exception:

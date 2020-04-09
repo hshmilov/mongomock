@@ -65,6 +65,11 @@ class JiraIncidentAction(ActionTypeAlert):
                     'name': 'send_csv_data',
                     'title': 'Send CSV data',
                     'type': 'bool'
+                },
+                {
+                    'name': 'extra_fields',
+                    'title': 'Extra Fields',
+                    'type': 'string'
                 }
             ],
             'required': [
@@ -89,6 +94,7 @@ class JiraIncidentAction(ActionTypeAlert):
     def default_config() -> dict:
         return {
             'issue_type': None,
+            'extra_fields': None,
             'description_default': False,
             'incident_description': None,
             'project_key': None,
@@ -147,5 +153,6 @@ class JiraIncidentAction(ActionTypeAlert):
                                                        labels=self._config.get('labels'),
                                                        components=self._config.get('components'),
                                                        csv_file_name='Axonius Entities Data.csv',
+                                                       extra_fields=self._config.get('extra_fields'),
                                                        csv_bytes=csv_bytes)
         return AlertActionResult(not message, message or 'Success')

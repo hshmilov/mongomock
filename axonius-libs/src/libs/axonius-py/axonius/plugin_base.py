@@ -2812,7 +2812,8 @@ class PluginBase(Configurable, Feature, ABC):
             return []
 
     def create_jira_ticket(self, project_key, summary, description, issue_type,
-                           assignee=None, labels=None, components=None, csv_file_name=None, csv_bytes=None):
+                           assignee=None, labels=None, components=None, csv_file_name=None, csv_bytes=None,
+                           extra_fields=None):
         jira_settings = self._jira_settings
         if jira_settings['enabled'] is not True:
             return 'Jira Settings missing'
@@ -2833,6 +2834,13 @@ class PluginBase(Configurable, Feature, ABC):
                 issue_dict['labels'] = labels.split(',')
             if assignee:
                 issue_dict['assignee'] = {'name': assignee}
+            try:
+                if extra_fields:
+                    extra_fields_dict = json.loads(extra_fields)
+                    if isinstance(extra_fields_dict, dict):
+                        issue_dict.update(extra_fields_dict)
+            except Exception:
+                pass
             issue = jira.create_issue(fields=issue_dict)
             if csv_file_name and csv_bytes:
                 jira.add_attachment(issue=issue, attachment=csv_bytes, filename=csv_file_name)
