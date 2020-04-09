@@ -2811,6 +2811,7 @@ class PluginBase(Configurable, Feature, ABC):
             logger.exception('Error in in getting projects keys')
             return []
 
+    # pylint: disable=too-many-arguments
     def create_jira_ticket(self, project_key, summary, description, issue_type,
                            assignee=None, labels=None, components=None, csv_file_name=None, csv_bytes=None,
                            extra_fields=None):
