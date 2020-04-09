@@ -136,6 +136,7 @@ class TwistlockAdapter(AdapterBase):
             device.id = 'CONTAINER_' + device_raw.get('_id') + '_' + (device_raw.get('hostname') or '')
             device.hostname = device_raw.get('hostname')
             device.scantime = parse_date(device_raw.get('scanTime'))
+            device.last_seen = parse_date(device_raw.get('scanTime'))
             device_info = device_raw.get('info') or {}
             mac = device_info.get('MacAddress') if device_info.get('MacAddress') else None
             ips = device_info.get('IPAddress').split(',') if device_info.get('IPAddress') else None
@@ -180,6 +181,7 @@ class TwistlockAdapter(AdapterBase):
             device.add_agent_version(agent=AGENT_NAMES.twistlock, version=device_raw.get('version'))
             device.agent_type = device_raw.get('type')
             device.last_modified = parse_date(device_raw.get('lastModified'))
+            device.last_seen = parse_date(device_raw.get('lastModified'))
             try:
                 ips = device_raw.get('hostIPs')
                 if ips and isinstance(ips, list):
@@ -208,6 +210,7 @@ class TwistlockAdapter(AdapterBase):
             device.id = 'HOST_' + device_raw.get('hostname')
             device.hostname = device_raw.get('hostname')
             device.scantime = parse_date(device_raw.get('scanTime'))
+            device.last_seen = parse_date(device_raw.get('scanTime'))
             device_info = device_raw.get('info') or {}
             try:
                 device.figure_os(device_info.get('distro'))

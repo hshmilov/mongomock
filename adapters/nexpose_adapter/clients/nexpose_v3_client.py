@@ -124,6 +124,7 @@ class NexposeV3Client(NexposeClient):
                                     logger.exception(f'Problem getting details for vulnerability {vuln_id}')
 
                     if fetch_tags:
+                        self._get_async_data(devices, 'services')
                         self._get_async_data(devices, 'tags')
                         self._get_async_data(devices, 'software')
                     yield from devices
@@ -291,6 +292,24 @@ class NexposeV3Client(NexposeClient):
                         device.add_vulnerable_software(cve_id=cve)
             except Exception:
                 logger.exception(f'Problem adding CVES to device')
+
+        try:
+            services_raw = device_raw.get('services_details') or []
+            if services_raw and isinstance(services_raw, list):
+                for services_data in services_raw:
+                    try:
+                        service_port = services_data.get('port')
+                        service_protocol = services_data.get('protocol')
+                        if not service_protocol or service_protocol.upper() not in ['TCP', 'UDP']:
+                            service_protocol = None
+                        if not service_port:
+                            logger.warning(f'Bad service at device {device_raw}')
+                            continue
+                        device.add_open_port(port_id=service_port, protocol=service_protocol)
+                    except Exception:
+                        logger.exception(f'Problem adding services_data {services_data}')
+        except Exception:
+            logger.exception(f'Problem parsing services')
 
         try:
             software = device_raw.get('software_details') or []

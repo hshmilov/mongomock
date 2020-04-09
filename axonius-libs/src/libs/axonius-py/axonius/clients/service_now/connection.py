@@ -102,9 +102,12 @@ class ServiceNowConnection(RESTConnection):
         except Exception:
             logger.exception(f'Problem getting ips')
         users_table_dict = dict()
+        users_username_dict = dict()
         for user in users_table:
             if user.get('sys_id'):
                 users_table_dict[user.get('sys_id')] = user
+                if user.get('name'):
+                    users_username_dict[user.get('user_name')] = user.get('sys_id')
 
         location_table_dict = dict()
         for location in location_table:
@@ -159,6 +162,7 @@ class ServiceNowConnection(RESTConnection):
             table_devices = {consts.DEVICES_KEY: self.__get_devices_from_table(table_details[consts.TABLE_NAME_KEY])}
             new_table_details.update(table_devices)
             new_table_details[consts.USERS_TABLE_KEY] = users_table_dict
+            new_table_details[consts.USERS_USERNAME_KEY] = users_username_dict
             new_table_details[consts.LOCATION_TABLE_KEY] = location_table_dict
             new_table_details[consts.USER_GROUPS_TABLE_KEY] = user_groups_dict
             new_table_details[consts.NIC_TABLE_KEY] = nic_table_dict

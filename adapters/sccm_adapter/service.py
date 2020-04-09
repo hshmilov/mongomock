@@ -321,6 +321,18 @@ class SccmAdapter(AdapterBase, Configurable):
             except Exception:
                 logger.warning(f'Problem getting query users', exc_info=True)
 
+            new_software_dict = dict()
+            try:
+                for new_soft_data in client_data.query(consts.NEW_SOFTWARE_QUERY):
+                    asset_id = new_soft_data.get('ResourceID')
+                    if not asset_id:
+                        continue
+                    if asset_id not in new_software_dict:
+                        new_software_dict[asset_id] = []
+                    new_software_dict[asset_id].append(new_soft_data)
+            except Exception:
+                logger.warning(f'Problem getting query new software', exc_info=True)
+
             asset_software_dict = dict()
             try:
                 for asset_soft_data in client_data.query(consts.QUERY_SOFTWARE):
@@ -429,7 +441,7 @@ class SccmAdapter(AdapterBase, Configurable):
                     asset_vm_dict, owner_dict, tpm_dict, computer_dict,\
                     clients_dict, os_dict, nics_dict, collections_dict,\
                     collections_data_dict, compliance_dict, local_admins_dict,\
-                    drivers_dict, ram_dict, network_drivers_dict
+                    drivers_dict, ram_dict, network_drivers_dict, new_software_dict
 
     def _clients_schema(self):
         return {
@@ -466,7 +478,7 @@ class SccmAdapter(AdapterBase, Configurable):
             os_dict,
             nics_dict,
             collections_dict, collections_data_dict, compliance_dict,
-            local_admins_dict, drivers_dict, ram_dict, network_drivers_dict
+            local_admins_dict, drivers_dict, ram_dict, network_drivers_dict, new_software_dict
         ) in devices_raw_data:
             try:
                 device_id = device_raw.get('Distinguished_Name0')
@@ -648,11 +660,11 @@ class SccmAdapter(AdapterBase, Configurable):
                                 driver_version = network_drivers_data.get('DriverVersion0')
                                 driver_provider = network_drivers_data.get('ProviderName0')
                                 driver_date = parse_date(network_drivers_data.get('DriverDate0'))
-                                device.drivers_data.append(DriverData(driver_name=driver_name,
-                                                                      driver_description=driver_description,
-                                                                      driver_version=driver_version,
-                                                                      driver_provider=driver_provider,
-                                                                      drivers_date=driver_date))
+                                device.network_drivers_data.append(DriverData(driver_name=driver_name,
+                                                                              driver_description=driver_description,
+                                                                              driver_version=driver_version,
+                                                                              driver_provider=driver_provider,
+                                                                              driver_date=driver_date))
 
                             except Exception:
                                 logger.exception(f'Problem with drivers data {network_drivers_data}')
@@ -811,6 +823,20 @@ class SccmAdapter(AdapterBase, Configurable):
                 device.time_zone = computer_data.get('CurrentTimeZone0')
                 if os_data.get('LastBootUpTime0'):
                     device.set_boot_time(boot_time=os_data.get('LastBootUpTime0'))
+
+                try:
+                    if isinstance(new_software_dict.get(device_raw.get('ResourceID')), list):
+                        for new_asset_data in new_software_dict.get(device_raw.get('ResourceID')):
+                            try:
+                                device.add_installed_software(
+                                    name=new_asset_data.get('ProductName'),
+                                    version=new_asset_data.get('ProductVersion'),
+                                    vendor=new_asset_data.get('CompanyName')
+                                )
+                            except Exception:
+                                logger.exception(f'Problem adding new sw asset {new_asset_data}')
+                except Exception:
+                    logger.exception(f'Problem adding software to {device_raw}')
 
                 try:
                     if isinstance(asset_software_dict.get(device_raw.get('ResourceID')), list):

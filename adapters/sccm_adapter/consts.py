@@ -63,3 +63,4 @@ LOCAL_ADMIN_QUERY = 'select ResourceID, name0 , account0, domain0 from v_gs_loca
 DRIVERS_QUERY = 'select ResourceID, Name0, Description0, DriverVersion0 from v_GS_VIDEO_CONTROLLER'
 RAM_QUERY = 'select ResourceID, Capacity0 from v_GS_PHYSICAL_MEMORY'
 NETWORK_DRIVERS_QUERY = 'select ResourceID, DriverDesc0, DriverVersion0 , ProviderName0, DriverDate0 from v_GS_NETWORK_DRIVERS'
+NEW_SOFTWARE_QUERY = 'select ResourceID, ProductName, ProductVersion CompanyName from v_GS_SoftwareProduct'

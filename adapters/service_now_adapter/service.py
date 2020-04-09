@@ -77,12 +77,15 @@ class ServiceNowAdapter(AdapterBase, Configurable):
                            snow_department_table_dict=None,
                            users_table_dict=None,
                            snow_nics_table_dict=None,
+                           users_username_dict=None,
                            snow_alm_asset_table_dict=None,
                            snow_user_groups_table_dict=None,
                            companies_table_dict=None,
                            ips_table_dict=None):
         got_nic = False
         got_serial = False
+        if users_username_dict is None:
+            users_username_dict = dict()
         if snow_user_groups_table_dict is None:
             snow_user_groups_table_dict = dict()
         if companies_table_dict is None:
@@ -274,7 +277,8 @@ class ServiceNowAdapter(AdapterBase, Configurable):
                     device.assigned_to_business_unit = assigned_to.get('u_business_unit')
                     try:
                         manager_value = (assigned_to.get('manager') or {}).get('value')
-                        device.manager_email = (users_table_dict.get(manager_value) or {}).get('email')
+                        manager_raw = users_table_dict.get(users_username_dict.get(manager_value)) or {}
+                        device.manager_email = manager_raw.get('email')
                     except Exception:
                         logger.exception(f'Problem getting manager {device_raw}')
                     try:
@@ -565,6 +569,7 @@ class ServiceNowAdapter(AdapterBase, Configurable):
     def _parse_raw_data(self, devices_raw_data):
         for table_devices_data in devices_raw_data:
             users_table_dict = table_devices_data.get(USERS_TABLE_KEY)
+            users_username_dict = table_devices_data.get(USERS_USERNAME_KEY)
             snow_department_table_dict = table_devices_data.get(DEPARTMENT_TABLE_KEY)
             snow_location_table_dict = table_devices_data.get(LOCATION_TABLE_KEY)
             snow_user_groups_table_dict = table_devices_data.get(USER_GROUPS_TABLE_KEY)
@@ -579,6 +584,7 @@ class ServiceNowAdapter(AdapterBase, Configurable):
                                                  snow_alm_asset_table_dict=snow_alm_asset_table_dict,
                                                  snow_nics_table_dict=snow_nics_table_dict,
                                                  users_table_dict=users_table_dict,
+                                                 users_username_dict=users_username_dict,
                                                  companies_table_dict=companies_table_dict,
                                                  snow_user_groups_table_dict=snow_user_groups_table_dict,
                                                  ips_table_dict=ips_table_dict,

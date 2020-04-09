@@ -159,6 +159,8 @@ class EpoAdapter(AdapterBase, Configurable):
 
             device = self._new_device_adapter()
             device.epo_host = epo_host
+            if hostname and hostname.endswith('::1'):
+                hostname = hostname[:-len('::1')]
             device.hostname = hostname
             device.name = name
             device.figure_os(device_raw.get('EPOLeafNode.os', ''))
