@@ -213,6 +213,7 @@ def setup_host():
     create_system_cronjobs()
     set_sysctl_value('kernel.pid_max', '64000')
     set_sysctl_value('kernel.threads-max', '200000')
+    set_sysctl_value('kernel.panic', '10')
     set_sysctl_value('net.ipv4.conf.all.accept_redirects', '0')
     set_sysctl_value('net.ipv4.conf.default.accept_redirects', '0')
     set_sysctl_value('net.ipv4.conf.all.secure_redirects', '0')
