@@ -53,6 +53,12 @@ class JamfCertificate(SmartJsonClass):
     expiration_time = Field(datetime.datetime, 'Expiration Time')
 
 
+class JamfExtensionAttribute(SmartJsonClass):
+    extension_name = Field(str, 'Name')
+    extension_type = Field(str, 'Type')
+    extension_value = Field(str, 'Value')
+
+
 class JamfAdapter(AdapterBase, Configurable):
 
     class MyDeviceAdapter(DeviceAdapter):
@@ -69,6 +75,7 @@ class JamfAdapter(AdapterBase, Configurable):
         common_users = ListField(str, 'Common Users')
         tenant_tag = Field(str, 'Tenant Tag')
         certificates = ListField(JamfCertificate, 'Certificates')
+        extension_attributes = ListField(JamfExtensionAttribute, 'Extension Attributes')
 
     def __init__(self):
         super().__init__(get_local_config_file(__file__))
@@ -189,6 +196,25 @@ class JamfAdapter(AdapterBase, Configurable):
                                 device.certificates.append(certificate_obj)
                 except Exception:
                     logger.exception(f'Probelm with certificates')
+                try:
+                    if device_raw.get('extension_attributes') \
+                            and isinstance(device_raw.get('extension_attributes'), dict):
+                        extension_attributes_raw = device_raw.get('extension_attributes').get('extension_attribute')
+                        if isinstance(extension_attributes_raw, list) and extension_attributes_raw:
+                            for extension_attribute_raw in extension_attributes_raw:
+                                extension_attributes_obj = JamfExtensionAttribute(
+                                    extension_name=extension_attribute_raw.get('name'),
+                                    extension_type=extension_attribute_raw.get('type'),
+                                    extension_value=extension_attribute_raw.get('value'))
+                                device.extension_attributes.append(extension_attributes_obj)
+                                if extension_attribute_raw.get('name') == 'Rapid7 Agent Version Info' \
+                                        and extension_attribute_raw.get('value'):
+                                    rapid7_version = extension_attribute_raw.get('value').split(' ')[0]
+                                    device.add_installed_software(name='Rapid7 Insight Agent',
+                                                                  vendor='Rapid7',
+                                                                  version=rapid7_version)
+                except Exception:
+                    logger.exception(f'Probelm with extensions')
                 if not general_info.get('name'):
                     continue
                 device.name = general_info.get('name')

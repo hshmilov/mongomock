@@ -39,6 +39,7 @@ class ServiceNowAdapter(AdapterBase, Configurable):
         install_status = Field(str, 'Install Status')
         assigned_to_location = Field(str, 'Assigned To Location')
         assigned_to_country = Field(str, 'Assigned To Country')
+        assigned_to_division = Field(str, 'Assigned To Business')
         assigned_to_business_unit = Field(str, 'Assigned To Business Unit')
         manager_email = Field(str, 'Manager Email')
         purchase_date = Field(datetime.datetime, 'Purchase date')
@@ -274,6 +275,7 @@ class ServiceNowAdapter(AdapterBase, Configurable):
                     device.assigned_to = assigned_to.get('name')
                     device.email = assigned_to.get('email')
                     device.assigned_to_country = assigned_to.get('country')
+                    device.assigned_to_division = assigned_to.get('u_division')
                     device.assigned_to_business_unit = assigned_to.get('u_business_unit')
                     try:
                         manager_value = (assigned_to.get('manager') or {}).get('value')

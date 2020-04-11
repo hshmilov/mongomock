@@ -2,8 +2,7 @@ import logging
 
 from axonius.clients.rest.exception import RESTException
 from axonius.clients.rest.connection import RESTConnection
-from cloud_health_adapter.consts import ENDPOINTS_ASSETS, PAGINATION_FIELD_PAGE_NUMBERS, DEVICE_PER_PAGE, \
-    CLOUD_HEALTH_DOMAIN_API
+from cloud_health_adapter.consts import ENDPOINTS_ASSETS, PAGINATION_FIELD_PAGE_NUMBERS, DEVICE_PER_PAGE
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -38,7 +37,7 @@ class CloudHealthConnection(RESTConnection):
                 'query': 'is_active=1'
             }
 
-            self._get(f'{CLOUD_HEALTH_DOMAIN_API}/search', url_params=url_params)
+            self._get('search', url_params=url_params)
         except RESTException as err:
             logger.exception(f'Failed connecting, {str(err)}')
             raise

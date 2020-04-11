@@ -38,7 +38,8 @@ class CloudHealthAdapter(AdapterBase):
     @staticmethod
     def get_connection(client_config):
         connection = CloudHealthConnection(api_key=client_config['api_key'],
-                                           domain=client_config['domain'])
+                                           domain=client_config['domain'],
+                                           https_proxy=client_config.get('https_proxy'))
 
         with connection:
             pass  # check that the connection credentials are valid
@@ -86,6 +87,11 @@ class CloudHealthAdapter(AdapterBase):
                     'type': 'string',
                     'format': 'password'
                 },
+                {
+                    'name': 'https_proxy',
+                    'title': 'HTTPS Proxy',
+                    'type': 'string'
+                }
             ],
             'required': [
                 'domain',

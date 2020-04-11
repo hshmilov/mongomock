@@ -371,7 +371,7 @@ class RESTConnection(ABC):
             try:
                 return response.json()
             except JSONDecodeError as e:
-                raise RESTRequestException(f'Got json error: {str(e)}')
+                raise RESTRequestException(f'Got json error: {str(response.content)[:1000]}')
         elif return_response_raw:
             return response
         else:
