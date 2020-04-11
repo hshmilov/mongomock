@@ -17,15 +17,28 @@ class AzureClient:
     DEFAULT_CLOUD = 'Azure Public Cloud'
 
     def __init__(self, subscription_id,
-                 client_id, client_secret, tenant_id, cloud_name=None, https_proxy=None, verify_ssl=None):
+                 client_id, client_secret, tenant_id, cloud_name=None,
+                 azure_stack_hub_resource=None, azure_stack_hub_url=None,
+                 https_proxy=None, verify_ssl=None):
         if cloud_name is None:
             cloud_name = self.DEFAULT_CLOUD
         cloud = self.get_clouds()[cloud_name]
         proxies = {'https': RESTConnection.build_url(https_proxy).strip('/')} if https_proxy else None
-        credentials = ServicePrincipalCredentials(client_id=client_id, secret=client_secret, tenant=tenant_id,
-                                                  cloud_environment=cloud, proxies=proxies, verify=verify_ssl)
-        self.compute = ComputeManagementClient(credentials, subscription_id, base_url=cloud.endpoints.resource_manager)
-        self.network = NetworkManagementClient(credentials, subscription_id, base_url=cloud.endpoints.resource_manager)
+
+        if azure_stack_hub_url and azure_stack_hub_resource:
+            base_url = azure_stack_hub_url
+            resource = azure_stack_hub_resource
+
+            logger.info(f'Using Azure Stack Hub - Resource "{resource}" with URL "{base_url}"')
+            credentials = ServicePrincipalCredentials(client_id=client_id, secret=client_secret, tenant=tenant_id,
+                                                      cloud_environment=cloud, resource=resource,
+                                                      proxies=proxies, verify=verify_ssl)
+        else:
+            base_url = cloud.endpoints.resource_manager
+            credentials = ServicePrincipalCredentials(client_id=client_id, secret=client_secret, tenant=tenant_id,
+                                                      cloud_environment=cloud, proxies=proxies, verify=verify_ssl)
+        self.compute = ComputeManagementClient(credentials, subscription_id, base_url=base_url)
+        self.network = NetworkManagementClient(credentials, subscription_id, base_url=base_url)
         if proxies:
             self.network.config.proxies.use_env_settings = False
             self.network.config.proxies.proxies = proxies

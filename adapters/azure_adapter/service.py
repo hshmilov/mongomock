@@ -19,6 +19,8 @@ AZURE_CLIENT_SECRET = 'client_secret'
 AZURE_TENANT_ID = 'tenant_id'
 AZURE_VERIFY_SSL = 'verify_ssl'
 AZURE_CLOUD_ENVIRONMENT = 'cloud_environment'
+AZURE_STACK_HUB_URL = 'azure_stack_hub_url'
+AZURE_STACK_HUB_RESOURCE = 'azure_stack_hub_resource'
 
 
 class AzureImage(SmartJsonClass):
@@ -71,6 +73,8 @@ class AzureAdapter(AdapterBase):
                                      client_secret=client_config[AZURE_CLIENT_SECRET],
                                      tenant_id=client_config[AZURE_TENANT_ID],
                                      cloud_name=client_config.get(AZURE_CLOUD_ENVIRONMENT),
+                                     azure_stack_hub_resource=client_config.get(AZURE_STACK_HUB_RESOURCE),
+                                     azure_stack_hub_url=client_config.get(AZURE_STACK_HUB_URL),
                                      https_proxy=client_config.get('https_proxy'),
                                      verify_ssl=client_config.get(AZURE_VERIFY_SSL))
             connection.test_connection()
@@ -114,6 +118,18 @@ class AzureAdapter(AdapterBase):
                     'type': 'string',
                     'enum': list(AzureClient.get_clouds().keys()),
                     'default': AzureClient.DEFAULT_CLOUD
+                },
+                {
+                    'name': AZURE_STACK_HUB_URL,
+                    'title': 'Azure Stack Hub Management URL',
+                    'type': 'string',
+                    'description': 'If you are using Azure Stack Hub, please specify the management URL'
+                },
+                {
+                    'name': AZURE_STACK_HUB_RESOURCE,
+                    'title': 'Azure Stack Hub Resource String',
+                    'type': 'string',
+                    'description': 'If you are using Azure Stack Hub, please specify the resource string'
                 },
                 {
                     'name': 'account_tag',

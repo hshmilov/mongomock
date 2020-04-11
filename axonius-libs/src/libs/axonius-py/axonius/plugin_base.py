@@ -1339,10 +1339,12 @@ class PluginBase(Configurable, Feature, ABC):
         Sometimes the system will make changes that will need to trigger a dashboard change
         :param clear_slow: Whether or not to also clear cache for historical dashboards that rarely change
         """
+        logger.debug('Requesting clear dashboard cache')
         self._trigger_remote_plugin(GUI_PLUGIN_NAME, 'clear_dashboard_cache', blocking=False, priority=clear_slow,
                                     data={
                                         'clear_slow': clear_slow
                                     })
+        logger.debug('Done requesting clear dashboard cache')
 
     def create_notification(self, title, content='', severity_type='info', notification_type='basic',
                             hooks: Dict[str, str] = None):

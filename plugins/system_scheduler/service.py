@@ -454,7 +454,9 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
 
             logger.info(f'Started Subphase {subphase}')
             if self._notify_on_adapters is True:
+                logger.debug(f'Creating notification for subphase {subphase}')
                 self.create_notification(f'Started Subphase {subphase}')
+            logger.debug(f'Trying to send syslog for subphase {subphase}')
             self.send_external_info_log(f'Started Subphase {subphase}')
 
         with self._start_research():
@@ -522,6 +524,7 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
                     try:
                         # this is important and is described at
                         # https://axonius.atlassian.net/wiki/spaces/AX/pages/799211552/
+                        logger.debug(f'Requesting wait/insert_to_db for {adapter[PLUGIN_UNIQUE_NAME]}')
                         self.request_remote_plugin('wait/insert_to_db', adapter[PLUGIN_UNIQUE_NAME])
                     except Exception as e:
                         logger.exception(f'Failed waiting for adapter cycle {e}')
@@ -756,6 +759,7 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
         """
         Runs a blocking trigger
         """
+        logger.debug(f'Running request {job_name} on {plugin_name}')
         response = self._trigger_remote_plugin(plugin_name, job_name, data=data,
                                                timeout=timeout, stop_on_timeout=True)
         if response.status_code == 408:

@@ -9,7 +9,7 @@ from collections import defaultdict
 from typing import List, Tuple
 
 from bson import Code
-from pymongo.errors import OperationFailure, PyMongoError
+from pymongo.errors import OperationFailure, PyMongoError, BulkWriteError
 from retrying import retry
 
 from axonius.devices.device_adapter import LAST_SEEN_FIELD
@@ -1269,6 +1269,9 @@ class AggregatorService(PluginService, UpdatablePluginMixin):
             else:
                 print(f'Tanium ID upgrade: Nothing to fix. Moving on')
             self.db_schema_version = 27
+        except BulkWriteError as e:
+            print(f'BulkWriteError: {e.details}')
+            raise
         except Exception as e:
             print(f'Exception while upgrading core db to version 27. Details: {e}')
             traceback.print_exc()
