@@ -159,6 +159,7 @@ class DeviceAdapterOS(SmartJsonClass):
     major = Field(int, 'Major')
     minor = Field(int, 'Minor')
     build = Field(str, 'Build')  # aka patch level
+    serial = Field(str, 'Serial')
 
 
 class DeviceAdapterVlan(SmartJsonClass):
@@ -235,6 +236,7 @@ class DeviceAdapterHD(SmartJsonClass):
     free_size = Field(float, "Free Size (GB)")
     is_encrypted = Field(bool, "Encrypted")
     description = Field(str, 'Description')
+    serial_number = Field(str, 'Serial Number')
 
 
 class DeviceAdapterCPU(SmartJsonClass):

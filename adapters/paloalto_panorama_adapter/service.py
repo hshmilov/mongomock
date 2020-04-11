@@ -151,7 +151,7 @@ class PaloaltoPanoramaAdapter(AdapterBase):
             device.fw_connected = device_raw_dict.get('connected')
             device.hostname = device_raw_dict.get('hostname')
             mac = device_raw_dict.get('mac-addr')
-            if not mac:
+            if not mac or mac == '(incomplete)':
                 mac = None
             ip = device_raw_dict.get('ip-address')
             if ip:
@@ -229,7 +229,7 @@ class PaloaltoPanoramaAdapter(AdapterBase):
             for xml_property in device_raw:
                 device_raw_dict[xml_property.tag] = xml_property.text
             mac = device_raw_dict.get('mac')
-            if not mac:
+            if not mac or mac == '(incomplete)':
                 logger.warning(f'Bad device with no mac {device_raw_dict}')
                 return None
             device.id = mac

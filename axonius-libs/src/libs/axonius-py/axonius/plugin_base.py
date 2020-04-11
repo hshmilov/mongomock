@@ -3853,7 +3853,7 @@ class PluginBase(Configurable, Feature, ABC):
             },
             CORRELATION_SETTINGS: {
                 CORRELATE_BY_EMAIL_PREFIX: False,
-                CORRELATE_AD_DISPLAY_NAME: True,
+                CORRELATE_AD_DISPLAY_NAME: False,
                 CORRELATE_BY_USERNAME_DOMAIN_ONLY: False,
                 CORRELATE_AD_SCCM: False,
                 CSV_FULL_HOSTNAME: False,

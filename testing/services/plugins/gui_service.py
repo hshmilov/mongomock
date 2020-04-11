@@ -4,6 +4,7 @@ from collections import defaultdict
 import secrets
 import logging
 import re
+from typing import List
 
 import requests
 from funcy import chunks
@@ -1255,6 +1256,16 @@ RUN cd /home/axonius && mkdir axonius-libs && mkdir axonius-libs/src && cd axoni
 
     def get_users_count(self, *vargs, **kwargs):
         return self.get('users/count', session=self._session, *vargs, **kwargs)
+
+    def unlink_users(self, internal_axon_ids: List = None):
+        return self.post('users/manual_unlink', session=self._session, data={
+            'ids': internal_axon_ids, 'include': True
+        })
+
+    def unlink_devices(self, internal_axon_ids: List = None):
+        return self.post('devices/manual_unlink', session=self._session, data={
+            'ids': internal_axon_ids, 'include': True
+        })
 
     def delete_users(self, internal_axon_ids, *vargs, **kwargs):
         return self.delete('users', session=self._session, data={

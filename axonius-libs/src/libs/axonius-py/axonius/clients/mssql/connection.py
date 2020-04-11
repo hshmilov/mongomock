@@ -76,15 +76,23 @@ class MSSQLConnection(AbstractSQLConnection):
             cursor = self.db.cursor()
             results = cursor.execute(sql)
             columns = [column[0] for column in cursor.description]
-            devices_count = 0
+            entities_count = 0
             batch = True
+
+            if self.devices_paging >= 200:
+                log_pages_rate = 100
+            else:
+                log_pages_rate = 1000
+
             while batch:
                 batch = results.fetchmany(self.devices_paging)
-                if devices_count < 10 or devices_count % 1000 == 0:
-                    logger.info(f'Got {devices_count * self.devices_paging} devices so far')
-                devices_count += 1
+                if entities_count % (self.devices_paging * log_pages_rate) == 0:
+                    logger.info(f'Got {entities_count} entities so far')
+                entities_count += self.devices_paging
                 for row in batch:
                     yield dict(zip(columns, row))
+
+            logger.info(f'Finished with {entities_count}')
         except Exception:
             logger.warning('Unable to perform query: ', exc_info=True)
             raise
