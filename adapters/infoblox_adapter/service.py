@@ -319,7 +319,7 @@ class InfobloxAdapter(AdapterBase, Configurable):
                 },
                 {
                     'name': 'result_per_page',
-                    'title': 'Results Per Page',
+                    'title': 'Results per page',
                     'type': 'integer'
                 },
                 {

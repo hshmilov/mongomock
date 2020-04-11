@@ -205,15 +205,15 @@ class CiscoIseAdapter(AdapterBase, Configurable):
                     'default': False
                 },
                 {
-                    'name': CLIENT_CONFIG_FIELDS.https_proxy,
-                    'title': CLIENT_CONFIG_TITLES.https_proxy,
-                    'type': 'string'
-                },
-                {
                     'name': CLIENT_CONFIG_FIELDS.verify_ssl,
                     'title': CLIENT_CONFIG_TITLES.verify_ssl,
                     'type': 'bool'
                 },
+                {
+                    'name': CLIENT_CONFIG_FIELDS.https_proxy,
+                    'title': CLIENT_CONFIG_TITLES.https_proxy,
+                    'type': 'string'
+                }
             ],
             'required': REQUIRED_SCHEMA_FIELDS,
             'type': 'array',

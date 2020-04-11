@@ -15,7 +15,7 @@ CSV_FILE_NAME = 'csv'
 GOTOASSIST_NAME = 'RescueAssist (GoToAssist)'
 CISCO_NAME = 'Cisco'
 CISCO_PLUGIN_NAME = 'cisco_adapter'
-CSV_NAME = 'CSV Serials'
+CSV_NAME = 'CSV'
 ESET_NAME = 'ESET Endpoint Security'
 QUERY_WIZARD_CSV_DATE_PICKER_VALUE = '2018-12-30 02:13:24.485Z'
 

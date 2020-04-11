@@ -166,12 +166,12 @@ class JitaAdapter(AdapterBase, Configurable):
                 },
                 {
                     'name': 'exclude_stale_devices',
-                    'title': 'Exclude Stale Devices',
+                    'title': 'Exclude stale devices',
                     'type': 'bool'
                 }
             ],
-            'required': ['devices_fetched_at_a_time'],
-            'pretty_name': 'JITA Configuration',
+            'required': ['devices_fetched_at_a_time', 'exclude_stale_devices'],
+            'pretty_name': 'Remediant SecureOne Configuration',
             'type': 'array'
         }
 

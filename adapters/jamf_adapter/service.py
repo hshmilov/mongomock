@@ -149,12 +149,12 @@ class JamfAdapter(AdapterBase, Configurable):
                 },
                 {
                     "name": consts.HTTP_PROXY,
-                    "title": "Http Proxy",
+                    "title": "HTTP Proxy",
                     "type": "string"
                 },
                 {
                     "name": consts.HTTPS_PROXY,
-                    "title": "Https Proxy",
+                    "title": "HTTPS Proxy",
                     "type": "string"
                 },
                 {

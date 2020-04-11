@@ -46,7 +46,7 @@ WMI_INFO_ADAPTER = 'WMI Info'
 AD_ADAPTER_NAME = 'Microsoft Active Directory (AD)'
 CISCO_PRIME_ADAPTER_NAME = 'Cisco Prime'
 
-CSV_NAME = 'CSV Serials'
+CSV_NAME = 'CSV'
 CSV_PLUGIN_NAME = 'csv_adapter'
 
 STRESSTEST_ADAPTER = 'stresstest_adapter'

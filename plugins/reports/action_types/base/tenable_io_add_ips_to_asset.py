@@ -23,7 +23,7 @@ class TenableIoAddIPsToTargetGroup(ActionTypeBase):
             'items': [
                 {
                     'name': 'use_adapter',
-                    'title': 'Use stored credentials from the Tenable.io Adapter',
+                    'title': 'Use stored credentials from the Tenable.io adapter',
                     'type': 'bool'
                 },
                 {
@@ -50,7 +50,7 @@ class TenableIoAddIPsToTargetGroup(ActionTypeBase):
                 },
                 {
                     'name': 'https_proxy',
-                    'title': 'HTTPS Proxy',
+                    'title': 'HTTPS proxy',
                     'type': 'string'
                 },
                 {

@@ -22,7 +22,7 @@ class TenableScAddIPsToAsset(ActionTypeBase):
             'items': [
                 {
                     'name': 'use_adapter',
-                    'title': 'Use stored credentials from the Tenable.sc Adapter',
+                    'title': 'Use stored credentials from the Tenable.sc adapter',
                     'type': 'bool'
                 },
                 {

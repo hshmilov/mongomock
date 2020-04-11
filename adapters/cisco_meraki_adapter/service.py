@@ -145,11 +145,6 @@ class CiscoMerakiAdapter(AdapterBase, Configurable):
                     'format': 'password'
                 },
                 {
-                    'name': 'verify_ssl',
-                    'title': 'Verify SSL',
-                    'type': 'bool'
-                },
-                {
                     'name': 'vlan_exclude_list',
                     'title': 'VLAN Exclude List',
                     'type': 'string'
@@ -157,6 +152,11 @@ class CiscoMerakiAdapter(AdapterBase, Configurable):
                 {
                     'name': 'exclude_no_vlan_clients',
                     'title': 'Exclude No VLAN Clients',
+                    'type': 'bool'
+                },
+                {
+                    'name': 'verify_ssl',
+                    'title': 'Verify SSL',
                     'type': 'bool'
                 },
                 {
@@ -168,6 +168,7 @@ class CiscoMerakiAdapter(AdapterBase, Configurable):
             'required': [
                 'CiscoMeraki_Domain',
                 'apikey',
+                'exclude_no_vlan_clients',
                 'verify_ssl'
             ],
             'type': 'array'

@@ -22,9 +22,9 @@ AD_NAME = 'Microsoft Active Directory (AD)'
 JSON_NAME = 'JSON File'
 QUERY_WIZARD_CSV_DATE_PICKER_VALUE = '2020-01-02 02:13:24.485Z'
 EXPECTED_ADAPTER_LIST_LABELS = [
-    'CSV Serials - users_1',
-    'CSV Serials - users_2',
-    'CSV Serials - users_3',
+    'CSV - users_1',
+    'CSV - users_2',
+    'CSV - users_3',
     'JSON File - JSON File'
 ]
 

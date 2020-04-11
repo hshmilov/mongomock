@@ -334,22 +334,22 @@ class TenableSecurityCenterAdapter(ScannerAdapterBase, Configurable):
             "items": [
                 {
                     'name': 'drop_only_ip_devices',
-                    'title': 'Drop Devices With Only IP',
+                    'title': 'Do not fetch devices with no MAC address and no hostname',
                     'type': 'bool'
                 },
                 {
                     'name': 'fetch_top_n_installed_software',
-                    'title': 'Fetch Top N Installed Software',
+                    'title': 'Fetch top N installed software',
                     'type': 'integer',
                 },
                 {
                     'name': 'fetch_software_per_device',
-                    'title': 'Fetch Software Per Device',
+                    'title': 'Fetch installed software per device',
                     'type': 'bool'
                 },
                 {
                     'name': 'fetch_vulnerabilities',
-                    'title': 'Fetch Vulnerabilities',
+                    'title': 'Fetch vulnerabilities',
                     'type': 'bool'
                 }
             ],

@@ -452,7 +452,8 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, ActiveDirectory
                 "password",
                 'do_not_fetch_users',
                 'fetch_disabled_devices',
-                'fetch_disabled_users'
+                'fetch_disabled_users',
+                'is_ad_gc'
             ],
             "type": "array"
         }

@@ -52,7 +52,7 @@ export const pluginMeta = {
     ip_fabric_adapter: {
         title: 'IP Fabric',
         link: 'https://docs.axonius.com/docs/ip-fabric',
-        description: 'IP Fabric is a network management system that helps companies’ network engineers to discover, verify, visualize and document large scale networks.'
+        description: 'IP Fabric is a network management system used to discover, verify, visualize and document large scale networks.'
     },
     digicert_pki_platform_adapter: {
         title: 'DigiCert PKI Platform (Symantec Managed PKI)',
@@ -989,17 +989,18 @@ export const pluginMeta = {
     },
     forcepoint_adapter: {
         title: 'Forcepoint Web Security Endpoint',
+        link: 'https://docs.axonius.com/docs/forcepoint-web-security-endpoint-sql',
         description: 'Forcepoint Web Security Endpoint enables end-users to authenticate and receive policy enforcement via the Forcepoint Web Security Cloud infrastructure.'
     },
     forcepoint_csv_adapter: {
         title: 'Forcepoint Web Security Endpoint CSV File',
         link: 'https://docs.axonius.com/docs/forcepoint-web-security-endpoint',
-        description: 'Forcepoint Web Security Endpoint enables end-users to authenticate and receive policy enforcement via the Forcepoint Web Security Cloud infrastructure.'
+        description: 'Forcepoint Web Security Endpoint CSV File imports CSV files with device information.'
     },
     csv_adapter: {
-        title: 'CSV Serials',
+        title: 'CSV',
         link: 'https://docs.axonius.com/docs/csv',
-        description: 'The CSV Serials adapter is able to import .csv files with inventory information including the serial number of a device and supplemental device data.'
+        description: 'The CSV adapter imports .csv files with inventory information including: devices, users and installed software data.'
     },
     mobileiron_adapter: {
         title: 'MobileIron EMM',

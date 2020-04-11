@@ -77,7 +77,7 @@ class FortigateAdapter(AdapterBase, Configurable):
                 },
                 {
                     'name': consts.IS_FORTIMANAGER,
-                    'title': 'Is Fortimanger Server',
+                    'title': 'Is Fortimanager Server',
                     'type': 'bool'
                 }
             ],
@@ -85,6 +85,8 @@ class FortigateAdapter(AdapterBase, Configurable):
                 consts.USER,
                 consts.PASSWORD,
                 consts.FORTIGATE_HOST,
+                consts.VERIFY_SSL,
+                consts.IS_FORTIMANAGER
             ],
             'type': 'array'
         }

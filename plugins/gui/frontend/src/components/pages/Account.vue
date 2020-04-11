@@ -38,9 +38,9 @@
           Reset Key
         </XButton>
         <div class="x-grid">
-          <label>API Key:</label>
+          <label>API key:</label>
           <div>{{ apiKey['api_key'] }}</div>
-          <label>API Secret:</label>
+          <label>API secret:</label>
           <div>
             <input
               v-show="isKeyVisible"

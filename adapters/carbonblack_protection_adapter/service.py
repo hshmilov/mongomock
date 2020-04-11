@@ -86,7 +86,7 @@ class CarbonblackProtectionAdapter(AdapterBase, Configurable):
                 },
                 {
                     'name': 'https_proxy',
-                    'title': 'Https Proxy',
+                    'title': 'HTTPS Proxy',
                     'type': 'string'
                 }
 
