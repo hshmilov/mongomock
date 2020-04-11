@@ -266,6 +266,15 @@ class GoogleMdmAdapter(AdapterBase):
         user.is_delegated_admin = raw_user_data.get('isDelegatedAdmin')
         user.is_mfa_enrolled = raw_user_data.get('isEnrolledIn2Sv')
         user.is_mfa_enforced = raw_user_data.get('isEnforcedIn2Sv')
+        organizations = raw_user_data.get('organizations')
+        if isinstance(organizations, list) and organizations and isinstance(organizations[0], dict):
+            user.user_department = organizations[0].get('department')
+            user.description = organizations[0].get('description')
+            user.user_title = organizations[0].get('title')
+        relations = raw_user_data.get('relations')
+        if isinstance(relations, list) and relations and isinstance(relations[0], dict) \
+                and relations[0].get('type') == 'manager':
+            user.user_manager = relations[0].get('value')
         try:
             user.account_disabled = raw_user_data.get('suspended', None)
             user.suspended = raw_user_data.get('suspended', None)

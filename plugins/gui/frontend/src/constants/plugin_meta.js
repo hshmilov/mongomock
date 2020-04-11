@@ -24,6 +24,11 @@ export const pluginMeta = {
         link: 'https://docs.axonius.com/docs/logicmonitor',
         description: 'LogicMonitor is an automated infrastructure monitoring platform for enterprise IT and managed service providers.'
     },
+    zoom_adapter: {
+        title: 'Zoom',
+        link: 'https://docs.axonius.com/docs/zoom',
+        description: 'Zoom is a remote conferencing service that provides video conferencing, online meetings, chat, and mobile collaboration.'
+    },
     contrast_security_adapter: {
         title: 'Contrast Security',
         link: 'https://docs.axonius.com/docs/contrast-security',

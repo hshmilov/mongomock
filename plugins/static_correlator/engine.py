@@ -307,7 +307,7 @@ def is_aws_or_chef_adapter(adapter_device):
 
 
 def is_asset_ok_hostname_no_adapters(adapter_device):
-    return adapter_device.get('plugin_name') in ['aws_adapter', 'chef_adapter', 'jamf_adapter']
+    return adapter_device.get('plugin_name') in ['aws_adapter', 'chef_adapter', 'jamf_adapter', 'epo_adapter']
 
 
 def if_csv_compare_full_path(adapter_device1, adapter_device2):

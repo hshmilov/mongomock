@@ -46,6 +46,12 @@ class ServiceNowAdapter(AdapterBase, Configurable):
         substatus = Field(str, 'Substatus')
         u_shared = Field(str, 'Shared')
         u_loaner = Field(str, 'Loaner')
+        u_cloud_premises = Field(str, 'Cloud Premises')
+        u_bia_confidentiallity = Field(str, 'BIA Confidentiallity')
+        u_bia_availability = Field(str, 'BIA Availability')
+        u_bia_id = Field(str, 'BIA ID')
+        u_bia_integrity = Field(str, 'BIA Integrity')
+        u_bia_overall = Field(str, 'BIA Overall')
         u_casper_status = Field(str, 'Casper Status')
         u_altiris_status = Field(str, 'Altiris Status')
         first_deployed = Field(datetime.datetime, 'First Deployed')
@@ -115,6 +121,12 @@ class ServiceNowAdapter(AdapterBase, Configurable):
             name = device_raw.get('name')
             device.name = name
             class_name = device_raw.get('sys_class_name')
+            device.u_cloud_premises = device_raw.get('u_cloud_premises')
+            device.u_bia_confidentiallity = device_raw.get('u_bia_confidentiallity')
+            device.u_bia_availability = device_raw.get('u_bia_availability')
+            device.u_bia_id = device_raw.get('u_bia_id')
+            device.u_bia_integrity = device_raw.get('u_bia_integrity')
+            device.u_bia_overall = device_raw.get('u_bia_overall')
             if self.__exclude_vm_tables is True and class_name and 'cmdb_ci_vm' in class_name:
                 return None
             device.class_name = class_name
