@@ -1,7 +1,7 @@
 import time
 from datetime import datetime
+from datetime import timedelta
 
-import pytest
 from test_helpers.file_mock_credentials import FileForCredentialsMock
 
 from ui_tests.tests.ui_consts import WINDOWS_QUERY_NAME, CSV_NAME, CSV_PLUGIN_NAME
@@ -181,8 +181,6 @@ class TestDevice(TestBase):
         assert self.devices_page.find_element_by_text(self.devices_page.FIELD_HOSTNAME_TITLE)
         assert self.devices_page.find_element_by_text(host_name)
 
-    # Sometimes upload file to CSV adapter does not work
-    @pytest.mark.skip('AX-6927')
     def test_last_seen_expanded_cell_sort(self):
         """
         Test that the expanded details table under last seen field is sorted decreasingly by date-time
@@ -193,22 +191,23 @@ class TestDevice(TestBase):
             - Make sure that the details table is sorted decreasingly by last seen field
         """
         with CsvService().contextmanager(take_ownership=True):
+            first_date = (datetime.today() - timedelta(days=1)).strftime('%Y-%m-%d')
+            second_date = (datetime.today() - timedelta(days=2)).strftime('%Y-%m-%d')
+            third_date = (datetime.today() - timedelta(days=3)).strftime('%Y-%m-%d')
+
             client_details = {
                 'user_id': 'user',
                 # an array of char
                 self.adapters_page.CSV_FILE_NAME: FileForCredentialsMock(
                     'csv_name',
                     ','.join(CSV_FIELDS) +
-                    '\nJohn,Serial1,Windows,11:22:22:33:11:33,Office,2020-01-05 02:13:24.485Z, 127.0.0.2'
-                    '\nJohn,Serial2,Windows,11:22:22:33:11:33,Office,2020-01-05 02:17:24.485Z, 127.0.0.2'
-                    '\nJohn,Serial3,Windows,11:22:22:33:11:33,Office,2020-01-07 05:17:24.485Z, 127.0.0.2'
-                    '\nJohn,Serial4,Windows,11:22:22:33:11:33,Office,2020-01-07 06:17:24.485Z, 127.0.0.2'
-                    '\nJohn,Serial5,Windows,11:22:22:33:11:33,Office,2020-01-01 02:15:24.485Z, 127.0.0.2'
-                    '\nJames,Serial6,Linux,11:22:22:33:11:33,Office,2019-05-05 08:13:24.485Z'
-                    '\nJames,Serial7,Linux,11:22:22:33:11:33,Office,2019-05-05 07:16:24.485Z'
-                    '\nJames,Serial8,Linux,11:22:22:33:11:33,Office,2020-04-01 02:13:24.485Z'
-                    '\nJames,Serial9,Linux,11:22:22:33:11:33,Office,2020-04-01 02:13:22.485Z')
+                    f'\nJohn,Serial1,Windows,11:22:22:33:11:33,Office,{second_date} 02:11:24.485Z, 127.0.0.2'
+                    f'\nJohn,Serial2,Windows,11:22:22:33:11:33,Office,{second_date} 02:17:24.485Z, 127.0.0.2'
+                    f'\nJohn,Serial3,Windows,11:22:22:33:11:33,Office,{first_date} 05:17:24.485Z, 127.0.0.2'
+                    f'\nJohn,Serial4,Windows,11:22:22:33:11:33,Office,{first_date} 06:17:24.485Z, 127.0.0.2'
+                    f'\nJohn,Serial5,Windows,11:22:22:33:11:33,Office,{third_date} 02:15:24.485Z, 127.0.0.2')
             }
+
             self.adapters_page.upload_csv(self.adapters_page.CSV_FILE_NAME, client_details)
             self.base_page.run_discovery()
             self.devices_page.switch_to_page()
