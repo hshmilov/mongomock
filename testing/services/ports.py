@@ -254,6 +254,7 @@ DOCKER_PORTS = {
     'openvas-adapter':                  10014,
     'kenna-adapter':                    12345,
     'redhat-satellite-adapter':         12346,
+    'axonius-users-adapter':            13337,
     'microfocus-sa-adapter':            13368,
     'digicert-pki-platform-adapter':    13369,
     'github-adapter':                   13370,

@@ -4,6 +4,10 @@ export const pluginMeta = {
         link: 'https://docs.axonius.com/docs/sophos-cloud-optix',
         description: 'Sophos Cloud Optix is a public cloud visibility and threat response solution that detects, responds, and prevents cloud security and compliance gaps.'
     },
+    axonius_users_adapter: {
+        title: 'Axonius Users',
+        description: 'The Axonius Users adapter fetches users with Axonius credentials and their permissions using our API client.'
+    },
     azure_stack_hub_adapter: {
         title: 'Microsoft Azure Stack Hub',
         link: 'https://docs.axonius.com/docs/microsoft-azure-stack-hub',
