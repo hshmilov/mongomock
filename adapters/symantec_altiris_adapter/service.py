@@ -53,7 +53,7 @@ class SymantecAltirisAdapter(AdapterBase, Configurable):
             message = f'Error connecting to client host: {str(client_config[consts.ALTIRIS_HOST])}  ' \
                       f'database: {str(client_config.get(consts.ALTIRIS_DATABASE, consts.DEFAULT_ALTIRIS_DATABASE))}'
             logger.exception(message)
-            raise ClientConnectionException(get_exception_string())
+            raise ClientConnectionException(get_exception_string(force_show_traceback=True))
 
     def _query_devices_by_client(self, client_name, client_data: MSSQLConnection):
         client_data.set_devices_paging(self.__devices_fetched_at_a_time)

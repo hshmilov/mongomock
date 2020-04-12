@@ -75,7 +75,7 @@ class WsusAdapter(AdapterBase):
         except Exception as e:
             message = f'Error connecting to WSUS host: {str(client_config[consts.WSUS_HOST])}'
             logger.exception(message)
-            raise ClientConnectionException(get_exception_string())
+            raise ClientConnectionException(get_exception_string(force_show_traceback=True))
         else:
             return connection
 

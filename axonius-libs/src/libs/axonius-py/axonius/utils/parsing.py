@@ -147,9 +147,10 @@ def normalize_var_name(name):
     return name
 
 
-def get_exception_string():
+def get_exception_string(force_show_traceback=False):
     """
     when inside a catch exception flow, returns a really informative string representing it.
+    :param: force_show_traceback, force returning the trackback to user even if in production mode
     :return: a string representing the exception.
     """
     exc_type, exc_obj, exc_tb = sys.exc_info()
@@ -166,7 +167,8 @@ def get_exception_string():
     ex_str = ex_str + f'{exc_type}:{exc_obj}'
     exc_id = uuid.uuid4()
     logger.error(f'UUID {exc_id}: error traceback: {ex_str}')
-    return html.escape(ex_str) if os.environ.get('PROD') == 'false' else GENERIC_ERROR_MESSAGE.format(exc_id)
+    return html.escape(ex_str) if os.environ.get('PROD') == 'false' or force_show_traceback \
+        else GENERIC_ERROR_MESSAGE.format(exc_id)
 
 
 def figure_out_cloud(s):

@@ -50,7 +50,7 @@ class FlexeraAdapter(AdapterBase, Configurable):
                       f'database: ' \
                       f'{client_config.get(consts.FLEXERA_DATABASE)}'
             logger.exception(message)
-            raise ClientConnectionException(get_exception_string())
+            raise ClientConnectionException(get_exception_string(force_show_traceback=True))
 
     # pylint: disable=too-many-branches, too-many-statements, too-many-nested-blocks, too-many-locals
     def _query_devices_by_client(self, client_name, client_data):

@@ -59,7 +59,7 @@ class ScepAdapter(AdapterBase, Configurable):
             logger.exception(message)
             if 'permission was denied' in str(repr(err)).lower():
                 raise ClientConnectionException(f'Error connecting to SCEP: {str(err)}')
-            raise ClientConnectionException(get_exception_string())
+            raise ClientConnectionException(get_exception_string(force_show_traceback=True))
 
     def _query_devices_by_client(self, client_name, client_data):
         client_data.set_devices_paging(self.__devices_fetched_at_a_time)
