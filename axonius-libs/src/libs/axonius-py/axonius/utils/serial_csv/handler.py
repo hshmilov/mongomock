@@ -42,7 +42,8 @@ def handle_entities(stream: io.StringIO, entity_fields: dict, selected: Union[di
 
     headers = []
     for i in selected_map.values():
-        headers += i['headers']
+        if i:
+            headers += i['headers']
 
     if not cell_joiner:
         cell_joiner = CELL_JOIN_DEFAULT
