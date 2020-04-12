@@ -119,7 +119,7 @@ class Saml:
 
 class Notes:
     note1_text = 'note1_text'
-    note1_device_filter = 'puppet-1'
+    note1_device_filter = 'storageserver-avidor'
 
 
 class History:
