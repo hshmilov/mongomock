@@ -13,6 +13,7 @@ from test_credentials.test_aws_credentials import client_details
 
 class TestDevicesTable(TestEntitiesTable):
     QUERY_FILTER_DEVICES = 'specific_data.data.hostname == regex("w", "i")'
+    QUERY_FILTER_LAST_SEEN = '(specific_data.data.last_seen >= date("NOW - 7d"))'
     QUERY_FIELDS = 'adapters,specific_data.data.hostname,specific_data.data.name,specific_data.data.last_seen,' \
                    'specific_data.data.os.type,specific_data.data.network_interfaces.ips,' \
                    'specific_data.data.network_interfaces.mac,labels'
@@ -311,3 +312,16 @@ class TestDevicesTable(TestEntitiesTable):
         self.devices_page.edit_columns(add_col_names=self.devices_page.PREFERRED_FIELDS)
         self.devices_page.wait_for_table_to_load()
         assert not self.devices_page.get_all_data() == view_data
+
+    def test_devices_last_seen_export_csv(self):
+        self.settings_page.switch_to_page()
+        self.base_page.run_discovery()
+        self.devices_page.switch_to_page()
+
+        # filter the ui to fit the QUERY_FILTER_DEVICES of the csv
+        self.devices_page.add_query_last_seen_in_days(7)
+
+        result = self.devices_page.generate_csv('devices',
+                                                self.QUERY_FIELDS,
+                                                self.QUERY_FILTER_LAST_SEEN)
+        self.devices_page.assert_csv_match_ui_data(result)

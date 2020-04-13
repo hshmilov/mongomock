@@ -224,3 +224,12 @@ class DevicesPage(EntitiesPage):
                                  clear_filter=True)
         self.wait_for_table_to_load()
         return self.count_entities()
+
+    def add_query_last_seen_in_days(self, days):
+        self.click_query_wizard()
+        expressions = self.find_expressions()
+        self.select_query_field(self.FIELD_LAST_SEEN, parent=expressions[0])
+        self.select_query_comp_op(self.QUERY_COMP_DAYS, parent=expressions[0])
+        self.fill_query_value(days, parent=expressions[0])
+        self.wait_for_table_to_load()
+        self.close_dropdown()
