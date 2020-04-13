@@ -63,34 +63,33 @@ class TestReportGeneration(TestBase):
     def test_saved_views_data_pdf_links(self):
         stress = stresstest_service.StresstestService()
         stress_scanner = stresstest_scanner_service.StresstestScannerService()
-        try:
-            with stress.contextmanager(take_ownership=True), stress_scanner.contextmanager(take_ownership=True):
-                device_dict = {'device_count': 10, 'name': 'blah'}
-                stress.add_client(device_dict)
-                stress_scanner.add_client(device_dict)
+        with stress.contextmanager(take_ownership=True), stress_scanner.contextmanager(take_ownership=True):
+            device_dict = {'device_count': 10, 'name': 'blah'}
+            stress.add_client(device_dict)
+            stress_scanner.add_client(device_dict)
 
-                self.base_page.run_discovery()
+            self.base_page.run_discovery()
 
-                data_query = self.DATA_QUERY
-                self.devices_page.create_saved_query(data_query, self.TEST_REPORT_QUERY_NAME)
-                self.devices_page.wait_for_table_to_load()
-                self.reports_page.create_report(ReportConfig(report_name=self.REPORT_NAME, add_dashboard=True,
-                                                             queries=[{
-                                                                 'entity': 'Devices',
-                                                                 'name': self.TEST_REPORT_QUERY_NAME}]))
+            data_query = self.DATA_QUERY
+            self.devices_page.create_saved_query(data_query, self.TEST_REPORT_QUERY_NAME)
+            self.devices_page.wait_for_table_to_load()
+            self.reports_page.create_report(ReportConfig(report_name=self.REPORT_NAME, add_dashboard=True,
+                                                         queries=[{
+                                                             'entity': 'Devices',
+                                                             'name': self.TEST_REPORT_QUERY_NAME}]))
 
-                doc = self._extract_report_pdf_doc(self.REPORT_NAME)
-                annots = [page.get('/Annots', []) for page in doc.pages]
-                annots = reduce(lambda x, y: x + y, annots)
-                links = [note.get('/A', {}).get('/URI') for note in annots]
-                assert len(links) > 0
+            doc = self._extract_report_pdf_doc(self.REPORT_NAME)
+            annots = [page.get('/Annots', []) for page in doc.pages]
+            annots = reduce(lambda x, y: x + y, annots)
+            links = [note.get('/A', {}).get('/URI') for note in annots]
+            assert len(links) > 0
 
-                decoded_links = map(urllib.parse.unquote, links)
-                assert any(self.TEST_REPORT_QUERY_NAME in link for link in decoded_links)
-                for page in doc.pages:
-                    if page.extractText().count('self.TEST_REPORT_QUERY_NAME') > 0:
-                        assert page.extractText().count('avigdor') == 10
-        finally:
+            decoded_links = map(urllib.parse.unquote, links)
+            assert any(self.TEST_REPORT_QUERY_NAME in link for link in decoded_links)
+            for page in doc.pages:
+                if page.extractText().count('self.TEST_REPORT_QUERY_NAME') > 0:
+                    assert page.extractText().count('avigdor') == 10
+
             self.wait_for_adapter_down(ui_consts.STRESSTEST_ADAPTER)
             self.wait_for_adapter_down(ui_consts.STRESSTEST_SCANNER_ADAPTER)
 
