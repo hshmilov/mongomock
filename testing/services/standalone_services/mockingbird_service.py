@@ -32,8 +32,8 @@ class MockingbirdService(WeaveService):
         FROM axonius/axonius-libs
 
         # Install MongoDB
-        RUN curl -fsSLk https://nexus.axonius.lan/ppa_certs/mongo.key | apt-key add -
-        RUN echo "deb [arch=amd64] https://axoniusreadonly:7wr7E6kfttdVgn5e@nexus.axonius.lan/repository/axonius-mongo/ xenial main" | tee /etc/apt/sources.list.d/ax-mongo.list
+        RUN curl -fsSLk https://nexus.pub.axonius.com/ppa_certs/mongo.key | apt-key add -
+        RUN echo "deb [arch=amd64] https://axoniusreadonly:7wr7E6kfttdVgn5e@nexus.pub.axonius.com/repository/axonius-mongo/ xenial main" | tee /etc/apt/sources.list.d/ax-mongo.list
         RUN apt-get update && apt-get install -y mongodb-org
 
         # Create a directory for mongodb

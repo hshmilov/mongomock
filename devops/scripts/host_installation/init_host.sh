@@ -107,9 +107,9 @@ retry timeout 20 add-apt-repository \
    $(lsb_release -cs) \
    stable"
 
-curl -sSk https://nexus.axonius.lan/ppa_certs/deadcert.key | sudo apt-key add -
+curl -sSk https://nexus.pub.axonius.com/ppa_certs/deadcert.key | sudo apt-key add -
 source /etc/lsb-release
-sudo add-apt-repository "deb https://axoniusreadonly:7wr7E6kfttdVgn5e@nexus.axonius.lan/repository/proxy-python3.6 ${DISTRIB_CODENAME} main"
+sudo add-apt-repository "deb https://axoniusreadonly:7wr7E6kfttdVgn5e@nexus.pub.axonius.com/repository/proxy-python3.6 ${DISTRIB_CODENAME} main"
 cd $SCRIPT_DIR
 cp ./uploads/nexus-apt /etc/apt/apt.conf.d/nexus
 _wait_for_apt update

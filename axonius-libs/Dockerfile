@@ -1,5 +1,5 @@
 # Use axonius-base-image. This gets is from a private repository in docker hub, use docker login to login!
-FROM nexus.axonius.lan/axonius/axonius-base-image
+FROM nexus.pub.axonius.com/axonius/axonius-base-image
 
 WORKDIR /home/axonius
 ENV HOME /home/axonius

@@ -141,8 +141,7 @@ echo "Done upgrading"
 #   "deb [arch=amd64] https://download.docker.com/linux/ubuntu \
 #   $(lsb_release -cs) \
 #   stable"
-#echo "deb http://nexus.axonius.lan:8081/repository/ppa.launchpad.net.jonathonf.python3-6.ubuntu/ xenial main" >> /etc/apt/sources.list
-#apt-key adv --keyserver keyserver.ubuntu.com --recv-keys F06FC659
+
 echo "Installing various dependencies..."
 #_wait_for_apt install -yq moreutils gparted sysstat net-tools iputils-ping libpq-dev tmux screen nano vim curl libffi-dev libxml2-dev libxslt-dev musl-dev make gcc tcl-dev tk-dev git libpango1.0-0 libcairo2 software-properties-common ssh libxmlsec1 ncdu traceroute libc6:i386 libstdc++6:i386
 echo "Installing docker-ce..."

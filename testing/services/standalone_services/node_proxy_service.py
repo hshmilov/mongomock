@@ -57,4 +57,4 @@ class NodeProxyService(WeaveService):
 
     @property
     def image(self):
-        return 'nexus.axonius.lan/alpine/socat'
+        return 'nexus.pub.axonius.com/alpine/socat'

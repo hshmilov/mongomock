@@ -11,7 +11,7 @@ WEAVE_VERSION="2.6.0"
 MIN_DOCKER_VERSION=1.10.0
 
 # These are needed for remote execs, hence we introduce them here
-DOCKERHUB_USER=nexus.axonius.lan/axonius
+DOCKERHUB_USER=nexus.pub.axonius.com/axonius
 BASE_EXEC_IMAGE=$DOCKERHUB_USER/weaveexec
 EXEC_IMAGE=$BASE_EXEC_IMAGE:$IMAGE_VERSION
 WEAVEDB_IMAGE=$DOCKERHUB_USER/weavedb:latest
