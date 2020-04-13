@@ -98,7 +98,6 @@ export default {
         .modal-container {
             position: relative;
             margin: auto;
-            padding: 24px;
             background-color: $theme-white;
             border-radius: 2px;
             box-shadow: 0 2px 8px rgba(0, 0, 0, .33);
@@ -107,19 +106,19 @@ export default {
             .modal-header {
                 display: flex;
                 border-bottom: 1px solid $grey-2;
-                padding: 0 24px 12px;
-                margin: 0 -24px 24px -24px;
-
+                padding: 12px 24px 12px 24px;
                 .modal-header-title {
                     flex: 1 0 auto;
                     font-weight: 500;
                     font-size: 16px;
                 }
             }
-
             .modal-body {
-                padding: 0;
+                padding: 24px;
+                padding-bottom: 0;
                 margin-bottom: 24px;
+                max-height: 650px;
+                overflow-y: auto;
 
                 .form-group:last-of-type {
                     margin-bottom: 0;
@@ -127,9 +126,10 @@ export default {
             }
 
             .modal-footer {
-                border: 0;
-                padding: 0;
-                text-align: right;
+              padding: 24px;
+              padding-top: 0;
+              border: 0;
+              text-align: right;
             }
         }
 
