@@ -145,6 +145,7 @@ class TestFeatureFlags(TestBase):
         self.dashboard_page.find_no_trial_banner()
         self._change_expiration_date(3)
 
+    @pytest.mark.skip('AX-6775')
     def test_contract_expiration(self):
         req = requests.get('https://127.0.0.1/', verify=False)
         server_date = req.headers.get('Date')

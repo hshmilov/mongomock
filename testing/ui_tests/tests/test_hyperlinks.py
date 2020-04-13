@@ -1,5 +1,7 @@
 import time
 
+import pytest
+
 from axonius.utils.wait import wait_until
 from devops.scripts.automate_dev import credentials_inputer
 from services.adapters.cisco_service import CiscoService
@@ -135,6 +137,7 @@ class TestHyperlinks(TestBase):
             if clients_db:
                 clients_db.delete_many({})
 
+    @pytest.mark.skip('AX-6869')
     def test_entity_field_links(self):
         self.enforcements_page.switch_to_page()
         with CiscoService().contextmanager(take_ownership=True):

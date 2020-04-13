@@ -3,6 +3,7 @@ import math
 from datetime import datetime
 from uuid import uuid4
 
+import pytest
 from pytest import raises
 from selenium.common.exceptions import NoSuchElementException
 from axonius.consts.gui_consts import ADAPTER_CONNECTIONS_FIELD
@@ -874,6 +875,7 @@ class TestDevicesQuery(TestBase):
         self.devices_page.click_query_wizard()
         self.devices_page.clear_query_wizard()
 
+    @pytest.mark.skip('AX-6585')
     def test_query_wizard_combos(self):
         self.settings_page.switch_to_page()
         self.base_page.run_discovery()
@@ -896,6 +898,7 @@ class TestDevicesQuery(TestBase):
         self._test_enum_expressions()
         self._test_asset_entity_expressions()
 
+    @pytest.mark.skip('AX-6079')
     def test_saved_query_field(self):
         self.settings_page.switch_to_page()
         self.base_page.run_discovery()
