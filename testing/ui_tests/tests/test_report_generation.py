@@ -168,34 +168,32 @@ class TestReportGeneration(TestBase):
     def test_report_cover_and_toc_chart_legend(self):
         stress = stresstest_service.StresstestService()
         stress_scanner = stresstest_scanner_service.StresstestScannerService()
-        try:
-            with stress.contextmanager(take_ownership=True), stress_scanner.contextmanager(take_ownership=True):
-                device_dict = {'device_count': 10, 'name': 'blah'}
-                stress.add_client(device_dict)
-                stress_scanner.add_client(device_dict)
+        with stress.contextmanager(take_ownership=True), stress_scanner.contextmanager(take_ownership=True):
+            device_dict = {'device_count': 10, 'name': 'blah'}
+            stress.add_client(device_dict)
+            stress_scanner.add_client(device_dict)
 
-                self.base_page.run_discovery()
+            self.base_page.run_discovery()
 
-                report_name = 'report cover test'
-                self.reports_page.create_report(ReportConfig(report_name=report_name, add_dashboard=True))
+            report_name = 'report cover test'
+            self.reports_page.create_report(ReportConfig(report_name=report_name, add_dashboard=True))
 
-                doc = self._extract_report_pdf_doc(report_name)
+            doc = self._extract_report_pdf_doc(report_name)
 
-                assert doc.pages[0].extractText().count(report_name) == 1
-                assert doc.pages[0].extractText().count('Generated on') == 1
+            assert doc.pages[0].extractText().count(report_name) == 1
+            assert doc.pages[0].extractText().count('Generated on') == 1
 
-                toc_page = doc.pages[1]
+            toc_page = doc.pages[1]
 
-                assert toc_page.extractText().count('Discovery Summary') == 1
-                assert toc_page.extractText().count('Dashboard Charts') == 1
-                assert toc_page.extractText().count('Saved Queries') == 0
+            assert toc_page.extractText().count('Discovery Summary') == 1
+            assert toc_page.extractText().count('Dashboard Charts') == 1
+            assert toc_page.extractText().count('Saved Queries') == 0
 
-                dashboard_chart_page = doc.pages[3]
+            dashboard_chart_page = doc.pages[3]
 
-                assert dashboard_chart_page.extractText().count(MANAGED_DEVICES_QUERY_NAME) == 2
-        finally:
-            self.wait_for_adapter_down(ui_consts.STRESSTEST_ADAPTER)
-            self.wait_for_adapter_down(ui_consts.STRESSTEST_SCANNER_ADAPTER)
+            assert dashboard_chart_page.extractText().count(MANAGED_DEVICES_QUERY_NAME) == 2
+        self.wait_for_adapter_down(ui_consts.STRESSTEST_ADAPTER)
+        self.wait_for_adapter_down(ui_consts.STRESSTEST_SCANNER_ADAPTER)
 
     def test_multiple_reports_generated(self):
         stress = stresstest_service.StresstestService()
