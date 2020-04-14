@@ -168,7 +168,7 @@ def get_db_projection(db_projection, sort):
                     }
             }
             sort = {'tempSortField': sort[sort_path]}
-    return sort
+    return db_projection, sort
 
 
 def _get_entities_raw(entity_type: EntityType,
@@ -183,7 +183,7 @@ def _get_entities_raw(entity_type: EntityType,
     See get_entities for explanation of the parameters
     """
     if db_projection:
-        sort = get_db_projection(db_projection, sort)
+        db_projection, sort = get_db_projection(db_projection, sort)
 
     entity_views_db, is_date_filter_required = plugin_base_instance().get_appropriate_view(history_date, entity_type)
     # if we defaulted to normal history collection, add historized_filter
