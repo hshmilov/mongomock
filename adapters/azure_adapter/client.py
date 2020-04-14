@@ -1,9 +1,9 @@
 import logging
-from typing import Optional
+from typing import Optional, Iterable, Tuple
 
 from azure.common.credentials import ServicePrincipalCredentials
 from azure.mgmt.compute import ComputeManagementClient
-from azure.mgmt.compute.models import VirtualMachine
+from azure.mgmt.compute.models import VirtualMachine, VirtualMachineScaleSetVM
 from azure.mgmt.network import NetworkManagementClient
 from msrestazure import azure_cloud as azure
 
@@ -63,8 +63,14 @@ class AzureClient:
     def test_connection(self):
         for _ in self.compute.virtual_machines.list_all():
             break
+        for _ in self.compute.virtual_machine_scale_sets.list_all():
+            break
 
     def get_virtual_machines(self):
+        yield from self._get_vms()
+        yield from self._get_scale_set_vms()
+
+    def _get_vms(self):
         subnets = {}
         for vm in self.compute.virtual_machines.list_all():
             try:
@@ -94,6 +100,61 @@ class AzureClient:
             return instance_view.as_dict()
         except Exception:
             logger.exception(f'Failed locating InstanceView of vm {vm_machine.id}')
+            return None
+
+    def _get_scale_set_vms(self):
+        """
+        compute.virtual_machine_scale_set_vms does not have a list_all() method.
+        The scale_set_vms.list() method takes resource_group_name and scale_set_name, so we need to
+        get those first.
+        """
+        subnets = {}
+        for scale_set_name, rg_name in self._get_scale_sets_names_and_rg():
+            for vm in self.compute.virtual_machine_scale_set_vms.list(rg_name, scale_set_name):
+                try:
+                    vm_dict = vm.as_dict()
+                    vm_dict['network_profile']['network_interfaces'] = [
+                        self._get_iface_dict(iface, subnets) for iface in vm.network_profile.network_interfaces
+                    ]
+                    # Check in case the comment from _get_vm_instance_view does not apply for
+                    # azure.mgmt.compute.model.VirtualMachineScaleSetVM objects
+                    if not vm.instance_view:
+                        vm_dict['instance_view'] = self._get_scale_set_vm_instance_view(
+                            vm, scale_set_name, rg_name)
+                    yield vm_dict
+                except Exception:
+                    logger.exception(f'Failed fetching scale set VM for '
+                                     f'resource group {rg_name} and name {scale_set_name}')
+
+    def _get_scale_sets_names_and_rg(self) -> Iterable[Tuple[str, str]]:
+        """
+        Get scale set names, and from each scale set id extract resource group also.
+        """
+        for scale_set in self.compute.virtual_machine_scale_sets.list_all():
+            try:
+                scale_set_name = scale_set.name
+            except Exception:
+                logger.exception(f'Failed fetching azure scale set for scale set vms')
+                continue
+            try:
+                resource_group_match = RE_VM_RESOURCEGROUP_FROM_ID.search(scale_set.id)
+                if not (resource_group_match and (RE_VM_RESOURCEGROUP_CG in resource_group_match.groupdict())):
+                    logger.warning(f'Failed locating RG of scale set {scale_set.id} '
+                                   f'due to unexpected scale set id format')
+                    continue
+                resource_group_name = resource_group_match[RE_VM_RESOURCEGROUP_CG]
+                yield scale_set_name, resource_group_name
+            except Exception:
+                logger.exception(f'Failed fetching azure scale set name and resource group'
+                                 f' for scale set {scale_set.as_dict()}')
+
+    def _get_scale_set_vm_instance_view(self, ss_vm: VirtualMachineScaleSetVM,
+                                        ss_name: str, resource_group: str) -> Optional[dict]:
+        try:
+            return self.compute.virtual_machine_scale_set_vms.get_instance_view(
+                resource_group, ss_name, ss_vm.instance_id).as_dict()
+        except Exception:
+            logger.exception(f'Failed fetching instance view of scale set vm {ss_vm.id}')
             return None
 
     def _get_iface_dict(self, iface_link, subnets):
