@@ -38,7 +38,7 @@ def succeed_on_first_try(num):
         yield i
 
 
-@flaky(max_runs=4)
+@flaky(max_runs=8)
 def test_retry_generator_succeeds_on_third_try():
     start_time = time.time()
     list_to_check = list(succeed_only_on_third_try(5))

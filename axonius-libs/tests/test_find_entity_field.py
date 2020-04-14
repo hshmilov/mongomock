@@ -316,7 +316,7 @@ def test_merge_speed():
     end = time.time()
     assert len(result) == 2
     assert len(result[0]['connected_hardware.name']) == 1000
-    assert end - start < 10
+    assert end - start < 12
 
     devices = []
     for _ in range(10):

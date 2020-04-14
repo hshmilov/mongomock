@@ -556,7 +556,7 @@ def main():
             instance_manager.execute_jobs(jobs)
 
         except Exception:
-            print('Exception will executing all tests:')
+            print('Exception while executing all tests:')
             print(traceback.format_exc())
             raise
 

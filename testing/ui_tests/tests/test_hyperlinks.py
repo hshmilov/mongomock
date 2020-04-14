@@ -86,6 +86,9 @@ class TestHyperlinks(TestBase):
                 })
                 self.adapters_page.click_save()
                 self.adapters_page.wait_for_spinner_to_end()
+                for position in (1, 2):
+                    self.adapters_page.wait_for_server_green(position=position, retries=700)
+
                 time.sleep(3)
                 clients = clients_db.find({}, limit=3)
                 found = False
