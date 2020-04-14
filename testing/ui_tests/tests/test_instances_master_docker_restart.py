@@ -26,8 +26,7 @@ class TestInstanceMasterDockerRestart(TestInstancesBase):
         self.check_master_proxy()
 
     @retry(stop_max_attempt_number=60,
-           wait_fixed=10000,
-           retry_on_exception=lambda: True)
+           wait_fixed=10000)
     def check_master_proxy(self):
         instance = self._instances[0]
         self.logger.info(f'Checking if master proxy works')
