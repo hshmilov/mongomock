@@ -90,8 +90,8 @@ class TestReportGeneration(TestBase):
                 if page.extractText().count('self.TEST_REPORT_QUERY_NAME') > 0:
                     assert page.extractText().count('avigdor') == 10
 
-            self.wait_for_adapter_down(ui_consts.STRESSTEST_ADAPTER)
-            self.wait_for_adapter_down(ui_consts.STRESSTEST_SCANNER_ADAPTER)
+        self.wait_for_adapter_down(ui_consts.STRESSTEST_ADAPTER)
+        self.wait_for_adapter_down(ui_consts.STRESSTEST_SCANNER_ADAPTER)
 
     def test_saved_views_data_device_no_dashboard_query(self):
         stress = stresstest_service.StresstestService()
