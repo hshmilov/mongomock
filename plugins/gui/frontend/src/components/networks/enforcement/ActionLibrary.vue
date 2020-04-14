@@ -105,7 +105,7 @@ export default {
             implemented: this.actionsDef[action] !== undefined,
             locked: this.lockedActions && this.lockedActions.includes(action),
           }))
-          .filter((action) => action.title.toLowerCase().includes(this.searchValue.toLowerCase())),
+          .filter((action) => action.title.toLowerCase().includes(this.searchValue.toLowerCase()) && ((action.title != 'Refetch Asset Entity') || (this.featureFlags.refetch_action))),
       })).filter((category) => category.items.length);
     },
   },

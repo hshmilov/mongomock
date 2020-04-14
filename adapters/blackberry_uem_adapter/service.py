@@ -158,7 +158,8 @@ class BlackberryUemAdapter(AdapterBase):
                 device.phone_number = device_raw.get('phoneNumber')
                 device.device_model = device_raw.get('hardwareModel')
                 device.hardware_name = device_raw.get('hardwareName')
-                device.device_serial = device_raw.get('serialNumber')
+                device.device_serial = device_raw.get('serialNumber') \
+                    if device_raw.get('serialNumber') != 'unknown' else None
                 try:
                     device.security_patch_level = parse_date(device_raw.get('securityPatchLevel'))
                 except Exception:

@@ -5,6 +5,7 @@ import requests
 
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.exception import RESTException
+from blackberry_uem_adapter.consts import DEVICES_PER_PAGE, MAX_NUMBER_OF_DEVICES
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -40,7 +41,22 @@ class BlackberryUemConnection(RESTConnection):
             raise RESTException('No user name or password')
 
     def get_device_list(self):
-        devices_raw = self._get('devices')['devices']
+        offset = 0
+        while offset < MAX_NUMBER_OF_DEVICES:
+            try:
+                for device_raw in self._get_device_list(offset):
+                    if device_raw is None:
+                        return
+                    yield device_raw
+                offset += DEVICES_PER_PAGE
+            except Exception:
+                logger.exception(f'Problem with offset {offset}')
+                break
+
+    def _get_device_list(self, offset):
+        devices_raw = self._get('devices', url_params={'offset': offset, 'max': DEVICES_PER_PAGE})['devices']
+        if not devices_raw:
+            yield None
         async_requests = []
         async_requests_devices = []
 

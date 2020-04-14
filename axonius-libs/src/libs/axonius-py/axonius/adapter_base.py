@@ -404,6 +404,14 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
             if post_json and post_json.get('do_not_look_at_last_cycle') is True:
                 do_not_look_at_last_cycle = True
             return to_json(self.clean_db(do_not_look_at_last_cycle))
+        elif job_name == 'refetch_device':
+            try:
+                self.refetch_device(client_id=post_json.get('client_id'),
+                                    device_id=post_json.get('device_id'))
+                return ''
+            except Exception as e:
+                logger.exception(f'Bad Refetch')
+                return str(e)
         else:
             raise RuntimeError('Wrong job_name')
 
@@ -582,20 +590,21 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
                         email.send(error_msg)
                     if self._adapter_errors_webhook:
                         try:
+                            logger.info(f'Sending webhook error to: {self._adapter_errors_webhook}')
                             resposne = requests.post(url=self._adapter_errors_webhook,
                                                      json={'error_message': error_msg},
                                                      headers={'Content-Type': 'application/json',
                                                               'Accept': 'application/json'},
                                                      verify=False)
                         except Exception:
-                            pass
+                            logger.exception(f'Problem sending webhook error error')
                     try:
                         opsgenie_connection = self.get_opsgenie_connection()
                         if opsgenie_connection:
                             with opsgenie_connection:
                                 opsgenie_connection.create_alert(message=error_msg)
                     except Exception:
-                        pass
+                        logger.exception(f'Proble with Opsgenie message')
 
                     logger.exception(f'Problem establishing connection for client {client_name}. Reason: {str(e2)}')
                     log_metric(logger, metric_name=Adapters.CONNECTION_ESTABLISH_ERROR,
@@ -1108,6 +1117,11 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
             return self.__adapter_mock.mock_query_devices_by_client
         return self._query_devices_by_client
 
+    # pylint: disable=no-self-use
+    def _refetch_device(self, client_id, client_data, device_id):
+        raise Exception('Not implemented in adapter')
+    # pylint: enable=no-self-use
+
     # pylint: disable=R0201
     def _query_devices_by_client(self, client_name, client_data):
         """
@@ -1302,6 +1316,28 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
         self._save_field_names_to_db(entity_type)
         raw_data, parsed_data = _get_raw_and_parsed_data()
         return [], parsed_data  # AD-HOC: Not returning any raw values
+
+    def refetch_device(self, client_id, device_id):
+        client_data = self.__connect_client_facade(self._get_client_config_by_client_id(client_id))
+        # pylint: disable=assignment-from-no-return
+        parsed_device = self._refetch_device(client_id, client_data, device_id)
+        # pylint: enable=assignment-from-no-return
+        parsed_device.generate_direct_connected_devices()
+        parsed_device.fetch_time = datetime.now()
+        try:
+            if self._uppercase_hostnames and parsed_device.hostname:
+                parsed_device.hostname = parsed_device.hostname.upper()
+        except Exception:
+            pass
+
+        # All scanners should have this automatically
+        if self.plugin_subtype == PluginSubtype.ScannerAdapter:
+            parsed_device.scanner = True
+        self._save_data_from_plugin(
+            client_id,
+            {'raw': [], 'parsed': [parsed_device.to_dict()]},
+            EntityType.Devices, False)
+        self._save_field_names_to_db(EntityType.Devices)
 
     def _query_data(self, entity_type: EntityType) -> Iterable[Tuple[Any, Dict[str, Any]]]:
         """

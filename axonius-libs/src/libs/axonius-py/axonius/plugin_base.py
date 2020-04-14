@@ -2779,6 +2779,7 @@ class PluginBase(Configurable, Feature, ABC):
         return ''
 
     def get_opsgenie_connection(self):
+        logger.info(f'Opsgenie setting: {self._opsgenie_settings}')
         opsgenie_settings = self._opsgenie_settings
         if opsgenie_settings['enabled'] is not True:
             return None

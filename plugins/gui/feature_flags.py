@@ -32,6 +32,11 @@ class FeatureFlags(Configurable):
                     'type': 'bool'
                 },
                 {
+                    'name': FeatureFlagsNames.RefetchAssetEntityAction,
+                    'title': 'Allow Refetch Asset Entity Action',
+                    'type': 'bool'
+                },
+                {
                     'name': FeatureFlagsNames.LockedActions,
                     'title': 'Actions Locked for Client',
                     'type': 'array',
@@ -119,5 +124,6 @@ class FeatureFlags(Configurable):
                 RootMasterNames.enabled: False,
                 RootMasterNames.delete_backups: False,
             },
-            FeatureFlagsNames.ReenterCredentials: False
+            FeatureFlagsNames.ReenterCredentials: False,
+            FeatureFlagsNames.RefetchAssetEntityAction: False
         }

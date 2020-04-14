@@ -21,7 +21,7 @@ class VulnStatus(SmartJsonClass):
     edfs_domain = Field(str, 'Domain Name')
     edfs_ip = Field(str, 'IP Address')
     is_corporate = Field(bool, 'Corporate')
-    cmi = Field(bool, 'Customer')
+    is_customer = Field(bool, 'Is Customer')
     pmi = Field(bool, 'PMI')
     edfs_cloud = Field(bool, 'Cloud (EDFS)')
     owner_status = Field(str, 'Owner Status')
@@ -47,7 +47,6 @@ class EdfsCsvAdapter(ScannerAdapterBase):
         is_live = Field(bool, 'Live Known Asset')
         is_corporate = Field(bool, 'Is Corporate')
         is_customer = Field(bool, 'Is Customer')
-        cmi = Field(bool, 'Customer')
         pmi = Field(bool, 'PMI')
         edfs_cloud = Field(bool, 'Cloud (EDFS)')
         amdocsip = Field(bool, 'AmdocsIP')
@@ -133,6 +132,12 @@ class EdfsCsvAdapter(ScannerAdapterBase):
         }
 
     def _parse_raw_data(self, devices_raw_data):
+        def _make_bool_from_data(data_field):
+            if not isinstance(data_field, str):
+                return False
+            if data_field.lower().strip() == 'yes':
+                return True
+            return False
         external_assets, vuln_statuses = devices_raw_data
         vuln_status_dict = defaultdict(list)
         # populate vulnaerability status dict with lists of VulnStatus objects
@@ -142,9 +147,9 @@ class EdfsCsvAdapter(ScannerAdapterBase):
             if not key:
                 continue
             try:
-                count_cve = int(vuln_raw.get('# of CVE'))
+                count_cve = int(vuln_raw.get('# CVE'))
             except Exception:
-                count_cve = 0
+                count_cve = None
             try:
                 vuln_status_dict[key].append(VulnStatus(
                     track_id=vuln_raw.get('Tracking ID'),
@@ -152,10 +157,10 @@ class EdfsCsvAdapter(ScannerAdapterBase):
                     src=vuln_raw.get('Source'),
                     edfs_domain=vuln_raw.get('Domain Name'),
                     edfs_ip=vuln_raw.get('IP Address'),
-                    is_corporate=vuln_raw.get('Corporate', '').lower() == 'yes',
-                    cmi=vuln_raw.get('CMI', '').lower() == 'yes',
-                    pmi=vuln_raw.get('PMI', '').lower() == 'yes',
-                    edfs_cloud=vuln_raw.get('Cloud', '').lower() == 'yes',
+                    is_corporate=_make_bool_from_data(vuln_raw.get('Corporate')),
+                    is_customer=_make_bool_from_data(vuln_raw.get('Customer')),
+                    pmi=_make_bool_from_data(vuln_raw.get('PMI')),
+                    edfs_cloud=_make_bool_from_data(vuln_raw.get('Cloud')),
                     owner_status=vuln_raw.get('Owner Status'),
                     owner_confirm=vuln_raw.get('Owner confirmation'),
                     vulnerability=vuln_raw.get('Vulnerability'),
@@ -186,21 +191,20 @@ class EdfsCsvAdapter(ScannerAdapterBase):
                 # Now for the adapter-specific stuff
                 device.edfs_owner = device_raw.get('Owner')
                 device.edfs_domain = device_raw.get('Domain Name')
-                device.is_vuln = device_raw.get('Vulnerable Asset', '').lower() == 'yes'
-                device.known_ip = device_raw.get('Known IP Address', '').lower() == 'yes'
-                device.is_live = device_raw.get('Live Known asset', '').lower() == 'yes'
-                device.is_corporate = device_raw.get('Corporate', '').lower() == 'yes'
-                device.is_customer = device_raw.get('Customer', '').lower() == 'yes'
-                device.cmi = device_raw.get('CMI', '').lower() == 'yes'
-                device.pmi = device_raw.get('PMI', '').lower() == 'yes'
-                device.edfs_cloud = device_raw.get('Cloud', '').lower() == 'yes'
-                device.amdocsip = device_raw.get('Amdocsip', '').lower() == 'yes'
-                device.rapidseven = device_raw.get('Rapid7', '').lower() == 'yes'
-                device.panorays = device_raw.get('Panorays', '').lower() == 'yes'
-                device.shodan = device_raw.get('Shodan', '').lower() == 'yes'
-                device.riskiq = device_raw.get('RiskIQ', '').lower() == 'yes'
-                device.riskiq_v2 = device_raw.get('RiskIQ V2', '').lower() == 'yes'
-                device.nw_team = device_raw.get('NW Team', '').lower() == 'yes'
+                device.is_vuln = _make_bool_from_data(device_raw.get('Vulnerable Asset'))
+                device.known_ip = _make_bool_from_data(device_raw.get('Known IP Address'))
+                device.is_live = _make_bool_from_data(device_raw.get('Live Known Asset'))
+                device.is_corporate = _make_bool_from_data(device_raw.get('Corporate'))
+                device.is_customer = _make_bool_from_data(device_raw.get('Customer'))
+                device.pmi = _make_bool_from_data(device_raw.get('PMI'))
+                device.edfs_cloud = _make_bool_from_data(device_raw.get('Cloud'))
+                device.amdocsip = _make_bool_from_data(device_raw.get('Amdocsip'))
+                device.rapidseven = _make_bool_from_data(device_raw.get('Rapid7'))
+                device.panorays = _make_bool_from_data(device_raw.get('Panorays'))
+                device.shodan = _make_bool_from_data(device_raw.get('Shodan'))
+                device.riskiq = _make_bool_from_data(device_raw.get('RiskIQ'))
+                device.riskiq_v2 = _make_bool_from_data(device_raw.get('RiskIQ V2'))
+                device.nw_team = _make_bool_from_data(device_raw.get('NW Team'))
                 device.brand = device_raw.get('Brand')
                 device.asn = device_raw.get('ASN')
                 # Now add the vulnerability statuses

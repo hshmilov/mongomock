@@ -134,13 +134,26 @@ class SccmAdapter(AdapterBase, Configurable):
             else:
                 raise ClientConnectionException(get_exception_string(force_show_traceback=True))
 
-    def _query_devices_by_client(self, client_name, client_data):
+    def _refetch_device(self, client_id, client_data, device_id):
+        for device in self._parse_raw_data(self._query_devices_by_client(client_id, client_data, device_id)):
+            return device
+
+    @staticmethod
+    def _wrap_query_with_resource_id(query, device_id, resource_name=None):
+        if not resource_name:
+            resource_name = 'ResourceID'
+        if not device_id:
+            return query
+        return f'{query} WHERE {resource_name}=\'{device_id}\''
+
+    def _query_devices_by_client(self, client_name, client_data, device_id=None):
         client_data.set_devices_paging(self.__devices_fetched_at_a_time)
         with client_data:
 
             local_admins_dict = dict()
             try:
-                for local_admin_data in client_data.query(consts.LOCAL_ADMIN_QUERY):
+                for local_admin_data \
+                        in client_data.query(self._wrap_query_with_resource_id(consts.LOCAL_ADMIN_QUERY, device_id)):
                     asset_id = local_admin_data.get('ResourceID')
                     if not asset_id:
                         continue
@@ -154,7 +167,7 @@ class SccmAdapter(AdapterBase, Configurable):
 
             ram_dict = dict()
             try:
-                for ram_data in client_data.query(consts.RAM_QUERY):
+                for ram_data in client_data.query(self._wrap_query_with_resource_id(consts.RAM_QUERY, device_id)):
                     asset_id = ram_data.get('ResourceID')
                     if not asset_id or not ram_data.get('Capacity0'):
                         continue
@@ -163,29 +176,32 @@ class SccmAdapter(AdapterBase, Configurable):
                 logger.warning(f'Problem getting collections data', exc_info=True)
             collections_data_dict = dict()
             try:
-                for collection_data_data in client_data.query(consts.COLLECTIONS_DATA_QUERY):
-                    collection_id = collection_data_data.get('CollectionID')
-                    if not collection_id:
-                        continue
-                    collections_data_dict[collection_id] = collection_data_data
+                if not device_id:
+                    for collection_data_data in \
+                            client_data.query(consts.COLLECTIONS_DATA_QUERY):
+                        collection_id = collection_data_data.get('CollectionID')
+                        if not collection_id:
+                            continue
+                        collections_data_dict[collection_id] = collection_data_data
             except Exception:
                 logger.warning(f'Problem getting collections data', exc_info=True)
 
             collections_dict = dict()
             try:
-                for collection_data in client_data.query(consts.COLLECTIONS_QUERY):
-                    asset_id = collection_data.get('ResourceID')
-                    if not asset_id:
-                        continue
-                    if asset_id not in collections_dict:
-                        collections_dict[asset_id] = []
-                    collections_dict[asset_id].append(collection_data)
+                if not device_id:
+                    for collection_data in client_data.query(consts.COLLECTIONS_QUERY):
+                        asset_id = collection_data.get('ResourceID')
+                        if not asset_id:
+                            continue
+                        if asset_id not in collections_dict:
+                            collections_dict[asset_id] = []
+                        collections_dict[asset_id].append(collection_data)
             except Exception:
                 logger.warning(f'Problem getting collections', exc_info=True)
 
             nics_dict = dict()
             try:
-                for nic_data in client_data.query(consts.NICS_QUERY):
+                for nic_data in client_data.query(self._wrap_query_with_resource_id(consts.NICS_QUERY, device_id)):
                     asset_id = nic_data.get('ResourceID')
                     if not asset_id:
                         continue
@@ -197,7 +213,8 @@ class SccmAdapter(AdapterBase, Configurable):
 
             clients_dict = dict()
             try:
-                for clients_data in client_data.query(consts.CLIENT_SUMMARY_QUERY):
+                for clients_data \
+                        in client_data.query(self._wrap_query_with_resource_id(consts.CLIENT_SUMMARY_QUERY, device_id)):
                     asset_id = clients_data.get('ResourceID')
                     if not asset_id:
                         continue
@@ -207,7 +224,7 @@ class SccmAdapter(AdapterBase, Configurable):
 
             os_dict = dict()
             try:
-                for os_data in client_data.query(consts.OS_DATA_QUERY):
+                for os_data in client_data.query(self._wrap_query_with_resource_id(consts.OS_DATA_QUERY, device_id)):
                     asset_id = os_data.get('ResourceID')
                     if not asset_id:
                         continue
@@ -217,7 +234,8 @@ class SccmAdapter(AdapterBase, Configurable):
 
             computer_dict = dict()
             try:
-                for computer_data in client_data.query(consts.COMPUTER_SYSTEM_QUERY):
+                for computer_data in \
+                        client_data.query(self._wrap_query_with_resource_id(consts.COMPUTER_SYSTEM_QUERY, device_id)):
                     asset_id = computer_data.get('ResourceID')
                     if not asset_id:
                         continue
@@ -227,7 +245,7 @@ class SccmAdapter(AdapterBase, Configurable):
 
             tpm_dict = dict()
             try:
-                for tpm_data in client_data.query(consts.TPM_QUERY):
+                for tpm_data in client_data.query(self._wrap_query_with_resource_id(consts.TPM_QUERY, device_id)):
                     asset_id = tpm_data.get('ResourceID')
                     if not asset_id:
                         continue
@@ -237,7 +255,8 @@ class SccmAdapter(AdapterBase, Configurable):
 
             owner_dict = dict()
             try:
-                for owner_data in client_data.query(consts.OWNER_QUERY):
+                query_owner = self._wrap_query_with_resource_id(consts.OWNER_QUERY, device_id, 'MachineID')
+                for owner_data in client_data.query(query_owner):
                     asset_id = owner_data.get('MachineID')
                     if not asset_id:
                         continue
@@ -247,7 +266,8 @@ class SccmAdapter(AdapterBase, Configurable):
 
             asset_encryption_dict = dict()
             try:
-                for asset_encryption_data in client_data.query(consts.ENCRYPTION_QUERY):
+                for asset_encryption_data \
+                        in client_data.query(self._wrap_query_with_resource_id(consts.ENCRYPTION_QUERY, device_id)):
                     asset_id = asset_encryption_data.get('ResourceID')
                     if not asset_id:
                         continue
@@ -259,7 +279,7 @@ class SccmAdapter(AdapterBase, Configurable):
 
             asset_vm_dict = dict()
             try:
-                for asset_vm_data in client_data.query(consts.VM_QUERY):
+                for asset_vm_data in client_data.query(self._wrap_query_with_resource_id(consts.VM_QUERY, device_id)):
                     asset_id = asset_vm_data.get('ResourceID')
                     if not asset_id:
                         continue
@@ -271,7 +291,8 @@ class SccmAdapter(AdapterBase, Configurable):
 
             asset_chasis_dict = dict()
             try:
-                for asset_chasis_data in client_data.query(consts.CHASIS_QUERY):
+                for asset_chasis_data in \
+                        client_data.query(self._wrap_query_with_resource_id(consts.CHASIS_QUERY, device_id)):
                     asset_id = asset_chasis_data.get('ResourceID')
                     if not asset_id:
                         continue
@@ -281,7 +302,8 @@ class SccmAdapter(AdapterBase, Configurable):
 
             asset_lenovo_dict = dict()
             try:
-                for asset_lenovo_data in client_data.query(consts.LENOVO_QUERY):
+                for asset_lenovo_data \
+                        in client_data.query(self._wrap_query_with_resource_id(consts.LENOVO_QUERY, device_id)):
                     asset_id = asset_lenovo_data.get('ResourceID')
                     if not asset_id:
                         continue
@@ -291,7 +313,8 @@ class SccmAdapter(AdapterBase, Configurable):
 
             asset_top_dict = dict()
             try:
-                for asset_top_data in client_data.query(consts.USERS_TOP_QUERY):
+                for asset_top_data \
+                        in client_data.query(self._wrap_query_with_resource_id(consts.USERS_TOP_QUERY, device_id)):
                     asset_id = asset_top_data.get('ResourceID')
                     if not asset_id:
                         continue
@@ -301,7 +324,8 @@ class SccmAdapter(AdapterBase, Configurable):
 
             asset_malware_dict = dict()
             try:
-                for asset_malware_data in client_data.query(consts.MALWARE_QUERY):
+                for asset_malware_data \
+                        in client_data.query(self._wrap_query_with_resource_id(consts.MALWARE_QUERY, device_id)):
                     asset_id = asset_malware_data.get('ResourceID')
                     if not asset_id:
                         continue
@@ -311,7 +335,8 @@ class SccmAdapter(AdapterBase, Configurable):
 
             asset_users_dict = dict()
             try:
-                for asset_users_data in client_data.query(consts.USERS_QUERY):
+                query_users = self._wrap_query_with_resource_id(consts.USERS_QUERY, device_id, 'MachineResourceID')
+                for asset_users_data in client_data.query(query_users):
                     asset_id = asset_users_data.get('MachineResourceID')
                     if not asset_id:
                         continue
@@ -323,7 +348,8 @@ class SccmAdapter(AdapterBase, Configurable):
 
             new_software_dict = dict()
             try:
-                for new_soft_data in client_data.query(consts.NEW_SOFTWARE_QUERY):
+                for new_soft_data \
+                        in client_data.query(self._wrap_query_with_resource_id(consts.NEW_SOFTWARE_QUERY, device_id)):
                     asset_id = new_soft_data.get('ResourceID')
                     if not asset_id:
                         continue
@@ -335,7 +361,8 @@ class SccmAdapter(AdapterBase, Configurable):
 
             asset_software_dict = dict()
             try:
-                for asset_soft_data in client_data.query(consts.QUERY_SOFTWARE):
+                for asset_soft_data \
+                        in client_data.query(self._wrap_query_with_resource_id(consts.QUERY_SOFTWARE, device_id)):
                     asset_id = asset_soft_data.get('ResourceID')
                     if not asset_id:
                         continue
@@ -347,7 +374,8 @@ class SccmAdapter(AdapterBase, Configurable):
 
             asset_program_dict = dict()
             try:
-                for asset_program_data in client_data.query(consts.QUERY_PROGRAM):
+                for asset_program_data \
+                        in client_data.query(self._wrap_query_with_resource_id(consts.QUERY_PROGRAM, device_id)):
                     asset_id = asset_program_data.get('ResourceID')
                     if not asset_id:
                         continue
@@ -358,7 +386,8 @@ class SccmAdapter(AdapterBase, Configurable):
                 logger.warning(f'Problem getting query program', exc_info=True)
 
             try:
-                for asset_program_data in client_data.query(consts.QUERY_PROGRAM_2):
+                for asset_program_data \
+                        in client_data.query(self._wrap_query_with_resource_id(consts.QUERY_PROGRAM_2, device_id)):
                     asset_id = asset_program_data.get('ResourceID')
                     if not asset_id:
                         continue
@@ -370,7 +399,8 @@ class SccmAdapter(AdapterBase, Configurable):
 
             drivers_dict = dict()
             try:
-                for drivers_data in client_data.query(consts.DRIVERS_QUERY):
+                for drivers_data \
+                        in client_data.query(self._wrap_query_with_resource_id(consts.DRIVERS_QUERY, device_id)):
                     asset_id = drivers_data.get('ResourceID')
                     if not asset_id:
                         continue
@@ -382,7 +412,8 @@ class SccmAdapter(AdapterBase, Configurable):
 
             network_drivers_dict = dict()
             try:
-                for network_drivers_data in client_data.query(consts.NETWORK_DRIVERS_QUERY):
+                query_network = self._wrap_query_with_resource_id(consts.NETWORK_DRIVERS_QUERY, device_id)
+                for network_drivers_data in client_data.query(query_network):
                     asset_id = network_drivers_data.get('ResourceID')
                     if not asset_id:
                         continue
@@ -394,7 +425,8 @@ class SccmAdapter(AdapterBase, Configurable):
 
             asset_patch_dict = dict()
             try:
-                for asset_patch_data in client_data.query(consts.QUERY_PATCH):
+                for asset_patch_data in \
+                        client_data.query(self._wrap_query_with_resource_id(consts.QUERY_PATCH, device_id)):
                     asset_id = asset_patch_data.get('ResourceID')
                     if not asset_id:
                         continue
@@ -405,7 +437,8 @@ class SccmAdapter(AdapterBase, Configurable):
                 logger.warning(f'Problem getting query patch', exc_info=True)
 
             try:
-                for asset_patch_data in client_data.query(consts.QUERY_PATCH_2):
+                for asset_patch_data \
+                        in client_data.query(self._wrap_query_with_resource_id(consts.QUERY_PATCH_2, device_id)):
                     asset_id = asset_patch_data.get('ResourceID')
                     if not asset_id:
                         continue
@@ -417,7 +450,8 @@ class SccmAdapter(AdapterBase, Configurable):
 
             compliance_dict = dict()
             try:
-                for compliance_data in client_data.query(consts.COMPLIANCE_QUERY):
+                for compliance_data \
+                        in client_data.query(self._wrap_query_with_resource_id(consts.COMPLIANCE_QUERY, device_id)):
                     asset_id = compliance_data.get('ResourceID')
                     if not asset_id:
                         continue
@@ -426,14 +460,16 @@ class SccmAdapter(AdapterBase, Configurable):
                 logger.warning(f'Problem getting compliance', exc_info=True)
             asset_bios_dict = dict()
             try:
-                for asset_bios_data in client_data.query(consts.BIOS_QUERY):
+                for asset_bios_data \
+                        in client_data.query(self._wrap_query_with_resource_id(consts.BIOS_QUERY, device_id)):
                     asset_id = asset_bios_data.get('ResourceID')
                     if not asset_id:
                         continue
                     asset_bios_dict[asset_id] = asset_bios_data
             except Exception:
                 logger.warning(f'Problem getting query bios', exc_info=True)
-            devices_raw_query = list(client_data.query(consts.SCCM_MAIN_QUERY))
+            query_main = self._wrap_query_with_resource_id(consts.SCCM_MAIN_QUERY, device_id)
+            devices_raw_query = list(client_data.query(query_main))
             for device_raw in devices_raw_query:
                 yield device_raw, client_data.server, asset_software_dict, asset_patch_dict, asset_program_dict, \
                     asset_bios_dict, asset_users_dict, asset_top_dict, asset_malware_dict, \
@@ -544,6 +580,7 @@ class SccmAdapter(AdapterBase, Configurable):
                     logger.exception(f'Problem adding users to {device_raw}')
                 device.resource_id = str(device_raw.get('ResourceID'))
                 device.organizational_unit = get_organizational_units_from_dn(device_id)
+                device.ad_site_name = device_raw.get('AD_Site_Name0')
                 domain = device_raw.get('Full_Domain_Name0')
                 if domain:
                     device.part_of_domain = True

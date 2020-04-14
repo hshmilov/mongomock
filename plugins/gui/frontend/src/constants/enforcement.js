@@ -20,6 +20,9 @@ export const actionsMeta = {
     qualys_remove_tag: {
         title: 'Remove Tag From Host Asset in Qualys Cloud Platform'
     },
+    refetch_action: {
+        title: 'Refetch Asset Entity'
+    },
     run_executable_linux: {
         title: 'Deploy on Linux Device'
     },
@@ -230,7 +233,7 @@ export const actionsMeta = {
     },
     axonius: {
         title: 'Axonius Utilities',
-        items: ['tag', 'untag', 'add_custom_data']
+        items: ['tag', 'untag', 'add_custom_data', 'refetch_action']
     }
 }
 

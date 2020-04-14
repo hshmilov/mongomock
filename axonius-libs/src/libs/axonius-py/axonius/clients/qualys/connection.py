@@ -91,6 +91,19 @@ class QualysScansConnection(RESTConnection):
                 'body_params': params,
                 'do_basic_auth': True}
 
+    def get_device_id_data(self, device_id):
+        response = self._get(f'qps/rest/2.0/get/am/hostasset/{device_id}', do_basic_auth=True)
+        if not isinstance(response, dict):
+            raise RESTException(f'Bad Response not as dict: {str(response)}')
+        if 'ServiceResponse' not in response:
+            raise RESTException(f'Bad Response without ServiceResponse: {str(response)}')
+        response = response['ServiceResponse']
+        if 'data' not in response:
+            raise RESTException(f'Bad response with not data: {str(response)}')
+        if not isinstance(response['data'], list) or not response['data']:
+            raise RESTException(f'Bad response with bad data: {str(response)}')
+        return response['data'][0]
+
     def _get_device_count(self):
         params = {
             'ServiceRequest': {

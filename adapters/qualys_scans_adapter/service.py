@@ -142,6 +142,11 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
             'type': 'array',
         }
 
+    def _refetch_device(self, client_id, client_data, device_id):
+        with client_data:
+            device_raw = client_data.get_device_id_data(device_id)
+        return self._create_agent_device(device_raw, self.__qualys_tags_white_list)
+
     @classmethod
     def parse_qid_info(cls, csv_path=consts.QUALYS_QID_TO_CVE_CSV):
         logger.info('Parsing QID to CVE from csv file')

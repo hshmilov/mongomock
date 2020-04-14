@@ -37,10 +37,11 @@ class OpsgenieConnection(RESTConnection):
             body_params['source'] = source
         if description:
             body_params['description'] = description
+        logger.info(f'Sending opgenie with params: {body_params}')
         try:
             self._post('alerts',
                        body_params=body_params)
             return ''
         except Exception as e:
-            logger.exception(f'Problem with creating alert with params: ')
+            logger.exception(f'Problem with creating alert with params: {body_params}')
             return str(e)

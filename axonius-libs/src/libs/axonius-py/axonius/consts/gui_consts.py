@@ -150,6 +150,7 @@ class FeatureFlagsNames:
     ExpiryDate = 'expiry_date'
     LockOnExpiry = 'lock_on_expiry'
     ReenterCredentials = 'reenter_credentials'
+    RefetchAssetEntityAction = 'refetch_action'
 
 
 class CloudComplianceNames:

@@ -92,6 +92,7 @@ class EpoAdapter(AdapterBase, Configurable):
         epo_tags = ListField(str, 'EPO Tags')
         epo_host = Field(str, 'EPO Host')
         node_text_path = Field(str, 'Node Text Path')
+        epo_id = Field(str, 'EPO ID')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -159,6 +160,7 @@ class EpoAdapter(AdapterBase, Configurable):
 
             device = self._new_device_adapter()
             device.epo_host = epo_host
+            device.epo_id = epo_id
             if hostname and hostname.endswith('::1'):
                 hostname = hostname[:-len('::1')]
             device.hostname = hostname

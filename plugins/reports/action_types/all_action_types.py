@@ -29,6 +29,7 @@ from reports.action_types.base.run_linux_ssh_scan import RunLinuxSSHScan
 from reports.action_types.base.shodan_enrichment import ShodanEnrichment
 from reports.action_types.base.censys_enrichment import CensysEnrichment
 from reports.action_types.base.run_wmi_scan import RunWMIScan
+from reports.action_types.base.refetch_device import RefetchAction
 from reports.action_types.alert.create_opsgenie_alert import OpsgenieCreateAlert
 from reports.action_types.base.ldap_attributes import ChangeLdapAttribute
 from reports.action_types.base.send_email_to_entities import SendEmailToEntities
@@ -86,6 +87,7 @@ AllActionTypes: Dict[str, type(ActionTypeBase)] = {
     'send_csv_to_share': SendCsvToShare,
     'send_csv_to_s3': SendCsvToS3,
     'run_wmi_scan': RunWMIScan,
+    'refetch_action': RefetchAction,
     'run_linux_ssh_scan': RunLinuxSSHScan,
     'change_ldap_attribute': ChangeLdapAttribute,
     'shodan_enrichment': ShodanEnrichment,
