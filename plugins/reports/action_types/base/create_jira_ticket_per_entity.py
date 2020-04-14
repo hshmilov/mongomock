@@ -67,7 +67,7 @@ class JiraIncidentPerEntityAction(ActionTypeBase):
                 },
                 {
                     'name': 'extra_fields',
-                    'title': 'Extra Fields',
+                    'title': 'Additional fields',
                     'type': 'string'
                 }
             ],

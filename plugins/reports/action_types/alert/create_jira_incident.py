@@ -62,14 +62,14 @@ class JiraIncidentAction(ActionTypeAlert):
                     'type': 'string'
                 },
                 {
+                    'name': 'extra_fields',
+                    'title': 'Additional fields',
+                    'type': 'string'
+                },
+                {
                     'name': 'send_csv_data',
                     'title': 'Send CSV data',
                     'type': 'bool'
-                },
-                {
-                    'name': 'extra_fields',
-                    'title': 'Extra Fields',
-                    'type': 'string'
                 }
             ],
             'required': [

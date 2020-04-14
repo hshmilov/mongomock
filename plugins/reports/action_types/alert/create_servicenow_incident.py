@@ -120,12 +120,12 @@ class ServiceNowIncidentAction(ActionTypeAlert):
                 },
                 {
                     'name': 'extra_fields',
-                    'title': 'Extra Fields',
+                    'title': 'Additional fields',
                     'type': 'string'
                 },
                 {
                     'name': 'send_csv_as_attachment',
-                    'title': 'Send CSV As Attachment',
+                    'title': 'Send CSV as attachment',
                     'type': 'bool'
                 }
             ],

@@ -243,7 +243,7 @@ class ServiceNowConnection(RESTConnection):
                     if isinstance(extra_fields_dict, dict):
                         final_dict.update(extra_fields_dict)
             except Exception:
-                logger.exception(f'Problem getting extra fields')
+                logger.exception(f'Problem getting additional fields')
             incident_value = self.__add_dict_to_table('incident', final_dict)
             if csv_string and (incident_value.get('result') or {}).get('sys_id'):
                 self._upload_csv_to_table(table_name='incident', table_sys_id=incident_value['result']['sys_id'],
