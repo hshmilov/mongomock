@@ -10,6 +10,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
 from axonius.consts.gui_consts import PROXY_ERROR_MESSAGE
+from axonius.consts.plugin_consts import CORRELATION_SCHEDULE_HOURS_INTERVAL
 from services.axon_service import TimeoutException
 from ui_tests.pages.page import PAGE_BODY, TAB_BODY, Page
 
@@ -90,7 +91,12 @@ class SettingsPage(Page):
     VIEWER_ROLE = 'Viewer'
     RESTRICTED_ROLE = 'Restricted User'
     USE_PROXY = 'Proxy enabled'
+    USE_AMAZON = 'Enable Amazon S3 integration'
+    USE_GUI_SSL = 'Configure custom SSL certificate'
+    USE_CORRELATION_SCHEDULE = 'Enable correlation schedule'
     USE_CYBERARK_VAULT = 'Use CyberArk'
+    CORRELATION_HOUR_ERROR = '\'Number of hours between correlations\' has an illegal value'
+    AMAZON_BUCKET_NAME_FIELD = 'bucket_name'
     VALUES_COUNT_PER_COLUMN_DROPDOWN_CSS = 'label[for="defaultColumnLimit"]~.x-dropdown.x-select'
     VALUES_COUNT_ENTITIES_PER_PAGE_CSS = 'label[for="defaultNumOfEntitiesPerPage"]~.x-dropdown.x-select'
     SAFEGUARD_REMOVE_BUTTON_TEXT = 'Remove Role'
@@ -548,6 +554,9 @@ class SettingsPage(Page):
     def find_schedule_date_error(self):
         return self.find_element_by_text('\'Daily discovery time\' has an illegal value')
 
+    def find_correlation_hours_error(self):
+        return self.find_element_by_text(self.CORRELATION_HOUR_ERROR)
+
     def fill_schedule_rate(self, text):
         self.fill_text_field_by_css_selector(self.DISCOVERY_SCHEDULE_INTERVAL_INPUT_CSS, text)
 
@@ -947,9 +956,27 @@ class SettingsPage(Page):
         toggle = self.find_checkbox_by_label(self.USE_PROXY)
         self.click_toggle_button(toggle, make_yes=make_yes, scroll_to_toggle=False)
 
+    def set_gui_ssl_settings_enabled(self, make_yes=True):
+        toggle = self.find_checkbox_by_label(self.USE_GUI_SSL)
+        self.click_toggle_button(toggle, make_yes=make_yes, scroll_to_toggle=False)
+
+    def set_correlation_schedule_settings_enabled(self, make_yes=True):
+        toggle = self.find_checkbox_by_label(self.USE_CORRELATION_SCHEDULE)
+        self.click_toggle_button(toggle, make_yes=make_yes, scroll_to_toggle=True)
+
+    def set_amazon_settings_enabled(self, make_yes=True):
+        toggle = self.find_checkbox_by_label(self.USE_AMAZON)
+        self.click_toggle_button(toggle, make_yes=make_yes, scroll_to_toggle=True)
+
     def set_cyberark_vault_settings_enabled(self, make_yes=True):
         toggle = self.find_checkbox_by_label(self.USE_CYBERARK_VAULT)
         self.click_toggle_button(toggle, make_yes=make_yes, scroll_to_toggle=False)
+
+    def fill_bucket_name(self, bucket_name):
+        self.fill_text_field_by_element_id(self.AMAZON_BUCKET_NAME_FIELD, bucket_name)
+
+    def fill_correlation_hours_interval(self, correlation_hours_interval, key_down_tab=False):
+        self.fill_text_field_by_element_id(CORRELATION_SCHEDULE_HOURS_INTERVAL, correlation_hours_interval)
 
     def fill_proxy_address(self, proxy_addr):
         self.fill_text_field_by_element_id('proxy_addr', proxy_addr)

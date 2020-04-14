@@ -68,7 +68,7 @@
                 	this.error = `${this.schema.name} File is required`
                 }
                 this.$emit('validate', {
-                	title: this.schema.title, valid: this.valid, error: this.error
+                	name: this.schema.name, valid: this.valid, error: this.error
                 })
             },
             onFocusout() {

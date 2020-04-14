@@ -29,6 +29,7 @@
             :read-only="readOnly"
             @input="(value) => dataChanged(value, item.name)"
             @validate="onValidate"
+            @remove-validate="onRemoveValidate"
           />
         </x-type-wrap>
         <x-button
@@ -194,7 +195,7 @@
     updated () {
       if (this.needsValidation) {
         // Here the new children (after change of hidden) are updated in the DOM
-        this.validate(true)
+        this.validate(true, true)
         this.needsValidation = false
       }
     },
@@ -209,7 +210,24 @@
       onValidate (validity) {
         this.$emit('validate', validity)
       },
-      validate (silent) {
+      onRemoveValidate (validity) {
+        this.$emit('remove-validate', validity);
+      },
+      validate (silent, checkHiddenFields=false) {
+        // If the user reverted his choice and decided not to fill a certain group of options,
+        // We go through each of the children fields and make sure to invalidate them.
+        // In other words, once the option sub fields is invisible again, we have to make them valid
+        // since they are no longer relevant for validation.
+        if(checkHiddenFields
+           && this.schema.items[0].name === 'enabled'
+           && this.data[this.schema.items[0].name] === false
+           && this.schema.items.length > 1) {
+          this.$emit('remove-validate', this.schema.items.slice(1).map((item) => {
+            return ({ name: item.name });
+          }));
+          return;
+        }
+
         if (this.isStringList) {
           this.validateStringList(silent)
         } else if (this.$refs.itemChild) {

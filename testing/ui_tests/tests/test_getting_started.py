@@ -148,7 +148,6 @@ class TestGettingStarted(TestBase):
         self.settings_page.enable_getting_started_feature()
         self.settings_page.open_getting_started_panel()
         self.settings_page.open_milestone_expand_by_index(1)
-
         self.settings_page.click_getting_started_overlay()
         body = self.base_page.get_body_element()
 

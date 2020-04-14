@@ -10,6 +10,7 @@
           :api-upload="apiUpload"
           :read-only="readOnly"
           @validate="onValidate"
+          @remove-validate="onRemoveValidate"
   />
   <div
           v-if="!silent"
@@ -30,6 +31,7 @@
 
 <script>
   import xArrayEdit from './types/array/ArrayEdit.vue';
+  import _differenceBy from 'lodash/differenceBy';
 
   /*
           Dynamically built form, according to given schema.
@@ -108,6 +110,18 @@
         const nextInvalidField = this.validity.fields.find((x) => x.error);
         this.validity.error = nextInvalidField ? nextInvalidField.error : '';
       }
+      this.$emit('validate', this.validity.fields.length === 0);
+    },
+    onRemoveValidate(arrFieldNames) {
+      /*
+        arrFieldNames: Array of field names.
+        Each field is an object containing the name of the field.
+        This method is used to remove a given array of fields from validation.
+        The field is removed from the validity fields list along with its error message (if existed)
+        */
+      this.validity.fields = _differenceBy(this.validity.fields, arrFieldNames, 'name');
+      const nextInvalidField = this.validity.fields.find((x) => x.error);
+      this.validity.error = nextInvalidField ? nextInvalidField.error : '';
       this.$emit('validate', this.validity.fields.length === 0);
     },
   },

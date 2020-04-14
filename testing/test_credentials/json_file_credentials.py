@@ -138,7 +138,8 @@ CLIENT_DETAILS_EXTRA = {
         ],
         "raw_fields" : []
     }
-    ''')
+    '''),
+    USERS_DATA: FileForCredentialsMock(USERS_DATA, '')
 }
 
 SOME_DEVICE_ID = 'cb_id1'

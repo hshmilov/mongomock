@@ -729,12 +729,16 @@ class Page:
         element.send_keys(Keys.ENTER)
 
     @staticmethod
-    def key_down_tab(element):
-        element.send_keys(Keys.TAB)
-
-    @staticmethod
     def key_down_arrow_down(element):
         element.send_keys(Keys.ARROW_DOWN)
+
+    def key_down_tab(self, element=None):
+        # If no element was sent, perform generic tab on the page
+        if not element:
+            ActionChains(self.driver).send_keys(Keys.TAB).perform()
+        # Otherwise, the tab is performed on the given element
+        else:
+            element.send_keys(Keys.TAB)
 
     def wait_for_spinner_to_end(self):
         # This method wants to wait for the spinner to appear and finish.
