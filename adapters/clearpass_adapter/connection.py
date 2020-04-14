@@ -30,10 +30,12 @@ class ClearpassConnection(RESTConnection):
         self._get('endpoint', url_params={'calculate_count': 'true', 'offset': 0, 'limit': DEVICE_PER_PAGE})
 
     # pylint: disable=arguments-differ
-    def get_device_list(self, get_extended_info):
-        yield from self._get_device_list_from_api('endpoint', 'endpoint', get_extended_info=get_extended_info)
+    def get_device_list(self, get_extended_info, result_per_page):
+        yield from self._get_device_list_from_api('endpoint', 'endpoint',
+                                                  get_extended_info=get_extended_info, result_per_page=result_per_page)
         try:
-            yield from self._get_device_list_from_api('network-device', 'network-device', get_extended_info=False)
+            yield from self._get_device_list_from_api('network-device', 'network-device',
+                                                      get_extended_info=False, result_per_page=result_per_page)
         except Exception:
             logger.exception('Problem getting networks')
 
@@ -53,23 +55,25 @@ class ClearpassConnection(RESTConnection):
         for device_raw in devices_raw:
             yield device_raw, device_type
 
-    def _get_device_list_from_api(self, api_name, device_type, get_extended_info):
+    def _get_device_list_from_api(self, api_name, device_type, get_extended_info, result_per_page):
+        if not result_per_page:
+            result_per_page = DEVICE_PER_PAGE
         response = self._get(api_name, url_params={'calculate_count': 'true',
-                                                   'offset': 0, 'limit': DEVICE_PER_PAGE})
+                                                   'offset': 0, 'limit': result_per_page})
         devices_raw = response['_embedded']['items']
         yield from self._get_extra_data_and_yield_devices(devices_raw, get_extended_info, device_type)
         count = response['count']
         if count >= MAX_NUMBER_OF_DEVICES:
             logger.error(f'Error, count - {count} is larger than MAX_NUMBER_OF_DEVICES '
                          f'- {MAX_NUMBER_OF_DEVICES}, skipping over pages!')
-        offset = DEVICE_PER_PAGE
+        offset = result_per_page
         # pylint: disable=R1702
         while offset < min(count, MAX_NUMBER_OF_DEVICES):
-            if offset % (DEVICE_PER_PAGE * 10) == 0:
+            if offset % (result_per_page * 10) == 0:
                 logger.info(f'Got to offset {offset} out of count {count}')
             try:
                 response = self._get(api_name, url_params={'calculate_count': 'false',
-                                                           'offset': offset, 'limit': DEVICE_PER_PAGE})
+                                                           'offset': offset, 'limit': result_per_page})
                 devices_raw = response['_embedded']['items']
                 if not devices_raw:
                     break
@@ -77,4 +81,4 @@ class ClearpassConnection(RESTConnection):
             except Exception:
                 logger.exception(f'Problem fetching offset {offset}')
                 break
-            offset += DEVICE_PER_PAGE
+            offset += result_per_page

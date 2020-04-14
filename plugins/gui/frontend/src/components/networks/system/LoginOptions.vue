@@ -106,10 +106,10 @@ export default {
         type: 'array',
         items: [
           { name: 'user_name', title: 'User Name', type: 'string' },
-          { name: 'domain', title: 'Domain', type: 'string' },
           {
             name: 'password', title: 'Password', type: 'string', format: 'password',
           },
+          { name: 'domain', title: 'Domain', type: 'string' },
         ],
         required: ['user_name', 'domain', 'password'],
       };

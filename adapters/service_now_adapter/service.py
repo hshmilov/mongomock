@@ -137,7 +137,12 @@ class ServiceNowAdapter(AdapterBase, Configurable):
                                                                                             'Stack',
                                                                                             'x',
                                                                                             'X']):
-                    ip_addresses = ip_addresses.split('/')
+                    if '/' in ip_addresses:
+                        ip_addresses = ip_addresses.split('/')
+                    elif ',' in ip_addresses:
+                        ip_addresses = ip_addresses.split(',')
+                    else:
+                        ip_addresses = [ip_addresses]
                     ip_addresses = [ip.strip() for ip in ip_addresses]
                 else:
                     ip_addresses = None
@@ -256,7 +261,7 @@ class ServiceNowAdapter(AdapterBase, Configurable):
                         if isinstance(snow_ips, list):
                             for snow_ip in snow_ips:
                                 try:
-                                    device.add_nic(ips=[snow_ip.get('u_address')])
+                                    device.add_nic(ips=[snow_ip.get('u_address').split('.')[0]])
                                 except Exception:
                                     logger.exception(f'Problem with snow ips {snow_ips}')
                     except Exception:

@@ -26,6 +26,7 @@ class CherwellAdapter(AdapterBase):
         last_modified = Field(datetime.datetime, 'Last Modification')
         asset_status = Field(str, 'Asset Status')
         asset_owner = Field(str, 'Asset Owner')
+        location_building = Field(str, 'Location Building')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -176,8 +177,12 @@ class CherwellAdapter(AdapterBase):
                         device.hostname = field_value
                     elif field_name == 'AssetStatus':
                         device.asset_status = field_value
-                    elif field_value == 'AssetOwner':
+                    elif field_name == 'AssetOwner':
                         device.asset_owner = field_value
+                    elif field_name == 'PrimaryUserName':
+                        device.last_used_users.append(field_value)
+                    elif field_name == 'LocationBuilding':
+                        device.location_building = field_value
                 except Exception:
                     logger.exception(f'Problem with field {field_raw}')
             if ips or mac:

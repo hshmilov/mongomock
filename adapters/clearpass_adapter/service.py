@@ -11,6 +11,7 @@ from axonius.utils.datetime import parse_date
 from axonius.utils.parsing import normalize_var_name
 from axonius.mixins.configurable import Configurable
 from clearpass_adapter.connection import ClearpassConnection
+from clearpass_adapter.consts import DEVICE_PER_PAGE
 from clearpass_adapter.client_id import get_client_id
 
 logger = logging.getLogger(f'axonius.{__name__}')
@@ -60,7 +61,7 @@ class ClearpassAdapter(AdapterBase, Configurable):
         :return: A json with all the attributes returned from the Server
         """
         with client_data:
-            yield from client_data.get_device_list(self.__get_extended_info)
+            yield from client_data.get_device_list(self.__get_extended_info, result_per_page=self.__result_per_page)
 
     @staticmethod
     def _clients_schema():
@@ -230,11 +231,17 @@ class ClearpassAdapter(AdapterBase, Configurable):
                     'name': 'drop_no_last_seen',
                     'title': 'Do not fetch devices without \'Last Seen\'',
                     'type': 'bool'
+                },
+                {
+                    'name': 'result_per_page',
+                    'title': 'Results per page',
+                    'type': 'integer'
                 }
             ],
             'required': [
                 'get_extended_info',
-                'drop_no_last_seen'
+                'drop_no_last_seen',
+                'result_per_page'
             ],
             'pretty_name': 'Clearpass Configuration',
             'type': 'array'
@@ -244,9 +251,11 @@ class ClearpassAdapter(AdapterBase, Configurable):
     def _db_config_default(cls):
         return {
             'get_extended_info': True,
-            'drop_no_last_seen': False
+            'drop_no_last_seen': False,
+            'result_per_page': DEVICE_PER_PAGE
         }
 
     def _on_config_update(self, config):
         self.__get_extended_info = config['get_extended_info']
         self.__drop_no_last_seen = config['drop_no_last_seen']
+        self.__result_per_page = config['result_per_page']

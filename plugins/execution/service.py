@@ -311,7 +311,7 @@ class ExecutionService(PluginBase):
                                                action_id,
                                                device_raw_data)
 
-                if result.status_code == 200:
+                if result is not None and result.status_code == 200:
                     # Action submitted successfully, Adding it to db
                     self._save_action_data({'action_type': action_type,
                                             'data_for_action': data,
@@ -329,7 +329,7 @@ class ExecutionService(PluginBase):
                                                data=json.dumps({'status': 'pending', 'output': ''}))
                     return json.dumps({'action_id': action_id})
 
-                if result.status_code != 501:
+                if result is not None and result.status_code != 501:
                     # Some general error happened, which is not 'Not Implemented'
                     logger.warning(f'Adapter failed running code on {device_id}. '
                                    f'Reason: {result.content}')
@@ -337,6 +337,10 @@ class ExecutionService(PluginBase):
                     accumulated_error = accumulated_error + f'Failure from {adapter_unique_name}. ' \
                                                             f'Got status {result.status_code} with ' \
                                                             f'data {result.content}'
+                if result is None:
+                    logger.warning(f'Adapter failed running code on {device_id}. Got None as response')
+                    accumulated_error = accumulated_error + f'Failure from {adapter_unique_name}. ' \
+                                                            f'Got status: None'
                 adapters_count += 1
 
             if len(adapters_tuple) == 0:
