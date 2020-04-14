@@ -167,3 +167,17 @@ class TestDevicesTable(TestEntitiesTable):
         self.devices_page.wait_for_table_to_load()
         self.devices_page.wait_for_spinner_to_end()
         assert len(self.devices_page.get_all_data()) == 1
+
+    def test_dropdown_columns_text_wrap(self):
+        self.settings_page.switch_to_page()
+        self.base_page.run_discovery()
+        self.devices_page.switch_to_page()
+        self.devices_page.open_edit_columns()
+
+        adapters_from_edit_columns = self.devices_page.get_edit_columns_adapters_elements()
+
+        if adapters_from_edit_columns is not None and len(adapters_from_edit_columns) > 0:
+            first_element_height = adapters_from_edit_columns[0].value_of_css_property('height')
+            adapters_from_edit_columns.pop(0)
+            for adapter_element in adapters_from_edit_columns:
+                assert first_element_height == adapter_element.value_of_css_property('height')

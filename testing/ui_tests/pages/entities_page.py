@@ -119,6 +119,7 @@ class EntitiesPage(Page):
     TABLE_ACTIONS_ENFORCE_CSS = 'div.content.w-sm > div > div:nth-child(5) > div.item-content'
     TABLE_ACTION_ITEM_XPATH = \
         '//div[@class=\'actions\']//div[@class=\'item-content\' and contains(text(),\'{action}\')]'
+    TABLE_EDIT_COLUMN_MODAL = 'div.x-modal.x-field-config'
 
     TABLE_OPTIONS_ITEM_XPATH = '//div[@class=\'v-list-item__title\' and text()=\'{option_title}\']'
 
@@ -302,6 +303,15 @@ class EntitiesPage(Page):
     def get_edit_columns_adapters_list(self):
         self.open_edit_columns_adapters_list()
         return self.get_adapters_list()
+
+    def get_edit_column_adapters_dropdown_element(self):
+        return self.driver.find_element_by_css_selector(self.TABLE_EDIT_COLUMN_MODAL)\
+            .find_element_by_css_selector(self.EDIT_COLUMNS_ADAPTER_DROPDOWN_CSS)
+
+    def get_edit_columns_adapters_elements(self):
+        self.open_edit_columns_adapters_list()
+        return self.get_edit_column_adapters_dropdown_element()\
+            .find_elements_by_css_selector(self.DROPDOWN_SELECTED_OPTION_CSS)
 
     def get_adapters_list(self):
         adapters_list = self.driver.find_element_by_css_selector(self.DROPDOWN_SELECTED_OPTIONS_CSS).text.split('\n')

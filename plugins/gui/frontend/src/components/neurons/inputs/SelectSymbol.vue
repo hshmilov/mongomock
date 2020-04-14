@@ -115,7 +115,7 @@
         }
 
         .logo-text {
-            max-width: 200px;
+            max-width: 178px;
             margin-top: 2px;
             margin-left: 4px;
             white-space: nowrap;
