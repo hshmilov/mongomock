@@ -577,6 +577,9 @@ def find_entity_field(entity_data, field_path, skip_unique=False, specific_adapt
                 if value is None:
                     return False
 
+                if len(children) > 10:
+                    return True
+
                 if isinstance(value, str):
                     return value.strip() and len([child for child in children if same_string(child, value)]) == 0
 
