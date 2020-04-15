@@ -6,7 +6,7 @@ from boto3.resources.base import ServiceResource
 from axonius.types.enforcement_classes import EntitiesResult
 from reports.action_types.base.aws_utils import AWSActionUtils, EC2_ACTION_REQUIRED_ENTITIES, \
     EC2InstanceGroup, EC2ActionResult, EC2ActionCallableReturnType
-from reports.action_types.action_type_base import ActionTypeBase
+from reports.action_types.action_type_base import ActionTypeBase, add_node_selection
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -46,7 +46,7 @@ class AwsEc2AddTagsAction(ActionTypeBase):
                                ' A single value may be empty.'
             }])
         schema['required'].append(TAG_KEY)
-        return schema
+        return add_node_selection(schema)
 
     @staticmethod
     def default_config() -> dict:

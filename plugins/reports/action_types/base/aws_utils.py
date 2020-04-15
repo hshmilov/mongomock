@@ -14,7 +14,7 @@ from dataclasses import dataclass
 from dataclasses_json import DataClassJsonMixin
 
 from axonius.types.enforcement_classes import EntityResult
-from reports.action_types.action_type_base import add_node_selection, add_node_default, generic_success, generic_fail
+from reports.action_types.action_type_base import add_node_default, generic_success, generic_fail
 
 PROXY = 'proxy'
 ADAPTER_NAME = 'aws_adapter'
@@ -173,7 +173,7 @@ class AWSActionUtils():
             'required': [AWS_USE_IAM],
             'type': 'array'
         }
-        return add_node_selection(schema)
+        return schema
 
     @staticmethod
     def default_config() -> dict:

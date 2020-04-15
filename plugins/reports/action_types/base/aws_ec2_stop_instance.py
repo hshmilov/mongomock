@@ -1,3 +1,4 @@
+import copy
 import logging
 
 from boto3.resources.base import ServiceResource
@@ -5,7 +6,7 @@ from boto3.resources.base import ServiceResource
 from axonius.types.enforcement_classes import EntitiesResult
 from reports.action_types.base.aws_utils import AWSActionUtils, EC2_ACTION_REQUIRED_ENTITIES, \
     EC2InstanceGroup, EC2ActionResult, EC2ActionCallableReturnType
-from reports.action_types.action_type_base import ActionTypeBase
+from reports.action_types.action_type_base import ActionTypeBase, add_node_selection
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -15,8 +16,12 @@ class AwsEc2StopInstanceAction(ActionTypeBase):
     AWS EC2 Stop Instance
     Requires "ec2:StopInstances" IAM policy permission.
     """
-    config_schema = AWSActionUtils.config_schema
     default_config = AWSActionUtils.default_config
+
+    @staticmethod
+    def config_schema() -> dict:
+        schema = copy.deepcopy(AWSActionUtils.config_schema())
+        return add_node_selection(schema)
 
     @staticmethod
     def stop_ec2_instance_group(ec2_resource: ServiceResource, instance_group: EC2InstanceGroup) \
