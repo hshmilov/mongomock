@@ -656,6 +656,11 @@ export const pluginMeta = {
         link: 'https://docs.axonius.com/docs/shodan',
         description: 'Shodan is a search engine for Internet-connected devices.'
     },
+    prisma_cloud_adapter: {
+        title: 'Prisma Cloud',
+        link: 'https://docs.axonius.com/docs/prisma-cloud',
+        description: 'Prisma Cloud is a native cloud security platform that provides visibility, threat prevention, compliance assurance and data protection across multi-cloud environments.'
+    },
     samange_adapter: {
         title: 'Samanage',
         link: '',

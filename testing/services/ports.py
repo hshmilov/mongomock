@@ -112,6 +112,7 @@ DOCKER_PORTS = {
     'minerva-adapter':                  6010,
     'bigfix-adapter':                   6012,
     'ensilo-adapter':                   6013,
+    'prisma-cloud-adapter':             6014,
     'secdo-adapter':                    6015,
     'mobileiron-adapter':               6016,
     'juniper-adapter':                  6017,
