@@ -976,6 +976,11 @@ export const pluginMeta = {
         link: 'https://docs.axonius.com/docs/eset-endpoint-security',
         description: 'ESET Endpoint Security is an anti-malware suite for Windows including web filtering, firewall, USB drive and botnet protection.'
     },
+    cyberark_pas_adapter: {
+        title: 'CyberArk Privileged Account Security',
+        link: 'https://docs.axonius.com/docs/cyberark-privileged-account-security',
+        description: 'CyberArk Privileged Account Security provides privileged password management, session recording, least privilege enforcement, and privileged data analytics.'
+    },
     traiana_lab_machines_adapter: {
         title: 'Traiana Lab Machines',
         link: '',
