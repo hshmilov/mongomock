@@ -273,6 +273,7 @@ DOCKER_PORTS = {
     'sophos-cloud-optix-adapter':       13381,
     'sevone-adapter':                   13389,
     'ip-fabric-adapter':                14285,
+    'sumo-logic-adapter':               14286,
     'mongo':                            27017,
     'mockingbird-db':                   28017
 }

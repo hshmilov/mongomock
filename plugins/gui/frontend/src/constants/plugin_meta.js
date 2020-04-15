@@ -23,6 +23,11 @@ export const pluginMeta = {
         link: 'https://docs.axonius.com/docs/red-hat-satellite',
         description: 'Red Hat Satellite is a system management solution used to deploy, configure, and maintain systems across physical, virtual, and cloud environments.'
     },
+    sumo_logic_adapter: {
+        title: 'Sumo Logic',
+        link: 'https://docs.axonius.com/docs/sumo-logic',
+        description: 'Sumo Logic is a cloud-based service for logs & metrics management for modern apps',
+    },
     logicmonitor_adapter: {
         title: 'LogicMonitor',
         link: 'https://docs.axonius.com/docs/logicmonitor',
