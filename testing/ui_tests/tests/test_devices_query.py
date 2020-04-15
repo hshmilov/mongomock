@@ -875,7 +875,6 @@ class TestDevicesQuery(TestBase):
         self.devices_page.click_query_wizard()
         self.devices_page.clear_query_wizard()
 
-    @pytest.mark.skip('AX-6585')
     def test_query_wizard_combos(self):
         self.settings_page.switch_to_page()
         self.base_page.run_discovery()
