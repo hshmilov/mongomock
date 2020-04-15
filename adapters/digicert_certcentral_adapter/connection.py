@@ -128,9 +128,9 @@ class DigicertCertcentralConnection(RESTConnection):
         gen_paginated_request = self._paginated_request(*args, offset_field_name='startIndex',
                                                         initial_offset=1, **kwargs)
 
-        for response in gen_paginated_request:
-
-            yield response
+        # retrieve initial response
+        response = next(gen_paginated_request)
+        while response:
 
             try:
                 curr_count, total_count = (int(response.get(field, 0)) for field in ['currentCount', 'totalCount'])
@@ -138,7 +138,7 @@ class DigicertCertcentralConnection(RESTConnection):
                 logger.exception(f'Invalid count values in response {response}')
                 return
 
-            gen_paginated_request.send((curr_count, total_count))
+            response = gen_paginated_request.send((curr_count, total_count))
 
     def _paginated_services_request_iter(self, *args, pagination_field: str, **kwargs):
 

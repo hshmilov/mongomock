@@ -8,7 +8,7 @@ from axonius.clients.rest.connection import RESTException
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.fields import Field, ListField
 from axonius.utils.files import get_local_config_file
-from axonius.utils.parsing import parse_date
+from axonius.utils.parsing import parse_date, is_valid_ip
 from digicert_certcentral_adapter.client_id import get_client_id
 from digicert_certcentral_adapter.connection import DigicertCertcentralConnection
 from digicert_certcentral_adapter import consts
@@ -171,7 +171,7 @@ class DigicertCertcentralAdapter(AdapterBase):
             scan.scan_name = device_raw.get('scanName')
             scan.scan_first_discovery_date = parse_date(device_raw.get('firstDiscoveredDate'))
             scan.scan_protocol = device_raw.get('service')
-            scan_vulnerabilities = parse_enum('vulnerabilityName', device_raw, consts.ENUM_CERT_VULNS)
+            scan_vulnerabilities = parse_enum(device_raw, 'vulnerabilityName', consts.ENUM_CERT_VULNS)
             if scan_vulnerabilities:
                 # Filter out sparse values
                 scan.scan_vulnerabilities = list(filter(lambda val: val not in ['NO_VULNERABILITY_FOUND'],
@@ -190,35 +190,37 @@ class DigicertCertcentralAdapter(AdapterBase):
                 logger.warning(message)
                 raise Exception(message)
             ip_address = device_raw.get('ipAddress') or ''
-            device.id = f'SCAN_{device_id}_{ip_address or ""}'
+            device.id = f'SCAN_{device_id}_{ip_address}'
 
             # Note: we set the asset_name to be the certificate id
             #       for different Digicert asset entities to correlate into the same device
             device.name = f'Certificate {device_id}'
 
             try:
-                device.add_ips_and_macs(ips=[ip_address])
+                if is_valid_ip(ip_address):
+                    device.add_ips_and_macs(ips=[ip_address])
             except Exception:
                 logger.exception(f'Failed to parse IP for device {device_raw}')
 
             device.hostname = device_raw.get('domainName')
 
             try:
-                device.figure_os(' '.join(device_raw.get(field, '') for field in ['os', 'osVersion']))
+                device.figure_os(' '.join((device_raw.get(field) or '') for field in ['os', 'osVersion']))
             except Exception:
                 logger.exception(f'Failed to parse OS for device {device_raw}')
 
             try:
                 if device_raw.get('port'):
-                    device.add_open_port(protocol=device_raw.get('service', ''), port_id=device_raw.get('port'),
-                                         service_name=device_raw.get('serverName', ''))
+                    device.add_open_port(service_name=device_raw.get('service'),
+                                         port_id=device_raw.get('port'))
             except Exception:
                 logger.exception(f'Failed to parse open port for device {device_raw}')
 
             try:
-                if device_raw.get('serverName'):
-                    device.add_installed_software(name=device_raw.get('serverName'),
-                                                  version=device_raw.get('serverVersion', ''))
+                server_name = device_raw.get('serverName')
+                server_version = device_raw.get('serverVersion')
+                if all((isinstance(field, str) and field != 'Unavailable') for field in [server_name, server_version]):
+                    device.add_installed_software(name=server_name, version=server_version)
             except Exception:
                 logger.exception(f'Failed to parse installed software for device {device_raw}')
 
