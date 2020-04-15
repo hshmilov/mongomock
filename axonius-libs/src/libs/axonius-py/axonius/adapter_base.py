@@ -1086,12 +1086,23 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
         timeout = timeout.total_seconds() if timeout else None
 
         def call_connect_as_stoppable(*args, **kwargs):
+            is_reachable, is_connected = False, False
             try:
-                return self._route_connect_client(*args, **kwargs)
+                try:
+                    is_reachable = self._route_test_reachability(*args, **kwargs)
+                except Exception:
+                    is_reachable = False
+
+                client = self._route_connect_client(*args, **kwargs)
+                is_connected = True
+                return client
             except BaseException as e:
                 # this is called from an external thread so if it raises the exception is lost,
                 # this allows forwarding exceptions back to the caller
                 return e
+            finally:
+                if is_connected and not is_reachable:
+                    logger.warning(f'Problem with test_reachability in adapter {self.plugin_name}')
 
         try:
             res = func_timeout.func_timeout(
