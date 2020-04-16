@@ -1,16 +1,16 @@
 <template>
-  <md-field v-if="readOnly">
-    <md-input
+  <MdField v-if="readOnly">
+    <MdInput
       type="text"
       disabled
     />
-  </md-field>
+  </MdField>
   <div
     v-else
     class="x-date-edit"
     :class="{labeled: label}"
   >
-    <md-datepicker
+    <MdDatepicker
       v-show="!hide || datepickerActive"
       ref="date"
       v-model="selectedDate"
@@ -20,84 +20,80 @@
       :class="{'no-icon': minimal, 'no-clear': !clearable}"
     >
       <label v-if="label">{{ label }}</label>
-    </md-datepicker>
-    <x-button
+    </MdDatepicker>
+    <XButton
       v-if="value && clearable"
       link
       @click="onClear"
-    >X</x-button>
+    >X</XButton>
   </div>
 </template>
 
 <script>
-  import xButton from '../../../../axons/inputs/Button.vue'
+import XButton from '../../../../axons/inputs/Button.vue';
 
-  export default {
-    name: 'XDateEdit',
-    components: {
-      xButton
+export default {
+  name: 'XDateEdit',
+  components: {
+    XButton,
+  },
+  props: {
+    value: {
+      type: [String, Date],
+      default: '',
     },
-    props: {
-      value: {
-        type: [String, Date],
-        default: ''
-      },
-      readOnly: {
-        type: Boolean, default: false
-      },
-      clearable: {
-        type: Boolean, default: true
-      },
-      minimal: {
-        type: Boolean, default: false
-      },
-      checkDisabled: {
-        type: Function,
-        default: () => false
-      },
-      label: {
-        type: String,
-        default: ''
-      },
-      hide: {
-        type: Boolean,
-        default: false
-      }
+    readOnly: {
+      type: Boolean, default: false,
     },
-    computed: {
-      selectedDate: {
-        get () {
-          return this.value
-        },
-        set (selectedDate) {
-          if (selectedDate && typeof selectedDate !== 'string') {
-            selectedDate.setMinutes(selectedDate.getMinutes() - selectedDate.getTimezoneOffset())
-            selectedDate = selectedDate.toISOString().substring(0, 10)
-          }
-          if (this.value === selectedDate) return
-          this.$emit('input', selectedDate)
+    clearable: {
+      type: Boolean, default: true,
+    },
+    minimal: {
+      type: Boolean, default: false,
+    },
+    checkDisabled: {
+      type: Function,
+      default: () => false,
+    },
+    label: {
+      type: String,
+      default: '',
+    },
+    hide: {
+      type: Boolean,
+      default: false,
+    },
+  },
+  computed: {
+    selectedDate: {
+      get() {
+        return this.value;
+      },
+      set(value) {
+        let selectedDate = value;
+        if (selectedDate && typeof selectedDate !== 'string') {
+          selectedDate.setMinutes(selectedDate.getMinutes() - selectedDate.getTimezoneOffset());
+          selectedDate = selectedDate.toISOString().substring(0, 10);
+        } else if (!selectedDate) {
+          this.$refs.date.modelDate = '';
         }
-      },
-      datepickerActive () {
-        if (!this.$refs.date) return false
-        return this.$refs.date.showDialog
-      }
-    },
-    watch: {
-      value (newValue) {
-        if (!newValue) {
-          this.onClear()
+        if (this.value === selectedDate) {
+          return;
         }
-      }
+        this.$emit('input', selectedDate);
+      },
     },
-    methods: {
-      onClear () {
-        this.$refs.date.modelDate = ''
-        this.selectedDate = (typeof this.value === 'string')? '' : null
-        this.$emit('clear')
-      }
-    }
-  }
+    datepickerActive() {
+      if (!this.$refs.date) return false;
+      return this.$refs.date.showDialog;
+    },
+  },
+  methods: {
+    onClear() {
+      this.selectedDate = (typeof this.value === 'string') ? '' : null;
+    },
+  },
+};
 </script>
 
 <style lang="scss">

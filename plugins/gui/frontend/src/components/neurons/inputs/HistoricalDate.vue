@@ -59,19 +59,15 @@ export default {
     isDateUnavailable(date) {
       // return true if date is unavailable, return false if date is available
       // if date smaller then the first day we have historical or bigger than today disable it!
-      const currentDate = new Date();
-      date.setMinutes(date.getMinutes() - date.getTimezoneOffset());
-      if (date < this.firstHistoricalDate || date > currentDate) {
+      const currentDate = new Date().toISOString();
+      const dateToCheck = date.toISOString();
+      if (dateToCheck < this.firstHistoricalDate.toISOString() || dateToCheck > currentDate) {
         return true;
       }
-      return (this.allowedDates && !this.allowedDates[date.toISOString().substring(0, 10)]);
+      return (this.allowedDates && !this.allowedDates[dateToCheck.substring(0, 10)]);
     },
     onInput(historical) {
-      if (historical && this.isDateUnavailable(new Date(historical))) {
-        this.$refs.date.onClear();
-      } else {
-        this.$emit('input', historical);
-      }
+      this.$emit('input', historical);
     },
   },
 };

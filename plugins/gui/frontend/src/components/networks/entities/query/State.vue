@@ -160,7 +160,7 @@ export default {
         this.updateView({
           module: this.module,
           view: {
-            historical: this.allowedDates[newDate],
+            historical: newDate ? this.allowedDates[newDate] : null,
           },
         });
         this.$emit('done');
