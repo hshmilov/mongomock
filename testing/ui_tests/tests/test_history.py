@@ -1,5 +1,7 @@
 from datetime import datetime, timedelta
 
+import pytest
+
 from axonius.consts.metric_consts import Query
 from axonius.utils.wait import wait_until
 from axonius.plugin_base import EntityType
@@ -27,6 +29,7 @@ class TestHistory(TestBase):
             self.users_page.clear_existing_date()
             wait_until(lambda: tester.is_metric_in_log(Query.QUERY_HISTORY, '.*'))
 
+    @pytest.mark.skip('AX-7064')
     def test_devices_history_sanity(self):
         self.settings_page.switch_to_page()
         self.base_page.run_discovery()

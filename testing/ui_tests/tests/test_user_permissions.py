@@ -301,6 +301,7 @@ class TestUserPermissions(TestBase):
                                            self.settings_page.RESTRICTED_ROLE)
         self.settings_page.wait_for_user_created_toaster()
 
+    @pytest.mark.skip('AX-6970')
     def test_new_user_with_role(self):
         self._enter_user_management_and_create_restricted_user()
         user_data = self.settings_page.get_user_data_by_user_name(ui_consts.RESTRICTED_USERNAME)
@@ -758,6 +759,7 @@ class TestUserPermissions(TestBase):
         self.dashboard_page.remove_space()
         self.dashboard_page.remove_space()
 
+    @pytest.mark.skip('AX-7052')
     def test_devices_permissions(self):
         self.devices_page.switch_to_page()
         self.base_page.run_discovery()
@@ -797,6 +799,7 @@ class TestUserPermissions(TestBase):
                                                      ui_consts.NEW_PASSWORD)
         self._test_entities_with_edit_permission(self.devices_page)
 
+    @pytest.mark.skip('AX-6987')
     def test_devices_saved_queries(self):
         self.devices_page.switch_to_page()
         self.base_page.run_discovery()
@@ -1217,6 +1220,7 @@ class TestUserPermissions(TestBase):
         wait_until(lambda: not self.adapters_page.is_save_button_disabled())
         self.adapters_page.click_save()
 
+    @pytest.mark.skip('AX-7052')
     def test_report_permissions(self):
         self.reports_page.switch_to_page()
         self.settings_page.switch_to_page()

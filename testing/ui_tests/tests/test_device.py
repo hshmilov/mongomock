@@ -2,6 +2,8 @@ import time
 from datetime import datetime
 from datetime import timedelta
 
+import pytest
+
 from test_helpers.file_mock_credentials import FileForCredentialsMock
 
 from ui_tests.tests.ui_consts import WINDOWS_QUERY_NAME, CSV_NAME, CSV_PLUGIN_NAME
@@ -117,6 +119,7 @@ class TestDevice(TestBase):
 
         self.logger.info('finished test_device_enforcement_tasks')
 
+    @pytest.mark.skip('AX-6612')
     def test_device_enforcement_task_sort(self):
         """
         Test for checking the sort order in the enforcement tasks of a device
