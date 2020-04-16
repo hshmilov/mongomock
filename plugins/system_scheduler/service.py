@@ -494,19 +494,19 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
                 self._run_aggregator_phase(PluginSubtype.AdapterBase)
                 self._request_gui_dashboard_cache_clear()
             except Exception:
-                logger.critical('Failed running fetch_devices phase', exc_info=True)
+                logger.error('Failed running fetch_devices phase', exc_info=True)
 
             try:
                 self.detect_correlation_errors()
             except Exception:
-                logger.critical(f'Failed running detect correlation errors', exc_info=True)
+                logger.error(f'Failed running detect correlation errors', exc_info=True)
 
             # Fetch Scanners Data.
             try:
                 _change_subphase(scheduler_consts.ResearchPhases.Fetch_Scanners)
                 self._run_aggregator_phase(PluginSubtype.ScannerAdapter)
             except Exception:
-                logger.critical('Failed running fetch_scanners phase', exc_info=True)
+                logger.error('Failed running fetch_scanners phase', exc_info=True)
 
             # Clean old devices.
             try:
@@ -531,14 +531,14 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
 
                 self._run_cleaning_phase()
             except Exception:
-                logger.critical(f'Failed running clean devices phase', exc_info=True)
+                logger.error(f'Failed running clean devices phase', exc_info=True)
 
             # Run Pre Correlation plugins.
             try:
                 _change_subphase(scheduler_consts.ResearchPhases.Pre_Correlation)
                 self._run_plugins(self._get_plugins(PluginSubtype.PreCorrelation))
             except Exception:
-                logger.critical(f'Failed running pre-correlation phase', exc_info=True)
+                logger.error(f'Failed running pre-correlation phase', exc_info=True)
 
             # Run Correlations.
             try:
@@ -551,7 +551,7 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
                         logger.info(f'Other correlation has finished')
                 self._request_gui_dashboard_cache_clear()
             except Exception:
-                logger.critical(f'Failed running correlation phase', exc_info=True)
+                logger.error(f'Failed running correlation phase', exc_info=True)
 
             try:
                 _change_subphase(scheduler_consts.ResearchPhases.Post_Correlation)
@@ -565,7 +565,7 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
 
                 self._run_plugins(post_correlations_plugins)
             except Exception:
-                logger.critical(f'Failed running post-correlation phase', exc_info=True)
+                logger.error(f'Failed running post-correlation phase', exc_info=True)
 
             try:
                 if self.__save_history:
@@ -579,7 +579,7 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
 
                 self._request_gui_dashboard_cache_clear(clear_slow=True)
             except Exception:
-                logger.critical(f'Failed running save historical phase', exc_info=True)
+                logger.error(f'Failed running save historical phase', exc_info=True)
 
             try:
                 r = requests.post('https://bandicoot.axonius.local:9090/transfer',
