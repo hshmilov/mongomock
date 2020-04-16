@@ -32,6 +32,7 @@ class DevicesPage(EntitiesPage):
     FIELD_USERS_LAST_USE_NAME = 'last_use_date'
     FIELD_LAST_USED_USERS = 'Last Used Users'
     FIELD_FIRST_FETCH_TIME = 'First Fetch Time'
+    FIELD_FIRST_SEEN = 'First Seen'
     FIELD_USERS_LOCAL = 'Is Local'
     FIELD_USERS_LOCAL_NAME = 'is_local'
     FIELD_USERS_USERNAME = 'Users: Username'
@@ -162,16 +163,22 @@ class DevicesPage(EntitiesPage):
         text = self.driver.find_element_by_xpath(self.DIV_BY_LABEL_TEMPLATE.format(label_text=label_text)).text
         return text.split('\n')[1]  # [0] is the label itself
 
-    def add_query_last_seen(self):
+    def _add_query_last_seen(self, query_comp_day):
         self.click_query_wizard()
         self.add_query_expression()
         expressions = self.find_expressions()
         self.select_query_logic_op(self.QUERY_LOGIC_AND, parent=expressions[1])
         self.select_query_field(self.FIELD_LAST_SEEN, parent=expressions[1])
-        self.select_query_comp_op(self.QUERY_COMP_DAYS, parent=expressions[1])
+        self.select_query_comp_op(query_comp_day, parent=expressions[1])
         self.fill_query_value(5, parent=expressions[1])
         self.wait_for_table_to_load()
         self.close_dropdown()
+
+    def add_query_last_seen_last_day(self):
+        self._add_query_last_seen(self.QUERY_COMP_DAYS)
+
+    def add_query_last_seen_next_day(self):
+        self._add_query_last_seen(self.QUERY_COMP_NEXT_DAYS)
 
     def run_enforcement_on_selected_device(self, enforcement_name):
         self.open_enforce_dialog()

@@ -3,6 +3,7 @@ from axonius.smart_json_class import SmartJsonClass
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.users.user_adapter import UserAdapter
+from axonius.utils.datetime import parse_date
 
 import json
 
@@ -12,6 +13,9 @@ from typing import List
 FILE_NAME = 'file_name'
 DEVICES_DATA = 'devices_data'
 USERS_DATA = 'users_data'
+
+TIME_BASE_FIELD = ['first_seen', 'last_seen', 'first_found', 'last_found', 'modified', 'published', 'fetch_time'
+                   'first_fetch_time', 'boot_time', 'security_patch_level']
 
 
 class JsonFileAdapter(AdapterBase):
@@ -28,6 +32,15 @@ class JsonFileAdapter(AdapterBase):
     @staticmethod
     def set_additional(fields):
         JsonFileAdapter.__additional_fields = fields
+
+    @staticmethod
+    def datetime_hook(dct):
+        for k, v in dct.items():
+            if k in TIME_BASE_FIELD:
+                dct[k] = parse_date(v)
+                return dct
+        else:
+            return dct
 
     class MyDeviceAdapter(DeviceAdapter):
 
@@ -52,10 +65,10 @@ class JsonFileAdapter(AdapterBase):
         return client_config
 
     def _query_devices_by_client(self, client_name, client_data):
-        return json.loads(self._grab_file_contents(client_data[DEVICES_DATA]).decode())
+        return json.loads(self._grab_file_contents(client_data[DEVICES_DATA]).decode(), object_hook=self.datetime_hook)
 
     def _query_users_by_client(self, key, data):
-        return json.loads(self._grab_file_contents(data[USERS_DATA]).decode())
+        return json.loads(self._grab_file_contents(data[USERS_DATA]).decode(), object_hook=self.datetime_hook)
 
     def _clients_schema(self):
         return {

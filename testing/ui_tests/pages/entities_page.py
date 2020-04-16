@@ -72,6 +72,7 @@ class EntitiesPage(Page):
     QUERY_COMP_SIZE_ABOVE = 'count >'
     QUERY_COMP_SIZE_BELOW = 'count <'
     QUERY_COMP_DAYS = 'last days'
+    QUERY_COMP_NEXT_DAYS = 'next days'
     QUERY_COMP_GREATER_THAN = '>'
     QUERY_COMP_LESS_THAN = '<'
     QUERY_COMP_STARTS = 'starts'
@@ -1451,6 +1452,13 @@ class EntitiesPage(Page):
         elif operator == 'in':
             self.fill_query_string_value(value, parent=expressions[0])
         self.wait_for_table_to_be_responsive()
+
+    def select_query_with_adapter(self, adapter_name='JSON', attribute='',  operator='', value=''):
+        expressions = self.find_expressions()
+        self.select_query_adapter(adapter_name, parent=expressions[0])
+        self.select_query_field(attribute, parent=expressions[0])
+        self.select_query_comp_op(operator, parent=expressions[0])
+        self.fill_query_value(value, parent=expressions[0])
 
     def click_tag_save_button(self):
         self.click_button(self.SAVE_BUTTON, context=self.driver.find_element_by_css_selector(self.TAG_MODAL_CSS))

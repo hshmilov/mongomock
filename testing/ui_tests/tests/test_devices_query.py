@@ -2,13 +2,15 @@ import random
 import math
 from datetime import datetime
 from uuid import uuid4
-
+from dateutil.relativedelta import relativedelta
 import pytest
 from pytest import raises
 from selenium.common.exceptions import NoSuchElementException
 from axonius.consts.gui_consts import ADAPTER_CONNECTIONS_FIELD
 from axonius.utils.hash import get_preferred_quick_adapter_id
 from axonius.utils.wait import wait_until
+from json_file_adapter.service import DEVICES_DATA, FILE_NAME
+from test_helpers.file_mock_credentials import FileForCredentialsMock
 from ui_tests.pages.entities_page import EntitiesPage
 from ui_tests.pages.adapters_page import CONNECTION_LABEL, CONNECTION_LABEL_UPDATED
 from ui_tests.tests.ui_test_base import TestBase
@@ -37,7 +39,8 @@ from test_credentials.json_file_credentials import (DEVICE_FIRST_IP,
                                                     DEVICE_SECOND_VLAN_NAME,
                                                     DEVICE_FIRST_HOSTNAME,
                                                     DEVICE_FIRST_NAME,
-                                                    DEVICE_SECOND_NAME)
+                                                    DEVICE_SECOND_NAME,
+                                                    USERS_DATA)
 from test_credentials.test_aws_credentials import client_details as aws_client_details
 from test_credentials.test_tanium_asset_credentials import CLIENT_DETAILS as tanium_asset_details
 from test_credentials.test_tanium_discover_credentials import CLIENT_DETAILS as tanium_discovery_details
@@ -411,22 +414,31 @@ class TestDevicesQuery(TestBase):
         self.devices_page.click_on_filter_adapter(AD_ADAPTER_NAME, parent=expressions[0])
         assert results_count > self.devices_page.count_entities()
 
-    def _test_last_seen_query(self):
+    def _test_last_seen_query(self, query_comp_days=EntitiesPage.QUERY_COMP_DAYS):
         self.devices_page.add_query_expression()
         expressions = self.devices_page.find_expressions()
         assert len(expressions) == 2
         self.devices_page.select_query_field(self.devices_page.FIELD_LAST_SEEN, parent=expressions[0])
-        self.devices_page.select_query_comp_op(EntitiesPage.QUERY_COMP_DAYS, parent=expressions[0])
+        self.devices_page.select_query_comp_op(query_comp_days, parent=expressions[0])
         self.devices_page.fill_query_value(365, parent=expressions[0])
         self.devices_page.wait_for_table_to_be_responsive()
         results_count = len(self.devices_page.get_all_data())
         self.devices_page.select_query_logic_op(self.devices_page.QUERY_LOGIC_AND)
         self.devices_page.select_query_field(self.devices_page.FIELD_LAST_SEEN, parent=expressions[1])
-        self.devices_page.select_query_comp_op(EntitiesPage.QUERY_COMP_DAYS, parent=expressions[1])
+        self.devices_page.select_query_comp_op(query_comp_days, parent=expressions[1])
         self.devices_page.fill_query_value(1, parent=expressions[1])
         self.devices_page.wait_for_table_to_be_responsive()
-        assert len(self.devices_page.get_all_data()) < results_count
+        if query_comp_days == EntitiesPage.QUERY_COMP_DAYS:
+            assert len(self.devices_page.get_all_data()) < results_count
+        else:
+            assert len(self.devices_page.get_all_data()) == results_count
         self.devices_page.clear_query_wizard()
+
+    def _test_last_seen_query_last_days(self):
+        self._test_last_seen_query(EntitiesPage.QUERY_COMP_DAYS)
+
+    def _test_last_seen_query_with_next_days(self):
+        self._test_last_seen_query(EntitiesPage.QUERY_COMP_NEXT_DAYS)
 
     def _test_last_seen_query_with_filter_adapters(self):
         self.devices_page.add_query_expression()
@@ -886,7 +898,8 @@ class TestDevicesQuery(TestBase):
         self._test_complex_obj()
         self._test_comp_op_change()
         self._test_and_expression()
-        self._test_last_seen_query()
+        self._test_last_seen_query_last_days()
+        self._test_last_seen_query_with_next_days()
         self._test_last_seen_query_with_filter_adapters()
         self._test_asset_name_query_with_filter_adapters()
         self._test_query_brackets()
@@ -1270,6 +1283,61 @@ class TestDevicesQuery(TestBase):
                                                    clear_filter=True)
             results_count = len(self.devices_page.get_all_data())
             assert results_count == 0
+
+    def test_last_seen_next_days(self):
+
+        def chabchab_in_result():
+            self.devices_page.wait_for_table_to_load()
+            return 'ChabChab' in self.devices_page.get_column_data_inline(
+                self.devices_page.FIELD_ASSET_NAME)
+
+        def json_query_filter_last_seen_next_days(days_value=0):
+            self.devices_page.select_query_with_adapter(attribute=self.devices_page.FIELD_LAST_SEEN,
+                                                        operator=self.devices_page.QUERY_COMP_NEXT_DAYS,
+                                                        value=days_value)
+            self.devices_page.wait_for_table_to_be_responsive()
+
+        future_date = (datetime.utcnow() + relativedelta(years=+10)).strftime('%Y-%m-%d %H:%M:%SZ')
+        client_details = {
+            FILE_NAME: 'test_last_seen_next_days',
+            DEVICES_DATA: FileForCredentialsMock(DEVICES_DATA, '''
+               {
+                   "devices" : [{
+                       "id": "ChabChab",
+                       "name": "ChabChab",
+                       "hostname": "ChabChab",
+                       "last_seen": "''' + future_date + '''",
+                       "network_interfaces": [{
+                           "mac": "06:3A:9B:D7:D7:CC",
+                           "ips": ["172.21.12.12"]
+                       }]
+                   }],
+                   "fields" : ["id", "network_interfaces", "name", "hostname", "last_seen"],
+                   "additional_schema" : [],
+                   "raw_fields" : []
+                       }
+               '''),
+            USERS_DATA: FileForCredentialsMock(USERS_DATA, '''
+                    {
+                        "users" : [],
+                         "fields" : [],
+                         "additional_schema" : [],
+                         "raw_fields" : []                      
+                    }
+                    ''')
+        }
+
+        self.adapters_page.add_server(client_details, adapter_name=JSON_ADAPTER_NAME)
+        self.adapters_page.wait_for_data_collection_toaster_start()
+        self.adapters_page.wait_for_data_collection_toaster_absent()
+        self.devices_page.switch_to_page()
+        self.devices_page.click_query_wizard()
+        json_query_filter_last_seen_next_days(1)
+        assert chabchab_in_result() is False
+        json_query_filter_last_seen_next_days(100)
+        assert chabchab_in_result() is False
+        json_query_filter_last_seen_next_days(10000)
+        assert chabchab_in_result()
 
     def test_connection_label_query_with_same_client_id(self):
         """

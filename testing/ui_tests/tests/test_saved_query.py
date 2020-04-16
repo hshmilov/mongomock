@@ -91,7 +91,10 @@ class TestSavedQuery(TestBase):
         self.devices_page.reset_query()
         self.devices_page.execute_saved_query(self.CUSTOM_QUERY_SAVE_NAME_1)
         assert self.devices_page.find_query_status_text() == ''
-        self.devices_page.add_query_last_seen()
+        self.devices_page.add_query_last_seen_last_day()
+        assert self.devices_page.find_query_status_text() == self.EDITED_QUERY_STATUS
+        self.devices_page.discard_changes_query()
+        self.devices_page.add_query_last_seen_next_day()
         assert self.devices_page.find_query_status_text() == self.EDITED_QUERY_STATUS
         self.devices_page.discard_changes_query()
         assert self.devices_page.find_query_status_text() == ''

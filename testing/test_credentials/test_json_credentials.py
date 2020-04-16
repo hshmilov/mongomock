@@ -49,7 +49,7 @@ DEVICES_JSON_DATA = '''[
         "Packages": [
             "MS Office 365", "Solitaire", "Space Cadet Pinball"
         ]
-    }
+    } 
 ]'''
 
 JSON_TEST_FIELDS = [
