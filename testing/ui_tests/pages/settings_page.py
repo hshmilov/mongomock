@@ -1030,7 +1030,7 @@ class SettingsPage(Page):
         except NoSuchElementException:
             pass
         if days_remaining is not None:
-            self.fill_datepicker_date(datetime.now()
+            self.fill_datepicker_date((datetime.now() + timedelta(days_remaining))
                                       if server_time is None else server_time + timedelta(days_remaining),
                                       context=elements[1])
             self.close_datepicker()

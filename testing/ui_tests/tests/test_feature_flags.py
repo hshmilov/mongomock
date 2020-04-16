@@ -152,7 +152,7 @@ class TestFeatureFlags(TestBase):
         req.close()
         server_date = parser.parse(server_date) if server_date is not None else None
         self.dashboard_page.switch_to_page()
-        for days_remaining in [60, 15, 2]:
+        for days_remaining in [60, 15, 3]:
             self._change_expiration_date(days_remaining, server_time=server_date, contract=True)
             assert self.dashboard_page.find_contract_remainder_banner(days_remaining)
 

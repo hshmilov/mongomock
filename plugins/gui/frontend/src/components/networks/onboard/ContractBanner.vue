@@ -21,6 +21,7 @@
 
 <script>
 import dayjs from 'dayjs';
+import { serverTime } from '@api/axios.js';
 import { mapGetters } from 'vuex';
 import XBanner from '../../axons/popover/Banner.vue';
 import featureFlagsMixin from '../../../mixins/feature_flags';
@@ -37,9 +38,14 @@ export default {
       isExpired: IS_EXPIRED,
     }),
     contractDaysRemaining() {
+      let now = dayjs();
       if (this.isContractDefined) {
+        if (serverTime) {
+          // Calculates the date relative to the server time and not the browser time
+          now = dayjs(serverTime);
+        }
         const expiry_date = dayjs(this.featureFlags.expiry_date);
-        return expiry_date.diff(dayjs(), 'days');
+        return expiry_date.diff(now, 'days');
       }
     },
     isContractDefined() {

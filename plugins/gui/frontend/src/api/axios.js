@@ -21,6 +21,8 @@ if (process.env.NODE_ENV === 'development') {
 }
 
 const axiosClient = axios.create(requestConfig);
+export default axiosClient;
+export let serverTime = 0;
 
 axiosClient.interceptors.request.use((config) => {
   if (['post', 'put', 'delete', 'patch'].includes(config.method) && !excludedUrls.includes(config.url)) {
@@ -33,5 +35,10 @@ axiosClient.interceptors.request.use((config) => {
   return config;
 }, (error) => Promise.reject(error));
 
-
-export default axiosClient;
+axiosClient.interceptors.response.use((response) => {
+  // Saving the server time for futher use in the code
+  if (response.headers.date) {
+    serverTime = response.headers.date;
+  }
+  return response;
+}, (error) => Promise.reject(error));
