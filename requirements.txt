@@ -130,7 +130,6 @@ SoftLayer==5.4.4
 oci==2.0.5
 pymemfd==0.1
 gql==0.1.0
-psycopg2==2.8.3
 mysql-connector-python==8.0.17
 junos-eznc==2.1.8
 beautifulsoup4==4.6.3
