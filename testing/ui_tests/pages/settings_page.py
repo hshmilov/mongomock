@@ -3,6 +3,7 @@ import collections
 
 from datetime import datetime, timedelta
 from uuid import uuid4
+import requests
 
 from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.common.by import By
@@ -18,7 +19,7 @@ from ui_tests.pages.page import PAGE_BODY, TAB_BODY, Page
 
 
 class SettingsPage(Page):
-    SCHEDULE_RATE_ID = 'system_research_rate'
+    SCHEDULE_RATE_CSS = '#system_research_rate'
     DEFAULT_SCHEDULE_RATE = '12'
     DEFAULT_SCHEDILE_DATE = '13:00'
     GLOBAL_SETTINGS_CSS = 'li#global-settings-tab'
@@ -160,6 +161,8 @@ class SettingsPage(Page):
     CONNECTION_LABEL_REQUIRED_DIV_CSS = '#requireConnectionLabel .checkbox-container'
     CONNECTION_LABEL_REQUIRED_INPUT_CSS = '#requireConnectionLabel .checkbox-container input'
     ACTIVE_TAB = 'div.x-tab.active'
+
+    SETTINGS_SAVE_TIMEOUT = 60 * 30
 
     ROLE_PANEL_CONTENT = '.role-panel .x-side-panel__content'
     USERS_PANEL_CONTENT = '.user-panel .v-navigation-drawer__content'
@@ -565,7 +568,7 @@ class SettingsPage(Page):
         self.fill_text_field_by_element_id(self.DISCOVERY_SCHEDULE_REPEAT_INPUT, 1)
 
     def get_schedule_rate_value(self):
-        return self.driver.find_element_by_id(self.SCHEDULE_RATE_ID).get_attribute('value')
+        return self.driver.find_element_by_css_selector(self.SCHEDULE_RATE_CSS).get_attribute('value')
 
     def find_send_emails_toggle(self):
         return self.find_checkbox_by_label(self.SEND_EMAILS_LABEL)
@@ -1168,9 +1171,6 @@ class SettingsPage(Page):
         self.click_save_button()
         self.wait_for_saved_successfully_toaster()
 
-    def get_discovery_rate_value(self):
-        return self.driver.find_element_by_id(self.SCHEDULE_RATE_ID).get_attribute('value')
-
     def get_selected_discovery_mode(self):
         return self.find_discovery_mode_dropdown().text
 
@@ -1245,8 +1245,37 @@ class SettingsPage(Page):
         close_btn.click()
         self.wait_for_role_panel_absent()
 
+    def save_system_interval_schedule_settings(self, interval_value):
+        session = requests.Session()
+        cookies = self.driver.get_cookies()
+
+        for cookie in cookies:
+            session.cookies.set(cookie['name'], cookie['value'])
+        resp = session.get('https://127.0.0.1/api/csrf')
+        csrf_token = resp.text
+        resp.close()
+        session.headers['X-CSRF-Token'] = csrf_token
+
+        current_settings = self.get_current_schedule_settings(session)
+        if current_settings is not None:
+            current_settings['discovery_settings']['system_research_rate'] = interval_value
+            current_settings['discovery_settings']['conditional'] = 'system_research_rate'
+
+        result = session.post('https://127.0.0.1/api/settings/plugins/system_scheduler/SystemSchedulerService',
+                              json=current_settings,
+                              timeout=self.SETTINGS_SAVE_TIMEOUT)
+        return result
+
     def open_discovery_mode_options(self):
         self.driver.find_element_by_css_selector(self.DISCOVERY_SCHEDULE_MODE_DDL).click()
 
     def find_discovery_mode_options(self):
         return self.driver.find_elements_by_css_selector(self.DISCOVERY_SCHEDULE_MODE_OPTIONS)
+
+    def wait_for_system_research_interval(self):
+        self.wait_for_element_present_by_css(self.SCHEDULE_RATE_CSS)
+
+    def get_current_schedule_settings(self, session):
+        current_settings = session.get('https://127.0.0.1/api/settings/plugins/system_scheduler/SystemSchedulerService',
+                                       timeout=self.SETTINGS_SAVE_TIMEOUT)
+        return current_settings.json().get('config', None)

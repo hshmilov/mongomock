@@ -44,7 +44,7 @@ class TestGeneralSettings(TestBase):
 
         # verify mode set to interval and value been migrated
         assert self.settings_page.get_selected_discovery_mode() == self.settings_page.DISCOVERY_SCHEDULE_INTERVAL_TEXT
-        assert self.settings_page.get_discovery_rate_value() == DISCOVERY_UPDATED_VALUE
+        assert self.settings_page.get_schedule_rate_value() == DISCOVERY_UPDATED_VALUE
 
     def test_gui_settings(self):
         self.settings_page.switch_to_page()

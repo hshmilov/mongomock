@@ -151,8 +151,10 @@ class SystemSchedulerService(PluginService, UpdatablePluginMixin):
             config_collection.update_one(config_match,
                                          {
                                              '$set': {
-                                                 f'config.discovery_settings.{DEFAULT_SYSTEM_RESEARCH_DATE_ATTRIB_NAME_MAIN}': {
-                                                     DEAFULT_SYSTEM_RESEARCH_DATE_ATTRIB_NAME: system_research_date_time,
+                                                 f'config.discovery_settings.'
+                                                 f'{DEFAULT_SYSTEM_RESEARCH_DATE_ATTRIB_NAME_MAIN}': {
+                                                     DEAFULT_SYSTEM_RESEARCH_DATE_ATTRIB_NAME:
+                                                         system_research_date_time,
                                                      DEAFULT_SYSTEM_RESEARCH_DATE_RECURRENCE_ATTRIB_NAME:
                                                      DEAFULT_SYSTEM_RESEARCH_DATE_RECURRENCE
                                                  }

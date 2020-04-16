@@ -995,12 +995,14 @@ class TestDashboard(TestBase):
             self.wait_for_adapter_down(STRESSTEST_ADAPTER)
 
     def test_dashboard_lifecycle_next_cycle(self):
+        interval_value = 0.1  # 5 minutes
         self.dashboard_page.switch_to_page()
         self.base_page.run_discovery()
 
         # This triggers a dashboard reload
         self.settings_page.switch_to_page()
-        self.settings_page.fill_schedule_rate('0.1')
+        self.settings_page.set_discovery_mode_dropdown_to_interval()
+        self.settings_page.fill_schedule_rate(interval_value)
         self.settings_page.save_and_wait_for_toaster()
 
         self.dashboard_page.switch_to_page()
