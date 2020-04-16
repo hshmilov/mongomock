@@ -6,6 +6,7 @@ users:
     groups: users, admin
     passwd: $6$rounds=4096$wLtxWdEtkp$mrQM5DTsV5KPDXVIKwULabcl/D5HmIkca19qCxsT0ZQ4NulYEr89pkayLP/rlIVrVIoilX.ZrsMJU.yFoh2U1.
     lock_passwd: false
+    shell: /bin/bash
 apt:
     preserve_sources_list: true
 package_update: false
