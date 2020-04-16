@@ -48,7 +48,9 @@
 </template>
 
 <script>
-import { mapState, mapMutations, mapActions } from 'vuex';
+import {
+  mapState, mapGetters, mapMutations, mapActions,
+} from 'vuex';
 import { getUserTableColumnGroups } from '@api/user-preferences';
 import { defaultFields, getEntityPermissionCategory } from '@constants/entities';
 
@@ -58,6 +60,7 @@ import XTableData from './TableData.vue';
 import XActionMenu from './ActionMenu.vue';
 import XTableOptionMenu from './TableOptionMenu.vue';
 
+import { GET_DATA_SCHEMA_BY_NAME } from '../../../store/getters';
 import { UPDATE_DATA_VIEW } from '../../../store/mutations';
 import {
   FETCH_DATA_FIELDS, FETCH_DATA_CURRENT, FETCH_DATA_HYPERLINKS,
@@ -105,6 +108,12 @@ export default {
     hasSelection() {
       return (this.selection.ids && this.selection.ids.length) || this.selection.include === false;
     },
+    ...mapGetters({
+      getFieldSchemaByName: GET_DATA_SCHEMA_BY_NAME,
+    }),
+    schemaFieldsByName() {
+      return this.getFieldSchemaByName(this.module);
+    },
   },
   async created() {
     this.fetchDataHyperlinks({ module: this.module });
@@ -120,7 +129,7 @@ export default {
       this.updateView({
         module: this.module,
         view: {
-          fields: this.userFieldsGroups.default,
+          fields: this.filterViewFields(this.userFieldsGroups.default),
         },
       });
       this.$refs.table.fetchContentPages(true);
@@ -172,6 +181,9 @@ export default {
             }), {});
         });
       }
+    },
+    filterViewFields(fields) {
+      return fields.filter((fieldName) => this.schemaFieldsByName[fieldName]);
     },
   },
 };
