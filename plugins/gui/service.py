@@ -12,6 +12,7 @@ import requests
 from apscheduler.executors.pool import \
     ThreadPoolExecutor as ThreadPoolExecutorApscheduler
 from flask import (session)
+from bson.json_util import dumps
 # pylint: disable=import-error,no-name-in-module
 from onelogin.saml2.idp_metadata_parser import OneLogin_Saml2_IdPMetadataParser
 
@@ -219,7 +220,6 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin, 
 
     def _add_default_roles(self):
         if self._roles_collection.find_one({'name': PREDEFINED_ROLE_OWNER}) is None:
-
             # Axonius Owner role doesn't exists - let's create it
             self._roles_collection.insert_one({
                 'name': PREDEFINED_ROLE_OWNER,
@@ -228,7 +228,6 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin, 
                 IS_AXONIUS_ROLE: True
             })
         if self._roles_collection.find_one({'name': PREDEFINED_ROLE_OWNER_RO}) is None:
-
             # Axonius Read Only role doesn't exists - let's create it
             axonius_ro_permissions = get_viewer_permissions()
             axonius_ro_permissions[PermissionCategory.Settings.value][PermissionAction.View.value] = True
@@ -248,7 +247,6 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin, 
 
             })
         if self._roles_collection.find_one({'name': PREDEFINED_ROLE_VIEWER}) is None:
-
             # Viewer role doesn't exists - let's create it
             self._roles_collection.insert_one({
                 'name': PREDEFINED_ROLE_VIEWER, PREDEFINED_FIELD: True, 'permissions': get_viewer_permissions()
@@ -413,7 +411,8 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin, 
             adapter_devices = adapter_data.call_uncached(EntityType.Devices)
             adapter_users = adapter_data.call_uncached(EntityType.Users)
 
-            log_metric(logger, SystemMetric.GUI_USERS, self._users_collection.count_documents({}))
+            log_metric(logger, SystemMetric.GUI_USERS,
+                       self._users_collection.count_documents({'archived': {'$ne': True}}))
             log_metric(logger, SystemMetric.DEVICES_SEEN, adapter_devices['seen'])
             log_metric(logger, SystemMetric.DEVICES_UNIQUE, adapter_devices['unique'])
 
@@ -424,8 +423,23 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin, 
                                                   mongo_filter={},
                                                   mongo_sort={},
                                                   skip=0)
+
+            log_metric(logger, SystemMetric.ENFORCEMENTS_COUNT, len(enforcements))
             for enforcement in enforcements:
-                log_metric(logger, SystemMetric.ENFORCEMENT_RAW, str(enforcement))
+                enforcement.pop('_id', None)
+                log_metric(logger, SystemMetric.ENFORCEMENT_RAW, dumps(enforcement))
+
+            for action in self.enforcements_saved_actions_collection.find({}, projection={'_id': False}):
+                log_metric(logger, SystemMetric.EC_ACTION_RAW, dumps(action))
+
+            for view_type, view_collection in self.gui_dbs.entity_query_views_db_map.items():
+                log_metric(logger,
+                           SystemMetric.STORED_VIEWS_COUNT,
+                           metric_value=view_collection.count_documents({}),
+                           view_type=str(view_type))
+                for view in view_collection.find({}, projection={'_id': False}):
+                    log_metric(logger, SystemMetric.STORED_VIEW_RAW, metric_value=dumps(view),
+                               view_type=str(view_type))
 
             plugins_by_plugin_name = {x[PLUGIN_NAME]
                                       for x

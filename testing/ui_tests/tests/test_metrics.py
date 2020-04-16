@@ -1,5 +1,3 @@
-import re
-
 from axonius.utils.wait import wait_until
 from axonius.consts.metric_consts import SystemMetric, Query, InstancesMetrics
 from services.adapters.stresstest_service import StresstestService
@@ -30,6 +28,13 @@ class TestMetrics(TestBase):
             self.devices_page.fill_query_name(self.TEST_METRIC_QUERY_NAME)
             self.devices_page.click_save_query_save_button()
 
+            self.enforcements_page.switch_to_page()
+            enforcement_name = 'Enforcement 1'
+            self.enforcements_page.create_notifying_enforcement(enforcement_name,
+                                                                self.TEST_METRIC_QUERY_NAME,
+                                                                added=False,
+                                                                subtracted=False)
+
             self.base_page.run_discovery()
 
             devices_unique = self.axonius_system.get_devices_db().count_documents({})
@@ -43,15 +48,14 @@ class TestMetrics(TestBase):
             wait_until(lambda: tester.is_metric_in_log(SystemMetric.USERS_SEEN, r'\d+'))
             wait_until(lambda: tester.is_metric_in_log(SystemMetric.USERS_UNIQUE, users_unique))
 
-            wait_until(lambda: tester.is_metric_in_log('adapter.devices.stresstest_adapter.entities', 10))
-            wait_until(lambda: tester.is_metric_in_log('adapter.devices.stresstest_adapter.entities.meta', 10))
-            wait_until(lambda: tester.is_metric_in_log('adapter.devices.stresstest_scanner_adapter.entities', 10))
-            wait_until(lambda: tester.is_metric_in_log('adapter.devices.stresstest_scanner_adapter.entities.meta', 10))
+            wait_until(lambda: tester.is_metric_in_log(SystemMetric.ENFORCEMENTS_COUNT, r'\d+'))
+            wait_until(lambda: tester.is_metric_in_log(SystemMetric.ENFORCEMENT_RAW, enforcement_name))
+            wait_until(lambda: tester.is_metric_in_log(SystemMetric.EC_ACTION_RAW, 'create_notification'))
 
-            wait_until(lambda: tester.is_metric_in_log('adapter.users.json_file_adapter.entities', 2))
-            wait_until(lambda: tester.is_metric_in_log('adapter.users.json_file_adapter.entities.meta', 2))
-            wait_until(lambda: tester.is_metric_in_log('adapter.users.active_directory_adapter.entities', r'\d+'))
-            wait_until(lambda: tester.is_metric_in_log('adapter.users.active_directory_adapter.entities.meta', r'\d+'))
+            wait_until(lambda: tester.is_metric_in_log(SystemMetric.STORED_VIEWS_COUNT, r'\d+'))
+            wait_until(lambda: tester.is_metric_in_log(SystemMetric.STORED_VIEW_RAW, self.TEST_METRIC_QUERY_NAME))
+
+            self._check_adapter_metrics(tester)
 
             system_scheduler_log_tester = self.axonius_system.scheduler.log_tester
             wait_until(lambda: system_scheduler_log_tester.is_metric_in_log(SystemMetric.TRIAL_EXPIRED_STATE, False))
@@ -62,11 +66,7 @@ class TestMetrics(TestBase):
             wait_until(lambda: core_log_tester.is_metric_in_log(InstancesMetrics.INSTANCE_LAST_SEEN, r'\d+'),
                        total_timeout=60 * 15)
 
-            report = re.escape(metric_query)
-
             self._create_report('metric_query')
-
-            wait_until(lambda: tester.is_metric_in_log('query.report', report))
 
             self.devices_page.switch_to_page()
             query_text = 'some_query_for_search'
@@ -74,6 +74,17 @@ class TestMetrics(TestBase):
             self.devices_page.enter_search()
 
             wait_until(lambda: tester.is_metric_in_log(Query.QUERY_GUI, query_text))
+
+    @staticmethod
+    def _check_adapter_metrics(tester):
+        wait_until(lambda: tester.is_metric_in_log('adapter.devices.stresstest_adapter.entities', 10))
+        wait_until(lambda: tester.is_metric_in_log('adapter.devices.stresstest_adapter.entities.meta', 10))
+        wait_until(lambda: tester.is_metric_in_log('adapter.devices.stresstest_scanner_adapter.entities', 10))
+        wait_until(lambda: tester.is_metric_in_log('adapter.devices.stresstest_scanner_adapter.entities.meta', 10))
+        wait_until(lambda: tester.is_metric_in_log('adapter.users.json_file_adapter.entities', 2))
+        wait_until(lambda: tester.is_metric_in_log('adapter.users.json_file_adapter.entities.meta', 2))
+        wait_until(lambda: tester.is_metric_in_log('adapter.users.active_directory_adapter.entities', r'\d+'))
+        wait_until(lambda: tester.is_metric_in_log('adapter.users.active_directory_adapter.entities.meta', r'\d+'))
 
     def _create_report(self, report_name):
         self.reports_page.switch_to_page()

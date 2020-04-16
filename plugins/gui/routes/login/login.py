@@ -20,6 +20,7 @@ from axonius.clients.ldap.ldap_connection import LdapConnection
 from axonius.clients.rest.connection import RESTConnection
 from axonius.consts.gui_consts import (CSRF_TOKEN_LENGTH, LOGGED_IN_MARKER_PATH, PREDEFINED_FIELD, IS_AXONIUS_ROLE)
 from axonius.clients.rest.exception import RESTException
+from axonius.consts.metric_consts import SystemMetric
 from axonius.consts.plugin_consts import (CONFIGURABLE_CONFIGS_COLLECTION,
                                           GUI_PLUGIN_NAME)
 from axonius.logging.metric_helper import log_metric
@@ -74,7 +75,7 @@ class Login:
         if 'pic_name' not in user:
             user['pic_name'] = self.DEFAULT_AVATAR_PIC
         user = dict(user)
-        log_metric(logger, 'LOGIN_MARKER', 0)
+        log_metric(logger, SystemMetric.LOGIN_MARKER, 0)
         user_name = user.get('user_name')
         source = user.get('source')
         if self.is_axonius_user():

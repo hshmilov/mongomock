@@ -12,7 +12,6 @@ from weasyprint.fonts import FontConfiguration
 from axonius.consts.gui_consts import (ChartViews, PREDEFINED_FIELD,
                                        FILE_NAME_TIMESTAMP_FORMAT)
 from axonius.entities import EntityType
-from axonius.logging.metric_helper import log_metric
 from axonius.plugin_base import PluginBase
 from axonius.utils.gui_helpers import get_sort, entity_fields
 from axonius.utils.db_querying_helper import get_entities
@@ -696,7 +695,6 @@ class ReportGenerator:
                     if view:
                         filter_query = view.get('query', {}).get('filter', '')
                         field_filters = view.get('colFilters', {})
-                        log_metric(logger, 'query.report', filter_query)
                         count = self.report_params['saved_view_count_func'](
                             entity, parse_filter(filter_query), None, False)
                         projection = {field: 1 for field in view.get('fields', []) if field_to_title.get(field)

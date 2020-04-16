@@ -1,4 +1,6 @@
 import re
+
+from axonius.consts.metric_consts import SystemMetric
 from axonius.utils.wait import wait_until
 from test_credentials.test_gui_credentials import AXONIUS_USER, AXONIUS_RO_USER
 from ui_tests.tests.ui_test_base import TestBase
@@ -13,9 +15,9 @@ class TestAxoniusUserLogin(TestBase):
         self.login_page.login(username=AXONIUS_USER['user_name'], password=AXONIUS_USER['password'])
 
         tester = self.axonius_system.gui.log_tester
-        wait_until(lambda: tester.is_pattern_in_log(re.escape('"metric_name": "LOGIN_MARKER"'), 30))
+        wait_until(lambda: tester.is_pattern_in_log(re.escape(f'"metric_name": "{SystemMetric.LOGIN_MARKER}"'), 30))
         wait_until(lambda: tester.is_pattern_in_log(re.escape('"ui_user": "admin", "ui_user_source": "internal"'), 30))
-        wait_until(lambda: tester.is_metric_in_log(metric_name='LOGIN_MARKER', value=0, lines_lookback=30))
+        wait_until(lambda: tester.is_metric_in_log(metric_name=SystemMetric.LOGIN_MARKER, value=0, lines_lookback=30))
 
         # So we can see that we're in
         self.settings_page.switch_to_page()

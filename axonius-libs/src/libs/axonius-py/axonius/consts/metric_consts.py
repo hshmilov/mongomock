@@ -7,7 +7,11 @@ class SystemMetric:
     DEVICES_UNIQUE = 'system.devices.unique'
     USERS_SEEN = 'system.users.seen'
     USERS_UNIQUE = 'system.users.unique'
-    ENFORCEMENT_RAW = 'system.alert.raw'
+    ENFORCEMENT_RAW = 'enforcement_raw'
+    ENFORCEMENTS_COUNT = 'enforcements_count'
+    EC_ACTION_RAW = 'ec_action_raw'
+    STORED_VIEW_RAW = 'stored_view_raw'
+    STORED_VIEWS_COUNT = 'stored_views_count'
     TIMED_ENDPOINT = 'timed_endpoint'
     NETIFACES_COUNT = 'netifaces.count'
     HOST_DB_DISK_FREE = 'host.db_disk_free'
@@ -25,6 +29,7 @@ class SystemMetric:
     CYCLE_FINISHED = 'cycle_finished'
     TRIAL_EXPIRED_STATE = 'trial_expired_state'
     CONTRACT_EXPIRED_STATE = 'contract_expired_state'
+    LOGIN_MARKER = 'LOGIN_MARKER'
 
 
 class ApiMetric:
