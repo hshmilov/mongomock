@@ -201,6 +201,8 @@ def normalize_mail(adapter_data):
         return None
     if mail.startswith('badgeonly@'):
         return None
+    if '_inactive' in mail:
+        return None
     return mail.strip().lower()
 
 
