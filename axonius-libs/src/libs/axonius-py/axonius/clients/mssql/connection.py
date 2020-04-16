@@ -4,6 +4,7 @@ import logging
 import pyodbc
 
 from axonius.clients.abstract.abstract_sql_connection import AbstractSQLConnection
+from axonius.multiprocess.utils import get_function_rv_safe
 
 logger = logging.getLogger(f'axonius.{__name__}')
 TDS_DRIVER = 'FreeTDS'
@@ -44,9 +45,10 @@ class MSSQLConnection(AbstractSQLConnection):
     def connect(self):
         """ Connects to the service """
         try:
-            self.db = pyodbc.connect(server=self.server, user=self.username, password=self.password, driver=TDS_DRIVER,
-                                     DATABASE=self.database, tds_version=self.tds_version, UseNTLMv2='yes')
-        except Exception as err:
+            self.db = get_function_rv_safe(pyodbc.connect, server=self.server, user=self.username,
+                                           password=self.password, driver=TDS_DRIVER, DATABASE=self.database,
+                                           tds_version=self.tds_version, UseNTLMv2='yes')
+        except Exception:
             logger.exception('Connection to database failed')
             raise
 

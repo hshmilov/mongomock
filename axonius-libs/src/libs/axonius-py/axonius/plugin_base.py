@@ -385,6 +385,7 @@ class PluginBase(Configurable, Feature, ABC):
         # No need to put such a small thing in a version.ini file, the CI changes this string everywhere.
 
         # Getting values from configuration file
+        self.__is_in_mock_mode = os.environ.get('AXONIUS_MOCK_MODE') == 'TRUE'
         self.temp_config = configparser.ConfigParser()
         self.temp_config.read(VOLATILE_CONFIG_PATH)
         self.config_file_path = config_file_path
@@ -697,6 +698,10 @@ class PluginBase(Configurable, Feature, ABC):
         import uwsgi    # pylint: disable=import-error
         logger.info(f'Reloading uwsgi...')
         uwsgi.reload()
+
+    @property
+    def is_in_mock_mode(self):
+        return self.__is_in_mock_mode
 
     # pylint: enable=no-self-use
     def _request_reload_uwsgi(self, plugin_unique_name: str):
@@ -3173,6 +3178,8 @@ class PluginBase(Configurable, Feature, ABC):
     @singlethreaded()
     @cachetools.cached(cachetools.TTLCache(maxsize=1, ttl=5), lock=threading.Lock())
     def should_cloud_compliance_run(self) -> bool:
+        if self.is_in_mock_mode:
+            return False
         cloud_compliance_settings = self.feature_flags_config().get(FeatureFlagsNames.CloudCompliance) or {}
         # If we are in trial, or if the cloud compliance feature has been enabled, run this.
         is_cloud_compliance_enabled = cloud_compliance_settings.get(CloudComplianceNames.Enabled)

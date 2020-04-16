@@ -35,7 +35,8 @@ def main():
         print(parser.usage())
         sys.exit(1)
 
-    db = core_service.CoreService().db.client
+    cs = core_service.CoreService()
+    db = cs.db.client
 
     if args.mode == 'backup':
         if Path(args.file).exists():
@@ -46,9 +47,17 @@ def main():
                 if 'adapter' in db_name:
                     for collection_name in db[db_name].collection_names():
                         print(f'Writing {db_name}/{collection_name}...')
+                        content = list(db[db_name][collection_name].find({}))
+                        if collection_name == 'devices_data':
+                            continue
+                        if collection_name == 'clients':
+                            # This is a special collection - we need to decrypt this
+                            for client in content:
+                                if 'client_config' in client:
+                                    cs.decrypt_dict(client['client_config'])
                         zf.writestr(
                             f'db/{db_name}/{collection_name}',
-                            xor_message(dumps(db[db_name][collection_name].find({})).encode('utf-8'),
+                            xor_message(dumps(content).encode('utf-8'),
                                         args.password.encode('utf-8'))
                         )
         print(f'Done with backup.')
@@ -61,11 +70,18 @@ def main():
                     collection_data = loads(xor_message(zf_file.read(), args.password.encode('utf-8')))
 
                 print(f'Restoring {db_name}/{collection_name}')
+                if collection_name == 'clients':
+                    if collection_data:
+                        for client in collection_data:
+                            if 'client_config' in client:
+                                cs.encrypt_dict(db_name, client['client_config'])
+
                 try:
                     db[db_name][collection_name].delete_many({})
                 except Exception:
                     pass
-                db[db_name][collection_name].insert(collection_data)
+                if collection_data:
+                    db[db_name][collection_name].insert(collection_data)
 
         print(f'Done with restore. Please restart the system')
 

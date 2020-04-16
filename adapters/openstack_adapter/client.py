@@ -2,7 +2,7 @@
 import logging
 from collections import defaultdict
 
-# pylint: disable=import-error
+# pylint: disable=import-error, no-member
 from openstack.connection import Connection
 
 from axonius.adapter_exceptions import ClientConnectionException
@@ -47,7 +47,7 @@ class OpenStackClient:
         if self._sess is None:
             raise OpenstackException('Unable to get instace list without session')
 
-        return map(lambda x: x.to_dict(), self._sess.compute.servers(all_tenants=True))
+        return map(lambda x: x.to_dict(), self._sess.compute.servers(all_tenants=True))     # pylint: disable=no-member
 
     def get_flavor(self, device):
         """
@@ -59,7 +59,7 @@ class OpenStackClient:
 
         # If we have flavor (not empty dict)
         if flavor:
-            flavor = self._sess.compute.get_flavor(flavor['id']).to_dict()
+            flavor = self._sess.compute.get_flavor(flavor['id']).to_dict()      # pylint: disable=no-member
         return flavor
 
     def get_image(self, device):
@@ -72,7 +72,7 @@ class OpenStackClient:
 
         # If we have image (not empty dict)
         if image:
-            image = self._sess.compute.get_image(image['id']).to_dict()
+            image = self._sess.compute.get_image(image['id']).to_dict()     # pylint: disable=no-member
         return image
 
     @staticmethod

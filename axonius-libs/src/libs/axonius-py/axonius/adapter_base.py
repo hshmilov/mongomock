@@ -85,7 +85,6 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
         self._clients = {}
         self._clients_collection = self._get_collection('clients')
         self.__adapter_settings_collection = self._get_collection(ADAPTER_SETTINGS)
-        self.__is_in_mock_mode = os.environ.get('AXONIUS_MOCK_MODE') == 'TRUE'
         self.__adapter_mock = AdapterMock(self)
 
         self._send_reset_to_ec()
@@ -441,7 +440,7 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
         Just understands where to route the request, the real or mock adapter.
         :return:
         """
-        if self.__is_in_mock_mode:
+        if self.is_in_mock_mode:
             return self.__adapter_mock.mock_query_users_by_client
         return self._query_users_by_client
 
@@ -497,7 +496,7 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
         self._save_field_names_to_db(EntityType.Users)
 
     def _route_parse_users_raw_data(self):
-        if self.__is_in_mock_mode:
+        if self.is_in_mock_mode:
             return self.__adapter_mock.mock_parse_users_raw_data
         return self._parse_users_raw_data
 
@@ -661,7 +660,7 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
             return data_list
 
     def _route_test_reachability(self, *args, **kwargs):
-        if self.__is_in_mock_mode:
+        if self.is_in_mock_mode:
             return self.__adapter_mock.mock_test_reachability()
         return self._test_reachability(*args, **kwargs)
 
@@ -1055,7 +1054,7 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
                 del client_config[param]
 
     def _route_connect_client(self, client_config, *args, **kwargs):
-        if self.__is_in_mock_mode:
+        if self.is_in_mock_mode:
             return self.__adapter_mock.mock_connect_client()
         self._clean_unneeded_client_config_fields(client_config)
         normalized_client_config = self._normalize_password_fields(client_config)
@@ -1124,7 +1123,7 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
         Just understands where to route the request, the real or mock adapter.
         :return:
         """
-        if self.__is_in_mock_mode:
+        if self.is_in_mock_mode:
             return self.__adapter_mock.mock_query_devices_by_client
         return self._query_devices_by_client
 
@@ -1396,7 +1395,7 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
         """
 
     def _route_parse_raw_data(self):
-        if self.__is_in_mock_mode:
+        if self.is_in_mock_mode:
             return self.__adapter_mock.mock_parse_raw_data
         return self._parse_raw_data
 

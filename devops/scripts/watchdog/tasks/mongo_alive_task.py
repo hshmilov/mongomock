@@ -28,7 +28,8 @@ class MongoAliveTask(WatchdogTask):
 
     @staticmethod
     def check_mongo_connection_now():
-        client = pymongo.MongoClient('127.0.0.1:27017', username='ax_user', password='ax_pass')
+        client = pymongo.MongoClient('127.0.0.1:27017', username='ax_user', password='ax_pass',
+                                     connectTimeoutMS=5000, serverSelectionTimeoutMS=5000)
         list(client['core']['version'].find({}))
 
     def run(self):
@@ -91,7 +92,7 @@ class MongoAliveTask(WatchdogTask):
                     with open('/home/ubuntu/helper.log', 'a') as helper:
                         subprocess.check_call('./se.sh re mongo'.split(),
                                               cwd=CORTEX_PATH,
-                                              timeout=60,
+                                              timeout=300,
                                               stderr=helper,
                                               stdout=helper)
                         subprocess.check_call('./se.sh re gui'.split(),
