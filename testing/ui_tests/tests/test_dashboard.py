@@ -657,16 +657,19 @@ class TestDashboard(TestBase):
         line.click()
         self.devices_page.wait_for_table_to_load()
         assert self.devices_page.count_entities() == first_result_count
-        assert self.devices_page.find_search_value() == self.OS_WINDOWS_QUERY
-        self.dashboard_page.switch_to_page()
-        shc_card = self.dashboard_page.get_card(self.TEST_SEGMENTATION_HISTOGRAM_TITLE)
-        shc_chart = self.dashboard_page.get_histogram_chart_from_card(shc_card)
-        line = self.dashboard_page.get_histogram_line_from_histogram(shc_chart, 2)
-        second_result_count = int(line.text)
-        line.click()
-        self.devices_page.wait_for_table_to_load()
-        assert self.devices_page.count_entities() == second_result_count
-        assert self.devices_page.find_search_value() == self.NO_OS_QUERY
+        if first_result_count == 1:
+            assert self.devices_page.find_search_value() == self.NO_OS_QUERY
+        else:
+            assert self.devices_page.find_search_value() == self.OS_WINDOWS_QUERY
+            self.dashboard_page.switch_to_page()
+            shc_card = self.dashboard_page.get_card(self.TEST_SEGMENTATION_HISTOGRAM_TITLE)
+            shc_chart = self.dashboard_page.get_histogram_chart_from_card(shc_card)
+            line = self.dashboard_page.get_histogram_line_from_histogram(shc_chart, 2)
+            second_result_count = int(line.text)
+            line.click()
+            self.devices_page.wait_for_table_to_load()
+            assert self.devices_page.count_entities() == second_result_count
+            assert self.devices_page.find_search_value() == self.NO_OS_QUERY
         self.dashboard_page.switch_to_page()
         self.dashboard_page.wait_for_spinner_to_end()
         self.dashboard_page.add_segmentation_card('Devices', 'Host Name', self.TEST_SEGMENTATION_PIE_TITLE, 'pie')
