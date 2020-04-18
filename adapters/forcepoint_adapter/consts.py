@@ -10,7 +10,12 @@ FORCEPOINT_QUERY = 'SELECT hostname.STR_VALUE AS "Hostname",ips.STR_VALUE AS "IP
                    '"Logged-in Users",(UPDATE_DATE) AS "Last Update",profile.STR_VALUE AS ' \
                    '"Profile Name",sync.STR_VALUE AS "Version",machinetype.STR_VALUE as ' \
                    '"Machine Type",synced.INT_VALUE as "Synced",clientStatus.STR_VALUE as ' \
-                   '"ClientStatus",macaddress.STR_VALUE as "MacAddress" FROM PA_DYNAMIC_STATUS ' \
+                   '"ClientStatus",macaddress.STR_VALUE as "MacAddress", ' \
+                   'clientInstallationVersion.STR_VALUE as "ClientInstallationVersion", ' \
+                   'lastProfileUpdate.TIME_VALUE_TS as "LastProfileUpdate", ' \
+                   'lastPolicyUpdate.TIME_VALUE_TS as "LastPolicyUpdate", ' \
+                   'profileVersion.INT_VALUE as "ProfileVersion" ' \
+                   'FROM PA_DYNAMIC_STATUS ' \
                    'AS endpoint LEFT OUTER JOIN PA_DYNAMIC_STATUS_PROPS hostname on endpoint.ID =' \
                    ' hostname.DYNAMIC_STATUS_ID and hostname.NAME = \'eps_os_HostName\' LEFT OUTER JOIN ' \
                    'PA_DYNAMIC_STATUS_PROPS ips on endpoint.ID = ips.DYNAMIC_STATUS_ID and ' \
@@ -25,4 +30,16 @@ FORCEPOINT_QUERY = 'SELECT hostname.STR_VALUE AS "Hostname",ips.STR_VALUE AS "IP
                    'JOIN PA_DYNAMIC_STATUS_PROPS clientStatus on endpoint.ID = clientStatus.DYNAMIC_STATUS_ID and ' \
                    'clientStatus.NAME = \'eps_os_ClientStatus\' LEFT OUTER JOIN ' \
                    'PA_DYNAMIC_STATUS_PROPS macaddress on ' \
-                   'endpoint.ID = macaddress.DYNAMIC_STATUS_ID and macaddress.NAME = \'eps_os_MacAddress\''
+                   'endpoint.ID = macaddress.DYNAMIC_STATUS_ID and macaddress.NAME = \'eps_os_MacAddress\' ' \
+                   'LEFT OUTER JOIN PA_DYNAMIC_STATUS_PROPS clientInstallationVersion on ' \
+                   'endpoint.ID = clientInstallationVersion.DYNAMIC_STATUS_ID ' \
+                   'and clientInstallationVersion.NAME = \'eps_os_ClientInstallationVersion\'' \
+                   'LEFT OUTER JOIN PA_DYNAMIC_STATUS_PROPS lastProfileUpdate on ' \
+                   'endpoint.ID = lastProfileUpdate.DYNAMIC_STATUS_ID ' \
+                   'and lastProfileUpdate.NAME = \'eps_os_LastProfileUpdate\'' \
+                   'LEFT OUTER JOIN PA_DYNAMIC_STATUS_PROPS profileVersion on ' \
+                   'endpoint.ID = profileVersion.DYNAMIC_STATUS_ID ' \
+                   'and profileVersion.NAME = \'eps_os_ProfileVersion\'' \
+                   'LEFT OUTER JOIN PA_DYNAMIC_STATUS_PROPS lastPolicyUpdate on ' \
+                   'endpoint.ID = lastPolicyUpdate.DYNAMIC_STATUS_ID ' \
+                   'and lastPolicyUpdate.NAME = \'eps_os_LastPolicyUpdate\''

@@ -102,6 +102,8 @@ class NessusAdapter(ScannerAdapterBase, Configurable):
             for scan in client_data.get_scans():
                 if scan.get('id') is None:
                     continue
+                if self.__scan_id_white_list and scan.get('id') not in self.__scan_id_white_list:
+                    continue
                 # Get all hosts for scan
                 try:
                     open_session = requests.Session()
@@ -303,6 +305,11 @@ class NessusAdapter(ScannerAdapterBase, Configurable):
         return {
             'items': [
                 {
+                    'name': 'scan_id_white_list',
+                    'title': 'Scan IDs category whitelist',
+                    'type': 'string'
+                },
+                {
                     'name': 'fetch_only_correlate',
                     'title': 'Only get devices with MAC, Hostname or correlatable IP address',
                     'type': 'bool'
@@ -318,8 +325,11 @@ class NessusAdapter(ScannerAdapterBase, Configurable):
     @classmethod
     def _db_config_default(cls):
         return {
-            'fetch_only_correlate': False
+            'fetch_only_correlate': False,
+            'scan_id_white_list': None
         }
 
     def _on_config_update(self, config):
         self.__fetch_only_correlate = config['fetch_only_correlate']
+        self.__scan_id_white_list = config['scan_id_white_list'].split(',') \
+            if config.get('scan_id_white_list') else None

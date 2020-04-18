@@ -7,7 +7,7 @@ from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.exception import RESTException
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.fields import Field
-from axonius.utils.parsing import normalize_var_name
+from axonius.utils.parsing import normalize_var_name, is_valid_ipv6
 from axonius.mixins.configurable import Configurable
 from axonius.utils.files import get_local_config_file
 from axonius.utils.datetime import parse_date
@@ -154,6 +154,8 @@ class ClarotyAdapter(ScannerAdapterBase, Configurable):
                     ips.extend(device_raw.get('ipv6') or [])
                 except Exception:
                     logger.exception(f'Problem getting ipv6 for {device_raw}')
+                if self.__exclude_ipv6:
+                    ips = [ip for ip in ips if not is_valid_ipv6(ip)]
                 try:
                     macs = device_raw.get('mac') or []
                     if not macs and self.__exclude_no_mac_address:
@@ -243,6 +245,11 @@ class ClarotyAdapter(ScannerAdapterBase, Configurable):
         return {
             'items': [
                 {
+                    'name': 'exclude_ipv6',
+                    'title': 'Exclude IPv6 addresses',
+                    'type': 'bool'
+                },
+                {
                     'name': 'virtual_zone_exclude_list',
                     'title': 'Virtual zone exclude list',
                     'type': 'string'
@@ -264,6 +271,7 @@ class ClarotyAdapter(ScannerAdapterBase, Configurable):
     def _db_config_default(cls):
         return {
             'virtual_zone_exclude_list': None,
+            'exclude_ipv6': False,
             'exclude_no_mac_address': False
         }
 
@@ -271,3 +279,4 @@ class ClarotyAdapter(ScannerAdapterBase, Configurable):
         self.__virtual_zone_exclude_list = config['virtual_zone_exclude_list'].split(',') \
             if config.get('virtual_zone_exclude_list') else None
         self.__exclude_no_mac_address = config.get('exclude_no_mac_address') or False
+        self.__exclude_ipv6 = config['exclude_ipv6']

@@ -101,6 +101,11 @@ class ServiceNowConnection(RESTConnection):
             ips_table = list(self.__get_devices_from_table(consts.IPS_TABLE))
         except Exception:
             logger.exception(f'Problem getting ips')
+        ci_ips_table = []
+        try:
+            ci_ips_table = list(self.__get_devices_from_table(consts.CI_IPS_TABLE))
+        except Exception:
+            logger.exception(f'Problem getting ci ips table')
         users_table_dict = dict()
         users_username_dict = dict()
         for user in users_table:
@@ -147,6 +152,15 @@ class ServiceNowConnection(RESTConnection):
             if company.get('sys_id'):
                 companies_table_dict[company.get('sys_id')] = company
 
+        ci_ips_table_dict = dict()
+        try:
+            for ci_ip in ci_ips_table:
+                if isinstance(ci_ip, dict) and ci_ip.get('asset'):
+                    if ci_ip.get('u_nic') not in ci_ips_table_dict:
+                        ci_ips_table_dict[ci_ip.get('u_nic')] = []
+                    ci_ips_table_dict[ci_ip.get('u_nic')].append(ci_ip)
+        except Exception:
+            logger.exception(f'Problem getting ci ips dict')
         ips_table_dict = dict()
         try:
             for ip_data in ips_table:
@@ -170,6 +184,7 @@ class ServiceNowConnection(RESTConnection):
             new_table_details[consts.ALM_ASSET_TABLE] = alm_asset_table_dict
             new_table_details[consts.COMPANY_TABLE] = companies_table_dict
             new_table_details[consts.IPS_TABLE] = ips_table_dict
+            new_table_details[consts.CI_IPS_TABLE] = ci_ips_table_dict
             tables_devices.append(new_table_details)
 
         return tables_devices

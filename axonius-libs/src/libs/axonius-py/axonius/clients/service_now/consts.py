@@ -21,6 +21,7 @@ USER_GROUPS_TABLE_KEY = 'user_groups_table'
 ALM_ASSET_TABLE = 'alm_hardware'
 COMPANY_TABLE = 'core_company'
 IPS_TABLE = 'u_ip_address'
+CI_IPS_TABLE = 'cmdb_ci_ip_address'
 # pylint: disable=C0103
 INSTALL_STATUS_DICT = {'0': 'Retired',
                        '1': 'Deployed',

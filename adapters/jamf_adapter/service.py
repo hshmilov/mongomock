@@ -76,6 +76,7 @@ class JamfAdapter(AdapterBase, Configurable):
         tenant_tag = Field(str, 'Tenant Tag')
         certificates = ListField(JamfCertificate, 'Certificates')
         extension_attributes = ListField(JamfExtensionAttribute, 'Extension Attributes')
+        disk_encryption_configuration = Field(str, 'Disk Encryption Configuration')
 
     def __init__(self):
         super().__init__(get_local_config_file(__file__))
@@ -399,6 +400,8 @@ class JamfAdapter(AdapterBase, Configurable):
                         try:
                             partitions = drive.get('partition')
                             if not partitions:
+                                partitions = (drive.get('partitions') or {}).get('partition')
+                            if not partitions:
                                 continue
                             if not isinstance(partitions, list):
                                 partitions = [partitions]
@@ -422,6 +425,7 @@ class JamfAdapter(AdapterBase, Configurable):
                                                       device=partition.get('name'))
                         except Exception:
                             logger.exception(f"couldn't parse drive: {drive}")
+                    device.disk_encryption_configuration = hardware.get('disk_encryption_configuration')
                     active_directory_status = hardware.get('active_directory_status') or 'Not Bound'
                     if active_directory_status == 'Not Bound':
                         device.part_of_domain = False

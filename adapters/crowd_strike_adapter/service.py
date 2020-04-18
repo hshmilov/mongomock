@@ -265,7 +265,7 @@ class CrowdStrikeAdapter(AdapterBase, Configurable):
             logger.exception('Error getting policy %s', policy.get('id'))
         return parsed_policy
 
-    # pylint: disable=too-many-statements,too-many-branches
+    # pylint: disable=too-many-statements,too-many-branches,too-many-nested-blocks
     def _parse_raw_data(self, devices_raw_data):
         for device_raw in devices_raw_data:
             try:
@@ -317,6 +317,13 @@ class CrowdStrikeAdapter(AdapterBase, Configurable):
                 device.device_manufacturer = device_raw.get('bios_manufacturer')
                 try:
                     device.groups = self.parse_groups(device_raw.get('groups_data'))
+                    if self.__group_name_whitelist:
+                        found_group = False
+                        for group_raw in device_raw.get('groups_data'):
+                            if group_raw.get('name') in self.__group_name_whitelist:
+                                found_group = True
+                        if not found_group:
+                            continue
                 except Exception:
                     logger.exception(f'Problem getting groups for {device_raw}')
                 try:
@@ -376,6 +383,11 @@ class CrowdStrikeAdapter(AdapterBase, Configurable):
                     'name': 'machine_domain_whitelist',
                     'title': 'Machine domain whitelist',
                     'type': 'string'
+                },
+                {
+                    'name': 'group_name_whitelist',
+                    'title': 'Group name whitelist',
+                    'type': 'string'
                 }
             ],
             'required': [
@@ -391,7 +403,8 @@ class CrowdStrikeAdapter(AdapterBase, Configurable):
         return {
             'get_policies': False,
             'get_vulnerabilities': False,
-            'machine_domain_whitelist': None
+            'machine_domain_whitelist': None,
+            'group_name_whitelist': None
         }
 
     def _on_config_update(self, config):
@@ -399,3 +412,5 @@ class CrowdStrikeAdapter(AdapterBase, Configurable):
         self._get_vulnerabilities = config['get_vulnerabilities']
         self.__machine_domain_whitelist = config.get('machine_domain_whitelist').split(',') \
             if config.get('machine_domain_whitelist') else None
+        self.__group_name_whitelist = config.get('group_name_whitelist').split(',') \
+            if config.get('group_name_whitelist') else None

@@ -1,3 +1,4 @@
+import datetime
 import logging
 
 from axonius.adapter_base import AdapterBase, AdapterProperty
@@ -21,6 +22,10 @@ class ForcepointAdapter(AdapterBase, Configurable):
         profile_name = Field(str, 'Profile Name')
         machine_type = Field(str, 'Machine Type')
         synced = Field(bool, 'Synced')
+        client_installation_version = Field(str, 'Client Installation Version')
+        last_policy_update = Field(datetime.datetime, 'Last Policy Update')
+        last_profile_update = Field(datetime.datetime, 'Last Profile Update')
+        profile_version = Field(int, 'Profile Version')
 
     def __init__(self):
         super().__init__(get_local_config_file(__file__))
@@ -41,7 +46,8 @@ class ForcepointAdapter(AdapterBase, Configurable):
             connection.set_credentials(username=client_config[consts.USER],
                                        password=client_config[consts.PASSWORD])
             with connection:
-                pass  # check that the connection credentials are valid
+                for _ in connection.query(consts.FORCEPOINT_QUERY):
+                    break
             return connection
         except Exception as err:
             message = f'Error connecting to client host: {client_config[consts.FORCEPOINT_HOST]}  ' \
@@ -122,6 +128,11 @@ class ForcepointAdapter(AdapterBase, Configurable):
                 device.last_seen = parse_date(device_raw.get('Last Update'))
                 device.profile_name = device_raw.get('Profile Name')
                 device.machine_type = device_raw.get('Machine Type')
+                device.client_installation_version = device_raw.get('ClientInstallationVersion')
+                device.last_policy_update = parse_date(device_raw.get('LastPolicyUpdate'))
+                device.last_profile_update = parse_date(device_raw.get('LastProfileUpdate'))
+                device.profile_version = device_raw.get('ProfileVersion') \
+                    if isinstance(device_raw.get('ProfileVersion'), int) else None
                 if str(device_raw.get('Synced')) == '1':
                     device.synced = True
                 elif str(device_raw.get('Synced')) == '0':

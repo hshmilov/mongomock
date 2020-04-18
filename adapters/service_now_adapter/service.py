@@ -9,13 +9,29 @@ from axonius.clients.rest.exception import RESTException
 from axonius.clients.service_now.connection import ServiceNowConnection
 from axonius.clients.service_now.consts import *
 from axonius.devices.device_adapter import DeviceAdapter
-from axonius.fields import Field
+from axonius.smart_json_class import SmartJsonClass
+from axonius.fields import Field, ListField
 from axonius.types.correlation import CorrelationResult, CorrelationReason
 from axonius.plugin_base import add_rule, return_error, EntityType
 from axonius.users.user_adapter import UserAdapter
 from axonius.utils.files import get_local_config_file
 from axonius.mixins.configurable import Configurable
 logger = logging.getLogger(f'axonius.{__name__}')
+
+
+class CiIpData(SmartJsonClass):
+    u_authorative_dns_name = Field(str, 'Authorative DNS Name')
+    u_ip_version = Field(str, 'IP Version')
+    u_ip_address = Field(str, 'IP Address')
+    u_lease_contract = Field(str, 'Lease Contract')
+    u_netmask = Field(str, 'Netmask')
+    u_network_address = Field(str, 'Network Address')
+    u_subnet = Field(str, 'Subnet')
+    u_zone = Field(str, 'Zone')
+    u_ip_address_property = Field(str, 'IP Address Property')
+    u_ip_network_class = Field(str, 'IP Network Class')
+    u_last_discovered = Field(datetime.datetime, 'Last Discovered')
+    u_install_status = Field(str, 'Install Status')
 
 
 class ServiceNowAdapter(AdapterBase, Configurable):
@@ -71,6 +87,9 @@ class ServiceNowAdapter(AdapterBase, Configurable):
         vendor = Field(str, 'Vendor')
         u_number = Field(str, 'U Number')
         support_group = Field(str, 'Support Group')
+        u_director = Field(str, 'Director')
+        is_virtual = Field(bool, 'Is Virtual')
+        ci_ips = ListField(CiIpData, 'CI IP Data')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -85,12 +104,15 @@ class ServiceNowAdapter(AdapterBase, Configurable):
                            users_table_dict=None,
                            snow_nics_table_dict=None,
                            users_username_dict=None,
+                           ci_ips_table_dict=None,
                            snow_alm_asset_table_dict=None,
                            snow_user_groups_table_dict=None,
                            companies_table_dict=None,
                            ips_table_dict=None):
         got_nic = False
         got_serial = False
+        if ci_ips_table_dict is None:
+            ci_ips_table_dict = dict()
         if users_username_dict is None:
             users_username_dict = dict()
         if snow_user_groups_table_dict is None:
@@ -127,6 +149,11 @@ class ServiceNowAdapter(AdapterBase, Configurable):
             device.u_bia_id = device_raw.get('u_bia_id')
             device.u_bia_integrity = device_raw.get('u_bia_integrity')
             device.u_bia_overall = device_raw.get('u_bia_overall')
+            virtual = device_raw.get('virtual')
+            if isinstance(virtual, str):
+                device.is_virtual = virtual.lower() == 'true'
+                if virtual.lower() != 'true' and self.__fetch_only_virtual_devices:
+                    return None
             if self.__exclude_vm_tables is True and class_name and 'cmdb_ci_vm' in class_name:
                 return None
             device.class_name = class_name
@@ -157,6 +184,7 @@ class ServiceNowAdapter(AdapterBase, Configurable):
                     (device_raw.get('support_group') or {}).get('value'))
                 if snow_support_group_value:
                     device.support_group = snow_support_group_value.get('name')
+                    device.u_director = snow_support_group_value.get('u_director')
             except Exception:
                 logger.warning(f'Problem adding support group to {device_raw}', exc_info=True)
 
@@ -252,20 +280,54 @@ class ServiceNowAdapter(AdapterBase, Configurable):
                             for snow_nic in snow_nics:
                                 try:
                                     device.add_nic(mac=snow_nic.get('mac_address'), ips=[snow_nic.get('ip_address')])
+                                    try:
+                                        ci_ip_data = ci_ips_table_dict.get(snow_nic.get('correlation_id'))
+                                        if not isinstance(ci_ip_data, list):
+                                            ci_ip_data = []
+
+                                        for ci_ip in ci_ip_data:
+                                            u_authorative_dns_name = ci_ip.get('u_authorative_dns_name')
+                                            u_ip_version = ci_ip.get('u_ip_version')
+                                            u_ip_address = ci_ip.get('u_ip_address')
+                                            u_lease_contract = ci_ip.get('u_lease_contract')
+                                            u_netmask = ci_ip.get('u_netmask')
+                                            u_network_address = ci_ip.get('u_network_address')
+                                            u_subnet = ci_ip.get('u_subnet')
+                                            u_zone = ci_ip.get('u_zone')
+                                            u_ip_address_property = ci_ip.get('u_ip_address_property')
+                                            u_ip_network_class = ci_ip.get('u_ip_network_class')
+                                            u_last_discovered = parse_date(ci_ip.get('u_last_discovered'))
+                                            u_install_status = ci_ip.get('u_install_status')
+                                            ci_ip_data = CiIpData(u_authorative_dns_name=u_authorative_dns_name,
+                                                                  u_ip_version=u_ip_version,
+                                                                  u_ip_address=u_ip_address,
+                                                                  u_lease_contract=u_lease_contract,
+                                                                  u_netmask=u_netmask,
+                                                                  u_network_address=u_network_address,
+                                                                  u_subnet=u_subnet,
+                                                                  u_zone=u_zone,
+                                                                  u_ip_address_property=u_ip_address_property,
+                                                                  u_ip_network_class=u_ip_network_class,
+                                                                  u_last_discovered=u_last_discovered,
+                                                                  u_install_status=u_install_status
+                                                                  )
+                                            device.ci_ips.append(ci_ip_data)
+                                    except Exception:
+                                        logger.exception(f'Problem getting ci ips table')
                                 except Exception:
                                     logger.exception(f'Problem with snow nic {snow_nic}')
                     except Exception:
                         logger.warning(f'Problem adding assigned_to to {device_raw}', exc_info=True)
-                    try:
-                        snow_ips = ips_table_dict.get(device_raw.get('sys_id'))
-                        if isinstance(snow_ips, list):
-                            for snow_ip in snow_ips:
-                                try:
-                                    device.add_nic(ips=[snow_ip.get('u_address').split('.')[0]])
-                                except Exception:
-                                    logger.exception(f'Problem with snow ips {snow_ips}')
-                    except Exception:
-                        logger.warning(f'Problem adding assigned_to to {device_raw}', exc_info=True)
+                try:
+                    snow_ips = ips_table_dict.get(device_raw.get('sys_id'))
+                    if isinstance(snow_ips, list):
+                        for snow_ip in snow_ips:
+                            try:
+                                device.add_nic(ips=[snow_ip.get('u_address').split(',')[0]])
+                            except Exception:
+                                logger.exception(f'Problem with snow ips {snow_ip}')
+                except Exception:
+                    logger.warning(f'Problem adding assigned_to to {device_raw}', exc_info=True)
                 if not install_status or self.__use_ci_table_for_install_status:
                     install_status = INSTALL_STATUS_DICT.get(device_raw.get('install_status'))
                 if self.__exclude_disposed_devices and install_status \
@@ -596,6 +658,7 @@ class ServiceNowAdapter(AdapterBase, Configurable):
             snow_alm_asset_table_dict = table_devices_data.get(ALM_ASSET_TABLE)
             companies_table_dict = table_devices_data.get(COMPANY_TABLE)
             ips_table_dict = table_devices_data.get(IPS_TABLE)
+            ci_ips_table_dict = table_devices_data.get(CI_IPS_TABLE)
             for device_raw in table_devices_data[DEVICES_KEY]:
                 device = self.create_snow_device(device_raw=device_raw,
                                                  snow_department_table_dict=snow_department_table_dict,
@@ -605,6 +668,7 @@ class ServiceNowAdapter(AdapterBase, Configurable):
                                                  users_table_dict=users_table_dict,
                                                  users_username_dict=users_username_dict,
                                                  companies_table_dict=companies_table_dict,
+                                                 ci_ips_table_dict=ci_ips_table_dict,
                                                  snow_user_groups_table_dict=snow_user_groups_table_dict,
                                                  ips_table_dict=ips_table_dict,
                                                  fetch_ips=self.__fetch_ips,
@@ -669,6 +733,11 @@ class ServiceNowAdapter(AdapterBase, Configurable):
                     'name': 'install_status_exclude_list',
                     'title': 'Install status number exclude list',
                     'type': 'string'
+                },
+                {
+                    'name': 'fetch_only_virtual_devices',
+                    'title': 'Fetch Only Virtual Devices',
+                    'type': 'bool'
                 }
             ],
             "required": [
@@ -678,7 +747,8 @@ class ServiceNowAdapter(AdapterBase, Configurable):
                 'fetch_users_info_for_devices',
                 'exclude_no_strong_identifier',
                 'exclude_vm_tables',
-                'fetch_only_active_users'
+                'fetch_only_active_users',
+                'fetch_only_virtual_devices'
             ],
             "pretty_name": "ServiceNow Configuration",
             "type": "array"
@@ -696,7 +766,8 @@ class ServiceNowAdapter(AdapterBase, Configurable):
             'exclude_vm_tables': False,
             'email_whitelist': None,
             'fetch_only_active_users': False,
-            'install_status_exclude_list': None
+            'install_status_exclude_list': None,
+            'fetch_only_virtual_devices': False
         }
 
     def _on_config_update(self, config):
@@ -707,6 +778,7 @@ class ServiceNowAdapter(AdapterBase, Configurable):
         self.__exclude_no_strong_identifier = config['exclude_no_strong_identifier']
         self.__use_ci_table_for_install_status = config['use_ci_table_for_install_status']
         self.__exclude_vm_tables = config['exclude_vm_tables']
+        self.__fetch_only_virtual_devices = config.get('fetch_only_virtual_devices') or False
         self.__email_whitelist = config['email_whitelist'].split(',') if config.get('email_whitelist') else None
         self.__fetch_only_active_users = config.get('fetch_only_active_users') or False
         self.__install_status_exclude_list = config.get('install_status_exclude_list').split(',') \

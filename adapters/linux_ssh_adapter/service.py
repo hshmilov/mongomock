@@ -38,7 +38,7 @@ class LinuxSshAdapter(LinuxSshExecutionMixIn, AdapterBase, Configurable):
 
     @staticmethod
     def _test_reachability(client_config):
-        return LinuxSshConnection.test_reachability(client_config[HOSTNAME], client_config.get(PORT, DEFAULT_PORT))
+        return LinuxSshConnection.test_reachability(client_config[HOSTNAME], int(client_config.get(PORT, DEFAULT_PORT)))
 
     def _prepare_client_config(self, client_config):
         client_config = copy.copy(client_config)
