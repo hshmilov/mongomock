@@ -16,7 +16,7 @@ GENERATE_CSV_TIMEOUT = 60 * 5
 
 def get_csv_from_heavy_lifting_plugin(mongo_filter, mongo_sort, mongo_projection, history: datetime,
                                       entity_type: EntityType, default_sort: bool,
-                                      field_filters: dict = None) -> Response:
+                                      field_filters: dict = None, cell_joiner=None) -> Response:
     """
     Queries the heavy lifting plugin and asks it to process the csv request.
     All the params are documented in the respected decorators in gui/service.py
@@ -27,7 +27,8 @@ def get_csv_from_heavy_lifting_plugin(mongo_filter, mongo_sort, mongo_projection
         'Content-Type': 'text/csv'
     }
     res = _get_csv_from_heavy_lifting(
-        default_sort, entity_type, history, mongo_filter, mongo_projection, mongo_sort, field_filters)
+        default_sort, entity_type, history, mongo_filter, mongo_projection, mongo_sort,
+        field_filters, cell_joiner=cell_joiner)
 
     def generate():
         # https://stackoverflow.com/questions/42715966/preserve-utf-8-bom-in-browser-downloads
@@ -43,7 +44,8 @@ def get_csv_from_heavy_lifting_plugin(mongo_filter, mongo_sort, mongo_projection
 
 def get_csv_file_from_heavy_lifting_plugin(query_name, mongo_filter, mongo_sort,
                                            mongo_projection, history: datetime, entity_type: EntityType,
-                                           default_sort: bool, field_filters: dict = None) -> object:
+                                           default_sort: bool, field_filters: dict = None,
+                                           cell_joiner=None) -> object:
     """
     Queries the heavy lifting plugin and asks it to process the csv request.
     All the params are documented in the respected decorators in gui/service.py
@@ -51,7 +53,7 @@ def get_csv_file_from_heavy_lifting_plugin(query_name, mongo_filter, mongo_sort,
     :return: the generated csv file of the saved query.
     """
     res = _get_csv_from_heavy_lifting(
-        default_sort, entity_type, history, mongo_filter, mongo_projection, mongo_sort, field_filters)
+        default_sort, entity_type, history, mongo_filter, mongo_projection, mongo_sort, field_filters, cell_joiner)
 
     csv_stream = io.StringIO()
     for chunk in res.iter_content(CHUNK_SIZE):
@@ -61,7 +63,7 @@ def get_csv_file_from_heavy_lifting_plugin(query_name, mongo_filter, mongo_sort,
 
 
 def _get_csv_from_heavy_lifting(default_sort, entity_type, history, mongo_filter, mongo_projection, mongo_sort,
-                                field_filters: dict = None):
+                                field_filters: dict = None, cell_joiner=None):
     try:
         return PluginBase.Instance.request_remote_plugin('generate_csv', HEAVY_LIFTING_PLUGIN_NAME,
                                                          'post',
@@ -71,6 +73,7 @@ def _get_csv_from_heavy_lifting(default_sort, entity_type, history, mongo_filter
                                                              'mongo_projection': mongo_projection,
                                                              'entity_type': entity_type.value,
                                                              'default_sort': default_sort,
+                                                             'cell_joiner': cell_joiner,
                                                              'history': history,
                                                              'field_filters': field_filters
                                                          }, stream=True, timeout=GENERATE_CSV_TIMEOUT)

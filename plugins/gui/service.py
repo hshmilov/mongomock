@@ -623,6 +623,11 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin, 
                             'enum': [1, 2]
                         },
                         {
+                            'name': 'cell_joiner',
+                            'title': 'Export CSV Cell Joiner',
+                            'type': 'string'
+                        },
+                        {
                             'name': 'timeout_settings',
                             'title': 'Timeout Settings',
                             'items': [
@@ -907,6 +912,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin, 
             },
             SYSTEM_SETTINGS: {
                 'refreshRate': 60,
+                'cell_joiner': None,
                 'defaultNumOfEntitiesPerPage': 20,
                 'timeout_settings': {
                     'disable_remember_me': False,

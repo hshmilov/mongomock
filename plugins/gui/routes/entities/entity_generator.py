@@ -89,7 +89,8 @@ def entity_generator(rule: str, permission_category: PermissionCategory):
                                                      self.entity_type,
                                                      self._system_settings.get(
                                                          'defaultSort'),
-                                                     field_filters)
+                                                     field_filters,
+                                                     cell_joiner=self._system_settings.get('cell_joiner'))
 
         @filtered_entities()
         @historical()
