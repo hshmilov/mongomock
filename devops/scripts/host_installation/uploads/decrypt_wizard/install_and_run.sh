@@ -18,8 +18,9 @@ trap finish EXIT
 touch $INSTALL_LOCK
 
 DECRYPTION_KEY=$1
+INSTALLER_NAME=axonius_install.py
 
-sudo unzip -o -P $DECRYPTION_KEY version.zip
+sudo gpg --no-use-agent -dq -o "${INSTALLER_NAME}" --passphrase "${DECRYPTION_KEY}" version.zip
 ls -la axonius_install.py
 
 cd /home/ubuntu

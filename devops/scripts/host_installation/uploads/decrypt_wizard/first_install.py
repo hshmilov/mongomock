@@ -37,7 +37,7 @@ def main():
             return
 
         print(f'Testing decryption key ...')
-        run_command_with_messages(f'sudo unzip -t -P {decryption_key} version.zip',
+        run_command_with_messages(f'sudo gpg --no-use-agent -dq -o /dev/null --passphrase {decryption_key} version.zip',
                                   ok_msg=f'Decryption key is correct',
                                   err_msg='Invalid decryption key',
                                   cwd=str(INSTALL_HOME),

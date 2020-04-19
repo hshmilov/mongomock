@@ -88,7 +88,7 @@
       "inline": [
         "cd /home/ubuntu/cortex",
         "mv axonius_{{user `build_name`}}.py axonius_install.py",
-        "zip -P {{user `version_password`}} version.zip axonius_install.py"
+        "sudo gpg --no-use-agent -o version.zip --symmetric --cipher-algo AES256 --passphrase \"{{user `version_password`}}\" axonius_install.py"
       ]
     },
     {
