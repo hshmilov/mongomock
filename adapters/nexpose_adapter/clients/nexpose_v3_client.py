@@ -236,6 +236,7 @@ class NexposeV3Client(NexposeClient):
                                    device_raw.get('osFingerprint', {}).get('architecture', '')]))
         device.last_seen = last_seen
         device.id = str(device_raw['id']) + (device_raw.get('hostName') or '')
+        device.nexpose_id = str(device_raw['id'])
         got_mac = False
         for address in device_raw.get('addresses', []):
             if address.get('mac'):

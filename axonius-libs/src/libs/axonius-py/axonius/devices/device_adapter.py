@@ -452,7 +452,7 @@ class DeviceOpenPort(SmartJsonClass):
 class DeviceOpenPortVulnerabilityAndFix(SmartJsonClass):
     """ A definition for a CVE that regarding an open port"""
 
-    port_id = Field(int, 'Port Number')
+    port_id = ListField(int, 'Port Number')
     cve_id = Field(str, 'CVE ID')
     cve_description = Field(str, 'CVE Description')
     cve_severity = Field(float, 'CVE Severity')

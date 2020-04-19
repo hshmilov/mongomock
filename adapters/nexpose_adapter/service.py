@@ -56,6 +56,7 @@ class NexposeAdapter(ScannerAdapterBase, Configurable):
     DEFAULT_LAST_SEEN_THRESHOLD_HOURS = 24 * 365 * 2
 
     class MyDeviceAdapter(DeviceAdapter):
+        nexpose_id = Field(str, 'Nexpose ID')
         nexpose_hostname = Field(str, 'Nexpose Hostname')
         risk_score = Field(float, 'Risk score')
         vulnerabilities_critical = Field(int, "Critical Vulnerabilities")

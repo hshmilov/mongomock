@@ -1,6 +1,6 @@
 import re
 
-DEVICE_PER_PAGE = 200
+DEVICE_PER_PAGE = 1000
 MAX_NUMBER_OF_DEVICES = 2000000
 
 DEFAULT_DOMAIN = 'https://api.kennasecurity.com'

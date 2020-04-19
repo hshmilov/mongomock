@@ -121,10 +121,11 @@ class KennaAdapter(AdapterBase):
             ip_address = device_raw.get('ip_address')
             device.first_seen = parse_date(device_raw.get('created_at'))
             device.last_seen = parse_date(device_raw.get('last_seen_time'))
-            device.host_name = device_raw.get('hostname') or device_raw.get('fqdn')
+            device.hostname = device_raw.get('hostname') or device_raw.get('fqdn')
             device.add_ips_and_macs(ips=[ip_address, device_raw.get('ipv6')],
                                     macs=[device_raw.get('mac_address')])
-            device.set_boot_time(boot_time=device_raw.get('last_booted_at'))
+            if device_raw.get('last_booted_at'):
+                device.set_boot_time(boot_time=parse_date(device_raw.get('last_booted_at')))
             network_ports = device_raw.get('network_ports')
             if not isinstance(network_ports, list):
                 network_ports = [network_ports]
@@ -137,14 +138,21 @@ class KennaAdapter(AdapterBase):
             device.boot_time = parse_date(device_raw.get('last_booted_at'))
             open_ports_vulns_and_fixes = []
             for vuln in device_vulnerabilities:
+                if not isinstance(vuln, dict):
+                    continue
                 vuln_fixes = vuln.get('fixes') or []
                 if not vuln_fixes:
                     # Note: in order to add a vulnerability with no fixes we need to have an empty fix
                     vuln_fixes.append({})
                 for fix in vuln_fixes:
                     try:
+                        port_id = vuln.get('port')
+                        if not port_id:
+                            port_id = None
+                        elif not isinstance(port_id, list):
+                            port_id = [port_id]
                         open_ports_vulns_and_fixes.append(DeviceOpenPortVulnerabilityAndFix(
-                            port_id=vuln.get('port'),
+                            port_id=port_id,
                             cve_id=vuln.get('cve_id'),
                             cve_description=vuln.get('cve_description'),
                             cve_severity=vuln.get('severity'),
@@ -162,7 +170,7 @@ class KennaAdapter(AdapterBase):
                         logger.exception(f'Failed to append vuln {vuln} and fix {fix}')
             device.open_ports_vulns_and_fixes = open_ports_vulns_and_fixes
             device.device_managed_by = device_raw.get('owner')
-            if device.get('ec2'):
+            if device_raw.get('ec2'):
                 device.cloud_provider = 'AWS'
                 device.cloud_id = device_raw.get('ec2')
         except Exception:
@@ -199,7 +207,7 @@ class KennaAdapter(AdapterBase):
             if device_id is None:
                 logger.warning(f'Bad device with no ID {device_raw}')
                 return None
-            device.id = device_id + '_' + (device_raw.get('ip_address') or '')
+            device.id = str(device_id) + '_' + (device_raw.get('ip_address') or '')
 
             self._fill_generic_fields(device, device_raw, device_vulnerabilities)
             self._fill_specific_fields(device, device_raw)
