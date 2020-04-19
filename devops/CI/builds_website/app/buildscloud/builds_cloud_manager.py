@@ -219,8 +219,8 @@ class BuildsCloudManager:
             raise ValueError(f'Unsupported compute cloud type {cloud}')
 
     def terminate_many_instances(self, cloud: str, instances_ids: List[str]):
-        assert len(instances_ids) < 20, \
-            'Can not terminate more than 20, this is a protection for you to not terminate everything'
+        assert len(instances_ids) < 50, \
+            'Can not terminate more than 50, this is a protection for you to not terminate everything'
         if cloud == 'aws':
             self.aws_compute.terminate_many_instances(instances_ids)
         elif cloud == 'gcp':
