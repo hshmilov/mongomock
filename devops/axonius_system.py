@@ -9,6 +9,7 @@ from pymongo.errors import PyMongoError
 
 from conf_tools import get_customer_conf_json
 from exclude_helper import ExcludeHelper
+from scripts.instances.network_utils import run_tunnel_for_adapters_register, stop_tunnel_for_adapters_register
 from services.axonius_service import get_service
 import subprocess
 import platform
@@ -338,14 +339,22 @@ def service_entry_point(target, args):
         args.env.append(AXONIUS_MOCK_DEMO_ENV_VAR)
 
     if args.mode == 'quick_register':
+        if NODE_MARKER_PATH.exists():
+            run_tunnel_for_adapters_register()
         for adapter in adapters:
             print(f'Registering {adapter}')
             axonius_system.get_adapter(adapter).quick_register()
+        if NODE_MARKER_PATH.exists():
+            stop_tunnel_for_adapters_register()
     elif args.mode == 'up':
         print(f'Starting {args.name}')
+        if NODE_MARKER_PATH.exists():
+            run_tunnel_for_adapters_register()
         axonius_system.start_plugins(adapters, services, standalone_services, 'prod' if args.prod else '',
                                      args.restart, args.rebuild, args.hard, env_vars=args.env,
                                      system_config=system_config)
+        if NODE_MARKER_PATH.exists():
+            stop_tunnel_for_adapters_register()
     elif args.mode == 'down':
         assert not args.restart and not args.rebuild
         print(f'Stopping {args.name}')

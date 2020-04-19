@@ -10,6 +10,8 @@ from scripts.instances.instances_consts import (MASTER_ADDR_HOST_PATH,
                                                 ENCRYPTION_KEY_HOST_PATH,
                                                 AXONIUS_SETTINGS_HOST_PATH,
                                                 WEAVE_NETWORK_SUBNET_KEY)
+from services.standalone_services.core_proxy_service import CoreProxyService
+from services.standalone_services.mongo_proxy_service import MongoProxyService
 from services.standalone_services.tunneler_service import TunnelerService
 from services.standalone_services.node_proxy_service import NodeProxyService
 
@@ -50,6 +52,26 @@ def run_proxy_socat():
     tunneler_service = NodeProxyService()
     tunneler_service.take_process_ownership()
     tunneler_service.start(allow_restart=True, show_print=False, mode='prod')
+
+
+def run_tunnel_for_adapters_register():
+    mongo_proxy = MongoProxyService()
+    mongo_proxy.take_process_ownership()
+    mongo_proxy.start(allow_restart=True, show_print=False, mode='prod')
+
+    core_proxy = CoreProxyService()
+    core_proxy.take_process_ownership()
+    core_proxy.start(allow_restart=True, show_print=False, mode='prod')
+
+
+def stop_tunnel_for_adapters_register():
+    mongo_proxy = MongoProxyService()
+    mongo_proxy.take_process_ownership()
+    mongo_proxy.stop()
+
+    core_proxy = CoreProxyService()
+    core_proxy.take_process_ownership()
+    core_proxy.stop()
 
 
 def connect_to_master(master_ip, weave_pass):
