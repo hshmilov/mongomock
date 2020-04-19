@@ -202,6 +202,8 @@ def system_entry_point(args):
         now = datetime.now()
         if adapters_to_register:
             print(f'Starting to quick register at {now}')
+            if NODE_MARKER_PATH.exists():
+                run_tunnel_for_adapters_register()
         failed_quick_register_adapters = set()
         for adapter in adapters_to_register:
             print(f'Quick registering {adapter}')
@@ -222,6 +224,8 @@ def system_entry_point(args):
                 failed_quick_register_adapters.add(adapter)
         if adapters_to_register:
             print(f'Finished quick registering, took {(datetime.now() - now).total_seconds()} seconds')
+            if NODE_MARKER_PATH.exists():
+                stop_tunnel_for_adapters_register()
 
         if failed_quick_register_adapters:
             # Fallback for failed quick register adapters

@@ -2,6 +2,7 @@ import shlex
 import subprocess
 
 from axonius.consts.plugin_consts import MASTER_PROXY_PLUGIN_NAME
+from axonius.consts.system_consts import DOCKERHUB_URL
 from services.ports import DOCKER_PORTS
 from services.weave_service import WeaveService
 
@@ -57,4 +58,4 @@ class NodeProxyService(WeaveService):
 
     @property
     def image(self):
-        return 'nexus.pub.axonius.com/alpine/socat'
+        return f'{DOCKERHUB_URL}alpine/socat'
