@@ -192,7 +192,7 @@ DOCKER_PORTS = {
     'alertlogic-adapter':               6683,
     'ca-cmdb-adapter':                  6684,
     'datto-rmm-adapter':                6685,
-    'zscaler-adapter':                  6686,
+    'zscaler-adapter':                  6686,  # port 8125 are used by datadog (some customers have)
     'reimage-tags-analysis':            6687,
     'heavy-lifting':                    6688,
     'instance-control':                 6689,

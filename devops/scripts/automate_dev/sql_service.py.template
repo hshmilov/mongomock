@@ -1,0 +1,255 @@
+import logging
+
+from axonius.utils.files import get_local_config_file
+from axonius.utils.parsing import get_exception_string
+from axonius.adapter_base import AdapterBase, AdapterProperty
+from axonius.clients.rest.connection import RESTConnection
+from axonius.clients.mssql.connection import MSSQLConnection
+from axonius.adapter_exceptions import ClientConnectionException
+from {adapter_name}_adapter import consts
+from {adapter_name}_adapter.client_id import get_client_id
+from {adapter_name}_adapter.structures import {capital_adapter_name}DeviceInstance, {capital_adapter_name}UserInstance
+
+logger = logging.getLogger(f'axonius.{{__name__}}')
+
+
+class {capital_adapter_name}Adapter(AdapterBase):
+    # pylint: disable=too-many-instance-attributes
+    class MyDeviceAdapter({capital_adapter_name}DeviceInstance):
+        pass
+
+    class MyUserAdapter({capital_adapter_name}UserInstance):
+        pass
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(get_local_config_file(__file__))
+
+    @staticmethod
+    def _get_client_id(client_config):
+        return get_client_id(client_config)
+
+    @staticmethod
+    def _test_reachability(client_config):
+        return RESTConnection.test_reachability(client_config.get('server'),
+                                                port=client_config.get('port'))
+
+    # TODO: implement
+    def get_connection(self, client_config):
+        # AUTOADAPTER
+        connection = MSSQLConnection(database=client_config.get(consts.{only_capital_adapter_name}_DATABASE,
+                                                                consts.DEFAULT_{only_capital_adapter_name}_DATABASE),
+                                     server=client_config[consts.{only_capital_adapter_name}_HOST],
+                                     port=client_config.get(consts.{only_capital_adapter_name}_PORT,
+                                                            consts.DEFAULT_{only_capital_adapter_name}_PORT),
+                                     devices_paging=self.__devices_fetched_at_a_time)
+        connection.set_credentials(username=client_config[consts.USER],
+                                   password=client_config[consts.PASSWORD])
+        with connection:
+            pass  # check that the connection credentials are valid
+        return connection
+
+    def _connect_client(self, client_config):
+        try:
+            return self.get_connection(client_config)
+        except Exception:
+            message = f'Error connecting to client host: {{client_config[consts.{only_capital_adapter_name}_HOST]}}  ' \
+                      f'database: ' \
+                      f'{{client_config.get(consts.{only_capital_adapter_name}_DATABASE, consts.DEFAULT_{only_capital_adapter_name}_DATABASE)}}'
+            logger.exception(message)
+            raise ClientConnectionException(get_exception_string())
+
+    def _query_devices_by_client(self, client_name, client_data: MSSQLConnection):
+        """
+        Get all devices from a specific  domain
+
+        :param str client_name: The name of the client
+        :param obj client_data: The data that represent a connection
+
+        :return: A json with all the attributes returned from the Server
+        """
+        # AUTOADAPTER - implement _query_devices_by_client
+        client_data.set_devices_paging(self.__devices_fetched_at_a_time)
+        with client_data:
+            yield from client_data.query(consts.{only_capital_adapter_name}_QUERY)
+
+    @staticmethod
+    # pylint: disable=arguments-differ
+    def _query_users_by_client(client_name, client_data):
+        """
+        Get all users from a specific  domain
+
+        :param str client_name: The name of the client
+        :param obj client_data: The data that represent a connection
+
+        :return: A json with all the attributes returned from the Server
+        """
+        with client_data:
+            yield from client_data.get_user_list()
+
+    def _clients_schema(self):
+        """
+        The schema {capital_adapter_name}Adapter expects from configs
+
+        :return: JSON scheme
+        """
+        return {{
+            'items': [
+                {{
+                    'name': consts.{only_capital_adapter_name}_HOST,
+                    'title': 'MSSQL Server',
+                    'type': 'string'
+                }},
+                {{
+                    'name': consts.{only_capital_adapter_name}_PORT,
+                    'title': 'Port',
+                    'type': 'integer',
+                    'default': consts.DEFAULT_{only_capital_adapter_name}_PORT,
+                    'format': 'port'
+                }},
+                {{
+                    'name': consts.{only_capital_adapter_name}_DATABASE,
+                    'title': 'Database',
+                    'type': 'string',
+                    'default': consts.DEFAULT_{only_capital_adapter_name}_DATABASE
+                }},
+                {{
+                    'name': consts.USER,
+                    'title': 'User Name',
+                    'type': 'string'
+                }},
+                {{
+                    'name': consts.PASSWORD,
+                    'title': 'Password',
+                    'type': 'string',
+                    'format': 'password'
+                }}
+            ],
+            'required': [
+                consts.{only_capital_adapter_name}_HOST,
+                consts.USER,
+                consts.PASSWORD,
+                consts.{only_capital_adapter_name}_DATABASE
+            ],
+            'type': 'array'
+        }}
+
+    # TODO: implement
+    @staticmethod
+    def _fill_{adapter_name}_device_fields(device_raw: dict, device: MyDeviceAdapter):
+        # AUTOADAPTER
+        try:
+            pass
+        except Exception:
+            logger.exception(f'Failed creating instance for device {{device_raw}}')
+
+    # TODO: implement
+    def _create_device(self, device_raw: dict, device: MyDeviceAdapter):
+        # AUTOADAPTER
+        try:
+            device_id = device_raw.get('')
+            if device_id is None:
+                logger.warning(f'Bad device with no ID {{device_raw}}')
+                return None
+            device.id = device_id + '_' + (device_raw.get('') or '')
+
+            self._fill_{adapter_name}_device_fields(device_raw, device)
+
+            device.set_raw(device_raw)
+
+            return device
+        except Exception:
+            logger.exception(f'Problem with fetching {capital_adapter_name} Device for {{device_raw}}')
+            return None
+
+    def _parse_device_raw_data(self, devices_raw_data):
+        """
+        Gets raw data and yields Device objects.
+        :param devices_raw_data: the raw data we get.
+        :return:
+        """
+        for device_raw in devices_raw_data:
+            if not device_raw:
+                continue
+            try:
+                # noinspection PyTypeChecker
+                device = self._create_device(device_raw, self._new_device_adapter())
+                if device:
+                    yield device
+            except Exception:
+                logger.exception(f'Problem with fetching {capital_adapter_name} Device for {{device_raw}}')
+
+    # TODO: implement
+    @staticmethod
+    def _fill_{adapter_name}_user_fields(user_raw: dict, user: MyUserAdapter):
+        # AUTOADAPTER
+        try:
+            pass
+        except Exception:
+            logger.exception(f'Failed creating instance for user {{user_raw}}')
+
+    # TODO: implement
+    def _create_user(self, user_raw: dict, user: MyUserAdapter):
+        # AUTOADAPTER
+        try:
+            user_id = user_raw.get('')
+            if user_id is None:
+                logger.warning(f'Bad user with no ID {{user_raw}}')
+                return None
+            user.id = user_id + '_' + (user_raw.get('') or '')
+
+            self._fill_{adapter_name}_user_fields(user_raw, user)
+
+            user.set_raw(user_raw)
+
+            return user
+        except Exception:
+            logger.exception(f'Problem with fetching {capital_adapter_name} User for {{user_raw}}')
+            return None
+
+    # pylint: disable=arguments-differ
+    def _parse_users_raw_data(self, users_raw_data):
+        """
+        Gets raw data and yields User objects.
+        :param users_raw_data: the raw data we get.
+        :return:
+        """
+        for user_raw in users_raw_data:
+            if not user_raw:
+                continue
+            try:
+                # noinspection PyTypeChecker
+                user = self._create_user(user_raw, self._new_user_adapter())
+                if user:
+                    yield user
+            except Exception:
+                logger.exception(f'Problem with fetching {capital_adapter_name} User for {{user_raw}}')
+
+    # TODO: Modify
+    @classmethod
+    def adapter_properties(cls):
+        # AUTOADAPTER - check if you need to add other properties'
+        return [AdapterProperty.Assets, AdapterProperty.UserManagement]
+
+    @classmethod
+    def _db_config_schema(cls) -> dict:
+        return {{
+            'items': [
+                {{
+                    'name': 'devices_fetched_at_a_time',
+                    'type': 'integer',
+                    'title': 'SQL pagination'
+                }}
+            ],
+            'required': ['devices_fetched_at_a_time'],
+            'pretty_name': '{capital_adapter_name} Configuration',
+            'type': 'array'
+        }}
+
+    @classmethod
+    def _db_config_default(cls):
+        return {{
+            'devices_fetched_at_a_time': 1000
+        }}
+
+    def _on_config_update(self, config):
+        self.__devices_fetched_at_a_time = config['devices_fetched_at_a_time']

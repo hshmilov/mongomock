@@ -1,0 +1,159 @@
+import logging
+
+from axonius.consts import remote_file_consts
+from axonius.utils.parsing import get_exception_string
+from axonius.utils.files import get_local_config_file
+from axonius.adapter_base import AdapterBase, AdapterProperty
+from axonius.adapter_exceptions import ClientConnectionException
+from axonius.utils.remote_file_utils import load_remote_data, test_file_reachability
+from {adapter_name}_adapter.client_id import get_client_id
+from {adapter_name}_adapter.structures import {capital_adapter_name}DeviceInstance, {capital_adapter_name}UserInstance
+
+logger = logging.getLogger(f'axonius.{{__name__}}')
+
+
+class {capital_adapter_name}Adapter(AdapterBase):
+    # pylint: disable=too-many-instance-attributes
+    class MyDeviceAdapter({capital_adapter_name}DeviceInstance):
+        pass
+
+    class MyUserAdapter({capital_adapter_name}UserInstance):
+        pass
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
+
+    @staticmethod
+    def _get_client_id(client_config):
+        return get_client_id(client_config)
+
+    # TODO: implement
+    @staticmethod
+    def _test_reachability(client_config):
+        # AUTOADAPTER
+        return test_file_reachability(client_config.get(''))
+
+    # TODO: implement
+    def _connect_client(self, client_config):
+        # AUTOADAPTER
+        try:
+            file_name, file_data = load_remote_data(client_config)
+
+            return file_name, file_data
+        except Exception as err:
+            logger.exception(f'Error connecting to sqlite database')
+            raise ClientConnectionException(get_exception_string())
+
+    @staticmethod
+    def _clients_schema():
+        """
+        The schema {capital_adapter_name}Adapter expects from configs
+
+        :return: JSON scheme
+        """
+        return {{
+            'items': [
+                *remote_file_consts.FILE_CLIENTS_SCHEMA
+            ],
+            'required': [
+                *remote_file_consts.FILE_SCHEMA_REQUIRED
+            ],
+            'type': 'array'
+        }}
+
+    # TODO: implement
+    @staticmethod
+    def _fill_{adapter_name}_device_fields(device_raw: dict, device: MyDeviceAdapter):
+        # AUTOADAPTER
+        try:
+            pass
+        except Exception:
+            logger.exception(f'Failed creating instance for device {{device_raw}}')
+
+    # TODO: implement
+    def _create_device(self, device_raw: dict, device: MyDeviceAdapter):
+        # AUTOADAPTER
+        try:
+            device_id = device_raw.get('')
+            if device_id is None:
+                logger.warning(f'Bad device with no ID {{device_raw}}')
+                return None
+            device.id = device_id + '_' + (device_raw.get('') or '')
+
+            self._fill_{adapter_name}_device_fields(device_raw, device)
+
+            device.set_raw(device_raw)
+
+            return device
+        except Exception:
+            logger.exception(f'Problem with fetching {capital_adapter_name} Device for {{device_raw}}')
+            return None
+
+    def _parse_device_raw_data(self, devices_raw_data):
+        """
+        Gets raw data and yields Device objects.
+        :param devices_raw_data: the raw data we get.
+        :return:
+        """
+        for device_raw in devices_raw_data:
+            if not device_raw:
+                continue
+            try:
+                # noinspection PyTypeChecker
+                device = self._create_device(device_raw, self._new_device_adapter())
+                if device:
+                    yield device
+            except Exception:
+                logger.exception(f'Problem with fetching {capital_adapter_name} Device for {{device_raw}}')
+
+    # TODO: implement
+    @staticmethod
+    def _fill_{adapter_name}_user_fields(user_raw: dict, user: MyUserAdapter):
+        # AUTOADAPTER
+        try:
+            pass
+        except Exception:
+            logger.exception(f'Failed creating instance for user {{user_raw}}')
+
+    # TODO: implement
+    def _create_user(self, user_raw: dict, user: MyUserAdapter):
+        # AUTOADAPTER
+        try:
+            user_id = user_raw.get('')
+            if user_id is None:
+                logger.warning(f'Bad user with no ID {{user_raw}}')
+                return None
+            user.id = user_id + '_' + (user_raw.get('') or '')
+
+            self._fill_{adapter_name}_user_fields(user_raw, user)
+
+            user.set_raw(user_raw)
+
+            return user
+        except Exception:
+            logger.exception(f'Problem with fetching {capital_adapter_name} User for {{user_raw}}')
+            return None
+
+    # pylint: disable=arguments-differ
+    def _parse_users_raw_data(self, users_raw_data):
+        """
+        Gets raw data and yields User objects.
+        :param users_raw_data: the raw data we get.
+        :return:
+        """
+        for user_raw in users_raw_data:
+            if not user_raw:
+                continue
+            try:
+                # noinspection PyTypeChecker
+                user = self._create_user(user_raw, self._new_user_adapter())
+                if user:
+                    yield user
+            except Exception:
+                logger.exception(f'Problem with fetching {capital_adapter_name} User for {{user_raw}}')
+
+    # TODO: Modify
+    @classmethod
+    def adapter_properties(cls):
+        # AUTOADAPTER - check if you need to add other properties'
+        return [AdapterProperty.Assets, AdapterProperty.UserManagement]
