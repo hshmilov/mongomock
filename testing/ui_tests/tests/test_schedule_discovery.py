@@ -1,6 +1,7 @@
 import time
 from datetime import datetime, timedelta
 
+import pytest
 from selenium.common.exceptions import ElementNotInteractableException
 
 from axonius.utils.wait import wait_until
@@ -136,6 +137,7 @@ class TestDiscoverySchedule(TestBase):
         wait_until(lambda: self.check_next_cycle_start_in_min(time_in_min=1),
                    total_timeout=60 * 3, interval=0.1)
 
+    @pytest.mark.skip('AX-7081')
     def test_schedule_lifecycle_next_scan(self):
         self._test_lifecycle_next_scan_daily_scheduled()
 
