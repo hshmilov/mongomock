@@ -93,7 +93,7 @@ class PrismaCloudAdapter(AdapterBase):
             'items': [
                 {
                     'name': 'domain',
-                    'title': 'Domain',
+                    'title': 'Prisma Cloud Domain',
                     'type': 'string'
                 },
                 {
