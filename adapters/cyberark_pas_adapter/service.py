@@ -78,7 +78,7 @@ class CyberarkPasAdapter(AdapterBase):
             'items': [
                 {
                     'name': 'domain',
-                    'title': 'Domain',
+                    'title': 'CyberArk Domain',
                     'type': 'string'
                 },
                 {
