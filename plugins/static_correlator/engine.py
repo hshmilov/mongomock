@@ -109,10 +109,14 @@ def is_only_host_adapter(adapter_device):
     return False
 
 
-def is_only_host_adapter_or_palo_alto_vpn(adapter_device):
+def is_cherwell_adapter(adapter_device):
+    return adapter_device.get('plugin_name') == 'cherwell_adapter'
+
+
+def is_only_host_adapter_or_host_only_force(adapter_device):
     return (is_only_host_adapter(adapter_device) and
             (not adapter_device.get(NORMALIZED_MACS) and not get_normalized_ip(adapter_device))) \
-        or is_palolato_vpn(adapter_device)
+        or is_palolato_vpn(adapter_device) or is_cherwell_adapter(adapter_device)
 
 
 def is_only_host_adapter_not_localhost(adapter_device):
@@ -710,7 +714,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
         return self._bucket_correlate(list(filtered_adapters_list),
                                       [get_normalized_hostname_str],
                                       [compare_device_normalized_hostname],
-                                      [is_only_host_adapter_or_palo_alto_vpn],
+                                      [is_only_host_adapter_or_host_only_force],
                                       inner_compare,
                                       {'Reason': 'They have the same hostname and from specifc adapters'},
                                       CorrelationReason.StaticAnalysis)

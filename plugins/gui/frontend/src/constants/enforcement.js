@@ -47,6 +47,9 @@ export const actionsMeta = {
     censys_enrichment: {
         title: 'Enrich Device Data with Censys'
     },
+    create_cherwell_incident: {
+        title: 'Create Cherwell Incident'
+    },
     haveibeenpwned_enrichment: {
         title: 'Enrich User Data with Have I Been Pwned'
     },
@@ -94,6 +97,9 @@ export const actionsMeta = {
     },
     create_service_now_computer: {
         title: 'Create ServiceNow Computer'
+    },
+    update_cherwell_computer: {
+        title: 'Update Cherwell Computer'
     },
     carbonblack_defense_change_policy: {
         title: 'Change Carbon Black CB Defense Policy'
@@ -213,7 +219,7 @@ export const actionsMeta = {
     },
     create_cmdb_computer: {
         title: 'Create CMDB Computer',
-        items: ['create_service_now_computer']
+        items: ['create_service_now_computer', 'update_cherwell_computer']
     },
     manage_directory: {
         title: 'Manage Microsoft Active Directory (AD) Services',
@@ -221,7 +227,7 @@ export const actionsMeta = {
     },
     create_incident: {
         title: 'Create Incident',
-        items: ['create_service_now_incident', 'create_service_now_incident_per_entity', 'create_jira_incident', 'jira_incident_per_entity_action', 'create_sysaid_incident', 'create_zendesk_ticket', 'create_remedy_ticket', 'create_fresh_service_incident', 'opsgenie_create_alert']
+        items: ['create_service_now_incident', 'create_service_now_incident_per_entity', 'create_jira_incident', 'jira_incident_per_entity_action', 'create_sysaid_incident', 'create_zendesk_ticket', 'create_remedy_ticket', 'create_fresh_service_incident', 'opsgenie_create_alert', 'create_cherwell_incident']
     },
     enrich_device_or_user_data: {
         title: 'Enrich Device or User Data',

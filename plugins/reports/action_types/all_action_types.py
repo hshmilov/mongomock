@@ -42,6 +42,7 @@ from reports.action_types.base.sentinelone_initiate_scan import SentineloneIniti
 from reports.action_types.base.haveibeenpwned_enrichment import HaveibeenpwnedEnrichment
 from reports.action_types.alert.send_csv_to_scp import SendCsvToScp
 from reports.action_types.base.run_linux_command import RunLinuxCommand
+from reports.action_types.alert.create_cherwell_incident import CherwellIncidentAction
 from reports.action_types.base.tenable_io_create_asset import TenableIoCreateAsset
 from reports.action_types.alert.create_zendesk_ticket import ZendeskTicketAction
 from reports.action_types.alert.create_remedy_ticket import RemedyTicketAction
@@ -57,10 +58,13 @@ from reports.action_types.base.aws_ec2_start_instance import AwsEc2StartInstance
 from reports.action_types.base.aws_ec2_stop_instance import AwsEc2StopInstanceAction
 from reports.action_types.base.qualys_add_tag import QualysAddTag
 from reports.action_types.base.qualys_remove_tag import QualysRemoveTag
+from reports.action_types.base.update_cherwell_computer import CherwellComputerAction
 
 AllActionTypes: Dict[str, type(ActionTypeBase)] = {
+    'update_cherwell_computer': CherwellComputerAction,
     'create_service_now_computer': ServiceNowComputerAction,
     'tag': TagAllEntitiesAction,
+    'create_cherwell_incident': CherwellIncidentAction,
     'add_custom_data': AddCustomDataAction,
     'carbonblack_isolate': CarbonblackIsolateAction,
     'carbonblack_unisolate': CarbonblackUnisolateAction,

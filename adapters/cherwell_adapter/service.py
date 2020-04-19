@@ -8,18 +8,21 @@ from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.connection import RESTException
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.utils.files import get_local_config_file
+from axonius.mixins.configurable import Configurable
+from axonius.plugin_base import add_rule, return_error, EntityType
 from axonius.utils.datetime import parse_date
-from cherwell_adapter.connection import CherwellConnection
+from axonius.clients.cherwell.connection import CherwellConnection
 from cherwell_adapter.client_id import get_client_id
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
-class CherwellAdapter(AdapterBase):
+class CherwellAdapter(AdapterBase, Configurable):
     # pylint: disable=too-many-instance-attributes
     class MyDeviceAdapter(DeviceAdapter):
         bus_ob_id = Field(str, 'Bus Ob ID')
         bus_ob_rec_id = Field(str, 'BusObRecId')
+        bus_ob_public_id = Field(str, 'BusObPublicId')
         ci_type_name = Field(str, 'CI Type Name')
         created_by = Field(str, 'Created By')
         asset_tag = Field(str, 'Asset Tag')
@@ -31,6 +34,50 @@ class CherwellAdapter(AdapterBase):
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
+
+    @add_rule('update_computer', methods=['POST'])
+    def create_cherwell_computer(self):
+        if self.get_method() != 'POST':
+            return return_error('Method not supported', 405)
+        cherwell_connection = self.get_request_data_as_object()
+        success = False
+        for client_id in self._clients:
+            try:
+                conn = self.get_connection(self._get_client_config_by_client_id(client_id))
+                with conn:
+                    result_status, device_raw = conn.update_cherwell_computer(cherwell_connection)
+                    success = success or result_status
+                    if success is True:
+                        device = self._create_device(device_raw=device_raw)
+                        if device:
+                            device_dict = device.to_dict()
+                            self._save_data_from_plugin(
+                                client_id,
+                                {'raw': [], 'parsed': [device_dict]},
+                                EntityType.Devices, False)
+                            self._save_field_names_to_db(EntityType.Devices)
+                        return '', 200
+            except Exception:
+                logger.exception(f'Could not connect to {client_id}')
+        return 'Failure', 400
+
+    @add_rule('create_incident', methods=['POST'])
+    def create_cherwell_incident(self):
+        if self.get_method() != 'POST':
+            return return_error('Method not supported', 405)
+        cherwell_connection = self.get_request_data_as_object()
+        success = False
+        for client_id in self._clients:
+            try:
+                conn = self.get_connection(self._get_client_config_by_client_id(client_id))
+                with conn:
+                    result_status = conn.create_incident(cherwell_connection)
+                    success = success or result_status
+                    if success is True:
+                        return '', 200
+            except Exception:
+                logger.exception(f'Could not connect to {client_id}')
+        return 'Failure', 400
 
     @staticmethod
     def _get_client_id(client_config):
@@ -135,6 +182,7 @@ class CherwellAdapter(AdapterBase):
             device.id = (device_response.get('busObId') or '') + '_' + (device_response.get('busObRecId') or '')
             device.bus_ob_id = device_response.get('busObId')
             device.bus_ob_rec_id = device_response.get('busObRecId')
+            device.bus_ob_public_id = device_response.get('busObPublicId')
             mac = None
             ips = None
             for field_raw in device_response.get('fields'):
@@ -145,6 +193,7 @@ class CherwellAdapter(AdapterBase):
                         continue
                     if field_name == 'SerialNumber':
                         device.device_serial = field_value
+                        device.id += '_' + field_value
                     elif field_name == 'Model':
                         device.device_model = field_value
                     elif field_name == 'BIOSVersion':
@@ -161,7 +210,11 @@ class CherwellAdapter(AdapterBase):
                         # pylint: disable=invalid-name
                         device.total_number_of_physical_processors = field_value
                     elif field_name == 'ConfigurationItemTypeName':
-                        device.ci_type_name = field_value
+                        ci_type_name = field_value
+                        if ci_type_name and self.__ci_type_name_white_list \
+                                and ci_type_name not in self.__ci_type_name_white_list:
+                            return None
+                        device.ci_type_name = ci_type_name
                     elif field_name == 'CreatedDateTime':
                         device.first_seen = parse_date(field_value)
                     elif field_name == 'CreatedBy':
@@ -203,3 +256,28 @@ class CherwellAdapter(AdapterBase):
     @classmethod
     def adapter_properties(cls):
         return [AdapterProperty.Assets]
+
+    @classmethod
+    def _db_config_schema(cls) -> dict:
+        return {
+            'items': [
+                {
+                    'name': 'ci_type_name_white_list',
+                    'title': 'CI type name whitelist',
+                    'type': 'string'
+                }
+            ],
+            'required': [],
+            'pretty_name': 'Cherwell Configuration',
+            'type': 'array'
+        }
+
+    @classmethod
+    def _db_config_default(cls):
+        return {
+            'ci_type_name_white_list': None
+        }
+
+    def _on_config_update(self, config):
+        self.__ci_type_name_white_list = config.get('ci_type_name_white_list').split(',') \
+            if config.get('ci_type_name_white_list') else None
