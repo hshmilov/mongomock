@@ -19,7 +19,7 @@ from apscheduler.executors.pool import ThreadPoolExecutor
 from apscheduler.triggers.interval import IntervalTrigger
 
 from axonius.consts.core_consts import DEACTIVATED_NODE_STATUS
-from axonius.consts.metric_consts import InstancesMetrics
+from axonius.consts.metric_consts import InstancesMetrics, SystemMetric
 from axonius.consts.plugin_subtype import PluginSubtype
 from axonius.logging.metric_helper import log_metric
 
@@ -58,7 +58,7 @@ logger = logging.getLogger(f'axonius.{__name__}')
 
 CHUNK_SIZE = 1024
 MAX_INSTANCES_OF_SAME_PLUGIN = 100
-BROKEN_NODES_DIFF_IN_SECONDS = (60 * 60 * 3)    # If a node is not communicating for 3 hours, it is broken
+BROKEN_NODES_DIFF_IN_SECONDS = (60 * 60 * 3)  # If a node is not communicating for 3 hours, it is broken
 MASTER_NODE_NAME = 'Master'
 
 
@@ -658,6 +658,10 @@ class CoreService(Triggerable, PluginBase, Configurable):
             raise
 
         logger.info(f"Got registration request : {data} from {request.remote_addr}")
+
+        nodes_metadata = self._get_collection('nodes_metadata').find_one({NODE_ID: node_id})
+        if not nodes_metadata:
+            log_metric(logger, SystemMetric.NEW_NODE_CONNECTED, data)
 
         with self.adapters_lock:
             relevant_doc = None

@@ -30,6 +30,7 @@ class SystemMetric:
     TRIAL_EXPIRED_STATE = 'trial_expired_state'
     CONTRACT_EXPIRED_STATE = 'contract_expired_state'
     LOGIN_MARKER = 'LOGIN_MARKER'
+    NEW_NODE_CONNECTED = 'new_node_connected'
 
 
 class ApiMetric:

@@ -5,6 +5,7 @@ import paramiko
 from retry.api import retry_call
 from selenium.common.exceptions import NoSuchElementException
 
+from axonius.consts.metric_consts import SystemMetric
 from axonius.utils.wait import wait_until, expect_specific_exception_to_be_raised
 from services.adapters.ad_service import AdService
 from services.adapters.json_file_service import JsonFileService
@@ -30,6 +31,7 @@ class TestInstancesAfterNodeJoin(TestInstancesBase):
         self.check_instance_indication()
         self.check_password_change()
         self.check_add_adapter_to_node()
+        self.axonius_system.core.log_tester.is_metric_in_log(SystemMetric.NEW_NODE_CONNECTED, r'.*node_id.*')
         self.check_correct_ip_is_shown_in_table()
         self.check_correct_hostname_is_shown_in_table()
         self.check_change_node_name()
