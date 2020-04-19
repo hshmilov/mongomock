@@ -198,6 +198,7 @@ DOCKER_PORTS = {
     'instance-control':                 6689,
     'cloud-health-adapter':             6690,
     'forcepoint-adapter':               6691,
+    'malwarebytes-cloud-adapter':       6692,
     'master-proxy':                     8888,  # reserved
     'bandicoot':                        9090,
     'httpd-service':                    8889,  # reserved

@@ -717,9 +717,14 @@ export const pluginMeta = {
         description: 'Linux Secure Shell uses remote command execution over the SSH protocol to gather information about the endpoint Linux machine.'
     },
     malwarebytes_adapter: {
-        title: 'Malwarebytes',
+        title: 'Malwarebytes Endpoint Security (On-Prem Platform)',
         link: 'https://docs.axonius.com/docs/malwarebytes',
-        description: 'Malwarebytes protects endpoints from ransomware, automates endpoint remediation, and provides continuous visibility and monitoring.'
+        description: 'Malwarebytes Endpoint Security protects endpoints from ransomware, automates endpoint remediation, and provides continuous visibility and monitoring.'
+    },
+    malwarebytes_cloud_adapter: {
+        title: 'Malwarebytes Endpoint Protection (Cloud Platform)',
+        link: 'https://docs.axonius.com/docs/malwarebytes-endpoint-protection',
+        description: 'Malwarebytes Endpoint Protection is a security platform that combines detection and remediation technologies into a single cloud-managed agent.'
     },
     cybereason_adapter: {
         title: 'Cybereason Deep Detect & Respond',
