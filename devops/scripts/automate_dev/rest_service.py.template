@@ -154,7 +154,7 @@ class {capital_adapter_name}Adapter(AdapterBase):
             logger.exception(f'Problem with fetching {capital_adapter_name} Device for {{device_raw}}')
             return None
 
-    def _parse_device_raw_data(self, devices_raw_data):
+    def _parse_raw_data(self, devices_raw_data):
         """
         Gets raw data and yields Device objects.
         :param devices_raw_data: the raw data we get.
