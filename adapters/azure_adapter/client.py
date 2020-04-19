@@ -1,6 +1,7 @@
 import logging
 from typing import Optional, Iterable, Tuple
 
+import requests
 from azure.common.credentials import ServicePrincipalCredentials
 from azure.mgmt.compute import ComputeManagementClient
 from azure.mgmt.compute.models import VirtualMachine, VirtualMachineScaleSetVM
@@ -13,6 +14,9 @@ from azure_adapter.consts import RE_VM_RESOURCEGROUP_FROM_ID, RE_VM_RESOURCEGROU
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
+# This adapters needs https://login.microsoftonline.com and https://management.azure.com
+
+
 class AzureClient:
     DEFAULT_CLOUD = 'Azure Public Cloud'
 
@@ -23,11 +27,13 @@ class AzureClient:
         if cloud_name is None:
             cloud_name = self.DEFAULT_CLOUD
         cloud = self.get_clouds()[cloud_name]
+        self.cloud = cloud
+        self.https_proxy = https_proxy
         proxies = {'https': RESTConnection.build_url(https_proxy).strip('/')} if https_proxy else None
 
         if azure_stack_hub_url and azure_stack_hub_resource:
-            base_url = azure_stack_hub_url
-            resource = azure_stack_hub_resource
+            base_url = azure_stack_hub_url.strip()
+            resource = azure_stack_hub_resource.strip()
 
             logger.info(f'Using Azure Stack Hub - Resource "{resource}" with URL "{base_url}"')
             credentials = ServicePrincipalCredentials(client_id=client_id, secret=client_secret, tenant=tenant_id,
@@ -49,6 +55,21 @@ class AzureClient:
             self.network.config.connection.verify = False
             self.compute.config.connection.verify = False
 
+    def test_connectivity(self):
+        if self.https_proxy:
+            proxies = {'https': RESTConnection.build_url(self.https_proxy).strip('/')}
+        else:
+            proxies = None
+
+        endpoint = self.cloud.endpoints.active_directory
+        response = requests.get(endpoint, verify=False, proxies=proxies)
+        try:
+            response.raise_for_status()
+        except Exception:
+            logger.exception(f'Error while getting to auth point')
+            raise ValueError(f'Error while connecting to {endpoint} - '
+                             f'Returned status {response.status_code}: {response.content}')
+
     @classmethod
     def get_clouds(cls):
         clouds = {}
@@ -61,6 +82,8 @@ class AzureClient:
         return clouds
 
     def test_connection(self):
+        self.test_connectivity()
+
         for _ in self.compute.virtual_machines.list_all():
             break
         for _ in self.compute.virtual_machine_scale_sets.list_all():

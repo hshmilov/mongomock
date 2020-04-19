@@ -76,8 +76,10 @@ class SystemSchedulerService(PluginService, UpdatablePluginMixin):
             self._update_schema_version_2()
         if self.db_schema_version < 3:
             self._update_schema_version_3()
+        if self.db_schema_version < 4:
+            self._update_schema_version_4()
 
-        if self.db_schema_version != 3:
+        if self.db_schema_version != 4:
             print(f'Upgrade failed, db_schema_version is {self.db_schema_version}')
 
     def _update_schema_version_2(self):
@@ -167,3 +169,45 @@ class SystemSchedulerService(PluginService, UpdatablePluginMixin):
         finally:
             print('Upgraded system scheduler to version 3')
             self.db_schema_version = 3
+
+    def _update_schema_version_4(self):
+        print(f'Upgrade to schema 4 - Save history')
+        try:
+            config_collection = self.db.get_collection(self.plugin_name, 'configurable_configs')
+            config_match = {
+                'config_name': 'SystemSchedulerService'
+            }
+            current_config = config_collection.find_one(config_match)
+            if not current_config:
+                print('No config present - continue')
+                return
+
+            current_config = current_config.get('config')
+            if not current_config:
+                print(f'Weird config - continue ({current_config})')
+                return
+
+            current_config = current_config.get('discovery_settings')
+            if not current_config:
+                print(f'Weird discovery_settings - continue ({current_config})')
+                return
+
+            save_history = current_config.get('save_history')
+            if save_history is not None:
+                # This means it's not a plain first deployment. In that case we need to not set
+                # the default values
+                config_collection.update_one(config_match,
+                                             {
+                                                 '$set': {
+                                                     f'config.discovery_settings.history_settings': {
+                                                         'enabled': False,
+                                                         'max_days_to_save': 180
+                                                     }
+                                                 }
+                                             }
+                                             )
+            self.db_schema_version = 4
+            print(f'Upgraded system scheduler to version 4')
+        except Exception as e:
+            print(f'Could not upgrade system scheduler to version 4: {e}')
+            raise

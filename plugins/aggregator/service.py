@@ -2,7 +2,7 @@ import concurrent.futures
 import logging
 import threading
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
 from enum import Enum, auto
 from threading import Thread
 
@@ -235,7 +235,18 @@ class AggregatorService(Triggerable, PluginBase):
                 except Exception as err:
                     logger.error(f'Failed to drop collection {col_name}. Reason: {err}')
 
-    def _save_entity_views_to_historical_db(self, entity_type: EntityType, now):
+    def _drop_old_historic_data_from_big_table(self, entity_type: EntityType, max_days: int):
+        history_db = self._historical_entity_views_db_map[entity_type]
+        history_raw_db = self._raw_adapter_historical_entity_db_map[entity_type]
+
+        relative_delete_date = datetime.utcnow() - timedelta(days=max_days)
+        query = {'accurate_for_datetime': {'$lt': relative_delete_date}}
+
+        logger.info(f'Deleting history for {max_days} days - anything before {relative_delete_date}')
+        history_db.delete_many(query)
+        history_raw_db.delete_many(query)
+
+    def _save_entity_views_to_historical_db(self, entity_type: EntityType, now, settings: dict):
         from_db = self._entity_db_map[entity_type]
         raw_from_db = self._raw_adapter_entity_db_map[entity_type]
 
@@ -300,6 +311,11 @@ class AggregatorService(Triggerable, PluginBase):
         ]
         [t.start() for t in threads]
         [t.join() for t in threads]
+        try:
+            if settings.get('max_days_to_save') and settings.get('max_days_to_save') > 0:
+                self._drop_old_historic_data_from_big_table(entity_type, settings['max_days_to_save'])
+        except Exception:
+            logger.critical(f'Could not delete historical data from big history collection!')
         return 'saved history'
 
     @staticmethod
@@ -318,7 +334,7 @@ class AggregatorService(Triggerable, PluginBase):
         elif job_name == 'save_history':
             now = datetime.utcnow()
             return {
-                entity_type.name: self._save_entity_views_to_historical_db(entity_type, now)
+                entity_type.name: self._save_entity_views_to_historical_db(entity_type, now, post_json)
                 for entity_type
                 in EntityType
             }

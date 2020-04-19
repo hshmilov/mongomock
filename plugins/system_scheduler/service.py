@@ -175,7 +175,13 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
         """
         next_run_time = self._research_phase_scheduler.get_job(
             scheduler_consts.RESEARCH_THREAD_ID).next_run_time
-        last_triggered_job = self.get_last_job({'job_name': 'execute'}, 'started_at')
+        last_triggered_job = self.get_last_job(
+            {
+                'job_name': 'execute',
+                'job_completed_state': {'$ne': StoredJobStateCompletion.Scheduled.name}
+            },
+            'started_at'
+        )
         last_finished_job = self.get_last_job({'job_name': 'execute',
                                                'job_completed_state': StoredJobStateCompletion.Successful.name},
                                               'finished_at')
@@ -203,6 +209,12 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
         self.__system_research_date_time = system_research_date['system_research_date_time']
         self.__system_research_date_recurrence = system_research_date['system_research_date_recurrence']
         self.__system_research_mode = config['discovery_settings']['conditional']
+
+        history_settings = config['discovery_settings']['history_settings']
+        if history_settings['enabled'] and history_settings['max_days_to_save'] > 0:
+            self.__max_days_to_save = history_settings['max_days_to_save']
+        else:
+            self.__max_days_to_save = False
 
         logger.info(f'Setting research mode to: {self.__system_research_mode}')
         logger.info(f'Setting research rate to: {self.__system_research_rate}')
@@ -280,12 +292,6 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
                             'required': ['system_research_date_time', 'system_research_date_recurrence']
                         },
                         {
-                            'name': 'save_history',
-                            'title': 'Gather historical data',
-                            'type': 'bool',
-                            'required': True
-                        },
-                        {
                             'name': 'constant_alerts',
                             'title': 'Constantly run Enforcement Sets',
                             'type': 'bool',
@@ -296,6 +302,30 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
                             'title': 'Tag reimaged devices',
                             'type': 'bool',
                             'required': True
+                        },
+                        {
+                            'name': 'save_history',
+                            'title': 'Gather historical data',
+                            'type': 'bool',
+                            'required': True
+                        },
+                        {
+                            'name': 'history_settings',
+                            'title': 'History Settings',
+                            'type': 'array',
+                            'items': [
+                                {
+                                    'name': 'enabled',
+                                    'title': 'Limit History',
+                                    'type': 'bool'
+                                },
+                                {
+                                    'name': 'max_days_to_save',
+                                    'title': 'Max Days To Save',
+                                    'type': 'integer'
+                                }
+                            ],
+                            'required': ['enabled', 'days']
                         }
                     ],
                     'name': 'discovery_settings',
@@ -317,11 +347,14 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
                     'system_research_date_time': '13:00',
                     'system_research_date_recurrence': 1
                 },
+                'history_settings': {
+                    'enabled': True,
+                    'max_days_to_save': 180
+                },
                 'save_history': True,
                 'constant_alerts': False,
                 'analyse_reimage': False,
                 'conditional': 'system_research_rate'
-
             }
         }
 
@@ -575,7 +608,7 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
                     if free_disk_space_in_gb < MIN_GB_TO_SAVE_HISTORY:
                         logger.error(f'Can not save history - less than 15 GB on disk!')
                     else:
-                        self._run_historical_phase()
+                        self._run_historical_phase(self.__max_days_to_save)
 
                 self._request_gui_dashboard_cache_clear(clear_slow=True)
             except Exception:
@@ -659,7 +692,7 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
                         return
 
                     for adapter_to_call in adapters_to_call:
-                        logger.info(f'Fetching from rt adapter {adapter_to_call[PLUGIN_UNIQUE_NAME]}')
+                        logger.debug(f'Fetching from rt adapter {adapter_to_call[PLUGIN_UNIQUE_NAME]}')
                         self._trigger_remote_plugin(adapter_to_call[PLUGIN_UNIQUE_NAME],
                                                     'insert_to_db',
                                                     blocking=False)
@@ -726,12 +759,17 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
         """
         self._run_blocking_request(plugin_consts.AGGREGATOR_PLUGIN_NAME, 'clean_db', timeout=3600 * 6)
 
-    def _run_historical_phase(self):
+    def _run_historical_phase(self, max_days_to_save):
         """
         Trigger saving history
         :return:
         """
-        self._run_blocking_request(plugin_consts.AGGREGATOR_PLUGIN_NAME, 'save_history', timeout=3600 * 6)
+        self._run_blocking_request(
+            plugin_consts.AGGREGATOR_PLUGIN_NAME,
+            'save_history',
+            data={'max_days_to_save': max_days_to_save},
+            timeout=3600 * 6,
+        )
 
     def _run_aggregator_phase(self, plugin_subtype: PluginSubtype):
         """
